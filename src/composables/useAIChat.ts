@@ -121,7 +121,7 @@ async function getRouter() {
 const activeProviderRef = ref<string | null>(null)
 const FINAL_FORMATTER_TIMEOUT_MS = 45_000
 const WEEK_PLAN_BRIDGE_FORMATTER_TIMEOUT_MS = 12_000
-const WEEK_PLAN_STRUCTURED_TIMEOUT_MS = 30_000
+const WEEK_PLAN_STRUCTURED_TIMEOUT_MS = 8_000
 
 // AI Personality mode
 const aiPersonality = ref<'professional' | 'grid_handler'>('professional')
@@ -1646,12 +1646,14 @@ export function useAIChat() {
           weekMemory = {}
         }
         const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, new Date(), weekMemory)
-        const progress = outputLanguage === 'he'
-          ? `בודק ${weekContext.tasks.length} מועמדות, דחיות, תלויות ועומס שבועי…`
-          : `Reviewing ${weekContext.tasks.length} candidate tasks, postponements, dependencies, and workload…`
+        const immediatePlan = buildQuickDraftWeeklyPlan(weekContext)
         if (lastMsg && lastMsg.isStreaming) {
-          lastMsg.content = progress
-          store.streamingContent = progress
+          lastMsg.content = ''
+          store.streamingContent = ''
+          lastMsg.metadata = {
+            ...lastMsg.metadata,
+            weeklyPlan: immediatePlan,
+          } as Record<string, unknown>
         }
 
         let weeklyPlan: WeeklyPlanOutput | null = null
@@ -1679,6 +1681,8 @@ export function useAIChat() {
           const parsed = parseWeeklyPlanOutput(rawPlan, weekContext)
           if (parsed.ok) {
             weeklyPlan = parsed.value
+          } else if (isBridgeActive()) {
+            validationErrors = parsed.errors
           } else {
             validationErrors = parsed.errors
             const repairMessages: RouterChatMessage[] = [
@@ -1706,11 +1710,11 @@ export function useAIChat() {
             }
           }
         } catch (planErr) {
-          console.warn('[AIChat:WeeklyPlan] Structured planning failed; using evidence-only quick draft:', planErr)
+          console.warn('[AIChat:WeeklyPlan] Structured planning failed; using grounded quick draft:', planErr)
           validationErrors = [planErr instanceof Error ? planErr.message : 'provider_failed']
         }
 
-        const finalPlan = weeklyPlan ?? buildQuickDraftWeeklyPlan(weekContext)
+        const finalPlan = weeklyPlan ?? immediatePlan
         if (validationErrors.length && finalPlan.source === 'quick_draft') {
           finalPlan.quality.caveats = [...finalPlan.quality.caveats, ...validationErrors.slice(0, 3)]
         }

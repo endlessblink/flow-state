@@ -54,6 +54,16 @@ async function getAccessToken(): Promise<string | null> {
   }
 }
 
+function looksLikeBrainLimitMessage(text: string): boolean {
+  return /you(?:'|’)?ve hit your limit|usage limit|rate limit|limit resets?|resets? \d{1,2}:\d{2}|no credits|quota exceeded/i.test(text)
+}
+
+function throwIfBrainLimitMessage(text: unknown): void {
+  if (typeof text === 'string' && looksLikeBrainLimitMessage(text)) {
+    throw new BridgeUnavailableError('brain_limit')
+  }
+}
+
 /** Liveness probe — no model call, so it's cheap and quota-free. */
 export async function isBridgeAvailable(timeoutMs = 4000): Promise<boolean> {
   try {
@@ -103,6 +113,7 @@ export async function bridgeChat(
 
   const data = await res.json()
   if (!data?.content) throw new BridgeUnavailableError('empty_response')
+  throwIfBrainLimitMessage(data.content)
   return { content: data.content, model: data.model || brain, brain }
 }
 
@@ -154,6 +165,7 @@ export async function* bridgeChatStream(
       let obj: { delta?: string; done?: boolean; error?: string; reason?: string }
       try { obj = JSON.parse(dataLine.slice(5).trim()) } catch { continue }
       if (obj.error) throw new BridgeUnavailableError(obj.reason || obj.error)
+      throwIfBrainLimitMessage(obj.delta)
       if (typeof obj.delta === 'string' && obj.delta) yield obj.delta
       if (obj.done) { sawDone = true; return }
     }

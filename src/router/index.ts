@@ -96,7 +96,7 @@ const router = createRouter({
     {
       path: '/ai',
       name: 'ai',
-      component: () => import('@/views/AIHubView.vue'),
+      component: () => import('@/views/AISidebarFallbackView.vue'),
       meta: { requiresAuth: false }
     },
     {

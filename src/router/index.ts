@@ -205,7 +205,7 @@ router.beforeEach(async (to, _from, next) => {
     const { useWorkspaceStore } = await import('@/stores/workspace')
     const workspaceStore = useWorkspaceStore()
     if (!workspaceStore.isPersonalWorkspace && routeName) {
-      const PERSONAL_ONLY_ROUTES = ['canvas', 'quick-sort', 'today-flow', 'ai', 'focus', 'performance', 'mobile-today', 'mobile-timer', 'mobile-quick-sort', 'mobile-ai-chat']
+      const PERSONAL_ONLY_ROUTES = ['quick-sort', 'today-flow', 'ai', 'focus', 'performance', 'mobile-today', 'mobile-timer', 'mobile-quick-sort', 'mobile-ai-chat']
       if (PERSONAL_ONLY_ROUTES.includes(routeName)) {
         console.log(`[WORKSPACE] Redirecting from personal route "${routeName}" to board (shared workspace)`)
         next({ name: 'board' })

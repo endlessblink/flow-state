@@ -76,7 +76,9 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
       const groupTasks = (Array.isArray(g.items) ? g.items : [])
         .map(it => {
           const t = indexedTasks[(Number(it.i) || 0) - 1]
-          return t ? { ...t, reason: String(it.reason || '').trim() } : null
+          if (!t) return null
+          const modelReason = String(it.reason || '').trim()
+          return { ...t, reason: repairCardReason(t, modelReason) }
         })
         .filter((t): t is Record<string, unknown> & { reason: string } => t !== null)
       const newTasks = (Array.isArray(g.newTasks) ? g.newTasks : [])
@@ -121,11 +123,12 @@ export function ensureCardTaskMentions(text: string, parsed: ParsedCards, intro:
   const cardStart = parsed.rawBlock ? text.indexOf(parsed.rawBlock) : -1
   const prose = cardStart >= 0 ? text.slice(0, cardStart).trimEnd() : stripCardsBlock(text).trimEnd()
   const cards = cardStart >= 0 ? text.slice(cardStart).trimStart() : parsed.rawBlock
+  const normalizedProse = normalizeReasonText(prose)
   const missing = parsed.groups
     .flatMap(group => group.tasks)
     .filter(task => {
       const title = String(task.title || '').trim()
-      return title.length > 0 && !prose.includes(title)
+      return title.length > 0 && !normalizedProse.includes(normalizeReasonText(title))
     })
 
   if (!missing.length) return text
@@ -147,4 +150,87 @@ export function stripStreamingCardsBlock(text: string): string {
   return stripCardsBlock(text)
     .replace(/`{1,}\s*(?:c(?:a(?:r(?:d(?:s)?)?)?)?)?$/i, '')
     .trim()
+}
+
+function repairCardReason(task: Record<string, unknown>, reason: string): string {
+  if (reason && !isShallowCardReason(reason)) return reason
+  return inferStakeReason(task)
+}
+
+function isShallowCardReason(reason: string): boolean {
+  const normalized = normalizeReasonText(reason)
+  if (!normalized) return true
+  if (normalized.length <= 4) return true
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return true
+  return [
+    'due',
+    'due today',
+    'deadline',
+    'deadline approaching',
+    'overdue',
+    'high priority',
+    'medium priority',
+    'low priority',
+    'priority high',
+    'priority medium',
+    'priority low',
+    'quick win',
+    'next up',
+    'today',
+    'מועד',
+    'דדליין',
+    'באיחור',
+    'עדיפות',
+    'עדיפות גבוהה',
+    'עדיפות בינונית',
+    'עדיפות נמוכה',
+    'היום',
+  ].some(term => normalized === term || normalized.includes(term))
+}
+
+function inferStakeReason(task: Record<string, unknown>): string {
+  const title = String(task.title || '')
+  const description = String(task.description || task.notes || '').trim()
+  const haystack = `${title} ${description}`.toLowerCase()
+  const hebrew = containsHebrew(`${title} ${description}`)
+
+  if (description) {
+    const clipped = description.length > 90 ? `${description.slice(0, 87)}...` : description
+    return hebrew ? `ההערה נותנת הקשר מעשי: ${clipped}` : `the note gives practical context: ${clipped}`
+  }
+  if (/(payment|invoice|cardcom|charge|billing|refund|תשלום|חשבונית|חיוב|קאדרקום|קארדקום)/i.test(haystack)) {
+    return hebrew ? 'כסף או גבייה עלולים להיתקע אם זה יחליק' : 'money or billing can get stuck if this slips'
+  }
+  if (/(treatment|medicine|dose|twice a day|doctor|health|טיפול|תרופה|מנה|מנות|רופא|בריאות|פעמיים ביום)/i.test(haystack)) {
+    return hebrew ? 'רצף טיפול שנשבר קשה להשלים בדיעבד' : 'a broken treatment sequence is hard to recover later'
+  }
+  if (/(reply|send|call|email|message|stakeholder|follow.?up|להגיב|לשלוח|להתקשר|מייל|הודעה|לחזור)/i.test(haystack)) {
+    return hebrew ? 'מישהו כנראה מחכה לתגובה כדי להתקדם' : 'someone is probably waiting on this to move forward'
+  }
+  if (/(outreach|cold opener|target list|sales|lead|prospect|פייפרפורט|לסקין|רשימת|אאוטריץ|מכירות|ליד)/i.test(haystack)) {
+    return hebrew ? 'זה חלק מרצף מכירות שכדאי לבצע כמקבץ' : 'this belongs to one sales sequence worth batching'
+  }
+  if (/(lecture|choose|slot|date|schedule|meeting|הרצאה|לבחור|מועד|תאריך|פגישה)/i.test(haystack)) {
+    return hebrew ? 'בחירה עכשיו סוגרת התחייבות זמן ומונעת דחייה' : 'choosing now closes a time commitment and prevents drift'
+  }
+  if (task.dueDate || task.daysOverdue) {
+    return hebrew
+      ? 'תזמון קרוב הופך את זה להתחייבות שכדאי לסגור'
+      : 'near-term timing makes this a commitment worth closing'
+  }
+  return hebrew
+    ? 'אין מספיק הקשר, אבל היא צריכה החלטה במקום להישאר פתוחה'
+    : 'there is limited context, but it needs a decision instead of staying open'
+}
+
+function normalizeReasonText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[*_`~()[\]{}"']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function containsHebrew(value: string): boolean {
+  return /[\u0590-\u05FF]/.test(value)
 }

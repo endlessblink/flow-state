@@ -474,6 +474,21 @@ export const useAuthStore = defineStore('auth', () => {
             }
           }
 
+          // AI chat can initialize before Electron's async disk-backed auth storage
+          // has resolved. Retry chat merge/realtime once auth is known-good so
+          // Electron, localhost, and PWA converge on the same Supabase history.
+          if ((_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED' || _event === 'INITIAL_SESSION') && newSession?.user) {
+            try {
+              const { useAIChatStore } = await import('@/stores/aiChat')
+              const aiChatStore = useAIChatStore()
+              if (aiChatStore.isInitialized) {
+                await aiChatStore.syncConversationsWithSupabaseNow()
+              }
+            } catch (e) {
+              console.warn(`👤 [AUTH:${currentTabId}] Failed to resync AI chat after ${_event}:`, e)
+            }
+          }
+
           // BUG-1086: Reset sign-in handler on sign-out so next sign-in reloads stores
           // BUG-1207: Reset appInitLoadComplete so post-login sign-in reloads stores
           if (_event === 'SIGNED_OUT') {

@@ -2241,7 +2241,7 @@ export function useAIChat() {
    * Loads persisted provider/model settings from store.
    */
   async function initialize() {
-    store.initialize()
+    await store.initialize()
 
     // Load persisted settings
     const savedSettings = store.getPersistedSettings()

@@ -8,6 +8,7 @@ import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
+import { buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -301,18 +302,210 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).not.toContain('Do not render yet')
   })
 
+  it('renders grouped inline cards while the immediate weekly fallback is still streaming', () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-streaming-week-plan-cards',
+          role: 'assistant',
+          content: 'Task Alpha belongs to the outreach pipeline because it unblocks the first send.',
+          timestamp: Date.now(),
+          isStreaming: true,
+          metadata: {
+            cardGroups: {
+              kind: 'week_plan',
+              total: 1,
+              groups: [
+                {
+                  name: 'Outreach pipeline',
+                  tasks: [
+                    {
+                      id: 'task-alpha',
+                      title: 'Task Alpha',
+                      status: 'todo',
+                      priority: 'high',
+                      reason: 'unblocks first send',
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(1)
+    expect(wrapper.find('.tool-results').exists()).toBe(false)
+  })
+
+  it('renders structured weekly plan sections with cards bound by task id', () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push({
+      id: 'task-renewal',
+      title: 'Send renewal proposal to Amit',
+      description: 'Amit needs numbers before Wednesday budget meeting.',
+      status: 'todo',
+      priority: 'high',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '2026-06-10',
+      projectId: 'client-renewals',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Task)
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-weekly-plan-structured',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            weeklyPlan: {
+              schemaVersion: 'weekly-plan.v2',
+              requestId: 'req-week',
+              locale: 'en',
+              direction: 'ltr',
+              headline: 'Protect the decision windows first',
+              weekRead: {
+                summary: 'One client decision window matters more than generic cleanup.',
+                workloadReality: 'Keep the plan focused.',
+                mainTradeoff: 'Client work beats low-context admin.',
+              },
+              recommendations: [
+                {
+                  sectionId: 'rec-renewal',
+                  rank: 1,
+                  primaryTaskId: 'task-renewal',
+                  relatedTaskIds: [],
+                  recommendationType: 'protect',
+                  title: 'Protect Amit’s renewal proposal',
+                  whyThisMatters: 'Amit needs numbers before the budget meeting, so this affects a real decision window.',
+                  whyThisWeek: 'The task is already in the current week and has clear external context.',
+                  riskIfIgnored: 'The decision may move before the proposal lands.',
+                  nextAction: 'Draft only the numbers table and send Amit a short confirmation.',
+                  evidence: [
+                    { taskId: 'task-renewal', field: 'notes', value: 'budget meeting', interpretation: 'external decision window' },
+                    { taskId: 'task-renewal', field: 'priority', value: 'high', interpretation: 'priority signal' },
+                  ],
+                  cardPlacement: 'immediately_after_explanation',
+                },
+              ],
+              deferrals: [],
+              openQuestions: [],
+              quality: { selectedTaskCount: 1, confidence: 'high', caveats: [] },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.get('[data-testid="weekly-plan"]').text()).toContain('Protect the decision windows first')
+    expect(wrapper.get('[data-section-id="rec-renewal"]').text()).toContain('Amit needs numbers')
+    expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="inline-plan-card"]').text()).toContain('Send renewal proposal to Amit')
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(0)
+  })
+
+  it('rejects shallow weekly plan JSON and falls back to evidence-only quick drafts', () => {
+    const task: Task = {
+      id: 'task-renewal',
+      title: 'Send renewal proposal to Amit',
+      description: 'Amit asked for numbers before Wednesday budget meeting.',
+      status: 'todo',
+      priority: 'high',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '2026-06-10',
+      projectId: 'client-renewals',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Task
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: [task] }],
+      [
+        task,
+        { ...task, id: 'task-bug', title: 'Fix timer sync blocker', description: 'Blocks QA signoff.', dependsOn: [], dueDate: '2026-06-11' } as Task,
+        { ...task, id: 'task-health', title: 'Book Dad blood test', description: 'Family health admin.', priority: 'medium', dueDate: '2026-06-12' } as Task,
+      ],
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+    )
+    const badPlan = {
+      schemaVersion: 'weekly-plan.v2',
+      requestId: context.requestId,
+      locale: 'en',
+      direction: 'ltr',
+      headline: 'Do due tasks',
+      weekRead: { summary: 'Do due tasks.', workloadReality: 'Fine.', mainTradeoff: 'None.' },
+      recommendations: context.tasks.slice(0, 3).map((candidate, index) => ({
+        sectionId: `bad-${index}`,
+        rank: index + 1,
+        primaryTaskId: candidate.id,
+        relatedTaskIds: [],
+        recommendationType: 'protect',
+        title: candidate.title,
+        whyThisMatters: 'This task is high priority and due soon. Completing it will help you stay on track.',
+        whyThisWeek: 'It is due this week.',
+        riskIfIgnored: 'You may not make progress.',
+        nextAction: 'Schedule a focused block.',
+        evidence: [
+          { taskId: candidate.id, field: 'dueIso', value: candidate.dueIso ?? '', interpretation: 'due this week' },
+          { taskId: candidate.id, field: 'priority', value: candidate.priority ?? 'medium', interpretation: 'priority signal' },
+        ],
+        cardPlacement: 'immediately_after_explanation',
+      })),
+      deferrals: [],
+      openQuestions: [],
+      quality: { selectedTaskCount: 3, confidence: 'medium', caveats: [] },
+    }
+
+    expect(validateWeeklyPlanOutput(badPlan, context)).toEqual(expect.arrayContaining([
+      'generic_reasoning:bad-0',
+      'date_priority_only_reasoning:bad-0',
+    ]))
+
+    const quickDraft = buildQuickDraftWeeklyPlan(context)
+    expect(quickDraft.source).toBe('quick_draft')
+    expect(quickDraft.headline).toContain('Quick draft')
+    expect(quickDraft.recommendations[0].evidence.length).toBeGreaterThanOrEqual(2)
+  })
+
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 
     expect(aiChat).toContain('FINAL_FORMATTER_TIMEOUT_MS')
-    expect(aiChat).toContain('WEEK_PLAN_BRIDGE_FORMATTER_TIMEOUT_MS = 12_000')
+    expect(aiChat).toContain('WEEK_PLAN_STRUCTURED_TIMEOUT_MS = 30_000')
     expect(aiChat).toContain('isBridgeActive() && isWeekPlan')
-    expect(aiChat).toContain('timeout: formatterTimeout')
-    expect(aiChat).toContain('const immediateFallback = buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
-    expect(aiChat).toContain('lastMsg.content = cleanResponse(immediateDisplay)')
-    expect(aiChat).toContain('cardGroups: { groups: immediateCards.groups, total: immediateCards.total, kind: immediateCards.kind }')
+    expect(aiChat).toContain('buildQuickDraftWeeklyPlan(weekContext)')
+    expect(aiChat).toContain('timeout: WEEK_PLAN_STRUCTURED_TIMEOUT_MS')
+    expect(aiChat).not.toContain('const immediateFallback = buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
+    expect(aiChat).not.toContain('lastMsg.content = cleanResponse(immediateDisplay)')
+    expect(aiChat).not.toContain('cardGroups: { groups: immediateCards.groups, total: immediateCards.total, kind: immediateCards.kind }')
     expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
     expect(aiChat).toContain("Formatter timed out or failed; using fallback answer")
+  })
+
+  it('does not force-scroll the chat while the user is reading older streaming content', () => {
+    const panel = src('src/components/ai/AIChatPanel.vue')
+
+    expect(panel).toContain('function isNearBottom')
+    expect(panel).toContain('if (!container || !isNearBottom(container)) return')
+    expect(panel).not.toContain('watch(visibleMessages, () => {\n  scrollToBottom()\n}, { deep: true })')
   })
 
   it('keeps AI task cards paired under the matching answer line and dismisses local suggestions', async () => {
@@ -638,44 +831,42 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.find('.card-groups').exists()).toBe(false)
   })
 
-  it('documents weekly planning as selective coach reasoning rather than a one-sentence task dump', () => {
+  it('documents weekly planning as a structured artifact instead of prose plus detached cards', () => {
     const aiChat = src('src/composables/useAIChat.ts')
+    const weeklyPlan = src('src/services/ai/pipeline/weeklyPlan.ts')
+    const chatMessage = src('src/components/ai/ChatMessage.vue')
 
-    expect(aiChat).toContain('Act like a thoughtful planning coach, not a sorter')
-    expect(aiChat).toContain('why now, expected impact, and the tradeoff/slot')
-    expect(aiChat).toContain('omissions/defer line')
-    expect(aiChat).toContain('Due dates and priority labels are metadata, not reasons')
-    expect(aiChat).toContain('what it unblocks, who is waiting, what risk it prevents')
-    expect(aiChat).not.toContain('use overdue days, priority, project deadlines')
+    expect(aiChat).toContain('buildWeekContextFromToolResults')
+    expect(aiChat).toContain('buildWeeklyPlanPrompt')
+    expect(aiChat).toContain('parseWeeklyPlanOutput')
+    expect(aiChat).toContain('weeklyPlan: finalPlan')
+    expect(aiChat).toContain('Reviewing ${weekContext.tasks.length} candidate tasks')
+    expect(aiChat).toContain('Return ONLY valid JSON matching schemaVersion weekly-plan.v2')
+    expect(aiChat).toContain('store.completeStreamingMessage()')
+    expect(aiChat).not.toContain('const immediateFallback = buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
+
+    expect(weeklyPlan).toContain("schemaVersion: 'weekly-plan.v2'")
+    expect(weeklyPlan).toContain('validateWeeklyPlanOutput')
+    expect(weeklyPlan).toContain('date_priority_only_reasoning')
+    expect(weeklyPlan).toContain('generic_reasoning')
+    expect(weeklyPlan).toContain('buildQuickDraftWeeklyPlan')
+    expect(weeklyPlan).toContain('Factual quick draft only')
+
+    expect(chatMessage).toContain('data-testid="weekly-plan"')
+    expect(chatMessage).toContain('data-testid="inline-plan-card"')
+    expect(chatMessage).toContain('taskCardFromId(taskId)')
+    expect(chatMessage).toContain('weeklyPlanTaskStaleLabel')
     expect(aiChat).toContain('depends on:')
     expect(aiChat).toContain('connections:')
     expect(aiChat).toContain('planning notes:')
     expect(aiChat).toContain('scheduled:')
     expect(aiChat).toContain('focus history today:')
-    expect(aiChat).toContain('ensureCardTaskMentions')
-    expect(aiChat).toContain('if (!cardData && cardsInstruction && hasTaskList)')
-    expect(aiChat).toContain('rankFallbackTasks')
-    expect(aiChat).toContain('fallbackTaskScore')
-    expect(aiChat).toContain('__cardIndex: tasks.length + 1')
-    expect(aiChat).toContain('i: Number(task.__cardIndex) || index + 1')
     expect(aiChat).toContain('function buildRichToolResultsData')
     expect(aiChat).toContain('let nextTaskIndex = 1')
     expect(aiChat).toContain('buildRichTaskData(r, lang, nextTaskIndex)')
     expect(aiChat).toContain('nextTaskIndex += collectCardTasks([r]).length')
-    expect(aiChat).toContain('fallbackTaskRecommendation')
-    expect(aiChat).toContain('weeklyPlanNeedsQualityRepair')
-    expect(aiChat).toContain('const requiredAnchors = selectedTasks.length')
-    expect(aiChat).toContain('taskAnchoredLineCount < requiredAnchors')
-    expect(aiChat).toContain('weeklyLineHasTaskReasoning')
-    expect(aiChat).toContain('!entry.lines.some(line => weeklyLineHasTaskReasoning(line, lang))')
-    expect(aiChat).toContain('shallowMetadataOnly && !hasStakeLanguage')
-    expect(aiChat).toContain('if (isWeekPlan && cardData && weeklyPlanNeedsQualityRepair')
-    expect(aiChat).toContain('Why now:')
-    expect(aiChat).toContain('Expected impact:')
-    expect(aiChat).toContain('Tradeoff/slot:')
-    expect(aiChat).toContain('למה עכשיו:')
-    expect(aiChat).toContain('השפעה:')
-    expect(aiChat).toContain('מיקום/טריידאוף:')
+    expect(aiChat).not.toContain('למה עכשיו: ${why}. השפעה: ${impact}. מיקום/טריידאוף: ${slot}')
+    expect(aiChat).not.toContain('Why now: ${why}. Expected impact: ${impact}. Tradeoff/slot: ${slot}')
     expect(aiChat).not.toContain('const lines = tasks.map((task, index) => `${index + 1}. **${task.title}**')
     expect(aiChat).not.toContain('these look like the highest-impact tasks right now')
   })

@@ -50,6 +50,13 @@ import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRou
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
 import { collectCardTasks, ensureCardTaskMentions, parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
+import {
+  buildQuickDraftWeeklyPlan,
+  buildWeekContextFromToolResults,
+  buildWeeklyPlanPrompt,
+  parseWeeklyPlanOutput,
+  type WeeklyPlanOutput,
+} from '@/services/ai/pipeline/weeklyPlan'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
 
@@ -112,6 +119,7 @@ async function getRouter() {
 const activeProviderRef = ref<string | null>(null)
 const FINAL_FORMATTER_TIMEOUT_MS = 45_000
 const WEEK_PLAN_BRIDGE_FORMATTER_TIMEOUT_MS = 12_000
+const WEEK_PLAN_STRUCTURED_TIMEOUT_MS = 30_000
 
 // AI Personality mode
 const aiPersonality = ref<'professional' | 'grid_handler'>('professional')
@@ -773,26 +781,159 @@ export function useAIChat() {
     return [...tasks].sort((a, b) => fallbackTaskScore(b) - fallbackTaskScore(a))
   }
 
+  type FallbackAspect = {
+    key: string
+    name: string
+    outcome: string
+    why: string
+    defer: string
+    tasks: Array<Record<string, unknown> & { title?: string }>
+  }
+
+  const WEEKLY_FALLBACK_TASK_LIMIT = 4
+  const WEEKLY_FALLBACK_ASPECT_LIMIT = 3
+  const WEEKLY_FALLBACK_TASKS_PER_ASPECT = 3
+
+  function fallbackTaskText(task: Record<string, unknown>): string {
+    return `${String(task.title || '')} ${String(task.description || '')}`.toLowerCase()
+  }
+
+  function inferFallbackAspect(task: Record<string, unknown>, lang: 'he' | 'en'): Omit<FallbackAspect, 'tasks'> {
+    const text = fallbackTaskText(task)
+    if (/(outreach|cold opener|target list|sales|lead|פייפרפורט|לסקין|רשימת|אאוטריץ|מכירות|לידים|לקוחות)/i.test(text)) {
+      return lang === 'he'
+        ? {
+            key: 'outreach',
+            name: 'רצף מכירות / אאוטריץ׳',
+            outcome: 'להפוך רשימה ומסר ראשוני לתנועה אמיתית מול אנשים.',
+            why: 'המשימות כאן הן לא פריטים נפרדים; הן שלבים באותו צינור. אם עושים רק שלב אחד, נוצרת תחושת התקדמות בלי המשך.',
+            defer: 'לא לפתוח עוד ניסוחים לפני שיש רשימת יעד או צעד שליחה ברור.',
+          }
+        : {
+            key: 'outreach',
+            name: 'Outreach pipeline',
+            outcome: 'turn a target list and opener into real movement with people',
+            why: 'these are not isolated tasks; they are steps in one pipeline. Doing only one step creates fake progress.',
+            defer: 'do not polish more copy before the target list and first send path are clear',
+          }
+    }
+    if (/(treatment|medicine|dose|twice a day|water|food|litter|vet|pet|טיפול|תרופה|מנה|מנות|מים|אוכל|חול|וטרינר|אוראו|פעמיים ביום)/i.test(text)) {
+      return lang === 'he'
+        ? {
+            key: 'care',
+            name: 'רצף טיפול / תחזוקה שוטפת',
+            outcome: 'לשמור על רצף טיפול ואספקה כדי שלא תיווצר בעיה מצטברת.',
+            why: 'אלה משימות שמדרדרות כשדוחים אותן: טיפול, מים, אוכל או ציוד חסר לא נפתרים טוב בדיעבד.',
+            defer: 'לא לערבב את זה עם עבודה כבדה; לסגור כבלוק קצר ומוגדר.',
+          }
+        : {
+            key: 'care',
+            name: 'Care routine',
+            outcome: 'protect the care sequence before it becomes a bigger problem',
+            why: 'these tasks degrade when delayed; treatment, water, food, or supplies are hard to recover retroactively.',
+            defer: 'do not mix this with deep work; close it as a short defined block',
+          }
+    }
+    if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום|קארדקום)/i.test(text)) {
+      return lang === 'he'
+        ? {
+            key: 'money',
+            name: 'כספים / גבייה',
+            outcome: 'לסגור סיכון כסף לפני שהוא יוצר בדיקות חוזרות או עיכוב מול אנשים.',
+            why: 'כסף פתוח הוא לא עוד משימה; הוא יוצר חוסר ודאות, מעקב חוזר, ולעיתים חסימה לאחרים.',
+            defer: 'לא לדחות לטובת אדמין קל אם יש סימן לתשלום תקוע.',
+          }
+        : {
+            key: 'money',
+            name: 'Money and billing risk',
+            outcome: 'close money uncertainty before it creates follow-up loops',
+            why: 'open money is not just admin; it creates uncertainty, repeated checking, and sometimes blocks other people.',
+            defer: 'do not trade this for easier admin if a payment may be stuck',
+          }
+    }
+    if (/(reply|send|call|email|message|stakeholder|להגיב|לשלוח|להתקשר|מייל|הודעה|שיחה)/i.test(text)) {
+      return lang === 'he'
+        ? {
+            key: 'followup',
+            name: 'תקשורת / אנשים שמחכים',
+            outcome: 'להוריד חוב תקשורתי ולפתוח תנועה אצל אחרים.',
+            why: 'כאן הערך הוא לא עצם השליחה אלא הסרת המתנה: מישהו אחר יכול להתקדם רק אחרי תגובה.',
+            defer: 'לא לפתוח את זה לאורך כל היום; לאגד לבלוק תקשורת קצר.',
+          }
+        : {
+            key: 'followup',
+            name: 'Follow-up and waiting people',
+            outcome: 'reduce communication debt and unblock someone else',
+            why: 'the value is not the send action itself; someone else may only move after the reply.',
+            defer: 'do not let it fragment the whole day; batch it into one short communication block',
+          }
+    }
+    if (/(lecture|choose|slot|date|meeting|הרצאה|לבחור|מועד|תאריך|פגישה)/i.test(text)) {
+      return lang === 'he'
+        ? {
+            key: 'calendar',
+            name: 'החלטות זמן / התחייבויות',
+            outcome: 'לסגור החלטות זמן כדי שלא ימשיכו לתפוס מקום מנטלי.',
+            why: 'משימות בחירת מועד נראות קטנות, אבל כל עוד הן פתוחות הן משאירות התחייבות לא סגורה.',
+            defer: 'לא להשאיר את זה כמשימה פתוחה אם אפשר להפוך להחלטה אחת.',
+          }
+        : {
+            key: 'calendar',
+            name: 'Time commitments',
+            outcome: 'close time decisions so they stop occupying mental space',
+            why: 'date-choice tasks look small, but they keep a commitment unresolved until a decision is made.',
+            defer: 'do not leave it as an open task if one decision can close it',
+          }
+    }
+    return lang === 'he'
+      ? {
+          key: 'open-loop',
+          name: 'לולאות פתוחות שדורשות החלטה',
+          outcome: 'להחליט אם המשימות האלה באמת שייכות לשבוע או צריכות הקשר נוסף.',
+          why: 'אין מספיק מידע כדי להעמיד פנים שיש כאן סיפור עמוק; הערך הוא להכריע או להוסיף הערה.',
+          defer: 'לדחות משימות בלי הקשר במקום לתת להן לתפוס מקום מרכזי בתוכנית.',
+        }
+      : {
+          key: 'open-loop',
+          name: 'Open loops needing a decision',
+          outcome: 'decide whether these tasks really belong this week or need more context',
+          why: 'there is not enough context to pretend there is a deep story; the value is deciding or adding a note.',
+          defer: 'defer tasks without context instead of letting them dominate the plan',
+        }
+  }
+
   function fallbackTaskReason(task: Record<string, unknown>, lang: 'he' | 'en'): string {
-    const title = String(task.title || '').toLowerCase()
+    const text = fallbackTaskText(task)
     const description = String(task.description || '').trim()
     if (description) {
       const clipped = description.length > 90 ? `${description.slice(0, 87)}...` : description
-      return lang === 'he' ? `ההערה נותנת הקשר מעשי: ${clipped}` : `the note gives practical context: ${clipped}`
+      return lang === 'he' ? `ההקשר מההערה משנה את הבחירה: ${clipped}` : `the note changes the decision: ${clipped}`
     }
-    if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום)/i.test(title)) {
+    if (/(water|מים)/i.test(text)) {
+      return lang === 'he' ? 'מים הם חלק מהרצף הבסיסי; דחייה כאן יוצרת בעיה לפני שמרגישים אותה' : 'water is part of the basic care sequence; delay creates a problem before it is obvious'
+    }
+    if (/(food|litter|אוכל|חול)/i.test(text)) {
+      return lang === 'he' ? 'אוכל או חול הם תשתית לטיפול; אם חסר ציוד, גם שאר הטיפול נתקע' : 'food or litter is care infrastructure; missing supplies block the rest of the routine'
+    }
+    if (/(target list|targets|רשימת|לידים)/i.test(text)) {
+      return lang === 'he' ? 'בלי רשימת יעד, ניסוח או שליחה הופכים לעבודה באוויר' : 'without a target list, copywriting or sending becomes work in the air'
+    }
+    if (/(cold opener|opener|פתיח)/i.test(text)) {
+      return lang === 'he' ? 'הפתיח שווה רק אם הוא מחובר לרשימת יעד ולשליחה ראשונה' : 'the opener matters only if it connects to a target list and first send'
+    }
+    if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום|קארדקום)/i.test(text)) {
       return lang === 'he' ? 'כסף או גבייה עלולים להיתקע אם זה יחליק' : 'money or billing can get stuck if this slips'
     }
-    if (/(reply|send|call|email|message|להגיב|לשלוח|להתקשר|מייל|הודעה)/i.test(title)) {
+    if (/(reply|send|call|email|message|להגיב|לשלוח|להתקשר|מייל|הודעה)/i.test(text)) {
       return lang === 'he' ? 'מישהו כנראה מחכה לתגובה כדי להתקדם' : 'someone is probably waiting on this to move forward'
     }
-    if (/(outreach|cold opener|target list|sales|lead|פייפרפורט|לסקין|רשימת|אאוטריץ|מכירות)/i.test(title)) {
+    if (/(outreach|sales|lead|פייפרפורט|לסקין|אאוטריץ|מכירות)/i.test(text)) {
       return lang === 'he' ? 'זה חלק מרצף מכירות שכדאי לבצע כמקבץ' : 'this belongs to one sales sequence worth batching'
     }
-    if (/(treatment|medicine|dose|twice a day|טיפול|תרופה|מנה|מנות|אוראו|פעמיים ביום)/i.test(title)) {
+    if (/(treatment|medicine|dose|twice a day|טיפול|תרופה|מנה|מנות|אוראו|פעמיים ביום)/i.test(text)) {
       return lang === 'he' ? 'רצף טיפול שנשבר קשה להשלים בדיעבד' : 'a broken treatment sequence is hard to recover later'
     }
-    if (/(lecture|choose|slot|date|הרצאה|לבחור|מועד|תאריך)/i.test(title)) {
+    if (/(lecture|choose|slot|date|הרצאה|לבחור|מועד|תאריך)/i.test(text)) {
       return lang === 'he' ? 'בחירה עכשיו סוגרת התחייבות זמן ומונעת דחייה' : 'choosing now closes a time commitment and prevents drift'
     }
     if (task.dueDate || task.daysOverdue) {
@@ -847,43 +988,84 @@ export function useAIChat() {
   function fallbackTaskRecommendation(task: Record<string, unknown> & { title?: string }, lang: 'he' | 'en'): string {
     const title = task.title || ''
     const why = fallbackTaskReason(task, lang)
-    const impact = fallbackTaskImpact(task, lang)
     const slot = fallbackTaskSlot(task, lang)
     return lang === 'he'
-      ? `- **${title}** — למה עכשיו: ${why}. השפעה: ${impact}. מיקום/טריידאוף: ${slot}.`
-      : `- **${title}** — Why now: ${why}. Expected impact: ${impact}. Tradeoff/slot: ${slot}.`
+      ? `- **${title}** — ${why}. הצעד הנכון: ${slot}.`
+      : `- **${title}** — ${why}. Best move: ${slot}.`
+  }
+
+  function fallbackTaskRecommendationBrief(task: Record<string, unknown> & { title?: string }, lang: 'he' | 'en'): string {
+    const title = task.title || ''
+    const why = fallbackTaskReason(task, lang)
+    return `- **${title}** — ${why}.`
+  }
+
+  function buildFallbackAspects(tasks: Array<Record<string, unknown> & { title?: string }>, lang: 'he' | 'en'): FallbackAspect[] {
+    const byKey = new Map<string, FallbackAspect>()
+    for (const task of tasks) {
+      const inferred = inferFallbackAspect(task, lang)
+      const existing = byKey.get(inferred.key)
+      if (existing) {
+        existing.tasks = rankFallbackTasks([...existing.tasks, task]).slice(0, WEEKLY_FALLBACK_TASKS_PER_ASPECT)
+      } else {
+        byKey.set(inferred.key, { ...inferred, tasks: [task] })
+      }
+    }
+    return [...byKey.values()]
+      .sort((a, b) => Math.max(...b.tasks.map(fallbackTaskScore)) - Math.max(...a.tasks.map(fallbackTaskScore)))
+      .slice(0, WEEKLY_FALLBACK_ASPECT_LIMIT)
   }
 
   function buildFallbackCards(tasks: Array<Record<string, unknown> & { title?: string }>, lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode']): string {
-    const groups = [{
-      name: lang === 'he' ? 'מוקדי השבוע' : 'Weekly focus',
-      items: tasks.map((task, index) => ({ i: Number(task.__cardIndex) || index + 1, reason: fallbackTaskReason(task, lang) })),
-    }]
+    const aspects = responseMode === 'week_plan' ? buildFallbackAspects(tasks, lang) : []
+    const groups = aspects.length > 0
+      ? aspects.map(aspect => ({
+          name: aspect.name,
+          items: aspect.tasks.map((task, index) => ({
+            i: Number(task.__cardIndex) || index + 1,
+            reason: fallbackTaskReason(task, lang),
+          })),
+        }))
+      : [{
+          name: lang === 'he' ? 'מוקדי השבוע' : 'Weekly focus',
+          items: tasks.map((task, index) => ({ i: Number(task.__cardIndex) || index + 1, reason: fallbackTaskReason(task, lang) })),
+        }]
     const kind = responseMode ? `"kind":"${responseMode}",` : ''
     return `\n\n\`\`\`cards\n{${kind}"groups":${JSON.stringify(groups)}}\n\`\`\``
   }
 
   function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode']): string {
-    const tasks = rankFallbackTasks(getTaskItemsFromToolResults(toolResults).filter(task => task.title)).slice(0, responseMode === 'week_plan' ? 5 : 3)
+    const tasks = rankFallbackTasks(getTaskItemsFromToolResults(toolResults).filter(task => task.title)).slice(0, responseMode === 'week_plan' ? WEEKLY_FALLBACK_TASK_LIMIT : 3)
     if (tasks.length === 0) {
       return lang === 'he'
         ? 'מצאתי את הנתונים, אבל לא הצלחתי לנסח תשובת AI מלאה בזמן. השתמש בכרטיסים למטה כדי להמשיך.'
         : 'I found the data, but could not finish the AI wording in time. Use the cards below to continue.'
     }
 
-    const lines = tasks.map(task => fallbackTaskRecommendation(task, lang))
-    const intro = responseMode === 'week_plan'
-      ? (lang === 'he'
-          ? 'תוכנית שבוע טובה צריכה לבחור מעט דברים עם השפעה, לא לרוקן את כל הרשימה. העומס כאן נראה כמו שילוב של התחייבויות, רצפים ופריטים שצריכים החלטה, אז הייתי בוחר את מה שמונע תקיעה אמיתית:'
-          : 'A useful week plan should select a few high-impact commitments, not empty the whole list. The load here looks like a mix of commitments, sequences, and decisions, so I would choose the items that prevent real drag:')
-      : (lang === 'he'
-          ? 'הייתי בוחר לפי השפעה, תלות וסיכון אמיתי, לא רק לפי תאריך או עדיפות:'
-          : 'I would choose by impact, dependencies, and real risk, not just date or priority:')
-    const omissions = responseMode === 'week_plan'
-      ? (lang === 'he'
-          ? 'מה לא להכניס עכשיו: משימות בלי הקשר ברור עדיף לדחות או לבקש עליהן הערה לפני שהן תופסות מקום בשבוע.'
-          : 'What not to load in now: tasks with unclear context should be deferred or clarified before they take space in the week.')
-      : ''
+    if (responseMode !== 'week_plan') {
+      const lines = tasks.map(task => fallbackTaskRecommendation(task, lang))
+      const intro = lang === 'he'
+        ? 'טיוטת בחירה מהירה לפי השפעה, תלות וסיכון אמיתי:'
+        : 'Fast draft based on impact, dependency, and real risk:'
+      return [intro, ...lines].filter(Boolean).join('\n') + buildFallbackCards(tasks, lang, responseMode)
+    }
+
+    const aspects = buildFallbackAspects(tasks, lang)
+    const intro = lang === 'he'
+      ? 'טיוטת תכנון מהירה: חילקתי את השבוע לפי תחומי עבודה פעילים, לא לפי רשימת משימות אקראית. הניסוח העמוק יותר עדיין נטען.'
+      : 'Fast planning draft: I grouped the week by active work areas, not a random task list. Deeper coaching is still loading.'
+    const lines = aspects.flatMap(aspect => {
+      const taskLines = aspect.tasks.map(task => fallbackTaskRecommendationBrief(task, lang))
+      return [
+        lang === 'he'
+          ? `\n**${aspect.name}** — ${aspect.outcome}`
+          : `\n**${aspect.name}** — ${aspect.outcome}.`,
+        ...taskLines,
+      ]
+    })
+    const omissions = lang === 'he'
+      ? '\nמה נשאר בחוץ כרגע: משימות בלי קשר ברור לתחומי העבודה האלה, כדי שהתכנון לא יהפוך לרעש.'
+      : '\nHeld back for now: tasks that do not clearly support these work areas, so the plan stays focused.'
     return [intro, ...lines, omissions].filter(Boolean).join('\n') + buildFallbackCards(tasks, lang, responseMode)
   }
 
@@ -1384,6 +1566,94 @@ export function useAIChat() {
       const isSmartLanes = routed.responseMode === 'smart_lanes'
       const isWeeklyReview = routed.responseMode === 'weekly_review'
       const isWeekPlan = routed.responseMode === 'week_plan'
+      if (isWeekPlan && hasTaskList) {
+        const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage)
+        const progress = outputLanguage === 'he'
+          ? `בודק ${weekContext.tasks.length} מועמדות, דחיות, תלויות ועומס שבועי…`
+          : `Reviewing ${weekContext.tasks.length} candidate tasks, postponements, dependencies, and workload…`
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.content = progress
+          store.streamingContent = progress
+        }
+
+        let weeklyPlan: WeeklyPlanOutput | null = null
+        let validationErrors: string[] = []
+        try {
+          const structuredMessages: RouterChatMessage[] = [
+            {
+              role: 'system',
+              content: `You are a weekly planning coach inside a personal productivity app. Your job is not to sort tasks; it is to decide what deserves attention this week and why. Return ONLY valid JSON matching schemaVersion weekly-plan.v2. Do not output markdown. Do not describe task cards. The UI will render task cards from primaryTaskId and relatedTaskIds. Every recommendation needs at least two evidence items and at least one evidence item that is not dueIso or priority. Explain real consequences: promise kept, decision unblocked, money protected, health/family/admin load lowered, rework prevented, risk reduced, or momentum restored. If locale is he, write natural Hebrew and set direction rtl.`,
+            },
+            {
+              role: 'user',
+              content: buildWeeklyPlanPrompt(weekContext),
+            },
+          ]
+          let rawPlan = ''
+          for await (const chunk of router.chatStream(structuredMessages, {
+            taskType: 'chat',
+            forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+            model: selectedModel.value || undefined,
+            timeout: WEEK_PLAN_STRUCTURED_TIMEOUT_MS,
+          })) {
+            rawPlan += chunk.content
+          }
+          const parsed = parseWeeklyPlanOutput(rawPlan, weekContext)
+          if (parsed.ok) {
+            weeklyPlan = parsed.value
+          } else {
+            validationErrors = parsed.errors
+            const repairMessages: RouterChatMessage[] = [
+              ...structuredMessages,
+              { role: 'assistant', content: rawPlan },
+              {
+                role: 'user',
+                content: `The JSON failed validation with these errors: ${parsed.errors.join(', ')}. Return the complete corrected JSON object only. Keep the same requestId and only use task IDs from candidateTasks.`,
+              },
+            ]
+            let repairedRawPlan = ''
+            for await (const chunk of router.chatStream(repairMessages, {
+              taskType: 'chat',
+              forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+              model: selectedModel.value || undefined,
+              timeout: WEEK_PLAN_STRUCTURED_TIMEOUT_MS,
+            })) {
+              repairedRawPlan += chunk.content
+            }
+            const repaired = parseWeeklyPlanOutput(repairedRawPlan, weekContext)
+            if (repaired.ok) {
+              weeklyPlan = repaired.value
+            } else {
+              validationErrors = [...validationErrors, ...repaired.errors]
+            }
+          }
+        } catch (planErr) {
+          console.warn('[AIChat:WeeklyPlan] Structured planning failed; using evidence-only quick draft:', planErr)
+          validationErrors = [planErr instanceof Error ? planErr.message : 'provider_failed']
+        }
+
+        const finalPlan = weeklyPlan ?? buildQuickDraftWeeklyPlan(weekContext)
+        if (validationErrors.length && finalPlan.source === 'quick_draft') {
+          finalPlan.quality.caveats = [...finalPlan.quality.caveats, ...validationErrors.slice(0, 3)]
+        }
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.content = ''
+          store.streamingContent = ''
+          lastMsg.metadata = {
+            ...lastMsg.metadata,
+            weeklyPlan: finalPlan,
+          } as Record<string, unknown>
+        }
+
+        try {
+          const currentRouter = await getRouter()
+          const lastUsed = currentRouter.getLastUsedProvider()
+          if (lastUsed) activeProviderRef.value = lastUsed
+        } catch { /* ignore */ }
+
+        store.completeStreamingMessage()
+        return
+      }
       const formatterTimeout = isBridgeActive() && isWeekPlan
         ? WEEK_PLAN_BRIDGE_FORMATTER_TIMEOUT_MS
         : FINAL_FORMATTER_TIMEOUT_MS
@@ -1414,20 +1684,6 @@ export function useAIChat() {
           content: `${reasoningDirective}\n\nData:\n${toolResultsSummary}\n\nWrite ENTIRELY in ${languageName}. No UUIDs.`,
         },
       ]
-
-      if (isBridgeActive() && isWeekPlan && hasTaskList && lastMsg?.isStreaming) {
-        const immediateFallback = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
-        const immediateCards = parseCardGroups(immediateFallback, toolResults)
-        const immediateDisplay = immediateCards ? stripCardsBlock(immediateFallback) : immediateFallback
-        lastMsg.content = cleanResponse(immediateDisplay)
-        store.streamingContent = lastMsg.content
-        if (immediateCards) {
-          lastMsg.metadata = {
-            ...lastMsg.metadata,
-            cardGroups: { groups: immediateCards.groups, total: immediateCards.total, kind: immediateCards.kind },
-          } as Record<string, unknown>
-        }
-      }
 
       let formattedResponse = ''
       try {

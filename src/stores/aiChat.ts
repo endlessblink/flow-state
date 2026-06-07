@@ -14,6 +14,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, shallowRef, watch } from 'vue'
 import type { Task } from '@/types/tasks'
+import type { WeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
 import { executeTool } from '@/services/ai/tools'
 import type { ToolCall } from '@/services/ai/tools'
 import {
@@ -98,6 +99,8 @@ export interface ChatMessage {
       answered: boolean
       selectedDays?: string[]
     }
+    /** Structured weekly planner artifact. Rendered directly, not parsed from markdown. */
+    weeklyPlan?: WeeklyPlanOutput
   }
 }
 

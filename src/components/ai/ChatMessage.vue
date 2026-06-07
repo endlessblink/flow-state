@@ -36,6 +36,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useLaneStore } from '@/stores/lanes'
 import { buildDayPlanTaskUpdates } from '@/services/ai/pipeline/dayPlan'
 import { getUndoSystem } from '@/composables/undoSingleton'
+import type { WeeklyPlanOutput, WeeklyPlanRecommendation } from '@/services/ai/pipeline/weeklyPlan'
 
 // ============================================================================
 // Props
@@ -182,6 +183,36 @@ function liveTasks(tasks: TaskListItem[]): TaskListItem[] {
   return tasks.map(t => liveTask(t))
 }
 
+const weeklyPlan = computed(() => {
+  const meta = props.message.metadata as Record<string, unknown> | undefined
+  const plan = meta?.weeklyPlan as WeeklyPlanOutput | undefined
+  return plan?.schemaVersion === 'weekly-plan.v2' ? plan : null
+})
+
+function weeklyPlanTaskIds(rec: WeeklyPlanRecommendation): string[] {
+  return [...new Set([rec.primaryTaskId, ...(rec.relatedTaskIds ?? [])].filter(Boolean))]
+}
+
+function taskCardFromId(taskId: string): TaskListItem | null {
+  const task = taskMap.value.get(taskId)
+  if (!task) return null
+  return liveTask({
+    id: task.id,
+    title: task.title,
+    status: task.status,
+    priority: task.priority,
+    dueDate: task.dueDate,
+    estimatedDuration: task.estimatedDuration,
+  })
+}
+
+function weeklyPlanTaskStaleLabel(task: TaskListItem | null): string {
+  if (!task) return weeklyPlan.value?.locale === 'he' ? 'המשימה כבר לא קיימת' : 'task no longer exists'
+  if (task.status === 'done') return weeklyPlan.value?.locale === 'he' ? 'הושלמה אחרי יצירת התוכנית' : 'completed after this plan was generated'
+  if (task.__liveDueDateChanged) return weeklyPlan.value?.locale === 'he' ? 'נדחתה אחרי יצירת התוכנית' : 'rescheduled after this plan was generated'
+  return ''
+}
+
 // ============================================================================
 // Computed
 // ============================================================================
@@ -295,7 +326,7 @@ const cardGroups = computed(() => {
     total?: number
     kind?: string
   } | undefined
-  if (!cg?.groups?.length || isStreaming.value || !hasRenderedResponse.value) return null
+  if (!cg?.groups?.length || !hasRenderedResponse.value) return null
   return cg
 })
 
@@ -752,8 +783,106 @@ async function saveSchedule() {
         <span class="thinking-label">{{ thinkingLabel }}</span>
       </div>
 
+      <!-- Structured Weekly Plan — rendered from task IDs, not markdown cards. -->
+      <article
+        v-if="weeklyPlan"
+        class="weekly-plan-message"
+        :lang="weeklyPlan.locale"
+        :dir="weeklyPlan.direction"
+        data-testid="weekly-plan"
+      >
+        <header class="weekly-plan-header">
+          <div v-if="weeklyPlan.source === 'quick_draft'" class="weekly-plan-source">
+            {{ weeklyPlan.locale === 'he' ? 'טיוטה עובדתית בלבד' : 'Evidence-only quick draft' }}
+          </div>
+          <h2>{{ weeklyPlan.headline }}</h2>
+          <p>{{ weeklyPlan.weekRead.summary }}</p>
+          <p class="weekly-plan-muted">{{ weeklyPlan.weekRead.mainTradeoff }}</p>
+        </header>
+
+        <section
+          v-for="rec in weeklyPlan.recommendations"
+          :key="rec.sectionId"
+          class="weekly-plan-section"
+          :data-section-id="rec.sectionId"
+          :data-primary-task-id="rec.primaryTaskId"
+        >
+          <h3>{{ rec.rank }}. {{ rec.title }}</h3>
+          <p>{{ rec.whyThisMatters }}</p>
+          <p>{{ rec.whyThisWeek }}</p>
+          <p v-if="rec.riskIfIgnored" class="weekly-plan-muted">{{ rec.riskIfIgnored }}</p>
+          <p class="weekly-next-action">
+            <strong>{{ weeklyPlan.locale === 'he' ? 'הצעד הבא' : 'Next action' }}:</strong>
+            {{ rec.nextAction }}
+          </p>
+
+          <div class="weekly-plan-cards">
+            <template v-for="taskId in weeklyPlanTaskIds(rec)" :key="`${rec.sectionId}:${taskId}`">
+              <button
+                v-if="taskCardFromId(taskId)"
+                class="task-list-item grouped-card inline-grouped-card"
+                data-testid="inline-plan-card"
+                :class="{ 'task-completed': completedTaskIds.has(taskId) || taskCardFromId(taskId)?.status === 'done' }"
+                @click="openQuickEdit(taskCardFromId(taskId)!, $event)"
+              >
+                <span class="task-priority-dot" :style="{ background: priorityColor(taskCardFromId(taskId)?.priority ?? undefined) }" />
+                <div class="grouped-card-body">
+                  <span class="task-title" dir="auto">{{ taskCardFromId(taskId)?.title || '(untitled)' }}</span>
+                  <span v-if="weeklyPlanTaskStaleLabel(taskCardFromId(taskId))" class="grouped-card-reason" dir="auto">
+                    {{ weeklyPlanTaskStaleLabel(taskCardFromId(taskId)) }}
+                  </span>
+                  <div class="task-meta-row">
+                    <span v-if="taskCardFromId(taskId)?.daysOverdue" class="task-overdue-badge">{{ taskCardFromId(taskId)?.daysOverdue }}d overdue</span>
+                    <span v-else-if="taskCardFromId(taskId)?.dueDate" class="task-due-date">{{ formatRelativeDate(taskCardFromId(taskId)?.dueDate ?? '') }}</span>
+                    <span v-if="taskCardFromId(taskId)?.status" class="task-status-badge" :class="'status-' + taskCardFromId(taskId)?.status">{{ taskCardFromId(taskId)?.status }}</span>
+                  </div>
+                </div>
+                <div class="task-inline-actions" @click.stop>
+                  <button
+                    v-if="taskCardFromId(taskId)?.status !== 'done' && !completedTaskIds.has(taskId)"
+                    class="inline-action-btn inline-done-btn"
+                    :class="{ loading: actionLoading[taskId] === 'done' }"
+                    title="Mark done"
+                    @click="markTaskDone(taskId, $event)"
+                  >
+                    <Loader2 v-if="actionLoading[taskId] === 'done'" :size="12" class="spin" />
+                    <CheckCircle2 v-else :size="12" />
+                  </button>
+                  <button
+                    v-if="!timerStartedTaskIds.has(taskId)"
+                    class="inline-action-btn inline-timer-btn"
+                    :class="{ loading: actionLoading[taskId] === 'timer' }"
+                    title="Start timer"
+                    @click="startTaskTimer(taskId, $event)"
+                  >
+                    <Loader2 v-if="actionLoading[taskId] === 'timer'" :size="12" class="spin" />
+                    <Play v-else :size="12" />
+                  </button>
+                  <span v-if="taskCardFromId(taskId)?.status === 'done' || completedTaskIds.has(taskId)" class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>
+                  <span v-if="timerStartedTaskIds.has(taskId)" class="inline-action-timer-badge"><Play :size="12" /> Timer</span>
+                </div>
+              </button>
+              <div v-else class="weekly-missing-task" data-testid="inline-plan-card-missing">
+                {{ weeklyPlan.locale === 'he' ? 'המשימה כבר לא קיימת' : 'Task no longer exists' }}
+              </div>
+            </template>
+          </div>
+        </section>
+
+        <footer v-if="weeklyPlan.deferrals.length || weeklyPlan.openQuestions.length" class="weekly-plan-footer">
+          <div v-if="weeklyPlan.deferrals.length">
+            <strong>{{ weeklyPlan.locale === 'he' ? 'לדחות בכוונה' : 'Intentional deferrals' }}</strong>
+            <p v-for="defer in weeklyPlan.deferrals" :key="defer.taskId">{{ defer.reason }}</p>
+          </div>
+          <div v-if="weeklyPlan.openQuestions.length">
+            <strong>{{ weeklyPlan.locale === 'he' ? 'שאלות פתוחות' : 'Open questions' }}</strong>
+            <p v-for="question in weeklyPlan.openQuestions" :key="question.question">{{ question.question }}</p>
+          </div>
+        </footer>
+      </article>
+
       <!-- Rendered Message Text -->
-      <div v-if="hasInlineCardLayout" class="inline-response" :dir="effectiveDirection">
+      <div v-else-if="hasInlineCardLayout" class="inline-response" :dir="effectiveDirection">
         <div v-for="block in inlineContentBlocks" :key="block.key" class="inline-response-block">
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div class="message-text markdown-body inline-message-text" :dir="effectiveDirection" v-html="block.html" />
@@ -2146,6 +2275,103 @@ async function saveSchedule() {
 .task-list-item.task-completed .task-title {
   text-decoration: line-through;
   opacity: 0.6;
+}
+
+/* ============================================================================
+   Structured Weekly Plan
+   ============================================================================ */
+
+.weekly-plan-message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-block: var(--space-2);
+  padding-inline: var(--space-1);
+  line-height: 1.48;
+  overflow-anchor: none;
+}
+
+.weekly-plan-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1_5);
+}
+
+.weekly-plan-header h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.weekly-plan-header p,
+.weekly-plan-section p,
+.weekly-plan-footer p {
+  margin-block: 0;
+  color: var(--text-secondary);
+}
+
+.weekly-plan-source {
+  align-self: flex-start;
+  padding-block: 2px;
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--warning-bg-light);
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+.weekly-plan-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--glass-border-faint);
+}
+
+.weekly-plan-section h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.weekly-plan-muted {
+  color: var(--text-tertiary) !important;
+}
+
+.weekly-next-action {
+  color: var(--text-primary) !important;
+}
+
+.weekly-plan-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-1);
+}
+
+.weekly-missing-task {
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.weekly-plan-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--glass-border-faint);
+  color: var(--text-secondary);
+}
+
+:dir(rtl).weekly-plan-message {
+  text-align: start;
 }
 
 /* ============================================================================

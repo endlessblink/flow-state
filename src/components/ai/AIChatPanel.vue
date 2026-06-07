@@ -548,9 +548,25 @@ const headerBadgeText = computed(() => {
 // Auto-scroll
 // ============================================================================
 
-watch(visibleMessages, () => {
-  scrollToBottom()
-}, { deep: true })
+function isNearBottom(container: HTMLElement, threshold = 96): boolean {
+  return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold
+}
+
+watch(
+  () => visibleMessages.value.length,
+  (newLength, oldLength) => {
+    if (newLength > oldLength) scrollToBottom()
+  },
+)
+
+watch(
+  () => store.streamingContent,
+  () => {
+    const container = messagesContainer.value
+    if (!container || !isNearBottom(container)) return
+    scrollToBottom()
+  },
+)
 
 function scrollToBottom() {
   nextTick(() => {

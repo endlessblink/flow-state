@@ -3,6 +3,7 @@ import type { Task, Project } from '@/types/tasks'
 import { useSmartViews } from '@/composables/useSmartViews'
 import { formatDateKey } from '@/utils/dateUtils'
 import { useWorkspaceStore } from '@/stores/workspace'
+import { isActiveCalendarTask } from '@/utils/calendar/activeSchedule'
 
 
 export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null
@@ -242,7 +243,10 @@ export const useTaskFiltering = (
     })
 
     const calendarFilteredTasks = computed(() => {
-        let filtered = filterByWorkspace(tasks.value).filter(task => !task._soft_deleted)
+        let filtered = filterByWorkspace(tasks.value).filter(task =>
+            !task._soft_deleted &&
+            !task.isCompletionRecord
+        )
 
         // 1. Project
         if (activeProjectId.value) {
@@ -252,7 +256,7 @@ export const useTaskFiltering = (
 
         // 2. Hide Done (Calendar specific)
         if (hideCalendarDoneTasks?.value) {
-            filtered = filtered.filter(task => task.status !== 'done')
+            filtered = filtered.filter(isActiveCalendarTask)
         }
 
         // BUG-FIX: Deduplicate — calendarFilteredTasks lacked dedup unlike filteredTasks.

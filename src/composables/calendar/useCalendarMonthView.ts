@@ -6,6 +6,7 @@ import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { useSettingsStore } from '@/stores/settings'
 import type { CalendarEvent } from '@/types/tasks'
 import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
+import { isActiveCalendarInstance, isActiveCalendarTask } from '@/utils/calendar/activeSchedule'
 
 export interface MonthDay {
   dateString: string
@@ -50,12 +51,15 @@ export function useCalendarMonthView(currentDate: Ref<Date>, _statusFilter: Ref<
 
       // Get events for this day
       const dayEvents: CalendarEvent[] = []
-      // Use calendarFilteredTasks to bypass smart view filters (consistent with week/day views)
+      // Use calendarFilteredTasks to bypass smart view filters, then enforce
+      // active calendar semantics locally so completed work never renders as
+      // an active work block.
       taskStore.calendarFilteredTasks
+        .filter(isActiveCalendarTask)
         .forEach(task => {
           const instances = getTaskInstances(task)
           instances
-            .filter((instance) => instance.scheduledDate === dateString)
+            .filter((instance) => isActiveCalendarInstance(instance) && instance.scheduledDate === dateString)
             .forEach((instance) => {
               const [_hour, _minute] = (instance.scheduledTime || '12:00').split(':').map(Number)
               const duration = instance.duration || task.estimatedDuration || 30

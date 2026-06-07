@@ -319,7 +319,8 @@ const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendar
   }
 }
 
-const handleContextMenuPermanentDelete = (taskId: string) => {
+const handleContextMenuPermanentDelete = (taskId: string, sourceContext?: TaskMenuContext) => {
+  const deleteContext = sourceContext ?? contextMenuContext.value
   const allTasks = taskStore.rawTasks || taskStore.tasks
   const task = allTasks.find(t => t.id === taskId)
   if (!task) {
@@ -333,7 +334,7 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
     recurrenceDeleteTaskRule.value = task.recurrenceRule
     recurrenceDeleteIsPermanent.value = true
     recurrenceDeleteShowCanvasRemove.value = !!task.canvasPosition
-    recurrenceDeleteContext.value = contextMenuContext.value
+    recurrenceDeleteContext.value = deleteContext
     showRecurrenceDeleteModal.value = true
     return
   }
@@ -344,7 +345,7 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
     'Use this only when you do not want the task recoverable from trash.'
   ]
   confirmAction.value = async () => {
-    if (contextMenuContext.value === 'canvas') {
+    if (deleteContext === 'canvas') {
       await canvasSafeDeleteTaskWithUndo(task.id)
       return
     }

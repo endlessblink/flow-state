@@ -202,6 +202,24 @@ export function useAppInitialization() {
             } catch (e) {
                 console.warn('[MAIN] Failed to load workspaces:', e)
             }
+
+            // AI chat history must converge across localhost/PWA/Electron even
+            // before the sidebar is opened. Keep this non-blocking so task
+            // startup remains cache-first, but start the Supabase merge/realtime
+            // path once auth is known-good.
+            ;(async () => {
+                try {
+                    const { useAIChatStore } = await import('@/stores/aiChat')
+                    const aiChatStore = useAIChatStore()
+                    if (aiChatStore.isInitialized) {
+                        await aiChatStore.syncConversationsWithSupabaseNow()
+                    } else {
+                        await aiChatStore.initialize()
+                    }
+                } catch (e) {
+                    console.warn('[MAIN] Failed to initialize AI chat sync:', e)
+                }
+            })()
         }
 
         // TASK-1812: Load lanes once on startup. Covers guest/offline (localStorage)

@@ -1892,7 +1892,14 @@ export function useAIChat() {
         // TASK-1814: attach grouped cards (block already stripped before cleaning above;
         // also re-strip here in case a language retry regenerated content with a block).
         if (reactCards) {
-          cleaned = stripCardsBlock(cleaned)
+          const anchoredResponse = ensureCardTaskMentions(
+            `${cleaned}\n\n${reactCards.rawBlock}`,
+            reactCards,
+            lang === 'he'
+              ? 'כדי שכל כרטיס יהיה מחובר להמלצה עצמה:'
+              : 'To keep each card tied to the recommendation:',
+          )
+          cleaned = stripCardsBlock(anchoredResponse)
           lastMsg.metadata = {
             ...lastMsg.metadata,
             cardGroups: { groups: reactCards.groups, total: reactCards.total, kind: reactCards.kind },

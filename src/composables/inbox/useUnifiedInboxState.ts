@@ -9,6 +9,7 @@ import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMem
 import { useDirection } from '@/i18n/useDirection'
 // TASK-144: Use centralized duration categories
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
+import { hasActiveCalendarInstance, isActiveCalendarInstance } from '@/utils/calendar/activeSchedule'
 
 export interface InboxContextProps {
     context: 'calendar' | 'canvas' | 'standalone'
@@ -130,7 +131,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
     const hasScheduledInstanceToday = (task: Task): boolean => {
         if (task.instances && task.instances.length > 0) {
-            return task.instances.some(inst => isDateToday(inst?.scheduledDate))
+            return task.instances.some(inst => isActiveCalendarInstance(inst) && isDateToday(inst?.scheduledDate))
         }
 
         return isDateToday(task.scheduledDate)
@@ -162,6 +163,8 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             ? taskStore.calendarFilteredTasks
             : taskStore.filteredTasks
         const filtered = sourceTasks.filter(task => {
+            if (task.isCompletionRecord) return false
+
             // 1. Done/Active filter (exclusive - show one OR the other)
             const isDone = task.status === 'done'
             if (showDoneOnly.value) {
@@ -190,7 +193,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             // not just when canvasOrder sort is active. Tasks on the canvas are real tasks
             // that belong in the calendar inbox (unless scheduled on the calendar grid).
             const isOnCanvas = !!task.canvasPosition
-            const isAlreadyOnCalendar = task.instances?.some(inst => inst.scheduledDate) ?? false
+            const isAlreadyOnCalendar = hasActiveCalendarInstance(task)
             const shouldBypassInboxGate = props.context === 'calendar' && (
                 shouldShowDueTodayTaskInCalendarInbox(task) ||
                 (isOnCanvas && !isAlreadyOnCalendar)
@@ -207,9 +210,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
                 // Canvas sort, or time filter like "Today"). This lets users see their canvas
                 // tasks via these filters. Without canvas filters, scheduled canvas tasks stay
                 // hidden (they're already on the calendar grid).
-                const isScheduledOnCalendar = task.instances &&
-                    task.instances.length > 0 &&
-                    task.instances.some(inst => inst.scheduledDate)
+                const isScheduledOnCalendar = hasActiveCalendarInstance(task)
 
                 // Keep due-today tasks visible in the default calendar inbox even when they
                 // have a calendar instance elsewhere. Otherwise they disappear from both the
@@ -249,9 +250,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             if (!task.isPinned || task.status === 'done' || task._soft_deleted) return false
             // Calendar context: hide pinned tasks that are scheduled on the calendar
             if (props.context === 'calendar') {
-                const isScheduled = task.instances &&
-                    task.instances.length > 0 &&
-                    task.instances.some(inst => inst.scheduledDate)
+                const isScheduled = hasActiveCalendarInstance(task)
                 if (isScheduled) return false
             }
             return true

@@ -10,6 +10,7 @@ import type { ExternalCalendarEvent } from '@/composables/calendar/useExternalCa
 import { CALENDAR_SLOT_HEIGHT_PX, CALENDAR_SNAP_MINUTES } from '@/constants/calendar'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import { computeRippleUpdates, type RippleLaterEvent } from '@/utils/calendar/rippleShift'
+import { isActiveCalendarInstance, isActiveCalendarTask } from '@/utils/calendar/activeSchedule'
 
 export interface PositionedExternalEvent extends ExternalCalendarEvent {
   top: number        // startMinutes from midnight
@@ -270,12 +271,13 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
       const dateStr = getDateString(currentDate.value)
       const events: CalendarEvent[] = []
 
-      // Use calendarFilteredTasks to bypass smart view filters (done tasks stay visible)
-      // Only filters by project + hideCalendarDoneTasks toggle
+      // Use calendarFilteredTasks to bypass smart view filters, then enforce
+      // active calendar semantics locally so completed work never renders as
+      // an active work block.
       const filteredTasks = taskStore.calendarFilteredTasks || []
 
       filteredTasks.forEach(task => {
-        if (!task) return // Skip invalid tasks
+        if (!isActiveCalendarTask(task)) return
 
         try {
           // GUARD: Limit instance processing to prevent OOM from corrupted data
@@ -287,13 +289,15 @@ export function useCalendarDayView(currentDate: Ref<Date>, _statusFilter: Ref<st
           let instanceCount = 0
           const hasInstanceForToday = task.instances && task.instances.some(instance => {
             if (instanceCount++ > MAX_INSTANCES_PER_TASK) return false
-            return instance && instance.scheduledDate === dateStr
+            return isActiveCalendarInstance(instance) && instance.scheduledDate === dateStr
           })
 
           // Create calendar events only for tasks with explicit instances
           if (hasInstanceForToday) {
             // Use instance-specific schedule — filter (not find) so multi-instance tasks show all slots
-            const todayInstances = task.instances?.filter(instance => instance && instance.scheduledDate === dateStr) ?? []
+            const todayInstances = task.instances?.filter(instance =>
+              isActiveCalendarInstance(instance) && instance.scheduledDate === dateStr
+            ) ?? []
             todayInstances.forEach(todayInstance => {
               if (!todayInstance || !todayInstance.scheduledTime) return
 

@@ -5,6 +5,7 @@ import type { TaskInstance, WeekEvent } from '@/types/tasks'
 import { calculateOverlappingPositions } from '@/utils/calendar/overlapCalculation'
 import { generateVirtualCalendarEvents } from '@/utils/recurrenceUtils'
 import { CALENDAR_SLOT_HEIGHT_PX } from '@/constants/calendar'
+import { isActiveCalendarInstance, isActiveCalendarTask } from '@/utils/calendar/activeSchedule'
 
 export interface WeekDay {
   dayName: string
@@ -146,10 +147,11 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
     weekDays.value.forEach((day, dayIndex) => {
       const dayEvents: WeekEvent[] = []
 
-      // Use calendarFilteredTasks to bypass smart view filters (done tasks stay visible)
-      // Only filters by project + hideCalendarDoneTasks toggle
+      // Use calendarFilteredTasks to bypass smart view filters, then enforce
+      // active calendar semantics locally so completed work never renders as
+      // an active work block.
       taskStore.calendarFilteredTasks.forEach(task => {
-        if (!task) return
+        if (!isActiveCalendarTask(task)) return
 
         try {
           const instances = getTaskInstances(task)
@@ -161,7 +163,7 @@ export function useCalendarWeekView(currentDate: Ref<Date>, _statusFilter: Ref<s
           instances
             .filter((instance) => {
               if (processedCount >= MAX_INSTANCES_PER_TASK) return false
-              const matches = instance.scheduledDate === day.dateString
+              const matches = isActiveCalendarInstance(instance) && instance.scheduledDate === day.dateString
               if (matches) processedCount++
               return matches
             })

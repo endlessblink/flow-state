@@ -15,11 +15,15 @@ describe('undo-aware modal and context-menu entry points', () => {
     expect(source).toContain('await taskStore.updateTaskWithUndo(currentTask.value.id, { calendarLocked:')
     expect(source).toContain("await taskStore.updateTaskWithUndo(taskId, { status: 'done' })")
     expect(source).toContain('await taskStore.createTaskWithUndo({')
+    expect(source).toContain('const buildDateMovePayload = (task: Task, dateStr: string')
+    expect(source).toContain('await taskStore.updateTaskWithUndo(taskId, buildDateMovePayload(')
 
     expect(source).not.toContain('await taskStore.updateTask(currentTask.value.id, { isPinned:')
     expect(source).not.toContain('await taskStore.updateTask(currentTask.value.id, { calendarLocked:')
     expect(source).not.toContain("await taskStore.moveTask(taskId, 'done')")
     expect(source).not.toContain('await taskStore.createTask({\n      title: t.title')
+    expect(source).not.toContain('await taskStore.updateTaskInstance(')
+    expect(source).not.toContain('await taskStore.updateTask(taskId,')
   })
 
   it('keeps recurrence modal delete and canvas-remove paths undo-aware', () => {
@@ -34,17 +38,23 @@ describe('undo-aware modal and context-menu entry points', () => {
 
   it('routes canvas-origin permanent task delete through the canvas-safe bulk delete path', () => {
     const canvasView = readSource('src/views/CanvasView.vue')
+    const taskContextMenu = readSource('src/components/tasks/TaskContextMenu.vue')
     const modalManager = readSource('src/layouts/ModalManager.vue')
     const canvasTaskActions = readSource('src/composables/canvas/useCanvasTaskActions.ts')
     const canvasHotkeys = readSource('src/composables/canvas/useCanvasHotkeys.ts')
 
     expect(canvasView).toContain("detail: { event, task, context: 'canvas' }")
+    expect(taskContextMenu).toContain('confirmPermanentDelete: [taskId: string, context: TaskMenuContext]')
+    expect(taskContextMenu).toContain("emit('confirmPermanentDelete', currentTask.value.id, props.context ?? 'list')")
     expect(canvasTaskActions).toContain("detail: { taskId: task.id, permanent: false, context: 'canvas' }")
     expect(canvasHotkeys).toContain("detail: { taskId: task.id, permanent: permanentDelete, context: 'canvas' }")
 
     expect(modalManager).toContain('const canvasSafeDeleteTaskWithUndo = async (taskId: string) => {')
     expect(modalManager).toContain('await undoRedoActions.bulkDeleteTasksWithUndo([taskId])')
-    expect(modalManager).toContain("if (contextMenuContext.value === 'canvas') {")
+    expect(modalManager).toContain('const handleContextMenuPermanentDelete = (taskId: string, sourceContext?: TaskMenuContext) => {')
+    expect(modalManager).toContain('const deleteContext = sourceContext ?? contextMenuContext.value')
+    expect(modalManager).toContain('recurrenceDeleteContext.value = deleteContext')
+    expect(modalManager).toContain("if (deleteContext === 'canvas') {")
     expect(modalManager).toContain("if (isPermanent && context === 'canvas') {")
     expect(modalManager).toContain("recurrenceDeleteContext.value = context === 'canvas' ? 'canvas' : 'list'")
   })

@@ -457,33 +457,46 @@ onBeforeUnmount(() => {
 /* TASK-1073: Sort Row */
 .sort-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .sort-label {
+  flex: 0 0 auto;
   font-size: var(--text-xs);
   color: var(--text-muted);
   font-weight: 500;
+  line-height: var(--space-6);
 }
 
 .sort-buttons {
   display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
   gap: var(--space-1);
+  min-width: 0;
 }
 
 .sort-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  min-height: var(--space-6);
+  min-width: 0;
   padding: var(--space-1) var(--space-2);
   background: transparent;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--text-xs);
+  line-height: 1;
   cursor: pointer;
   transition: all var(--duration-fast) var(--spring-smooth);
+}
+
+.sort-btn > svg {
+  flex: 0 0 auto;
 }
 
 .sort-btn:hover {
@@ -503,7 +516,6 @@ onBeforeUnmount(() => {
   padding: var(--space-1);
   min-width: 28px;
   justify-content: center;
-  margin-inline-start: var(--space-1);
   border-color: var(--glass-border-hover);
 }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { inject, ref, computed } from 'vue'
-import { Play, Timer } from 'lucide-vue-next'
+import { Play, Timer, X } from 'lucide-vue-next'
 import { useTimerStore } from '@/stores/timer'
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import type { CalendarEvent, DragGhost } from '@/types/tasks'
@@ -262,7 +262,7 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
                     title="Remove from calendar (move to inbox)"
                     @click.stop="$emit('removeFromCalendar', calEvent)"
                   >
-                    ✕
+                    <X :size="12" />
                   </button>
                 </div>
               </div>
@@ -501,7 +501,8 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .task-title {
@@ -515,11 +516,21 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
 }
 
 .task-actions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 2px;
+  flex: 0 0 auto;
+  max-width: 48px;
+  min-height: var(--space-5);
+  padding: 1px;
+  border: 1px solid var(--glass-border-light);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-medium);
+  backdrop-filter: blur(8px);
   opacity: 0;
+  transform: translateY(-1px);
   transition: opacity var(--duration-fast);
+  overflow: hidden;
 }
 
 .slot-task:hover .task-actions {
@@ -754,13 +765,16 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
 
 
 .play-timer-btn {
+  width: var(--space-5);
+  height: var(--space-5);
+  flex: 0 0 var(--space-5);
   background: transparent;
   border: none;
   color: var(--text-muted);
-  padding: var(--space-1);
+  padding: 0;
   cursor: pointer;
   border-radius: var(--radius-sm);
-  transition: all var(--duration-fast);
+  transition: background var(--duration-fast), color var(--duration-fast);
   line-height: 1;
   display: flex;
   align-items: center;
@@ -773,14 +787,20 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
 }
 
 .remove-from-calendar-btn {
+  width: var(--space-5);
+  height: var(--space-5);
+  flex: 0 0 var(--space-5);
   background: transparent;
   border: none;
   color: var(--text-muted);
-  padding: var(--space-1);
+  padding: 0;
   cursor: pointer;
   border-radius: var(--radius-sm);
-  transition: all var(--duration-fast);
+  transition: background var(--duration-fast), color var(--duration-fast);
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .remove-from-calendar-btn:hover {

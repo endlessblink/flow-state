@@ -6,6 +6,8 @@
       class="context-menu"
       :style="menuPosition"
       @wheel.stop
+      @pointerdown.stop
+      @contextmenu.stop.prevent
     >
     <!-- Header for inbox/batch operations -->
     <div v-if="showInboxHeader" class="context-menu-header">
@@ -23,6 +25,15 @@
     <button class="menu-item menu-item--done" @click="toggleDone">
       <CheckCircle :size="16" class="menu-icon" :class="{ 'icon-done': currentTask?.status === 'done' }" />
       <span class="menu-text">{{ doneToggleLabel }}</span>
+    </button>
+
+    <button
+      v-if="!isBatchOperation && context === 'calendar' && currentTask?.status !== 'done'"
+      class="menu-item menu-item--done"
+      @click="handleDoneTodayKeepTask"
+    >
+      <CheckCheck :size="16" class="menu-icon" />
+      <span class="menu-text">Done today, move to tomorrow</span>
     </button>
 
     <!-- Pin to Top / Unpin -->
@@ -235,6 +246,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useProjectStore } from '@/stores/projects'
 import {
   Calendar,
+  CheckCheck,
   CheckCircle,
   Timer,
   FolderOpen,
@@ -284,13 +296,15 @@ interface Props {
   context?: 'calendar' | 'board' | 'list' | 'canvas'
 }
 
+type TaskMenuContext = NonNullable<Props['context']>
+
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
   close: []
   edit: [taskId: string]
   confirmDelete: [taskId: string, instanceId?: string, isCalendarEvent?: boolean]
-  confirmPermanentDelete: [taskId: string]
+  confirmPermanentDelete: [taskId: string, context: TaskMenuContext]
   clearSelection: []
   setPriority: [priority: 'low' | 'medium' | 'high']
   setStatus: [status: 'todo' | 'done']
@@ -429,6 +443,36 @@ const deleteText = computed(() => {
   return (task && 'isCalendarEvent' in task && (task as Record<string, unknown>).isCalendarEvent) ? 'Remove' : 'Delete'
 })
 
+const getCalendarInstanceId = (task: Task | null | undefined): string | undefined =>
+  (task as unknown as Record<string, unknown> | undefined)?.instanceId as string | undefined
+
+const getIsCalendarEvent = (task: Task | null | undefined): boolean | undefined =>
+  (task as unknown as Record<string, unknown> | undefined)?.isCalendarEvent as boolean | undefined
+
+const buildDateMovePayload = (task: Task, dateStr: string, options: { markDoneForNow?: boolean } = {}): Partial<Task> => {
+  const calendarInstanceId = getCalendarInstanceId(task)
+  const updates: Partial<Task> = { dueDate: dateStr }
+
+  if (options.markDoneForNow) {
+    updates.status = 'todo'
+    updates.doneForNowUntil = dateStr
+  }
+
+  if (task.scheduledDate) {
+    updates.scheduledDate = dateStr
+  }
+
+  if (getIsCalendarEvent(task) && calendarInstanceId && task.instances?.length) {
+    updates.instances = task.instances.map(instance =>
+      instance.id === calendarInstanceId
+        ? { ...instance, scheduledDate: dateStr, status: 'scheduled' as const, updatedAt: new Date() }
+        : instance
+    )
+  }
+
+  return updates
+}
+
 // Handle date selection from DueDateSubmenu picker - directly update task store
 const handleDatePickerSelect = async (timestamp: number) => {
   if (!currentTask.value) return
@@ -440,20 +484,13 @@ const handleDatePickerSelect = async (timestamp: number) => {
   const day = String(date.getDate()).padStart(2, '0')
   const formattedDate = `${year}-${month}-${day}`
 
-  // TASK-1362: Capture calendar instance info before menu closes
   const taskId = currentTask.value.id
-  const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
-  const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
   closeAllSubmenusNow()
 
   // Update the task directly via task store
   try {
-    await taskStore.updateTaskWithUndo(taskId, { dueDate: formattedDate })
-    // TASK-1362: Also move calendar instance to selected date
-    if (isCalendarEvent && calendarInstanceId) {
-      await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: formattedDate })
-    }
+    await taskStore.updateTaskWithUndo(taskId, buildDateMovePayload(currentTask.value, formattedDate))
     canvasStore.requestSync('user:context-menu')
     // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups).
     // TASK-1756 v6: skipDueDateInheritance — we JUST set dueDate above from
@@ -470,6 +507,16 @@ const handleDatePickerSelect = async (timestamp: number) => {
   }
 
   emit('close')
+}
+
+const handleDoneTodayKeepTask = async () => {
+  const task = currentTask.value
+  if (!task) return
+  if (task.recurrenceRule) {
+    await handleDoneForNowNextOccurrence()
+    return
+  }
+  await handleDoneForNowTomorrow()
 }
 
 // Clear due date
@@ -501,8 +548,6 @@ const handleDoneForNowTomorrow = async () => {
   // BUG-1184: Capture task data BEFORE closing menu
   const taskId = currentTask.value?.id
   const task = currentTask.value
-  const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
-  const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
   emit('close')
 
@@ -520,18 +565,11 @@ const handleDoneForNowTomorrow = async () => {
 
   try {
     // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
-    const updatePayload: Record<string, string> = {
+    await taskStore.updateTaskWithUndo(taskId, task ? buildDateMovePayload(task, tomorrowStr, { markDoneForNow: true }) : {
+      status: 'todo',
       dueDate: tomorrowStr,
       doneForNowUntil: tomorrowStr
-    }
-    if (task?.scheduledDate) {
-      updatePayload.scheduledDate = tomorrowStr
-    }
-    await taskStore.updateTaskWithUndo(taskId, updatePayload)
-    // TASK-1362: Also move calendar instance to tomorrow
-    if (isCalendarEvent && calendarInstanceId) {
-      await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: tomorrowStr })
-    }
+    })
     canvasStore.requestSync('user:context-menu')
     showToast('Moved to tomorrow', 'success', { duration: 2000 })
   } catch (error) {
@@ -565,8 +603,6 @@ const handleDoneForNowNextOccurrence = async () => {
 const handleDoneForNowPickDate = async (timestamp: number) => {
   const taskId = currentTask.value?.id
   const task = currentTask.value
-  const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
-  const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
   closeAllSubmenusNow()
   emit('close')
@@ -587,22 +623,16 @@ const handleDoneForNowPickDate = async (timestamp: number) => {
       // Recurring: create completion record, then override next due date to picked date
       await taskStore.doneForNow(taskId)
       // Override the auto-computed next date with the user's pick
-      await taskStore.updateTask(taskId, { dueDate: dateStr })
+      await taskStore.updateTaskWithUndo(taskId, { dueDate: dateStr })
       canvasStore.requestSync('user:context-menu')
       showToast(`Completed for today, next on ${dateStr}`, 'success', { duration: 2000 })
     } else {
       // Non-recurring: same as tomorrow but with custom date
-      const updatePayload: Record<string, string> = {
+      await taskStore.updateTaskWithUndo(taskId, task ? buildDateMovePayload(task, dateStr, { markDoneForNow: true }) : {
+        status: 'todo',
         dueDate: dateStr,
         doneForNowUntil: dateStr
-      }
-      if (task?.scheduledDate) {
-        updatePayload.scheduledDate = dateStr
-      }
-      await taskStore.updateTaskWithUndo(taskId, updatePayload)
-      if (isCalendarEvent && calendarInstanceId) {
-        await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: dateStr })
-      }
+      })
       canvasStore.requestSync('user:context-menu')
       showToast(`Moved to ${dateStr}`, 'success', { duration: 2000 })
     }
@@ -1092,7 +1122,7 @@ const enterFocus = () => {
 
 const permanentlyDeleteTask = () => {
   if (!isBatchOperation.value && currentTask.value) {
-    emit('confirmPermanentDelete', currentTask.value.id)
+    emit('confirmPermanentDelete', currentTask.value.id, props.context ?? 'list')
   }
   emit('close')
 }
@@ -1107,37 +1137,73 @@ const handleKeyDown = (event: KeyboardEvent) => {
   }
 }
 
-// Click outside handler
-const handleClickOutside = (event: MouseEvent) => {
-  const target = event.target as HTMLElement
-  if (target.closest('.submenu')) return
-  // NPopover teleports date picker to body — don't close on clicks inside it
-  if (target.closest('.n-date-picker') || target.closest('.n-date-panel') || target.closest('.n-popover')) return
-  if (menuRef.value && !menuRef.value.contains(target)) {
-    emit('close')
-  }
+const isOwnedMenuTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false
+  if (menuRef.value?.contains(target)) return true
+
+  // Submenus and library popovers are teleported to body, so they must count as
+  // part of this interaction surface for outside-dismiss purposes.
+  return !!target.closest('.submenu, .n-date-picker, .n-date-panel, .n-popover, .ai-assist-popover')
 }
 
-watch(() => props.isVisible, (isVisible) => {
-  if (isVisible) {
-    setTimeout(() => document.addEventListener('click', handleClickOutside, true), 0)
-    document.addEventListener('keydown', handleKeyDown)
-  } else {
-    document.removeEventListener('click', handleClickOutside, true)
-    document.removeEventListener('keydown', handleKeyDown)
-    showDueDateSubmenu.value = false
-    showPrioritySubmenu.value = false
-    showDurationSubmenu.value = false
-    showMoreSubmenu.value = false
-    showProjectSubmenu.value = false
-    showCanvasGroupSubmenu.value = false
-    showDoneForNowSubmenu.value = false
-    showAIAssist.value = false
+const closeFromOutside = (target: EventTarget | null) => {
+  if (isOwnedMenuTarget(target)) return
+  closeAllSubmenusNow()
+  emit('close')
+}
+
+const handleOutsidePointerDown = (event: PointerEvent) => {
+  closeFromOutside(event.target)
+}
+
+const handleOutsideContextMenu = (event: MouseEvent) => {
+  closeFromOutside(event.target)
+}
+
+let outsideDismissListenerTimer: ReturnType<typeof setTimeout> | null = null
+
+const addOutsideDismissListeners = () => {
+  document.addEventListener('pointerdown', handleOutsidePointerDown, true)
+  document.addEventListener('contextmenu', handleOutsideContextMenu, true)
+}
+
+const removeOutsideDismissListeners = () => {
+  if (outsideDismissListenerTimer) {
+    clearTimeout(outsideDismissListenerTimer)
+    outsideDismissListenerTimer = null
   }
-})
+  document.removeEventListener('pointerdown', handleOutsidePointerDown, true)
+  document.removeEventListener('contextmenu', handleOutsideContextMenu, true)
+}
+
+watch(
+  () => props.isVisible,
+  (isVisible) => {
+    if (isVisible) {
+      removeOutsideDismissListeners()
+      outsideDismissListenerTimer = setTimeout(() => {
+        outsideDismissListenerTimer = null
+        addOutsideDismissListeners()
+      }, 0)
+      document.addEventListener('keydown', handleKeyDown)
+    } else {
+      removeOutsideDismissListeners()
+      document.removeEventListener('keydown', handleKeyDown)
+      showDueDateSubmenu.value = false
+      showPrioritySubmenu.value = false
+      showDurationSubmenu.value = false
+      showMoreSubmenu.value = false
+      showProjectSubmenu.value = false
+      showCanvasGroupSubmenu.value = false
+      showDoneForNowSubmenu.value = false
+      showAIAssist.value = false
+    }
+  },
+  { immediate: true }
+)
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside, true)
+  removeOutsideDismissListeners()
   document.removeEventListener('keydown', handleKeyDown)
   cancelPendingSwitch()
   clearAllSubmenuTimeouts()

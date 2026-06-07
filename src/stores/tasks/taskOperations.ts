@@ -24,6 +24,7 @@ import {
     traceCanvasDone,
     traceCanvasDoneTasks
 } from '@/utils/canvas/doneTrace'
+import { isActiveCalendarInstance } from '@/utils/calendar/activeSchedule'
 // TASK-089 FIX: Unlock position when removing from canvas
 // TASK-131 FIX: Protect locked positions from being overwritten by stale sync data
 
@@ -542,6 +543,14 @@ export function useTaskOperations(
                         }
                     } catch (e) {
                         console.warn('[Timer] Auto-stop on task completion failed:', e)
+                    }
+
+                    if (!task.recurrenceRule && !('instances' in updates) && task.instances?.length) {
+                        updates.instances = task.instances.map(instance =>
+                            isActiveCalendarInstance(instance)
+                                ? { ...instance, status: 'completed' as const, updatedAt: new Date() }
+                                : instance
+                        )
                     }
 
                     // TASK-1403: Clone-on-complete for recurring tasks

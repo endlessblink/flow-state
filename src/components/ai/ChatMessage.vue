@@ -1004,7 +1004,12 @@ async function saveSchedule() {
                   <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
                   <Play v-else :size="12" />
                 </button>
-                <button class="inline-action-btn inline-dismiss-btn" title="Hide from these options" aria-label="Hide from these options" @click="dismissCardTask(task.id, $event)">
+                <button
+                  class="inline-action-btn inline-dismiss-btn"
+                  title="Hide from these options"
+                  aria-label="Hide from these options"
+                  @click="dismissCardTask(task.id, $event)"
+                >
                   <X :size="12" />
                 </button>
                 <span v-if="completedTaskIds.has(task.id)" class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>
@@ -1113,7 +1118,12 @@ async function saveSchedule() {
             </div>
             <div v-if="isWeeklyReview" class="task-inline-actions" @click.stop>
               <span class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>
-              <button class="inline-action-btn inline-dismiss-btn" title="Hide from these options" aria-label="Hide from these options" @click="dismissCardTask(task.id, $event)">
+              <button
+                class="inline-action-btn inline-dismiss-btn"
+                title="Hide from these options"
+                aria-label="Hide from these options"
+                @click="dismissCardTask(task.id, $event)"
+              >
                 <X :size="12" />
               </button>
             </div>
@@ -1138,7 +1148,12 @@ async function saveSchedule() {
                 <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
                 <Play v-else :size="12" />
               </button>
-              <button class="inline-action-btn inline-dismiss-btn" title="Hide from these options" aria-label="Hide from these options" @click="dismissCardTask(task.id, $event)">
+              <button
+                class="inline-action-btn inline-dismiss-btn"
+                title="Hide from these options"
+                aria-label="Hide from these options"
+                @click="dismissCardTask(task.id, $event)"
+              >
                 <X :size="12" />
               </button>
               <span v-if="completedTaskIds.has(task.id)" class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>

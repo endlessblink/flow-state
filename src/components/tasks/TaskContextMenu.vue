@@ -9,223 +9,237 @@
       @pointerdown.stop
       @contextmenu.stop.prevent
     >
-    <!-- Header for inbox/batch operations -->
-    <div v-if="showInboxHeader" class="context-menu-header">
-      <OverflowTooltip :text="displayHeaderText" tooltip-position="bottom">{{ displayHeaderText }}</OverflowTooltip>
+      <!-- Header for inbox/batch operations -->
+      <div v-if="showInboxHeader" class="context-menu-header">
+        <OverflowTooltip :text="displayHeaderText" tooltip-position="bottom">
+          {{ displayHeaderText }}
+        </OverflowTooltip>
+      </div>
+
+      <!-- Edit Task (single only) -->
+      <button v-if="!isBatchOperation" class="menu-item" @click="handleEdit">
+        <Pencil :size="16" class="menu-icon" />
+        <span class="menu-text">Edit</span>
+        <span class="menu-shortcut">Ctrl+E</span>
+      </button>
+
+      <!-- Mark as Done / Mark as To Do -->
+      <button class="menu-item menu-item--done" @click="toggleDone">
+        <CheckCircle :size="16" class="menu-icon" :class="{ 'icon-done': currentTask?.status === 'done' }" />
+        <span class="menu-text">{{ doneToggleLabel }}</span>
+      </button>
+
+      <!-- Calendar-only: complete today's calendar occurrence without completing the task -->
+      <button v-if="showCalendarDoneKeepTask" class="menu-item" @click="handleCalendarDoneKeepTask">
+        <CheckCircle :size="16" class="menu-icon icon-done-for-now" />
+        <span class="menu-text">Done for today</span>
+      </button>
+
+      <!-- Pin to Top / Unpin -->
+      <button v-if="!isBatchOperation" class="menu-item" @click="togglePin">
+        <component :is="currentTask?.isPinned ? PinOff : Pin" :size="16" class="menu-icon" />
+        <span class="menu-text">{{ currentTask?.isPinned ? 'Unpin' : 'Pin to Top' }}</span>
+      </button>
+
+      <!-- TASK-1785 Push 2: Lock time on calendar (calendar context only) -->
+      <button v-if="!isBatchOperation && context === 'calendar'" class="menu-item" @click="toggleCalendarLock">
+        <LockOpen v-if="currentTask?.calendarLocked" :size="16" class="menu-icon" />
+        <Lock v-else :size="16" class="menu-icon" />
+        <span class="menu-text">{{ currentTask?.calendarLocked ? 'Unlock time' : 'Lock time on calendar' }}</span>
+      </button>
+
+      <div class="menu-divider" />
+
+      <!-- Due Date with submenu -->
+      <div
+        class="menu-item has-submenu"
+        @mouseenter="openSubmenu('dueDate', $event)"
+        @mouseleave="handleTriggerLeave('dueDate', $event)"
+      >
+        <Calendar :size="16" class="menu-icon" />
+        <span class="menu-text">Due Date</span>
+        <OverflowTooltip :text="currentDueDateLabel" class="menu-item-value" tooltip-position="bottom">
+          {{ currentDueDateLabel }}
+        </OverflowTooltip>
+        <ChevronRight :size="14" class="submenu-arrow" />
+      </div>
+
+      <!-- Priority with submenu -->
+      <div
+        class="menu-item has-submenu"
+        @mouseenter="openSubmenu('priority', $event)"
+        @mouseleave="handleTriggerLeave('priority', $event)"
+      >
+        <span class="priority-dot-sm" :class="currentTask?.priority || 'none'" />
+        <span class="menu-text">Priority</span>
+        <OverflowTooltip :text="currentPriorityLabel" class="menu-item-value" tooltip-position="bottom">
+          {{ currentPriorityLabel }}
+        </OverflowTooltip>
+        <ChevronRight :size="14" class="submenu-arrow" />
+      </div>
+
+      <!-- Project with submenu -->
+      <div
+        class="menu-item has-submenu"
+        @mouseenter="openSubmenu('project', $event)"
+        @mouseleave="handleTriggerLeave('project', $event)"
+      >
+        <FolderOpen :size="16" class="menu-icon" />
+        <span class="menu-text">Project</span>
+        <OverflowTooltip :text="currentProjectLabel" class="menu-item-value" tooltip-position="bottom">
+          {{ currentProjectLabel }}
+        </OverflowTooltip>
+        <ChevronRight :size="14" class="submenu-arrow" />
+      </div>
+
+      <div class="menu-divider" />
+
+      <!-- Start Timer -->
+      <button class="menu-item menu-item--timer" @click="startTimer">
+        <Timer :size="16" class="menu-icon" />
+        <span class="menu-text">Start Timer</span>
+      </button>
+
+      <!-- Open Thinking Flow (single task only) -->
+      <button v-if="!isBatchOperation" class="menu-item" @click="handleOpenPlanningCanvas">
+        <LayoutDashboard :size="16" class="menu-icon" />
+        <span class="menu-text">Thinking Flow</span>
+      </button>
+
+      <!-- More submenu -->
+      <div
+        class="menu-item has-submenu"
+        @mouseenter="openSubmenu('more', $event)"
+        @mouseleave="handleTriggerLeave('more', $event)"
+      >
+        <MoreHorizontal :size="16" class="menu-icon" />
+        <span class="menu-text">More</span>
+        <ChevronRight :size="14" class="submenu-arrow" />
+      </div>
+
+      <!-- MoreSubmenu with ALL event handlers including nested submenus -->
+      <MoreSubmenu
+        :is-visible="showMoreSubmenu"
+        :parent-visible="isVisible"
+        :style="moreSubmenuStyle"
+        :is-batch-operation="isBatchOperation"
+        :task-id="currentTask?.id"
+        :is-recurring="!!currentTask?.recurrenceRule"
+        @mouseenter="handlePanelEnter"
+        @mouseleave="handlePanelLeave('more')"
+        @open-done-for-now="handleMoreDoneForNow"
+        @close-done-for-now="closeSubmenu('doneForNow')"
+        @done-fully="() => { closeAllSubmenusNow(); handleDoneFully() }"
+        @duplicate="() => { closeAllSubmenusNow(); duplicateTask() }"
+        @pin-quick-task="() => { closeAllSubmenusNow(); pinAsQuickTask() }"
+        @clear-selection="() => { closeAllSubmenusNow(); clearSelection() }"
+        @open-canvas-group="handleMoreCanvasGroup"
+        @close-canvas-group="closeSubmenu('canvasGroup')"
+        @open-duration="handleMoreDuration"
+        @close-duration="closeSubmenu('duration')"
+        @focus-mode="enterFocus"
+        @start-now="() => { closeAllSubmenusNow(); startTaskNow(); emit('close') }"
+        @ai-assist="(event: MouseEvent) => { closeAllSubmenusNow(); openAIAssist(event) }"
+      />
+
+      <!-- DueDateSubmenu -->
+      <DueDateSubmenu
+        :is-visible="showDueDateSubmenu"
+        :parent-visible="isVisible"
+        :style="dueDateSubmenuStyle"
+        :current-due-date="currentTask?.dueDate"
+        @mouseenter="handlePanelEnter"
+        @mouseleave="handlePanelLeave('dueDate')"
+        @select="(dateType: string) => { closeAllSubmenusNow(); setDueDate(dateType as 'today' | 'tomorrow' | 'weekend' | 'nextweek') }"
+        @pick-date="handleDatePickerSelect"
+        @clear-date="() => { closeAllSubmenusNow(); clearDueDate() }"
+      />
+
+      <!-- PrioritySubmenu -->
+      <PrioritySubmenu
+        :is-visible="showPrioritySubmenu"
+        :parent-visible="isVisible"
+        :style="prioritySubmenuStyle"
+        :current-priority="currentTask?.priority"
+        @mouseenter="handlePanelEnter"
+        @mouseleave="handlePanelLeave('priority')"
+        @select="(p: 'high' | 'medium' | 'low') => { closeAllSubmenusNow(); setPriority(p) }"
+        @clear-priority="() => { closeAllSubmenusNow(); clearPriority() }"
+      />
+
+      <!-- ProjectSubmenu -->
+      <ProjectSubmenu
+        :is-visible="showProjectSubmenu"
+        :parent-visible="isVisible"
+        :style="projectSubmenuStyle"
+        :current-project-id="currentTask?.projectId"
+        @mouseenter="handlePanelEnter"
+        @mouseleave="handlePanelLeave('project')"
+        @select="(id: string | null) => { closeAllSubmenusNow(); setProject(id) }"
+      />
+
+      <!-- CanvasGroupSubmenu (triggered from More submenu) -->
+      <CanvasGroupSubmenu
+        :is-visible="showCanvasGroupSubmenu"
+        :parent-visible="isVisible"
+        :style="canvasGroupSubmenuStyle"
+        :current-group-id="currentTask?.parentId"
+        @mouseenter="handlePanelEnter"
+        @mouseleave="handlePanelLeave('canvasGroup')"
+        @select="(id: string | null) => { closeAllSubmenusNow(); handleMoveToGroup(id) }"
+      />
+
+      <!-- DurationSubmenu (triggered from More submenu) -->
+      <DurationSubmenu
+        :is-visible="showDurationSubmenu"
+        :parent-visible="isVisible"
+        :style="durationSubmenuStyle"
+        :current-duration="currentTask?.estimatedDuration"
+        @mouseenter="handlePanelEnter"
+        @mouseleave="handlePanelLeave('duration')"
+        @select="(d: number | null) => { closeAllSubmenusNow(); setDuration(d) }"
+      />
+
+      <!-- DoneForNowSubmenu (triggered from More submenu) -->
+      <DoneForNowSubmenu
+        :is-visible="showDoneForNowSubmenu"
+        :parent-visible="isVisible"
+        :style="doneForNowSubmenuStyle"
+        :is-recurring="!!currentTask?.recurrenceRule"
+        @mouseenter="handlePanelEnter"
+        @mouseleave="handlePanelLeave('doneForNow')"
+        @select-tomorrow="() => { closeAllSubmenusNow(); handleDoneForNowTomorrow() }"
+        @select-next-occurrence="() => { closeAllSubmenusNow(); handleDoneForNowNextOccurrence() }"
+        @pick-date="handleDoneForNowPickDate"
+      />
+
+      <div class="menu-divider" />
+
+      <!-- Delete (soft - moves to trash) -->
+      <button class="menu-item danger" @click="deleteTask">
+        <Trash2 :size="16" class="menu-icon" />
+        <span class="menu-text">{{ deleteText }}</span>
+      </button>
+
+      <!-- Permanent Delete (hard delete, bypasses trash) -->
+      <button v-if="!isBatchOperation" class="menu-item danger permanent-delete" @click="permanentlyDeleteTask">
+        <Trash2 :size="16" class="menu-icon" />
+        <span class="menu-text">Permanently Delete</span>
+      </button>
+
+      <!-- AI Assist Popover -->
+      <AITaskAssistPopover
+        :is-visible="showAIAssist"
+        :task="currentTask"
+        :x="aiAssistPosition.x"
+        :y="aiAssistPosition.y"
+        context="context-menu"
+        @close="closeAIAssist"
+        @accept-priority="handleAIAcceptPriority"
+        @accept-breakdown="handleAIAcceptBreakdown"
+        @accept-date="handleAIAcceptDate"
+      />
     </div>
-
-    <!-- Edit Task (single only) -->
-    <button v-if="!isBatchOperation" class="menu-item" @click="handleEdit">
-      <Pencil :size="16" class="menu-icon" />
-      <span class="menu-text">Edit</span>
-      <span class="menu-shortcut">Ctrl+E</span>
-    </button>
-
-    <!-- Mark as Done / Mark as To Do -->
-    <button class="menu-item menu-item--done" @click="toggleDone">
-      <CheckCircle :size="16" class="menu-icon" :class="{ 'icon-done': currentTask?.status === 'done' }" />
-      <span class="menu-text">{{ doneToggleLabel }}</span>
-    </button>
-
-    <!-- Pin to Top / Unpin -->
-    <button v-if="!isBatchOperation" class="menu-item" @click="togglePin">
-      <component :is="currentTask?.isPinned ? PinOff : Pin" :size="16" class="menu-icon" />
-      <span class="menu-text">{{ currentTask?.isPinned ? 'Unpin' : 'Pin to Top' }}</span>
-    </button>
-
-    <!-- TASK-1785 Push 2: Lock time on calendar (calendar context only) -->
-    <button v-if="!isBatchOperation && context === 'calendar'" class="menu-item" @click="toggleCalendarLock">
-      <component :is="currentTask?.calendarLocked ? LockOpen : Lock" :size="16" class="menu-icon" />
-      <span class="menu-text">{{ currentTask?.calendarLocked ? 'Unlock time' : 'Lock time on calendar' }}</span>
-    </button>
-
-    <div class="menu-divider" />
-
-    <!-- Due Date with submenu -->
-    <div
-      class="menu-item has-submenu"
-      @mouseenter="openSubmenu('dueDate', $event)"
-      @mouseleave="handleTriggerLeave('dueDate', $event)"
-    >
-      <Calendar :size="16" class="menu-icon" />
-      <span class="menu-text">Due Date</span>
-      <OverflowTooltip :text="currentDueDateLabel" class="menu-item-value" tooltip-position="bottom">{{ currentDueDateLabel }}</OverflowTooltip>
-      <ChevronRight :size="14" class="submenu-arrow" />
-    </div>
-
-    <!-- Priority with submenu -->
-    <div
-      class="menu-item has-submenu"
-      @mouseenter="openSubmenu('priority', $event)"
-      @mouseleave="handleTriggerLeave('priority', $event)"
-    >
-      <span class="priority-dot-sm" :class="currentTask?.priority || 'none'" />
-      <span class="menu-text">Priority</span>
-      <OverflowTooltip :text="currentPriorityLabel" class="menu-item-value" tooltip-position="bottom">{{ currentPriorityLabel }}</OverflowTooltip>
-      <ChevronRight :size="14" class="submenu-arrow" />
-    </div>
-
-    <!-- Project with submenu -->
-    <div
-      class="menu-item has-submenu"
-      @mouseenter="openSubmenu('project', $event)"
-      @mouseleave="handleTriggerLeave('project', $event)"
-    >
-      <FolderOpen :size="16" class="menu-icon" />
-      <span class="menu-text">Project</span>
-      <OverflowTooltip :text="currentProjectLabel" class="menu-item-value" tooltip-position="bottom">{{ currentProjectLabel }}</OverflowTooltip>
-      <ChevronRight :size="14" class="submenu-arrow" />
-    </div>
-
-    <div class="menu-divider" />
-
-    <!-- Start Timer -->
-    <button class="menu-item menu-item--timer" @click="startTimer">
-      <Timer :size="16" class="menu-icon" />
-      <span class="menu-text">Start Timer</span>
-    </button>
-
-    <!-- Open Thinking Flow (single task only) -->
-    <button v-if="!isBatchOperation" class="menu-item" @click="handleOpenPlanningCanvas">
-      <LayoutDashboard :size="16" class="menu-icon" />
-      <span class="menu-text">Thinking Flow</span>
-    </button>
-
-    <!-- More submenu -->
-    <div
-      class="menu-item has-submenu"
-      @mouseenter="openSubmenu('more', $event)"
-      @mouseleave="handleTriggerLeave('more', $event)"
-    >
-      <MoreHorizontal :size="16" class="menu-icon" />
-      <span class="menu-text">More</span>
-      <ChevronRight :size="14" class="submenu-arrow" />
-    </div>
-
-    <!-- MoreSubmenu with ALL event handlers including nested submenus -->
-    <MoreSubmenu
-      :is-visible="showMoreSubmenu"
-      :parent-visible="isVisible"
-      :style="moreSubmenuStyle"
-      :is-batch-operation="isBatchOperation"
-      :task-id="currentTask?.id"
-      :is-recurring="!!currentTask?.recurrenceRule"
-      @mouseenter="handlePanelEnter"
-      @mouseleave="handlePanelLeave('more')"
-      @open-done-for-now="handleMoreDoneForNow"
-      @close-done-for-now="closeSubmenu('doneForNow')"
-      @done-fully="() => { closeAllSubmenusNow(); handleDoneFully() }"
-      @duplicate="() => { closeAllSubmenusNow(); duplicateTask() }"
-      @pin-quick-task="() => { closeAllSubmenusNow(); pinAsQuickTask() }"
-      @clear-selection="() => { closeAllSubmenusNow(); clearSelection() }"
-      @open-canvas-group="handleMoreCanvasGroup"
-      @close-canvas-group="closeSubmenu('canvasGroup')"
-      @open-duration="handleMoreDuration"
-      @close-duration="closeSubmenu('duration')"
-      @focus-mode="enterFocus"
-      @start-now="() => { closeAllSubmenusNow(); startTaskNow(); emit('close') }"
-      @ai-assist="(event: MouseEvent) => { closeAllSubmenusNow(); openAIAssist(event) }"
-    />
-
-    <!-- DueDateSubmenu -->
-    <DueDateSubmenu
-      :is-visible="showDueDateSubmenu"
-      :parent-visible="isVisible"
-      :style="dueDateSubmenuStyle"
-      :current-due-date="currentTask?.dueDate"
-      @mouseenter="handlePanelEnter"
-      @mouseleave="handlePanelLeave('dueDate')"
-      @select="(dateType: string) => { closeAllSubmenusNow(); setDueDate(dateType as 'today' | 'tomorrow' | 'weekend' | 'nextweek') }"
-      @pick-date="handleDatePickerSelect"
-      @clear-date="() => { closeAllSubmenusNow(); clearDueDate() }"
-    />
-
-    <!-- PrioritySubmenu -->
-    <PrioritySubmenu
-      :is-visible="showPrioritySubmenu"
-      :parent-visible="isVisible"
-      :style="prioritySubmenuStyle"
-      :current-priority="currentTask?.priority"
-      @mouseenter="handlePanelEnter"
-      @mouseleave="handlePanelLeave('priority')"
-      @select="(p: 'high' | 'medium' | 'low') => { closeAllSubmenusNow(); setPriority(p) }"
-      @clear-priority="() => { closeAllSubmenusNow(); clearPriority() }"
-    />
-
-    <!-- ProjectSubmenu -->
-    <ProjectSubmenu
-      :is-visible="showProjectSubmenu"
-      :parent-visible="isVisible"
-      :style="projectSubmenuStyle"
-      :current-project-id="currentTask?.projectId"
-      @mouseenter="handlePanelEnter"
-      @mouseleave="handlePanelLeave('project')"
-      @select="(id: string | null) => { closeAllSubmenusNow(); setProject(id) }"
-    />
-
-    <!-- CanvasGroupSubmenu (triggered from More submenu) -->
-    <CanvasGroupSubmenu
-      :is-visible="showCanvasGroupSubmenu"
-      :parent-visible="isVisible"
-      :style="canvasGroupSubmenuStyle"
-      :current-group-id="currentTask?.parentId"
-      @mouseenter="handlePanelEnter"
-      @mouseleave="handlePanelLeave('canvasGroup')"
-      @select="(id: string | null) => { closeAllSubmenusNow(); handleMoveToGroup(id) }"
-    />
-
-    <!-- DurationSubmenu (triggered from More submenu) -->
-    <DurationSubmenu
-      :is-visible="showDurationSubmenu"
-      :parent-visible="isVisible"
-      :style="durationSubmenuStyle"
-      :current-duration="currentTask?.estimatedDuration"
-      @mouseenter="handlePanelEnter"
-      @mouseleave="handlePanelLeave('duration')"
-      @select="(d: number | null) => { closeAllSubmenusNow(); setDuration(d) }"
-    />
-
-    <!-- DoneForNowSubmenu (triggered from More submenu) -->
-    <DoneForNowSubmenu
-      :is-visible="showDoneForNowSubmenu"
-      :parent-visible="isVisible"
-      :style="doneForNowSubmenuStyle"
-      :is-recurring="!!currentTask?.recurrenceRule"
-      @mouseenter="handlePanelEnter"
-      @mouseleave="handlePanelLeave('doneForNow')"
-      @select-tomorrow="() => { closeAllSubmenusNow(); handleDoneForNowTomorrow() }"
-      @select-next-occurrence="() => { closeAllSubmenusNow(); handleDoneForNowNextOccurrence() }"
-      @pick-date="handleDoneForNowPickDate"
-    />
-
-    <div class="menu-divider" />
-
-    <!-- Delete (soft - moves to trash) -->
-    <button class="menu-item danger" @click="deleteTask">
-      <Trash2 :size="16" class="menu-icon" />
-      <span class="menu-text">{{ deleteText }}</span>
-    </button>
-
-    <!-- Permanent Delete (hard delete, bypasses trash) -->
-    <button v-if="!isBatchOperation" class="menu-item danger permanent-delete" @click="permanentlyDeleteTask">
-      <Trash2 :size="16" class="menu-icon" />
-      <span class="menu-text">Permanently Delete</span>
-    </button>
-
-    <!-- AI Assist Popover -->
-    <AITaskAssistPopover
-      :is-visible="showAIAssist"
-      :task="currentTask"
-      :x="aiAssistPosition.x"
-      :y="aiAssistPosition.y"
-      context="context-menu"
-      @close="closeAIAssist"
-      @accept-priority="handleAIAcceptPriority"
-      @accept-breakdown="handleAIAcceptBreakdown"
-      @accept-date="handleAIAcceptDate"
-    />
-  </div>
-
   </Teleport>
 </template>
 
@@ -244,7 +258,6 @@ import {
   Pencil,
   Trash2,
   MoreHorizontal,
-  Sparkles,
   Pin,
   PinOff,
   Lock,
@@ -313,7 +326,6 @@ const {
   handleEdit,
   setDueDate,
   setPriority,
-  setStatus,
   setDuration,
   setProject,
   toggleDone,
@@ -393,6 +405,12 @@ const doneToggleLabel = computed(() => {
   }
   return currentTask.value?.status === 'done' ? 'Mark as To Do' : 'Mark as Done'
 })
+
+const showCalendarDoneKeepTask = computed(() =>
+  !isBatchOperation.value &&
+  props.context === 'calendar' &&
+  currentTask.value?.status !== 'done'
+)
 
 const currentDueDateLabel = computed(() => {
   const dueDate = currentTask.value?.dueDate
@@ -561,6 +579,15 @@ const handleDoneForNowNextOccurrence = async () => {
     console.error('Error in done-for-now (next occurrence):', error)
     showToast('Failed to complete task', 'error')
   }
+}
+
+const handleCalendarDoneKeepTask = async () => {
+  if (currentTask.value?.recurrenceRule) {
+    await handleDoneForNowNextOccurrence()
+    return
+  }
+
+  await handleDoneForNowTomorrow()
 }
 
 // Handle "Done for now" > Pick a date — custom date picker
@@ -969,12 +996,6 @@ const openSubmenu = (type: SubmenuType, event: MouseEvent) => {
 
   // No submenu open yet — open immediately
   performSubmenuOpen(type, triggerRect)
-}
-
-const keepSubmenuOpen = () => {
-  cancelPendingSwitch()
-  clearAllSubmenuTimeouts()
-  safePolygon.stopTracking()
 }
 
 // TASK-1445: Get the known rect of a submenu by type (position + estimated size)

@@ -371,6 +371,47 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).not.toContain('payment decision risk')
   })
 
+  it('anchors cards inline even when the answer uses markdown or different casing', () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-inline-fuzzy-card',
+          role: 'assistant',
+          content: '**task   alpha** is the first focus because it protects the payment decision.',
+          timestamp: Date.now(),
+          metadata: {
+            cardGroups: {
+              kind: 'week_plan',
+              total: 1,
+              groups: [
+                {
+                  name: 'Money',
+                  tasks: [
+                    {
+                      id: 'task-alpha',
+                      title: 'Task Alpha',
+                      status: 'todo',
+                      priority: 'high',
+                      reason: 'payment decision risk',
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(1)
+    expect(wrapper.find('.card-groups').exists()).toBe(false)
+  })
+
   it('documents weekly planning as selective coach reasoning rather than a one-sentence task dump', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 

@@ -279,6 +279,14 @@ const liveCardGroups = computed(() => {
 const allCardTasks = computed(() =>
   liveCardGroups.value.flatMap(group => group.tasks.map(task => ({ ...task, groupName: group.name }))),
 )
+function normalizeInlineMatchText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[*_`~()[\]{}"']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 const inlineContentBlocks = computed(() => {
   const content = (props.message.content || '').trim()
   if (!content || !cardGroups.value) return []
@@ -288,9 +296,10 @@ const inlineContentBlocks = computed(() => {
     .map(line => line.trim())
     .filter(Boolean)
     .map((line, index) => {
+      const normalizedLine = normalizeInlineMatchText(line)
       const tasks = allCardTasks.value.filter(task => {
         if (!task.id || used.has(task.id) || !task.title) return false
-        return line.includes(task.title)
+        return normalizedLine.includes(normalizeInlineMatchText(task.title))
       })
       for (const task of tasks) used.add(task.id)
       return { key: `line-${index}`, html: sanitizeMarkdownHtml(md.render(line)), tasks }

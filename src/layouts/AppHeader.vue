@@ -265,7 +265,6 @@ const activeTaskProject = computed(() => {
 // Route name to display title mapping
 const routeNameToTitle = computed(() => ({
   'canvas': t('views.canvas'),
-  'canvas-route': t('views.canvas'),
   'calendar': t('views.calendar'),
   'board': t('views.board'),
   'catalog': t('views.catalog'),

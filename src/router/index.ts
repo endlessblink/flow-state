@@ -28,6 +28,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      alias: '/canvas',
       name: 'canvas',
       component: () => import('@/views/CanvasView.vue'),
       meta: { requiresAuth: false } // Temporarily disabled for development
@@ -37,12 +38,6 @@ const router = createRouter({
       name: 'board',
       component: () => import('@/views/BoardView.vue'),
       meta: { requiresAuth: false } // Temporarily disabled for development
-    },
-    {
-      path: '/canvas',
-      name: 'canvas-route',
-      component: () => import('@/views/CanvasView.vue'),
-      meta: { requiresAuth: false }
     },
     {
       path: '/calendar',

@@ -111,6 +111,7 @@ async function getRouter() {
 // Active provider tracking
 const activeProviderRef = ref<string | null>(null)
 const FINAL_FORMATTER_TIMEOUT_MS = 45_000
+const WEEK_PLAN_BRIDGE_FORMATTER_TIMEOUT_MS = 12_000
 
 // AI Personality mode
 const aiPersonality = ref<'professional' | 'grid_handler'>('professional')
@@ -1383,6 +1384,9 @@ export function useAIChat() {
       const isSmartLanes = routed.responseMode === 'smart_lanes'
       const isWeeklyReview = routed.responseMode === 'weekly_review'
       const isWeekPlan = routed.responseMode === 'week_plan'
+      const formatterTimeout = isBridgeActive() && isWeekPlan
+        ? WEEK_PLAN_BRIDGE_FORMATTER_TIMEOUT_MS
+        : FINAL_FORMATTER_TIMEOUT_MS
       const cardsInstruction = (isBridgeActive() && hasTaskList)
         ? isWeeklyReview
           ? `\n\nThis is a WEEKLY REVIEW of tasks the user ALREADY COMPLETED. STRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE short sentence stating how many tasks were completed (use ONLY the count of tasks in the data). Mention focus time ONLY if it is present in the data; if it is not present, do NOT mention focus time at all and never say it is missing or unavailable. Do NOT invent any numbers. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"weekly_review","groups":[{"name":"project or theme name in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"one short concrete note about this completed task in ${languageName}, max 8 words"}]}]}\n\`\`\`\nGroup the completed tasks by their project (use the \`project:\` field in the data) or by theme. Include ONLY tasks present in the data — never invent task names, categories, counts, trends, insights, or recommendations. Reference tasks by [N] number INSIDE the cards block only; in prose use the task NAME, never [N]. Do NOT add any sections after the cards block.`
@@ -1417,7 +1421,7 @@ export function useAIChat() {
           taskType: 'chat',
           forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
           model: selectedModel.value || undefined,
-          timeout: FINAL_FORMATTER_TIMEOUT_MS,
+          timeout: formatterTimeout,
         })) {
           formattedResponse += chunk.content
         }
@@ -1443,7 +1447,7 @@ export function useAIChat() {
           taskType: 'chat',
           forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
           model: selectedModel.value || undefined,
-          timeout: FINAL_FORMATTER_TIMEOUT_MS,
+          timeout: formatterTimeout,
         })) {
           retryResponse += chunk.content
         }

@@ -305,6 +305,9 @@ describe('AI sidebar-first desktop experience', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 
     expect(aiChat).toContain('FINAL_FORMATTER_TIMEOUT_MS')
+    expect(aiChat).toContain('WEEK_PLAN_BRIDGE_FORMATTER_TIMEOUT_MS = 12_000')
+    expect(aiChat).toContain('isBridgeActive() && isWeekPlan')
+    expect(aiChat).toContain('timeout: formatterTimeout')
     expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
     expect(aiChat).toContain("Formatter timed out or failed; using fallback answer")
   })

@@ -47,6 +47,21 @@
 
 ---
 
+### ~~TASK-1823~~: Reliable blank-screen gate — Electron/web can never ship a non-loading build (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-06-07) — *gate built & proven; not yet wired into a release* | **Depends on**: TASK-1789 (typecheck now 0 errors)
+
+**Why**: The FlowState desktop app has gone blank/non-loading more than once ("fixed and then broke again"). Root cause class is structural, not a one-off bug: `npm run build` (esbuild) does NOT type-check, so a used-but-unimported symbol (BUG-1796) or any runtime throw during bootstrap ships undetected; and **every test ran against the Vite dev server — nothing ever loaded the actual production bundle** that ships to web + Electron (file://). The manual `deploy-electron-update.sh` path had zero gates. Goal: a safe, super-reliable process that never lets a non-loading build ship again.
+
+**Shipped** — a 3-layer blank-screen gate, each proven to fail on a real break and pass on a good build:
+1. **Type-check (static)** — `npm run type-check` (0 errors today). Catches the undefined-symbol class (BUG-1796) the esbuild build silently ships.
+2. **Render smoke (runtime)** — `tests/smoke/prod-build-render.spec.ts` + `playwright.smoke.config.ts` serve the REAL built `dist/` via `vite preview` and assert the app actually mounts (static `#fs-loader` detaches = Vue mounted; no fatal console/pageerror) across `/`, `#/board`, `#/canvas`, `#/calendar`. Auth-free (no Supabase/global-setup) so it's reliable enough to gate every deploy. Proven: passes on the current bundle, fails when the entry chunk is broken.
+3. **Electron file:// base-path (static)** — `scripts/verify-build-renders.sh --check-file-protocol` asserts the ELECTRON_BUILD bundle uses relative `./assets/` (not `/assets/`), the exact regression that blanks the desktop app over file:// while the web app looks fine. Plain Chromium can't load ESM over file://, so this is a deterministic static grep, not a flaky browser test. Proven: passes relative, fails absolute.
+
+**Wired as BLOCKING gates into every ship path**: `scripts/deploy-electron-update.sh` (Step 0 type-check + Step 1b render smoke + file:// check, aborts before packaging/upload), the `electron:build` npm script, CI `deploy.yml` (VPS web deploy), and CI `ci.yml` (PR time — earliest gate). Runner: `scripts/verify-build-renders.sh` (`npm run verify:build`). SOP: `docs/sop/SOP-070-blank-screen-gate.md`.
+
+---
+
 ### ~~BUG-1821~~: "Plan my week" misrouted to the completed-tasks summary (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-07, v1.4.105) | **Depends on**: BUG-1820

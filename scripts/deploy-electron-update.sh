@@ -52,12 +52,39 @@ echo -e "Notes: ${NOTES:-'(none)'}"
 
 node "$PROJECT_DIR/scripts/validate-electron-vite-env.cjs"
 
+# Step 0: Type-check (TASK-1823) — BLOCKING. Catches used-but-unimported symbols
+# and other type errors that `npm run build` (esbuild) silently ships and that
+# surface only at runtime as a blank/empty screen on the desktop app (BUG-1796).
+echo -e "\n${YELLOW}[0/4] Type-checking (blank-screen guard, static)...${NC}"
+if [ "$DRY_RUN" = true ]; then
+  echo -e "${CYAN}  [DRY RUN] Would run: npm run type-check${NC}"
+else
+  if ! npm run type-check; then
+    echo -e "${RED}✗ Type-check failed — aborting deploy. Fix the errors above; do NOT ship.${NC}"
+    exit 1
+  fi
+fi
+
 # Step 1: Build frontend
 echo -e "\n${YELLOW}[1/4] Building Vue frontend...${NC}"
 if [ "$DRY_RUN" = true ]; then
   echo -e "${CYAN}  [DRY RUN] Would run: ELECTRON_BUILD=true npm run build${NC}"
 else
   ELECTRON_BUILD=true npm run build
+fi
+
+# Step 1b: Render smoke (TASK-1823) — BLOCKING. Proves the EXACT bundle just built
+# actually mounts (no white screen, no fatal runtime error) before we package and
+# upload it to the auto-updater. This is the gate that stops "Electron doesn't load"
+# from ever shipping again. Tests the real dist/ — no rebuild, no env drift.
+echo -e "\n${YELLOW}[1b/4] Verifying the built bundle renders (blank-screen guard, runtime)...${NC}"
+if [ "$DRY_RUN" = true ]; then
+  echo -e "${CYAN}  [DRY RUN] Would run: scripts/verify-build-renders.sh --no-build --skip-typecheck --check-file-protocol${NC}"
+else
+  if ! bash "$PROJECT_DIR/scripts/verify-build-renders.sh" --no-build --skip-typecheck --check-file-protocol; then
+    echo -e "${RED}✗ The built bundle does NOT render (blank screen). Aborting deploy — nothing uploaded.${NC}"
+    exit 1
+  fi
 fi
 
 # Step 2: Build Electron main process

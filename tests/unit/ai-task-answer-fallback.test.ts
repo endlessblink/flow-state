@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildStructuredTaskCards,
   buildStructuredTaskFallback,
+  finalizeTaskAnswer,
   isMeaningfulTaskReason,
   shouldUseStructuredTaskFallback,
 } from '@/services/ai/pipeline/taskAnswerFallback'
@@ -104,5 +105,56 @@ describe('task answer fallback quality gate', () => {
       'Write one cold opener from the target list',
     ])
     expect(cards?.groups[0].tasks.every(task => task.reason.length > 0)).toBe(true)
+  })
+
+  it('finalizes a shallow formatter answer into rich visible text plus matching cards', () => {
+    const shallow = 'הייתי מתחיל ב-"להתחיל טיפול אוראו - פעמיים ביום לעשרה ימים", "לעבור על תוצאות פייפרפורט ולסקין", ו-"Write one cold opener from the target list", לפי הסדר הזה; אלה נראות כמו המשימות הכי דחופות כרגע.'
+
+    const finalized = finalizeTaskAnswer(shallow, taskResults, 'he', {
+      groupName: 'משימות מהתשובה',
+      kind: 'week_plan',
+    })
+
+    expect(finalized.usedStructuredFallback).toBe(true)
+    expect(finalized.displayText).toContain('זה הסדר שהייתי בוחר')
+    expect(finalized.displayText).toContain('1. **להתחיל טיפול אוראו - פעמיים ביום לעשרה ימים**')
+    expect(finalized.cards?.kind).toBe('week_plan')
+    expect(finalized.cards?.groups[0].tasks.map(task => task.title)).toEqual([
+      'להתחיל טיפול אוראו - פעמיים ביום לעשרה ימים',
+      'לעבור על תוצאות פייפרפורט ולסקין',
+      'Write one cold opener from the target list',
+    ])
+    expect(finalized.cards?.groups[0].tasks.every(task => isMeaningfulTaskReason(task.reason))).toBe(true)
+  })
+
+  it('finalizes valid model cards without replacing them', () => {
+    const answer = [
+      'קודם בודקים את התוצאות ואז כותבים את הפתיח.',
+      '',
+      '```cards',
+      JSON.stringify({
+        kind: 'week_plan',
+        groups: [{
+          name: 'רצף מכירות',
+          items: [
+            { i: 2, reason: 'פותח את שלב הכתיבה הבא' },
+            { i: 3, reason: 'תלוי ברשימת היעדים' },
+          ],
+        }],
+      }),
+      '```',
+    ].join('\n')
+
+    const finalized = finalizeTaskAnswer(answer, taskResults, 'he', {
+      groupName: 'משימות מהתשובה',
+      kind: 'week_plan',
+    })
+
+    expect(finalized.usedStructuredFallback).toBe(false)
+    expect(finalized.displayText).toBe('קודם בודקים את התוצאות ואז כותבים את הפתיח.')
+    expect(finalized.cards?.groups[0].tasks.map(task => task.title)).toEqual([
+      'לעבור על תוצאות פייפרפורט ולסקין',
+      'Write one cold opener from the target list',
+    ])
   })
 })

@@ -49,8 +49,8 @@ import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
-import { parseCardGroups, parseMentionedTaskCards, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
-import { buildStructuredTaskCards, buildStructuredTaskFallback, shouldUseStructuredTaskFallback } from '@/services/ai/pipeline/taskAnswerFallback'
+import { stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
+import { buildStructuredTaskFallback, finalizeTaskAnswer } from '@/services/ai/pipeline/taskAnswerFallback'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
 
@@ -1169,14 +1169,15 @@ export function useAIChat() {
               ? 'smart_lanes'
               : undefined
       const fallbackGroupName = outputLanguage === 'he' ? 'משימות מהתשובה' : 'Tasks from the answer'
-      let cardData = parseCardGroups(formattedResponse, toolResults)
-      if (shouldUseStructuredTaskFallback(formattedResponse, toolResults, cardData)) {
-        formattedResponse = buildStructuredTaskFallback(toolResults, outputLanguage, { limit: 4 })
-        cardData = buildStructuredTaskCards(toolResults, outputLanguage, fallbackGroupName, fallbackKind, 4)
-      }
-      cardData = cardData
-        ?? (hasTaskList ? parseMentionedTaskCards(formattedResponse, toolResults, fallbackGroupName, fallbackKind) : null)
-      const displayRaw = cardData ? stripCardsBlock(formattedResponse) : formattedResponse
+      const finalizedAnswer = finalizeTaskAnswer(formattedResponse, toolResults, outputLanguage, {
+        groupName: fallbackGroupName,
+        kind: fallbackKind,
+        limit: 4,
+        allowMentionedTaskCards: hasTaskList,
+      })
+      formattedResponse = finalizedAnswer.rawAnswer
+      const cardData = finalizedAnswer.cards
+      const displayRaw = finalizedAnswer.displayText
 
       // Clean and set
       const cleaned = cleanResponse(displayRaw)
@@ -1635,22 +1636,20 @@ export function useAIChat() {
       if (lastMsg && lastMsg.isStreaming) {
         const hadToolCalls = stepCount > 1 || (lastMsg.metadata as Record<string, unknown>)?.toolResults !== undefined
         const allToolResults = ((lastMsg.metadata as Record<string, unknown>)?.toolResults as ToolResult[]) || []
-        let rawAnswer = lastMsg.content || ''
+        const rawAnswer = lastMsg.content || ''
         // TASK-1814: parse the `cards` block from the RAW answer (before cleaning may
         // drop it) → grouped interactive cards, same as the deterministic path.
-        let reactCards = isBridgeActive()
-          ? parseCardGroups(rawAnswer, allToolResults)
-          : null
         const fallbackGroupName = lang === 'he' ? 'משימות מהתשובה' : 'Tasks from the answer'
-        if (isBridgeActive() && shouldUseStructuredTaskFallback(rawAnswer, allToolResults, reactCards)) {
-          rawAnswer = buildStructuredTaskFallback(allToolResults, lang, { limit: 4 })
-          reactCards = buildStructuredTaskCards(allToolResults, lang, fallbackGroupName, undefined, 4)
-        }
-        reactCards = reactCards
-          ?? (isBridgeActive() ? parseMentionedTaskCards(rawAnswer, allToolResults, fallbackGroupName) : null)
+        const finalizedAnswer = isBridgeActive()
+          ? finalizeTaskAnswer(rawAnswer, allToolResults, lang, {
+              groupName: fallbackGroupName,
+              limit: 4,
+            })
+          : { displayText: rawAnswer, cards: null }
+        const reactCards = finalizedAnswer.cards
         // Strip the cards block from the RAW content BEFORE cleaning (cleanResponse
         // mangles the fence → raw JSON leaks). cards block is always last → strip to EOF.
-        let cleaned = cleanResponse(reactCards ? stripCardsBlock(rawAnswer) : rawAnswer)
+        let cleaned = cleanResponse(finalizedAnswer.displayText)
 
         // TASK-1391: Fluff detection + retry (max 1 retry to avoid latency)
         if (hadToolCalls && !abortController.signal.aborted) {

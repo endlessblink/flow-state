@@ -1,4 +1,4 @@
-import { stripCardsBlock, type CardToolResult, type ParsedCards } from './cardsBlock'
+import { parseCardGroups, parseMentionedTaskCards, stripCardsBlock, type CardToolResult, type ParsedCards } from './cardsBlock'
 
 export interface TaskAnswerItem {
   id?: string
@@ -13,6 +13,13 @@ export interface TaskAnswerItem {
 }
 
 export type TaskAnswerLanguage = 'he' | 'en'
+
+export interface FinalizedTaskAnswer {
+  rawAnswer: string
+  displayText: string
+  cards: ParsedCards | null
+  usedStructuredFallback: boolean
+}
 
 export function collectTaskAnswerItems(toolResults: CardToolResult[]): TaskAnswerItem[] {
   const tasks: TaskAnswerItem[] = []
@@ -145,6 +152,41 @@ export function buildStructuredTaskCards(
     total: collectTaskAnswerItems(toolResults).filter(task => task.title).length,
     rawBlock: '',
     kind,
+  }
+}
+
+export function finalizeTaskAnswer(
+  answer: string,
+  toolResults: CardToolResult[],
+  lang: TaskAnswerLanguage,
+  options: {
+    groupName?: string
+    kind?: ParsedCards['kind']
+    limit?: number
+    allowMentionedTaskCards?: boolean
+  } = {},
+): FinalizedTaskAnswer {
+  const groupName = options.groupName ?? (lang === 'he' ? 'משימות מהתשובה' : 'Tasks from the answer')
+  const limit = options.limit ?? 4
+  let rawAnswer = answer
+  let cards = parseCardGroups(rawAnswer, toolResults)
+  let usedStructuredFallback = false
+
+  if (shouldUseStructuredTaskFallback(rawAnswer, toolResults, cards)) {
+    rawAnswer = buildStructuredTaskFallback(toolResults, lang, { limit })
+    cards = buildStructuredTaskCards(toolResults, lang, groupName, options.kind, limit)
+    usedStructuredFallback = true
+  }
+
+  cards = cards ?? (options.allowMentionedTaskCards === false
+    ? null
+    : parseMentionedTaskCards(rawAnswer, toolResults, groupName, options.kind))
+
+  return {
+    rawAnswer,
+    displayText: cards ? stripCardsBlock(rawAnswer) : rawAnswer,
+    cards,
+    usedStructuredFallback,
   }
 }
 

@@ -3,6 +3,44 @@
   "version": "2.2.0",
   "last_updated": "2026-06-07",
   "skills": {
+    "superpowers-flowstate-auto-router": {
+      "name": "Superpowers FlowState Auto-Router",
+      "category": "tooling",
+      "triggers": [
+        "bug",
+        "fix",
+        "test failure",
+        "unexpected behavior",
+        "regression",
+        "implement",
+        "refactor",
+        "code review",
+        "review feedback",
+        "done",
+        "complete",
+        "verify",
+        "ship"
+      ],
+      "keywords": [
+        "superpowers",
+        "auto-router",
+        "debugging",
+        "tdd",
+        "verification",
+        "review"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "superpowers-systematic-debugging",
+        "superpowers-test-driven-development",
+        "superpowers-verification-before-completion",
+        "superpowers-requesting-code-review",
+        "superpowers-receiving-code-review",
+        "superpowers-writing-plans"
+      ],
+      "description": "FlowState-safe automatic routing layer for selected Superpowers support workflows. FlowState AGENTS.md, CLAUDE.md, MASTER_PLAN, OMX, and Electron release rules remain authoritative."
+    },
     "superpowers-systematic-debugging": {
       "name": "Superpowers Systematic Debugging",
       "category": "debug",

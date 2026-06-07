@@ -11,6 +11,8 @@ Use them as support workflows for systematic debugging, TDD, verification, code 
 They do **not** override `AGENTS.md`, this `CLAUDE.md`, MASTER_PLAN tracking, OMX workflow state, branch safety, or Electron-first shipping requirements.
 The always-on `using-superpowers`, worktree, and branch-finishing Superpowers flows are intentionally not installed for this project trial.
 
+**Auto-routing trial**: at the start of bugs, fixes, behavior changes, reviews, planning, and completion checks, use `.claude/skills/superpowers-flowstate-auto-router/SKILL.md` to choose the relevant `superpowers-*` support skill. Keep the router subordinate to FlowState rules and skip it for trivial chat or when a higher-priority workflow already clearly applies.
+
 # MANDATORY Pre-Read for Major Work
 
 **Before ANY major feature, refactoring, architecture decision, or multi-file change**, read these documents first:

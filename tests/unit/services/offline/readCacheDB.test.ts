@@ -12,6 +12,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import {
   cacheTasks,
   getCachedTasks,
+  getCachedTasksWithPendingWrites,
   cacheGroups,
   getCachedGroups,
   cacheProjects,
@@ -20,6 +21,7 @@ import {
   getCacheStats,
   clearReadCache,
 } from '@/services/offline/readCacheDB'
+import { clearAll as clearWriteQueue, getWriteQueueDB } from '@/services/offline/writeQueueDB'
 import type { Task, Project } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
 
@@ -74,10 +76,12 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 
 beforeEach(async () => {
   await clearReadCache()
+  await clearWriteQueue()
 })
 
 afterEach(async () => {
   await clearReadCache()
+  await clearWriteQueue()
 })
 
 // ── Task cache tests ───────────────────────────────────────────────────────
@@ -142,6 +146,43 @@ describe('cacheTasks / getCachedTasks', () => {
     const cached = await getCachedTasks()
     // Empty cache is treated as "no cache" — returns null
     expect(cached).toBeNull()
+  })
+
+  it('applies pending canvas geometry writes over the read cache', async () => {
+    const cachedTask = makeTask({
+      id: 'task-pending-geometry',
+      title: 'Canvas Task',
+      canvasPosition: { x: 10, y: 20 },
+      parentId: 'old-group',
+      positionVersion: 2,
+      updatedAt: new Date('2026-06-01T10:00:00Z'),
+    })
+
+    await cacheTasks([cachedTask])
+    await getWriteQueueDB().operations.add({
+      status: 'pending',
+      retryCount: 0,
+      createdAt: Date.now(),
+      entityType: 'task',
+      operation: 'update',
+      entityId: cachedTask.id,
+      payload: {
+        id: cachedTask.id,
+        title: cachedTask.title,
+        status: 'planned',
+        position: { x: 440, y: 560, parentId: 'new-group', format: 'absolute' },
+        position_version: 3,
+        updated_at: '2026-06-01T10:01:00Z',
+      },
+    })
+
+    const merged = await getCachedTasksWithPendingWrites()
+    const task = merged?.find(t => t.id === cachedTask.id)
+
+    expect(task?.canvasPosition).toEqual({ x: 440, y: 560 })
+    expect(task?.parentId).toBe('new-group')
+    expect(task?.positionVersion).toBe(3)
+    expect(task?.updatedAt).toEqual(new Date('2026-06-01T10:01:00Z'))
   })
 })
 

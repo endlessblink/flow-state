@@ -19,7 +19,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import type { Task } from '@/types/tasks'
-import { getCachedTasks } from '@/services/offline/readCacheDB'
+import { getCachedTasksWithPendingWrites } from '@/services/offline/readCacheDB'
 
 // ── Module-level mocks ──────────────────────────────────────────────
 
@@ -94,6 +94,7 @@ vi.mock('@/services/offline/writeQueueDB', () => ({
 vi.mock('@/services/offline/readCacheDB', () => ({
   cacheTasks: vi.fn().mockResolvedValue(undefined),
   getCachedTasks: vi.fn().mockResolvedValue([]),
+  getCachedTasksWithPendingWrites: vi.fn().mockResolvedValue([]),
 }))
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     vi.clearAllMocks()
     setActivePinia(createPinia())
     mockIsSwitchingWorkspace = false
-    vi.mocked(getCachedTasks).mockResolvedValue([])
+    vi.mocked(getCachedTasksWithPendingWrites).mockResolvedValue([])
 
     // Dynamic import after mocks are set up
     const mod = await import('@/stores/tasks')
@@ -442,7 +443,7 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
 
     store._rawTasks.length = 0
     mockFetchTasks.mockResolvedValue([remoteTask])
-    vi.mocked(getCachedTasks).mockResolvedValue([cachedTask])
+    vi.mocked(getCachedTasksWithPendingWrites).mockResolvedValue([cachedTask])
 
     await store.loadFromDatabase()
 
@@ -473,7 +474,7 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
 
     store._rawTasks.length = 0
     mockFetchTasks.mockResolvedValue([remoteTask])
-    vi.mocked(getCachedTasks).mockResolvedValue([cachedTask])
+    vi.mocked(getCachedTasksWithPendingWrites).mockResolvedValue([cachedTask])
 
     await store.loadFromDatabase()
 

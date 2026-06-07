@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 import type { Task } from '@/types/tasks'
-import { cacheTasks, getCachedTasks } from '@/services/offline/readCacheDB'
+import { cacheTasks, getCachedTasks, getCachedTasksWithPendingWrites } from '@/services/offline/readCacheDB'
 import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats, repairTaskTitles, sanitizeLoadedTasks } from '@/utils/taskValidation'
 import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
@@ -308,7 +308,7 @@ export function useTaskPersistence(
             // newer IndexedDB geometry on reload; do the same for tasks so a
             // restart cannot combine fresh group positions with stale task
             // positions from Supabase.
-            const cachedTasks = (await getCachedTasks().catch(() => [])) ?? []
+            const cachedTasks = (await getCachedTasksWithPendingWrites().catch(() => [])) ?? []
             const cachedById = new Map<string, Task>()
             for (const cachedTask of cachedTasks) {
                 const existing = cachedById.get(cachedTask.id)

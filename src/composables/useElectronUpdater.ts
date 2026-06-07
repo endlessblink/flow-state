@@ -22,6 +22,7 @@ export type UpdateStatus =
   | 'available'
   | 'downloading'
   | 'ready'
+  | 'installing'
   | 'error'
   | 'up-to-date'
 
@@ -124,10 +125,20 @@ export function useElectronUpdater() {
     const api = getElectronAPI()
     if (!isElectron() || !api) return
 
+    status.value = 'installing'
+    error.value = null
+
     try {
       await api.installUpdate()
+      window.setTimeout(() => {
+        if (status.value === 'installing') {
+          status.value = 'error'
+          error.value = 'Restart did not complete automatically. Close FlowState and reopen it to finish the update.'
+        }
+      }, 10_000)
     } catch (err) {
       console.error('[ElectronUpdater] Install failed:', err)
+      status.value = 'error'
       error.value = String(err)
     }
   }

@@ -758,7 +758,7 @@ export function useTaskOperations(
 
             // TASK-1177: Queue for offline-first sync FIRST
             // This ensures the update persists in IndexedDB even if network fails
-            const updatedTask = _rawTasks.value[index]
+            const updatedTask = _rawTasks.value[freshIndex]
             let persisted = false
             try {
                 const syncOrchestrator = useSyncOrchestrator()
@@ -993,8 +993,14 @@ export function useTaskOperations(
                 }
             }
 
-            // TASK-1428: Update IndexedDB read cache so offline reloads see the updated task
-            cacheTasks([..._rawTasks.value])
+            // TASK-1428: Update IndexedDB read cache so offline reloads see the updated task.
+            // Geometry changes must be durable before restart/update handoff can interrupt JS.
+            const cacheSnapshot = [..._rawTasks.value]
+            if (hasGeometryChange) {
+                await cacheTasks(cacheSnapshot)
+            } else {
+                cacheTasks(cacheSnapshot)
+            }
         } finally {
             if (!wasManualInProgress) manualOperationInProgress.value = false
         }

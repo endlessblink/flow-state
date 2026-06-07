@@ -299,6 +299,102 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).not.toContain('Do not render yet')
   })
 
+  it('does not show raw tool-result task cards as a deterministic fallback after the answer finishes', () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-raw-results',
+          role: 'assistant',
+          content: 'The model chose a different summary.',
+          timestamp: Date.now(),
+          isStreaming: false,
+          metadata: {
+            toolResults: [
+              {
+                tool: 'list_tasks',
+                message: 'Found 15 tasks',
+                success: true,
+                type: 'read',
+                data: [
+                  { id: 'task-raw', title: 'Raw deterministic task', status: 'todo' },
+                ],
+              },
+            ],
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('The model chose a different summary.')
+    expect(wrapper.find('.tool-results').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Raw deterministic task')
+  })
+
+  it('shows grouped task cards only when they are paired with visible model prose', () => {
+    const withProse = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-cards-with-prose',
+          role: 'assistant',
+          content: 'Start with the payment task.',
+          timestamp: Date.now(),
+          isStreaming: false,
+          metadata: {
+            cardGroups: {
+              total: 1,
+              groups: [
+                {
+                  name: 'Money',
+                  tasks: [
+                    { id: 'task-card', title: 'Check Cardcom payment', status: 'todo', reason: 'Payment may be stuck' },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: { stubs: { TaskQuickEditPopover: true } },
+    })
+
+    expect(withProse.text()).toContain('Start with the payment task.')
+    expect(withProse.text()).toContain('Check Cardcom payment')
+
+    const withoutProse = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-cards-without-prose',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          isStreaming: false,
+          metadata: {
+            cardGroups: {
+              total: 1,
+              groups: [
+                {
+                  name: 'Money',
+                  tasks: [
+                    { id: 'task-card', title: 'Check Cardcom payment', status: 'todo', reason: 'Payment may be stuck' },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: { stubs: { TaskQuickEditPopover: true } },
+    })
+
+    expect(withoutProse.text()).not.toContain('Check Cardcom payment')
+    expect(withoutProse.find('.card-groups').exists()).toBe(false)
+  })
+
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 

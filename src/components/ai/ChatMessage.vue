@@ -203,6 +203,8 @@ const renderedContent = computed(() => {
   return sanitizeMarkdownHtml(md.render(content))
 })
 
+const hasRenderedResponse = computed(() => renderedContent.value.trim().length > 0)
+
 export interface ChatToolResultData {
   length?: number
   totalTasks?: number
@@ -240,6 +242,7 @@ const toolResults = computed(() => {
     type?: 'read' | 'write' | 'destructive'
   }>
 })
+const showStandaloneToolResults = computed(() => false)
 
 /**
  * TASK-1814: grouped prioritization cards (each task with the AI's one-line reason).
@@ -256,7 +259,7 @@ const cardGroups = computed(() => {
     total?: number
     kind?: string
   } | undefined
-  if (!cg?.groups?.length || isStreaming.value) return null
+  if (!cg?.groups?.length || isStreaming.value || !hasRenderedResponse.value) return null
   return cg
 })
 
@@ -766,11 +769,10 @@ async function saveSchedule() {
         </div>
       </div>
 
-      <!-- Tool Results — render as soon as a tool executes (TASK-1814), even while
-           the model's text answer is still streaming. With slow subscription CLI
-           brains (~8-19s) this shows the interactive cards in ~1s instead of making
-           the user wait for the full response. -->
-      <div v-if="toolResults.length > 0 && !cardGroups" class="tool-results">
+      <!-- Tool results are model context, not a deterministic visual fallback.
+           Task cards must come from cardGroups parsed out of the model answer so
+           the visible cards correspond to the assistant's prose. -->
+      <div v-if="showStandaloneToolResults" class="tool-results">
         <template v-for="(result, idx) in toolResults" :key="idx">
           <!-- Daily summary stats card -->
           <div v-if="isDailySummaryResult(result)" class="tool-result-card">

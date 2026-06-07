@@ -30,6 +30,7 @@ export interface BridgeChatResult {
 
 /** Production bridge — the only place the CLIs actually run (the VPS). */
 const PROD_BRIDGE_URL = 'https://in-theflow.com/ai-bridge'
+const LIMIT_PREFLIGHT_CHARS = 180
 
 /**
  * Bridge base URL. Override with VITE_AI_BRIDGE_URL. Otherwise use <site>/ai-bridge,
@@ -103,6 +104,7 @@ export async function bridgeChat(
 
   const data = await res.json()
   if (!data?.content) throw new BridgeUnavailableError('empty_response')
+  if (isBrainLimitText(String(data.content))) throw new BridgeUnavailableError('brain_limit_reached')
   return { content: data.content, model: data.model || brain, brain }
 }
 
@@ -139,6 +141,19 @@ export async function* bridgeChatStream(
   const decoder = new TextDecoder()
   let buf = ''
   let sawDone = false
+  let preflight = ''
+  let preflightOpen = true
+
+  function consumeDelta(delta: string): string[] {
+    if (!preflightOpen) return [delta]
+    preflight += delta
+    if (isBrainLimitText(preflight)) throw new BridgeUnavailableError('brain_limit_reached')
+    if (preflight.length < LIMIT_PREFLIGHT_CHARS) return []
+    preflightOpen = false
+    const release = preflight
+    preflight = ''
+    return [release]
+  }
 
   while (true) {
     const { value, done } = await reader.read()
@@ -154,9 +169,36 @@ export async function* bridgeChatStream(
       let obj: { delta?: string; done?: boolean; error?: string; reason?: string }
       try { obj = JSON.parse(dataLine.slice(5).trim()) } catch { continue }
       if (obj.error) throw new BridgeUnavailableError(obj.reason || obj.error)
-      if (typeof obj.delta === 'string' && obj.delta) yield obj.delta
-      if (obj.done) { sawDone = true; return }
+      if (typeof obj.delta === 'string' && obj.delta) {
+        for (const delta of consumeDelta(obj.delta)) yield delta
+      }
+      if (obj.done) {
+        if (preflightOpen && preflight) {
+          if (isBrainLimitText(preflight)) throw new BridgeUnavailableError('brain_limit_reached')
+          yield preflight
+        }
+        sawDone = true
+        return
+      }
     }
   }
   if (!sawDone) throw new BridgeUnavailableError('incomplete_stream')
+}
+
+function isBrainLimitText(value: string): boolean {
+  const normalized = value
+    .toLowerCase()
+    .replace(/[’']/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+  return [
+    "you've hit your limit",
+    'you have hit your limit',
+    'usage limit',
+    'rate limit',
+    'quota exceeded',
+    'too many requests',
+    'insufficient credits',
+    'no credits',
+  ].some(marker => normalized.includes(marker))
 }

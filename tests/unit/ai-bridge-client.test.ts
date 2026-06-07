@@ -86,6 +86,22 @@ describe('bridge client — bridgeChatStream (SSE)', () => {
     vi.stubGlobal('fetch', vi.fn(async () => sseResponse([{ delta: 'partial' }])))
     await expect(collect('claude')).rejects.toThrow(/incomplete_stream/)
   })
+
+  it('throws before yielding when a CLI limit banner streams as normal text', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => sseResponse([
+      { delta: "You've " },
+      { delta: 'hit your limit · resets 3:20pm (Asia/Jerusalem)' },
+      { done: true, brain: 'claude' },
+    ])))
+
+    const out: string[] = []
+    await expect(async () => {
+      for await (const delta of bridgeChatStream([{ role: 'user', content: 'hi' }], 'claude')) {
+        out.push(delta)
+      }
+    }).rejects.toThrow(/brain_limit_reached/)
+    expect(out).toEqual([])
+  })
 })
 
 describe('bridge client — bridgeChat (non-streaming)', () => {
@@ -101,6 +117,11 @@ describe('bridge client — bridgeChat (non-streaming)', () => {
   it('throws BridgeUnavailableError on 502', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'brain_unavailable', reason: 'auth' }), { status: 502 })))
     await expect(bridgeChat([{ role: 'user', content: 'hi' }], 'codex')).rejects.toBeInstanceOf(BridgeUnavailableError)
+  })
+
+  it('throws BridgeUnavailableError when a non-streaming CLI returns a limit banner as text', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ content: "You've hit your limit · resets 3:20pm (Asia/Jerusalem)", model: 'claude' }), { status: 200 })))
+    await expect(bridgeChat([{ role: 'user', content: 'hi' }], 'claude')).rejects.toThrow(/brain_limit_reached/)
   })
 
   it('sends stream:false for the non-streaming path', async () => {

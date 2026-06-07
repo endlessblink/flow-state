@@ -1415,6 +1415,20 @@ export function useAIChat() {
         },
       ]
 
+      if (isBridgeActive() && isWeekPlan && hasTaskList && lastMsg?.isStreaming) {
+        const immediateFallback = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
+        const immediateCards = parseCardGroups(immediateFallback, toolResults)
+        const immediateDisplay = immediateCards ? stripCardsBlock(immediateFallback) : immediateFallback
+        lastMsg.content = cleanResponse(immediateDisplay)
+        store.streamingContent = lastMsg.content
+        if (immediateCards) {
+          lastMsg.metadata = {
+            ...lastMsg.metadata,
+            cardGroups: { groups: immediateCards.groups, total: immediateCards.total, kind: immediateCards.kind },
+          } as Record<string, unknown>
+        }
+      }
+
       let formattedResponse = ''
       try {
         for await (const chunk of router.chatStream(formatterMessages, {

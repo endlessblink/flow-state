@@ -379,7 +379,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).not.toContain('payment decision risk')
   })
 
-  it('refreshes inline recommendation card due metadata when a task is postponed', () => {
+  it('clears an inline week-plan recommendation card when the task is postponed out of the plan window', () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({
       id: 'task-postponed',
@@ -434,8 +434,7 @@ describe('AI sidebar-first desktop experience', () => {
       },
     })
 
-    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(1)
-    expect(wrapper.text()).toContain('Postpone me')
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(0)
     expect(wrapper.text()).not.toContain('6d overdue')
     expect(wrapper.text()).not.toContain('today')
   })

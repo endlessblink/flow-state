@@ -133,6 +133,24 @@ function currentDaysOverdue(dueDate?: string | null, status?: string): number | 
   return days > 0 ? days : undefined
 }
 
+function dateKey(date?: string | null): string {
+  return date ? date.slice(0, 10) : ''
+}
+
+function isLaterDate(currentDate?: string | null, snapshotDate?: string | null): boolean {
+  const current = dateKey(currentDate)
+  const snapshot = dateKey(snapshotDate)
+  return !!current && !!snapshot && current > snapshot
+}
+
+function wasPostponedOutOfPlan(task: TaskListItem): boolean {
+  const current = dateKey(task.dueDate as string | null | undefined)
+  const snapshot = dateKey(task.__snapshotDueDate as string | null | undefined)
+  const today = new Date().toISOString().slice(0, 10)
+
+  return Boolean(task.__liveDueDateChanged && snapshot <= today && current > today)
+}
+
 /**
  * Merge a frozen snapshot task with live data from the Pinia task store.
  * The snapshot determines WHICH task to show; the store provides CURRENT field values.
@@ -144,6 +162,7 @@ function liveTask(snapshotTask: TaskListItem): TaskListItem {
   if (!storeTask) return snapshotTask
   const status = storeTask.status ?? snapshotTask.status
   const dueDate = storeTask.dueDate ?? null
+  const snapshotDueDate = snapshotTask.dueDate ?? null
   return {
     ...snapshotTask,
     title: storeTask.title ?? snapshotTask.title,
@@ -152,6 +171,8 @@ function liveTask(snapshotTask: TaskListItem): TaskListItem {
     dueDate,
     estimatedDuration: storeTask.estimatedDuration ?? snapshotTask.estimatedDuration,
     daysOverdue: currentDaysOverdue(dueDate, status),
+    __snapshotDueDate: snapshotDueDate,
+    __liveDueDateChanged: isLaterDate(dueDate, snapshotDueDate),
   }
 }
 
@@ -289,7 +310,10 @@ const liveCardGroups = computed(() => {
   return groups
     .map(group => ({
       ...group,
-      tasks: liveTasks(group.tasks).filter(task => !dismissedCardTaskIds.value.has(task.id)),
+      tasks: liveTasks(group.tasks).filter(task =>
+        !dismissedCardTaskIds.value.has(task.id) &&
+        !(isWeekPlan.value && wasPostponedOutOfPlan(task)),
+      ),
     }))
     .filter(group => group.tasks.length > 0 || (group.newTasks?.length ?? 0) > 0)
 })

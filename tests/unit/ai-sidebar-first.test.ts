@@ -384,6 +384,7 @@ describe('AI sidebar-first desktop experience', () => {
                 {
                   sectionId: 'rec-renewal',
                   rank: 1,
+                  focusArea: 'Client renewals',
                   primaryTaskId: 'task-renewal',
                   relatedTaskIds: [],
                   recommendationType: 'protect',
@@ -414,6 +415,7 @@ describe('AI sidebar-first desktop experience', () => {
     })
 
     expect(wrapper.get('[data-testid="weekly-plan"]').text()).toContain('Protect the decision windows first')
+    expect(wrapper.get('[data-section-id="rec-renewal"]').text()).toContain('Client renewals')
     expect(wrapper.get('[data-section-id="rec-renewal"]').text()).toContain('Amit needs numbers')
     expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(1)
     expect(wrapper.get('[data-testid="inline-plan-card"]').text()).toContain('Send renewal proposal to Amit')
@@ -435,16 +437,18 @@ describe('AI sidebar-first desktop experience', () => {
       createdAt: new Date('2026-06-01T08:00:00Z'),
       updatedAt: new Date('2026-06-07T08:00:00Z'),
     } as Task
+    const relatedTasks = [
+      task,
+      { ...task, id: 'task-bug', title: 'Fix timer sync blocker', description: 'Blocks QA signoff for release.', dependsOn: [], dueDate: '2026-06-11' } as Task,
+      { ...task, id: 'task-health', title: 'Book Dad blood test', description: 'Family health admin.', priority: 'medium', dueDate: '2026-06-12' } as Task,
+    ]
     const context = buildWeekContextFromToolResults(
-      [{ success: true, data: [task] }],
-      [
-        task,
-        { ...task, id: 'task-bug', title: 'Fix timer sync blocker', description: 'Blocks QA signoff.', dependsOn: [], dueDate: '2026-06-11' } as Task,
-        { ...task, id: 'task-health', title: 'Book Dad blood test', description: 'Family health admin.', priority: 'medium', dueDate: '2026-06-12' } as Task,
-      ],
+      [{ success: true, data: relatedTasks }],
+      relatedTasks,
       'en',
       new Date('2026-06-07T09:00:00Z'),
     )
+    expect(context.workstreams.length).toBeGreaterThan(0)
     const badPlan = {
       schemaVersion: 'weekly-plan.v2',
       requestId: context.requestId,
@@ -455,6 +459,7 @@ describe('AI sidebar-first desktop experience', () => {
       recommendations: context.tasks.slice(0, 3).map((candidate, index) => ({
         sectionId: `bad-${index}`,
         rank: index + 1,
+        focusArea: 'Due tasks',
         primaryTaskId: candidate.id,
         relatedTaskIds: [],
         recommendationType: 'protect',
@@ -477,12 +482,14 @@ describe('AI sidebar-first desktop experience', () => {
     expect(validateWeeklyPlanOutput(badPlan, context)).toEqual(expect.arrayContaining([
       'generic_reasoning:bad-0',
       'date_priority_only_reasoning:bad-0',
+      'missing_related_workstream_binding',
     ]))
 
     const quickDraft = buildQuickDraftWeeklyPlan(context)
     expect(quickDraft.source).toBe('quick_draft')
     expect(quickDraft.headline).toContain('Quick draft')
     expect(quickDraft.recommendations[0].evidence.length).toBeGreaterThanOrEqual(2)
+    expect(quickDraft.recommendations[0].focusArea).toBeTruthy()
   })
 
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {

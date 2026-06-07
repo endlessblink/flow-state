@@ -807,6 +807,7 @@ async function saveSchedule() {
           :data-section-id="rec.sectionId"
           :data-primary-task-id="rec.primaryTaskId"
         >
+          <div class="weekly-plan-focus" dir="auto">{{ rec.focusArea }}</div>
           <h3>{{ rec.rank }}. {{ rec.title }}</h3>
           <p>{{ rec.whyThisMatters }}</p>
           <p>{{ rec.whyThisWeek }}</p>
@@ -2325,9 +2326,23 @@ async function saveSchedule() {
 .weekly-plan-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding-block-start: var(--space-3);
+  gap: var(--space-2_5);
+  padding-block-start: var(--space-4);
   border-block-start: 1px solid var(--glass-border-faint);
+}
+
+.weekly-plan-focus {
+  align-self: flex-start;
+  max-width: 100%;
+  padding-block: 2px;
+  padding-inline: var(--space-2);
+  border: 1px solid var(--glass-border-faint);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-subtle);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  line-height: 1.35;
 }
 
 .weekly-plan-section h3 {

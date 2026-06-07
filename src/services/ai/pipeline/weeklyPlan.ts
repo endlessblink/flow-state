@@ -42,11 +42,34 @@ export type PlannerTaskSnapshot = {
     isStale: boolean
     hasHumanOrExternalStakeholder: boolean
     hasMoneyClientHealthFamilyLegalSignal: boolean
+    candidateReasons: CandidateReason[]
     evidenceSnippets: Array<{
       field: 'title' | 'notes' | 'project' | 'history' | 'dependency'
       text: string
     }>
   }
+}
+
+export type CandidateReason =
+  | 'due_this_week'
+  | 'overdue'
+  | 'blocks_other_tasks'
+  | 'blocked_needs_decision'
+  | 'repeatedly_postponed'
+  | 'already_started'
+  | 'high_timer_investment'
+  | 'project_with_multiple_active_tasks'
+  | 'notes_have_external_stakeholder'
+  | 'notes_have_money_client_health_family_legal_signal'
+  | 'small_quick_win'
+  | 'large_needs_decomposition'
+
+export type PlannerWorkstream = {
+  id: string
+  label: string
+  taskIds: string[]
+  reason: string
+  evidenceSignals: CandidateReason[]
 }
 
 export type WeekContext = {
@@ -64,12 +87,14 @@ export type WeekContext = {
     postponedLast14Days: number
     activeTimersLast7Days: number
   }
+  workstreams: PlannerWorkstream[]
   tasks: PlannerTaskSnapshot[]
 }
 
 export type WeeklyPlanRecommendation = {
   sectionId: string
   rank: number
+  focusArea: string
   primaryTaskId: string
   relatedTaskIds: string[]
   recommendationType: 'protect' | 'unblock' | 'finish' | 'reduce-risk' | 'quick-win' | 'defer' | 'clarify'
@@ -181,6 +206,7 @@ export function buildWeekContextFromToolResults(
       postponedLast14Days: 0,
       activeTimersLast7Days: 0,
     },
+    workstreams: buildWorkstreams(snapshots),
     tasks: snapshots,
   }
 }
@@ -190,12 +216,22 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
     instruction: 'Return only valid JSON matching schema weekly-plan.v2. Do not output markdown. Do not describe task cards. The UI renders cards from task IDs.',
     schemaRules: {
       recommendations: '3-7 items',
+      focusArea: 'Every recommendation must name the concrete workstream/aspect it belongs to, for example Client renewals, Release blocker, Family health admin, Sales pipeline.',
       taskIds: 'Every primaryTaskId and relatedTaskIds item must be from candidateTasks.',
       evidence: 'At least two evidence items per recommendation. At least one must not be dueIso or priority.',
       reasoning: 'Explain real consequence beyond due date/priority. Avoid repeated templates.',
       locale: context.locale,
       direction: context.direction,
     },
+    selectionPolicy: [
+      'Build a grand view of the week: recommendations should be about workstreams/aspects, not isolated checkboxes.',
+      'Use relatedTaskIds when several candidate tasks serve the same aspect of work or life.',
+      'Prefer tasks with concrete consequences over tasks that merely have a due date.',
+      'Do not choose more than 3 tasks from the same project unless that project is the clear center of the week.',
+      'Include a repeatedly postponed task only if you can explain the avoidance risk or relief value.',
+      'If a task is large, recommend the smallest useful next action, not "finish the whole thing."',
+      'Explicitly defer lower-value due-soon tasks when they crowd out higher-impact work.',
+    ],
     avoid: [
       'This task is due soon, so do it.',
       'High priority means high impact.',
@@ -211,6 +247,7 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
       locale: context.locale,
       direction: context.direction,
       workload: context.workload,
+      workstreams: context.workstreams,
     },
     candidateTasks: context.tasks,
   }, null, 2)
@@ -245,6 +282,7 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
 
   for (const rec of recs) {
     if (!rec.sectionId) errors.push('missing_section_id')
+    if (!rec.focusArea || typeof rec.focusArea !== 'string') errors.push(`missing_focus_area:${rec.sectionId}`)
     if (!validTaskIds.has(rec.primaryTaskId)) errors.push(`invalid_primary_task_id:${rec.primaryTaskId}`)
     if (rec.cardPlacement !== 'immediately_after_explanation') errors.push(`bad_card_placement:${rec.sectionId}`)
     if (looksGeneric(`${rec.whyThisMatters} ${rec.whyThisWeek} ${rec.nextAction}`)) errors.push(`generic_reasoning:${rec.sectionId}`)
@@ -258,6 +296,9 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
       if (!validTaskIds.has(id)) errors.push(`invalid_related_task_id:${id}`)
     }
   }
+  if (context.workstreams.some(stream => stream.taskIds.length > 1) && recs.every(rec => (rec.relatedTaskIds ?? []).length === 0)) {
+    errors.push('missing_related_workstream_binding')
+  }
   if (hasRepeatedTemplateShape(recs)) errors.push('repeated_template_structure')
   if (overusesDueDates(recs)) errors.push('due_date_overuse')
   return [...new Set(errors)]
@@ -265,14 +306,18 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
 
 export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutput {
   const selected = context.tasks.slice(0, Math.min(5, Math.max(3, context.tasks.length)))
+  const workstreamByTaskId = buildWorkstreamLookup(context.workstreams)
   const locale = context.locale
   const recommendations = selected.map((task, index): WeeklyPlanRecommendation => {
     const evidence = quickDraftEvidence(task)
+    const stream = workstreamByTaskId.get(task.id)
+    const relatedTaskIds = stream?.taskIds.filter(id => id !== task.id).slice(0, 2) ?? []
     return {
       sectionId: `quick_${index + 1}_${task.id}`,
       rank: index + 1,
+      focusArea: stream?.label ?? (task.project?.name || task.tags?.[0] || (locale === 'he' ? 'משימה ממוקדת' : 'Focused task')),
       primaryTaskId: task.id,
-      relatedTaskIds: [],
+      relatedTaskIds,
       recommendationType: quickDraftType(task),
       title: task.title,
       whyThisMatters: locale === 'he'
@@ -354,7 +399,6 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
   const title = task?.title ?? String(record.title || '')
   if (!id || !title) return null
   const dueIso = normalizeDate(task?.dueDate ?? record.dueDate)
-  const status = normalizeStatus(task?.status ?? record.status)
   const notes = String(task?.description ?? record.description ?? record.notes ?? '').trim()
   const projectId = task?.projectId || String(record.projectId || '')
   const projectName = String(record.project || record.projectName || projectId || '').trim()
@@ -366,19 +410,40 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
   const timerMinutes = Number(record.timerMinutesLast7Days || record.timerMinutesLast30Days || (task?.completedPomodoros ?? 0) * 25 || 0)
   const postponedCount = Number(record.postponedCount || (task?.doneForNowUntil ? 1 : 0) || 0)
   const daysUntilDue = dueIso ? Math.ceil((new Date(`${dueIso}T00:00:00`).getTime() - startOfDay(now).getTime()) / MS_PER_DAY) : null
+  const estimateMinutes = Number(task?.estimatedDuration ?? record.estimatedDuration) || null
+  const status = normalizeStatus(task?.status ?? record.status)
+  const priority = normalizePriority(task?.priority ?? record.priority)
+  const hasHumanOrExternalStakeholder = STAKEHOLDER_RE.test(text)
+  const hasMoneyClientHealthFamilyLegalSignal = MONEY_CLIENT_HEALTH_FAMILY_LEGAL_RE.test(text)
+  const isOverdue = typeof daysUntilDue === 'number' && daysUntilDue < 0
+  const isStale = now.getTime() - new Date(updatedIso).getTime() > 14 * MS_PER_DAY
   const evidenceSnippets = buildEvidenceSnippets({ title, notes, projectName, postponedCount, blocksTaskIds, blockedByTaskIds, timerMinutes })
+  const candidateReasons = buildCandidateReasons({
+    daysUntilDue,
+    isOverdue,
+    isStale,
+    status,
+    projectName,
+    postponedCount,
+    timerMinutes,
+    blocksTaskIds,
+    blockedByTaskIds,
+    hasHumanOrExternalStakeholder,
+    hasMoneyClientHealthFamilyLegalSignal,
+    estimateMinutes,
+  })
 
   return {
     id,
     version: new Date(updatedIso).getTime() || 0,
     title,
     status,
-    priority: normalizePriority(task?.priority ?? record.priority),
+    priority,
     dueIso,
     project: projectId || projectName ? { id: projectId || projectName, name: projectName || projectId } : undefined,
     notes: notes || undefined,
     tags: task?.tags ?? (Array.isArray(record.tags) ? record.tags.map(String) : undefined),
-    estimateMinutes: Number(task?.estimatedDuration ?? record.estimatedDuration) || null,
+    estimateMinutes,
     dependencies: { blocksTaskIds, blockedByTaskIds },
     history: {
       createdIso,
@@ -392,13 +457,93 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
     },
     derived: {
       daysUntilDue,
-      isOverdue: typeof daysUntilDue === 'number' && daysUntilDue < 0,
-      isStale: now.getTime() - new Date(updatedIso).getTime() > 14 * MS_PER_DAY,
-      hasHumanOrExternalStakeholder: STAKEHOLDER_RE.test(text),
-      hasMoneyClientHealthFamilyLegalSignal: MONEY_CLIENT_HEALTH_FAMILY_LEGAL_RE.test(text),
+      isOverdue,
+      isStale,
+      hasHumanOrExternalStakeholder,
+      hasMoneyClientHealthFamilyLegalSignal,
+      candidateReasons,
       evidenceSnippets,
     },
   }
+}
+
+function buildCandidateReasons(input: {
+  daysUntilDue: number | null
+  isOverdue: boolean
+  isStale: boolean
+  status: PlannerTaskSnapshot['status']
+  projectName: string
+  postponedCount: number
+  timerMinutes: number
+  blocksTaskIds: string[]
+  blockedByTaskIds: string[]
+  hasHumanOrExternalStakeholder: boolean
+  hasMoneyClientHealthFamilyLegalSignal: boolean
+  estimateMinutes: number | null
+}): CandidateReason[] {
+  const reasons: CandidateReason[] = []
+  if (input.isOverdue) reasons.push('overdue')
+  if (typeof input.daysUntilDue === 'number' && input.daysUntilDue >= 0 && input.daysUntilDue <= 7) reasons.push('due_this_week')
+  if (input.blocksTaskIds.length) reasons.push('blocks_other_tasks')
+  if (input.blockedByTaskIds.length) reasons.push('blocked_needs_decision')
+  if (input.postponedCount >= 2 || input.isStale) reasons.push('repeatedly_postponed')
+  if (input.status === 'in_progress') reasons.push('already_started')
+  if (input.timerMinutes >= 60) reasons.push('high_timer_investment')
+  if (input.projectName) reasons.push('project_with_multiple_active_tasks')
+  if (input.hasHumanOrExternalStakeholder) reasons.push('notes_have_external_stakeholder')
+  if (input.hasMoneyClientHealthFamilyLegalSignal) reasons.push('notes_have_money_client_health_family_legal_signal')
+  if (input.estimateMinutes != null && input.estimateMinutes <= 30) reasons.push('small_quick_win')
+  if (input.estimateMinutes != null && input.estimateMinutes >= 180) reasons.push('large_needs_decomposition')
+  return reasons
+}
+
+function buildWorkstreams(tasks: PlannerTaskSnapshot[]): PlannerWorkstream[] {
+  const streams = new Map<string, PlannerWorkstream>()
+
+  function add(id: string, label: string, task: PlannerTaskSnapshot, reason: string, signals: CandidateReason[]) {
+    const stream = streams.get(id) ?? { id, label, taskIds: [], reason, evidenceSignals: [] }
+    if (!stream.taskIds.includes(task.id)) stream.taskIds.push(task.id)
+    for (const signal of signals) {
+      if (!stream.evidenceSignals.includes(signal)) stream.evidenceSignals.push(signal)
+    }
+    streams.set(id, stream)
+  }
+
+  for (const task of tasks) {
+    if (task.project?.name) {
+      add(`project:${task.project.id}`, task.project.name, task, 'Several candidate tasks share this project/aspect.', ['project_with_multiple_active_tasks'])
+    }
+    if (task.derived.hasHumanOrExternalStakeholder) {
+      add('signal:commitments', 'External commitments and replies', task, 'These tasks appear connected to other people, meetings, replies, approvals, or clients.', ['notes_have_external_stakeholder'])
+    }
+    if (task.derived.hasMoneyClientHealthFamilyLegalSignal) {
+      add('signal:real-life-stakes', 'Money, client, health, family, or admin stakes', task, 'These tasks carry consequences beyond a checkbox.', ['notes_have_money_client_health_family_legal_signal'])
+    }
+    if (task.dependencies?.blocksTaskIds.length) {
+      add('signal:blockers', 'Unblock dependent work', task, 'These tasks block follow-up work.', ['blocks_other_tasks'])
+    }
+    if (task.history.postponedCount >= 2 || task.derived.isStale) {
+      add('signal:avoidance', 'Postponed or stale work', task, 'These tasks show avoidance or slipping context.', ['repeatedly_postponed'])
+    }
+    if (task.status === 'in_progress' || task.history.timerMinutesLast7Days >= 60) {
+      add('signal:finish-started', 'Finish work already in motion', task, 'These tasks already have attention invested.', ['already_started', 'high_timer_investment'])
+    }
+  }
+
+  return [...streams.values()]
+    .filter(stream => stream.taskIds.length > 1 || stream.id.startsWith('signal:'))
+    .sort((a, b) => b.taskIds.length - a.taskIds.length)
+    .slice(0, 8)
+}
+
+function buildWorkstreamLookup(workstreams: PlannerWorkstream[]): Map<string, PlannerWorkstream> {
+  const out = new Map<string, PlannerWorkstream>()
+  for (const stream of workstreams) {
+    for (const id of stream.taskIds) {
+      if (!out.has(id)) out.set(id, stream)
+    }
+  }
+  return out
 }
 
 function selectCandidatePool(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapshot[] {

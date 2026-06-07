@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.4.96",
+  "version": "1.4.97",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://github.com/endlessblink/flow-state",
   "repository": {
@@ -40,7 +40,7 @@
     "electron:dev": "VITE_DEV_SERVER_URL=http://localhost:5546 npm run electron:build-main && electron dist-electron/main.cjs --no-sandbox",
     "electron:patch-builder": "node scripts/patch-electron-builder-dependency-parser.cjs",
     "electron:validate-env": "node scripts/validate-electron-vite-env.cjs",
-    "electron:build": "npm run electron:validate-env && ELECTRON_BUILD=true npm run build && npm run electron:build-main && npm run electron:patch-builder && electron-builder --config electron-builder.yml",
+    "electron:build": "npm run electron:validate-env && ELECTRON_BUILD=true npm run build && npm run electron:build-main && npm run electron:patch-builder && electron-builder --config electron-builder.yml && node scripts/validate-electron-vite-env.cjs --package",
     "electron:preview": "npm run electron:validate-env && ELECTRON_BUILD=true npm run build && npm run electron:build-main && electron dist-electron/main.cjs --no-sandbox",
     "tauri:update-manifest": "node scripts/generate-update-manifest.cjs",
     "tauri:build:signed": "echo '' | bash scripts/tauri-build-signed.sh",

@@ -76,6 +76,7 @@ if [ "$DRY_RUN" = true ]; then
 else
   npm run electron:patch-builder
   npx electron-builder --config electron-builder.yml --linux
+  node "$PROJECT_DIR/scripts/validate-electron-vite-env.cjs" --package
 fi
 
 # Check artifacts exist

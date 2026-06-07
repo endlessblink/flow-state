@@ -648,6 +648,15 @@ onUnmounted(() => {
           </OverflowTooltip>
         </div>
         <div class="header-actions">
+          <button
+            class="header-text-btn new-chat-header-btn"
+            :title="$t('ai_chat.new_chat')"
+            @click="handleNewChat"
+          >
+            <Plus :size="14" />
+            <span>{{ $t('ai_chat.new_chat') }}</span>
+          </button>
+
           <!-- Settings dropdown -->
           <div ref="settingsContainerRef" class="settings-container">
             <button
@@ -1243,6 +1252,30 @@ onUnmounted(() => {
 
 .header-btn:hover {
   background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.header-text-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1_5);
+  height: var(--space-8);
+  padding: 0 var(--space-2_5);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+}
+
+.header-text-btn:hover {
+  border-color: var(--color-focus);
+  background: var(--purple-bg-subtle);
   color: var(--text-primary);
 }
 

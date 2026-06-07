@@ -18,6 +18,12 @@ const requiredAsarEntries = [
   '/dist-electron/main.cjs',
   '/dist-electron/preload.cjs',
   '/dist-electron/local-api-server.cjs',
+  '/node_modules/universalify/package.json',
+  '/node_modules/universalify/index.js',
+  '/node_modules/jsonfile/package.json',
+  '/node_modules/jsonfile/index.js',
+  '/node_modules/graceful-fs/package.json',
+  '/node_modules/graceful-fs/graceful-fs.js',
   '/package.json',
 ]
 
@@ -43,6 +49,9 @@ if (!fs.existsSync(builderConfig)) {
   const requiredConfigSnippets = [
     '  - dist/**/*',
     '  - dist-electron/**/*',
+    '  - node_modules/universalify/**/*',
+    '  - node_modules/jsonfile/**/*',
+    '  - node_modules/graceful-fs/**/*',
     'main: dist-electron/main.cjs',
     'executableName: flowstate',
     'StartupWMClass: flow-state',
@@ -58,4 +67,4 @@ if (process.exitCode) {
   process.exit(process.exitCode)
 }
 
-console.log('[electron-package] Electron package contains renderer, main process, sidecar, and Linux launcher metadata.')
+console.log('[electron-package] Electron package contains renderer, main process, sidecar, updater dependency closure, and Linux launcher metadata.')

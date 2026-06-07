@@ -31,6 +31,9 @@ function writeBuilderConfig(root: string, options: { executableName?: string; st
 files:
   - dist/**/*
   - dist-electron/**/*
+  - node_modules/universalify/**/*
+  - node_modules/jsonfile/**/*
+  - node_modules/graceful-fs/**/*
 
 extraMetadata:
   main: dist-electron/main.cjs
@@ -73,6 +76,20 @@ function runValidator(root: string) {
 }
 
 describe('validate-electron-package', () => {
+  const validAsarEntries = [
+    '/dist/index.html',
+    '/dist-electron/main.cjs',
+    '/dist-electron/preload.cjs',
+    '/dist-electron/local-api-server.cjs',
+    '/node_modules/universalify/package.json',
+    '/node_modules/universalify/index.js',
+    '/node_modules/jsonfile/package.json',
+    '/node_modules/jsonfile/index.js',
+    '/node_modules/graceful-fs/package.json',
+    '/node_modules/graceful-fs/graceful-fs.js',
+    '/package.json',
+  ]
+
   afterEach(() => {
     for (const root of tempRoots.splice(0)) {
       rmSync(root, { recursive: true, force: true })
@@ -82,13 +99,7 @@ describe('validate-electron-package', () => {
   it('passes when the packaged Electron app contains the renderer, main process, preload, and sidecar', async () => {
     const root = makeRoot()
     writeBuilderConfig(root)
-    await writeAppAsar(root, [
-      '/dist/index.html',
-      '/dist-electron/main.cjs',
-      '/dist-electron/preload.cjs',
-      '/dist-electron/local-api-server.cjs',
-      '/package.json',
-    ])
+    await writeAppAsar(root, validAsarEntries)
 
     const result = runValidator(root)
 
@@ -99,12 +110,7 @@ describe('validate-electron-package', () => {
   it('fails before shipping an AppImage that is missing the renderer entrypoint', async () => {
     const root = makeRoot()
     writeBuilderConfig(root)
-    await writeAppAsar(root, [
-      '/dist-electron/main.cjs',
-      '/dist-electron/preload.cjs',
-      '/dist-electron/local-api-server.cjs',
-      '/package.json',
-    ])
+    await writeAppAsar(root, validAsarEntries.filter((entry) => entry !== '/dist/index.html'))
 
     const result = runValidator(root)
 
@@ -116,11 +122,8 @@ describe('validate-electron-package', () => {
     const root = makeRoot()
     writeBuilderConfig(root)
     await writeAppAsar(root, [
-      '/dist/index.html',
-      '/dist-electron/main.cjs',
-      '/dist-electron/preload.cjs',
+      ...validAsarEntries.filter((entry) => entry !== '/dist-electron/local-api-server.cjs'),
       '/dist-electron/ipc/local-api-server.cjs',
-      '/package.json',
     ])
 
     const result = runValidator(root)
@@ -132,17 +135,23 @@ describe('validate-electron-package', () => {
   it('fails if Linux launcher metadata drifts away from the dock shortcut contract', async () => {
     const root = makeRoot()
     writeBuilderConfig(root, { executableName: 'flow-state' })
-    await writeAppAsar(root, [
-      '/dist/index.html',
-      '/dist-electron/main.cjs',
-      '/dist-electron/preload.cjs',
-      '/dist-electron/local-api-server.cjs',
-      '/package.json',
-    ])
+    await writeAppAsar(root, validAsarEntries)
 
     const result = runValidator(root)
 
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('executableName: flowstate')
+  })
+
+  it('fails before shipping an AppImage that can crash electron-updater on a missing fs-extra dependency', async () => {
+    const root = makeRoot()
+    writeBuilderConfig(root)
+    await writeAppAsar(root, validAsarEntries.filter((entry) => !entry.startsWith('/node_modules/universalify/')))
+
+    const result = runValidator(root)
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('/node_modules/universalify/package.json')
+    expect(result.stderr).toContain('/node_modules/universalify/index.js')
   })
 })

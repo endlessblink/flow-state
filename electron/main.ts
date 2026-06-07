@@ -191,7 +191,15 @@ app.whenReady().then(() => {
   registerAppMenu()
   createWindow()
   globalShortcut.register('CommandOrControl+Shift+I', toggleMainWindowDevTools)
-  registerUpdater()
+  // TASK-1823: defense-in-depth. The auto-updater is non-essential to loading the
+  // app; never let its init (or a missing transitive dep) crash the main process
+  // and blank the window. updater.ts already lazy-loads electron-updater safely,
+  // but keep this guard so any future updater error degrades to "no auto-update".
+  try {
+    registerUpdater()
+  } catch (err) {
+    console.error('[main] Updater init failed — continuing without auto-update:', err)
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

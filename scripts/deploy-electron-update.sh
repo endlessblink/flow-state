@@ -104,6 +104,7 @@ else
   npm run electron:patch-builder
   npx electron-builder --config electron-builder.yml --linux
   npm run electron:validate-package
+  npm run electron:smoke-appimage
 fi
 
 # Check artifacts exist

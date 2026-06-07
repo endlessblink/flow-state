@@ -62,7 +62,7 @@ export function registerUpdater() {
   })
 
   ipcMain.handle('updater:install', () => {
-    if (!canUseUpdater) return true
+    if (!canUseUpdater || !autoUpdater) return true
 
     // Release single-instance lock before restart, otherwise the new process
     // can't acquire the lock and immediately exits (appears as a crash).
@@ -78,7 +78,7 @@ export function registerUpdater() {
     return true
   })
 
-  if (!canUseUpdater) {
+  if (!canUseUpdater || !autoUpdater) {
     if (!isDev) {
       console.warn(`[Updater] Skipping updater initialization for invalid app version: ${appVersion}`)
     }

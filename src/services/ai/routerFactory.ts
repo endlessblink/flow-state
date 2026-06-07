@@ -177,9 +177,12 @@ export async function getSharedRouter(): Promise<AIRouter> {
   if (!sharedRouter) {
     configuredApiKey = currentApiKey
     configuredBridgeKey = bridgeKey
-    // Bridge first (best brain) when enabled; always keep cloud + local as fallback.
+    // TASK-1822: when the subscription is on, the ONLY brains are the two CLIs —
+    // the bridge provider fails over Claude↔Codex internally. No Groq/Ollama
+    // (not strong enough). OpenRouter may be added later as a tail fallback.
+    // When the subscription is off, keep the cloud/local providers available.
     const providers = useBridge
-      ? ['bridge', 'groq', 'ollama', 'openrouter'] as const
+      ? ['bridge'] as const
       : ['groq', 'ollama', 'openrouter'] as const
     const rawRouter = createAIRouter({
       providers: [...providers],

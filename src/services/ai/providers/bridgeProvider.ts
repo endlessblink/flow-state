@@ -68,46 +68,77 @@ export class BridgeProvider implements AIProvider {
 
   async generate(messages: ChatMessage[], options: GenerateOptions): Promise<GenerateResponse> {
     const start = Date.now()
-    const brain = this.resolveBrain(options.model)
-    const out = await bridgeChat(messages, brain, { timeoutMs: options.timeout ?? this.timeout })
-    return {
-      content: out.content,
-      model: out.model,
-      generationTimeMs: Date.now() - start,
-      stopReason: 'stop',
+    let lastErr: unknown
+    // TASK-1822: try the preferred brain, then fail over to the other (Claude↔Codex)
+    // on any bridge/brain failure (error or no credits). Only the two CLI brains.
+    for (const brain of this.brainFailoverOrder(options.model)) {
+      try {
+        const out = await bridgeChat(messages, brain, { timeoutMs: options.timeout ?? this.timeout })
+        return {
+          content: out.content,
+          model: out.model,
+          generationTimeMs: Date.now() - start,
+          stopReason: 'stop',
+        }
+      } catch (error) {
+        lastErr = error
+        // Only fail over on bridge/brain failures; a real code error should surface.
+        if (!(error instanceof BridgeUnavailableError)) throw error
+      }
     }
+    throw lastErr
   }
 
   /**
    * Real token streaming via the bridge's SSE endpoint. Yields deltas as they
    * arrive (Claude streams tokens; Codex arrives as one chunk on completion).
+   *
+   * TASK-1822: Claude↔Codex failover. If the preferred brain throws BEFORE any
+   * token is yielded (auth / 429 / 502 / no credits — all surfaced pre-stream by
+   * bridgeChatStream), retry the other brain. We never switch mid-stream.
    */
   async *generateStream(messages: ChatMessage[], options: GenerateOptions): AsyncGenerator<StreamChunk> {
-    const brain = this.resolveBrain(options.model)
-    let yielded = false
-    try {
-      for await (const delta of bridgeChatStream(messages, brain, { timeoutMs: options.timeout ?? this.timeout })) {
-        yielded = true
-        yield { content: delta, done: false }
-      }
-      yield { content: '', done: true }
-    } catch (error) {
-      // If nothing streamed yet (e.g. auth/connect failure), THROW so the router
-      // falls back to the next provider. If we already streamed tokens, end the
-      // chunk with an error marker instead (can't un-yield partial output).
-      if (!yielded && error instanceof BridgeUnavailableError) throw error
-      if (error instanceof BridgeUnavailableError) {
-        yield { content: '', done: true, error: error.message }
+    const order = this.brainFailoverOrder(options.model)
+    let lastErr: unknown
+    for (let i = 0; i < order.length; i++) {
+      const brain = order[i]
+      let yielded = false
+      try {
+        for await (const delta of bridgeChatStream(messages, brain, { timeoutMs: options.timeout ?? this.timeout })) {
+          yielded = true
+          yield { content: delta, done: false }
+        }
+        yield { content: '', done: true }
         return
+      } catch (error) {
+        lastErr = error
+        // Already streamed partial output — can't un-yield, so don't switch brains.
+        if (yielded) {
+          if (error instanceof BridgeUnavailableError) {
+            yield { content: '', done: true, error: error.message }
+            return
+          }
+          throw error
+        }
+        // Nothing yielded yet. Non-bridge errors surface; bridge errors fail over
+        // to the next brain (loop continues). If this was the last brain, rethrow.
+        if (!(error instanceof BridgeUnavailableError)) throw error
       }
-      throw error
     }
+    throw lastErr
   }
 
   /** model field may carry an explicit brain override ('claude'|'codex'); else use configured. */
   private resolveBrain(model?: string): BridgeBrain {
     if (model === 'claude' || model === 'codex') return model
     return this.brain
+  }
+
+  /** TASK-1822: [preferred brain, the other brain] for automatic failover. */
+  private brainFailoverOrder(model?: string): BridgeBrain[] {
+    const first = this.resolveBrain(model)
+    const other: BridgeBrain = first === 'claude' ? 'codex' : 'claude'
+    return [first, other]
   }
 
   dispose(): void {

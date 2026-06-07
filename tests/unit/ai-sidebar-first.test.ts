@@ -344,7 +344,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.find('.tool-results').exists()).toBe(false)
   })
 
-  it('renders structured weekly plan sections with cards bound by task id', () => {
+  it('renders structured weekly plan sections with cards bound by task id', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({
       id: 'task-renewal',
@@ -420,6 +420,10 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(1)
     expect(wrapper.get('[data-testid="inline-plan-card"]').text()).toContain('Send renewal proposal to Amit')
     expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(0)
+
+    await wrapper.get('[aria-label="Hide from these options"]').trigger('click')
+    expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(0)
+    expect(wrapper.get('[data-section-id="rec-renewal"]').text()).toContain('Amit needs numbers')
   })
 
   it('rejects shallow weekly plan JSON and falls back to evidence-only quick drafts', () => {

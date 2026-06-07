@@ -191,6 +191,7 @@ const weeklyPlan = computed(() => {
 
 function weeklyPlanTaskIds(rec: WeeklyPlanRecommendation): string[] {
   return [...new Set([rec.primaryTaskId, ...(rec.relatedTaskIds ?? [])].filter(Boolean))]
+    .filter(taskId => !dismissedCardTaskIds.value.has(taskId))
 }
 
 function taskCardFromId(taskId: string): TaskListItem | null {
@@ -858,6 +859,14 @@ async function saveSchedule() {
                   >
                     <Loader2 v-if="actionLoading[taskId] === 'timer'" :size="12" class="spin" />
                     <Play v-else :size="12" />
+                  </button>
+                  <button
+                    class="inline-action-btn inline-dismiss-btn"
+                    title="Hide from these options"
+                    aria-label="Hide from these options"
+                    @click="dismissCardTask(taskId, $event)"
+                  >
+                    <X :size="12" />
                   </button>
                   <span v-if="taskCardFromId(taskId)?.status === 'done' || completedTaskIds.has(taskId)" class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>
                   <span v-if="timerStartedTaskIds.has(taskId)" class="inline-action-timer-badge"><Play :size="12" /> Timer</span>

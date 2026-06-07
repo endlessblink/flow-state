@@ -264,6 +264,7 @@ const cardGroups = computed(() => {
 
 const isDayPlan = computed(() => cardGroups.value?.kind === 'day_plan')
 const isSmartLanes = computed(() => cardGroups.value?.kind === 'smart_lanes')
+const isWeekPlan = computed(() => cardGroups.value?.kind === 'week_plan')
 // TASK-1820: weekly review cards show ALREADY-COMPLETED tasks → read-only
 // (no done-toggle / start-timer actions), but still clickable to open the task.
 const isWeeklyReview = computed(() => cardGroups.value?.kind === 'weekly_review')
@@ -289,9 +290,9 @@ function normalizeInlineMatchText(value: string): string {
 
 const inlineContentBlocks = computed(() => {
   const content = (props.message.content || '').trim()
-  if (!content || !cardGroups.value) return []
+  if (!cardGroups.value) return []
   const used = new Set<string>()
-  return content
+  const blocks = content
     .split(/\n+/)
     .map(line => line.trim())
     .filter(Boolean)
@@ -304,6 +305,23 @@ const inlineContentBlocks = computed(() => {
       for (const task of tasks) used.add(task.id)
       return { key: `line-${index}`, html: sanitizeMarkdownHtml(md.render(line)), tasks }
     })
+  if (isWeekPlan.value) {
+    const groundedBlocks = allCardTasks.value
+      .filter(task => task.id && !used.has(task.id))
+      .map((task, index) => {
+        const title = String(task.title || '').trim() || '(untitled)'
+        const reason = String(task.reason || '').trim()
+        const line = reason ? `**${title}** - ${reason}` : `**${title}**`
+        used.add(task.id)
+        return {
+          key: `grounded-week-plan-${index}-${task.id}`,
+          html: sanitizeMarkdownHtml(md.render(line)),
+          tasks: [task],
+        }
+      })
+    blocks.push(...groundedBlocks)
+  }
+  return blocks
 })
 const inlineTaskIds = computed(() => new Set(inlineContentBlocks.value.flatMap(block => block.tasks.map(task => task.id))))
 const hasInlineCardLayout = computed(() => inlineTaskIds.value.size > 0)
@@ -314,7 +332,7 @@ const remainingCardGroups = computed(() => {
     .filter(group => group.tasks.length > 0 || (group.newTasks?.length ?? 0) > 0)
 })
 const hasBottomCardGroups = computed(() =>
-  !!cardGroups.value && (isDayPlan.value || isSmartLanes.value || remainingCardGroups.value.length > 0),
+  !!cardGroups.value && !isWeekPlan.value && (isDayPlan.value || isSmartLanes.value || remainingCardGroups.value.length > 0),
 )
 const dayPlanTaskCount = computed(() => {
   const groups = liveCardGroups.value

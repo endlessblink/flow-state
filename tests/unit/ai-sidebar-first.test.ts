@@ -412,6 +412,49 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.find('.card-groups').exists()).toBe(false)
   })
 
+  it('keeps unmatched weekly planning cards inline instead of batching them at the bottom', () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-week-plan-unmatched-card',
+          role: 'assistant',
+          content: 'The week should protect payment follow-through and leave admin for a lower-energy slot.',
+          timestamp: Date.now(),
+          metadata: {
+            cardGroups: {
+              kind: 'week_plan',
+              total: 1,
+              groups: [
+                {
+                  name: 'Money',
+                  tasks: [
+                    {
+                      id: 'cardcom-payment',
+                      title: 'Check Cardcom payment',
+                      status: 'todo',
+                      priority: 'high',
+                      reason: 'money can get stuck if this slips',
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Check Cardcom payment')
+    expect(wrapper.text()).toContain('money can get stuck if this slips')
+    expect(wrapper.find('.card-groups').exists()).toBe(false)
+  })
+
   it('documents weekly planning as selective coach reasoning rather than a one-sentence task dump', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 

@@ -56,6 +56,7 @@ vi.mock('@/composables/useAIChat', async () => {
         pendingConfirmation: ref(null),
         aiPersonality: ref('professional'),
         chatDirection: refs.chatDirection,
+        chatLanguage: refs.chatLanguage,
         setProvider: vi.fn(),
         selectBrain: vi.fn(),
         setModel: vi.fn(),
@@ -71,6 +72,7 @@ vi.mock('@/composables/useAIChat', async () => {
         executeDirectTool: vi.fn(),
         setPersonality: vi.fn(),
         setChatDirection: store.setChatDirection,
+        setChatLanguage: store.setChatLanguage,
       }
     },
   }

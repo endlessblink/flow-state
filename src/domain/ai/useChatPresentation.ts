@@ -37,25 +37,29 @@ export function useChatPresentation(options: UseChatPresentationOptions) {
   const store = useAIChatStore()
   const timerStore = useTimerStore()
 
+  function chatText(en: string, he: string): string {
+    return store.chatLanguage === 'he' ? he : en
+  }
+
   // Error UX
   const friendlyError = computed(() => {
     if (!error.value) return null
     const err = error.value.toLowerCase()
 
     if (err.includes('econnrefused') || err.includes('localhost:11434')) {
-      return { message: 'Ollama is not running. Start it with: ollama serve', type: 'warning' as const }
+      return { message: chatText('Ollama is not running. Start it with: ollama serve', 'Ollama לא פועל. הפעל אותו עם: ollama serve'), type: 'warning' as const }
     }
     if (err.includes('network') || err.includes('fetch')) {
-      return { message: 'Network error. Check your internet connection.', type: 'error' as const }
+      return { message: chatText('Network error. Check your internet connection.', 'שגיאת רשת. בדוק את החיבור לאינטרנט.'), type: 'error' as const }
     }
     if (err.includes('rate limit') || err.includes('429')) {
-      return { message: 'Rate limited. Please wait a moment and try again.', type: 'warning' as const }
+      return { message: chatText('Rate limited. Please wait a moment and try again.', 'הגעת למגבלת שימוש. המתן רגע ונסה שוב.'), type: 'warning' as const }
     }
     if (err.includes('401') || err.includes('unauthorized')) {
-      return { message: 'Authentication failed. Check your API key.', type: 'error' as const }
+      return { message: chatText('Authentication failed. Check your API key.', 'האימות נכשל. בדוק את מפתח ה-API.'), type: 'error' as const }
     }
     if (err.includes('all providers failed')) {
-      return { message: 'AI is currently unavailable. Check provider settings.', type: 'error' as const }
+      return { message: chatText('AI is currently unavailable. Check provider settings.', 'ה-AI לא זמין כרגע. בדוק את הגדרות הספקים.'), type: 'error' as const }
     }
     return { message: error.value, type: 'error' as const }
   })
@@ -79,15 +83,34 @@ export function useChatPresentation(options: UseChatPresentationOptions) {
   const quickActions = computed(() => {
     const actions: { label: string; message: string; directTool?: { tool: string; parameters: Record<string, unknown> } | null }[] = []
 
-    actions.push({ label: t('ai_chat.suggestion_plan'), message: 'Plan my day', directTool: { tool: 'get_daily_summary', parameters: {} } })
-    actions.push({ label: t('ai_chat.suggestion_overdue'), message: 'What tasks are overdue?', directTool: { tool: 'get_overdue_tasks', parameters: {} } })
+    actions.push({
+      label: chatText(t('ai_chat.suggestion_plan'), 'תכנן לי את היום'),
+      message: chatText('Plan my day', 'תכנן לי את היום'),
+      directTool: { tool: 'get_daily_summary', parameters: {} },
+    })
+    actions.push({
+      label: chatText(t('ai_chat.suggestion_overdue'), 'מה המשימות באיחור?'),
+      message: chatText('What tasks are overdue?', 'מה המשימות באיחור?'),
+      directTool: { tool: 'get_overdue_tasks', parameters: {} },
+    })
 
     if (store.context.selectedTask) {
-      actions.push({ label: 'Break down this task', message: `Break down the task "${store.context.selectedTask.title}" into actionable subtasks.`, directTool: null })
+      actions.push({
+        label: chatText('Break down this task', 'פרק את המשימה הזאת'),
+        message: chatText(
+          `Break down the task "${store.context.selectedTask.title}" into actionable subtasks.`,
+          `פרק את המשימה "${store.context.selectedTask.title}" לתת-משימות מעשיות.`
+        ),
+        directTool: null,
+      })
     }
 
     if (timerStore.isTimerActive) {
-      actions.push({ label: t('ai_chat.suggestion_time'), message: 'How much time is left on my current timer?', directTool: { tool: 'get_timer_status', parameters: {} } })
+      actions.push({
+        label: chatText(t('ai_chat.suggestion_time'), 'כמה זמן נשאר?'),
+        message: chatText('How much time is left on my current timer?', 'כמה זמן נשאר בטיימר הנוכחי?'),
+        directTool: { tool: 'get_timer_status', parameters: {} },
+      })
     }
 
     return actions.slice(0, 4)

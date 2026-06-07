@@ -65,11 +65,17 @@ const {
   setPersonality,
   chatLanguage,
   setChatLanguage,
-  chatDirection,
-  setChatDirection,
 } = useAIChat()
 
 const { t } = useI18n()
+
+const effectiveChatDirection = computed(() =>
+  chatLanguage.value === 'he' ? 'rtl' : chatLanguage.value === 'en' ? 'ltr' : 'auto'
+)
+
+function chatText(en: string, he: string): string {
+  return chatLanguage.value === 'he' ? he : en
+}
 
 // Router for full-screen navigation
 const vueRouter = useRouter()
@@ -235,7 +241,10 @@ function retryLastMessage() {
 function handleQuickAction(action: { label: string; message: string; directTool?: { tool: string; parameters: Record<string, unknown> } | null }) {
   // TASK-1441: Quick actions use AI which requires network
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    error.value = 'AI chat requires an internet connection. Please check your network and try again.'
+    error.value = chatText(
+      'AI chat requires an internet connection. Please check your network and try again.',
+      'צ׳אט ה-AI דורש חיבור לאינטרנט. בדוק את החיבור ונסה שוב.'
+    )
     return
   }
   if (action.directTool) {
@@ -253,20 +262,50 @@ const quickActions = computed(() => {
   const actions: { label: string; message: string; directTool?: { tool: string; parameters: Record<string, unknown> } | null }[] = []
 
   // Always available — these have direct tool mappings for Ollama compatibility
-  actions.push({ label: t('ai_chat.suggestion_plan'), message: 'Plan my day', directTool: { tool: 'get_daily_summary', parameters: {} } })
-  actions.push({ label: t('ai_chat.suggestion_overdue'), message: "What tasks are overdue?", directTool: { tool: 'get_overdue_tasks', parameters: {} } })
+  actions.push({
+    label: chatText(t('ai_chat.suggestion_plan'), 'תכנן לי את היום'),
+    message: chatText('Plan my day', 'תכנן לי את היום'),
+    directTool: { tool: 'get_daily_summary', parameters: {} },
+  })
+  actions.push({
+    label: chatText(t('ai_chat.suggestion_overdue'), 'מה המשימות באיחור?'),
+    message: chatText('What tasks are overdue?', 'מה המשימות באיחור?'),
+    directTool: { tool: 'get_overdue_tasks', parameters: {} },
+  })
 
   // When a task is selected
   if (store.context.selectedTask) {
     // Break down needs AI creativity — no direct tool
-    actions.push({ label: 'Break down this task', message: `Break down the task "${store.context.selectedTask.title}" into actionable subtasks.`, directTool: null })
-    actions.push({ label: 'Start timer for this', message: `Start a timer for the task "${store.context.selectedTask.title}"`, directTool: { tool: 'start_timer', parameters: { taskId: store.context.selectedTask.id } } })
+    actions.push({
+      label: chatText('Break down this task', 'פרק את המשימה הזאת'),
+      message: chatText(
+        `Break down the task "${store.context.selectedTask.title}" into actionable subtasks.`,
+        `פרק את המשימה "${store.context.selectedTask.title}" לתת-משימות מעשיות.`
+      ),
+      directTool: null,
+    })
+    actions.push({
+      label: chatText('Start timer for this', 'הפעל טיימר לזה'),
+      message: chatText(
+        `Start a timer for the task "${store.context.selectedTask.title}"`,
+        `הפעל טיימר למשימה "${store.context.selectedTask.title}"`
+      ),
+      directTool: { tool: 'start_timer', parameters: { taskId: store.context.selectedTask.id } },
+    })
   }
 
   // When timer is running
   if (timerStore.isTimerActive) {
-    actions.push({ label: t('ai_chat.suggestion_time'), message: 'How much time is left on my current timer?', directTool: { tool: 'get_timer_status', parameters: {} } })
-    actions.push({ label: 'What am I working on?', message: 'What task am I currently working on?', directTool: { tool: 'get_timer_status', parameters: {} } })
+    actions.push({
+      label: chatText(t('ai_chat.suggestion_time'), 'כמה זמן נשאר?'),
+      message: chatText('How much time is left on my current timer?', 'כמה זמן נשאר בטיימר הנוכחי?'),
+      directTool: { tool: 'get_timer_status', parameters: {} },
+    })
+    actions.push({
+      label: chatText('What am I working on?', 'על מה אני עובד?'),
+      message: chatText('What task am I currently working on?', 'על איזו משימה אני עובד עכשיו?'),
+      directTool: { tool: 'get_timer_status', parameters: {} },
+    })
   }
 
   // Return max 4
@@ -288,7 +327,7 @@ async function handleUndo() {
 }
 
 const activityItems = computed(() => {
-  const items = [...store.activityEvents]
+  const items = [...(store.activityEvents || [])]
   if (isGenerating.value) {
     items.unshift({
       id: 'ai-thinking-live',
@@ -648,7 +687,7 @@ onUnmounted(() => {
         <div class="header-title">
           <Zap v-if="isGridHandler" class="header-icon grid-handler-icon" :size="18" />
           <Sparkles v-else class="header-icon" :size="18" />
-          <span>{{ isGridHandler ? 'Grid Handler' : 'AI Assistant' }}</span>
+          <span>{{ isGridHandler ? chatText('Grid Handler', 'מנהל הגריד') : chatText('AI Assistant', 'עוזר AI') }}</span>
           <OverflowTooltip
             v-if="headerBadgeText"
             class="provider-badge"
@@ -799,9 +838,9 @@ onUnmounted(() => {
                   </div>
                 </div>
 
-                <!-- Assistant Reply Language -->
+                <!-- Chat Language -->
                 <div class="settings-section">
-                  <label class="settings-label">Message Language</label>
+                  <label class="settings-label">{{ chatText('Chat Language', 'שפת הצ׳אט') }}</label>
                   <div class="personality-toggle">
                     <button
                       class="personality-option"
@@ -822,35 +861,7 @@ onUnmounted(() => {
                       :class="{ active: chatLanguage === 'he' }"
                       @click="setChatLanguage('he')"
                     >
-                      Hebrew
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Chat Text Direction -->
-                <div class="settings-section">
-                  <label class="settings-label">Text Direction</label>
-                  <div class="personality-toggle">
-                    <button
-                      class="personality-option"
-                      :class="{ active: chatDirection === 'auto' }"
-                      @click="setChatDirection('auto')"
-                    >
-                      Auto
-                    </button>
-                    <button
-                      class="personality-option"
-                      :class="{ active: chatDirection === 'ltr' }"
-                      @click="setChatDirection('ltr')"
-                    >
-                      LTR
-                    </button>
-                    <button
-                      class="personality-option"
-                      :class="{ active: chatDirection === 'rtl' }"
-                      @click="setChatDirection('rtl')"
-                    >
-                      RTL
+                      עברית
                     </button>
                   </div>
                 </div>
@@ -858,7 +869,7 @@ onUnmounted(() => {
                 <!-- Provider Status Section (TASK-1250: Keys are server-side) -->
                 <div class="settings-section api-keys-section">
                   <button class="api-keys-toggle" @click="showApiKeys = !showApiKeys">
-                    <label class="settings-label">Provider Status</label>
+                    <label class="settings-label">{{ chatText('Provider Status', 'סטטוס ספקים') }}</label>
                     <ChevronDown v-if="!showApiKeys" :size="14" class="api-keys-chevron" />
                     <ChevronUp v-else :size="14" class="api-keys-chevron" />
                   </button>
@@ -867,8 +878,7 @@ onUnmounted(() => {
                     <div v-if="showApiKeys" class="api-keys-content">
                       <div class="provider-info-box">
                         <p class="provider-info-text">
-                          API keys are managed securely via server-side configuration.
-                          Test buttons verify proxy availability.
+                          {{ chatText('API keys are managed securely via server-side configuration. Test buttons verify proxy availability.', 'מפתחות API מנוהלים בצורה מאובטחת בצד השרת. כפתורי הבדיקה מאמתים זמינות פרוקסי.') }}
                         </p>
                       </div>
 
@@ -1007,13 +1017,13 @@ onUnmounted(() => {
       <div
         ref="messagesContainer"
         class="ai-chat-messages"
-        :dir="chatDirection !== 'auto' ? chatDirection : undefined"
+        :dir="effectiveChatDirection !== 'auto' ? effectiveChatDirection : undefined"
       >
         <ChatMessage
           v-for="message in visibleMessages"
           :key="message.id"
           :message="message"
-          :direction="chatDirection"
+          :direction="effectiveChatDirection"
           @select-task="handleSelectTask"
         />
 
@@ -1025,10 +1035,10 @@ onUnmounted(() => {
           </div>
           <div class="error-actions">
             <button v-if="lastUserMessage" class="error-retry" @click="retryLastMessage">
-              Retry
+              {{ chatText('Retry', 'נסה שוב') }}
             </button>
             <button class="error-dismiss" @click="clearError">
-              Dismiss
+              {{ chatText('Dismiss', 'סגור') }}
             </button>
           </div>
         </div>
@@ -1036,12 +1046,12 @@ onUnmounted(() => {
         <!-- Empty state -->
         <div v-if="visibleMessages.length === 0" class="empty-state">
           <Sparkles class="empty-icon" :size="32" />
-          <p>Ask me anything about your tasks!</p>
+          <p>{{ chatText('Ask me anything about your tasks!', 'אפשר לשאול אותי כל דבר על המשימות שלך!') }}</p>
           <p class="empty-hint">
-            Try: "Plan my day" or "Break down this task"
+            {{ chatText('Try: "Plan my day" or "Break down this task"', 'נסה: "תכנן לי את היום" או "פרק את המשימה הזאת"') }}
           </p>
           <p v-if="selectedProvider === 'ollama' || (selectedProvider === 'auto' && activeProvider === 'ollama')" class="provider-note">
-            Using local AI — quick actions call tools directly
+            {{ chatText('Using local AI — quick actions call tools directly', 'משתמש ב-AI מקומי — פעולות מהירות מפעילות כלים ישירות') }}
           </p>
         </div>
       </div>
@@ -1050,7 +1060,7 @@ onUnmounted(() => {
       <div v-if="activityItems.length > 0" class="ai-activity-timeline" data-testid="ai-activity-timeline">
         <div class="activity-heading">
           <Zap :size="13" />
-          <span>Activity</span>
+          <span>{{ chatText('Activity', 'פעילות') }}</span>
         </div>
         <div class="activity-list">
           <div
@@ -1088,14 +1098,14 @@ onUnmounted(() => {
       <div v-if="pendingConfirmation" class="confirmation-banner">
         <div class="confirmation-content">
           <AlertTriangle :size="16" class="confirmation-icon" />
-          <span>Confirm: {{ pendingConfirmation.tool.replace(/_/g, ' ') }}?</span>
+          <span>{{ chatText('Confirm', 'אישור') }}: {{ pendingConfirmation.tool.replace(/_/g, ' ') }}?</span>
         </div>
         <div class="confirmation-actions">
           <button class="confirm-btn confirm-danger" @click="confirmPendingAction()">
-            Confirm
+            {{ chatText('Confirm', 'אשר') }}
           </button>
           <button class="confirm-btn confirm-cancel" @click="cancelPendingAction()">
-            Cancel
+            {{ chatText('Cancel', 'בטל') }}
           </button>
         </div>
       </div>
@@ -1106,8 +1116,8 @@ onUnmounted(() => {
           ref="inputRef"
           v-model="inputText"
           class="ai-chat-input"
-          :dir="inputText ? chatDirection : 'auto'"
-          :placeholder="$t('ai_chat.ask_placeholder')"
+          :dir="inputText ? effectiveChatDirection : 'auto'"
+          :placeholder="chatText($t('ai_chat.ask_placeholder'), 'שאל אותי על המשימות שלך...')"
           rows="1"
           :disabled="isGenerating"
           @keydown="handleKeydown"

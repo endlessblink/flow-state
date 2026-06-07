@@ -86,8 +86,8 @@ const {
   executeAgentChain,
   aiPersonality,
   setPersonality,
-  chatDirection,
-  setChatDirection,
+  chatLanguage,
+  setChatLanguage,
 } = useAIChat()
 
 const isGridHandler = computed(() => aiPersonality.value === 'grid_handler')
@@ -95,6 +95,14 @@ const isGridHandler = computed(() => aiPersonality.value === 'grid_handler')
 const { t } = useI18n()
 const store = useAIChatStore()
 const agentChains = useAgentChains()
+
+const effectiveChatDirection = computed(() =>
+  chatLanguage.value === 'he' ? 'rtl' : chatLanguage.value === 'en' ? 'ltr' : 'auto'
+)
+
+function chatText(en: string, he: string): string {
+  return chatLanguage.value === 'he' ? he : en
+}
 
 // ============================================================================
 // Refs
@@ -315,7 +323,7 @@ function getChainName(chain: { id: string; name: string }): string {
 // ============================================================================
 
 const activeConversationTitle = computed(() => {
-  return store.activeConversation?.title || 'New Chat'
+  return store.activeConversation?.title || chatText('New Chat', 'צ׳אט חדש')
 })
 
 // ============================================================================
@@ -458,7 +466,7 @@ onUnmounted(() => {
           <button
             class="header-btn"
             :class="{ active: showSettings }"
-            title="AI Settings"
+            :title="chatText('AI Settings', 'הגדרות AI')"
             @click="showSettings = !showSettings"
           >
             <Settings :size="16" />
@@ -478,7 +486,7 @@ onUnmounted(() => {
           <button
             v-if="visibleMessages.length > 1"
             class="header-btn"
-            title="Clear chat"
+            :title="chatText('Clear chat', 'נקה צ׳אט')"
             @click="clearMessages"
           >
             <Trash2 :size="16" />
@@ -487,7 +495,7 @@ onUnmounted(() => {
           <!-- Close / Exit full-screen -->
           <button
             class="header-btn close-btn"
-            title="Close (Esc)"
+            :title="chatText('Close (Esc)', 'סגור (Esc)')"
             @click="goBack"
           >
             <X :size="18" />
@@ -500,7 +508,7 @@ onUnmounted(() => {
         <div v-if="showSettings" class="settings-bar">
           <!-- Provider Selection -->
           <div class="settings-group">
-            <label class="settings-label">Provider</label>
+            <label class="settings-label">{{ chatText('Provider', 'ספק') }}</label>
             <div class="provider-options">
               <!-- TASK-1814: subscription brains (Claude / Codex) — the preferred default -->
               <button
@@ -553,7 +561,7 @@ onUnmounted(() => {
 
           <!-- Cloud Model Selector -->
           <div v-if="showCloudModelSelector" class="settings-group">
-            <label class="settings-label">Model</label>
+            <label class="settings-label">{{ chatText('Model', 'מודל') }}</label>
             <CustomSelect
               :model-value="selectedModel || cloudModelOptions[0]?.value || ''"
               :options="cloudModelOptions"
@@ -565,7 +573,7 @@ onUnmounted(() => {
           <!-- Ollama Model Selector -->
           <div v-if="selectedProvider === 'ollama' || (selectedProvider === 'auto' && activeProvider === 'ollama')" class="settings-group">
             <div class="settings-label-row">
-              <label class="settings-label">Local Model</label>
+              <label class="settings-label">{{ chatText('Local Model', 'מודל מקומי') }}</label>
               <button class="refresh-btn" :disabled="isLoadingModels" @click="refreshOllamaModels">
                 <Loader2 v-if="isLoadingModels" class="spin" :size="12" />
                 <span v-else>&#x21bb;</span>
@@ -581,7 +589,7 @@ onUnmounted(() => {
 
           <!-- Personality -->
           <div class="settings-group">
-            <label class="settings-label">Personality</label>
+            <label class="settings-label">{{ chatText('Personality', 'אופי') }}</label>
             <div class="personality-toggle">
               <button
                 class="personality-option"
@@ -589,7 +597,7 @@ onUnmounted(() => {
                 @click="setPersonality('professional')"
               >
                 <Sparkles :size="12" />
-                Professional
+                {{ chatText('Professional', 'מקצועי') }}
               </button>
               <button
                 class="personality-option grid-handler-option"
@@ -597,23 +605,23 @@ onUnmounted(() => {
                 @click="setPersonality('grid_handler')"
               >
                 <Zap :size="12" />
-                Grid Handler
+                {{ chatText('Grid Handler', 'מנהל הגריד') }}
               </button>
             </div>
           </div>
 
-          <!-- Chat Text Direction -->
+          <!-- Chat Language -->
           <div class="settings-group">
-            <label class="settings-label">Text Direction</label>
+            <label class="settings-label">{{ chatText('Chat Language', 'שפת הצ׳אט') }}</label>
             <div class="personality-toggle">
-              <button class="personality-option" :class="{ active: chatDirection === 'auto' }" @click="setChatDirection('auto')">
+              <button class="personality-option" :class="{ active: chatLanguage === 'auto' }" @click="setChatLanguage('auto')">
                 Auto
               </button>
-              <button class="personality-option" :class="{ active: chatDirection === 'ltr' }" @click="setChatDirection('ltr')">
-                LTR
+              <button class="personality-option" :class="{ active: chatLanguage === 'en' }" @click="setChatLanguage('en')">
+                English
               </button>
-              <button class="personality-option" :class="{ active: chatDirection === 'rtl' }" @click="setChatDirection('rtl')">
-                RTL
+              <button class="personality-option" :class="{ active: chatLanguage === 'he' }" @click="setChatLanguage('he')">
+                עברית
               </button>
             </div>
           </div>
@@ -621,12 +629,12 @@ onUnmounted(() => {
       </Transition>
 
       <!-- Messages Area -->
-      <div ref="messagesContainer" class="chat-messages" :dir="chatDirection !== 'auto' ? chatDirection : undefined">
+      <div ref="messagesContainer" class="chat-messages" :dir="effectiveChatDirection !== 'auto' ? effectiveChatDirection : undefined">
         <ChatMessage
           v-for="message in visibleMessages"
           :key="message.id"
           :message="message"
-          :direction="chatDirection"
+          :direction="effectiveChatDirection"
           @select-task="handleSelectTask"
         />
 
@@ -638,10 +646,10 @@ onUnmounted(() => {
           </div>
           <div class="error-actions">
             <button v-if="lastUserMessage" class="error-retry" @click="retryLastMessage">
-              Retry
+              {{ chatText('Retry', 'נסה שוב') }}
             </button>
             <button class="error-dismiss" @click="clearError">
-              Dismiss
+              {{ chatText('Dismiss', 'סגור') }}
             </button>
           </div>
         </div>
@@ -650,10 +658,10 @@ onUnmounted(() => {
         <div v-if="visibleMessages.length === 0" class="empty-state">
           <Sparkles class="empty-icon" :size="40" />
           <p class="empty-title">
-            Ask me anything about your tasks!
+            {{ chatText('Ask me anything about your tasks!', 'אפשר לשאול אותי כל דבר על המשימות שלך!') }}
           </p>
           <p class="empty-hint">
-            Try: "Plan my day" or "Break down this task"
+            {{ chatText('Try: "Plan my day" or "Break down this task"', 'נסה: "תכנן לי את היום" או "פרק את המשימה הזאת"') }}
           </p>
         </div>
       </div>
@@ -662,14 +670,14 @@ onUnmounted(() => {
       <div v-if="pendingConfirmation" class="confirmation-banner">
         <div class="confirmation-content">
           <AlertTriangle :size="16" class="confirmation-icon" />
-          <span>Confirm: {{ pendingConfirmation.tool.replace(/_/g, ' ') }}?</span>
+          <span>{{ chatText('Confirm', 'אישור') }}: {{ pendingConfirmation.tool.replace(/_/g, ' ') }}?</span>
         </div>
         <div class="confirmation-actions">
           <button class="confirm-btn confirm-danger" @click="confirmPendingAction()">
-            Confirm
+            {{ chatText('Confirm', 'אשר') }}
           </button>
           <button class="confirm-btn confirm-cancel" @click="cancelPendingAction()">
-            Cancel
+            {{ chatText('Cancel', 'בטל') }}
           </button>
         </div>
       </div>
@@ -681,8 +689,8 @@ onUnmounted(() => {
             ref="inputRef"
             v-model="inputText"
             class="chat-input"
-            :dir="inputText ? chatDirection : 'auto'"
-            :placeholder="$t('ai_chat.ask_placeholder')"
+            :dir="inputText ? effectiveChatDirection : 'auto'"
+            :placeholder="chatText($t('ai_chat.ask_placeholder'), 'שאל אותי על המשימות שלך...')"
             rows="1"
             :disabled="isGenerating"
             @keydown="handleKeydown"

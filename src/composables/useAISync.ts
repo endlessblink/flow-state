@@ -19,7 +19,7 @@ import { getUsageEntries } from '@/services/ai/usageTracker'
 
 // AI database methods — not yet implemented in useSupabaseDatabase, will be added with AI sync feature
 interface AIDatabase {
-  fetchAISettings(): Promise<{ provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' } | null>
+  fetchAISettings(): Promise<{ provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl'; chatLanguage?: 'auto' | 'en' | 'he' } | null>
   fetchAIConversations(): Promise<Array<{ id: string; title: string; messages: any[]; createdAt: Date; updatedAt: Date }>>
   saveAIConversation(conv: unknown): Promise<void>
   saveAISettings(settings: unknown): Promise<void>
@@ -73,13 +73,13 @@ export function useAISync() {
   }
 
   /**
-   * Load AI settings (provider, model, chatDirection) from Supabase.
+   * Load AI settings (provider, model, chat language) from Supabase.
    * Supabase wins if it has a value; localStorage is the fallback.
    */
   async function loadSettings(): Promise<void> {
     const remoteSettings = await db.fetchAISettings()
     if (remoteSettings) {
-      ;(store as any).saveSettings(remoteSettings as { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' })
+      ;(store as any).saveSettings(remoteSettings)
     }
   }
 
@@ -211,7 +211,7 @@ export function useAISync() {
     }, CONVERSATION_SYNC_DEBOUNCE_MS))
   }
 
-  function scheduleSaveSettings(settings: { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl' }): void {
+  function scheduleSaveSettings(settings: { provider: string; model: string; chatDirection?: 'auto' | 'ltr' | 'rtl'; chatLanguage?: 'auto' | 'en' | 'he' }): void {
     if (settingsSyncTimer) clearTimeout(settingsSyncTimer)
     settingsSyncTimer = setTimeout(async () => {
       await db.saveAISettings(settings).catch((e: unknown) => console.warn('[AI-SYNC] saveAISettings failed:', e))

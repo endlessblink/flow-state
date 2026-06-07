@@ -1,10 +1,10 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, ref } from 'vue'
 
 const mocks = vi.hoisted(() => ({
+  chatLanguage: { value: 'auto' as 'auto' | 'en' | 'he' },
   setChatLanguage: vi.fn(),
-  setChatDirection: vi.fn(),
   setProvider: vi.fn(),
   selectBrain: vi.fn(),
   setModel: vi.fn(),
@@ -24,6 +24,7 @@ vi.mock('@/stores/aiChat', () => ({
     sortedConversations: [],
     activeConversationId: null,
     undoBuffer: [],
+    activityEvents: [],
     context: {},
     createConversation: vi.fn(),
     switchConversation: vi.fn(),
@@ -73,10 +74,8 @@ vi.mock('@/composables/useAIChat', () => ({
     executeDirectTool: vi.fn(),
     aiPersonality: ref('professional'),
     setPersonality: vi.fn(),
-    chatLanguage: ref('auto'),
+    chatLanguage: mocks.chatLanguage,
     setChatLanguage: mocks.setChatLanguage,
-    chatDirection: ref('auto'),
-    setChatDirection: mocks.setChatDirection,
     activeProviderLabel: computed(() => 'Claude'),
   }),
 }))
@@ -90,6 +89,11 @@ vi.mock('@/config/aiModels', () => ({
 }))
 
 describe('AIChatPanel message language setting', () => {
+  beforeEach(() => {
+    mocks.chatLanguage.value = 'auto'
+    vi.clearAllMocks()
+  })
+
   it('renders message language options and updates the selected language', async () => {
     const { default: AIChatPanel } = await import('@/components/ai/AIChatPanel.vue')
     const wrapper = mount(AIChatPanel, {
@@ -107,16 +111,36 @@ describe('AIChatPanel message language setting', () => {
 
     await wrapper.find('.settings-btn').trigger('click')
 
-    expect(wrapper.text()).toContain('Message Language')
+    expect(wrapper.text()).toContain('Chat Language')
     expect(wrapper.text()).toContain('Auto')
     expect(wrapper.text()).toContain('English')
-    expect(wrapper.text()).toContain('Hebrew')
+    expect(wrapper.text()).toContain('עברית')
 
     const languageButtons = wrapper.findAll('.settings-section').find(section =>
-      section.text().includes('Message Language')
+      section.text().includes('Chat Language')
     )?.findAll('button')
 
-    await languageButtons?.find(button => button.text() === 'Hebrew')?.trigger('click')
+    await languageButtons?.find(button => button.text() === 'עברית')?.trigger('click')
     expect(mocks.setChatLanguage).toHaveBeenCalledWith('he')
+  })
+
+  it('forces the chat shell to RTL when Hebrew is selected', async () => {
+    mocks.chatLanguage.value = 'he'
+    const { default: AIChatPanel } = await import('@/components/ai/AIChatPanel.vue')
+    const wrapper = mount(AIChatPanel, {
+      global: {
+        stubs: {
+          OverflowTooltip: { template: '<span><slot /></span>' },
+          ChatMessage: true,
+          CustomSelect: true,
+        },
+        mocks: {
+          $t: (_key: string, fallback?: string) => fallback || _key,
+        },
+      },
+    })
+
+    expect(wrapper.find('.ai-chat-messages').attributes('dir')).toBe('rtl')
+    expect(wrapper.find('.ai-chat-input').attributes('placeholder')).toContain('שאל')
   })
 })

@@ -154,6 +154,17 @@ function chatUI(lang: 'he' | 'en', key: string): string {
     confirmationRequired: { en: '**Confirmation required:**', he: '**נדרש אישור:**' },
     abortedByUser: { en: '*ReAct loop aborted by user.*', he: '*הופסק על ידי המשתמש.*' },
     analyzingResults: { en: 'Analyzing results...', he: 'מנתח תוצאות...' },
+    waitingConfirmation: { en: 'Waiting for confirmation', he: 'ממתין לאישור' },
+    readComplete: { en: 'Read complete', he: 'הקריאה הושלמה' },
+    actionComplete: { en: 'Action complete', he: 'הפעולה הושלמה' },
+    readFailed: { en: 'Read failed', he: 'הקריאה נכשלה' },
+    actionFailed: { en: 'Action failed', he: 'הפעולה נכשלה' },
+    updatingFlowState: { en: 'Updating FlowState', he: 'מעדכן את FlowState' },
+    preparingAction: { en: 'Preparing protected action', he: 'מכין פעולה מוגנת' },
+    readingFlowState: { en: 'Reading FlowState', he: 'קורא מ-FlowState' },
+    actionCancelledLabel: { en: 'Action cancelled', he: 'הפעולה בוטלה' },
+    chainStepComplete: { en: 'Chain step complete', he: 'שלב בשרשרת הושלם' },
+    chainStepFailed: { en: 'Chain step failed', he: 'שלב בשרשרת נכשל' },
   }
   return strings[key]?.[lang] ?? strings[key]?.en ?? key
 }
@@ -331,12 +342,13 @@ export function useAIChat() {
 
   function activityLabelForTool(toolName: string, status: AIActivityEvent['status'] = 'running'): string {
     const type = activityTypeForTool(toolName)
-    if (status === 'waiting_confirmation') return 'Waiting for confirmation'
-    if (status === 'success') return type === 'read' ? 'Read complete' : 'Action complete'
-    if (status === 'failed') return type === 'read' ? 'Read failed' : 'Action failed'
-    if (type === 'write') return 'Updating FlowState'
-    if (type === 'destructive') return 'Preparing protected action'
-    return 'Reading FlowState'
+    const lang = currentOutputLanguage()
+    if (status === 'waiting_confirmation') return chatUI(lang, 'waitingConfirmation')
+    if (status === 'success') return type === 'read' ? chatUI(lang, 'readComplete') : chatUI(lang, 'actionComplete')
+    if (status === 'failed') return type === 'read' ? chatUI(lang, 'readFailed') : chatUI(lang, 'actionFailed')
+    if (type === 'write') return chatUI(lang, 'updatingFlowState')
+    if (type === 'destructive') return chatUI(lang, 'preparingAction')
+    return chatUI(lang, 'readingFlowState')
   }
 
   const TASK_RESULT_TOOLS = new Set([
@@ -883,15 +895,18 @@ export function useAIChat() {
     }
 
     // No personal context — show onboarding card
+    const lang = chatLanguage.value === 'he' ? 'he' : 'en'
     store.addAssistantMessage(
-      'I can give better suggestions if I know your schedule.',
+      lang === 'he'
+        ? 'אני יכול לתת הצעות טובות יותר אם אדע מה הלו"ז שלך.'
+        : 'I can give better suggestions if I know your schedule.',
       {
         metadata: {
           scheduleQuestion: {
             type: 'unavailable-days',
             answered: false,
           },
-          forceDirection: 'ltr',
+          forceDirection: lang === 'he' ? 'rtl' : 'ltr',
         },
       }
     )
@@ -1829,7 +1844,7 @@ export function useAIChat() {
         tool: call.tool,
         type: activityTypeForTool(call.tool),
         status: 'cancelled',
-        label: 'Action cancelled',
+        label: chatUI(currentOutputLanguage(), 'actionCancelledLabel'),
         message: call.tool.replace(/_/g, ' '),
       })
     }
@@ -1989,13 +2004,14 @@ export function useAIChat() {
       return
     }
 
-    // Detect language from recent user messages so chains respond in the user's language
+    // Detect language from recent user messages unless the chat has an explicit language mode.
     const recentUserMessages = store.messages
       .filter((m) => m.role === 'user')
       .slice(-5)
       .map((m) => m.content || '')
       .join(' ')
-    const chainLang: 'he' | 'en' = detectLanguage(recentUserMessages) === 'he' ? 'he' : 'en'
+    const detectedChainLang: 'he' | 'en' = detectLanguage(recentUserMessages) === 'he' ? 'he' : 'en'
+    const chainLang: 'he' | 'en' = resolveChatOutputLanguage(detectedChainLang, chatLanguage.value)
 
     // Clear input and add user message
     store.inputText = ''
@@ -2016,7 +2032,7 @@ export function useAIChat() {
           tool: toolName || 'unknown',
           type: toolName ? activityTypeForTool(toolName) : 'thinking',
           status: result.success ? 'success' : 'failed',
-          label: result.success ? 'Chain step complete' : 'Chain step failed',
+          label: result.success ? chatUI(chainLang, 'chainStepComplete') : chatUI(chainLang, 'chainStepFailed'),
           message: result.message,
           undoAvailable: result.success && !!result.undoAction,
         })

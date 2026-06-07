@@ -12,6 +12,13 @@ export interface TaskAnswerItem {
   subtasks?: Array<{ completed?: boolean; done?: boolean }>
 }
 
+type TaskAnswerBucket = 'flat' | 'tasks' | 'dueTodayTasks' | 'overdueTasks'
+
+interface TaskAnswerEntry {
+  task: TaskAnswerItem
+  bucket: TaskAnswerBucket
+}
+
 export type TaskAnswerLanguage = 'he' | 'en'
 
 export interface FinalizedTaskAnswer {
@@ -22,22 +29,26 @@ export interface FinalizedTaskAnswer {
 }
 
 export function collectTaskAnswerItems(toolResults: CardToolResult[]): TaskAnswerItem[] {
-  const tasks: TaskAnswerItem[] = []
+  return collectTaskAnswerEntries(toolResults).map(entry => entry.task)
+}
+
+function collectTaskAnswerEntries(toolResults: CardToolResult[]): TaskAnswerEntry[] {
+  const entries: TaskAnswerEntry[] = []
   for (const result of toolResults) {
     if (!result.success) continue
     const data = result.data
     if (Array.isArray(data)) {
-      tasks.push(...data.filter(isTaskLike))
+      entries.push(...data.filter(isTaskLike).map(task => ({ task, bucket: 'flat' as const })))
       continue
     }
     if (!data || typeof data !== 'object') continue
     const record = data as Record<string, unknown>
-    for (const key of ['tasks', 'dueTodayTasks', 'overdueTasks']) {
+    for (const key of ['tasks', 'dueTodayTasks', 'overdueTasks'] as const) {
       const value = record[key]
-      if (Array.isArray(value)) tasks.push(...value.filter(isTaskLike))
+      if (Array.isArray(value)) entries.push(...value.filter(isTaskLike).map(task => ({ task, bucket: key })))
     }
   }
-  return tasks
+  return entries
 }
 
 export function shouldUseStructuredTaskFallback(
@@ -138,17 +149,11 @@ export function buildStructuredTaskCards(
   kind?: ParsedCards['kind'],
   limit = 4,
 ): ParsedCards | null {
-  const tasks = collectTaskAnswerItems(toolResults).filter(task => task.title).slice(0, limit)
-  if (tasks.length === 0) return null
+  const entries = collectTaskAnswerEntries(toolResults).filter(entry => entry.task.title).slice(0, limit)
+  if (entries.length === 0) return null
 
   return {
-    groups: [{
-      name: groupName,
-      tasks: tasks.map(task => ({
-        ...task as Record<string, unknown>,
-        reason: inferTaskReason(task, lang),
-      })),
-    }],
+    groups: buildCardGroups(entries, lang, groupName, kind),
     total: collectTaskAnswerItems(toolResults).filter(task => task.title).length,
     rawBlock: '',
     kind,
@@ -192,6 +197,73 @@ export function finalizeTaskAnswer(
 
 function isTaskLike(value: unknown): value is TaskAnswerItem {
   return Boolean(value && typeof value === 'object' && typeof (value as Record<string, unknown>).title === 'string')
+}
+
+function buildCardGroups(
+  entries: TaskAnswerEntry[],
+  lang: TaskAnswerLanguage,
+  fallbackName: string,
+  kind?: ParsedCards['kind'],
+): ParsedCards['groups'] {
+  const grouped = new Map<string, TaskAnswerItem[]>()
+  for (const entry of entries) {
+    const name = fallbackCardGroupName(entry, lang, fallbackName, kind)
+    grouped.set(name, [...(grouped.get(name) || []), entry.task])
+  }
+
+  return Array.from(grouped.entries()).map(([name, tasks]) => ({
+    name,
+    tasks: tasks.map(task => ({
+      ...task as Record<string, unknown>,
+      reason: inferTaskReason(task, lang),
+    })),
+  }))
+}
+
+function fallbackCardGroupName(
+  entry: TaskAnswerEntry,
+  lang: TaskAnswerLanguage,
+  fallbackName: string,
+  kind?: ParsedCards['kind'],
+): string {
+  if (kind === 'day_plan') {
+    if (entry.bucket === 'dueTodayTasks') return lang === 'he' ? 'היום' : 'Today'
+    if (entry.bucket === 'overdueTasks') return lang === 'he' ? 'לשחרר תקיעות' : 'Unstick overdue work'
+  }
+
+  if (kind === 'week_plan') {
+    if (entry.task.dueDate) return String(entry.task.dueDate).slice(0, 10)
+    return lang === 'he' ? 'המשך השבוע' : 'Later this week'
+  }
+
+  if (kind === 'weekly_review' && entry.task.projectName) {
+    return String(entry.task.projectName)
+  }
+
+  if (kind === 'smart_lanes') {
+    return semanticLaneName(String(entry.task.title || ''), lang)
+  }
+
+  return fallbackName
+}
+
+function semanticLaneName(title: string, lang: TaskAnswerLanguage): string {
+  if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום)/i.test(title)) {
+    return lang === 'he' ? 'כסף וגבייה' : 'Money and billing'
+  }
+  if (/(reply|send|call|email|message|להגיב|לשלוח|להתקשר|מייל|הודעה)/i.test(title)) {
+    return lang === 'he' ? 'אנשים שמחכים' : 'People waiting'
+  }
+  if (/(outreach|cold opener|target list|sales|lead|פייפרפורט|לסקין|רשימת|אאוטריץ|מכירות)/i.test(title)) {
+    return lang === 'he' ? 'רצף מכירות' : 'Sales sequence'
+  }
+  if (/(fix|bug|deploy|release|update|לתקן|באג|לפרוס|לעדכן)/i.test(title)) {
+    return lang === 'he' ? 'שחרור וחסימות' : 'Release blockers'
+  }
+  if (/(gift|birthday|event|מתנה|יום הולדת|אירוע)/i.test(title)) {
+    return lang === 'he' ? 'תלוי בזמן' : 'Time-sensitive'
+  }
+  return lang === 'he' ? 'הפעולות הבאות' : 'Next actions'
 }
 
 function inferTaskReason(task: TaskAnswerItem, lang: TaskAnswerLanguage): string {

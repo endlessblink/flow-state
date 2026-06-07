@@ -237,11 +237,38 @@ describe('task answer fallback quality gate', () => {
 
     expect(finalized.usedStructuredFallback).toBe(true)
     expect(finalized.cards?.kind).toBe('day_plan')
-    expect(finalized.cards?.groups[0].tasks.map(task => task.title)).toEqual([
-      'לבדוק תשלומים באתר דרך קאדרקום',
-      'להגיב למירי ולשלוח חשבונית',
+    expect(finalized.cards?.groups.map(group => group.name)).toEqual(['היום', 'לשחרר תקיעות'])
+    expect(finalized.cards?.groups.map(group => group.tasks.map(task => task.title))).toEqual([
+      ['לבדוק תשלומים באתר דרך קאדרקום'],
+      ['להגיב למירי ולשלוח חשבונית'],
     ])
     expect(finalized.displayText).toContain('כסף או גבייה עלולים להיתקע')
     expect(finalized.displayText).toContain('כבר באיחור 1 ימים אחרי הסיכון האמיתי')
+  })
+
+  it('keeps fallback smart-lane cards grouped by task relationship', () => {
+    const laneResults = [{
+      success: true,
+      message: 'found 3 tasks',
+      data: [
+        { id: 'm1', title: 'Check payment via Cardcom', priority: 'high' },
+        { id: 's1', title: 'Build outreach target list', priority: 'high' },
+        { id: 's2', title: 'Write cold opener', priority: 'medium' },
+      ],
+    }]
+
+    const finalized = finalizeTaskAnswer('I would start with "Check payment via Cardcom", "Build outreach target list", and "Write cold opener" because they are urgent.', laneResults, 'en', {
+      groupName: 'Smart lanes',
+      kind: 'smart_lanes',
+    })
+
+    expect(finalized.usedStructuredFallback).toBe(true)
+    expect(finalized.cards?.kind).toBe('smart_lanes')
+    expect(finalized.cards?.groups.map(group => group.name)).toEqual(['Money and billing', 'Sales sequence'])
+    expect(finalized.cards?.groups.map(group => group.tasks.map(task => task.title))).toEqual([
+      ['Check payment via Cardcom'],
+      ['Build outreach target list', 'Write cold opener'],
+    ])
+    expect(finalized.cards?.groups.every(group => group.tasks.every(task => isMeaningfulTaskReason(task.reason)))).toBe(true)
   })
 })

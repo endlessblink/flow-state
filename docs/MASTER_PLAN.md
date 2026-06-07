@@ -2,6 +2,14 @@
 
 ## 🔜 Next Up — AI flows (TASK-1814 follow-ups; start here after restart)
 
+### ~~TASK-1821~~: Fix canvas group collapse silently no-opping on Electron (settling-guard race) (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-07) | **Depends on**: BUG-1813
+
+**Why**: Canvas group collapse/expand was unreliable on the Electron desktop app while passing the existing local test. Child-task hiding only recomputes inside `syncStoreToCanvas`. The orchestrator collapse-signature watcher re-synced via `batchedSyncNodes()` **without `force`**, so `syncNodes()` dropped it whenever the canvas was inside the drag-settling / remote-update guard window (`canAcceptRemoteUpdate=false`), and it also early-returned on `persistence.isSyncing`. Because it's a signature watcher, a dropped fire never recovers — children stay visible until the next toggle. Electron realtime storms (BUG-1799) keep that guard closed far more often than a quiet browser, so the existing test (realtime off, guard always open) never reproduced it.
+
+**Shipped**: Collapse watcher in `useCanvasOrchestrator.ts` now calls `batchedSyncNodes(undefined, { force: true })` (collapse is user-initiated, mirroring the other forced syncs) and no longer early-returns on `isSyncing`/`isSyncingFromWatcher` (read-only sync can't re-trigger the collapse signature, so there's no loop to guard). Added a DEV/test-only `window.__canvasOpState` seam in `useCanvasOperationState.ts` so e2e can drive the real state machine into drag-settling. New regression test `tests/e2e/canvas-collapse-local.spec.ts` → "group collapse hides children during the drag-settling guard window (TASK-1821)" collapses inside the guarded window; it fails without the fix and passes with it. Verified: collapse e2e (2 passed), 185 canvas/geometry unit tests pass. Worktree-isolated branch off `origin/master` (shared tree was mid-switch by a parallel instance). **Not yet deployed** — needs version bump + `deploy-electron-update.sh` per rules 6/7.
+
 ### ~~TASK-1815~~: Flagship flow — "Overwhelmed → AI reorders my day" (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.93 deployed) | **Depends on**: TASK-1814 (AI chat now intelligent)

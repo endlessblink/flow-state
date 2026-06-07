@@ -240,6 +240,17 @@ export function useCanvasOperationState() {
         fullState: state.value
     })
 
+    // TASK-1821: DEV/test-only seam. Lets e2e drive the (singleton) operation-state
+    // machine into drag-settling so the syncNodes remote-update guard
+    // (canAcceptRemoteUpdate=false) can be exercised deterministically — the
+    // condition under which canvas group collapse silently no-opped on Electron.
+    // No-op in production builds.
+    if (import.meta.env.DEV && typeof window !== 'undefined') {
+        ;(window as unknown as { __canvasOpState?: unknown }).__canvasOpState = {
+            startDrag, endDrag, startResize, endResize, resetToIdle, getDebugInfo,
+        }
+    }
+
     return {
         state,
         currentType,

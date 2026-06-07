@@ -772,14 +772,22 @@ export function useCanvasOrchestrator() {
     // watcher pattern above.
     watch(() => canvasStore.groups.map(g => `${g.id}:${g.isCollapsed ? 1 : 0}`).join('|'), () => {
         if (!isInitialized.value) return
-        if (isSyncingFromWatcher) return
-        isSyncingFromWatcher = true
-        try {
-            if (persistence.isSyncing.value) return
-            batchedSyncNodes()
-        } finally {
-            isSyncingFromWatcher = false
-        }
+        // TASK-1821: Collapse/expand MUST always refresh node hidden-flags. This is a
+        // signature watcher, so a dropped fire never recovers — children would stay
+        // visible until the next toggle (the "collapse unreliable on Electron" flake).
+        // Two fixes vs the old code:
+        //   1. force:true — collapse is user-initiated, so its resync must bypass the
+        //      drag-settling / remote-update guard in syncNodes (`!canAcceptRemoteUpdate`),
+        //      mirroring the user-initiated forced syncs elsewhere in this file. On
+        //      Electron, realtime storms (BUG-1799) keep that guard closed far more often,
+        //      which is exactly why collapse worked locally but failed on the desktop app.
+        //   2. No early-return on isSyncing/isSyncingFromWatcher — syncStoreToCanvas is
+        //      read-only on the store and never mutates this collapse signature, so there
+        //      is no reentrancy loop to guard against, and silently dropping the resync is
+        //      worse than a redundant rebuild. batchedSyncNodes is debounced (nextTick)
+        //      and reads fresh store state at flush time, so calling it during an in-flight
+        //      sync is safe.
+        batchedSyncNodes(undefined, { force: true })
     })
 
     // TASK-1690: Watch for canvas image additions/removals to inject imageNode nodes

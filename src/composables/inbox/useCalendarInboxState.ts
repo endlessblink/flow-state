@@ -7,6 +7,7 @@ import { useSmartViews } from '@/composables/useSmartViews'
 import { useDirection } from '@/i18n/useDirection'
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
+import { hasActiveCalendarInstance, isActiveCalendarTask } from '@/utils/calendar/activeSchedule'
 
 export function useCalendarInboxState() {
     const taskStore = useTaskStore()
@@ -83,13 +84,16 @@ export function useCalendarInboxState() {
 
     // Helper: Check if task is scheduled
     const isScheduledOnCalendar = (task: Task): boolean => {
-        if (!task.instances || task.instances.length === 0) return false
-        return task.instances.some(inst => inst.scheduledDate)
+        return hasActiveCalendarInstance(task)
     }
 
     const isScheduledForToday = (task: Task): boolean => {
         if (task.instances && task.instances.length > 0) {
-            return task.instances.some(inst => isDateToday(inst?.scheduledDate))
+            return task.instances.some(inst =>
+                inst.status !== 'completed' &&
+                inst.status !== 'skipped' &&
+                isDateToday(inst?.scheduledDate)
+            )
         }
 
         return isDateToday(task.scheduledDate)
@@ -122,7 +126,7 @@ export function useCalendarInboxState() {
     // filters that incorrectly restrict the calendar inbox.
     const baseInboxTasks = computed(() => {
         return taskStore.calendarFilteredTasks.filter(task => {
-            if (hideCalendarDoneTasks.value && task.status === 'done') return false
+            if (!isActiveCalendarTask(task)) return false
             if (task.isPinned) return false
 
             // BUG-1530 port: Canvas tasks that are also scheduled on the calendar are included

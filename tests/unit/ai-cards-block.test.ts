@@ -106,6 +106,32 @@ describe('parseCardGroups — maps [N] index → the RIGHT task', () => {
     expect(r!.groups[1].tasks[0].title).toBe('Call the dentist')
   })
 
+  it('repairs shallow card reasons with task-derived stakes', () => {
+    const text = 'Start with Check payment via Cardcom.\n\n' + block({
+      kind: 'week_plan',
+      groups: [
+        { name: 'Money', items: [{ i: 1, reason: 'deadline 2026-06-07' }] },
+        { name: 'Sales', items: [{ i: 2, reason: 'medium priority' }] },
+      ],
+    })
+    const r = parseCardGroups(text, results)
+
+    expect(r?.groups[0].tasks[0].reason).toBe('money or billing can get stuck if this slips')
+    expect(r?.groups[1].tasks[0].reason).toBe('this belongs to one sales sequence worth batching')
+  })
+
+  it('keeps specific model reasons when they explain the real stake', () => {
+    const text = 'Start with Check payment via Cardcom.\n\n' + block({
+      kind: 'week_plan',
+      groups: [
+        { name: 'Money', items: [{ i: 1, reason: 'prevents a stuck customer charge before follow-up' }] },
+      ],
+    })
+    const r = parseCardGroups(text, results)
+
+    expect(r?.groups[0].tasks[0].reason).toBe('prevents a stuck customer charge before follow-up')
+  })
+
   it('maps cards onto nested directive task arrays in the same order the model saw', () => {
     const nestedResults = [{
       success: true,
@@ -215,6 +241,18 @@ describe('ensureCardTaskMentions — cards have a prose anchor for inline render
       ],
     })
     const parsed = parseCardGroups(text, results)!
+    expect(ensureCardTaskMentions(text, parsed, 'Anchor:')).toBe(text)
+  })
+
+  it('uses normalized title matching before adding grounding lines', () => {
+    const text = '**check   PAYMENT via cardcom** is the first money risk.\n\n' + block({
+      kind: 'week_plan',
+      groups: [
+        { name: 'Money', items: [{ i: 1, reason: 'payment risk' }] },
+      ],
+    })
+    const parsed = parseCardGroups(text, results)!
+
     expect(ensureCardTaskMentions(text, parsed, 'Anchor:')).toBe(text)
   })
 })

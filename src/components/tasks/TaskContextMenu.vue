@@ -25,6 +25,15 @@
       <span class="menu-text">{{ doneToggleLabel }}</span>
     </button>
 
+    <button
+      v-if="!isBatchOperation && context === 'calendar' && currentTask?.status !== 'done'"
+      class="menu-item menu-item--done"
+      @click="handleDoneTodayKeepTask"
+    >
+      <CheckCheck :size="16" class="menu-icon" />
+      <span class="menu-text">Done today, move to tomorrow</span>
+    </button>
+
     <!-- Pin to Top / Unpin -->
     <button v-if="!isBatchOperation" class="menu-item" @click="togglePin">
       <component :is="currentTask?.isPinned ? PinOff : Pin" :size="16" class="menu-icon" />
@@ -235,6 +244,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useProjectStore } from '@/stores/projects'
 import {
   Calendar,
+  CheckCheck,
   CheckCircle,
   Timer,
   FolderOpen,
@@ -429,6 +439,39 @@ const deleteText = computed(() => {
   return (task && 'isCalendarEvent' in task && (task as Record<string, unknown>).isCalendarEvent) ? 'Remove' : 'Delete'
 })
 
+const getCalendarInstanceId = (task: Task | null | undefined): string | undefined =>
+  (task as unknown as Record<string, unknown> | undefined)?.instanceId as string | undefined
+
+const getIsCalendarEvent = (task: Task | null | undefined): boolean | undefined =>
+  (task as unknown as Record<string, unknown> | undefined)?.isCalendarEvent as boolean | undefined
+
+const buildDateMovePayload = (task: Task, dateStr: string, options: { markDoneForNow?: boolean } = {}): Partial<Task> => {
+  const calendarInstanceId = getCalendarInstanceId(task)
+  const isCalendarEvent = getIsCalendarEvent(task)
+  const updates: Partial<Task> = {
+    dueDate: dateStr
+  }
+
+  if (options.markDoneForNow) {
+    updates.status = 'todo'
+    updates.doneForNowUntil = dateStr
+  }
+
+  if (task.scheduledDate) {
+    updates.scheduledDate = dateStr
+  }
+
+  if (isCalendarEvent && calendarInstanceId && task.instances?.length) {
+    updates.instances = task.instances.map(instance =>
+      instance.id === calendarInstanceId
+        ? { ...instance, scheduledDate: dateStr, status: 'scheduled' as const, updatedAt: new Date() }
+        : instance
+    )
+  }
+
+  return updates
+}
+
 // Handle date selection from DueDateSubmenu picker - directly update task store
 const handleDatePickerSelect = async (timestamp: number) => {
   if (!currentTask.value) return
@@ -442,18 +485,12 @@ const handleDatePickerSelect = async (timestamp: number) => {
 
   // TASK-1362: Capture calendar instance info before menu closes
   const taskId = currentTask.value.id
-  const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
-  const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
   closeAllSubmenusNow()
 
   // Update the task directly via task store
   try {
-    await taskStore.updateTaskWithUndo(taskId, { dueDate: formattedDate })
-    // TASK-1362: Also move calendar instance to selected date
-    if (isCalendarEvent && calendarInstanceId) {
-      await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: formattedDate })
-    }
+    await taskStore.updateTaskWithUndo(taskId, buildDateMovePayload(currentTask.value, formattedDate))
     canvasStore.requestSync('user:context-menu')
     // Auto-route to matching canvas group (Today, Tomorrow, day-of-week groups).
     // TASK-1756 v6: skipDueDateInheritance — we JUST set dueDate above from
@@ -470,6 +507,16 @@ const handleDatePickerSelect = async (timestamp: number) => {
   }
 
   emit('close')
+}
+
+const handleDoneTodayKeepTask = async () => {
+  const task = currentTask.value
+  if (!task) return
+  if (task.recurrenceRule) {
+    await handleDoneForNowNextOccurrence()
+    return
+  }
+  await handleDoneForNowTomorrow()
 }
 
 // Clear due date
@@ -501,8 +548,6 @@ const handleDoneForNowTomorrow = async () => {
   // BUG-1184: Capture task data BEFORE closing menu
   const taskId = currentTask.value?.id
   const task = currentTask.value
-  const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
-  const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
   emit('close')
 
@@ -520,18 +565,11 @@ const handleDoneForNowTomorrow = async () => {
 
   try {
     // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
-    const updatePayload: Record<string, string> = {
+    await taskStore.updateTaskWithUndo(taskId, task ? buildDateMovePayload(task, tomorrowStr, { markDoneForNow: true }) : {
+      status: 'todo',
       dueDate: tomorrowStr,
       doneForNowUntil: tomorrowStr
-    }
-    if (task?.scheduledDate) {
-      updatePayload.scheduledDate = tomorrowStr
-    }
-    await taskStore.updateTaskWithUndo(taskId, updatePayload)
-    // TASK-1362: Also move calendar instance to tomorrow
-    if (isCalendarEvent && calendarInstanceId) {
-      await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: tomorrowStr })
-    }
+    })
     canvasStore.requestSync('user:context-menu')
     showToast('Moved to tomorrow', 'success', { duration: 2000 })
   } catch (error) {
@@ -565,8 +603,6 @@ const handleDoneForNowNextOccurrence = async () => {
 const handleDoneForNowPickDate = async (timestamp: number) => {
   const taskId = currentTask.value?.id
   const task = currentTask.value
-  const calendarInstanceId = (currentTask.value as unknown as Record<string, unknown>)?.instanceId as string | undefined
-  const isCalendarEvent = (currentTask.value as unknown as Record<string, unknown>)?.isCalendarEvent as boolean | undefined
 
   closeAllSubmenusNow()
   emit('close')
@@ -587,22 +623,16 @@ const handleDoneForNowPickDate = async (timestamp: number) => {
       // Recurring: create completion record, then override next due date to picked date
       await taskStore.doneForNow(taskId)
       // Override the auto-computed next date with the user's pick
-      await taskStore.updateTask(taskId, { dueDate: dateStr })
+      await taskStore.updateTaskWithUndo(taskId, { dueDate: dateStr })
       canvasStore.requestSync('user:context-menu')
       showToast(`Completed for today, next on ${dateStr}`, 'success', { duration: 2000 })
     } else {
       // Non-recurring: same as tomorrow but with custom date
-      const updatePayload: Record<string, string> = {
+      await taskStore.updateTaskWithUndo(taskId, task ? buildDateMovePayload(task, dateStr, { markDoneForNow: true }) : {
+        status: 'todo',
         dueDate: dateStr,
         doneForNowUntil: dateStr
-      }
-      if (task?.scheduledDate) {
-        updatePayload.scheduledDate = dateStr
-      }
-      await taskStore.updateTaskWithUndo(taskId, updatePayload)
-      if (isCalendarEvent && calendarInstanceId) {
-        await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: dateStr })
-      }
+      })
       canvasStore.requestSync('user:context-menu')
       showToast(`Moved to ${dateStr}`, 'success', { duration: 2000 })
     }

@@ -125,6 +125,33 @@ describe('TaskStore', () => {
       expect(completedTask?.isInInbox).toBe(false)
       expect(completedTask?.canvasPosition).toEqual({ x: 100, y: 100 })
     })
+
+    it('marks scheduled non-recurring tasks done without leaving active calendar instances', async () => {
+      const store = useTaskStore()
+      const task = await store.createTask({
+        title: 'Scheduled Task',
+        status: 'todo',
+        canvasPosition: { x: 100, y: 100 },
+        parentId: 'today-group',
+        isInInbox: false
+      })
+
+      await store.createTaskInstance(task.id, {
+        scheduledDate: '2026-06-07',
+        scheduledTime: '16:00',
+        duration: 30
+      })
+
+      await store.updateTask(task.id, { status: 'done' })
+
+      const completedTask = store.getTask(task.id)
+      expect(completedTask?.status).toBe('done')
+      expect(completedTask?.instances).toHaveLength(1)
+      expect(completedTask?.instances?.[0].status).toBe('completed')
+      expect(completedTask?.isInInbox).toBe(false)
+      expect(completedTask?.canvasPosition).toEqual({ x: 100, y: 100 })
+      expect(completedTask?.parentId).toBe('today-group')
+    })
   })
 
   describe('Task Instance Management', () => {

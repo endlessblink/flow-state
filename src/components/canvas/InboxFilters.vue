@@ -517,22 +517,31 @@ onBeforeUnmount(() => {
 .filter-chips-row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-1_5);
+  align-items: center;
 }
 
 .filter-chip {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-1_5);
+  min-width: 0;
+  min-height: var(--space-6);
+  max-width: 100%;
   padding: var(--space-1) var(--space-2);
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   font-size: var(--text-xs);
+  line-height: 1;
   cursor: pointer;
   transition: all var(--duration-fast) var(--spring-smooth);
   white-space: nowrap;
+}
+
+.filter-chip > svg {
+  flex: 0 0 auto;
 }
 
 .filter-chip:hover {
@@ -548,21 +557,27 @@ onBeforeUnmount(() => {
 }
 
 .chip-label {
+  min-width: 0;
   max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chip-count {
+  flex: 0 0 auto;
   background: var(--accent-primary);
   color: white;
   font-size: var(--text-2xs);
   font-weight: var(--font-semibold);
-  padding: 0 var(--space-1);
+  line-height: 1;
+  padding: 0 var(--space-1_5);
   border-radius: var(--radius-full);
-  min-width: var(--space-3_5);
-  height: var(--space-3_5);
-  display: flex;
+  min-width: var(--space-4);
+  height: var(--space-4);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .filter-chip.active .chip-count {
@@ -580,6 +595,7 @@ onBeforeUnmount(() => {
 
 .filter-dropdown {
   position: relative;
+  min-width: 0;
 }
 
 .dropdown-menu {

@@ -1,0 +1,3 @@
+## 2024-05-18 - Calendar Header Toggle Groups
+**Learning:** For group toggle button clusters (like view modes in calendar), standard buttons are not accessible. Screen readers cannot tell which item is currently "active" or how many items are in the group without visual cues.
+**Action:** When implementing view toggles or toggle groups (e.g., `view-selector`), wrap them in `role="group"` with an `aria-label`, and use `:aria-pressed="condition"` on individual toggles to properly indicate selection states. Also ensure popovers have `aria-haspopup="menu"`, `:aria-expanded="showPopover"` and its content wrapper uses `role="menu"` with `role="menuitem"` for the items inside.

@@ -36,11 +36,13 @@ describe('undo-aware modal and context-menu entry points', () => {
 
   it('routes canvas-origin permanent task delete through the canvas-safe bulk delete path', () => {
     const canvasView = readSource('src/views/CanvasView.vue')
+    const canvasEvents = readSource('src/composables/canvas/useCanvasEvents.ts')
     const modalManager = readSource('src/layouts/ModalManager.vue')
     const canvasTaskActions = readSource('src/composables/canvas/useCanvasTaskActions.ts')
     const canvasHotkeys = readSource('src/composables/canvas/useCanvasHotkeys.ts')
 
     expect(canvasView).toContain("detail: { event, task, context: 'canvas' }")
+    expect(canvasEvents).toContain("context: 'canvas'")
     expect(canvasTaskActions).toContain("detail: { taskId: task.id, permanent: false, context: 'canvas' }")
     expect(canvasHotkeys).toContain("detail: { taskId: task.id, permanent: permanentDelete, context: 'canvas' }")
 

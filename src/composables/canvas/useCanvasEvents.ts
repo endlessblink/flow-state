@@ -291,7 +291,8 @@ export function useCanvasEvents(syncNodes?: (tasks?: unknown[], options?: { forc
             window.dispatchEvent(new CustomEvent('task-context-menu', {
                 detail: {
                     event: mouseEvent,
-                    task: node.data?.task || { id: node.id }
+                    task: node.data?.task || { id: node.id },
+                    context: 'canvas'
                 }
             }))
             closeAllContextMenus()

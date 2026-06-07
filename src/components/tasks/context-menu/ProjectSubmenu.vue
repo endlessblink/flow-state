@@ -75,18 +75,20 @@ const projects = computed(() => projectStore.projects)
 <style scoped>
 .submenu {
   position: fixed;
-  background: var(--glass-bg-solid, hsl(30, 8%, 13%));
-  backdrop-filter: var(--overlay-component-backdrop);
-  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  background: hsl(30, 8%, 13%);
+  background-color: hsl(30, 8%, 13%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border: var(--overlay-component-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--overlay-component-shadow), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
   padding: var(--space-1) 0;
   min-width: 160px;
   max-width: 220px;
-  z-index: var(--z-submenu, 10001);
+  z-index: var(--z-submenu-popover, 10003);
   isolation: isolate;
   animation: menuSlideIn var(--duration-fast) var(--ease-out);
+  opacity: 1;
 }
 
 /* TASK-1445: Invisible hover bridge on both sides (submenu can flip) */

@@ -13,6 +13,8 @@ describe('undo-aware modal and context-menu entry points', () => {
 
     expect(source).toContain('await taskStore.updateTaskWithUndo(currentTask.value.id, { isPinned:')
     expect(source).toContain('await taskStore.updateTaskWithUndo(currentTask.value.id, { calendarLocked:')
+    expect(source).toContain('Time locked on calendar')
+    expect(source).toContain('Time unlocked on calendar')
     expect(source).toContain("await taskStore.updateTaskWithUndo(taskId, { status: 'done' })")
     expect(source).toContain('await taskStore.createTaskWithUndo({')
 

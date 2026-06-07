@@ -17,6 +17,11 @@ export type PlannerTaskSnapshot = {
   }
   notes?: string
   tags?: string[]
+  subtasks?: Array<{
+    id: string
+    title: string
+    isCompleted: boolean
+  }>
   estimateMinutes?: number | null
   dependencies?: {
     blocksTaskIds: string[]
@@ -42,6 +47,10 @@ export type PlannerTaskSnapshot = {
     isStale: boolean
     hasHumanOrExternalStakeholder: boolean
     hasMoneyClientHealthFamilyLegalSignal: boolean
+    domain: 'work' | 'home' | 'personal' | 'health_family' | 'admin' | 'unknown'
+    weekendEligible: boolean
+    substantialWorkScore: number
+    quickErrandScore: number
     candidateReasons: CandidateReason[]
     evidenceSnippets: Array<{
       field: 'title' | 'notes' | 'project' | 'history' | 'dependency'
@@ -63,6 +72,9 @@ export type CandidateReason =
   | 'notes_have_money_client_health_family_legal_signal'
   | 'small_quick_win'
   | 'large_needs_decomposition'
+  | 'substantial_work'
+  | 'home_or_weekend_errand'
+  | 'has_open_subtasks'
 
 export type PlannerWorkstream = {
   id: string
@@ -118,6 +130,7 @@ export type WeeklyPlanRecommendation = {
       | 'dueIso'
       | 'priority'
       | 'status'
+      | 'subtasks'
       | 'history.postponedCount'
       | 'history.timerMinutesLast7Days'
       | 'dependencies.blocksTaskIds'
@@ -146,7 +159,14 @@ export type WeeklyPlanOutput = {
     revisitIso?: string | null
   }>
   openQuestions: Array<{
+    id?: string
     question: string
+    options?: Array<{
+      id: string
+      label: string
+      effect: string
+    }>
+    allowFreeText?: boolean
     relatedTaskIds: string[]
   }>
   quality: {
@@ -174,6 +194,10 @@ type ToolResultLike = {
 const MS_PER_DAY = 86_400_000
 const MONEY_CLIENT_HEALTH_FAMILY_LEGAL_RE = /(payment|invoice|charge|billing|refund|client|customer|health|doctor|medicine|family|dad|mom|legal|tax|תשלום|חשבונית|חיוב|לקוח|בריאות|רופא|תרופה|משפחה|אבא|אמא|מס|משפט)/i
 const STAKEHOLDER_RE = /(send|reply|call|email|message|meeting|proposal|review|approve|client|customer|stakeholder|amit|לשלוח|להגיב|להתקשר|מייל|הודעה|פגישה|לקוח|לאשר|בדיקה)/i
+const WORK_SIGNAL_RE = /(work|client|customer|proposal|outreach|sales|lead|release|qa|bug|feature|marketing|campaign|invoice|payment|project|strategy|meeting|follow.?up|targets?|pipeline|עבודה|לקוח|לקוחות|הצעה|מכירות|לידים|שיווק|קמפיין|חשבונית|תשלום|פרויקט|פגישה|פולואפ|יעדים|רשימת יעד)/i
+const HOME_ERRAND_RE = /(buy|gift|present|cook|food|grocer|laundry|clean|water|trash|home|house|pet|cat|dog|מתנה|לקנות|לבשל|אוכל|מקרר|כביסה|לנקות|מים|בית|חול|חתול|כלב)/i
+const HEALTH_FAMILY_RE = /(health|doctor|medicine|dad|mom|family|clinic|blood test|בריאות|רופא|תרופה|אבא|אמא|משפחה|בדיקת דם|מרפאה)/i
+const ADMIN_RE = /(tax|legal|bank|insurance|passport|license|form|admin|מס|משפט|בנק|ביטוח|דרכון|רישיון|טופס|אדמין|מנהלתי)/i
 const REAL_CONSEQUENCE_RE = /(decision|meeting|client|customer|stakeholder|promise|commitment|renewal|proposal|budget|revenue|money|invoice|payment|cash|risk|blocked|blocks|unblock|release|qa|signoff|rework|context|postponed|avoidance|mental load|family|health|doctor|admin|legal|tax|relief|momentum|החלטה|פגישה|לקוח|התחייבות|הבטחה|תקציב|כסף|תשלום|חשבונית|סיכון|חוסם|לשחרר|שחרור|בדיקה|משפחה|בריאות|רופא|מס|מנהלתי|עומס|דחייה|מומנטום)/i
 const GENERIC_FOCUS_RE = /^(due tasks?|top tasks?|weekly tasks?|priority tasks?|work|admin|personal|focused task|משימות|משימות השבוע|עבודה|אישי|משימה ממוקדת)$/i
 
@@ -220,7 +244,7 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
       recommendations: '3-7 items',
       focusArea: 'Every recommendation must name the concrete workstream/aspect it belongs to, for example Client renewals, Release blocker, Family health admin, Sales pipeline.',
       taskIds: 'Every primaryTaskId and relatedTaskIds item must be from candidateTasks.',
-      evidence: 'At least two evidence items per recommendation. At least one must not be dueIso or priority.',
+      evidence: 'At least two evidence items per recommendation. At least one must not be dueIso or priority. Use subtasks evidence when open subtasks clarify the next action.',
       reasoning: 'Explain real consequence beyond due date/priority. Avoid repeated templates.',
       locale: context.locale,
       direction: context.direction,
@@ -315,7 +339,11 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
 }
 
 export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutput {
-  const selected = context.tasks.slice(0, Math.min(5, Math.max(3, context.tasks.length)))
+  const selected = selectQuickDraftTasks(context.tasks)
+  const deferredErrands = context.tasks
+    .filter(task => !selected.some(selectedTask => selectedTask.id === task.id))
+    .filter(task => task.derived.quickErrandScore >= 0.55 || task.derived.weekendEligible)
+    .slice(0, 3)
   const workstreamByTaskId = buildWorkstreamLookup(context.workstreams)
   const locale = context.locale
   const recommendations = selected.map((task, index): WeeklyPlanRecommendation => {
@@ -358,8 +386,14 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
         : 'Prefer clear signals such as postponement, dependencies, money/client/health, and near dates.',
     },
     recommendations,
-    deferrals: [],
-    openQuestions: [],
+    deferrals: deferredErrands.map(task => ({
+      taskId: task.id,
+      reason: locale === 'he'
+        ? `לא שמתי את "${task.title}" במוקד השבועי כי היא נראית כמו סידור קטן שאפשר לאגד לסוף שבוע או חלון אנרגיה נמוכה.`
+        : `I did not put "${task.title}" in the weekly focus because it looks like a small errand that can be batched into the weekend or a low-energy window.`,
+      revisitIso: task.dueIso ?? null,
+    })),
+    openQuestions: buildQuickDraftQuestions(context, selected),
     quality: {
       selectedTaskCount: recommendations.length,
       confidence: 'low',
@@ -367,6 +401,114 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
     },
     source: 'quick_draft',
   }
+}
+
+function selectQuickDraftTasks(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapshot[] {
+  const target = Math.min(5, Math.max(3, tasks.length))
+  const selected: PlannerTaskSnapshot[] = []
+
+  function addFrom(candidates: PlannerTaskSnapshot[], limit: number) {
+    for (const task of candidates) {
+      if (selected.length >= target || selected.filter(existing => candidates.includes(existing)).length >= limit) break
+      if (!selected.some(existing => existing.id === task.id)) selected.push(task)
+    }
+  }
+
+  const substantial = tasks
+    .filter(task => task.derived.substantialWorkScore >= 0.55)
+    .sort((a, b) => b.derived.substantialWorkScore - a.derived.substantialWorkScore)
+  const commitments = tasks.filter(task =>
+    task.dependencies?.blocksTaskIds.length ||
+    task.derived.hasHumanOrExternalStakeholder ||
+    task.derived.hasMoneyClientHealthFamilyLegalSignal ||
+    task.history.postponedCount >= 2 ||
+    task.status === 'in_progress',
+  )
+  const quickErrands = tasks.filter(task => task.derived.quickErrandScore >= 0.55 || task.derived.weekendEligible)
+  const fallback = tasks.filter(task => !quickErrands.includes(task))
+
+  addFrom(substantial, 3)
+  addFrom(commitments, 3)
+  addFrom(fallback, target)
+  if (selected.length < 3) {
+    const hasSubstantialWork = tasks.some(task => task.derived.substantialWorkScore >= 0.55)
+    addFrom(quickErrands, hasSubstantialWork ? 3 - selected.length : 3)
+  }
+
+  return selected.slice(0, target)
+}
+
+function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSnapshot[]): WeeklyPlanOutput['openQuestions'] {
+  const locale = context.locale
+  const questions: WeeklyPlanOutput['openQuestions'] = []
+  const weakSubstantialTask = selected.find(task =>
+    task.derived.substantialWorkScore >= 0.45 &&
+    !task.notes &&
+    !task.subtasks?.length &&
+    !task.dependencies?.blocksTaskIds.length
+  )
+  if (weakSubstantialTask) {
+    questions.push({
+      id: `context_${weakSubstantialTask.id}`,
+      question: locale === 'he'
+        ? `מה ההקשר של "${weakSubstantialTask.title}" השבוע?`
+        : `What is the context for "${weakSubstantialTask.title}" this week?`,
+      options: [
+        {
+          id: 'work_commitment',
+          label: locale === 'he' ? 'התחייבות עבודה' : 'Work commitment',
+          effect: 'Raise weekly planning priority and protect weekday focus time.',
+        },
+        {
+          id: 'nice_to_have',
+          label: locale === 'he' ? 'נחמד אם יקרה' : 'Nice to have',
+          effect: 'Lower priority and batch behind stronger commitments.',
+        },
+        {
+          id: 'weekend_ok',
+          label: locale === 'he' ? 'אפשר בסופ"ש' : 'Weekend is fine',
+          effect: 'Move out of weekday focus unless it blocks something.',
+        },
+      ],
+      allowFreeText: true,
+      relatedTaskIds: [weakSubstantialTask.id],
+    })
+  }
+
+  const taskNeedingFollowup = selected.find(task =>
+    task.derived.hasHumanOrExternalStakeholder ||
+    task.derived.domain === 'work' ||
+    task.subtasks?.some(subtask => !subtask.isCompleted)
+  )
+  if (taskNeedingFollowup) {
+    questions.push({
+      id: `followup_${taskNeedingFollowup.id}`,
+      question: locale === 'he'
+        ? `להוסיף משימת המשך אחרי "${taskNeedingFollowup.title}"?`
+        : `Add a follow-up task after "${taskNeedingFollowup.title}"?`,
+      options: [
+        {
+          id: 'add_followup',
+          label: locale === 'he' ? 'כן, להוסיף' : 'Yes, add it',
+          effect: 'Create a follow-up task linked to this recommendation.',
+        },
+        {
+          id: 'ask_later',
+          label: locale === 'he' ? 'שאל אותי אחר כך' : 'Ask later',
+          effect: 'Keep the suggestion visible without changing tasks now.',
+        },
+        {
+          id: 'no_followup',
+          label: locale === 'he' ? 'לא צריך' : 'No follow-up',
+          effect: 'Do not suggest a follow-up for this task again in this plan.',
+        },
+      ],
+      allowFreeText: true,
+      relatedTaskIds: [taskNeedingFollowup.id],
+    })
+  }
+
+  return questions.slice(0, 2)
 }
 
 function extractPlannerTasks(toolResults: ToolResultLike[], allTasks: Task[], now: Date): PlannerTaskSnapshot[] {
@@ -409,7 +551,16 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
   const projectName = String(record.project || record.projectName || projectId || '').trim()
   const blocksTaskIds = allTasks.filter(other => (other.dependsOn ?? []).includes(id)).map(other => other.id)
   const blockedByTaskIds = task?.dependsOn ?? []
-  const text = `${title} ${notes} ${projectName}`
+  const subtasks = Array.isArray(task?.subtasks)
+    ? task.subtasks.map(subtask => ({
+        id: subtask.id,
+        title: subtask.title,
+        isCompleted: Boolean(subtask.isCompleted),
+      }))
+    : []
+  const openSubtaskCount = subtasks.filter(subtask => !subtask.isCompleted).length
+  const subtaskText = subtasks.map(subtask => subtask.title).join(' ')
+  const text = `${title} ${notes} ${projectName} ${subtaskText}`
   const updatedIso = toIso(task?.updatedAt) || String(record.updatedAt || now.toISOString())
   const createdIso = toIso(task?.createdAt) || String(record.createdAt || updatedIso)
   const timerMinutes = Number(record.timerMinutesLast7Days || record.timerMinutesLast30Days || (task?.completedPomodoros ?? 0) * 25 || 0)
@@ -420,9 +571,13 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
   const priority = normalizePriority(task?.priority ?? record.priority)
   const hasHumanOrExternalStakeholder = STAKEHOLDER_RE.test(text)
   const hasMoneyClientHealthFamilyLegalSignal = MONEY_CLIENT_HEALTH_FAMILY_LEGAL_RE.test(text)
+  const domain = classifyTaskDomain(text, projectName)
+  const weekendEligible = isWeekendEligibleTask(domain, text, dueIso)
+  const substantialWorkScore = scoreSubstantialWork({ text, domain, projectName, estimateMinutes, blocksTaskIds, timerMinutes, status, openSubtaskCount })
+  const quickErrandScore = scoreQuickErrand({ text, domain, estimateMinutes, openSubtaskCount })
   const isOverdue = typeof daysUntilDue === 'number' && daysUntilDue < 0
   const isStale = now.getTime() - new Date(updatedIso).getTime() > 14 * MS_PER_DAY
-  const evidenceSnippets = buildEvidenceSnippets({ title, notes, projectName, postponedCount, blocksTaskIds, blockedByTaskIds, timerMinutes })
+  const evidenceSnippets = buildEvidenceSnippets({ title, notes, projectName, postponedCount, blocksTaskIds, blockedByTaskIds, timerMinutes, subtasks })
   const candidateReasons = buildCandidateReasons({
     daysUntilDue,
     isOverdue,
@@ -436,6 +591,9 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
     hasHumanOrExternalStakeholder,
     hasMoneyClientHealthFamilyLegalSignal,
     estimateMinutes,
+    substantialWorkScore,
+    quickErrandScore,
+    openSubtaskCount,
   })
 
   return {
@@ -447,6 +605,7 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
     dueIso,
     project: projectId || projectName ? { id: projectId || projectName, name: projectName || projectId } : undefined,
     notes: notes || undefined,
+    subtasks: subtasks.length ? subtasks : undefined,
     tags: task?.tags ?? (Array.isArray(record.tags) ? record.tags.map(String) : undefined),
     estimateMinutes,
     dependencies: { blocksTaskIds, blockedByTaskIds },
@@ -466,6 +625,10 @@ function toPlannerTaskSnapshot(task: Task | undefined, record: Record<string, un
       isStale,
       hasHumanOrExternalStakeholder,
       hasMoneyClientHealthFamilyLegalSignal,
+      domain,
+      weekendEligible,
+      substantialWorkScore,
+      quickErrandScore,
       candidateReasons,
       evidenceSnippets,
     },
@@ -485,6 +648,9 @@ function buildCandidateReasons(input: {
   hasHumanOrExternalStakeholder: boolean
   hasMoneyClientHealthFamilyLegalSignal: boolean
   estimateMinutes: number | null
+  substantialWorkScore: number
+  quickErrandScore: number
+  openSubtaskCount: number
 }): CandidateReason[] {
   const reasons: CandidateReason[] = []
   if (input.isOverdue) reasons.push('overdue')
@@ -499,7 +665,61 @@ function buildCandidateReasons(input: {
   if (input.hasMoneyClientHealthFamilyLegalSignal) reasons.push('notes_have_money_client_health_family_legal_signal')
   if (input.estimateMinutes != null && input.estimateMinutes <= 30) reasons.push('small_quick_win')
   if (input.estimateMinutes != null && input.estimateMinutes >= 180) reasons.push('large_needs_decomposition')
+  if (input.substantialWorkScore >= 0.55) reasons.push('substantial_work')
+  if (input.quickErrandScore >= 0.55) reasons.push('home_or_weekend_errand')
+  if (input.openSubtaskCount > 0) reasons.push('has_open_subtasks')
   return reasons
+}
+
+function classifyTaskDomain(text: string, projectName: string): PlannerTaskSnapshot['derived']['domain'] {
+  const source = `${text} ${projectName}`
+  if (HEALTH_FAMILY_RE.test(source)) return 'health_family'
+  if (ADMIN_RE.test(source)) return 'admin'
+  if (WORK_SIGNAL_RE.test(source)) return 'work'
+  if (HOME_ERRAND_RE.test(source)) return 'home'
+  return 'unknown'
+}
+
+function isWeekendEligibleTask(domain: PlannerTaskSnapshot['derived']['domain'], text: string, dueIso: string | null): boolean {
+  if (domain === 'work') return false
+  if (domain === 'home' || domain === 'personal') return true
+  if (!dueIso && HOME_ERRAND_RE.test(text)) return true
+  return false
+}
+
+function scoreSubstantialWork(input: {
+  text: string
+  domain: PlannerTaskSnapshot['derived']['domain']
+  projectName: string
+  estimateMinutes: number | null
+  blocksTaskIds: string[]
+  timerMinutes: number
+  status: PlannerTaskSnapshot['status']
+  openSubtaskCount: number
+}): number {
+  return Math.min(1,
+    0.35 * Number(input.domain === 'work') +
+    0.20 * Number(Boolean(input.projectName) && input.projectName !== 'uncategorized') +
+    0.20 * Number(WORK_SIGNAL_RE.test(input.text)) +
+    0.18 * Number(input.blocksTaskIds.length > 0) +
+    0.12 * Number(input.status === 'in_progress' || input.timerMinutes >= 25) +
+    0.10 * Number(input.openSubtaskCount > 0) +
+    0.10 * Number((input.estimateMinutes ?? 0) >= 45),
+  )
+}
+
+function scoreQuickErrand(input: {
+  text: string
+  domain: PlannerTaskSnapshot['derived']['domain']
+  estimateMinutes: number | null
+  openSubtaskCount: number
+}): number {
+  return Math.min(1,
+    0.40 * Number(input.domain === 'home' || input.domain === 'personal') +
+    0.25 * Number(HOME_ERRAND_RE.test(input.text)) +
+    0.20 * Number((input.estimateMinutes ?? 30) <= 30) +
+    0.15 * Number(input.openSubtaskCount === 0),
+  )
 }
 
 function buildWorkstreams(tasks: PlannerTaskSnapshot[]): PlannerWorkstream[] {
@@ -584,7 +804,8 @@ function scoreTask(task: PlannerTaskSnapshot): TaskSignals {
     0.25 * Number(task.priority === 'high' || task.priority === 'urgent') +
     0.25 * Number(task.derived.hasHumanOrExternalStakeholder) +
     0.25 * Number(task.derived.hasMoneyClientHealthFamilyLegalSignal) +
-    0.15 * Number(Boolean(task.project?.name)) +
+    0.20 * task.derived.substantialWorkScore +
+    0.15 * Number(Boolean(task.project?.name) && task.project?.id !== 'uncategorized') +
     0.10 * Math.min(task.history.timerMinutesLast30Days / 180, 1),
   )
   const dependency = Math.min(1, 0.25 * (task.dependencies?.blocksTaskIds.length ?? 0))
@@ -595,7 +816,14 @@ function scoreTask(task: PlannerTaskSnapshot): TaskSignals {
   )
   const workloadFit = task.estimateMinutes == null ? 0.45 : task.estimateMinutes <= 30 ? 0.9 : task.estimateMinutes <= 90 ? 0.75 : task.estimateMinutes <= 180 ? 0.45 : 0.2
   const contextRichness = Math.min(1, task.derived.evidenceSnippets.length / 4)
-  return { urgency, impact, dependency, avoidanceRisk, workloadFit, contextRichness }
+  return {
+    urgency,
+    impact: Math.max(0, impact - 0.20 * task.derived.quickErrandScore),
+    dependency,
+    avoidanceRisk,
+    workloadFit,
+    contextRichness,
+  }
 }
 
 function planningScore(signals: TaskSignals): number {
@@ -605,6 +833,8 @@ function planningScore(signals: TaskSignals): number {
 function quickDraftEvidence(task: PlannerTaskSnapshot): WeeklyPlanRecommendation['evidence'] {
   const evidence: WeeklyPlanRecommendation['evidence'] = []
   if (task.notes) evidence.push({ taskId: task.id, field: 'notes', value: task.notes.slice(0, 140), interpretation: 'notes add context' })
+  const openSubtasks = task.subtasks?.filter(subtask => !subtask.isCompleted) ?? []
+  if (openSubtasks.length) evidence.push({ taskId: task.id, field: 'subtasks', value: openSubtasks.map(subtask => subtask.title).slice(0, 3).join('; '), interpretation: 'open subtasks clarify the next step' })
   if (task.dependencies?.blocksTaskIds.length) evidence.push({ taskId: task.id, field: 'dependencies.blocksTaskIds', value: String(task.dependencies.blocksTaskIds.length), interpretation: 'blocks other work' })
   if (task.history.postponedCount > 0) evidence.push({ taskId: task.id, field: 'history.postponedCount', value: String(task.history.postponedCount), interpretation: 'postponed before' })
   if (task.derived.hasMoneyClientHealthFamilyLegalSignal) evidence.push({ taskId: task.id, field: 'title', value: task.title, interpretation: 'title suggests real-world stakes' })
@@ -628,6 +858,12 @@ function quickDraftType(task: PlannerTaskSnapshot): WeeklyPlanRecommendation['re
 }
 
 function quickDraftWhyThisMatters(task: PlannerTaskSnapshot, stream: PlannerWorkstream | undefined, locale: PlannerLocale): string {
+  const openSubtaskCount = task.subtasks?.filter(subtask => !subtask.isCompleted).length ?? 0
+  if (task.derived.substantialWorkScore >= 0.55) {
+    return locale === 'he'
+      ? 'טיוטה עובדתית: זה נראה כמו מוקד עבודה משמעותי, לא סידור קטן, ולכן הוא צריך להישקל לפני משימות בית שניתן לאגד או להעביר לסוף שבוע.'
+      : 'Evidence-only draft: this looks like a substantial work focus, not a small errand, so it should be weighed before home tasks that can be batched or moved to the weekend.'
+  }
   if (task.dependencies?.blocksTaskIds.length) {
     return locale === 'he'
       ? `טיוטה עובדתית: המשימה הזו חוסמת ${task.dependencies.blocksTaskIds.length} משימות נוספות, לכן היא משפיעה על זרימת העבודה מעבר לצ'קבוקס שלה.`
@@ -653,6 +889,11 @@ function quickDraftWhyThisMatters(task: PlannerTaskSnapshot, stream: PlannerWork
       ? `טיוטה עובדתית: כבר הושקעו כאן ${task.history.timerMinutesLast7Days} דקות או שהמשימה בתהליך, כך שיש ערך בלסגור את ההקשר לפני שהוא מתפזר.`
       : `Evidence-only draft: ${task.history.timerMinutesLast7Days} minutes are already invested or the task is in progress, so there is value in closing the context before it fades.`
   }
+  if (openSubtaskCount > 0) {
+    return locale === 'he'
+      ? `טיוטה עובדתית: יש כאן ${openSubtaskCount} תתי-משימות פתוחות, אז עדיף לבחור את תת-הצעד הבא במקום להתייחס לזה ככרטיס שטוח.`
+      : `Evidence-only draft: there are ${openSubtaskCount} open subtasks, so choose the next sub-step instead of treating this as a flat card.`
+  }
   if (stream) {
     return locale === 'he'
       ? `טיוטה עובדתית: המשימה יושבת בתוך "${stream.label}", יחד עם ${stream.taskIds.length} משימות קשורות, אז כדאי לראות אותה כחלק מאותו היבט עבודה.`
@@ -665,6 +906,11 @@ function quickDraftWhyThisMatters(task: PlannerTaskSnapshot, stream: PlannerWork
 
 function quickDraftWhyThisWeek(task: PlannerTaskSnapshot, evidence: WeeklyPlanRecommendation['evidence'], locale: PlannerLocale): string {
   const signals = evidence.map(item => item.interpretation).join(locale === 'he' ? ' · ' : ' · ')
+  if (task.derived.substantialWorkScore >= 0.55) {
+    return locale === 'he'
+      ? `השבוע כי זה נראה כמו עבודה עם יותר משקל מסידורים קטנים. אותות: ${signals}`
+      : `This week because it looks heavier-weight than small errands. Signals: ${signals}`
+  }
   if (task.derived.isOverdue) return locale === 'he' ? `השבוע כי היא כבר באיחור. אותות: ${signals}` : `This week because it is already overdue. Signals: ${signals}`
   if (typeof task.derived.daysUntilDue === 'number' && task.derived.daysUntilDue <= 7) {
     return locale === 'he'
@@ -683,6 +929,8 @@ function quickDraftRisk(task: PlannerTaskSnapshot, locale: PlannerLocale): strin
 }
 
 function quickDraftNextAction(task: PlannerTaskSnapshot, locale: PlannerLocale): string {
+  const openSubtask = task.subtasks?.find(subtask => !subtask.isCompleted)
+  if (openSubtask) return locale === 'he' ? `התחל מתת-המשימה: ${openSubtask.title}.` : `Start with the subtask: ${openSubtask.title}.`
   if (task.estimateMinutes != null && task.estimateMinutes <= 30) return locale === 'he' ? 'בצע את הפעולה הקטנה בכרטיס וסגור אותה אם היא באמת לוקחת פחות מחצי שעה.' : 'Do the small action on the card and close it if it really fits under 30 minutes.'
   if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? 'פתח את הכרטיס ובחר את הצעד המינימלי שישחרר את המשימות התלויות.' : 'Open the card and choose the smallest step that unblocks the dependent tasks.'
   if (task.history.postponedCount > 0 || task.derived.isStale) return locale === 'he' ? 'פתח את הכרטיס והגדר צעד פתיחה של 10 דקות, לא יעד סיום מלא.' : 'Open the card and define a 10-minute starting step, not a full completion target.'
@@ -697,12 +945,15 @@ function buildEvidenceSnippets(input: {
   blocksTaskIds: string[]
   blockedByTaskIds: string[]
   timerMinutes: number
+  subtasks: PlannerTaskSnapshot['subtasks']
 }): PlannerTaskSnapshot['derived']['evidenceSnippets'] {
   const snippets: PlannerTaskSnapshot['derived']['evidenceSnippets'] = [{ field: 'title', text: input.title }]
   if (input.notes) snippets.push({ field: 'notes', text: input.notes.slice(0, 180) })
   if (input.projectName) snippets.push({ field: 'project', text: input.projectName })
   if (input.postponedCount > 0 || input.timerMinutes > 0) snippets.push({ field: 'history', text: `postponed ${input.postponedCount} times; timer ${input.timerMinutes} minutes` })
   if (input.blocksTaskIds.length || input.blockedByTaskIds.length) snippets.push({ field: 'dependency', text: `blocks ${input.blocksTaskIds.length}; blocked by ${input.blockedByTaskIds.length}` })
+  const openSubtasks = input.subtasks?.filter(subtask => !subtask.isCompleted) ?? []
+  if (openSubtasks.length) snippets.push({ field: 'notes', text: `open subtasks: ${openSubtasks.map(subtask => subtask.title).slice(0, 3).join('; ')}` })
   return snippets
 }
 
@@ -768,6 +1019,8 @@ function isEvidenceValueGrounded(task: PlannerTaskSnapshot, item: WeeklyPlanReco
       return value === normalizeEvidenceText(task.priority ?? '')
     case 'status':
       return value === normalizeEvidenceText(task.status)
+    case 'subtasks':
+      return textSupportsEvidence(task.subtasks?.map(subtask => subtask.title).join(' ') ?? '', value)
     case 'history.postponedCount':
       return Number(value) === task.history.postponedCount
     case 'history.timerMinutesLast7Days':

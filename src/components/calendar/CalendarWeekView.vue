@@ -744,8 +744,15 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
   top: 2px;
   right: 4px;
   font-size: 10px;
-  opacity: 0.65;
+  opacity: 0.9;
   pointer-events: none;
+}
+
+.week-event.is-locked {
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.85),
+    0 0 0 1px rgba(245, 158, 11, 0.25),
+    0 0 16px rgba(245, 158, 11, 0.18);
 }
 
 /* TASK-1317: External calendar events */

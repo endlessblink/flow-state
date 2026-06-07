@@ -655,7 +655,14 @@ const togglePin = async () => {
 // TASK-1785 Push 2: toggle calendar ripple-shift lock (skip-protect)
 const toggleCalendarLock = async () => {
   if (!currentTask.value) return
-  await taskStore.updateTaskWithUndo(currentTask.value.id, { calendarLocked: !currentTask.value.calendarLocked })
+  const nextLocked = !currentTask.value.calendarLocked
+  const { showToast } = useToast()
+  await taskStore.updateTaskWithUndo(currentTask.value.id, { calendarLocked: nextLocked })
+  showToast(
+    nextLocked ? 'Time locked on calendar' : 'Time unlocked on calendar',
+    'success',
+    { duration: 1800 }
+  )
   emit('close')
 }
 

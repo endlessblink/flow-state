@@ -561,8 +561,9 @@ export const useProjectStore = defineStore('projects', () => {
         const project = getProjectById(projectId)
         if (!project) return { type: 'css-circle', content: '', color: '#6B7280' }
         if (project.emoji) return { type: 'emoji', content: project.emoji }
-        if (project.colorType === 'hex' && typeof project.color === 'string') {
-            return { type: 'css-circle', content: '', color: project.color }
+        const color = Array.isArray(project.color) ? project.color[0] : project.color
+        if (typeof color === 'string' && color.trim()) {
+            return { type: 'css-circle', content: '', color }
         }
         return { type: 'css-circle', content: '', color: '#6B7280' }
     }

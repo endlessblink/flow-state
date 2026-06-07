@@ -528,6 +528,88 @@ describe('AI sidebar-first desktop experience', () => {
     expect(quickDraft.recommendations.some(rec => rec.relatedTaskIds.length > 0)).toBe(true)
   })
 
+  it('keeps quick drafts focused on substantial work before small home errands', () => {
+    const baseTask = {
+      status: 'todo',
+      priority: 'medium',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '2026-06-10',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } satisfies Partial<Task>
+    const tasks = [
+      {
+        ...baseTask,
+        id: 'task-outreach',
+        title: 'Build list of 10 real cold-outreach targets',
+        description: '',
+        projectId: 'sales-pipeline',
+        estimatedDuration: 90,
+        subtasks: [
+          {
+            id: 'sub-outreach-1',
+            parentTaskId: 'task-outreach',
+            title: 'Review the target company list',
+            description: '',
+            completedPomodoros: 0,
+            isCompleted: false,
+            createdAt: new Date('2026-06-01T08:00:00Z'),
+            updatedAt: new Date('2026-06-07T08:00:00Z'),
+          },
+        ],
+      } as Task,
+      {
+        ...baseTask,
+        id: 'task-present',
+        title: 'Buy Sivan a present',
+        description: '',
+        projectId: 'Home',
+        estimatedDuration: 20,
+      } as Task,
+      {
+        ...baseTask,
+        id: 'task-fridge-food',
+        title: 'Cook the food in the fridge',
+        description: '',
+        projectId: 'Home',
+        estimatedDuration: 25,
+      } as Task,
+      {
+        ...baseTask,
+        id: 'task-water',
+        title: 'Replace water',
+        description: '',
+        projectId: 'Home',
+        estimatedDuration: 10,
+      } as Task,
+      {
+        ...baseTask,
+        id: 'task-pet-food',
+        title: 'Buy pet food and litter',
+        description: '',
+        projectId: 'Home',
+        estimatedDuration: 25,
+      } as Task,
+    ]
+
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+    )
+    const quickDraft = buildQuickDraftWeeklyPlan(context)
+
+    expect(quickDraft.recommendations[0].primaryTaskId).toBe('task-outreach')
+    expect(quickDraft.recommendations[0].evidence.some(item => item.field === 'subtasks')).toBe(true)
+    expect(quickDraft.recommendations.filter(rec => rec.focusArea === 'Home').length).toBeLessThanOrEqual(2)
+    expect(quickDraft.deferrals.length).toBeGreaterThanOrEqual(2)
+    expect(new Set([...quickDraft.recommendations.map(rec => rec.primaryTaskId), ...quickDraft.deferrals.map(item => item.taskId)]).size).toBeGreaterThanOrEqual(5)
+    expect(quickDraft.openQuestions.some(question => question.options?.length && question.allowFreeText)).toBe(true)
+  })
+
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 

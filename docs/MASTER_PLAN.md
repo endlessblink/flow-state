@@ -62,6 +62,26 @@
 
 ---
 
+### ~~TASK-1824~~: Ground weekly planner recommendations and AI chat sync state (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-07, Electron v1.4.138 deployed) | **Depends on**: TASK-1814
+
+**Why**: Weekly planning still treated small home errands and substantial work too similarly, could miss subtask evidence, and produced weak follow-up questions. AI chat sync also had a resurrection path where locally cached conversations could be uploaded again after remote deletion or when Supabase already had real history.
+
+**Shipped**: Weekly planner snapshots now include subtasks, domain classification, substantial-work scoring, quick-errand scoring, weekend deferrals, and option-based follow-up questions. Quick drafts prefer meaningful work commitments over small errands, cite open subtasks as evidence, and propose next actions from the first open subtask when available. AI chat conversation merge now stores sync metadata, remembers remote-known/deleted conversation IDs, suppresses welcome-only local ghosts when real remote history exists, and avoids re-uploading conversations already known to be deleted remotely. Project labels now stay visible across task surfaces. Regression coverage: weekly planner/sidebar tests, AI chat sync resurrection tests, task project row tests, and undo entrypoint contract coverage.
+
+---
+
+### ~~TASK-1825~~: FlowState-safe Superpowers auto-router trial (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-06-07)
+
+**Why**: Make the project-local Superpowers trial activate more naturally without installing the upstream always-on `using-superpowers` behavior that can conflict with FlowState autonomy, MASTER_PLAN tracking, OMX routing, and Electron shipping rules.
+
+**Shipped**: Added `.claude/skills/superpowers-flowstate-auto-router/SKILL.md` as a FlowState-safe routing layer for bugs, behavior changes, reviews, planning, and completion checks. Registered broad-but-subordinate triggers in `.claude/config/skills.json` and documented the auto-routing trial in `CLAUDE.md`. The router explicitly preserves FlowState authority and routes to the existing namespaced `superpowers-*` support skills instead of upstream always-on Superpowers.
+
+---
+
 ### ~~BUG-1821~~: "Plan my week" misrouted to the completed-tasks summary (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-07, v1.4.105) | **Depends on**: BUG-1820

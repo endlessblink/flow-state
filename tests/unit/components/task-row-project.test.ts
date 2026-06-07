@@ -66,21 +66,44 @@ describe('TaskRowProject', () => {
     expect(wrapper.emitted('update:projectId')).toEqual([['project-work']])
   })
 
-  it('uses neutral overlay menu tokens instead of the old purple popup colors', () => {
+  it('uses an opaque elevated project menu instead of translucent popup colors', () => {
     const source = readSource('src/components/tasks/row/TaskRowProject.vue')
 
-    expect(source).toContain('background: var(--overlay-component-bg) !important')
+    expect(source).toContain('z-index: var(--z-submenu-popover, 10003)')
+    expect(source).toContain('background: hsl(30, 8%, 13%) !important')
+    expect(source).toContain('backdrop-filter: none !important')
+    expect(source).toContain('opacity: 1 !important')
     expect(source).toContain('border: var(--overlay-component-border) !important')
     expect(source).toContain('box-shadow: var(--overlay-component-shadow)')
     expect(source).toContain('@pointerdown.stop')
     expect(source).toContain('@click.stop="selectProject(project.id)"')
 
     expect(source).not.toContain('rgba(28, 25, 45')
+    expect(source).not.toContain('background: var(--overlay-component-bg) !important')
   })
 
   it('keeps inline row project updates explicit about uncategorized state', () => {
     const source = readSource('src/components/tasks/HierarchicalTaskRow.vue')
 
     expect(source).toContain("{ projectId: val ?? undefined, isUncategorized: !val }")
+  })
+
+  it('uses the selected project color for row visuals instead of the gray fallback', () => {
+    const projectStore = useProjectStore()
+    projectStore._rawProjects = [
+      {
+        id: 'project-colored',
+        name: 'Colored Project',
+        color: ['#14b8a6', '#0f766e'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ]
+
+    expect(projectStore.getProjectVisual('project-colored')).toEqual({
+      type: 'css-circle',
+      content: '',
+      color: '#14b8a6'
+    })
   })
 })

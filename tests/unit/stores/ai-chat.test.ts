@@ -492,4 +492,96 @@ describe('useAIChatStore', () => {
     expect(mockSaveConversationToSupabase).toHaveBeenCalledWith(expect.objectContaining({ id: 'conv_electron_local' }))
     expect(mockSubscribeToAIConversationChanges).toHaveBeenCalledTimes(2)
   })
+
+  it('17. initialize() does not resurrect locally cached conversations that remote sync already knew about', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    localStorage.setItem('flowstate-ai-sync-meta', JSON.stringify({
+      lastRemoteSyncAt: '2026-06-07T10:00:00.000Z',
+      knownRemoteIds: ['conv_deleted_elsewhere', 'conv_remote'],
+    }))
+    localStorage.setItem('flowstate-ai-conversations', JSON.stringify({
+      conversations: [
+        {
+          id: 'conv_deleted_elsewhere',
+          title: 'Deleted elsewhere',
+          messages: [
+            {
+              id: 'msg_deleted',
+              role: 'user',
+              content: 'This was already deleted remotely',
+              timestamp: '2026-06-07T08:00:00.000Z',
+              isStreaming: false,
+            },
+          ],
+          createdAt: '2026-06-07T08:00:00.000Z',
+          updatedAt: '2026-06-07T08:30:00.000Z',
+        },
+      ],
+      activeConversationId: 'conv_deleted_elsewhere',
+    }))
+    mockLoadConversationsFromSupabase.mockResolvedValue([
+      {
+        id: 'conv_remote',
+        title: 'Remote Chat',
+        messages: [],
+        createdAt: new Date('2026-06-07T09:00:00.000Z'),
+        updatedAt: new Date('2026-06-07T09:00:00.000Z'),
+      },
+    ])
+
+    const store = useAIChatStore()
+    await store.initialize()
+
+    expect(store.conversations.map(c => c.id)).toEqual(['conv_remote'])
+    expect(store.activeConversationId).toBe('conv_remote')
+    expect(mockSaveConversationToSupabase).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'conv_deleted_elsewhere' }))
+  })
+
+  it('18. initialize() drops welcome-only New Chat ghosts when Supabase has real history', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    localStorage.setItem('flowstate-ai-conversations', JSON.stringify({
+      conversations: [
+        {
+          id: 'conv_empty_new_chat',
+          title: 'New Chat',
+          messages: [
+            {
+              id: 'msg_welcome',
+              role: 'assistant',
+              content: "Hi! I'm your FlowState AI assistant. I can help you organize your tasks, break down complex work, and suggest canvas groupings. Just ask me anything!",
+              timestamp: '2026-06-07T08:00:00.000Z',
+              isStreaming: false,
+            },
+          ],
+          createdAt: '2026-06-07T08:00:00.000Z',
+          updatedAt: '2026-06-07T08:00:00.000Z',
+        },
+      ],
+      activeConversationId: 'conv_empty_new_chat',
+    }))
+    mockLoadConversationsFromSupabase.mockResolvedValue([
+      {
+        id: 'conv_real_remote',
+        title: 'Real Remote Chat',
+        messages: [
+          {
+            id: 'msg_real',
+            role: 'user' as const,
+            content: 'Actual history',
+            timestamp: new Date('2026-06-07T09:00:00.000Z'),
+            isStreaming: false,
+          },
+        ],
+        createdAt: new Date('2026-06-07T09:00:00.000Z'),
+        updatedAt: new Date('2026-06-07T09:00:00.000Z'),
+      },
+    ])
+
+    const store = useAIChatStore()
+    await store.initialize()
+
+    expect(store.conversations.map(c => c.id)).toEqual(['conv_real_remote'])
+    expect(store.activeConversationId).toBe('conv_real_remote')
+    expect(mockSaveConversationToSupabase).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'conv_empty_new_chat' }))
+  })
 })

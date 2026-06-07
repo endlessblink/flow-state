@@ -77,6 +77,8 @@ md.renderer.rules.link_open = function (tokens: Token[], idx: number, options: M
 
 const loadingActions = ref<Set<string>>(new Set())
 const copied = ref(false)
+const weeklyQuestionAnswers = ref<Record<string, string>>({})
+const weeklyQuestionFreeText = ref<Record<string, string>>({})
 
 // Track which tasks have been actioned (for visual feedback)
 const completedTaskIds = ref<Set<string>>(new Set())
@@ -206,9 +208,31 @@ function weeklyPlanTaskIds(rec: WeeklyPlanRecommendation): string[] {
     .filter(taskId => !dismissedCardTaskIds.value.has(taskId))
 }
 
+function weeklyPlanRecommendationForTask(taskId: string): WeeklyPlanRecommendation | undefined {
+  return weeklyPlan.value?.recommendations.find(rec => rec.primaryTaskId === taskId || rec.relatedTaskIds?.includes(taskId))
+}
+
+function taskSnapshotFromPlan(taskId: string): TaskListItem | null {
+  const rec = weeklyPlanRecommendationForTask(taskId)
+  if (!rec) return null
+  const evidence = rec.evidence ?? []
+  const dueDate = evidence.find(item => item.taskId === taskId && item.field === 'dueIso')?.value
+  const priority = evidence.find(item => item.taskId === taskId && item.field === 'priority')?.value
+  const status = evidence.find(item => item.taskId === taskId && item.field === 'status')?.value
+  return liveTask({
+    id: taskId,
+    title: rec.primaryTaskId === taskId ? rec.title : taskId,
+    status: status || 'todo',
+    priority: priority || undefined,
+    dueDate: dueDate || null,
+    reason: weeklyPlan.value?.locale === 'he' ? 'תמונת מצב מהתוכנית' : 'snapshot from plan',
+    __planSnapshotOnly: true,
+  })
+}
+
 function taskCardFromId(taskId: string): TaskListItem | null {
   const task = taskMap.value.get(taskId)
-  if (!task) return null
+  if (!task) return taskSnapshotFromPlan(taskId)
   return liveTask({
     id: task.id,
     title: task.title,
@@ -221,9 +245,14 @@ function taskCardFromId(taskId: string): TaskListItem | null {
 
 function weeklyPlanTaskStaleLabel(task: TaskListItem | null): string {
   if (!task) return weeklyPlan.value?.locale === 'he' ? 'המשימה כבר לא קיימת' : 'task no longer exists'
+  if (task.__planSnapshotOnly) return weeklyPlan.value?.locale === 'he' ? 'תמונת מצב מהתוכנית; המשימה לא נטענה לפעולות' : 'snapshot from plan; task is not loaded for actions'
   if (task.status === 'done') return weeklyPlan.value?.locale === 'he' ? 'הושלמה אחרי יצירת התוכנית' : 'completed after this plan was generated'
   if (task.__liveDueDateChanged) return weeklyPlan.value?.locale === 'he' ? 'נדחתה אחרי יצירת התוכנית' : 'rescheduled after this plan was generated'
   return ''
+}
+
+function isPlanSnapshotCard(task: TaskListItem | null): boolean {
+  return Boolean(task?.__planSnapshotOnly)
 }
 
 // ============================================================================
@@ -837,7 +866,7 @@ async function saveSchedule() {
                 class="task-list-item grouped-card inline-grouped-card"
                 data-testid="inline-plan-card"
                 :class="{ 'task-completed': completedTaskIds.has(taskId) || taskCardFromId(taskId)?.status === 'done' }"
-                @click="openQuickEdit(taskCardFromId(taskId)!, $event)"
+                @click="!isPlanSnapshotCard(taskCardFromId(taskId)) && openQuickEdit(taskCardFromId(taskId)!, $event)"
               >
                 <span class="task-priority-dot" :style="{ background: priorityColor(taskCardFromId(taskId)?.priority ?? undefined) }" />
                 <div class="grouped-card-body">
@@ -853,7 +882,7 @@ async function saveSchedule() {
                 </div>
                 <div class="task-inline-actions" @click.stop>
                   <button
-                    v-if="taskCardFromId(taskId)?.status !== 'done' && !completedTaskIds.has(taskId)"
+                    v-if="!isPlanSnapshotCard(taskCardFromId(taskId)) && taskCardFromId(taskId)?.status !== 'done' && !completedTaskIds.has(taskId)"
                     class="inline-action-btn inline-done-btn"
                     :class="{ loading: actionLoading[taskId] === 'done' }"
                     title="Mark done"
@@ -863,7 +892,7 @@ async function saveSchedule() {
                     <CheckCircle2 v-else :size="12" />
                   </button>
                   <button
-                    v-if="!timerStartedTaskIds.has(taskId)"
+                    v-if="!isPlanSnapshotCard(taskCardFromId(taskId)) && !timerStartedTaskIds.has(taskId)"
                     class="inline-action-btn inline-timer-btn"
                     :class="{ loading: actionLoading[taskId] === 'timer' }"
                     title="Start timer"
@@ -880,8 +909,8 @@ async function saveSchedule() {
                   >
                     <X :size="12" />
                   </button>
-                  <span v-if="taskCardFromId(taskId)?.status === 'done' || completedTaskIds.has(taskId)" class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>
-                  <span v-if="timerStartedTaskIds.has(taskId)" class="inline-action-timer-badge"><Play :size="12" /> Timer</span>
+                  <span v-if="!isPlanSnapshotCard(taskCardFromId(taskId)) && (taskCardFromId(taskId)?.status === 'done' || completedTaskIds.has(taskId))" class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>
+                  <span v-if="!isPlanSnapshotCard(taskCardFromId(taskId)) && timerStartedTaskIds.has(taskId)" class="inline-action-timer-badge"><Play :size="12" /> Timer</span>
                 </div>
               </button>
               <div v-else class="weekly-missing-task" data-testid="inline-plan-card-missing">
@@ -898,7 +927,33 @@ async function saveSchedule() {
           </div>
           <div v-if="weeklyPlan.openQuestions.length">
             <strong>{{ weeklyPlan.locale === 'he' ? 'שאלות פתוחות' : 'Open questions' }}</strong>
-            <p v-for="question in weeklyPlan.openQuestions" :key="question.question">{{ question.question }}</p>
+            <div
+              v-for="question in weeklyPlan.openQuestions"
+              :key="question.id || question.question"
+              class="weekly-plan-question"
+            >
+              <p>{{ question.question }}</p>
+              <div v-if="question.options?.length" class="weekly-question-options">
+                <button
+                  v-for="option in question.options"
+                  :key="option.id"
+                  type="button"
+                  class="weekly-question-option"
+                  :class="{ selected: weeklyQuestionAnswers[question.id || question.question] === option.id }"
+                  :title="option.effect"
+                  @click="weeklyQuestionAnswers[question.id || question.question] = option.id"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+              <textarea
+                v-if="question.allowFreeText"
+                v-model="weeklyQuestionFreeText[question.id || question.question]"
+                class="weekly-question-free-text"
+                :placeholder="weeklyPlan.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...'"
+                rows="2"
+              />
+            </div>
           </div>
         </footer>
       </article>
@@ -2400,10 +2455,54 @@ async function saveSchedule() {
 .weekly-plan-footer {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding-block-start: var(--space-3);
   border-block-start: 1px solid var(--glass-border-faint);
   color: var(--text-secondary);
+}
+
+.weekly-plan-question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.weekly-question-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1_5);
+}
+
+.weekly-question-option {
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.weekly-question-option:hover,
+.weekly-question-option.selected {
+  border-color: var(--brand-primary);
+  color: var(--text-primary);
+  background: var(--glass-bg-soft);
+}
+
+.weekly-question-free-text {
+  width: 100%;
+  min-height: 54px;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font: inherit;
+  resize: vertical;
 }
 
 :dir(rtl).weekly-plan-message {

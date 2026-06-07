@@ -258,12 +258,14 @@ onBeforeUnmount(() => {
 </style>
 
 <style>
-/* Project Dropdown - Dark glass morphism (teleported to body, NOT scoped) */
+/* Project Dropdown - teleported to body, NOT scoped. Keep this opaque because it
+   renders over dense task rows where translucent glass makes labels bleed. */
 .project-dropdown {
-  z-index: var(--z-context-menu, 9999);
-  background: var(--overlay-component-bg) !important;
-  backdrop-filter: var(--overlay-component-backdrop);
-  -webkit-backdrop-filter: var(--overlay-component-backdrop);
+  z-index: var(--z-submenu-popover, 10003);
+  background: hsl(30, 8%, 13%) !important;
+  background-color: hsl(30, 8%, 13%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border: var(--overlay-component-border) !important;
   box-shadow: var(--overlay-component-shadow), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   border-radius: var(--radius-lg);
@@ -272,6 +274,7 @@ onBeforeUnmount(() => {
   max-height: 240px;
   overflow: hidden;
   isolation: isolate;
+  opacity: 1 !important;
 }
 
 .project-dropdown__list {

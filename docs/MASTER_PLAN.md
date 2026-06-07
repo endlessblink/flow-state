@@ -47,6 +47,21 @@
 
 ---
 
+### ~~TASK-1823~~: Project-local Superpowers skills trial (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-06-07)
+
+**Why**: Trial the useful parts of `obra/superpowers` inside FlowState without letting its always-on workflow override this repo's existing MASTER_PLAN, OMX, autonomy, Electron release, and push rules.
+
+**Scope**:
+- Add only namespaced, project-local Superpowers support skills for debugging, TDD, verification, and code review.
+- Do not install the intrusive always-on `using-superpowers` workflow or branch-completion/worktree flows in v1.
+- Keep the install limited to `.claude/skills` plus the local skill registry; no app runtime files, Codex global install, Electron build, or deploy.
+
+**Shipped**: Added namespaced project-local Superpowers support skills under `.claude/skills/superpowers-*` for systematic debugging, TDD, verification, requesting/receiving code review, and writing plans. Registered them in `.claude/config/skills.json` with explicit `superpowers-*` triggers and documented in `CLAUDE.md` that they are support-only and do not override FlowState/OMX/Master Plan/Electron rules. Intentionally omitted the always-on `using-superpowers`, worktree, and branch-finishing flows.
+
+---
+
 ### ~~BUG-1821~~: "Plan my week" misrouted to the completed-tasks summary (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-07, v1.4.105) | **Depends on**: BUG-1820

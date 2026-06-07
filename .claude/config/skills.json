@@ -1,8 +1,135 @@
 {
   "project": "FlowState",
   "version": "2.2.0",
-  "last_updated": "2026-03-05",
+  "last_updated": "2026-06-07",
   "skills": {
+    "superpowers-systematic-debugging": {
+      "name": "Superpowers Systematic Debugging",
+      "category": "debug",
+      "triggers": [
+        "superpowers debugging",
+        "systematic debugging",
+        "root cause investigation",
+        "no fix without root cause"
+      ],
+      "keywords": [
+        "superpowers",
+        "debugging",
+        "root cause",
+        "investigation"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "dev-debugging",
+        "qa-testing"
+      ],
+      "description": "Project-local Superpowers root-cause debugging workflow. FlowState AGENTS.md, CLAUDE.md, MASTER_PLAN, OMX, and Electron release rules remain authoritative."
+    },
+    "superpowers-test-driven-development": {
+      "name": "Superpowers Test-Driven Development",
+      "category": "test",
+      "triggers": [
+        "superpowers tdd",
+        "red green refactor",
+        "write failing test first"
+      ],
+      "keywords": [
+        "superpowers",
+        "tdd",
+        "test-driven",
+        "regression"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "qa-testing"
+      ],
+      "description": "Project-local Superpowers TDD workflow for focused regression coverage before behavior changes."
+    },
+    "superpowers-verification-before-completion": {
+      "name": "Superpowers Verification Before Completion",
+      "category": "test",
+      "triggers": [
+        "superpowers verification",
+        "verification before completion",
+        "evidence before claims"
+      ],
+      "keywords": [
+        "superpowers",
+        "verification",
+        "evidence",
+        "completion"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "qa-testing",
+        "stress-tester"
+      ],
+      "description": "Project-local Superpowers completion gate for fresh verification evidence before success claims."
+    },
+    "superpowers-requesting-code-review": {
+      "name": "Superpowers Requesting Code Review",
+      "category": "review",
+      "triggers": [
+        "superpowers code review",
+        "request superpowers review",
+        "review this with superpowers"
+      ],
+      "keywords": [
+        "superpowers",
+        "review",
+        "code review"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "codebase-health-auditor"
+      ],
+      "description": "Project-local Superpowers workflow for focused review of substantial implementation work."
+    },
+    "superpowers-receiving-code-review": {
+      "name": "Superpowers Receiving Code Review",
+      "category": "review",
+      "triggers": [
+        "superpowers review feedback",
+        "receive superpowers review",
+        "evaluate review feedback"
+      ],
+      "keywords": [
+        "superpowers",
+        "review feedback",
+        "review response"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "codebase-health-auditor"
+      ],
+      "description": "Project-local Superpowers workflow for evaluating review feedback before implementing changes."
+    },
+    "superpowers-writing-plans": {
+      "name": "Superpowers Writing Plans",
+      "category": "planning",
+      "triggers": [
+        "superpowers plan",
+        "superpowers implementation plan",
+        "write superpowers plan"
+      ],
+      "keywords": [
+        "superpowers",
+        "plan",
+        "implementation plan"
+      ],
+      "activation_count": 0,
+      "last_used": null,
+      "related_skills": [
+        "chief-architect",
+        "smart-doc-manager"
+      ],
+      "description": "Project-local Superpowers planning workflow that remains subordinate to FlowState MASTER_PLAN and OMX planning surfaces."
+    },
     "watchpost": {
       "name": "Watchpost",
       "category": "tooling",

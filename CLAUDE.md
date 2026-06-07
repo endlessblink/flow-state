@@ -4,6 +4,13 @@
 
 # ALWAYS USE THE CORRECT SKILL FOR THE TASK
 
+# Project-Local Superpowers Trial
+
+This repo has a guarded project-local trial of selected Superpowers skills under `.claude/skills/superpowers-*`.
+Use them as support workflows for systematic debugging, TDD, verification, code review, and planning when they fit.
+They do **not** override `AGENTS.md`, this `CLAUDE.md`, MASTER_PLAN tracking, OMX workflow state, branch safety, or Electron-first shipping requirements.
+The always-on `using-superpowers`, worktree, and branch-finishing Superpowers flows are intentionally not installed for this project trial.
+
 # MANDATORY Pre-Read for Major Work
 
 **Before ANY major feature, refactoring, architecture decision, or multi-file change**, read these documents first:

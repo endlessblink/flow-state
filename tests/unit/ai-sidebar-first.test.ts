@@ -520,11 +520,13 @@ describe('AI sidebar-first desktop experience', () => {
 
     const quickDraft = buildQuickDraftWeeklyPlan(context)
     expect(quickDraft.source).toBe('quick_draft')
-    expect(quickDraft.headline).toContain('Quick draft')
+    expect(quickDraft.headline).toContain('Best plan')
     expect(quickDraft.recommendations[0].evidence.length).toBeGreaterThanOrEqual(2)
     expect(quickDraft.recommendations[0].focusArea).toBeTruthy()
     expect(new Set(quickDraft.recommendations.map(rec => rec.whyThisMatters)).size).toBeGreaterThan(1)
-    expect(quickDraft.recommendations.map(rec => rec.whyThisMatters).join(' ')).not.toMatch(/coaching explanation is unavailable.*coaching explanation is unavailable/i)
+    const recommendationText = quickDraft.recommendations.map(rec => rec.whyThisMatters).join(' ')
+    expect(recommendationText).not.toMatch(/coaching explanation is unavailable.*coaching explanation is unavailable/i)
+    expect(recommendationText).not.toMatch(/Evidence-only draft|not a replacement|left waiting/i)
     expect(quickDraft.recommendations.some(rec => rec.relatedTaskIds.length > 0)).toBe(true)
   })
 
@@ -604,10 +606,110 @@ describe('AI sidebar-first desktop experience', () => {
 
     expect(quickDraft.recommendations[0].primaryTaskId).toBe('task-outreach')
     expect(quickDraft.recommendations[0].evidence.some(item => item.field === 'subtasks')).toBe(true)
+    expect(quickDraft.recommendations[0].nextAction).toContain('Review the target company list')
+    expect(quickDraft.recommendations[0].whyThisMatters).toContain('substantial work focus')
     expect(quickDraft.recommendations.filter(rec => rec.focusArea === 'Home').length).toBeLessThanOrEqual(2)
     expect(quickDraft.deferrals.length).toBeGreaterThanOrEqual(2)
     expect(new Set([...quickDraft.recommendations.map(rec => rec.primaryTaskId), ...quickDraft.deferrals.map(item => item.taskId)]).size).toBeGreaterThanOrEqual(5)
     expect(quickDraft.openQuestions.some(question => question.options?.length && question.allowFreeText)).toBe(true)
+  })
+
+  it('lets weekly-plan question buttons create a linked follow-up task with optional user text', async () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push({
+      id: 'task-renewal',
+      title: 'Send renewal proposal to Amit',
+      description: 'Amit asked for numbers before Wednesday budget meeting.',
+      status: 'todo',
+      priority: 'high',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '2026-06-10',
+      projectId: 'client-renewals',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Task)
+    const createFollowup = vi.spyOn(taskStore, 'createTaskWithUndo').mockResolvedValue({ id: 'follow-up-task' } as Task)
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-weekly-followup-question',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            weeklyPlan: {
+              schemaVersion: 'weekly-plan.v2',
+              requestId: 'req-week',
+              locale: 'en',
+              direction: 'ltr',
+              source: 'quick_draft',
+              headline: 'Best plan from task evidence',
+              weekRead: {
+                summary: 'There are enough signals to act now.',
+                workloadReality: 'Keep the plan focused.',
+                mainTradeoff: 'Client work beats low-context admin.',
+              },
+              recommendations: [
+                {
+                  sectionId: 'rec-renewal',
+                  rank: 1,
+                  focusArea: 'Client renewals',
+                  primaryTaskId: 'task-renewal',
+                  relatedTaskIds: [],
+                  recommendationType: 'protect',
+                  title: 'Send renewal proposal to Amit',
+                  whyThisMatters: 'Amit needs numbers before the budget meeting.',
+                  whyThisWeek: 'The task is inside the current planning window.',
+                  riskIfIgnored: 'The decision may move before the proposal lands.',
+                  nextAction: 'Draft the numbers table.',
+                  evidence: [
+                    { taskId: 'task-renewal', field: 'notes', value: 'budget meeting', interpretation: 'external decision window' },
+                    { taskId: 'task-renewal', field: 'dueIso', value: '2026-06-10', interpretation: 'original plan date' },
+                  ],
+                  cardPlacement: 'immediately_after_explanation',
+                },
+              ],
+              deferrals: [],
+              openQuestions: [
+                {
+                  id: 'followup_task-renewal',
+                  question: 'Add a follow-up task after "Send renewal proposal to Amit"?',
+                  options: [
+                    { id: 'add_followup', label: 'Yes, add it', effect: 'Create a follow-up task linked to this recommendation.' },
+                    { id: 'no_followup', label: 'No follow-up', effect: 'Do not suggest a follow-up for this task again in this plan.' },
+                  ],
+                  allowFreeText: true,
+                  relatedTaskIds: ['task-renewal'],
+                },
+              ],
+              quality: { selectedTaskCount: 1, confidence: 'medium', caveats: [] },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('Grounded task-evidence plan')
+    await wrapper.get('.weekly-question-option').trigger('click')
+    await wrapper.get('.weekly-question-free-text').setValue('Confirm renewal numbers were received')
+    await wrapper.get('.weekly-question-apply').trigger('click')
+    await nextTick()
+
+    expect(createFollowup).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Confirm renewal numbers were received',
+      parentTaskId: 'task-renewal',
+      projectId: 'client-renewals',
+      priority: 'high',
+    }))
+    expect(wrapper.text()).toContain('Follow-up task added')
   })
 
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
@@ -975,12 +1077,16 @@ describe('AI sidebar-first desktop experience', () => {
     expect(weeklyPlan).toContain('date_priority_only_reasoning')
     expect(weeklyPlan).toContain('generic_reasoning')
     expect(weeklyPlan).toContain('buildQuickDraftWeeklyPlan')
-    expect(weeklyPlan).toContain('Evidence-only draft:')
+    expect(weeklyPlan).toContain('Best plan from task evidence')
+    expect(weeklyPlan).not.toContain('Evidence-only draft:')
 
     expect(chatMessage).toContain('data-testid="weekly-plan"')
     expect(chatMessage).toContain('data-testid="inline-plan-card"')
     expect(chatMessage).toContain('taskCardFromId(taskId)')
     expect(chatMessage).toContain('weeklyPlanTaskStaleLabel')
+    expect(chatMessage).toContain('Grounded task-evidence plan')
+    expect(chatMessage).toContain('applyWeeklyQuestion')
+    expect(chatMessage).toContain('createTaskWithUndo')
     expect(aiChat).toContain('depends on:')
     expect(aiChat).toContain('connections:')
     expect(aiChat).toContain('planning notes:')

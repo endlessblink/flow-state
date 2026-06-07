@@ -79,6 +79,8 @@ const loadingActions = ref<Set<string>>(new Set())
 const copied = ref(false)
 const weeklyQuestionAnswers = ref<Record<string, string>>({})
 const weeklyQuestionFreeText = ref<Record<string, string>>({})
+const weeklyQuestionApplying = ref<Record<string, boolean>>({})
+const weeklyQuestionApplied = ref<Record<string, string>>({})
 
 // Track which tasks have been actioned (for visual feedback)
 const completedTaskIds = ref<Set<string>>(new Set())
@@ -253,6 +255,55 @@ function weeklyPlanTaskStaleLabel(task: TaskListItem | null): string {
 
 function isPlanSnapshotCard(task: TaskListItem | null): boolean {
   return Boolean(task?.__planSnapshotOnly)
+}
+
+function weeklyQuestionKey(question: WeeklyPlanOutput['openQuestions'][number]): string {
+  return question.id || question.question
+}
+
+function weeklyQuestionTask(question: WeeklyPlanOutput['openQuestions'][number]): Task | null {
+  const taskId = question.relatedTaskIds?.[0]
+  return taskId ? taskMap.value.get(taskId) ?? null : null
+}
+
+async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][number], event: MouseEvent) {
+  event.stopPropagation()
+  const key = weeklyQuestionKey(question)
+  const selected = weeklyQuestionAnswers.value[key]
+  const note = weeklyQuestionFreeText.value[key]?.trim()
+  if (!selected && !note) return
+  if (weeklyQuestionApplying.value[key]) return
+
+  weeklyQuestionApplying.value[key] = true
+  try {
+    const parentTask = weeklyQuestionTask(question)
+    if (selected === 'add_followup') {
+      const locale = weeklyPlan.value?.locale ?? 'en'
+      const title = note || (locale === 'he'
+        ? `מעקב: ${parentTask?.title || 'משימה'}`
+        : `Follow up: ${parentTask?.title || 'task'}`)
+      await taskStore.createTaskWithUndo({
+        title,
+        description: [
+          locale === 'he' ? 'נוצר מתשובת מעקב בתוכנית השבועית.' : 'Created from a weekly-plan follow-up answer.',
+          parentTask ? `${locale === 'he' ? 'משימת מקור' : 'Source task'}: ${parentTask.title}` : '',
+          question.question,
+        ].filter(Boolean).join('\n'),
+        status: 'todo',
+        priority: parentTask?.priority ?? 'medium',
+        projectId: parentTask?.projectId || 'uncategorized',
+        parentTaskId: parentTask?.id ?? null,
+      })
+      weeklyQuestionApplied.value[key] = locale === 'he' ? 'משימת מעקב נוספה' : 'Follow-up task added'
+    } else {
+      weeklyQuestionApplied.value[key] = weeklyPlan.value?.locale === 'he' ? 'התשובה נשמרה לתוכנית הזו' : 'Answer saved for this plan'
+    }
+  } catch (err) {
+    console.error('[ChatMessage] Weekly question action failed:', err)
+    weeklyQuestionApplied.value[key] = weeklyPlan.value?.locale === 'he' ? 'הפעולה נכשלה' : 'Action failed'
+  } finally {
+    delete weeklyQuestionApplying.value[key]
+  }
 }
 
 // ============================================================================
@@ -835,7 +886,7 @@ async function saveSchedule() {
       >
         <header class="weekly-plan-header">
           <div v-if="weeklyPlan.source === 'quick_draft'" class="weekly-plan-source">
-            {{ weeklyPlan.locale === 'he' ? 'טיוטה עובדתית בלבד' : 'Evidence-only quick draft' }}
+            {{ weeklyPlan.locale === 'he' ? 'תוכנית מקורקעת מנתוני המשימות' : 'Grounded task-evidence plan' }}
           </div>
           <h2>{{ weeklyPlan.headline }}</h2>
           <p>{{ weeklyPlan.weekRead.summary }}</p>
@@ -953,6 +1004,25 @@ async function saveSchedule() {
                 :placeholder="weeklyPlan.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...'"
                 rows="2"
               />
+              <div class="weekly-question-action-row">
+                <button
+                  type="button"
+                  class="weekly-question-apply"
+                  :disabled="weeklyQuestionApplying[weeklyQuestionKey(question)] || (!weeklyQuestionAnswers[weeklyQuestionKey(question)] && !weeklyQuestionFreeText[weeklyQuestionKey(question)]?.trim())"
+                  @click="applyWeeklyQuestion(question, $event)"
+                >
+                  <Loader2 v-if="weeklyQuestionApplying[weeklyQuestionKey(question)]" :size="13" class="spin" />
+                  <CheckCircle2 v-else :size="13" />
+                  {{
+                    weeklyQuestionAnswers[weeklyQuestionKey(question)] === 'add_followup'
+                      ? (weeklyPlan.locale === 'he' ? 'הוסף משימת מעקב' : 'Add follow-up task')
+                      : (weeklyPlan.locale === 'he' ? 'שמור תשובה' : 'Save answer')
+                  }}
+                </button>
+                <span v-if="weeklyQuestionApplied[weeklyQuestionKey(question)]" class="weekly-question-status">
+                  {{ weeklyQuestionApplied[weeklyQuestionKey(question)] }}
+                </span>
+              </div>
             </div>
           </div>
         </footer>
@@ -2518,6 +2588,38 @@ async function saveSchedule() {
   color: var(--text-primary);
   font: inherit;
   resize: vertical;
+}
+
+.weekly-question-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.weekly-question-apply {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-sm);
+  background: var(--brand-primary);
+  color: var(--bg-primary);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.weekly-question-apply:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.weekly-question-status {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
 }
 
 :dir(rtl).weekly-plan-message {

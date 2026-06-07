@@ -373,17 +373,17 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
     requestId: context.requestId,
     locale,
     direction: context.direction,
-    headline: locale === 'he' ? 'טיוטה מהירה לפי נתוני המשימות' : 'Quick draft from task data',
+    headline: locale === 'he' ? 'התוכנית הטובה ביותר מנתוני המשימות' : 'Best plan from task evidence',
     weekRead: {
       summary: locale === 'he'
         ? `נבדקו ${context.tasks.length} מועמדים מתוך ${context.workload.openTaskCount} משימות פתוחות.`
         : `Reviewed ${context.tasks.length} candidates from ${context.workload.openTaskCount} open tasks.`,
       workloadReality: locale === 'he'
-        ? 'זה לא תחליף לתשובת מודל מלאה; זו שכבת ראיות כדי שלא תחכה מול מסך ריק.'
-        : 'This is not a replacement for the full model answer; it is evidence-only so you are not left waiting.',
+        ? 'יש כאן מספיק אותות לבנות תוכנית שימושית עכשיו; משימות בלי הקשר עמוק עדיין מקבלות דירוג לפי הראיות הזמינות.'
+        : 'There are enough signals here to build a useful plan now; tasks without deep context are still ranked by the evidence available.',
       mainTradeoff: locale === 'he'
-        ? 'להעדיף אותות ברורים כמו דחייה, תלות, כסף/לקוח/בריאות, ותאריך קרוב.'
-        : 'Prefer clear signals such as postponement, dependencies, money/client/health, and near dates.',
+        ? 'להגן קודם על עבודה עם השלכות אמיתיות: תלות, כסף/לקוח/בריאות, התחייבות לאדם אחר, או דחייה חוזרת.'
+        : 'Protect work with real consequences first: dependencies, money/client/health, commitments to another person, or repeated postponement.',
     },
     recommendations,
     deferrals: deferredErrands.map(task => ({
@@ -397,7 +397,7 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
     quality: {
       selectedTaskCount: recommendations.length,
       confidence: 'low',
-      caveats: [locale === 'he' ? 'המודל לא החזיר תוכנית תקינה בזמן.' : 'The model did not return a valid plan in time.'],
+      caveats: [locale === 'he' ? 'תשובת המודל נדחתה או לא חזרה בזמן; מוצגת תוכנית מקורקעת מנתוני המשימות.' : 'The model answer was rejected or unavailable; showing a grounded plan from task evidence.'],
     },
     source: 'quick_draft',
   }
@@ -861,47 +861,47 @@ function quickDraftWhyThisMatters(task: PlannerTaskSnapshot, stream: PlannerWork
   const openSubtaskCount = task.subtasks?.filter(subtask => !subtask.isCompleted).length ?? 0
   if (task.derived.substantialWorkScore >= 0.55) {
     return locale === 'he'
-      ? 'טיוטה עובדתית: זה נראה כמו מוקד עבודה משמעותי, לא סידור קטן, ולכן הוא צריך להישקל לפני משימות בית שניתן לאגד או להעביר לסוף שבוע.'
-      : 'Evidence-only draft: this looks like a substantial work focus, not a small errand, so it should be weighed before home tasks that can be batched or moved to the weekend.'
+      ? 'זה נראה כמו מוקד עבודה משמעותי, לא סידור קטן, ולכן הוא צריך להישקל לפני משימות בית שניתן לאגד או להעביר לסוף שבוע.'
+      : 'This looks like a substantial work focus, not a small errand, so it should be weighed before home tasks that can be batched or moved to the weekend.'
   }
   if (task.dependencies?.blocksTaskIds.length) {
     return locale === 'he'
-      ? `טיוטה עובדתית: המשימה הזו חוסמת ${task.dependencies.blocksTaskIds.length} משימות נוספות, לכן היא משפיעה על זרימת העבודה מעבר לצ'קבוקס שלה.`
-      : `Evidence-only draft: this task blocks ${task.dependencies.blocksTaskIds.length} other task${task.dependencies.blocksTaskIds.length === 1 ? '' : 's'}, so it affects the flow of work beyond its own checkbox.`
+      ? `המשימה הזו חוסמת ${task.dependencies.blocksTaskIds.length} משימות נוספות, לכן היא משפיעה על זרימת העבודה מעבר לצ'קבוקס שלה.`
+      : `This task blocks ${task.dependencies.blocksTaskIds.length} other task${task.dependencies.blocksTaskIds.length === 1 ? '' : 's'}, so it affects the flow of work beyond its own checkbox.`
   }
   if (task.derived.hasHumanOrExternalStakeholder) {
     return locale === 'he'
-      ? 'טיוטה עובדתית: הכותרת או ההערות מצביעות על אדם אחר, תגובה, פגישה או אישור, אז יש כאן התחייבות חיצונית שצריך להגן עליה.'
-      : 'Evidence-only draft: the title or notes point to another person, reply, meeting, approval, or client, so this looks like an external commitment to protect.'
+      ? 'הכותרת או ההערות מצביעות על אדם אחר, תגובה, פגישה או אישור, אז יש כאן התחייבות חיצונית שצריך להגן עליה.'
+      : 'The title or notes point to another person, reply, meeting, approval, or client, so this looks like an external commitment to protect.'
   }
   if (task.derived.hasMoneyClientHealthFamilyLegalSignal) {
     return locale === 'he'
-      ? 'טיוטה עובדתית: האותות במשימה מצביעים על כסף, לקוח, בריאות, משפחה או אדמין, ולכן יש לה משקל חיים/עבודה מעבר לסידור רשימה.'
-      : 'Evidence-only draft: the task signals money, client, health, family, or admin stakes, so it carries life/work weight beyond list cleanup.'
+      ? 'האותות במשימה מצביעים על כסף, לקוח, בריאות, משפחה או אדמין, ולכן יש לה משקל חיים/עבודה מעבר לסידור רשימה.'
+      : 'The task signals money, client, health, family, or admin stakes, so it carries life/work weight beyond list cleanup.'
   }
   if (task.history.postponedCount > 0 || task.derived.isStale) {
     return locale === 'he'
-      ? `טיוטה עובדתית: המשימה נדחתה ${task.history.postponedCount} פעמים או התיישנה, אז הסיכון הוא שהיא תמשיך לשבת פתוחה ולמשוך קשב.`
-      : `Evidence-only draft: this task has been postponed ${task.history.postponedCount} time${task.history.postponedCount === 1 ? '' : 's'} or has gone stale, so the risk is continued open-loop attention.`
+      ? `המשימה נדחתה ${task.history.postponedCount} פעמים או התיישנה, אז הסיכון הוא שהיא תמשיך לשבת פתוחה ולמשוך קשב.`
+      : `This task has been postponed ${task.history.postponedCount} time${task.history.postponedCount === 1 ? '' : 's'} or has gone stale, so the risk is continued open-loop attention.`
   }
   if (task.status === 'in_progress' || task.history.timerMinutesLast7Days > 0) {
     return locale === 'he'
-      ? `טיוטה עובדתית: כבר הושקעו כאן ${task.history.timerMinutesLast7Days} דקות או שהמשימה בתהליך, כך שיש ערך בלסגור את ההקשר לפני שהוא מתפזר.`
-      : `Evidence-only draft: ${task.history.timerMinutesLast7Days} minutes are already invested or the task is in progress, so there is value in closing the context before it fades.`
+      ? `כבר הושקעו כאן ${task.history.timerMinutesLast7Days} דקות או שהמשימה בתהליך, כך שיש ערך בלסגור את ההקשר לפני שהוא מתפזר.`
+      : `${task.history.timerMinutesLast7Days} minutes are already invested or the task is in progress, so there is value in closing the context before it fades.`
   }
   if (openSubtaskCount > 0) {
     return locale === 'he'
-      ? `טיוטה עובדתית: יש כאן ${openSubtaskCount} תתי-משימות פתוחות, אז עדיף לבחור את תת-הצעד הבא במקום להתייחס לזה ככרטיס שטוח.`
-      : `Evidence-only draft: there are ${openSubtaskCount} open subtasks, so choose the next sub-step instead of treating this as a flat card.`
+      ? `יש כאן ${openSubtaskCount} תתי-משימות פתוחות, אז עדיף לבחור את תת-הצעד הבא במקום להתייחס לזה ככרטיס שטוח.`
+      : `There are ${openSubtaskCount} open subtasks, so choose the next sub-step instead of treating this as a flat card.`
   }
   if (stream) {
     return locale === 'he'
-      ? `טיוטה עובדתית: המשימה יושבת בתוך "${stream.label}", יחד עם ${stream.taskIds.length} משימות קשורות, אז כדאי לראות אותה כחלק מאותו היבט עבודה.`
-      : `Evidence-only draft: this sits inside "${stream.label}" with ${stream.taskIds.length} related tasks, so treat it as part of that work aspect.`
+      ? `המשימה יושבת בתוך "${stream.label}", יחד עם ${stream.taskIds.length} משימות קשורות, אז כדאי לראות אותה כחלק מאותו היבט עבודה.`
+      : `This sits inside "${stream.label}" with ${stream.taskIds.length} related tasks, so treat it as part of that work aspect.`
   }
   return locale === 'he'
-    ? 'טיוטה עובדתית: אין מספיק הקשר עמוק, לכן זה מוצג לפי האותות הזמינים בכרטיס ולא כהמלצה אימונית מלאה.'
-    : 'Evidence-only draft: there is limited deeper context, so this is shown from available task signals rather than as full coaching advice.'
+    ? 'אין מספיק הקשר עמוק, אבל האותות הזמינים עדיין מצדיקים לשקול את זה לפני חלופות חלשות יותר.'
+    : 'There is limited deeper context, but the available signals still justify considering this before weaker alternatives.'
 }
 
 function quickDraftWhyThisWeek(task: PlannerTaskSnapshot, evidence: WeeklyPlanRecommendation['evidence'], locale: PlannerLocale): string {

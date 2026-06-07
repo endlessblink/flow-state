@@ -136,13 +136,7 @@ const statusOptions = [
 ]
 
 // Initialize Composables
-const state = useTaskRowState({
-  task: props.task,
-  indentLevel: props.indentLevel,
-  selected: props.selected,
-  expandedTasks: props.expandedTasks,
-  visitedIds: props.visitedIds
-})
+const state = useTaskRowState(props)
 
 const actions = useTaskRowActions(
   { 

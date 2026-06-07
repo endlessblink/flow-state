@@ -303,8 +303,82 @@ describe('AI sidebar-first desktop experience', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 
     expect(aiChat).toContain('FINAL_FORMATTER_TIMEOUT_MS')
-    expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language)')
+    expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
     expect(aiChat).toContain("Formatter timed out or failed; using fallback answer")
+  })
+
+  it('keeps AI task cards paired under the matching answer line and dismisses local suggestions', async () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-inline-cards',
+          role: 'assistant',
+          content: [
+            'Start with Task Alpha because it protects the payment decision.',
+            'Then handle Task Beta while the context is still fresh.',
+          ].join('\n'),
+          timestamp: Date.now(),
+          metadata: {
+            cardGroups: {
+              kind: 'week_plan',
+              total: 2,
+              groups: [
+                {
+                  name: 'Money',
+                  tasks: [
+                    {
+                      id: 'task-alpha',
+                      title: 'Task Alpha',
+                      status: 'todo',
+                      priority: 'high',
+                      reason: 'payment decision risk',
+                    },
+                  ],
+                },
+                {
+                  name: 'Follow-up',
+                  tasks: [
+                    {
+                      id: 'task-beta',
+                      title: 'Task Beta',
+                      status: 'todo',
+                      priority: 'medium',
+                      reason: 'stakeholder follow-through',
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(2)
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')[0].text()).toContain('Task Alpha')
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')[1].text()).toContain('Task Beta')
+
+    await wrapper.find('.inline-dismiss-btn').trigger('click')
+
+    const remaining = wrapper.findAll('[data-testid="inline-ai-task-card"]')
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0].text()).toContain('Task Beta')
+    expect(wrapper.text()).not.toContain('payment decision risk')
+  })
+
+  it('documents weekly planning as selective coach reasoning rather than a one-sentence task dump', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+
+    expect(aiChat).toContain('Act like a thoughtful planning coach, not a sorter')
+    expect(aiChat).toContain('why now, expected impact, and the tradeoff/slot')
+    expect(aiChat).toContain('omissions/defer line')
+    expect(aiChat).toContain('Due dates and priority labels are metadata, not reasons')
+    expect(aiChat).not.toContain('these look like the highest-impact tasks right now')
   })
 
   it('keeps a visible New Chat control in the AI sidebar header', async () => {

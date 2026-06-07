@@ -106,6 +106,37 @@ describe('parseCardGroups — maps [N] index → the RIGHT task', () => {
     expect(r!.groups[1].tasks[0].title).toBe('Call the dentist')
   })
 
+  it('maps directive cards from nested loaded task arrays', () => {
+    const nestedResults = [{
+      success: true,
+      message: 'today plus overdue',
+      data: {
+        dueTodayTasks: [
+          { id: 'today-1', title: 'Check payment via Cardcom', priority: 'high' },
+        ],
+        overdueTasks: [
+          { id: 'late-1', title: 'Reply to Miri and send invoice', priority: 'high' },
+        ],
+      },
+    }]
+    const text = 'Start with payment, then Miri.\n\n' + block({
+      kind: 'day_plan',
+      groups: [
+        { name: 'Money first', items: [{ i: 1, reason: 'billing can get stuck' }] },
+        { name: 'Client follow-up', items: [{ i: 2, reason: 'client is waiting' }] },
+      ],
+    })
+
+    const r = parseCardGroups(text, nestedResults)
+
+    expect(r?.kind).toBe('day_plan')
+    expect(r?.total).toBe(2)
+    expect(r?.groups.flatMap(group => group.tasks.map(task => task.title))).toEqual([
+      'Check payment via Cardcom',
+      'Reply to Miri and send invoice',
+    ])
+  })
+
   it('drops items whose index has no matching task (never shows a phantom card)', () => {
     const text = block({ groups: [{ name: 'X', items: [{ i: 1, reason: 'ok' }, { i: 99, reason: 'nope' }] }] })
     const r = parseCardGroups(text, results)
@@ -159,6 +190,27 @@ describe('parseMentionedTaskCards — answer-bound recovery only', () => {
     const r = parseMentionedTaskCards(text, hebrewResults, 'משימות מהתשובה')
 
     expect(r!.groups[0].tasks.map(task => task.title)).toEqual(['לשלוח חשבונית לתמר', 'להתקשר לאורן'])
+  })
+
+  it('creates answer-bound cards from nested task arrays only for mentioned tasks', () => {
+    const nestedResults = [{
+      success: true,
+      message: 'today plus overdue',
+      data: {
+        dueTodayTasks: [
+          { id: 'today-1', title: 'Check payment via Cardcom', priority: 'high' },
+        ],
+        overdueTasks: [
+          { id: 'late-1', title: 'Reply to Miri and send invoice', priority: 'high' },
+        ],
+      },
+    }]
+
+    const r = parseMentionedTaskCards('Do **Reply to Miri and send invoice** first because the client is waiting.', nestedResults, 'Tasks from answer', 'day_plan')
+
+    expect(r?.kind).toBe('day_plan')
+    expect(r?.total).toBe(2)
+    expect(r?.groups[0].tasks.map(task => task.title)).toEqual(['Reply to Miri and send invoice'])
   })
 })
 

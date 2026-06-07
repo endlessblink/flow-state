@@ -50,7 +50,7 @@ import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRou
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
 import { stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
-import { buildStructuredTaskFallback, finalizeTaskAnswer } from '@/services/ai/pipeline/taskAnswerFallback'
+import { buildStructuredTaskFallback, collectTaskAnswerItems, finalizeTaskAnswer } from '@/services/ai/pipeline/taskAnswerFallback'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
 
@@ -1082,9 +1082,7 @@ export function useAIChat() {
 
       // TASK-1814: structured `cards` block → grouped interactive cards with a reason
       // on each (rendered by ChatMessage). Only for bridge brains with a task list.
-      const hasTaskList = toolResults.some(r =>
-        r.success && Array.isArray(r.data) && r.data.length > 0 && (r.data[0] as Record<string, unknown>)?.title !== undefined,
-      )
+      const hasTaskList = collectTaskAnswerItems(toolResults).some(task => task.title)
       const isDayPlan = routed.responseMode === 'day_plan'
       const isSmartLanes = routed.responseMode === 'smart_lanes'
       const isWeeklyReview = routed.responseMode === 'weekly_review'

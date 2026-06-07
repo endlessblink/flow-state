@@ -27,10 +27,26 @@ export interface ParsedCards {
 }
 
 function findIndexedTasks(toolResults: CardToolResult[]): Array<Record<string, unknown>> {
-  const taskResult = toolResults.find(r =>
-    r.success && Array.isArray(r.data) && (r.data[0] as Record<string, unknown>)?.title !== undefined,
-  )
-  return (taskResult?.data as Array<Record<string, unknown>>) || []
+  const tasks: Array<Record<string, unknown>> = []
+  for (const result of toolResults) {
+    if (!result.success) continue
+    const data = result.data
+    if (Array.isArray(data)) {
+      tasks.push(...data.filter(isIndexedTask))
+      continue
+    }
+    if (!data || typeof data !== 'object') continue
+    const record = data as Record<string, unknown>
+    for (const key of ['tasks', 'dueTodayTasks', 'overdueTasks']) {
+      const value = record[key]
+      if (Array.isArray(value)) tasks.push(...value.filter(isIndexedTask))
+    }
+  }
+  return tasks
+}
+
+function isIndexedTask(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && typeof (value as Record<string, unknown>).title === 'string')
 }
 
 function normalizeForMentionMatch(value: string): string {

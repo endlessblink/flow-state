@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -395,6 +396,7 @@ describe('AI sidebar-first desktop experience', () => {
                   nextAction: 'Draft only the numbers table and send Amit a short confirmation.',
                   evidence: [
                     { taskId: 'task-renewal', field: 'notes', value: 'budget meeting', interpretation: 'external decision window' },
+                    { taskId: 'task-renewal', field: 'dueIso', value: '2026-06-10', interpretation: 'original plan date' },
                     { taskId: 'task-renewal', field: 'priority', value: 'high', interpretation: 'priority signal' },
                   ],
                   cardPlacement: 'immediately_after_explanation',
@@ -420,6 +422,10 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(1)
     expect(wrapper.get('[data-testid="inline-plan-card"]').text()).toContain('Send renewal proposal to Amit')
     expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(0)
+
+    taskStore._rawTasks[0].dueDate = '2026-06-12'
+    await nextTick()
+    expect(wrapper.get('[data-testid="inline-plan-card"]').text()).toContain('rescheduled after this plan was generated')
 
     await wrapper.get('[aria-label="Hide from these options"]').trigger('click')
     expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(0)

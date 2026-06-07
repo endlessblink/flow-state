@@ -189,6 +189,18 @@ const weeklyPlan = computed(() => {
   return plan?.schemaVersion === 'weekly-plan.v2' ? plan : null
 })
 
+const weeklyPlanSnapshotDueByTaskId = computed(() => {
+  const map = new Map<string, string>()
+  for (const rec of weeklyPlan.value?.recommendations ?? []) {
+    for (const item of rec.evidence ?? []) {
+      if (item.field === 'dueIso' && item.taskId && item.value) {
+        map.set(item.taskId, item.value)
+      }
+    }
+  }
+  return map
+})
+
 function weeklyPlanTaskIds(rec: WeeklyPlanRecommendation): string[] {
   return [...new Set([rec.primaryTaskId, ...(rec.relatedTaskIds ?? [])].filter(Boolean))]
     .filter(taskId => !dismissedCardTaskIds.value.has(taskId))
@@ -202,7 +214,7 @@ function taskCardFromId(taskId: string): TaskListItem | null {
     title: task.title,
     status: task.status,
     priority: task.priority,
-    dueDate: task.dueDate,
+    dueDate: weeklyPlanSnapshotDueByTaskId.value.get(task.id) ?? task.dueDate,
     estimatedDuration: task.estimatedDuration,
   })
 }

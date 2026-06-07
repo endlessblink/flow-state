@@ -65,6 +65,28 @@ describe('parseCardGroups — maps [N] index → the RIGHT task', () => {
     ])
   })
 
+  it('TASK-1820: maps weekly-review cards (completed tasks) and preserves kind', () => {
+    // get_weekly_summary returns the ARRAY of completed-this-week tasks, so the
+    // weekly review renders REAL clickable cards instead of fabricated names.
+    const completed = [
+      { id: 'c1', title: 'ניקיון כללי', priority: 'low', status: 'done' },
+      { id: 'c2', title: 'Cloudflare Workers', priority: 'high', status: 'done' },
+    ]
+    const weeklyResults = [{ success: true, message: 'סיכום שבועי: הושלמו 2 משימות', data: completed }]
+    const text = 'השלמת 2 משימות השבוע.\n\n' + block({
+      kind: 'weekly_review',
+      groups: [
+        { name: 'בית', items: [{ i: 1, reason: 'תחזוקה שוטפת' }] },
+        { name: 'פרויקטים', items: [{ i: 2, reason: 'פריסה לפרודקשן' }] },
+      ],
+    })
+    const r = parseCardGroups(text, weeklyResults)
+    expect(r?.kind).toBe('weekly_review')
+    expect(r!.groups[0].tasks[0].title).toBe('ניקיון כללי')
+    expect(r!.groups[1].tasks[0].title).toBe('Cloudflare Workers')
+    expect(r!.total).toBe(2)
+  })
+
   it('drops items whose index has no matching task (never shows a phantom card)', () => {
     const text = block({ groups: [{ name: 'X', items: [{ i: 1, reason: 'ok' }, { i: 99, reason: 'nope' }] }] })
     const r = parseCardGroups(text, results)

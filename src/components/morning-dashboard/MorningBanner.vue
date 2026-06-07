@@ -50,25 +50,29 @@ const bannerText = computed(() => {
 <style scoped>
 .morning-banner {
   position: fixed;
-  top: 0;
+  top: var(--space-3);
   left: 0;
   right: 0;
   z-index: var(--z-toast);
   display: flex;
   justify-content: center;
-  padding: var(--space-2) var(--space-4);
-  background: var(--glass-bg-soft);
-  border-bottom: 1px solid var(--brand-primary);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  padding: 0 var(--space-4);
+  pointer-events: none;
 }
 
 .banner-content {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-3);
   max-width: 600px;
-  width: 100%;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-full, 9999px);
+  box-shadow: var(--shadow-lg, 0 10px 30px -10px rgba(0, 0, 0, 0.5));
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  pointer-events: auto;
 }
 
 .banner-icon {
@@ -79,7 +83,7 @@ const bannerText = computed(() => {
 .banner-text {
   font-size: var(--text-sm);
   color: var(--text-primary);
-  flex: 1;
+  white-space: nowrap;
 }
 
 .banner-dismiss {

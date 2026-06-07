@@ -465,11 +465,18 @@ describe('preDigestedReasoning — digestToolResults()', () => {
     expect(result).toContain('Pomodoros today: 4')
   })
 
-  it('digests weekly summary with completedThisWeek and totalFocusMinutes', () => {
-    const data = { completedThisWeek: 8, totalFocusMinutes: 90 }
-    const result = digestToolResults('get_weekly_summary', data, 'Week summary')
-    expect(result).toContain('Completed this week: 8')
-    expect(result).toContain('1h 30m')
+  it('TASK-1820: digests weekly summary from the completed-task ARRAY (grounded count + titles)', () => {
+    // get_weekly_summary now returns the real completed-this-week tasks, so the
+    // digest is grounded in actual count + titles (no fabricated names/numbers).
+    const data = [
+      { id: 'c1', title: 'Ship release notes', priority: 'high', status: 'done' },
+      { id: 'c2', title: 'Review PR #82', priority: 'medium', status: 'done' },
+    ]
+    const result = digestToolResults('get_weekly_summary', data, 'Weekly summary: 2 tasks completed, 1h 30m focus')
+    expect(result).toContain('Completed this week: 2')
+    expect(result).toContain('Ship release notes')
+    expect(result).toContain('Review PR #82')
+    expect(result).toContain('1h 30m') // carried in the message
   })
 
   it('digests timer status when running', () => {

@@ -12,6 +12,7 @@
 
 import { supabase } from '@/services/auth/supabase'
 import type { Conversation } from '@/stores/aiChat'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 // ============================================================================
 // Helpers
@@ -19,6 +20,26 @@ import type { Conversation } from '@/stores/aiChat'
 
 function getClient() {
   return supabase
+}
+
+function mapConversationRow(row: Record<string, unknown>): Conversation {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    messages: ((row.messages || []) as Array<Record<string, unknown>>).map(m => ({
+      id: m.id as string,
+      role: m.role as 'user' | 'assistant' | 'system',
+      content: m.content as string,
+      timestamp: new Date(m.timestamp as string),
+      isStreaming: false,
+      error: m.error as string | undefined,
+      taskId: m.taskId as string | undefined,
+      metadata: m.metadata as Record<string, unknown> | undefined,
+      // actions are NOT restored (handlers are functions — not serializable)
+    })),
+    createdAt: new Date(row.created_at as string),
+    updatedAt: new Date(row.updated_at as string),
+  }
 }
 
 // ============================================================================
@@ -49,26 +70,66 @@ export async function loadConversationsFromSupabase(): Promise<Conversation[] | 
       return null
     }
 
-    return data.map(row => ({
-      id: row.id as string,
-      title: row.title as string,
-      messages: ((row.messages || []) as Array<Record<string, unknown>>).map(m => ({
-        id: m.id as string,
-        role: m.role as 'user' | 'assistant' | 'system',
-        content: m.content as string,
-        timestamp: new Date(m.timestamp as string),
-        isStreaming: false,
-        error: m.error as string | undefined,
-        taskId: m.taskId as string | undefined,
-        metadata: m.metadata as Record<string, unknown> | undefined,
-        // actions are NOT restored (handlers are functions — not serializable)
-      })),
-      createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.updated_at as string),
-    }))
+    return data.map(row => mapConversationRow(row as Record<string, unknown>))
   } catch (err) {
     console.warn('[ChatPersistence] Load error:', err)
     return null
+  }
+}
+
+export interface AIConversationRealtimeHandlers {
+  onUpsert: (conversation: Conversation) => void
+  onDelete: (conversationId: string) => void
+  onStatus?: (status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => void
+}
+
+export async function subscribeToAIConversationChanges(
+  handlers: AIConversationRealtimeHandlers
+): Promise<{ unsubscribe: () => Promise<void> } | null> {
+  const client = getClient()
+  if (!client) return null
+
+  const { data: { user } } = await client.auth.getUser()
+  if (!user?.id) return null
+
+  const { data: { session } } = await client.auth.getSession()
+  if (session?.access_token) {
+    client.realtime.setAuth(session.access_token)
+  }
+
+  const channelName = `ai-conversations-${user.id.slice(0, 8)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  let channel: RealtimeChannel | null = client.channel(channelName)
+
+  channel
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'ai_conversations',
+      filter: `user_id=eq.${user.id}`,
+    }, (payload) => {
+      if (payload.eventType === 'DELETE') {
+        const id = payload.old?.id
+        if (typeof id === 'string') handlers.onDelete(id)
+        return
+      }
+
+      if (payload.new) {
+        handlers.onUpsert(mapConversationRow(payload.new as Record<string, unknown>))
+      }
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        handlers.onStatus?.(status)
+      }
+    })
+
+  return {
+    unsubscribe: async () => {
+      if (!channel) return
+      const current = channel
+      channel = null
+      await client.removeChannel(current)
+    },
   }
 }
 

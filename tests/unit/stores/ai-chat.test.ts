@@ -24,12 +24,19 @@ import { setActivePinia, createPinia } from 'pinia'
 const mockSaveConversationToSupabase = vi.fn().mockResolvedValue(true)
 const mockLoadConversationsFromSupabase = vi.fn().mockResolvedValue(null)
 const mockDeleteConversationFromSupabase = vi.fn().mockResolvedValue(true)
+const mockSubscribeToAIConversationChanges = vi.fn()
 const mockStartUsageSync = vi.fn()
+let realtimeHandlers: {
+  onUpsert: (conversation: any) => void
+  onDelete: (conversationId: string) => void
+  onStatus?: (status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => void
+} | null = null
 
 vi.mock('@/services/ai/chatPersistence', () => ({
   saveConversationToSupabase: mockSaveConversationToSupabase,
   loadConversationsFromSupabase: mockLoadConversationsFromSupabase,
   deleteConversationFromSupabase: mockDeleteConversationFromSupabase,
+  subscribeToAIConversationChanges: mockSubscribeToAIConversationChanges,
 }))
 
 vi.mock('@/services/ai/usageSync', () => ({
@@ -48,10 +55,16 @@ describe('useAIChatStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    realtimeHandlers = null
     // Clear localStorage between tests
     localStorage.clear()
     // Reset mocks to their defaults
     mockLoadConversationsFromSupabase.mockResolvedValue(null)
+    mockSubscribeToAIConversationChanges.mockImplementation((handlers) => {
+      realtimeHandlers = handlers
+      handlers.onStatus?.('SUBSCRIBED')
+      return Promise.resolve({ unsubscribe: vi.fn().mockResolvedValue(undefined) })
+    })
   })
 
   afterEach(() => {
@@ -253,5 +266,157 @@ describe('useAIChatStore', () => {
     expect(store.conversations).toHaveLength(1)
     expect(store.conversations.find(c => c.id === conv1.id)).toBeUndefined()
     expect(mockDeleteConversationFromSupabase).toHaveBeenCalledWith(conv1.id)
+  })
+
+  it('11. initialize() merges local and Supabase conversations instead of replacing local cache', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    const localConversation = {
+      id: 'conv_local',
+      title: 'Local Chat',
+      messages: [
+        {
+          id: 'msg_local',
+          role: 'user',
+          content: 'Local only',
+          timestamp: '2026-06-07T08:00:00.000Z',
+          isStreaming: false,
+        },
+      ],
+      createdAt: '2026-06-07T08:00:00.000Z',
+      updatedAt: '2026-06-07T08:00:00.000Z',
+    }
+    localStorage.setItem('flowstate-ai-conversations', JSON.stringify({
+      conversations: [localConversation],
+      activeConversationId: 'conv_local',
+    }))
+
+    mockLoadConversationsFromSupabase.mockResolvedValue([
+      {
+        id: 'conv_remote',
+        title: 'Remote Chat',
+        messages: [
+          {
+            id: 'msg_remote',
+            role: 'assistant' as const,
+            content: 'Remote only',
+            timestamp: new Date('2026-06-07T09:00:00.000Z'),
+            isStreaming: false,
+          },
+        ],
+        createdAt: new Date('2026-06-07T09:00:00.000Z'),
+        updatedAt: new Date('2026-06-07T09:00:00.000Z'),
+      },
+    ])
+
+    const store = useAIChatStore()
+    await store.initialize()
+
+    expect(store.conversations.map(c => c.id).sort()).toEqual(['conv_local', 'conv_remote'])
+    expect(store.activeConversationId).toBe('conv_local')
+    expect(mockSaveConversationToSupabase).toHaveBeenCalledWith(expect.objectContaining({ id: 'conv_local' }))
+  })
+
+  it('12. initialize() merges messages from local and remote copies of the same conversation', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    localStorage.setItem('flowstate-ai-conversations', JSON.stringify({
+      conversations: [
+        {
+          id: 'conv_shared',
+          title: 'Local Newer Title',
+          messages: [
+            {
+              id: 'msg_local',
+              role: 'user',
+              content: 'Local message',
+              timestamp: '2026-06-07T10:00:00.000Z',
+              isStreaming: false,
+            },
+          ],
+          createdAt: '2026-06-07T08:00:00.000Z',
+          updatedAt: '2026-06-07T10:00:00.000Z',
+        },
+      ],
+      activeConversationId: 'conv_shared',
+    }))
+    mockLoadConversationsFromSupabase.mockResolvedValue([
+      {
+        id: 'conv_shared',
+        title: 'Remote Older Title',
+        messages: [
+          {
+            id: 'msg_remote',
+            role: 'assistant' as const,
+            content: 'Remote message',
+            timestamp: new Date('2026-06-07T09:00:00.000Z'),
+            isStreaming: false,
+          },
+        ],
+        createdAt: new Date('2026-06-07T08:00:00.000Z'),
+        updatedAt: new Date('2026-06-07T09:00:00.000Z'),
+      },
+    ])
+
+    const store = useAIChatStore()
+    await store.initialize()
+
+    expect(store.conversations).toHaveLength(1)
+    expect(store.conversations[0].title).toBe('Local Newer Title')
+    expect(store.conversations[0].messages.map(m => m.id)).toEqual(['msg_remote', 'msg_local'])
+    expect(mockSaveConversationToSupabase).toHaveBeenCalledWith(expect.objectContaining({ id: 'conv_shared' }))
+  })
+
+  it('13. realtime upsert adds remote conversations to the local store', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    const store = useAIChatStore()
+    await store.initialize()
+
+    realtimeHandlers?.onUpsert({
+      id: 'conv_realtime',
+      title: 'Realtime Chat',
+      messages: [],
+      createdAt: new Date('2026-06-07T11:00:00.000Z'),
+      updatedAt: new Date('2026-06-07T11:00:00.000Z'),
+    })
+
+    expect(store.conversations.some(c => c.id === 'conv_realtime')).toBe(true)
+  })
+
+  it('14. realtime delete removes remote conversations from the local store', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    const store = useAIChatStore()
+    await store.initialize()
+    const conv = store.createConversation()
+
+    realtimeHandlers?.onDelete(conv.id)
+
+    expect(store.conversations.some(c => c.id === conv.id)).toBe(false)
+  })
+
+  it('15. realtime upsert does not clobber an active streaming message', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    const store = useAIChatStore()
+    await store.initialize()
+    const conv = store.createConversation()
+    const streaming = store.startStreamingMessage()
+    store.appendStreamingContent('still thinking')
+
+    realtimeHandlers?.onUpsert({
+      id: conv.id,
+      title: 'Remote Snapshot',
+      messages: [
+        {
+          id: 'remote_msg',
+          role: 'assistant',
+          content: 'remote old answer',
+          timestamp: new Date('2026-06-07T11:00:00.000Z'),
+          isStreaming: false,
+        },
+      ],
+      createdAt: conv.createdAt,
+      updatedAt: new Date('2026-06-07T11:00:00.000Z'),
+    })
+
+    expect(store.messages.some(m => m.id === streaming.id && m.content === 'still thinking')).toBe(true)
+    expect(store.messages.some(m => m.id === 'remote_msg')).toBe(false)
   })
 })

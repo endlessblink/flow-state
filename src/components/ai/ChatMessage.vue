@@ -262,6 +262,9 @@ const cardGroups = computed(() => {
 
 const isDayPlan = computed(() => cardGroups.value?.kind === 'day_plan')
 const isSmartLanes = computed(() => cardGroups.value?.kind === 'smart_lanes')
+// TASK-1820: weekly review cards show ALREADY-COMPLETED tasks → read-only
+// (no done-toggle / start-timer actions), but still clickable to open the task.
+const isWeeklyReview = computed(() => cardGroups.value?.kind === 'weekly_review')
 const dayPlanTaskCount = computed(() => {
   const groups = cardGroups.value?.groups ?? []
   return groups.reduce((sum, group) => sum + group.tasks.length, 0)
@@ -717,7 +720,10 @@ async function saveSchedule() {
                 <span v-if="task.status" class="task-status-badge" :class="'status-' + task.status">{{ task.status }}</span>
               </div>
             </div>
-            <div class="task-inline-actions" @click.stop>
+            <div v-if="isWeeklyReview" class="task-inline-actions" @click.stop>
+              <span class="inline-action-done-badge"><CheckCircle2 :size="12" /> Done</span>
+            </div>
+            <div v-else class="task-inline-actions" @click.stop>
               <button
                 v-if="!completedTaskIds.has(task.id)"
                 class="inline-action-btn inline-done-btn"

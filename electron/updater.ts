@@ -1,8 +1,32 @@
-import { autoUpdater } from 'electron-updater'
 import { app, ipcMain, BrowserWindow } from 'electron'
+import type { AppUpdater } from 'electron-updater'
 
 function hasValidAppVersion(version: string): boolean {
   return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)
+}
+
+/**
+ * Lazily load electron-updater. CRITICAL (TASK-1823): a static top-level
+ * `import { autoUpdater } from 'electron-updater'` runs at module-load time, so
+ * if electron-updater (or any of its transitive deps — e.g. fs-extra's
+ * `universalify`) is missing from the packaged asar, the require throws BEFORE
+ * the app body runs and the ENTIRE main process dies → blank window, no app.
+ * That exact crash shipped and blanked the desktop app. Loading it lazily inside
+ * a try/catch means a broken/missing updater dependency degrades the updater to
+ * a no-op instead of taking down the whole app. The auto-updater is never
+ * essential to the app *loading*.
+ */
+function loadAutoUpdater(): AppUpdater | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require('electron-updater').autoUpdater as AppUpdater
+  } catch (err) {
+    console.error(
+      '[Updater] electron-updater unavailable — auto-update disabled, app continues:',
+      (err as Error).message,
+    )
+    return null
+  }
 }
 
 /**
@@ -14,13 +38,14 @@ function hasValidAppVersion(version: string): boolean {
 export function registerUpdater() {
   const isDev = !!process.env.VITE_DEV_SERVER_URL
   const appVersion = app.getVersion()
-  const canUseUpdater = !isDev && hasValidAppVersion(appVersion)
+  const autoUpdater = loadAutoUpdater()
+  const canUseUpdater = !isDev && hasValidAppVersion(appVersion) && autoUpdater !== null
 
   // Register IPC handlers in all environments so renderer invocations don't
   // fail during local dev. In dev or unpackaged preview mode, updater actions
   // become safe no-ops.
   ipcMain.handle('updater:check', async () => {
-    if (!canUseUpdater) return null
+    if (!canUseUpdater || !autoUpdater) return null
 
     try {
       return await autoUpdater.checkForUpdates()
@@ -31,7 +56,7 @@ export function registerUpdater() {
   })
 
   ipcMain.handle('updater:download', async () => {
-    if (!canUseUpdater) return
+    if (!canUseUpdater || !autoUpdater) return
 
     await autoUpdater.downloadUpdate()
   })

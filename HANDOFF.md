@@ -16,7 +16,15 @@ Require stack:
 ```
 `electron-updater`'s nested `fs-extra` can't resolve `universalify` in the packaged asar → main process dies → no window → blank app.
 
-**Next (immediate, single action):** make the main process survive a broken/missing updater dependency. Edit `electron/main.ts` (and/or `electron/updater.ts`) to wrap the `require('./updater')` / updater init in try/catch so a missing module logs and is skipped instead of killing the whole app. Then rebuild and reinstall the AppImage (see below). This is the safest fix — the updater is non-essential to *loading* the app.
+**IN PROGRESS — fail-safe updater fix (electron/updater.ts), ~70% done. FINISH THESE EXACT STEPS:**
+1. `electron/updater.ts` — DONE so far: replaced top-level `import { autoUpdater } from 'electron-updater'` with a lazy `loadAutoUpdater()` that `require('electron-updater')` inside try/catch and returns `null` on failure; `registerUpdater()` now does `const autoUpdater = loadAutoUpdater()` and `canUseUpdater = ... && autoUpdater !== null`. Updated guards in `updater:check` and `updater:download` to `if (!canUseUpdater || !autoUpdater)`.
+   **STILL TODO in updater.ts:** (a) `updater:install` handler guard → change `if (!canUseUpdater) return true` to `if (!canUseUpdater || !autoUpdater) return true` (TS-narrows the `autoUpdater.quitAndInstall` inside setImmediate). (b) the main-body guard `if (!canUseUpdater) {` (the block that warns + returns before `autoUpdater.autoDownload = false`) → change to `if (!canUseUpdater || !autoUpdater) {` so TS narrows autoUpdater non-null for the rest of the function.
+2. `electron/main.ts` line ~194 `registerUpdater()` — wrap in try/catch as defense-in-depth: `try { registerUpdater() } catch (e) { console.error('[main] updater init failed, continuing', e) }`.
+3. Run `npm run type-check` (must be 0 errors — the nullable autoUpdater needs all guards above).
+4. ROOT-FIX the packaging too (so the updater actually works, not just no-ops): figure out why `universalify` is missing from the asar. Fastest reliable fix: add to `electron-builder.yml` `files:` an explicit include `- node_modules/universalify/**/*` (and if still broken, `- node_modules/fs-extra/**/*`, `- node_modules/jsonfile/**/*`, `- node_modules/graceful-fs/**/*`). Verify with: `npx asar list release/linux-unpacked/resources/app.asar | grep universalify`.
+5. `npm run electron:build` → then COPY the new AppImage over `~/.local/bin/FlowState.AppImage` (the dock icon's real target — see dual-install trap below).
+6. Verify the user's app loads: `~/.local/bin/FlowState.AppImage --no-sandbox --enable-logging=stderr 2>&1 | grep -iE "error|module"` should show NO "Cannot find module".
+7. Add the 4th GATE LAYER so this packaging class is caught forever: in `scripts/verify-build-renders.sh` add (when `--check-file-protocol`) an assertion that the built asar contains electron-updater's fs-extra closure, e.g. `npx asar list dist asar | grep universalify`; OR better, a post-package smoke that launches the packaged Electron with a short timeout and asserts no main-process "Cannot find module". Wire it into `electron:build` + `deploy-electron-update.sh`.
 
 ## Files touched / in flight
 **TASK-1823 blank-screen gate (NEW, uncommitted — being committed by this dropoff):**

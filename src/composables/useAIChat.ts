@@ -823,6 +823,40 @@ export function useAIChat() {
     return [intro, ...lines, omissions].filter(Boolean).join('\n') + buildFallbackCards(tasks, lang, responseMode)
   }
 
+  function weeklyPlanNeedsQualityRepair(response: string, cardData: ReturnType<typeof parseCardGroups>, lang: 'he' | 'en'): boolean {
+    if (!cardData || cardData.kind !== 'week_plan') return false
+    const selectedTasks = cardData.groups.flatMap(group => group.tasks)
+    if (selectedTasks.length === 0) return false
+
+    const prose = stripCardsBlock(response).trim()
+    if (prose.length < 80) return true
+
+    const proseLines = prose
+      .split(/\n+/)
+      .map(line => line.trim())
+      .filter(Boolean)
+    const normalizedLines = proseLines.map(line => line.toLowerCase())
+    const taskAnchoredLineCount = selectedTasks.filter(task => {
+      const title = String(task.title || '').trim().toLowerCase()
+      return title && normalizedLines.some(line => line.includes(title))
+    }).length
+    const requiredAnchors = Math.min(3, selectedTasks.length)
+    if (taskAnchoredLineCount < requiredAnchors) return true
+    if (proseLines.length < requiredAnchors) return true
+
+    const hasPlanningReasoning = lang === 'he'
+      ? /(למה עכשיו|השפעה|טריידאוף|מיקום|סיכון|פותח|מונע|משחרר|חוסך|רצף|תלות)/i.test(prose)
+      : /(why now|expected impact|tradeoff|slot|risk|unblock|prevent|dependency|sequence|capacity|energy)/i.test(prose)
+    if (!hasPlanningReasoning) return true
+
+    const shallowMetadataOnly = /(due today|deadline \d{4}-\d{2}-\d{2}|priority (?:low|medium|high)|(?:low|medium|high) priority|באיחור|עדיפות (?:נמוכה|בינונית|גבוהה)|דדליין \d{4}-\d{2}-\d{2})/i.test(prose)
+    const hasStakeLanguage = lang === 'he'
+      ? /(נתקע|מונע|פותח|משחרר|סיכון|רצף|מחכה|החלטה|כסף|גבייה)/i.test(prose)
+      : /(stuck|unblock|prevent|risk|waiting|decision|money|billing|sequence|follow-through)/i.test(prose)
+
+    return shallowMetadataOnly && !hasStakeLanguage
+  }
+
   /**
    * Build the system prompt with context awareness.
    * Includes timer state, task statistics, and additional context.
@@ -1352,6 +1386,14 @@ export function useAIChat() {
             .filter(Boolean)
             .join('\n\n')
           cardData = parseCardGroups(formattedResponse, toolResults)
+        }
+      }
+      if (isWeekPlan && cardData && weeklyPlanNeedsQualityRepair(formattedResponse, cardData, routed.language)) {
+        const fallbackResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
+        const fallbackCardData = parseCardGroups(fallbackResponse, toolResults)
+        if (fallbackCardData) {
+          formattedResponse = fallbackResponse
+          cardData = fallbackCardData
         }
       }
       if (cardData) {

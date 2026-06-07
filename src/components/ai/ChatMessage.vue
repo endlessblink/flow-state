@@ -120,6 +120,19 @@ type TaskListItem = {
   [key: string]: unknown
 }
 
+function currentDaysOverdue(dueDate?: string | null, status?: string): number | undefined {
+  if (!dueDate || status === 'done' || status === 'completed') return undefined
+
+  const due = dueDate.slice(0, 10)
+  const today = new Date().toISOString().slice(0, 10)
+  if (due >= today) return undefined
+
+  const dueMs = new Date(`${due}T00:00:00`).getTime()
+  const todayMs = new Date(`${today}T00:00:00`).getTime()
+  const days = Math.floor((todayMs - dueMs) / 86_400_000)
+  return days > 0 ? days : undefined
+}
+
 /**
  * Merge a frozen snapshot task with live data from the Pinia task store.
  * The snapshot determines WHICH task to show; the store provides CURRENT field values.
@@ -129,13 +142,16 @@ function liveTask(snapshotTask: TaskListItem): TaskListItem {
   if (!snapshotTask?.id) return snapshotTask
   const storeTask = taskMap.value.get(snapshotTask.id)
   if (!storeTask) return snapshotTask
+  const status = storeTask.status ?? snapshotTask.status
+  const dueDate = storeTask.dueDate ?? null
   return {
     ...snapshotTask,
     title: storeTask.title ?? snapshotTask.title,
-    status: storeTask.status ?? snapshotTask.status,
+    status,
     priority: storeTask.priority ?? snapshotTask.priority,
-    dueDate: storeTask.dueDate ?? null,
+    dueDate,
     estimatedDuration: storeTask.estimatedDuration ?? snapshotTask.estimatedDuration,
+    daysOverdue: currentDaysOverdue(dueDate, status),
   }
 }
 

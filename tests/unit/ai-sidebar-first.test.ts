@@ -6,6 +6,8 @@ import { describe, expect, it, beforeEach, vi } from 'vitest'
 import AIChatPanel from '@/components/ai/AIChatPanel.vue'
 import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useAIChatStore } from '@/stores/aiChat'
+import { useTaskStore } from '@/stores/tasks'
+import type { Task } from '@/types/tasks'
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -369,6 +371,128 @@ describe('AI sidebar-first desktop experience', () => {
     expect(remaining).toHaveLength(1)
     expect(remaining[0].text()).toContain('Task Beta')
     expect(wrapper.text()).not.toContain('payment decision risk')
+  })
+
+  it('refreshes inline recommendation card due metadata when a task is postponed', () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push({
+      id: 'task-postponed',
+      title: 'Postpone me',
+      description: '',
+      status: 'todo',
+      priority: 'high',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '2999-01-01',
+      projectId: '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as Task)
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-postponed-card',
+          role: 'assistant',
+          content: 'Postpone me should stay visible only if it still makes sense for this plan.',
+          timestamp: Date.now(),
+          metadata: {
+            cardGroups: {
+              kind: 'week_plan',
+              total: 1,
+              groups: [
+                {
+                  name: 'Focus',
+                  tasks: [
+                    {
+                      id: 'task-postponed',
+                      title: 'Postpone me',
+                      status: 'todo',
+                      priority: 'high',
+                      dueDate: '2026-06-01',
+                      daysOverdue: 6,
+                      reason: 'old snapshot reason',
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Postpone me')
+    expect(wrapper.text()).not.toContain('6d overdue')
+    expect(wrapper.text()).not.toContain('today')
+  })
+
+  it('clears stale overdue metadata from completed inline recommendation cards', () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push({
+      id: 'task-completed',
+      title: 'Completed recommendation',
+      description: '',
+      status: 'done',
+      priority: 'medium',
+      progress: 100,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '2026-06-01',
+      projectId: '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as Task)
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-completed-card',
+          role: 'assistant',
+          content: 'Completed recommendation no longer belongs in the active plan as an overdue item.',
+          timestamp: Date.now(),
+          metadata: {
+            cardGroups: {
+              kind: 'week_plan',
+              total: 1,
+              groups: [
+                {
+                  name: 'Focus',
+                  tasks: [
+                    {
+                      id: 'task-completed',
+                      title: 'Completed recommendation',
+                      status: 'todo',
+                      priority: 'medium',
+                      dueDate: '2026-06-01',
+                      daysOverdue: 6,
+                      reason: 'old snapshot reason',
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Completed recommendation')
+    expect(wrapper.text()).toContain('done')
+    expect(wrapper.text()).not.toContain('6d overdue')
   })
 
   it('anchors cards inline even when the answer uses markdown or different casing', () => {

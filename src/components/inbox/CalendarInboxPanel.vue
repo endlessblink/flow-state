@@ -278,7 +278,8 @@ const handleInboxDrop = (e: DragEvent) => {
   width: 320px;
   margin: var(--space-4) 0 var(--space-4) var(--space-4);
   max-height: calc(100vh - 220px);
-  padding: var(--space-4);
+  min-height: 0;
+  padding: var(--space-4) var(--space-3) var(--space-4) var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -306,6 +307,7 @@ const handleInboxDrop = (e: DragEvent) => {
 
 .inbox-content {
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;

@@ -87,6 +87,25 @@ describe('parseCardGroups — maps [N] index → the RIGHT task', () => {
     expect(r!.total).toBe(2)
   })
 
+  it('TASK-1821: preserves week_plan kind (forward planning cards)', () => {
+    const upcoming = [
+      { id: 'u1', title: 'Prep renewal email', priority: 'high', status: 'todo' },
+      { id: 'u2', title: 'Call the dentist', priority: 'medium', status: 'todo' },
+    ]
+    const planResults = [{ success: true, message: 'upcoming', data: upcoming }]
+    const text = 'Start with the renewal email.\n\n' + block({
+      kind: 'week_plan',
+      groups: [
+        { name: 'ראשון', items: [{ i: 1, reason: 'deadline approaching' }] },
+        { name: 'המשך השבוע', items: [{ i: 2, reason: 'quick win' }] },
+      ],
+    })
+    const r = parseCardGroups(text, planResults)
+    expect(r?.kind).toBe('week_plan')
+    expect(r!.groups[0].tasks[0].title).toBe('Prep renewal email')
+    expect(r!.groups[1].tasks[0].title).toBe('Call the dentist')
+  })
+
   it('drops items whose index has no matching task (never shows a phantom card)', () => {
     const text = block({ groups: [{ name: 'X', items: [{ i: 1, reason: 'ok' }, { i: 99, reason: 'nope' }] }] })
     const r = parseCardGroups(text, results)

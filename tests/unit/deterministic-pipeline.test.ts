@@ -167,11 +167,52 @@ describe('intentRouter — routeIntentByKeywords()', () => {
   it.each([
     ['how am I doing', 'stats', 'get_productivity_stats'],
     ['סטטיסטיקות', 'stats', 'get_productivity_stats'],
-    ['this week', 'stats', 'get_weekly_summary'],
   ])('routes "%s" to %s with %s', (input, expectedType, expectedTool) => {
     const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe(expectedType)
     expect(result.tools.some(t => t.tool === expectedTool)).toBe(true)
+  })
+
+  // ── TASK-1821: forward planning vs retrospective summary ───────────────────
+  // The bug: planning phrasings ("תכנן את השבוע") were misrouted to the
+  // retrospective get_weekly_summary because the bare 'השבוע' keyword matched.
+  // Predicate/tense must decide intent, not the time word.
+  describe('plan ↔ summary disambiguation', () => {
+    it.each([
+      'plan my week',
+      'plan the week',
+      'תכנן את השבוע',
+      'תעזור לי לתכנן את השבוע',
+      'plan לי את השבוע',
+      'what should I do this week',
+      'מה לעשות השבוע',
+      'plan my day',
+    ])('routes planning "%s" to forward planning (list_tasks), NOT get_weekly_summary', (input) => {
+      const result = routeIntentByKeywords(input, mockTasks, entityMemory)
+      expect(result.tools.some(t => t.tool === 'get_weekly_summary')).toBe(false)
+      // forward planning → list_tasks (week_plan/day_plan), or at worst freeform — never the summary
+      if (result.type !== 'freeform') {
+        expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
+        expect(['week_plan', 'day_plan']).toContain(result.responseMode)
+      }
+    })
+
+    it.each([
+      'weekly summary',
+      'summarize my week',
+      'סיכום שבועי',
+      'מה עשיתי השבוע',
+      'what did I do this week',
+    ])('routes retrospective "%s" to get_weekly_summary (weekly_review)', (input) => {
+      const result = routeIntentByKeywords(input, mockTasks, entityMemory)
+      expect(result.tools.some(t => t.tool === 'get_weekly_summary')).toBe(true)
+      expect(result.responseMode).toBe('weekly_review')
+    })
+
+    it('bare "this week" no longer defaults to the retrospective summary', () => {
+      const result = routeIntentByKeywords('this week', mockTasks, entityMemory)
+      expect(result.tools.some(t => t.tool === 'get_weekly_summary')).toBe(false)
+    })
   })
 
   it('routes "today" alone to freeform (single-word too broad)', () => {

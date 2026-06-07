@@ -23,7 +23,7 @@ import { getToolHints } from './toolHints'
 import type { EntityMemory } from './entityMemory'
 import type { DetectedLanguage } from './types'
 import { getSharedRouter } from '../routerFactory'
-import { isOverwhelmedDayPlanRequest } from './dayPlan'
+import { isOverwhelmedDayPlanRequest, isWeekPlanRequest } from './dayPlan'
 import { isSmartLaneRequest } from './smartLanes'
 
 // ---------------------------------------------------------------------------
@@ -62,7 +62,7 @@ export interface RoutedIntent {
    * Only set for deterministic write actions where no reasoning is needed.
    */
   skipLLM?: boolean
-  responseMode?: 'day_plan' | 'smart_lanes' | 'weekly_review'
+  responseMode?: 'day_plan' | 'smart_lanes' | 'weekly_review' | 'week_plan'
 }
 
 // ---------------------------------------------------------------------------
@@ -440,6 +440,20 @@ export function routeIntentByKeywords(
     }
   }
 
+  // TASK-1821: forward planning ("plan my week/day", "תכנן את השבוע", "מה לעשות השבוע").
+  // Predicate/tense beats the time word, so this intercepts BEFORE keyword hints —
+  // otherwise the bare "week"/"השבוע" keyword would misroute it to the retrospective
+  // get_weekly_summary (the exact bug). Pulls upcoming todo tasks for a forward plan.
+  if (isWeekPlanRequest(userMessage)) {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'dueDate', limit: 40 } }],
+      language,
+      formatDirective: 'Lay out a concrete forward plan from the real upcoming/todo tasks. Group by day or focus theme; include only what should actually be done next.',
+      responseMode: 'week_plan',
+    }
+  }
+
   // ── 2. Keyword-based tool hint matching ──────────────────────────────────
   //
   // getToolHints() uses the same KEYWORD_MAPPINGS table (more-specific entries
@@ -631,6 +645,20 @@ export async function routeIntent(
       language,
       formatDirective: 'Build smart task lanes from the real task list. Suggest lane names/themes, include existing tasks that belong in each lane, and add concrete new child tasks only when a large task should be broken down.',
       responseMode: 'smart_lanes',
+    }
+  }
+
+  // TASK-1821: forward planning ("plan my week/day", "תכנן את השבוע", "מה לעשות השבוע").
+  // Predicate/tense beats the time word, so this intercepts BEFORE keyword hints —
+  // otherwise the bare "week"/"השבוע" keyword would misroute it to the retrospective
+  // get_weekly_summary (the exact bug). Pulls upcoming todo tasks for a forward plan.
+  if (isWeekPlanRequest(userMessage)) {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'dueDate', limit: 40 } }],
+      language,
+      formatDirective: 'Lay out a concrete forward plan from the real upcoming/todo tasks. Group by day or focus theme; include only what should actually be done next.',
+      responseMode: 'week_plan',
     }
   }
 

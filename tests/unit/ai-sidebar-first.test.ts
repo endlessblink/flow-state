@@ -9,7 +9,7 @@ import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
-import { buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, buildWeeklyPlanPrompt, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
+import { auditWeeklyPlanQuality, buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, buildWeeklyPlanPrompt, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -517,6 +517,17 @@ describe('AI sidebar-first desktop experience', () => {
       'missing_related_workstream_binding',
       'insufficient_real_consequence_coverage',
     ]))
+    const audit = auditWeeklyPlanQuality({
+      ...badPlan,
+      recommendations: badPlan.recommendations.map(rec => ({
+        ...rec,
+        whyThisMatters: 'This is high stakes strategic work, so it is important.',
+      })),
+    }, context)
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toEqual(expect.arrayContaining([
+      expect.stringContaining('unsupported_importance_language'),
+    ]))
 
     const quickDraft = buildQuickDraftWeeklyPlan(context)
     expect(quickDraft.source).toBe('quick_draft')
@@ -607,7 +618,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(quickDraft.recommendations[0].primaryTaskId).toBe('task-outreach')
     expect(quickDraft.recommendations[0].evidence.some(item => item.field === 'subtasks')).toBe(true)
     expect(quickDraft.recommendations[0].nextAction).toContain('Review the target company list')
-    expect(quickDraft.recommendations[0].whyThisMatters).toContain('substantial work focus')
+    expect(quickDraft.recommendations[0].whyThisMatters).toContain('task signals only')
+    const serializedDraft = JSON.stringify(quickDraft)
+    expect(serializedDraft).not.toMatch(/substantial work focus|heavier-weight than small errands|מוקד עבודה משמעותי|משקל מסידורים קטנים/i)
     expect(quickDraft.recommendations.filter(rec => rec.focusArea === 'Home').length).toBeLessThanOrEqual(2)
     expect(quickDraft.deferrals.length).toBeGreaterThanOrEqual(2)
     expect(new Set([...quickDraft.recommendations.map(rec => rec.primaryTaskId), ...quickDraft.deferrals.map(item => item.taskId)]).size).toBeGreaterThanOrEqual(5)
@@ -1575,6 +1588,10 @@ describe('AI sidebar-first desktop experience', () => {
 
     expect(weeklyPlan).toContain("schemaVersion: 'weekly-plan.v2'")
     expect(weeklyPlan).toContain('validateWeeklyPlanOutput')
+    expect(weeklyPlan).toContain('auditWeeklyPlanQuality')
+    expect(weeklyPlan).toContain("export type WeeklyPlanQualityLevel = 'bad' | 'acceptable' | 'excellent'")
+    expect(weeklyPlan).toContain('quality_audit_failed')
+    expect(weeklyPlan).toContain('unsupported_importance_language')
     expect(weeklyPlan).toContain('date_priority_only_reasoning')
     expect(weeklyPlan).toContain('missing_project_understanding_evidence')
     expect(weeklyPlan).toContain('do not infer importance from the project name alone')

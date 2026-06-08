@@ -242,6 +242,25 @@ export type WeeklyPlanOutput = {
   source?: 'model' | 'quick_draft'
 }
 
+export type WeeklyPlanQualityDimension =
+  | 'groundedness'
+  | 'scannability'
+  | 'uncertainty'
+  | 'userControl'
+  | 'realism'
+  | 'learning'
+  | 'safety'
+
+export type WeeklyPlanQualityLevel = 'bad' | 'acceptable' | 'excellent'
+
+export type WeeklyPlanQualityAudit = {
+  level: WeeklyPlanQualityLevel
+  score: number
+  failures: string[]
+  warnings: string[]
+  checks: Record<WeeklyPlanQualityDimension, number>
+}
+
 type TaskSignals = {
   urgency: number
   impact: number
@@ -271,6 +290,8 @@ const HEALTH_FAMILY_RE = /(health|doctor|medicine|dad|mom|family|clinic|blood te
 const ADMIN_RE = /(tax|legal|bank|insurance|passport|license|form|admin|מס|משפט|בנק|ביטוח|דרכון|רישיון|טופס|אדמין|מנהלתי)/i
 const REAL_CONSEQUENCE_RE = /(decision|meeting|client|customer|stakeholder|promise|commitment|renewal|proposal|budget|revenue|money|invoice|payment|cash|risk|blocked|blocks|unblock|release|qa|signoff|rework|context|postponed|avoidance|mental load|family|health|doctor|admin|legal|tax|relief|momentum|החלטה|פגישה|לקוח|התחייבות|הבטחה|תקציב|כסף|תשלום|חשבונית|סיכון|חוסם|לשחרר|שחרור|בדיקה|משפחה|בריאות|רופא|מס|מנהלתי|עומס|דחייה|מומנטום)/i
 const GENERIC_FOCUS_RE = /^(due tasks?|top tasks?|weekly tasks?|priority tasks?|work|admin|personal|focused task|משימות|משימות השבוע|עבודה|אישי|משימה ממוקדת)$/i
+const BANNED_LOW_CONTEXT_IMPORTANCE_RE = /(substantial work focus|heavier-weight than small errands|מוקד עבודה משמעותי|משקל מסידורים קטנים)/i
+const UNSUPPORTED_IMPORTANCE_RE = /(high stakes|strategic|meaningful|important|critical|חשוב|משמעותי|אסטרטגי|קריטי)/i
 
 export function buildWeekContextFromToolResults(
   toolResults: ToolResultLike[],
@@ -435,7 +456,98 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
   if (!isClarificationFirstPlan && recs.length >= 3 && realConsequenceCoverage(recs) < 0.8) errors.push('insufficient_real_consequence_coverage')
   if (!isClarificationFirstPlan && hasRepeatedTemplateShape(recs)) errors.push('repeated_template_structure')
   if (!isClarificationFirstPlan && overusesDueDates(recs)) errors.push('due_date_overuse')
+  if (!isClarificationFirstPlan) {
+    const audit = auditWeeklyPlanQuality(plan, context)
+    if (audit.level === 'bad') {
+      for (const failure of audit.failures.slice(0, 4)) errors.push(`quality_audit_failed:${failure}`)
+    }
+  }
   return [...new Set(errors)]
+}
+
+export function auditWeeklyPlanQuality(plan: WeeklyPlanOutput, context: WeekContext): WeeklyPlanQualityAudit {
+  const recs = Array.isArray(plan.recommendations) ? plan.recommendations : []
+  const failures: string[] = []
+  const warnings: string[] = []
+  const combinedText = [
+    plan.headline,
+    plan.weekRead?.summary,
+    plan.weekRead?.workloadReality,
+    plan.weekRead?.mainTradeoff,
+    ...recs.flatMap(rec => [
+      rec.focusArea,
+      rec.title,
+      rec.whyThisMatters,
+      rec.whyThisWeek,
+      rec.riskIfIgnored,
+      rec.nextAction,
+      ...rec.evidence.map(item => `${item.value} ${item.interpretation}`),
+    ]),
+  ].filter(Boolean).join(' ')
+  const unknownEvidenceCount = recs.reduce((sum, rec) => sum + rec.evidence.filter(item => item.field === 'missingContext').length, 0)
+  const projectEvidenceCount = recs.reduce((sum, rec) => sum + rec.evidence.filter(item => item.field === 'projectContext' || item.field === 'taskContext').length, 0)
+  const hasUncertaintyCaveat = [
+    ...(plan.quality?.caveats ?? []),
+    ...(context.uncertaintyNotes ?? []),
+    plan.weekRead?.summary ?? '',
+    plan.weekRead?.workloadReality ?? '',
+    plan.weekRead?.mainTradeoff ?? '',
+  ].some(text => /(unknown|uncertain|missing|limited|חסר|לא ידוע|אי.?ודאות|הקשר מוגבל)/i.test(text))
+
+  if (recs.length > 7) failures.push('too_many_recommendations')
+  else if (recs.length > 5) warnings.push('too_many_default_recommendations')
+
+  if (BANNED_LOW_CONTEXT_IMPORTANCE_RE.test(combinedText)) failures.push('generic_substantial_work_wording')
+  if (combinedText.length > 2800) failures.push('too_verbose_default_plan')
+  else if (combinedText.length > 1900) warnings.push('verbose_default_plan')
+
+  for (const rec of recs) {
+    const recText = `${rec.focusArea} ${rec.title} ${rec.whyThisMatters} ${rec.whyThisWeek} ${rec.riskIfIgnored} ${rec.nextAction}`
+    const fields = new Set(rec.evidence.map(item => item.field))
+    const hasMeaningEvidence = fields.has('projectContext') || fields.has('taskContext')
+    const hasConcreteTaskEvidence = ['notes', 'subtasks', 'dependencies.blocksTaskIds', 'dependencies.blockedByTaskIds', 'history.postponedCount', 'history.timerMinutesLast7Days'].some(field => fields.has(field as WeeklyPlanRecommendation['evidence'][number]['field']))
+    if (UNSUPPORTED_IMPORTANCE_RE.test(recText) && !hasMeaningEvidence && !hasConcreteTaskEvidence) {
+      failures.push(`unsupported_importance_language:${rec.sectionId}`)
+    }
+  }
+
+  if (unknownEvidenceCount >= Math.max(1, recs.length) && plan.quality?.confidence === 'high' && !hasUncertaintyCaveat) {
+    failures.push('missing_context_without_uncertainty')
+  } else if (unknownEvidenceCount > 0 && !hasUncertaintyCaveat) {
+    warnings.push('missing_context_without_visible_caveat')
+  }
+
+  if (recs.length > 0 && !Array.isArray(plan.openQuestions)) failures.push('missing_open_questions_array')
+  if (recs.length > 0 && !Array.isArray(plan.deferrals)) failures.push('missing_deferrals_array')
+  if (recs.length > 0 && !(plan.openQuestions?.length || plan.deferrals?.length)) warnings.push('no_followup_or_deferral_control')
+  if (recs.length >= 3 && realConsequenceCoverage(recs) < 0.8) failures.push('weak_real_consequence_coverage')
+  if (recs.length >= 3 && hasRepeatedTemplateShape(recs)) failures.push('repeated_template_structure')
+  if (overusesDueDates(recs)) failures.push('due_date_overuse')
+
+  const checks: WeeklyPlanQualityAudit['checks'] = {
+    groundedness: clamp01((projectEvidenceCount + recs.filter(hasRealConsequence).length) / Math.max(1, recs.length * 2)),
+    scannability: combinedText.length <= 1900 && recs.length <= 5 ? 1 : combinedText.length <= 2800 && recs.length <= 7 ? 0.65 : 0.25,
+    uncertainty: unknownEvidenceCount === 0 || hasUncertaintyCaveat || plan.quality?.confidence === 'low' ? 1 : 0.35,
+    userControl: plan.openQuestions?.length || plan.deferrals?.length ? 1 : 0.55,
+    realism: overusesDueDates(recs) || realConsequenceCoverage(recs) < 0.8 ? 0.35 : 1,
+    learning: context.recommendationFeedback?.length || context.projectContexts.length || context.taskContexts.length ? 1 : 0.65,
+    safety: failures.some(failure => failure.startsWith('unsupported_importance_language') || failure === 'generic_substantial_work_wording') ? 0.2 : 1,
+  }
+  const averageCheckScore = Object.values(checks).reduce((sum, value) => sum + value, 0) / Object.values(checks).length
+  const score = clamp01(averageCheckScore - failures.length * 0.16 - warnings.length * 0.04)
+  const level: WeeklyPlanQualityLevel = failures.length > 0 || score < 0.6
+    ? 'bad'
+    : score >= 0.82
+      ? 'excellent'
+      : 'acceptable'
+
+  return {
+    level,
+    score: Number(score.toFixed(2)),
+    failures: [...new Set(failures)],
+    warnings: [...new Set(warnings)],
+    checks,
+  }
 }
 
 export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutput {
@@ -1631,8 +1743,8 @@ function quickDraftWhyThisMatters(task: PlannerTaskSnapshot, stream: PlannerWork
   }
   if (task.derived.substantialWorkScore >= 0.55) {
     return locale === 'he'
-      ? 'זה נראה כמו מוקד עבודה משמעותי, לא סידור קטן, ולכן הוא צריך להישקל לפני משימות בית שניתן לאגד או להעביר לסוף שבוע.'
-      : 'This looks like a substantial work focus, not a small errand, so it should be weighed before home tasks that can be batched or moved to the weekend.'
+      ? 'אין לי עדיין הקשר שמסביר למה זה חשוב. אני משאיר את זה כמועמד בגלל אותות משימה בלבד, לא כדירוג חשיבות ודאי.'
+      : 'I do not have saved context explaining why this matters yet. I am treating it as a candidate from task signals only, not as proven importance.'
   }
   if (task.dependencies?.blocksTaskIds.length) {
     return locale === 'he'
@@ -1678,8 +1790,8 @@ function quickDraftWhyThisWeek(task: PlannerTaskSnapshot, evidence: WeeklyPlanRe
   const signals = evidence.map(item => item.interpretation).join(locale === 'he' ? ' · ' : ' · ')
   if (task.derived.substantialWorkScore >= 0.55) {
     return locale === 'he'
-      ? `השבוע כי זה נראה כמו עבודה עם יותר משקל מסידורים קטנים. אותות: ${signals}`
-      : `This week because it looks heavier-weight than small errands. Signals: ${signals}`
+      ? `השבוע רק לפי אותות המשימה, לא לפי חשיבות פרויקט מוכחת. אותות: ${signals}`
+      : `This week based on task signals only, not proven project importance. Signals: ${signals}`
   }
   if (task.derived.isOverdue) return locale === 'he' ? `השבוע כי היא כבר באיחור. אותות: ${signals}` : `This week because it is already overdue. Signals: ${signals}`
   if (typeof task.derived.daysUntilDue === 'number' && task.derived.daysUntilDue <= 7) {
@@ -1739,6 +1851,11 @@ function looksGeneric(text: string): boolean {
     /schedule a focused block/i,
     /משימה חשובה כי/i,
   ].some(pattern => pattern.test(text))
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.max(0, Math.min(1, value))
 }
 
 function hasRealConsequence(rec: WeeklyPlanRecommendation): boolean {

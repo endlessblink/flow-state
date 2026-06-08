@@ -104,6 +104,12 @@ type ChatOutputLanguage = 'en' | 'he'
 type FormatterFallbackOptions = {
   uncertaintyOnly?: boolean
   clarificationEvidence?: string
+  recommendationFeedback?: AIRecommendationFeedback[]
+}
+
+type AIMemorySummaryResult = {
+  summary: string
+  recommendationFeedback: AIRecommendationFeedback[]
 }
 
 export function resolveChatOutputLanguage(detectedLanguage: ChatOutputLanguage, chatLanguage: ChatLanguage): ChatOutputLanguage {
@@ -940,9 +946,9 @@ export function useAIChat() {
     }
   }
 
-  async function buildAIMemorySummaryForToolResults(toolResults: ToolResult[], lang: 'he' | 'en'): Promise<string> {
+  async function buildAIMemorySummaryForToolResults(toolResults: ToolResult[], lang: 'he' | 'en'): Promise<AIMemorySummaryResult> {
     const cardTasks = collectCardTasks(toolResults)
-    if (!cardTasks.length) return ''
+    if (!cardTasks.length) return { summary: '', recommendationFeedback: [] }
     try {
       const db = useSupabaseDatabase()
       const taskIdStrings = uniqueStrings(cardTasks.map(task => String(task.id || '')))
@@ -1000,9 +1006,12 @@ export function useAIChat() {
         ].filter(Boolean)
         if (target && bits.length) lines.push(`- recommendation feedback for ${target}: ${bits.join(' | ')}`)
       }
-      return lines.join('\n')
+      return {
+        summary: lines.join('\n'),
+        recommendationFeedback,
+      }
     } catch {
-      return ''
+      return { summary: '', recommendationFeedback: [] }
     }
   }
 
@@ -1067,7 +1076,45 @@ export function useAIChat() {
     return tasks
   }
 
-  function fallbackTaskScore(task: Record<string, unknown>): number {
+  function fallbackFeedbackMatchesTask(feedback: AIRecommendationFeedback, task: Record<string, unknown>): boolean {
+    const taskId = String(task.id || '')
+    const projectId = String(task.projectId || '')
+    if (feedback.taskId && feedback.taskId === taskId) return true
+    if (feedback.entityKey === taskEntityKey(taskId)) return true
+    if (feedback.recommendationId && feedback.recommendationId.includes(taskId)) return true
+    if (feedback.recommendationId?.startsWith('inline_')) return false
+    if (projectId && feedback.entityKey === projectEntityKey(projectId)) return true
+    return false
+  }
+
+  function fallbackFeedbackSignal(task: Record<string, unknown>, feedback: AIRecommendationFeedback[] = [], now = Date.now()): { penalty: number; positiveBoost: number; suppressed: boolean } {
+    const matching = feedback
+      .filter(event => fallbackFeedbackMatchesTask(event, task))
+      .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+    let penalty = 0
+    let positiveBoost = 0
+    let suppressed = false
+    for (const event of matching.slice(0, 6)) {
+      const createdAt = event.createdAt ? Date.parse(event.createdAt) : now
+      const ageDays = Number.isFinite(createdAt) ? (now - createdAt) / (24 * 60 * 60 * 1000) : 0
+      const revisitAt = event.revisitAt ? Date.parse(event.revisitAt) : null
+      const revisitInFuture = revisitAt !== null && Number.isFinite(revisitAt) && revisitAt > now
+      if (event.action === 'dismiss') {
+        penalty = Math.max(penalty, ageDays < 14 ? 0.9 : 0.45)
+        suppressed ||= ageDays < 14
+      } else if (event.action === 'postpone') {
+        penalty = Math.max(penalty, revisitInFuture ? 0.85 : ageDays < 7 ? 0.55 : 0.25)
+        suppressed ||= revisitInFuture || ageDays < 7
+      } else if (event.action === 'simplify') {
+        penalty = Math.max(penalty, ageDays < 7 ? 0.35 : 0.15)
+      } else if (event.action === 'accept' || event.action === 'timeblock' || event.implicitPositive) {
+        positiveBoost = Math.max(positiveBoost, ageDays < 14 ? 0.25 : 0.1)
+      }
+    }
+    return { penalty, positiveBoost, suppressed }
+  }
+
+  function fallbackTaskScore(task: Record<string, unknown>, recommendationFeedback: AIRecommendationFeedback[] = []): number {
     const title = String(task.title || '').toLowerCase()
     const description = String(task.description || '').toLowerCase()
     const text = `${title} ${description}`
@@ -1094,11 +1141,14 @@ export function useAIChat() {
     if (typeof task.daysOverdue === 'number') score += Math.min(6, Math.max(1, task.daysOverdue))
     if (typeof task.estimatedDuration === 'number' && task.estimatedDuration > 0 && task.estimatedDuration <= 30) score += 1
 
-    return score
+    const feedback = fallbackFeedbackSignal(task, recommendationFeedback)
+    return score + feedback.positiveBoost * 8 - feedback.penalty * 18
   }
 
-  function rankFallbackTasks(tasks: Array<Record<string, unknown> & { title?: string }>): Array<Record<string, unknown> & { title?: string }> {
-    return [...tasks].sort((a, b) => fallbackTaskScore(b) - fallbackTaskScore(a))
+  function rankFallbackTasks(tasks: Array<Record<string, unknown> & { title?: string }>, recommendationFeedback: AIRecommendationFeedback[] = []): Array<Record<string, unknown> & { title?: string }> {
+    const ranked = [...tasks].sort((a, b) => fallbackTaskScore(b, recommendationFeedback) - fallbackTaskScore(a, recommendationFeedback))
+    const unsuppressed = ranked.filter(task => !fallbackFeedbackSignal(task, recommendationFeedback).suppressed)
+    return unsuppressed.length ? unsuppressed : ranked
   }
 
   type FallbackAspect = {
@@ -1359,24 +1409,27 @@ export function useAIChat() {
     return `- **${title}** — ${why}.`
   }
 
-  function buildFallbackAspects(tasks: Array<Record<string, unknown> & { title?: string }>, lang: 'he' | 'en'): FallbackAspect[] {
+  function buildFallbackAspects(tasks: Array<Record<string, unknown> & { title?: string }>, lang: 'he' | 'en', recommendationFeedback: AIRecommendationFeedback[] = []): FallbackAspect[] {
     const byKey = new Map<string, FallbackAspect>()
     for (const task of tasks) {
       const inferred = inferFallbackAspect(task, lang)
       const existing = byKey.get(inferred.key)
       if (existing) {
-        existing.tasks = rankFallbackTasks([...existing.tasks, task]).slice(0, WEEKLY_FALLBACK_TASKS_PER_ASPECT)
+        existing.tasks = rankFallbackTasks([...existing.tasks, task], recommendationFeedback).slice(0, WEEKLY_FALLBACK_TASKS_PER_ASPECT)
       } else {
         byKey.set(inferred.key, { ...inferred, tasks: [task] })
       }
     }
     return [...byKey.values()]
-      .sort((a, b) => Math.max(...b.tasks.map(fallbackTaskScore)) - Math.max(...a.tasks.map(fallbackTaskScore)))
+      .sort((a, b) =>
+        Math.max(...b.tasks.map(task => fallbackTaskScore(task, recommendationFeedback))) -
+        Math.max(...a.tasks.map(task => fallbackTaskScore(task, recommendationFeedback)))
+      )
       .slice(0, WEEKLY_FALLBACK_ASPECT_LIMIT)
   }
 
   function buildFallbackCards(tasks: Array<Record<string, unknown> & { title?: string }>, lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode'], options: FormatterFallbackOptions = {}): string {
-    const aspects = responseMode === 'week_plan' ? buildFallbackAspects(tasks, lang) : []
+    const aspects = responseMode === 'week_plan' ? buildFallbackAspects(tasks, lang, options.recommendationFeedback) : []
     const reasonFor = (task: Record<string, unknown>): string => {
       if (options.uncertaintyOnly) return fallbackTaskUncertaintyReason(task, lang)
       if (options.clarificationEvidence) return fallbackClarificationReason(options.clarificationEvidence, lang)
@@ -1402,7 +1455,10 @@ export function useAIChat() {
   }
 
   function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode'], options: FormatterFallbackOptions = {}): string {
-    const tasks = rankFallbackTasks(getTaskItemsFromToolResults(toolResults).filter(task => task.title)).slice(0, responseMode === 'week_plan' ? WEEKLY_FALLBACK_TASK_LIMIT : 3)
+    const tasks = rankFallbackTasks(
+      getTaskItemsFromToolResults(toolResults).filter(task => task.title),
+      options.recommendationFeedback,
+    ).slice(0, responseMode === 'week_plan' ? WEEKLY_FALLBACK_TASK_LIMIT : 3)
     if (tasks.length === 0) {
       return lang === 'he'
         ? 'מצאתי את הנתונים, אבל לא הצלחתי לנסח תשובת AI מלאה בזמן. השתמש בכרטיסים למטה כדי להמשיך.'
@@ -2073,17 +2129,20 @@ export function useAIChat() {
       const isSmartLanes = routed.responseMode === 'smart_lanes'
       const isWeeklyReview = routed.responseMode === 'weekly_review'
       const isWeekPlan = routed.responseMode === 'week_plan'
+      let broadRecommendationFeedback: AIRecommendationFeedback[] = []
       if (hasTaskList && !isWeekPlan) {
         updateChatPhase(phaseActivityId, 'Loading context memory', `${collectCardTasks(toolResults).length} task candidates`)
-        const memorySummary = await withTimeout(
+        const memoryResult = await withTimeout(
           buildAIMemorySummaryForToolResults(toolResults, outputLanguage),
           WEEK_PLAN_MEMORY_TIMEOUT_MS,
           'chat_memory_summary_timeout',
         ).catch(memoryErr => {
           console.warn('[AIChat:Deterministic] Memory summary skipped or timed out:', memoryErr)
-          return ''
+          return { summary: '', recommendationFeedback: [] } as AIMemorySummaryResult
         })
-        if (memorySummary) toolResultsSummary += `\n\n${memorySummary}`
+        broadRecommendationFeedback = memoryResult.recommendationFeedback
+        formatterFallbackOptions.recommendationFeedback = broadRecommendationFeedback
+        if (memoryResult.summary) toolResultsSummary += `\n\n${memoryResult.summary}`
       }
 
       if (!isClarificationContinuation && shouldAskBroadTaskClarification(content, routed, hasTaskList)) {

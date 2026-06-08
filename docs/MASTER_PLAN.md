@@ -46,7 +46,7 @@
 10. **Localhost QA gate**: automated unit/contract tests, type-check/build, then real localhost browser smoke covering prompt -> clarification -> answer/uncertainty -> feedback -> no barrage -> no stuck activity.
 11. **Electron gate**: deferred until localhost proves the full loop and the user explicitly re-enables desktop packaging/updater work.
 
-**Current packet cursor**: packet 7, "future retrieval of feedback". Broad inline recommendation cards now save feedback; finish proving that later broad answers retrieve those signals before advancing to lifecycle or additional UI.
+**Current packet cursor**: packet 7, "future retrieval of feedback". Broad inline recommendation cards now save feedback; later broad fallback answers retrieve those signals and avoid suppressed recommendations. Next packet is lifecycle/summarization once localhost proof stays green.
 
 | Stage | Task(s) | Required outcome | Status | Proof gate before moving on |
 | --- | --- | --- | --- | --- |
@@ -295,6 +295,7 @@
 - 2026-06-08: Broader non-weekly task answers now use the shared uncertainty policy for ask/proceed/neutral decisions instead of a fixed hardcoded ask path. Focused tests cover high-materiality broad recommendations, tiny task sets that proceed with uncertainty, and cold-start neutral candidates.
 - 2026-06-08: Clarification messages now suppress the generic tool-result task list while asking. Candidate tasks only appear through explicit "show candidates" style escapes, preventing the old barrage of task cards under a question.
 - 2026-06-08: Broad non-weekly memory summaries now retrieve recent recommendation feedback by task/project entity keys, so later broad answers can see postponed/dismissed inline-card signals instead of only weekly plans learning from feedback.
+- 2026-06-08: Broad fallback card selection now applies recent recommendation feedback: dismissed/postponed inline cards are filtered out during cooldown, while accepted/timeblocked cards get a small positive boost. Inline task feedback is matched by recommendation ID so one postponed task does not suppress the whole project.
 
 ---
 
@@ -322,6 +323,7 @@
 - 2026-06-08: Added mounted regression coverage that verifies a postponed weekly recommendation saves `generatedPlanId`, `recommendationId`, task/project entity key, reason category, revisit date, and becomes visually suppressed in the current plan.
 - Feedback reason patterns become inspectable preference memory rather than hidden ranking magic.
 - 2026-06-08: Broad non-weekly task-answer memory now retrieves recent `ai_recommendation_feedback` by UUID task IDs and text entity keys (`task:*`, `project:*`), so inline accept/postpone/dismiss signals can affect later broad answers even when task IDs are local or synthetic.
+- 2026-06-08: Broad fallback ranking now uses retrieved feedback directly: recent dismiss/postpone events suppress tasks until cooldown/revisit, simplify applies a smaller penalty, and accept/timeblock/implicit-positive events boost follow-through.
 
 ---
 

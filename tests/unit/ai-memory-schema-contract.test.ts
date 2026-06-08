@@ -162,8 +162,10 @@ describe('AI memory schema contract', () => {
     expect(createTableBlock('ai_parameter_beliefs')).toContain('entity_key text not null')
     expect(createTableBlock('ai_context_edges')).toContain('source_entity_key text not null')
     expect(createTableBlock('ai_context_edges')).toContain('target_entity_key text not null')
-    expect(memoryDbSource).toContain('Skipping legacy UUID memory patch for general entity')
-    expect(memoryDbSource).toContain('Skipping ${patch.entityType} memory patch for non-Supabase UUID')
+    expect(memoryDbSource).toContain('function aiContextEntityKeyFromPatch')
+    expect(memoryDbSource).toContain('applyAIContextEntityPatch')
+    expect(memoryDbSource).toContain("kind: 'context_entity_patch'")
+    expect(memoryDbSource).toContain("from('ai_context_entities')")
   })
 
   it('keeps migration check enums aligned with TypeScript memory types', () => {

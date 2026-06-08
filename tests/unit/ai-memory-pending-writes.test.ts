@@ -489,6 +489,66 @@ describe('AI memory pending write queue', () => {
     expect(parameterBeliefUpsertCount).toBeGreaterThan(0)
   })
 
+  it('applies patch-only synthetic context updates to ai_context_entities instead of skipping them', async () => {
+    readyTables = new Set(['ai_context_entities'])
+    const db = useAIMemoryDatabase(createContext())
+
+    await db.applyAIMemoryPatch({
+      entityType: 'synthetic_group',
+      entityId: 'Work',
+      operation: 'confirm',
+      field: 'stale_context',
+      value: 'still true',
+      confidence: 0.9,
+      source: 'button_answer',
+      sourceMessageId: 'msg-synthetic-patch',
+    })
+
+    const entityPayload = upsertPayloads.ai_context_entities?.[0] as Record<string, unknown>
+
+    expect(entityPayload).toMatchObject({
+      user_id: '00000000-0000-4000-8000-000000000001',
+      entity_key: 'synthetic:Work',
+      entity_type: 'synthetic_group',
+      display_name: 'Work',
+      last_answered_at: expect.any(String),
+      last_reinforced_at: expect.any(String),
+      reinforcement_count: 1,
+      decay_score: 1,
+    })
+    expect(new Date(String(entityPayload.stale_after)).getTime()).toBeGreaterThan(Date.now() + 40 * 24 * 60 * 60 * 1000)
+    expect(getPendingAIMemoryWriteCount()).toBe(0)
+  })
+
+  it('queues and mirrors patch-only text-key memory updates while ai_context_entities schema is missing', async () => {
+    const db = useAIMemoryDatabase(createContext())
+
+    await db.applyAIMemoryPatch({
+      entityType: 'workflow',
+      entityId: 'task_answer:general',
+      operation: 'set',
+      field: 'rankingFocus',
+      value: 'keep answers compact',
+      confidence: 0.86,
+      source: 'button_answer',
+      sourceMessageId: 'msg-workflow-patch',
+    })
+
+    expect(getPendingAIMemoryWriteCount()).toBe(1)
+    const entities = await db.fetchAIContextEntities(['workflow:task_answer:general'])
+
+    expect(entities).toHaveLength(1)
+    expect(entities[0]).toMatchObject({
+      entityKey: 'workflow:task_answer:general',
+      entityType: 'workflow',
+      displayName: 'task_answer:general',
+      facts: expect.objectContaining({ rankingFocus: 'keep answers compact' }),
+      lastAnsweredAt: expect.any(String),
+      reinforcementCount: 1,
+      decayScore: 1,
+    })
+  })
+
   it('keeps schema-missing stale refresh answers retrievable as local context entities until server tables are ready', async () => {
     const db = useAIMemoryDatabase(createContext())
 

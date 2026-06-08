@@ -164,6 +164,7 @@ type PendingAIMemoryWrite =
   | { kind: 'clarification_event'; input: AIClarificationEventInput; queuedAt: string; attempts: number }
   | { kind: 'recommendation_feedback'; input: AIRecommendationFeedbackInput; queuedAt: string; attempts: number }
   | { kind: 'parameter_belief'; input: AIParameterBeliefInput; queuedAt: string; attempts: number }
+  | { kind: 'context_entity_patch'; input: AIMemoryPatch; queuedAt: string; attempts: number }
   | { kind: 'context_edges'; input: AIContextEdgeInput[]; queuedAt: string; attempts: number }
 
 type AIMemoryWriteOptions = {
@@ -488,6 +489,66 @@ function localAIContextEntityFromClarification(input: AIClarificationEventInput,
   }
 }
 
+function aiContextEntityKeyFromPatch(patch: AIMemoryPatch): string {
+  if (/^(project|task|week|preference|synthetic|workflow):/.test(patch.entityId)) return patch.entityId
+  if (patch.entityType === 'synthetic_group') return `synthetic:${patch.entityId}`
+  return `${patch.entityType}:${patch.entityId}`
+}
+
+function aiContextEntityDisplayNameFromPatch(patch: AIMemoryPatch): string {
+  const key = aiContextEntityKeyFromPatch(patch)
+  return key.includes(':') ? key.slice(key.indexOf(':') + 1) : key
+}
+
+function localAIContextEntityFromPatch(patch: AIMemoryPatch, existing: AIContextEntity | undefined, now: string): AIContextEntity {
+  const entityKey = aiContextEntityKeyFromPatch(patch)
+  const facts = mergeFactPatch(existing?.facts ?? {}, patch)
+  const corrections = patch.operation === 'reject' || patch.source === 'user_correction'
+    ? uniqueStrings([...(existing?.corrections ?? []), `${patch.field}: ${String(patch.value)}`])
+    : existing?.corrections ?? []
+  const confirmed = patch.operation === 'confirm' || patch.source === 'button_answer' || patch.source === 'free_text'
+
+  return {
+    id: existing?.id ?? `local-entity-${entityKey}`,
+    entityKey,
+    entityType: patch.entityType,
+    displayName: existing?.displayName ?? aiContextEntityDisplayNameFromPatch(patch),
+    canonicalProjectId: existing?.canonicalProjectId ?? (patch.entityType === 'project' && isSupabaseUuid(patch.entityId) ? patch.entityId : null),
+    canonicalTaskId: existing?.canonicalTaskId ?? (patch.entityType === 'task' && isSupabaseUuid(patch.entityId) ? patch.entityId : null),
+    summary: typeof facts.whyItMatters === 'string' ? facts.whyItMatters : existing?.summary ?? null,
+    facts,
+    corrections,
+    confidence: Math.max(existing?.confidence ?? 0, patch.confidence ?? 0.5),
+    completenessScore: computeAIEntityCompleteness(facts),
+    lastAskedAt: existing?.lastAskedAt ?? null,
+    lastAnsweredAt: confirmed ? now : existing?.lastAnsweredAt ?? null,
+    askCount: existing?.askCount ?? 0,
+    staleAfter: confirmed ? nextStaleAfterIso(now) : existing?.staleAfter ?? null,
+    memoryType: existing?.memoryType ?? (patch.entityType === 'preference' ? 'preference' : 'semantic'),
+    scope: existing?.scope ?? aiEntityScope(patch.entityType),
+    reinforcementCount: (existing?.reinforcementCount ?? 0) + (confirmed ? 1 : 0),
+    lastReinforcedAt: confirmed ? now : existing?.lastReinforcedAt ?? null,
+    relatedEntities: existing?.relatedEntities ?? [],
+    decayScore: confirmed ? 1 : existing?.decayScore ?? null,
+  }
+}
+
+function recordLocalAIContextEntityPatch(patch: AIMemoryPatch): void {
+  const now = new Date().toISOString()
+  const memory = readLocalAIClarificationMemory()
+  const entityKey = aiContextEntityKeyFromPatch(patch)
+  const nextEntitiesByKey = new Map((memory.contextEntities ?? []).map(entity => [entity.entityKey, entity]))
+  nextEntitiesByKey.set(entityKey, localAIContextEntityFromPatch(patch, nextEntitiesByKey.get(entityKey), now))
+  writeLocalAIClarificationMemory({
+    contextEntities: [...nextEntitiesByKey.values()]
+      .sort((a, b) => new Date(b.lastAnsweredAt ?? b.lastAskedAt ?? 0).getTime() - new Date(a.lastAnsweredAt ?? a.lastAskedAt ?? 0).getTime())
+      .slice(0, 80),
+    events: memory.events,
+    parameterBeliefs: memory.parameterBeliefs,
+    recommendationFeedback: memory.recommendationFeedback ?? [],
+  })
+}
+
 function recordLocalAIClarificationEvent(input: AIClarificationEventInput) {
   const now = new Date().toISOString()
   const memory = readLocalAIClarificationMemory()
@@ -688,6 +749,9 @@ function pendingAIMemoryWriteKey(write: PendingAIMemoryWrite): string {
   }
   if (write.kind === 'parameter_belief') {
     return `${write.kind}:${write.input.entityKey}:${write.input.parameterKey}:${write.input.sourceQuestionId ?? ''}`
+  }
+  if (write.kind === 'context_entity_patch') {
+    return `${write.kind}:${write.input.entityType}:${write.input.entityId}:${write.input.operation}:${write.input.field}:${write.input.sourceMessageId ?? ''}`
   }
   return `${write.kind}:${write.input.map(edge => `${edge.sourceEntityKey}>${edge.relationType}>${edge.targetEntityKey}`).sort().join('|')}`
 }
@@ -1882,13 +1946,89 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
-  const applyAIMemoryPatch = async (patch: AIMemoryPatch): Promise<void> => {
+  const applyAIContextEntityPatch = async (patch: AIMemoryPatch, options: AIMemoryWriteOptions = {}): Promise<void> => {
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) {
+      recordLocalAIContextEntityPatch(patch)
+      return
+    }
+    const now = new Date().toISOString()
+    const entityKey = aiContextEntityKeyFromPatch(patch)
+    const confirmed = patch.operation === 'confirm' || patch.source === 'button_answer' || patch.source === 'free_text'
+
+    try {
+      isSyncing.value = true
+      await withRetry(async () => {
+        const { data: existingData, error: fetchError } = await getSupabase()
+          .from('ai_context_entities')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('entity_key', entityKey)
+          .maybeSingle()
+        if (fetchError) throw fetchError
+        const existing = (existingData ?? null) as AIContextEntityRow | null
+        const facts = mergeFactPatch(existing?.facts ?? {}, patch)
+        const corrections = patch.operation === 'reject' || patch.source === 'user_correction'
+          ? uniqueStrings([...stringArray(existing?.corrections), `${patch.field}: ${String(patch.value)}`])
+          : stringArray(existing?.corrections)
+
+        const { error: upsertError } = await getSupabase()
+          .from('ai_context_entities')
+          .upsert({
+            ...(existing ?? {}),
+            user_id: userId,
+            entity_key: entityKey,
+            entity_type: patch.entityType,
+            display_name: existing?.display_name ?? aiContextEntityDisplayNameFromPatch(patch),
+            canonical_project_id: existing?.canonical_project_id ?? (patch.entityType === 'project' && isSupabaseUuid(patch.entityId) ? patch.entityId : null),
+            canonical_task_id: existing?.canonical_task_id ?? (patch.entityType === 'task' && isSupabaseUuid(patch.entityId) ? patch.entityId : null),
+            summary: typeof facts.whyItMatters === 'string' ? facts.whyItMatters : existing?.summary ?? null,
+            facts,
+            corrections,
+            confidence: Math.max(Number(existing?.confidence ?? 0), patch.confidence ?? 0.5),
+            completeness_score: computeAIEntityCompleteness(facts),
+            last_answered_at: confirmed ? now : existing?.last_answered_at ?? null,
+            stale_after: confirmed ? nextStaleAfterIso(now) : existing?.stale_after ?? null,
+            memory_type: existing?.memory_type ?? (patch.entityType === 'preference' ? 'preference' : 'semantic'),
+            scope: existing?.scope ?? aiEntityScope(patch.entityType),
+            reinforcement_count: Number(existing?.reinforcement_count ?? 0) + (confirmed ? 1 : 0),
+            last_reinforced_at: confirmed ? now : existing?.last_reinforced_at ?? null,
+            decay_score: confirmed ? 1 : existing?.decay_score ?? null,
+          }, { onConflict: 'user_id,entity_key' })
+        if (upsertError) throw upsertError
+      }, 'applyAIContextEntityPatch')
+      invalidateCache.all()
+      if (!options.skipQueue) void flushPendingAIMemoryWrites()
+    } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('applyAIContextEntityPatch')
+        if (options.skipQueue) {
+          throw e
+        }
+        recordLocalAIContextEntityPatch(patch)
+        enqueuePendingAIMemoryWrite({
+          kind: 'context_entity_patch',
+          input: patch,
+          queuedAt: new Date().toISOString(),
+          attempts: 0,
+        })
+        return
+      }
+      handleError(e, 'applyAIContextEntityPatch')
+      throw e
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
+  const applyAIMemoryPatch = async (patch: AIMemoryPatch, options: AIMemoryWriteOptions = {}): Promise<void> => {
     if (patch.entityType !== 'project' && patch.entityType !== 'task') {
-      console.debug(`[AIMemory] Skipping legacy UUID memory patch for general entity: ${patch.entityType}:${patch.entityId}`)
+      await applyAIContextEntityPatch(patch, options)
       return
     }
     if (!isSupabaseUuid(patch.entityId)) {
-      console.debug(`[AIMemory] Skipping ${patch.entityType} memory patch for non-Supabase UUID: ${patch.entityId}`)
+      await applyAIContextEntityPatch(patch, options)
       return
     }
     if (!authStore.isInitialized) await authStore.initialize()
@@ -1997,6 +2137,8 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
             await recordAIRecommendationFeedback(write.input, { skipQueue: true })
           } else if (write.kind === 'parameter_belief') {
             await upsertAIParameterBelief(write.input, { skipQueue: true })
+          } else if (write.kind === 'context_entity_patch') {
+            await applyAIMemoryPatch(write.input, { skipQueue: true })
           } else {
             await upsertAIContextEdges(write.input, { skipQueue: true })
           }

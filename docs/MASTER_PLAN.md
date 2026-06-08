@@ -133,6 +133,7 @@
 - 2026-06-08: Broad task-list and global/freeform memory retrieval now consume bounded `ai_memory_snapshots` as quoted prompt evidence, with `snapshotCount` diagnostics on broad retrieval. This turns lifecycle summaries into real answer context instead of leaving them as debug-only rows.
 - 2026-06-08: Weekly and broad retrieval now separate stale/refresh-needed memory from active planning evidence. Expired, old-confirmation, or low-confidence project/task context remains visible in lifecycle diagnostics and refresh signals, but is not promoted into `projectContexts`, `taskContexts`, remembered answers, or active broad-answer summary lines that could justify ranking as if it were fresh.
 - 2026-06-08: Added an end-to-end local stale-refresh regression: answering a stale-context clarification writes a fresh local context entity, broad retrieval then treats it as active evidence, and lifecycle diagnostics no longer report `refresh_needed` for that entity. This protects guest/schema-cache fallback from asking the same stale-refresh question immediately after the user answered it.
+- 2026-06-08: Patch-only memory updates now write text-key and synthetic entities into `ai_context_entities` instead of being skipped by the legacy UUID-only `project_contexts`/`task_contexts` path. Schema-cache misses queue and mirror those patch writes locally, so stale-context confirmations from UI cards refresh entity freshness even before server schema visibility catches up.
 
 ---
 

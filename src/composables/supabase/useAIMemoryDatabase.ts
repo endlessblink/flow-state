@@ -161,6 +161,7 @@ const LOCAL_AI_CLARIFICATION_MEMORY_KEY = 'flowstate-ai-clarification-local-memo
 type LocalAIClarificationMemory = {
   events: AIClarificationEvent[]
   parameterBeliefs: AIParameterBelief[]
+  recommendationFeedback?: AIRecommendationFeedback[]
 }
 
 const PROJECT_FIELD_MAP: Record<string, keyof ProjectContextRow> = {
@@ -353,9 +354,10 @@ function readLocalAIClarificationMemory(): LocalAIClarificationMemory {
     return {
       events: Array.isArray(parsed.events) ? parsed.events : [],
       parameterBeliefs: Array.isArray(parsed.parameterBeliefs) ? parsed.parameterBeliefs : [],
+      recommendationFeedback: Array.isArray(parsed.recommendationFeedback) ? parsed.recommendationFeedback : [],
     }
   } catch {
-    return { events: [], parameterBeliefs: [] }
+    return { events: [], parameterBeliefs: [], recommendationFeedback: [] }
   }
 }
 
@@ -364,6 +366,7 @@ function writeLocalAIClarificationMemory(memory: LocalAIClarificationMemory) {
   localStorage.setItem(LOCAL_AI_CLARIFICATION_MEMORY_KEY, JSON.stringify({
     events: memory.events.slice(0, 80),
     parameterBeliefs: memory.parameterBeliefs.slice(0, 80),
+    recommendationFeedback: (memory.recommendationFeedback ?? []).slice(0, 80),
   }))
 }
 
@@ -444,6 +447,79 @@ function localAIParameterBeliefs(input: { entityKeys?: string[]; parameterKeys?:
     .filter(belief => (!entityKeys.size || entityKeys.has(belief.entityKey)) && (!parameterKeys.size || parameterKeys.has(belief.parameterKey)))
     .sort((a, b) => new Date(b.updatedAt ?? b.lastAnsweredAt ?? 0).getTime() - new Date(a.updatedAt ?? a.lastAnsweredAt ?? 0).getTime())
     .slice(0, input.limit ?? 80)
+}
+
+function localAIRecommendationFeedback(input: { taskIds?: string[]; entityKeys?: string[]; limit?: number }): AIRecommendationFeedback[] {
+  const taskIds = new Set(uniqueStrings(input.taskIds ?? []))
+  const entityKeys = new Set(uniqueStrings(input.entityKeys ?? []))
+  return (readLocalAIClarificationMemory().recommendationFeedback ?? [])
+    .filter(feedback => {
+      const taskMatch = Boolean(feedback.taskId && taskIds.has(feedback.taskId))
+      const entityMatch = Boolean(feedback.entityKey && entityKeys.has(feedback.entityKey))
+      return (!taskIds.size && !entityKeys.size) || taskMatch || entityMatch
+    })
+    .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+    .slice(0, input.limit ?? 80)
+}
+
+function localAIRecommendationFeedbackEvent(input: AIRecommendationFeedbackInput, now: string): AIRecommendationFeedback {
+  return {
+    id: `local-${now}-${input.recommendationId}-${input.action}`,
+    generatedPlanId: input.generatedPlanId ?? null,
+    recommendationId: input.recommendationId,
+    taskId: input.taskId ?? null,
+    entityKey: input.entityKey ?? null,
+    action: input.action,
+    reasonCategory: input.reasonCategory ?? null,
+    freeText: input.freeText ?? null,
+    revisitAt: input.revisitAt ?? null,
+    outcomeSignals: input.outcomeSignals ?? {},
+    implicitPositive: Boolean(input.implicitPositive),
+    sourceMessageId: input.sourceMessageId ?? null,
+    createdAt: now,
+  }
+}
+
+function localAIParameterBeliefsFromRecommendationFeedback(input: AIRecommendationFeedbackInput, now: string): AIParameterBelief[] {
+  return beliefInputsFromRecommendationFeedback(input).map(belief => ({
+    id: `local-${now}-${belief.entityKey}-${belief.parameterKey}`,
+    entityKey: belief.entityKey,
+    entityType: belief.entityType,
+    parameterKey: belief.parameterKey,
+    beliefJson: {
+      value: belief.value,
+      selectedLabel: belief.selectedLabel,
+      freeText: belief.freeText,
+      lastUpdated: now,
+      evidence: belief.evidence ?? {},
+    },
+    confidence: belief.confidence ?? Math.min(1, 0.55 + (belief.confidenceBoost ?? 0)),
+    impactWeight: belief.impactWeight ?? aiParameterImpactWeight(belief.parameterKey),
+    lastAnsweredAt: now,
+    sourceQuestionId: belief.sourceQuestionId ?? null,
+    sourceEventId: belief.sourceEventId ?? null,
+    createdAt: now,
+    updatedAt: now,
+  }))
+}
+
+function recordLocalAIRecommendationFeedback(input: AIRecommendationFeedbackInput) {
+  const now = new Date().toISOString()
+  const memory = readLocalAIClarificationMemory()
+  const feedback = localAIRecommendationFeedbackEvent(input, now)
+  const nextBeliefsByKey = new Map(memory.parameterBeliefs.map(belief => [`${belief.entityKey}:${belief.parameterKey}`, belief]))
+  for (const belief of localAIParameterBeliefsFromRecommendationFeedback(input, now)) {
+    const key = `${belief.entityKey}:${belief.parameterKey}`
+    const existing = nextBeliefsByKey.get(key)
+    nextBeliefsByKey.set(key, existing && existing.confidence > belief.confidence ? existing : belief)
+  }
+  writeLocalAIClarificationMemory({
+    events: memory.events,
+    parameterBeliefs: [...nextBeliefsByKey.values()]
+      .sort((a, b) => new Date(b.updatedAt ?? b.lastAnsweredAt ?? 0).getTime() - new Date(a.updatedAt ?? a.lastAnsweredAt ?? 0).getTime())
+      .slice(0, 80),
+    recommendationFeedback: [feedback, ...(memory.recommendationFeedback ?? [])].slice(0, 80),
+  })
 }
 
 function toAIContextEdge(row: AIContextEdgeRow): AIContextEdge {
@@ -844,7 +920,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     if (!taskIds.length && !entityKeys.length) return []
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
-    if (!userId) return []
+    if (!userId) return localAIRecommendationFeedback({ taskIds: input.taskIds, entityKeys, limit: input.limit })
     const limit = input.limit ?? 80
     try {
       return await withRetry(async () => {
@@ -1285,7 +1361,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
   const recordAIRecommendationFeedback = async (input: AIRecommendationFeedbackInput, options: AIMemoryWriteOptions = {}): Promise<void> => {
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
-    if (!userId) throw new Error('Cannot save AI recommendation feedback without an authenticated user.')
+    if (!userId) {
+      recordLocalAIRecommendationFeedback(input)
+      return
+    }
     try {
       isSyncing.value = true
       await withRetry(async () => {

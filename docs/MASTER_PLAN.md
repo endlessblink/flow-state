@@ -263,6 +263,7 @@
 **Progress**:
 - 2026-06-08: Weekly recommendation controls now collect explicit postpone/dismiss/simplify reasons with button choices, persist `reasonCategory` + `revisitAt`, and immediately hide the rejected recommendation visually so the chat does not keep showing work the user just pushed back on.
 - 2026-06-08: Broad non-weekly inline recommendation cards now persist accept/timeblock/postpone/dismiss feedback directly to `ai_recommendation_feedback` even without a weekly-plan recommendation object, and the new Later control hides the card immediately with a revisit date.
+- 2026-06-08: Guest/localhost inline recommendation feedback now persists to the AI-memory local fallback instead of throwing without auth, so postpone/dismiss reasons can influence later broad answers before Supabase auth or schema availability.
 
 ---
 
@@ -358,6 +359,7 @@
 - 2026-06-08: Added mounted regression coverage that verifies a postponed weekly recommendation saves `generatedPlanId`, `recommendationId`, task/project entity key, reason category, revisit date, and becomes visually suppressed in the current plan.
 - Feedback reason patterns become inspectable preference memory rather than hidden ranking magic.
 - 2026-06-08: Broad non-weekly task-answer memory now retrieves recent `ai_recommendation_feedback` by UUID task IDs and text entity keys (`task:*`, `project:*`), so inline accept/postpone/dismiss signals can affect later broad answers even when task IDs are local or synthetic.
+- 2026-06-08: Guest/localhost recommendation feedback now uses the same local AI-memory fallback as clarification answers. Local postpone/dismiss feedback is retrievable by task/entity key and derives parameter beliefs such as `energy_fit`, `ranking_focus`, and `task_recommendation_fit` for later suppression/reweighting.
 - 2026-06-08: Broad fallback ranking now uses retrieved feedback directly: recent dismiss/postpone events suppress tasks until cooldown/revisit, simplify applies a smaller penalty, and accept/timeblock/implicit-positive events boost follow-through.
 - 2026-06-08: Recommendation feedback now promotes conservative durable parameter beliefs after the raw feedback event is saved. Simplify/too-much updates `preference:brevity`, low-energy/too-hard updates `energy_fit`, not-important/wrong-context/needs-more-info updates `rankingFocus`, and accept/timeblock/implicit positives update `history`; rollout tests prove feedback still flushes even if the belief table is unavailable.
 

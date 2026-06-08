@@ -155,6 +155,72 @@ describe('AI memory pending write queue', () => {
     })
   })
 
+  it('stores guest recommendation feedback locally so broad suggestions can learn without auth', async () => {
+    const db = useAIMemoryDatabase(createGuestContext())
+
+    await expect(db.recordAIRecommendationFeedback({
+      recommendationId: 'inline_task_local-task',
+      taskId: 'local-task',
+      entityKey: 'task:local-task',
+      action: 'postpone',
+      reasonCategory: 'low_energy',
+      revisitAt: '2026-06-15T09:00:00.000Z',
+      sourceMessageId: 'msg-local',
+    })).resolves.toBeUndefined()
+
+    const feedback = await db.fetchAIRecommendationFeedback({
+      taskIds: ['local-task'],
+      entityKeys: ['task:local-task'],
+      limit: 10,
+    })
+    const beliefs = await db.fetchAIParameterBeliefs({
+      entityKeys: ['task:local-task'],
+      parameterKeys: ['energy_fit'],
+      limit: 10,
+    })
+
+    expect(feedback).toHaveLength(1)
+    expect(feedback[0]).toMatchObject({
+      recommendationId: 'inline_task_local-task',
+      taskId: 'local-task',
+      entityKey: 'task:local-task',
+      action: 'postpone',
+      reasonCategory: 'low_energy',
+      revisitAt: '2026-06-15T09:00:00.000Z',
+    })
+    expect(beliefs).toHaveLength(1)
+    expect(beliefs[0]).toMatchObject({
+      entityKey: 'task:local-task',
+      parameterKey: 'energy_fit',
+    })
+  })
+
+  it('retrieves guest local feedback through broad task memory inputs', async () => {
+    const db = useAIMemoryDatabase(createGuestContext())
+
+    await db.recordAIRecommendationFeedback({
+      recommendationId: 'inline_task_local-task',
+      taskId: 'local-task',
+      entityKey: 'task:local-task',
+      action: 'dismiss',
+      reasonCategory: 'not_important',
+      sourceMessageId: 'msg-local',
+    })
+
+    const feedback = await db.fetchAIRecommendationFeedback({
+      taskIds: ['00000000-0000-4000-8000-000000000002', 'local-task'],
+      entityKeys: ['task:local-task', 'project:uncategorized'],
+      limit: 10,
+    })
+
+    expect(feedback).toHaveLength(1)
+    expect(feedback[0]).toMatchObject({
+      recommendationId: 'inline_task_local-task',
+      action: 'dismiss',
+      reasonCategory: 'not_important',
+    })
+  })
+
   it('queues clarification writes skipped by missing schema and flushes them later', async () => {
     const db = useAIMemoryDatabase(createContext())
 

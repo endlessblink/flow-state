@@ -312,6 +312,8 @@
 - 2026-06-08: Clarification continuations now add a visible "Answer queued" activity row when the user answers while generation is settling, then mark it as accepted when the queued continuation is sent. This prevents the UI from looking inert after saving a clarification answer.
 - 2026-06-08: Clarification cards now expose pending AI-memory write status: normal saved copy says when memory updates are queued for sync, while "Why ask?" debug includes the pending write count. This makes schema-cache/migration fallback visible without adding broad answer prose.
 - 2026-06-08: Settings > AI > Memory Health now includes an "AI memory debug" snapshot for the new server-backed memory layer. It shows bounded counts for context entities, parameter beliefs, clarification events, recommendation feedback, pending sync writes, and the latest compact entity/belief/event labels so saved context is inspectable without reading raw database rows.
+- 2026-06-08: Broad answer quality repair now records the exact fallback path in activity/message metadata. If the formatter fallback still fails audit, the final quality-floor guardrail is marked as `quality_floor` with source, repair stage, original failures, fallback failures, and quality-floor failures so localhost/debug proof can explain why a concise fallback appeared instead of a verbose model answer.
+- 2026-06-08: Inline recommendation feedback status now renders at the message level, so postponing/dismissing the last visible inline card still shows the saved-feedback confirmation after the card is suppressed.
 - 2026-06-08: AI memory debug now shows the same local fallback rows that retrieval uses during guest mode and schema-cache/missing-table rollouts. Local refreshed context entities, answered clarification events, parameter beliefs, and pending write counts remain visible instead of rendering an empty debug panel while the chat is actually using queued local memory.
 
 ---
@@ -572,6 +574,7 @@
 - 2026-06-08: Extended and re-ran `tests/e2e/ai-chat-quality-local.spec.ts` for broad non-weekly prompts. The localhost browser proof now covers weekly planning plus prioritization, next-task, and overdue-triage one-card clarification loops with no pre-answer recommendation barrage and guest-mode no-repeat memory.
 - 2026-06-08: Extended and re-ran the localhost browser proof for day-plan, smart-lane, and broad task-breakdown prompts. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` now covers 8 prompt paths and passes with no pre-answer recommendation barrage, no repeated clarification after the saved answer, and no stuck activity row.
 - 2026-06-08: Extended and re-ran the localhost browser proof for broad feedback suppression. The suite now covers 9 prompt/feedback paths, including broad postpone feedback that visibly saves, hides the exact card immediately, and prevents the same task from reappearing in the next broad answer.
+- 2026-06-08: Re-ran the 9-path localhost smoke after quality-floor observability and inline feedback-status fixes. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed 9/9 against a manually started Vite server on `127.0.0.1:5564`.
 
 ---
 

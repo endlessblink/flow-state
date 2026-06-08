@@ -2455,6 +2455,16 @@ export function useAIChat() {
           hasCards: Boolean(fallbackCardData),
         })
         if (fallbackQuality.level !== 'bad') {
+          store.updateActivityEvent(phaseActivityId, {
+            metadata: {
+              pathType: 'quality_repair',
+              source: 'deterministic_formatter_fallback',
+              reason: responseQuality.failures[0],
+              repairStage: 'formatter_fallback',
+              qualityFailures: responseQuality.failures,
+              fallbackQualityFailures: fallbackQuality.failures,
+            },
+          })
           formattedResponse = fallbackResponse
           cardData = fallbackCardData
           responseQuality = fallbackQuality
@@ -2473,6 +2483,21 @@ export function useAIChat() {
           formattedResponse = qualityFloorResponse
           cardData = qualityFloorCardData
           responseQuality = qualityFloorAudit
+          store.updateActivityEvent(phaseActivityId, {
+            label: 'Answer quality guarded',
+            message: qualityFloorAudit.level === 'bad'
+              ? 'Used final fallback with remaining issues'
+              : 'Used final concise fallback',
+            metadata: {
+              pathType: 'quality_floor',
+              source: 'deterministic_quality_floor',
+              reason: responseQuality.failures[0] ?? fallbackQuality.failures[0] ?? 'quality_floor',
+              repairStage: 'quality_floor',
+              qualityFailures: responseQuality.failures,
+              fallbackQualityFailures: fallbackQuality.failures,
+              qualityFloorFailures: qualityFloorAudit.failures,
+            },
+          })
         }
       }
       const displayRaw = cardData ? stripCardsBlock(formattedResponse) : formattedResponse
@@ -2487,11 +2512,13 @@ export function useAIChat() {
             ...lastMsg.metadata,
             cardGroups: { groups: cardData.groups, total: cardData.total, kind: cardData.kind },
             chatQuality: responseQuality,
+            chatQualityPath: store.activityEvents.find(event => event.id === phaseActivityId)?.metadata?.pathType,
           } as Record<string, unknown>
         } else {
           lastMsg.metadata = {
             ...lastMsg.metadata,
             chatQuality: responseQuality,
+            chatQualityPath: store.activityEvents.find(event => event.id === phaseActivityId)?.metadata?.pathType,
           } as Record<string, unknown>
         }
       }

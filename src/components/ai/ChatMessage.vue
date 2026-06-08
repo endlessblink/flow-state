@@ -2225,9 +2225,6 @@ async function saveSchedule() {
               </div>
             </button>
           </div>
-          <span v-if="inlineFeedbackStatus" class="weekly-question-status inline-feedback-status">
-            {{ inlineFeedbackStatus }}
-          </span>
         </div>
       </div>
       <!-- eslint-disable-next-line vue/no-v-html -->
@@ -2237,6 +2234,9 @@ async function saveSchedule() {
         :dir="effectiveDirection"
         v-html="renderedContent"
       />
+      <span v-if="inlineFeedbackStatus" class="weekly-question-status inline-feedback-status">
+        {{ inlineFeedbackStatus }}
+      </span>
 
       <!-- Streaming cursor (when there IS content) -->
       <span v-if="isStreaming && !isThinking && renderedContent" class="cursor-blink">|</span>

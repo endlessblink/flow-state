@@ -76,6 +76,9 @@ export interface AIActivityEvent {
     elapsedMs?: number
     timedOut?: boolean
     qualityFailures?: string[]
+    fallbackQualityFailures?: string[]
+    qualityFloorFailures?: string[]
+    repairStage?: 'audit_failed' | 'formatter_fallback' | 'quality_floor'
     entityKeyCount?: number
     feedbackCount?: number
     lifecycle?: {

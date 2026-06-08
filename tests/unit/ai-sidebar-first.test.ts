@@ -2466,6 +2466,11 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('Project context is still not reliable enough for broad ranking')
     expect(aiChat).toContain('Candidate only; project context is unknown or needs refresh.')
     expect(aiChat).toContain('responseQuality = qualityFloorAudit')
+    expect(aiChat).toContain("pathType: 'quality_floor'")
+    expect(aiChat).toContain("source: 'deterministic_quality_floor'")
+    expect(aiChat).toContain("repairStage: 'quality_floor'")
+    expect(aiChat).toContain('qualityFloorFailures: qualityFloorAudit.failures')
+    expect(aiChat).toContain('chatQualityPath: store.activityEvents.find')
   })
 
   it('does not force-scroll the chat while the user is reading older streaming content', () => {

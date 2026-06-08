@@ -1033,6 +1033,92 @@ describe('AI sidebar-first desktop experience', () => {
     ]))
   })
 
+  it('still asks for project meaning when task notes exist but project context is unknown', () => {
+    const tasks = [
+      {
+        id: 'task-memory',
+        title: 'Fix FlowState chat memory so it stops giving generic plans',
+        description: 'Broad product-quality work. The assistant should ask before ranking if context is missing.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [{ id: 'sub-memory', title: 'Prove no barrage before clarification', isCompleted: false }],
+        dueDate: '2026-06-11',
+        projectId: 'uncategorized',
+        estimatedDuration: 120,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-work',
+        title: 'Review Work bucket priorities',
+        description: 'Ambiguous bucket. The assistant must not infer stakes from the label alone.',
+        status: 'todo',
+        priority: 'high',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-09',
+        projectId: 'uncategorized',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-paper',
+        title: 'Buy printer paper',
+        description: 'Small admin task used to catch shallow priority-only ranking.',
+        status: 'todo',
+        priority: 'high',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'uncategorized',
+        estimatedDuration: 20,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-followup',
+        title: 'Draft follow-up tasks for the memory interview flow',
+        description: 'Should be proposed only with confirmation, not silently created.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-13',
+        projectId: 'uncategorized',
+        estimatedDuration: 90,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+    )
+
+    const interview = buildWeeklyPlanningInterview(context, [])
+
+    expect(interview).toMatchObject({
+      schemaVersion: 'ai-clarification.v1',
+      pathType: 'clarify_first',
+      coverage: expect.objectContaining({
+        decision: 'ask',
+        missing: expect.arrayContaining(['project_meaning']),
+      }),
+    })
+    expect(interview?.question).toMatchObject({
+      entityType: 'project',
+      reason: 'missing_project_understanding',
+      allowFreeText: true,
+    })
+  })
+
   it('uses saved project context as ranking evidence instead of project-name guessing', () => {
     const tasks = [
       {

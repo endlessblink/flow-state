@@ -842,7 +842,8 @@ function selectClarificationQuestion(
     }))
 
   const unknownContextCount = context.tasks.filter(needsPlanningClarification).length
-  if (unknownContextCount >= 2) {
+  const missingProjectContextCount = context.tasks.filter(task => task.project?.id && !hasUsableProjectContext(task)).length
+  if (unknownContextCount >= 2 || missingProjectContextCount >= 2) {
     const questionId = `week_importance_${context.weekStartIso}`
     const locale = context.locale
     candidates.push({
@@ -947,7 +948,11 @@ function scoreClarificationQuestion(
     return sum + uncertainty * CLARIFICATION_PARAMETER_IMPACT[parameter] * expectedReduction * 1.2
   }, 0)
   const userCost = 0.08 + (0.07 * Math.max(1, targetedParameters.length)) + (targetedParameters.length > 1 ? 0.05 : 0)
-  const selectedScore = skippedReason ? -1 : heuristicEvpi - userCost
+  const missingForcedDimensionBonus = (
+    (preferredReasons.includes('project_meaning') && targetedParameters.includes('project_meaning')) ||
+    (preferredReasons.includes('stale_context') && targetedParameters.includes('stale_context'))
+  ) ? 0.8 : 0
+  const selectedScore = skippedReason ? -1 : heuristicEvpi + missingForcedDimensionBonus - userCost
   return {
     question,
     reason: question.reason,
@@ -1190,7 +1195,7 @@ function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSna
     })
   }
 
-  const missingProjectTask = selected.find(task => task.project?.id && needsPlanningClarification(task))
+  const missingProjectTask = selected.find(task => task.project?.id && !hasUsableProjectContext(task))
   if (missingProjectTask?.project?.id) {
     const projectId = missingProjectTask.project.id
     const projectName = missingProjectTask.project.name || projectId

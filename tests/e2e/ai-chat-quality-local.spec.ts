@@ -95,7 +95,8 @@ function seededTasks(): SeedTask[] {
 }
 
 async function seedGuestWorkspace(page: Page) {
-  await page.addInitScript((seedTasks) => {
+  await page.goto('/src/main.ts', { waitUntil: 'domcontentloaded' })
+  await page.evaluate(async (seedTasks) => {
     localStorage.clear()
     localStorage.setItem('flowstate-onboarding-v2', 'true')
     localStorage.setItem('flowstate-welcome-seen', 'true')
@@ -107,18 +108,42 @@ async function seedGuestWorkspace(page: Page) {
       chatLanguage: 'en',
     }))
     localStorage.setItem('flowstate-guest-tasks', JSON.stringify(seedTasks))
+
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase('FlowStateReadCache')
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error)
+      request.onblocked = () => resolve()
+    })
+
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('FlowStateReadCache', 1)
+      request.onupgradeneeded = () => {
+        const db = request.result
+        if (!db.objectStoreNames.contains('tasks')) db.createObjectStore('tasks', { keyPath: 'id' })
+        if (!db.objectStoreNames.contains('groups')) db.createObjectStore('groups', { keyPath: 'id' })
+        if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects', { keyPath: 'id' })
+        if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' })
+      }
+      request.onsuccess = () => {
+        const db = request.result
+        const transaction = db.transaction(['tasks', 'meta'], 'readwrite')
+        const taskStore = transaction.objectStore('tasks')
+        const metaStore = transaction.objectStore('meta')
+        for (const task of seedTasks) taskStore.put(task)
+        metaStore.put({ key: 'tasks', updatedAt: Date.now(), count: seedTasks.length })
+        transaction.oncomplete = () => {
+          db.close()
+          resolve()
+        }
+        transaction.onerror = () => {
+          db.close()
+          reject(transaction.error)
+        }
+      }
+      request.onerror = () => reject(request.error)
+    })
   }, seededTasks())
-}
-
-async function createTasksThroughQuickAdd(page: Page) {
-  const quickAdd = page.locator('input[placeholder*="Quick add task"], input[placeholder*="quick add"]').first()
-  await expect(quickAdd).toBeVisible({ timeout: 15_000 })
-
-  for (const seedTask of seededTasks()) {
-    await quickAdd.fill(seedTask.title)
-    await page.keyboard.press('Enter')
-    await expect(page.getByText(seedTask.title).first()).toBeVisible({ timeout: 10_000 })
-  }
 }
 
 async function stubBridge(page: Page) {
@@ -175,9 +200,6 @@ async function stubBridge(page: Page) {
 async function openAIChat(page: Page) {
   await page.goto('/#/tasks')
   await page.waitForLoadState('domcontentloaded')
-  if (!(await page.getByText('Fix FlowState chat memory so it stops giving generic plans').isVisible({ timeout: 3_000 }).catch(() => false))) {
-    await createTasksThroughQuickAdd(page)
-  }
   await expect(page.getByText('Fix FlowState chat memory so it stops giving generic plans')).toBeVisible({ timeout: 20_000 })
 
   const toggle = page.locator('.ai-toggle-btn').first()

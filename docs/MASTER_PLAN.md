@@ -6,7 +6,7 @@
 
 **Goal**: Make FlowState chat consistently useful across weekly planning, "what should I do", prioritization, task breakdown, smart lanes, follow-up tasks, and general agent help by combining server-backed memory, explicit uncertainty, low-overwhelm UX, feedback learning, and testable answer-quality gates.
 
-**Current execution cursor**: **LANE-7/LANE-9 lifecycle diagnostics and answer-quality hardening**. The lane is now treated as one full delivery track, not scattered AI-chat patches. The current localhost proof covers the main broad task-answer entry points plus first feedback suppression, but do not ask the user to test broadly until lifecycle, stale-context refresh behavior, and quality gates prove the flow cannot regress into repeated questions, generic fallback prose, or low-context recommendation dumps.
+**Current execution cursor**: **LANE-1 VPS-safe memory substrate readiness**. Localhost behavior now has broad-flow proof, so the next gate is proving the server/VPS Supabase schema can actually persist the AI memory layer instead of relying on guest/local fallback. Do not ask the user to test broadly or move to Electron until the live schema readiness check passes or the missing-schema fallback remains the explicitly accepted rollout state.
 
 **Why this lane exists**: This work has too many coupled failure modes to track as isolated fixes. Use this lane as the single source of truth so every change is tied to a phase, a proof gate, and a user-visible quality outcome. If a future session feels lost, resume from the current execution cursor and the first incomplete proof gate below.
 
@@ -27,10 +27,10 @@
 5. Commit and push only after the plan file, tests, and proof evidence match the actual current state.
 
 **Operator board for the active lane**:
-- **Current slice**: LANE-7/LANE-9 lifecycle diagnostics plus answer-quality hardening. Prove broad memory retrieval can detect stale, low-confidence, noisy, or old memory without dumping it into normal prose, then turn those signals into refresh prompts and eval failures for fake/generic answers.
-- **Current proof**: MASTER_PLAN has a complete packet queue with one current cursor, plus a repeatable localhost browser proof that covers prompt -> one clarification -> answer/uncertainty -> feedback/debug -> no-repeat.
-- **Next slice after current proof**: answer-quality eval hardening for broad post-clarification plans, plus the deeper entity freshness writeback that updates `ai_context_entities.last_answered_at`/`stale_after` after refresh confirmations.
-- **Blocked until current proof is green**: background summarization jobs, pgvector/semantic recall, broader UI polish, Electron packaging, and user-facing test instructions.
+- **Current slice**: LANE-1 server schema readiness. Wire and run a read-only live Supabase REST checker for all AI memory tables/columns, then apply/refresh migrations only through an explicit production-safe path.
+- **Current proof**: MASTER_PLAN has a complete packet queue, repeatable localhost browser proof, and a focused schema contract test. The live REST schema check currently fails because all six server AI memory tables are absent from the schema cache.
+- **Next slice after current proof**: production/VPS migration application or schema-cache refresh, followed by the same read-only checker passing against `https://api.in-theflow.com`.
+- **Blocked until current proof is green**: background summarization jobs, pgvector/semantic recall, broader UI polish, Electron packaging, broad user testing, and any claim that server-backed memory works across devices.
 - **User-test rule**: no user test request until Stage 8/LANE-10 proves the full localhost loop in browser: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity -> feedback/debug visible.
 
 **Authoritative task lane queue**:
@@ -50,7 +50,7 @@
 | LANE-10: Localhost E2E proof | ✅ Broad-flow proof done | TASK-1842 | Real browser proves the end-to-end loop before the user is asked to test | Playwright/localhost smoke, seeded tasks, bridge stubs, screenshots | Prompt -> one clarification -> answers/follow-ups -> concise plan/uncertainty -> feedback/debug -> no barrage -> no stuck activity -> too-much feedback changes next broad answer |
 | LANE-11: Electron delivery gate | ⏸ Deferred | TASK-1843 | Desktop packaging/updater only after localhost proves behavior and user re-enables Electron | Electron build/update/deploy surfaces | Explicit user re-enable, then Electron build/update verification |
 
-**Current lane cursor**: LANE-7/LANE-9 are the next incomplete product slices after the broad-flow and feedback-suppression proofs. The latest localhost smoke covers weekly planning, prioritization, next-task, overdue triage, day planning, smart lanes, task breakdown, compact post-clarification planning, debug disclosure, no stuck running row, no-repeat broad clarification, a simplify/too-much feedback loop that changes the next broad answer, and broad postpone feedback suppressing the same task in the next broad answer. Continue with lifecycle/stale-context rules and answer-quality eval hardening before asking for broad user testing.
+**Current lane cursor**: LANE-1 is the next incomplete product slice after the broad-flow localhost proof. The latest localhost smoke covers weekly planning, prioritization, next-task, overdue triage, day planning, smart lanes, task breakdown, compact post-clarification planning, debug disclosure, no stuck running row, no-repeat broad clarification, a simplify/too-much feedback loop that changes the next broad answer, and broad postpone feedback suppressing the same task in the next broad answer. Continue with live/VPS AI-memory schema readiness before asking for broad user testing or shipping Electron.
 
 **Resume rule for future agents**: Start from the operator board above, then the first non-green proof gate in the stage table. Do not reinterpret this lane as a weekly-plan copywriting task, a local-only memory hack, or an Electron updater task. The intended product behavior is a durable AI chat quality system that learns useful context, asks the right low-friction questions, avoids overwhelming answers, and proves that behavior locally before desktop delivery.
 
@@ -134,6 +134,7 @@
 - 2026-06-08: Weekly and broad retrieval now separate stale/refresh-needed memory from active planning evidence. Expired, old-confirmation, or low-confidence project/task context remains visible in lifecycle diagnostics and refresh signals, but is not promoted into `projectContexts`, `taskContexts`, remembered answers, or active broad-answer summary lines that could justify ranking as if it were fresh.
 - 2026-06-08: Added an end-to-end local stale-refresh regression: answering a stale-context clarification writes a fresh local context entity, broad retrieval then treats it as active evidence, and lifecycle diagnostics no longer report `refresh_needed` for that entity. This protects guest/schema-cache fallback from asking the same stale-refresh question immediately after the user answered it.
 - 2026-06-08: Patch-only memory updates now write text-key and synthetic entities into `ai_context_entities` instead of being skipped by the legacy UUID-only `project_contexts`/`task_contexts` path. Schema-cache misses queue and mirror those patch writes locally, so stale-context confirmations from UI cards refresh entity freshness even before server schema visibility catches up.
+- 2026-06-08: Added `npm run check:ai-memory-schema`, a read-only Supabase REST readiness check for all server AI-memory tables and runtime columns. The schema contract test now asserts this live checker stays aligned with migrations/runtime. Current live result: `https://api.in-theflow.com` returns PGRST205 for `ai_context_entities`, `ai_clarification_events`, `ai_parameter_beliefs`, `ai_recommendation_feedback`, `ai_context_edges`, and `ai_memory_snapshots`, so server/VPS AI memory is not ready until migrations are applied or the REST schema cache is refreshed.
 
 ---
 

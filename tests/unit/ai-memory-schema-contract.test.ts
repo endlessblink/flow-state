@@ -18,6 +18,7 @@ const migrations = migrationFiles
 
 const memoryDbSource = readFileSync(join(root, 'src/composables/supabase/useAIMemoryDatabase.ts'), 'utf8')
 const aiMemoryTypes = readFileSync(join(root, 'src/types/aiMemory.ts'), 'utf8')
+const liveSchemaChecker = readFileSync(join(root, 'scripts/check-ai-memory-schema.cjs'), 'utf8')
 
 const tableColumns: Record<string, string[]> = {
   ai_context_entities: [
@@ -230,5 +231,20 @@ describe('AI memory schema contract', () => {
       )
       expect(migrations, `${table} delete policy`).toMatch(policyPattern)
     }
+  })
+
+  it('keeps the live Supabase schema readiness checker aligned with server memory tables', () => {
+    for (const [table, columns] of Object.entries(tableColumns)) {
+      expect(liveSchemaChecker, `${table} table check`).toContain(table)
+      for (const column of columns) {
+        expect(liveSchemaChecker, `${table}.${column} checker column`).toContain(`'${column}'`)
+      }
+    }
+
+    expect(liveSchemaChecker).toContain('Read-only AI memory schema readiness check')
+    expect(liveSchemaChecker).toContain('It does not insert')
+    expect(liveSchemaChecker).toContain('it never prints keys')
+    expect(liveSchemaChecker).toContain('limit=0')
+    expect(liveSchemaChecker).toContain('Apply AI memory migrations or refresh the REST schema cache')
   })
 })

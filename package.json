@@ -25,6 +25,7 @@
     "shadow:watch": "node scripts/auto-backup-daemon.cjs",
     "restore": "node scripts/restore-from-shadow.cjs",
     "restore:dry-run": "node scripts/restore-from-shadow.cjs --dry-run",
+    "check:ai-memory-schema": "node scripts/check-ai-memory-schema.cjs",
     "dev:manager": "cd watchpost && npm start",
     "postinstall": "node scripts/patch-electron-builder-dependency-parser.cjs && ([ -d watchpost ] && cd watchpost && npm install || true)",
     "kill": "bash scripts/kill-flow-state.sh",

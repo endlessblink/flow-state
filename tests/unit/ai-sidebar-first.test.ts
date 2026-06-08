@@ -605,6 +605,72 @@ describe('AI sidebar-first desktop experience', () => {
     expect(quickDraft.recommendations.some(rec => rec.relatedTaskIds.length > 0)).toBe(true)
   })
 
+  it('rejects weekly recommendations that treat project names as project understanding evidence', () => {
+    const task = {
+      id: 'task-client-launch',
+      title: 'Polish homepage',
+      description: 'Hero copy and layout polish.',
+      status: 'todo',
+      priority: 'medium',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      projectId: 'important-client-launch',
+      projectName: 'Important Client Launch',
+      dueDate: '2026-06-11',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Task
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: [task] }],
+      [task],
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+    )
+    const plan = {
+      schemaVersion: 'weekly-plan.v2',
+      requestId: context.requestId,
+      locale: 'en',
+      direction: 'ltr',
+      headline: 'Client launch focus',
+      weekRead: {
+        summary: 'Context is limited.',
+        workloadReality: 'Only one candidate is available.',
+        mainTradeoff: 'Unknown project context limits confidence.',
+      },
+      recommendations: [
+        {
+          sectionId: 'rec-name-only',
+          rank: 1,
+          focusArea: 'Important Client Launch',
+          primaryTaskId: 'task-client-launch',
+          relatedTaskIds: [],
+          recommendationType: 'protect',
+          title: 'Polish homepage',
+          whyThisMatters: 'This is important strategic work because it belongs to Important Client Launch.',
+          whyThisWeek: 'It is due this week.',
+          riskIfIgnored: 'Unknown project context limits deeper risk assessment.',
+          nextAction: 'Open the task and confirm what outcome matters.',
+          evidence: [
+            { taskId: 'task-client-launch', field: 'project', value: 'Important Client Launch', interpretation: 'project label only' },
+            { taskId: 'task-client-launch', field: 'notes', value: 'Hero copy and layout polish.', interpretation: 'task note evidence' },
+          ],
+          cardPlacement: 'immediately_after_explanation',
+        },
+      ],
+      deferrals: [],
+      openQuestions: [],
+      quality: { selectedTaskCount: 1, confidence: 'medium', caveats: ['Project context unknown.'] },
+    }
+
+    expect(validateWeeklyPlanOutput(plan, context)).toEqual(expect.arrayContaining([
+      'missing_project_understanding_evidence:rec-name-only',
+      'evidence_audit_failed:rec-name-only:missing_context_or_unknown_evidence',
+      'quality_audit_failed:evidence:rec-name-only:missing_context_or_unknown_evidence',
+    ]))
+    expect(auditWeeklyPlanQuality(plan, context).level).toBe('bad')
+  })
+
   it('keeps quick drafts focused on substantial work before small home errands', () => {
     const baseTask = {
       status: 'todo',

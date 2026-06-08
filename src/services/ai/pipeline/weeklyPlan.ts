@@ -14,6 +14,7 @@ import type {
 } from '@/types/aiMemory'
 import { memoryEvidencePolicy, sanitizeWeekContextForPrompt } from './memoryEvidence'
 import { decideClarificationPath } from './uncertaintyPolicy'
+import { auditRecommendationEvidence } from './chatQuality'
 
 export type PlannerLocale = 'en' | 'he'
 export type PlannerDirection = 'ltr' | 'rtl'
@@ -461,6 +462,8 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
     const evidence = Array.isArray(rec.evidence) ? rec.evidence : []
     if (!evidence.some(item => !['dueIso', 'priority'].includes(item.field))) errors.push(`date_priority_only_reasoning:${rec.sectionId}`)
     if (!evidence.some(item => ['projectContext', 'taskContext', 'missingContext'].includes(item.field))) errors.push(`missing_project_understanding_evidence:${rec.sectionId}`)
+    const evidenceAudit = auditWeeklyRecommendationEvidence(rec)
+    for (const failure of evidenceAudit.failures) errors.push(`evidence_audit_failed:${failure}`)
     for (const item of evidence) {
       if (!validTaskIds.has(item.taskId)) errors.push(`invalid_evidence_task_id:${item.taskId}`)
       const task = taskById.get(item.taskId)
@@ -531,6 +534,9 @@ export function auditWeeklyPlanQuality(plan: WeeklyPlanOutput, context: WeekCont
     if (UNSUPPORTED_IMPORTANCE_RE.test(recText) && !hasMeaningEvidence && !hasConcreteTaskEvidence) {
       failures.push(`unsupported_importance_language:${rec.sectionId}`)
     }
+    const evidenceAudit = auditWeeklyRecommendationEvidence(rec)
+    failures.push(...evidenceAudit.failures.map(failure => `evidence:${failure}`))
+    warnings.push(...evidenceAudit.warnings.map(warning => `evidence:${warning}`))
   }
 
   if (unknownEvidenceCount >= Math.max(1, recs.length) && plan.quality?.confidence === 'high' && !hasUncertaintyCaveat) {
@@ -570,6 +576,29 @@ export function auditWeeklyPlanQuality(plan: WeeklyPlanOutput, context: WeekCont
     warnings: [...new Set(warnings)],
     checks,
   }
+}
+
+function auditWeeklyRecommendationEvidence(rec: WeeklyPlanRecommendation) {
+  return auditRecommendationEvidence([{
+    recommendationId: rec.sectionId,
+    taskId: rec.primaryTaskId,
+    rank: rec.rank,
+    reason: [
+      rec.whyThisMatters,
+      rec.whyThisWeek,
+      rec.riskIfIgnored,
+      rec.nextAction,
+    ].filter(Boolean).join(' '),
+    taskEvidence: rec.evidence
+      .filter(item => !['projectContext', 'taskContext', 'missingContext'].includes(item.field))
+      .map(item => `${item.field}: ${item.value} (${item.interpretation})`),
+    projectContextEvidence: rec.evidence
+      .filter(item => item.field === 'projectContext' || item.field === 'taskContext')
+      .map(item => `${item.field}: ${item.value} (${item.interpretation})`),
+    missingEvidence: rec.evidence
+      .filter(item => item.field === 'missingContext')
+      .map(item => `${item.value} (${item.interpretation})`),
+  }])
 }
 
 type QuickDraftOptions = {

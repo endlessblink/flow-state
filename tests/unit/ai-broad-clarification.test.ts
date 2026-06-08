@@ -75,6 +75,7 @@ describe('broad task clarification policy', () => {
     const card = buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [])
 
     expect(card?.kind).toBe('response_quality')
+    expect(card?.responseMode).toBe('day_plan')
     expect(card?.pathType).toBe('clarify_first')
     expect(card?.question.options).toHaveLength(5)
     expect(card?.question.allowFreeText).toBe(true)
@@ -101,6 +102,7 @@ describe('broad task clarification policy', () => {
     const card = buildBroadTaskClarification(routed('prioritization'), taskResult(6), 'en', [])
 
     expect(card?.question.question).toBe('What should decide the priority order?')
+    expect(card?.responseMode).toBe('prioritization')
     expect(card?.question.id).toBe('response_quality_prioritization_impact')
     expect(card?.question.options.map(option => option.label)).toEqual([
       'Real consequence',
@@ -116,6 +118,7 @@ describe('broad task clarification policy', () => {
     const card = buildBroadTaskClarification(routed('next_task'), taskResult(4), 'en', [])
 
     expect(card?.question.id).toBe('response_quality_next_task_energy')
+    expect(card?.responseMode).toBe('next_task')
     expect(card?.question.question).toBe('What would make one task right for now?')
     expect(card?.question.options.map(option => option.label)).toEqual([
       'Energy fit',

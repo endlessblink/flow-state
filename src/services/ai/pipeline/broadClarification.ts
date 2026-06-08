@@ -79,6 +79,7 @@ export function buildBroadTaskClarification(
   return {
     schemaVersion: 'ai-clarification.v1',
     kind: 'response_quality',
+    responseMode: routed.responseMode || 'general',
     locale: lang,
     direction: lang === 'he' ? 'rtl' : 'ltr',
     progressLabel: lang === 'he' ? 'מבהיר כיוון · שלב 1/1' : 'Clarifying direction • Step 1/1',
@@ -152,6 +153,7 @@ function buildBroadStaleRefreshClarification(
   return {
     schemaVersion: 'ai-clarification.v1',
     kind: 'response_quality',
+    responseMode: routed.responseMode || 'general',
     locale: lang,
     direction: isHebrew ? 'rtl' : 'ltr',
     progressLabel: isHebrew ? 'מרענן הקשר · שלב 1/1' : 'Refreshing context • Step 1/1',

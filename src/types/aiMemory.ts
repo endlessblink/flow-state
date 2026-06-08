@@ -146,6 +146,7 @@ export interface AIClarificationEVPIScore {
 export interface AIClarificationArtifact {
   schemaVersion: 'ai-clarification.v1'
   kind: 'weekly_planning' | 'response_quality'
+  responseMode?: 'day_plan' | 'smart_lanes' | 'weekly_review' | 'week_plan' | 'prioritization' | 'next_task' | 'overdue_triage' | 'task_breakdown' | 'general'
   locale: 'he' | 'en'
   direction: 'rtl' | 'ltr'
   progressLabel: string

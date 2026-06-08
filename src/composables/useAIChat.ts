@@ -159,7 +159,7 @@ const WEEK_PLAN_MEMORY_TIMEOUT_MS = 1_500
 function clarificationContinuationMode(content: string): ClarificationContinuationMode | null {
   const marker = content.match(/\[FLOWSTATE_CLARIFICATION_CONTINUATION\s+mode=([a-z_]+)\]/i)
   const markerMode = marker?.[1] as ClarificationContinuationMode | undefined
-  if (markerMode && ['week_plan', 'day_plan', 'smart_lanes', 'general'].includes(markerMode)) return markerMode
+  if (markerMode && ['week_plan', 'day_plan', 'smart_lanes', 'weekly_review', 'prioritization', 'next_task', 'overdue_triage', 'task_breakdown', 'general'].includes(markerMode)) return markerMode
   if (/Continue planning the week using the clarification I just answered|המשך לתכנן את השבוע עם ההקשר שעניתי עכשיו/i.test(content)) {
     return 'week_plan'
   }
@@ -207,6 +207,42 @@ function routeClarificationContinuation(
       language,
       formatDirective: 'Continue smart lane grouping from the clarification the user just answered. Keep it compact and actionable.',
       responseMode: 'smart_lanes',
+    }
+  }
+  if (mode === 'prioritization') {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 30 } }],
+      language,
+      formatDirective: 'Continue prioritization from the clarification the user just answered. Keep it compact, evidence-based, and avoid a broad list.',
+      responseMode: 'prioritization',
+    }
+  }
+  if (mode === 'next_task') {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'suggest_next_task', parameters: {} }],
+      language,
+      formatDirective: 'Continue next-task selection from the clarification the user just answered. Choose one focused recommendation and keep uncertainty visible.',
+      responseMode: 'next_task',
+    }
+  }
+  if (mode === 'overdue_triage') {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'get_overdue_tasks', parameters: {} }],
+      language,
+      formatDirective: 'Continue overdue triage from the clarification the user just answered. Separate real commitments from stale overdue noise and keep it compact.',
+      responseMode: 'overdue_triage',
+    }
+  }
+  if (mode === 'task_breakdown') {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 20 } }],
+      language,
+      formatDirective: 'Continue task breakdown from the clarification the user just answered. Suggest only a small grounded next step and do not create tasks without confirmation.',
+      responseMode: 'task_breakdown',
     }
   }
   return {

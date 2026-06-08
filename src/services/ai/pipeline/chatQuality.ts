@@ -74,6 +74,8 @@ export type ChatQualityInput = {
   hasEscapeHatch?: boolean
   hasDebugDisclosure?: boolean
   hasLearningSignal?: boolean
+  hasConfidenceSignal?: boolean
+  hasTradeoffOrOmission?: boolean
   coldStart?: boolean
   recommendationEvidence?: ChatRecommendationEvidenceInput[]
 }
@@ -92,6 +94,8 @@ const MEMORY_INJECTION_RE = /(ignore (all )?(previous|prior|above) instructions|
 const CORRECTION_MARKER_RE = /(correction|user corrected|user said|actually|reject|deprecated|no longer|wrong context|תיקון|המשתמש תיקן|לא נכון|הקשר שגוי)/i
 const NEGATED_IMPORTANCE_RE = /(not high stakes|not important|not critical|not meaningful|not strategic|low stakes|no longer true|wrong context|is not high stakes|isn't high stakes|do not rank.{0,40}(high stakes|important|critical|meaningful|strategic)|do not treat.{0,40}(high stakes|important|critical|meaningful|strategic)|לא חשוב|לא קריטי|לא משמעותי|לא אסטרטגי|סיכון נמוך|לא נכון)/i
 const STALE_CONTEXT_EVIDENCE_RE = /(stale|expired|refresh.?needed|needs? confirmation|old context|outdated|last confirmed|requires refresh|הקשר ישן|דורש רענון|לא אושר|פג תוקף)/i
+const CONFIDENCE_SIGNAL_RE = /(confidence|confident|low confidence|medium confidence|high confidence|candidate only|limited context|coverage|not reliable enough|לא מספיק בטוח|ביטחון|מועמד בלבד|הקשר מוגבל)/i
+const TRADEOFF_OMISSION_RE = /(tradeoff|trade-off|held back|left out|omission|defer|deferred|batch|not include|do not include|instead of|rather than|what should not dominate|stays focused|מחוץ|לדחות|דחיתי|לא לכלול|במקום|כדי שהתכנון לא יהפוך|יישאר ממוקד)/i
 const BROAD_TASK_QUALITY_MODES = new Set<ChatQualityMode>([
   'general',
   'day_plan',
@@ -125,6 +129,8 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
     && NEGATED_IMPORTANCE_RE.test(clarificationEvidence)
   const lowCoverage = typeof input.coverageScore === 'number' && input.coverageScore < 0.5
   const mediumCoverage = typeof input.coverageScore === 'number' && input.coverageScore >= 0.5 && input.coverageScore < 0.72
+  const hasConfidenceSignal = input.hasConfidenceSignal ?? CONFIDENCE_SIGNAL_RE.test(text)
+  const hasTradeoffOrOmission = input.hasTradeoffOrOmission ?? TRADEOFF_OMISSION_RE.test(text)
 
   if (!text) failures.push('empty_response')
   if (input.hasTaskList && !input.hasCards && input.taskCount > 0) failures.push('missing_task_cards')
@@ -182,6 +188,12 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   }
   if ((path === 'feedback_updated' || input.hasFeedbackControls) && input.hasLearningSignal === false) {
     failures.push('feedback_not_recorded_as_learning_signal')
+  }
+  if (isBroadTaskAnswer && input.hasCards && recommendationCount > 0 && !hasConfidenceSignal) {
+    failures.push('missing_confidence_signal')
+  }
+  if (isBroadTaskAnswer && input.hasCards && recommendationCount > 1 && !hasTradeoffOrOmission) {
+    failures.push('missing_tradeoff_or_omission')
   }
   if ((path === 'deterministic_fallback' || input.contextUnknown || mediumCoverage) && recommendationCount > 3) {
     failures.push('too_many_low_context_recommendations')

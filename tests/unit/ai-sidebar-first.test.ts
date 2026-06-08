@@ -848,7 +848,7 @@ describe('AI sidebar-first desktop experience', () => {
       hasCards: true,
       taskCount: 3,
       contextUnknown: true,
-      text: 'Start with the payment follow-up; the money risk is explicit. Context is unknown for the other candidates, so keep them as cards only.',
+      text: 'Medium confidence: start with the payment follow-up; the money risk is explicit. Held back for now: other candidates where context is unknown, so keep them as cards only.',
     })
 
     expect(audit.level).not.toBe('bad')
@@ -870,7 +870,7 @@ describe('AI sidebar-first desktop experience', () => {
       hasCards: true,
       taskCount: 3,
       hasClarificationEvidence: true,
-      text: 'Matches your clarification: start with the payment follow-up because the money risk is explicit.',
+      text: 'Medium confidence: matches your clarification; start with the payment follow-up because the money risk is explicit. Held back for now: weaker candidates until context is clearer.',
     })
 
     expect(ignoredClarification.level).toBe('bad')
@@ -922,7 +922,7 @@ describe('AI sidebar-first desktop experience', () => {
       hasEscapeHatch: true,
       hasDebugDisclosure: true,
       hasLearningSignal: true,
-      text: 'Draft from partial data: coverage is 61%, so context is still limited. Start with the payment follow-up; the money risk is explicit. Use the cards to accept, postpone, or dismiss the other two.',
+      text: 'Medium confidence draft from partial data: coverage is 61%, so context is still limited. Start with the payment follow-up; the money risk is explicit. Held back for now: broad ranking of the other two; use the cards to accept, postpone, or dismiss them.',
     })
 
     expect(usefulFallback.level).not.toBe('bad')

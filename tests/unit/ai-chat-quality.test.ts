@@ -46,7 +46,7 @@ describe('chat quality evidence audit', () => {
       clarificationEvidenceText: 'User chose "real impact or consequence" before ranking.',
       hasFeedbackControls: true,
       hasLearningSignal: true,
-      text: 'Matches your clarification: rank by real consequence first, so start with the payment follow-up.',
+      text: 'Medium confidence: matches your clarification, rank by real consequence first, so start with the payment follow-up. Held back for now: weaker candidates until context is clearer.',
     })
 
     expect(valueReflected.level).not.toBe('bad')
@@ -64,7 +64,7 @@ describe('chat quality evidence audit', () => {
       clarificationEvidenceText: 'Note: "client approval is waiting on me"',
       hasFeedbackControls: true,
       hasLearningSignal: true,
-      text: 'Matches your clarification: prioritize the approval follow-up because client approval is waiting.',
+      text: 'Medium confidence: matches your clarification, prioritize the approval follow-up because client approval is waiting. Held back for now: admin tasks until the approval risk is clear.',
     })
 
     expect(audit.level).not.toBe('bad')
@@ -468,6 +468,8 @@ describe('chat quality evidence audit', () => {
       clarificationEvidenceText: 'User chose "dependency or blocker" before ranking.',
       hasFeedbackControls: true,
       hasLearningSignal: true,
+      hasConfidenceSignal: true,
+      hasTradeoffOrOmission: true,
       text: 'Matches your clarification: rank by dependency first. Use the four cards as candidates and adjust anything wrong.',
     })
 
@@ -475,6 +477,64 @@ describe('chat quality evidence audit', () => {
     expect(audit.failures).toEqual([])
     expect(audit.warnings).toContain('broad_recommendation_load')
     expect(audit.checks.realism).toBeLessThan(1)
+  })
+
+  it('rejects recommendation card answers that hide confidence and tradeoffs', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'day_plan',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      recommendationCount: 3,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Start with the memory task because the note says the planner must stop giving generic plans.',
+      recommendationEvidence: [
+        {
+          recommendationId: 'rec_memory',
+          taskId: 'task_memory',
+          reason: 'The note says the planner must stop giving generic plans.',
+          taskEvidence: ['note: planner must stop giving generic plans'],
+          projectContextEvidence: [],
+          missingEvidence: ['project context unknown'],
+        },
+      ],
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toEqual(expect.arrayContaining([
+      'missing_confidence_signal',
+      'missing_tradeoff_or_omission',
+    ]))
+  })
+
+  it('accepts concise recommendations with visible confidence and omission control', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'day_plan',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      recommendationCount: 2,
+      hasVisibleUncertainty: true,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Medium confidence: start with the memory task because its note names the planning failure. Held back for now: loose admin until project context is clearer.',
+      recommendationEvidence: [
+        {
+          recommendationId: 'rec_memory',
+          taskId: 'task_memory',
+          reason: 'The note names the planning failure.',
+          taskEvidence: ['note: planner must stop giving generic plans'],
+          projectContextEvidence: [],
+          missingEvidence: ['project context unknown'],
+        },
+      ],
+    })
+
+    expect(audit.level).not.toBe('bad')
+    expect(audit.failures).toEqual([])
   })
 
   it('rejects recommendation cards whose controls do not feed learning', () => {

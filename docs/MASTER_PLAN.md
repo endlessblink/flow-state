@@ -265,6 +265,7 @@
 - 2026-06-08: The chat-quality audit now treats `prioritization`, `next_task`, `overdue_triage`, and `task_breakdown` as broad task-answer modes. Mode-specific regressions prove these flows fail when they ignore saved clarification evidence, cite only shallow metadata, or claim high stakes without visible uncertainty.
 - 2026-06-08: Broad card answers now feed parsed card reasons into the structured recommendation-evidence audit, and the audit rejects repeated reason/evidence templates across multiple cards. Post-clarification deterministic fallback reasons now combine the user's clarification with task-specific evidence, so the fallback cannot pass by repeating the same generic clarification sentence on every recommendation.
 - 2026-06-08: The broad chat-quality audit now catches visible answer prose that ignores user corrections in clarification evidence. English and Hebrew regressions fail when the user has corrected a project/task as not important or wrong-context but the assistant still calls it important, strategic, or critical.
+- 2026-06-08: The broad chat-quality rubric now requires visible confidence and tradeoff/omission signals for recommendation-card answers. Tests fail card answers that hide confidence or omit what was deferred/held back, while concise answers with medium-confidence wording, explicit omissions, uncertainty, feedback controls, and learning signals remain acceptable.
 
 ---
 

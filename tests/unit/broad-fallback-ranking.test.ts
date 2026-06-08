@@ -127,4 +127,44 @@ describe('broad fallback ranking feedback memory', () => {
     ])[0].id).toBe('task-accepted')
     vi.useRealTimers()
   })
+
+  it('uses time-blocked and implicit-positive feedback as follow-through signals', () => {
+    vi.setSystemTime(new Date(now))
+    const timeblocked = task('task-timeblocked', 'Draft stakeholder update', 'project-a', {
+      description: 'Send the stakeholder update.',
+    })
+    const implicit = task('task-implicit', 'Prepare client reply', 'project-b', {
+      description: 'Reply to the client thread.',
+    })
+    const neutral = task('task-neutral', 'Collect references', 'project-c')
+
+    expect(scoreBroadFallbackTask(timeblocked, [
+      feedback({
+        recommendationId: 'inline_next_task_task-timeblocked',
+        taskId: 'task-timeblocked',
+        entityKey: 'task:task-timeblocked',
+        action: 'timeblock',
+      }),
+    ])).toBeGreaterThan(scoreBroadFallbackTask(timeblocked, []))
+
+    expect(scoreBroadFallbackTask(implicit, [
+      feedback({
+        recommendationId: 'inline_next_task_task-implicit',
+        taskId: 'task-implicit',
+        entityKey: 'task:task-implicit',
+        action: 'accept',
+        implicitPositive: true,
+      }),
+    ])).toBeGreaterThan(scoreBroadFallbackTask(implicit, []))
+
+    expect(rankBroadFallbackTasks([neutral, timeblocked], [
+      feedback({
+        recommendationId: 'inline_next_task_task-timeblocked',
+        taskId: 'task-timeblocked',
+        entityKey: 'task:task-timeblocked',
+        action: 'timeblock',
+      }),
+    ])[0].id).toBe('task-timeblocked')
+    vi.useRealTimers()
+  })
 })

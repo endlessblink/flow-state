@@ -21,6 +21,7 @@ const aiMemoryTypes = readFileSync(join(root, 'src/types/aiMemory.ts'), 'utf8')
 const liveSchemaChecker = readFileSync(join(root, 'scripts/check-ai-memory-schema.cjs'), 'utf8')
 const crudSmokeChecker = readFileSync(join(root, 'scripts/check-ai-memory-crud.cjs'), 'utf8')
 const liveMigrationBundler = readFileSync(join(root, 'scripts/build-ai-memory-migration-bundle.cjs'), 'utf8')
+const liveMigrationApplier = readFileSync(join(root, 'scripts/apply-ai-memory-live-migration.sh'), 'utf8')
 
 const tableColumns: Record<string, string[]> = {
   ai_context_entities: [
@@ -274,5 +275,16 @@ describe('AI memory schema contract', () => {
     expect(crudSmokeChecker).toContain('probe:ai-memory:')
     expect(crudSmokeChecker).toContain('cleanup')
     expect(crudSmokeChecker).toContain('Probe rows inserted, read, and deleted successfully')
+  })
+
+  it('keeps the live AI memory migration applier dry-run by default and double-confirmed', () => {
+    expect(liveMigrationApplier).toContain('DRY RUN ONLY')
+    expect(liveMigrationApplier).toContain('APPLY_AI_MEMORY_LIVE')
+    expect(liveMigrationApplier).toContain('CONFIRM_AI_MEMORY_LIVE')
+    expect(liveMigrationApplier).toContain('CONFIRM_AI_MEMORY_LIVE=APPLY')
+    expect(liveMigrationApplier).toContain('npm run build:ai-memory-migration-bundle')
+    expect(liveMigrationApplier).toContain('psql -v ON_ERROR_STOP=1')
+    expect(liveMigrationApplier).toContain('npm run check:ai-memory-schema')
+    expect(liveMigrationApplier).toContain('AI_MEMORY_CRUD_PROBE=1 npm run check:ai-memory-crud')
   })
 })

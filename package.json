@@ -28,6 +28,7 @@
     "check:ai-memory-schema": "node scripts/check-ai-memory-schema.cjs",
     "check:ai-memory-crud": "node scripts/check-ai-memory-crud.cjs",
     "build:ai-memory-migration-bundle": "node scripts/build-ai-memory-migration-bundle.cjs",
+    "apply:ai-memory-live-migration": "bash scripts/apply-ai-memory-live-migration.sh",
     "dev:manager": "cd watchpost && npm start",
     "postinstall": "node scripts/patch-electron-builder-dependency-parser.cjs && ([ -d watchpost ] && cd watchpost && npm install || true)",
     "kill": "bash scripts/kill-flow-state.sh",

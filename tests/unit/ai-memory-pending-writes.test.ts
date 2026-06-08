@@ -374,7 +374,35 @@ describe('AI memory pending write queue', () => {
     expect(snapshot.clarificationEvents[0]).toMatchObject({ selectedLabel: 'Real impact' })
     expect(snapshot.parameterBeliefs[0]).toMatchObject({ parameterKey: 'rankingFocus', confidence: 0.9 })
     expect(snapshot.recommendationFeedback[0]).toMatchObject({ action: 'dismiss', reasonCategory: 'not_important' })
+    expect(snapshot.schemaStatus).toBe('ready')
+    expect(snapshot.schemaMissingTables).toEqual([])
     expect(snapshot.pendingWriteCount).toBe(0)
+  })
+
+  it('reports missing server memory schema in the debug snapshot instead of throwing', async () => {
+    const db = useAIMemoryDatabase(createContext())
+
+    const snapshot = await db.fetchAIMemoryDebugSnapshot(6)
+
+    expect(snapshot.schemaStatus).toBe('missing')
+    expect(snapshot.schemaMissingTables).toEqual([
+      'ai_clarification_events',
+      'ai_context_edges',
+      'ai_context_entities',
+      'ai_parameter_beliefs',
+      'ai_recommendation_feedback',
+    ])
+    expect(snapshot.contextEntities).toEqual([])
+    expect(snapshot.pendingWriteCount).toBe(0)
+  })
+
+  it('reports local-only memory mode for guests', async () => {
+    const db = useAIMemoryDatabase(createGuestContext())
+
+    const snapshot = await db.fetchAIMemoryDebugSnapshot(6)
+
+    expect(snapshot.schemaStatus).toBe('local_only')
+    expect(snapshot.schemaMissingTables).toEqual([])
   })
 
   it('reads graph edges by source or target entity key without UUID casting', async () => {

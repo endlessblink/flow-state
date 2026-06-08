@@ -1065,17 +1065,28 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       clarificationEvents: [],
       parameterBeliefs: [],
       recommendationFeedback: [],
+      schemaStatus: userId ? 'ready' : 'local_only',
+      schemaMissingTables: [],
       pendingWriteCount: getPendingAIMemoryWriteCount(),
       loadedAt: new Date().toISOString(),
     })
     if (!userId) return empty()
 
-    const safeRead = async <T>(label: string, read: () => Promise<T[]>): Promise<T[]> => {
+    const memoryTables = [
+      'ai_context_entities',
+      'ai_context_edges',
+      'ai_clarification_events',
+      'ai_parameter_beliefs',
+      'ai_recommendation_feedback',
+    ]
+    const missingTables = new Set<string>()
+    const safeRead = async <T>(label: string, table: string, read: () => Promise<T[]>): Promise<T[]> => {
       try {
         return await withRetry(read, label)
       } catch (e) {
         if (isAIMemorySchemaMissing(e)) {
           logMissingAIMemorySchema(label)
+          missingTables.add(table)
           return []
         }
         handleError(e, label)
@@ -1084,7 +1095,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
 
     const [contextEntities, contextEdges, clarificationEvents, parameterBeliefs, recommendationFeedback] = await Promise.all([
-      safeRead('fetchAIMemoryDebugSnapshot:entities', async () => {
+      safeRead('fetchAIMemoryDebugSnapshot:entities', 'ai_context_entities', async () => {
         const { data, error } = await getSupabase()
           .from('ai_context_entities')
           .select('*')
@@ -1094,7 +1105,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (error) throw error
         return ((data ?? []) as AIContextEntityRow[]).map(toAIContextEntity)
       }),
-      safeRead('fetchAIMemoryDebugSnapshot:edges', async () => {
+      safeRead('fetchAIMemoryDebugSnapshot:edges', 'ai_context_edges', async () => {
         const { data, error } = await getSupabase()
           .from('ai_context_edges')
           .select('*')
@@ -1104,7 +1115,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (error) throw error
         return ((data ?? []) as AIContextEdgeRow[]).map(toAIContextEdge)
       }),
-      safeRead('fetchAIMemoryDebugSnapshot:events', async () => {
+      safeRead('fetchAIMemoryDebugSnapshot:events', 'ai_clarification_events', async () => {
         const { data, error } = await getSupabase()
           .from('ai_clarification_events')
           .select('*')
@@ -1114,7 +1125,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (error) throw error
         return ((data ?? []) as AIClarificationEventRow[]).map(toAIClarificationEvent)
       }),
-      safeRead('fetchAIMemoryDebugSnapshot:beliefs', async () => {
+      safeRead('fetchAIMemoryDebugSnapshot:beliefs', 'ai_parameter_beliefs', async () => {
         const { data, error } = await getSupabase()
           .from('ai_parameter_beliefs')
           .select('*')
@@ -1124,7 +1135,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (error) throw error
         return ((data ?? []) as AIParameterBeliefRow[]).map(toAIParameterBelief)
       }),
-      safeRead('fetchAIMemoryDebugSnapshot:feedback', async () => {
+      safeRead('fetchAIMemoryDebugSnapshot:feedback', 'ai_recommendation_feedback', async () => {
         const { data, error } = await getSupabase()
           .from('ai_recommendation_feedback')
           .select('*')
@@ -1135,6 +1146,12 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         return ((data ?? []) as AIRecommendationFeedbackRow[]).map(toAIRecommendationFeedback)
       }),
     ])
+    const schemaMissingTables = [...missingTables].sort()
+    const schemaStatus: AIMemoryDebugSnapshot['schemaStatus'] = schemaMissingTables.length === 0
+      ? 'ready'
+      : schemaMissingTables.length === memoryTables.length
+        ? 'missing'
+        : 'partial'
 
     return {
       contextEntities,
@@ -1142,6 +1159,8 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       clarificationEvents,
       parameterBeliefs,
       recommendationFeedback,
+      schemaStatus,
+      schemaMissingTables,
       pendingWriteCount: getPendingAIMemoryWriteCount(),
       loadedAt: new Date().toISOString(),
     }

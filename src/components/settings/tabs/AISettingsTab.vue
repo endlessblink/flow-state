@@ -74,6 +74,15 @@ const aiMemoryDebugCounts = computed(() => {
   ]
 })
 
+const aiMemorySchemaStatusLabel = computed(() => {
+  const snapshot = aiMemoryDebug.value
+  if (!snapshot) return ''
+  if (snapshot.schemaStatus === 'ready') return 'Server schema ready'
+  if (snapshot.schemaStatus === 'local_only') return 'Local memory only'
+  if (snapshot.schemaStatus === 'missing') return 'AI memory schema missing'
+  return `AI memory schema partial: ${snapshot.schemaMissingTables.join(', ')}`
+})
+
 function aiMemoryEventLabel(snapshot: AIMemoryDebugSnapshot): string[] {
   return snapshot.clarificationEvents.slice(0, 3).map(event => {
     const answer = event.selectedLabel || event.freeText || event.eventType
@@ -913,7 +922,18 @@ async function onClearMemories() {
             {{ aiMemoryDebugError }}
           </div>
 
-          <div v-else-if="aiMemoryDebug" class="ai-memory-debug-list">
+          <div
+            v-if="!aiMemoryDebugError && aiMemoryDebug"
+            class="ai-memory-debug-status"
+            :data-status="aiMemoryDebug.schemaStatus"
+          >
+            {{ aiMemorySchemaStatusLabel }}
+            <span v-if="aiMemoryDebug.pendingWriteCount > 0">
+              · {{ aiMemoryDebug.pendingWriteCount }} queued write{{ aiMemoryDebug.pendingWriteCount === 1 ? '' : 's' }}
+            </span>
+          </div>
+
+          <div v-if="!aiMemoryDebugError && aiMemoryDebug" class="ai-memory-debug-list">
             <span
               v-for="entity in aiMemoryDebug.contextEntities.slice(0, 3)"
               :key="`entity:${entity.entityKey}`"
@@ -2097,6 +2117,21 @@ async function onClearMemories() {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
+}
+
+.ai-memory-debug-status {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+}
+
+.ai-memory-debug-status[data-status='ready'] {
+  color: var(--brand-primary);
+}
+
+.ai-memory-debug-status[data-status='partial'],
+.ai-memory-debug-status[data-status='missing'] {
+  color: var(--color-warning);
 }
 
 .detail-tag {

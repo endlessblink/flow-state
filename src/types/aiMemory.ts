@@ -343,6 +343,8 @@ export interface AIMemoryDebugSnapshot {
   clarificationEvents: AIClarificationEvent[]
   parameterBeliefs: AIParameterBelief[]
   recommendationFeedback: AIRecommendationFeedback[]
+  schemaStatus: 'ready' | 'partial' | 'missing' | 'local_only'
+  schemaMissingTables: string[]
   pendingWriteCount: number
   loadedAt: string
 }

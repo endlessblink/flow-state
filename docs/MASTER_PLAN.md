@@ -152,6 +152,7 @@
 - 2026-06-08: Ran the standalone read-only VPS preflight against the real server. It found database container `supabase-db`, completed `psql` connectivity, and exited with "No production database changes were made." Live schema remains missing until the explicit apply step is approved.
 - 2026-06-08: Added `npm run check:ai-memory-live-readiness`, a combined read-only live gate that runs the VPS DB preflight and then writes the REST schema readiness JSON report. It intentionally does not upload SQL, apply migrations, or run the guarded CRUD write probe.
 - 2026-06-08: Ran `npm run check:ai-memory-live-readiness` against the real VPS/API. The read-only preflight found `supabase-db` and made no production changes; the command then failed the readiness gate because the REST schema check still reports PGRST205 for all six AI-memory tables and writes `/tmp/flowstate-ai-memory-live-readiness-current.json`.
+- 2026-06-08: Added `npm run check:ai-memory-migration-safety`, a read-only destructive-operation gate for the generated live AI-memory SQL bundle. It allows retry-safe `drop policy if exists` and `drop trigger if exists`, but rejects table/schema/index/function/view drops, truncation, data deletes, and column drops. The live apply helper now runs this safety check immediately after bundle generation in dry-run, preflight-only, and confirmed-apply modes.
 
 ---
 

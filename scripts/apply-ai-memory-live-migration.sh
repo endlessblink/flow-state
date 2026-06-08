@@ -29,6 +29,8 @@ run_vps_db_preflight() {
 
 echo "[ai-memory-live] Generating migration bundle..."
 npm run build:ai-memory-migration-bundle -- "$BUNDLE_PATH"
+echo "[ai-memory-live] Checking migration bundle safety..."
+npm run check:ai-memory-migration-safety -- "$BUNDLE_PATH"
 
 if [[ "${AI_MEMORY_PREFLIGHT_ONLY:-0}" == "1" ]]; then
   run_vps_db_preflight

@@ -22,6 +22,7 @@ const aiMemoryTypes = readFileSync(join(root, 'src/types/aiMemory.ts'), 'utf8')
 const liveSchemaChecker = readFileSync(join(root, 'scripts/check-ai-memory-schema.cjs'), 'utf8')
 const crudSmokeChecker = readFileSync(join(root, 'scripts/check-ai-memory-crud.cjs'), 'utf8')
 const liveMigrationBundler = readFileSync(join(root, 'scripts/build-ai-memory-migration-bundle.cjs'), 'utf8')
+const liveMigrationSafetyChecker = readFileSync(join(root, 'scripts/check-ai-memory-migration-safety.cjs'), 'utf8')
 const liveMigrationApplier = readFileSync(join(root, 'scripts/apply-ai-memory-live-migration.sh'), 'utf8')
 const liveReadinessChecker = readFileSync(join(root, 'scripts/check-ai-memory-live-readiness.sh'), 'utf8')
 
@@ -271,6 +272,17 @@ describe('AI memory schema contract', () => {
     expect(liveMigrationBundler).toContain('npm run check:ai-memory-schema')
   })
 
+  it('keeps the live AI memory migration safety gate destructive-operation focused', () => {
+    expect(liveMigrationSafetyChecker).toContain('drop\\s+policy\\s+if\\s+exists')
+    expect(liveMigrationSafetyChecker).toContain('drop\\s+trigger\\s+if\\s+exists')
+    expect(liveMigrationSafetyChecker).toContain('drop table')
+    expect(liveMigrationSafetyChecker).toContain('drop schema')
+    expect(liveMigrationSafetyChecker).toContain('truncate')
+    expect(liveMigrationSafetyChecker).toContain('delete from')
+    expect(liveMigrationSafetyChecker).toContain('alter table drop column')
+    expect(liveMigrationSafetyChecker).toContain('Refusing unsafe AI memory migration bundle')
+  })
+
   it('keeps the AI memory CRUD smoke guarded and aligned with server memory tables', () => {
     for (const table of Object.keys(tableColumns)) {
       expect(crudSmokeChecker, `${table} CRUD smoke table`).toContain(table)
@@ -292,6 +304,7 @@ describe('AI memory schema contract', () => {
     expect(liveMigrationApplier).toContain('CONFIRM_AI_MEMORY_LIVE')
     expect(liveMigrationApplier).toContain('CONFIRM_AI_MEMORY_LIVE=APPLY')
     expect(liveMigrationApplier).toContain('npm run build:ai-memory-migration-bundle')
+    expect(liveMigrationApplier).toContain('npm run check:ai-memory-migration-safety')
     expect(liveMigrationApplier).toContain('psql -v ON_ERROR_STOP=1')
     expect(liveMigrationApplier).toContain('REMOTE_CONTAINER_LOOKUP')
     expect(liveMigrationApplier).toContain('No Supabase/Postgres container found')

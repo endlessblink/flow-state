@@ -59,6 +59,11 @@ import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
 import { collectCardTasks, ensureCardTaskMentions, parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 import {
+  broadFallbackTaskText,
+  rankBroadFallbackTasks,
+  scoreBroadFallbackTask,
+} from '@/services/ai/pipeline/broadFallbackRanking'
+import {
   buildQuickDraftWeeklyPlan,
   buildWeeklyPlanningInterview,
   buildWeeklyPlanReliabilityFallback,
@@ -876,14 +881,6 @@ export function useAIChat() {
     }).join('\n\n')
   }
 
-  function projectEntityKey(projectId: string): string {
-    return `project:${projectId || 'uncategorized'}`
-  }
-
-  function taskEntityKey(taskId: string): string {
-    return `task:${taskId}`
-  }
-
   async function buildAIMemorySummaryForToolResults(toolResults: ToolResult[], lang: 'he' | 'en'): Promise<AIMemorySummaryResult> {
     const cardTasks = collectCardTasks(toolResults)
     if (!cardTasks.length) return { summary: '', recommendationFeedback: [] }
@@ -948,81 +945,6 @@ export function useAIChat() {
     return tasks
   }
 
-  function fallbackFeedbackMatchesTask(feedback: AIRecommendationFeedback, task: Record<string, unknown>): boolean {
-    const taskId = String(task.id || '')
-    const projectId = String(task.projectId || '')
-    if (feedback.taskId && feedback.taskId === taskId) return true
-    if (feedback.entityKey === taskEntityKey(taskId)) return true
-    if (feedback.recommendationId && feedback.recommendationId.includes(taskId)) return true
-    if (feedback.recommendationId?.startsWith('inline_')) return false
-    if (projectId && feedback.entityKey === projectEntityKey(projectId)) return true
-    return false
-  }
-
-  function fallbackFeedbackSignal(task: Record<string, unknown>, feedback: AIRecommendationFeedback[] = [], now = Date.now()): { penalty: number; positiveBoost: number; suppressed: boolean } {
-    const matching = feedback
-      .filter(event => fallbackFeedbackMatchesTask(event, task))
-      .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
-    let penalty = 0
-    let positiveBoost = 0
-    let suppressed = false
-    for (const event of matching.slice(0, 6)) {
-      const createdAt = event.createdAt ? Date.parse(event.createdAt) : now
-      const ageDays = Number.isFinite(createdAt) ? (now - createdAt) / (24 * 60 * 60 * 1000) : 0
-      const revisitAt = event.revisitAt ? Date.parse(event.revisitAt) : null
-      const revisitInFuture = revisitAt !== null && Number.isFinite(revisitAt) && revisitAt > now
-      if (event.action === 'dismiss') {
-        penalty = Math.max(penalty, ageDays < 14 ? 0.9 : 0.45)
-        suppressed ||= ageDays < 14
-      } else if (event.action === 'postpone') {
-        penalty = Math.max(penalty, revisitInFuture ? 0.85 : ageDays < 7 ? 0.55 : 0.25)
-        suppressed ||= revisitInFuture || ageDays < 7
-      } else if (event.action === 'simplify') {
-        penalty = Math.max(penalty, ageDays < 7 ? 0.35 : 0.15)
-      } else if (event.action === 'accept' || event.action === 'timeblock' || event.implicitPositive) {
-        positiveBoost = Math.max(positiveBoost, ageDays < 14 ? 0.25 : 0.1)
-      }
-    }
-    return { penalty, positiveBoost, suppressed }
-  }
-
-  function fallbackTaskScore(task: Record<string, unknown>, recommendationFeedback: AIRecommendationFeedback[] = []): number {
-    const title = String(task.title || '').toLowerCase()
-    const description = String(task.description || '').toLowerCase()
-    const text = `${title} ${description}`
-    let score = 0
-
-    if (task.status === 'in_progress') score += 4
-    if (task.priority === 'urgent') score += 7
-    if (task.priority === 'high') score += 5
-    if (task.priority === 'medium') score += 2
-    if (description.trim()) score += 3
-    if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום)/i.test(text)) score += 8
-    if (/(treatment|medicine|dose|twice a day|טיפול|תרופה|מנה|מנות|אוראו|פעמיים ביום)/i.test(text)) score += 7
-    if (/(reply|send|call|email|message|stakeholder|להגיב|לשלוח|להתקשר|מייל|הודעה)/i.test(text)) score += 6
-    if (/(outreach|cold opener|target list|sales|lead|פייפרפורט|לסקין|רשימת|אאוטריץ|מכירות)/i.test(text)) score += 5
-    if (/(lecture|choose|slot|date|הרצאה|לבחור|מועד|תאריך)/i.test(text)) score += 4
-
-    const due = typeof task.dueDate === 'string' ? task.dueDate.slice(0, 10) : ''
-    if (due) {
-      const today = new Date().toISOString().slice(0, 10)
-      if (due < today) score += 6
-      else if (due === today) score += 5
-      else score += 2
-    }
-    if (typeof task.daysOverdue === 'number') score += Math.min(6, Math.max(1, task.daysOverdue))
-    if (typeof task.estimatedDuration === 'number' && task.estimatedDuration > 0 && task.estimatedDuration <= 30) score += 1
-
-    const feedback = fallbackFeedbackSignal(task, recommendationFeedback)
-    return score + feedback.positiveBoost * 8 - feedback.penalty * 18
-  }
-
-  function rankFallbackTasks(tasks: Array<Record<string, unknown> & { title?: string }>, recommendationFeedback: AIRecommendationFeedback[] = []): Array<Record<string, unknown> & { title?: string }> {
-    const ranked = [...tasks].sort((a, b) => fallbackTaskScore(b, recommendationFeedback) - fallbackTaskScore(a, recommendationFeedback))
-    const unsuppressed = ranked.filter(task => !fallbackFeedbackSignal(task, recommendationFeedback).suppressed)
-    return unsuppressed.length ? unsuppressed : ranked
-  }
-
   type FallbackAspect = {
     key: string
     name: string
@@ -1037,7 +959,7 @@ export function useAIChat() {
   const WEEKLY_FALLBACK_TASKS_PER_ASPECT = 3
 
   function fallbackTaskText(task: Record<string, unknown>): string {
-    return `${String(task.title || '')} ${String(task.description || '')}`.toLowerCase()
+    return broadFallbackTaskText(task)
   }
 
   function inferFallbackAspect(task: Record<string, unknown>, lang: 'he' | 'en'): Omit<FallbackAspect, 'tasks'> {
@@ -1287,15 +1209,15 @@ export function useAIChat() {
       const inferred = inferFallbackAspect(task, lang)
       const existing = byKey.get(inferred.key)
       if (existing) {
-        existing.tasks = rankFallbackTasks([...existing.tasks, task], recommendationFeedback).slice(0, WEEKLY_FALLBACK_TASKS_PER_ASPECT)
+        existing.tasks = rankBroadFallbackTasks([...existing.tasks, task], recommendationFeedback).slice(0, WEEKLY_FALLBACK_TASKS_PER_ASPECT)
       } else {
         byKey.set(inferred.key, { ...inferred, tasks: [task] })
       }
     }
     return [...byKey.values()]
       .sort((a, b) =>
-        Math.max(...b.tasks.map(task => fallbackTaskScore(task, recommendationFeedback))) -
-        Math.max(...a.tasks.map(task => fallbackTaskScore(task, recommendationFeedback)))
+        Math.max(...b.tasks.map(task => scoreBroadFallbackTask(task, recommendationFeedback))) -
+        Math.max(...a.tasks.map(task => scoreBroadFallbackTask(task, recommendationFeedback)))
       )
       .slice(0, WEEKLY_FALLBACK_ASPECT_LIMIT)
   }
@@ -1327,7 +1249,7 @@ export function useAIChat() {
   }
 
   function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode'], options: FormatterFallbackOptions = {}): string {
-    const tasks = rankFallbackTasks(
+    const tasks = rankBroadFallbackTasks(
       getTaskItemsFromToolResults(toolResults).filter(task => task.title),
       options.recommendationFeedback,
     ).slice(0, responseMode === 'week_plan' ? WEEKLY_FALLBACK_TASK_LIMIT : 3)
@@ -1353,7 +1275,7 @@ export function useAIChat() {
       return [intro, ...lines].filter(Boolean).join('\n') + buildFallbackCards(tasks, lang, responseMode, options)
     }
 
-    const aspects = buildFallbackAspects(tasks, lang)
+    const aspects = buildFallbackAspects(tasks, lang, options.recommendationFeedback)
     const intro = lang === 'he'
       ? 'טיוטת תכנון מהירה: חילקתי את השבוע לפי תחומי עבודה פעילים, לא לפי רשימת משימות אקראית. הניסוח העמוק יותר עדיין נטען.'
       : 'Fast planning draft: I grouped the week by active work areas, not a random task list. Deeper coaching is still loading.'

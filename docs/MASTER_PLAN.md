@@ -332,6 +332,7 @@
 - 2026-06-08: Extracted broad clarification policy into a tested pipeline module. Regression coverage now proves cold-start day/smart/general broad requests ask one concise direction question, recent answered/proceed-with-uncertainty events suppress repeats, stale decisions can refresh, and weekly planning stays on its separate interview path.
 - 2026-06-08: Broad clarification cards are now mode-specific: prioritization asks what should decide the priority order, next-task asks what makes one task right now, and overdue triage asks how to treat overdue items. Tests prove these paths no longer ask the generic "what should guide this answer?" question.
 - 2026-06-08: Localhost Playwright now proves broad-flow behavior for `prioritize my tasks`, `what should I do next?`, and `show me overdue tasks`: each prompt asks one mode-specific card before recommendations, hides task cards while asking, saves the button answer, leaves no stuck running activity, and does not re-ask the same question on the next prompt.
+- 2026-06-08: Extracted broad fallback task ranking into a tested pipeline module so non-weekly fallback answers use the same feedback-aware suppression/boost rules as retrieved memory. The chat path now imports the tested ranker instead of hiding feedback logic inside the composable.
 
 ---
 
@@ -362,6 +363,7 @@
 - 2026-06-08: Guest/localhost recommendation feedback now uses the same local AI-memory fallback as clarification answers. Local postpone/dismiss feedback is retrievable by task/entity key and derives parameter beliefs such as `energy_fit`, `ranking_focus`, and `task_recommendation_fit` for later suppression/reweighting.
 - 2026-06-08: Broad fallback ranking now uses retrieved feedback directly: recent dismiss/postpone events suppress tasks until cooldown/revisit, simplify applies a smaller penalty, and accept/timeblock/implicit-positive events boost follow-through.
 - 2026-06-08: Recommendation feedback now promotes conservative durable parameter beliefs after the raw feedback event is saved. Simplify/too-much updates `preference:brevity`, low-energy/too-hard updates `energy_fit`, not-important/wrong-context/needs-more-info updates `rankingFocus`, and accept/timeblock/implicit positives update `history`; rollout tests prove feedback still flushes even if the belief table is unavailable.
+- 2026-06-08: Added direct broad fallback ranking regressions for local task IDs: dismissed cards are suppressed during cooldown, postponed cards stay hidden until revisit, inline project feedback does not suppress every task in the project, and accept/timeblock-style feedback boosts later follow-through ranking.
 
 ---
 

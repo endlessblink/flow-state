@@ -19,6 +19,7 @@ const migrations = migrationFiles
 const memoryDbSource = readFileSync(join(root, 'src/composables/supabase/useAIMemoryDatabase.ts'), 'utf8')
 const aiMemoryTypes = readFileSync(join(root, 'src/types/aiMemory.ts'), 'utf8')
 const liveSchemaChecker = readFileSync(join(root, 'scripts/check-ai-memory-schema.cjs'), 'utf8')
+const liveMigrationBundler = readFileSync(join(root, 'scripts/build-ai-memory-migration-bundle.cjs'), 'utf8')
 
 const tableColumns: Record<string, string[]> = {
   ai_context_entities: [
@@ -246,5 +247,15 @@ describe('AI memory schema contract', () => {
     expect(liveSchemaChecker).toContain('it never prints keys')
     expect(liveSchemaChecker).toContain('limit=0')
     expect(liveSchemaChecker).toContain('Apply AI memory migrations or refresh the REST schema cache')
+  })
+
+  it('keeps the live AI memory migration bundle aligned with the server memory migrations', () => {
+    for (const file of migrationFiles.filter(file => file.includes('/20260608'))) {
+      expect(liveMigrationBundler).toContain(file.split('/').at(-1))
+    }
+
+    expect(liveMigrationBundler).toContain('drop policy if exists')
+    expect(liveMigrationBundler).toContain('Review before applying to production')
+    expect(liveMigrationBundler).toContain('npm run check:ai-memory-schema')
   })
 })

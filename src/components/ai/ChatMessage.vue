@@ -966,7 +966,8 @@ function clarificationDebugLines(card: AIClarificationArtifact): string[] {
   }
   if (card.debug?.retrieval) {
     const retrieval = card.debug.retrieval
-    lines.push(`memory: ${retrieval.entityKeyCount} keys, ${retrieval.eventCount} events, ${retrieval.elapsedMs ?? '?'}ms${retrieval.timedOut ? ', timed out' : ''}`)
+    const feedback = retrieval.feedbackCount ? `, ${retrieval.feedbackCount} feedback` : ''
+    lines.push(`memory: ${retrieval.entityKeyCount} keys, ${retrieval.eventCount} events${feedback}, ${retrieval.elapsedMs ?? '?'}ms${retrieval.timedOut ? ', timed out' : ''}`)
   }
   if (card.debug?.reason) lines.push(card.debug.reason)
   return lines

@@ -9,7 +9,7 @@ import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
-import { buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
+import { buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, buildWeeklyPlanPrompt, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -792,6 +792,82 @@ describe('AI sidebar-first desktop experience', () => {
     expect(quickDraft.recommendations[0].whyThisMatters).toContain('Saved project context')
   })
 
+  it('uses recent recommendation feedback to suppress repeated weekly suggestions', () => {
+    const baseTask = {
+      status: 'todo',
+      priority: 'medium',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '2026-06-12',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } satisfies Partial<Task>
+    const tasks = [
+      {
+        ...baseTask,
+        id: 'task-dismissed-client',
+        title: 'Prepare client renewal packet',
+        description: 'Client renewal context is clear but the user dismissed this exact recommendation yesterday.',
+        projectId: 'client-renewals',
+        priority: 'high',
+        estimatedDuration: 90,
+      } as Task,
+      {
+        ...baseTask,
+        id: 'task-memory-quality',
+        title: 'Tighten planner memory rubric',
+        description: 'Product work that improves whether weekly planning feels grounded in real context.',
+        projectId: 'ai-planner',
+        estimatedDuration: 90,
+      } as Task,
+      {
+        ...baseTask,
+        id: 'task-release-blocker',
+        title: 'Fix release blocker before QA',
+        description: 'Blocks QA signoff and prevents a reliable release handoff this week.',
+        projectId: 'release',
+        estimatedDuration: 60,
+      } as Task,
+      {
+        ...baseTask,
+        id: 'task-admin-review',
+        title: 'Review admin document',
+        description: 'Admin paperwork with enough context to avoid a clarification-first plan.',
+        projectId: 'admin',
+        estimatedDuration: 30,
+      } as Task,
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+      {
+        recommendationFeedback: [{
+          recommendationId: 'quick_1_task-dismissed-client',
+          taskId: null,
+          entityKey: 'project:client-renewals',
+          action: 'dismiss',
+          reasonCategory: 'not_important',
+          implicitPositive: false,
+          createdAt: '2026-06-06T09:00:00Z',
+        }],
+      },
+    )
+    const quickDraft = buildQuickDraftWeeklyPlan(context)
+
+    expect(context.tasks.find(task => task.id === 'task-dismissed-client')?.derived.recommendationFeedback.penalty).toBeGreaterThan(0.7)
+    expect(quickDraft.recommendations.map(rec => rec.primaryTaskId)).not.toContain('task-dismissed-client')
+    expect(quickDraft.deferrals).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        taskId: 'task-dismissed-client',
+        reason: expect.stringContaining('dismissed it recently'),
+      }),
+    ]))
+    expect(buildWeeklyPlanPrompt(context)).toContain('recommendationFeedbackSummary')
+  })
+
   it('lets weekly-plan question buttons create a linked follow-up task with optional user text', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({
@@ -1323,6 +1399,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('parseWeeklyPlanOutput')
     expect(aiChat).toContain('fetchProjectContexts(projectIds)')
     expect(aiChat).toContain('fetchTaskContexts(taskIds)')
+    expect(aiChat).toContain('fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 })')
     expect(aiChat).toContain('const clarification = buildWeeklyPlanningInterview(weekContext, clarificationEvents, {')
     expect(aiChat).toContain('clarification,')
     expect(aiChat).toContain('recordAIClarificationEvent')
@@ -1342,6 +1419,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(weeklyPlan).toContain('buildQuickDraftWeeklyPlan')
     expect(weeklyPlan).toContain('buildWeeklyPlanReliabilityFallback')
     expect(weeklyPlan).toContain('buildWeeklyPlanningInterview')
+    expect(weeklyPlan).toContain('recommendationFeedbackSummary')
+    expect(weeklyPlan).toContain('isSuppressedByRecommendationFeedback')
+    expect(weeklyPlan).toContain('feedbackDeferralReason')
     expect(weeklyPlan).toContain("schemaVersion: 'ai-clarification.v1'")
     expect(weeklyPlan).toContain('I did not get a reliable enough plan')
     expect(weeklyPlan).toContain('Best plan from task evidence')
@@ -1373,6 +1453,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain("from('ai_clarification_events')")
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('recordAIClarificationEvent')
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('recordAIRecommendationFeedback')
+    expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('fetchAIRecommendationFeedback')
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('upsertAIContextEdges')
     expect(src('supabase/migrations/20260608090000_ai_clarification_memory.sql')).toContain('create table if not exists public.ai_context_entities')
     expect(src('supabase/migrations/20260608090000_ai_clarification_memory.sql')).toContain('create table if not exists public.ai_clarification_events')

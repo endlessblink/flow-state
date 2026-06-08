@@ -1791,6 +1791,7 @@ export function useAIChat() {
         let memoryEntityKeyCount = 0
         let memoryProjectContextCount = 0
         let memoryTaskContextCount = 0
+        let memoryFeedbackCount = 0
         try {
           const db = useSupabaseDatabase()
           const taskIds = uniqueSupabaseIds(cardTasks.map(task => String(task.id || '')))
@@ -1807,11 +1808,12 @@ export function useAIChat() {
           const weekEntityKey = `week:${buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, now).weekStartIso}`
           const entityKeys = uniqueStrings([...projectEntityKeys, ...taskEntityKeys, weekEntityKey])
           memoryEntityKeyCount = entityKeys.length
-          const [projectContexts, taskContexts, contextEntities, events] = await withTimeout(Promise.all([
+          const [projectContexts, taskContexts, contextEntities, events, recommendationFeedback] = await withTimeout(Promise.all([
             db.fetchProjectContexts(projectIds),
             db.fetchTaskContexts(taskIds),
             db.fetchAIContextEntities(entityKeys),
             db.fetchAIClarificationEvents(entityKeys, 40),
+            db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 }),
           ]), WEEK_PLAN_MEMORY_TIMEOUT_MS, 'weekly_plan_memory_timeout')
           clarificationEvents = events
           const entityProjectContexts = contextEntities.map(entityToProjectContext).filter((ctx): ctx is ProjectContext => Boolean(ctx))
@@ -1821,9 +1823,11 @@ export function useAIChat() {
               .filter((ctx, index, all) => all.findIndex(item => item.projectId === ctx.projectId) === index),
             taskContexts: [...taskContexts, ...entityTaskContexts]
               .filter((ctx, index, all) => all.findIndex(item => item.taskId === ctx.taskId) === index),
+            recommendationFeedback,
           }
           memoryProjectContextCount = weekMemory.projectContexts?.length ?? 0
           memoryTaskContextCount = weekMemory.taskContexts?.length ?? 0
+          memoryFeedbackCount = recommendationFeedback.length
           await db.upsertAIContextEdges([
             ...cardTasks.flatMap(task => {
               const taskId = String(task.id || '')
@@ -1864,6 +1868,7 @@ export function useAIChat() {
             taskContextCount: memoryTaskContextCount,
             elapsedMs: Math.round(performance.now() - memoryStartedAt),
             timedOut: memoryTimedOut,
+            feedbackCount: memoryFeedbackCount,
           },
           reason: memoryTimedOut
             ? 'memory retrieval timed out; ask-before-plan prevents fake certainty'
@@ -1896,6 +1901,7 @@ export function useAIChat() {
                 candidateTaskIds: clarification.candidateTaskIds,
                 coverage: clarification.coverage,
                 retrieval: clarification.debug?.retrieval,
+                feedbackCount: memoryFeedbackCount,
               },
             })
           } catch (eventErr) {

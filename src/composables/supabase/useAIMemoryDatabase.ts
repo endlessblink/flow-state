@@ -4,6 +4,7 @@ import type {
   AIContextEntity,
   AIContextEdgeInput,
   AIMemoryPatch,
+  AIRecommendationFeedback,
   AIRecommendationFeedbackInput,
   ProjectContext,
   TaskContext,
@@ -91,6 +92,22 @@ type AIClarificationEventRow = {
   uncertainty_dimensions?: unknown
   path_type?: AIClarificationEvent['pathType']
   context_snapshot?: Record<string, unknown> | null
+  created_at?: string | null
+}
+
+type AIRecommendationFeedbackRow = {
+  id?: string
+  generated_plan_id?: string | null
+  recommendation_id: string
+  task_id?: string | null
+  entity_key?: string | null
+  action: AIRecommendationFeedback['action']
+  reason_category?: AIRecommendationFeedback['reasonCategory'] | null
+  free_text?: string | null
+  revisit_at?: string | null
+  outcome_signals?: Record<string, unknown> | null
+  implicit_positive?: boolean
+  source_message_id?: string | null
   created_at?: string | null
 }
 
@@ -236,6 +253,24 @@ function toAIClarificationEvent(row: AIClarificationEventRow): AIClarificationEv
     uncertaintyDimensions: stringArray(row.uncertainty_dimensions) as AIClarificationEvent['uncertaintyDimensions'],
     pathType: row.path_type ?? null,
     contextSnapshot: row.context_snapshot ?? null,
+    createdAt: row.created_at ?? null,
+  }
+}
+
+function toAIRecommendationFeedback(row: AIRecommendationFeedbackRow): AIRecommendationFeedback {
+  return {
+    id: row.id,
+    generatedPlanId: row.generated_plan_id ?? null,
+    recommendationId: row.recommendation_id,
+    taskId: row.task_id ?? null,
+    entityKey: row.entity_key ?? null,
+    action: row.action,
+    reasonCategory: row.reason_category ?? null,
+    freeText: row.free_text ?? null,
+    revisitAt: row.revisit_at ?? null,
+    outcomeSignals: row.outcome_signals ?? {},
+    implicitPositive: Boolean(row.implicit_positive),
+    sourceMessageId: row.source_message_id ?? null,
     createdAt: row.created_at ?? null,
   }
 }
@@ -450,6 +485,57 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       }, 'fetchAIClarificationEvents')
     } catch (e) {
       handleError(e, 'fetchAIClarificationEvents')
+      return []
+    }
+  }
+
+  const fetchAIRecommendationFeedback = async (
+    input: { taskIds?: string[]; entityKeys?: string[]; limit?: number },
+  ): Promise<AIRecommendationFeedback[]> => {
+    const taskIds = uniqueStrings(input.taskIds ?? []).filter(isSupabaseUuid)
+    const entityKeys = uniqueStrings(input.entityKeys ?? [])
+    if (!taskIds.length && !entityKeys.length) return []
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) return []
+    const limit = input.limit ?? 80
+    try {
+      return await withRetry(async () => {
+        const queries: Promise<{ data: unknown[] | null; error: unknown }>[] = []
+        if (taskIds.length) {
+          queries.push(getSupabase()
+            .from('ai_recommendation_feedback')
+            .select('*')
+            .eq('user_id', userId)
+            .in('task_id', taskIds)
+            .order('created_at', { ascending: false })
+            .limit(limit) as unknown as Promise<{ data: unknown[] | null; error: unknown }>)
+        }
+        if (entityKeys.length) {
+          queries.push(getSupabase()
+            .from('ai_recommendation_feedback')
+            .select('*')
+            .eq('user_id', userId)
+            .in('entity_key', entityKeys)
+            .order('created_at', { ascending: false })
+            .limit(limit) as unknown as Promise<{ data: unknown[] | null; error: unknown }>)
+        }
+        const results = await Promise.all(queries)
+        for (const result of results) {
+          if (result.error) throw result.error
+        }
+        const byId = new Map<string, AIRecommendationFeedback>()
+        for (const row of results.flatMap(result => result.data ?? [])) {
+          const feedback = toAIRecommendationFeedback(row as AIRecommendationFeedbackRow)
+          const key = feedback.id || `${feedback.recommendationId}:${feedback.taskId ?? ''}:${feedback.entityKey ?? ''}:${feedback.createdAt ?? ''}`
+          byId.set(key, feedback)
+        }
+        return [...byId.values()]
+          .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+          .slice(0, limit)
+      }, 'fetchAIRecommendationFeedback')
+    } catch (e) {
+      handleError(e, 'fetchAIRecommendationFeedback')
       return []
     }
   }
@@ -702,6 +788,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     searchAIMemory,
     fetchAIContextEntities,
     fetchAIClarificationEvents,
+    fetchAIRecommendationFeedback,
     shouldAskClarification,
     recordAIClarificationEvent,
     recordAIRecommendationFeedback,

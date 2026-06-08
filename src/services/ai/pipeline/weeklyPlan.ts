@@ -5,6 +5,7 @@ import type {
   AIClarificationEvent,
   AIClarificationQuestion,
   AIMemoryQuestionOption,
+  AIRecommendationFeedback,
   ProjectContext,
   TaskContext,
 } from '@/types/aiMemory'
@@ -63,6 +64,14 @@ export type PlannerTaskSnapshot = {
     substantialWorkScore: number
     quickErrandScore: number
     projectImportanceScore: number
+    recommendationFeedback: {
+      recentNegativeCount: number
+      recentPositiveCount: number
+      lastAction?: AIRecommendationFeedback['action']
+      lastReasonCategory?: AIRecommendationFeedback['reasonCategory'] | null
+      cooldownUntilIso?: string | null
+      penalty: number
+    }
     candidateReasons: CandidateReason[]
     evidenceSnippets: Array<{
       field: 'title' | 'notes' | 'project' | 'history' | 'dependency'
@@ -148,6 +157,7 @@ export type WeekContext = {
   tasks: PlannerTaskSnapshot[]
   projectContexts: ProjectContextSnapshot[]
   taskContexts: TaskContextSnapshot[]
+  recommendationFeedback: AIRecommendationFeedback[]
   uncertaintyNotes: string[]
 }
 
@@ -249,6 +259,7 @@ type ToolResultLike = {
 export type WeekContextMemoryInput = {
   projectContexts?: ProjectContext[]
   taskContexts?: TaskContext[]
+  recommendationFeedback?: AIRecommendationFeedback[]
 }
 
 const MS_PER_DAY = 86_400_000
@@ -270,7 +281,14 @@ export function buildWeekContextFromToolResults(
 ): WeekContext {
   const projectContextById = new Map((memory.projectContexts ?? []).map(ctx => [ctx.projectId, ctx]))
   const taskContextById = new Map((memory.taskContexts ?? []).map(ctx => [ctx.taskId, ctx]))
-  const snapshots = selectCandidatePool(extractPlannerTasks(toolResults, allTasks, now, projectContextById, taskContextById))
+  const snapshots = selectCandidatePool(extractPlannerTasks(
+    toolResults,
+    allTasks,
+    now,
+    projectContextById,
+    taskContextById,
+    memory.recommendationFeedback ?? [],
+  ))
   const weekStart = startOfWeek(now)
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 6)
@@ -304,6 +322,7 @@ export function buildWeekContextFromToolResults(
     taskContexts: snapshots
       .map(task => task.taskContext)
       .filter((ctx): ctx is TaskContextSnapshot => Boolean(ctx)),
+    recommendationFeedback: memory.recommendationFeedback ?? [],
     uncertaintyNotes: buildMemoryUncertaintyNotes(snapshots, locale),
   }
 }
@@ -350,6 +369,7 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
       workstreams: context.workstreams,
       projectContexts: context.projectContexts,
       taskContexts: context.taskContexts,
+      recommendationFeedbackSummary: summarizeRecommendationFeedbackForPrompt(context),
       uncertaintyNotes: context.uncertaintyNotes,
     },
     candidateTasks: context.tasks,
@@ -433,6 +453,10 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
     .filter(task => !selected.some(selectedTask => selectedTask.id === task.id))
     .filter(task => task.derived.quickErrandScore >= 0.55 || task.derived.weekendEligible)
     .slice(0, 3)
+  const feedbackDeferrals = context.tasks
+    .filter(task => !selected.some(selectedTask => selectedTask.id === task.id))
+    .filter(isSuppressedByRecommendationFeedback)
+    .slice(0, 3)
   const workstreamByTaskId = buildWorkstreamLookup(context.workstreams)
   const locale = context.locale
   const recommendations = selected.map((task, index): WeeklyPlanRecommendation => {
@@ -475,13 +499,22 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
         : 'Protect work with real consequences first: dependencies, money/client/health, commitments to another person, or repeated postponement.',
     },
     recommendations,
-    deferrals: deferredErrands.map(task => ({
+    deferrals: [
+      ...feedbackDeferrals.map(task => ({
+        taskId: task.id,
+        reason: feedbackDeferralReason(task, locale),
+        revisitIso: task.derived.recommendationFeedback.cooldownUntilIso ?? task.dueIso ?? null,
+      })),
+      ...deferredErrands
+        .filter(task => !feedbackDeferrals.some(feedbackTask => feedbackTask.id === task.id))
+        .map(task => ({
       taskId: task.id,
       reason: locale === 'he'
         ? `לא שמתי את "${task.title}" במוקד השבועי כי היא נראית כמו סידור קטן שאפשר לאגד לסוף שבוע או חלון אנרגיה נמוכה.`
         : `I did not put "${task.title}" in the weekly focus because it looks like a small errand that can be batched into the weekend or a low-energy window.`,
       revisitIso: task.dueIso ?? null,
-    })),
+        })),
+    ].slice(0, 4),
     openQuestions: openQuestions.slice(0, 1),
     quality: {
       selectedTaskCount: recommendations.length,
@@ -786,20 +819,31 @@ function selectQuickDraftTasks(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapsho
   }
 
   const substantial = tasks
+    .filter(task => !isSuppressedByRecommendationFeedback(task))
     .filter(task => task.derived.substantialWorkScore >= 0.55)
     .sort((a, b) => b.derived.substantialWorkScore - a.derived.substantialWorkScore)
   const commitments = tasks.filter(task =>
-    task.dependencies?.blocksTaskIds.length ||
-    task.derived.hasHumanOrExternalStakeholder ||
-    task.derived.hasMoneyClientHealthFamilyLegalSignal ||
-    task.history.postponedCount >= 2 ||
-    task.status === 'in_progress',
+    !isSuppressedByRecommendationFeedback(task) && (
+      Boolean(task.dependencies?.blocksTaskIds.length) ||
+      task.derived.hasHumanOrExternalStakeholder ||
+      task.derived.hasMoneyClientHealthFamilyLegalSignal ||
+      task.history.postponedCount >= 2 ||
+      task.status === 'in_progress'
+    ),
   )
-  const quickErrands = tasks.filter(task => task.derived.quickErrandScore >= 0.55 || task.derived.weekendEligible)
-  const fallback = tasks.filter(task => !quickErrands.includes(task))
+  const quickErrands = tasks.filter(task =>
+    (task.derived.quickErrandScore >= 0.55 || task.derived.weekendEligible) &&
+    (!isSuppressedByRecommendationFeedback(task) || hasFeedbackUrgencyOverride(task)),
+  )
+  const fallback = tasks.filter(task => !quickErrands.includes(task) && !isSuppressedByRecommendationFeedback(task))
+  const suppressedUrgent = tasks.filter(task =>
+    task.derived.recommendationFeedback.penalty >= 0.72 &&
+    hasFeedbackUrgencyOverride(task),
+  )
 
   addFrom(substantial, 3)
   addFrom(commitments, 3)
+  addFrom(suppressedUrgent, 1)
   addFrom(fallback, target)
   if (selected.length < 3) {
     const hasSubstantialWork = tasks.some(task => task.derived.substantialWorkScore >= 0.55)
@@ -957,6 +1001,7 @@ function extractPlannerTasks(
   now: Date,
   projectContextById: Map<string, ProjectContext>,
   taskContextById: Map<string, TaskContext>,
+  recommendationFeedback: AIRecommendationFeedback[] = [],
 ): PlannerTaskSnapshot[] {
   const taskMap = new Map(allTasks.map(task => [task.id, task]))
   const candidateRecords = new Map<string, Record<string, unknown>>()
@@ -972,7 +1017,7 @@ function extractPlannerTasks(
     : allTasks.map(task => ({ task, record: task as unknown as Record<string, unknown> }))
 
   return source
-    .map(({ task, record }) => toPlannerTaskSnapshot(task, record, now, allTasks, projectContextById, taskContextById))
+    .map(({ task, record }) => toPlannerTaskSnapshot(task, record, now, allTasks, projectContextById, taskContextById, recommendationFeedback))
     .filter((snapshot): snapshot is PlannerTaskSnapshot => Boolean(snapshot && snapshot.status !== 'done' && snapshot.status !== 'dismissed'))
 }
 
@@ -1089,6 +1134,74 @@ function buildMemoryUncertaintyNotes(tasks: PlannerTaskSnapshot[], locale: Plann
   return notes
 }
 
+function summarizeTaskRecommendationFeedback(input: {
+  taskId: string
+  projectId: string
+  feedback: AIRecommendationFeedback[]
+  now: Date
+  daysUntilDue: number | null
+  isOverdue: boolean
+}): PlannerTaskSnapshot['derived']['recommendationFeedback'] {
+  const matches = input.feedback
+    .filter(event => feedbackMatchesTask(event, input.taskId, input.projectId))
+    .filter(event => event.createdAt || event.revisitAt)
+    .sort((a, b) => new Date(b.createdAt ?? b.revisitAt ?? 0).getTime() - new Date(a.createdAt ?? a.revisitAt ?? 0).getTime())
+  const nowMs = input.now.getTime()
+  let penalty = 0
+  let cooldownUntilIso: string | null = null
+  let recentNegativeCount = 0
+  let recentPositiveCount = 0
+  for (const event of matches) {
+    const createdMs = new Date(event.createdAt ?? event.revisitAt ?? 0).getTime()
+    if (!Number.isFinite(createdMs) || nowMs - createdMs > 30 * MS_PER_DAY) continue
+    if (event.action === 'accept' || event.action === 'timeblock' || event.implicitPositive) {
+      recentPositiveCount += 1
+      continue
+    }
+    const cooldownDays = event.action === 'dismiss'
+      ? 14
+      : event.action === 'simplify'
+        ? 10
+        : event.action === 'postpone'
+          ? 7
+          : 3
+    const explicitRevisit = event.revisitAt ? new Date(event.revisitAt).getTime() : 0
+    const cooldownMs = Math.max(explicitRevisit || 0, createdMs + cooldownDays * MS_PER_DAY)
+    if (cooldownMs <= nowMs) continue
+    const basePenalty = event.action === 'dismiss'
+      ? 0.95
+      : event.action === 'simplify'
+        ? 0.82
+        : event.action === 'postpone'
+          ? 0.72
+          : 0.35
+    const projectWideFactor = event.entityKey === `project:${input.projectId}` && event.taskId !== input.taskId ? 0.8 : 1
+    penalty = Math.max(penalty, basePenalty * projectWideFactor)
+    recentNegativeCount += 1
+    cooldownUntilIso = new Date(cooldownMs).toISOString()
+  }
+  const positiveRelief = Math.min(0.25, recentPositiveCount * 0.08)
+  const urgentRelief = input.isOverdue || (typeof input.daysUntilDue === 'number' && input.daysUntilDue <= 1) ? 0.25 : 0
+  const finalPenalty = Math.max(0, Number((penalty - positiveRelief - urgentRelief).toFixed(3)))
+  const last = matches[0]
+  return {
+    recentNegativeCount,
+    recentPositiveCount,
+    lastAction: last?.action,
+    lastReasonCategory: last?.reasonCategory ?? null,
+    cooldownUntilIso,
+    penalty: finalPenalty,
+  }
+}
+
+function feedbackMatchesTask(event: AIRecommendationFeedback, taskId: string, projectId: string): boolean {
+  return Boolean(
+    event.taskId === taskId ||
+    event.entityKey === `task:${taskId}` ||
+    (projectId && event.entityKey === `project:${projectId}`),
+  )
+}
+
 function toPlannerTaskSnapshot(
   task: Task | undefined,
   record: Record<string, unknown>,
@@ -1096,6 +1209,7 @@ function toPlannerTaskSnapshot(
   allTasks: Task[],
   projectContextById: Map<string, ProjectContext>,
   taskContextById: Map<string, TaskContext>,
+  recommendationFeedback: AIRecommendationFeedback[],
 ): PlannerTaskSnapshot | null {
   const id = task?.id ?? String(record.id || '')
   const title = task?.title ?? String(record.title || '')
@@ -1134,6 +1248,14 @@ function toPlannerTaskSnapshot(
   const quickErrandScore = scoreQuickErrand({ text, domain, estimateMinutes, openSubtaskCount })
   const projectImportanceScore = scoreProjectImportance(projectContext, taskContext)
   const isOverdue = typeof daysUntilDue === 'number' && daysUntilDue < 0
+  const feedbackSignal = summarizeTaskRecommendationFeedback({
+    taskId: id,
+    projectId,
+    feedback: recommendationFeedback,
+    now,
+    daysUntilDue,
+    isOverdue,
+  })
   const isStale = now.getTime() - new Date(updatedIso).getTime() > 14 * MS_PER_DAY
   const evidenceSnippets = buildEvidenceSnippets({ title, notes, projectName, postponedCount, blocksTaskIds, blockedByTaskIds, timerMinutes, subtasks })
   const candidateReasons = buildCandidateReasons({
@@ -1190,6 +1312,7 @@ function toPlannerTaskSnapshot(
       substantialWorkScore,
       quickErrandScore,
       projectImportanceScore,
+      recommendationFeedback: feedbackSignal,
       candidateReasons,
       evidenceSnippets,
     },
@@ -1332,6 +1455,54 @@ function buildWorkstreamLookup(workstreams: PlannerWorkstream[]): Map<string, Pl
   return out
 }
 
+function summarizeRecommendationFeedbackForPrompt(context: WeekContext): Array<{
+  taskId: string
+  action: AIRecommendationFeedback['action']
+  reasonCategory?: AIRecommendationFeedback['reasonCategory'] | null
+  effect: 'positive' | 'suppressed' | 'penalized'
+  cooldownUntilIso?: string | null
+}> {
+  return context.tasks
+    .filter(task => task.derived.recommendationFeedback.lastAction)
+    .map(task => ({
+      taskId: task.id,
+      action: task.derived.recommendationFeedback.lastAction as AIRecommendationFeedback['action'],
+      reasonCategory: task.derived.recommendationFeedback.lastReasonCategory,
+      effect: (isSuppressedByRecommendationFeedback(task)
+        ? 'suppressed'
+        : task.derived.recommendationFeedback.penalty > 0
+          ? 'penalized'
+          : 'positive') as 'positive' | 'suppressed' | 'penalized',
+      cooldownUntilIso: task.derived.recommendationFeedback.cooldownUntilIso ?? null,
+    }))
+    .slice(0, 8)
+}
+
+function isSuppressedByRecommendationFeedback(task: PlannerTaskSnapshot): boolean {
+  return task.derived.recommendationFeedback.penalty >= 0.72 && !hasFeedbackUrgencyOverride(task)
+}
+
+function hasFeedbackUrgencyOverride(task: PlannerTaskSnapshot): boolean {
+  return Boolean(
+    task.derived.isOverdue ||
+    (typeof task.derived.daysUntilDue === 'number' && task.derived.daysUntilDue <= 1) ||
+    task.dependencies?.blocksTaskIds.length,
+  )
+}
+
+function feedbackDeferralReason(task: PlannerTaskSnapshot, locale: PlannerLocale): string {
+  const action = task.derived.recommendationFeedback.lastAction
+  const reason = task.derived.recommendationFeedback.lastReasonCategory
+  if (locale === 'he') {
+    if (action === 'postpone') return `לא החזרתי את "${task.title}" כהמלצה מרכזית כי דחית אותה לאחרונה${reason ? ` (${reason})` : ''}.`
+    if (action === 'simplify') return `לא החזרתי את "${task.title}" למוקד כי סימנת שהתוכנית הייתה עמוסה מדי.`
+    return `לא החזרתי את "${task.title}" כהמלצה מרכזית כי הסרת אותה לאחרונה${reason ? ` (${reason})` : ''}.`
+  }
+  if (action === 'postpone') return `I did not bring "${task.title}" back as a core recommendation because you postponed it recently${reason ? ` (${reason})` : ''}.`
+  if (action === 'simplify') return `I did not bring "${task.title}" back into focus because you marked the prior plan as too much.`
+  return `I did not bring "${task.title}" back as a core recommendation because you dismissed it recently${reason ? ` (${reason})` : ''}.`
+}
+
 function selectCandidatePool(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapshot[] {
   const scored = tasks
     .filter(task => !['done', 'dismissed'].includes(task.status))
@@ -1339,9 +1510,11 @@ function selectCandidatePool(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapshot[
     .map(item => ({ ...item, score: planningScore(item.signals) }))
     .sort((a, b) => b.score - a.score)
   const mustInclude = scored.filter(item =>
-    item.task.derived.isOverdue ||
-    item.signals.dependency > 0.6 ||
-    item.task.history.postponedCount >= 3,
+    !isSuppressedByRecommendationFeedback(item.task) && (
+      item.task.derived.isOverdue ||
+      item.signals.dependency > 0.6 ||
+      item.task.history.postponedCount >= 3
+    ),
   )
   const selected: typeof scored = []
   const projectCounts = new Map<string, number>()
@@ -1377,12 +1550,14 @@ function scoreTask(task: PlannerTaskSnapshot): TaskSignals {
   )
   const workloadFit = task.estimateMinutes == null ? 0.45 : task.estimateMinutes <= 30 ? 0.9 : task.estimateMinutes <= 90 ? 0.75 : task.estimateMinutes <= 180 ? 0.45 : 0.2
   const contextRichness = Math.min(1, task.derived.evidenceSnippets.length / 4)
+  const feedbackPenalty = task.derived.recommendationFeedback.penalty
+  const positiveFeedbackBoost = Math.min(0.12, task.derived.recommendationFeedback.recentPositiveCount * 0.06)
   return {
     urgency,
-    impact: Math.max(0, impact - 0.20 * task.derived.quickErrandScore),
+    impact: Math.max(0, Math.min(1, impact + positiveFeedbackBoost - 0.20 * task.derived.quickErrandScore - 0.35 * feedbackPenalty)),
     dependency,
-    avoidanceRisk,
-    workloadFit,
+    avoidanceRisk: Math.max(0, avoidanceRisk - 0.25 * feedbackPenalty),
+    workloadFit: Math.max(0, workloadFit - 0.2 * feedbackPenalty),
     contextRichness,
   }
 }

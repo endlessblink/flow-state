@@ -144,6 +144,7 @@ export interface AIClarificationArtifact {
       eventCount: number
       projectContextCount: number
       taskContextCount: number
+      feedbackCount?: number
       elapsedMs?: number
       timedOut?: boolean
     }
@@ -225,6 +226,22 @@ export interface AIRecommendationFeedbackInput {
   outcomeSignals?: Record<string, unknown>
   implicitPositive?: boolean
   sourceMessageId?: string
+}
+
+export interface AIRecommendationFeedback {
+  id?: string
+  generatedPlanId?: string | null
+  recommendationId: string
+  taskId?: string | null
+  entityKey?: string | null
+  action: AIRecommendationFeedbackInput['action']
+  reasonCategory?: AIRecommendationFeedbackInput['reasonCategory'] | null
+  freeText?: string | null
+  revisitAt?: string | null
+  outcomeSignals?: Record<string, unknown>
+  implicitPositive: boolean
+  sourceMessageId?: string | null
+  createdAt?: string | null
 }
 
 export interface AIContextEdgeInput {

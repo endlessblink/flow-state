@@ -226,6 +226,40 @@ describe('AI sidebar-first desktop experience', () => {
     })
   })
 
+  it('preserves active chat phases when the bounded activity timeline fills up', () => {
+    const store = useAIChatStore()
+
+    store.addActivityEvent({
+      id: 'ai-chat-phase-live',
+      type: 'thinking',
+      status: 'running',
+      label: 'Retrieving memory',
+      metadata: { startedAt: 1_000, phase: 'Retrieving memory', pathType: 'clarify_first' },
+      timestamp: 1_000,
+    })
+
+    for (let index = 0; index < 8; index += 1) {
+      store.addActivityEvent({
+        id: `completed-${index}`,
+        type: 'read',
+        status: 'success',
+        label: `Completed ${index}`,
+        timestamp: 2_000 + index,
+      })
+    }
+
+    expect(store.activityEvents).toHaveLength(8)
+    expect(store.activityEvents[0]).toMatchObject({
+      id: 'ai-chat-phase-live',
+      status: 'running',
+      label: 'Retrieving memory',
+      metadata: {
+        pathType: 'clarify_first',
+      },
+    })
+    expect(store.activityEvents.some(event => event.id === 'completed-0')).toBe(false)
+  })
+
   it('renders timeline rows from real activity state in the AI sidebar', () => {
     const store = useAIChatStore()
     store.openPanel()

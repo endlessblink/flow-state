@@ -325,6 +325,7 @@
 - 2026-06-08: Broad answer quality repair now records the exact fallback path in activity/message metadata. If the formatter fallback still fails audit, the final quality-floor guardrail is marked as `quality_floor` with source, repair stage, original failures, fallback failures, and quality-floor failures so localhost/debug proof can explain why a concise fallback appeared instead of a verbose model answer.
 - 2026-06-08: Inline recommendation feedback status now renders at the message level, so postponing/dismissing the last visible inline card still shows the saved-feedback confirmation after the card is suppressed.
 - 2026-06-08: AI memory debug now shows the same local fallback rows that retrieval uses during guest mode and schema-cache/missing-table rollouts. Local refreshed context entities, answered clarification events, parameter beliefs, and pending write counts remain visible instead of rendering an empty debug panel while the chat is actually using queued local memory.
+- 2026-06-08: The bounded activity timeline now preserves active `running` and `waiting_confirmation` rows before trimming completed history. A focused sidebar regression proves the specific live chat phase and path metadata stay visible even after many completed activity rows arrive, instead of falling back to a generic Thinking row.
 
 ---
 

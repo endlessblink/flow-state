@@ -1341,7 +1341,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
       id,
       timestamp: event.timestamp || Date.now(),
     })
-    activityEvents.value = activityEvents.value.slice(0, 8)
+    activityEvents.value = trimActivityEvents(activityEvents.value)
     return id
   }
 
@@ -1361,6 +1361,19 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
   function clearActivityEvents(): void {
     activityEvents.value = []
+  }
+
+  function trimActivityEvents(events: AIActivityEvent[], limit = 8): AIActivityEvent[] {
+    if (events.length <= limit) return events
+    const active = events.filter(event => event.status === 'running' || event.status === 'waiting_confirmation')
+    const rest = events.filter(event => event.status !== 'running' && event.status !== 'waiting_confirmation')
+    const activeIds = new Set<string>()
+    const prioritized = [...active, ...rest].filter(event => {
+      if (activeIds.has(event.id)) return false
+      activeIds.add(event.id)
+      return true
+    })
+    return prioritized.slice(0, limit)
   }
 
   // ============================================================================

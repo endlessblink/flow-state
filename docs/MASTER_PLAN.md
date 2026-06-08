@@ -33,6 +33,21 @@
 - **Blocked until current proof is green**: feedback controls expansion, lifecycle/summarization, broader UI polish, Electron packaging.
 - **User-test rule**: no user test request until Stage 8 proves the full localhost loop in browser: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity -> feedback/debug visible.
 
+**Concrete task lane packets**:
+1. **Memory substrate**: Supabase-safe `ai_context_entities`, clarification events, recommendation feedback, parameter beliefs, text entity keys, synthetic buckets, graph edges, RLS, and missing-schema fallback.
+2. **Retrieval substrate**: exact entity-key lookup, UUID-safe legacy project/task context lookup, recent events, feedback retrieval, graph edge retrieval, bounded diagnostics, and optional pgvector metadata without blocking the hot path.
+3. **Clarification decision engine**: coverage/materiality scoring, heuristic EVPI, highest-value non-repeated question selection, cooldowns, path types, selected-score debug metadata, and answer-to-belief updates.
+4. **Low-overwhelm chat contract**: one button-based question before broad answers when context is missing, no recommendation barrage while asking, explicit "continue with uncertainty" escape, concise fallback, and progressive follow-up ladder.
+5. **Broad-flow coverage**: apply the same contract to weekly planning, day planning, smart lanes, "what should I do", prioritization, task breakdown, follow-up task suggestions, and general agent help.
+6. **Answer quality gates**: bad/acceptable/excellent rubric, grounded evidence arrays, no name-only importance, no generic filler, no repeated templates, no overlong first response, and repair paths that do not reintroduce fluff.
+7. **Feedback learning**: accept/timeblock/postpone/dismiss/simplify controls, reason chips, revisit dates, immediate UI suppression, future retrieval of feedback, cooldown/backoff, and positive follow-through signals.
+8. **Memory lifecycle**: fact promotion, correction overrides, confidence decay, stale refresh, summarization/snapshots, retention/export/delete policy, and prompt-injection-safe evidence handling.
+9. **Observability and speed**: visible phases, phase timings, retrieval/source counts, clarify/generate path labels, no duplicate thinking rows, no stuck spinner after saving a clarification, and debug details behind disclosure.
+10. **Localhost QA gate**: automated unit/contract tests, type-check/build, then real localhost browser smoke covering prompt -> clarification -> answer/uncertainty -> feedback -> no barrage -> no stuck activity.
+11. **Electron gate**: deferred until localhost proves the full loop and the user explicitly re-enables desktop packaging/updater work.
+
+**Current packet cursor**: packet 7, "future retrieval of feedback". Broad inline recommendation cards now save feedback; finish proving that later broad answers retrieve those signals before advancing to lifecycle or additional UI.
+
 | Stage | Task(s) | Required outcome | Status | Proof gate before moving on |
 | --- | --- | --- | --- | --- |
 | 0 | This lane + TASK-1842 | Single execution lane, active cursor, localhost-only gate, no vague partial phases | ✅ Done | MASTER_PLAN lane lists all stages, dependencies, proof, and user-test gate |
@@ -279,6 +294,7 @@
 - 2026-06-08: Response-quality clarification answers now route back into the matching deterministic flow (`day_plan`, `smart_lanes`, or general task recommendation) instead of falling through as vague freeform continuation text.
 - 2026-06-08: Broader non-weekly task answers now use the shared uncertainty policy for ask/proceed/neutral decisions instead of a fixed hardcoded ask path. Focused tests cover high-materiality broad recommendations, tiny task sets that proceed with uncertainty, and cold-start neutral candidates.
 - 2026-06-08: Clarification messages now suppress the generic tool-result task list while asking. Candidate tasks only appear through explicit "show candidates" style escapes, preventing the old barrage of task cards under a question.
+- 2026-06-08: Broad non-weekly memory summaries now retrieve recent recommendation feedback by task/project entity keys, so later broad answers can see postponed/dismissed inline-card signals instead of only weekly plans learning from feedback.
 
 ---
 
@@ -305,6 +321,7 @@
 **Progress**:
 - 2026-06-08: Added mounted regression coverage that verifies a postponed weekly recommendation saves `generatedPlanId`, `recommendationId`, task/project entity key, reason category, revisit date, and becomes visually suppressed in the current plan.
 - Feedback reason patterns become inspectable preference memory rather than hidden ranking magic.
+- 2026-06-08: Broad non-weekly task-answer memory now retrieves recent `ai_recommendation_feedback` by UUID task IDs and text entity keys (`task:*`, `project:*`), so inline accept/postpone/dismiss signals can affect later broad answers even when task IDs are local or synthetic.
 
 ---
 

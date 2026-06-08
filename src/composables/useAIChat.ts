@@ -63,7 +63,7 @@ import {
   type WeeklyPlanOutput,
 } from '@/services/ai/pipeline/weeklyPlan'
 import { retrieveWeeklyAIMemory, type WeeklyMemoryRetrievalDiagnostics } from '@/services/ai/pipeline/weeklyMemoryRetrieval'
-import type { AIClarificationArtifact, AIClarificationEvent, AIContextEntity, ProjectContext, TaskContext } from '@/types/aiMemory'
+import type { AIClarificationArtifact, AIClarificationEvent, AIContextEntity, AIRecommendationFeedback, ProjectContext, TaskContext } from '@/types/aiMemory'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
@@ -945,16 +945,23 @@ export function useAIChat() {
     if (!cardTasks.length) return ''
     try {
       const db = useSupabaseDatabase()
-      const taskIds = uniqueSupabaseIds(cardTasks.map(task => String(task.id || '')))
-      const projectIds = uniqueSupabaseIds(cardTasks
+      const taskIdStrings = uniqueStrings(cardTasks.map(task => String(task.id || '')))
+      const projectIdStrings = uniqueStrings(cardTasks
         .map(task => {
           const id = String(task.id || '')
           return id ? taskStore.getTask(id)?.projectId || String(task.projectId || '') : String(task.projectId || '')
         })
       )
-      const [projectContexts, taskContexts] = await Promise.all([
+      const taskIds = uniqueSupabaseIds(taskIdStrings)
+      const projectIds = uniqueSupabaseIds(projectIdStrings)
+      const entityKeys = uniqueStrings([
+        ...taskIdStrings.map(taskEntityKey),
+        ...projectIdStrings.map(projectEntityKey),
+      ])
+      const [projectContexts, taskContexts, recommendationFeedback] = await Promise.all([
         db.fetchProjectContexts(projectIds),
         db.fetchTaskContexts(taskIds),
+        db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 20 }),
       ])
       const lines: string[] = [buildMemoryEvidenceHeader(lang)]
       for (const ctx of projectContexts.slice(0, 8)) {
@@ -983,10 +990,36 @@ export function useAIChat() {
       if (projectsWithoutContext.length) {
         lines.push(`- context unknown for projects: ${projectsWithoutContext.join(', ')}`)
       }
+      for (const feedback of recommendationFeedback.slice(0, 8)) {
+        const target = feedbackTargetLabel(feedback)
+        const bits = [
+          formatMemoryEvidence('action', feedback.action, 80),
+          feedback.reasonCategory ? formatMemoryEvidence('reason', feedback.reasonCategory, 80) : '',
+          feedback.revisitAt ? formatMemoryEvidence('revisit', feedback.revisitAt.slice(0, 10), 80) : '',
+          feedback.freeText ? formatMemoryEvidence('note', feedback.freeText, 120) : '',
+        ].filter(Boolean)
+        if (target && bits.length) lines.push(`- recommendation feedback for ${target}: ${bits.join(' | ')}`)
+      }
       return lines.join('\n')
     } catch {
       return ''
     }
+  }
+
+  function feedbackTargetLabel(feedback: AIRecommendationFeedback): string {
+    if (feedback.taskId) {
+      return sanitizeMemoryEvidenceText(taskStore.getTask(feedback.taskId)?.title || feedback.taskId, 160)
+    }
+    const entityKey = feedback.entityKey || ''
+    if (entityKey.startsWith('task:')) {
+      const taskId = entityKey.slice('task:'.length)
+      return sanitizeMemoryEvidenceText(taskStore.getTask(taskId)?.title || taskId, 160)
+    }
+    if (entityKey.startsWith('project:')) {
+      const projectId = entityKey.slice('project:'.length)
+      return sanitizeMemoryEvidenceText(taskStore.getProjectDisplayName?.(projectId) || projectId, 120)
+    }
+    return sanitizeMemoryEvidenceText(entityKey || feedback.recommendationId, 160)
   }
 
   function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<Record<string, unknown> & { title?: string; __cardIndex?: number }> {

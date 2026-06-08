@@ -85,6 +85,15 @@ const aiMemorySchemaStatusLabel = computed(() => {
   return `AI memory schema partial: ${snapshot.schemaMissingTables.join(', ')}`
 })
 
+const aiMemoryDebugSubtitle = computed(() => {
+  const snapshot = aiMemoryDebug.value
+  if (!snapshot) return 'Refresh to inspect the context chat can currently use'
+  if (snapshot.schemaStatus === 'ready') return 'Server-backed context currently available to chat'
+  if (snapshot.schemaStatus === 'local_only') return 'Local-only memory on this device; sign in for cross-device memory'
+  if (snapshot.schemaStatus === 'missing') return 'Server schema unavailable; chat is using local fallback and queued writes'
+  return 'Partial server schema; unavailable tables are using fallback behavior'
+})
+
 function aiMemoryEventLabel(snapshot: AIMemoryDebugSnapshot): string[] {
   return snapshot.clarificationEvents.slice(0, 3).map(event => {
     const answer = event.selectedLabel || event.freeText || event.eventType
@@ -912,7 +921,7 @@ async function onClearMemories() {
           <div class="ai-memory-debug-header">
             <div>
               <strong>AI memory debug</strong>
-              <span>Recent server-backed context used by chat</span>
+              <span>{{ aiMemoryDebugSubtitle }}</span>
             </div>
             <div class="ai-memory-debug-actions">
               <button
@@ -961,6 +970,9 @@ async function onClearMemories() {
             <span v-if="aiMemoryDebug.pendingWriteCount > 0">
               · {{ aiMemoryDebug.pendingWriteCount }} queued write{{ aiMemoryDebug.pendingWriteCount === 1 ? '' : 's' }}
             </span>
+            <small v-if="aiMemoryDebug.schemaMissingTables.length">
+              Missing: {{ aiMemoryDebug.schemaMissingTables.join(', ') }}
+            </small>
           </div>
 
           <div v-if="!aiMemoryDebugError && aiMemoryDebug" class="ai-memory-debug-list">
@@ -2176,6 +2188,11 @@ async function onClearMemories() {
   color: var(--text-muted);
   font-size: var(--text-xs);
   line-height: 1.35;
+}
+
+.ai-memory-debug-status small {
+  display: block;
+  margin-top: 2px;
 }
 
 .ai-memory-debug-status[data-status='ready'] {

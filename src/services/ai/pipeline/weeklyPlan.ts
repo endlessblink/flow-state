@@ -319,6 +319,10 @@ export type WeekContextMemoryInput = {
   recommendationFeedback?: AIRecommendationFeedback[]
 }
 
+export type WeeklyPlanResponseOptions = {
+  compactAfterClarification?: boolean
+}
+
 const MS_PER_DAY = 86_400_000
 const MONEY_CLIENT_HEALTH_FAMILY_LEGAL_RE = /(payment|invoice|charge|billing|refund|client|customer|health|doctor|medicine|family|dad|mom|legal|tax|תשלום|חשבונית|חיוב|לקוח|בריאות|רופא|תרופה|משפחה|אבא|אמא|מס|משפט)/i
 const STAKEHOLDER_RE = /(send|reply|call|email|message|meeting|proposal|review|approve|client|customer|stakeholder|amit|לשלוח|להגיב|להתקשר|מייל|הודעה|פגישה|לקוח|לאשר|בדיקה)/i
@@ -388,12 +392,13 @@ export function buildWeekContextFromToolResults(
   }
 }
 
-export function buildWeeklyPlanPrompt(context: WeekContext): string {
+export function buildWeeklyPlanPrompt(context: WeekContext, options: WeeklyPlanResponseOptions = {}): string {
   const promptContext = sanitizeWeekContextForPrompt(context)
+  const compactAfterClarification = Boolean(options.compactAfterClarification)
   return JSON.stringify({
     instruction: 'Return only valid JSON matching schema weekly-plan.v2. Do not output markdown. Do not describe task cards. The UI renders cards from task IDs.',
     schemaRules: {
-      recommendations: '3-7 items',
+      recommendations: compactAfterClarification ? '1-3 items after clarification continuation' : '3-7 items',
       focusArea: 'Every recommendation must name the concrete workstream/aspect it belongs to, for example Client renewals, Release blocker, Family health admin, Sales pipeline.',
       taskIds: 'Every primaryTaskId and relatedTaskIds item must be from candidateTasks.',
       evidence: 'At least two evidence items per recommendation. At least one must not be dueIso or priority. Use subtasks evidence when open subtasks clarify the next action.',
@@ -405,6 +410,9 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
     },
     selectionPolicy: [
       'Build a grand view of the week: recommendations should be about workstreams/aspects, not isolated checkboxes.',
+      ...(compactAfterClarification
+        ? ['This is a post-clarification continuation. Return a compact answer with 1-3 recommendations only; do not include a broad weekly digest.']
+        : []),
       'Use relatedTaskIds when several candidate tasks serve the same aspect of work or life.',
       'Prefer tasks with concrete consequences over tasks that merely have a due date.',
       'Use saved project/task context when present; when it is missing, explicitly treat importance/stakes/category as unknown.',
@@ -437,12 +445,13 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
       parameterBeliefs: promptContext.parameterBeliefs,
       recommendationFeedbackSummary: summarizeRecommendationFeedbackForPrompt(context),
       uncertaintyNotes: promptContext.uncertaintyNotes,
+      responseMode: compactAfterClarification ? 'post_clarification_compact' : 'weekly_plan',
     },
     candidateTasks: promptContext.candidateTasks,
   }, null, 2)
 }
 
-export function parseWeeklyPlanOutput(raw: string, context: WeekContext): { ok: true; value: WeeklyPlanOutput } | { ok: false; errors: string[] } {
+export function parseWeeklyPlanOutput(raw: string, context: WeekContext, options: WeeklyPlanResponseOptions = {}): { ok: true; value: WeeklyPlanOutput } | { ok: false; errors: string[] } {
   const jsonText = extractJsonObject(raw)
   if (!jsonText) return { ok: false, errors: ['missing_json_object'] }
   let value: unknown
@@ -451,12 +460,12 @@ export function parseWeeklyPlanOutput(raw: string, context: WeekContext): { ok: 
   } catch {
     return { ok: false, errors: ['invalid_json'] }
   }
-  const errors = validateWeeklyPlanOutput(value, context)
+  const errors = validateWeeklyPlanOutput(value, context, options)
   if (errors.length) return { ok: false, errors }
   return { ok: true, value: { ...(value as WeeklyPlanOutput), source: 'model' } }
 }
 
-export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): string[] {
+export function validateWeeklyPlanOutput(value: unknown, context: WeekContext, options: WeeklyPlanResponseOptions = {}): string[] {
   const errors: string[] = []
   if (!value || typeof value !== 'object') return ['not_object']
   const plan = value as WeeklyPlanOutput
@@ -470,7 +479,9 @@ export function validateWeeklyPlanOutput(value: unknown, context: WeekContext): 
   const recs = Array.isArray(plan.recommendations) ? plan.recommendations : []
   const openQuestions = Array.isArray(plan.openQuestions) ? plan.openQuestions : []
   const isClarificationFirstPlan = recs.length === 0 && openQuestions.length > 0 && plan.quality?.confidence === 'low'
-  if (!isClarificationFirstPlan && (recs.length < 3 || recs.length > 7)) errors.push('recommendation_count_out_of_range')
+  const minRecs = options.compactAfterClarification ? 1 : 3
+  const maxRecs = options.compactAfterClarification ? 3 : 7
+  if (!isClarificationFirstPlan && (recs.length < minRecs || recs.length > maxRecs)) errors.push('recommendation_count_out_of_range')
 
   for (const rec of recs) {
     if (!rec.sectionId) errors.push('missing_section_id')
@@ -626,6 +637,7 @@ function auditWeeklyRecommendationEvidence(rec: WeeklyPlanRecommendation) {
 type QuickDraftOptions = {
   allowClarificationFirst?: boolean
   compactUncertainty?: boolean
+  maxRecommendations?: number
 }
 
 export function buildQuickDraftWeeklyPlan(
@@ -636,6 +648,7 @@ export function buildQuickDraftWeeklyPlan(
   const openQuestions = buildQuickDraftQuestions(context, selected)
   const allowClarificationFirst = options.allowClarificationFirst ?? true
   const compactUncertainty = options.compactUncertainty ?? false
+  const maxRecommendations = Math.max(1, Math.min(7, options.maxRecommendations ?? 7))
   const topTaskQuestion = selected[0]
     ? openQuestions.find(question => question.relatedTaskIds.includes(selected[0].id))
     : undefined
@@ -659,7 +672,7 @@ export function buildQuickDraftWeeklyPlan(
     .slice(0, 3)
   const workstreamByTaskId = buildWorkstreamLookup(context.workstreams)
   const locale = context.locale
-  const recommendations = selected.map((task, index): WeeklyPlanRecommendation => {
+  const recommendations = selected.slice(0, maxRecommendations).map((task, index): WeeklyPlanRecommendation => {
     const evidence = quickDraftEvidence(task, { compactUncertainty })
     const stream = workstreamByTaskId.get(task.id)
     const relatedTaskIds = stream?.taskIds.filter(id => id !== task.id).slice(0, 2) ?? []
@@ -686,17 +699,31 @@ export function buildQuickDraftWeeklyPlan(
     requestId: context.requestId,
     locale,
     direction: context.direction,
-    headline: locale === 'he' ? 'התוכנית הטובה ביותר מנתוני המשימות' : 'Best plan from task evidence',
+    headline: compactUncertainty
+      ? (locale === 'he' ? 'תשובה קצרה אחרי ההקשר ששמרת' : 'Short plan after your clarification')
+      : (locale === 'he' ? 'התוכנית הטובה ביותר מנתוני המשימות' : 'Best plan from task evidence'),
     weekRead: {
       summary: locale === 'he'
-        ? `נבדקו ${context.tasks.length} מועמדים מתוך ${context.workload.openTaskCount} משימות פתוחות.`
-        : `Reviewed ${context.tasks.length} candidates from ${context.workload.openTaskCount} open tasks.`,
+        ? compactUncertainty
+            ? `בחרתי ${recommendations.length} מוקדים בלבד מתוך ${context.tasks.length} מועמדים.`
+            : `נבדקו ${context.tasks.length} מועמדים מתוך ${context.workload.openTaskCount} משימות פתוחות.`
+        : compactUncertainty
+            ? `Selected only ${recommendations.length} focus items from ${context.tasks.length} candidates.`
+            : `Reviewed ${context.tasks.length} candidates from ${context.workload.openTaskCount} open tasks.`,
       workloadReality: locale === 'he'
-        ? 'יש כאן מספיק אותות לבנות תוכנית שימושית עכשיו; משימות בלי הקשר עמוק עדיין מקבלות דירוג לפי הראיות הזמינות.'
-        : 'There are enough signals here to build a useful plan now; tasks without deep context are still ranked by the evidence available.',
+        ? compactUncertainty
+            ? 'משימות בלי הקשר עמוק נשארות עם אי-ודאות גלויה.'
+            : 'יש כאן מספיק אותות לבנות תוכנית שימושית עכשיו; משימות בלי הקשר עמוק עדיין מקבלות דירוג לפי הראיות הזמינות.'
+        : compactUncertainty
+            ? 'Tasks without deeper context keep visible uncertainty.'
+            : 'There are enough signals here to build a useful plan now; tasks without deep context are still ranked by the evidence available.',
       mainTradeoff: locale === 'he'
-        ? 'להגן קודם על עבודה עם השלכות אמיתיות: תלות, כסף/לקוח/בריאות, התחייבות לאדם אחר, או דחייה חוזרת.'
-        : 'Protect work with real consequences first: dependencies, money/client/health, commitments to another person, or repeated postponement.',
+        ? compactUncertainty
+            ? 'המשך רק עם מה שמגובה בראיות או בהקשר ששמרת.'
+            : 'להגן קודם על עבודה עם השלכות אמיתיות: תלות, כסף/לקוח/בריאות, התחייבות לאדם אחר, או דחייה חוזרת.'
+        : compactUncertainty
+            ? 'Continue only from evidence or the context you saved.'
+            : 'Protect work with real consequences first: dependencies, money/client/health, commitments to another person, or repeated postponement.',
     },
     recommendations,
     deferrals: [

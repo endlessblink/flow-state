@@ -2158,11 +2158,11 @@ export function useAIChat() {
           const structuredMessages: RouterChatMessage[] = [
             {
               role: 'system',
-              content: `You are a weekly planning coach inside a personal productivity app. Your job is not to sort tasks; it is to decide what deserves attention this week and why. Return ONLY valid JSON matching schemaVersion weekly-plan.v2. Do not output markdown. Do not describe task cards. The UI will render task cards from primaryTaskId and relatedTaskIds. Every recommendation needs at least two evidence items and at least one evidence item that is not dueIso or priority. You may rank tasks using due dates, priority, status, timers, and supplied project/task context, but you must not infer importance, stakes, work/personal category, or success criteria from project names alone. If project context is missing, mark it as unknown and ask a button clarification instead of pretending. Explain real consequences: promise kept, decision unblocked, money protected, health/family/admin load lowered, rework prevented, risk reduced, or momentum restored. If locale is he, write natural Hebrew and set direction rtl.`,
+              content: `You are a weekly planning coach inside a personal productivity app. Your job is not to sort tasks; it is to decide what deserves attention this week and why. Return ONLY valid JSON matching schemaVersion weekly-plan.v2. Do not output markdown. Do not describe task cards. The UI will render task cards from primaryTaskId and relatedTaskIds. Every recommendation needs at least two evidence items and at least one evidence item that is not dueIso or priority. You may rank tasks using due dates, priority, status, timers, and supplied project/task context, but you must not infer importance, stakes, work/personal category, or success criteria from project names alone. If project context is missing, mark it as unknown and ask a button clarification instead of pretending. Explain real consequences: promise kept, decision unblocked, money protected, health/family/admin load lowered, rework prevented, risk reduced, or momentum restored. ${isClarificationContinuation ? 'This is a post-clarification continuation: return only 1-3 recommendations, keep prose short, and do not produce a broad weekly digest.' : ''} If locale is he, write natural Hebrew and set direction rtl.`,
             },
             {
               role: 'user',
-              content: buildWeeklyPlanPrompt(weekContext),
+              content: buildWeeklyPlanPrompt(weekContext, { compactAfterClarification: isClarificationContinuation }),
             },
           ]
           let rawPlan = ''
@@ -2174,7 +2174,7 @@ export function useAIChat() {
           })) {
             rawPlan += chunk.content
           }
-          const parsed = parseWeeklyPlanOutput(rawPlan, weekContext)
+          const parsed = parseWeeklyPlanOutput(rawPlan, weekContext, { compactAfterClarification: isClarificationContinuation })
           if (parsed.ok) {
             weeklyPlan = parsed.value
           } else if (isBridgeActive()) {
@@ -2186,7 +2186,7 @@ export function useAIChat() {
               { role: 'assistant', content: rawPlan },
               {
                 role: 'user',
-                content: `The JSON failed validation with these errors: ${parsed.errors.join(', ')}. Return the complete corrected JSON object only. Keep the same requestId and only use task IDs from candidateTasks.`,
+                content: `The JSON failed validation with these errors: ${parsed.errors.join(', ')}. Return the complete corrected JSON object only. Keep the same requestId and only use task IDs from candidateTasks.${isClarificationContinuation ? ' This is a post-clarification continuation, so keep 1-3 recommendations only.' : ''}`,
               },
             ]
             let repairedRawPlan = ''
@@ -2198,7 +2198,7 @@ export function useAIChat() {
             })) {
               repairedRawPlan += chunk.content
             }
-            const repaired = parseWeeklyPlanOutput(repairedRawPlan, weekContext)
+            const repaired = parseWeeklyPlanOutput(repairedRawPlan, weekContext, { compactAfterClarification: isClarificationContinuation })
             if (repaired.ok) {
               weeklyPlan = repaired.value
             } else {
@@ -2215,6 +2215,7 @@ export function useAIChat() {
             ? buildQuickDraftWeeklyPlan(weekContext, {
                 allowClarificationFirst: false,
                 compactUncertainty: true,
+                maxRecommendations: 3,
               })
             : buildWeeklyPlanReliabilityFallback(weekContext, validationErrors)
         )

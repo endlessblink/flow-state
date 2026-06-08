@@ -531,6 +531,15 @@ describe('AI sidebar-first desktop experience', () => {
         priority: 'medium',
         dueDate: '2026-06-12',
       } as Task,
+      {
+        ...task,
+        id: 'task-memory',
+        title: 'Fix weekly planner memory',
+        description: 'Blocks assistant trust because ranking feels generic.',
+        projectId: 'ai-planner',
+        priority: 'medium',
+        dueDate: '2026-06-13',
+      } as Task,
     ]
     const context = buildWeekContextFromToolResults(
       [{ success: true, data: relatedTasks }],
@@ -603,6 +612,24 @@ describe('AI sidebar-first desktop experience', () => {
     expect(recommendationText).not.toMatch(/coaching explanation is unavailable.*coaching explanation is unavailable/i)
     expect(recommendationText).not.toMatch(/Evidence-only draft|not a replacement|left waiting/i)
     expect(quickDraft.recommendations.some(rec => rec.relatedTaskIds.length > 0)).toBe(true)
+
+    const compactDraft = buildQuickDraftWeeklyPlan(context, {
+      allowClarificationFirst: false,
+      compactUncertainty: true,
+      maxRecommendations: 2,
+    })
+    expect(compactDraft.headline).toContain('Short plan')
+    expect(compactDraft.recommendations).toHaveLength(2)
+    expect(validateWeeklyPlanOutput(compactDraft, context, { compactAfterClarification: true })).not.toContain('recommendation_count_out_of_range')
+    expect(validateWeeklyPlanOutput(compactDraft, context)).toContain('recommendation_count_out_of_range')
+
+    const tooBroadContinuation = buildQuickDraftWeeklyPlan(context, {
+      allowClarificationFirst: false,
+      compactUncertainty: true,
+      maxRecommendations: 4,
+    })
+    expect(tooBroadContinuation.recommendations.length).toBeGreaterThan(3)
+    expect(validateWeeklyPlanOutput(tooBroadContinuation, context, { compactAfterClarification: true })).toContain('recommendation_count_out_of_range')
   })
 
   it('rejects weekly recommendations that treat project names as project understanding evidence', () => {
@@ -2922,6 +2949,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('recordAIClarificationEvent')
     expect(aiChat).toContain('weeklyPlan: finalPlan')
     expect(aiChat).toContain('compactUncertainty: true')
+    expect(aiChat).toContain('compactAfterClarification: isClarificationContinuation')
+    expect(aiChat).toContain('This is a post-clarification continuation: return only 1-3 recommendations')
+    expect(aiChat).toContain('maxRecommendations: 3')
     expect(aiChat).toContain('buildWeeklyPlanReliabilityFallback')
     expect(aiChat).toContain('Return ONLY valid JSON matching schemaVersion weekly-plan.v2')
     expect(aiChat).toContain('store.completeStreamingMessage()')
@@ -2940,6 +2970,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(weeklyPlan).toContain('buildQuickDraftWeeklyPlan')
     expect(weeklyPlan).toContain('buildWeeklyPlanReliabilityFallback')
     expect(weeklyPlan).toContain('buildWeeklyPlanningInterview')
+    expect(weeklyPlan).toContain('compactAfterClarification')
+    expect(weeklyPlan).toContain('1-3 items after clarification continuation')
+    expect(weeklyPlan).toContain('post_clarification_compact')
     expect(weeklyPlan).toContain('recommendationFeedbackSummary')
     expect(weeklyPlan).toContain('isSuppressedByRecommendationFeedback')
     expect(weeklyPlan).toContain('feedbackDeferralReason')

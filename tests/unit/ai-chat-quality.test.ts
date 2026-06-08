@@ -160,6 +160,38 @@ describe('chat quality evidence audit', () => {
     expect(audit.failures).toContain('rec_injected:unsafe_memory_evidence_instruction')
   })
 
+  it('rejects stale memory when it is cited as active recommendation evidence', () => {
+    const audit = auditRecommendationEvidence([
+      {
+        recommendationId: 'rec_stale',
+        taskId: 'task_stale',
+        reason: 'Do this first because the old project context says it blocks the product.',
+        taskEvidence: ['note: planner quality work'],
+        projectContextEvidence: ['stale project context: why it matters was last confirmed on 2025-01-01'],
+        missingEvidence: [],
+      },
+    ])
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('rec_stale:stale_context_used_as_active_evidence')
+  })
+
+  it('allows stale project context to be marked as missing evidence instead of active evidence', () => {
+    const audit = auditRecommendationEvidence([
+      {
+        recommendationId: 'rec_refresh',
+        taskId: 'task_refresh',
+        reason: 'Use task notes as a candidate only; project meaning needs refresh before confident ranking.',
+        taskEvidence: ['note: planner quality work'],
+        projectContextEvidence: [],
+        missingEvidence: ['project context stale; refresh needed'],
+      },
+    ])
+
+    expect(audit.level).toBe('excellent')
+    expect(audit.failures).toEqual([])
+  })
+
   it('accepts missing project context only when the recommendation marks the missing evidence explicitly', () => {
     const audit = auditRecommendationEvidence([
       {

@@ -538,6 +538,7 @@
 - 2026-06-08: Broad answer scannability audits now inspect the rendered line structure before whitespace normalization. Numbered recommendation dumps with too many visible items fail with `too_many_visible_items`/`too_many_low_context_recommendations`, which routes them into the deterministic repair path instead of letting a long prose list reach the chat.
 - 2026-06-08: Added prompt-injection evidence regressions to the answer-quality suite. Saved clarification/free-text memory and recommendation evidence that tries to become instructions now fails with explicit safety errors instead of relying only on prompt wording.
 - 2026-06-08: Added conflicting-correction citation audits. If saved context evidence says the user corrected prior high-stakes/importance framing, a recommendation that still calls the task high stakes, strategic, critical, or meaningful fails with `conflicting_correction_ignored`; neutral handling of the correction remains acceptable.
+- 2026-06-08: Added stale-context citation audits. Recommendation evidence now fails with `stale_context_used_as_active_evidence` when expired/refresh-needed memory is cited as active project understanding, while stale context marked as missing/needs refresh remains valid uncertainty evidence.
 
 ---
 

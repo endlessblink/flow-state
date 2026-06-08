@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { retrieveBroadAIMemory, type BroadMemoryDb } from '@/services/ai/pipeline/broadMemoryRetrieval'
+import {
+  BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS,
+  retrieveBroadAIMemory,
+  type BroadMemoryDb,
+} from '@/services/ai/pipeline/broadMemoryRetrieval'
 import type {
   AIClarificationEvent,
   AIContextEdge,
@@ -61,6 +65,7 @@ describe('retrieveBroadAIMemory', () => {
     expect(result.summary).toBe('')
     expect(result.recommendationFeedback).toEqual([])
     expect(result.entityKeys).toEqual([
+      ...BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS,
       `project:${projectId}`,
       'project:uncategorized',
       `task:${taskId}`,
@@ -69,7 +74,7 @@ describe('retrieveBroadAIMemory', () => {
     expect(result.diagnostics).toMatchObject({
       source: 'fallback',
       timedOut: true,
-      entityKeyCount: 4,
+      entityKeyCount: BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS.length + 4,
       projectContextCount: 0,
       taskContextCount: 0,
       exactEntityCount: 0,
@@ -159,6 +164,7 @@ describe('retrieveBroadAIMemory', () => {
     expect(db.fetchProjectContexts).toHaveBeenCalledWith([projectId])
     expect(db.fetchTaskContexts).toHaveBeenCalledWith([taskId])
     expect(db.fetchAIContextEntities).toHaveBeenCalledWith([
+      ...BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS,
       `project:${projectId}`,
       'project:uncategorized',
       `task:${taskId}`,
@@ -184,6 +190,7 @@ describe('retrieveBroadAIMemory', () => {
     expect(result.summary).toContain('recommendation feedback for uncategorized')
     expect(result.summary).not.toContain('context unknown for projects: uncategorized')
     expect(result.recommendationFeedback).toEqual(feedback)
+    expect(result.compactPreference).toBe(false)
     expect(result.diagnostics).toMatchObject({
       projectContextCount: 1,
       exactEntityCount: 1,
@@ -192,5 +199,56 @@ describe('retrieveBroadAIMemory', () => {
       feedbackCount: 1,
       graphEdgeCount: 1,
     })
+  })
+
+  it('retrieves global brevity preference for broad task answers and exposes a compact signal', async () => {
+    const brevityBelief: AIParameterBelief = {
+      id: 'belief-brevity',
+      entityKey: 'preference:brevity',
+      entityType: 'preference',
+      parameterKey: 'preferences',
+      beliefJson: {
+        value: 'User marked the previous planning answer as too much; keep future task recommendations shorter and compact.',
+      },
+      confidence: 0.9,
+      impactWeight: 0.65,
+      sourceQuestionId: 'recommendation_feedback:simplify',
+      updatedAt: '2026-06-08T09:00:00.000Z',
+    }
+    const db = dbStub({
+      fetchAIContextEntities: vi.fn(async keys => keys.includes('preference:brevity')
+        ? [
+            contextEntity({
+              entityKey: 'preference:brevity',
+              entityType: 'preference',
+              displayName: 'Brevity',
+              facts: {
+                preferences: 'Keep broad planning answers compact after too-much feedback.',
+              },
+            }),
+          ]
+        : []),
+      fetchAIParameterBeliefs: vi.fn(async () => [brevityBelief]),
+    })
+
+    const result = await retrieveBroadAIMemory({
+      db,
+      lang: 'en',
+      cardTasks: [
+        { id: 'local-a', projectId: 'uncategorized', title: 'First task' },
+        { id: 'local-b', projectId: 'uncategorized', title: 'Second task' },
+      ],
+    })
+
+    expect(result.entityKeys).toEqual(expect.arrayContaining(['preference:brevity', 'workflow:task_answer:next_task']))
+    expect(db.fetchAIContextEntities).toHaveBeenCalledWith(expect.arrayContaining(['preference:brevity']))
+    expect(db.fetchAIParameterBeliefs).toHaveBeenCalledWith({
+      entityKeys: result.entityKeys,
+      limit: 40,
+    })
+    expect(result.compactPreference).toBe(true)
+    expect(result.summary).toContain('response preference Brevity')
+    expect(result.summary).toContain('preferences="Keep broad planning answers compact after too-much feedback."')
+    expect(result.summary).toContain('remembered answer for preference:brevity')
   })
 })

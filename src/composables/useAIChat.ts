@@ -116,11 +116,13 @@ type FormatterFallbackOptions = {
   uncertaintyOnly?: boolean
   clarificationEvidence?: string
   recommendationFeedback?: AIRecommendationFeedback[]
+  compactPreference?: boolean
 }
 
 type AIMemorySummaryResult = {
   summary: string
   recommendationFeedback: AIRecommendationFeedback[]
+  compactPreference?: boolean
 }
 
 export function resolveChatOutputLanguage(detectedLanguage: ChatOutputLanguage, chatLanguage: ChatLanguage): ChatOutputLanguage {
@@ -1249,10 +1251,15 @@ export function useAIChat() {
   }
 
   function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode'], options: FormatterFallbackOptions = {}): string {
+    const fallbackLimit = options.compactPreference && responseMode !== 'week_plan'
+      ? 1
+      : responseMode === 'week_plan'
+        ? WEEKLY_FALLBACK_TASK_LIMIT
+        : 3
     const tasks = rankBroadFallbackTasks(
       getTaskItemsFromToolResults(toolResults).filter(task => task.title),
       options.recommendationFeedback,
-    ).slice(0, responseMode === 'week_plan' ? WEEKLY_FALLBACK_TASK_LIMIT : 3)
+    ).slice(0, fallbackLimit)
     if (tasks.length === 0) {
       return lang === 'he'
         ? 'מצאתי את הנתונים, אבל לא הצלחתי לנסח תשובת AI מלאה בזמן. השתמש בכרטיסים למטה כדי להמשיך.'
@@ -1269,6 +1276,10 @@ export function useAIChat() {
           ? lang === 'he'
             ? 'טיוטה קצרה לפי תשובת ההבהרה שלך; הקשר חסר עדיין מסומן בכרטיסים:'
             : 'Short draft using your clarification; missing context stays visible in the cards:'
+        : options.compactPreference
+          ? lang === 'he'
+            ? 'טיוטה קצרה במיוחד לפי המשוב שלך שהקודם היה עמוס מדי:'
+            : 'Extra-compact draft based on your feedback that the last answer was too much:'
         : lang === 'he'
           ? 'טיוטת בחירה מהירה לפי השפעה, תלות וסיכון אמיתי:'
           : 'Fast draft based on impact, dependency, and real risk:'
@@ -1822,10 +1833,11 @@ export function useAIChat() {
           'chat_memory_summary_timeout',
         ).catch(memoryErr => {
           console.warn('[AIChat:Deterministic] Memory summary skipped or timed out:', memoryErr)
-          return { summary: '', recommendationFeedback: [] } as AIMemorySummaryResult
+          return { summary: '', recommendationFeedback: [], compactPreference: false } as AIMemorySummaryResult
         })
         broadRecommendationFeedback = memoryResult.recommendationFeedback
         formatterFallbackOptions.recommendationFeedback = broadRecommendationFeedback
+        formatterFallbackOptions.compactPreference = memoryResult.compactPreference
         if (memoryResult.summary) toolResultsSummary += `\n\n${memoryResult.summary}`
       }
       if (!hasTaskList) {

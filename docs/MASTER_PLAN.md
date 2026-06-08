@@ -128,6 +128,7 @@
 - 2026-06-08: Broad task-memory retrieval now has the same bounded timeout/fallback contract as weekly retrieval. It returns source/timing/entity-count diagnostics and an empty evidence packet on timeout, so broad prompts can continue without inventing memory or losing proof of whether memory came from `hybrid_sql` or fallback.
 - 2026-06-08: Added a dedicated AI memory schema contract test that checks runtime table usage against the Supabase migrations for `ai_context_entities`, `ai_clarification_events`, `ai_parameter_beliefs`, `ai_recommendation_feedback`, and `ai_context_edges`. The test now guards text-key synthetic entities, RLS enablement, hot retrieval indexes, check-enum parity, and every runtime-read/write column before VPS rollout.
 - 2026-06-08: Settings > AI memory debug now reports server schema status (`ready`, `partial`, `missing`, or `local_only`) plus missing table names and queued writes. This makes Supabase schema-cache/migration drift visible during localhost/VPS testing instead of showing an empty memory panel with no diagnosis.
+- 2026-06-08: Broad task-list memory now also retrieves global workflow/preference keys such as `preference:brevity` and response-quality workflow memories. A saved simplify/too-much signal becomes a direct `compactPreference` flag, and deterministic broad fallbacks cap the next non-weekly draft to one recommendation instead of repeating a dense answer.
 
 ---
 

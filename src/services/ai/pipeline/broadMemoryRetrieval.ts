@@ -34,9 +34,23 @@ export type BroadMemoryRetrievalInput = {
 
 export type BroadMemoryRetrievalSource = 'hybrid_sql' | 'fallback'
 
+export const BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS = [
+  'workflow:task_answer:general',
+  'workflow:task_answer:day_plan',
+  'workflow:task_answer:smart_lanes',
+  'workflow:task_answer:prioritization',
+  'workflow:task_answer:next_task',
+  'workflow:task_answer:overdue_triage',
+  'preference:planning_style',
+  'preference:energy',
+  'preference:constraints',
+  'preference:brevity',
+]
+
 export type BroadMemoryRetrievalResult = {
   summary: string
   recommendationFeedback: AIRecommendationFeedback[]
+  compactPreference: boolean
   entityKeys: string[]
   diagnostics: {
     source: BroadMemoryRetrievalSource
@@ -66,12 +80,14 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
   const taskIds = uniqueSupabaseIds(taskIdStrings)
   const projectIds = uniqueSupabaseIds(projectIdStrings)
   const entityKeys = uniqueStrings([
+    ...broadWorkflowMemoryKeys(),
     ...projectIdStrings.map(projectEntityKey),
     ...taskIdStrings.map(taskEntityKey),
   ])
   const fallback = (timedOut: boolean): BroadMemoryRetrievalResult => ({
     summary: '',
     recommendationFeedback: [],
+    compactPreference: false,
     entityKeys,
     diagnostics: {
       source: 'fallback',
@@ -145,11 +161,13 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       parameterBeliefs,
       recommendationFeedback,
       contextEdges,
+      contextEntities,
       projectIdStrings,
       getTaskTitle: input.getTaskTitle,
       getProjectDisplayName: input.getProjectDisplayName,
     }),
     recommendationFeedback,
+    compactPreference: hasCompactPreference(contextEntities, parameterBeliefs, recommendationFeedback),
     entityKeys,
     diagnostics: {
       source: 'hybrid_sql',
@@ -167,6 +185,10 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
   }
 }
 
+function broadWorkflowMemoryKeys(): string[] {
+  return BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS
+}
+
 function buildBroadMemorySummary(input: {
   lang: 'he' | 'en'
   projectContexts: ProjectContext[]
@@ -175,6 +197,7 @@ function buildBroadMemorySummary(input: {
   parameterBeliefs: AIParameterBelief[]
   recommendationFeedback: AIRecommendationFeedback[]
   contextEdges: AIContextEdge[]
+  contextEntities: AIContextEntity[]
   projectIdStrings: string[]
   getTaskTitle?: (taskId: string) => string | null | undefined
   getProjectDisplayName?: (projectId: string) => string | null | undefined
@@ -198,6 +221,20 @@ function buildBroadMemorySummary(input: {
       ctx.successCriteria.length ? formatMemoryEvidence('success', ctx.successCriteria.slice(0, 2).join('; '), 160) : '',
     ].filter(Boolean)
     if (bits.length) lines.push(`- task ${taskName}: ${bits.join(' | ')}`)
+  }
+  for (const entity of input.contextEntities
+    .filter(entity => entity.entityType === 'preference' || entity.entityType === 'workflow')
+    .slice(0, 6)) {
+    const label = sanitizeMemoryEvidenceText(entity.displayName || entity.entityKey, 120)
+    const facts = entity.facts ?? {}
+    const bits = [
+      factLabel(facts, 'rankingFocus', 140),
+      factLabel(facts, 'whyItMatters', 160),
+      factLabel(facts, 'taskSelectionHints', 160),
+      factLabel(facts, 'preferences', 160),
+      entity.confidence ? formatMemoryEvidence('confidence', entity.confidence.toFixed(2), 20) : '',
+    ].filter(Boolean)
+    if (bits.length) lines.push(`- response preference ${label}: ${bits.join(' | ')}`)
   }
   for (const belief of input.parameterBeliefs.slice(0, 8)) {
     const target = entityLabel(belief.entityKey, input.getTaskTitle, input.getProjectDisplayName)
@@ -242,6 +279,36 @@ function buildBroadMemorySummary(input: {
     if (target && bits.length) lines.push(`- recommendation feedback for ${target}: ${bits.join(' | ')}`)
   }
   return lines.length > 1 ? lines.join('\n') : ''
+}
+
+function hasCompactPreference(
+  entities: AIContextEntity[],
+  beliefs: AIParameterBelief[],
+  feedback: AIRecommendationFeedback[],
+): boolean {
+  const entityText = entities
+    .filter(entity => entity.entityKey === 'preference:brevity' || entity.entityKey === 'preference:planning_style')
+    .map(entity => JSON.stringify(entity.facts ?? {}))
+    .join(' ')
+  const beliefText = beliefs
+    .filter(belief =>
+      belief.entityKey === 'preference:brevity' ||
+      belief.parameterKey === 'preferences' ||
+      belief.sourceQuestionId === 'recommendation_feedback:simplify'
+    )
+    .map(belief => `${belief.entityKey} ${belief.parameterKey} ${beliefValueLabel(belief)}`)
+    .join(' ')
+  const feedbackText = feedback
+    .filter(item => item.action === 'simplify' || item.reasonCategory === 'too_much')
+    .map(item => `${item.action} ${item.reasonCategory ?? ''} ${item.freeText ?? ''}`)
+    .join(' ')
+  return /too much|shorter|brief|compact|less|overwhelm|עומס|קצר|פחות/i.test(`${entityText} ${beliefText} ${feedbackText}`)
+}
+
+function factLabel(facts: Record<string, unknown>, key: string, limit: number): string {
+  const raw = facts[key]
+  const value = Array.isArray(raw) ? raw.map(String).join('; ') : typeof raw === 'string' ? raw : ''
+  return value.trim() ? formatMemoryEvidence(key, value, limit) : ''
 }
 
 function feedbackTargetLabel(

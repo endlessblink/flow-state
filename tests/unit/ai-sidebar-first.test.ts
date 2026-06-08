@@ -2912,6 +2912,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(src('src/composables/useAIChat.ts')).toContain("feedback.recommendationId?.startsWith('inline_')")
     expect(src('src/composables/useAIChat.ts')).toContain('rankFallbackTasks(')
     expect(src('src/composables/useAIChat.ts')).toContain('options.recommendationFeedback')
+    expect(src('src/composables/useAIChat.ts')).toContain('react_tool_memory_summary_timeout')
+    expect(src('src/composables/useAIChat.ts')).toContain('react_text_tool_memory_summary_timeout')
     expect(src('src/services/ai/pipeline/broadMemoryRetrieval.ts')).toContain('uniqueSupabaseIds')
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('filter(isSupabaseUuid)')
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('Skipping ${patch.entityType} memory patch for non-Supabase UUID')

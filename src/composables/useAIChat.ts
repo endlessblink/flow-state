@@ -2707,10 +2707,22 @@ export function useAIChat() {
                   return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, lang)
                 })
                 .join('\n\n')
+          let reActToolResultsSummary = toolResultsSummary
+          const reActMemoryResult = await withTimeout(
+            buildAIMemorySummaryForToolResults(toolResults, lang),
+            WEEK_PLAN_MEMORY_TIMEOUT_MS,
+            'react_tool_memory_summary_timeout',
+          ).catch(memoryErr => {
+            console.warn('[AIChat:ReAct] Tool memory summary skipped or timed out:', memoryErr)
+            return { summary: '', recommendationFeedback: [] } as AIMemorySummaryResult
+          })
+          if (reActMemoryResult.summary) {
+            reActToolResultsSummary += `\n\n${reActMemoryResult.summary}`
+          }
 
           conversationMessages.push({
             role: 'user',
-            content: buildToolFeedbackMessage(toolResultsSummary, lang, bridgeRich1),
+            content: buildToolFeedbackMessage(reActToolResultsSummary, lang, bridgeRich1),
           })
 
           // Store step info in metadata only (not visible to user)
@@ -2810,9 +2822,21 @@ export function useAIChat() {
                     return base
                   })
                   .join('\n\n')
+            let reActToolResultsSummary = toolResultsSummary
+            const reActMemoryResult = await withTimeout(
+              buildAIMemorySummaryForToolResults(toolResults, lang),
+              WEEK_PLAN_MEMORY_TIMEOUT_MS,
+              'react_text_tool_memory_summary_timeout',
+            ).catch(memoryErr => {
+              console.warn('[AIChat:ReAct] Text-tool memory summary skipped or timed out:', memoryErr)
+              return { summary: '', recommendationFeedback: [] } as AIMemorySummaryResult
+            })
+            if (reActMemoryResult.summary) {
+              reActToolResultsSummary += `\n\n${reActMemoryResult.summary}`
+            }
             conversationMessages.push({
               role: 'user',
-              content: buildToolFeedbackMessage(toolResultsSummary, lang, bridgeRich2),
+              content: buildToolFeedbackMessage(reActToolResultsSummary, lang, bridgeRich2),
             })
 
             // Strip the raw tool call text from the displayed message

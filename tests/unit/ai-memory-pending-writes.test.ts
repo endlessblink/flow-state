@@ -282,6 +282,14 @@ describe('AI memory pending write queue', () => {
     expect(entityUpsertCount).toBe(0)
     expect(eventInsertCount).toBe(0)
 
+    const immediateEvents = await db.fetchAIClarificationEvents(['synthetic:Work'], 10)
+    expect(immediateEvents).toHaveLength(1)
+    expect(immediateEvents[0]).toMatchObject({
+      entityKey: 'synthetic:Work',
+      eventType: 'answered',
+      selectedLabel: 'Work/product',
+    })
+
     readyTables = new Set(['ai_context_entities', 'ai_clarification_events', 'ai_parameter_beliefs'])
     await db.flushPendingAIMemoryWrites()
 
@@ -304,6 +312,27 @@ describe('AI memory pending write queue', () => {
 
     expect(getPendingAIMemoryWriteCount()).toBe(1)
     expect(feedbackInsertCount).toBe(0)
+
+    const immediateFeedback = await db.fetchAIRecommendationFeedback({
+      entityKeys: ['workflow:task_answer:general'],
+      limit: 10,
+    })
+    const immediateBeliefs = await db.fetchAIParameterBeliefs({
+      entityKeys: ['workflow:task_answer:general'],
+      parameterKeys: ['energy_fit'],
+      limit: 10,
+    })
+    expect(immediateFeedback).toHaveLength(1)
+    expect(immediateFeedback[0]).toMatchObject({
+      recommendationId: 'rec_1',
+      action: 'postpone',
+      reasonCategory: 'low_energy',
+    })
+    expect(immediateBeliefs).toHaveLength(1)
+    expect(immediateBeliefs[0]).toMatchObject({
+      entityKey: 'workflow:task_answer:general',
+      parameterKey: 'energy_fit',
+    })
 
     readyTables = new Set(['ai_recommendation_feedback'])
     await db.flushPendingAIMemoryWrites()
@@ -452,6 +481,18 @@ describe('AI memory pending write queue', () => {
 
     expect(getPendingAIMemoryWriteCount()).toBe(1)
     expect(parameterBeliefUpsertCount).toBe(0)
+
+    const immediateBeliefs = await db.fetchAIParameterBeliefs({
+      entityKeys: ['synthetic:Work'],
+      parameterKeys: ['impact'],
+      limit: 10,
+    })
+    expect(immediateBeliefs).toHaveLength(1)
+    expect(immediateBeliefs[0]).toMatchObject({
+      entityKey: 'synthetic:Work',
+      parameterKey: 'impact',
+      confidence: 0.86,
+    })
 
     readyTables = new Set(['ai_parameter_beliefs'])
     await db.flushPendingAIMemoryWrites()

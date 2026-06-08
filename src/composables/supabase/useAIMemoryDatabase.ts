@@ -533,6 +533,22 @@ function localAIParameterBeliefFromInput(input: AIParameterBeliefInput, now: str
   }
 }
 
+function recordLocalAIParameterBelief(input: AIParameterBeliefInput) {
+  const now = new Date().toISOString()
+  const memory = readLocalAIClarificationMemory()
+  const nextBelief = localAIParameterBeliefFromInput(input, now)
+  const nextBeliefsByKey = new Map(memory.parameterBeliefs.map(belief => [`${belief.entityKey}:${belief.parameterKey}`, belief]))
+  const key = `${nextBelief.entityKey}:${nextBelief.parameterKey}`
+  const existing = nextBeliefsByKey.get(key)
+  nextBeliefsByKey.set(key, existing && existing.confidence > nextBelief.confidence ? existing : nextBelief)
+  writeLocalAIClarificationMemory({
+    ...memory,
+    parameterBeliefs: [...nextBeliefsByKey.values()]
+      .sort((a, b) => new Date(b.updatedAt ?? b.lastAnsweredAt ?? 0).getTime() - new Date(a.updatedAt ?? a.lastAnsweredAt ?? 0).getTime())
+      .slice(0, 80),
+  })
+}
+
 function toAIContextEdge(row: AIContextEdgeRow): AIContextEdge {
   return {
     id: row.id,
@@ -1006,7 +1022,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     } catch (e) {
       if (isAIMemorySchemaMissing(e)) {
         logMissingAIMemorySchema('fetchAIClarificationEvents')
-        return []
+        return localAIClarificationEvents(keys, limit)
       }
       handleError(e, 'fetchAIClarificationEvents')
       return []
@@ -1061,7 +1077,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     } catch (e) {
       if (isAIMemorySchemaMissing(e)) {
         logMissingAIMemorySchema('fetchAIRecommendationFeedback')
-        return []
+        return localAIRecommendationFeedback({ taskIds: input.taskIds, entityKeys, limit })
       }
       handleError(e, 'fetchAIRecommendationFeedback')
       return []
@@ -1095,7 +1111,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     } catch (e) {
       if (isAIMemorySchemaMissing(e)) {
         logMissingAIMemorySchema('fetchAIParameterBeliefs')
-        return []
+        return localAIParameterBeliefs(input)
       }
       handleError(e, 'fetchAIParameterBeliefs')
       return []
@@ -1327,6 +1343,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (options.skipQueue) {
           throw e
         }
+        recordLocalAIParameterBelief(input)
         enqueuePendingAIMemoryWrite({
           kind: 'parameter_belief',
           input,
@@ -1501,6 +1518,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (options.skipQueue) {
           throw e
         }
+        recordLocalAIClarificationEvent(input)
         enqueuePendingAIMemoryWrite({
           kind: 'clarification_event',
           input,
@@ -1575,6 +1593,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (options.skipQueue) {
           throw e
         }
+        recordLocalAIRecommendationFeedback(input)
         enqueuePendingAIMemoryWrite({
           kind: 'recommendation_feedback',
           input,

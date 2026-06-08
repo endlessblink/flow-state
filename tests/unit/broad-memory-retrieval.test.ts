@@ -432,4 +432,55 @@ describe('retrieveBroadAIMemory', () => {
     expect(result.summary).toContain('summary="Uncategorized is mostly low-stakes admin unless the task note says otherwise."')
     expect(result.summary).toContain('source_events="18"')
   })
+
+  it('does not reuse stale or low-confidence snapshots as fresh broad-answer evidence', async () => {
+    const snapshots: AIMemorySnapshot[] = [
+      {
+        snapshotKey: 'project:uncategorized:old-summary',
+        scope: 'project',
+        entityKeys: ['project:uncategorized'],
+        summaryText: 'Old summary that should not guide current ranking.',
+        facts: {},
+        sourceEventCount: 22,
+        sourceEntityCount: 1,
+        confidence: 0.9,
+        staleAfter: '2026-06-01T09:00:00.000Z',
+        updatedAt: '2026-05-01T09:00:00.000Z',
+      },
+      {
+        snapshotKey: 'project:uncategorized:weak-summary',
+        scope: 'project',
+        entityKeys: ['project:uncategorized'],
+        summaryText: 'Weak summary that should not suppress uncertainty.',
+        facts: {},
+        sourceEventCount: 5,
+        sourceEntityCount: 1,
+        confidence: 0.3,
+        staleAfter: '2026-07-01T09:00:00.000Z',
+        updatedAt: '2026-06-01T09:00:00.000Z',
+      },
+    ]
+    const db = dbStub({
+      fetchAIMemorySnapshots: vi.fn(async () => snapshots),
+    })
+
+    const result = await retrieveBroadAIMemory({
+      db,
+      lang: 'en',
+      now: new Date('2026-06-08T10:00:00.000Z'),
+      cardTasks: [{ id: 'local-task', projectId: 'uncategorized', title: 'Loose admin task' }],
+    })
+
+    expect(result.diagnostics.snapshotCount).toBe(0)
+    expect(result.diagnostics.lifecycle.staleSnapshotKeys).toEqual(['project:uncategorized:old-summary'])
+    expect(result.diagnostics.lifecycle.refreshSnapshotKeys).toEqual([
+      'project:uncategorized:old-summary',
+      'project:uncategorized:weak-summary',
+    ])
+    expect(result.diagnostics.lifecycle.lowConfidenceSnapshotCount).toBe(1)
+    expect(result.summary).toContain('memory lifecycle')
+    expect(result.summary).toContain('snapshot_refresh_needed')
+    expect(result.summary).not.toContain('Old summary that should not guide current ranking.')
+    expect(result.summary).not.toContain('Weak summary that should not suppress uncertainty.')
+  })
 })

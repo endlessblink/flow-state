@@ -9,7 +9,7 @@ import type {
   TaskContext,
 } from '@/types/aiMemory'
 import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from './memoryEvidence'
-import { assessAIParameterBeliefFreshness, assessAIMemoryFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
+import { assessAIParameterBeliefFreshness, assessAIMemoryFreshness, assessAIMemorySnapshotFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 import { projectEntityKey, taskEntityKey } from './weeklyMemoryRetrieval'
 
 type CardTaskLike = Record<string, unknown>
@@ -162,9 +162,10 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     contextEdges,
     memorySnapshots,
   ] = rows
-  const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now, parameterBeliefs)
+  const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now, parameterBeliefs, memorySnapshots)
   const refreshEntityKeys = new Set(lifecycle.refreshEntityKeys)
   const activeClarificationEvents = clarificationEvents.filter(event => !refreshEntityKeys.has(event.entityKey))
+  const activeMemorySnapshots = memorySnapshots.filter(snapshot => assessAIMemorySnapshotFreshness(snapshot, input.now).fresh)
   const activeParameterBeliefs = parameterBeliefs.filter(belief =>
     !refreshEntityKeys.has(belief.entityKey) &&
     assessAIParameterBeliefFreshness(belief, input.now).fresh
@@ -200,7 +201,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       parameterBeliefs: activeParameterBeliefs,
       recommendationFeedback,
       contextEdges,
-      memorySnapshots,
+      memorySnapshots: activeMemorySnapshots,
       contextEntities,
       lifecycle,
       projectIdStrings,
@@ -219,7 +220,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       beliefCount: activeParameterBeliefs.length,
       feedbackCount: recommendationFeedback.length,
       graphEdgeCount: contextEdges.length,
-      snapshotCount: memorySnapshots.length,
+      snapshotCount: activeMemorySnapshots.length,
       entityKeyCount: entityKeys.length,
       lifecycle,
       elapsedMs: Math.round(performance.now() - startedAt),
@@ -359,10 +360,13 @@ function emptyLifecycleSummary(): AIMemoryLifecycleSummary {
     refreshEntityKeys: [],
     staleParameterBeliefKeys: [],
     refreshParameterBeliefKeys: [],
+    staleSnapshotKeys: [],
+    refreshSnapshotKeys: [],
     summarizeEntityKeys: [],
     archiveEventCount: 0,
     lowConfidenceEntityCount: 0,
     lowConfidenceBeliefCount: 0,
+    lowConfidenceSnapshotCount: 0,
   }
 }
 
@@ -372,10 +376,13 @@ function broadLifecycleEvidence(lifecycle: AIMemoryLifecycleSummary): string[] {
   if (lifecycle.refreshParameterBeliefKeys.length) bits.push(formatMemoryEvidence('belief_refresh_needed', `${lifecycle.refreshParameterBeliefKeys.length} remembered answer(s)`, 80))
   if (lifecycle.staleEntityKeys.length) bits.push(formatMemoryEvidence('stale', `${lifecycle.staleEntityKeys.length} memory item(s)`, 80))
   if (lifecycle.staleParameterBeliefKeys.length) bits.push(formatMemoryEvidence('stale_beliefs', `${lifecycle.staleParameterBeliefKeys.length} remembered answer(s)`, 80))
+  if (lifecycle.refreshSnapshotKeys.length) bits.push(formatMemoryEvidence('snapshot_refresh_needed', `${lifecycle.refreshSnapshotKeys.length} compact summary item(s)`, 80))
+  if (lifecycle.staleSnapshotKeys.length) bits.push(formatMemoryEvidence('stale_snapshots', `${lifecycle.staleSnapshotKeys.length} compact summary item(s)`, 80))
   if (lifecycle.summarizeEntityKeys.length) bits.push(formatMemoryEvidence('summarize_needed', `${lifecycle.summarizeEntityKeys.length} memory item(s)`, 80))
   if (lifecycle.archiveEventCount) bits.push(formatMemoryEvidence('old_events', `${lifecycle.archiveEventCount}`, 40))
   if (lifecycle.lowConfidenceEntityCount) bits.push(formatMemoryEvidence('low_confidence', `${lifecycle.lowConfidenceEntityCount}`, 40))
   if (lifecycle.lowConfidenceBeliefCount) bits.push(formatMemoryEvidence('low_confidence_beliefs', `${lifecycle.lowConfidenceBeliefCount}`, 40))
+  if (lifecycle.lowConfidenceSnapshotCount) bits.push(formatMemoryEvidence('low_confidence_snapshots', `${lifecycle.lowConfidenceSnapshotCount}`, 40))
   return bits
 }
 

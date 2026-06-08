@@ -2096,10 +2096,13 @@ export function useAIChat() {
             refreshEntityKeys: [],
             staleParameterBeliefKeys: [],
             refreshParameterBeliefKeys: [],
+            staleSnapshotKeys: [],
+            refreshSnapshotKeys: [],
             summarizeEntityKeys: [],
             archiveEventCount: 0,
             lowConfidenceEntityCount: 0,
             lowConfidenceBeliefCount: 0,
+            lowConfidenceSnapshotCount: 0,
           },
         }
         try {

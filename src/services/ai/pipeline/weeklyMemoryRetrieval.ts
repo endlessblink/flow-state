@@ -1,6 +1,6 @@
 import type { AIClarificationEvent, AIContextEdge, AIContextEdgeInput, AIContextEntity, AIMemorySnapshot, AIParameterBelief, ProjectContext, TaskContext, AIRecommendationFeedback } from '@/types/aiMemory'
 import type { WeekContextMemoryInput } from './weeklyPlan'
-import { assessAIParameterBeliefFreshness, assessAIMemoryFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
+import { assessAIParameterBeliefFreshness, assessAIMemoryFreshness, assessAIMemorySnapshotFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 
 type CardTaskLike = Record<string, unknown>
 const WEEKLY_GLOBAL_MEMORY_ENTITY_KEYS = [
@@ -115,8 +115,9 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
       timeWeeklyRetrievalStage(stageTimings, 'memorySnapshots', () => input.db.fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week'], limit: 12 }) ?? Promise.resolve([])),
       timeWeeklyRetrievalStage(stageTimings, 'parameterBeliefs', () => input.db.fetchAIParameterBeliefs?.({ entityKeys: beliefEntityKeys, limit: 60 }) ?? Promise.resolve([])),
     ]), input.timeoutMs, 'weekly_plan_memory_timeout')
-    const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now, parameterBeliefs)
+    const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now, parameterBeliefs, memorySnapshots)
     const refreshEntityKeys = new Set(lifecycle.refreshEntityKeys)
+    const freshMemorySnapshots = memorySnapshots.filter(snapshot => assessAIMemorySnapshotFreshness(snapshot, input.now).fresh)
     const freshParameterBeliefs = parameterBeliefs.filter(belief =>
       !refreshEntityKeys.has(belief.entityKey) &&
       assessAIParameterBeliefFreshness(belief, input.now).fresh
@@ -134,7 +135,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
     const memory: WeekContextMemoryInput = {
       projectContexts: uniqueBy([...freshProjectContexts, ...entityProjectContexts], ctx => ctx.projectId),
       taskContexts: uniqueBy([...freshTaskContexts, ...entityTaskContexts], ctx => ctx.taskId),
-      memorySnapshots,
+      memorySnapshots: freshMemorySnapshots,
       parameterBeliefs: freshParameterBeliefs,
       recommendationFeedback,
     }
@@ -154,7 +155,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
         taskContextCount: memory.taskContexts?.length ?? 0,
         feedbackCount: recommendationFeedback.length,
         graphEdgeCount: contextEdges.length,
-        snapshotCount: memorySnapshots.length,
+        snapshotCount: freshMemorySnapshots.length,
         parameterBeliefCount: freshParameterBeliefs.length,
         elapsedMs: Math.round(performance.now() - startedAt),
         timedOut: false,
@@ -196,10 +197,13 @@ function emptyLifecycleSummary(): AIMemoryLifecycleSummary {
     refreshEntityKeys: [],
     staleParameterBeliefKeys: [],
     refreshParameterBeliefKeys: [],
+    staleSnapshotKeys: [],
+    refreshSnapshotKeys: [],
     summarizeEntityKeys: [],
     archiveEventCount: 0,
     lowConfidenceEntityCount: 0,
     lowConfidenceBeliefCount: 0,
+    lowConfidenceSnapshotCount: 0,
   }
 }
 

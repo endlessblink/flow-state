@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { assessAIContextEntityLifecycle, assessAIMemoryFreshness, assessAIParameterBeliefFreshness, buildAIMemorySnapshotInput, summarizeAIMemoryLifecycle } from '@/services/ai/pipeline/memoryLifecycle'
-import type { AIClarificationEvent, AIContextEntity, AIParameterBelief } from '@/types/aiMemory'
+import { assessAIContextEntityLifecycle, assessAIMemoryFreshness, assessAIMemorySnapshotFreshness, assessAIParameterBeliefFreshness, buildAIMemorySnapshotInput, summarizeAIMemoryLifecycle } from '@/services/ai/pipeline/memoryLifecycle'
+import type { AIClarificationEvent, AIContextEntity, AIMemorySnapshot, AIParameterBelief } from '@/types/aiMemory'
 
 function entity(overrides: Partial<AIContextEntity> = {}): AIContextEntity {
   return {
@@ -41,6 +41,22 @@ function belief(overrides: Partial<AIParameterBelief> = {}): AIParameterBelief {
     lastReinforcedAt: '2026-06-01T10:00:00.000Z',
     staleAfter: '2026-07-01T10:00:00.000Z',
     decayScore: 1,
+    ...overrides,
+  }
+}
+
+function snapshot(overrides: Partial<AIMemorySnapshot> = {}): AIMemorySnapshot {
+  return {
+    snapshotKey: 'project:ai-planner:summary',
+    scope: 'project',
+    entityKeys: ['project:ai-planner'],
+    summaryText: 'Current compact memory summary.',
+    facts: {},
+    sourceEventCount: 12,
+    sourceEntityCount: 1,
+    confidence: 0.82,
+    staleAfter: '2026-07-01T10:00:00.000Z',
+    updatedAt: '2026-06-01T10:00:00.000Z',
     ...overrides,
   }
 }
@@ -124,6 +140,32 @@ describe('AI memory lifecycle policy', () => {
     const summary = summarizeAIMemoryLifecycle([], [], now, [stale, fresh])
     expect(summary.staleParameterBeliefKeys).toEqual(['preference:ranking_focus:rankingFocus'])
     expect(summary.refreshParameterBeliefKeys).toEqual(['preference:ranking_focus:rankingFocus'])
+  })
+
+  it('marks stale or low-confidence snapshots for refresh instead of fresh retrieval evidence', () => {
+    const stale = snapshot({
+      snapshotKey: 'project:ai-planner:old-summary',
+      staleAfter: '2026-06-01T00:00:00.000Z',
+    })
+    const weak = snapshot({
+      snapshotKey: 'project:ai-planner:weak-summary',
+      confidence: 0.3,
+    })
+    const fresh = snapshot()
+
+    expect(assessAIMemorySnapshotFreshness(stale, now)).toMatchObject({
+      fresh: false,
+      reasons: expect.arrayContaining(['explicit_stale_after']),
+    })
+    expect(assessAIMemorySnapshotFreshness(fresh, now)).toMatchObject({ fresh: true, reasons: [] })
+
+    const summary = summarizeAIMemoryLifecycle([], [], now, [], [stale, weak, fresh])
+    expect(summary.staleSnapshotKeys).toEqual(['project:ai-planner:old-summary'])
+    expect(summary.refreshSnapshotKeys).toEqual([
+      'project:ai-planner:old-summary',
+      'project:ai-planner:weak-summary',
+    ])
+    expect(summary.lowConfidenceSnapshotCount).toBe(1)
   })
 
   it('builds a bounded sanitized snapshot input from noisy lifecycle history', () => {

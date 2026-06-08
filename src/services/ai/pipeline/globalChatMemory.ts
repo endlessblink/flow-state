@@ -1,5 +1,6 @@
 import type { AIClarificationEvent, AIContextEdge, AIContextEntity, AIMemorySnapshot, AIParameterBelief } from '@/types/aiMemory'
 import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from './memoryEvidence'
+import { assessAIMemorySnapshotFreshness } from './memoryLifecycle'
 
 export const GLOBAL_CHAT_MEMORY_ENTITY_KEYS = [
   'workflow:task_answer:general',
@@ -47,7 +48,8 @@ export async function retrieveGlobalChatMemory(
     db.fetchAIContextEdges?.({ entityKeys: GLOBAL_CHAT_MEMORY_ENTITY_KEYS, limit: 30 }) ?? Promise.resolve([]),
     db.fetchAIMemorySnapshots?.({ entityKeys: GLOBAL_CHAT_MEMORY_ENTITY_KEYS, scopes: ['user', 'workflow'], limit: 8 }) ?? Promise.resolve([]),
   ])
-  return buildGlobalChatMemorySummary({ lang, entities, events, beliefs, edges, snapshots })
+  const freshSnapshots = snapshots.filter(snapshot => assessAIMemorySnapshotFreshness(snapshot).fresh)
+  return buildGlobalChatMemorySummary({ lang, entities, events, beliefs, edges, snapshots: freshSnapshots })
 }
 
 export function buildGlobalChatMemorySummary(input: {

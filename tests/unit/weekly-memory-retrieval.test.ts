@@ -245,6 +245,56 @@ describe('retrieveWeeklyAIMemory', () => {
     expect(JSON.stringify(result.diagnostics)).not.toContain('User said uncategorized')
   })
 
+  it('filters stale memory snapshots out of weekly planning evidence while keeping lifecycle diagnostics', async () => {
+    const memorySnapshots: AIMemorySnapshot[] = [
+      {
+        snapshotKey: 'week:2026-06-01:summary',
+        scope: 'week',
+        entityKeys: [`task:${taskId}`, `project:${projectId}`, 'week:2026-06-08'],
+        summaryText: 'Outdated weekly focus that should be refreshed before ranking.',
+        facts: { focus: 'old priority' },
+        sourceEventCount: 12,
+        sourceEntityCount: 2,
+        confidence: 0.9,
+        staleAfter: '2026-06-01T08:00:00.000Z',
+        updatedAt: '2026-05-20T08:00:00.000Z',
+      },
+      {
+        snapshotKey: 'project:weak-summary',
+        scope: 'project',
+        entityKeys: [`project:${projectId}`],
+        summaryText: 'Low-confidence summary that should not suppress a clarification.',
+        facts: {},
+        sourceEventCount: 3,
+        sourceEntityCount: 1,
+        confidence: 0.3,
+        staleAfter: '2026-07-01T08:00:00.000Z',
+        updatedAt: '2026-06-01T08:00:00.000Z',
+      },
+    ]
+    const db = dbStub({
+      fetchAIMemorySnapshots: vi.fn(async () => memorySnapshots),
+    })
+
+    const result = await retrieveWeeklyAIMemory({
+      db,
+      now: new Date('2026-06-08T10:00:00.000Z'),
+      timeoutMs: 200,
+      cardTasks: [{ id: taskId, projectId, title: 'Known task' }],
+    })
+
+    expect(result.memory.memorySnapshots).toEqual([])
+    expect(result.diagnostics.snapshotCount).toBe(0)
+    expect(result.diagnostics.lifecycle.staleSnapshotKeys).toEqual(['week:2026-06-01:summary'])
+    expect(result.diagnostics.lifecycle.refreshSnapshotKeys).toEqual([
+      'week:2026-06-01:summary',
+      'project:weak-summary',
+    ])
+    expect(result.diagnostics.lifecycle.lowConfidenceSnapshotCount).toBe(1)
+    expect(JSON.stringify(result.memory)).not.toContain('Outdated weekly focus')
+    expect(JSON.stringify(result.memory)).not.toContain('Low-confidence summary')
+  })
+
   it('falls back on timeout without inventing memory evidence', async () => {
     vi.useFakeTimers()
     const db = dbStub({

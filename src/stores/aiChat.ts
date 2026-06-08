@@ -86,10 +86,13 @@ export interface AIActivityEvent {
       refreshEntityKeys: string[]
       staleParameterBeliefKeys?: string[]
       refreshParameterBeliefKeys?: string[]
+      staleSnapshotKeys?: string[]
+      refreshSnapshotKeys?: string[]
       summarizeEntityKeys: string[]
       archiveEventCount: number
       lowConfidenceEntityCount: number
       lowConfidenceBeliefCount?: number
+      lowConfidenceSnapshotCount?: number
     }
   }
 }

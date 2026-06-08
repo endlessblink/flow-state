@@ -213,10 +213,13 @@ describe('broad task clarification policy', () => {
       refreshEntityKeys: ['project:uncategorized'],
       staleParameterBeliefKeys: [],
       refreshParameterBeliefKeys: [],
+      staleSnapshotKeys: [],
+      refreshSnapshotKeys: [],
       summarizeEntityKeys: [],
       archiveEventCount: 0,
       lowConfidenceEntityCount: 0,
       lowConfidenceBeliefCount: 0,
+      lowConfidenceSnapshotCount: 0,
     })
 
     expect(card?.memoryKey).toBe('project:uncategorized')
@@ -254,10 +257,13 @@ describe('broad task clarification policy', () => {
       refreshEntityKeys: ['project:uncategorized'],
       staleParameterBeliefKeys: [],
       refreshParameterBeliefKeys: [],
+      staleSnapshotKeys: [],
+      refreshSnapshotKeys: [],
       summarizeEntityKeys: [],
       archiveEventCount: 0,
       lowConfidenceEntityCount: 0,
       lowConfidenceBeliefCount: 0,
+      lowConfidenceSnapshotCount: 0,
     })
 
     expect(card).toBeNull()
@@ -272,10 +278,13 @@ describe('broad task clarification policy', () => {
       refreshEntityKeys: [],
       staleParameterBeliefKeys: ['workflow:task_answer:day_plan:rankingFocus'],
       refreshParameterBeliefKeys: ['workflow:task_answer:day_plan:rankingFocus'],
+      staleSnapshotKeys: [],
+      refreshSnapshotKeys: [],
       summarizeEntityKeys: [],
       archiveEventCount: 0,
       lowConfidenceEntityCount: 0,
       lowConfidenceBeliefCount: 0,
+      lowConfidenceSnapshotCount: 0,
     })
 
     expect(card?.memoryKey).toBe('workflow:task_answer:day_plan')

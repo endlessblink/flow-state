@@ -1755,10 +1755,13 @@ describe('AI sidebar-first desktop experience', () => {
       refreshEntityKeys: [],
       staleParameterBeliefKeys: ['week:2026-06-08:thisWeekImportance'],
       refreshParameterBeliefKeys: ['week:2026-06-08:thisWeekImportance'],
+      staleSnapshotKeys: [],
+      refreshSnapshotKeys: [],
       summarizeEntityKeys: [],
       archiveEventCount: 0,
       lowConfidenceEntityCount: 0,
       lowConfidenceBeliefCount: 0,
+      lowConfidenceSnapshotCount: 0,
     }
 
     const interview = buildWeeklyPlanningInterview(context, [], {
@@ -3217,7 +3220,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('fetchTaskContexts(taskIds)')
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 })')
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain("fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week'], limit: 12 })")
-    expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('snapshotCount: memorySnapshots.length')
+    expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('snapshotCount: freshMemorySnapshots.length')
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('fetchAIParameterBeliefs?.({ entityKeys: beliefEntityKeys, limit: 60 })')
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('parameterBeliefCount: freshParameterBeliefs.length')
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('contextFresh(ctx')

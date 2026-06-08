@@ -1,4 +1,4 @@
-import type { AIClarificationEvent, AIContextEntity, AIMemorySnapshotInput, AIParameterBelief } from '@/types/aiMemory'
+import type { AIClarificationEvent, AIContextEntity, AIMemorySnapshot, AIMemorySnapshotInput, AIParameterBelief } from '@/types/aiMemory'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -17,10 +17,13 @@ export type AIMemoryLifecycleSummary = {
   refreshEntityKeys: string[]
   staleParameterBeliefKeys: string[]
   refreshParameterBeliefKeys: string[]
+  staleSnapshotKeys: string[]
+  refreshSnapshotKeys: string[]
   summarizeEntityKeys: string[]
   archiveEventCount: number
   lowConfidenceEntityCount: number
   lowConfidenceBeliefCount: number
+  lowConfidenceSnapshotCount: number
 }
 
 export type AIMemoryFreshnessInput = {
@@ -113,11 +116,23 @@ export function assessAIParameterBeliefFreshness(
   }, now)
 }
 
+export function assessAIMemorySnapshotFreshness(
+  snapshot: AIMemorySnapshot,
+  now: Date = new Date(),
+): AIMemoryFreshnessDecision {
+  return assessAIMemoryFreshness({
+    staleAfter: snapshot.staleAfter,
+    lastConfirmedAt: snapshot.updatedAt ?? snapshot.createdAt ?? null,
+    confidence: snapshot.confidence,
+  }, now)
+}
+
 export function summarizeAIMemoryLifecycle(
   entities: AIContextEntity[],
   events: AIClarificationEvent[] = [],
   now: Date = new Date(),
   parameterBeliefs: AIParameterBelief[] = [],
+  memorySnapshots: AIMemorySnapshot[] = [],
 ): AIMemoryLifecycleSummary {
   const decisions = entities.map(entity => assessAIContextEntityLifecycle(entity, events, now))
   const beliefDecisions = parameterBeliefs.map(belief => ({
@@ -125,11 +140,17 @@ export function summarizeAIMemoryLifecycle(
     entityKey: belief.entityKey,
     decision: assessAIParameterBeliefFreshness(belief, now),
   }))
+  const snapshotDecisions = memorySnapshots.map(snapshot => ({
+    key: snapshot.snapshotKey,
+    decision: assessAIMemorySnapshotFreshness(snapshot, now),
+  }))
   return {
     staleEntityKeys: decisions.filter(decision => decision.stale).map(decision => decision.entityKey),
     refreshEntityKeys: decisions.filter(decision => decision.needsRefresh).map(decision => decision.entityKey),
     staleParameterBeliefKeys: beliefDecisions.filter(item => item.decision.reasons.includes('explicit_stale_after')).map(item => item.key),
     refreshParameterBeliefKeys: beliefDecisions.filter(item => !item.decision.fresh).map(item => item.key),
+    staleSnapshotKeys: snapshotDecisions.filter(item => item.decision.reasons.includes('explicit_stale_after')).map(item => item.key),
+    refreshSnapshotKeys: snapshotDecisions.filter(item => !item.decision.fresh).map(item => item.key),
     summarizeEntityKeys: decisions.filter(decision => decision.shouldSummarize).map(decision => decision.entityKey),
     archiveEventCount: events.filter(event => {
       const createdAt = parseMs(event.createdAt ?? null)
@@ -137,6 +158,7 @@ export function summarizeAIMemoryLifecycle(
     }).length,
     lowConfidenceEntityCount: decisions.filter(decision => decision.effectiveConfidence < 0.45).length,
     lowConfidenceBeliefCount: beliefDecisions.filter(item => item.decision.reasons.includes('low_confidence')).length,
+    lowConfidenceSnapshotCount: snapshotDecisions.filter(item => item.decision.reasons.includes('low_confidence')).length,
   }
 }
 

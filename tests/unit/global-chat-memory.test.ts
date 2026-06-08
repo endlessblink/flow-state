@@ -124,4 +124,32 @@ describe('retrieveGlobalChatMemory', () => {
     expect(summary).toContain('source_events="9"')
     expect(summary).not.toContain('undefined')
   })
+
+  it('filters stale snapshots out of global freeform memory evidence', async () => {
+    const db = dbStub({
+      fetchAIMemorySnapshots: vi.fn(async () => [{
+        id: 'snapshot-stale',
+        snapshotKey: 'workflow:task_answer:general:old-summary',
+        scope: 'workflow',
+        entityKeys: ['workflow:task_answer:general'],
+        summaryText: 'Old global planning summary that should not guide current answers.',
+        facts: {},
+        sourceEventCount: 20,
+        sourceEntityCount: 1,
+        confidence: 0.9,
+        staleAfter: '2020-01-01T00:00:00.000Z',
+        updatedAt: '2020-01-01T00:00:00.000Z',
+      }]),
+    })
+
+    const summary = await retrieveGlobalChatMemory(db, 'en')
+
+    expect(db.fetchAIMemorySnapshots).toHaveBeenCalledWith({
+      entityKeys: GLOBAL_CHAT_MEMORY_ENTITY_KEYS,
+      scopes: ['user', 'workflow'],
+      limit: 8,
+    })
+    expect(summary).not.toContain('memory snapshot workflow:task_answer:general:old-summary')
+    expect(summary).not.toContain('Old global planning summary')
+  })
 })

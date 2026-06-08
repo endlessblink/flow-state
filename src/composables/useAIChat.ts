@@ -2280,6 +2280,7 @@ export function useAIChat() {
             exactEntityCount: memoryDiagnostics.exactEntityCount,
             semanticCandidateCount: memoryDiagnostics.semanticCandidateCount,
             semanticSkippedReason: memoryDiagnostics.semanticSkippedReason,
+            lifecycle: memoryDiagnostics.lifecycle,
           },
           reason: memoryDiagnostics.timedOut
             ? 'memory retrieval timed out; ask-before-plan prevents fake certainty'

@@ -829,6 +829,13 @@ describe('AI sidebar-first desktop experience', () => {
         projectContextCount: 0,
         taskContextCount: 0,
         elapsedMs: 12,
+        lifecycle: {
+          staleEntityKeys: ['project:important-client-launch'],
+          refreshEntityKeys: ['project:important-client-launch'],
+          summarizeEntityKeys: [],
+          archiveEventCount: 2,
+          lowConfidenceEntityCount: 1,
+        },
       },
       reason: 'coverage score says context would change ranking',
       candidateCount: 3,
@@ -841,7 +848,14 @@ describe('AI sidebar-first desktop experience', () => {
         materiality: 'high',
       }),
       debug: expect.objectContaining({
-        retrieval: expect.objectContaining({ entityKeyCount: 4, elapsedMs: 12 }),
+        retrieval: expect.objectContaining({
+          entityKeyCount: 4,
+          elapsedMs: 12,
+          lifecycle: expect.objectContaining({
+            refreshEntityKeys: ['project:important-client-launch'],
+            archiveEventCount: 2,
+          }),
+        }),
       }),
     })
     expect(interview?.coverage?.score).toBeLessThan(0.5)
@@ -1479,6 +1493,27 @@ describe('AI sidebar-first desktop experience', () => {
               summary: 'One missing preference would change the recommendation.',
               memoryKey: 'workflow:task_answer:day_plan',
               pathType: 'clarify_first',
+              debug: {
+                retrieval: {
+                  source: 'hybrid_sql',
+                  entityKeyCount: 4,
+                  eventCount: 21,
+                  projectContextCount: 0,
+                  taskContextCount: 0,
+                  feedbackCount: 1,
+                  elapsedMs: 18,
+                  timedOut: false,
+                  lifecycle: {
+                    staleEntityKeys: ['synthetic:Work'],
+                    refreshEntityKeys: ['synthetic:Work'],
+                    summarizeEntityKeys: ['synthetic:Work'],
+                    archiveEventCount: 3,
+                    lowConfidenceEntityCount: 1,
+                  },
+                },
+                reason: 'coverage score says context would change ranking',
+                candidateCount: 1,
+              },
               candidateTaskIds: ['task-a'],
               actions: ['generate_current', 'show_candidates', 'pause_save'],
               coverage: {
@@ -1544,6 +1579,27 @@ describe('AI sidebar-first desktop experience', () => {
               summary: 'One missing detail would change the ranking, so I should ask before planning.',
               memoryKey: 'synthetic:Work',
               pathType: 'clarify_first',
+              debug: {
+                retrieval: {
+                  source: 'hybrid_sql',
+                  entityKeyCount: 4,
+                  eventCount: 21,
+                  projectContextCount: 0,
+                  taskContextCount: 0,
+                  feedbackCount: 1,
+                  elapsedMs: 18,
+                  timedOut: false,
+                  lifecycle: {
+                    staleEntityKeys: ['synthetic:Work'],
+                    refreshEntityKeys: ['synthetic:Work'],
+                    summarizeEntityKeys: ['synthetic:Work'],
+                    archiveEventCount: 3,
+                    lowConfidenceEntityCount: 1,
+                  },
+                },
+                reason: 'coverage score says context would change ranking',
+                candidateCount: 1,
+              },
               candidateTaskIds: ['task-a'],
               actions: ['generate_current', 'show_candidates', 'pause_save'],
               coverage: {
@@ -1609,6 +1665,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.find('[data-testid="ai-clarification"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('This broad plan should stay hidden')
+    expect(wrapper.text()).toContain('memory lifecycle: 1 need refresh, 1 need summary, 3 old events, 1 low confidence')
 
     await wrapper.get('.weekly-question-option').trigger('click')
     await wrapper.get('.weekly-question-apply').trigger('click')

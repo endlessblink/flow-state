@@ -355,6 +355,8 @@
 - 2026-06-08: Added a central `memoryLifecycle` policy that computes effective confidence with decay/reinforcement, flags explicit stale dates and old confirmations for refresh, detects noisy event history for summarization, and counts year-old events for retention/archive follow-up.
 - 2026-06-08: Weekly memory retrieval diagnostics now include lifecycle summary fields (`staleEntityKeys`, `refreshEntityKeys`, `summarizeEntityKeys`, `archiveEventCount`, `lowConfidenceEntityCount`) without injecting raw memory text into normal prompts.
 - 2026-06-08: Verified the lifecycle slice with focused lifecycle/retrieval/sidebar tests, the AI regression bundle, `npm run type-check`, and localhost web `npm run build`; Electron packaging remains intentionally deferred for this lane.
+- 2026-06-08: Clarification-card debug disclosure now surfaces memory lifecycle pressure (`need refresh`, `need summary`, old events, low confidence) behind "Why ask?" so diagnostics are inspectable without adding normal-response clutter.
+- 2026-06-08: Localhost browser smoke on isolated `http://127.0.0.1:5562` loaded the app, dismissed onboarding, opened the AI sidebar, and captured `/tmp/flowstate-ai-debug-smoke-sidebar.png`; this proves the updated chat UI is not blank or blocked, but Stage 8 full prompt-to-answer smoke is still pending.
 
 ---
 

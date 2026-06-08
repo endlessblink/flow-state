@@ -1441,6 +1441,15 @@ function clarificationDebugLines(card: AIClarificationArtifact): string[] {
     const retrieval = card.debug.retrieval
     const feedback = retrieval.feedbackCount ? `, ${retrieval.feedbackCount} feedback` : ''
     lines.push(`memory: ${retrieval.entityKeyCount} keys, ${retrieval.eventCount} events${feedback}, ${retrieval.elapsedMs ?? '?'}ms${retrieval.timedOut ? ', timed out' : ''}`)
+    const lifecycle = retrieval.lifecycle
+    if (lifecycle) {
+      const parts: string[] = []
+      if (lifecycle.refreshEntityKeys.length) parts.push(`${lifecycle.refreshEntityKeys.length} need refresh`)
+      if (lifecycle.summarizeEntityKeys.length) parts.push(`${lifecycle.summarizeEntityKeys.length} need summary`)
+      if (lifecycle.archiveEventCount) parts.push(`${lifecycle.archiveEventCount} old events`)
+      if (lifecycle.lowConfidenceEntityCount) parts.push(`${lifecycle.lowConfidenceEntityCount} low confidence`)
+      if (parts.length) lines.push(`memory lifecycle: ${parts.join(', ')}`)
+    }
   }
   if (card.debug?.evpi) {
     const evpi = card.debug.evpi

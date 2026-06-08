@@ -169,6 +169,13 @@ export interface AIClarificationArtifact {
       exactEntityCount?: number
       semanticCandidateCount?: number
       semanticSkippedReason?: 'pgvector_not_configured' | 'no_related_entities'
+      lifecycle?: {
+        staleEntityKeys: string[]
+        refreshEntityKeys: string[]
+        summarizeEntityKeys: string[]
+        archiveEventCount: number
+        lowConfidenceEntityCount: number
+      }
     }
     reason: string
     candidateCount: number

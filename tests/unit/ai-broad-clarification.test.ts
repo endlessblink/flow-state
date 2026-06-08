@@ -45,6 +45,13 @@ function event(eventType: AIClarificationEvent['eventType'], daysAgo: number, qu
   }
 }
 
+function relativeEvent(eventType: AIClarificationEvent['eventType'], daysAgo: number, questionId = 'response_quality_day_plan'): AIClarificationEvent {
+  return {
+    ...event(eventType, daysAgo, questionId),
+    createdAt: new Date(Date.now() - (daysAgo * 24 * 60 * 60 * 1000)).toISOString(),
+  }
+}
+
 function belief(parameterKey = 'rankingFocus', confidence = 0.9, value = 'real impact or consequence'): AIParameterBelief {
   return {
     id: `belief-${parameterKey}`,
@@ -210,11 +217,18 @@ describe('broad task clarification policy', () => {
     expect(hasRecentClarificationDecision([event('asked', 0.5)], now)).toBe(true)
     expect(hasRecentClarificationDecision([event('asked', 2)], now)).toBe(false)
     expect(hasRecentClarificationDecision([event('answered', 8)], now)).toBe(false)
+    expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [relativeEvent('asked', 0.5)])).toBeNull()
 
     const card = buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'he', [event('answered', 8)])
     expect(card?.locale).toBe('he')
     expect(card?.direction).toBe('rtl')
     expect(card?.question.options[0]?.label).toBe('השפעה אמיתית')
+
+    const staleAskedOnlyCard = buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [relativeEvent('asked', 2)])
+    expect(staleAskedOnlyCard?.question.id).toBe('response_quality_day_plan_general_focus')
+    expect(staleAskedOnlyCard?.debug?.evpi?.candidates).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ skippedReason: 'recently_resolved' }),
+    ]))
   })
 
   it('uses stable workflow memory keys for synthetic broad-answer buckets', () => {

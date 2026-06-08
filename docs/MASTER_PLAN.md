@@ -119,6 +119,9 @@
 - Memory rows can be versioned or audited so correction history remains inspectable after summaries are compacted.
 - Entity relationships can be queried server-side without introducing Neo4j/Memgraph deployment complexity.
 
+**Progress**:
+- 2026-06-08: Pending AI memory write tests now prove clarification events, recommendation feedback, and parameter beliefs all queue during schema-cache/migration misses and flush after the server schema becomes available. This protects saved clarification answers, postpone/dismiss/simplify learning signals, and EVPI belief updates during VPS rollout timing gaps.
+
 ---
 
 ### TASK-1831: Global low-overwhelm clarify-before-answer contract (📋 PLANNED)

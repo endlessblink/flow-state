@@ -7,9 +7,11 @@ import {
   useAIMemoryDatabase,
 } from '@/composables/supabase/useAIMemoryDatabase'
 
-let schemaReady = false
+let readyTables = new Set<string>()
 let entityUpsertCount = 0
 let eventInsertCount = 0
+let feedbackInsertCount = 0
+let parameterBeliefUpsertCount = 0
 
 vi.mock('@/composables/supabase/_infrastructure', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/composables/supabase/_infrastructure')>()
@@ -29,27 +31,29 @@ vi.mock('@/composables/supabase/_infrastructure', async (importOriginal) => {
 })
 
 function createTableBuilder(table: string) {
+  const schemaError = () => ({
+    code: 'PGRST205',
+    message: `Could not find the table 'public.${table}' in the schema cache`,
+  })
   const builder = {
     select: vi.fn(() => builder),
     eq: vi.fn(() => builder),
     maybeSingle: vi.fn(async () => {
-      if (!schemaReady && table === 'ai_context_entities') {
-        return {
-          data: null,
-          error: {
-            code: 'PGRST205',
-            message: "Could not find the table 'public.ai_context_entities' in the schema cache",
-          },
-        }
+      if (!readyTables.has(table)) {
+        return { data: null, error: schemaError() }
       }
       return { data: null, error: null }
     }),
     upsert: vi.fn(async () => {
+      if (!readyTables.has(table)) return { error: schemaError() }
       if (table === 'ai_context_entities') entityUpsertCount += 1
+      if (table === 'ai_parameter_beliefs') parameterBeliefUpsertCount += 1
       return { error: null }
     }),
     insert: vi.fn(async () => {
+      if (!readyTables.has(table)) return { error: schemaError() }
       if (table === 'ai_clarification_events') eventInsertCount += 1
+      if (table === 'ai_recommendation_feedback') feedbackInsertCount += 1
       return { error: null }
     }),
     order: vi.fn(() => builder),
@@ -74,9 +78,11 @@ function createContext(): DatabaseContext {
 
 describe('AI memory pending write queue', () => {
   beforeEach(() => {
-    schemaReady = false
+    readyTables = new Set()
     entityUpsertCount = 0
     eventInsertCount = 0
+    feedbackInsertCount = 0
+    parameterBeliefUpsertCount = 0
     clearPendingAIMemoryWritesForTest()
   })
 
@@ -101,11 +107,56 @@ describe('AI memory pending write queue', () => {
     expect(entityUpsertCount).toBe(0)
     expect(eventInsertCount).toBe(0)
 
-    schemaReady = true
+    readyTables = new Set(['ai_context_entities', 'ai_clarification_events', 'ai_parameter_beliefs'])
     await db.flushPendingAIMemoryWrites()
 
     expect(getPendingAIMemoryWriteCount()).toBe(0)
     expect(entityUpsertCount).toBe(1)
     expect(eventInsertCount).toBe(1)
+  })
+
+  it('queues recommendation feedback writes skipped by missing schema and flushes them later', async () => {
+    const db = useAIMemoryDatabase(createContext())
+
+    await expect(db.recordAIRecommendationFeedback({
+      recommendationId: 'rec_1',
+      entityKey: 'workflow:task_answer:general',
+      action: 'postpone',
+      reasonCategory: 'low_energy',
+      revisitAt: '2026-06-15T09:00:00.000Z',
+      sourceMessageId: 'msg_1',
+    })).resolves.toBeUndefined()
+
+    expect(getPendingAIMemoryWriteCount()).toBe(1)
+    expect(feedbackInsertCount).toBe(0)
+
+    readyTables = new Set(['ai_recommendation_feedback'])
+    await db.flushPendingAIMemoryWrites()
+
+    expect(getPendingAIMemoryWriteCount()).toBe(0)
+    expect(feedbackInsertCount).toBe(1)
+  })
+
+  it('queues parameter belief writes skipped by missing schema and flushes them later', async () => {
+    const db = useAIMemoryDatabase(createContext())
+
+    await expect(db.upsertAIParameterBelief({
+      entityKey: 'synthetic:Work',
+      entityType: 'synthetic_group',
+      parameterKey: 'impact',
+      value: 'real consequence',
+      confidence: 0.86,
+      impactWeight: 0.9,
+      sourceQuestionId: 'weekly-impact',
+    })).resolves.toBeUndefined()
+
+    expect(getPendingAIMemoryWriteCount()).toBe(1)
+    expect(parameterBeliefUpsertCount).toBe(0)
+
+    readyTables = new Set(['ai_parameter_beliefs'])
+    await db.flushPendingAIMemoryWrites()
+
+    expect(getPendingAIMemoryWriteCount()).toBe(0)
+    expect(parameterBeliefUpsertCount).toBe(1)
   })
 })

@@ -725,6 +725,30 @@ describe('AI sidebar-first desktop experience', () => {
     expect(audit.failures).toEqual([])
   })
 
+  it('requires broad post-clarification answers to visibly honor the user answer', () => {
+    const ignoredClarification = auditChatResponseQuality({
+      language: 'en',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      hasClarificationEvidence: true,
+      text: 'Start with the payment follow-up; the money risk is explicit. Keep the other candidates as cards only.',
+    })
+    const honoredClarification = auditChatResponseQuality({
+      language: 'en',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      hasClarificationEvidence: true,
+      text: 'Matches your clarification: start with the payment follow-up because the money risk is explicit.',
+    })
+
+    expect(ignoredClarification.level).toBe('bad')
+    expect(ignoredClarification.failures).toContain('missing_clarification_evidence')
+    expect(honoredClarification.level).not.toBe('bad')
+    expect(honoredClarification.failures).toEqual([])
+  })
+
   it('does not infer project importance from name alone and asks for saved project understanding', () => {
     const tasks = [
       {
@@ -2435,6 +2459,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(chatQuality).toContain('missing_task_cards')
     expect(chatQuality).toContain('unsupported_importance_language')
     expect(chatQuality).toContain('metadata_only_reasoning')
+    expect(chatQuality).toContain('missing_clarification_evidence')
 
     expect(chatMessage).toContain('data-testid="weekly-plan"')
     expect(chatMessage).toContain('data-testid="weekly-plan-questions"')

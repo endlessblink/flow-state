@@ -2432,6 +2432,7 @@ export function useAIChat() {
             hasCards: false,
             taskCount: collectCardTasks(toolResults).length,
             contextUnknown: toolResultsSummary.includes('context unknown') || toolResultsSummary.includes('Project/task understanding memory'),
+            hasClarificationEvidence: Boolean(clarificationContinuationEvidence && !isGenerateCurrentContinuation),
           })
           const shouldReplaceMissingCardProse = isClarificationContinuation || missingCardQuality.level === 'bad'
           formattedResponse = shouldReplaceMissingCardProse
@@ -2468,6 +2469,7 @@ export function useAIChat() {
         hasCards: Boolean(cardData),
         taskCount: collectCardTasks(toolResults).length,
         contextUnknown: toolResultsSummary.includes('context unknown') || toolResultsSummary.includes('Project/task understanding memory'),
+        hasClarificationEvidence: Boolean(clarificationContinuationEvidence && !isGenerateCurrentContinuation),
       }
       let responseQuality = auditChatResponseQuality(qualityInput)
       if (!isWeekPlan && responseQuality.level === 'bad' && hasTaskList) {

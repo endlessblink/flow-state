@@ -190,6 +190,7 @@
 **Progress**:
 - 2026-06-08: Added `auditWeeklyPlanQuality()` with bad/acceptable/excellent scoring and validation rejection for unsupported importance, generic substantial-work phrasing, weak consequence coverage, repeated templates, and overlong plans.
 - 2026-06-08: Added shared `auditChatResponseQuality()` for broader deterministic task answers so non-weekly outputs can be repaired when they are verbose, generic, metadata-only, or missing task cards.
+- 2026-06-08: Broad post-clarification answers now fail the chat-quality audit when they do not visibly honor the user's clarification evidence, forcing repair to the concise grounded fallback instead of accepting a plausible but context-ignoring answer.
 
 ---
 

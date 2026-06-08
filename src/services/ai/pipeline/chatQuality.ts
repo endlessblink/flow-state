@@ -17,12 +17,14 @@ export type ChatQualityInput = {
   hasCards: boolean
   taskCount: number
   contextUnknown?: boolean
+  hasClarificationEvidence?: boolean
 }
 
 const UNSUPPORTED_IMPORTANCE_RE = /(high stakes|strategic|meaningful|important|critical|substantial work|real consequences|חשוב|משמעותי|אסטרטגי|קריטי|השלכות אמיתיות)/i
 const GENERIC_FILLER_RE = /(stay on track|make progress|productive week|focus on priorities|based on your tasks|תתקדם|שבוע פרודוקטיבי|להתמקד בסדרי עדיפויות)/i
 const SHALLOW_REASON_RE = /(due soon|high priority|medium priority|low priority|overdue|באיחור|עדיפות גבוהה|עדיפות בינונית|עדיפות נמוכה)/i
 const STAKE_RE = /(unblock|blocked|risk|waiting|decision|money|billing|client|health|family|dependency|sequence|note|subtask|context unknown|unclear|חוסם|סיכון|מחכה|החלטה|כסף|לקוח|בריאות|משפחה|תלות|רצף|הערה|תת.?משימה|הקשר חסר|לא ברור)/i
+const CLARIFICATION_EVIDENCE_RE = /(clarification|your answer|you said|you chose|matches your clarification|explicit user wording|לפי תשובת|תשובת ההבהרה|ענית|בחרת|כתבת)/i
 
 export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAudit {
   const text = normalizeText(input.text)
@@ -44,6 +46,9 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   if (GENERIC_FILLER_RE.test(text)) failures.push('generic_filler')
   if (input.contextUnknown && UNSUPPORTED_IMPORTANCE_RE.test(text) && !/context unknown|unclear|missing context|הקשר חסר|לא ברור/i.test(text)) {
     failures.push('unsupported_importance_language')
+  }
+  if (input.hasClarificationEvidence && isBroadTaskAnswer && !CLARIFICATION_EVIDENCE_RE.test(text)) {
+    failures.push('missing_clarification_evidence')
   }
   if (isBroadTaskAnswer && SHALLOW_REASON_RE.test(text) && !STAKE_RE.test(text)) {
     failures.push('metadata_only_reasoning')

@@ -665,13 +665,91 @@ describe('AI memory pending write queue', () => {
     expect(snapshot.pendingWriteCount).toBe(0)
   })
 
+  it('shows local fallback memory in debug snapshot while server schema is missing', async () => {
+    const db = useAIMemoryDatabase(createContext())
+
+    await db.recordAIClarificationEvent({
+      entityKey: 'synthetic:Work',
+      entityType: 'synthetic_group',
+      displayName: 'Work',
+      questionId: 'memory_refresh_synthetic_work',
+      eventType: 'answered',
+      question: 'Is the old Work context still true?',
+      selectedOptionId: 'still_true',
+      selectedLabel: 'Still true',
+      memoryPatch: {
+        entityType: 'synthetic_group',
+        entityId: 'Work',
+        operation: 'confirm',
+        field: 'stale_context',
+        value: 'still true',
+        confidence: 0.9,
+        source: 'button_answer',
+      },
+      uncertaintyDimensions: ['stale_context'],
+      pathType: 'clarify_first',
+    })
+
+    const snapshot = await db.fetchAIMemoryDebugSnapshot(6)
+
+    expect(snapshot.schemaStatus).toBe('missing')
+    expect(snapshot.pendingWriteCount).toBe(1)
+    expect(snapshot.contextEntities[0]).toMatchObject({
+      entityKey: 'synthetic:Work',
+      lastAnsweredAt: expect.any(String),
+      reinforcementCount: 1,
+      decayScore: 1,
+    })
+    expect(snapshot.clarificationEvents[0]).toMatchObject({
+      entityKey: 'synthetic:Work',
+      eventType: 'answered',
+      selectedLabel: 'Still true',
+    })
+    expect(snapshot.parameterBeliefs.length).toBeGreaterThan(0)
+  })
+
   it('reports local-only memory mode for guests', async () => {
     const db = useAIMemoryDatabase(createGuestContext())
+
+    await db.recordAIClarificationEvent({
+      entityKey: 'workflow:task_answer:general',
+      entityType: 'workflow',
+      displayName: 'general',
+      questionId: 'response_quality_general',
+      eventType: 'answered',
+      question: 'What should broad answers focus on?',
+      selectedOptionId: 'ranking_impact',
+      selectedLabel: 'Real impact',
+      memoryPatch: {
+        entityType: 'workflow',
+        entityId: 'general',
+        operation: 'set',
+        field: 'rankingFocus',
+        value: 'real impact',
+        confidence: 0.9,
+        source: 'button_answer',
+      },
+      uncertaintyDimensions: ['preferences'],
+      pathType: 'clarify_first',
+    })
 
     const snapshot = await db.fetchAIMemoryDebugSnapshot(6)
 
     expect(snapshot.schemaStatus).toBe('local_only')
     expect(snapshot.schemaMissingTables).toEqual([])
+    expect(snapshot.contextEntities[0]).toMatchObject({
+      entityKey: 'workflow:task_answer:general',
+      displayName: 'general',
+    })
+    expect(snapshot.clarificationEvents[0]).toMatchObject({
+      selectedLabel: 'Real impact',
+    })
+    expect(snapshot.parameterBeliefs).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        parameterKey: 'rankingFocus',
+        confidence: 0.9,
+      }),
+    ]))
   })
 
   it('writes and reads compact AI memory snapshots for lifecycle summarization', async () => {

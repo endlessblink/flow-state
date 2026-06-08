@@ -1298,12 +1298,13 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
   const fetchAIMemoryDebugSnapshot = async (limit = 8): Promise<AIMemoryDebugSnapshot> => {
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
+    const localMemory = () => readLocalAIClarificationMemory()
     const empty = (): AIMemoryDebugSnapshot => ({
-      contextEntities: [],
+      contextEntities: (localMemory().contextEntities ?? []).slice(0, limit),
       contextEdges: [],
-      clarificationEvents: [],
-      parameterBeliefs: [],
-      recommendationFeedback: [],
+      clarificationEvents: localMemory().events.slice(0, limit),
+      parameterBeliefs: localMemory().parameterBeliefs.slice(0, limit),
+      recommendationFeedback: (localMemory().recommendationFeedback ?? []).slice(0, limit),
       memorySnapshots: [],
       schemaStatus: userId ? 'ready' : 'local_only',
       schemaMissingTables: [],
@@ -1403,13 +1404,22 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       : schemaMissingTables.length === memoryTables.length
         ? 'missing'
         : 'partial'
+    const local = localMemory()
 
     return {
-      contextEntities,
+      contextEntities: missingTables.has('ai_context_entities')
+        ? (local.contextEntities ?? []).slice(0, limit)
+        : contextEntities,
       contextEdges,
-      clarificationEvents,
-      parameterBeliefs,
-      recommendationFeedback,
+      clarificationEvents: missingTables.has('ai_clarification_events')
+        ? local.events.slice(0, limit)
+        : clarificationEvents,
+      parameterBeliefs: missingTables.has('ai_parameter_beliefs')
+        ? local.parameterBeliefs.slice(0, limit)
+        : parameterBeliefs,
+      recommendationFeedback: missingTables.has('ai_recommendation_feedback')
+        ? (local.recommendationFeedback ?? []).slice(0, limit)
+        : recommendationFeedback,
       memorySnapshots,
       schemaStatus,
       schemaMissingTables,

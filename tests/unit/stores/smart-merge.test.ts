@@ -24,11 +24,15 @@ import { getCachedTasksWithPendingWrites } from '@/services/offline/readCacheDB'
 // ── Module-level mocks ──────────────────────────────────────────────
 
 const mockFetchTasks = vi.fn().mockResolvedValue([])
+const mockFetchDeletedTaskIds = vi.fn().mockResolvedValue([])
+const mockFetchTombstones = vi.fn().mockResolvedValue([])
 let mockIsSwitchingWorkspace = false
 
 vi.mock('@/composables/useSupabaseDatabase', () => ({
   useSupabaseDatabase: () => ({
     fetchTasks: mockFetchTasks,
+    fetchDeletedTaskIds: mockFetchDeletedTaskIds,
+    fetchTombstones: mockFetchTombstones,
     fetchTaskById: vi.fn(),
     saveTask: vi.fn().mockResolvedValue({ error: null }),
     saveTasks: vi.fn().mockResolvedValue({ error: null }),
@@ -127,6 +131,9 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     vi.clearAllMocks()
     setActivePinia(createPinia())
     mockIsSwitchingWorkspace = false
+    mockFetchTasks.mockResolvedValue([])
+    mockFetchDeletedTaskIds.mockResolvedValue([])
+    mockFetchTombstones.mockResolvedValue([])
     vi.mocked(getCachedTasksWithPendingWrites).mockResolvedValue([])
 
     // Dynamic import after mocks are set up
@@ -339,6 +346,73 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     const found = store._rawTasks.find(t => t.id === recentTask.id)
     expect(found).toBeDefined()
     expect(found?.title).toBe('Just Created')
+  })
+
+  it('drops local-only tasks that are tombstoned on the server instead of resurrecting them', async () => {
+    const store = useTaskStore()
+    const tombstonedTask = makeTask({
+      id: 'task-tombstoned-local-only',
+      title: 'Deleted in Electron',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    const remoteTask = makeTask({ title: 'Still Active Remote Task' })
+
+    store._rawTasks.push(tombstonedTask)
+    mockFetchTasks.mockResolvedValue([remoteTask])
+    mockFetchTombstones.mockResolvedValue([
+      { entityType: 'task', entityId: tombstonedTask.id }
+    ])
+
+    await store.loadFromDatabase()
+
+    expect(store._rawTasks.some(t => t.id === tombstonedTask.id)).toBe(false)
+    expect(store._rawTasks.some(t => t.id === remoteTask.id)).toBe(true)
+  })
+
+  it('does not let the young-session empty overwrite guard preserve tombstoned local tasks', async () => {
+    const store = useTaskStore()
+    const tombstonedTask = makeTask({
+      id: 'task-tombstoned-empty-remote',
+      title: 'Deleted while localhost was stale',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    store._rawTasks.push(tombstonedTask)
+
+    const win = globalThis.window as any
+    if (win) {
+      win.FlowStateSessionStart = Date.now() - 5000
+    }
+
+    mockFetchTasks.mockResolvedValue([])
+    mockFetchTombstones.mockResolvedValue([
+      { entityType: 'task', entityId: tombstonedTask.id }
+    ])
+
+    await store.loadFromDatabase()
+
+    expect(store._rawTasks.some(t => t.id === tombstonedTask.id)).toBe(false)
+  })
+
+  it('drops local-only tasks that are soft-deleted on the server instead of recreating them', async () => {
+    const store = useTaskStore()
+    const softDeletedTask = makeTask({
+      id: 'task-soft-deleted-local-only',
+      title: 'Soft deleted in other runtime',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    const remoteTask = makeTask({ title: 'Remote survivor' })
+
+    store._rawTasks.push(softDeletedTask)
+    mockFetchTasks.mockResolvedValue([remoteTask])
+    mockFetchDeletedTaskIds.mockResolvedValue([softDeletedTask.id])
+
+    await store.loadFromDatabase()
+
+    expect(store._rawTasks.some(t => t.id === softDeletedTask.id)).toBe(false)
+    expect(store._rawTasks.some(t => t.id === remoteTask.id)).toBe(true)
   })
 
   // ── Empty overwrite guard ──

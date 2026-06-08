@@ -61,7 +61,14 @@ export function useTaskPersistence(
     // --- SQL PERSISTENCE ---
 
     // -- Supabase Integration --
-    const { fetchTasks, saveTasks, deleteTask: deleteFromDB, bulkDeleteTasks: bulkDeleteFromDB } = useSupabaseDatabase()
+    const {
+        fetchTasks,
+        saveTasks,
+        deleteTask: deleteFromDB,
+        bulkDeleteTasks: bulkDeleteFromDB,
+        fetchDeletedTaskIds = async () => [],
+        fetchTombstones = async () => []
+    } = useSupabaseDatabase()
 
     // TASK-142 FIX: Guest Mode localStorage persistence for tasks
     const GUEST_TASKS_KEY = 'flowstate-guest-tasks'
@@ -281,8 +288,19 @@ export function useTaskPersistence(
             const wsStore = useWorkspaceStore()
             // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq), undefined = legacy (no filter)
             const workspaceId = wsStore.activeWorkspaceId
-            const repairedLoaded = repairTaskTitles(sanitizeLoadedTasks(await fetchTasks(workspaceId)))
+            const [fetchedTasks, softDeletedTaskIds, tombstones] = await Promise.all([
+                fetchTasks(workspaceId),
+                fetchDeletedTaskIds(),
+                fetchTombstones()
+            ])
+            const repairedLoaded = repairTaskTitles(sanitizeLoadedTasks(fetchedTasks))
             const loadedTasks = repairedLoaded.repairedTasks
+            const remotelyDeletedTaskIds = new Set<string>([
+                ...softDeletedTaskIds,
+                ...tombstones
+                    .filter(t => t.entityType === 'task')
+                    .map(t => t.entityId)
+            ])
             if (repairedLoaded.repairedCount > 0) {
                 console.warn(`🛠️ [TASK-TITLE-REPAIR] Repaired ${repairedLoaded.repairedCount} blank task title(s) during load`)
                 try {
@@ -352,9 +370,10 @@ export function useTaskPersistence(
             // TASK-1177: Extended from 10 seconds to 60 seconds for better protection
             // Exception: workspace switches to an empty workspace are legitimate
             if (geometryMergedLoadedTasks.length === 0 && _rawTasks.value.length > 0) {
+                const hasKnownRemoteDeletes = _rawTasks.value.some(task => remotelyDeletedTaskIds.has(task.id))
                 if (wsStore.isSwitchingWorkspace) {
                     console.log(`🔄 [TASK-LOAD] Workspace switch — clearing ${_rawTasks.value.length} tasks for new workspace context`)
-                } else {
+                } else if (!hasKnownRemoteDeletes) {
                     const sessionStart = typeof window !== 'undefined' ? (window as unknown as { FlowStateSessionStart?: number }).FlowStateSessionStart || 0 : 0
                     const timeSinceSessionStart = Date.now() - sessionStart
 
@@ -366,6 +385,8 @@ export function useTaskPersistence(
                     }
 
                     console.warn(`⚠️ [TASK-LOAD] Supabase returned 0 tasks but ${_rawTasks.value.length} exist locally - proceeding with empty (session ${timeSinceSessionStart}ms old)`)
+                } else if (import.meta.env.DEV) {
+                    console.log('🪦 [TASK-LOAD] Empty remote load includes known deleted local tasks — allowing tombstone-aware merge')
                 }
             }
 
@@ -477,6 +498,16 @@ export function useTaskPersistence(
                     // Mark as processed so we don't add it again in step 3
                     remoteMap.delete(localTask.id)
                 } else {
+                    // BUG-1800: A task missing from the active task query may be absent because
+                    // another runtime permanently deleted it. Do not preserve and enqueue a
+                    // CREATE for IDs that the server says are soft-deleted or tombstoned.
+                    if (remotelyDeletedTaskIds.has(localTask.id)) {
+                        if (import.meta.env.DEV) {
+                            console.log(`🪦 [SMART-MERGE] Dropping deleted local-only task "${localTask.title?.slice(0, 15)}" - server has deletion marker`)
+                        }
+                        continue
+                    }
+
                     // TASK-1177 FIX: NEVER drop local-only tasks automatically
                     // Previous behavior dropped tasks older than 5 minutes, causing DATA LOSS
                     // when sync failed and user refreshed.

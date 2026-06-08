@@ -662,6 +662,9 @@ export function useAppInitialization() {
 
             const { eventType, new: newDoc, old: oldDoc } = payload
             const taskId = newDoc?.id || oldDoc?.id
+            const isHardDelete = eventType === 'DELETE'
+            const isSoftDelete = newDoc && newDoc.is_deleted === true
+            const isDeleteEvent = isHardDelete || isSoftDelete
 
             console.log('🔄 [HANDLER] onTaskChange called:', {
                 eventType,
@@ -672,6 +675,10 @@ export function useAppInitialization() {
 
             if (isLocked) {
                 console.log('🔒 [HANDLER] TASK change blocked - lock active')
+                if (taskId && isDeleteEvent) {
+                    invalidateCache.all()
+                    void reloadCoreData()
+                }
                 return
             }
 
@@ -691,26 +698,20 @@ export function useAppInitialization() {
             // simultaneously risks duplicates from parallel add paths.
             if (tasks.isLoadingFromDatabase) {
                 console.log(`⏳ [HANDLER] TASK ${taskId.slice(0,8)} skipped - database load in progress`)
+                if (isDeleteEvent) {
+                    invalidateCache.all()
+                    window.setTimeout(() => {
+                        void reloadCoreData()
+                    }, 0)
+                }
                 return
             }
 
             // BUG-169 FIX: Safety guards to prevent spurious task deletions
             // 1. Check for hard DELETE event (eventType === 'DELETE')
             // 2. Check for soft delete ONLY if is_deleted is EXPLICITLY true (not just truthy)
-            const isHardDelete = eventType === 'DELETE'
-            const isSoftDelete = newDoc && newDoc.is_deleted === true
 
-            if (isHardDelete || isSoftDelete) {
-                // Extra safety: Check session start time
-                const sessionStart = window.FlowStateSessionStart || 0
-                const timeSinceSessionStart = Date.now() - sessionStart
-
-                // Don't process deletions in the first 5 seconds of the session (anti-race guard)
-                if (timeSinceSessionStart < 5000) {
-                    console.warn(`⚠️ [HANDLER] BLOCKED deletion for task ${taskId.substring(0, 8)} - session just started`)
-                    return
-                }
-
+            if (isDeleteEvent) {
                 console.log(`🗑️ [HANDLER] Removing task ${taskId.substring(0, 8)} from sync`)
                 tasks.updateTaskFromSync(taskId, null, true)
             } else if (newDoc) {

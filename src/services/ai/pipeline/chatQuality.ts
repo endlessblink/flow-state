@@ -61,6 +61,7 @@ export type ChatQualityInput = {
   recommendationCount?: number
   contextUnknown?: boolean
   hasClarificationEvidence?: boolean
+  clarificationEvidenceText?: string
   responsePath?: ChatQualityPath
   coverageScore?: number
   highMateriality?: boolean
@@ -108,6 +109,8 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   const path = input.responsePath ?? 'direct_answer'
   const recommendationCount = input.recommendationCount ?? input.taskCount
   const visibleUncertainty = input.hasVisibleUncertainty ?? UNCERTAINTY_RE.test(text)
+  const clarificationTerms = clarificationEvidenceTerms(input.clarificationEvidenceText)
+  const honorsClarificationValue = !clarificationTerms.length || clarificationTerms.some(term => clarificationTermMatches(text, term))
   const lowCoverage = typeof input.coverageScore === 'number' && input.coverageScore < 0.5
   const mediumCoverage = typeof input.coverageScore === 'number' && input.coverageScore >= 0.5 && input.coverageScore < 0.72
 
@@ -124,6 +127,9 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   }
   if (input.hasClarificationEvidence && isBroadTaskAnswer && !CLARIFICATION_EVIDENCE_RE.test(text)) {
     failures.push('missing_clarification_evidence')
+  }
+  if (input.hasClarificationEvidence && isBroadTaskAnswer && input.clarificationEvidenceText && !honorsClarificationValue) {
+    failures.push('clarification_value_not_reflected')
   }
   if (isBroadTaskAnswer && SHALLOW_REASON_RE.test(text) && !STAKE_RE.test(text)) {
     failures.push('metadata_only_reasoning')
@@ -275,6 +281,36 @@ function hasRepeatedLineShape(lines: string[]): boolean {
   if (candidateLines.length < 3) return false
   const openings = candidateLines.map(line => line.split(/\s+/).slice(0, 4).join(' ').toLowerCase())
   return new Set(openings).size < Math.ceil(openings.length * 0.75)
+}
+
+function clarificationEvidenceTerms(evidence: string | undefined): string[] {
+  if (!evidence) return []
+  const quoted = [...evidence.matchAll(/"([^"]{3,80})"/g)]
+    .map(match => match[1])
+    .flatMap(value => value.split(/[/,;|]|\bor\b|\band\b/i))
+  const raw = evidence
+    .replace(/"[^"]*"/g, ' ')
+    .split(/[\n.,;:|()[\]{}]+/)
+  return [...quoted, ...raw]
+    .map(term => term.toLowerCase().trim())
+    .map(term => term.replace(/^(label|answer|value|note|selected|user answered|user chose|clarification|matches your clarification)\s*[:=-]?\s*/i, '').trim())
+    .filter(term => term.length >= 4)
+    .filter(term => !/^(user|answer|answered|chose|choice|selected|clarification|evidence|note|optional|ranking|focus|memory|patch|field|value|label|effect|task|tasks|recommendation|recommendations|context|unknown|not sure)$/i.test(term))
+    .filter(term => !/^response_quality_|^workflow:|^project:|^task:/.test(term))
+    .slice(0, 8)
+}
+
+function clarificationTermMatches(text: string, term: string): boolean {
+  const normalizedText = text.toLowerCase()
+  if (normalizedText.includes(term)) return true
+  const words = term
+    .split(/\s+/)
+    .map(word => word.replace(/[^a-z0-9א-ת]/gi, '').toLowerCase())
+    .filter(word => word.length >= 4)
+    .filter(word => !/^(because|before|after|with|this|that|should|would|could|user|answer|chose|בחרת|ענית|הקשר)$/i.test(word))
+  if (words.length < 2) return false
+  const overlap = words.filter(word => normalizedText.includes(word)).length
+  return overlap >= Math.min(words.length, Math.max(2, Math.ceil(words.length * 0.6)))
 }
 
 function clamp01(value: number): number {

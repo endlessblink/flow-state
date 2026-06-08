@@ -2316,6 +2316,7 @@ export function useAIChat() {
         taskCount: collectCardTasks(toolResults).length,
         contextUnknown: toolResultsSummary.includes('context unknown') || toolResultsSummary.includes('Project/task understanding memory'),
         hasClarificationEvidence: Boolean(clarificationContinuationEvidence && !isGenerateCurrentContinuation),
+        clarificationEvidenceText: clarificationContinuationEvidence,
       }
       let responseQuality = auditChatResponseQuality(qualityInput)
       if (!isWeekPlan && responseQuality.level === 'bad' && hasTaskList) {

@@ -19,6 +19,58 @@ describe('chat quality evidence audit', () => {
     expect(audit.failures).toContain('missing_clarification_evidence')
   })
 
+  it('requires post-clarification broad answers to reflect the actual selected value', () => {
+    const genericAcknowledgement = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 4,
+      hasClarificationEvidence: true,
+      clarificationEvidenceText: 'User chose "real impact or consequence" before ranking.',
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Matches your clarification: start with the payment follow-up because the task has explicit evidence.',
+    })
+
+    expect(genericAcknowledgement.level).toBe('bad')
+    expect(genericAcknowledgement.failures).toContain('clarification_value_not_reflected')
+
+    const valueReflected = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 4,
+      hasClarificationEvidence: true,
+      clarificationEvidenceText: 'User chose "real impact or consequence" before ranking.',
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Matches your clarification: rank by real consequence first, so start with the payment follow-up.',
+    })
+
+    expect(valueReflected.level).not.toBe('bad')
+    expect(valueReflected.failures).toEqual([])
+  })
+
+  it('requires post-clarification broad answers to reflect free-text user context', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'day_plan',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      hasClarificationEvidence: true,
+      clarificationEvidenceText: 'Note: "client approval is waiting on me"',
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Matches your clarification: prioritize the approval follow-up because client approval is waiting.',
+    })
+
+    expect(audit.level).not.toBe('bad')
+    expect(audit.failures).toEqual([])
+  })
+
   it('rejects next-task answers that only cite shallow task metadata', () => {
     const audit = auditChatResponseQuality({
       language: 'en',

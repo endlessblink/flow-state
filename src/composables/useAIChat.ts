@@ -893,6 +893,7 @@ export function useAIChat() {
         db,
         cardTasks,
         lang,
+        timeoutMs: WEEK_PLAN_MEMORY_TIMEOUT_MS,
         getTaskProjectId: taskId => taskStore.getTask(taskId)?.projectId,
         getTaskTitle: taskId => taskStore.getTask(taskId)?.title,
         getProjectDisplayName: projectId => taskStore.getProjectDisplayName?.(projectId),

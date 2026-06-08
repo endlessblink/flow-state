@@ -39,6 +39,48 @@ function contextEntity(input: Partial<AIContextEntity> & Pick<AIContextEntity, '
 }
 
 describe('retrieveBroadAIMemory', () => {
+  it('falls back with bounded diagnostics when broad memory retrieval times out', async () => {
+    vi.useFakeTimers()
+    const db = dbStub({
+      fetchProjectContexts: vi.fn(() => new Promise<ProjectContext[]>(resolve => setTimeout(() => resolve([]), 100))),
+    })
+    const pending = retrieveBroadAIMemory({
+      db,
+      lang: 'en',
+      timeoutMs: 10,
+      cardTasks: [
+        { id: taskId, projectId, title: 'Known task' },
+        { id: 'local-task', projectId: 'uncategorized', title: 'Loose admin' },
+      ],
+    })
+
+    await vi.advanceTimersByTimeAsync(11)
+    const result = await pending
+    vi.useRealTimers()
+
+    expect(result.summary).toBe('')
+    expect(result.recommendationFeedback).toEqual([])
+    expect(result.entityKeys).toEqual([
+      `project:${projectId}`,
+      'project:uncategorized',
+      `task:${taskId}`,
+      'task:local-task',
+    ])
+    expect(result.diagnostics).toMatchObject({
+      source: 'fallback',
+      timedOut: true,
+      entityKeyCount: 4,
+      projectContextCount: 0,
+      taskContextCount: 0,
+      exactEntityCount: 0,
+      eventCount: 0,
+      beliefCount: 0,
+      feedbackCount: 0,
+      graphEdgeCount: 0,
+    })
+    expect(JSON.stringify(result.diagnostics)).not.toContain('Known task')
+  })
+
   it('uses server-backed entity memory and parameter beliefs for broad task answers with synthetic project keys', async () => {
     const feedback: AIRecommendationFeedback[] = [{
       id: 'feedback-1',

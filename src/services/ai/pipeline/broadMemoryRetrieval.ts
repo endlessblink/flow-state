@@ -26,16 +26,20 @@ export type BroadMemoryRetrievalInput = {
   db: BroadMemoryDb
   cardTasks: CardTaskLike[]
   lang: 'he' | 'en'
+  timeoutMs?: number
   getTaskProjectId?: (taskId: string) => string | null | undefined
   getTaskTitle?: (taskId: string) => string | null | undefined
   getProjectDisplayName?: (projectId: string) => string | null | undefined
 }
+
+export type BroadMemoryRetrievalSource = 'hybrid_sql' | 'fallback'
 
 export type BroadMemoryRetrievalResult = {
   summary: string
   recommendationFeedback: AIRecommendationFeedback[]
   entityKeys: string[]
   diagnostics: {
+    source: BroadMemoryRetrievalSource
     projectContextCount: number
     taskContextCount: number
     exactEntityCount: number
@@ -43,10 +47,14 @@ export type BroadMemoryRetrievalResult = {
     beliefCount: number
     feedbackCount: number
     graphEdgeCount: number
+    entityKeyCount: number
+    elapsedMs: number
+    timedOut: boolean
   }
 }
 
 export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): Promise<BroadMemoryRetrievalResult> {
+  const startedAt = performance.now()
   const taskIdStrings = uniqueStrings(input.cardTasks.map(task => String(task.id || '')))
   const projectIdStrings = uniqueStrings(input.cardTasks
     .map(task => {
@@ -61,6 +69,47 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     ...projectIdStrings.map(projectEntityKey),
     ...taskIdStrings.map(taskEntityKey),
   ])
+  const fallback = (timedOut: boolean): BroadMemoryRetrievalResult => ({
+    summary: '',
+    recommendationFeedback: [],
+    entityKeys,
+    diagnostics: {
+      source: 'fallback',
+      projectContextCount: 0,
+      taskContextCount: 0,
+      exactEntityCount: 0,
+      eventCount: 0,
+      beliefCount: 0,
+      feedbackCount: 0,
+      graphEdgeCount: 0,
+      entityKeyCount: entityKeys.length,
+      elapsedMs: Math.round(performance.now() - startedAt),
+      timedOut,
+    },
+  })
+
+  let rows: [
+    ProjectContext[],
+    TaskContext[],
+    AIContextEntity[],
+    AIClarificationEvent[],
+    AIParameterBelief[],
+    AIRecommendationFeedback[],
+    AIContextEdge[],
+  ]
+  try {
+    rows = await withOptionalTimeout(Promise.all([
+      input.db.fetchProjectContexts(projectIds),
+      input.db.fetchTaskContexts(taskIds),
+      input.db.fetchAIContextEntities(entityKeys),
+      input.db.fetchAIClarificationEvents(entityKeys, 30),
+      input.db.fetchAIParameterBeliefs({ entityKeys, limit: 40 }),
+      input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 30 }),
+      input.db.fetchAIContextEdges?.({ entityKeys, limit: 40 }) ?? Promise.resolve([]),
+    ]), input.timeoutMs, 'broad_task_memory_timeout')
+  } catch {
+    return fallback(Boolean(input.timeoutMs))
+  }
 
   const [
     legacyProjectContexts,
@@ -70,15 +119,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     parameterBeliefs,
     recommendationFeedback,
     contextEdges,
-  ] = await Promise.all([
-    input.db.fetchProjectContexts(projectIds),
-    input.db.fetchTaskContexts(taskIds),
-    input.db.fetchAIContextEntities(entityKeys),
-    input.db.fetchAIClarificationEvents(entityKeys, 30),
-    input.db.fetchAIParameterBeliefs({ entityKeys, limit: 40 }),
-    input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 30 }),
-    input.db.fetchAIContextEdges?.({ entityKeys, limit: 40 }) ?? Promise.resolve([]),
-  ])
+  ] = rows
 
   const projectContexts = uniqueBy(
     [
@@ -111,6 +152,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     recommendationFeedback,
     entityKeys,
     diagnostics: {
+      source: 'hybrid_sql',
       projectContextCount: projectContexts.length,
       taskContextCount: taskContexts.length,
       exactEntityCount: contextEntities.length,
@@ -118,6 +160,9 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       beliefCount: parameterBeliefs.length,
       feedbackCount: recommendationFeedback.length,
       graphEdgeCount: contextEdges.length,
+      entityKeyCount: entityKeys.length,
+      elapsedMs: Math.round(performance.now() - startedAt),
+      timedOut: false,
     },
   }
 }
@@ -242,6 +287,21 @@ function isSupabaseUuid(value: string): boolean {
 
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.map(value => value.trim()).filter(Boolean))]
+}
+
+async function withOptionalTimeout<T>(promise: Promise<T>, timeoutMs: number | undefined, timeoutMessage: string): Promise<T> {
+  if (!timeoutMs || timeoutMs <= 0) return promise
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
+      }),
+    ])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
 }
 
 function uniqueBy<T>(items: T[], keyOf: (item: T) => string): T[] {

@@ -870,8 +870,8 @@ describe('AI sidebar-first desktop experience', () => {
       'missing_visible_uncertainty',
       'missing_feedback_controls',
       'too_many_low_context_recommendations',
+      'missing_debug_disclosure',
     ]))
-    expect(brittleStructuredFailure.warnings).toContain('missing_debug_disclosure')
 
     const usefulFallback = auditChatResponseQuality({
       language: 'en',

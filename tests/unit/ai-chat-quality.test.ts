@@ -402,4 +402,24 @@ describe('chat quality evidence audit', () => {
     expect(audit.level).toBe('bad')
     expect(audit.failures).toContain('feedback_not_recorded_as_learning_signal')
   })
+
+  it('fails fallback or structured-failure paths that hide debug disclosure', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      responsePath: 'deterministic_fallback',
+      structuredOutputFailed: true,
+      hasVisibleUncertainty: true,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      hasDebugDisclosure: false,
+      text: 'Limited context: use this compact fallback as a candidate and adjust anything wrong.',
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('missing_debug_disclosure')
+  })
 })

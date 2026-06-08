@@ -168,7 +168,7 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
     failures.push('missing_escape_hatch')
   }
   if ((path === 'deterministic_fallback' || path === 'clarification_first' || input.structuredOutputFailed) && input.hasDebugDisclosure === false) {
-    warnings.push('missing_debug_disclosure')
+    failures.push('missing_debug_disclosure')
   }
   if ((path === 'feedback_updated' || input.hasFeedbackControls) && input.hasLearningSignal === false) {
     failures.push('feedback_not_recorded_as_learning_signal')

@@ -558,6 +558,7 @@
 - 2026-06-08: Added a deterministic broad-answer quality floor after the normal formatter and fallback both fail audit. The final user-visible fallback is capped to one candidate card, marks project context as unknown/needs refresh, and preserves the user's clarification value instead of leaking verbose or fake reasoning.
 - 2026-06-08: Recommendation-card learning signals are now an executable quality gate. If broad task cards expose feedback controls but the response path does not prove those controls feed memory/learning, the audit fails with `feedback_not_recorded_as_learning_signal`; the runtime marks inline card groups as learning-enabled because accept/postpone/dismiss actions write recommendation feedback.
 - 2026-06-08: The bad/acceptable/excellent chat-quality rubric now includes an explicit realism/load dimension. Broad card sets with 4-5 recommendations are capped at acceptable with a `broad_recommendation_load` warning, while 6+ broad recommendations fail with `unrealistic_recommendation_load`; warnings now prevent an answer from scoring excellent.
+- 2026-06-08: Missing debug disclosure on deterministic fallback, clarification-first, or structured-output-failure paths is now a hard answer-quality failure instead of a warning. This keeps reliability fallbacks inspectable and prevents low-overwhelm repair paths from hiding why the model output was replaced.
 
 ---
 

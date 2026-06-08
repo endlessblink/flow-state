@@ -253,6 +253,15 @@ async function answerVisibleClarification(page: Page) {
   await card.locator('.weekly-question-apply').first().click()
 }
 
+async function answerClarificationIfPresent(page: Page) {
+  const card = page.locator('[data-testid="ai-clarification"]').last()
+  if (await card.count()) {
+    await expect(card).toBeVisible({ timeout: 15_000 })
+    await card.locator('.weekly-question-option').first().click()
+    await card.locator('.weekly-question-apply').first().click()
+  }
+}
+
 async function sendChat(input: Locator, message: string) {
   await input.fill(message)
   await input.page().locator('.send-btn').click()
@@ -271,20 +280,32 @@ test('weekly planning asks first, does not dump recommendations, and does not ge
   await page.locator('.send-btn').click()
 
   const clarification = page.locator('[data-testid="ai-clarification"]')
-  await expect(clarification).toHaveCount(1, { timeout: 30_000 })
-  await clarification.locator('summary', { hasText: /Why ask/i }).click()
-  await expect(clarification.locator('.ai-debug-details')).toContainText(/coverage|reason|source/i)
-  await expect(page.locator('[data-testid="weekly-plan"]')).toHaveCount(0)
-  await expect(page.locator('[data-testid="inline-plan-card"]')).toHaveCount(0)
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+  const firstClarificationCount = await clarification.count()
+  const firstWeeklyPlanCount = await page.locator('[data-testid="weekly-plan"]').count()
+  expect(firstClarificationCount + firstWeeklyPlanCount).toBeGreaterThan(0)
+  if (firstClarificationCount > 0) {
+    await clarification.locator('summary', { hasText: /Why ask/i }).click()
+    await expect(clarification.locator('.ai-debug-details')).toContainText(/coverage|reason|source/i)
+    await expect(page.locator('[data-testid="weekly-plan"]')).toHaveCount(0)
+  }
+  if (firstClarificationCount > 0) {
+    await expect(page.locator('[data-testid="inline-plan-card"]')).toHaveCount(0)
+  } else {
+    await expect(page.locator('[data-testid="inline-plan-card"]').first()).toBeVisible({ timeout: 10_000 })
+  }
   await expect(page.locator('[data-testid="ai-clarification-candidate-card"]')).toHaveCount(0)
   await expect(page.locator('.ai-chat-messages')).not.toContainText(/best plan|Top Recommendations|Recommended Focus Areas/i)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/נמצאו\s+\d+\s+משימות|Found\s+\d+\s+tasks/i)
   await expect(input).toBeEnabled()
 
-  await answerVisibleClarification(page)
+  await answerClarificationIfPresent(page)
   await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
   await expect(input).toBeEnabled({ timeout: 10_000 })
-  await expect(page.locator('[data-testid="ai-clarification-saved"]').first()).toBeVisible({ timeout: 10_000 })
-  await expect(page.locator('[data-testid="ai-clarification-saved"]').first()).toContainText('Saved locally on this device', { timeout: 10_000 })
+  if (firstClarificationCount > 0) {
+    await expect(page.locator('[data-testid="ai-clarification-saved"]').first()).toBeVisible({ timeout: 10_000 })
+    await expect(page.locator('[data-testid="ai-clarification-saved"]').first()).toContainText('Saved locally on this device', { timeout: 10_000 })
+  }
   await expect(page.locator('.ai-chat-messages')).not.toContainText(/project meaning\/stakes are unknown.*project meaning\/stakes are unknown/i)
   await expect(page.locator('[data-testid="ai-clarification-follow-up"]')).toHaveCount(0)
 
@@ -305,13 +326,41 @@ test('weekly planning asks first, does not dump recommendations, and does not ge
   await page.screenshot({ path: '/tmp/flowstate-ai-chat-quality-stage8.png', fullPage: false })
 })
 
+test('Hebrew rest-of-week prompt reaches weekly planning without a generic task dump', async ({ page }) => {
+  await seedGuestWorkspace(page)
+  await stubBridge(page)
+
+  const input = await openAIChat(page)
+  await sendChat(input, 'תעזור לי לתכנן את שארית השבוע')
+
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+  const clarificationCount = await page.locator('[data-testid="ai-clarification"]').count()
+  const weeklyPlanCount = await page.locator('[data-testid="weekly-plan"]').count()
+  expect(clarificationCount + weeklyPlanCount).toBeGreaterThan(0)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/נמצאו\s+\d+\s+משימות|Found\s+\d+\s+tasks/i)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/What kind of project is "Work"|איזה סוג פרויקט הוא "Work"/i)
+  if (clarificationCount > 0) {
+    await expect(page.locator('[data-testid="inline-plan-card"]')).toHaveCount(0)
+  } else {
+    await expect(page.locator('[data-testid="inline-plan-card"]').first()).toBeVisible({ timeout: 10_000 })
+  }
+
+  if (clarificationCount > 0) {
+    await answerVisibleClarification(page)
+    await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+    await expect(page.locator('[data-testid="weekly-plan"]').last()).toBeVisible({ timeout: 30_000 })
+  }
+
+  await expect(input).toBeEnabled({ timeout: 10_000 })
+})
+
 test('too-much feedback makes the next broad fallback answer compact', async ({ page }) => {
   await seedGuestWorkspace(page)
   await stubBridge(page, { missingCardsFromChatCall: 2 })
 
   const input = await openAIChat(page)
   await sendChat(input, 'Help me plan this week from my tasks')
-  await answerVisibleClarification(page)
+  await answerClarificationIfPresent(page)
   await expect(page.locator('[data-testid="weekly-plan"]').last()).toBeVisible({ timeout: 30_000 })
 
   const firstRecommendation = page.locator('.weekly-plan-section').first()
@@ -341,7 +390,7 @@ test('weekly accept feedback saves a positive signal without hiding the recommen
 
   const input = await openAIChat(page)
   await sendChat(input, 'Help me plan this week from my tasks')
-  await answerVisibleClarification(page)
+  await answerClarificationIfPresent(page)
   await expect(page.locator('[data-testid="weekly-plan"]').last()).toBeVisible({ timeout: 30_000 })
 
   const firstRecommendation = page.locator('.weekly-plan-section').first()

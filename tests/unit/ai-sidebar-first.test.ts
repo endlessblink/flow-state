@@ -1151,7 +1151,7 @@ describe('AI sidebar-first desktop experience', () => {
     ]))
   })
 
-  it('still asks for project meaning when task notes exist but project context is unknown', () => {
+  it('does not ask for project meaning when task notes already lower the question value', () => {
     const tasks = [
       {
         id: 'task-memory',
@@ -1222,19 +1222,77 @@ describe('AI sidebar-first desktop experience', () => {
 
     const interview = buildWeeklyPlanningInterview(context, [])
 
-    expect(interview).toMatchObject({
-      schemaVersion: 'ai-clarification.v1',
-      pathType: 'clarify_first',
-      coverage: expect.objectContaining({
-        decision: 'ask',
-        missing: expect.arrayContaining(['project_meaning']),
-      }),
-    })
-    expect(interview?.question).toMatchObject({
-      entityType: 'project',
-      reason: 'missing_project_understanding',
-      allowFreeText: true,
-    })
+    expect(interview).toBeNull()
+  })
+
+  it('does not ask what a self-explanatory Work bucket means', () => {
+    const tasks = [
+      {
+        id: 'task-work-1',
+        title: 'Prepare client follow-up',
+        description: '',
+        status: 'todo',
+        priority: 'high',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'work',
+        projectName: 'Work',
+        estimatedDuration: 45,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task & { projectName: string },
+      {
+        id: 'task-work-2',
+        title: 'Review launch checklist',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-11',
+        projectId: 'work',
+        projectName: 'Work',
+        estimatedDuration: 60,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task & { projectName: string },
+      {
+        id: 'task-admin-1',
+        title: 'Buy printer paper',
+        description: '',
+        status: 'todo',
+        priority: 'high',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'admin',
+        projectName: 'Admin',
+        estimatedDuration: 20,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task & { projectName: string },
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+    )
+
+    const quickDraft = buildQuickDraftWeeklyPlan(context)
+    const interview = buildWeeklyPlanningInterview(context, [])
+
+    expect(context.uncertaintyNotes.join(' ')).not.toContain('Project context for "Work" is unknown')
+    expect(quickDraft.openQuestions.some(question => question.id === 'project_context_work')).toBe(false)
+    expect(interview?.question.id).not.toBe('project_context_work')
+    expect(interview?.question.question ?? '').not.toMatch(/what kind of project is "work"/i)
+    if (interview) {
+      expect(interview.coverage.dimensions.project_meaning).toBeGreaterThanOrEqual(0.45)
+    }
   })
 
   it('uses saved weekly beliefs for impact without treating one answer as project understanding', () => {
@@ -1306,11 +1364,7 @@ describe('AI sidebar-first desktop experience', () => {
     const interview = buildWeeklyPlanningInterview(context, [])
     const prompt = buildWeeklyPlanPrompt(context)
 
-    expect(interview?.coverage?.dimensions.impact).toBeGreaterThanOrEqual(0.9)
-    expect(interview?.coverage?.dimensions.preferences).toBeGreaterThanOrEqual(0.9)
-    expect(interview?.coverage?.dimensions.project_meaning).toBeLessThan(0.45)
-    expect(interview?.coverage?.missing).toContain('project_meaning')
-    expect(interview?.question.reason).toBe('missing_project_understanding')
+    expect(interview).toBeNull()
     expect(prompt).toContain('"parameterBeliefs"')
     expect(prompt).toContain('"parameterKey": "thisWeekImportance"')
   })
@@ -2706,10 +2760,12 @@ describe('AI sidebar-first desktop experience', () => {
     expect(panel).toContain('sendMessage(trimmed, { skipHistory: true })')
   })
 
-  it('uses a bounded local weekly draft after clarification instead of waiting for another broad model pass', () => {
+  it('keeps weekly clarification iterative while preserving the generate-now compact draft escape', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 
-    expect(aiChat).toContain('if (isClarificationContinuation) {')
+    expect(aiChat).toContain('const shouldForceCurrentDraft = isGenerateCurrentContinuation')
+    expect(aiChat).toContain('buildWeeklyPlanningInterview(weekContext, clarificationEvents')
+    expect(aiChat).toContain('if (shouldForceCurrentDraft) {')
     expect(aiChat).toContain("updateChatPhase(phaseActivityId, 'Using saved context', 'Compact local draft')")
     expect(aiChat).toContain('pathType: \'post_clarification_quick_draft\'')
     expect(aiChat).toContain('maxRecommendations: 3')
@@ -2781,7 +2837,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('const continuationMode = clarificationContinuationMode(trimmedContent)')
     expect(aiChat).toContain('const isClarificationContinuation = Boolean(clarificationContinuationMode(content))')
     expect(aiChat).toContain('!isClarificationContinuation && shouldAskBroadTaskClarification')
-    expect(aiChat).toContain('const clarification = isClarificationContinuation ? null : buildWeeklyPlanningInterview')
+    expect(aiChat).toContain('const shouldForceCurrentDraft = isGenerateCurrentContinuation')
+    expect(aiChat).toContain('const clarification = shouldForceCurrentDraft ? null : buildWeeklyPlanningInterview')
   })
 
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
@@ -3352,7 +3409,11 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('buildWeeklyPlanPrompt')
     expect(aiChat).toContain('parseWeeklyPlanOutput')
     expect(aiChat).toContain('retrieveWeeklyAIMemory')
-    expect(aiChat).toContain('const clarification = isClarificationContinuation ? null : buildWeeklyPlanningInterview(weekContext, clarificationEvents, {')
+    expect(aiChat).toContain('function persistAIContextEdges')
+    expect(aiChat).toContain('persistAIContextEdges(db, retrieval.edges)')
+    expect(aiChat).not.toContain('await db.upsertAIContextEdges(retrieval.edges)')
+    expect(aiChat).toContain('const shouldForceCurrentDraft = isGenerateCurrentContinuation')
+    expect(aiChat).toContain('const clarification = shouldForceCurrentDraft ? null : buildWeeklyPlanningInterview(weekContext, clarificationEvents, {')
     expect(aiChat).toContain('clarification,')
     expect(aiChat).toContain('recordAIClarificationEvent')
     expect(aiChat).toContain('weeklyPlan: finalPlan')
@@ -3411,7 +3472,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(chatMessage).toContain('weekly-feedback-btn')
     expect(chatMessage).toContain('inline-postpone-btn')
     expect(chatMessage).toContain('clarificationSavedLocal')
-    expect(chatMessage).toContain('Saved locally. Continuing with a short answer')
+    expect(chatMessage).toContain('Saving context...')
+    expect(chatMessage).toContain('Saved. Continuing to the next step')
     expect(chatMessage).toContain('data-testid="ai-clarification-follow-up"')
     expect(chatMessage).toContain('data-testid="ai-clarification-saved"')
     expect(chatMessage).toContain('Why does this matter right now?')

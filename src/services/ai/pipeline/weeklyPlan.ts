@@ -333,6 +333,7 @@ const HEALTH_FAMILY_RE = /(health|doctor|medicine|dad|mom|family|clinic|blood te
 const ADMIN_RE = /(tax|legal|bank|insurance|passport|license|form|admin|מס|משפט|בנק|ביטוח|דרכון|רישיון|טופס|אדמין|מנהלתי)/i
 const REAL_CONSEQUENCE_RE = /(decision|meeting|client|customer|stakeholder|promise|commitment|renewal|proposal|budget|revenue|money|invoice|payment|cash|risk|blocked|blocks|unblock|release|qa|signoff|rework|context|postponed|avoidance|mental load|family|health|doctor|admin|legal|tax|relief|momentum|החלטה|פגישה|לקוח|התחייבות|הבטחה|תקציב|כסף|תשלום|חשבונית|סיכון|חוסם|לשחרר|שחרור|בדיקה|משפחה|בריאות|רופא|מס|מנהלתי|עומס|דחייה|מומנטום)/i
 const GENERIC_FOCUS_RE = /^(due tasks?|top tasks?|weekly tasks?|priority tasks?|work|admin|personal|focused task|משימות|משימות השבוע|עבודה|אישי|משימה ממוקדת)$/i
+const SELF_DESCRIBING_BUCKET_RE = /^(work|עבודה|personal|אישי|home|בית|admin|אדמין|maintenance|תחזוקה|inbox|uncategorized|uncategorised|ללא קטגוריה|my projects|projects|הפרויקטים שלי|פרויקטים)$/i
 const BANNED_LOW_CONTEXT_IMPORTANCE_RE = /(substantial work focus|heavier-weight than small errands|מוקד עבודה משמעותי|משקל מסידורים קטנים)/i
 const UNSUPPORTED_IMPORTANCE_RE = /(high stakes|strategic|meaningful|important|critical|חשוב|משמעותי|אסטרטגי|קריטי)/i
 
@@ -805,12 +806,13 @@ export function buildWeeklyPlanningInterview(
   if (!question) return null
   const memoryKey = clarificationMemoryKey(question, context)
   const evpiDebug = selection?.evpi
+  const step = weeklyClarificationStep(recentEvents)
   return {
     schemaVersion: 'ai-clarification.v1',
     kind: 'weekly_planning',
     locale: context.locale,
     direction: context.direction,
-    progressLabel: context.locale === 'he' ? 'מבהיר סדרי עדיפויות • שלב 1/3' : 'Clarifying priorities • Step 1/3',
+    progressLabel: context.locale === 'he' ? `מבהיר סדרי עדיפויות • שלב ${step}/3` : `Clarifying priorities • Step ${step}/3`,
     summary: context.locale === 'he'
       ? 'חסר לי פרט אחד שישנה את הדירוג, אז אני עוצר לפני תוכנית רחבה.'
       : 'I am missing one detail that would change the ranking, so I am stopping before a broad plan.',
@@ -857,6 +859,7 @@ function buildWeeklyStaleBeliefRefreshInterview(
   const locale = context.locale
   const isHebrew = locale === 'he'
   const displayName = displayNameFromEntityKey(refreshKey)
+  const step = weeklyClarificationStep(recentEvents)
   const refreshCoverage: AIClarificationCoverage = {
     ...coverage,
     decision: 'ask',
@@ -873,7 +876,7 @@ function buildWeeklyStaleBeliefRefreshInterview(
     kind: 'weekly_planning',
     locale,
     direction: context.direction,
-    progressLabel: isHebrew ? 'מרענן הקשר • שלב 1/1' : 'Refreshing context • Step 1/1',
+    progressLabel: isHebrew ? `מרענן הקשר • שלב ${step}/3` : `Refreshing context • Step ${step}/3`,
     summary: isHebrew
       ? 'מצאתי תשובה שמורה ישנה שיכולה לשנות את הדירוג, אז אשאל לפני תוכנית רחבה.'
       : 'I found an old saved answer that could change the ranking, so I should refresh it before a broad plan.',
@@ -1044,7 +1047,9 @@ function selectClarificationQuestion(
     }))
 
   const unknownContextCount = context.tasks.filter(needsPlanningClarification).length
-  const missingProjectContextCount = context.tasks.filter(task => task.project?.id && !hasUsableProjectContext(task)).length
+  const missingProjectContextCount = context.tasks
+    .filter(task => task.project?.id && !hasUsableProjectContext(task) && !isSelfDescribingPlanningBucket(task.project?.name))
+    .length
   if (unknownContextCount >= 2 || missingProjectContextCount >= 2) {
     const questionId = `week_importance_${context.weekStartIso}`
     const locale = context.locale
@@ -1215,7 +1220,10 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
     belief.entityKey.startsWith('preference:') ||
     belief.entityKey.startsWith('workflow:'),
   )
-  const projectMeaning = relevant.filter(task => hasUsableProjectContext(task)).length / denominator
+  const projectMeaning = relevant.filter(task =>
+    hasUsableProjectContext(task) ||
+    isSelfDescribingPlanningBucket(task.project?.name)
+  ).length / denominator
   const taskContext = relevant.filter(task => hasTaskLevelPlanningContext(task)).length / denominator
   const impact = relevant.filter(task =>
     task.derived.projectImportanceScore >= 0.4 ||
@@ -1240,6 +1248,17 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
   const energyFit = relevant.filter(task => task.estimateMinutes || task.derived.quickErrandScore >= 0.55 || task.derived.substantialWorkScore >= 0.55).length / denominator
   const preferences = context.projectContexts.some(ctx => ctx.taskSelectionHints.length || ctx.nonGoals.length || ctx.userCorrections.length) ? 1 : 0
   const staleContext = relevant.some(task => isProjectContextStale(task.projectContext, context.nowIso) || isTaskContextStale(task.taskContext, context.nowIso)) ? 0 : 1
+  const highValueProjectContextGap = relevant.some(task =>
+    task.project?.id &&
+    !hasUsableProjectContext(task) &&
+    !isSelfDescribingPlanningBucket(task.project?.name) &&
+    (
+      task.derived.hasMoneyClientHealthFamilyLegalSignal ||
+      task.derived.hasHumanOrExternalStakeholder ||
+      task.derived.substantialWorkScore >= 0.55 ||
+      Boolean(task.dependencies?.blocksTaskIds.length)
+    )
+  )
   const dimensions: AIClarificationCoverage['dimensions'] = {
     impact: Math.max(impact, strongestBelief([...projectBeliefs, ...taskBeliefs, ...weekAndPreferenceBeliefs], ['impact', 'currentStakes', 'thisWeekImportance', 'stakeholders'])),
     energy_fit: Math.max(energyFit, strongestBelief([...taskBeliefs, ...weekAndPreferenceBeliefs], ['energy_fit', 'energy', 'workload', 'effort'])),
@@ -1268,13 +1287,14 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
   const missing = Object.entries(dimensions)
     .filter(([key, value]) => Number(value ?? 0) < (key === 'preferences' ? 0.2 : key === 'stale_context' ? 1 : 0.45))
     .map(([key]) => key as AIClarificationCoverage['missing'][number])
+  if (highValueProjectContextGap && !missing.includes('project_meaning')) missing.push('project_meaning')
   const materiality: AIClarificationCoverage['materiality'] = context.tasks.length >= 3 ? 'high' : 'medium'
   const policy = decideClarificationPath({
     score: rawScore,
     materiality,
     missing,
     candidateCount: relevant.length,
-    forceAskDimensions: ['project_meaning', 'stale_context'],
+    forceAskDimensions: highValueProjectContextGap ? ['project_meaning', 'stale_context'] : ['stale_context'],
   })
   return {
     score: policy.score,
@@ -1301,6 +1321,14 @@ function recentClarificationResolved(events: AIClarificationEvent[], entityKey: 
     event.createdAt &&
     new Date(event.createdAt).getTime() >= cutoff
   )
+}
+
+function weeklyClarificationStep(events: AIClarificationEvent[]): number {
+  const answeredQuestionIds = new Set(events
+    .filter(event => ['answered', 'generated_with_uncertainty', 'showed_candidates', 'dismissed'].includes(event.eventType))
+    .map(event => event.questionId)
+    .filter(Boolean))
+  return Math.min(3, Math.max(1, answeredQuestionIds.size + 1))
 }
 
 function clarificationMemoryKey(question: Pick<AIClarificationQuestion, 'entityType' | 'entityId'>, context: WeekContext): string {
@@ -1411,7 +1439,11 @@ function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSna
     })
   }
 
-  const missingProjectTask = selected.find(task => task.project?.id && !hasUsableProjectContext(task))
+  const missingProjectTask = selected.find(task =>
+    task.project?.id &&
+    !hasUsableProjectContext(task) &&
+    !isSelfDescribingPlanningBucket(task.project?.name)
+  )
   if (missingProjectTask?.project?.id) {
     const projectId = missingProjectTask.project.id
     const projectName = missingProjectTask.project.name || projectId
@@ -1687,6 +1719,11 @@ function hasUsableProjectContext(task: PlannerTaskSnapshot): boolean {
   )
 }
 
+function isSelfDescribingPlanningBucket(name: string | null | undefined): boolean {
+  const normalized = String(name ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
+  return Boolean(normalized && SELF_DESCRIBING_BUCKET_RE.test(normalized))
+}
+
 function isProjectContextStale(ctx: ProjectContextSnapshot | undefined, nowIso: string): boolean {
   if (!ctx) return false
   return isMemoryContextStale(ctx.staleAfter, ctx.lastConfirmedAt, nowIso)
@@ -1742,13 +1779,15 @@ function hasTaskLevelPlanningContext(task: PlannerTaskSnapshot): boolean {
 }
 
 function needsPlanningClarification(task: PlannerTaskSnapshot): boolean {
-  return !hasUsableProjectContext(task) && !hasTaskLevelPlanningContext(task)
+  return !hasUsableProjectContext(task) &&
+    !isSelfDescribingPlanningBucket(task.project?.name) &&
+    !hasTaskLevelPlanningContext(task)
 }
 
 function buildMemoryUncertaintyNotes(tasks: PlannerTaskSnapshot[], locale: PlannerLocale): string[] {
   const notes: string[] = []
   const missingProjects = tasks
-    .filter(task => task.project?.id && !hasUsableProjectContext(task))
+    .filter(task => task.project?.id && !hasUsableProjectContext(task) && !isSelfDescribingPlanningBucket(task.project?.name))
     .map(task => task.project?.name || task.project?.id || '')
     .filter(Boolean)
   for (const projectName of [...new Set(missingProjects)].slice(0, 4)) {

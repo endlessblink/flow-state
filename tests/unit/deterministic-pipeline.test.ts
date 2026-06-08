@@ -216,8 +216,15 @@ describe('intentRouter — routeIntentByKeywords()', () => {
     it.each([
       'plan my week',
       'plan the week',
+      'plan the rest of my week',
+      'help me plan the remaining week',
+      'help me plan until the end of the week',
+      'organize the rest of my week',
       'תכנן את השבוע',
       'תעזור לי לתכנן את השבוע',
+      'תעזור לי לתכנן את שארית השבוע',
+      'תעזור לי לתכנן עד סוף השבוע',
+      'סדר לי את המשך השבוע',
       'plan לי את השבוע',
       'what should I do this week',
       'מה לעשות השבוע',
@@ -230,6 +237,18 @@ describe('intentRouter — routeIntentByKeywords()', () => {
         expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
         expect(['week_plan', 'day_plan']).toContain(result.responseMode)
       }
+    })
+
+    it.each([
+      'plan the rest of my week',
+      'organize the rest of my week',
+      'תעזור לי לתכנן את שארית השבוע',
+      'סדר לי את המשך השבוע',
+    ])('async router preserves flexible weekly planning route before generic task listing: "%s"', async (input) => {
+      const result = await routeIntent(input, mockTasks, entityMemory)
+      expect(result.type).toBe('task_query')
+      expect(result.tools).toEqual([{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'dueDate', limit: 40 } }])
+      expect(result.responseMode).toBe('week_plan')
     })
 
     it.each([

@@ -74,7 +74,7 @@ import {
   type WeeklyPlanOutput,
 } from '@/services/ai/pipeline/weeklyPlan'
 import { retrieveWeeklyAIMemory, type WeeklyMemoryRetrievalDiagnostics } from '@/services/ai/pipeline/weeklyMemoryRetrieval'
-import type { AIClarificationArtifact, AIClarificationEvent, AIRecommendationFeedback } from '@/types/aiMemory'
+import type { AIClarificationArtifact, AIClarificationEvent, AIContextEdgeInput, AIRecommendationFeedback } from '@/types/aiMemory'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
@@ -947,6 +947,12 @@ export function useAIChat() {
       .catch(error => console.warn('[AIChat] Could not persist AI memory snapshot suggestion:', error))
   }
 
+  function persistAIContextEdges(db: ReturnType<typeof useSupabaseDatabase>, edges: AIContextEdgeInput[]) {
+    if (!edges.length) return
+    void db.upsertAIContextEdges(edges)
+      .catch(error => console.warn('[AIChat] Could not persist AI context edges:', error))
+  }
+
   function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<Record<string, unknown> & { title?: string; __cardIndex?: number }> {
     const tasks: Array<Record<string, unknown> & { title?: string; __cardIndex?: number }> = []
     const addTask = (item: unknown) => {
@@ -1369,9 +1375,13 @@ export function useAIChat() {
         ? `לפי תשובת ההבהרה שלך: ${shortClarificationEvidence(options.clarificationEvidence)}.`
         : `Using your clarification: ${shortClarificationEvidence(options.clarificationEvidence)}.`
       : ''
-    const intro = lang === 'he'
-      ? 'הקשר הפרויקט עדיין לא מספיק בטוח לדירוג רחב, אז אני מציג מועמד אחד בלבד.'
-      : 'Project context is still not reliable enough for broad ranking, so I am showing one candidate only.'
+    const intro = options.compactPreference
+      ? lang === 'he'
+        ? 'ביטחון נמוך: טיוטה קצרה במיוחד לפי המשוב שלך שהקודם היה עמוס מדי; אני מציג מועמד אחד בלבד.'
+        : 'Low confidence: Extra-compact draft based on your feedback that the last answer was too much, so I am showing one candidate only.'
+      : lang === 'he'
+        ? 'הקשר הפרויקט עדיין לא מספיק בטוח לדירוג רחב, אז אני מציג מועמד אחד בלבד.'
+        : 'Project context is still not reliable enough for broad ranking, so I am showing one candidate only.'
 
     if (!task) {
       return [clarificationLine, intro].filter(Boolean).join('\n')
@@ -2129,7 +2139,7 @@ export function useAIChat() {
           weekMemory = retrieval.memory
           clarificationEvents = retrieval.clarificationEvents
           memoryDiagnostics = retrieval.diagnostics
-          await db.upsertAIContextEdges(retrieval.edges)
+          persistAIContextEdges(db, retrieval.edges)
           persistAIMemorySnapshotSuggestions(db, retrieval.diagnostics.snapshotSuggestions)
         } catch (memoryErr) {
           console.warn('[AIChat:WeeklyPlan] Memory fetch skipped or timed out:', memoryErr)
@@ -2138,7 +2148,8 @@ export function useAIChat() {
         }
         updateChatPhase(phaseActivityId, 'Checking needed context', `${cardTasks.length} task candidates`)
         const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, now, weekMemory)
-        const clarification = isClarificationContinuation ? null : buildWeeklyPlanningInterview(weekContext, clarificationEvents, {
+        const shouldForceCurrentDraft = isGenerateCurrentContinuation
+        const clarification = shouldForceCurrentDraft ? null : buildWeeklyPlanningInterview(weekContext, clarificationEvents, {
           retrieval: {
             source: memoryDiagnostics.source,
             entityKeyCount: memoryDiagnostics.entityKeyCount,
@@ -2177,8 +2188,9 @@ export function useAIChat() {
           if (lastMsg && lastMsg.isStreaming) {
             lastMsg.content = ''
             store.streamingContent = ''
+            const { toolResults: _toolResults, cardGroups: _cardGroups, ...metadataWithoutTaskDump } = (lastMsg.metadata ?? {}) as Record<string, unknown>
             lastMsg.metadata = {
-              ...lastMsg.metadata,
+              ...metadataWithoutTaskDump,
               clarification,
             } as Record<string, unknown>
           }
@@ -2216,7 +2228,7 @@ export function useAIChat() {
           return
         }
 
-        if (isClarificationContinuation) {
+        if (shouldForceCurrentDraft) {
           updateChatPhase(phaseActivityId, 'Using saved context', 'Compact local draft')
           const finalPlan = buildQuickDraftWeeklyPlan(weekContext, {
             allowClarificationFirst: false,
@@ -2237,8 +2249,9 @@ export function useAIChat() {
           if (lastMsg && lastMsg.isStreaming) {
             lastMsg.content = ''
             store.streamingContent = ''
+            const { toolResults: _toolResults, cardGroups: _cardGroups, ...metadataWithoutTaskDump } = (lastMsg.metadata ?? {}) as Record<string, unknown>
             lastMsg.metadata = {
-              ...lastMsg.metadata,
+              ...metadataWithoutTaskDump,
               weeklyPlan: finalPlan,
             } as Record<string, unknown>
           }
@@ -2313,7 +2326,11 @@ export function useAIChat() {
                 compactUncertainty: true,
                 maxRecommendations: 3,
               })
-            : buildWeeklyPlanReliabilityFallback(weekContext, validationErrors)
+            : buildQuickDraftWeeklyPlan(weekContext, {
+                allowClarificationFirst: false,
+                compactUncertainty: true,
+                maxRecommendations: 5,
+              })
         )
         if (validationErrors.length && finalPlan.source === 'quick_draft') {
           finalPlan.quality.caveats = [...finalPlan.quality.caveats, ...validationErrors.slice(0, 3)]
@@ -2333,8 +2350,9 @@ export function useAIChat() {
         if (lastMsg && lastMsg.isStreaming) {
           lastMsg.content = ''
           store.streamingContent = ''
+          const { toolResults: _toolResults, cardGroups: _cardGroups, ...metadataWithoutTaskDump } = (lastMsg.metadata ?? {}) as Record<string, unknown>
           lastMsg.metadata = {
-            ...lastMsg.metadata,
+            ...metadataWithoutTaskDump,
             weeklyPlan: finalPlan,
           } as Record<string, unknown>
         }

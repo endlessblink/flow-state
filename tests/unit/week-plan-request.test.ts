@@ -19,9 +19,15 @@ describe('isWeekPlanRequest', () => {
   it.each([
     'plan my week',
     'plan the week',
+    'plan the rest of my week',
+    'help me plan the remaining week',
+    'help me plan until the end of the week',
     'help me plan tomorrow',
     'תכנן את השבוע',
     'תעזור לי לתכנן את השבוע', // "לתכנן" contains "תכנן"
+    'תעזור לי לתכנן את שארית השבוע',
+    'תעזור לי לתכנן עד סוף השבוע',
+    'סדר לי את המשך השבוע',
     'plan לי את השבוע',
     'what should I do this week',
     'מה לעשות השבוע',

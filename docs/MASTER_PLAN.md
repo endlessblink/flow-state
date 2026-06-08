@@ -2,11 +2,90 @@
 
 ## 🔜 Next Up — AI Chat Quality System (start here after restart)
 
+## Current Focused Lane — Localhost Weekly Planning Must Become Useful
+
+**Goal**: Make the localhost AI chat weekly-planning flow reliably useful before any more architecture work.
+
+**Why this lane overrides the broader memory lane for now**: The live user flow still produced a generic task-card dump for a Hebrew "plan the rest of the week" request. That means the product-visible planner is not ready, regardless of memory-schema progress. Resume here until the browser flow proves the assistant can clarify, learn, and produce a compact plan without embarrassing output.
+
+**Current cursor**: ✅ Localhost proof passed on 2026-06-08. Next work may return to the broader AI chat quality lane, but do not regress the weekly-planning proof gates below.
+
+**Hard rules for this focused lane**:
+- Do not add more broad memory architecture work until this lane passes real localhost browser proof.
+- Do not hardcode a single user phrase. Intent handling must recognize categories: planning/organizing/help intent plus future horizon such as this week, rest of week, remaining week, end of week, today, or tomorrow.
+- Ask one question per screen, but not only one question total. Continue the interview while coverage/EVPI says more context is needed.
+- Every clarification card must include user escape controls: generate with current info, show candidates only, pause/stop asking.
+- Every saved answer must update memory/beliefs/events so the next turn does not ask the same thing again.
+- Weekly output must be either a useful clarification card or a compact weekly plan. Never end as a generic "found 40 tasks" dump.
+- Memory retrieval and memory writes must be bounded/fail-open and cannot block the visible next step.
+- Electron stays deferred. Proof is localhost browser behavior first.
+
+**Focused lane tasks**:
+
+### TASK-1844: Flexible weekly-planning intent and route proof (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-08, proved 2026-06-08) | **Depends on**: TASK-1831
+
+**Acceptance**:
+- Hebrew and English "plan/organize/help me plan" prompts with rest/remaining/end-of-week horizons route to `week_plan`.
+- The route is category/rule based, not exact-prompt hardcoding.
+- Retrospective requests such as weekly summaries still route to review/summary, not forward planning.
+- User-flow browser proof uses at least one Hebrew "rest of week" prompt and one English flexible prompt.
+
+**Proof**:
+- `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts tests/unit/weekly-memory-retrieval.test.ts tests/unit/week-plan-request.test.ts tests/unit/deterministic-pipeline.test.ts` → 215/215 passed.
+- `npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts` → 13/13 passed, including Hebrew `תעזור לי לתכנן את שארית השבוע` routing to weekly planning without a generic task dump.
+
+### TASK-1845: Iterative weekly clarification ladder with stop/generate controls (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-08, proved 2026-06-08) | **Depends on**: TASK-1844, TASK-1831A
+
+**Acceptance**:
+- The chat may ask multiple questions when needed, but only one question is visible at a time.
+- Answering one clarification does not force a final plan if coverage is still weak.
+- The user can stop the flow or generate with current info at any point.
+- Saved answers become durable/local fallback memory and suppress repeated questions.
+
+**Proof**:
+- Clarification answers now await persistence before emitting the continuation, so retrieval can see the saved answer before deciding the next question.
+- Weekly clarification continuation remains iterative; only the explicit generate/current-info escape forces the bounded compact draft.
+- Escape controls remain visible and iconized with accessible labels.
+- Browser suite proves no stuck activity row after answers and no-repeat broad clarification behavior.
+
+### TASK-1846: Weekly planner visible-output quality gate (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-08, proved 2026-06-08) | **Depends on**: TASK-1844, TASK-1845
+
+**Acceptance**:
+- Final weekly plan shows 3-5 recommendations max.
+- Each recommendation has a clear "why this now" grounded in task data, saved context, or explicit uncertainty.
+- No generic task dump, no broad wall of text, no unsupported importance claims, no "found 40 tasks" as the final answer.
+- Playwright/localhost proof checks rendered UI, not only unit contracts.
+
+**Proof**:
+- Weekly fallback now uses a bounded quick-draft plan with recommendation cards instead of an empty "not reliable enough" artifact.
+- Weekly plan/clarification metadata clears raw `toolResults`/`cardGroups` so `ChatMessage` does not render `Found N tasks` under planning artifacts.
+- Browser proof checks English weekly planning, Hebrew rest-of-week planning, accept/postpone/simplify feedback controls, no generic task dump, and enabled input/no stuck running state.
+
+**Focused proof gate before user testing**:
+- Unit tests for flexible weekly intent, iterative clarification continuation, no blocking memory persistence, and no repeated questions.
+- Playwright localhost user flow with seeded tasks:
+  1. Ask in Hebrew for help planning the rest of the week.
+  2. See one concise clarification or compact plan, not task dump cards.
+  3. Answer at least one clarification.
+  4. If more context is needed, see the next question with stop/generate controls.
+  5. Choose generate/current-info escape and receive a compact 3-5 item weekly plan.
+  6. Repeat with an English flexible prompt and verify it routes to weekly planning.
+
+**Gate status**: ✅ Passed on localhost via `npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts` (13/13).
+
+---
+
 ## AI Chat Quality System Full Delivery Lane — localhost first, Electron later
 
 **Goal**: Make FlowState chat consistently useful across weekly planning, "what should I do", prioritization, task breakdown, smart lanes, follow-up tasks, and general agent help by combining server-backed memory, explicit uncertainty, low-overwhelm UX, feedback learning, and testable answer-quality gates.
 
-**Current execution cursor**: **LANE-1 VPS-safe memory substrate readiness**. Localhost behavior now has broad-flow proof, so the next gate is proving the server/VPS Supabase schema can actually persist the AI memory layer instead of relying on guest/local fallback. Do not ask the user to test broadly or move to Electron until the live schema readiness check passes or the missing-schema fallback remains the explicitly accepted rollout state.
+**Current execution cursor**: **Current Focused Lane — Localhost Weekly Planning Must Become Useful**. The live schema is now ready, but the product-visible weekly planner still failed the user's actual localhost chat flow. Resume TASK-1844/TASK-1845/TASK-1846 before any further architecture work, broad user testing, or Electron delivery.
 
 **Why this lane exists**: This work has too many coupled failure modes to track as isolated fixes. Use this lane as the single source of truth so every change is tied to a phase, a proof gate, and a user-visible quality outcome. If a future session feels lost, resume from the current execution cursor and the first incomplete proof gate below.
 

@@ -569,7 +569,7 @@ function clarificationFollowUpOptions(card: AIClarificationArtifact) {
   return clarificationFollowUpStep(card)?.options ?? []
 }
 
-function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEvent) {
+async function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEvent) {
   event.stopPropagation()
   if (clarificationApplying.value) return
   const key = clarificationKey(card)
@@ -581,10 +581,16 @@ function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEven
 
   clarificationSavedLocal.value[key] = true
   clarificationFollowUpSavedLocal.value[key] = true
-  clarificationStatus.value = card.locale === 'he'
-    ? 'נשמר מקומית. ממשיך לתשובה קצרה...'
-    : 'Saved locally. Continuing with a short answer...'
-  void persistClarificationAnswer(card, option, note)
+  const savingStatus = card.locale === 'he'
+    ? 'שומר הקשר...'
+    : 'Saving context...'
+  clarificationStatus.value = savingStatus
+  await persistClarificationAnswer(card, option, note)
+  if (clarificationStatus.value === savingStatus) {
+    clarificationStatus.value = card.locale === 'he'
+      ? 'נשמר. ממשיך לשלב הבא...'
+      : 'Saved. Continuing to the next step...'
+  }
   emit('continueChat', clarificationContinueMessage(card, {
     selectedLabel: option?.label,
     freeText: note,
@@ -1793,10 +1799,13 @@ async function saveSchedule() {
                   :key="action"
                   type="button"
                   class="weekly-question-escape"
+                  :title="clarificationActionLabel(action, clarification.locale)"
+                  :aria-label="clarificationActionLabel(action, clarification.locale)"
                   :disabled="clarificationApplying"
                   @click="recordClarificationEscape(clarification, action, $event)"
                 >
-                  {{ clarificationActionLabel(action, clarification.locale) }}
+                  <X :size="13" aria-hidden="true" />
+                  <span class="sr-only">{{ clarificationActionLabel(action, clarification.locale) }}</span>
                 </button>
                 <span v-if="clarificationStatus" class="weekly-question-status">
                   {{ clarificationStatus }}
@@ -3642,11 +3651,20 @@ async function saveSchedule() {
   overflow-anchor: none;
 }
 
+.ai-clarification-message {
+  gap: var(--space-5);
+  padding-block: var(--space-3);
+}
+
 .weekly-plan-header,
 .ai-clarification-header {
   display: flex;
   flex-direction: column;
   gap: var(--space-1_5);
+}
+
+.ai-clarification-header {
+  gap: var(--space-2);
 }
 
 .weekly-plan-header h2,
@@ -3710,6 +3728,11 @@ async function saveSchedule() {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   background: var(--glass-bg-subtle);
+}
+
+.ai-clarification-message .weekly-plan-questions {
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 
 .weekly-plan-focus {
@@ -3836,21 +3859,37 @@ async function saveSchedule() {
   gap: var(--space-2);
 }
 
-.weekly-question-options {
+.ai-clarification-message .weekly-plan-question,
+.clarification-follow-up,
+.clarification-saved-state {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ai-clarification-message .weekly-plan-question > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.weekly-question-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   gap: var(--space-1_5);
 }
 
 .weekly-question-option {
-  padding-block: var(--space-1);
-  padding-inline: var(--space-2);
+  min-height: 32px;
+  padding-block: var(--space-1_5);
+  padding-inline: var(--space-2_5);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   background: var(--glass-bg-subtle);
   color: var(--text-secondary);
   font-size: var(--text-xs);
   line-height: 1.3;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -3863,9 +3902,9 @@ async function saveSchedule() {
 
 .weekly-question-free-text {
   width: 100%;
-  min-height: 54px;
-  padding-block: var(--space-2);
-  padding-inline: var(--space-2);
+  min-height: 64px;
+  padding-block: var(--space-2_5);
+  padding-inline: var(--space-3);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   background: var(--input-bg);
@@ -3878,20 +3917,24 @@ async function saveSchedule() {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1_5);
+  margin-block-start: var(--space-1);
 }
 
 .weekly-question-apply {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
-  padding-block: var(--space-1);
-  padding-inline: var(--space-2);
+  min-height: 32px;
+  padding-block: var(--space-1_5);
+  padding-inline: var(--space-3);
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-sm);
   background: var(--brand-primary);
   color: var(--bg-primary);
   font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
   line-height: 1.3;
   cursor: pointer;
 }
@@ -3904,9 +3947,11 @@ async function saveSchedule() {
 .weekly-question-escape {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
-  padding-block: var(--space-1);
-  padding-inline: var(--space-2);
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   background: var(--glass-bg-subtle);
@@ -3928,8 +3973,21 @@ async function saveSchedule() {
 }
 
 .weekly-question-status {
+  flex-basis: 100%;
   color: var(--text-secondary);
   font-size: var(--text-xs);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 :dir(rtl).weekly-plan-message {

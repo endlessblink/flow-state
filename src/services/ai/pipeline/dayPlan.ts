@@ -69,27 +69,31 @@ export function isWeekPlanRequest(message: string): boolean {
     'סיכום', 'סכם', 'מה עשיתי', 'מה סיימתי', 'מה השלמתי', 'מה הספקתי',
   ]
   if (retrospective.some(t => q.includes(t))) return false
+  if (/^how\s+(do|can)\s+i\b/.test(q)) return false
 
-  // Strong planning verbs — unambiguous, match on their own.
-  const strong = [
-    'plan my', 'plan the', 'plan for', 'plan out', 'plan tomorrow', 'plan today',
-    'help me plan', 'schedule my', 'lay out my', 'map out my',
-    'תכנן', 'תכנון', 'סדר לי את השבוע', 'סדר לי את היום',
-  ]
-  if (strong.some(t => q.includes(t))) return true
-
-  // Weak predicates ("what should I do", "מה לעשות") overlap with suggest_next_task,
-  // so only treat them as a week/day PLAN when an explicit horizon word is present.
-  const weak = [
+  const planningPredicates = [
+    'plan', 'schedule', 'lay out', 'map out', 'organize', 'organise',
     'what should i do', 'what to do', 'what can i do', 'what can i finish', 'what next',
+    'תכנן', 'תכנון', 'לתכנן', 'מתכנן', 'סדר', 'לסדר', 'ארגן', 'לארגן',
     'מה לעשות', 'מה כדאי', 'על מה לעבוד', 'מה הבא',
   ]
-  const horizon = ['this week', 'next week', 'today', 'tomorrow', 'שבוע', 'היום', 'מחר']
-  const hasHorizon = horizon.some(t => q.includes(t))
-  // A bare "plan" verb (word-boundary, so not "explain"/"plant") + a horizon also
-  // counts — covers code-switched "plan לי את השבוע".
-  if (/\bplan\b/.test(q) && hasHorizon) return true
-  return weak.some(t => q.includes(t)) && hasHorizon
+
+  const futureHorizons = [
+    'my week', 'the week', 'this week', 'next week', 'rest of the week', 'rest of my week',
+    'remaining week', 'remainder of the week', 'end of the week', 'until the end of the week',
+    'today', 'tomorrow', 'my day', 'the day',
+    'שבוע', 'השבוע', 'שארית השבוע', 'שאר השבוע', 'המשך השבוע', 'סוף השבוע', 'עד סוף השבוע',
+    'היום', 'מחר',
+  ]
+  const hasFutureHorizon = futureHorizons.some(t => q.includes(t))
+  if (!hasFutureHorizon) return false
+
+  return planningPredicates.some(predicate => {
+    if (/^[a-z ]+$/.test(predicate)) {
+      return new RegExp(`\\b${predicate.replace(/\s+/g, '\\s+')}\\b`).test(q)
+    }
+    return q.includes(predicate)
+  })
 }
 
 export function flattenDayPlanTaskIds(groups: DayPlanGroup[]): string[] {

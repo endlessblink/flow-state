@@ -2607,7 +2607,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('type FormatterFallbackOptions')
     expect(aiChat).toContain('clarificationEvidence: isGenerateCurrentContinuation ? undefined : clarificationContinuationEvidence')
     expect(aiChat).toContain('matches your clarification')
-    expect(aiChat).toContain('Short draft using your clarification')
+    expect(aiChat).toContain('Medium confidence: short draft using your clarification')
     expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language, routed.responseMode, formatterFallbackOptions)')
   })
 

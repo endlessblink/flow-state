@@ -1321,20 +1321,23 @@ export function useAIChat() {
       const lines = tasks.map(task => fallbackTaskRecommendation(task, lang, options))
       const intro = options.uncertaintyOnly
         ? lang === 'he'
-          ? 'טיוטה מוגבלת לפי הנתונים הקיימים בלבד; ההקשר האמיתי עדיין לא ידוע:'
-          : 'Limited draft from current task data only; real context is still unknown:'
+          ? 'ביטחון נמוך: טיוטה מוגבלת לפי הנתונים הקיימים בלבד; ההקשר האמיתי עדיין לא ידוע:'
+          : 'Low confidence: limited draft from current task data only; real context is still unknown:'
         : options.compactPreference
           ? lang === 'he'
-            ? 'טיוטה קצרה במיוחד לפי המשוב שלך שהקודם היה עמוס מדי:'
-            : 'Extra-compact draft based on your feedback that the last answer was too much:'
+            ? 'ביטחון בינוני: טיוטה קצרה במיוחד לפי המשוב שלך שהקודם היה עמוס מדי:'
+            : 'Medium confidence: Extra-compact draft based on your feedback that the last answer was too much:'
         : options.clarificationEvidence
           ? lang === 'he'
-            ? 'טיוטה קצרה לפי תשובת ההבהרה שלך; הקשר חסר עדיין מסומן בכרטיסים:'
-            : 'Short draft using your clarification; missing context stays visible in the cards:'
+            ? 'ביטחון בינוני: טיוטה קצרה לפי תשובת ההבהרה שלך; הקשר חסר עדיין מסומן בכרטיסים:'
+            : 'Medium confidence: short draft using your clarification; missing context stays visible in the cards:'
         : lang === 'he'
-          ? 'טיוטת בחירה מהירה לפי השפעה, תלות וסיכון אמיתי:'
-          : 'Fast draft based on impact, dependency, and real risk:'
-      return [intro, ...lines].filter(Boolean).join('\n') + buildFallbackCards(tasks, lang, responseMode, options)
+          ? 'ביטחון בינוני: טיוטת בחירה מהירה לפי השפעה, תלות וסיכון אמיתי:'
+          : 'Medium confidence: fast draft based on impact, dependency, and real risk:'
+      const heldBack = lang === 'he'
+        ? 'נשאר בחוץ כרגע: משימות עם הקשר חלש יותר או פחות עדות, כדי שהתשובה תישאר קצרה.'
+        : 'Held back for now: lower-evidence tasks, so the answer stays short.'
+      return [intro, ...lines, heldBack].filter(Boolean).join('\n') + buildFallbackCards(tasks, lang, responseMode, options)
     }
 
     const aspects = buildFallbackAspects(tasks, lang, options.recommendationFeedback)

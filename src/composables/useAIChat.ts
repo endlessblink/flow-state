@@ -84,6 +84,8 @@ export interface SendMessageOptions {
   useReAct?: boolean
 }
 
+type ClarificationContinuationMode = RoutedIntent['responseMode'] | 'general'
+
 /**
  * A quick action button that can optionally call a tool directly
  * (bypassing AI model call — works with Ollama and other local models).
@@ -127,6 +129,55 @@ const FINAL_FORMATTER_TIMEOUT_MS = 45_000
 const WEEK_PLAN_BRIDGE_FORMATTER_TIMEOUT_MS = 12_000
 const WEEK_PLAN_STRUCTURED_TIMEOUT_MS = 8_000
 const WEEK_PLAN_MEMORY_TIMEOUT_MS = 1_500
+
+function clarificationContinuationMode(content: string): ClarificationContinuationMode | null {
+  const marker = content.match(/\[FLOWSTATE_CLARIFICATION_CONTINUATION\s+mode=([a-z_]+)\]/i)
+  const markerMode = marker?.[1] as ClarificationContinuationMode | undefined
+  if (markerMode && ['week_plan', 'day_plan', 'smart_lanes', 'general'].includes(markerMode)) return markerMode
+  if (/Continue planning the week using the clarification I just answered|המשך לתכנן את השבוע עם ההקשר שעניתי עכשיו/i.test(content)) {
+    return 'week_plan'
+  }
+  return null
+}
+
+function routeClarificationContinuation(
+  mode: ClarificationContinuationMode,
+  language: ChatOutputLanguage,
+): RoutedIntent {
+  if (mode === 'week_plan') {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'dueDate', limit: 40 } }],
+      language,
+      formatDirective: 'Continue the forward weekly plan from the clarification the user just answered. Keep it short and grounded in task data.',
+      responseMode: 'week_plan',
+    }
+  }
+  if (mode === 'day_plan') {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 25 } }],
+      language,
+      formatDirective: 'Continue the day plan from the clarification the user just answered. Keep it short and sequence only what matters now.',
+      responseMode: 'day_plan',
+    }
+  }
+  if (mode === 'smart_lanes') {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 30 } }],
+      language,
+      formatDirective: 'Continue smart lane grouping from the clarification the user just answered. Keep it compact and actionable.',
+      responseMode: 'smart_lanes',
+    }
+  }
+  return {
+    type: 'task_query',
+    tools: [{ tool: 'suggest_next_task', parameters: {} }],
+    language,
+    formatDirective: 'Continue the task recommendation from the clarification the user just answered. Keep it short, grounded, and avoid a broad list.',
+  }
+}
 
 // AI Personality mode
 const aiPersonality = ref<'professional' | 'grid_handler'>('professional')
@@ -1732,9 +1783,13 @@ export function useAIChat() {
     // ── Deterministic pipeline: route intent BEFORE ReAct ──────────────
     // TASK-1814: skip the LLM intent-classification round-trip for bridge brains
     // (each CLI call is ~6s) — keyword routing is instant and falls back to ReAct.
-    const routed = await routeIntent(trimmedContent, taskStore.tasks, entityMemory, {
-      skipLLMClassification: isBridgeActive(),
-    })
+    const continuationMode = clarificationContinuationMode(trimmedContent)
+    const detectedLanguage = detectLanguage(trimmedContent) === 'he' ? 'he' : 'en'
+    const routed = continuationMode
+      ? routeClarificationContinuation(continuationMode, resolveChatOutputLanguage(detectedLanguage, chatLanguage.value))
+      : await routeIntent(trimmedContent, taskStore.tasks, entityMemory, {
+          skipLLMClassification: isBridgeActive(),
+        })
 
     if (routed.type !== 'freeform') {
       return sendMessageDeterministic(trimmedContent, routed, options)
@@ -1777,6 +1832,7 @@ export function useAIChat() {
     // Track last detected language for use in confirmation/cancel handlers
     const outputLanguage = resolveChatOutputLanguage(routed.language, chatLanguage.value)
     lastDetectedLanguage.value = outputLanguage
+    const isClarificationContinuation = Boolean(clarificationContinuationMode(content))
 
     // Start streaming response
     store.startStreamingMessage()
@@ -1917,7 +1973,7 @@ export function useAIChat() {
         if (memorySummary) toolResultsSummary += `\n\n${memorySummary}`
       }
 
-      if (shouldAskBroadTaskClarification(content, routed, hasTaskList)) {
+      if (!isClarificationContinuation && shouldAskBroadTaskClarification(content, routed, hasTaskList)) {
         updateChatPhase(phaseActivityId, 'Checking needed context', `${collectCardTasks(toolResults).length} task candidates`)
         const memoryKey = broadTaskClarificationMemoryKey(routed)
         const broadClarificationEvents = await withTimeout(
@@ -2072,7 +2128,7 @@ export function useAIChat() {
         }
         updateChatPhase(phaseActivityId, 'Checking needed context', `${cardTasks.length} task candidates`)
         const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, now, weekMemory)
-        const clarification = buildWeeklyPlanningInterview(weekContext, clarificationEvents, {
+        const clarification = isClarificationContinuation ? null : buildWeeklyPlanningInterview(weekContext, clarificationEvents, {
           retrieval: {
             source: memoryTimedOut ? 'fallback' : 'exact_entity_lookup',
             entityKeyCount: memoryEntityKeyCount,

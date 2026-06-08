@@ -1536,6 +1536,7 @@ describe('AI sidebar-first desktop experience', () => {
 
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue with the answer using the clarification I just answered')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Real impact"')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('week')
   })
 
@@ -1547,7 +1548,21 @@ describe('AI sidebar-first desktop experience', () => {
     expect(panel).toContain('watch(isGenerating, (generating) => {')
     expect(panel).toContain('if (generating || !pendingContinueMessage.value) return')
     expect(panel).toContain('pendingContinueMessage.value = \'\'')
-    expect(panel).toContain('sendMessage(message)')
+    expect(panel).toContain('sendMessage(message, { skipHistory: true })')
+    expect(panel).toContain('sendMessage(trimmed, { skipHistory: true })')
+  })
+
+  it('routes clarification continuation without asking the same card again', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+    const chatMessage = src('src/components/ai/ChatMessage.vue')
+
+    expect(chatMessage).toContain('FLOWSTATE_CLARIFICATION_CONTINUATION mode=')
+    expect(aiChat).toContain('function clarificationContinuationMode')
+    expect(aiChat).toContain('routeClarificationContinuation')
+    expect(aiChat).toContain('const continuationMode = clarificationContinuationMode(trimmedContent)')
+    expect(aiChat).toContain('const isClarificationContinuation = Boolean(clarificationContinuationMode(content))')
+    expect(aiChat).toContain('!isClarificationContinuation && shouldAskBroadTaskClarification')
+    expect(aiChat).toContain('const clarification = isClarificationContinuation ? null : buildWeeklyPlanningInterview')
   })
 
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
@@ -1917,7 +1932,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('fetchProjectContexts(projectIds)')
     expect(aiChat).toContain('fetchTaskContexts(taskIds)')
     expect(aiChat).toContain('fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 })')
-    expect(aiChat).toContain('const clarification = buildWeeklyPlanningInterview(weekContext, clarificationEvents, {')
+    expect(aiChat).toContain('const clarification = isClarificationContinuation ? null : buildWeeklyPlanningInterview(weekContext, clarificationEvents, {')
     expect(aiChat).toContain('clarification,')
     expect(aiChat).toContain('recordAIClarificationEvent')
     expect(aiChat).toContain('weeklyPlan: finalPlan')

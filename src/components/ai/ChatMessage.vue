@@ -469,6 +469,10 @@ function clarificationContinueMessage(
     followUpFreeText?: string
   } = {},
 ): string {
+  const continuationMode = card.kind === 'weekly_planning'
+    ? 'week_plan'
+    : card.question.entityId || 'general'
+  const continuationMarker = `\n\n[FLOWSTATE_CLARIFICATION_CONTINUATION mode=${continuationMode}]`
   const evidenceText = formatClarificationContinuationEvidence(evidence, card.locale)
   const evidenceBlock = evidenceText
     ? card.locale === 'he'
@@ -477,12 +481,12 @@ function clarificationContinueMessage(
     : ''
   if (card.kind === 'response_quality') {
     return card.locale === 'he'
-      ? `המשך עם התשובה לפי ההקשר שעניתי עכשיו. תן תשובה קצרה וממוקדת, בלי רשימה ארוכה.${evidenceBlock}`
-      : `Continue with the answer using the clarification I just answered. Keep it short and focused, not a long list.${evidenceBlock}`
+      ? `המשך עם התשובה לפי ההקשר שעניתי עכשיו. תן תשובה קצרה וממוקדת, בלי רשימה ארוכה.${evidenceBlock}${continuationMarker}`
+      : `Continue with the answer using the clarification I just answered. Keep it short and focused, not a long list.${evidenceBlock}${continuationMarker}`
   }
   return card.locale === 'he'
-    ? `המשך לתכנן את השבוע עם ההקשר שעניתי עכשיו. תן קודם תקציר קצר בלבד, בלי רשימה ארוכה.${evidenceBlock}`
-    : `Continue planning the week using the clarification I just answered. Start with a short summary only, not a long list.${evidenceBlock}`
+    ? `המשך לתכנן את השבוע עם ההקשר שעניתי עכשיו. תן קודם תקציר קצר בלבד, בלי רשימה ארוכה.${evidenceBlock}${continuationMarker}`
+    : `Continue planning the week using the clarification I just answered. Start with a short summary only, not a long list.${evidenceBlock}${continuationMarker}`
 }
 
 function continueAfterClarification(card: AIClarificationArtifact, event: MouseEvent) {

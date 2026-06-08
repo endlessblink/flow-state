@@ -263,14 +263,14 @@ function handleContinueChat(message: string) {
     return
   }
   pendingContinueMessage.value = ''
-  sendMessage(trimmed)
+  sendMessage(trimmed, { skipHistory: true })
 }
 
 watch(isGenerating, (generating) => {
   if (generating || !pendingContinueMessage.value) return
   const message = pendingContinueMessage.value
   pendingContinueMessage.value = ''
-  sendMessage(message)
+  sendMessage(message, { skipHistory: true })
 })
 
 // ============================================================================

@@ -1303,9 +1303,13 @@ async function postponeCardTask(taskId: string, event: MouseEvent) {
 }
 
 function recommendationEntityKey(rec: WeeklyPlanRecommendation): string | undefined {
+  return rec.primaryTaskId ? `task:${rec.primaryTaskId}` : undefined
+}
+
+function recommendationProjectEntityKey(rec: WeeklyPlanRecommendation): string | undefined {
   const task = taskMap.value.get(rec.primaryTaskId)
   if (task?.projectId) return `project:${task.projectId}`
-  return rec.primaryTaskId ? `task:${rec.primaryTaskId}` : undefined
+  return undefined
 }
 
 function feedbackStatusLabel(action: AIRecommendationFeedbackInput['action'], locale: 'he' | 'en'): string {
@@ -1398,7 +1402,7 @@ async function recordRecommendationFeedback(
   action: AIRecommendationFeedbackInput['action'],
   reasonCategory?: AIRecommendationFeedbackInput['reasonCategory'],
   implicitPositive = false,
-  options: Pick<AIRecommendationFeedbackInput, 'freeText' | 'revisitAt'> = {},
+  options: Pick<AIRecommendationFeedbackInput, 'freeText' | 'revisitAt' | 'outcomeSignals'> = {},
 ) {
   const key = `${rec.sectionId}:${action}`
   if (recommendationFeedbackLoading.value[key]) return
@@ -1418,6 +1422,12 @@ async function recordRecommendationFeedback(
       reasonCategory,
       freeText: options.freeText,
       revisitAt: options.revisitAt,
+      outcomeSignals: {
+        ...(options.outcomeSignals ?? {}),
+        primaryTaskId: rec.primaryTaskId,
+        relatedTaskIds: rec.relatedTaskIds,
+        projectEntityKey: recommendationProjectEntityKey(rec),
+      },
       implicitPositive,
       sourceMessageId: props.message.id,
     })

@@ -1574,6 +1574,14 @@ describe('AI sidebar-first desktop experience', () => {
       } as Task,
       {
         ...baseTask,
+        id: 'task-renewal-sibling',
+        title: 'Send renewal timeline',
+        description: 'Same project as the dismissed card, but this task has not been rejected.',
+        projectId: 'client-renewals',
+        estimatedDuration: 45,
+      } as Task,
+      {
+        ...baseTask,
         id: 'task-release-blocker',
         title: 'Fix release blocker before QA',
         description: 'Blocks QA signoff and prevents a reliable release handoff this week.',
@@ -1609,6 +1617,7 @@ describe('AI sidebar-first desktop experience', () => {
     const quickDraft = buildQuickDraftWeeklyPlan(context)
 
     expect(context.tasks.find(task => task.id === 'task-dismissed-client')?.derived.recommendationFeedback.penalty).toBeGreaterThan(0.7)
+    expect(context.tasks.find(task => task.id === 'task-renewal-sibling')?.derived.recommendationFeedback.penalty).toBe(0)
     expect(quickDraft.recommendations.map(rec => rec.primaryTaskId)).not.toContain('task-dismissed-client')
     expect(quickDraft.deferrals).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -2496,6 +2505,15 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('finishChatPhase(phaseActivityId, \'Weekly plan ready\', \'Used compact saved-context draft\')')
   })
 
+  it('records weekly recommendation feedback against the exact task, not the whole project', () => {
+    const chatMessage = src('src/components/ai/ChatMessage.vue')
+
+    expect(chatMessage).toContain('function recommendationEntityKey(rec: WeeklyPlanRecommendation): string | undefined {')
+    expect(chatMessage).toContain('return rec.primaryTaskId ? `task:${rec.primaryTaskId}` : undefined')
+    expect(chatMessage).toContain('function recommendationProjectEntityKey(rec: WeeklyPlanRecommendation): string | undefined {')
+    expect(chatMessage).toContain('projectEntityKey: recommendationProjectEntityKey(rec)')
+  })
+
   it('shows a queued continuation activity row after a clarification answer while generation is settling', async () => {
     const store = useAIChatStore()
     store.openPanel()
@@ -2820,12 +2838,16 @@ describe('AI sidebar-first desktop experience', () => {
       generatedPlanId: 'plan-feedback-1',
       recommendationId: 'rec-feedback-1',
       taskId: 'task-feedback-plan',
-      entityKey: 'project:ai-planner',
+      entityKey: 'task:task-feedback-plan',
       action: 'postpone',
       reasonCategory: 'needs_more_info',
       sourceMessageId: 'msg-feedback-plan',
     }))
     const savedPayload = supabaseDbMocks.recordAIRecommendationFeedback.mock.calls[0][0]
+    expect(savedPayload.outcomeSignals).toMatchObject({
+      primaryTaskId: 'task-feedback-plan',
+      projectEntityKey: 'project:ai-planner',
+    })
     expect(savedPayload.revisitAt).toEqual(expect.any(String))
     expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(0)
     expect(wrapper.get('[data-section-id="rec-feedback-1"]').isVisible()).toBe(false)

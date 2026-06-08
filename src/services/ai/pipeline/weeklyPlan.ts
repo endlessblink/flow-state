@@ -1821,10 +1821,11 @@ function summarizeTaskRecommendationFeedback(input: {
 }
 
 function feedbackMatchesTask(event: AIRecommendationFeedback, taskId: string, projectId: string): boolean {
+  if (event.taskId === taskId || event.entityKey === `task:${taskId}`) return true
+  if (event.recommendationId?.includes(taskId)) return true
+  if (event.recommendationId && /^((inline|quick|weekly)_)/.test(event.recommendationId)) return false
   return Boolean(
-    event.taskId === taskId ||
-    event.entityKey === `task:${taskId}` ||
-    (projectId && event.entityKey === `project:${projectId}`),
+    projectId && event.entityKey === `project:${projectId}`,
   )
 }
 

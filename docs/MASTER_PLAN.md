@@ -284,6 +284,7 @@
 - 2026-06-08: Sidebar activity rows show concise elapsed timing so slow phases are visible without dumping debug prose into the answer.
 - 2026-06-08: Clarification continuations now add a visible "Answer queued" activity row when the user answers while generation is settling, then mark it as accepted when the queued continuation is sent. This prevents the UI from looking inert after saving a clarification answer.
 - 2026-06-08: Clarification cards now expose pending AI-memory write status: normal saved copy says when memory updates are queued for sync, while "Why ask?" debug includes the pending write count. This makes schema-cache/migration fallback visible without adding broad answer prose.
+- 2026-06-08: Settings > AI > Memory Health now includes an "AI memory debug" snapshot for the new server-backed memory layer. It shows bounded counts for context entities, parameter beliefs, clarification events, recommendation feedback, pending sync writes, and the latest compact entity/belief/event labels so saved context is inspectable without reading raw database rows.
 
 ---
 

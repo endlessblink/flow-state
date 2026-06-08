@@ -12,6 +12,7 @@ let entityUpsertCount = 0
 let eventInsertCount = 0
 let feedbackInsertCount = 0
 let parameterBeliefUpsertCount = 0
+let tableRows: Record<string, unknown[]> = {}
 
 vi.mock('@/composables/supabase/_infrastructure', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/composables/supabase/_infrastructure')>()
@@ -59,6 +60,12 @@ function createTableBuilder(table: string) {
     order: vi.fn(() => builder),
     limit: vi.fn(() => builder),
     in: vi.fn(() => builder),
+    then: (resolve: (value: { data: unknown[] | null; error: unknown }) => unknown, reject?: (reason: unknown) => unknown) => {
+      const result = readyTables.has(table)
+        ? { data: tableRows[table] ?? [], error: null }
+        : { data: null, error: schemaError() }
+      return Promise.resolve(result).then(resolve, reject)
+    },
   }
   return builder
 }
@@ -83,6 +90,7 @@ describe('AI memory pending write queue', () => {
     eventInsertCount = 0
     feedbackInsertCount = 0
     parameterBeliefUpsertCount = 0
+    tableRows = {}
     clearPendingAIMemoryWritesForTest()
   })
 
@@ -176,5 +184,59 @@ describe('AI memory pending write queue', () => {
 
     expect(getPendingAIMemoryWriteCount()).toBe(0)
     expect(parameterBeliefUpsertCount).toBe(1)
+  })
+
+  it('reads a bounded debug snapshot across server-backed memory tables', async () => {
+    readyTables = new Set([
+      'ai_context_entities',
+      'ai_clarification_events',
+      'ai_parameter_beliefs',
+      'ai_recommendation_feedback',
+    ])
+    tableRows = {
+      ai_context_entities: [{
+        entity_key: 'workflow:task_answer:general',
+        entity_type: 'workflow',
+        display_name: 'Task answer',
+        facts: { rankingFocus: 'impact' },
+        corrections: [],
+        confidence: 0.8,
+        completeness_score: 0.4,
+        ask_count: 1,
+      }],
+      ai_clarification_events: [{
+        entity_key: 'workflow:task_answer:general',
+        entity_type: 'workflow',
+        question_id: 'response_quality_general',
+        event_type: 'answered',
+        selected_label: 'Real impact',
+        created_at: '2026-06-08T09:00:00.000Z',
+      }],
+      ai_parameter_beliefs: [{
+        entity_key: 'workflow:task_answer:general',
+        entity_type: 'workflow',
+        parameter_key: 'rankingFocus',
+        belief_json: { value: 'real impact' },
+        confidence: 0.9,
+        impact_weight: 0.8,
+      }],
+      ai_recommendation_feedback: [{
+        recommendation_id: 'rec-1',
+        entity_key: 'workflow:task_answer:general',
+        action: 'dismiss',
+        reason_category: 'not_important',
+        implicit_positive: false,
+        created_at: '2026-06-08T09:05:00.000Z',
+      }],
+    }
+    const db = useAIMemoryDatabase(createContext())
+
+    const snapshot = await db.fetchAIMemoryDebugSnapshot(6)
+
+    expect(snapshot.contextEntities).toHaveLength(1)
+    expect(snapshot.clarificationEvents[0]).toMatchObject({ selectedLabel: 'Real impact' })
+    expect(snapshot.parameterBeliefs[0]).toMatchObject({ parameterKey: 'rankingFocus', confidence: 0.9 })
+    expect(snapshot.recommendationFeedback[0]).toMatchObject({ action: 'dismiss', reasonCategory: 'not_important' })
+    expect(snapshot.pendingWriteCount).toBe(0)
   })
 })

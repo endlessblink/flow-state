@@ -3,6 +3,7 @@ import type {
   AIClarificationEventInput,
   AIContextEntity,
   AIContextEdgeInput,
+  AIMemoryDebugSnapshot,
   AIMemoryPatch,
   AIParameterBelief,
   AIParameterBeliefInput,
@@ -787,6 +788,85 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
+  const fetchAIMemoryDebugSnapshot = async (limit = 8): Promise<AIMemoryDebugSnapshot> => {
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    const empty = (): AIMemoryDebugSnapshot => ({
+      contextEntities: [],
+      clarificationEvents: [],
+      parameterBeliefs: [],
+      recommendationFeedback: [],
+      pendingWriteCount: getPendingAIMemoryWriteCount(),
+      loadedAt: new Date().toISOString(),
+    })
+    if (!userId) return empty()
+
+    const safeRead = async <T>(label: string, read: () => Promise<T[]>): Promise<T[]> => {
+      try {
+        return await withRetry(read, label)
+      } catch (e) {
+        if (isAIMemorySchemaMissing(e)) {
+          logMissingAIMemorySchema(label)
+          return []
+        }
+        handleError(e, label)
+        return []
+      }
+    }
+
+    const [contextEntities, clarificationEvents, parameterBeliefs, recommendationFeedback] = await Promise.all([
+      safeRead('fetchAIMemoryDebugSnapshot:entities', async () => {
+        const { data, error } = await getSupabase()
+          .from('ai_context_entities')
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false })
+          .limit(limit)
+        if (error) throw error
+        return ((data ?? []) as AIContextEntityRow[]).map(toAIContextEntity)
+      }),
+      safeRead('fetchAIMemoryDebugSnapshot:events', async () => {
+        const { data, error } = await getSupabase()
+          .from('ai_clarification_events')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(limit)
+        if (error) throw error
+        return ((data ?? []) as AIClarificationEventRow[]).map(toAIClarificationEvent)
+      }),
+      safeRead('fetchAIMemoryDebugSnapshot:beliefs', async () => {
+        const { data, error } = await getSupabase()
+          .from('ai_parameter_beliefs')
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false })
+          .limit(limit)
+        if (error) throw error
+        return ((data ?? []) as AIParameterBeliefRow[]).map(toAIParameterBelief)
+      }),
+      safeRead('fetchAIMemoryDebugSnapshot:feedback', async () => {
+        const { data, error } = await getSupabase()
+          .from('ai_recommendation_feedback')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(limit)
+        if (error) throw error
+        return ((data ?? []) as AIRecommendationFeedbackRow[]).map(toAIRecommendationFeedback)
+      }),
+    ])
+
+    return {
+      contextEntities,
+      clarificationEvents,
+      parameterBeliefs,
+      recommendationFeedback,
+      pendingWriteCount: getPendingAIMemoryWriteCount(),
+      loadedAt: new Date().toISOString(),
+    }
+  }
+
   const upsertAIParameterBelief = async (input: AIParameterBeliefInput, options: AIMemoryWriteOptions = {}): Promise<void> => {
     if (!input.entityKey || !input.parameterKey) return
     if (!authStore.isInitialized) await authStore.initialize()
@@ -1240,6 +1320,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     fetchAIClarificationEvents,
     fetchAIRecommendationFeedback,
     fetchAIParameterBeliefs,
+    fetchAIMemoryDebugSnapshot,
     shouldAskClarification,
     recordAIClarificationEvent,
     recordAIRecommendationFeedback,

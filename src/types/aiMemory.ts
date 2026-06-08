@@ -322,3 +322,12 @@ export interface AIContextEdgeInput {
   sourceEventId?: string
   validUntil?: string | null
 }
+
+export interface AIMemoryDebugSnapshot {
+  contextEntities: AIContextEntity[]
+  clarificationEvents: AIClarificationEvent[]
+  parameterBeliefs: AIParameterBelief[]
+  recommendationFeedback: AIRecommendationFeedback[]
+  pendingWriteCount: number
+  loadedAt: string
+}

@@ -12,9 +12,12 @@ import { PROVIDER_OPTIONS, GROQ_MODELS, OPENROUTER_MODELS, asIdLabel, filterFree
 import { tauriFetch } from '@/services/ai/utils/tauriHttp'
 import { resetSharedRouter } from '@/services/ai/routerFactory'
 import { isBridgeAvailable } from '@/services/ai/proxy/bridgeClient'
+import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import type { AIMemoryDebugSnapshot } from '@/types/aiMemory'
 
 const { usageSummary, weekUsage, monthUsage, hasUsageData, pricingCatalog, clearUsageData } = useAIUsageTracking()
 const settingsStore = useSettingsStore()
+const aiMemoryDb = useSupabaseDatabase()
 
 // ── TASK-1814: Subscription brain (Claude/Codex via VPS bridge) ──
 const BRAIN_OPTIONS = [
@@ -54,6 +57,43 @@ const lastMemoryReport = computed(() => {
   const history = getMemoryHistory()
   return history.length > 0 ? history[0] : null
 })
+
+const aiMemoryDebug = ref<AIMemoryDebugSnapshot | null>(null)
+const aiMemoryDebugLoading = ref(false)
+const aiMemoryDebugError = ref('')
+
+const aiMemoryDebugCounts = computed(() => {
+  const snapshot = aiMemoryDebug.value
+  return [
+    { label: 'Entities', value: snapshot?.contextEntities.length ?? 0 },
+    { label: 'Beliefs', value: snapshot?.parameterBeliefs.length ?? 0 },
+    { label: 'Events', value: snapshot?.clarificationEvents.length ?? 0 },
+    { label: 'Feedback', value: snapshot?.recommendationFeedback.length ?? 0 },
+    { label: 'Pending sync', value: snapshot?.pendingWriteCount ?? 0 },
+  ]
+})
+
+function aiMemoryEventLabel(snapshot: AIMemoryDebugSnapshot): string[] {
+  return snapshot.clarificationEvents.slice(0, 3).map(event => {
+    const answer = event.selectedLabel || event.freeText || event.eventType
+    return `${event.entityKey}: ${answer}`
+  })
+}
+
+async function refreshAIMemoryDebug() {
+  aiMemoryDebugLoading.value = true
+  aiMemoryDebugError.value = ''
+  try {
+    if (typeof aiMemoryDb.fetchAIMemoryDebugSnapshot !== 'function') {
+      throw new Error('AI memory debug snapshot is unavailable.')
+    }
+    aiMemoryDebug.value = await aiMemoryDb.fetchAIMemoryDebugSnapshot(6)
+  } catch (e) {
+    aiMemoryDebugError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    aiMemoryDebugLoading.value = false
+  }
+}
 
 function gradeColor(grade: string): string {
   switch (grade) {
@@ -257,6 +297,7 @@ const isClearingMemories = ref(false)
 
 onMounted(async () => {
   await loadProfile()
+  void refreshAIMemoryDebug()
 })
 
 async function onRecalculate() {
@@ -837,6 +878,68 @@ async function onClearMemories() {
           {{ memoryHealthRunning ? 'Checking...' : 'Run Quick Check' }}
         </button>
         <p class="mh-hint">Full assessment available in AI Hub &gt; Memory tab.</p>
+
+        <div class="ai-memory-debug" data-testid="ai-memory-debug">
+          <div class="ai-memory-debug-header">
+            <div>
+              <strong>AI memory debug</strong>
+              <span>Recent server-backed context used by chat</span>
+            </div>
+            <button
+              type="button"
+              class="mh-run-btn compact"
+              :disabled="aiMemoryDebugLoading"
+              @click="refreshAIMemoryDebug"
+            >
+              <RefreshCw :size="13" :class="{ spinning: aiMemoryDebugLoading }" />
+              {{ aiMemoryDebugLoading ? 'Loading...' : 'Refresh' }}
+            </button>
+          </div>
+
+          <div class="ai-memory-debug-counts">
+            <div
+              v-for="item in aiMemoryDebugCounts"
+              :key="item.label"
+              class="ai-memory-debug-count"
+            >
+              <span>{{ item.value }}</span>
+              <small>{{ item.label }}</small>
+            </div>
+          </div>
+
+          <div v-if="aiMemoryDebugError" class="mh-error">
+            <AlertCircle :size="12" />
+            {{ aiMemoryDebugError }}
+          </div>
+
+          <div v-else-if="aiMemoryDebug" class="ai-memory-debug-list">
+            <span
+              v-for="entity in aiMemoryDebug.contextEntities.slice(0, 3)"
+              :key="`entity:${entity.entityKey}`"
+              class="detail-tag"
+            >
+              {{ entity.entityKey }}
+            </span>
+            <span
+              v-for="belief in aiMemoryDebug.parameterBeliefs.slice(0, 3)"
+              :key="`belief:${belief.entityKey}:${belief.parameterKey}`"
+              class="detail-tag"
+            >
+              {{ belief.entityKey }} / {{ belief.parameterKey }} {{ Math.round(belief.confidence * 100) }}%
+            </span>
+            <span
+              v-for="event in aiMemoryEventLabel(aiMemoryDebug)"
+              :key="`event:${event}`"
+              class="detail-tag"
+            >
+              {{ event }}
+            </span>
+          </div>
+
+          <p v-if="aiMemoryDebug && !aiMemoryDebug.contextEntities.length && !aiMemoryDebug.parameterBeliefs.length && !aiMemoryDebug.clarificationEvents.length" class="mh-hint">
+            No server-backed AI memory rows yet, or the memory migration is not available for this user.
+          </p>
+        </div>
       </div>
     </SettingsSection>
 
@@ -1917,10 +2020,89 @@ async function onClearMemories() {
   cursor: not-allowed;
 }
 
+.mh-run-btn.compact {
+  padding: var(--space-1) var(--space-2);
+}
+
 .mh-hint {
   font-size: var(--text-xs);
   color: var(--text-muted);
   margin: 0;
+}
+
+.ai-memory-debug {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-subtle);
+}
+
+.ai-memory-debug-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.ai-memory-debug-header strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.ai-memory-debug-header span {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  margin-top: 2px;
+}
+
+.ai-memory-debug-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: var(--space-1_5);
+}
+
+.ai-memory-debug-count {
+  padding: var(--space-2);
+  border: 1px solid var(--glass-border-faint);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-soft);
+}
+
+.ai-memory-debug-count span {
+  display: block;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+}
+
+.ai-memory-debug-count small {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.ai-memory-debug-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.detail-tag {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 2px var(--space-1_5);
+  border: 1px solid var(--glass-border-faint);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--glass-bg-soft);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── TASK-1500: Smart Model Routing ── */

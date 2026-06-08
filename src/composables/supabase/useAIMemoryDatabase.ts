@@ -370,6 +370,11 @@ function writeLocalAIClarificationMemory(memory: LocalAIClarificationMemory) {
   }))
 }
 
+function clearLocalAIClarificationMemory() {
+  if (typeof localStorage === 'undefined') return
+  localStorage.removeItem(LOCAL_AI_CLARIFICATION_MEMORY_KEY)
+}
+
 function localAIClarificationEvent(input: AIClarificationEventInput, now: string): AIClarificationEvent {
   return {
     id: `local-${now}-${input.questionId}`,
@@ -1283,6 +1288,50 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
+  const clearAIMemoryDebugData = async (): Promise<void> => {
+    pendingAIMemoryWrites.splice(0, pendingAIMemoryWrites.length)
+    clearLocalAIClarificationMemory()
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) {
+      invalidateCache.all()
+      return
+    }
+    const tables = [
+      'ai_context_edges',
+      'ai_recommendation_feedback',
+      'ai_parameter_beliefs',
+      'ai_clarification_events',
+      'ai_context_entities',
+    ]
+    try {
+      isSyncing.value = true
+      for (const table of tables) {
+        try {
+          await withRetry(async () => {
+            const { error } = await getSupabase()
+              .from(table)
+              .delete()
+              .eq('user_id', userId)
+            if (error) throw error
+          }, `clearAIMemoryDebugData:${table}`)
+        } catch (e) {
+          if (isAIMemorySchemaMissing(e)) {
+            logMissingAIMemorySchema(`clearAIMemoryDebugData:${table}`)
+            continue
+          }
+          throw e
+        }
+      }
+      invalidateCache.all()
+    } catch (e) {
+      handleError(e, 'clearAIMemoryDebugData')
+      throw e
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
   const upsertAIParameterBelief = async (input: AIParameterBeliefInput, options: AIMemoryWriteOptions = {}): Promise<void> => {
     if (!input.entityKey || !input.parameterKey) return
     if (!authStore.isInitialized) await authStore.initialize()
@@ -1797,6 +1846,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     fetchAIParameterBeliefs,
     fetchAIContextEdges,
     fetchAIMemoryDebugSnapshot,
+    clearAIMemoryDebugData,
     shouldAskClarification,
     recordAIClarificationEvent,
     recordAIRecommendationFeedback,

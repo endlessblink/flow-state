@@ -60,6 +60,7 @@ const lastMemoryReport = computed(() => {
 
 const aiMemoryDebug = ref<AIMemoryDebugSnapshot | null>(null)
 const aiMemoryDebugLoading = ref(false)
+const aiMemoryDebugClearing = ref(false)
 const aiMemoryDebugError = ref('')
 
 const aiMemoryDebugCounts = computed(() => {
@@ -102,6 +103,23 @@ async function refreshAIMemoryDebug() {
     aiMemoryDebugError.value = e instanceof Error ? e.message : String(e)
   } finally {
     aiMemoryDebugLoading.value = false
+  }
+}
+
+async function clearAIMemoryDebugData() {
+  if (!confirm('Clear server-backed AI chat memory? The assistant will need to re-learn clarification answers and feedback.')) return
+  aiMemoryDebugClearing.value = true
+  aiMemoryDebugError.value = ''
+  try {
+    if (typeof aiMemoryDb.clearAIMemoryDebugData !== 'function') {
+      throw new Error('AI memory clear is unavailable.')
+    }
+    await aiMemoryDb.clearAIMemoryDebugData()
+    aiMemoryDebug.value = await aiMemoryDb.fetchAIMemoryDebugSnapshot(6)
+  } catch (e) {
+    aiMemoryDebugError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    aiMemoryDebugClearing.value = false
   }
 }
 
@@ -895,15 +913,26 @@ async function onClearMemories() {
               <strong>AI memory debug</strong>
               <span>Recent server-backed context used by chat</span>
             </div>
-            <button
-              type="button"
-              class="mh-run-btn compact"
-              :disabled="aiMemoryDebugLoading"
-              @click="refreshAIMemoryDebug"
-            >
-              <RefreshCw :size="13" :class="{ spinning: aiMemoryDebugLoading }" />
-              {{ aiMemoryDebugLoading ? 'Loading...' : 'Refresh' }}
-            </button>
+            <div class="ai-memory-debug-actions">
+              <button
+                type="button"
+                class="mh-run-btn compact"
+                :disabled="aiMemoryDebugLoading || aiMemoryDebugClearing"
+                @click="refreshAIMemoryDebug"
+              >
+                <RefreshCw :size="13" :class="{ spinning: aiMemoryDebugLoading }" />
+                {{ aiMemoryDebugLoading ? 'Loading...' : 'Refresh' }}
+              </button>
+              <button
+                type="button"
+                class="mh-run-btn compact danger"
+                :disabled="aiMemoryDebugLoading || aiMemoryDebugClearing"
+                @click="clearAIMemoryDebugData"
+              >
+                <Trash2 :size="13" />
+                {{ aiMemoryDebugClearing ? 'Clearing...' : 'Clear' }}
+              </button>
+            </div>
           </div>
 
           <div class="ai-memory-debug-counts">
@@ -2052,6 +2081,15 @@ async function onClearMemories() {
   padding: var(--space-1) var(--space-2);
 }
 
+.mh-run-btn.danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.mh-run-btn.danger:hover:not(:disabled) {
+  background: rgba(var(--color-danger-rgb, 220, 38, 38), 0.1);
+}
+
 .mh-hint {
   font-size: var(--text-xs);
   color: var(--text-muted);
@@ -2086,6 +2124,13 @@ async function onClearMemories() {
   color: var(--text-muted);
   font-size: var(--text-xs);
   margin-top: 2px;
+}
+
+.ai-memory-debug-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .ai-memory-debug-counts {

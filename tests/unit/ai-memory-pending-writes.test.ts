@@ -12,6 +12,7 @@ let entityUpsertCount = 0
 let eventInsertCount = 0
 let feedbackInsertCount = 0
 let parameterBeliefUpsertCount = 0
+let deleteTables: string[] = []
 let tableRows: Record<string, unknown[]> = {}
 let upsertPayloads: Record<string, unknown[]> = {}
 
@@ -53,6 +54,14 @@ function createTableBuilder(table: string) {
       upsertPayloads[table] = [...(upsertPayloads[table] ?? []), payload]
       return { error: null }
     }),
+    delete: vi.fn(() => ({
+      eq: vi.fn(async () => {
+        if (!readyTables.has(table)) return { error: schemaError() }
+        deleteTables.push(table)
+        tableRows[table] = []
+        return { error: null }
+      }),
+    })),
     insert: vi.fn(async () => {
       if (!readyTables.has(table)) return { error: schemaError() }
       if (table === 'ai_clarification_events') eventInsertCount += 1
@@ -105,6 +114,7 @@ describe('AI memory pending write queue', () => {
     eventInsertCount = 0
     feedbackInsertCount = 0
     parameterBeliefUpsertCount = 0
+    deleteTables = []
     tableRows = {}
     upsertPayloads = {}
     clearPendingAIMemoryWritesForTest()
@@ -591,6 +601,56 @@ describe('AI memory pending write queue', () => {
 
     expect(snapshot.schemaStatus).toBe('local_only')
     expect(snapshot.schemaMissingTables).toEqual([])
+  })
+
+  it('clears guest local AI memory observations and pending writes', async () => {
+    const db = useAIMemoryDatabase(createGuestContext())
+
+    await db.recordAIClarificationEvent({
+      entityKey: 'workflow:task_answer:general',
+      entityType: 'workflow',
+      displayName: 'General',
+      questionId: 'response_quality_general',
+      eventType: 'answered',
+      question: 'What should guide this answer?',
+      selectedLabel: 'Real impact',
+    })
+    await db.recordAIRecommendationFeedback({
+      recommendationId: 'inline_task_local',
+      entityKey: 'workflow:task_answer:general',
+      action: 'dismiss',
+      reasonCategory: 'not_important',
+    })
+
+    expect(await db.fetchAIClarificationEvents(['workflow:task_answer:general'], 10)).toHaveLength(1)
+    expect(await db.fetchAIRecommendationFeedback({ entityKeys: ['workflow:task_answer:general'], limit: 10 })).toHaveLength(1)
+
+    await db.clearAIMemoryDebugData()
+
+    expect(await db.fetchAIClarificationEvents(['workflow:task_answer:general'], 10)).toHaveLength(0)
+    expect(await db.fetchAIRecommendationFeedback({ entityKeys: ['workflow:task_answer:general'], limit: 10 })).toHaveLength(0)
+    expect(getPendingAIMemoryWriteCount()).toBe(0)
+  })
+
+  it('clears server-backed AI memory tables in dependency order', async () => {
+    readyTables = new Set([
+      'ai_context_entities',
+      'ai_context_edges',
+      'ai_clarification_events',
+      'ai_parameter_beliefs',
+      'ai_recommendation_feedback',
+    ])
+    const db = useAIMemoryDatabase(createContext())
+
+    await db.clearAIMemoryDebugData()
+
+    expect(deleteTables).toEqual([
+      'ai_context_edges',
+      'ai_recommendation_feedback',
+      'ai_parameter_beliefs',
+      'ai_clarification_events',
+      'ai_context_entities',
+    ])
   })
 
   it('reads graph edges by source or target entity key without UUID casting', async () => {

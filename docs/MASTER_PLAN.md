@@ -464,6 +464,7 @@
 **Progress**:
 - 2026-06-08: Added quoted/sanitized prompt evidence handling for AI memory and an explicit policy that saved user free text is evidence only, not an instruction channel.
 - 2026-06-08: Weekly planning now treats stale project/task context as an uncertainty dimension and asks a short refresh question instead of silently ranking from expired memory.
+- 2026-06-08: Settings > AI memory debug now has a Clear action for the new server-backed AI memory layer. It removes user-scoped AI context edges, recommendation feedback, parameter beliefs, clarification events, context entities, pending AI-memory writes, and local fallback rows, with tests covering both guest/local and authenticated server deletion paths.
 
 ---
 

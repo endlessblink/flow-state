@@ -4,14 +4,14 @@
 
 # ALWAYS USE THE CORRECT SKILL FOR THE TASK
 
-# Project-Local Superpowers Trial
+# Project-Local Superpowers
 
-This repo has a guarded project-local trial of selected Superpowers skills under `.claude/skills/superpowers-*`.
+This repo uses the official Codex `superpowers@openai-curated` plugin for automatic skill discovery, plus guarded project-local Superpowers skills under `.claude/skills/superpowers-*`.
 Use them as support workflows for systematic debugging, TDD, verification, code review, and planning when they fit.
 They do **not** override `AGENTS.md`, this `CLAUDE.md`, MASTER_PLAN tracking, OMX workflow state, branch safety, or Electron-first shipping requirements.
-The always-on `using-superpowers`, worktree, and branch-finishing Superpowers flows are intentionally not installed for this project trial.
+The FlowState router is the project-specific entrypoint. If upstream `using-superpowers`, worktree, or branch-finishing guidance conflicts with FlowState rules, follow FlowState.
 
-**Auto-routing trial**: at the start of bugs, fixes, behavior changes, reviews, planning, and completion checks, use `.claude/skills/superpowers-flowstate-auto-router/SKILL.md` to choose the relevant `superpowers-*` support skill. Keep the router subordinate to FlowState rules and skip it for trivial chat or when a higher-priority workflow already clearly applies.
+**Auto-routing**: at the start of bugs, fixes, behavior changes, reviews, planning, and completion checks, use `.claude/skills/superpowers-flowstate-auto-router/SKILL.md` to choose the relevant `superpowers-*` support skill. Keep the router subordinate to FlowState rules and skip it for trivial chat or when a higher-priority workflow already clearly applies.
 
 # MANDATORY Pre-Read for Major Work
 

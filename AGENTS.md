@@ -63,11 +63,11 @@ Or use the `/next` skill to get scored task recommendations.
 
 ## Project-Local Superpowers Auto-Router
 
-This repo has a FlowState-safe Superpowers router at `.claude/skills/superpowers-flowstate-auto-router/SKILL.md`, with Codex-discoverable wrappers under `.codex/skills/superpowers-*`.
+This repo uses the official Codex `superpowers@openai-curated` plugin plus a FlowState-safe Superpowers router at `.claude/skills/superpowers-flowstate-auto-router/SKILL.md`, with Codex-discoverable wrappers under `.codex/skills/superpowers-*`.
 For bugs, fixes, behavior changes, reviews, planning, and completion checks, you MUST use `superpowers-flowstate-auto-router` before starting substantive work, unless the request is trivial chat or a higher-priority workflow already clearly applies.
 
 Important boundaries:
 - FlowState rules in this `AGENTS.md`, `CLAUDE.md`, `docs/MASTER_PLAN.md`, OMX state, branch safety, and Electron-first shipping remain authoritative.
-- Do not install or emulate upstream always-on `using-superpowers`.
+- The upstream Superpowers plugin is allowed for automatic discovery, but the FlowState router is the project-specific entrypoint. If upstream `using-superpowers` conflicts with FlowState rules, follow FlowState.
 - Skip the router only for trivial chat or when a higher-priority workflow already clearly applies.
 - If a chosen Superpowers skill conflicts with FlowState rules, follow FlowState and treat Superpowers as support-only.

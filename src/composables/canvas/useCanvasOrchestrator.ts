@@ -453,6 +453,59 @@ export function useCanvasOrchestrator() {
     // Without this, watchers fire as data loads, causing multiple syncNodes() calls with different task counts
     const isInitialized = ref(false)
 
+    const hasVisibleCanvasNode = () => {
+        const container = document.querySelector<HTMLElement>('.canvas-container')
+        if (!container) return false
+
+        const bounds = container.getBoundingClientRect()
+        const renderedNodes = Array.from(document.querySelectorAll<HTMLElement>('.vue-flow__node'))
+            .filter(node => !node.classList.contains('hidden'))
+
+        return renderedNodes.some(node => {
+            const rect = node.getBoundingClientRect()
+            return rect.width > 0 &&
+                rect.height > 0 &&
+                rect.right > bounds.left &&
+                rect.left < bounds.right &&
+                rect.bottom > bounds.top &&
+                rect.top < bounds.bottom
+        })
+    }
+
+    const scheduleInitialViewportRecovery = (attempt = 0) => {
+        const maxAttempts = 12
+        setTimeout(async () => {
+            await nextTick()
+
+            if (hasVisibleCanvasNode()) {
+                if (import.meta.env.DEV) {
+                    console.log('🎯 [ORCHESTRATOR] Initial viewport already contains canvas nodes')
+                }
+                return
+            }
+
+            const hasRenderedNodes = nodes.value.some(node => !node.hidden)
+            if (!hasRenderedNodes && attempt < maxAttempts) {
+                scheduleInitialViewportRecovery(attempt + 1)
+                return
+            }
+
+            const centered = centerOnTodayGroup(true)
+            if (!centered && hasRenderedNodes) {
+                fitCanvas()
+            }
+
+            if (import.meta.env.DEV) {
+                console.log('🎯 [ORCHESTRATOR] Initial viewport recovery', {
+                    centered,
+                    fitCanvasFallback: !centered && hasRenderedNodes,
+                    nodeCount: nodes.value.length,
+                    attempt
+                })
+            }
+        }, attempt === 0 ? 150 : 250)
+    }
+
     // SEARCH REVEAL: Center viewport on a task when triggered from search modal
     const handleRevealTaskOnCanvas = (event: Event) => {
         const { taskId } = (event as CustomEvent<{ taskId: string }>).detail
@@ -517,6 +570,7 @@ export function useCanvasOrchestrator() {
 
                     // Calculate initial task counts AFTER reconciliation (fixes 0 counters on load)
                     canvasStore.recalculateAllTaskCounts(taskStore.tasks)
+                    scheduleInitialViewportRecovery()
 
                     // Log hierarchy summary once on load (dev only)
                     if (import.meta.env.DEV) {
@@ -543,25 +597,10 @@ export function useCanvasOrchestrator() {
                 syncNodes()
                 syncEdges()
                 isInitialized.value = true
+                scheduleInitialViewportRecovery()
                 if (stopInitWatcher) stopInitWatcher()
             }
         }, 2000)
-
-        // TASK-299: Auto-center on Today group after nodes are rendered
-        // Use setTimeout to allow Vue Flow to calculate node dimensions
-        setTimeout(() => {
-            // Check if user has a custom saved viewport (not default 0,0,1)
-            const vp = canvasStore.viewport
-            const hasCustomViewport = vp && (vp.x !== 0 || vp.y !== 0 || vp.zoom !== 1)
-
-            // If no custom viewport (first visit), force fallback to busiest group
-            // If has custom viewport, only override if Today group exists
-            const forceFallback = !hasCustomViewport
-            const centered = centerOnTodayGroup(forceFallback)
-            if (import.meta.env.DEV) {
-                console.log('🎯 [ORCHESTRATOR] Auto-center result:', centered ? 'SUCCESS' : 'USING_SAVED_VIEWPORT', { hasCustomViewport })
-            }
-        }, 100)
 
         // TASK-213: Position Manager Subscription
         // Listen for updates from other sources (e.g. Alignment tools, Auto-layout)

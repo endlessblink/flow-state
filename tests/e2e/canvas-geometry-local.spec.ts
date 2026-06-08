@@ -622,6 +622,66 @@ test.describe('local canvas geometry regressions', () => {
     expect(rendered.every(Boolean), JSON.stringify(rendered, null, 2)).toBe(true)
   })
 
+  test('startup recovers when the saved viewport points at empty canvas space', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'startup-blank-group', name: 'Startup Blank Group', x: 880, y: 220, width: 420, height: 900 },
+    ], [
+      { id: 'startup-blank-a', title: 'Startup Blank A', parentId: 'startup-blank-group', x: 920, y: 360 },
+      { id: 'startup-blank-b', title: 'Startup Blank B', parentId: 'startup-blank-group', x: 920, y: 500 },
+    ])
+
+    await page.evaluate(() => {
+      localStorage.setItem('flowstate-canvas-viewport', JSON.stringify({ x: -20000, y: -20000, zoom: 1 }))
+    })
+
+    await page.reload()
+    await setupCanvas(page)
+
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const container = document.querySelector<HTMLElement>('.canvas-container')
+        if (!container) return 0
+        const bounds = container.getBoundingClientRect()
+        const nodes = Array.from(document.querySelectorAll<HTMLElement>('.vue-flow__node'))
+          .filter((node) => !node.classList.contains('hidden'))
+        const visibleNodes = nodes.filter((node) => {
+          const rect = node.getBoundingClientRect()
+          return rect.width > 0 &&
+            rect.height > 0 &&
+            rect.right > bounds.left &&
+            rect.left < bounds.right &&
+            rect.bottom > bounds.top &&
+            rect.top < bounds.bottom
+        })
+        return visibleNodes.length
+      })
+    }, {
+      timeout: 10_000,
+      message: 'Expected startup viewport recovery to make at least one canvas node visible',
+    }).toBeGreaterThan(0)
+
+    const visibility = await page.evaluate(() => {
+      const container = document.querySelector<HTMLElement>('.canvas-container')!
+      const bounds = container.getBoundingClientRect()
+      return Array.from(document.querySelectorAll<HTMLElement>('.vue-flow__node'))
+        .filter((node) => !node.classList.contains('hidden'))
+        .map((node) => {
+          const rect = node.getBoundingClientRect()
+          return {
+            id: node.dataset.id,
+            visible: rect.width > 0 &&
+              rect.height > 0 &&
+              rect.right > bounds.left &&
+              rect.left < bounds.right &&
+              rect.bottom > bounds.top &&
+              rect.top < bounds.bottom,
+          }
+        })
+    })
+
+    expect(visibility.some((node) => node.visible), JSON.stringify(visibility, null, 2)).toBe(true)
+  })
+
   test('moving one grouped canvas task does not shift sibling task geometry', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'drag-shift-group', name: 'Drag Shift Group', x: 1000, y: 300, width: 420, height: 900 },

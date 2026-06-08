@@ -244,6 +244,10 @@ async function sendChat(input: Locator, message: string) {
   await input.page().locator('.send-btn').click()
 }
 
+async function visibleInlineCardTitles(scope: Locator): Promise<string[]> {
+  return (await scope.locator('[data-testid="inline-ai-task-card"] .task-title').allTextContents()).map(title => title.trim())
+}
+
 test('weekly planning asks first, does not dump recommendations, and does not get stuck after answers', async ({ page }) => {
   await seedGuestWorkspace(page)
   await stubBridge(page)
@@ -313,6 +317,39 @@ test('too-much feedback makes the next broad fallback answer compact', async ({ 
   await expect(latestMessage).toContainText(/Extra-compact draft based on your feedback that the last answer was too much/i, { timeout: 30_000 })
   await expect(latestMessage.locator('[data-testid="inline-ai-task-card"]')).toHaveCount(1)
   await expect(latestMessage).not.toContainText(/Fast draft based on impact, dependency, and real risk/i)
+  await expect(input).toBeEnabled({ timeout: 10_000 })
+})
+
+test('broad postpone feedback suppresses the same task in the next broad answer', async ({ page }) => {
+  await seedGuestWorkspace(page)
+  await stubBridge(page, { missingCardsFromChatCall: 1 })
+
+  const input = await openAIChat(page)
+  await sendChat(input, 'what should I do next?')
+
+  let clarification = page.locator('[data-testid="ai-clarification"]').last()
+  await expect(clarification).toBeVisible({ timeout: 30_000 })
+  await clarification.getByText('Energy fit', { exact: true }).click()
+  await clarification.locator('.weekly-question-apply').first().click()
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+
+  let latestMessage = page.locator('.chat-message').last()
+  const firstCard = latestMessage.locator('[data-testid="inline-ai-task-card"]').first()
+  await expect(firstCard).toBeVisible({ timeout: 30_000 })
+  const postponedTitle = (await firstCard.locator('.task-title').textContent())?.trim()
+  expect(postponedTitle).toBeTruthy()
+  await firstCard.locator('.inline-postpone-btn').click()
+  await expect.poll(() => visibleInlineCardTitles(latestMessage), { timeout: 10_000 }).not.toContain(postponedTitle!)
+  await expect(latestMessage).toContainText(/Postponed and saved as feedback|Feedback is local until signed in/i)
+
+  const clarificationCountBeforeRepeat = await page.locator('[data-testid="ai-clarification"]').count()
+  await sendChat(input, 'what should I do next?')
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+  await expect(page.locator('[data-testid="ai-clarification"]')).toHaveCount(clarificationCountBeforeRepeat)
+
+  latestMessage = page.locator('.chat-message').last()
+  await expect(latestMessage.locator('[data-testid="inline-ai-task-card"]').first()).toBeVisible({ timeout: 30_000 })
+  await expect.poll(() => visibleInlineCardTitles(latestMessage), { timeout: 10_000 }).not.toContain(postponedTitle!)
   await expect(input).toBeEnabled({ timeout: 10_000 })
 })
 

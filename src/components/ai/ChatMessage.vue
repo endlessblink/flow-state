@@ -96,6 +96,7 @@ const clarificationFollowUpStepIndex = ref<Record<string, number>>({})
 const clarificationInlineMode = ref<Record<string, 'uncertainty' | 'candidates'>>({})
 const recommendationFeedbackLoading = ref<Record<string, string>>({})
 const recommendationFeedbackStatus = ref<Record<string, string>>({})
+const inlineFeedbackStatus = ref('')
 const recommendationFeedbackChoiceOpen = ref<Record<string, AIRecommendationFeedbackInput['action'] | ''>>({})
 const recommendationFeedbackReasons = ref<Record<string, AIRecommendationFeedbackInput['reasonCategory']>>({})
 const recommendationFeedbackRevisit = ref<Record<string, 'tomorrow' | 'next_week' | 'later' | 'none'>>({})
@@ -1501,6 +1502,7 @@ async function recordInlineTaskFeedback(
   const task = taskMap.value.get(taskId)
   const cardKind = cardGroups.value?.kind || 'task_answer'
   const entityKey = task?.projectId ? `project:${task.projectId}` : `task:${taskId}`
+  const locale = effectiveDirection.value === 'rtl' ? 'he' : 'en'
   try {
     await aiMemoryDb.recordAIRecommendationFeedback({
       recommendationId: `inline_${cardKind}_${taskId}`,
@@ -1517,11 +1519,15 @@ async function recordInlineTaskFeedback(
         inlineCard: true,
       },
     })
+    inlineFeedbackStatus.value = feedbackStatusLabel(action, locale)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (!message.includes('authenticated user')) {
       console.error('[ChatMessage] Inline recommendation feedback failed:', err)
     }
+    inlineFeedbackStatus.value = locale === 'he'
+      ? 'המשוב מקומי עד כניסה לחשבון'
+      : 'Feedback is local until signed in'
   }
 }
 
@@ -2218,6 +2224,9 @@ async function saveSchedule() {
               </div>
             </button>
           </div>
+          <span v-if="inlineFeedbackStatus" class="weekly-question-status inline-feedback-status">
+            {{ inlineFeedbackStatus }}
+          </span>
         </div>
       </div>
       <!-- eslint-disable-next-line vue/no-v-html -->

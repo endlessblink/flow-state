@@ -195,6 +195,9 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   if (isBroadTaskAnswer && input.hasCards && recommendationCount > 1 && !hasTradeoffOrOmission) {
     failures.push('missing_tradeoff_or_omission')
   }
+  if (isBroadTaskAnswer && input.hasCards && recommendationCount > 0 && !input.recommendationEvidence) {
+    failures.push('missing_recommendation_evidence_audit')
+  }
   if ((path === 'deterministic_fallback' || input.contextUnknown || mediumCoverage) && recommendationCount > 3) {
     failures.push('too_many_low_context_recommendations')
   }

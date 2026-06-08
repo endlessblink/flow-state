@@ -47,6 +47,16 @@ describe('chat quality evidence audit', () => {
       hasFeedbackControls: true,
       hasLearningSignal: true,
       text: 'Medium confidence: matches your clarification, rank by real consequence first, so start with the payment follow-up. Held back for now: weaker candidates until context is clearer.',
+      recommendationEvidence: [
+        {
+          recommendationId: 'rec_payment',
+          taskId: 'task_payment',
+          reason: 'The task note names a payment follow-up consequence.',
+          taskEvidence: ['note: payment follow-up is waiting'],
+          projectContextEvidence: [],
+          missingEvidence: ['project context unknown'],
+        },
+      ],
     })
 
     expect(valueReflected.level).not.toBe('bad')
@@ -65,6 +75,16 @@ describe('chat quality evidence audit', () => {
       hasFeedbackControls: true,
       hasLearningSignal: true,
       text: 'Medium confidence: matches your clarification, prioritize the approval follow-up because client approval is waiting. Held back for now: admin tasks until the approval risk is clear.',
+      recommendationEvidence: [
+        {
+          recommendationId: 'rec_approval',
+          taskId: 'task_approval',
+          reason: 'The clarification says client approval is waiting.',
+          taskEvidence: ['clarification note: client approval is waiting on me'],
+          projectContextEvidence: [],
+          missingEvidence: ['project context unknown'],
+        },
+      ],
     })
 
     expect(audit.level).not.toBe('bad')
@@ -471,6 +491,16 @@ describe('chat quality evidence audit', () => {
       hasConfidenceSignal: true,
       hasTradeoffOrOmission: true,
       text: 'Matches your clarification: rank by dependency first. Use the four cards as candidates and adjust anything wrong.',
+      recommendationEvidence: [
+        {
+          recommendationId: 'rec_dependency',
+          taskId: 'task_dependency',
+          reason: 'The task note says this blocks the next review.',
+          taskEvidence: ['note: blocks next review'],
+          projectContextEvidence: [],
+          missingEvidence: ['project context unknown'],
+        },
+      ],
     })
 
     expect(audit.level).toBe('acceptable')
@@ -507,6 +537,24 @@ describe('chat quality evidence audit', () => {
       'missing_confidence_signal',
       'missing_tradeoff_or_omission',
     ]))
+  })
+
+  it('rejects broad card answers that skip structured recommendation evidence auditing', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      recommendationCount: 2,
+      hasVisibleUncertainty: true,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Medium confidence: rank by real consequence first. Held back for now: weaker candidates until context is clearer.',
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('missing_recommendation_evidence_audit')
   })
 
   it('accepts concise recommendations with visible confidence and omission control', () => {

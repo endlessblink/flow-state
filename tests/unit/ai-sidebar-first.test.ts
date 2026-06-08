@@ -849,6 +849,14 @@ describe('AI sidebar-first desktop experience', () => {
       taskCount: 3,
       contextUnknown: true,
       text: 'Medium confidence: start with the payment follow-up; the money risk is explicit. Held back for now: other candidates where context is unknown, so keep them as cards only.',
+      recommendationEvidence: [{
+        recommendationId: 'rec_payment',
+        taskId: 'task_payment',
+        reason: 'The task note names a payment risk.',
+        taskEvidence: ['note: payment risk is explicit'],
+        projectContextEvidence: [],
+        missingEvidence: ['project context unknown'],
+      }],
     })
 
     expect(audit.level).not.toBe('bad')
@@ -871,6 +879,14 @@ describe('AI sidebar-first desktop experience', () => {
       taskCount: 3,
       hasClarificationEvidence: true,
       text: 'Medium confidence: matches your clarification; start with the payment follow-up because the money risk is explicit. Held back for now: weaker candidates until context is clearer.',
+      recommendationEvidence: [{
+        recommendationId: 'rec_payment',
+        taskId: 'task_payment',
+        reason: 'The task note names a payment risk.',
+        taskEvidence: ['note: payment risk is explicit'],
+        projectContextEvidence: [],
+        missingEvidence: ['project context unknown'],
+      }],
     })
 
     expect(ignoredClarification.level).toBe('bad')
@@ -923,6 +939,14 @@ describe('AI sidebar-first desktop experience', () => {
       hasDebugDisclosure: true,
       hasLearningSignal: true,
       text: 'Medium confidence draft from partial data: coverage is 61%, so context is still limited. Start with the payment follow-up; the money risk is explicit. Held back for now: broad ranking of the other two; use the cards to accept, postpone, or dismiss them.',
+      recommendationEvidence: [{
+        recommendationId: 'rec_payment',
+        taskId: 'task_payment',
+        reason: 'The task note names a payment risk.',
+        taskEvidence: ['note: payment risk is explicit'],
+        projectContextEvidence: [],
+        missingEvidence: ['project context unknown'],
+      }],
     })
 
     expect(usefulFallback.level).not.toBe('bad')

@@ -271,6 +271,7 @@
 - 2026-06-08: The broad chat-quality audit now catches visible answer prose that ignores user corrections in clarification evidence. English and Hebrew regressions fail when the user has corrected a project/task as not important or wrong-context but the assistant still calls it important, strategic, or critical.
 - 2026-06-08: The broad chat-quality rubric now requires visible confidence and tradeoff/omission signals for recommendation-card answers. Tests fail card answers that hide confidence or omit what was deferred/held back, while concise answers with medium-confidence wording, explicit omissions, uncertainty, feedback controls, and learning signals remain acceptable.
 - 2026-06-08: The deterministic broad formatter fallbacks now emit the same confidence and held-back/omission signals required by the stricter rubric. Browser smoke caught that the new audit initially pushed the "too much" compact path into the quality-floor candidate-only fallback; the fallback copy now stays compact while still passing the executable confidence/omission gate.
+- 2026-06-08: Broad card-answer quality now fails if recommendation cards skip structured evidence auditing. Positive fixtures must provide task/context/missing-evidence arrays, so prose alone with confidence/tradeoff language cannot score acceptable.
 
 ---
 
@@ -586,6 +587,7 @@
 - 2026-06-08: Missing debug disclosure on deterministic fallback, clarification-first, or structured-output-failure paths is now a hard answer-quality failure instead of a warning. This keeps reliability fallbacks inspectable and prevents low-overwhelm repair paths from hiding why the model output was replaced.
 - 2026-06-08: Unknown-context broad answers now fail if they still claim a task is strategic, high stakes, important, critical, meaningful, or consequential, even when the prose also says context is unknown. The only passing pattern is to explicitly avoid the importance claim, for example "project context unknown, so do not treat this as high stakes." Focused quality tests now cover both the rejected fake-certainty case and the allowed negated-importance case.
 - 2026-06-08: Added Hebrew/RTL coverage for the same unknown-context fake-certainty rule. A Hebrew next-task answer that says context is missing but still calls the work meaningful/critical now fails the answer-quality audit, protecting the actual Hebrew sidebar flow from the English-only version of the regression.
+- 2026-06-08: Broad card answers now fail with `missing_recommendation_evidence_audit` when they omit structured recommendation evidence entirely. This prevents polished confidence/omission prose from bypassing the task/context/missing-evidence citation audit.
 
 ---
 
@@ -624,6 +626,7 @@
 - 2026-06-08: Re-ran the self-starting localhost AI chat quality smoke after stale-snapshot lifecycle filtering. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed 10/10, covering weekly ask-first, no pre-answer recommendation barrage, no stuck post-answer activity, compact/too-much feedback behavior, broad postpone suppression, mechanical overdue list bypass, targeted broad clarifications, and no-repeat memory across broad modes.
 - 2026-06-08: Re-ran the real localhost AI chat quality smoke after the weekly EVPI threshold hardening to guard against hollow unit-only progress. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed 10/10 with the self-starting Vite server on `127.0.0.1:5564`, proving the current UI still handles weekly ask-first, post-answer continuation, compact fallback, too-much feedback, broad postpone suppression, mechanical overdue bypass, targeted broad clarifications, no-repeat memory, and no stuck activity rows.
 - 2026-06-08: Re-ran the real localhost smoke after adding confidence/omission answer-quality gates. The first full run exposed a real regression where the "too much" compact path fell through to the candidate-only quality floor; after updating deterministic fallback wording, the targeted compact-path smoke passed and the full self-starting Playwright smoke passed 10/10 again.
+- 2026-06-08: Re-ran the real localhost smoke after requiring structured recommendation-evidence audits for broad card answers. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed 10/10, including weekly ask-first, post-answer continuation, no stuck activity rows, compact "too much" feedback behavior, broad postpone suppression, no-repeat memory, and mechanical overdue-list bypass.
 
 ---
 

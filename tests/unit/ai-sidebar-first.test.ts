@@ -749,6 +749,85 @@ describe('AI sidebar-first desktop experience', () => {
     expect(honoredClarification.failures).toEqual([])
   })
 
+  it('turns the research policy table into executable broad-answer gates', () => {
+    const brittleStructuredFailure = auditChatResponseQuality({
+      language: 'en',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 6,
+      recommendationCount: 5,
+      contextUnknown: true,
+      coverageScore: 0.42,
+      highMateriality: true,
+      structuredOutputFailed: true,
+      responsePath: 'structured_model',
+      hasFeedbackControls: false,
+      hasEscapeHatch: false,
+      hasDebugDisclosure: false,
+      text: 'Here are five important tasks to do this week because they are due soon.',
+    })
+
+    expect(brittleStructuredFailure.level).toBe('bad')
+    expect(brittleStructuredFailure.failures).toEqual(expect.arrayContaining([
+      'missing_deterministic_fallback_after_structured_failure',
+      'missing_high_evpi_clarification',
+      'missing_visible_uncertainty',
+      'missing_feedback_controls',
+      'too_many_low_context_recommendations',
+    ]))
+    expect(brittleStructuredFailure.warnings).toContain('missing_debug_disclosure')
+
+    const usefulFallback = auditChatResponseQuality({
+      language: 'en',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 6,
+      recommendationCount: 3,
+      contextUnknown: true,
+      coverageScore: 0.61,
+      structuredOutputFailed: true,
+      responsePath: 'deterministic_fallback',
+      hasVisibleUncertainty: true,
+      hasFeedbackControls: true,
+      hasEscapeHatch: true,
+      hasDebugDisclosure: true,
+      hasLearningSignal: true,
+      text: 'Draft from partial data: coverage is 61%, so context is still limited. Start with the payment follow-up; the money risk is explicit. Use the cards to accept, postpone, or dismiss the other two.',
+    })
+
+    expect(usefulFallback.level).not.toBe('bad')
+    expect(usefulFallback.failures).toEqual([])
+    expect(usefulFallback.checks.userControl).toBe(1)
+    expect(usefulFallback.checks.learning).toBe(1)
+  })
+
+  it('rejects repeated clarification loops after the user already answered', () => {
+    const repeatedAfterAnswer = auditChatResponseQuality({
+      language: 'en',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      responsePath: 'deterministic_fallback',
+      fallbackAfterClarification: true,
+      hasVisibleUncertainty: true,
+      hasFeedbackControls: true,
+      text: 'Quick question before ranking: what kind of project is Work?',
+    })
+    const recentReask = auditChatResponseQuality({
+      language: 'en',
+      hasTaskList: true,
+      hasCards: false,
+      taskCount: 3,
+      responsePath: 'clarification_first',
+      repeatedQuestionRecently: true,
+      hasEscapeHatch: true,
+      text: 'Why does this matter right now?',
+    })
+
+    expect(repeatedAfterAnswer.failures).toContain('repeated_question_after_clarification')
+    expect(recentReask.failures).toContain('repeated_clarification_question')
+  })
+
   it('does not infer project importance from name alone and asks for saved project understanding', () => {
     const tasks = [
       {

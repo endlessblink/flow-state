@@ -6,7 +6,7 @@
 
 **Goal**: Make FlowState chat consistently useful across weekly planning, "what should I do", prioritization, task breakdown, smart lanes, follow-up tasks, and general agent help by combining server-backed memory, explicit uncertainty, low-overwhelm UX, feedback learning, and testable answer-quality gates.
 
-**Current execution cursor**: **LANE-0 regroup → LANE-10 localhost E2E proof**. The lane is now treated as one full delivery track, not scattered AI-chat patches. First keep this task lane current, then finish the localhost prompt-to-answer proof. Do not ask the user to test until Stage 8/LANE-10 passes in a real browser.
+**Current execution cursor**: **LANE-9 answer-quality evaluation rubric + policy hardening**. The lane is now treated as one full delivery track, not scattered AI-chat patches. The first localhost prompt-to-answer proof exists, but do not ask the user to test until the policy/evaluation gates also prove the flow cannot regress into repeated questions, generic fallback prose, or low-context recommendation dumps.
 
 **Why this lane exists**: This work has too many coupled failure modes to track as isolated fixes. Use this lane as the single source of truth so every change is tied to a phase, a proof gate, and a user-visible quality outcome. If a future session feels lost, resume from the current execution cursor and the first incomplete proof gate below.
 
@@ -27,9 +27,9 @@
 5. Commit and push only after the plan file, tests, and proof evidence match the actual current state.
 
 **Operator board for the active lane**:
-- **Current slice**: LANE-0 regroup, then LANE-10 localhost E2E. The implementation has many partial slices; the next value is proving the real chat loop works locally without barrage/stuck states.
+- **Current slice**: LANE-9 answer-quality policy hardening. Turn the research decisions into executable checks for structured-output failure, EVPI/coverage thresholds, repeated questions, feedback controls, and low-context recommendation limits.
 - **Current proof**: MASTER_PLAN has a complete packet queue with one current cursor, plus a repeatable localhost browser proof that covers prompt -> clarification -> answer/uncertainty -> feedback/debug.
-- **Next slice after proof**: LANE-3/LANE-5 broad-flow coverage and feedback learning gaps discovered by the localhost proof.
+- **Next slice after policy proof**: LANE-1/LANE-2 schema/retrieval hardening, then LANE-3/LANE-5 broad-flow coverage and feedback learning gaps discovered by the localhost proof.
 - **Blocked until current proof is green**: background summarization jobs, pgvector/semantic recall, broader UI polish, Electron packaging, and user-facing test instructions.
 - **User-test rule**: no user test request until Stage 8/LANE-10 proves the full localhost loop in browser: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity -> feedback/debug visible.
 
@@ -46,11 +46,11 @@
 | LANE-6: Feedback learning and suppression | 🔄 In progress | TASK-1833, TASK-1836 | Accept/postpone/dismiss/simplify actions immediately change current UI and later retrieval/ranking | inline recommendation cards, feedback store, memory retrieval, cooldown rules | UI/unit tests prove postponed/dismissed items suppress until revisit and accepted/timeblocked items become positive signals |
 | LANE-7: Memory lifecycle and safety | 🔄 In progress | TASK-1837, TASK-1839 | Memory stays useful over time: stale refresh, confidence decay, summaries, retention, correction audit, prompt-injection-safe evidence | lifecycle policy, retrieval diagnostics, prompt evidence builders | Lifecycle/security tests prove stale facts are refreshed, old/noisy events are flagged, and free text is quoted evidence only |
 | LANE-8: Observability and speed | 🔄 In progress | TASK-1834 | User can see concise phases and debug reasons without reading internal dumps; no duplicate thinking rows or stuck spinner after saving | activity timeline, clarification debug disclosure, phase timing metadata | Activity/UI tests and browser smoke show phase changes, slow-step attribution, and no stuck running row |
-| LANE-9: Answer-quality evaluation rubric | 📋 Planned | TASK-1841 | Bad/acceptable/excellent scoring becomes executable, not subjective vibe review | eval fixtures, citation audit, adversarial scenarios | Eval fails fake reasoning, repeated questions, excess length, missing evidence, and conflicting-correction misuse |
-| LANE-10: Localhost E2E proof | 📋 NEXT | TASK-1842 | Real browser proves the end-to-end loop before the user is asked to test | Playwright/localhost smoke, seeded tasks, bridge stubs, screenshots | Prompt -> one clarification -> answers/follow-ups -> concise plan/uncertainty -> feedback/debug -> no barrage -> no stuck activity |
+| LANE-9: Answer-quality evaluation rubric | 🔄 CURRENT | TASK-1841 | Bad/acceptable/excellent scoring becomes executable, not subjective vibe review | eval fixtures, citation audit, adversarial scenarios | Eval fails fake reasoning, repeated questions, excess length, missing evidence, and conflicting-correction misuse |
+| LANE-10: Localhost E2E proof | ✅ First proof done | TASK-1842 | Real browser proves the end-to-end loop before the user is asked to test | Playwright/localhost smoke, seeded tasks, bridge stubs, screenshots | Prompt -> one clarification -> answers/follow-ups -> concise plan/uncertainty -> feedback/debug -> no barrage -> no stuck activity |
 | LANE-11: Electron delivery gate | ⏸ Deferred | TASK-1843 | Desktop packaging/updater only after localhost proves behavior and user re-enables Electron | Electron build/update/deploy surfaces | Explicit user re-enable, then Electron build/update verification |
 
-**Current lane cursor**: LANE-10 is active. The task lane is now explicit, and the first repeatable localhost smoke exists. Continue hardening the prompt-to-answer E2E until it covers feedback controls and debug disclosure, then use failures from that proof to drive LANE-3/LANE-5/LANE-8 fixes. LANE-1 through LANE-8 have partial implementation and focused tests, but the system is not ready for user testing until LANE-10 proves the full integrated behavior including feedback/debug.
+**Current lane cursor**: LANE-9 is active. The first repeatable localhost smoke now covers clarification, compact post-clarification planning, feedback controls, debug disclosure, and no stuck running row. Continue by making the research policy table executable, then harden schema/retrieval and broader-flow learning gaps. The system is still not ready for user testing because policy coverage and server-backed durability are not complete enough.
 
 **Resume rule for future agents**: Start from the operator board above, then the first non-green proof gate in the stage table. Do not reinterpret this lane as a weekly-plan copywriting task, a local-only memory hack, or an Electron updater task. The intended product behavior is a durable AI chat quality system that learns useful context, asks the right low-friction questions, avoids overwhelming answers, and proves that behavior locally before desktop delivery.
 
@@ -76,6 +76,9 @@
 - Feedback learning: dismissed/postponed/ignored recommendations affect cooldowns and preference facts; accepted/time-blocked/completed/timer-started actions are positive signals.
 - Lifecycle: confidence decay, stale refresh, summarization/snapshots, retention, export/delete, and correction auditability.
 - Evaluation: groundedness, specificity, brevity, uncertainty handling, learning/adaptation, user control, realism, safety, citation audit, and adversarial free-text tests.
+- Accepted architecture decision: defer a dedicated graph database. Use Postgres-native `ai_context_entities` + `ai_context_edges` + optional pgvector embeddings first; add recursive CTE/app-layer traversal only when concrete multi-hop queries demand it.
+- Accepted fallback decision: after structured-output failure, retry once with validation feedback; on second failure, show a deterministic compact draft with visible coverage/uncertainty and feedback controls. Do not loop into another clarification unless EVPI is high and the question is not recently answered.
+- Accepted quality decision: broad low-context outputs default to 1-3 recommendations with controls, not 5+ ranked items and prose. If coverage is low and materiality is high, ask one high-EVPI question; if proceeding, mark uncertainty visibly.
 
 **User-test gate**: The user should only be asked to test after Stage 8 has a passing localhost browser smoke and the final response says exactly what changed, what to try, what should no longer happen, and what is still intentionally not built.
 
@@ -105,6 +108,7 @@
 - Research validation update 2: add `memory_type`, `scope`, `reinforcement_count`, `last_reinforced`, `related_entities`, and optional vector embedding support when the schema graduates beyond the first clarification slice.
 - Research validation update 2: user-authored facts and corrections outrank model inferences; model inferences stay low confidence until confirmed.
 - Graph update: add a Postgres-native `ai_context_edges` relation table before considering a separate graph database. Treat projects/tasks/weeks/preferences/workflows as nodes and store edges such as `belongs_to`, `blocks`, `follow_up`, `part_of_week`, and `preference_affects`.
+- Research decision update: do not introduce Neo4j/Memgraph/Graphiti as a separate runtime now. Postgres entities/edges plus pgvector keeps RLS, migrations, VPS ops, and localhost parity simpler; revisit only after concrete temporal multi-hop use cases exceed recursive CTE/app-layer traversal.
 
 **Acceptance**:
 - Synthetic buckets persist through `ai_context_entities`/`ai_clarification_events`, not localStorage.
@@ -133,6 +137,7 @@
 - Research validation update: ask first when weak context would materially affect planning; otherwise proceed with visible uncertainty.
 - Research validation update 2: use a concrete coverage policy: coverage > 0.8 proceeds, 0.5-0.8 proceeds with visible uncertainty when materiality is low/medium, and < 0.5 with high materiality asks one question first.
 - Research validation update 2: choose the question with highest expected value: missing impact, stakes, energy fit, stakeholder/commitment, dependency, history, or preference dimension that most changes the current answer.
+- Research decision update: one button answer is only enough when it resolves a low-EVPI slot or the user chooses to proceed with uncertainty. Complex/cold-start planning may use a short ladder, but still one question per turn with cooldown/dedupe.
 
 **Acceptance**:
 - Missing meaning/stakes/success criteria triggers one clarification card, not a full generic plan.
@@ -212,6 +217,7 @@
 - 2026-06-08: Added `auditWeeklyPlanQuality()` with bad/acceptable/excellent scoring and validation rejection for unsupported importance, generic substantial-work phrasing, weak consequence coverage, repeated templates, and overlong plans.
 - 2026-06-08: Added shared `auditChatResponseQuality()` for broader deterministic task answers so non-weekly outputs can be repaired when they are verbose, generic, metadata-only, or missing task cards.
 - 2026-06-08: Broad post-clarification answers now fail the chat-quality audit when they do not visibly honor the user's clarification evidence, forcing repair to the concise grounded fallback instead of accepting a plausible but context-ignoring answer.
+- 2026-06-08: Research policy update accepted: structured-output failure must retry once and then degrade to a deterministic compact draft with visible uncertainty and feedback controls; repeated clarification after a saved answer is a quality failure; low-context fallback should cap visible recommendations around 1-3 by default.
 
 ---
 
@@ -454,6 +460,12 @@
 - Eval fails on fake reasoning even when prose sounds polished.
 - Eval fails on broad generic plans that exceed the low-overwhelm contract.
 - Eval catches repeated clarification questions inside cooldown.
+- Eval fails when structured output fails but the response does not use deterministic fallback.
+- Eval fails when low coverage/high materiality produces broad ranking instead of a high-EVPI question or visible uncertainty escape.
+- Eval fails when recommendation cards lack feedback controls or learning signals.
+
+**Progress**:
+- 2026-06-08: Extended `auditChatResponseQuality()` with executable checks for response path, coverage score, high materiality, structured-output failure, deterministic fallback, repeated post-clarification questions, visible uncertainty, feedback controls, escape hatches, debug disclosure, and learning signals.
 
 ---
 

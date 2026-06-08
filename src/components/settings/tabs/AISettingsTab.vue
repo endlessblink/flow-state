@@ -116,8 +116,22 @@ async function refreshAIMemoryDebug() {
   }
 }
 
+function aiMemoryClearConfirmMessage(): string {
+  const status = aiMemoryDebug.value?.schemaStatus
+  if (status === 'local_only') {
+    return 'Clear local AI chat memory on this device? The assistant will need to re-learn clarification answers and feedback here.'
+  }
+  if (status === 'missing') {
+    return 'Clear local fallback and queued AI chat memory? Server memory is not available until the AI memory schema is ready.'
+  }
+  if (status === 'partial') {
+    return 'Clear available AI chat memory and local fallbacks? Some server memory tables are currently unavailable.'
+  }
+  return 'Clear server-backed AI chat memory? The assistant will need to re-learn clarification answers and feedback.'
+}
+
 async function clearAIMemoryDebugData() {
-  if (!confirm('Clear server-backed AI chat memory? The assistant will need to re-learn clarification answers and feedback.')) return
+  if (!confirm(aiMemoryClearConfirmMessage())) return
   aiMemoryDebugClearing.value = true
   aiMemoryDebugError.value = ''
   try {

@@ -6,6 +6,7 @@ import type { AIMemoryDebugSnapshot } from '@/types/aiMemory'
 
 const state = vi.hoisted(() => ({
   fetchAIMemoryDebugSnapshot: vi.fn(),
+  clearAIMemoryDebugData: vi.fn(),
 }))
 
 vi.mock('@/services/ai/proxy/bridgeClient', () => ({
@@ -101,7 +102,7 @@ vi.mock('@/stores/settings', () => ({
 vi.mock('@/composables/useSupabaseDatabase', () => ({
   useSupabaseDatabase: () => ({
     fetchAIMemoryDebugSnapshot: state.fetchAIMemoryDebugSnapshot,
-    clearAIMemoryDebugData: vi.fn(async () => undefined),
+    clearAIMemoryDebugData: state.clearAIMemoryDebugData,
   }),
 }))
 
@@ -149,6 +150,8 @@ async function mountSettingsWithSnapshot(snapshot: AIMemoryDebugSnapshot) {
 describe('AI settings memory debug status', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    state.clearAIMemoryDebugData.mockResolvedValue(undefined)
+    vi.stubGlobal('confirm', vi.fn(() => true))
   })
 
   it('renders missing server schema as local fallback with missing table names', async () => {
@@ -186,5 +189,34 @@ describe('AI settings memory debug status', () => {
     expect(text).toContain('Server-backed context currently available to chat')
     expect(text).toContain('Server schema ready')
     expect(text).not.toContain('local fallback')
+  })
+
+  it('uses local-only clear confirmation copy when server memory is unavailable', async () => {
+    const wrapper = await mountSettingsWithSnapshot(debugSnapshot({
+      schemaStatus: 'local_only',
+      pendingWriteCount: 1,
+    }))
+
+    await wrapper.get('[data-testid="ai-memory-debug"] .danger').trigger('click')
+    await flushPromises()
+
+    expect(globalThis.confirm).toHaveBeenCalledWith(expect.stringContaining('Clear local AI chat memory on this device?'))
+    expect(globalThis.confirm).not.toHaveBeenCalledWith(expect.stringContaining('server-backed'))
+    expect(state.clearAIMemoryDebugData).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses fallback-and-queued clear confirmation copy while server schema is missing', async () => {
+    const wrapper = await mountSettingsWithSnapshot(debugSnapshot({
+      schemaStatus: 'missing',
+      schemaMissingTables: ['ai_context_entities'],
+      pendingWriteCount: 2,
+    }))
+
+    await wrapper.get('[data-testid="ai-memory-debug"] .danger').trigger('click')
+    await flushPromises()
+
+    expect(globalThis.confirm).toHaveBeenCalledWith(expect.stringContaining('Clear local fallback and queued AI chat memory?'))
+    expect(globalThis.confirm).not.toHaveBeenCalledWith(expect.stringContaining('Clear server-backed AI chat memory?'))
+    expect(state.clearAIMemoryDebugData).toHaveBeenCalledTimes(1)
   })
 })

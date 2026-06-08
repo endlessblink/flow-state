@@ -1884,29 +1884,31 @@ export function useAIChat() {
               clarification,
             } as Record<string, unknown>
           }
-          try {
-            const db = useSupabaseDatabase()
-            await db.recordAIClarificationEvent({
-              entityKey: clarification.memoryKey,
-              entityType: clarification.question.entityType ?? 'workflow',
-              displayName: clarification.question.entityId ?? clarification.memoryKey,
-              questionId: clarification.question.id,
-              eventType: 'asked',
-              question: clarification.question.question,
-              sourceMessageId: lastMsg?.id,
-              coverageScoreAtTime: clarification.coverage?.score,
-              uncertaintyDimensions: clarification.coverage?.missing,
-              pathType: clarification.pathType,
-              contextSnapshot: {
-                candidateTaskIds: clarification.candidateTaskIds,
-                coverage: clarification.coverage,
-                retrieval: clarification.debug?.retrieval,
-                feedbackCount: memoryFeedbackCount,
-              },
-            })
-          } catch (eventErr) {
-            console.warn('[AIChat:WeeklyPlan] Could not record clarification ask:', eventErr)
-          }
+          void (async () => {
+            try {
+              const db = useSupabaseDatabase()
+              await db.recordAIClarificationEvent({
+                entityKey: clarification.memoryKey,
+                entityType: clarification.question.entityType ?? 'workflow',
+                displayName: clarification.question.entityId ?? clarification.memoryKey,
+                questionId: clarification.question.id,
+                eventType: 'asked',
+                question: clarification.question.question,
+                sourceMessageId: lastMsg?.id,
+                coverageScoreAtTime: clarification.coverage?.score,
+                uncertaintyDimensions: clarification.coverage?.missing,
+                pathType: clarification.pathType,
+                contextSnapshot: {
+                  candidateTaskIds: clarification.candidateTaskIds,
+                  coverage: clarification.coverage,
+                  retrieval: clarification.debug?.retrieval,
+                  feedbackCount: memoryFeedbackCount,
+                },
+              })
+            } catch (eventErr) {
+              console.warn('[AIChat:WeeklyPlan] Could not record clarification ask:', eventErr)
+            }
+          })()
           finishChatPhase(phaseActivityId, 'Clarification ready', 'Waiting for one answer')
           store.completeStreamingMessage()
           return

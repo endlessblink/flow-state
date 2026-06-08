@@ -87,6 +87,10 @@ const clarificationAnswers = ref<Record<string, string>>({})
 const clarificationFreeText = ref<Record<string, string>>({})
 const clarificationApplying = ref(false)
 const clarificationStatus = ref('')
+const clarificationSavedLocal = ref<Record<string, boolean>>({})
+const clarificationFollowUpAnswers = ref<Record<string, string>>({})
+const clarificationFollowUpFreeText = ref<Record<string, string>>({})
+const clarificationFollowUpSavedLocal = ref<Record<string, boolean>>({})
 const clarificationInlineMode = ref<Record<string, 'uncertainty' | 'candidates'>>({})
 const recommendationFeedbackLoading = ref<Record<string, string>>({})
 const recommendationFeedbackStatus = ref<Record<string, string>>({})
@@ -375,17 +379,59 @@ function clarificationDisplayName(card: AIClarificationArtifact): string {
   return question.entityId || card.memoryKey
 }
 
-async function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEvent) {
+function clarificationFollowUpPrompt(card: AIClarificationArtifact): string {
+  return card.locale === 'he' ? 'למה זה חשוב עכשיו?' : 'Why does this matter right now?'
+}
+
+function clarificationFollowUpPlaceholder(card: AIClarificationArtifact): string {
+  return card.locale === 'he'
+    ? 'אופציונלי: מה ייחשב התקדמות טובה?'
+    : 'Optional: what would count as good progress?'
+}
+
+function clarificationFollowUpOptions(card: AIClarificationArtifact) {
+  if (card.locale === 'he') {
+    return [
+      { id: 'deadline_commitment', label: 'דדליין/התחייבות', value: 'deadline or commitment' },
+      { id: 'unblocks_work', label: 'פותח עבודה אחרת', value: 'unblocks other work' },
+      { id: 'client_money', label: 'לקוח/כסף', value: 'client or money impact' },
+      { id: 'stress_chaos', label: 'מוריד לחץ', value: 'reduces stress or chaos' },
+      { id: 'momentum', label: 'מומנטום חשוב', value: 'important long-term or creative momentum' },
+      { id: 'not_sure', label: 'לא בטוח', value: 'unclear why it matters right now' },
+    ]
+  }
+  return [
+    { id: 'deadline_commitment', label: 'Deadline/commitment', value: 'deadline or commitment' },
+    { id: 'unblocks_work', label: 'Unblocks work', value: 'unblocks other work' },
+    { id: 'client_money', label: 'Client/money impact', value: 'client or money impact' },
+    { id: 'stress_chaos', label: 'Reduces stress', value: 'reduces stress or chaos' },
+    { id: 'momentum', label: 'Important momentum', value: 'important long-term or creative momentum' },
+    { id: 'not_sure', label: 'Not sure', value: 'unclear why it matters right now' },
+  ]
+}
+
+function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEvent) {
   event.stopPropagation()
   if (clarificationApplying.value) return
   const key = clarificationKey(card)
+  if (clarificationSavedLocal.value[key]) return
   const selectedId = clarificationAnswers.value[key]
   const note = clarificationFreeText.value[key]?.trim()
   const option = card.question.options.find(item => item.id === selectedId)
   if (!option && !note) return
 
-  clarificationApplying.value = true
-  clarificationStatus.value = ''
+  clarificationSavedLocal.value[key] = true
+  clarificationStatus.value = card.locale === 'he'
+    ? 'נשמר מקומית. מסנכרן ברקע...'
+    : 'Saved locally. Syncing in the background...'
+  void persistClarificationAnswer(card, option, note)
+}
+
+async function persistClarificationAnswer(
+  card: AIClarificationArtifact,
+  option: AIClarificationQuestion['options'][number] | undefined,
+  note: string,
+) {
   try {
     if (option?.memoryPatch) {
       await aiMemoryDb.applyAIMemoryPatch({
@@ -416,10 +462,94 @@ async function saveClarificationAnswer(card: AIClarificationArtifact, event: Mou
     })
     clarificationStatus.value = card.locale === 'he' ? 'נשמר. אפשר לבקש שוב כדי להמשיך.' : 'Saved. Ask again to continue.'
   } catch (err) {
-    console.error('[ChatMessage] Clarification save failed:', err)
-    clarificationStatus.value = card.locale === 'he' ? 'השמירה נכשלה' : 'Save failed'
-  } finally {
-    clarificationApplying.value = false
+    const message = err instanceof Error ? err.message : String(err)
+    if (!message.includes('authenticated user')) {
+      console.error('[ChatMessage] Clarification save failed:', err)
+    }
+    clarificationStatus.value = card.locale === 'he'
+      ? 'נשמר מקומית; הסנכרון יושלם אחרי חיבור תקין.'
+      : 'Saved locally; sync will complete when the connection is ready.'
+  }
+}
+
+function saveClarificationFollowUp(card: AIClarificationArtifact, event: MouseEvent) {
+  event.stopPropagation()
+  const key = clarificationKey(card)
+  if (clarificationFollowUpSavedLocal.value[key]) return
+  const selectedId = clarificationFollowUpAnswers.value[key]
+  const note = clarificationFollowUpFreeText.value[key]?.trim()
+  const option = clarificationFollowUpOptions(card).find(item => item.id === selectedId)
+  if (!option && !note) return
+
+  clarificationFollowUpSavedLocal.value[key] = true
+  clarificationStatus.value = card.locale === 'he'
+    ? 'נשמר מקומית. זה מספיק כדי להמשיך בלי להציף.'
+    : 'Saved locally. That is enough to continue without a broad dump.'
+  void persistClarificationFollowUp(card, option, note)
+}
+
+async function persistClarificationFollowUp(
+  card: AIClarificationArtifact,
+  option: ReturnType<typeof clarificationFollowUpOptions>[number] | undefined,
+  note: string,
+) {
+  const memoryPatch: AIMemoryPatch | undefined = option
+    ? {
+        entityType: card.question.entityType ?? 'workflow',
+        entityId: card.question.entityId ?? card.memoryKey,
+        operation: 'set',
+        field: 'thisWeekImportance',
+        value: option.value,
+        confidence: option.id === 'not_sure' ? 0.45 : 0.9,
+        source: 'button_answer',
+        sourceMessageId: props.message.id,
+      }
+    : note
+      ? {
+          entityType: card.question.entityType ?? 'workflow',
+          entityId: card.question.entityId ?? card.memoryKey,
+          operation: 'set',
+          field: 'whyItMatters',
+          value: note,
+          confidence: 0.9,
+          source: 'free_text',
+          sourceMessageId: props.message.id,
+        }
+      : undefined
+  try {
+    await aiMemoryDb.recordAIClarificationEvent({
+      entityKey: card.memoryKey,
+      entityType: card.question.entityType ?? 'workflow',
+      displayName: clarificationDisplayName(card),
+      questionId: `${card.question.id}:why_now`,
+      eventType: 'answered',
+      question: clarificationFollowUpPrompt(card),
+      selectedOptionId: option?.id,
+      selectedLabel: option?.label,
+      freeText: note,
+      memoryPatch,
+      sourceMessageId: props.message.id,
+      coverageScoreAtTime: card.coverage?.score,
+      uncertaintyDimensions: card.coverage?.missing,
+      pathType: 'clarify_first',
+      contextSnapshot: {
+        candidateTaskIds: card.candidateTaskIds,
+        coverage: card.coverage,
+        retrieval: card.debug?.retrieval,
+        followUp: 'why_now',
+      },
+    })
+    clarificationStatus.value = card.locale === 'he'
+      ? 'נשמר. בקש שוב תוכנית, ואשתמש בהקשר הזה.'
+      : 'Saved. Ask for the plan again and I will use this context.'
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (!message.includes('authenticated user')) {
+      console.error('[ChatMessage] Clarification follow-up save failed:', err)
+    }
+    clarificationStatus.value = card.locale === 'he'
+      ? 'נשמר מקומית; הסנכרון יושלם אחרי חיבור תקין.'
+      : 'Saved locally; sync will complete when the connection is ready.'
   }
 }
 
@@ -1179,51 +1309,90 @@ async function saveSchedule() {
 
         <section class="weekly-plan-questions">
           <div v-if="!clarificationInlineMode[clarificationKey(clarification)]" class="weekly-plan-question">
-            <p>{{ clarification.question.question }}</p>
-            <div v-if="clarification.question.options?.length" class="weekly-question-options">
-              <button
-                v-for="option in clarification.question.options"
-                :key="option.id"
-                type="button"
-                class="weekly-question-option"
-                :class="{ selected: clarificationAnswers[clarificationKey(clarification)] === option.id }"
-                :title="option.effect"
-                @click="clarificationAnswers[clarificationKey(clarification)] = option.id"
-              >
-                {{ option.label }}
-              </button>
+            <div v-if="!clarificationSavedLocal[clarificationKey(clarification)]">
+              <p>{{ clarification.question.question }}</p>
+              <div v-if="clarification.question.options?.length" class="weekly-question-options">
+                <button
+                  v-for="option in clarification.question.options"
+                  :key="option.id"
+                  type="button"
+                  class="weekly-question-option"
+                  :class="{ selected: clarificationAnswers[clarificationKey(clarification)] === option.id }"
+                  :title="option.effect"
+                  @click="clarificationAnswers[clarificationKey(clarification)] = option.id"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+              <textarea
+                v-if="clarification.question.allowFreeText"
+                v-model="clarificationFreeText[clarificationKey(clarification)]"
+                class="weekly-question-free-text"
+                :placeholder="clarification.question.freeTextPlaceholder || (clarification.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...')"
+                rows="2"
+              />
+              <div class="weekly-question-action-row">
+                <button
+                  type="button"
+                  class="weekly-question-apply"
+                  :disabled="clarificationApplying || (!clarificationAnswers[clarificationKey(clarification)] && !clarificationFreeText[clarificationKey(clarification)]?.trim())"
+                  @click="saveClarificationAnswer(clarification, $event)"
+                >
+                  <Loader2 v-if="clarificationApplying" :size="13" class="spin" />
+                  <CheckCircle2 v-else :size="13" />
+                  {{ clarification.locale === 'he' ? 'שמור תשובה' : 'Save answer' }}
+                </button>
+                <button
+                  v-for="action in clarification.actions"
+                  :key="action"
+                  type="button"
+                  class="weekly-question-escape"
+                  :disabled="clarificationApplying"
+                  @click="recordClarificationEscape(clarification, action, $event)"
+                >
+                  {{ clarificationActionLabel(action, clarification.locale) }}
+                </button>
+                <span v-if="clarificationStatus" class="weekly-question-status">
+                  {{ clarificationStatus }}
+                </span>
+              </div>
             </div>
-            <textarea
-              v-if="clarification.question.allowFreeText"
-              v-model="clarificationFreeText[clarificationKey(clarification)]"
-              class="weekly-question-free-text"
-              :placeholder="clarification.question.freeTextPlaceholder || (clarification.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...')"
-              rows="2"
-            />
-            <div class="weekly-question-action-row">
-              <button
-                type="button"
-                class="weekly-question-apply"
-                :disabled="clarificationApplying || (!clarificationAnswers[clarificationKey(clarification)] && !clarificationFreeText[clarificationKey(clarification)]?.trim())"
-                @click="saveClarificationAnswer(clarification, $event)"
-              >
-                <Loader2 v-if="clarificationApplying" :size="13" class="spin" />
-                <CheckCircle2 v-else :size="13" />
-                {{ clarification.locale === 'he' ? 'שמור תשובה' : 'Save answer' }}
-              </button>
-              <button
-                v-for="action in clarification.actions"
-                :key="action"
-                type="button"
-                class="weekly-question-escape"
-                :disabled="clarificationApplying"
-                @click="recordClarificationEscape(clarification, action, $event)"
-              >
-                {{ clarificationActionLabel(action, clarification.locale) }}
-              </button>
-              <span v-if="clarificationStatus" class="weekly-question-status">
-                {{ clarificationStatus }}
-              </span>
+            <div v-else class="clarification-follow-up" data-testid="ai-clarification-follow-up">
+              <p>{{ clarificationFollowUpPrompt(clarification) }}</p>
+              <div class="weekly-question-options">
+                <button
+                  v-for="option in clarificationFollowUpOptions(clarification)"
+                  :key="option.id"
+                  type="button"
+                  class="weekly-question-option"
+                  :class="{ selected: clarificationFollowUpAnswers[clarificationKey(clarification)] === option.id }"
+                  :disabled="clarificationFollowUpSavedLocal[clarificationKey(clarification)]"
+                  @click="clarificationFollowUpAnswers[clarificationKey(clarification)] = option.id"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+              <textarea
+                v-model="clarificationFollowUpFreeText[clarificationKey(clarification)]"
+                class="weekly-question-free-text"
+                :placeholder="clarificationFollowUpPlaceholder(clarification)"
+                :disabled="clarificationFollowUpSavedLocal[clarificationKey(clarification)]"
+                rows="2"
+              />
+              <div class="weekly-question-action-row">
+                <button
+                  type="button"
+                  class="weekly-question-apply"
+                  :disabled="clarificationFollowUpSavedLocal[clarificationKey(clarification)] || (!clarificationFollowUpAnswers[clarificationKey(clarification)] && !clarificationFollowUpFreeText[clarificationKey(clarification)]?.trim())"
+                  @click="saveClarificationFollowUp(clarification, $event)"
+                >
+                  <CheckCircle2 :size="13" />
+                  {{ clarificationFollowUpSavedLocal[clarificationKey(clarification)] ? (clarification.locale === 'he' ? 'נשמר' : 'Saved') : (clarification.locale === 'he' ? 'שמור המשך' : 'Save follow-up') }}
+                </button>
+                <span v-if="clarificationStatus" class="weekly-question-status">
+                  {{ clarificationStatus }}
+                </span>
+              </div>
             </div>
           </div>
           <div v-else class="clarification-inline-result" data-testid="ai-clarification-inline-result">

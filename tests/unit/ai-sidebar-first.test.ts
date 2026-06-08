@@ -1042,6 +1042,101 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).toContain('Define planner memory success criteria')
   })
 
+  it('keeps clarification as a concise interview before broad weekly planning', async () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-clarification-before-plan',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            clarification: {
+              schemaVersion: 'ai-clarification.v1',
+              kind: 'weekly_planning',
+              locale: 'en',
+              direction: 'ltr',
+              progressLabel: 'Clarifying priorities • Step 1/3',
+              summary: 'One missing detail would change the ranking, so I should ask before planning.',
+              memoryKey: 'synthetic:Work',
+              pathType: 'clarify_first',
+              candidateTaskIds: ['task-a'],
+              actions: ['generate_current', 'show_candidates', 'pause_save'],
+              coverage: {
+                score: 0.28,
+                materiality: 'high',
+                dimensions: { project_meaning: 0, impact: 0 },
+                missing: ['project_meaning', 'impact'],
+                decision: 'ask',
+              },
+              question: {
+                id: 'project_context_work',
+                entityType: 'synthetic_group',
+                entityId: 'Work',
+                reason: 'missing_project_understanding',
+                question: 'What kind of project is "Work"?',
+                options: [
+                  {
+                    id: 'domain_work',
+                    label: 'Work/Product',
+                    effect: 'Save work context.',
+                    memoryPatch: {
+                      entityType: 'synthetic_group',
+                      entityId: 'Work',
+                      operation: 'set',
+                      field: 'domain',
+                      value: 'work',
+                      confidence: 0.95,
+                      source: 'button_answer',
+                    },
+                  },
+                ],
+                allowFreeText: true,
+                relatedTaskIds: ['task-a'],
+              },
+            },
+            weeklyPlan: {
+              schemaVersion: 'weekly-plan.v2',
+              requestId: 'req-should-not-render',
+              locale: 'en',
+              direction: 'ltr',
+              source: 'quick_draft',
+              headline: 'This broad plan should stay hidden',
+              weekRead: {
+                summary: 'Broad plan content.',
+                workloadReality: 'Too much.',
+                mainTradeoff: 'Should not show before answering.',
+              },
+              recommendations: [],
+              deferrals: [],
+              openQuestions: [],
+              quality: { selectedTaskCount: 0, confidence: 'low', caveats: [] },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="ai-clarification"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('This broad plan should stay hidden')
+
+    await wrapper.get('.weekly-question-option').trigger('click')
+    await wrapper.get('.weekly-question-apply').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Why does this matter right now?')
+    expect(wrapper.text()).toContain('Deadline/commitment')
+    expect(wrapper.text()).not.toContain('This broad plan should stay hidden')
+    expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false)
+  })
+
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 
@@ -1439,6 +1534,11 @@ describe('AI sidebar-first desktop experience', () => {
     expect(chatMessage).toContain('applyAIMemoryPatch')
     expect(chatMessage).toContain('recordRecommendationFeedback')
     expect(chatMessage).toContain('weekly-feedback-btn')
+    expect(chatMessage).toContain('clarificationSavedLocal')
+    expect(chatMessage).toContain('Saved locally. Syncing in the background')
+    expect(chatMessage).toContain('data-testid="ai-clarification-follow-up"')
+    expect(chatMessage).toContain('Why does this matter right now?')
+    expect(chatMessage).toContain('persistClarificationFollowUp')
     expect(chatMessage).toContain('Why ask?')
     expect(chatMessage).toContain('clarificationDebugLines')
     expect(chatMessage).toContain('createTaskWithUndo')
@@ -1455,6 +1555,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('recordAIRecommendationFeedback')
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('fetchAIRecommendationFeedback')
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('upsertAIContextEdges')
+    expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('isAIMemorySchemaMissing')
+    expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('skipped because AI memory migrations are not applied yet')
+    expect(src('src/composables/useAIChat.ts')).toContain('void (async () => {')
     expect(src('supabase/migrations/20260608090000_ai_clarification_memory.sql')).toContain('create table if not exists public.ai_context_entities')
     expect(src('supabase/migrations/20260608090000_ai_clarification_memory.sql')).toContain('create table if not exists public.ai_clarification_events')
     expect(src('supabase/migrations/20260608093000_ai_assistant_memory_metadata.sql')).toContain('create table if not exists public.ai_recommendation_feedback')

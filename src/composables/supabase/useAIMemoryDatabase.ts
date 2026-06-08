@@ -283,6 +283,24 @@ function isSupabaseUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
+function isAIMemorySchemaMissing(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: unknown }).code) : ''
+  return (
+    code === 'PGRST205' ||
+    message.includes('schema cache') ||
+    message.includes('Could not find the table') ||
+    message.includes('ai_context_entities') ||
+    message.includes('ai_clarification_events') ||
+    message.includes('ai_recommendation_feedback') ||
+    message.includes('ai_context_edges')
+  )
+}
+
+function logMissingAIMemorySchema(context: string): void {
+  console.debug(`[AIMemory] ${context} skipped because AI memory migrations are not applied yet.`)
+}
+
 function computeProjectCompleteness(row: ProjectContextRow): number {
   const filled = [
     Boolean(row.summary),
@@ -460,6 +478,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         return ((data ?? []) as AIContextEntityRow[]).map(toAIContextEntity)
       }, 'fetchAIContextEntities')
     } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('fetchAIContextEntities')
+        return []
+      }
       handleError(e, 'fetchAIContextEntities')
       return []
     }
@@ -484,6 +506,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         return ((data ?? []) as AIClarificationEventRow[]).map(toAIClarificationEvent)
       }, 'fetchAIClarificationEvents')
     } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('fetchAIClarificationEvents')
+        return []
+      }
       handleError(e, 'fetchAIClarificationEvents')
       return []
     }
@@ -535,6 +561,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
           .slice(0, limit)
       }, 'fetchAIRecommendationFeedback')
     } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('fetchAIRecommendationFeedback')
+        return []
+      }
       handleError(e, 'fetchAIRecommendationFeedback')
       return []
     }
@@ -611,6 +641,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       }, 'recordAIClarificationEvent')
       invalidateCache.all()
     } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('recordAIClarificationEvent')
+        return
+      }
       handleError(e, 'recordAIClarificationEvent')
       throw e
     } finally {
@@ -645,6 +679,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       }, 'recordAIRecommendationFeedback')
       invalidateCache.all()
     } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('recordAIRecommendationFeedback')
+        return
+      }
       handleError(e, 'recordAIRecommendationFeedback')
       throw e
     } finally {
@@ -677,6 +715,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       }, 'upsertAIContextEdges')
       invalidateCache.all()
     } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('upsertAIContextEdges')
+        return
+      }
       handleError(e, 'upsertAIContextEdges')
       throw e
     } finally {

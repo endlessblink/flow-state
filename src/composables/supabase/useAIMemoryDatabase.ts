@@ -176,6 +176,7 @@ const MAX_PENDING_AI_MEMORY_WRITES = 80
 const LOCAL_AI_CLARIFICATION_MEMORY_KEY = 'flowstate-ai-clarification-local-memory-v1'
 
 type LocalAIClarificationMemory = {
+  contextEntities?: AIContextEntity[]
   events: AIClarificationEvent[]
   parameterBeliefs: AIParameterBelief[]
   recommendationFeedback?: AIRecommendationFeedback[]
@@ -380,24 +381,26 @@ function toAIMemorySnapshot(row: AIMemorySnapshotRow): AIMemorySnapshot {
 }
 
 function readLocalAIClarificationMemory(): LocalAIClarificationMemory {
-  if (typeof localStorage === 'undefined') return { events: [], parameterBeliefs: [] }
+  if (typeof localStorage === 'undefined') return { contextEntities: [], events: [], parameterBeliefs: [], recommendationFeedback: [] }
   try {
     const raw = localStorage.getItem(LOCAL_AI_CLARIFICATION_MEMORY_KEY)
-    if (!raw) return { events: [], parameterBeliefs: [] }
+    if (!raw) return { contextEntities: [], events: [], parameterBeliefs: [], recommendationFeedback: [] }
     const parsed = JSON.parse(raw) as Partial<LocalAIClarificationMemory>
     return {
+      contextEntities: Array.isArray(parsed.contextEntities) ? parsed.contextEntities : [],
       events: Array.isArray(parsed.events) ? parsed.events : [],
       parameterBeliefs: Array.isArray(parsed.parameterBeliefs) ? parsed.parameterBeliefs : [],
       recommendationFeedback: Array.isArray(parsed.recommendationFeedback) ? parsed.recommendationFeedback : [],
     }
   } catch {
-    return { events: [], parameterBeliefs: [], recommendationFeedback: [] }
+    return { contextEntities: [], events: [], parameterBeliefs: [], recommendationFeedback: [] }
   }
 }
 
 function writeLocalAIClarificationMemory(memory: LocalAIClarificationMemory) {
   if (typeof localStorage === 'undefined') return
   localStorage.setItem(LOCAL_AI_CLARIFICATION_MEMORY_KEY, JSON.stringify({
+    contextEntities: (memory.contextEntities ?? []).slice(0, 80),
     events: memory.events.slice(0, 80),
     parameterBeliefs: memory.parameterBeliefs.slice(0, 80),
     recommendationFeedback: (memory.recommendationFeedback ?? []).slice(0, 80),
@@ -453,10 +456,44 @@ function localAIParameterBeliefsFromClarification(input: AIClarificationEventInp
   }))
 }
 
+function localAIContextEntityFromClarification(input: AIClarificationEventInput, existing: AIContextEntity | undefined, now: string): AIContextEntity {
+  const answeredAt = input.eventType === 'answered' ? now : null
+  const facts = mergeFactPatch(existing?.facts ?? {}, input.memoryPatch, input.freeText)
+  const corrections = input.eventType === 'correction'
+    ? uniqueStrings([...(existing?.corrections ?? []), input.freeText || input.selectedLabel || input.questionId])
+    : existing?.corrections ?? []
+
+  return {
+    id: existing?.id ?? `local-entity-${input.entityKey}`,
+    entityKey: input.entityKey,
+    entityType: input.entityType,
+    displayName: input.displayName,
+    canonicalProjectId: existing?.canonicalProjectId ?? null,
+    canonicalTaskId: existing?.canonicalTaskId ?? null,
+    summary: typeof facts.whyItMatters === 'string' ? facts.whyItMatters : existing?.summary ?? null,
+    facts,
+    corrections,
+    confidence: Math.max(existing?.confidence ?? 0, input.eventType === 'answered' ? 0.85 : 0.4),
+    completenessScore: computeAIEntityCompleteness(facts),
+    lastAskedAt: input.eventType === 'asked' ? now : existing?.lastAskedAt ?? null,
+    lastAnsweredAt: answeredAt ?? existing?.lastAnsweredAt ?? null,
+    askCount: (existing?.askCount ?? 0) + (input.eventType === 'asked' ? 1 : 0),
+    staleAfter: answeredAt ? nextStaleAfterIso(answeredAt) : existing?.staleAfter ?? null,
+    memoryType: existing?.memoryType ?? (input.entityType === 'preference' ? 'preference' : 'semantic'),
+    scope: existing?.scope ?? aiEntityScope(input.entityType),
+    reinforcementCount: (existing?.reinforcementCount ?? 0) + (answeredAt ? 1 : 0),
+    lastReinforcedAt: answeredAt ?? existing?.lastReinforcedAt ?? null,
+    relatedEntities: existing?.relatedEntities ?? [],
+    decayScore: answeredAt ? 1 : existing?.decayScore ?? null,
+  }
+}
+
 function recordLocalAIClarificationEvent(input: AIClarificationEventInput) {
   const now = new Date().toISOString()
   const memory = readLocalAIClarificationMemory()
   const event = localAIClarificationEvent(input, now)
+  const nextEntitiesByKey = new Map((memory.contextEntities ?? []).map(entity => [entity.entityKey, entity]))
+  nextEntitiesByKey.set(input.entityKey, localAIContextEntityFromClarification(input, nextEntitiesByKey.get(input.entityKey), now))
   const nextBeliefsByKey = new Map(memory.parameterBeliefs.map(belief => [`${belief.entityKey}:${belief.parameterKey}`, belief]))
   for (const belief of localAIParameterBeliefsFromClarification(input, now)) {
     const key = `${belief.entityKey}:${belief.parameterKey}`
@@ -464,11 +501,22 @@ function recordLocalAIClarificationEvent(input: AIClarificationEventInput) {
     nextBeliefsByKey.set(key, existing && existing.confidence > belief.confidence ? existing : belief)
   }
   writeLocalAIClarificationMemory({
+    contextEntities: [...nextEntitiesByKey.values()]
+      .sort((a, b) => new Date(b.lastAnsweredAt ?? b.lastAskedAt ?? 0).getTime() - new Date(a.lastAnsweredAt ?? a.lastAskedAt ?? 0).getTime())
+      .slice(0, 80),
     events: [event, ...memory.events].slice(0, 80),
     parameterBeliefs: [...nextBeliefsByKey.values()]
       .sort((a, b) => new Date(b.updatedAt ?? b.lastAnsweredAt ?? 0).getTime() - new Date(a.updatedAt ?? a.lastAnsweredAt ?? 0).getTime())
       .slice(0, 80),
+    recommendationFeedback: memory.recommendationFeedback ?? [],
   })
+}
+
+function localAIContextEntities(entityKeys: string[]): AIContextEntity[] {
+  const keys = new Set(uniqueStrings(entityKeys))
+  if (!keys.size) return []
+  return (readLocalAIClarificationMemory().contextEntities ?? [])
+    .filter(entity => keys.has(entity.entityKey))
 }
 
 function localAIClarificationEvents(entityKeys: string[], limit: number): AIClarificationEvent[] {
@@ -1020,7 +1068,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     if (!keys.length) return []
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
-    if (!userId) return []
+    if (!userId) return localAIContextEntities(keys)
     try {
       return await withRetry(async () => {
         const { data, error } = await getSupabase()
@@ -1034,7 +1082,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     } catch (e) {
       if (isAIMemorySchemaMissing(e)) {
         logMissingAIMemorySchema('fetchAIContextEntities')
-        return []
+        return localAIContextEntities(keys)
       }
       handleError(e, 'fetchAIContextEntities')
       return []

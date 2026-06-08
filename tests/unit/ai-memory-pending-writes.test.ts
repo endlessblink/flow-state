@@ -148,6 +148,7 @@ describe('AI memory pending write queue', () => {
     })
 
     const events = await db.fetchAIClarificationEvents(['workflow:task_answer:next_task'], 10)
+    const entities = await db.fetchAIContextEntities(['workflow:task_answer:next_task'])
     const beliefs = await db.fetchAIParameterBeliefs({
       entityKeys: ['workflow:task_answer:next_task'],
       parameterKeys: ['rankingFocus'],
@@ -160,6 +161,17 @@ describe('AI memory pending write queue', () => {
       selectedLabel: 'Energy fit',
       questionId: 'response_quality_next_task',
     })
+    expect(entities).toHaveLength(1)
+    expect(entities[0]).toMatchObject({
+      entityKey: 'workflow:task_answer:next_task',
+      entityType: 'workflow',
+      displayName: 'next_task',
+      lastAnsweredAt: expect.any(String),
+      lastReinforcedAt: expect.any(String),
+      reinforcementCount: 1,
+      decayScore: 1,
+    })
+    expect(new Date(String(entities[0]?.staleAfter)).getTime()).toBeGreaterThan(Date.now() + 40 * 24 * 60 * 60 * 1000)
     expect(beliefs).toHaveLength(1)
     expect(beliefs[0]).toMatchObject({
       entityKey: 'workflow:task_answer:next_task',
@@ -474,6 +486,47 @@ describe('AI memory pending write queue', () => {
     })
     expect(new Date(String(entityPayload.stale_after)).getTime()).toBeGreaterThan(Date.now() + 40 * 24 * 60 * 60 * 1000)
     expect(parameterBeliefUpsertCount).toBeGreaterThan(0)
+  })
+
+  it('keeps schema-missing stale refresh answers retrievable as local context entities until server tables are ready', async () => {
+    const db = useAIMemoryDatabase(createContext())
+
+    await db.recordAIClarificationEvent({
+      entityKey: 'synthetic:Work',
+      entityType: 'synthetic_group',
+      displayName: 'Work',
+      questionId: 'memory_refresh_synthetic_work',
+      eventType: 'answered',
+      question: 'Is the old Work context still true?',
+      selectedOptionId: 'still_true',
+      selectedLabel: 'Still true',
+      memoryPatch: {
+        entityType: 'synthetic_group',
+        entityId: 'Work',
+        operation: 'confirm',
+        field: 'stale_context',
+        value: 'still true',
+        confidence: 0.9,
+        source: 'button_answer',
+      },
+      uncertaintyDimensions: ['stale_context'],
+      pathType: 'clarify_first',
+    })
+
+    expect(getPendingAIMemoryWriteCount()).toBe(1)
+    const entities = await db.fetchAIContextEntities(['synthetic:Work'])
+
+    expect(entities).toHaveLength(1)
+    expect(entities[0]).toMatchObject({
+      entityKey: 'synthetic:Work',
+      entityType: 'synthetic_group',
+      displayName: 'Work',
+      lastAnsweredAt: expect.any(String),
+      lastReinforcedAt: expect.any(String),
+      reinforcementCount: 1,
+      decayScore: 1,
+    })
+    expect(new Date(String(entities[0]?.staleAfter)).getTime()).toBeGreaterThan(Date.now() + 40 * 24 * 60 * 60 * 1000)
   })
 
   it('queues parameter belief writes skipped by missing schema and flushes them later', async () => {

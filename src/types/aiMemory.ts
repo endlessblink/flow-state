@@ -167,6 +167,7 @@ export interface AIClarificationArtifact {
       feedbackCount?: number
       graphEdgeCount?: number
       snapshotCount?: number
+      parameterBeliefCount?: number
       elapsedMs?: number
       timedOut?: boolean
       exactEntityCount?: number

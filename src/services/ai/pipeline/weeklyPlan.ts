@@ -9,6 +9,7 @@ import type {
   AIMemoryPatchOperation,
   AIMemoryQuestionOption,
   AIMemorySnapshot,
+  AIParameterBelief,
   AIRecommendationFeedback,
   ProjectContext,
   TaskContext,
@@ -191,6 +192,7 @@ export type WeekContext = {
   projectContexts: ProjectContextSnapshot[]
   taskContexts: TaskContextSnapshot[]
   memorySnapshots: MemorySnapshotEvidence[]
+  parameterBeliefs: AIParameterBelief[]
   recommendationFeedback: AIRecommendationFeedback[]
   uncertaintyNotes: string[]
 }
@@ -313,6 +315,7 @@ export type WeekContextMemoryInput = {
   projectContexts?: ProjectContext[]
   taskContexts?: TaskContext[]
   memorySnapshots?: AIMemorySnapshot[]
+  parameterBeliefs?: AIParameterBelief[]
   recommendationFeedback?: AIRecommendationFeedback[]
 }
 
@@ -379,6 +382,7 @@ export function buildWeekContextFromToolResults(
       .map(task => task.taskContext)
       .filter((ctx): ctx is TaskContextSnapshot => Boolean(ctx)),
     memorySnapshots: (memory.memorySnapshots ?? []).slice(0, 8).map(toMemorySnapshotEvidence),
+    parameterBeliefs: (memory.parameterBeliefs ?? []).slice(0, 40),
     recommendationFeedback: memory.recommendationFeedback ?? [],
     uncertaintyNotes: buildMemoryUncertaintyNotes(snapshots, locale),
   }
@@ -430,6 +434,7 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
       projectContexts: promptContext.projectContexts,
       taskContexts: promptContext.taskContexts,
       memorySnapshots: promptContext.memorySnapshots,
+      parameterBeliefs: promptContext.parameterBeliefs,
       recommendationFeedbackSummary: summarizeRecommendationFeedbackForPrompt(context),
       uncertaintyNotes: promptContext.uncertaintyNotes,
     },
@@ -1022,6 +1027,15 @@ function targetParametersForQuestion(question: AIClarificationQuestion, preferre
 function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTaskSnapshot[]): AIClarificationCoverage {
   const relevant = selected.length ? selected : context.tasks.slice(0, 5)
   const denominator = Math.max(1, relevant.length)
+  const projectEntityKeys = new Set(relevant.map(task => task.project?.id ? `project:${task.project.id}` : '').filter(Boolean))
+  const taskEntityKeys = new Set(relevant.map(task => `task:${task.id}`))
+  const projectBeliefs = context.parameterBeliefs.filter(belief => projectEntityKeys.has(belief.entityKey))
+  const taskBeliefs = context.parameterBeliefs.filter(belief => taskEntityKeys.has(belief.entityKey))
+  const weekAndPreferenceBeliefs = context.parameterBeliefs.filter(belief =>
+    belief.entityKey.startsWith('week:') ||
+    belief.entityKey.startsWith('preference:') ||
+    belief.entityKey.startsWith('workflow:'),
+  )
   const projectMeaning = relevant.filter(task => hasUsableProjectContext(task)).length / denominator
   const taskContext = relevant.filter(task => hasTaskLevelPlanningContext(task)).length / denominator
   const impact = relevant.filter(task =>
@@ -1048,14 +1062,14 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
   const preferences = context.projectContexts.some(ctx => ctx.taskSelectionHints.length || ctx.nonGoals.length || ctx.userCorrections.length) ? 1 : 0
   const staleContext = relevant.some(task => isProjectContextStale(task.projectContext, context.nowIso) || isTaskContextStale(task.taskContext, context.nowIso)) ? 0 : 1
   const dimensions: AIClarificationCoverage['dimensions'] = {
-    impact,
-    energy_fit: energyFit,
+    impact: Math.max(impact, strongestBelief([...projectBeliefs, ...taskBeliefs, ...weekAndPreferenceBeliefs], ['impact', 'currentStakes', 'thisWeekImportance', 'stakeholders'])),
+    energy_fit: Math.max(energyFit, strongestBelief([...taskBeliefs, ...weekAndPreferenceBeliefs], ['energy_fit', 'energy', 'workload', 'effort'])),
     stakeholders,
-    dependencies,
-    history,
-    preferences,
-    project_meaning: projectMeaning,
-    task_context: taskContext,
+    dependencies: Math.max(dependencies, strongestBelief([...taskBeliefs, ...weekAndPreferenceBeliefs], ['dependencies', 'blocking', 'sequence'])),
+    history: Math.max(history, strongestBelief([...taskBeliefs, ...weekAndPreferenceBeliefs], ['history', 'postponed', 'follow_through'])),
+    preferences: Math.max(preferences, strongestBelief(weekAndPreferenceBeliefs, ['preferences', 'rankingFocus', 'taskSelectionHints', 'thisWeekImportance'])),
+    project_meaning: Math.max(projectMeaning, strongestBelief(projectBeliefs, ['project_meaning', 'whyItMatters', 'summary', 'domain'])),
+    task_context: Math.max(taskContext, strongestBelief(taskBeliefs, ['task_context', 'whyItMatters', 'successCriteria', 'currentStakes'])),
     stale_context: staleContext,
   }
   const weights: Record<keyof typeof dimensions, number> = {
@@ -1090,6 +1104,12 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
     missing,
     decision: policy.decision,
   }
+}
+
+function strongestBelief(beliefs: AIParameterBelief[], keys: string[]): number {
+  return beliefs
+    .filter(belief => keys.includes(belief.parameterKey))
+    .reduce((max, belief) => Math.max(max, Math.min(1, Math.max(0, belief.confidence))), 0)
 }
 
 function recentClarificationResolved(events: AIClarificationEvent[], entityKey: string, questionId: string): boolean {

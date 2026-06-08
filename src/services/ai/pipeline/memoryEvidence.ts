@@ -1,3 +1,4 @@
+import type { AIParameterBelief } from '@/types/aiMemory'
 import type { MemorySnapshotEvidence, PlannerDirection, PlannerLocale, PlannerTaskSnapshot, ProjectContextSnapshot, TaskContextSnapshot, WeekContext } from './weeklyPlan'
 
 const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f-\u009f]/g
@@ -87,6 +88,15 @@ function sanitizeMemoryFacts(facts: Record<string, unknown>): Record<string, unk
   return Object.fromEntries(entries)
 }
 
+export function sanitizeParameterBeliefForPrompt(belief: AIParameterBelief): AIParameterBelief {
+  return {
+    ...belief,
+    entityKey: sanitizeMemoryEvidenceText(belief.entityKey, 160),
+    parameterKey: sanitizeMemoryEvidenceText(belief.parameterKey, 120),
+    beliefJson: sanitizeMemoryFacts(belief.beliefJson),
+  }
+}
+
 function sanitizeTaskForPrompt(task: PlannerTaskSnapshot): PlannerTaskSnapshot {
   return {
     ...task,
@@ -126,6 +136,7 @@ export function sanitizeWeekContextForPrompt(context: WeekContext): {
   projectContexts: ProjectContextSnapshot[]
   taskContexts: TaskContextSnapshot[]
   memorySnapshots: MemorySnapshotEvidence[]
+  parameterBeliefs: AIParameterBelief[]
   recommendationFeedback: WeekContext['recommendationFeedback']
   uncertaintyNotes: string[]
   candidateTasks: PlannerTaskSnapshot[]
@@ -146,6 +157,7 @@ export function sanitizeWeekContextForPrompt(context: WeekContext): {
     projectContexts: context.projectContexts.map(sanitizeProjectContextForPrompt),
     taskContexts: context.taskContexts.map(sanitizeTaskContextForPrompt),
     memorySnapshots: context.memorySnapshots.map(sanitizeMemorySnapshotForPrompt),
+    parameterBeliefs: context.parameterBeliefs.map(sanitizeParameterBeliefForPrompt),
     recommendationFeedback: context.recommendationFeedback,
     uncertaintyNotes: context.uncertaintyNotes.map(note => sanitizeMemoryEvidenceText(note, 180)),
     candidateTasks: context.tasks.map(sanitizeTaskForPrompt),

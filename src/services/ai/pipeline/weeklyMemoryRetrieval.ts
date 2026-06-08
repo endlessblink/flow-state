@@ -1,8 +1,14 @@
-import type { AIClarificationEvent, AIContextEdge, AIContextEdgeInput, AIContextEntity, AIMemorySnapshot, ProjectContext, TaskContext, AIRecommendationFeedback } from '@/types/aiMemory'
+import type { AIClarificationEvent, AIContextEdge, AIContextEdgeInput, AIContextEntity, AIMemorySnapshot, AIParameterBelief, ProjectContext, TaskContext, AIRecommendationFeedback } from '@/types/aiMemory'
 import type { WeekContextMemoryInput } from './weeklyPlan'
 import { summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 
 type CardTaskLike = Record<string, unknown>
+const WEEKLY_GLOBAL_MEMORY_ENTITY_KEYS = [
+  'preference:ranking_focus',
+  'preference:energy_fit',
+  'preference:follow_through',
+  'preference:brevity',
+]
 
 export type WeeklyMemoryRetrievalSource = 'hybrid_sql' | 'fallback'
 
@@ -15,6 +21,7 @@ export type WeeklyMemoryRetrievalDiagnostics = {
   feedbackCount: number
   graphEdgeCount: number
   snapshotCount: number
+  parameterBeliefCount: number
   elapsedMs: number
   timedOut: boolean
   exactEntityCount: number
@@ -31,6 +38,7 @@ export type WeeklyMemoryDb = {
   fetchAIRecommendationFeedback(input: { taskIds?: string[]; entityKeys?: string[]; limit?: number }): Promise<AIRecommendationFeedback[]>
   fetchAIContextEdges?(input: { entityKeys: string[]; limit?: number }): Promise<AIContextEdge[]>
   fetchAIMemorySnapshots?(input: { entityKeys?: string[]; scopes?: AIMemorySnapshot['scope'][]; limit?: number }): Promise<AIMemorySnapshot[]>
+  fetchAIParameterBeliefs?(input: { entityKeys?: string[]; parameterKeys?: string[]; limit?: number }): Promise<AIParameterBelief[]>
 }
 
 export type WeeklyMemoryRetrievalInput = {
@@ -65,6 +73,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
   const projectEntityKeys = rawProjectIds.map(projectEntityKey)
   const weekEntityKey = `week:${weekStartKey(input.now)}`
   const entityKeys = uniqueStrings([...projectEntityKeys, ...taskEntityKeys, weekEntityKey])
+  const beliefEntityKeys = uniqueStrings([...entityKeys, ...WEEKLY_GLOBAL_MEMORY_ENTITY_KEYS])
   const fallbackDiagnostics = (timedOut: boolean): WeeklyMemoryRetrievalDiagnostics => ({
     source: 'fallback',
     entityKeyCount: entityKeys.length,
@@ -74,6 +83,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
     feedbackCount: 0,
     graphEdgeCount: 0,
     snapshotCount: 0,
+    parameterBeliefCount: 0,
     elapsedMs: Math.round(performance.now() - startedAt),
     timedOut,
     exactEntityCount: 0,
@@ -83,7 +93,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
   })
 
   try {
-    const [projectContexts, taskContexts, contextEntities, clarificationEvents, recommendationFeedback, contextEdges, memorySnapshots] = await withTimeout(Promise.all([
+    const [projectContexts, taskContexts, contextEntities, clarificationEvents, recommendationFeedback, contextEdges, memorySnapshots, parameterBeliefs] = await withTimeout(Promise.all([
       input.db.fetchProjectContexts(projectIds),
       input.db.fetchTaskContexts(taskIds),
       input.db.fetchAIContextEntities(entityKeys),
@@ -91,6 +101,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
       input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 }),
       input.db.fetchAIContextEdges?.({ entityKeys, limit: 80 }) ?? Promise.resolve([]),
       input.db.fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week'], limit: 12 }) ?? Promise.resolve([]),
+      input.db.fetchAIParameterBeliefs?.({ entityKeys: beliefEntityKeys, limit: 60 }) ?? Promise.resolve([]),
     ]), input.timeoutMs, 'weekly_plan_memory_timeout')
     const entityProjectContexts = contextEntities.map(entityToProjectContext).filter((ctx): ctx is ProjectContext => Boolean(ctx))
     const entityTaskContexts = contextEntities.map(entityToTaskContext).filter((ctx): ctx is TaskContext => Boolean(ctx))
@@ -99,6 +110,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
       projectContexts: uniqueBy([...projectContexts, ...entityProjectContexts], ctx => ctx.projectId),
       taskContexts: uniqueBy([...taskContexts, ...entityTaskContexts], ctx => ctx.taskId),
       memorySnapshots,
+      parameterBeliefs,
       recommendationFeedback,
     }
     const semanticCandidateKeys = uniqueStrings(contextEntities.flatMap(entity => entity.relatedEntities ?? []))
@@ -118,6 +130,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
         feedbackCount: recommendationFeedback.length,
         graphEdgeCount: contextEdges.length,
         snapshotCount: memorySnapshots.length,
+        parameterBeliefCount: parameterBeliefs.length,
         elapsedMs: Math.round(performance.now() - startedAt),
         timedOut: false,
         exactEntityCount: contextEntities.length,

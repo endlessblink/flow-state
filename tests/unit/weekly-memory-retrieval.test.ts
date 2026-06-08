@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { retrieveWeeklyAIMemory, type WeeklyMemoryDb } from '@/services/ai/pipeline/weeklyMemoryRetrieval'
-import type { AIContextEdge, AIContextEntity, AIMemorySnapshot, AIRecommendationFeedback, ProjectContext, TaskContext } from '@/types/aiMemory'
+import type { AIContextEdge, AIContextEntity, AIMemorySnapshot, AIParameterBelief, AIRecommendationFeedback, ProjectContext, TaskContext } from '@/types/aiMemory'
 
 const taskId = '11111111-1111-4111-8111-111111111111'
 const projectId = '22222222-2222-4222-8222-222222222222'
@@ -69,6 +69,7 @@ function dbStub(overrides: Partial<WeeklyMemoryDb> = {}): WeeklyMemoryDb {
     fetchAIRecommendationFeedback: vi.fn(async () => []),
     fetchAIContextEdges: vi.fn(async () => []),
     fetchAIMemorySnapshots: vi.fn(async () => []),
+    fetchAIParameterBeliefs: vi.fn(async () => []),
     ...overrides,
   }
 }
@@ -105,6 +106,15 @@ describe('retrieveWeeklyAIMemory', () => {
       confidence: 0.82,
       staleAfter: '2026-07-08T08:00:00.000Z',
     }]
+    const parameterBeliefs: AIParameterBelief[] = [{
+      entityKey: 'week:2026-06-08',
+      entityType: 'week',
+      parameterKey: 'thisWeekImportance',
+      beliefJson: { value: 'client_money' },
+      confidence: 0.88,
+      impactWeight: 0.85,
+      updatedAt: '2026-06-08T08:15:00.000Z',
+    }]
     const db = dbStub({
       fetchProjectContexts: vi.fn(async ids => ids.map(id => projectContext(id, 'Legacy project context'))),
       fetchTaskContexts: vi.fn(async ids => ids.map(id => taskContext(id))),
@@ -140,6 +150,7 @@ describe('retrieveWeeklyAIMemory', () => {
       fetchAIRecommendationFeedback: vi.fn(async () => feedback),
       fetchAIContextEdges: vi.fn(async () => contextEdges),
       fetchAIMemorySnapshots: vi.fn(async () => memorySnapshots),
+      fetchAIParameterBeliefs: vi.fn(async () => parameterBeliefs),
     })
 
     const result = await retrieveWeeklyAIMemory({
@@ -176,9 +187,24 @@ describe('retrieveWeeklyAIMemory', () => {
       scopes: ['user', 'project', 'task', 'week'],
       limit: 12,
     })
+    expect(db.fetchAIParameterBeliefs).toHaveBeenCalledWith({
+      entityKeys: [
+        `project:${projectId}`,
+        'project:uncategorized',
+        `task:${taskId}`,
+        'task:local-temp-task',
+        'week:2026-06-08',
+        'preference:ranking_focus',
+        'preference:energy_fit',
+        'preference:follow_through',
+        'preference:brevity',
+      ],
+      limit: 60,
+    })
     expect(result.memory.projectContexts?.map(ctx => ctx.projectId)).toEqual([projectId, 'uncategorized'])
     expect(result.memory.taskContexts?.map(ctx => ctx.taskId)).toEqual([taskId])
     expect(result.memory.memorySnapshots).toEqual(memorySnapshots)
+    expect(result.memory.parameterBeliefs).toEqual(parameterBeliefs)
     expect(result.memory.recommendationFeedback).toEqual(feedback)
     expect(result.clarificationEvents).toHaveLength(21)
     expect(result.edges).toHaveLength(4)
@@ -191,6 +217,7 @@ describe('retrieveWeeklyAIMemory', () => {
       feedbackCount: 1,
       graphEdgeCount: 1,
       snapshotCount: 1,
+      parameterBeliefCount: 1,
       timedOut: false,
       exactEntityCount: 1,
       semanticCandidateCount: 1,
@@ -227,6 +254,7 @@ describe('retrieveWeeklyAIMemory', () => {
     expect(result.diagnostics.projectContextCount).toBe(0)
     expect(result.diagnostics.taskContextCount).toBe(0)
     expect(result.diagnostics.snapshotCount).toBe(0)
+    expect(result.diagnostics.parameterBeliefCount).toBe(0)
     expect(result.edges).toHaveLength(2)
   })
 })

@@ -212,6 +212,7 @@
 - 2026-06-08: Response-quality coverage now treats prioritization, next-task, overdue-triage, and task-breakdown modes as high-materiality even when only a few task candidates are visible. A saved high-confidence `rankingFocus` belief still suppresses re-asking for those modes.
 - 2026-06-08: Prioritization routing now loads the active task list rather than the overdue-only tool. This prevents "prioritize my tasks" from skipping the clarification gate simply because there are no overdue tasks.
 - 2026-06-08: Broad clarification now uses heuristic EVPI candidate scoring instead of a single hardcoded mode prompt. It scores targeted parameters, skips recently resolved prompt variants, records selected score/user cost/candidate metadata in debug, and can ask the next high-value missing dimension without repeating the same generic ranking-focus question.
+- 2026-06-08: Weekly planning retrieval now loads scoped `ai_parameter_beliefs` and uses them in coverage/EVPI scoring. Week/preference beliefs can raise impact or preference confidence, but project meaning and task context still require project/task-scoped evidence, so one broad answer cannot fake full project understanding.
 
 ---
 

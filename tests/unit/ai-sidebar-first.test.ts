@@ -1119,6 +1119,84 @@ describe('AI sidebar-first desktop experience', () => {
     })
   })
 
+  it('uses saved weekly beliefs for impact without treating one answer as project understanding', () => {
+    const tasks = [
+      {
+        id: 'task-memory',
+        title: 'Fix FlowState chat memory so it stops giving generic plans',
+        description: 'Broad product-quality work. The assistant should ask before ranking if context is missing.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [{ id: 'sub-memory', title: 'Prove no barrage before clarification', isCompleted: false }],
+        dueDate: '2026-06-11',
+        projectId: 'uncategorized',
+        estimatedDuration: 120,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-paper',
+        title: 'Buy printer paper',
+        description: 'Small admin task used to catch shallow priority-only ranking.',
+        status: 'todo',
+        priority: 'high',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'uncategorized',
+        estimatedDuration: 20,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-followup',
+        title: 'Draft follow-up tasks for the memory interview flow',
+        description: 'Should be proposed only with confirmation, not silently created.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-13',
+        projectId: 'uncategorized',
+        estimatedDuration: 90,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+      {
+        parameterBeliefs: [{
+          entityKey: 'week:2026-06-02',
+          entityType: 'week',
+          parameterKey: 'thisWeekImportance',
+          beliefJson: { value: 'client_money', selectedLabel: 'Client or money' },
+          confidence: 0.92,
+          impactWeight: 0.85,
+          updatedAt: '2026-06-07T08:30:00.000Z',
+        }],
+      },
+    )
+
+    const interview = buildWeeklyPlanningInterview(context, [])
+    const prompt = buildWeeklyPlanPrompt(context)
+
+    expect(interview?.coverage?.dimensions.impact).toBeGreaterThanOrEqual(0.9)
+    expect(interview?.coverage?.dimensions.preferences).toBeGreaterThanOrEqual(0.9)
+    expect(interview?.coverage?.dimensions.project_meaning).toBeLessThan(0.45)
+    expect(interview?.coverage?.missing).toContain('project_meaning')
+    expect(interview?.question.reason).toBe('missing_project_understanding')
+    expect(prompt).toContain('"parameterBeliefs"')
+    expect(prompt).toContain('"parameterKey": "thisWeekImportance"')
+  })
+
   it('uses saved project context as ranking evidence instead of project-name guessing', () => {
     const tasks = [
       {
@@ -2910,6 +2988,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 })')
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain("fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week'], limit: 12 })")
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('snapshotCount: memorySnapshots.length')
+    expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('fetchAIParameterBeliefs?.({ entityKeys: beliefEntityKeys, limit: 60 })')
+    expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('parameterBeliefCount: parameterBeliefs.length')
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('summarizeAIMemoryLifecycle')
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('lifecycle')
     expect(src('src/services/ai/pipeline/memoryLifecycle.ts')).toContain('assessAIContextEntityLifecycle')

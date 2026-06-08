@@ -822,6 +822,29 @@ describe('AI sidebar-first desktop experience', () => {
     })
     expect(interview?.coverage?.score).toBeLessThan(0.5)
     expect(interview?.coverage?.missing).toEqual(expect.arrayContaining(['project_meaning']))
+    expect(interview?.debug?.evpi).toMatchObject({
+      targetedParameters: expect.arrayContaining(['project_meaning']),
+      askThreshold: expect.any(Number),
+      coverageScore: interview?.coverage?.score,
+    })
+    expect(interview?.debug?.evpi?.heuristicEvpi).toBeGreaterThan(interview?.debug?.evpi?.userCost ?? 0)
+    expect(interview?.debug?.evpi?.selectedScore).toBeGreaterThan(0)
+
+    const repeatedProjectEvent = {
+      entityKey: 'project:important-client-launch',
+      entityType: 'project',
+      questionId: 'project_context_important-client-launch',
+      eventType: 'answered',
+      createdAt: '2026-06-07T08:30:00Z',
+    } as const
+    const dedupedInterview = buildWeeklyPlanningInterview(context, [repeatedProjectEvent])
+    expect(dedupedInterview?.question.id).not.toBe('project_context_important-client-launch')
+    expect(dedupedInterview?.debug?.evpi?.candidates).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        questionId: 'project_context_important-client-launch',
+        skippedReason: 'recently_resolved',
+      }),
+    ]))
   })
 
   it('uses saved project context as ranking evidence instead of project-name guessing', () => {

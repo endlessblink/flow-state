@@ -1388,6 +1388,10 @@ function clarificationDebugLines(card: AIClarificationArtifact): string[] {
     const feedback = retrieval.feedbackCount ? `, ${retrieval.feedbackCount} feedback` : ''
     lines.push(`memory: ${retrieval.entityKeyCount} keys, ${retrieval.eventCount} events${feedback}, ${retrieval.elapsedMs ?? '?'}ms${retrieval.timedOut ? ', timed out' : ''}`)
   }
+  if (card.debug?.evpi) {
+    const evpi = card.debug.evpi
+    lines.push(`question value: ${evpi.selectedScore} (${evpi.targetedParameters.join(', ')})`)
+  }
   if (card.debug?.reason) lines.push(card.debug.reason)
   return lines
 }

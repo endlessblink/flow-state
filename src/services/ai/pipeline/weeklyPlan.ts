@@ -3,7 +3,9 @@ import type {
   AIClarificationArtifact,
   AIClarificationCoverage,
   AIClarificationEvent,
+  AIClarificationEVPIScore,
   AIClarificationQuestion,
+  AIUncertaintyDimension,
   AIMemoryPatchOperation,
   AIMemoryQuestionOption,
   AIRecommendationFeedback,
@@ -14,6 +16,20 @@ import { memoryEvidencePolicy, sanitizeWeekContextForPrompt } from './memoryEvid
 
 export type PlannerLocale = 'en' | 'he'
 export type PlannerDirection = 'ltr' | 'rtl'
+
+const CLARIFICATION_EVPI_ASK_THRESHOLD = 0.28
+
+const CLARIFICATION_PARAMETER_IMPACT: Record<AIUncertaintyDimension, number> = {
+  impact: 0.9,
+  project_meaning: 0.88,
+  task_context: 0.74,
+  stale_context: 0.95,
+  stakeholders: 0.65,
+  dependencies: 0.62,
+  history: 0.45,
+  energy_fit: 0.35,
+  preferences: 0.4,
+}
 
 export type PlannerTaskSnapshot = {
   id: string
@@ -683,9 +699,11 @@ export function buildWeeklyPlanningInterview(
   const selected = selectQuickDraftTasks(context.tasks)
   const coverage = computeWeeklyPlanningCoverage(context, selected)
   if (coverage.decision !== 'ask') return null
-  const question = selectClarificationQuestion(context, selected, recentEvents, coverage)
+  const selection = selectClarificationQuestion(context, selected, recentEvents, coverage)
+  const question = selection?.question ?? null
   if (!question) return null
   const memoryKey = clarificationMemoryKey(question, context)
+  const evpiDebug = selection?.evpi
   return {
     schemaVersion: 'ai-clarification.v1',
     kind: 'weekly_planning',
@@ -701,7 +719,8 @@ export function buildWeeklyPlanningInterview(
     memoryKey,
     coverage,
     pathType: 'clarify_first',
-    debug: debug ?? {
+    debug: {
+      ...(debug ?? {
       retrieval: {
         source: 'fallback',
         entityKeyCount: 0,
@@ -713,6 +732,8 @@ export function buildWeeklyPlanningInterview(
         ? `missing ${coverage.missing.join(', ')}`
         : 'weekly planning context coverage is too low',
       candidateCount: selected.length,
+      }),
+      evpi: evpiDebug,
     },
   }
 }
@@ -754,56 +775,49 @@ function selectClarificationQuestion(
   selected: PlannerTaskSnapshot[],
   recentEvents: AIClarificationEvent[],
   coverage: AIClarificationCoverage,
-): AIClarificationQuestion | null {
+): { question: AIClarificationQuestion; evpi: AIClarificationEVPIScore } | null {
   const preferredReasons = coverage.missing
-  const taskQuestion = buildQuickDraftQuestions(context, selected)
+  const candidates: AIClarificationQuestion[] = buildQuickDraftQuestions(context, selected)
     .filter(question => question.entityType !== undefined)
-    .sort((a, b) => questionPriority(b.reason, preferredReasons) - questionPriority(a.reason, preferredReasons))
-    .find(question => {
-      const key = clarificationMemoryKey(question as AIClarificationQuestion, context)
-      return !recentClarificationResolved(recentEvents, key, question.id || question.question)
-    })
-
-  if (taskQuestion) {
-    return {
-      id: taskQuestion.id || `clarify_${taskQuestion.entityType}_${taskQuestion.entityId}`,
-      entityType: taskQuestion.entityType,
-      entityId: taskQuestion.entityId,
-      reason: taskQuestion.reason || 'missing_context',
-      question: taskQuestion.question,
-      options: taskQuestion.options ?? [],
-      allowFreeText: taskQuestion.allowFreeText,
-      freeTextPatch: taskQuestion.freeTextPatch,
-      freeTextPlaceholder: taskQuestion.freeTextPlaceholder,
-      relatedTaskIds: taskQuestion.relatedTaskIds ?? [],
-    }
-  }
+    .map(question => ({
+      id: question.id || `clarify_${question.entityType}_${question.entityId}`,
+      entityType: question.entityType,
+      entityId: question.entityId,
+      reason: question.reason || 'missing_context',
+      question: question.question,
+      options: question.options ?? [],
+      allowFreeText: question.allowFreeText,
+      freeTextPatch: question.freeTextPatch,
+      freeTextPlaceholder: question.freeTextPlaceholder,
+      relatedTaskIds: question.relatedTaskIds ?? [],
+    }))
 
   const unknownContextCount = context.tasks.filter(needsPlanningClarification).length
-  if (unknownContextCount < 2) return null
-  const questionId = `week_importance_${context.weekStartIso}`
-  const memoryKey = `week:${context.weekStartIso}`
-  if (recentClarificationResolved(recentEvents, memoryKey, questionId)) return null
-  const locale = context.locale
-  return {
-    id: questionId,
-    entityType: 'week',
-    entityId: context.weekStartIso,
-    reason: 'missing_week_priorities',
-    question: locale === 'he' ? 'מה הכי חשוב להגן עליו השבוע?' : 'What matters most to protect this week?',
-    options: [
-      weekOption(context.weekStartIso, 'work_commitment', locale === 'he' ? 'התחייבות עבודה' : 'Work commitment', 'thisWeekImportance', 'work_commitment'),
-      weekOption(context.weekStartIso, 'client_money', locale === 'he' ? 'לקוח/כסף' : 'Client or money', 'thisWeekImportance', 'client_money'),
-      weekOption(context.weekStartIso, 'family_admin', locale === 'he' ? 'משפחה/אדמין' : 'Family or admin', 'thisWeekImportance', 'family_admin'),
-      weekOption(context.weekStartIso, 'creative_momentum', locale === 'he' ? 'מומנטום יצירתי' : 'Creative momentum', 'thisWeekImportance', 'creative_momentum'),
-      weekOption(context.weekStartIso, 'reduce_chaos', locale === 'he' ? 'להוריד עומס' : 'Reduce chaos', 'thisWeekImportance', 'reduce_chaos'),
-      weekOption(context.weekStartIso, 'not_sure', locale === 'he' ? 'לא בטוח' : 'Not sure', 'thisWeekImportance', 'unknown'),
-    ],
-    allowFreeText: true,
-    freeTextPatch: { field: 'whyItMatters', operation: 'set' },
-    freeTextPlaceholder: locale === 'he' ? 'אופציונלי: מה ייחשב שבוע טוב?' : 'Optional: what would make this a good week?',
-    relatedTaskIds: selected.slice(0, 5).map(task => task.id),
+  if (unknownContextCount >= 2) {
+    const questionId = `week_importance_${context.weekStartIso}`
+    const locale = context.locale
+    candidates.push({
+      id: questionId,
+      entityType: 'week',
+      entityId: context.weekStartIso,
+      reason: 'missing_week_priorities',
+      question: locale === 'he' ? 'מה הכי חשוב להגן עליו השבוע?' : 'What matters most to protect this week?',
+      options: [
+        weekOption(context.weekStartIso, 'work_commitment', locale === 'he' ? 'התחייבות עבודה' : 'Work commitment', 'thisWeekImportance', 'work_commitment'),
+        weekOption(context.weekStartIso, 'client_money', locale === 'he' ? 'לקוח/כסף' : 'Client or money', 'thisWeekImportance', 'client_money'),
+        weekOption(context.weekStartIso, 'family_admin', locale === 'he' ? 'משפחה/אדמין' : 'Family or admin', 'thisWeekImportance', 'family_admin'),
+        weekOption(context.weekStartIso, 'creative_momentum', locale === 'he' ? 'מומנטום יצירתי' : 'Creative momentum', 'thisWeekImportance', 'creative_momentum'),
+        weekOption(context.weekStartIso, 'reduce_chaos', locale === 'he' ? 'להוריד עומס' : 'Reduce chaos', 'thisWeekImportance', 'reduce_chaos'),
+        weekOption(context.weekStartIso, 'not_sure', locale === 'he' ? 'לא בטוח' : 'Not sure', 'thisWeekImportance', 'unknown'),
+      ],
+      allowFreeText: true,
+      freeTextPatch: { field: 'whyItMatters', operation: 'set' },
+      freeTextPlaceholder: locale === 'he' ? 'אופציונלי: מה ייחשב שבוע טוב?' : 'Optional: what would make this a good week?',
+      relatedTaskIds: selected.slice(0, 5).map(task => task.id),
+    })
   }
+
+  return selectHighestEVPIQuestion(candidates, context, recentEvents, coverage, preferredReasons)
 }
 
 function questionPriority(reason: string | undefined, missing: AIClarificationCoverage['missing']): number {
@@ -815,6 +829,123 @@ function questionPriority(reason: string | undefined, missing: AIClarificationCo
   if (reason.includes('stake') && missing.includes('impact')) score += 2
   if (reason.includes('priority') && missing.includes('preferences')) score += 2
   return score
+}
+
+function selectHighestEVPIQuestion(
+  questions: AIClarificationQuestion[],
+  context: WeekContext,
+  recentEvents: AIClarificationEvent[],
+  coverage: AIClarificationCoverage,
+  preferredReasons: AIClarificationCoverage['missing'],
+): { question: AIClarificationQuestion; evpi: AIClarificationEVPIScore } | null {
+  const scored = questions
+    .map(question => scoreClarificationQuestion(question, context, recentEvents, coverage, preferredReasons))
+    .sort((a, b) => {
+      if (b.selectedScore !== a.selectedScore) return b.selectedScore - a.selectedScore
+      return questionPriority(b.reason, preferredReasons) - questionPriority(a.reason, preferredReasons)
+    })
+  const selected = scored.find(candidate => !candidate.skippedReason && candidate.selectedScore > CLARIFICATION_EVPI_ASK_THRESHOLD)
+    ?? scored.find(candidate => !candidate.skippedReason)
+  if (!selected) return null
+  return {
+    question: selected.question,
+    evpi: {
+      targetedParameters: selected.targetedParameters,
+      heuristicEvpi: selected.heuristicEvpi,
+      userCost: selected.userCost,
+      selectedScore: selected.selectedScore,
+      askThreshold: CLARIFICATION_EVPI_ASK_THRESHOLD,
+      coverageScore: coverage.score,
+      candidates: scored.map(candidate => ({
+        questionId: candidate.question.id,
+        reason: candidate.reason,
+        targetedParameters: candidate.targetedParameters,
+        heuristicEvpi: candidate.heuristicEvpi,
+        userCost: candidate.userCost,
+        selectedScore: candidate.selectedScore,
+        skippedReason: candidate.skippedReason,
+      })),
+    },
+  }
+}
+
+function scoreClarificationQuestion(
+  question: AIClarificationQuestion,
+  context: WeekContext,
+  recentEvents: AIClarificationEvent[],
+  coverage: AIClarificationCoverage,
+  preferredReasons: AIClarificationCoverage['missing'],
+): {
+  question: AIClarificationQuestion
+  reason: string
+  targetedParameters: AIUncertaintyDimension[]
+  heuristicEvpi: number
+  userCost: number
+  selectedScore: number
+  skippedReason?: 'recently_resolved' | 'no_targets'
+} {
+  const targetedParameters = targetParametersForQuestion(question, preferredReasons)
+  const memoryKey = clarificationMemoryKey(question, context)
+  const skippedReason = recentClarificationResolved(recentEvents, memoryKey, question.id || question.question)
+    ? 'recently_resolved'
+    : targetedParameters.length === 0
+      ? 'no_targets'
+      : undefined
+  const heuristicEvpi = targetedParameters.reduce((sum, parameter) => {
+    const confidence = Number(coverage.dimensions[parameter] ?? 0)
+    const uncertainty = parameterUncertainty(confidence)
+    const expectedReduction = 0.65 + (0.2 * (1 - confidence))
+    return sum + uncertainty * CLARIFICATION_PARAMETER_IMPACT[parameter] * expectedReduction * 1.2
+  }, 0)
+  const userCost = 0.08 + (0.07 * Math.max(1, targetedParameters.length)) + (targetedParameters.length > 1 ? 0.05 : 0)
+  const selectedScore = skippedReason ? -1 : heuristicEvpi - userCost
+  return {
+    question,
+    reason: question.reason,
+    targetedParameters,
+    heuristicEvpi: Number(heuristicEvpi.toFixed(3)),
+    userCost: Number(userCost.toFixed(3)),
+    selectedScore: Number(selectedScore.toFixed(3)),
+    skippedReason,
+  }
+}
+
+function parameterUncertainty(confidence: number): number {
+  const bounded = Math.min(1, Math.max(0, confidence))
+  let uncertainty = 1 - bounded
+  if (bounded < 0.3) uncertainty *= 1.8
+  else if (bounded < 0.5) uncertainty *= 1.4
+  return Math.min(1, Math.max(0, uncertainty))
+}
+
+function targetParametersForQuestion(question: AIClarificationQuestion, preferredReasons: AIClarificationCoverage['missing']): AIUncertaintyDimension[] {
+  const targets = new Set<AIUncertaintyDimension>()
+  const reason = question.reason || ''
+  if (reason.includes('stale')) targets.add('stale_context')
+  if (reason.includes('project')) targets.add('project_meaning')
+  if (reason.includes('task')) targets.add('task_context')
+  if (reason.includes('week') || reason.includes('priorit')) {
+    targets.add('impact')
+    targets.add('preferences')
+  }
+  if (question.options.some(option => /commitment|client|money|stake|priority|חשוב|לקוח|כסף|התחייבות/i.test(`${option.id} ${option.label} ${option.effect}`))) {
+    targets.add('impact')
+    targets.add('stakeholders')
+  }
+  if (question.entityType !== 'week' && (question.relatedTaskIds.length > 1 || question.reason.includes('followup'))) targets.add('dependencies')
+  if (question.freeTextPatch?.field && /why|success|matter|context|priority/i.test(question.freeTextPatch.field)) {
+    if (question.entityType === 'project') targets.add('project_meaning')
+    else if (question.entityType === 'week') {
+      targets.add('impact')
+      targets.add('preferences')
+    } else {
+      targets.add('task_context')
+    }
+  }
+  if (!targets.size) {
+    for (const missing of preferredReasons.slice(0, 2)) targets.add(missing)
+  }
+  return [...targets].filter(target => preferredReasons.includes(target) || target === 'impact' || target === 'preferences')
 }
 
 function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTaskSnapshot[]): AIClarificationCoverage {

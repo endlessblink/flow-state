@@ -125,6 +125,24 @@ export interface AIClarificationCoverage {
   decision: 'ask' | 'proceed_with_uncertainty' | 'proceed' | 'neutral_candidates'
 }
 
+export interface AIClarificationEVPIScore {
+  targetedParameters: AIUncertaintyDimension[]
+  heuristicEvpi: number
+  userCost: number
+  selectedScore: number
+  askThreshold: number
+  coverageScore: number
+  candidates: Array<{
+    questionId: string
+    reason: string
+    targetedParameters: AIUncertaintyDimension[]
+    heuristicEvpi: number
+    userCost: number
+    selectedScore: number
+    skippedReason?: 'recently_resolved' | 'no_targets'
+  }>
+}
+
 export interface AIClarificationArtifact {
   schemaVersion: 'ai-clarification.v1'
   kind: 'weekly_planning' | 'response_quality'
@@ -151,6 +169,7 @@ export interface AIClarificationArtifact {
     }
     reason: string
     candidateCount: number
+    evpi?: AIClarificationEVPIScore
   }
 }
 

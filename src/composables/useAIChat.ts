@@ -2182,6 +2182,7 @@ export function useAIChat() {
                 contextSnapshot: {
                   candidateTaskIds: clarification.candidateTaskIds,
                   coverage: clarification.coverage,
+                  evpi: clarification.debug?.evpi,
                   retrieval: clarification.debug?.retrieval,
                   feedbackCount: memoryFeedbackCount,
                 },

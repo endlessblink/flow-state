@@ -2,6 +2,35 @@
 
 ## 🔜 Next Up — AI flows (TASK-1814 follow-ups; start here after restart)
 
+## AI Chat Quality System Lane — localhost first, Electron later
+
+**Goal**: Make FlowState chat produce high-quality, low-overwhelm answers across planning, prioritization, task breakdown, and follow-up workflows by grounding responses in server-backed memory, explicit uncertainty, user feedback, and evidence-based UI controls.
+
+**Lane rule**: Work this lane in order. Do not ask the user to test a phase until localhost behavior is verified by focused tests plus `npm run type-check` and `npm run build`. Electron packaging/update verification is a later gate after localhost proves the flow.
+
+| Order | Task | Slice | Status | Localhost proof |
+| --- | --- | --- | --- | --- |
+| 1 | TASK-1830 | Server-backed structured memory core: entities, events, synthetic keys, graph edges, missing-schema fallback | 🔄 In progress | Contract tests for migrations/RLS/client fallback |
+| 2 | TASK-1831 | Global clarify-before-answer contract: one question at a time, cooldowns, generate-with-uncertainty escapes | 🔄 In progress | Mounted clarification-card tests and continuation tests |
+| 3 | TASK-1831A | EVPI-style clarification scoring: target parameters, heuristic EVPI, user cost, selected score, event/debug metadata | 🔄 Current slice | Unit tests showing highest-value non-repeated question is selected |
+| 4 | TASK-1835 | Hybrid retrieval pipeline: exact SQL entities, event history, feedback, optional pgvector-ready semantic recall, timeout-safe fallback | 📋 Planned | Retrieval tests with bounded context and no raw memory dumps |
+| 5 | TASK-1832 | Answer-quality evaluator and ranking rubric: bad/acceptable/excellent, evidence arrays, anti-fake-reasoning checks | 🔄 In progress | Quality tests reject generic/unsupported ranking |
+| 6 | TASK-1833 | Planning UI controls: task cards, accept/postpone/dismiss/simplify, reason chips, immediate visual suppression | 🔄 In progress | Mounted UI tests for feedback payloads and visual suppression |
+| 7 | TASK-1836 | Recommendation feedback learning: cooldowns, revisit dates, implicit positives, preference aggregation | 📋 Planned | Ranking tests prove dismissed/postponed items do not reappear unchanged |
+| 8 | TASK-1834 | Observability: phase timing, retrieval/debug metadata, path types, slow-answer diagnosis | 🔄 In progress | Activity-row tests and debug metadata assertions |
+| 9 | TASK-1837 | Memory lifecycle: summarization, confidence decay, retention, stale confirmation, export/delete policy | 📋 Planned | Lifecycle tests for stale/summary/correction behavior |
+| 10 | TASK-1838 | Localhost end-to-end QA lane: dev-server/manual browser checks for weekly plan, response-quality clarification, feedback, debug | 📋 Planned | Browser evidence and documented expected behavior |
+| 11 | TASK-1839 | Electron gate: package, updater manifest, desktop verification after localhost is stable | ⏸ Deferred | `npm run electron:build` and updater manifest only after user re-enables Electron |
+
+**Research-backed additions still to implement**:
+- `ai_parameter_beliefs` or equivalent structured parameter-belief store for deadline, priority, scope, energy fit, dependencies, success criteria, constraints, and preferences.
+- pgvector-ready memory records with metadata filters, HNSW indexing when available, and SQL-first hybrid retrieval.
+- Clarification event metadata for `targeted_parameters`, `heuristic_evpi`, `selected_score`, and dedupe/cooldown outcomes.
+- Snapshot/summarization jobs that compact old event history into inspectable semantic facts without erasing corrections.
+- Feedback aggregation that turns repeated dismiss/postpone reasons into explicit preference facts instead of hidden ranking magic.
+
+---
+
 ### TASK-1830: Server-backed AI context memory for all chat flows (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1828, TASK-1829
@@ -62,6 +91,32 @@
 - 2026-06-08: Clarification continuation messages now include the actual selected button/free-text answer as compact quoted context, so localhost flows still proceed correctly before live Supabase memory migrations are applied.
 - 2026-06-08: Clarification continuations now run as hidden control messages with a typed mode marker and bypass the ask gate once, so answering a card does not add noisy chat content or immediately re-ask the same question while persistence is delayed.
 - 2026-06-08: Weekly clarification now uses a progressive one-question-at-a-time ladder for button-only answers: project/category, why it matters now, success this week, and slip risk. Free text can still satisfy enough context and continue immediately.
+
+---
+
+### TASK-1831A: EVPI-style clarification scoring and parameter belief tracking (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
+
+**Why**: "Ask one question at a time" is not enough unless the system asks the right question. Clarification should be chosen because it has high expected value for the answer, not because it appears first in a hardcoded list.
+
+**Scope**:
+- Define structured planning parameters: project meaning, task context, impact/stakes, stakeholders, dependencies, energy fit, history, preferences, stale context, and later deadline/scope/success criteria.
+- Add heuristic EVPI scoring: uncertainty × task-planning impact × expected reduction − user-cost.
+- Use EVPI scoring to select the highest-value non-repeated clarification question.
+- Store EVPI details in debug/context metadata: targeted parameters, heuristic EVPI, user cost, selected score, threshold, skipped/recently-resolved candidates.
+- Add `ai_parameter_beliefs` or equivalent server-backed belief records after the heuristic is proven locally.
+- Update belief confidence after user answers and use answer/feedback outcomes to learn impact weights over time.
+
+**Acceptance**:
+- When multiple clarification questions are possible, the selected card is the highest-value non-repeated question by EVPI score.
+- The assistant does not ask a lower-value question just because it appears first in the question list.
+- Clarification debug/event context includes targeted parameters and score metadata.
+- Recent answered/dismissed/generated-with-uncertainty questions are skipped and appear as skipped candidates in debug metadata.
+- The heuristic remains local/fast and does not add extra LLM calls to the hot path.
+
+**Progress**:
+- 2026-06-08: Added local heuristic EVPI scoring over existing coverage dimensions, including targeted parameters, user cost, selected score, skipped candidates, clarification debug display, and event context metadata. Mounted tests verify project-meaning questions outrank broad week questions when project meaning is the high-value missing context, and recently answered questions are skipped.
 
 ---
 

@@ -1,9 +1,23 @@
-import type { AIClarificationArtifact, AIClarificationEvent, AIParameterBelief } from '@/types/aiMemory'
+import type { AIClarificationArtifact, AIClarificationEvent, AIClarificationEVPIScore, AIParameterBelief, AIUncertaintyDimension } from '@/types/aiMemory'
 import { collectCardTasks, type CardToolResult } from './cardsBlock'
 import type { RoutedIntent } from './intentRouter'
 import { computeBroadTaskClarificationCoverage } from './responseClarificationPolicy'
 
 type ChatOutputLanguage = 'en' | 'he'
+const BROAD_CLARIFICATION_EVPI_ASK_THRESHOLD = 0.28
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+const BROAD_PARAMETER_IMPACT: Record<AIUncertaintyDimension, number> = {
+  impact: 0.9,
+  preferences: 0.78,
+  energy_fit: 0.76,
+  stakeholders: 0.74,
+  dependencies: 0.7,
+  history: 0.58,
+  project_meaning: 0.66,
+  task_context: 0.62,
+  stale_context: 0.72,
+}
 
 export const BROAD_TASK_RECOMMENDATION_RE = /(what should i do|what to do|prioriti[sz]e|priority|important|overwhelm|plan my day|plan today|focus on|next task|next action|מה לעשות|מה כדאי|לתעדף|סדר עדיפויות|חשוב|להתמקד|מוצף|לתכנן|המשימה הבאה)/i
 
@@ -46,13 +60,15 @@ export function buildBroadTaskClarification(
     .map(task => String(task.id || ''))
     .filter(Boolean)
     .slice(0, 12)
-  if (!candidateTaskIds.length || hasRecentClarificationDecision(events)) return null
+  if (!candidateTaskIds.length || hasRecentAskedOnlyClarification(events)) return null
   const coverage = computeBroadTaskClarificationCoverage(routed.responseMode, candidateTaskIds.length, beliefs)
   if (coverage.decision !== 'ask') return null
 
   const memoryKey = broadTaskClarificationMemoryKey(routed)
   const entityId = routed.responseMode || 'general'
-  const prompt = promptForBroadTaskMode(routed.responseMode, lang)
+  const selection = selectBroadClarificationPrompt(routed.responseMode, lang, events, coverage, memoryKey, entityId)
+  if (!selection) return null
+  const prompt = selection.prompt
 
   return {
     schemaVersion: 'ai-clarification.v1',
@@ -69,10 +85,10 @@ export function buildBroadTaskClarification(
     actions: ['generate_current', 'show_candidates', 'pause_save'],
     coverage,
     question: {
-      id: `response_quality_${entityId}`,
+      id: `response_quality_${entityId}_${prompt.id}`,
       entityType: 'workflow',
       entityId,
-      reason: 'missing_response_direction',
+      reason: prompt.reason,
       question: prompt.question,
       options: prompt.options.map(option => ({
         id: `ranking_${option.id}`,
@@ -103,8 +119,9 @@ export function buildBroadTaskClarification(
         projectContextCount: 0,
         taskContextCount: 0,
       },
-      reason: `shared uncertainty policy says a broad task answer would otherwise rank ${candidateTaskIds.length} candidates without a saved response direction`,
+      reason: `heuristic EVPI selected a ${selection.evpi.targetedParameters.join(', ')} clarification before ranking ${candidateTaskIds.length} candidates`,
       candidateCount: candidateTaskIds.length,
+      evpi: selection.evpi,
     },
   }
 }
@@ -117,13 +134,121 @@ type BroadTaskPromptOption = {
 }
 
 type BroadTaskPrompt = {
+  id: string
+  reason: string
+  targetedParameters: AIUncertaintyDimension[]
   question: string
   freeTextPlaceholderHe: string
   freeTextPlaceholderEn: string
   options: BroadTaskPromptOption[]
 }
 
-function promptForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang: ChatOutputLanguage): BroadTaskPrompt {
+function selectBroadClarificationPrompt(
+  responseMode: RoutedIntent['responseMode'],
+  lang: ChatOutputLanguage,
+  events: AIClarificationEvent[],
+  coverage: NonNullable<AIClarificationArtifact['coverage']>,
+  memoryKey: string,
+  entityId: string,
+): { prompt: BroadTaskPrompt; evpi: AIClarificationEVPIScore } | null {
+  const prompts = promptsForBroadTaskMode(responseMode, lang)
+  const scored = prompts
+    .map(prompt => scoreBroadPrompt(prompt, events, coverage, memoryKey, entityId))
+    .sort((a, b) => b.selectedScore - a.selectedScore)
+  const selected = scored.find(candidate => !candidate.skippedReason && candidate.selectedScore > BROAD_CLARIFICATION_EVPI_ASK_THRESHOLD)
+    ?? scored.find(candidate => !candidate.skippedReason)
+  if (!selected) return null
+  return {
+    prompt: selected.prompt,
+    evpi: {
+      targetedParameters: selected.targetedParameters,
+      heuristicEvpi: selected.heuristicEvpi,
+      userCost: selected.userCost,
+      selectedScore: selected.selectedScore,
+      askThreshold: BROAD_CLARIFICATION_EVPI_ASK_THRESHOLD,
+      coverageScore: coverage.score,
+      candidates: scored.map(candidate => ({
+        questionId: `response_quality_${entityId}_${candidate.prompt.id}`,
+        reason: candidate.reason,
+        targetedParameters: candidate.targetedParameters,
+        heuristicEvpi: candidate.heuristicEvpi,
+        userCost: candidate.userCost,
+        selectedScore: candidate.selectedScore,
+        skippedReason: candidate.skippedReason,
+      })),
+    },
+  }
+}
+
+function scoreBroadPrompt(
+  prompt: BroadTaskPrompt,
+  events: AIClarificationEvent[],
+  coverage: NonNullable<AIClarificationArtifact['coverage']>,
+  memoryKey: string,
+  entityId: string,
+): {
+  prompt: BroadTaskPrompt
+  reason: string
+  targetedParameters: AIUncertaintyDimension[]
+  heuristicEvpi: number
+  userCost: number
+  selectedScore: number
+  skippedReason?: 'recently_resolved' | 'no_targets'
+} {
+  const targetedParameters = prompt.targetedParameters.filter(parameter => coverage.missing.includes(parameter) || parameter === 'impact' || parameter === 'preferences')
+  const skippedReason = recentBroadPromptResolved(events, memoryKey, `response_quality_${entityId}_${prompt.id}`, `response_quality_${entityId}`)
+    ? 'recently_resolved'
+    : targetedParameters.length === 0
+      ? 'no_targets'
+      : undefined
+  const heuristicEvpi = targetedParameters.reduce((sum, parameter) => {
+    const confidence = Number(coverage.dimensions[parameter] ?? 0)
+    const uncertainty = parameterUncertainty(confidence)
+    const expectedReduction = 0.65 + (0.2 * (1 - confidence))
+    return sum + uncertainty * BROAD_PARAMETER_IMPACT[parameter] * expectedReduction * 1.2
+  }, 0)
+  const userCost = 0.08 + (0.07 * Math.max(1, targetedParameters.length)) + (targetedParameters.length > 1 ? 0.05 : 0)
+  const selectedScore = skippedReason ? -1 : heuristicEvpi - userCost
+  return {
+    prompt,
+    reason: prompt.reason,
+    targetedParameters,
+    heuristicEvpi: Number(heuristicEvpi.toFixed(3)),
+    userCost: Number(userCost.toFixed(3)),
+    selectedScore: Number(selectedScore.toFixed(3)),
+    skippedReason,
+  }
+}
+
+function recentBroadPromptResolved(events: AIClarificationEvent[], entityKey: string, questionId: string, legacyQuestionId: string): boolean {
+  const cutoff = Date.now() - (7 * MS_PER_DAY)
+  return events.some(event =>
+    event.entityKey === entityKey &&
+    (event.questionId === questionId || event.questionId === legacyQuestionId) &&
+    ['answered', 'dismissed', 'generated_with_uncertainty', 'showed_candidates'].includes(event.eventType) &&
+    event.createdAt &&
+    new Date(event.createdAt).getTime() >= cutoff
+  )
+}
+
+function hasRecentAskedOnlyClarification(events: AIClarificationEvent[], now = Date.now()): boolean {
+  return events.some(event => {
+    if (event.eventType !== 'asked') return false
+    const createdAt = event.createdAt ? Date.parse(event.createdAt) : now
+    if (!Number.isFinite(createdAt)) return false
+    return (now - createdAt) / MS_PER_DAY < 1
+  })
+}
+
+function parameterUncertainty(confidence: number): number {
+  const bounded = Math.min(1, Math.max(0, confidence))
+  let uncertainty = 1 - bounded
+  if (bounded < 0.3) uncertainty *= 1.8
+  else if (bounded < 0.5) uncertainty *= 1.4
+  return Math.min(1, Math.max(0, uncertainty))
+}
+
+function promptsForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang: ChatOutputLanguage): BroadTaskPrompt[] {
   const commonHe = {
     freeTextPlaceholderHe: 'אופציונלי: מה חשוב לך בתשובה הזו?',
     freeTextPlaceholderEn: 'Optional: what matters most in this answer?',
@@ -131,9 +256,12 @@ function promptForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang
   const commonEn = commonHe
 
   if (responseMode === 'prioritization') {
-    return lang === 'he'
+    const priorityPrompt = lang === 'he'
       ? {
           ...commonHe,
+          id: 'impact',
+          reason: 'missing_response_impact',
+          targetedParameters: ['impact', 'stakeholders', 'preferences'] as AIUncertaintyDimension[],
           question: 'מה צריך לקבוע את סדר העדיפויות?',
           options: [
             { id: 'impact', label: 'השלכה אמיתית', value: 'real impact or consequence', effect: 'לדרג לפי השלכות אמיתיות.' },
@@ -145,6 +273,9 @@ function promptForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang
         }
       : {
           ...commonEn,
+          id: 'impact',
+          reason: 'missing_response_impact',
+          targetedParameters: ['impact', 'stakeholders', 'preferences'] as AIUncertaintyDimension[],
           question: 'What should decide the priority order?',
           options: [
             { id: 'impact', label: 'Real consequence', value: 'real impact or consequence', effect: 'Rank by real consequences.' },
@@ -154,12 +285,43 @@ function promptForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang
             { id: 'not_sure', label: 'Not sure', value: 'unknown ranking focus', effect: 'Mark uncertainty instead of guessing.' },
           ],
         }
+    const dependencyPrompt = lang === 'he'
+      ? {
+          ...commonHe,
+          id: 'dependencies',
+          reason: 'missing_response_dependencies',
+          targetedParameters: ['dependencies', 'history'] as AIUncertaintyDimension[],
+          question: 'מה קודם חוסם או גורר דברים אחרים?',
+          options: [
+            { id: 'blocks_others', label: 'חוסם אחרים', value: 'tasks that block other work', effect: 'להעדיף חסימות ותלויות.' },
+            { id: 'repeatedly_delayed', label: 'נדחה שוב ושוב', value: 'repeatedly postponed work', effect: 'להעלות עבודה תקועה.' },
+            { id: 'needs_sequence', label: 'צריך רצף', value: 'tasks that create sequence momentum', effect: 'לבחור התחלה שמאפשרת המשך.' },
+            { id: 'not_sure', label: 'לא בטוח', value: 'unknown dependency focus', effect: 'לסמן אי ודאות ולא להמציא.' },
+          ],
+        }
+      : {
+          ...commonEn,
+          id: 'dependencies',
+          reason: 'missing_response_dependencies',
+          targetedParameters: ['dependencies', 'history'] as AIUncertaintyDimension[],
+          question: 'What is blocking or dragging other work?',
+          options: [
+            { id: 'blocks_others', label: 'Blocks others', value: 'tasks that block other work', effect: 'Prioritize blockers and dependencies.' },
+            { id: 'repeatedly_delayed', label: 'Repeatedly delayed', value: 'repeatedly postponed work', effect: 'Surface stuck work.' },
+            { id: 'needs_sequence', label: 'Needs sequence', value: 'tasks that create sequence momentum', effect: 'Pick a start that unlocks follow-up.' },
+            { id: 'not_sure', label: 'Not sure', value: 'unknown dependency focus', effect: 'Mark uncertainty instead of guessing.' },
+          ],
+        }
+    return [priorityPrompt, dependencyPrompt]
   }
 
   if (responseMode === 'next_task') {
-    return lang === 'he'
+    const energyPrompt = lang === 'he'
       ? {
           ...commonHe,
+          id: 'energy',
+          reason: 'missing_response_energy',
+          targetedParameters: ['energy_fit', 'preferences'] as AIUncertaintyDimension[],
           question: 'מה יהפוך משימה אחת לנכונה עכשיו?',
           options: [
             { id: 'energy', label: 'מתאים לאנרגיה', value: 'energy fit right now', effect: 'לבחור פעולה שמתאימה למצב הנוכחי.' },
@@ -171,6 +333,9 @@ function promptForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang
         }
       : {
           ...commonEn,
+          id: 'energy',
+          reason: 'missing_response_energy',
+          targetedParameters: ['energy_fit', 'preferences'] as AIUncertaintyDimension[],
           question: 'What would make one task right for now?',
           options: [
             { id: 'energy', label: 'Energy fit', value: 'energy fit right now', effect: 'Choose a task that fits your current state.' },
@@ -180,12 +345,43 @@ function promptForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang
             { id: 'not_sure', label: 'Not sure', value: 'unknown ranking focus', effect: 'Mark uncertainty instead of guessing.' },
           ],
         }
+    const impactPrompt = lang === 'he'
+      ? {
+          ...commonHe,
+          id: 'impact',
+          reason: 'missing_response_impact',
+          targetedParameters: ['impact', 'stakeholders'] as AIUncertaintyDimension[],
+          question: 'איזו השלכה אמיתית הכי חשוב לסגור עכשיו?',
+          options: [
+            { id: 'commitment', label: 'מישהו מחכה', value: 'someone is waiting', effect: 'להעדיף התחייבות לאחר.' },
+            { id: 'money_health', label: 'כסף/בריאות', value: 'money health or client risk', effect: 'להעדיף סיכון מוחשי.' },
+            { id: 'project_momentum', label: 'מומנטום', value: 'project momentum', effect: 'להעדיף תנועה בפרויקט.' },
+            { id: 'not_sure', label: 'לא בטוח', value: 'unknown impact focus', effect: 'לסמן אי ודאות ולא להמציא.' },
+          ],
+        }
+      : {
+          ...commonEn,
+          id: 'impact',
+          reason: 'missing_response_impact',
+          targetedParameters: ['impact', 'stakeholders'] as AIUncertaintyDimension[],
+          question: 'What real consequence matters most right now?',
+          options: [
+            { id: 'commitment', label: 'Someone waits', value: 'someone is waiting', effect: 'Prefer a commitment to another person.' },
+            { id: 'money_health', label: 'Money/health', value: 'money health or client risk', effect: 'Prefer concrete risk.' },
+            { id: 'project_momentum', label: 'Momentum', value: 'project momentum', effect: 'Prefer project movement.' },
+            { id: 'not_sure', label: 'Not sure', value: 'unknown impact focus', effect: 'Mark uncertainty instead of guessing.' },
+          ],
+        }
+    return [energyPrompt, impactPrompt]
   }
 
   if (responseMode === 'overdue_triage') {
-    return lang === 'he'
+    return [lang === 'he'
       ? {
           ...commonHe,
+          id: 'overdue_commitments',
+          reason: 'missing_response_impact',
+          targetedParameters: ['impact', 'stakeholders', 'history'] as AIUncertaintyDimension[],
           question: 'איך להתייחס למשימות באיחור?',
           options: [
             { id: 'hard_commitments', label: 'התחייבויות קשיחות', value: 'hard commitments first', effect: 'לטפל קודם במה שמישהו מחכה לו.' },
@@ -197,6 +393,9 @@ function promptForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang
         }
       : {
           ...commonEn,
+          id: 'overdue_commitments',
+          reason: 'missing_response_impact',
+          targetedParameters: ['impact', 'stakeholders', 'history'] as AIUncertaintyDimension[],
           question: 'How should I treat overdue tasks?',
           options: [
             { id: 'hard_commitments', label: 'Hard commitments', value: 'hard commitments first', effect: 'Handle what someone is waiting on first.' },
@@ -205,12 +404,15 @@ function promptForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang
             { id: 'stale_filter', label: 'Filter stale', value: 'filter stale overdue tasks', effect: 'Do not surface old items without a reason.' },
             { id: 'not_sure', label: 'Not sure', value: 'unknown ranking focus', effect: 'Mark uncertainty instead of guessing.' },
           ],
-        }
+        }]
   }
 
-  return lang === 'he'
+  const defaultPrompt = lang === 'he'
     ? {
         ...commonHe,
+        id: 'general_focus',
+        reason: 'missing_response_direction',
+        targetedParameters: ['preferences', 'impact'] as AIUncertaintyDimension[],
         question: 'מה צריך להוביל את התשובה הזו?',
         options: [
           { id: 'impact', label: 'השפעה אמיתית', value: 'real impact or consequence', effect: 'לדרג לפי השלכה אמיתית.' },
@@ -222,6 +424,9 @@ function promptForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang
       }
     : {
         ...commonEn,
+        id: 'general_focus',
+        reason: 'missing_response_direction',
+        targetedParameters: ['preferences', 'impact'] as AIUncertaintyDimension[],
         question: 'What should guide this answer?',
         options: [
           { id: 'impact', label: 'Real impact', value: 'real impact or consequence', effect: 'Rank by real-world consequence.' },
@@ -231,4 +436,32 @@ function promptForBroadTaskMode(responseMode: RoutedIntent['responseMode'], lang
           { id: 'not_sure', label: 'Not sure', value: 'unknown ranking focus', effect: 'Mark uncertainty instead of guessing.' },
         ],
       }
+  const energyPrompt = lang === 'he'
+    ? {
+        ...commonHe,
+        id: 'energy',
+        reason: 'missing_response_energy',
+        targetedParameters: ['energy_fit'] as AIUncertaintyDimension[],
+        question: 'איזה סוג אנרגיה יש לך עכשיו?',
+        options: [
+          { id: 'deep', label: 'עבודה עמוקה', value: 'deep work energy', effect: 'להעדיף עבודה קוגניטיבית.' },
+          { id: 'admin', label: 'אדמין קל', value: 'admin or low energy', effect: 'להעדיף משימות קלות.' },
+          { id: 'quick', label: 'רק התחלה', value: 'quick start only', effect: 'להעדיף צעד פתיחה קטן.' },
+          { id: 'not_sure', label: 'לא בטוח', value: 'unknown energy', effect: 'לסמן אי ודאות.' },
+        ],
+      }
+    : {
+        ...commonEn,
+        id: 'energy',
+        reason: 'missing_response_energy',
+        targetedParameters: ['energy_fit'] as AIUncertaintyDimension[],
+        question: 'What kind of energy do you have right now?',
+        options: [
+          { id: 'deep', label: 'Deep work', value: 'deep work energy', effect: 'Prefer cognitive work.' },
+          { id: 'admin', label: 'Light admin', value: 'admin or low energy', effect: 'Prefer light tasks.' },
+          { id: 'quick', label: 'Just start', value: 'quick start only', effect: 'Prefer a small opening step.' },
+          { id: 'not_sure', label: 'Not sure', value: 'unknown energy', effect: 'Mark uncertainty.' },
+        ],
+      }
+  return [defaultPrompt, energyPrompt]
 }

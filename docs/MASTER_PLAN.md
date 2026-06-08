@@ -202,6 +202,7 @@
 - 2026-06-08: Broad clarification coverage now consumes durable parameter beliefs, not only recent events. Unit tests prove a saved high-confidence `rankingFocus` belief suppresses the response-direction card and lets the assistant proceed without repeating the ladder question.
 - 2026-06-08: Response-quality coverage now treats prioritization, next-task, overdue-triage, and task-breakdown modes as high-materiality even when only a few task candidates are visible. A saved high-confidence `rankingFocus` belief still suppresses re-asking for those modes.
 - 2026-06-08: Prioritization routing now loads the active task list rather than the overdue-only tool. This prevents "prioritize my tasks" from skipping the clarification gate simply because there are no overdue tasks.
+- 2026-06-08: Broad clarification now uses heuristic EVPI candidate scoring instead of a single hardcoded mode prompt. It scores targeted parameters, skips recently resolved prompt variants, records selected score/user cost/candidate metadata in debug, and can ask the next high-value missing dimension without repeating the same generic ranking-focus question.
 
 ---
 
@@ -333,6 +334,7 @@
 - 2026-06-08: Broad clarification cards are now mode-specific: prioritization asks what should decide the priority order, next-task asks what makes one task right now, and overdue triage asks how to treat overdue items. Tests prove these paths no longer ask the generic "what should guide this answer?" question.
 - 2026-06-08: Localhost Playwright now proves broad-flow behavior for `prioritize my tasks`, `what should I do next?`, and `show me overdue tasks`: each prompt asks one mode-specific card before recommendations, hides task cards while asking, saves the button answer, leaves no stuck running activity, and does not re-ask the same question on the next prompt.
 - 2026-06-08: Extracted broad fallback task ranking into a tested pipeline module so non-weekly fallback answers use the same feedback-aware suppression/boost rules as retrieved memory. The chat path now imports the tested ranker instead of hiding feedback logic inside the composable.
+- 2026-06-08: Broad clarification coverage now includes energy fit, dependencies, history, and stakeholders for the modes where those dimensions materially affect output. This lets next-task prompts ask about energy when impact is already known and prioritization prompts move from impact to dependency/momentum questions after the first answer.
 
 ---
 

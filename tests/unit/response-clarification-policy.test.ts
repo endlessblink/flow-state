@@ -51,7 +51,7 @@ describe('computeBroadTaskClarificationCoverage', () => {
     })
   })
 
-  it('lets saved response-direction memory suppress prioritization re-asks', () => {
+  it('lets saved response-direction memory suppress the generic prioritization prompt while keeping deeper missing dimensions visible', () => {
     expect(computeBroadTaskClarificationCoverage('prioritization', 6, [{
       entityKey: 'workflow:task_answer:prioritization',
       entityType: 'workflow',
@@ -61,8 +61,8 @@ describe('computeBroadTaskClarificationCoverage', () => {
       impactWeight: 0.65,
     }])).toMatchObject({
       materiality: 'high',
-      missing: [],
-      decision: 'proceed',
+      missing: ['dependencies', 'history'],
+      decision: 'ask',
     })
   })
 })

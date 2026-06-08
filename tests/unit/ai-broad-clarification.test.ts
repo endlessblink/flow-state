@@ -32,25 +32,25 @@ function taskResult(count: number) {
   }]
 }
 
-function event(eventType: AIClarificationEvent['eventType'], daysAgo: number): AIClarificationEvent {
+function event(eventType: AIClarificationEvent['eventType'], daysAgo: number, questionId = 'response_quality_day_plan'): AIClarificationEvent {
   return {
     id: `${eventType}-${daysAgo}`,
     entityKey: 'workflow:task_answer:day_plan',
     entityType: 'workflow',
     eventType,
-    questionId: 'response_quality_day_plan',
+    questionId,
     question: 'What should guide this answer?',
     createdAt: new Date(Date.UTC(2026, 5, 8) - (daysAgo * 24 * 60 * 60 * 1000)).toISOString(),
   }
 }
 
-function belief(parameterKey = 'rankingFocus', confidence = 0.9): AIParameterBelief {
+function belief(parameterKey = 'rankingFocus', confidence = 0.9, value = 'real impact or consequence'): AIParameterBelief {
   return {
     id: `belief-${parameterKey}`,
     entityKey: 'workflow:task_answer:day_plan',
     entityType: 'workflow',
     parameterKey,
-    beliefJson: { value: 'real impact or consequence' },
+    beliefJson: { value },
     confidence,
     impactWeight: 0.65,
   }
@@ -78,6 +78,9 @@ describe('broad task clarification policy', () => {
     expect(card?.pathType).toBe('clarify_first')
     expect(card?.question.options).toHaveLength(5)
     expect(card?.question.allowFreeText).toBe(true)
+    expect(card?.question.id).toBe('response_quality_day_plan_general_focus')
+    expect(card?.debug?.evpi?.targetedParameters).toEqual(expect.arrayContaining(['preferences', 'impact']))
+    expect(card?.debug?.evpi?.selectedScore).toBeGreaterThan(0.28)
     expect(card?.candidateTaskIds).toHaveLength(5)
     expect(card?.coverage?.decision).toBe('ask')
     expect(card?.debug?.candidateCount).toBe(5)
@@ -98,6 +101,7 @@ describe('broad task clarification policy', () => {
     const card = buildBroadTaskClarification(routed('prioritization'), taskResult(6), 'en', [])
 
     expect(card?.question.question).toBe('What should decide the priority order?')
+    expect(card?.question.id).toBe('response_quality_prioritization_impact')
     expect(card?.question.options.map(option => option.label)).toEqual([
       'Real consequence',
       'Commitment',
@@ -111,6 +115,7 @@ describe('broad task clarification policy', () => {
   it('asks a next-action question for next-task requests', () => {
     const card = buildBroadTaskClarification(routed('next_task'), taskResult(4), 'en', [])
 
+    expect(card?.question.id).toBe('response_quality_next_task_energy')
     expect(card?.question.question).toBe('What would make one task right for now?')
     expect(card?.question.options.map(option => option.label)).toEqual([
       'Energy fit',
@@ -119,6 +124,34 @@ describe('broad task clarification policy', () => {
       'Easy start',
       'Not sure',
     ])
+  })
+
+  it('uses EVPI to ask about energy when impact is already covered for next-task requests', () => {
+    const card = buildBroadTaskClarification(routed('next_task'), taskResult(4), 'en', [], [
+      belief('impact', 0.92, 'real consequence is already known'),
+      belief('stakeholders', 0.9, 'commitments are already known'),
+    ])
+
+    expect(card?.question.id).toBe('response_quality_next_task_energy')
+    expect(card?.question.question).toBe('What would make one task right for now?')
+    expect(card?.debug?.evpi?.targetedParameters).toEqual(expect.arrayContaining(['energy_fit']))
+  })
+
+  it('skips a recently resolved broad prompt and exposes the skipped candidate in EVPI debug metadata', () => {
+    const recentImpact = {
+      ...event('answered', 2, 'response_quality_prioritization_impact'),
+      entityKey: 'workflow:task_answer:prioritization',
+    }
+    const card = buildBroadTaskClarification(routed('prioritization'), taskResult(6), 'en', [recentImpact])
+
+    expect(card?.question.id).toBe('response_quality_prioritization_dependencies')
+    expect(card?.question.question).toBe('What is blocking or dragging other work?')
+    expect(card?.debug?.evpi?.candidates).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        questionId: 'response_quality_prioritization_impact',
+        skippedReason: 'recently_resolved',
+      }),
+    ]))
   })
 
   it('asks an overdue-triage question instead of treating overdue as automatically important', () => {

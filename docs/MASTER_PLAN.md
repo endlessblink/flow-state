@@ -469,6 +469,7 @@
 
 **Progress**:
 - 2026-06-08: Extended `auditChatResponseQuality()` with executable checks for response path, coverage score, high materiality, structured-output failure, deterministic fallback, repeated post-clarification questions, visible uncertainty, feedback controls, escape hatches, debug disclosure, and learning signals.
+- 2026-06-08: Added a structured recommendation citation audit. Recommendations now fail quality checks when they cite only task metadata or project names as context, pass when they explicitly mark project/context evidence unknown, and score excellent only when task evidence is paired with real success/stakes/why/dependency context.
 
 ---
 

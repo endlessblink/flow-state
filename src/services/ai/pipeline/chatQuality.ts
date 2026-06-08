@@ -25,6 +25,23 @@ export type ChatQualityAudit = {
   }
 }
 
+export type ChatRecommendationEvidenceInput = {
+  recommendationId?: string
+  taskId?: string
+  rank?: number
+  reason?: string
+  taskEvidence?: string[]
+  projectContextEvidence?: string[]
+  missingEvidence?: string[]
+}
+
+export type ChatRecommendationEvidenceAudit = {
+  level: ChatQualityLevel
+  checkedCount: number
+  failures: string[]
+  warnings: string[]
+}
+
 export type ChatQualityInput = {
   text: string
   language: 'he' | 'en'
@@ -47,6 +64,7 @@ export type ChatQualityInput = {
   hasDebugDisclosure?: boolean
   hasLearningSignal?: boolean
   coldStart?: boolean
+  recommendationEvidence?: ChatRecommendationEvidenceInput[]
 }
 
 const UNSUPPORTED_IMPORTANCE_RE = /(high stakes|strategic|meaningful|important|critical|substantial work|real consequences|חשוב|משמעותי|אסטרטגי|קריטי|השלכות אמיתיות)/i
@@ -56,6 +74,9 @@ const STAKE_RE = /(unblock|blocked|risk|waiting|decision|money|billing|client|he
 const CLARIFICATION_EVIDENCE_RE = /(clarification|your answer|you said|you chose|matches your clarification|explicit user wording|לפי תשובת|תשובת ההבהרה|ענית|בחרת|כתבת)/i
 const UNCERTAINTY_RE = /(coverage|uncertain|uncertainty|context (is )?unknown|missing context|limited context|assum|not enough context|הקשר חסר|לא ברור|לא ידוע|אי.?ודאות|הקשר מוגבל)/i
 const CLARIFICATION_QUESTION_RE = /(quick question|before ranking|before I rank|what kind of project|why does this matter|שאלה קצרה|לפני הדירוג|איזה סוג פרויקט|למה זה חשוב)/i
+const UNKNOWN_EVIDENCE_RE = /(context unknown|project context unknown|missing context|unknown stakes|unknown importance|not enough context|הקשר חסר|לא ידוע|אי.?ודאות|אין מספיק הקשר)/i
+const NAME_ONLY_CONTEXT_RE = /^(project|belongs to|part of|project:|belongs to project|שייך|פרויקט|חלק מ)/i
+const REAL_CONTEXT_EVIDENCE_RE = /(why|matters|success|criteria|stakes|risk|correction|non-goal|preference|impact|commitment|dependency|unblock|client|money|health|family|למה|חשוב|קריטריון|הצלחה|סיכון|תיקון|העדפה|השפעה|התחייבות|תלות|לקוח|כסף|בריאות|משפחה)/i
 
 export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAudit {
   const text = normalizeText(input.text)
@@ -120,6 +141,11 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   if ((path === 'deterministic_fallback' || input.contextUnknown || mediumCoverage) && recommendationCount > 3) {
     failures.push('too_many_low_context_recommendations')
   }
+  if (input.recommendationEvidence) {
+    const evidenceAudit = auditRecommendationEvidence(input.recommendationEvidence)
+    failures.push(...evidenceAudit.failures)
+    warnings.push(...evidenceAudit.warnings)
+  }
 
   const checks: ChatQualityAudit['checks'] = {
     groundedness: input.contextUnknown && UNSUPPORTED_IMPORTANCE_RE.test(text) && !visibleUncertainty
@@ -160,6 +186,66 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
     warnings: [...new Set(warnings)],
     checks,
   }
+}
+
+export function auditRecommendationEvidence(recommendations: ChatRecommendationEvidenceInput[]): ChatRecommendationEvidenceAudit {
+  const failures: string[] = []
+  const warnings: string[] = []
+
+  if (!recommendations.length) {
+    return {
+      level: 'bad',
+      checkedCount: 0,
+      failures: ['missing_recommendations_to_audit'],
+      warnings,
+    }
+  }
+
+  recommendations.forEach((rec, index) => {
+    const ref = recommendationRef(rec, index)
+    const taskEvidence = cleanEvidence(rec.taskEvidence)
+    const contextEvidence = cleanEvidence(rec.projectContextEvidence)
+    const missingEvidence = cleanEvidence(rec.missingEvidence)
+    const reason = rec.reason ?? ''
+    const hasUnknownContext = missingEvidence.some(item => UNKNOWN_EVIDENCE_RE.test(item))
+    const substantiveContextEvidence = contextEvidence.filter(item => !NAME_ONLY_CONTEXT_RE.test(item))
+    const hasRealContextEvidence = substantiveContextEvidence.some(item => REAL_CONTEXT_EVIDENCE_RE.test(item))
+    const contextIsNameOnly = contextEvidence.length > 0 && substantiveContextEvidence.length === 0
+    const hasUnsupportedImportance = UNSUPPORTED_IMPORTANCE_RE.test(reason) || contextEvidence.some(item => UNSUPPORTED_IMPORTANCE_RE.test(item))
+
+    if (!taskEvidence.length) failures.push(`${ref}:missing_task_evidence`)
+    if (!contextEvidence.length && !hasUnknownContext) failures.push(`${ref}:missing_context_or_unknown_evidence`)
+    if (contextIsNameOnly && !hasUnknownContext) failures.push(`${ref}:context_evidence_name_only`)
+    if (hasUnsupportedImportance && !hasRealContextEvidence && !hasUnknownContext) failures.push(`${ref}:unsupported_importance_without_context`)
+    if (hasUnknownContext && hasUnsupportedImportance) failures.push(`${ref}:unsupported_importance_with_unknown_context`)
+    if (taskEvidence.length > 0 && taskEvidence.every(item => SHALLOW_REASON_RE.test(item)) && !hasRealContextEvidence && !hasUnknownContext) {
+      failures.push(`${ref}:metadata_only_evidence`)
+    }
+    if (hasUnknownContext && contextEvidence.length > 0) {
+      warnings.push(`${ref}:mixed_context_and_unknown_evidence`)
+    }
+  })
+
+  const uniqueFailures = [...new Set(failures)]
+  const uniqueWarnings = [...new Set(warnings)]
+  return {
+    level: uniqueFailures.length > 0
+      ? 'bad'
+      : uniqueWarnings.length > 0
+        ? 'acceptable'
+        : 'excellent',
+    checkedCount: recommendations.length,
+    failures: uniqueFailures,
+    warnings: uniqueWarnings,
+  }
+}
+
+function cleanEvidence(items: string[] | undefined): string[] {
+  return (items ?? []).map(item => item.trim()).filter(Boolean)
+}
+
+function recommendationRef(rec: ChatRecommendationEvidenceInput, index: number): string {
+  return rec.recommendationId || rec.taskId || `recommendation_${rec.rank ?? index + 1}`
 }
 
 function normalizeText(text: string): string {

@@ -51,6 +51,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'selectTask': [taskId: string]
+  'continueChat': [message: string]
 }>()
 
 // ============================================================================
@@ -421,10 +422,24 @@ function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEven
   if (!option && !note) return
 
   clarificationSavedLocal.value[key] = true
+  if (note) {
+    clarificationFollowUpSavedLocal.value[key] = true
+  }
   clarificationStatus.value = card.locale === 'he'
     ? 'נשמר מקומית. מסנכרן ברקע...'
     : 'Saved locally. Syncing in the background...'
   void persistClarificationAnswer(card, option, note)
+}
+
+function clarificationContinueMessage(card: AIClarificationArtifact): string {
+  return card.locale === 'he'
+    ? 'המשך לתכנן את השבוע עם ההקשר ששמרתי עכשיו. תן קודם תקציר קצר בלבד, בלי רשימה ארוכה.'
+    : 'Continue planning the week using the context I just saved. Start with a short summary only, not a long list.'
+}
+
+function continueAfterClarification(card: AIClarificationArtifact, event: MouseEvent) {
+  event.stopPropagation()
+  emit('continueChat', clarificationContinueMessage(card))
 }
 
 async function persistClarificationAnswer(
@@ -1351,6 +1366,33 @@ async function saveSchedule() {
                   @click="recordClarificationEscape(clarification, action, $event)"
                 >
                   {{ clarificationActionLabel(action, clarification.locale) }}
+                </button>
+                <span v-if="clarificationStatus" class="weekly-question-status">
+                  {{ clarificationStatus }}
+                </span>
+              </div>
+            </div>
+            <div
+              v-else-if="clarificationFollowUpSavedLocal[clarificationKey(clarification)]"
+              class="clarification-follow-up clarification-saved-state"
+              data-testid="ai-clarification-saved"
+            >
+              <strong>{{ clarification.locale === 'he' ? 'ההקשר נשמר' : 'Context saved' }}</strong>
+              <p>
+                {{
+                  clarification.locale === 'he'
+                    ? 'עכשיו אפשר להמשיך לתוכנית קצרה שמבוססת על מה שענית.'
+                    : 'Now the chat can continue with a short plan based on what you answered.'
+                }}
+              </p>
+              <div class="weekly-question-action-row">
+                <button
+                  type="button"
+                  class="weekly-question-apply"
+                  @click="continueAfterClarification(clarification, $event)"
+                >
+                  <CheckCircle2 :size="13" />
+                  {{ clarification.locale === 'he' ? 'המשך לתוכנית קצרה' : 'Continue with short plan' }}
                 </button>
                 <span v-if="clarificationStatus" class="weekly-question-status">
                   {{ clarificationStatus }}

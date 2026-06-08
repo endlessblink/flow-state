@@ -254,6 +254,11 @@ function handleQuickAction(action: { label: string; message: string; directTool?
   }
 }
 
+function handleContinueChat(message: string) {
+  if (!message.trim() || isGenerating.value) return
+  sendMessage(message)
+}
+
 // ============================================================================
 // Context-Aware Quick Actions
 // ============================================================================
@@ -1042,6 +1047,7 @@ onUnmounted(() => {
           :message="message"
           :direction="effectiveChatDirection"
           @select-task="handleSelectTask"
+          @continue-chat="handleContinueChat"
         />
 
         <!-- Contextual Error -->

@@ -1135,6 +1135,74 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).toContain('Deadline/commitment')
     expect(wrapper.text()).not.toContain('This broad plan should stay hidden')
     expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-option').trigger('click')
+    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Context saved')
+    await wrapper.find('[data-testid="ai-clarification-saved"] .weekly-question-apply').trigger('click')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week')
+  })
+
+  it('does not ask the why-now follow-up again when the first clarification already includes free text', async () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-clarification-free-text',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            clarification: {
+              schemaVersion: 'ai-clarification.v1',
+              kind: 'weekly_planning',
+              locale: 'en',
+              direction: 'ltr',
+              progressLabel: 'Clarifying priorities • Step 1/3',
+              summary: 'One missing detail would change the ranking.',
+              memoryKey: 'synthetic:Work',
+              pathType: 'clarify_first',
+              candidateTaskIds: ['task-a'],
+              actions: ['generate_current', 'show_candidates', 'pause_save'],
+              coverage: {
+                score: 0.28,
+                materiality: 'high',
+                dimensions: { project_meaning: 0, impact: 0 },
+                missing: ['project_meaning', 'impact'],
+                decision: 'ask',
+              },
+              question: {
+                id: 'project_context_work',
+                entityType: 'synthetic_group',
+                entityId: 'Work',
+                reason: 'missing_project_understanding',
+                question: 'What kind of project is "Work"?',
+                options: [{ id: 'domain_work', label: 'Work/Product', effect: 'Save work context.' }],
+                allowFreeText: true,
+                relatedTaskIds: ['task-a'],
+              },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    await wrapper.get('.weekly-question-option').trigger('click')
+    await wrapper.get('.weekly-question-free-text').setValue('This matters because it is the core product quality issue.')
+    await wrapper.get('.weekly-question-apply').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('Why does this matter right now?')
   })
 
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
@@ -1537,8 +1605,12 @@ describe('AI sidebar-first desktop experience', () => {
     expect(chatMessage).toContain('clarificationSavedLocal')
     expect(chatMessage).toContain('Saved locally. Syncing in the background')
     expect(chatMessage).toContain('data-testid="ai-clarification-follow-up"')
+    expect(chatMessage).toContain('data-testid="ai-clarification-saved"')
     expect(chatMessage).toContain('Why does this matter right now?')
+    expect(chatMessage).toContain('continueAfterClarification')
     expect(chatMessage).toContain('persistClarificationFollowUp')
+    expect(src('src/components/ai/AIChatPanel.vue')).toContain('function handleContinueChat')
+    expect(src('src/components/ai/AIChatPanel.vue')).toContain('@continue-chat="handleContinueChat"')
     expect(chatMessage).toContain('Why ask?')
     expect(chatMessage).toContain('clarificationDebugLines')
     expect(chatMessage).toContain('createTaskWithUndo')

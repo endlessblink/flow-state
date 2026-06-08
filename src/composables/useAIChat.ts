@@ -2199,6 +2199,37 @@ export function useAIChat() {
           return
         }
 
+        if (isClarificationContinuation) {
+          updateChatPhase(phaseActivityId, 'Using saved context', 'Compact local draft')
+          const finalPlan = buildQuickDraftWeeklyPlan(weekContext, {
+            allowClarificationFirst: false,
+            compactUncertainty: true,
+            maxRecommendations: 3,
+          })
+          const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
+          const startedAt = existingPhase?.metadata?.startedAt ?? Date.now()
+          store.updateActivityEvent(phaseActivityId, {
+            metadata: {
+              startedAt,
+              elapsedMs: Date.now() - startedAt,
+              pathType: 'post_clarification_quick_draft',
+              source: finalPlan.source,
+              reason: 'post-clarification continuation uses bounded local draft',
+            },
+          })
+          if (lastMsg && lastMsg.isStreaming) {
+            lastMsg.content = ''
+            store.streamingContent = ''
+            lastMsg.metadata = {
+              ...lastMsg.metadata,
+              weeklyPlan: finalPlan,
+            } as Record<string, unknown>
+          }
+          finishChatPhase(phaseActivityId, 'Weekly plan ready', 'Used compact saved-context draft')
+          store.completeStreamingMessage()
+          return
+        }
+
         let weeklyPlan: WeeklyPlanOutput | null = null
         let validationErrors: string[] = []
         try {

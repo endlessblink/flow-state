@@ -2478,11 +2478,22 @@ describe('AI sidebar-first desktop experience', () => {
 
     expect(panel).toContain("const pendingContinueMessage = ref<string>('')")
     expect(panel).toContain('pendingContinueMessage.value = trimmed')
+    expect(panel).toContain('void nextTick(flushPendingContinuation)')
+    expect(panel).toContain('function flushPendingContinuation()')
     expect(panel).toContain('watch(isGenerating, (generating) => {')
-    expect(panel).toContain('if (generating || !pendingContinueMessage.value) return')
     expect(panel).toContain('pendingContinueMessage.value = \'\'')
     expect(panel).toContain('sendMessage(message, { skipHistory: true })')
     expect(panel).toContain('sendMessage(trimmed, { skipHistory: true })')
+  })
+
+  it('uses a bounded local weekly draft after clarification instead of waiting for another broad model pass', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+
+    expect(aiChat).toContain('if (isClarificationContinuation) {')
+    expect(aiChat).toContain("updateChatPhase(phaseActivityId, 'Using saved context', 'Compact local draft')")
+    expect(aiChat).toContain('pathType: \'post_clarification_quick_draft\'')
+    expect(aiChat).toContain('maxRecommendations: 3')
+    expect(aiChat).toContain('finishChatPhase(phaseActivityId, \'Weekly plan ready\', \'Used compact saved-context draft\')')
   })
 
   it('shows a queued continuation activity row after a clarification answer while generation is settling', async () => {

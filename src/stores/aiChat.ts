@@ -84,9 +84,12 @@ export interface AIActivityEvent {
     lifecycle?: {
       staleEntityKeys: string[]
       refreshEntityKeys: string[]
+      staleParameterBeliefKeys?: string[]
+      refreshParameterBeliefKeys?: string[]
       summarizeEntityKeys: string[]
       archiveEventCount: number
       lowConfidenceEntityCount: number
+      lowConfidenceBeliefCount?: number
     }
   }
 }

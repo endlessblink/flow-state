@@ -271,14 +271,15 @@ function handleContinueChat(message: string) {
         phase: 'Clarification continuation queued',
       },
     })
+    void nextTick(flushPendingContinuation)
     return
   }
   pendingContinueMessage.value = ''
   sendMessage(trimmed, { skipHistory: true })
 }
 
-watch(isGenerating, (generating) => {
-  if (generating || !pendingContinueMessage.value) return
+function flushPendingContinuation() {
+  if (isGenerating.value || !pendingContinueMessage.value) return
   const message = pendingContinueMessage.value
   pendingContinueMessage.value = ''
   store.updateActivityEvent(queuedContinuationActivityId, {
@@ -287,6 +288,11 @@ watch(isGenerating, (generating) => {
     message: 'Clarification answer accepted',
   })
   sendMessage(message, { skipHistory: true })
+}
+
+watch(isGenerating, (generating) => {
+  if (generating || !pendingContinueMessage.value) return
+  flushPendingContinuation()
 })
 
 // ============================================================================

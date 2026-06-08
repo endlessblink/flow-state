@@ -2181,6 +2181,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('Repairing answer quality')
     expect(aiChat).toContain('shouldAskBroadTaskClarification')
     expect(aiChat).toContain('buildBroadTaskClarification')
+    expect(aiChat).toContain('computeBroadTaskClarificationCoverage')
     expect(aiChat).toContain("kind: 'response_quality'")
     expect(aiChat).toContain('What should guide this answer?')
     expect(aiChat).toContain('broad task answer would otherwise rank')

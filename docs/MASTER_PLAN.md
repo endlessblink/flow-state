@@ -233,6 +233,7 @@
 **Progress**:
 - 2026-06-08: Added a deterministic `response_quality` clarification card before high-materiality non-weekly task recommendations so day plans, smart lanes, and prioritization/overwhelm prompts can ask one button-based direction question instead of dumping broad prose.
 - 2026-06-08: Response-quality clarification answers now route back into the matching deterministic flow (`day_plan`, `smart_lanes`, or general task recommendation) instead of falling through as vague freeform continuation text.
+- 2026-06-08: Broader non-weekly task answers now use the shared uncertainty policy for ask/proceed/neutral decisions instead of a fixed hardcoded ask path. Focused tests cover high-materiality broad recommendations, tiny task sets that proceed with uncertainty, and cold-start neutral candidates.
 
 ---
 

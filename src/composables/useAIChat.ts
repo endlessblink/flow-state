@@ -47,6 +47,7 @@ import { detectFluff, extractTaskTitlesFromResults } from '@/services/ai/pipelin
 import { EntityMemory } from '@/services/ai/pipeline/entityMemory'
 import { auditChatResponseQuality, type ChatQualityMode } from '@/services/ai/pipeline/chatQuality'
 import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from '@/services/ai/pipeline/memoryEvidence'
+import { computeBroadTaskClarificationCoverage } from '@/services/ai/pipeline/responseClarificationPolicy'
 import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
@@ -1433,6 +1434,8 @@ export function useAIChat() {
       .filter(Boolean)
       .slice(0, 12)
     if (!candidateTaskIds.length || hasRecentClarificationDecision(events)) return null
+    const coverage = computeBroadTaskClarificationCoverage(routed.responseMode, candidateTaskIds.length)
+    if (coverage.decision !== 'ask') return null
 
     const memoryKey = broadTaskClarificationMemoryKey(routed)
     const entityId = routed.responseMode || 'general'
@@ -1468,13 +1471,7 @@ export function useAIChat() {
       pathType: 'clarify_first',
       candidateTaskIds,
       actions: ['generate_current', 'show_candidates', 'pause_save'],
-      coverage: {
-        score: 0.46,
-        materiality: 'high',
-        dimensions: { preferences: 0.25, impact: 0.35 },
-        missing: ['preferences', 'impact'],
-        decision: 'ask',
-      },
+      coverage,
       question: {
         id: `response_quality_${entityId}`,
         entityType: 'workflow',
@@ -1510,7 +1507,7 @@ export function useAIChat() {
           projectContextCount: 0,
           taskContextCount: 0,
         },
-        reason: `broad task answer would otherwise rank ${candidateTaskIds.length} candidates without a saved response direction`,
+        reason: `shared uncertainty policy says a broad task answer would otherwise rank ${candidateTaskIds.length} candidates without a saved response direction`,
         candidateCount: candidateTaskIds.length,
       },
     }

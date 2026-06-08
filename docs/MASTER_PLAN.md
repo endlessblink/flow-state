@@ -27,9 +27,9 @@
 5. Commit and push only after the plan file, tests, and proof evidence match the actual current state.
 
 **Operator board for the active lane**:
-- **Current slice**: LANE-9 answer-quality policy hardening. Turn the research decisions into executable checks for structured-output failure, EVPI/coverage thresholds, repeated questions, feedback controls, and low-context recommendation limits.
+- **Current slice**: LANE-1/LANE-2 server-backed memory retrieval hardening. Prove broad chat answers retrieve durable `ai_context_entities`, clarification events, parameter beliefs, and feedback by text entity key before falling back to prompt-only behavior.
 - **Current proof**: MASTER_PLAN has a complete packet queue with one current cursor, plus a repeatable localhost browser proof that covers prompt -> clarification -> answer/uncertainty -> feedback/debug.
-- **Next slice after policy proof**: LANE-1/LANE-2 schema/retrieval hardening, then LANE-3/LANE-5 broad-flow coverage and feedback learning gaps discovered by the localhost proof.
+- **Next slice after retrieval proof**: LANE-3/LANE-5 broad-flow coverage and no-repeat clarification behavior, then LANE-6 feedback learning gaps discovered by the localhost proof.
 - **Blocked until current proof is green**: background summarization jobs, pgvector/semantic recall, broader UI polish, Electron packaging, and user-facing test instructions.
 - **User-test rule**: no user test request until Stage 8/LANE-10 proves the full localhost loop in browser: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity -> feedback/debug visible.
 
@@ -38,19 +38,19 @@
 | Lane | Status | Task refs | Product outcome | Files/surfaces | Proof gate |
 | --- | --- | --- | --- | --- | --- |
 | LANE-0: Regroup and cursor discipline | 🔄 CURRENT | This top lane + TASK-1842 | One source of truth that prevents scattered fixes and stale "current slice" drift | `docs/MASTER_PLAN.md` | Lane lists all packets, current cursor, blocked work, and user-test gate |
-| LANE-1: VPS-safe memory substrate | 🔄 In progress | TASK-1830, TASK-1839 | Durable memory for real projects, synthetic buckets, preferences, corrections, and events; no UUID failures for `Work`, `My Projects`, or `uncategorized` | Supabase migrations, memory repositories, schema contract tests | Contract/retrieval tests pass; missing live schema degrades without chat failure |
-| LANE-2: Hybrid retrieval and latency budget | 🔄 In progress | TASK-1838 | Fast exact-key retrieval first; bounded recent events/feedback/edges; optional pgvector later without blocking the hot path | `weeklyMemoryRetrieval`, memory diagnostics, timeout/cache helpers | Retrieval tests prove bounded diagnostics, synthetic-key safety, and timeout fallback |
+| LANE-1: VPS-safe memory substrate | 🔄 CURRENT | TASK-1830, TASK-1839 | Durable memory for real projects, synthetic buckets, preferences, corrections, and events; no UUID failures for `Work`, `My Projects`, or `uncategorized` | Supabase migrations, memory repositories, schema contract tests | Contract/retrieval tests pass; missing live schema degrades without chat failure |
+| LANE-2: Hybrid retrieval and latency budget | 🔄 CURRENT | TASK-1838 | Fast exact-key retrieval first; bounded recent events/feedback/edges; optional pgvector later without blocking the hot path | `weeklyMemoryRetrieval`, `broadMemoryRetrieval`, memory diagnostics, timeout/cache helpers | Retrieval tests prove bounded diagnostics, synthetic-key safety, and timeout fallback |
 | LANE-3: Coverage, uncertainty, and EVPI question choice | 🔄 In progress | TASK-1840, TASK-1831A, TASK-1831 | Ask the most valuable non-repeated question; do not treat one random button answer as enough context | uncertainty policy, EVPI scoring, parameter beliefs, clarification events | Tests prove high-value question selection, cooldown/dedupe, answer-to-belief update, and no immediate re-ask |
 | LANE-4: Low-overwhelm answer contract | 🔄 In progress | TASK-1831, TASK-1832 | Broad requests start with one concise card or a visible uncertainty escape; no generic plan dump by default | chat pipeline, deterministic fallback, repair/audit helpers, clarification UI | Tests fail overlong first answers, name-only importance, unsupported ranking, and filler prose |
 | LANE-5: Broad-flow coverage beyond weekly planning | 🔄 In progress | TASK-1835 | Same contract for "what should I do", day plan, smart lanes, prioritization, task breakdown, follow-up task suggestions, and general agent help | intent router, deterministic flows, formatter prompts, fallback cards | Non-weekly tests prove ask/proceed/neutral behavior and no hidden task-card barrage while asking |
 | LANE-6: Feedback learning and suppression | 🔄 In progress | TASK-1833, TASK-1836 | Accept/postpone/dismiss/simplify actions immediately change current UI and later retrieval/ranking | inline recommendation cards, feedback store, memory retrieval, cooldown rules | UI/unit tests prove postponed/dismissed items suppress until revisit and accepted/timeblocked items become positive signals |
 | LANE-7: Memory lifecycle and safety | 🔄 In progress | TASK-1837, TASK-1839 | Memory stays useful over time: stale refresh, confidence decay, summaries, retention, correction audit, prompt-injection-safe evidence | lifecycle policy, retrieval diagnostics, prompt evidence builders | Lifecycle/security tests prove stale facts are refreshed, old/noisy events are flagged, and free text is quoted evidence only |
 | LANE-8: Observability and speed | 🔄 In progress | TASK-1834 | User can see concise phases and debug reasons without reading internal dumps; no duplicate thinking rows or stuck spinner after saving | activity timeline, clarification debug disclosure, phase timing metadata | Activity/UI tests and browser smoke show phase changes, slow-step attribution, and no stuck running row |
-| LANE-9: Answer-quality evaluation rubric | 🔄 CURRENT | TASK-1841 | Bad/acceptable/excellent scoring becomes executable, not subjective vibe review | eval fixtures, citation audit, adversarial scenarios | Eval fails fake reasoning, repeated questions, excess length, missing evidence, and conflicting-correction misuse |
+| LANE-9: Answer-quality evaluation rubric | 🔄 In progress | TASK-1841 | Bad/acceptable/excellent scoring becomes executable, not subjective vibe review | eval fixtures, citation audit, adversarial scenarios | Eval fails fake reasoning, repeated questions, excess length, missing evidence, and conflicting-correction misuse |
 | LANE-10: Localhost E2E proof | ✅ First proof done | TASK-1842 | Real browser proves the end-to-end loop before the user is asked to test | Playwright/localhost smoke, seeded tasks, bridge stubs, screenshots | Prompt -> one clarification -> answers/follow-ups -> concise plan/uncertainty -> feedback/debug -> no barrage -> no stuck activity |
 | LANE-11: Electron delivery gate | ⏸ Deferred | TASK-1843 | Desktop packaging/updater only after localhost proves behavior and user re-enables Electron | Electron build/update/deploy surfaces | Explicit user re-enable, then Electron build/update verification |
 
-**Current lane cursor**: LANE-9 is active. The first repeatable localhost smoke now covers clarification, compact post-clarification planning, feedback controls, debug disclosure, and no stuck running row. Continue by making the research policy table executable, then harden schema/retrieval and broader-flow learning gaps. The system is still not ready for user testing because policy coverage and server-backed durability are not complete enough.
+**Current lane cursor**: LANE-1/LANE-2 are active. The first repeatable localhost smoke now covers clarification, compact post-clarification planning, feedback controls, debug disclosure, and no stuck running row. Continue by proving server-backed memory and retrieval work for both weekly and broad chat flows, then harden broader-flow no-repeat clarification and feedback learning gaps. The system is still not ready for user testing because server-backed durability and no-repeat behavior are not complete enough.
 
 **Resume rule for future agents**: Start from the operator board above, then the first non-green proof gate in the stage table. Do not reinterpret this lane as a weekly-plan copywriting task, a local-only memory hack, or an Electron updater task. The intended product behavior is a durable AI chat quality system that learns useful context, asks the right low-friction questions, avoids overwhelming answers, and proves that behavior locally before desktop delivery.
 
@@ -64,7 +64,7 @@
 | 5 | TASK-1833, TASK-1836 | User feedback loop: accept/postpone/dismiss/simplify controls, reason chips, cooldowns, revisit dates, implicit positives | 🔄 In progress | UI tests prove feedback persists, current suggestions suppress immediately, future ranking respects feedback |
 | 6 | TASK-1834 | Observability and speed: concise phases, timings, path type, slow-step diagnostics, no duplicate thinking rows | 🔄 In progress | Activity-row tests plus localhost smoke show answer phase changes and no stuck spinner after saving clarification |
 | 7 | TASK-1837 | Memory lifecycle: fact promotion, confidence decay, summaries/snapshots, stale confirmations, export/delete policy | 🔄 In progress | Lifecycle tests prove stale facts refresh, corrections stay auditable, retrieval stays bounded |
-| 8 | TASK-1842 | Localhost end-to-end QA: real browser flow from prompt → clarification → answer/uncertainty → feedback/debug | 📋 Planned | Playwright/browser evidence proves no content barrage before clarification and no stuck card after answer |
+| 8 | TASK-1842 | Localhost end-to-end QA: real browser flow from prompt → clarification → answer/uncertainty → feedback/debug | ✅ First proof done | Playwright/browser evidence proves no content barrage before clarification and no stuck card after answer |
 | 9 | TASK-1843 | Electron packaging/updater gate after localhost stabilization | ⏸ Deferred | Only run Electron build/update when user explicitly re-enables Electron for this lane |
 
 **Research-backed requirements captured in the stages**:
@@ -121,6 +121,7 @@
 
 **Progress**:
 - 2026-06-08: Pending AI memory write tests now prove clarification events, recommendation feedback, and parameter beliefs all queue during schema-cache/migration misses and flush after the server schema becomes available. This protects saved clarification answers, postpone/dismiss/simplify learning signals, and EVPI belief updates during VPS rollout timing gaps.
+- 2026-06-08: Broad non-weekly task answers now retrieve server-backed `ai_context_entities`, `ai_clarification_events`, `ai_parameter_beliefs`, and `ai_recommendation_feedback` by text entity key before formatting task-list responses. This closes the gap where weekly planning could recall synthetic bucket context but general "what should I do" answers still ignored durable `Work`/`My Projects`/`uncategorized` memory.
 
 ---
 
@@ -398,6 +399,7 @@
 
 **Progress**:
 - 2026-06-08: Extracted weekly memory retrieval into a bounded SQL-first helper. The helper retrieves UUID-only legacy contexts, server context entities, clarification events, recommendation feedback, and graph edges separately so synthetic buckets never enter UUID-only calls. Semantic/vector recall remains pgvector-ready metadata only until the database function is available. Focused tests cover bounded diagnostics, feedback/event counts, synthetic bucket safety, and timeout fallback.
+- 2026-06-08: Added `broadMemoryRetrieval` for non-weekly task-list answers. The helper keeps UUID-only legacy calls filtered to real UUIDs, sends synthetic/local entities through text keys (`project:uncategorized`, `task:local-task`), includes safe quoted evidence from parameter beliefs and recent clarification answers, and returns concise retrieval diagnostics for future debug display.
 
 ---
 

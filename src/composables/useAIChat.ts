@@ -46,12 +46,12 @@ import { digestToolResults } from '@/services/ai/pipeline/preDigestedReasoning'
 import { detectFluff, extractTaskTitlesFromResults } from '@/services/ai/pipeline/fluffDetector'
 import { EntityMemory } from '@/services/ai/pipeline/entityMemory'
 import { auditChatResponseQuality, type ChatQualityMode } from '@/services/ai/pipeline/chatQuality'
-import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from '@/services/ai/pipeline/memoryEvidence'
 import {
   broadTaskClarificationMemoryKey,
   buildBroadTaskClarification,
   shouldAskBroadTaskClarification,
 } from '@/services/ai/pipeline/broadClarification'
+import { retrieveBroadAIMemory } from '@/services/ai/pipeline/broadMemoryRetrieval'
 import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
@@ -68,7 +68,7 @@ import {
   type WeeklyPlanOutput,
 } from '@/services/ai/pipeline/weeklyPlan'
 import { retrieveWeeklyAIMemory, type WeeklyMemoryRetrievalDiagnostics } from '@/services/ai/pipeline/weeklyMemoryRetrieval'
-import type { AIClarificationArtifact, AIClarificationEvent, AIContextEntity, AIRecommendationFeedback, ProjectContext, TaskContext } from '@/types/aiMemory'
+import type { AIClarificationArtifact, AIClarificationEvent, AIRecommendationFeedback } from '@/types/aiMemory'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
@@ -863,18 +863,6 @@ export function useAIChat() {
     }).join('\n\n')
   }
 
-  function isSupabaseUuid(value: string): boolean {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
-  }
-
-  function uniqueSupabaseIds(values: string[]): string[] {
-    return [...new Set(values.map(value => value.trim()).filter(isSupabaseUuid))]
-  }
-
-  function uniqueStrings(values: string[]): string[] {
-    return [...new Set(values.map(value => value.trim()).filter(Boolean))]
-  }
-
   function projectEntityKey(projectId: string): string {
     return `project:${projectId || 'uncategorized'}`
   }
@@ -883,157 +871,22 @@ export function useAIChat() {
     return `task:${taskId}`
   }
 
-  function factString(facts: Record<string, unknown>, field: string): string | null {
-    const value = facts[field]
-    return typeof value === 'string' && value.trim() ? value.trim() : null
-  }
-
-  function factArray(facts: Record<string, unknown>, field: string): string[] {
-    const value = facts[field]
-    if (Array.isArray(value)) return value.map(String).filter(Boolean)
-    if (typeof value === 'string' && value.trim()) return [value.trim()]
-    return []
-  }
-
-  function entityToProjectContext(entity: AIContextEntity): ProjectContext | null {
-    if (entity.entityType !== 'project' && entity.entityType !== 'synthetic_group') return null
-    const projectId = entity.canonicalProjectId || entity.entityKey.replace(/^project:/, '').replace(/^synthetic_group:/, '')
-    if (!projectId) return null
-    const facts = entity.facts ?? {}
-    const domain = factString(facts, 'domain')
-    const currentStakes = factString(facts, 'currentStakes')
-    const urgencyWindow = factString(facts, 'urgencyWindow')
-    return {
-      projectId,
-      summary: entity.summary ?? factString(facts, 'summary'),
-      domain: domain === 'work' || domain === 'personal' || domain === 'creative' || domain === 'admin' || domain === 'learning' || domain === 'health' ? domain : 'unknown',
-      lifeArea: factString(facts, 'lifeArea'),
-      whyItMatters: factString(facts, 'whyItMatters') ?? factString(facts, 'thisWeekImportance'),
-      successCriteria: factArray(facts, 'successCriteria'),
-      failureRisks: factArray(facts, 'failureRisks'),
-      currentStakes: currentStakes === 'low' || currentStakes === 'medium' || currentStakes === 'high' || currentStakes === 'critical' ? currentStakes : 'unknown',
-      urgencyWindow: urgencyWindow === 'none' || urgencyWindow === 'this_week' || urgencyWindow === 'this_month' || urgencyWindow === 'date_bound' ? urgencyWindow : 'unknown',
-      preferredCadence: null,
-      taskSelectionHints: factArray(facts, 'taskSelectionHints'),
-      nonGoals: factArray(facts, 'nonGoals'),
-      userCorrections: [...entity.corrections, ...factArray(facts, 'userCorrections')],
-      confidence: entity.confidence,
-      completenessScore: entity.completenessScore,
-      lastConfirmedAt: entity.lastAnsweredAt ?? null,
-      lastUpdatedAt: entity.lastAnsweredAt ?? entity.lastAskedAt ?? null,
-      staleAfter: entity.staleAfter ?? null,
-    }
-  }
-
-  function entityToTaskContext(entity: AIContextEntity): TaskContext | null {
-    if (entity.entityType !== 'task') return null
-    const taskId = entity.canonicalTaskId || entity.entityKey.replace(/^task:/, '')
-    if (!taskId) return null
-    const facts = entity.facts ?? {}
-    const currentStakes = factString(facts, 'currentStakes')
-    const urgencyWindow = factString(facts, 'urgencyWindow')
-    return {
-      taskId,
-      projectId: factString(facts, 'projectId'),
-      summary: entity.summary ?? factString(facts, 'summary'),
-      whyItMatters: factString(facts, 'whyItMatters'),
-      successCriteria: factArray(facts, 'successCriteria'),
-      currentStakes: currentStakes === 'low' || currentStakes === 'medium' || currentStakes === 'high' || currentStakes === 'critical' ? currentStakes : 'unknown',
-      urgencyWindow: urgencyWindow === 'none' || urgencyWindow === 'this_week' || urgencyWindow === 'this_month' || urgencyWindow === 'date_bound' ? urgencyWindow : 'unknown',
-      selectionHints: factArray(facts, 'selectionHints'),
-      nonGoals: factArray(facts, 'nonGoals'),
-      userCorrections: [...entity.corrections, ...factArray(facts, 'userCorrections')],
-      confidence: entity.confidence,
-      completenessScore: entity.completenessScore,
-      lastConfirmedAt: entity.lastAnsweredAt ?? null,
-      lastUpdatedAt: entity.lastAnsweredAt ?? entity.lastAskedAt ?? null,
-      staleAfter: entity.staleAfter ?? null,
-    }
-  }
-
   async function buildAIMemorySummaryForToolResults(toolResults: ToolResult[], lang: 'he' | 'en'): Promise<AIMemorySummaryResult> {
     const cardTasks = collectCardTasks(toolResults)
     if (!cardTasks.length) return { summary: '', recommendationFeedback: [] }
     try {
       const db = useSupabaseDatabase()
-      const taskIdStrings = uniqueStrings(cardTasks.map(task => String(task.id || '')))
-      const projectIdStrings = uniqueStrings(cardTasks
-        .map(task => {
-          const id = String(task.id || '')
-          return id ? taskStore.getTask(id)?.projectId || String(task.projectId || '') : String(task.projectId || '')
-        })
-      )
-      const taskIds = uniqueSupabaseIds(taskIdStrings)
-      const projectIds = uniqueSupabaseIds(projectIdStrings)
-      const entityKeys = uniqueStrings([
-        ...taskIdStrings.map(taskEntityKey),
-        ...projectIdStrings.map(projectEntityKey),
-      ])
-      const [projectContexts, taskContexts, recommendationFeedback] = await Promise.all([
-        db.fetchProjectContexts(projectIds),
-        db.fetchTaskContexts(taskIds),
-        db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 20 }),
-      ])
-      const lines: string[] = [buildMemoryEvidenceHeader(lang)]
-      for (const ctx of projectContexts.slice(0, 8)) {
-        const projectName = sanitizeMemoryEvidenceText(taskStore.getProjectDisplayName?.(ctx.projectId) || ctx.projectId, 120)
-        const bits = [
-          formatMemoryEvidence('domain', ctx.domain, 80),
-          ctx.currentStakes !== 'unknown' ? formatMemoryEvidence('stakes', ctx.currentStakes, 80) : '',
-          ctx.whyItMatters ? formatMemoryEvidence('why', ctx.whyItMatters, 160) : '',
-          ctx.successCriteria.length ? formatMemoryEvidence('success', ctx.successCriteria.slice(0, 2).join('; '), 160) : '',
-        ].filter(Boolean)
-        if (bits.length) lines.push(`- project ${projectName}: ${bits.join(' | ')}`)
-      }
-      for (const ctx of taskContexts.slice(0, 8)) {
-        const taskName = sanitizeMemoryEvidenceText(taskStore.getTask(ctx.taskId)?.title || ctx.taskId, 160)
-        const bits = [
-          ctx.currentStakes !== 'unknown' ? formatMemoryEvidence('stakes', ctx.currentStakes, 80) : '',
-          ctx.whyItMatters ? formatMemoryEvidence('why', ctx.whyItMatters, 160) : '',
-          ctx.successCriteria.length ? formatMemoryEvidence('success', ctx.successCriteria.slice(0, 2).join('; '), 160) : '',
-        ].filter(Boolean)
-        if (bits.length) lines.push(`- task ${taskName}: ${bits.join(' | ')}`)
-      }
-      const projectsWithoutContext = projectIds
-        .filter(id => !projectContexts.some(ctx => ctx.projectId === id))
-        .map(id => sanitizeMemoryEvidenceText(taskStore.getProjectDisplayName?.(id) || id, 120))
-        .slice(0, 5)
-      if (projectsWithoutContext.length) {
-        lines.push(`- context unknown for projects: ${projectsWithoutContext.join(', ')}`)
-      }
-      for (const feedback of recommendationFeedback.slice(0, 8)) {
-        const target = feedbackTargetLabel(feedback)
-        const bits = [
-          formatMemoryEvidence('action', feedback.action, 80),
-          feedback.reasonCategory ? formatMemoryEvidence('reason', feedback.reasonCategory, 80) : '',
-          feedback.revisitAt ? formatMemoryEvidence('revisit', feedback.revisitAt.slice(0, 10), 80) : '',
-          feedback.freeText ? formatMemoryEvidence('note', feedback.freeText, 120) : '',
-        ].filter(Boolean)
-        if (target && bits.length) lines.push(`- recommendation feedback for ${target}: ${bits.join(' | ')}`)
-      }
-      return {
-        summary: lines.join('\n'),
-        recommendationFeedback,
-      }
+      return await retrieveBroadAIMemory({
+        db,
+        cardTasks,
+        lang,
+        getTaskProjectId: taskId => taskStore.getTask(taskId)?.projectId,
+        getTaskTitle: taskId => taskStore.getTask(taskId)?.title,
+        getProjectDisplayName: projectId => taskStore.getProjectDisplayName?.(projectId),
+      })
     } catch {
       return { summary: '', recommendationFeedback: [] }
     }
-  }
-
-  function feedbackTargetLabel(feedback: AIRecommendationFeedback): string {
-    if (feedback.taskId) {
-      return sanitizeMemoryEvidenceText(taskStore.getTask(feedback.taskId)?.title || feedback.taskId, 160)
-    }
-    const entityKey = feedback.entityKey || ''
-    if (entityKey.startsWith('task:')) {
-      const taskId = entityKey.slice('task:'.length)
-      return sanitizeMemoryEvidenceText(taskStore.getTask(taskId)?.title || taskId, 160)
-    }
-    if (entityKey.startsWith('project:')) {
-      const projectId = entityKey.slice('project:'.length)
-      return sanitizeMemoryEvidenceText(taskStore.getProjectDisplayName?.(projectId) || projectId, 120)
-    }
-    return sanitizeMemoryEvidenceText(entityKey || feedback.recommendationId, 160)
   }
 
   function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<Record<string, unknown> & { title?: string; __cardIndex?: number }> {

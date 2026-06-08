@@ -433,6 +433,49 @@ describe('retrieveBroadAIMemory', () => {
     expect(result.summary).toContain('source_events="18"')
   })
 
+  it('suggests compact snapshots when broad memory lifecycle says an entity needs summarization', async () => {
+    const entityKey = 'project:uncategorized'
+    const db = dbStub({
+      fetchAIContextEntities: vi.fn(async () => [
+        contextEntity({
+          entityKey,
+          entityType: 'project',
+          displayName: 'Uncategorized',
+          facts: { whyItMatters: 'Mostly admin unless task notes say otherwise.' },
+          confidence: 0.82,
+          lastAnsweredAt: '2026-06-07T10:00:00.000Z',
+        }),
+      ]),
+      fetchAIClarificationEvents: vi.fn(async () => Array.from({ length: 20 }, (_, index) => ({
+        entityKey,
+        entityType: 'project',
+        questionId: `q-${index}`,
+        eventType: 'answered',
+        selectedLabel: `Answer ${index}`,
+        createdAt: `2026-06-${String(Math.max(1, 8 - (index % 5))).padStart(2, '0')}T10:00:00.000Z`,
+      } as AIClarificationEvent))),
+    })
+
+    const result = await retrieveBroadAIMemory({
+      db,
+      lang: 'en',
+      now: new Date('2026-06-08T10:00:00.000Z'),
+      cardTasks: [{ id: 'local-task', projectId: 'uncategorized', title: 'Loose admin task' }],
+    })
+
+    expect(result.diagnostics.lifecycle.summarizeEntityKeys).toContain(entityKey)
+    expect(result.diagnostics.snapshotSuggestions).toEqual([
+      expect.objectContaining({
+        snapshotKey: 'project:uncategorized:summary',
+        scope: 'project',
+        entityKeys: [entityKey],
+        summaryText: expect.stringContaining('Mostly admin'),
+        sourceEventCount: 20,
+        sourceEntityCount: 1,
+      }),
+    ])
+  })
+
   it('does not reuse stale or low-confidence snapshots as fresh broad-answer evidence', async () => {
     const snapshots: AIMemorySnapshot[] = [
       {

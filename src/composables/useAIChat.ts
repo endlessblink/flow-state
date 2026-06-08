@@ -925,7 +925,7 @@ export function useAIChat() {
     if (!cardTasks.length) return { summary: '', recommendationFeedback: [] }
     try {
       const db = useSupabaseDatabase()
-      return await retrieveBroadAIMemory({
+      const retrieval = await retrieveBroadAIMemory({
         db,
         cardTasks,
         lang,
@@ -934,9 +934,17 @@ export function useAIChat() {
         getTaskTitle: taskId => taskStore.getTask(taskId)?.title,
         getProjectDisplayName: projectId => taskStore.getProjectDisplayName?.(projectId),
       })
+      persistAIMemorySnapshotSuggestions(db, retrieval.diagnostics.snapshotSuggestions)
+      return retrieval
     } catch {
       return { summary: '', recommendationFeedback: [] }
     }
+  }
+
+  function persistAIMemorySnapshotSuggestions(db: ReturnType<typeof useSupabaseDatabase>, suggestions: BroadMemoryRetrievalResult['diagnostics']['snapshotSuggestions'] | WeeklyMemoryRetrievalDiagnostics['snapshotSuggestions']) {
+    if (!suggestions.length) return
+    void Promise.all(suggestions.slice(0, 3).map(snapshot => db.upsertAIMemorySnapshot(snapshot)))
+      .catch(error => console.warn('[AIChat] Could not persist AI memory snapshot suggestion:', error))
   }
 
   function getTaskItemsFromToolResults(toolResults: ToolResult[]): Array<Record<string, unknown> & { title?: string; __cardIndex?: number }> {
@@ -2091,6 +2099,7 @@ export function useAIChat() {
           semanticCandidateCount: 0,
           semanticSkippedReason: 'no_related_entities' as const,
           stageTimings: {},
+          snapshotSuggestions: [],
           lifecycle: {
             staleEntityKeys: [],
             refreshEntityKeys: [],
@@ -2118,6 +2127,7 @@ export function useAIChat() {
           clarificationEvents = retrieval.clarificationEvents
           memoryDiagnostics = retrieval.diagnostics
           await db.upsertAIContextEdges(retrieval.edges)
+          persistAIMemorySnapshotSuggestions(db, retrieval.diagnostics.snapshotSuggestions)
         } catch (memoryErr) {
           console.warn('[AIChat:WeeklyPlan] Memory fetch skipped or timed out:', memoryErr)
           updateChatPhase(phaseActivityId, 'Memory skipped', 'Using task data now')

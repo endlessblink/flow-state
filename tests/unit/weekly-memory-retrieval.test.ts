@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { retrieveWeeklyAIMemory, type WeeklyMemoryDb } from '@/services/ai/pipeline/weeklyMemoryRetrieval'
-import type { AIContextEdge, AIContextEntity, AIMemorySnapshot, AIParameterBelief, AIRecommendationFeedback, ProjectContext, TaskContext } from '@/types/aiMemory'
+import type { AIClarificationEvent, AIContextEdge, AIContextEntity, AIMemorySnapshot, AIParameterBelief, AIRecommendationFeedback, ProjectContext, TaskContext } from '@/types/aiMemory'
 
 const taskId = '11111111-1111-4111-8111-111111111111'
 const projectId = '22222222-2222-4222-8222-222222222222'
@@ -293,6 +293,49 @@ describe('retrieveWeeklyAIMemory', () => {
     expect(result.diagnostics.lifecycle.lowConfidenceSnapshotCount).toBe(1)
     expect(JSON.stringify(result.memory)).not.toContain('Outdated weekly focus')
     expect(JSON.stringify(result.memory)).not.toContain('Low-confidence summary')
+  })
+
+  it('suggests compact snapshots when weekly memory lifecycle says an entity needs summarization', async () => {
+    const entityKey = `project:${projectId}`
+    const db = dbStub({
+      fetchAIContextEntities: vi.fn(async () => [
+        contextEntity({
+          entityKey,
+          entityType: 'project',
+          displayName: 'Memory Reliability',
+          facts: { whyItMatters: 'Prevents repeated clarification and fake planning.' },
+          confidence: 0.86,
+          lastAnsweredAt: '2026-06-07T10:00:00.000Z',
+        }),
+      ]),
+      fetchAIClarificationEvents: vi.fn(async () => Array.from({ length: 20 }, (_, index) => ({
+        entityKey,
+        entityType: 'project',
+        questionId: `q-${index}`,
+        eventType: 'answered',
+        selectedLabel: `Answer ${index}`,
+        createdAt: `2026-06-${String(Math.max(1, 8 - (index % 5))).padStart(2, '0')}T10:00:00.000Z`,
+      } as AIClarificationEvent))),
+    })
+
+    const result = await retrieveWeeklyAIMemory({
+      db,
+      cardTasks: [{ id: taskId, projectId }],
+      now: new Date('2026-06-08T10:00:00.000Z'),
+      timeoutMs: 1000,
+    })
+
+    expect(result.diagnostics.lifecycle.summarizeEntityKeys).toContain(entityKey)
+    expect(result.diagnostics.snapshotSuggestions).toEqual([
+      expect.objectContaining({
+        snapshotKey: `${entityKey}:summary`,
+        scope: 'project',
+        entityKeys: [entityKey],
+        summaryText: expect.stringContaining('Prevents repeated clarification'),
+        sourceEventCount: 20,
+        sourceEntityCount: 1,
+      }),
+    ])
   })
 
   it('falls back on timeout without inventing memory evidence', async () => {

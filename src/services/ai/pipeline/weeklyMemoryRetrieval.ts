@@ -1,6 +1,6 @@
-import type { AIClarificationEvent, AIContextEdge, AIContextEdgeInput, AIContextEntity, AIMemorySnapshot, AIParameterBelief, ProjectContext, TaskContext, AIRecommendationFeedback } from '@/types/aiMemory'
+import type { AIClarificationEvent, AIContextEdge, AIContextEdgeInput, AIContextEntity, AIMemorySnapshot, AIMemorySnapshotInput, AIParameterBelief, ProjectContext, TaskContext, AIRecommendationFeedback } from '@/types/aiMemory'
 import type { WeekContextMemoryInput } from './weeklyPlan'
-import { assessAIParameterBeliefFreshness, assessAIMemoryFreshness, assessAIMemorySnapshotFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
+import { assessAIParameterBeliefFreshness, assessAIMemoryFreshness, assessAIMemorySnapshotFreshness, buildAIMemorySnapshotInput, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 
 type CardTaskLike = Record<string, unknown>
 const WEEKLY_GLOBAL_MEMORY_ENTITY_KEYS = [
@@ -38,6 +38,7 @@ export type WeeklyMemoryRetrievalDiagnostics = {
   semanticSkippedReason?: 'pgvector_not_configured' | 'no_related_entities'
   stageTimings: Partial<Record<WeeklyMemoryRetrievalStage, number>>
   lifecycle: AIMemoryLifecycleSummary
+  snapshotSuggestions: AIMemorySnapshotInput[]
 }
 
 export type WeeklyMemoryDb = {
@@ -102,6 +103,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
     semanticSkippedReason: 'no_related_entities',
     stageTimings,
     lifecycle: emptyLifecycleSummary(),
+    snapshotSuggestions: [],
   })
 
   try {
@@ -116,6 +118,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
       timeWeeklyRetrievalStage(stageTimings, 'parameterBeliefs', () => input.db.fetchAIParameterBeliefs?.({ entityKeys: beliefEntityKeys, limit: 60 }) ?? Promise.resolve([])),
     ]), input.timeoutMs, 'weekly_plan_memory_timeout')
     const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now, parameterBeliefs, memorySnapshots)
+    const snapshotSuggestions = buildWeeklySnapshotSuggestions(contextEntities, clarificationEvents, lifecycle, input.now)
     const refreshEntityKeys = new Set(lifecycle.refreshEntityKeys)
     const freshMemorySnapshots = memorySnapshots.filter(snapshot => assessAIMemorySnapshotFreshness(snapshot, input.now).fresh)
     const freshParameterBeliefs = parameterBeliefs.filter(belief =>
@@ -164,6 +167,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
         semanticSkippedReason: semanticCandidateKeys.length ? 'pgvector_not_configured' : 'no_related_entities',
         stageTimings,
         lifecycle,
+        snapshotSuggestions,
       },
     }
   } catch {
@@ -176,6 +180,39 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
       diagnostics: fallbackDiagnostics(true),
     }
   }
+}
+
+function buildWeeklySnapshotSuggestions(
+  entities: AIContextEntity[],
+  events: AIClarificationEvent[],
+  lifecycle: AIMemoryLifecycleSummary,
+  now: Date,
+): AIMemorySnapshotInput[] {
+  const entityByKey = new Map(entities.map(entity => [entity.entityKey, entity]))
+  const refreshKeys = new Set(lifecycle.refreshEntityKeys)
+  return lifecycle.summarizeEntityKeys
+    .filter(entityKey => !refreshKeys.has(entityKey))
+    .map(entityKey => {
+      const entity = entityByKey.get(entityKey)
+      if (!entity) return null
+      return buildAIMemorySnapshotInput({
+        snapshotKey: `${entityKey}:summary`,
+        scope: snapshotScopeForEntityKey(entityKey),
+        entityKeys: [entityKey],
+        entities: [entity],
+        events: events.filter(event => event.entityKey === entityKey),
+        now,
+      })
+    })
+    .filter((snapshot): snapshot is AIMemorySnapshotInput => Boolean(snapshot))
+}
+
+function snapshotScopeForEntityKey(entityKey: string): AIMemorySnapshotInput['scope'] {
+  if (entityKey.startsWith('task:')) return 'task'
+  if (entityKey.startsWith('week:')) return 'week'
+  if (entityKey.startsWith('workflow:')) return 'workflow'
+  if (entityKey.startsWith('preference:')) return 'user'
+  return 'project'
 }
 
 async function timeWeeklyRetrievalStage<T>(

@@ -3,13 +3,14 @@ import type {
   AIContextEdge,
   AIContextEntity,
   AIMemorySnapshot,
+  AIMemorySnapshotInput,
   AIParameterBelief,
   AIRecommendationFeedback,
   ProjectContext,
   TaskContext,
 } from '@/types/aiMemory'
 import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from './memoryEvidence'
-import { assessAIParameterBeliefFreshness, assessAIMemoryFreshness, assessAIMemorySnapshotFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
+import { assessAIParameterBeliefFreshness, assessAIMemoryFreshness, assessAIMemorySnapshotFreshness, buildAIMemorySnapshotInput, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 import { projectEntityKey, taskEntityKey } from './weeklyMemoryRetrieval'
 
 type CardTaskLike = Record<string, unknown>
@@ -80,6 +81,7 @@ export type BroadMemoryRetrievalResult = {
     snapshotCount: number
     entityKeyCount: number
     lifecycle: AIMemoryLifecycleSummary
+    snapshotSuggestions: AIMemorySnapshotInput[]
     elapsedMs: number
     timedOut: boolean
     stageTimings: Partial<Record<BroadMemoryRetrievalStage, number>>
@@ -121,6 +123,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       snapshotCount: 0,
       entityKeyCount: entityKeys.length,
       lifecycle: emptyLifecycleSummary(),
+      snapshotSuggestions: [],
       elapsedMs: Math.round(performance.now() - startedAt),
       timedOut,
       stageTimings,
@@ -163,6 +166,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     memorySnapshots,
   ] = rows
   const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now, parameterBeliefs, memorySnapshots)
+  const snapshotSuggestions = buildBroadSnapshotSuggestions(contextEntities, activeLifecycleEvents(clarificationEvents, lifecycle), lifecycle, input.now)
   const refreshEntityKeys = new Set(lifecycle.refreshEntityKeys)
   const activeClarificationEvents = clarificationEvents.filter(event => !refreshEntityKeys.has(event.entityKey))
   const activeMemorySnapshots = memorySnapshots.filter(snapshot => assessAIMemorySnapshotFreshness(snapshot, input.now).fresh)
@@ -223,11 +227,48 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       snapshotCount: activeMemorySnapshots.length,
       entityKeyCount: entityKeys.length,
       lifecycle,
+      snapshotSuggestions,
       elapsedMs: Math.round(performance.now() - startedAt),
       timedOut: false,
       stageTimings,
     },
   }
+}
+
+function activeLifecycleEvents(events: AIClarificationEvent[], lifecycle: AIMemoryLifecycleSummary): AIClarificationEvent[] {
+  const refreshKeys = new Set(lifecycle.refreshEntityKeys)
+  return events.filter(event => !refreshKeys.has(event.entityKey))
+}
+
+function buildBroadSnapshotSuggestions(
+  entities: AIContextEntity[],
+  events: AIClarificationEvent[],
+  lifecycle: AIMemoryLifecycleSummary,
+  now?: Date,
+): AIMemorySnapshotInput[] {
+  const entityByKey = new Map(entities.map(entity => [entity.entityKey, entity]))
+  return lifecycle.summarizeEntityKeys
+    .map(entityKey => {
+      const entity = entityByKey.get(entityKey)
+      if (!entity) return null
+      return buildAIMemorySnapshotInput({
+        snapshotKey: `${entityKey}:summary`,
+        scope: snapshotScopeForEntityKey(entityKey),
+        entityKeys: [entityKey],
+        entities: [entity],
+        events: events.filter(event => event.entityKey === entityKey),
+        now,
+      })
+    })
+    .filter((snapshot): snapshot is AIMemorySnapshotInput => Boolean(snapshot))
+}
+
+function snapshotScopeForEntityKey(entityKey: string): AIMemorySnapshotInput['scope'] {
+  if (entityKey.startsWith('task:')) return 'task'
+  if (entityKey.startsWith('week:')) return 'week'
+  if (entityKey.startsWith('workflow:')) return 'workflow'
+  if (entityKey.startsWith('preference:')) return 'user'
+  return 'project'
 }
 
 async function timeBroadRetrievalStage<T>(

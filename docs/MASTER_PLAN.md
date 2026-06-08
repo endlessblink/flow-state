@@ -451,6 +451,7 @@
 - 2026-06-08: Lifecycle snapshot compaction now preserves user corrections as bounded, sanitized snapshot facts and includes a short corrections line in the compact summary. This keeps correction history auditable after noisy clarification events are summarized, instead of letting summarization erase "the user corrected this framing" evidence.
 - 2026-06-08: Authenticated clarification-derived parameter beliefs now refresh the same lifecycle fields as local fallback beliefs: `stale_after`, `last_reinforced_at`, `reinforcement_count`, and `decay_score`. This keeps VPS/server-backed answers from immediately aging out or being re-asked after a stale-context refresh confirmation.
 - 2026-06-08: Memory snapshots now obey the same freshness policy as entities and parameter beliefs. Weekly, broad, and global retrieval filter stale or low-confidence compact summaries out of prompt evidence, keep their keys in lifecycle diagnostics, and expose stale/refresh-needed snapshot counts so old summaries cannot silently suppress clarification or create fake certainty.
+- 2026-06-08: Weekly and broad memory retrieval now convert lifecycle summarize-needed diagnostics into bounded compact snapshot write suggestions, and the chat pipeline persists up to three suggestions in the background through the resilient `ai_memory_snapshots` local/queued/server upsert path. This turns noisy clarification history into compact memory without blocking visible answers.
 
 ---
 

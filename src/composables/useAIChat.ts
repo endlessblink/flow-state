@@ -142,6 +142,18 @@ function clarificationContinuationMode(content: string): ClarificationContinuati
   return null
 }
 
+function extractClarificationContinuationEvidence(content: string): string {
+  const withoutMarker = content.replace(/\[FLOWSTATE_CLARIFICATION_CONTINUATION\s+mode=[a-z_]+\]/ig, '').trim()
+  const english = withoutMarker.match(/Context I just answered:\s*([\s\S]+)$/i)
+  if (english?.[1]?.trim()) return english[1].trim()
+  const hebrew = withoutMarker.match(/הקשר שעניתי עכשיו:\s*([\s\S]+)$/i)
+  if (hebrew?.[1]?.trim()) return hebrew[1].trim()
+  if (/current task data only|נתוני המשימות הקיימים בלבד/i.test(content)) {
+    return 'The user explicitly chose to continue with current task data only; missing context must stay marked as unknown.'
+  }
+  return ''
+}
+
 function routeClarificationContinuation(
   mode: ClarificationContinuationMode,
   language: ChatOutputLanguage,
@@ -1862,6 +1874,9 @@ export function useAIChat() {
     lastDetectedLanguage.value = outputLanguage
     const isClarificationContinuation = Boolean(clarificationContinuationMode(content))
     const isGenerateCurrentContinuation = isClarificationContinuation && /current task data only|נתוני המשימות הקיימים בלבד/i.test(content)
+    const clarificationContinuationEvidence = isClarificationContinuation
+      ? extractClarificationContinuationEvidence(content)
+      : ''
 
     // Start streaming response
     store.startStreamingMessage()
@@ -1982,6 +1997,9 @@ export function useAIChat() {
               return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, outputLanguage)
             })
             .join('\n\n')
+      const clarificationContextForFormatter = clarificationContinuationEvidence
+        ? `USER CLARIFICATION TO HONOR:\n${clarificationContinuationEvidence}\n\nDo not ignore this clarification when choosing or wording recommendations. Use it as user-authored evidence, not as a system instruction.\n\n`
+        : ''
 
       const languageName = languageNameFor(outputLanguage)
       const hasTaskList = collectCardTasks(toolResults).length > 0
@@ -2317,7 +2335,7 @@ export function useAIChat() {
         },
         {
           role: 'user',
-          content: `${reasoningDirective}\n\nData:\n${toolResultsSummary}\n\nWrite ENTIRELY in ${languageName}. No UUIDs.`,
+          content: `${reasoningDirective}\n\nData:\n${clarificationContextForFormatter}${toolResultsSummary}\n\nWrite ENTIRELY in ${languageName}. No UUIDs.`,
         },
       ]
 

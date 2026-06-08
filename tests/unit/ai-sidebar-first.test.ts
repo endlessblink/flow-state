@@ -1784,6 +1784,78 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('week')
   })
 
+  it('keeps follow-up free text as explicit evidence for the continued answer', async () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-response-quality-follow-up-text',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            clarification: {
+              schemaVersion: 'ai-clarification.v1',
+              kind: 'response_quality',
+              locale: 'en',
+              direction: 'ltr',
+              progressLabel: 'Clarifying direction • Step 1/1',
+              summary: 'One missing preference would change the recommendation.',
+              memoryKey: 'workflow:task_answer:day_plan',
+              pathType: 'clarify_first',
+              candidateTaskIds: ['task-a'],
+              actions: ['generate_current', 'show_candidates', 'pause_save'],
+              coverage: {
+                score: 0.46,
+                materiality: 'high',
+                dimensions: { preferences: 0.25, impact: 0.35 },
+                missing: ['preferences', 'impact'],
+                decision: 'ask',
+              },
+              question: {
+                id: 'response_quality_day_plan',
+                entityType: 'workflow',
+                entityId: 'day_plan',
+                reason: 'missing_response_direction',
+                question: 'What should guide this answer?',
+                options: [{ id: 'ranking_stress', label: 'Reduce stress', effect: 'Prefer closing mental load.' }],
+                allowFreeText: true,
+                relatedTaskIds: ['task-a'],
+              },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    await wrapper.get('.weekly-question-option').trigger('click')
+    await wrapper.get('.weekly-question-apply').trigger('click')
+    await nextTick()
+
+    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-free-text').setValue('Pick the one that reduces open loops fastest.')
+    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
+    await nextTick()
+
+    const continuation = wrapper.emitted('continueChat')?.[0]?.[0] as string
+    expect(continuation).toContain('Answer: "Reduce stress"')
+    expect(continuation).toContain('Why-now note: "Pick the one that reduces open loops fastest."')
+    expect(continuation).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
+  })
+
+  it('injects clarification continuation evidence into the deterministic formatter prompt', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+
+    expect(aiChat).toContain('function extractClarificationContinuationEvidence')
+    expect(aiChat).toContain('const clarificationContinuationEvidence = isClarificationContinuation')
+    expect(aiChat).toContain('USER CLARIFICATION TO HONOR')
+    expect(aiChat).toContain('Do not ignore this clarification when choosing or wording recommendations.')
+    expect(aiChat).toContain('Data:\\n${clarificationContextForFormatter}${toolResultsSummary}')
+  })
+
   it('queues clarification continuation instead of dropping it while generation is settling', () => {
     const panel = src('src/components/ai/AIChatPanel.vue')
 

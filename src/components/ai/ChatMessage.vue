@@ -785,19 +785,21 @@ function collectClarificationEvidence(card: AIClarificationArtifact): {
 } {
   const key = clarificationKey(card)
   const steps = clarificationFollowUpSteps(card)
-  const followUpLines: string[] = []
+  const followUpLabels: string[] = []
+  const followUpTextLines: string[] = []
   for (const step of steps) {
     const inputKey = `${key}:${step.id}`
     const selected = clarificationFollowUpAnswers.value[inputKey]
     const label = step.options.find(option => option.id === selected)?.label
     const text = clarificationFollowUpFreeText.value[inputKey]?.trim()
-    if (label) followUpLines.push(label)
-    if (text) followUpLines.push(text)
+    if (label) followUpLabels.push(label)
+    if (text) followUpTextLines.push(text)
   }
   return {
     selectedLabel: card.question.options.find(item => item.id === clarificationAnswers.value[key])?.label,
     freeText: clarificationFreeText.value[key]?.trim(),
-    followUpLabel: followUpLines.join(' | ') || undefined,
+    followUpLabel: followUpLabels.join(' | ') || undefined,
+    followUpFreeText: followUpTextLines.join(' | ') || undefined,
   }
 }
 

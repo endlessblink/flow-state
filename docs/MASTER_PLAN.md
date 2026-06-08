@@ -131,6 +131,7 @@
 - 2026-06-08: Response-quality clarification no longer treats one button click as enough context. Button-only broad prompts now ask one short follow-up about what the answer should help the user do before continuing.
 - 2026-06-08: The "generate with current info" escape now explicitly continues the chat through the clarification-continuation path with instructions to mark missing context as unknown, rather than only showing local candidate cards.
 - 2026-06-08: Localhost generate-current smoke now shows a limited uncertainty-marked draft instead of confident impact/risk fallback prose, with no long-plan dump and no stuck generation state.
+- 2026-06-08: Clarification follow-up answers are now preserved as user-authored evidence in the deterministic formatter prompt, including free-text follow-up notes, so the answer after clarification can use what the user actually said instead of only bypassing the ask gate.
 
 ---
 

@@ -23,6 +23,7 @@ const liveSchemaChecker = readFileSync(join(root, 'scripts/check-ai-memory-schem
 const crudSmokeChecker = readFileSync(join(root, 'scripts/check-ai-memory-crud.cjs'), 'utf8')
 const liveMigrationBundler = readFileSync(join(root, 'scripts/build-ai-memory-migration-bundle.cjs'), 'utf8')
 const liveMigrationApplier = readFileSync(join(root, 'scripts/apply-ai-memory-live-migration.sh'), 'utf8')
+const liveReadinessChecker = readFileSync(join(root, 'scripts/check-ai-memory-live-readiness.sh'), 'utf8')
 
 const tableColumns: Record<string, string[]> = {
   ai_context_entities: [
@@ -302,6 +303,15 @@ describe('AI memory schema contract', () => {
     expect(liveMigrationApplier).toContain('AI_MEMORY_SCHEMA_RETRY_MS="${AI_MEMORY_SCHEMA_RETRY_MS:-2500}"')
     expect(liveMigrationApplier).toContain('Live migration apply completed and REST schema readiness passed')
     expect(liveMigrationApplier).toContain('AI_MEMORY_CRUD_PROBE=1 npm run check:ai-memory-crud')
+  })
+
+  it('keeps the combined live readiness check read-only', () => {
+    expect(liveReadinessChecker).toContain('Read-only live readiness gate')
+    expect(liveReadinessChecker).toContain('does not upload SQL, apply migrations, or write probe rows')
+    expect(liveReadinessChecker).toContain('AI_MEMORY_PREFLIGHT_ONLY=1 npm run apply:ai-memory-live-migration')
+    expect(liveReadinessChecker).toContain('npm run check:ai-memory-schema -- --json --json-out')
+    expect(liveReadinessChecker).not.toContain('APPLY_AI_MEMORY_LIVE=1')
+    expect(liveReadinessChecker).not.toContain('AI_MEMORY_CRUD_PROBE=1')
   })
 
   it('prints the required AI memory schema contract without network access', () => {

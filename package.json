@@ -27,6 +27,7 @@
     "restore:dry-run": "node scripts/restore-from-shadow.cjs --dry-run",
     "check:ai-memory-schema": "node scripts/check-ai-memory-schema.cjs",
     "check:ai-memory-crud": "node scripts/check-ai-memory-crud.cjs",
+    "check:ai-memory-live-readiness": "bash scripts/check-ai-memory-live-readiness.sh",
     "build:ai-memory-migration-bundle": "node scripts/build-ai-memory-migration-bundle.cjs",
     "apply:ai-memory-live-migration": "bash scripts/apply-ai-memory-live-migration.sh",
     "dev:manager": "cd watchpost && npm start",

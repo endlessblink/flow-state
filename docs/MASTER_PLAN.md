@@ -150,6 +150,8 @@
 - 2026-06-08: Hardened the confirmed live migration path with a read-only VPS database preflight before upload/apply. The helper now detects the Supabase/Postgres container, fails clearly if no DB container is found, runs `select current_database();` through `psql`, and only then uploads/applies the SQL bundle. Dry-run output now prints the concrete preflight and apply commands while still making no production changes.
 - 2026-06-08: Added `AI_MEMORY_PREFLIGHT_ONLY=1 npm run apply:ai-memory-live-migration` for standalone read-only VPS database preflight. This regenerates the bundle, verifies SSH/container/`psql` access, and exits before upload/apply so production migration readiness can be checked without mutating the live database.
 - 2026-06-08: Ran the standalone read-only VPS preflight against the real server. It found database container `supabase-db`, completed `psql` connectivity, and exited with "No production database changes were made." Live schema remains missing until the explicit apply step is approved.
+- 2026-06-08: Added `npm run check:ai-memory-live-readiness`, a combined read-only live gate that runs the VPS DB preflight and then writes the REST schema readiness JSON report. It intentionally does not upload SQL, apply migrations, or run the guarded CRUD write probe.
+- 2026-06-08: Ran `npm run check:ai-memory-live-readiness` against the real VPS/API. The read-only preflight found `supabase-db` and made no production changes; the command then failed the readiness gate because the REST schema check still reports PGRST205 for all six AI-memory tables and writes `/tmp/flowstate-ai-memory-live-readiness-current.json`.
 
 ---
 

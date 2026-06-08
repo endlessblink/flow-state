@@ -58,9 +58,9 @@
 
 ---
 
-### TASK-1832: High-quality planning rubric and anti-fake-reasoning evaluator (📋 PLANNED)
+### TASK-1832: High-quality planning rubric and anti-fake-reasoning evaluator (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
 
 **Why**: "High quality" must be testable. The current failures are not only bugs; they are answer-quality regressions: filler prose, unsupported importance, overwhelming length, repeated questions, and recommendations that ignore consequences, commitments, dependencies, emotional friction, and project momentum.
 
@@ -80,6 +80,10 @@
 - Tests cover postponed/dismissed suggestions, stale context, correction overrides, and uncertainty handling.
 - Tests assert visible evidence, confidence, omissions, and user override controls so ranking does not become a black box.
 - Tests include cold-start, conflicting corrections, high-uncertainty sets, adversarial free text, and citation audits for unsupported prioritization.
+
+**Progress**:
+- 2026-06-08: Added `auditWeeklyPlanQuality()` with bad/acceptable/excellent scoring and validation rejection for unsupported importance, generic substantial-work phrasing, weak consequence coverage, repeated templates, and overlong plans.
+- 2026-06-08: Added shared `auditChatResponseQuality()` for broader deterministic task answers so non-weekly outputs can be repaired when they are verbose, generic, metadata-only, or missing task cards.
 
 ---
 

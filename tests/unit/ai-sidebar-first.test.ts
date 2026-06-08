@@ -10,6 +10,7 @@ import { useAIChatStore } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
 import { auditWeeklyPlanQuality, buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, buildWeeklyPlanPrompt, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
+import { auditChatResponseQuality } from '@/services/ai/pipeline/chatQuality'
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -625,6 +626,43 @@ describe('AI sidebar-first desktop experience', () => {
     expect(quickDraft.deferrals.length).toBeGreaterThanOrEqual(2)
     expect(new Set([...quickDraft.recommendations.map(rec => rec.primaryTaskId), ...quickDraft.deferrals.map(item => item.taskId)]).size).toBeGreaterThanOrEqual(5)
     expect(quickDraft.openQuestions.some(question => question.options?.length && question.allowFreeText)).toBe(true)
+  })
+
+  it('flags broad chat answers that are verbose, generic, or missing task cards', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      hasTaskList: true,
+      hasCards: false,
+      taskCount: 4,
+      contextUnknown: true,
+      text: [
+        'Based on your tasks, this is important strategic work and you should focus on priorities to make progress.',
+        'Task A is high priority. Task B is due soon. Task C is overdue. Task D is medium priority.',
+        'This will help you stay on track for a productive week.',
+      ].join('\n'),
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toEqual(expect.arrayContaining([
+      'missing_task_cards',
+      'generic_filler',
+      'unsupported_importance_language',
+      'metadata_only_reasoning',
+    ]))
+  })
+
+  it('accepts compact broad chat answers that use cards and grounded uncertainty', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      contextUnknown: true,
+      text: 'Start with the payment follow-up; the money risk is explicit. Context is unknown for the other candidates, so keep them as cards only.',
+    })
+
+    expect(audit.level).not.toBe('bad')
+    expect(audit.failures).toEqual([])
   })
 
   it('does not infer project importance from name alone and asks for saved project understanding', () => {
@@ -1571,6 +1609,9 @@ describe('AI sidebar-first desktop experience', () => {
     const chatMessage = src('src/components/ai/ChatMessage.vue')
 
     expect(aiChat).toContain('buildWeekContextFromToolResults')
+    expect(aiChat).toContain('auditChatResponseQuality')
+    expect(aiChat).toContain('chatQuality: responseQuality')
+    expect(aiChat).toContain('Repairing answer quality')
     expect(aiChat).toContain('buildWeeklyPlanPrompt')
     expect(aiChat).toContain('parseWeeklyPlanOutput')
     expect(aiChat).toContain('fetchProjectContexts(projectIds)')
@@ -1606,6 +1647,12 @@ describe('AI sidebar-first desktop experience', () => {
     expect(weeklyPlan).toContain('I did not get a reliable enough plan')
     expect(weeklyPlan).toContain('Best plan from task evidence')
     expect(weeklyPlan).not.toContain('Evidence-only draft:')
+
+    const chatQuality = src('src/services/ai/pipeline/chatQuality.ts')
+    expect(chatQuality).toContain("export type ChatQualityLevel = 'bad' | 'acceptable' | 'excellent'")
+    expect(chatQuality).toContain('missing_task_cards')
+    expect(chatQuality).toContain('unsupported_importance_language')
+    expect(chatQuality).toContain('metadata_only_reasoning')
 
     expect(chatMessage).toContain('data-testid="weekly-plan"')
     expect(chatMessage).toContain('data-testid="weekly-plan-questions"')

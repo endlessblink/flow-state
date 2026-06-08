@@ -45,6 +45,7 @@ import { cleanResponse } from '@/services/ai/pipeline/responseValidator'
 import { digestToolResults } from '@/services/ai/pipeline/preDigestedReasoning'
 import { detectFluff, extractTaskTitlesFromResults } from '@/services/ai/pipeline/fluffDetector'
 import { EntityMemory } from '@/services/ai/pipeline/entityMemory'
+import { auditChatResponseQuality, type ChatQualityMode } from '@/services/ai/pipeline/chatQuality'
 import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
@@ -1314,6 +1315,14 @@ export function useAIChat() {
     return hasStakeLanguage
   }
 
+  function qualityModeForResponseMode(responseMode?: RoutedIntent['responseMode']): ChatQualityMode {
+    if (responseMode === 'day_plan') return 'day_plan'
+    if (responseMode === 'week_plan') return 'week_plan'
+    if (responseMode === 'weekly_review') return 'weekly_review'
+    if (responseMode === 'smart_lanes') return 'smart_lanes'
+    return 'general'
+  }
+
   /**
    * Build the system prompt with context awareness.
    * Includes timer state, task statistics, and additional context.
@@ -2111,6 +2120,31 @@ export function useAIChat() {
         )
         cardData = parseCardGroups(formattedResponse, toolResults)
       }
+      const qualityInput = {
+        text: cardData ? stripCardsBlock(formattedResponse) : formattedResponse,
+        language: outputLanguage,
+        mode: qualityModeForResponseMode(routed.responseMode),
+        hasTaskList,
+        hasCards: Boolean(cardData),
+        taskCount: collectCardTasks(toolResults).length,
+        contextUnknown: toolResultsSummary.includes('context unknown') || toolResultsSummary.includes('Project/task understanding memory'),
+      }
+      let responseQuality = auditChatResponseQuality(qualityInput)
+      if (!isWeekPlan && responseQuality.level === 'bad' && hasTaskList) {
+        updateChatPhase(phaseActivityId, 'Repairing answer quality', responseQuality.failures.slice(0, 2).join(', '))
+        const fallbackResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
+        const fallbackCardData = parseCardGroups(fallbackResponse, toolResults)
+        const fallbackQuality = auditChatResponseQuality({
+          ...qualityInput,
+          text: fallbackCardData ? stripCardsBlock(fallbackResponse) : fallbackResponse,
+          hasCards: Boolean(fallbackCardData),
+        })
+        if (fallbackQuality.level !== 'bad') {
+          formattedResponse = fallbackResponse
+          cardData = fallbackCardData
+          responseQuality = fallbackQuality
+        }
+      }
       const displayRaw = cardData ? stripCardsBlock(formattedResponse) : formattedResponse
 
       // Clean and set
@@ -2122,6 +2156,12 @@ export function useAIChat() {
           lastMsg.metadata = {
             ...lastMsg.metadata,
             cardGroups: { groups: cardData.groups, total: cardData.total, kind: cardData.kind },
+            chatQuality: responseQuality,
+          } as Record<string, unknown>
+        } else {
+          lastMsg.metadata = {
+            ...lastMsg.metadata,
+            chatQuality: responseQuality,
           } as Record<string, unknown>
         }
       }

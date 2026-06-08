@@ -8,6 +8,7 @@ const migrationFiles = [
   'supabase/migrations/20260608093000_ai_assistant_memory_metadata.sql',
   'supabase/migrations/20260608100000_ai_parameter_beliefs.sql',
   'supabase/migrations/20260608103000_ai_memory_snapshots.sql',
+  'supabase/migrations/20260608110000_ai_clarification_event_delete_policy.sql',
 ]
 
 const migrations = migrationFiles
@@ -203,6 +204,25 @@ describe('AI memory schema contract', () => {
     ]
     for (const indexName of requiredIndexes) {
       expect(migrations).toContain(`create index if not exists ${indexName}`)
+    }
+  })
+
+  it('keeps user-owned AI memory rows clearable under RLS', () => {
+    const clearableTables = [
+      'ai_context_entities',
+      'ai_clarification_events',
+      'ai_recommendation_feedback',
+      'ai_context_edges',
+      'ai_parameter_beliefs',
+      'ai_memory_snapshots',
+    ]
+
+    for (const table of clearableTables) {
+      const policyPattern = new RegExp(
+        `create policy "[^"]*delete[^"]*"\\s+on public\\.${table} for delete using \\(auth\\.uid\\(\\) = user_id\\)`,
+        'i',
+      )
+      expect(migrations, `${table} delete policy`).toMatch(policyPattern)
     }
   })
 })

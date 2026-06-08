@@ -616,7 +616,7 @@ function clarificationContinueMessage(
 ): string {
   const continuationMode = card.kind === 'weekly_planning'
     ? 'week_plan'
-    : card.question.entityId || 'general'
+    : 'general'
   const continuationMarker = `\n\n[FLOWSTATE_CLARIFICATION_CONTINUATION mode=${continuationMode}]`
   const evidenceText = formatClarificationContinuationEvidence(evidence, card.locale)
   const evidenceBlock = evidenceText
@@ -637,7 +637,7 @@ function clarificationContinueMessage(
 function clarificationUncertaintyContinueMessage(card: AIClarificationArtifact): string {
   const continuationMode = card.kind === 'weekly_planning'
     ? 'week_plan'
-    : card.question.entityId || 'general'
+    : 'general'
   const continuationMarker = `\n\n[FLOWSTATE_CLARIFICATION_CONTINUATION mode=${continuationMode}]`
   if (card.locale === 'he') {
     return `המשך עם תשובה לפי נתוני המשימות הקיימים בלבד. סמן הקשר חסר כלא ידוע, אל תסיק חשיבות משמות בלבד, ותן תשובה קצרה ומעשית בלי רשימה ארוכה.${continuationMarker}`

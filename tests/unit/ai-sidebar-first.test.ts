@@ -1788,7 +1788,7 @@ describe('AI sidebar-first desktop experience', () => {
     const continuation = wrapper.emitted('continueChat')?.[0]?.[0] as string | undefined
     expect(continuation).toContain('Continue with the answer using current task data')
     expect(continuation).toContain('mark missing context as unknown')
-    expect(continuation).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
+    expect(continuation).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=general]')
     expect(supabaseDbMocks.recordAIClarificationEvent).toHaveBeenCalledWith(expect.objectContaining({
       eventType: 'generated_with_uncertainty',
       pathType: 'generated_with_uncertainty',
@@ -2126,7 +2126,7 @@ describe('AI sidebar-first desktop experience', () => {
 
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue with the answer using the clarification I just answered')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Real impact"')
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=general]')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('week')
     expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(true)
@@ -2190,7 +2190,7 @@ describe('AI sidebar-first desktop experience', () => {
     const continuation = wrapper.emitted('continueChat')?.[0]?.[0] as string
     expect(continuation).toContain('Answer: "Reduce stress"')
     expect(continuation).toContain('Note: "Pick the one that reduces open loops fastest."')
-    expect(continuation).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
+    expect(continuation).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=general]')
   })
 
   it('injects clarification continuation evidence into the deterministic formatter prompt', () => {

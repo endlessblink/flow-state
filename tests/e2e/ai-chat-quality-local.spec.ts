@@ -146,8 +146,11 @@ async function seedGuestWorkspace(page: Page) {
   }, seededTasks())
 }
 
-async function stubBridge(page: Page) {
+async function stubBridge(page: Page, options: { missingCardsFromChatCall?: number } = {}) {
   await page.addInitScript(() => {
+    ;(window as unknown as { __flowstateBridgeChatCallCount: number }).__flowstateBridgeChatCallCount = 0
+  })
+  await page.addInitScript((bridgeOptions) => {
     const originalFetch = window.fetch.bind(window)
     const encoder = new TextEncoder()
 
@@ -159,6 +162,24 @@ async function stubBridge(page: Page) {
         return new Response(JSON.stringify({ ok: true, brains: { claude: true, codex: true } }), {
           status: 200,
           headers: { 'content-type': 'application/json' },
+        })
+      }
+      const bridgeWindow = window as unknown as { __flowstateBridgeChatCallCount?: number }
+      bridgeWindow.__flowstateBridgeChatCallCount = (bridgeWindow.__flowstateBridgeChatCallCount || 0) + 1
+
+      if (bridgeOptions.missingCardsFromChatCall && bridgeWindow.__flowstateBridgeChatCallCount >= bridgeOptions.missingCardsFromChatCall) {
+        const chunks = [
+          `data: ${JSON.stringify({ delta: 'Formatter missed the cards block and wrote too much generic prose instead.' })}\n\n`,
+          `data: ${JSON.stringify({ done: true, brain: 'claude' })}\n\n`,
+        ]
+        return new Response(new ReadableStream({
+          start(controller) {
+            for (const chunk of chunks) controller.enqueue(encoder.encode(chunk))
+            controller.close()
+          },
+        }), {
+          status: 200,
+          headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
         })
       }
 
@@ -194,7 +215,7 @@ async function stubBridge(page: Page) {
         headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
       })
     }
-  })
+  }, options)
 }
 
 async function openAIChat(page: Page) {
@@ -263,6 +284,36 @@ test('weekly planning asks first, does not dump recommendations, and does not ge
   await expect(input).toBeEnabled({ timeout: 10_000 })
 
   await page.screenshot({ path: '/tmp/flowstate-ai-chat-quality-stage8.png', fullPage: false })
+})
+
+test('too-much feedback makes the next broad fallback answer compact', async ({ page }) => {
+  await seedGuestWorkspace(page)
+  await stubBridge(page, { missingCardsFromChatCall: 2 })
+
+  const input = await openAIChat(page)
+  await sendChat(input, 'Help me plan this week from my tasks')
+  await answerVisibleClarification(page)
+  await expect(page.locator('[data-testid="weekly-plan"]').last()).toBeVisible({ timeout: 30_000 })
+
+  const firstRecommendation = page.locator('.weekly-plan-section').first()
+  await firstRecommendation.getByRole('button', { name: /^Too much$/ }).click()
+  const feedbackDetail = page.locator('[data-testid="weekly-feedback-detail"]').first()
+  await expect(feedbackDetail).toBeVisible({ timeout: 5_000 })
+  await feedbackDetail.getByRole('button', { name: /Save feedback/i }).click()
+  await expect(page.locator('.ai-chat-messages')).toContainText(/Saved: too much|Feedback is local until signed in/i)
+
+  await sendChat(input, 'what should I do next?')
+  const clarification = page.locator('[data-testid="ai-clarification"]').last()
+  await expect(clarification).toBeVisible({ timeout: 30_000 })
+  await clarification.getByText('Energy fit', { exact: true }).click()
+  await clarification.locator('.weekly-question-apply').first().click()
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+
+  const latestMessage = page.locator('.chat-message').last()
+  await expect(latestMessage).toContainText(/Extra-compact draft based on your feedback that the last answer was too much/i, { timeout: 30_000 })
+  await expect(latestMessage.locator('[data-testid="inline-ai-task-card"]')).toHaveCount(1)
+  await expect(latestMessage).not.toContainText(/Fast draft based on impact, dependency, and real risk/i)
+  await expect(input).toBeEnabled({ timeout: 10_000 })
 })
 
 test.describe('broad task answers ask one specific question before recommendations', () => {

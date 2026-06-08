@@ -1272,14 +1272,14 @@ export function useAIChat() {
         ? lang === 'he'
           ? 'טיוטה מוגבלת לפי הנתונים הקיימים בלבד; ההקשר האמיתי עדיין לא ידוע:'
           : 'Limited draft from current task data only; real context is still unknown:'
-        : options.clarificationEvidence
-          ? lang === 'he'
-            ? 'טיוטה קצרה לפי תשובת ההבהרה שלך; הקשר חסר עדיין מסומן בכרטיסים:'
-            : 'Short draft using your clarification; missing context stays visible in the cards:'
         : options.compactPreference
           ? lang === 'he'
             ? 'טיוטה קצרה במיוחד לפי המשוב שלך שהקודם היה עמוס מדי:'
             : 'Extra-compact draft based on your feedback that the last answer was too much:'
+        : options.clarificationEvidence
+          ? lang === 'he'
+            ? 'טיוטה קצרה לפי תשובת ההבהרה שלך; הקשר חסר עדיין מסומן בכרטיסים:'
+            : 'Short draft using your clarification; missing context stays visible in the cards:'
         : lang === 'he'
           ? 'טיוטת בחירה מהירה לפי השפעה, תלות וסיכון אמיתי:'
           : 'Fast draft based on impact, dependency, and real risk:'
@@ -1694,6 +1694,7 @@ export function useAIChat() {
     // Start streaming response
     store.startStreamingMessage()
     const phaseActivityId = beginChatPhase('Preparing response', activeProviderRef.value ? `Using ${activeProviderRef.value}` : undefined)
+    const toolResults: ToolResult[] = []
 
     try {
       // ── Step 1: Handle greeting (no tools, no LLM) ──────────────────
@@ -1711,7 +1712,6 @@ export function useAIChat() {
       }
 
       // ── Step 2: Execute pre-built tool calls ────────────────────────
-      const toolResults: ToolResult[] = []
       for (const call of routed.tools) {
         updateChatPhase(phaseActivityId, 'Reading task data', call.tool.replace(/_/g, ' '))
         console.log(`[AIChat:Deterministic] Executing tool: ${call.tool}`, call.parameters)
@@ -2353,6 +2353,59 @@ export function useAIChat() {
     } catch (err) {
       const rawError = err instanceof Error ? err.message : 'Failed to get response'
       const errorMessage = formatUserFriendlyError(rawError)
+      const fallbackTaskCount = collectCardTasks(toolResults).length
+      if (fallbackTaskCount > 0) {
+        const fallbackOptions: FormatterFallbackOptions = {
+          uncertaintyOnly: isGenerateCurrentContinuation,
+          clarificationEvidence: isGenerateCurrentContinuation ? undefined : clarificationContinuationEvidence,
+        }
+        try {
+          const memoryResult = await withTimeout(
+            buildAIMemorySummaryForToolResults(toolResults, outputLanguage),
+            WEEK_PLAN_MEMORY_TIMEOUT_MS,
+            'deterministic_error_fallback_memory_timeout',
+          )
+          fallbackOptions.recommendationFeedback = memoryResult.recommendationFeedback
+          fallbackOptions.compactPreference = memoryResult.compactPreference
+        } catch (memoryErr) {
+          console.warn('[AIChat:Deterministic] Error fallback memory skipped:', memoryErr)
+        }
+
+        const fallbackResponse = buildFormatterFallback(toolResults, outputLanguage, routed.responseMode, fallbackOptions)
+        const cardData = parseCardGroups(fallbackResponse, toolResults)
+        const cleaned = cleanResponse(cardData ? stripCardsBlock(fallbackResponse) : fallbackResponse)
+        const lastMsg = store.messages[store.messages.length - 1]
+        if (lastMsg && lastMsg.isStreaming) {
+          lastMsg.content = cleaned
+          store.streamingContent = cleaned
+          lastMsg.metadata = {
+            ...lastMsg.metadata,
+            ...(cardData ? { cardGroups: { groups: cardData.groups, total: cardData.total, kind: cardData.kind } } : {}),
+            chatQuality: {
+              level: 'acceptable',
+              failures: [],
+              warnings: [`provider_fallback:${errorMessage}`],
+            },
+          } as Record<string, unknown>
+        }
+        const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
+        const startedAt = existingPhase?.metadata?.startedAt ?? Date.now()
+        store.updateActivityEvent(phaseActivityId, {
+          status: 'success',
+          label: 'Used local fallback',
+          message: `${fallbackTaskCount} task candidates`,
+          metadata: {
+            startedAt,
+            elapsedMs: Date.now() - startedAt,
+            pathType: 'provider_error_fallback',
+            source: 'local_formatter_fallback',
+            reason: errorMessage,
+          },
+        })
+        store.completeStreamingMessage()
+        console.warn('[AIChat:Deterministic] Provider failed after tool data; used local fallback:', err)
+        return
+      }
       failChatPhase(phaseActivityId, 'Response failed', errorMessage)
       store.failStreamingMessage(errorMessage)
       console.error('[AIChat:Deterministic] Error:', err)

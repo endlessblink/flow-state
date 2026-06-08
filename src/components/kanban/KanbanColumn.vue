@@ -28,14 +28,14 @@
         :group="dragGroup"
         item-key="id"
         class="drag-area"
-        :animation="200"
+        :animation="180"
         ghost-class="ghost-card"
         chosen-class="chosen-card"
         drag-class="drag-card"
         :force-fallback="true"
         :fallback-on-body="true"
         fallback-class="sortable-fallback"
-        :fallback-tolerance="3"
+        :fallback-tolerance="8"
         :scroll-sensitivity="100"
         :scroll-speed="20"
         :bubble-scroll="true"
@@ -237,6 +237,8 @@ const { startDrag, endDrag: endGlobalDrag, dragData } = useDragAndDrop()
 
 const onDragStart = (evt: SortableDragEvent) => {
   isDragActive.value = true
+  window.getSelection()?.removeAllRanges()
+  document.body.classList.add('kanban-dragging')
 
   // Bridge to global drag state so sidebar can receive drops
   const taskElement = evt.item?.querySelector?.('[data-task-id]') as HTMLElement | null | undefined
@@ -254,6 +256,7 @@ const onDragStart = (evt: SortableDragEvent) => {
 
 const onDragEnd = async (evt: SortableDragEvent) => {
   isDragActive.value = false
+  document.body.classList.remove('kanban-dragging')
 
   // Check if dropped on a sidebar project (SortableJS forceFallback doesn't fire
   // native drag events on external elements, so we detect the target manually)
@@ -451,6 +454,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  document.body.classList.remove('kanban-dragging')
   window.removeEventListener('kanban:drag-end', handleDragEndBroadcast)
 })
 </script>

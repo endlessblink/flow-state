@@ -865,6 +865,25 @@ describe('WebKitGTK CSS Safety (Tauri Parity)', () => {
     expect(violations).toHaveLength(0)
   })
 
+  it('kanban drag must suppress text selection and expose a visible fallback clone', () => {
+    const columnPath = join(srcDir, 'components', 'kanban', 'KanbanColumn.vue')
+    const globalOverridesPath = join(srcDir, 'assets', 'global-overrides.css')
+    const column = readFileSync(columnPath, 'utf-8')
+    const css = readFileSync(globalOverridesPath, 'utf-8')
+
+    expect(column).toContain('document.body.classList.add(\'kanban-dragging\')')
+    expect(column).toContain('document.body.classList.remove(\'kanban-dragging\')')
+    expect(column).toContain('window.getSelection()?.removeAllRanges()')
+    expect(column).toContain(':fallback-tolerance="8"')
+    expect(column).toContain(':animation="180"')
+
+    expect(css).toMatch(/body\.kanban-dragging[\s\S]*user-select:\s*none\s*!important/)
+    expect(css).toMatch(/body\.kanban-dragging[\s\S]*-webkit-user-select:\s*none\s*!important/)
+    expect(css).toMatch(/\.task-card\.sortable-fallback[\s\S]*opacity:\s*0\.96\s*!important/)
+    expect(css).toMatch(/\.task-card\.sortable-fallback[\s\S]*transition:\s*box-shadow 120ms ease,\s*transform 120ms ease\s*!important/)
+    expect(css).toContain('.task-card.sortable-fallback.drag-card')
+  })
+
   // -------------------------------------------------------------------------
   // 5. display: inline-flex inside flex containers (BUG-1696)
   //    In WebKitGTK (wry 0.54.1), `display: inline-flex` inside a flex parent

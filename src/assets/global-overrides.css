@@ -177,6 +177,16 @@ button svg {
     background: rgba(237, 230, 220, 0.05) !important;
     min-height: unset !important;
     margin-bottom: 0 !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    touch-action: manipulation !important;
+}
+
+body.kanban-dragging,
+body.kanban-dragging * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    cursor: grabbing !important;
 }
 
 .task-card:hover:not(.swiping) {
@@ -201,37 +211,47 @@ button svg {
    The sortable-fallback element gets .task-card class from SortableJS clone, so these
    need higher specificity (.task-card.sortable-fallback) to override .task-card styles. */
 .task-card.ghost-card {
-    opacity: 0.4 !important;
-    background: transparent !important;
-    border: 1px dashed var(--glass-border) !important;
+    opacity: 0.32 !important;
+    background: rgba(78, 205, 196, 0.04) !important;
+    border: 1px dashed rgba(78, 205, 196, 0.45) !important;
     transform: none !important;
     box-shadow: none !important;
 }
 .task-card.chosen-card {
     opacity: 1 !important;
-    transform: scale(1.02) !important;
+    transform: scale(1.015) !important;
     z-index: 1000 !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(78, 205, 196, 0.18) !important;
 }
 .task-card.sortable-fallback {
     position: fixed !important;
     z-index: 9999 !important;
     pointer-events: none !important;
-    opacity: 1 !important;
-    background: rgba(45, 42, 68, 0.92) !important;
+    opacity: 0.96 !important;
+    background: rgba(31, 29, 41, 0.94) !important;
     border: 1px solid var(--brand-primary, #4ECDC4) !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(78, 205, 196, 0.25) !important;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(78, 205, 196, 0.28) !important;
     border-radius: 8px !important;
-    transform: scale(1.02) !important;
+    transform: scale(1.025) rotate(0.25deg) !important;
     backdrop-filter: blur(12px) !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
     /* BUG-1455: Prevent .task-item transition: all from animating position/opacity on clone */
-    transition: none !important;
+    transition: box-shadow 120ms ease, transform 120ms ease !important;
 }
 .task-card.drag-card {
     opacity: 1 !important;
     border: 1px solid var(--brand-primary) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
     cursor: grabbing !important;
+}
+
+.task-card.sortable-fallback.drag-card {
+    opacity: 0.96 !important;
+    border: 1px solid var(--brand-primary, #4ECDC4) !important;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(78, 205, 196, 0.28) !important;
+    transform: scale(1.025) rotate(0.25deg) !important;
+    transition: box-shadow 120ms ease, transform 120ms ease !important;
 }
 /* Prevent hover/active styles during drag */
 .task-card.chosen-card:hover,

@@ -310,6 +310,7 @@
 - 2026-06-08: Clarification messages now suppress the generic tool-result task list while asking. Candidate tasks only appear through explicit "show candidates" style escapes, preventing the old barrage of task cards under a question.
 - 2026-06-08: Broad non-weekly memory summaries now retrieve recent recommendation feedback by task/project entity keys, so later broad answers can see postponed/dismissed inline-card signals instead of only weekly plans learning from feedback.
 - 2026-06-08: Broad fallback card selection now applies recent recommendation feedback: dismissed/postponed inline cards are filtered out during cooldown, while accepted/timeblocked cards get a small positive boost. Inline task feedback is matched by recommendation ID so one postponed task does not suppress the whole project.
+- 2026-06-08: Extracted broad clarification policy into a tested pipeline module. Regression coverage now proves cold-start day/smart/general broad requests ask one concise direction question, recent answered/proceed-with-uncertainty events suppress repeats, stale decisions can refresh, and weekly planning stays on its separate interview path.
 
 ---
 

@@ -96,11 +96,15 @@ const clarificationFollowUpStepIndex = ref<Record<string, number>>({})
 const clarificationInlineMode = ref<Record<string, 'uncertainty' | 'candidates'>>({})
 const recommendationFeedbackLoading = ref<Record<string, string>>({})
 const recommendationFeedbackStatus = ref<Record<string, string>>({})
+const recommendationFeedbackChoiceOpen = ref<Record<string, AIRecommendationFeedbackInput['action'] | ''>>({})
+const recommendationFeedbackReasons = ref<Record<string, AIRecommendationFeedbackInput['reasonCategory']>>({})
+const recommendationFeedbackRevisit = ref<Record<string, 'tomorrow' | 'next_week' | 'later' | 'none'>>({})
 
 // Track which tasks have been actioned (for visual feedback)
 const completedTaskIds = ref<Set<string>>(new Set())
 const timerStartedTaskIds = ref<Set<string>>(new Set())
 const dismissedCardTaskIds = ref<Set<string>>(new Set())
+const suppressedRecommendationIds = ref<Record<string, boolean>>({})
 const actionLoading = ref<Record<string, string>>({}) // taskId -> 'done' | 'timer'
 const dayPlanApplying = ref(false)
 const dayPlanApplied = ref(false)
@@ -234,6 +238,14 @@ function weeklyPlanTaskIds(rec: WeeklyPlanRecommendation): string[] {
 
 function weeklyPlanRecommendationForTask(taskId: string): WeeklyPlanRecommendation | undefined {
   return weeklyPlan.value?.recommendations.find(rec => rec.primaryTaskId === taskId || rec.relatedTaskIds?.includes(taskId))
+}
+
+function isWeeklyRecommendationVisible(rec: WeeklyPlanRecommendation): boolean {
+  return !suppressedRecommendationIds.value[rec.sectionId]
+}
+
+function hasVisibleWeeklyRecommendations(): boolean {
+  return Boolean(weeklyPlan.value?.recommendations.some(isWeeklyRecommendationVisible))
 }
 
 function taskSnapshotFromPlan(taskId: string): TaskListItem | null {
@@ -1245,11 +1257,80 @@ function feedbackStatusLabel(action: AIRecommendationFeedbackInput['action'], lo
   return 'Saved as feedback'
 }
 
+function openRecommendationFeedbackChoice(rec: WeeklyPlanRecommendation, action: AIRecommendationFeedbackInput['action']) {
+  recommendationFeedbackChoiceOpen.value[rec.sectionId] = action
+  if (!recommendationFeedbackReasons.value[rec.sectionId]) {
+    recommendationFeedbackReasons.value[rec.sectionId] = defaultFeedbackReason(action)
+  }
+  if (!recommendationFeedbackRevisit.value[rec.sectionId]) {
+    recommendationFeedbackRevisit.value[rec.sectionId] = action === 'postpone' ? 'next_week' : 'none'
+  }
+}
+
+function cancelRecommendationFeedbackChoice(rec: WeeklyPlanRecommendation) {
+  recommendationFeedbackChoiceOpen.value[rec.sectionId] = ''
+}
+
+function recommendationFeedbackAction(rec: WeeklyPlanRecommendation): AIRecommendationFeedbackInput['action'] {
+  return recommendationFeedbackChoiceOpen.value[rec.sectionId] || 'dismiss'
+}
+
+function defaultFeedbackReason(action: AIRecommendationFeedbackInput['action']): AIRecommendationFeedbackInput['reasonCategory'] {
+  if (action === 'postpone') return 'low_energy'
+  if (action === 'dismiss') return 'not_important'
+  if (action === 'simplify') return 'too_much'
+  return 'other'
+}
+
+function feedbackReasonOptions(action: AIRecommendationFeedbackInput['action'], locale: 'he' | 'en'): Array<{ value: AIRecommendationFeedbackInput['reasonCategory']; label: string }> {
+  const labels: Record<NonNullable<AIRecommendationFeedbackInput['reasonCategory']>, { en: string; he: string }> = {
+    too_hard: { en: 'Too hard now', he: 'קשה מדי עכשיו' },
+    low_energy: { en: 'Low energy', he: 'אנרגיה נמוכה' },
+    not_important: { en: 'Not important', he: 'לא חשוב' },
+    wrong_context: { en: 'Wrong context', he: 'הקשר שגוי' },
+    already_done: { en: 'Already done', he: 'כבר נעשה' },
+    needs_more_info: { en: 'Needs info', he: 'חסר מידע' },
+    too_much: { en: 'Too much', he: 'יותר מדי' },
+    other: { en: 'Other', he: 'אחר' },
+  }
+  const values: Array<NonNullable<AIRecommendationFeedbackInput['reasonCategory']>> = action === 'postpone'
+    ? ['low_energy', 'too_hard', 'needs_more_info', 'other']
+    : action === 'dismiss'
+      ? ['not_important', 'wrong_context', 'already_done', 'other']
+      : ['too_much', 'too_hard', 'low_energy', 'other']
+  return values.map(value => ({ value, label: labels[value][locale] }))
+}
+
+function feedbackRevisitOptions(locale: 'he' | 'en'): Array<{ value: 'tomorrow' | 'next_week' | 'later' | 'none'; label: string }> {
+  return locale === 'he'
+    ? [
+        { value: 'tomorrow', label: 'מחר' },
+        { value: 'next_week', label: 'שבוע הבא' },
+        { value: 'later', label: 'מאוחר יותר' },
+        { value: 'none', label: 'בלי תזכורת' },
+      ]
+    : [
+        { value: 'tomorrow', label: 'Tomorrow' },
+        { value: 'next_week', label: 'Next week' },
+        { value: 'later', label: 'Later' },
+        { value: 'none', label: 'No revisit' },
+      ]
+}
+
+function feedbackRevisitIso(choice: 'tomorrow' | 'next_week' | 'later' | 'none' | undefined): string | null {
+  if (!choice || choice === 'none') return null
+  const date = new Date()
+  const days = choice === 'tomorrow' ? 1 : choice === 'next_week' ? 7 : 14
+  date.setDate(date.getDate() + days)
+  return date.toISOString()
+}
+
 async function recordRecommendationFeedback(
   rec: WeeklyPlanRecommendation,
   action: AIRecommendationFeedbackInput['action'],
   reasonCategory?: AIRecommendationFeedbackInput['reasonCategory'],
   implicitPositive = false,
+  options: Pick<AIRecommendationFeedbackInput, 'freeText' | 'revisitAt'> = {},
 ) {
   const key = `${rec.sectionId}:${action}`
   if (recommendationFeedbackLoading.value[key]) return
@@ -1262,12 +1343,16 @@ async function recordRecommendationFeedback(
       entityKey: recommendationEntityKey(rec),
       action,
       reasonCategory,
+      freeText: options.freeText,
+      revisitAt: options.revisitAt,
       implicitPositive,
       sourceMessageId: props.message.id,
     })
-    if (action === 'dismiss') {
+    if (['dismiss', 'postpone', 'simplify'].includes(action)) {
       dismissedCardTaskIds.value = new Set([...dismissedCardTaskIds.value, ...weeklyPlanTaskIds(rec)])
+      suppressedRecommendationIds.value[rec.sectionId] = true
     }
+    recommendationFeedbackChoiceOpen.value[rec.sectionId] = ''
     recommendationFeedbackStatus.value[rec.sectionId] = feedbackStatusLabel(action, weeklyPlan.value?.locale ?? 'en')
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -1280,6 +1365,16 @@ async function recordRecommendationFeedback(
   } finally {
     delete recommendationFeedbackLoading.value[key]
   }
+}
+
+async function saveRecommendationFeedbackChoice(rec: WeeklyPlanRecommendation) {
+  const action = recommendationFeedbackChoiceOpen.value[rec.sectionId]
+  if (!action) return
+  const reason = recommendationFeedbackReasons.value[rec.sectionId] ?? defaultFeedbackReason(action)
+  const revisitAt = action === 'postpone'
+    ? feedbackRevisitIso(recommendationFeedbackRevisit.value[rec.sectionId])
+    : null
+  await recordRecommendationFeedback(rec, action, reason, false, { revisitAt })
 }
 
 function clarificationDebugLines(card: AIClarificationArtifact): string[] {
@@ -1679,7 +1774,7 @@ async function saveSchedule() {
         <header class="weekly-plan-header">
           <div v-if="weeklyPlan.source === 'quick_draft'" class="weekly-plan-source">
             {{
-              weeklyPlan.recommendations.length
+              hasVisibleWeeklyRecommendations()
                 ? (weeklyPlan.locale === 'he' ? 'תוכנית מקורקעת מנתוני המשימות' : 'Grounded task-evidence plan')
                 : (weeklyPlan.locale === 'he' ? 'ממתין להקשר אמין' : 'Waiting for reliable context')
             }}
@@ -1745,6 +1840,7 @@ async function saveSchedule() {
 
         <section
           v-for="rec in weeklyPlan.recommendations"
+          v-show="!suppressedRecommendationIds[rec.sectionId]"
           :key="rec.sectionId"
           class="weekly-plan-section"
           :data-section-id="rec.sectionId"
@@ -1772,7 +1868,7 @@ async function saveSchedule() {
               type="button"
               class="weekly-feedback-btn"
               :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:postpone`])"
-              @click="recordRecommendationFeedback(rec, 'postpone', 'low_energy')"
+              @click="openRecommendationFeedbackChoice(rec, 'postpone')"
             >
               {{ weeklyPlan.locale === 'he' ? 'דחה' : 'Postpone' }}
             </button>
@@ -1780,7 +1876,7 @@ async function saveSchedule() {
               type="button"
               class="weekly-feedback-btn"
               :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:dismiss`])"
-              @click="recordRecommendationFeedback(rec, 'dismiss', 'not_important')"
+              @click="openRecommendationFeedbackChoice(rec, 'dismiss')"
             >
               {{ weeklyPlan.locale === 'he' ? 'לא חשוב' : 'Not important' }}
             </button>
@@ -1788,13 +1884,71 @@ async function saveSchedule() {
               type="button"
               class="weekly-feedback-btn"
               :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:simplify`])"
-              @click="recordRecommendationFeedback(rec, 'simplify', 'too_much')"
+              @click="openRecommendationFeedbackChoice(rec, 'simplify')"
             >
               {{ weeklyPlan.locale === 'he' ? 'יותר מדי' : 'Too much' }}
             </button>
             <span v-if="recommendationFeedbackStatus[rec.sectionId]" class="weekly-question-status">
               {{ recommendationFeedbackStatus[rec.sectionId] }}
             </span>
+          </div>
+          <div
+            v-if="recommendationFeedbackChoiceOpen[rec.sectionId]"
+            class="weekly-feedback-detail"
+            data-testid="weekly-feedback-detail"
+            @click.stop
+          >
+            <span class="weekly-feedback-detail-label">
+              {{ weeklyPlan.locale === 'he' ? 'למה?' : 'Why?' }}
+            </span>
+            <div class="weekly-feedback-choice-row">
+              <button
+                v-for="reason in feedbackReasonOptions(recommendationFeedbackAction(rec), weeklyPlan.locale)"
+                :key="`${rec.sectionId}:reason:${reason.value}`"
+                type="button"
+                class="weekly-feedback-btn"
+                :class="{ selected: recommendationFeedbackReasons[rec.sectionId] === reason.value }"
+                @click="recommendationFeedbackReasons[rec.sectionId] = reason.value"
+              >
+                {{ reason.label }}
+              </button>
+            </div>
+            <template v-if="recommendationFeedbackChoiceOpen[rec.sectionId] === 'postpone'">
+              <span class="weekly-feedback-detail-label">
+                {{ weeklyPlan.locale === 'he' ? 'להחזיר מתי?' : 'Revisit when?' }}
+              </span>
+              <div class="weekly-feedback-choice-row">
+                <button
+                  v-for="option in feedbackRevisitOptions(weeklyPlan.locale)"
+                  :key="`${rec.sectionId}:revisit:${option.value}`"
+                  type="button"
+                  class="weekly-feedback-btn"
+                  :class="{ selected: recommendationFeedbackRevisit[rec.sectionId] === option.value }"
+                  @click="recommendationFeedbackRevisit[rec.sectionId] = option.value"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+            </template>
+            <div class="weekly-feedback-detail-actions">
+              <button
+                type="button"
+                class="weekly-question-apply"
+                :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:${recommendationFeedbackChoiceOpen[rec.sectionId]}`])"
+                @click="saveRecommendationFeedbackChoice(rec)"
+              >
+                <Loader2 v-if="recommendationFeedbackLoading[`${rec.sectionId}:${recommendationFeedbackChoiceOpen[rec.sectionId]}`]" :size="13" class="spin" />
+                <CheckCircle2 v-else :size="13" />
+                {{ weeklyPlan.locale === 'he' ? 'שמור משוב' : 'Save feedback' }}
+              </button>
+              <button
+                type="button"
+                class="weekly-feedback-btn"
+                @click="cancelRecommendationFeedbackChoice(rec)"
+              >
+                {{ weeklyPlan.locale === 'he' ? 'בטל' : 'Cancel' }}
+              </button>
+            </div>
           </div>
 
           <div class="weekly-plan-cards">
@@ -3398,6 +3552,31 @@ async function saveSchedule() {
   gap: var(--space-1_5);
 }
 
+.weekly-feedback-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1_5);
+  margin-block-start: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-subtle);
+}
+
+.weekly-feedback-detail-label {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  line-height: 1.25;
+}
+
+.weekly-feedback-choice-row,
+.weekly-feedback-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1_5);
+}
+
 .weekly-feedback-btn {
   display: inline-flex;
   align-items: center;
@@ -3411,6 +3590,12 @@ async function saveSchedule() {
   font-size: var(--text-xs);
   line-height: 1.25;
   cursor: pointer;
+}
+
+.weekly-feedback-btn.selected {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  background: var(--accent-bg);
 }
 
 .weekly-feedback-btn:hover {

@@ -117,6 +117,9 @@
 - Accepted/time-blocked/completed/timer-started suggestions become implicit positive signals for future planning.
 - Postponement uses exponential backoff plus revisit triggers such as deadline proximity, weekly review, or user re-engagement.
 
+**Progress**:
+- 2026-06-08: Weekly recommendation controls now collect explicit postpone/dismiss/simplify reasons with button choices, persist `reasonCategory` + `revisitAt`, and immediately hide the rejected recommendation visually so the chat does not keep showing work the user just pushed back on.
+
 ---
 
 ### TASK-1834: Chat observability for slow or low-quality answers (🔄 IN PROGRESS)
@@ -194,6 +197,9 @@
 - A dismissed recommendation does not immediately reappear as a top suggestion.
 - A postponed recommendation respects the revisit date.
 - Feedback changes ranking evidence in later weekly/next-action responses.
+
+**Progress**:
+- 2026-06-08: Added mounted regression coverage that verifies a postponed weekly recommendation saves `generatedPlanId`, `recommendationId`, task/project entity key, reason category, revisit date, and becomes visually suppressed in the current plan.
 - Feedback reason patterns become inspectable preference memory rather than hidden ranking magic.
 
 ---

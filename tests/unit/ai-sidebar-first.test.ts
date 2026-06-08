@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { readFileSync } from 'node:fs'
@@ -37,6 +37,16 @@ vi.mock('@vueuse/core', async () => {
     onClickOutside: vi.fn(),
   }
 })
+
+const supabaseDbMocks = vi.hoisted(() => ({
+  applyAIMemoryPatch: vi.fn(async () => undefined),
+  recordAIClarificationEvent: vi.fn(async () => undefined),
+  recordAIRecommendationFeedback: vi.fn(async () => undefined),
+}))
+
+vi.mock('@/composables/useSupabaseDatabase', () => ({
+  useSupabaseDatabase: () => supabaseDbMocks,
+}))
 
 vi.mock('@/composables/useAIChat', async () => {
   const { ref } = await import('vue')
@@ -91,6 +101,9 @@ function src(path: string) {
 describe('AI sidebar-first desktop experience', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    supabaseDbMocks.applyAIMemoryPatch.mockClear()
+    supabaseDbMocks.recordAIClarificationEvent.mockClear()
+    supabaseDbMocks.recordAIRecommendationFeedback.mockClear()
   })
 
   it('removes AI as a standalone desktop header tab while keeping the sparkles panel toggle', () => {
@@ -1673,6 +1686,106 @@ describe('AI sidebar-first desktop experience', () => {
     expect(remaining).toHaveLength(1)
     expect(remaining[0].text()).toContain('Task Beta')
     expect(wrapper.text()).not.toContain('payment decision risk')
+  })
+
+  it('saves explicit weekly recommendation feedback and removes the rejected recommendation immediately', async () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push({
+      id: 'task-feedback-plan',
+      title: 'Tighten planner feedback loop',
+      description: 'Make feedback change future recommendations instead of repeating rejected work.',
+      status: 'todo',
+      priority: 'high',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '2026-06-12',
+      projectId: 'ai-planner',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as Task)
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-feedback-plan',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            weeklyPlan: {
+              schemaVersion: 'weekly-plan.v2',
+              requestId: 'plan-feedback-1',
+              locale: 'en',
+              direction: 'ltr',
+              headline: 'This week',
+              weekRead: {
+                summary: 'One grounded recommendation.',
+                workloadReality: 'Keep it small.',
+                mainTradeoff: 'Avoid repeated rejected work.',
+              },
+              recommendations: [
+                {
+                  sectionId: 'rec-feedback-1',
+                  rank: 1,
+                  focusArea: 'AI planning quality',
+                  primaryTaskId: 'task-feedback-plan',
+                  relatedTaskIds: [],
+                  recommendationType: 'protect',
+                  title: 'Tighten planner feedback loop',
+                  whyThisMatters: 'It stops the assistant from repeating suggestions the user rejected.',
+                  whyThisWeek: 'The user just gave feedback that repeated plans are overwhelming.',
+                  riskIfIgnored: 'The same rejected work keeps coming back.',
+                  nextAction: 'Save the reason and suppress this recommendation.',
+                  evidence: [
+                    { taskId: 'task-feedback-plan', field: 'projectContext', value: 'AI planner quality', interpretation: 'project meaning evidence' },
+                    { taskId: 'task-feedback-plan', field: 'notes', value: 'feedback loop', interpretation: 'task note evidence' },
+                  ],
+                  cardPlacement: 'immediately_after_explanation',
+                },
+              ],
+              deferrals: [],
+              openQuestions: [],
+              quality: {
+                selectedTaskCount: 1,
+                confidence: 'medium',
+                caveats: [],
+              },
+              source: 'quick_draft',
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(1)
+    await wrapper.findAll('.weekly-feedback-btn').find(button => button.text() === 'Postpone')?.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="weekly-feedback-detail"]').exists()).toBe(true)
+    await wrapper.findAll('.weekly-feedback-btn').find(button => button.text() === 'Needs info')?.trigger('click')
+    await wrapper.findAll('.weekly-question-apply').find(button => button.text().includes('Save feedback'))?.trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(supabaseDbMocks.recordAIRecommendationFeedback).toHaveBeenCalledWith(expect.objectContaining({
+      generatedPlanId: 'plan-feedback-1',
+      recommendationId: 'rec-feedback-1',
+      taskId: 'task-feedback-plan',
+      entityKey: 'project:ai-planner',
+      action: 'postpone',
+      reasonCategory: 'needs_more_info',
+      sourceMessageId: 'msg-feedback-plan',
+    }))
+    const savedPayload = supabaseDbMocks.recordAIRecommendationFeedback.mock.calls[0][0]
+    expect(savedPayload.revisitAt).toEqual(expect.any(String))
+    expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(0)
+    expect(wrapper.get('[data-section-id="rec-feedback-1"]').isVisible()).toBe(false)
   })
 
   it('clears an inline week-plan recommendation card when the task is postponed out of the plan window', () => {

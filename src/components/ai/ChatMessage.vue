@@ -87,6 +87,7 @@ const clarificationAnswers = ref<Record<string, string>>({})
 const clarificationFreeText = ref<Record<string, string>>({})
 const clarificationApplying = ref(false)
 const clarificationStatus = ref('')
+const clarificationInlineMode = ref<Record<string, 'uncertainty' | 'candidates'>>({})
 const recommendationFeedbackLoading = ref<Record<string, string>>({})
 const recommendationFeedbackStatus = ref<Record<string, string>>({})
 
@@ -357,6 +358,12 @@ function clarificationActionEvent(action: AIClarificationArtifact['actions'][num
   return 'dismissed' as const
 }
 
+function clarificationActionPath(action: AIClarificationArtifact['actions'][number]) {
+  if (action === 'generate_current') return 'generated_with_uncertainty' as const
+  if (action === 'show_candidates') return 'showed_candidates' as const
+  return 'pause_save' as const
+}
+
 function clarificationDisplayName(card: AIClarificationArtifact): string {
   const question = card.question
   if (question.entityType === 'project' && question.entityId) {
@@ -398,6 +405,14 @@ async function saveClarificationAnswer(card: AIClarificationArtifact, event: Mou
       freeText: note,
       memoryPatch: option?.memoryPatch ? { ...option.memoryPatch, sourceMessageId: props.message.id } : undefined,
       sourceMessageId: props.message.id,
+      coverageScoreAtTime: card.coverage?.score,
+      uncertaintyDimensions: card.coverage?.missing,
+      pathType: 'clarify_first',
+      contextSnapshot: {
+        candidateTaskIds: card.candidateTaskIds,
+        coverage: card.coverage,
+        retrieval: card.debug?.retrieval,
+      },
     })
     clarificationStatus.value = card.locale === 'he' ? 'נשמר. אפשר לבקש שוב כדי להמשיך.' : 'Saved. Ask again to continue.'
   } catch (err) {
@@ -413,6 +428,12 @@ async function recordClarificationEscape(card: AIClarificationArtifact, action: 
   if (clarificationApplying.value) return
   clarificationApplying.value = true
   clarificationStatus.value = ''
+  const key = clarificationKey(card)
+  if (action === 'generate_current') {
+    clarificationInlineMode.value[key] = 'uncertainty'
+  } else if (action === 'show_candidates') {
+    clarificationInlineMode.value[key] = 'candidates'
+  }
   try {
     await aiMemoryDb.recordAIClarificationEvent({
       entityKey: card.memoryKey,
@@ -422,16 +443,59 @@ async function recordClarificationEscape(card: AIClarificationArtifact, action: 
       eventType: clarificationActionEvent(action),
       question: card.question.question,
       sourceMessageId: props.message.id,
+      coverageScoreAtTime: card.coverage?.score,
+      uncertaintyDimensions: card.coverage?.missing,
+      pathType: clarificationActionPath(action),
+      contextSnapshot: {
+        candidateTaskIds: card.candidateTaskIds,
+        coverage: card.coverage,
+        retrieval: card.debug?.retrieval,
+      },
     })
     clarificationStatus.value = card.locale === 'he'
-      ? 'נשמר. השאלה לא תחזור מיד.'
-      : 'Saved. I will not ask this again right away.'
+      ? action === 'pause_save' ? 'נשמר. השאלה לא תחזור מיד.' : 'נשמר. מציג תוצאה מוגבלת לפי הנתונים הקיימים.'
+      : action === 'pause_save' ? 'Saved. I will not ask this again right away.' : 'Saved. Showing a limited result from current data.'
   } catch (err) {
-    console.error('[ChatMessage] Clarification escape failed:', err)
-    clarificationStatus.value = card.locale === 'he' ? 'השמירה נכשלה' : 'Save failed'
+    const message = err instanceof Error ? err.message : String(err)
+    if (!message.includes('authenticated user')) {
+      console.error('[ChatMessage] Clarification escape failed:', err)
+    }
+    clarificationStatus.value = card.locale === 'he'
+      ? action === 'pause_save' ? 'השמירה נכשלה' : 'מוצג מקומית; יישמר אחרי כניסה לחשבון.'
+      : action === 'pause_save' ? 'Save failed' : 'Showing locally; will persist after sign-in.'
   } finally {
     clarificationApplying.value = false
   }
+}
+
+function clarificationInlineLabel(card: AIClarificationArtifact): string {
+  const mode = clarificationInlineMode.value[clarificationKey(card)]
+  if (card.locale === 'he') {
+    return mode === 'uncertainty'
+      ? 'מועמדים עם אי-ודאות'
+      : 'מועמדים ללא דירוג'
+  }
+  return mode === 'uncertainty'
+    ? 'Candidates with uncertainty'
+    : 'Unranked candidates'
+}
+
+function clarificationInlineSummary(card: AIClarificationArtifact): string {
+  const mode = clarificationInlineMode.value[clarificationKey(card)]
+  if (card.locale === 'he') {
+    return mode === 'uncertainty'
+      ? 'אני מציג את המשימות האפשריות בלי לטעון שהן החשובות ביותר, כי ההקשר עדיין חסר.'
+      : 'אלה משימות אפשריות מהנתונים שנקראו. אין כאן דירוג חשיבות.'
+  }
+  return mode === 'uncertainty'
+    ? 'These are possible tasks from the current data. I am not claiming they are the most important because context is still missing.'
+    : 'These are possible tasks from the data I read. This is not an importance ranking.'
+}
+
+function clarificationCandidateTasks(card: AIClarificationArtifact): TaskListItem[] {
+  return card.candidateTaskIds
+    .map(taskId => taskCardFromId(taskId))
+    .filter((task): task is TaskListItem => Boolean(task))
 }
 
 // ============================================================================
@@ -1113,7 +1177,7 @@ async function saveSchedule() {
         </header>
 
         <section class="weekly-plan-questions">
-          <div class="weekly-plan-question">
+          <div v-if="!clarificationInlineMode[clarificationKey(clarification)]" class="weekly-plan-question">
             <p>{{ clarification.question.question }}</p>
             <div v-if="clarification.question.options?.length" class="weekly-question-options">
               <button
@@ -1160,6 +1224,55 @@ async function saveSchedule() {
                 {{ clarificationStatus }}
               </span>
             </div>
+          </div>
+          <div v-else class="clarification-inline-result" data-testid="ai-clarification-inline-result">
+            <strong>{{ clarificationInlineLabel(clarification) }}</strong>
+            <p>{{ clarificationInlineSummary(clarification) }}</p>
+            <div class="weekly-plan-cards">
+              <template v-for="task in clarificationCandidateTasks(clarification)" :key="`clarify:${task.id}`">
+                <button
+                  class="task-list-item grouped-card inline-grouped-card"
+                  data-testid="ai-clarification-candidate-card"
+                  :class="{ 'task-completed': completedTaskIds.has(task.id) || task.status === 'done' }"
+                  @click="!isPlanSnapshotCard(task) && openQuickEdit(task, $event)"
+                >
+                  <span class="task-priority-dot" :style="{ background: priorityColor(task.priority ?? undefined) }" />
+                  <div class="grouped-card-body">
+                    <span class="task-title" dir="auto">{{ task.title || '(untitled)' }}</span>
+                    <div class="task-meta-row">
+                      <span v-if="task.daysOverdue" class="task-overdue-badge">{{ task.daysOverdue }}d overdue</span>
+                      <span v-else-if="task.dueDate" class="task-due-date">{{ formatRelativeDate(task.dueDate) }}</span>
+                      <span v-if="task.status" class="task-status-badge" :class="'status-' + task.status">{{ task.status }}</span>
+                    </div>
+                  </div>
+                  <div class="task-inline-actions" @click.stop>
+                    <button
+                      v-if="!isPlanSnapshotCard(task) && task.status !== 'done' && !completedTaskIds.has(task.id)"
+                      class="inline-action-btn inline-done-btn"
+                      :class="{ loading: actionLoading[task.id] === 'done' }"
+                      title="Mark done"
+                      @click="markTaskDone(task.id, $event)"
+                    >
+                      <Loader2 v-if="actionLoading[task.id] === 'done'" :size="12" class="spin" />
+                      <CheckCircle2 v-else :size="12" />
+                    </button>
+                    <button
+                      v-if="!isPlanSnapshotCard(task) && !timerStartedTaskIds.has(task.id)"
+                      class="inline-action-btn inline-timer-btn"
+                      :class="{ loading: actionLoading[task.id] === 'timer' }"
+                      title="Start timer"
+                      @click="startTaskTimer(task.id, $event)"
+                    >
+                      <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
+                      <Play v-else :size="12" />
+                    </button>
+                  </div>
+                </button>
+              </template>
+            </div>
+            <span v-if="clarificationStatus" class="weekly-question-status">
+              {{ clarificationStatus }}
+            </span>
           </div>
         </section>
       </article>

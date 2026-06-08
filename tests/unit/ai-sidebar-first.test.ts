@@ -890,6 +890,82 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).toContain('Follow-up task added')
   })
 
+  it('shows local candidate cards immediately when clarification is skipped for candidates', async () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push({
+      id: 'task-candidate-a',
+      title: 'Define planner memory success criteria',
+      description: '',
+      status: 'todo',
+      priority: 'medium',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: null,
+      projectId: 'ai-planner',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Task)
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-clarification-candidates',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            clarification: {
+              schemaVersion: 'ai-clarification.v1',
+              kind: 'weekly_planning',
+              locale: 'en',
+              direction: 'ltr',
+              progressLabel: 'Clarifying priorities • Step 1/3',
+              summary: 'I am missing one detail that would change the ranking.',
+              memoryKey: 'project:ai-planner',
+              pathType: 'clarify_first',
+              candidateTaskIds: ['task-candidate-a'],
+              actions: ['show_candidates', 'pause_save'],
+              coverage: {
+                score: 0.32,
+                materiality: 'high',
+                dimensions: { project_meaning: 0 },
+                missing: ['project_meaning'],
+                decision: 'ask',
+              },
+              question: {
+                id: 'project_context_ai-planner',
+                entityType: 'project',
+                entityId: 'ai-planner',
+                reason: 'missing_project_understanding',
+                question: 'What kind of project is "AI Planner"?',
+                options: [{ id: 'domain_work', label: 'Work/Product', effect: 'Save work context.' }],
+                allowFreeText: true,
+                relatedTaskIds: ['task-candidate-a'],
+              },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="ai-clarification"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false)
+    await wrapper.findAll('.weekly-question-escape')[0].trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="ai-clarification-inline-result"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="ai-clarification-candidate-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Unranked candidates')
+    expect(wrapper.text()).toContain('Define planner memory success criteria')
+  })
+
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 

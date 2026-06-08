@@ -1427,6 +1427,10 @@ export function useAIChat() {
     if (responseMode === 'week_plan') return 'week_plan'
     if (responseMode === 'weekly_review') return 'weekly_review'
     if (responseMode === 'smart_lanes') return 'smart_lanes'
+    if (responseMode === 'prioritization') return 'prioritization'
+    if (responseMode === 'next_task') return 'next_task'
+    if (responseMode === 'overdue_triage') return 'overdue_triage'
+    if (responseMode === 'task_breakdown') return 'task_breakdown'
     return 'general'
   }
 

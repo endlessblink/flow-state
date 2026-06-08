@@ -1,4 +1,13 @@
-export type ChatQualityMode = 'general' | 'day_plan' | 'week_plan' | 'weekly_review' | 'smart_lanes'
+export type ChatQualityMode =
+  | 'general'
+  | 'day_plan'
+  | 'week_plan'
+  | 'weekly_review'
+  | 'smart_lanes'
+  | 'prioritization'
+  | 'next_task'
+  | 'overdue_triage'
+  | 'task_breakdown'
 
 export type ChatQualityLevel = 'bad' | 'acceptable' | 'excellent'
 
@@ -77,6 +86,15 @@ const CLARIFICATION_QUESTION_RE = /(quick question|before ranking|before I rank|
 const UNKNOWN_EVIDENCE_RE = /(context unknown|project context unknown|missing context|unknown stakes|unknown importance|not enough context|הקשר חסר|לא ידוע|אי.?ודאות|אין מספיק הקשר)/i
 const NAME_ONLY_CONTEXT_RE = /^(project|belongs to|part of|project:|belongs to project|שייך|פרויקט|חלק מ)/i
 const REAL_CONTEXT_EVIDENCE_RE = /(why|matters|success|criteria|stakes|risk|correction|non-goal|preference|impact|commitment|dependency|unblock|client|money|health|family|למה|חשוב|קריטריון|הצלחה|סיכון|תיקון|העדפה|השפעה|התחייבות|תלות|לקוח|כסף|בריאות|משפחה)/i
+const BROAD_TASK_QUALITY_MODES = new Set<ChatQualityMode>([
+  'general',
+  'day_plan',
+  'smart_lanes',
+  'prioritization',
+  'next_task',
+  'overdue_triage',
+  'task_breakdown',
+])
 
 export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAudit {
   const text = normalizeText(input.text)
@@ -86,7 +104,7 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   const bulletLines = lines.filter(line => /^[-*•]|\d+[.)]/.test(line))
   const paragraphCount = lines.filter(line => line.length > 180).length
   const mode = input.mode ?? 'general'
-  const isBroadTaskAnswer = input.hasTaskList && ['general', 'day_plan', 'smart_lanes'].includes(mode)
+  const isBroadTaskAnswer = input.hasTaskList && BROAD_TASK_QUALITY_MODES.has(mode)
   const path = input.responsePath ?? 'direct_answer'
   const recommendationCount = input.recommendationCount ?? input.taskCount
   const visibleUncertainty = input.hasVisibleUncertainty ?? UNCERTAINTY_RE.test(text)

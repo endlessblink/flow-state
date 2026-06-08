@@ -2,6 +2,59 @@ import { describe, expect, it } from 'vitest'
 import { auditChatResponseQuality, auditRecommendationEvidence } from '@/services/ai/pipeline/chatQuality'
 
 describe('chat quality evidence audit', () => {
+  it('applies post-clarification grounding checks to prioritization answers', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      hasClarificationEvidence: true,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Start with the payment follow-up; the money risk is explicit. Keep the other candidates as cards only.',
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('missing_clarification_evidence')
+  })
+
+  it('rejects next-task answers that only cite shallow task metadata', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'next_task',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 2,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Do Task A first because it is high priority and due soon.',
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('metadata_only_reasoning')
+  })
+
+  it('requires uncertainty for overdue triage when context is unknown', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'overdue_triage',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 2,
+      contextUnknown: true,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'This is high stakes strategic work with real consequences, so do it first.',
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toEqual(expect.arrayContaining([
+      'unsupported_importance_language',
+      'missing_visible_uncertainty',
+    ]))
+  })
+
   it('rejects recommendations that infer importance from project names or shallow task metadata', () => {
     const audit = auditRecommendationEvidence([
       {

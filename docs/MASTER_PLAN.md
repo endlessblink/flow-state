@@ -232,6 +232,7 @@
 - 2026-06-08: Added shared `auditChatResponseQuality()` for broader deterministic task answers so non-weekly outputs can be repaired when they are verbose, generic, metadata-only, or missing task cards.
 - 2026-06-08: Broad post-clarification answers now fail the chat-quality audit when they do not visibly honor the user's clarification evidence, forcing repair to the concise grounded fallback instead of accepting a plausible but context-ignoring answer.
 - 2026-06-08: Research policy update accepted: structured-output failure must retry once and then degrade to a deterministic compact draft with visible uncertainty and feedback controls; repeated clarification after a saved answer is a quality failure; low-context fallback should cap visible recommendations around 1-3 by default.
+- 2026-06-08: The chat-quality audit now treats `prioritization`, `next_task`, `overdue_triage`, and `task_breakdown` as broad task-answer modes. Mode-specific regressions prove these flows fail when they ignore saved clarification evidence, cite only shallow metadata, or claim high stakes without visible uncertainty.
 
 ---
 
@@ -324,6 +325,7 @@
 - 2026-06-08: Clarification messages now suppress the generic tool-result task list while asking. Candidate tasks only appear through explicit "show candidates" style escapes, preventing the old barrage of task cards under a question.
 - 2026-06-08: Broad non-weekly memory summaries now retrieve recent recommendation feedback by task/project entity keys, so later broad answers can see postponed/dismissed inline-card signals instead of only weekly plans learning from feedback.
 - 2026-06-08: Broad fallback card selection now applies recent recommendation feedback: dismissed/postponed inline cards are filtered out during cooldown, while accepted/timeblocked cards get a small positive boost. Inline task feedback is matched by recommendation ID so one postponed task does not suppress the whole project.
+- 2026-06-08: Broad response modes now pass their exact intent into the shared quality gate instead of collapsing to `general`, so prioritization, next-task, overdue-triage, and task-breakdown answers are held to the same groundedness and low-overwhelm contract as weekly/day planning.
 - 2026-06-08: Extracted broad clarification policy into a tested pipeline module. Regression coverage now proves cold-start day/smart/general broad requests ask one concise direction question, recent answered/proceed-with-uncertainty events suppress repeats, stale decisions can refresh, and weekly planning stays on its separate interview path.
 - 2026-06-08: Broad clarification cards are now mode-specific: prioritization asks what should decide the priority order, next-task asks what makes one task right now, and overdue triage asks how to treat overdue items. Tests prove these paths no longer ask the generic "what should guide this answer?" question.
 - 2026-06-08: Localhost Playwright now proves broad-flow behavior for `prioritize my tasks`, `what should I do next?`, and `show me overdue tasks`: each prompt asks one mode-specific card before recommendations, hides task cards while asking, saves the button answer, leaves no stuck running activity, and does not re-ask the same question on the next prompt.
@@ -491,6 +493,7 @@
 - 2026-06-08: Added a structured recommendation citation audit. Recommendations now fail quality checks when they cite only task metadata or project names as context, pass when they explicitly mark project/context evidence unknown, and score excellent only when task evidence is paired with real success/stakes/why/dependency context.
 - 2026-06-08: Wired the structured citation audit into weekly-plan validation and weekly quality scoring. A model weekly plan can no longer satisfy "project understanding" by citing a grounded project label; it must cite real project/task context or explicitly mark context unknown.
 - 2026-06-08: Added a regression for the realistic cache-first weekly-planning case where task notes/subtasks exist but project meaning is still unknown. The clarification policy now treats project meaning and stale context as forced missing dimensions in EVPI scoring, so a project-understanding question beats a broader week-priority question when project meaning is the blocker.
+- 2026-06-08: Added mode-specific chat-quality regressions for prioritization, next-task, and overdue-triage outputs. These tests prevent polished but fake broad answers from bypassing the audit just because they are not weekly/day-plan response modes.
 
 ---
 

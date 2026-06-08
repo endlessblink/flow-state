@@ -2456,6 +2456,18 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain(': [formatterProse, fallbackProse, fallbackCardData.rawBlock]')
   })
 
+  it('has a deterministic quality floor when broad answer repair also fails audit', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+
+    expect(aiChat).toContain('function buildQualityFloorFallback')
+    expect(aiChat).toContain("if (fallbackQuality.level !== 'bad')")
+    expect(aiChat).toContain('const qualityFloorResponse = buildQualityFloorFallback')
+    expect(aiChat).toContain('const qualityFloorAudit = auditChatResponseQuality({')
+    expect(aiChat).toContain('Project context is still not reliable enough for broad ranking')
+    expect(aiChat).toContain('Candidate only; project context is unknown or needs refresh.')
+    expect(aiChat).toContain('responseQuality = qualityFloorAudit')
+  })
+
   it('does not force-scroll the chat while the user is reading older streaming content', () => {
     const panel = src('src/components/ai/AIChatPanel.vue')
 

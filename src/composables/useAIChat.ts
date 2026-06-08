@@ -1348,6 +1348,45 @@ export function useAIChat() {
     return [intro, ...lines, omissions].filter(Boolean).join('\n') + buildFallbackCards(tasks, lang, responseMode)
   }
 
+  function buildQualityFloorFallback(toolResults: ToolResult[], lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode'], options: FormatterFallbackOptions = {}): string {
+    const [task] = rankBroadFallbackTasks(
+      getTaskItemsFromToolResults(toolResults).filter(task => task.title),
+      options.recommendationFeedback,
+    )
+    const clarificationLine = options.clarificationEvidence
+      ? lang === 'he'
+        ? `לפי תשובת ההבהרה שלך: ${shortClarificationEvidence(options.clarificationEvidence)}.`
+        : `Using your clarification: ${shortClarificationEvidence(options.clarificationEvidence)}.`
+      : ''
+    const intro = lang === 'he'
+      ? 'הקשר הפרויקט עדיין לא מספיק בטוח לדירוג רחב, אז אני מציג מועמד אחד בלבד.'
+      : 'Project context is still not reliable enough for broad ranking, so I am showing one candidate only.'
+
+    if (!task) {
+      return [clarificationLine, intro].filter(Boolean).join('\n')
+    }
+
+    const cardIndex = Number(task.__cardIndex) || 1
+    const title = String(task.title || '').trim()
+    const line = lang === 'he'
+      ? `מועמד: ${title}. בדוק את הכרטיס לפני קביעה שזה חשוב.`
+      : `Candidate: ${title}. Check the card before treating it as important.`
+    const kind = responseMode ? `"kind":"${responseMode}",` : ''
+    const reason = lang === 'he'
+      ? 'מועמד בלבד; הקשר הפרויקט חסר או דורש רענון.'
+      : 'Candidate only; project context is unknown or needs refresh.'
+    const cards = `\n\n\`\`\`cards\n{${kind}"groups":[{"name":"${lang === 'he' ? 'מועמד לבדיקה' : 'Candidate to verify'}","items":[{"i":${cardIndex},"reason":${JSON.stringify(reason)}}]}]}\n\`\`\``
+    return [clarificationLine, intro, line].filter(Boolean).join('\n') + cards
+  }
+
+  function shortClarificationEvidence(value: string): string {
+    return value
+      .replace(/^FLOWSTATE_CLARIFICATION_CONTINUATION\b[^\n]*\n?/i, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 120)
+  }
+
   function weeklyPlanNeedsQualityRepair(response: string, cardData: ReturnType<typeof parseCardGroups>, lang: 'he' | 'en'): boolean {
     if (!cardData || cardData.kind !== 'week_plan') return false
     const selectedTasks = cardData.groups.flatMap(group => group.tasks)
@@ -2419,6 +2458,21 @@ export function useAIChat() {
           formattedResponse = fallbackResponse
           cardData = fallbackCardData
           responseQuality = fallbackQuality
+        } else {
+          const qualityFloorResponse = buildQualityFloorFallback(toolResults, routed.language, routed.responseMode, formatterFallbackOptions)
+          const qualityFloorCardData = parseCardGroups(qualityFloorResponse, toolResults)
+          const qualityFloorAudit = auditChatResponseQuality({
+            ...qualityInput,
+            text: qualityFloorCardData ? stripCardsBlock(qualityFloorResponse) : qualityFloorResponse,
+            hasCards: Boolean(qualityFloorCardData),
+            recommendationCount: qualityFloorCardData?.groups.flatMap(group => group.tasks).length ?? 0,
+            contextUnknown: true,
+            hasVisibleUncertainty: true,
+            hasFeedbackControls: Boolean(qualityFloorCardData),
+          })
+          formattedResponse = qualityFloorResponse
+          cardData = qualityFloorCardData
+          responseQuality = qualityFloorAudit
         }
       }
       const displayRaw = cardData ? stripCardsBlock(formattedResponse) : formattedResponse

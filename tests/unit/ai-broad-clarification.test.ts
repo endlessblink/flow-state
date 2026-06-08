@@ -95,6 +95,21 @@ describe('broad task clarification policy', () => {
     expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [event('generated_with_uncertainty', 6)])).toBeNull()
   })
 
+  it('dedupes the same broad clarification wording across workflow buckets without blocking mode-specific questions', () => {
+    const recentGeneralFocus: AIClarificationEvent = {
+      ...event('answered', 2, 'response_quality_general_general_focus'),
+      entityKey: 'workflow:task_answer:general',
+      question: 'What should guide this answer?',
+      selectedLabel: 'Real impact',
+    }
+
+    expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [recentGeneralFocus])).toBeNull()
+
+    const prioritizationCard = buildBroadTaskClarification(routed('prioritization'), taskResult(5), 'en', [recentGeneralFocus])
+    expect(prioritizationCard?.question.id).toBe('response_quality_prioritization_impact')
+    expect(prioritizationCard?.question.question).toBe('What should decide the priority order?')
+  })
+
   it('suppresses repeat questions when a saved parameter belief already answers the ladder', () => {
     expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [], [belief()])).toBeNull()
   })

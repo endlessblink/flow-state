@@ -139,7 +139,7 @@ export interface AIClarificationEVPIScore {
     heuristicEvpi: number
     userCost: number
     selectedScore: number
-    skippedReason?: 'recently_resolved' | 'no_targets'
+    skippedReason?: 'recently_resolved' | 'same_question_recently_resolved' | 'no_targets'
   }>
 }
 

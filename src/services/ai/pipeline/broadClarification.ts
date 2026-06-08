@@ -369,11 +369,13 @@ function scoreBroadPrompt(
   heuristicEvpi: number
   userCost: number
   selectedScore: number
-  skippedReason?: 'recently_resolved' | 'no_targets'
+  skippedReason?: 'recently_resolved' | 'same_question_recently_resolved' | 'no_targets'
 } {
   const targetedParameters = prompt.targetedParameters.filter(parameter => coverage.missing.includes(parameter) || parameter === 'impact' || parameter === 'preferences')
   const skippedReason = recentBroadPromptResolved(events, memoryKey, `response_quality_${entityId}_${prompt.id}`, `response_quality_${entityId}`)
     ? 'recently_resolved'
+    : recentBroadQuestionResolved(events, prompt.question)
+      ? 'same_question_recently_resolved'
     : targetedParameters.length === 0
       ? 'no_targets'
       : undefined
@@ -407,6 +409,18 @@ function recentBroadPromptResolved(events: AIClarificationEvent[], entityKey: st
   )
 }
 
+function recentBroadQuestionResolved(events: AIClarificationEvent[], question: string): boolean {
+  const normalizedQuestion = normalizeClarificationQuestion(question)
+  if (!normalizedQuestion) return false
+  const cutoff = Date.now() - (7 * MS_PER_DAY)
+  return events.some(event =>
+    ['answered', 'dismissed', 'generated_with_uncertainty', 'showed_candidates'].includes(event.eventType) &&
+    normalizeClarificationQuestion(event.question ?? '') === normalizedQuestion &&
+    event.createdAt &&
+    new Date(event.createdAt).getTime() >= cutoff
+  )
+}
+
 function hasRecentAskedOnlyClarification(events: AIClarificationEvent[], now = Date.now()): boolean {
   return events.some(event => {
     if (event.eventType !== 'asked') return false
@@ -414,6 +428,14 @@ function hasRecentAskedOnlyClarification(events: AIClarificationEvent[], now = D
     if (!Number.isFinite(createdAt)) return false
     return (now - createdAt) / MS_PER_DAY < 1
   })
+}
+
+function normalizeClarificationQuestion(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[?؟]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function parameterUncertainty(confidence: number): number {

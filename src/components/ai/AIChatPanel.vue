@@ -103,6 +103,7 @@ const showApiKeys = ref(false)
 const showChatHistory = ref(false)
 const chatHistoryContainerRef = ref<HTMLElement | null>(null)
 const lastUserMessage = ref<string>('')
+const pendingContinueMessage = ref<string>('')
 
 // Panel sizing mode: compact (380px) | expanded (600px) | fullscreen
 const panelMode = ref<'compact' | 'expanded' | 'fullscreen'>('compact')
@@ -255,9 +256,22 @@ function handleQuickAction(action: { label: string; message: string; directTool?
 }
 
 function handleContinueChat(message: string) {
-  if (!message.trim() || isGenerating.value) return
-  sendMessage(message)
+  const trimmed = message.trim()
+  if (!trimmed) return
+  if (isGenerating.value) {
+    pendingContinueMessage.value = trimmed
+    return
+  }
+  pendingContinueMessage.value = ''
+  sendMessage(trimmed)
 }
+
+watch(isGenerating, (generating) => {
+  if (generating || !pendingContinueMessage.value) return
+  const message = pendingContinueMessage.value
+  pendingContinueMessage.value = ''
+  sendMessage(message)
+})
 
 // ============================================================================
 // Context-Aware Quick Actions

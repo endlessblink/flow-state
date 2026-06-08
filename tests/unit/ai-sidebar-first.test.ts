@@ -1463,6 +1463,17 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('week')
   })
 
+  it('queues clarification continuation instead of dropping it while generation is settling', () => {
+    const panel = src('src/components/ai/AIChatPanel.vue')
+
+    expect(panel).toContain("const pendingContinueMessage = ref<string>('')")
+    expect(panel).toContain('pendingContinueMessage.value = trimmed')
+    expect(panel).toContain('watch(isGenerating, (generating) => {')
+    expect(panel).toContain('if (generating || !pendingContinueMessage.value) return')
+    expect(panel).toContain('pendingContinueMessage.value = \'\'')
+    expect(panel).toContain('sendMessage(message)')
+  })
+
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 

@@ -121,8 +121,44 @@ describe('chat quality evidence audit', () => {
     expect(audit.level).toBe('bad')
     expect(audit.failures).toEqual(expect.arrayContaining([
       'unsupported_importance_language',
+      'unsupported_importance_with_unknown_context',
       'missing_visible_uncertainty',
     ]))
+  })
+
+  it('rejects fake importance claims even when the prose mentions unknown context', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 2,
+      contextUnknown: true,
+      hasVisibleUncertainty: true,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Limited context: project context unknown, but this still looks like strategic high stakes work, so start here.',
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('unsupported_importance_with_unknown_context')
+  })
+
+  it('allows unknown-context answers to explicitly avoid importance claims', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 2,
+      contextUnknown: true,
+      hasVisibleUncertainty: true,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Limited context: project context unknown, so do not treat this as high stakes. Use task notes only and adjust the card if wrong.',
+    })
+
+    expect(audit.failures).not.toContain('unsupported_importance_with_unknown_context')
   })
 
   it('rejects recommendations that infer importance from project names or shallow task metadata', () => {

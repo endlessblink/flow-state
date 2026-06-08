@@ -133,6 +133,9 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   if (input.contextUnknown && UNSUPPORTED_IMPORTANCE_RE.test(text) && !/context unknown|unclear|missing context|הקשר חסר|לא ברור/i.test(text)) {
     failures.push('unsupported_importance_language')
   }
+  if (isBroadTaskAnswer && input.contextUnknown && UNSUPPORTED_IMPORTANCE_RE.test(text) && !NEGATED_IMPORTANCE_RE.test(text)) {
+    failures.push('unsupported_importance_with_unknown_context')
+  }
   if (input.hasClarificationEvidence && isBroadTaskAnswer && !CLARIFICATION_EVIDENCE_RE.test(text)) {
     failures.push('missing_clarification_evidence')
   }
@@ -214,6 +217,7 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
           : 0.25,
     safety: failures.some(failure => [
       'unsupported_importance_language',
+      'unsupported_importance_with_unknown_context',
       'repeated_clarification_question',
       'missing_high_evpi_clarification',
       'unrealistic_recommendation_load',

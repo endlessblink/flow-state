@@ -565,6 +565,7 @@
 - 2026-06-08: Recommendation-card learning signals are now an executable quality gate. If broad task cards expose feedback controls but the response path does not prove those controls feed memory/learning, the audit fails with `feedback_not_recorded_as_learning_signal`; the runtime marks inline card groups as learning-enabled because accept/postpone/dismiss actions write recommendation feedback.
 - 2026-06-08: The bad/acceptable/excellent chat-quality rubric now includes an explicit realism/load dimension. Broad card sets with 4-5 recommendations are capped at acceptable with a `broad_recommendation_load` warning, while 6+ broad recommendations fail with `unrealistic_recommendation_load`; warnings now prevent an answer from scoring excellent.
 - 2026-06-08: Missing debug disclosure on deterministic fallback, clarification-first, or structured-output-failure paths is now a hard answer-quality failure instead of a warning. This keeps reliability fallbacks inspectable and prevents low-overwhelm repair paths from hiding why the model output was replaced.
+- 2026-06-08: Unknown-context broad answers now fail if they still claim a task is strategic, high stakes, important, critical, meaningful, or consequential, even when the prose also says context is unknown. The only passing pattern is to explicitly avoid the importance claim, for example "project context unknown, so do not treat this as high stakes." Focused quality tests now cover both the rejected fake-certainty case and the allowed negated-importance case.
 
 ---
 

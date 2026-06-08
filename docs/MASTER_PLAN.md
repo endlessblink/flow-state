@@ -239,6 +239,7 @@
 - 2026-06-08: Broad post-clarification answers now fail the chat-quality audit when they do not visibly honor the user's clarification evidence, forcing repair to the concise grounded fallback instead of accepting a plausible but context-ignoring answer.
 - 2026-06-08: Research policy update accepted: structured-output failure must retry once and then degrade to a deterministic compact draft with visible uncertainty and feedback controls; repeated clarification after a saved answer is a quality failure; low-context fallback should cap visible recommendations around 1-3 by default.
 - 2026-06-08: The chat-quality audit now treats `prioritization`, `next_task`, `overdue_triage`, and `task_breakdown` as broad task-answer modes. Mode-specific regressions prove these flows fail when they ignore saved clarification evidence, cite only shallow metadata, or claim high stakes without visible uncertainty.
+- 2026-06-08: Broad card answers now feed parsed card reasons into the structured recommendation-evidence audit, and the audit rejects repeated reason/evidence templates across multiple cards. Post-clarification deterministic fallback reasons now combine the user's clarification with task-specific evidence, so the fallback cannot pass by repeating the same generic clarification sentence on every recommendation.
 
 ---
 

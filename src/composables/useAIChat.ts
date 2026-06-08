@@ -1182,12 +1182,18 @@ export function useAIChat() {
       : `matches your clarification: ${clipped}`
   }
 
+  function fallbackTaskClarifiedReason(task: Record<string, unknown>, evidence: string, lang: 'he' | 'en'): string {
+    const clarification = fallbackClarificationReason(evidence, lang)
+    const taskReason = fallbackTaskReason(task, lang)
+    return `${clarification}; ${taskReason}`
+  }
+
   function fallbackTaskRecommendation(task: Record<string, unknown> & { title?: string }, lang: 'he' | 'en', options: FormatterFallbackOptions = {}): string {
     const title = task.title || ''
     const why = options.uncertaintyOnly
       ? fallbackTaskUncertaintyReason(task, lang)
       : options.clarificationEvidence
-        ? fallbackClarificationReason(options.clarificationEvidence, lang)
+        ? fallbackTaskClarifiedReason(task, options.clarificationEvidence, lang)
         : fallbackTaskReason(task, lang)
     const slot = fallbackTaskSlot(task, lang)
     if (options.uncertaintyOnly) {
@@ -1229,7 +1235,7 @@ export function useAIChat() {
     const aspects = responseMode === 'week_plan' ? buildFallbackAspects(tasks, lang, options.recommendationFeedback) : []
     const reasonFor = (task: Record<string, unknown>): string => {
       if (options.uncertaintyOnly) return fallbackTaskUncertaintyReason(task, lang)
-      if (options.clarificationEvidence) return fallbackClarificationReason(options.clarificationEvidence, lang)
+      if (options.clarificationEvidence) return fallbackTaskClarifiedReason(task, options.clarificationEvidence, lang)
       return fallbackTaskReason(task, lang)
     }
     const groups = aspects.length > 0
@@ -1355,6 +1361,31 @@ export function useAIChat() {
       : /(why now|expected impact|tradeoff|slot|stuck|unblock|prevent|risk|waiting|decision|money|billing|sequence|follow-through|dependency|capacity|energy)/i.test(line)
     if (shallowMetadata && !hasStakeLanguage) return false
     return hasStakeLanguage
+  }
+
+  function buildCardRecommendationEvidence(cardData: ReturnType<typeof parseCardGroups>) {
+    if (!cardData) return undefined
+    return cardData.groups.flatMap(group => group.tasks).map((task, index) => {
+      const reason = String(task.reason || '').trim()
+      const taskEvidence = [
+        reason ? `card reason: ${reason}` : '',
+        typeof task.description === 'string' && task.description.trim() ? `note: ${task.description.trim().slice(0, 140)}` : '',
+        task.daysOverdue ? `overdue by ${task.daysOverdue} days` : '',
+        task.dueDate ? `due: ${String(task.dueDate).slice(0, 10)}` : '',
+        task.priority ? `priority: ${String(task.priority)}` : '',
+        typeof task.estimatedDuration === 'number' ? `estimate: ${task.estimatedDuration}min` : '',
+        Array.isArray(task.subtasks) && task.subtasks.length ? `subtasks: ${task.subtasks.length}` : '',
+      ].filter(Boolean) as string[]
+      return {
+        recommendationId: `card_${index + 1}_${String(task.id || task.title || 'task').replace(/[^a-z0-9_-]/gi, '_').slice(0, 40)}`,
+        taskId: typeof task.id === 'string' ? task.id : undefined,
+        rank: index + 1,
+        reason,
+        taskEvidence,
+        projectContextEvidence: [],
+        missingEvidence: ['project context unknown'],
+      }
+    })
   }
 
   function qualityModeForResponseMode(responseMode?: RoutedIntent['responseMode']): ChatQualityMode {
@@ -2317,6 +2348,7 @@ export function useAIChat() {
         contextUnknown: toolResultsSummary.includes('context unknown') || toolResultsSummary.includes('Project/task understanding memory'),
         hasClarificationEvidence: Boolean(clarificationContinuationEvidence && !isGenerateCurrentContinuation),
         clarificationEvidenceText: clarificationContinuationEvidence,
+        recommendationEvidence: buildCardRecommendationEvidence(cardData),
       }
       let responseQuality = auditChatResponseQuality(qualityInput)
       if (!isWeekPlan && responseQuality.level === 'bad' && hasTaskList) {

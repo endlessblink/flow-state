@@ -189,4 +189,78 @@ describe('chat quality evidence audit', () => {
       'rec_bad:unsupported_importance_without_context',
     ]))
   })
+
+  it('rejects repeated recommendation reason templates across several cards', () => {
+    const audit = auditRecommendationEvidence([
+      {
+        recommendationId: 'rec_a',
+        taskId: 'task_a',
+        reason: 'Do this because the task has explicit context and should be handled now.',
+        taskEvidence: ['note: client waiting'],
+        projectContextEvidence: [],
+        missingEvidence: ['project context unknown'],
+      },
+      {
+        recommendationId: 'rec_b',
+        taskId: 'task_b',
+        reason: 'Do this because the task has explicit context and should be handled now.',
+        taskEvidence: ['note: billing risk'],
+        projectContextEvidence: [],
+        missingEvidence: ['project context unknown'],
+      },
+      {
+        recommendationId: 'rec_c',
+        taskId: 'task_c',
+        reason: 'Do this because the task has explicit context and should be handled now.',
+        taskEvidence: ['note: dependency is blocked'],
+        projectContextEvidence: [],
+        missingEvidence: ['project context unknown'],
+      },
+    ])
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('repeated_recommendation_reason:rec_a,rec_b,rec_c')
+  })
+
+  it('rejects repeated shallow evidence templates across several cards', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 3,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Limited context: use the cards as candidates and adjust anything wrong.',
+      recommendationEvidence: [
+        {
+          recommendationId: 'rec_a',
+          reason: 'Candidate, not confirmed importance.',
+          taskEvidence: ['priority: high', 'due soon'],
+          projectContextEvidence: [],
+          missingEvidence: ['project context unknown'],
+        },
+        {
+          recommendationId: 'rec_b',
+          reason: 'Candidate, not confirmed importance.',
+          taskEvidence: ['priority: high', 'due soon'],
+          projectContextEvidence: [],
+          missingEvidence: ['project context unknown'],
+        },
+        {
+          recommendationId: 'rec_c',
+          reason: 'Candidate, not confirmed importance.',
+          taskEvidence: ['priority: high', 'due soon'],
+          projectContextEvidence: [],
+          missingEvidence: ['project context unknown'],
+        },
+      ],
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toEqual(expect.arrayContaining([
+      'repeated_recommendation_reason:rec_a,rec_b,rec_c',
+      'repeated_recommendation_evidence:rec_a,rec_b,rec_c',
+    ]))
+  })
 })

@@ -225,6 +225,9 @@ export function auditRecommendationEvidence(recommendations: ChatRecommendationE
     }
   }
 
+  const reasonShapes = new Map<string, string[]>()
+  const evidenceShapes = new Map<string, string[]>()
+
   recommendations.forEach((rec, index) => {
     const ref = recommendationRef(rec, index)
     const taskEvidence = cleanEvidence(rec.taskEvidence)
@@ -248,7 +251,17 @@ export function auditRecommendationEvidence(recommendations: ChatRecommendationE
     if (hasUnknownContext && contextEvidence.length > 0) {
       warnings.push(`${ref}:mixed_context_and_unknown_evidence`)
     }
+
+    addShape(reasonShapes, reasonShape(reason), ref)
+    addShape(evidenceShapes, evidenceShape([...taskEvidence, ...contextEvidence, ...missingEvidence]), ref)
   })
+
+  for (const refs of reasonShapes.values()) {
+    if (refs.length >= 3) failures.push(`repeated_recommendation_reason:${refs.join(',')}`)
+  }
+  for (const refs of evidenceShapes.values()) {
+    if (refs.length >= 3) failures.push(`repeated_recommendation_evidence:${refs.join(',')}`)
+  }
 
   const uniqueFailures = [...new Set(failures)]
   const uniqueWarnings = [...new Set(warnings)]
@@ -262,6 +275,42 @@ export function auditRecommendationEvidence(recommendations: ChatRecommendationE
     failures: uniqueFailures,
     warnings: uniqueWarnings,
   }
+}
+
+function addShape(shapes: Map<string, string[]>, shape: string, ref: string): void {
+  if (!shape) return
+  shapes.set(shape, [...(shapes.get(shape) ?? []), ref])
+}
+
+function reasonShape(reason: string): string {
+  const text = normalizeEvidenceShape(reason)
+  if (!text) return ''
+  return text
+    .replace(/\b(task|project|recommendation|item)\s+\d+\b/g, '$1')
+    .replace(/\b[a-z0-9_-]{8,}\b/g, 'id')
+    .split(/\s+/)
+    .slice(0, 12)
+    .join(' ')
+}
+
+function evidenceShape(items: string[]): string {
+  if (!items.length) return ''
+  return items
+    .map(normalizeEvidenceShape)
+    .filter(Boolean)
+    .sort()
+    .slice(0, 4)
+    .join('|')
+}
+
+function normalizeEvidenceShape(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/"[^"]+"/g, '"value"')
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, 'date')
+    .replace(/\b\d+\b/g, 'n')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function cleanEvidence(items: string[] | undefined): string[] {

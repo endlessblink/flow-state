@@ -674,6 +674,12 @@ function aiParameterImpactWeight(parameterKey: string): number {
   return 0.5
 }
 
+function nextStaleAfterIso(answeredAtIso: string): string {
+  const answeredAtMs = Date.parse(answeredAtIso)
+  const baseMs = Number.isFinite(answeredAtMs) ? answeredAtMs : Date.now()
+  return new Date(baseMs + 45 * 24 * 60 * 60 * 1000).toISOString()
+}
+
 function beliefInputsFromClarification(input: AIClarificationEventInput): AIParameterBeliefInput[] {
   if (input.eventType !== 'answered') return []
   const parameterKeys = uniqueStrings([
@@ -1257,6 +1263,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     try {
       isSyncing.value = true
       await withRetry(async () => {
+        const answeredAt = input.eventType === 'answered' ? now : null
         const { data: existingData, error: fetchError } = await getSupabase()
           .from('ai_context_entities')
           .select('*')
@@ -1283,12 +1290,14 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
             confidence: Math.max(Number(existing?.confidence ?? 0), input.eventType === 'answered' ? 0.85 : 0.4),
             completeness_score: computeAIEntityCompleteness(facts),
             last_asked_at: input.eventType === 'asked' ? now : existing?.last_asked_at ?? null,
-            last_answered_at: input.eventType === 'answered' ? now : existing?.last_answered_at ?? null,
+            last_answered_at: answeredAt ?? existing?.last_answered_at ?? null,
             ask_count: Number(existing?.ask_count ?? 0) + (input.eventType === 'asked' ? 1 : 0),
+            stale_after: answeredAt ? nextStaleAfterIso(answeredAt) : existing?.stale_after ?? null,
             memory_type: existing?.memory_type ?? (input.entityType === 'preference' ? 'preference' : 'semantic'),
             scope: existing?.scope ?? aiEntityScope(input.entityType),
-            reinforcement_count: Number(existing?.reinforcement_count ?? 0) + (input.eventType === 'answered' ? 1 : 0),
-            last_reinforced_at: input.eventType === 'answered' ? now : existing?.last_reinforced_at ?? null,
+            reinforcement_count: Number(existing?.reinforcement_count ?? 0) + (answeredAt ? 1 : 0),
+            last_reinforced_at: answeredAt ?? existing?.last_reinforced_at ?? null,
+            decay_score: answeredAt ? 1 : existing?.decay_score ?? null,
           }, { onConflict: 'user_id,entity_key' })
         if (upsertError) throw upsertError
 

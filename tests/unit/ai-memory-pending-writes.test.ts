@@ -13,6 +13,7 @@ let eventInsertCount = 0
 let feedbackInsertCount = 0
 let parameterBeliefUpsertCount = 0
 let tableRows: Record<string, unknown[]> = {}
+let upsertPayloads: Record<string, unknown[]> = {}
 
 vi.mock('@/composables/supabase/_infrastructure', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/composables/supabase/_infrastructure')>()
@@ -45,10 +46,11 @@ function createTableBuilder(table: string) {
       }
       return { data: null, error: null }
     }),
-    upsert: vi.fn(async () => {
+    upsert: vi.fn(async (payload: unknown) => {
       if (!readyTables.has(table)) return { error: schemaError() }
       if (table === 'ai_context_entities') entityUpsertCount += 1
       if (table === 'ai_parameter_beliefs') parameterBeliefUpsertCount += 1
+      upsertPayloads[table] = [...(upsertPayloads[table] ?? []), payload]
       return { error: null }
     }),
     insert: vi.fn(async () => {
@@ -104,6 +106,7 @@ describe('AI memory pending write queue', () => {
     feedbackInsertCount = 0
     parameterBeliefUpsertCount = 0
     tableRows = {}
+    upsertPayloads = {}
     clearPendingAIMemoryWritesForTest()
     localStorage.removeItem('flowstate-ai-clarification-local-memory-v1')
   })
@@ -288,6 +291,45 @@ describe('AI memory pending write queue', () => {
 
     expect(feedbackInsertCount).toBe(1)
     expect(parameterBeliefUpsertCount).toBe(1)
+  })
+
+  it('refreshes stale context entity freshness when a stale-context clarification is answered', async () => {
+    readyTables = new Set(['ai_context_entities', 'ai_clarification_events', 'ai_parameter_beliefs'])
+    const db = useAIMemoryDatabase(createContext())
+
+    await db.recordAIClarificationEvent({
+      entityKey: 'project:uncategorized',
+      entityType: 'project',
+      displayName: 'uncategorized',
+      questionId: 'memory_refresh_project_uncategorized',
+      eventType: 'answered',
+      question: 'Is the old context for "uncategorized" still true?',
+      selectedOptionId: 'still_true',
+      selectedLabel: 'Still true',
+      memoryPatch: {
+        entityType: 'project',
+        entityId: 'uncategorized',
+        operation: 'confirm',
+        field: 'stale_context',
+        value: 'still true',
+        confidence: 0.9,
+        source: 'button_answer',
+      },
+      uncertaintyDimensions: ['stale_context'],
+      pathType: 'clarify_first',
+    })
+
+    const entityPayload = upsertPayloads.ai_context_entities?.[0] as Record<string, unknown>
+
+    expect(entityPayload).toMatchObject({
+      entity_key: 'project:uncategorized',
+      last_answered_at: expect.any(String),
+      last_reinforced_at: expect.any(String),
+      reinforcement_count: 1,
+      decay_score: 1,
+    })
+    expect(new Date(String(entityPayload.stale_after)).getTime()).toBeGreaterThan(Date.now() + 40 * 24 * 60 * 60 * 1000)
+    expect(parameterBeliefUpsertCount).toBeGreaterThan(0)
   })
 
   it('queues parameter belief writes skipped by missing schema and flushes them later', async () => {

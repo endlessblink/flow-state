@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { retrieveBroadAIMemory, type BroadMemoryDb } from '@/services/ai/pipeline/broadMemoryRetrieval'
 import type {
   AIClarificationEvent,
+  AIContextEdge,
   AIContextEntity,
   AIParameterBelief,
   AIRecommendationFeedback,
@@ -20,6 +21,7 @@ function dbStub(overrides: Partial<BroadMemoryDb> = {}): BroadMemoryDb {
     fetchAIClarificationEvents: vi.fn(async () => []),
     fetchAIParameterBeliefs: vi.fn(async () => []),
     fetchAIRecommendationFeedback: vi.fn(async () => []),
+    fetchAIContextEdges: vi.fn(async () => []),
     ...overrides,
   }
 }
@@ -71,6 +73,15 @@ describe('retrieveBroadAIMemory', () => {
       freeText: 'This is not strategic work.',
       createdAt: '2026-06-08T08:00:00.000Z',
     }
+    const graphEdge: AIContextEdge = {
+      id: 'edge-1',
+      sourceEntityKey: 'task:local-task',
+      targetEntityKey: 'project:uncategorized',
+      relationType: 'belongs_to',
+      confidence: 0.9,
+      evidence: { source: 'clarification' },
+      createdAt: '2026-06-08T08:15:00.000Z',
+    }
     const db = dbStub({
       fetchProjectContexts: vi.fn(async (): Promise<ProjectContext[]> => []),
       fetchTaskContexts: vi.fn(async (): Promise<TaskContext[]> => []),
@@ -88,6 +99,7 @@ describe('retrieveBroadAIMemory', () => {
       fetchAIClarificationEvents: vi.fn(async () => [answeredEvent]),
       fetchAIParameterBeliefs: vi.fn(async () => [belief]),
       fetchAIRecommendationFeedback: vi.fn(async () => feedback),
+      fetchAIContextEdges: vi.fn(async () => [graphEdge]),
     })
 
     const result = await retrieveBroadAIMemory({
@@ -117,11 +129,16 @@ describe('retrieveBroadAIMemory', () => {
       entityKeys: result.entityKeys,
       limit: 30,
     })
+    expect(db.fetchAIContextEdges).toHaveBeenCalledWith({
+      entityKeys: result.entityKeys,
+      limit: 40,
+    })
     expect(result.summary).toContain('project uncategorized')
     expect(result.summary).toContain('domain="admin"')
     expect(result.summary).toContain('remembered answer for uncategorized')
     expect(result.summary).toContain('project_meaning')
     expect(result.summary).toContain('recent clarification for uncategorized')
+    expect(result.summary).toContain('relationship: Loose admin relation=\"belongs_to\" uncategorized')
     expect(result.summary).toContain('recommendation feedback for uncategorized')
     expect(result.summary).not.toContain('context unknown for projects: uncategorized')
     expect(result.recommendationFeedback).toEqual(feedback)
@@ -131,6 +148,7 @@ describe('retrieveBroadAIMemory', () => {
       eventCount: 1,
       beliefCount: 1,
       feedbackCount: 1,
+      graphEdgeCount: 1,
     })
   })
 })

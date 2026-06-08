@@ -2,6 +2,7 @@ import type {
   AIClarificationEvent,
   AIClarificationEventInput,
   AIContextEntity,
+  AIContextEdge,
   AIContextEdgeInput,
   AIMemoryDebugSnapshot,
   AIMemoryPatch,
@@ -127,6 +128,19 @@ type AIParameterBeliefRow = {
   source_event_id?: string | null
   created_at?: string | null
   updated_at?: string | null
+}
+
+type AIContextEdgeRow = {
+  id?: string
+  source_entity_key: string
+  target_entity_key: string
+  relation_type: AIContextEdge['relationType']
+  confidence?: number
+  evidence?: Record<string, unknown> | null
+  source_event_id?: string | null
+  valid_from?: string | null
+  valid_until?: string | null
+  created_at?: string | null
 }
 
 type PendingAIMemoryWrite =
@@ -321,6 +335,21 @@ function toAIParameterBelief(row: AIParameterBeliefRow): AIParameterBelief {
     sourceEventId: row.source_event_id ?? null,
     createdAt: row.created_at ?? null,
     updatedAt: row.updated_at ?? null,
+  }
+}
+
+function toAIContextEdge(row: AIContextEdgeRow): AIContextEdge {
+  return {
+    id: row.id,
+    sourceEntityKey: row.source_entity_key,
+    targetEntityKey: row.target_entity_key,
+    relationType: row.relation_type,
+    confidence: Number(row.confidence ?? 0.5),
+    evidence: row.evidence ?? {},
+    sourceEventId: row.source_event_id ?? null,
+    validFrom: row.valid_from ?? null,
+    validUntil: row.valid_until ?? null,
+    createdAt: row.created_at ?? null,
   }
 }
 
@@ -788,11 +817,67 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
+  const fetchAIContextEdges = async (
+    input: { entityKeys: string[]; relationTypes?: AIContextEdge['relationType'][]; limit?: number },
+  ): Promise<AIContextEdge[]> => {
+    const entityKeys = uniqueStrings(input.entityKeys)
+    if (!entityKeys.length) return []
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) return []
+    const limit = input.limit ?? 80
+    try {
+      return await withRetry(async () => {
+        const sourceQuery = getSupabase()
+          .from('ai_context_edges')
+          .select('*')
+          .eq('user_id', userId)
+          .in('source_entity_key', entityKeys)
+          .order('created_at', { ascending: false })
+          .limit(limit)
+        const targetQuery = getSupabase()
+          .from('ai_context_edges')
+          .select('*')
+          .eq('user_id', userId)
+          .in('target_entity_key', entityKeys)
+          .order('created_at', { ascending: false })
+          .limit(limit)
+        if (input.relationTypes?.length) {
+          sourceQuery.in('relation_type', input.relationTypes)
+          targetQuery.in('relation_type', input.relationTypes)
+        }
+        const [sourceResult, targetResult] = await Promise.all([
+          sourceQuery as unknown as Promise<{ data: unknown[] | null; error: unknown }>,
+          targetQuery as unknown as Promise<{ data: unknown[] | null; error: unknown }>,
+        ])
+        if (sourceResult.error) throw sourceResult.error
+        if (targetResult.error) throw targetResult.error
+        const byKey = new Map<string, AIContextEdge>()
+        for (const row of [...(sourceResult.data ?? []), ...(targetResult.data ?? [])]) {
+          const edge = toAIContextEdge(row as AIContextEdgeRow)
+          const key = edge.id || `${edge.sourceEntityKey}:${edge.targetEntityKey}:${edge.relationType}`
+          byKey.set(key, edge)
+        }
+        return [...byKey.values()]
+          .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+          .slice(0, limit)
+      }, 'fetchAIContextEdges')
+    } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('fetchAIContextEdges')
+        return []
+      }
+      handleError(e, 'fetchAIContextEdges')
+      return []
+    }
+  }
+
   const fetchAIMemoryDebugSnapshot = async (limit = 8): Promise<AIMemoryDebugSnapshot> => {
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
     const empty = (): AIMemoryDebugSnapshot => ({
       contextEntities: [],
+      contextEdges: [],
       clarificationEvents: [],
       parameterBeliefs: [],
       recommendationFeedback: [],
@@ -814,7 +899,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       }
     }
 
-    const [contextEntities, clarificationEvents, parameterBeliefs, recommendationFeedback] = await Promise.all([
+    const [contextEntities, contextEdges, clarificationEvents, parameterBeliefs, recommendationFeedback] = await Promise.all([
       safeRead('fetchAIMemoryDebugSnapshot:entities', async () => {
         const { data, error } = await getSupabase()
           .from('ai_context_entities')
@@ -824,6 +909,16 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
           .limit(limit)
         if (error) throw error
         return ((data ?? []) as AIContextEntityRow[]).map(toAIContextEntity)
+      }),
+      safeRead('fetchAIMemoryDebugSnapshot:edges', async () => {
+        const { data, error } = await getSupabase()
+          .from('ai_context_edges')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(limit)
+        if (error) throw error
+        return ((data ?? []) as AIContextEdgeRow[]).map(toAIContextEdge)
       }),
       safeRead('fetchAIMemoryDebugSnapshot:events', async () => {
         const { data, error } = await getSupabase()
@@ -859,6 +954,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
 
     return {
       contextEntities,
+      contextEdges,
       clarificationEvents,
       parameterBeliefs,
       recommendationFeedback,
@@ -1320,6 +1416,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     fetchAIClarificationEvents,
     fetchAIRecommendationFeedback,
     fetchAIParameterBeliefs,
+    fetchAIContextEdges,
     fetchAIMemoryDebugSnapshot,
     shouldAskClarification,
     recordAIClarificationEvent,

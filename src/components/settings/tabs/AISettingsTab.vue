@@ -66,6 +66,7 @@ const aiMemoryDebugCounts = computed(() => {
   const snapshot = aiMemoryDebug.value
   return [
     { label: 'Entities', value: snapshot?.contextEntities.length ?? 0 },
+    { label: 'Edges', value: snapshot?.contextEdges.length ?? 0 },
     { label: 'Beliefs', value: snapshot?.parameterBeliefs.length ?? 0 },
     { label: 'Events', value: snapshot?.clarificationEvents.length ?? 0 },
     { label: 'Feedback', value: snapshot?.recommendationFeedback.length ?? 0 },
@@ -928,6 +929,13 @@ async function onClearMemories() {
               {{ belief.entityKey }} / {{ belief.parameterKey }} {{ Math.round(belief.confidence * 100) }}%
             </span>
             <span
+              v-for="edge in aiMemoryDebug.contextEdges.slice(0, 3)"
+              :key="`edge:${edge.sourceEntityKey}:${edge.targetEntityKey}:${edge.relationType}`"
+              class="detail-tag"
+            >
+              {{ edge.sourceEntityKey }} {{ edge.relationType }} {{ edge.targetEntityKey }}
+            </span>
+            <span
               v-for="event in aiMemoryEventLabel(aiMemoryDebug)"
               :key="`event:${event}`"
               class="detail-tag"
@@ -936,7 +944,7 @@ async function onClearMemories() {
             </span>
           </div>
 
-          <p v-if="aiMemoryDebug && !aiMemoryDebug.contextEntities.length && !aiMemoryDebug.parameterBeliefs.length && !aiMemoryDebug.clarificationEvents.length" class="mh-hint">
+          <p v-if="aiMemoryDebug && !aiMemoryDebug.contextEntities.length && !aiMemoryDebug.contextEdges.length && !aiMemoryDebug.parameterBeliefs.length && !aiMemoryDebug.clarificationEvents.length" class="mh-hint">
             No server-backed AI memory rows yet, or the memory migration is not available for this user.
           </p>
         </div>

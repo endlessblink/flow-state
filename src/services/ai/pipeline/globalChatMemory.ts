@@ -1,4 +1,4 @@
-import type { AIClarificationEvent, AIContextEntity, AIParameterBelief } from '@/types/aiMemory'
+import type { AIClarificationEvent, AIContextEdge, AIContextEntity, AIParameterBelief } from '@/types/aiMemory'
 import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from './memoryEvidence'
 
 export const GLOBAL_CHAT_MEMORY_ENTITY_KEYS = [
@@ -29,18 +29,20 @@ export type GlobalChatMemoryDb = {
   fetchAIContextEntities(entityKeys: string[]): Promise<AIContextEntity[]>
   fetchAIClarificationEvents(entityKeys: string[], limit?: number): Promise<AIClarificationEvent[]>
   fetchAIParameterBeliefs(input: { entityKeys?: string[]; parameterKeys?: string[]; limit?: number }): Promise<AIParameterBelief[]>
+  fetchAIContextEdges?(input: { entityKeys: string[]; limit?: number }): Promise<AIContextEdge[]>
 }
 
 export async function retrieveGlobalChatMemory(
   db: GlobalChatMemoryDb,
   lang: 'he' | 'en',
 ): Promise<string> {
-  const [entities, events, beliefs] = await Promise.all([
+  const [entities, events, beliefs, edges] = await Promise.all([
     db.fetchAIContextEntities(GLOBAL_CHAT_MEMORY_ENTITY_KEYS),
     db.fetchAIClarificationEvents(GLOBAL_CHAT_MEMORY_ENTITY_KEYS, 20),
     db.fetchAIParameterBeliefs({ parameterKeys: GLOBAL_CHAT_MEMORY_PARAMETER_KEYS, limit: 30 }),
+    db.fetchAIContextEdges?.({ entityKeys: GLOBAL_CHAT_MEMORY_ENTITY_KEYS, limit: 30 }) ?? Promise.resolve([]),
   ])
-  return buildGlobalChatMemorySummary({ lang, entities, events, beliefs })
+  return buildGlobalChatMemorySummary({ lang, entities, events, beliefs, edges })
 }
 
 export function buildGlobalChatMemorySummary(input: {
@@ -48,6 +50,7 @@ export function buildGlobalChatMemorySummary(input: {
   entities: AIContextEntity[]
   events: AIClarificationEvent[]
   beliefs: AIParameterBelief[]
+  edges: AIContextEdge[]
 }): string {
   const lines: string[] = [buildMemoryEvidenceHeader(input.lang)]
   for (const entity of input.entities.slice(0, 6)) {
@@ -76,6 +79,11 @@ export function buildGlobalChatMemorySummary(input: {
     if (!answer) continue
     const target = sanitizeMemoryEvidenceText(event.entityKey, 120)
     lines.push(`- recent clarification for ${target}: ${formatMemoryEvidence('answer', answer, 140)}`)
+  }
+  for (const edge of input.edges.slice(0, 6)) {
+    const source = sanitizeMemoryEvidenceText(edge.sourceEntityKey, 120)
+    const target = sanitizeMemoryEvidenceText(edge.targetEntityKey, 120)
+    lines.push(`- relationship: ${source} ${formatMemoryEvidence('relation', edge.relationType, 80)} ${target} ${formatMemoryEvidence('confidence', edge.confidence.toFixed(2), 20)}`)
   }
   return lines.length > 1 ? lines.join('\n') : ''
 }

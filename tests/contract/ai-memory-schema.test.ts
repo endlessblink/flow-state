@@ -194,6 +194,7 @@ describe('AI memory database schema contract', () => {
     expect(beliefInputs).toBeGreaterThan(eventInsert)
     expect(beliefUpsert).toBeGreaterThan(beliefInputs)
     expect(aiMemoryDatabase).toContain('fetchAIParameterBeliefs')
+    expect(aiMemoryDatabase).toContain('fetchAIContextEdges')
     expect(aiMemoryDatabase).toContain('upsertAIParameterBelief')
   })
 })

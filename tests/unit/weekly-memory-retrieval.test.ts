@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { retrieveWeeklyAIMemory, type WeeklyMemoryDb } from '@/services/ai/pipeline/weeklyMemoryRetrieval'
-import type { AIContextEntity, AIRecommendationFeedback, ProjectContext, TaskContext } from '@/types/aiMemory'
+import type { AIContextEdge, AIContextEntity, AIRecommendationFeedback, ProjectContext, TaskContext } from '@/types/aiMemory'
 
 const taskId = '11111111-1111-4111-8111-111111111111'
 const projectId = '22222222-2222-4222-8222-222222222222'
@@ -67,6 +67,7 @@ function dbStub(overrides: Partial<WeeklyMemoryDb> = {}): WeeklyMemoryDb {
     fetchAIContextEntities: vi.fn(async () => []),
     fetchAIClarificationEvents: vi.fn(async () => []),
     fetchAIRecommendationFeedback: vi.fn(async () => []),
+    fetchAIContextEdges: vi.fn(async () => []),
     ...overrides,
   }
 }
@@ -82,6 +83,15 @@ describe('retrieveWeeklyAIMemory', () => {
       reasonCategory: 'not_important',
       implicitPositive: false,
       createdAt: '2026-06-08T08:00:00.000Z',
+    }]
+    const contextEdges: AIContextEdge[] = [{
+      id: 'edge-1',
+      sourceEntityKey: `task:${taskId}`,
+      targetEntityKey: `project:${projectId}`,
+      relationType: 'belongs_to',
+      confidence: 0.95,
+      evidence: { source: 'test' },
+      createdAt: '2026-06-08T08:10:00.000Z',
     }]
     const db = dbStub({
       fetchProjectContexts: vi.fn(async ids => ids.map(id => projectContext(id, 'Legacy project context'))),
@@ -116,6 +126,7 @@ describe('retrieveWeeklyAIMemory', () => {
         })),
       ]),
       fetchAIRecommendationFeedback: vi.fn(async () => feedback),
+      fetchAIContextEdges: vi.fn(async () => contextEdges),
     })
 
     const result = await retrieveWeeklyAIMemory({
@@ -143,6 +154,10 @@ describe('retrieveWeeklyAIMemory', () => {
       entityKeys: result.entityKeys,
       limit: 80,
     })
+    expect(db.fetchAIContextEdges).toHaveBeenCalledWith({
+      entityKeys: result.entityKeys,
+      limit: 80,
+    })
     expect(result.memory.projectContexts?.map(ctx => ctx.projectId)).toEqual([projectId, 'uncategorized'])
     expect(result.memory.taskContexts?.map(ctx => ctx.taskId)).toEqual([taskId])
     expect(result.memory.recommendationFeedback).toEqual(feedback)
@@ -155,6 +170,7 @@ describe('retrieveWeeklyAIMemory', () => {
       projectContextCount: 2,
       taskContextCount: 1,
       feedbackCount: 1,
+      graphEdgeCount: 1,
       timedOut: false,
       exactEntityCount: 1,
       semanticCandidateCount: 1,

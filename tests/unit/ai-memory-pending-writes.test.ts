@@ -189,6 +189,7 @@ describe('AI memory pending write queue', () => {
   it('reads a bounded debug snapshot across server-backed memory tables', async () => {
     readyTables = new Set([
       'ai_context_entities',
+      'ai_context_edges',
       'ai_clarification_events',
       'ai_parameter_beliefs',
       'ai_recommendation_feedback',
@@ -203,6 +204,14 @@ describe('AI memory pending write queue', () => {
         confidence: 0.8,
         completeness_score: 0.4,
         ask_count: 1,
+      }],
+      ai_context_edges: [{
+        source_entity_key: 'task:local-task',
+        target_entity_key: 'project:uncategorized',
+        relation_type: 'belongs_to',
+        confidence: 0.9,
+        evidence: { source: 'test' },
+        created_at: '2026-06-08T09:01:00.000Z',
       }],
       ai_clarification_events: [{
         entity_key: 'workflow:task_answer:general',
@@ -234,9 +243,39 @@ describe('AI memory pending write queue', () => {
     const snapshot = await db.fetchAIMemoryDebugSnapshot(6)
 
     expect(snapshot.contextEntities).toHaveLength(1)
+    expect(snapshot.contextEdges[0]).toMatchObject({ sourceEntityKey: 'task:local-task', relationType: 'belongs_to' })
     expect(snapshot.clarificationEvents[0]).toMatchObject({ selectedLabel: 'Real impact' })
     expect(snapshot.parameterBeliefs[0]).toMatchObject({ parameterKey: 'rankingFocus', confidence: 0.9 })
     expect(snapshot.recommendationFeedback[0]).toMatchObject({ action: 'dismiss', reasonCategory: 'not_important' })
     expect(snapshot.pendingWriteCount).toBe(0)
+  })
+
+  it('reads graph edges by source or target entity key without UUID casting', async () => {
+    readyTables = new Set(['ai_context_edges'])
+    tableRows = {
+      ai_context_edges: [{
+        id: 'edge-1',
+        source_entity_key: 'task:local-task',
+        target_entity_key: 'project:uncategorized',
+        relation_type: 'belongs_to',
+        confidence: 0.88,
+        evidence: { source: 'weekly_plan_candidates' },
+        created_at: '2026-06-08T09:01:00.000Z',
+      }],
+    }
+    const db = useAIMemoryDatabase(createContext())
+
+    const edges = await db.fetchAIContextEdges({
+      entityKeys: ['project:uncategorized'],
+      limit: 6,
+    })
+
+    expect(edges).toHaveLength(1)
+    expect(edges[0]).toMatchObject({
+      sourceEntityKey: 'task:local-task',
+      targetEntityKey: 'project:uncategorized',
+      relationType: 'belongs_to',
+      confidence: 0.88,
+    })
   })
 })

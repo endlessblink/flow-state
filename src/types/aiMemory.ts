@@ -164,6 +164,7 @@ export interface AIClarificationArtifact {
       projectContextCount: number
       taskContextCount: number
       feedbackCount?: number
+      graphEdgeCount?: number
       elapsedMs?: number
       timedOut?: boolean
       exactEntityCount?: number
@@ -323,8 +324,22 @@ export interface AIContextEdgeInput {
   validUntil?: string | null
 }
 
+export interface AIContextEdge {
+  id?: string
+  sourceEntityKey: string
+  targetEntityKey: string
+  relationType: AIContextEdgeInput['relationType']
+  confidence: number
+  evidence: Record<string, unknown>
+  sourceEventId?: string | null
+  validFrom?: string | null
+  validUntil?: string | null
+  createdAt?: string | null
+}
+
 export interface AIMemoryDebugSnapshot {
   contextEntities: AIContextEntity[]
+  contextEdges: AIContextEdge[]
   clarificationEvents: AIClarificationEvent[]
   parameterBeliefs: AIParameterBelief[]
   recommendationFeedback: AIRecommendationFeedback[]

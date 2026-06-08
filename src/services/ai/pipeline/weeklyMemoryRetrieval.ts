@@ -1,4 +1,4 @@
-import type { AIClarificationEvent, AIContextEdgeInput, AIContextEntity, ProjectContext, TaskContext, AIRecommendationFeedback } from '@/types/aiMemory'
+import type { AIClarificationEvent, AIContextEdge, AIContextEdgeInput, AIContextEntity, ProjectContext, TaskContext, AIRecommendationFeedback } from '@/types/aiMemory'
 import type { WeekContextMemoryInput } from './weeklyPlan'
 import { summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 
@@ -13,6 +13,7 @@ export type WeeklyMemoryRetrievalDiagnostics = {
   projectContextCount: number
   taskContextCount: number
   feedbackCount: number
+  graphEdgeCount: number
   elapsedMs: number
   timedOut: boolean
   exactEntityCount: number
@@ -27,6 +28,7 @@ export type WeeklyMemoryDb = {
   fetchAIContextEntities(entityKeys: string[]): Promise<AIContextEntity[]>
   fetchAIClarificationEvents(entityKeys: string[], limit?: number): Promise<AIClarificationEvent[]>
   fetchAIRecommendationFeedback(input: { taskIds?: string[]; entityKeys?: string[]; limit?: number }): Promise<AIRecommendationFeedback[]>
+  fetchAIContextEdges?(input: { entityKeys: string[]; limit?: number }): Promise<AIContextEdge[]>
 }
 
 export type WeeklyMemoryRetrievalInput = {
@@ -68,6 +70,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
     projectContextCount: 0,
     taskContextCount: 0,
     feedbackCount: 0,
+    graphEdgeCount: 0,
     elapsedMs: Math.round(performance.now() - startedAt),
     timedOut,
     exactEntityCount: 0,
@@ -77,12 +80,13 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
   })
 
   try {
-    const [projectContexts, taskContexts, contextEntities, clarificationEvents, recommendationFeedback] = await withTimeout(Promise.all([
+    const [projectContexts, taskContexts, contextEntities, clarificationEvents, recommendationFeedback, contextEdges] = await withTimeout(Promise.all([
       input.db.fetchProjectContexts(projectIds),
       input.db.fetchTaskContexts(taskIds),
       input.db.fetchAIContextEntities(entityKeys),
       input.db.fetchAIClarificationEvents(entityKeys, 40),
       input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 }),
+      input.db.fetchAIContextEdges?.({ entityKeys, limit: 80 }) ?? Promise.resolve([]),
     ]), input.timeoutMs, 'weekly_plan_memory_timeout')
     const entityProjectContexts = contextEntities.map(entityToProjectContext).filter((ctx): ctx is ProjectContext => Boolean(ctx))
     const entityTaskContexts = contextEntities.map(entityToTaskContext).filter((ctx): ctx is TaskContext => Boolean(ctx))
@@ -107,6 +111,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
         projectContextCount: memory.projectContexts?.length ?? 0,
         taskContextCount: memory.taskContexts?.length ?? 0,
         feedbackCount: recommendationFeedback.length,
+        graphEdgeCount: contextEdges.length,
         elapsedMs: Math.round(performance.now() - startedAt),
         timedOut: false,
         exactEntityCount: contextEntities.length,

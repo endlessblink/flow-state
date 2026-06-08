@@ -1,5 +1,6 @@
 import type {
   AIClarificationEvent,
+  AIContextEdge,
   AIContextEntity,
   AIParameterBelief,
   AIRecommendationFeedback,
@@ -18,6 +19,7 @@ export type BroadMemoryDb = {
   fetchAIClarificationEvents(entityKeys: string[], limit?: number): Promise<AIClarificationEvent[]>
   fetchAIParameterBeliefs(input: { entityKeys?: string[]; parameterKeys?: string[]; limit?: number }): Promise<AIParameterBelief[]>
   fetchAIRecommendationFeedback(input: { taskIds?: string[]; entityKeys?: string[]; limit?: number }): Promise<AIRecommendationFeedback[]>
+  fetchAIContextEdges?(input: { entityKeys: string[]; limit?: number }): Promise<AIContextEdge[]>
 }
 
 export type BroadMemoryRetrievalInput = {
@@ -40,6 +42,7 @@ export type BroadMemoryRetrievalResult = {
     eventCount: number
     beliefCount: number
     feedbackCount: number
+    graphEdgeCount: number
   }
 }
 
@@ -66,6 +69,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     clarificationEvents,
     parameterBeliefs,
     recommendationFeedback,
+    contextEdges,
   ] = await Promise.all([
     input.db.fetchProjectContexts(projectIds),
     input.db.fetchTaskContexts(taskIds),
@@ -73,6 +77,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     input.db.fetchAIClarificationEvents(entityKeys, 30),
     input.db.fetchAIParameterBeliefs({ entityKeys, limit: 40 }),
     input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 30 }),
+    input.db.fetchAIContextEdges?.({ entityKeys, limit: 40 }) ?? Promise.resolve([]),
   ])
 
   const projectContexts = uniqueBy(
@@ -98,6 +103,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       clarificationEvents,
       parameterBeliefs,
       recommendationFeedback,
+      contextEdges,
       projectIdStrings,
       getTaskTitle: input.getTaskTitle,
       getProjectDisplayName: input.getProjectDisplayName,
@@ -111,6 +117,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       eventCount: clarificationEvents.length,
       beliefCount: parameterBeliefs.length,
       feedbackCount: recommendationFeedback.length,
+      graphEdgeCount: contextEdges.length,
     },
   }
 }
@@ -122,6 +129,7 @@ function buildBroadMemorySummary(input: {
   clarificationEvents: AIClarificationEvent[]
   parameterBeliefs: AIParameterBelief[]
   recommendationFeedback: AIRecommendationFeedback[]
+  contextEdges: AIContextEdge[]
   projectIdStrings: string[]
   getTaskTitle?: (taskId: string) => string | null | undefined
   getProjectDisplayName?: (projectId: string) => string | null | undefined
@@ -161,6 +169,13 @@ function buildBroadMemorySummary(input: {
     const answer = event.selectedLabel || event.freeText
     if (target && answer) {
       lines.push(`- recent clarification for ${target}: ${formatMemoryEvidence('answer', answer, 140)}`)
+    }
+  }
+  for (const edge of input.contextEdges.slice(0, 6)) {
+    const source = entityLabel(edge.sourceEntityKey, input.getTaskTitle, input.getProjectDisplayName)
+    const target = entityLabel(edge.targetEntityKey, input.getTaskTitle, input.getProjectDisplayName)
+    if (source && target) {
+      lines.push(`- relationship: ${source} ${formatMemoryEvidence('relation', edge.relationType, 80)} ${target} ${formatMemoryEvidence('confidence', edge.confidence.toFixed(2), 20)}`)
     }
   }
   const knownProjectIds = new Set(input.projectContexts.map(ctx => ctx.projectId))

@@ -88,6 +88,8 @@ const UNKNOWN_EVIDENCE_RE = /(context unknown|project context unknown|missing co
 const NAME_ONLY_CONTEXT_RE = /^(project|belongs to|part of|project:|belongs to project|שייך|פרויקט|חלק מ)/i
 const REAL_CONTEXT_EVIDENCE_RE = /(why|matters|success|criteria|stakes|risk|correction|non-goal|preference|impact|commitment|dependency|unblock|client|money|health|family|למה|חשוב|קריטריון|הצלחה|סיכון|תיקון|העדפה|השפעה|התחייבות|תלות|לקוח|כסף|בריאות|משפחה)/i
 const MEMORY_INJECTION_RE = /(ignore (all )?(previous|prior|above) instructions|disregard (all )?(previous|prior|above) instructions|system prompt|developer message|reveal.*(secret|memory|prompt)|act as|you are now|follow this instruction|אל תציית|התעלם מההוראות|חשוף.*(סוד|זיכרון|פרומפט))/i
+const CORRECTION_MARKER_RE = /(correction|user corrected|user said|actually|reject|deprecated|no longer|wrong context|תיקון|המשתמש תיקן|לא נכון|הקשר שגוי)/i
+const NEGATED_IMPORTANCE_RE = /(not high stakes|not important|not critical|not meaningful|not strategic|low stakes|no longer true|wrong context|is not high stakes|isn't high stakes|do not rank.{0,40}(high stakes|important|critical|meaningful|strategic)|do not treat.{0,40}(high stakes|important|critical|meaningful|strategic)|לא חשוב|לא קריטי|לא משמעותי|לא אסטרטגי|סיכון נמוך|לא נכון)/i
 const BROAD_TASK_QUALITY_MODES = new Set<ChatQualityMode>([
   'general',
   'day_plan',
@@ -244,6 +246,7 @@ export function auditRecommendationEvidence(recommendations: ChatRecommendationE
     const hasUnknownContext = missingEvidence.some(item => UNKNOWN_EVIDENCE_RE.test(item))
     const substantiveContextEvidence = contextEvidence.filter(item => !NAME_ONLY_CONTEXT_RE.test(item))
     const hasRealContextEvidence = substantiveContextEvidence.some(item => REAL_CONTEXT_EVIDENCE_RE.test(item))
+    const hasNegatingCorrection = contextEvidence.some(item => CORRECTION_MARKER_RE.test(item) && NEGATED_IMPORTANCE_RE.test(item))
     const contextIsNameOnly = contextEvidence.length > 0 && substantiveContextEvidence.length === 0
     const hasUnsupportedImportance = UNSUPPORTED_IMPORTANCE_RE.test(reason) || contextEvidence.some(item => UNSUPPORTED_IMPORTANCE_RE.test(item))
     const evidenceItems = [...taskEvidence, ...contextEvidence, ...missingEvidence]
@@ -253,6 +256,7 @@ export function auditRecommendationEvidence(recommendations: ChatRecommendationE
     if (contextIsNameOnly && !hasUnknownContext) failures.push(`${ref}:context_evidence_name_only`)
     if (hasUnsupportedImportance && !hasRealContextEvidence && !hasUnknownContext) failures.push(`${ref}:unsupported_importance_without_context`)
     if (hasUnknownContext && hasUnsupportedImportance) failures.push(`${ref}:unsupported_importance_with_unknown_context`)
+    if (hasNegatingCorrection && UNSUPPORTED_IMPORTANCE_RE.test(reason) && !NEGATED_IMPORTANCE_RE.test(reason)) failures.push(`${ref}:conflicting_correction_ignored`)
     if (evidenceItems.some(item => MEMORY_INJECTION_RE.test(item))) failures.push(`${ref}:unsafe_memory_evidence_instruction`)
     if (taskEvidence.length > 0 && taskEvidence.every(item => SHALLOW_REASON_RE.test(item)) && !hasRealContextEvidence && !hasUnknownContext) {
       failures.push(`${ref}:metadata_only_evidence`)

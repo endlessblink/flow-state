@@ -924,6 +924,39 @@ describe('AI sidebar-first desktop experience', () => {
     expect(recentReask.failures).toContain('repeated_clarification_question')
   })
 
+  it('rejects recommendations that ignore user corrections about importance', () => {
+    const ignoredCorrection = auditChatResponseQuality({
+      language: 'en',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 2,
+      text: 'This is high stakes strategic work, so start here before everything else.',
+      recommendationEvidence: [{
+        recommendationId: 'rec-corrected',
+        reason: 'This is high stakes strategic work, so start here before everything else.',
+        taskEvidence: ['notes mention a candidate task'],
+        projectContextEvidence: ['correction: user corrected this framing; it is not high stakes and is the wrong context'],
+      }],
+    })
+    const honoredCorrection = auditChatResponseQuality({
+      language: 'en',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 2,
+      text: 'Keep this visible but do not rank it as high stakes; your correction says the prior framing was wrong.',
+      recommendationEvidence: [{
+        recommendationId: 'rec-corrected',
+        reason: 'Keep this visible but do not rank it as high stakes; your correction says the prior framing was wrong.',
+        taskEvidence: ['notes mention a candidate task'],
+        projectContextEvidence: ['correction: user corrected this framing; it is not high stakes and is the wrong context'],
+      }],
+    })
+
+    expect(ignoredCorrection.level).toBe('bad')
+    expect(ignoredCorrection.failures).toContain('rec-corrected:conflicting_correction_ignored')
+    expect(honoredCorrection.failures).not.toContain('rec-corrected:conflicting_correction_ignored')
+  })
+
   it('does not infer project importance from name alone and asks for saved project understanding', () => {
     const tasks = [
       {

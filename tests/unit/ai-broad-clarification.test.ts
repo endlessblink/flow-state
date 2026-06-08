@@ -196,9 +196,12 @@ describe('broad task clarification policy', () => {
     ], {
       staleEntityKeys: ['project:uncategorized'],
       refreshEntityKeys: ['project:uncategorized'],
+      staleParameterBeliefKeys: [],
+      refreshParameterBeliefKeys: [],
       summarizeEntityKeys: [],
       archiveEventCount: 0,
       lowConfidenceEntityCount: 0,
+      lowConfidenceBeliefCount: 0,
     })
 
     expect(card?.memoryKey).toBe('project:uncategorized')
@@ -234,11 +237,40 @@ describe('broad task clarification policy', () => {
     ], {
       staleEntityKeys: ['project:uncategorized'],
       refreshEntityKeys: ['project:uncategorized'],
+      staleParameterBeliefKeys: [],
+      refreshParameterBeliefKeys: [],
       summarizeEntityKeys: [],
       archiveEventCount: 0,
       lowConfidenceEntityCount: 0,
+      lowConfidenceBeliefCount: 0,
     })
 
     expect(card).toBeNull()
+  })
+
+  it('asks a stale remembered-answer refresh question when parameter belief lifecycle needs refresh', () => {
+    const card = buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [], [
+      belief('impact', 0.9),
+      belief('preferences', 0.9),
+    ], {
+      staleEntityKeys: [],
+      refreshEntityKeys: [],
+      staleParameterBeliefKeys: ['workflow:task_answer:day_plan:rankingFocus'],
+      refreshParameterBeliefKeys: ['workflow:task_answer:day_plan:rankingFocus'],
+      summarizeEntityKeys: [],
+      archiveEventCount: 0,
+      lowConfidenceEntityCount: 0,
+      lowConfidenceBeliefCount: 0,
+    })
+
+    expect(card?.memoryKey).toBe('workflow:task_answer:day_plan')
+    expect(card?.question.id).toBe('memory_refresh_workflow_task_answer_day_plan_rankingFocus')
+    expect(card?.question.reason).toBe('stale_context')
+    expect(card?.question.options[0]?.memoryPatch?.field).toBe('rankingFocus')
+    expect(card?.debug?.retrieval.lifecycle).toMatchObject({
+      staleParameterBeliefKeys: ['workflow:task_answer:day_plan:rankingFocus'],
+      refreshParameterBeliefKeys: ['workflow:task_answer:day_plan:rankingFocus'],
+    })
+    expect(card?.debug?.evpi?.targetedParameters).toEqual(['stale_context'])
   })
 })

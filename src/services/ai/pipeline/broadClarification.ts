@@ -141,12 +141,15 @@ function buildBroadStaleRefreshClarification(
   coverage: NonNullable<AIClarificationArtifact['coverage']>,
   lifecycle?: AIMemoryLifecycleSummary,
 ): AIClarificationArtifact | null {
-  const refreshKey = lifecycle?.refreshEntityKeys[0]
+  const entityRefreshKey = lifecycle?.refreshEntityKeys[0]
+  const beliefRefreshKey = lifecycle?.refreshParameterBeliefKeys[0]
+  const refreshKey = entityRefreshKey ?? beliefRefreshKey
   if (!refreshKey) return null
-  const entityId = refreshKey.includes(':') ? refreshKey.slice(refreshKey.indexOf(':') + 1) : refreshKey
-  const entityType = broadEntityTypeFromKey(refreshKey)
+  const entityKey = entityRefreshKey ? refreshKey : beliefEntityKey(refreshKey)
+  const entityId = entityKey.includes(':') ? entityKey.slice(entityKey.indexOf(':') + 1) : entityKey
+  const entityType = broadEntityTypeFromKey(entityKey)
   const questionId = `memory_refresh_${safeQuestionSuffix(refreshKey)}`
-  if (recentBroadPromptResolved(events, refreshKey, questionId, questionId)) return null
+  if (recentBroadPromptResolved(events, entityKey, questionId, questionId)) return null
 
   const isHebrew = lang === 'he'
   const displayName = broadEntityDisplayName(refreshKey)
@@ -160,7 +163,7 @@ function buildBroadStaleRefreshClarification(
     summary: isHebrew
       ? 'מצאתי הקשר ישן שיכול לשנות את הדירוג, אז אשאל לפני תשובה רחבה.'
       : 'I found old context that could change the ranking, so I should refresh it before a broad answer.',
-    memoryKey: refreshKey,
+    memoryKey: entityKey,
     pathType: 'clarify_first',
     candidateTaskIds,
     actions: ['generate_current', 'show_candidates', 'pause_save'],
@@ -187,7 +190,7 @@ function buildBroadStaleRefreshClarification(
             entityType,
             entityId,
             operation: 'confirm',
-            field: 'stale_context',
+            field: entityRefreshKey ? 'stale_context' : staleRefreshField(refreshKey),
             value: 'still true',
             confidence: 0.9,
             source: 'button_answer',
@@ -201,7 +204,7 @@ function buildBroadStaleRefreshClarification(
             entityType,
             entityId,
             operation: 'set',
-            field: 'stale_context',
+            field: entityRefreshKey ? 'stale_context' : staleRefreshField(refreshKey),
             value: 'partly changed',
             confidence: 0.78,
             source: 'button_answer',
@@ -215,7 +218,7 @@ function buildBroadStaleRefreshClarification(
             entityType,
             entityId,
             operation: 'reject',
-            field: 'stale_context',
+            field: entityRefreshKey ? 'stale_context' : staleRefreshField(refreshKey),
             value: 'no longer true',
             confidence: 0.86,
             source: 'button_answer',
@@ -229,7 +232,7 @@ function buildBroadStaleRefreshClarification(
             entityType,
             entityId,
             operation: 'set',
-            field: 'stale_context',
+            field: entityRefreshKey ? 'stale_context' : staleRefreshField(refreshKey),
             value: 'not sure',
             confidence: 0.45,
             source: 'button_answer',
@@ -237,14 +240,14 @@ function buildBroadStaleRefreshClarification(
         },
       ],
       allowFreeText: true,
-      freeTextPatch: { field: 'stale_context', operation: 'set' },
+      freeTextPatch: { field: entityRefreshKey ? 'stale_context' : staleRefreshField(refreshKey), operation: 'set' },
       freeTextPlaceholder: isHebrew ? 'אופציונלי: מה השתנה?' : 'Optional: what changed?',
       relatedTaskIds: candidateTaskIds.slice(0, 5),
     },
     debug: {
       retrieval: {
         source: 'hybrid_sql',
-        entityKeyCount: lifecycle?.refreshEntityKeys.length ?? 1,
+        entityKeyCount: (lifecycle?.refreshEntityKeys.length ?? 0) + (lifecycle?.refreshParameterBeliefKeys.length ?? 0),
         eventCount: events.length,
         projectContextCount: 0,
         taskContextCount: 0,
@@ -270,6 +273,16 @@ function buildBroadStaleRefreshClarification(
       },
     },
   }
+}
+
+function beliefEntityKey(refreshKey: string): string {
+  const separator = refreshKey.lastIndexOf(':')
+  return separator > 0 ? refreshKey.slice(0, separator) : refreshKey
+}
+
+function staleRefreshField(refreshKey: string): string {
+  const separator = refreshKey.lastIndexOf(':')
+  return separator > 0 ? refreshKey.slice(separator + 1) || 'stale_context' : 'stale_context'
 }
 
 function broadEntityTypeFromKey(entityKey: string): AIContextEntityType {

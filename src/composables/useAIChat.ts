@@ -1980,7 +1980,13 @@ export function useAIChat() {
         const memoryKey = broadTaskClarificationMemoryKey(routed)
         const db = useSupabaseDatabase()
         const refreshEntityKeys = memoryResult.diagnostics?.lifecycle.refreshEntityKeys ?? []
-        const clarificationEntityKeys = [...new Set([memoryKey, ...refreshEntityKeys])]
+        const refreshParameterBeliefEntityKeys = (memoryResult.diagnostics?.lifecycle.refreshParameterBeliefKeys ?? [])
+          .map(key => {
+            const separator = key.lastIndexOf(':')
+            return separator > 0 ? key.slice(0, separator) : key
+          })
+          .filter(Boolean)
+        const clarificationEntityKeys = [...new Set([memoryKey, ...refreshEntityKeys, ...refreshParameterBeliefEntityKeys])]
         const [broadClarificationEvents, broadClarificationBeliefs] = await withTimeout(Promise.all([
           db.fetchAIClarificationEvents(clarificationEntityKeys, 20),
           db.fetchAIParameterBeliefs({ entityKeys: [memoryKey], parameterKeys: ['rankingFocus', 'preferences', 'impact'], limit: 12 }),

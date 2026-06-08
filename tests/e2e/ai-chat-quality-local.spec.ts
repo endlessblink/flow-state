@@ -335,6 +335,25 @@ test('too-much feedback makes the next broad fallback answer compact', async ({ 
   await expect(input).toBeEnabled({ timeout: 10_000 })
 })
 
+test('weekly accept feedback saves a positive signal without hiding the recommendation or sticking activity', async ({ page }) => {
+  await seedGuestWorkspace(page)
+  await stubBridge(page)
+
+  const input = await openAIChat(page)
+  await sendChat(input, 'Help me plan this week from my tasks')
+  await answerVisibleClarification(page)
+  await expect(page.locator('[data-testid="weekly-plan"]').last()).toBeVisible({ timeout: 30_000 })
+
+  const firstRecommendation = page.locator('.weekly-plan-section').first()
+  await expect(firstRecommendation).toBeVisible({ timeout: 10_000 })
+  await firstRecommendation.getByRole('button', { name: /^Accept$/ }).click()
+
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+  await expect(firstRecommendation).toBeVisible({ timeout: 10_000 })
+  await expect(firstRecommendation).toContainText(/Saved as feedback|Feedback is local until signed in/i)
+  await expect(input).toBeEnabled({ timeout: 10_000 })
+})
+
 test('broad postpone feedback suppresses the same task in the next broad answer', async ({ page }) => {
   await seedGuestWorkspace(page)
   await stubBridge(page, { missingCardsFromChatCall: 1 })

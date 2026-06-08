@@ -153,6 +153,7 @@
 - 2026-06-08: Added `npm run check:ai-memory-live-readiness`, a combined read-only live gate that runs the VPS DB preflight and then writes the REST schema readiness JSON report. It intentionally does not upload SQL, apply migrations, or run the guarded CRUD write probe.
 - 2026-06-08: Ran `npm run check:ai-memory-live-readiness` against the real VPS/API. The read-only preflight found `supabase-db` and made no production changes; the command then failed the readiness gate because the REST schema check still reports PGRST205 for all six AI-memory tables and writes `/tmp/flowstate-ai-memory-live-readiness-current.json`.
 - 2026-06-08: Added `npm run check:ai-memory-migration-safety`, a read-only destructive-operation gate for the generated live AI-memory SQL bundle. It allows retry-safe `drop policy if exists` and `drop trigger if exists`, but rejects table/schema/index/function/view drops, truncation, data deletes, and column drops. The live apply helper now runs this safety check immediately after bundle generation in dry-run, preflight-only, and confirmed-apply modes.
+- 2026-06-08: Added localhost browser proof that the weekly `Accept` feedback control saves a positive signal without hiding the recommendation, leaving a running activity row, or disabling the chat input. The AI chat quality local Playwright suite now covers ask-before-answer, post-answer continuation, no-repeat clarification, postpone/dismiss suppression, too-much compacting, local-only memory debug, mechanical no-clarify requests, and positive accept feedback (`12 passed`).
 
 ---
 

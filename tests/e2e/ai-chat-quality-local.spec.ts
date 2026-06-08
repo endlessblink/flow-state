@@ -232,6 +232,20 @@ async function openAIChat(page: Page) {
   return input
 }
 
+async function openAISettingsMemoryDebug(page: Page) {
+  await page.goto('/#/tasks')
+  await page.waitForLoadState('domcontentloaded')
+  await expect(page.getByText('Fix FlowState chat memory so it stops giving generic plans')).toBeVisible({ timeout: 20_000 })
+
+  const settingsButton = page.locator('.settings-mini-btn, [aria-label*="Settings"], [title*="Settings"]').first()
+  await expect(settingsButton).toBeVisible({ timeout: 10_000 })
+  await settingsButton.click()
+  await expect(page.locator('.settings-modal')).toBeVisible({ timeout: 10_000 })
+  await page.locator('.tab-btn').filter({ hasText: /AI/ }).click()
+  await expect(page.locator('[data-testid="ai-memory-debug"]')).toBeVisible({ timeout: 15_000 })
+  return page.locator('[data-testid="ai-memory-debug"]')
+}
+
 async function answerVisibleClarification(page: Page) {
   const card = page.locator('[data-testid="ai-clarification"]').last()
   await expect(card).toBeVisible({ timeout: 15_000 })
@@ -366,6 +380,16 @@ test('mechanical overdue list request shows data without a clarification gate', 
   await expect(page.locator('[data-testid="inline-ai-task-card"]').first()).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('.chat-message').last()).not.toContainText(/How should I treat overdue tasks|What should guide this answer/i)
   await expect(input).toBeEnabled({ timeout: 10_000 })
+})
+
+test('settings memory debug shows local-only status on localhost guest fallback', async ({ page }) => {
+  await seedGuestWorkspace(page)
+  await stubBridge(page)
+
+  const debug = await openAISettingsMemoryDebug(page)
+  await expect(debug).toContainText('Local-only memory on this device; sign in for cross-device memory')
+  await expect(debug).toContainText('Local memory only')
+  await expect(debug).not.toContainText('Server-backed context currently available to chat')
 })
 
 test.describe('broad task answers ask one specific question before recommendations', () => {

@@ -2514,6 +2514,14 @@ describe('AI sidebar-first desktop experience', () => {
     expect(chatMessage).toContain('projectEntityKey: recommendationProjectEntityKey(rec)')
   })
 
+  it('surfaces slow memory retrieval stages in clarification debug disclosure', () => {
+    const chatMessage = src('src/components/ai/ChatMessage.vue')
+
+    expect(chatMessage).toContain('const slowStages = slowestMemoryStages(retrieval.stageTimings)')
+    expect(chatMessage).toContain('slow memory stage: ${slowStages.join(\', \')}')
+    expect(chatMessage).toContain('function slowestMemoryStages(stageTimings?: Record<string, number | undefined>): string[]')
+  })
+
   it('shows a queued continuation activity row after a clarification answer while generation is settling', async () => {
     const store = useAIChatStore()
     store.openPanel()

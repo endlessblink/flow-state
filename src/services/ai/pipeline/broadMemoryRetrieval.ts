@@ -37,6 +37,15 @@ export type BroadMemoryRetrievalInput = {
 }
 
 export type BroadMemoryRetrievalSource = 'hybrid_sql' | 'fallback'
+export type BroadMemoryRetrievalStage =
+  | 'projectContexts'
+  | 'taskContexts'
+  | 'contextEntities'
+  | 'clarificationEvents'
+  | 'parameterBeliefs'
+  | 'recommendationFeedback'
+  | 'contextEdges'
+  | 'memorySnapshots'
 
 export const BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS = [
   'workflow:task_answer:general',
@@ -73,11 +82,13 @@ export type BroadMemoryRetrievalResult = {
     lifecycle: AIMemoryLifecycleSummary
     elapsedMs: number
     timedOut: boolean
+    stageTimings: Partial<Record<BroadMemoryRetrievalStage, number>>
   }
 }
 
 export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): Promise<BroadMemoryRetrievalResult> {
   const startedAt = performance.now()
+  const stageTimings: Partial<Record<BroadMemoryRetrievalStage, number>> = {}
   const taskIdStrings = uniqueStrings(input.cardTasks.map(task => String(task.id || '')))
   const projectIdStrings = uniqueStrings(input.cardTasks
     .map(task => {
@@ -112,6 +123,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       lifecycle: emptyLifecycleSummary(),
       elapsedMs: Math.round(performance.now() - startedAt),
       timedOut,
+      stageTimings,
     },
   })
 
@@ -127,14 +139,14 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
   ]
   try {
     rows = await withOptionalTimeout(Promise.all([
-      input.db.fetchProjectContexts(projectIds),
-      input.db.fetchTaskContexts(taskIds),
-      input.db.fetchAIContextEntities(entityKeys),
-      input.db.fetchAIClarificationEvents(entityKeys, 30),
-      input.db.fetchAIParameterBeliefs({ entityKeys, limit: 40 }),
-      input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 30 }),
-      input.db.fetchAIContextEdges?.({ entityKeys, limit: 40 }) ?? Promise.resolve([]),
-      input.db.fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week', 'workflow'], limit: 12 }) ?? Promise.resolve([]),
+      timeBroadRetrievalStage(stageTimings, 'projectContexts', () => input.db.fetchProjectContexts(projectIds)),
+      timeBroadRetrievalStage(stageTimings, 'taskContexts', () => input.db.fetchTaskContexts(taskIds)),
+      timeBroadRetrievalStage(stageTimings, 'contextEntities', () => input.db.fetchAIContextEntities(entityKeys)),
+      timeBroadRetrievalStage(stageTimings, 'clarificationEvents', () => input.db.fetchAIClarificationEvents(entityKeys, 30)),
+      timeBroadRetrievalStage(stageTimings, 'parameterBeliefs', () => input.db.fetchAIParameterBeliefs({ entityKeys, limit: 40 })),
+      timeBroadRetrievalStage(stageTimings, 'recommendationFeedback', () => input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 30 })),
+      timeBroadRetrievalStage(stageTimings, 'contextEdges', () => input.db.fetchAIContextEdges?.({ entityKeys, limit: 40 }) ?? Promise.resolve([])),
+      timeBroadRetrievalStage(stageTimings, 'memorySnapshots', () => input.db.fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week', 'workflow'], limit: 12 }) ?? Promise.resolve([])),
     ]), input.timeoutMs, 'broad_task_memory_timeout')
   } catch {
     return fallback(Boolean(input.timeoutMs))
@@ -212,7 +224,21 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       lifecycle,
       elapsedMs: Math.round(performance.now() - startedAt),
       timedOut: false,
+      stageTimings,
     },
+  }
+}
+
+async function timeBroadRetrievalStage<T>(
+  timings: Partial<Record<BroadMemoryRetrievalStage, number>>,
+  stage: BroadMemoryRetrievalStage,
+  run: () => Promise<T>,
+): Promise<T> {
+  const startedAt = performance.now()
+  try {
+    return await run()
+  } finally {
+    timings[stage] = Math.round(performance.now() - startedAt)
   }
 }
 

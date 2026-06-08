@@ -11,6 +11,15 @@ const WEEKLY_GLOBAL_MEMORY_ENTITY_KEYS = [
 ]
 
 export type WeeklyMemoryRetrievalSource = 'hybrid_sql' | 'fallback'
+export type WeeklyMemoryRetrievalStage =
+  | 'projectContexts'
+  | 'taskContexts'
+  | 'contextEntities'
+  | 'clarificationEvents'
+  | 'recommendationFeedback'
+  | 'contextEdges'
+  | 'memorySnapshots'
+  | 'parameterBeliefs'
 
 export type WeeklyMemoryRetrievalDiagnostics = {
   source: WeeklyMemoryRetrievalSource
@@ -27,6 +36,7 @@ export type WeeklyMemoryRetrievalDiagnostics = {
   exactEntityCount: number
   semanticCandidateCount: number
   semanticSkippedReason?: 'pgvector_not_configured' | 'no_related_entities'
+  stageTimings: Partial<Record<WeeklyMemoryRetrievalStage, number>>
   lifecycle: AIMemoryLifecycleSummary
 }
 
@@ -60,6 +70,7 @@ export type WeeklyMemoryRetrievalResult = {
 
 export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput): Promise<WeeklyMemoryRetrievalResult> {
   const startedAt = performance.now()
+  const stageTimings: Partial<Record<WeeklyMemoryRetrievalStage, number>> = {}
   const taskIds = uniqueSupabaseIds(input.cardTasks.map(task => String(task.id || '')))
   const taskEntityKeys = uniqueStrings(input.cardTasks.map(task => String(task.id || '')).filter(Boolean).map(taskEntityKey))
   const rawProjectIds = uniqueStrings(input.cardTasks
@@ -89,19 +100,20 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
     exactEntityCount: 0,
     semanticCandidateCount: 0,
     semanticSkippedReason: 'no_related_entities',
+    stageTimings,
     lifecycle: emptyLifecycleSummary(),
   })
 
   try {
     const [projectContexts, taskContexts, contextEntities, clarificationEvents, recommendationFeedback, contextEdges, memorySnapshots, parameterBeliefs] = await withTimeout(Promise.all([
-      input.db.fetchProjectContexts(projectIds),
-      input.db.fetchTaskContexts(taskIds),
-      input.db.fetchAIContextEntities(entityKeys),
-      input.db.fetchAIClarificationEvents(beliefEntityKeys, 40),
-      input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 }),
-      input.db.fetchAIContextEdges?.({ entityKeys, limit: 80 }) ?? Promise.resolve([]),
-      input.db.fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week'], limit: 12 }) ?? Promise.resolve([]),
-      input.db.fetchAIParameterBeliefs?.({ entityKeys: beliefEntityKeys, limit: 60 }) ?? Promise.resolve([]),
+      timeWeeklyRetrievalStage(stageTimings, 'projectContexts', () => input.db.fetchProjectContexts(projectIds)),
+      timeWeeklyRetrievalStage(stageTimings, 'taskContexts', () => input.db.fetchTaskContexts(taskIds)),
+      timeWeeklyRetrievalStage(stageTimings, 'contextEntities', () => input.db.fetchAIContextEntities(entityKeys)),
+      timeWeeklyRetrievalStage(stageTimings, 'clarificationEvents', () => input.db.fetchAIClarificationEvents(beliefEntityKeys, 40)),
+      timeWeeklyRetrievalStage(stageTimings, 'recommendationFeedback', () => input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 })),
+      timeWeeklyRetrievalStage(stageTimings, 'contextEdges', () => input.db.fetchAIContextEdges?.({ entityKeys, limit: 80 }) ?? Promise.resolve([])),
+      timeWeeklyRetrievalStage(stageTimings, 'memorySnapshots', () => input.db.fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week'], limit: 12 }) ?? Promise.resolve([])),
+      timeWeeklyRetrievalStage(stageTimings, 'parameterBeliefs', () => input.db.fetchAIParameterBeliefs?.({ entityKeys: beliefEntityKeys, limit: 60 }) ?? Promise.resolve([])),
     ]), input.timeoutMs, 'weekly_plan_memory_timeout')
     const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now, parameterBeliefs)
     const refreshEntityKeys = new Set(lifecycle.refreshEntityKeys)
@@ -149,6 +161,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
         exactEntityCount: contextEntities.length,
         semanticCandidateCount: semanticCandidateKeys.length,
         semanticSkippedReason: semanticCandidateKeys.length ? 'pgvector_not_configured' : 'no_related_entities',
+        stageTimings,
         lifecycle,
       },
     }
@@ -161,6 +174,19 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
       edges: buildWeeklyMemoryEdges(input.cardTasks, weekEntityKey, input.getTaskProjectId),
       diagnostics: fallbackDiagnostics(true),
     }
+  }
+}
+
+async function timeWeeklyRetrievalStage<T>(
+  timings: Partial<Record<WeeklyMemoryRetrievalStage, number>>,
+  stage: WeeklyMemoryRetrievalStage,
+  run: () => Promise<T>,
+): Promise<T> {
+  const startedAt = performance.now()
+  try {
+    return await run()
+  } finally {
+    timings[stage] = Math.round(performance.now() - startedAt)
   }
 }
 

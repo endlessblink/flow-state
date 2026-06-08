@@ -201,6 +201,16 @@ describe('retrieveBroadAIMemory', () => {
       feedbackCount: 1,
       graphEdgeCount: 1,
     })
+    expect(result.diagnostics.stageTimings).toMatchObject({
+      projectContexts: expect.any(Number),
+      taskContexts: expect.any(Number),
+      contextEntities: expect.any(Number),
+      clarificationEvents: expect.any(Number),
+      parameterBeliefs: expect.any(Number),
+      recommendationFeedback: expect.any(Number),
+      contextEdges: expect.any(Number),
+      memorySnapshots: expect.any(Number),
+    })
   })
 
   it('retrieves global brevity preference for broad task answers and exposes a compact signal', async () => {

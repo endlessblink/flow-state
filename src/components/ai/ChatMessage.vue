@@ -1470,6 +1470,8 @@ function clarificationDebugLines(card: AIClarificationArtifact): string[] {
     const retrieval = card.debug.retrieval
     const feedback = retrieval.feedbackCount ? `, ${retrieval.feedbackCount} feedback` : ''
     lines.push(`memory: ${retrieval.entityKeyCount} keys, ${retrieval.eventCount} events${feedback}, ${retrieval.elapsedMs ?? '?'}ms${retrieval.timedOut ? ', timed out' : ''}`)
+    const slowStages = slowestMemoryStages(retrieval.stageTimings)
+    if (slowStages.length) lines.push(`slow memory stage: ${slowStages.join(', ')}`)
     const lifecycle = retrieval.lifecycle
     if (lifecycle) {
       const parts: string[] = []
@@ -1486,6 +1488,15 @@ function clarificationDebugLines(card: AIClarificationArtifact): string[] {
   }
   if (card.debug?.reason) lines.push(card.debug.reason)
   return lines
+}
+
+function slowestMemoryStages(stageTimings?: Record<string, number | undefined>): string[] {
+  if (!stageTimings) return []
+  return Object.entries(stageTimings)
+    .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([stage, ms]) => `${stage} ${ms}ms`)
 }
 
 async function recordRecommendationFeedbackForTask(

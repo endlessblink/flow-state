@@ -170,6 +170,7 @@ export interface AIClarificationArtifact {
       parameterBeliefCount?: number
       elapsedMs?: number
       timedOut?: boolean
+      stageTimings?: Record<string, number | undefined>
       exactEntityCount?: number
       semanticCandidateCount?: number
       semanticSkippedReason?: 'pgvector_not_configured' | 'no_related_entities'

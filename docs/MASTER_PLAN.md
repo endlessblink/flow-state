@@ -463,6 +463,7 @@
 - 2026-06-08: Broad/global retrieval now exact-fetches compact `ai_memory_snapshots` before generation. Snapshot evidence is bounded, sanitized, counted in diagnostics, and covered by focused retrieval tests so future summarization jobs can reduce prompt bloat without adding a separate graph/vector dependency.
 - 2026-06-08: Weekly planning retrieval now exact-fetches compact `ai_memory_snapshots` for user/project/task/week scopes, passes sanitized snapshot evidence into the weekly-plan prompt, and carries `snapshotCount` through diagnostics/debug metadata. Focused tests cover retrieval, prompt sanitization, and timeout fallback.
 - 2026-06-08: Playwright global setup now clears `ai_memory_snapshots` with the other AI memory tables, preventing stale summarized memory from hiding clarification-first regressions in localhost smoke tests.
+- 2026-06-08: Weekly and broad memory retrieval diagnostics now include per-stage timing data for legacy contexts, exact entities, clarification events, parameter beliefs, recommendation feedback, graph edges, and snapshots. The clarification debug disclosure surfaces the slowest memory stages behind "Why ask?", so slow answer reports can point to the retrieval stage instead of only showing one total elapsed time.
 
 ---
 

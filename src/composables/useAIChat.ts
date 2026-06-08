@@ -2090,6 +2090,7 @@ export function useAIChat() {
           exactEntityCount: 0,
           semanticCandidateCount: 0,
           semanticSkippedReason: 'no_related_entities' as const,
+          stageTimings: {},
           lifecycle: {
             staleEntityKeys: [],
             refreshEntityKeys: [],

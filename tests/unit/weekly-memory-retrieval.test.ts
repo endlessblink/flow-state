@@ -225,6 +225,16 @@ describe('retrieveWeeklyAIMemory', () => {
       semanticCandidateCount: 1,
       semanticSkippedReason: 'pgvector_not_configured',
     })
+    expect(result.diagnostics.stageTimings).toMatchObject({
+      projectContexts: expect.any(Number),
+      taskContexts: expect.any(Number),
+      contextEntities: expect.any(Number),
+      clarificationEvents: expect.any(Number),
+      recommendationFeedback: expect.any(Number),
+      contextEdges: expect.any(Number),
+      memorySnapshots: expect.any(Number),
+      parameterBeliefs: expect.any(Number),
+    })
     expect(result.diagnostics.lifecycle).toMatchObject({
       staleEntityKeys: ['project:uncategorized'],
       refreshEntityKeys: ['project:uncategorized'],

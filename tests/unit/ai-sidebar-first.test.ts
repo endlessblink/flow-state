@@ -1400,12 +1400,34 @@ describe('AI sidebar-first desktop experience', () => {
     await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
     await nextTick()
 
+    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('What would count as good progress this week?')
+    expect(wrapper.text()).toContain('Ship usable')
+    expect(wrapper.emitted('continueChat')).toBeUndefined()
+
+    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-option').trigger('click')
+    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('What happens if this slips?')
+    expect(wrapper.text()).toContain('Nothing serious')
+    expect(wrapper.emitted('continueChat')).toBeUndefined()
+
+    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-option').trigger('click')
+    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
+    await nextTick()
+
     expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Context saved')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Work/Product"')
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Why now: "Deadline/commitment"')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Why now: "Why does this matter right now?: Deadline/commitment')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('What would count as good progress this week?: Ship usable')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('What happens if this slips?: Nothing serious')
   })
 
   it('does not ask the why-now follow-up again when the first clarification already includes free text', async () => {

@@ -92,6 +92,7 @@ const clarificationSavedLocal = ref<Record<string, boolean>>({})
 const clarificationFollowUpAnswers = ref<Record<string, string>>({})
 const clarificationFollowUpFreeText = ref<Record<string, string>>({})
 const clarificationFollowUpSavedLocal = ref<Record<string, boolean>>({})
+const clarificationFollowUpStepIndex = ref<Record<string, number>>({})
 const clarificationInlineMode = ref<Record<string, 'uncertainty' | 'candidates'>>({})
 const recommendationFeedbackLoading = ref<Record<string, string>>({})
 const recommendationFeedbackStatus = ref<Record<string, string>>({})
@@ -380,35 +381,125 @@ function clarificationDisplayName(card: AIClarificationArtifact): string {
   return question.entityId || card.memoryKey
 }
 
+type ClarificationFollowUpStep = {
+  id: string
+  field: string
+  operation: 'set' | 'append'
+  prompt: string
+  placeholder: string
+  options: Array<{ id: string; label: string; value: string; confidence?: number }>
+}
+
+function clarificationFollowUpSteps(card: AIClarificationArtifact): ClarificationFollowUpStep[] {
+  if (card.kind !== 'weekly_planning') return []
+  const locale = card.locale
+  const steps: ClarificationFollowUpStep[] = []
+
+  steps.push({
+    id: 'why_now',
+    field: 'whyItMatters',
+    operation: 'set',
+    prompt: locale === 'he' ? 'למה זה חשוב עכשיו?' : 'Why does this matter right now?',
+    placeholder: locale === 'he'
+      ? 'אופציונלי: מה ייחשב התקדמות טובה?'
+      : 'Optional: what would count as good progress?',
+    options: locale === 'he'
+      ? [
+          { id: 'deadline_commitment', label: 'דדליין/התחייבות', value: 'deadline or commitment' },
+          { id: 'unblocks_work', label: 'פותח עבודה אחרת', value: 'unblocks other work' },
+          { id: 'client_money', label: 'לקוח/כסף', value: 'client or money impact' },
+          { id: 'stress_chaos', label: 'מוריד לחץ', value: 'reduces stress or chaos' },
+          { id: 'momentum', label: 'מומנטום חשוב', value: 'important long-term or creative momentum' },
+          { id: 'not_sure', label: 'לא בטוח', value: 'unclear why it matters right now', confidence: 0.45 },
+        ]
+      : [
+          { id: 'deadline_commitment', label: 'Deadline/commitment', value: 'deadline or commitment' },
+          { id: 'unblocks_work', label: 'Unblocks work', value: 'unblocks other work' },
+          { id: 'client_money', label: 'Client/money impact', value: 'client or money impact' },
+          { id: 'stress_chaos', label: 'Reduces stress', value: 'reduces stress or chaos' },
+          { id: 'momentum', label: 'Important momentum', value: 'important long-term or creative momentum' },
+          { id: 'not_sure', label: 'Not sure', value: 'unclear why it matters right now', confidence: 0.45 },
+        ],
+  })
+
+  steps.push({
+    id: 'success_this_week',
+    field: 'successCriteria',
+    operation: 'append',
+    prompt: locale === 'he' ? 'מה ייחשב התקדמות טובה השבוע?' : 'What would count as good progress this week?',
+    placeholder: locale === 'he'
+      ? 'אופציונלי: כתוב ניסוח משלך להצלחה השבוע'
+      : 'Optional: write your own success criterion',
+    options: locale === 'he'
+      ? [
+          { id: 'ship_usable', label: 'לשלוח משהו שימושי', value: 'ship something usable' },
+          { id: 'make_decision', label: 'לקבל החלטה', value: 'make a decision' },
+          { id: 'clear_backlog', label: 'לנקות עומס', value: 'clear backlog' },
+          { id: 'draft_prototype', label: 'טיוטה/אב-טיפוס', value: 'create draft or prototype' },
+          { id: 'maintain_habit', label: 'לשמר הרגל', value: 'maintain habit' },
+          { id: 'write_it', label: 'אכתוב בעצמי', value: 'user will write success criterion', confidence: 0.5 },
+        ]
+      : [
+          { id: 'ship_usable', label: 'Ship usable', value: 'ship something usable' },
+          { id: 'make_decision', label: 'Make decision', value: 'make a decision' },
+          { id: 'clear_backlog', label: 'Clear backlog', value: 'clear backlog' },
+          { id: 'draft_prototype', label: 'Draft/prototype', value: 'create draft or prototype' },
+          { id: 'maintain_habit', label: 'Maintain habit', value: 'maintain habit' },
+          { id: 'write_it', label: 'I’ll write it', value: 'user will write success criterion', confidence: 0.5 },
+        ],
+  })
+
+  steps.push({
+    id: 'slip_risk',
+    field: 'failureRisks',
+    operation: 'append',
+    prompt: locale === 'he' ? 'מה קורה אם זה נדחה?' : 'What happens if this slips?',
+    placeholder: locale === 'he'
+      ? 'אופציונלי: מה הסיכון האמיתי אם זה לא קורה?'
+      : 'Optional: what is the real risk if this does not happen?',
+    options: locale === 'he'
+      ? [
+          { id: 'nothing_serious', label: 'לא נורא', value: 'nothing serious', confidence: 0.75 },
+          { id: 'some_inconvenience', label: 'קצת אי-נוחות', value: 'some inconvenience' },
+          { id: 'blocks_tasks', label: 'חוסם משימות', value: 'blocks other tasks' },
+          { id: 'missed_opportunity', label: 'הזדמנות תתפספס', value: 'missed opportunity' },
+          { id: 'work_problem', label: 'בעיה בעבודה/לקוח', value: 'client or work problem' },
+          { id: 'stress_increases', label: 'יותר לחץ', value: 'personal stress increases' },
+        ]
+      : [
+          { id: 'nothing_serious', label: 'Nothing serious', value: 'nothing serious', confidence: 0.75 },
+          { id: 'some_inconvenience', label: 'Some inconvenience', value: 'some inconvenience' },
+          { id: 'blocks_tasks', label: 'Blocks tasks', value: 'blocks other tasks' },
+          { id: 'missed_opportunity', label: 'Missed opportunity', value: 'missed opportunity' },
+          { id: 'work_problem', label: 'Work/client problem', value: 'client or work problem' },
+          { id: 'stress_increases', label: 'Stress increases', value: 'personal stress increases' },
+        ],
+  })
+
+  return steps
+}
+
+function clarificationFollowUpStep(card: AIClarificationArtifact): ClarificationFollowUpStep | null {
+  const key = clarificationKey(card)
+  const steps = clarificationFollowUpSteps(card)
+  return steps[clarificationFollowUpStepIndex.value[key] ?? 0] ?? null
+}
+
+function clarificationFollowUpInputKey(card: AIClarificationArtifact): string {
+  const step = clarificationFollowUpStep(card)
+  return `${clarificationKey(card)}:${step?.id ?? 'none'}`
+}
+
 function clarificationFollowUpPrompt(card: AIClarificationArtifact): string {
-  return card.locale === 'he' ? 'למה זה חשוב עכשיו?' : 'Why does this matter right now?'
+  return clarificationFollowUpStep(card)?.prompt ?? (card.locale === 'he' ? 'מה עוד חשוב לדעת?' : 'What else matters here?')
 }
 
 function clarificationFollowUpPlaceholder(card: AIClarificationArtifact): string {
-  return card.locale === 'he'
-    ? 'אופציונלי: מה ייחשב התקדמות טובה?'
-    : 'Optional: what would count as good progress?'
+  return clarificationFollowUpStep(card)?.placeholder ?? (card.locale === 'he' ? 'אופציונלי: הוסף הקשר קצר' : 'Optional: add brief context')
 }
 
 function clarificationFollowUpOptions(card: AIClarificationArtifact) {
-  if (card.locale === 'he') {
-    return [
-      { id: 'deadline_commitment', label: 'דדליין/התחייבות', value: 'deadline or commitment' },
-      { id: 'unblocks_work', label: 'פותח עבודה אחרת', value: 'unblocks other work' },
-      { id: 'client_money', label: 'לקוח/כסף', value: 'client or money impact' },
-      { id: 'stress_chaos', label: 'מוריד לחץ', value: 'reduces stress or chaos' },
-      { id: 'momentum', label: 'מומנטום חשוב', value: 'important long-term or creative momentum' },
-      { id: 'not_sure', label: 'לא בטוח', value: 'unclear why it matters right now' },
-    ]
-  }
-  return [
-    { id: 'deadline_commitment', label: 'Deadline/commitment', value: 'deadline or commitment' },
-    { id: 'unblocks_work', label: 'Unblocks work', value: 'unblocks other work' },
-    { id: 'client_money', label: 'Client/money impact', value: 'client or money impact' },
-    { id: 'stress_chaos', label: 'Reduces stress', value: 'reduces stress or chaos' },
-    { id: 'momentum', label: 'Important momentum', value: 'important long-term or creative momentum' },
-    { id: 'not_sure', label: 'Not sure', value: 'unclear why it matters right now' },
-  ]
+  return clarificationFollowUpStep(card)?.options ?? []
 }
 
 function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEvent) {
@@ -543,37 +634,43 @@ function saveClarificationFollowUp(card: AIClarificationArtifact, event: MouseEv
   event.stopPropagation()
   const key = clarificationKey(card)
   if (clarificationFollowUpSavedLocal.value[key]) return
-  const selectedId = clarificationFollowUpAnswers.value[key]
-  const note = clarificationFollowUpFreeText.value[key]?.trim()
+  const inputKey = clarificationFollowUpInputKey(card)
+  const step = clarificationFollowUpStep(card)
+  const selectedId = clarificationFollowUpAnswers.value[inputKey]
+  const note = clarificationFollowUpFreeText.value[inputKey]?.trim()
   const option = clarificationFollowUpOptions(card).find(item => item.id === selectedId)
   if (!option && !note) return
 
-  clarificationFollowUpSavedLocal.value[key] = true
   clarificationStatus.value = card.locale === 'he'
-    ? 'נשמר מקומית. זה מספיק כדי להמשיך בלי להציף.'
-    : 'Saved locally. That is enough to continue without a broad dump.'
-  void persistClarificationFollowUp(card, option, note)
-  emit('continueChat', clarificationContinueMessage(card, {
-    selectedLabel: card.question.options.find(item => item.id === clarificationAnswers.value[key])?.label,
-    freeText: clarificationFreeText.value[key]?.trim(),
-    followUpLabel: option?.label,
-    followUpFreeText: note,
-  }))
+    ? 'נשמר מקומית. שאלה קצרה אחת בכל פעם.'
+    : 'Saved locally. One short question at a time.'
+  void persistClarificationFollowUp(card, step, option, note)
+  const nextIndex = (clarificationFollowUpStepIndex.value[key] ?? 0) + 1
+  const hasNextStep = nextIndex < clarificationFollowUpSteps(card).length
+  if (hasNextStep) {
+    clarificationFollowUpStepIndex.value[key] = nextIndex
+    return
+  }
+  clarificationFollowUpSavedLocal.value[key] = true
+  emit('continueChat', clarificationContinueMessage(card, collectClarificationEvidence(card)))
 }
 
 async function persistClarificationFollowUp(
   card: AIClarificationArtifact,
+  step: ClarificationFollowUpStep | null,
   option: ReturnType<typeof clarificationFollowUpOptions>[number] | undefined,
   note: string,
 ) {
+  const patchField = step?.field ?? 'whyItMatters'
+  const patchOperation = step?.operation ?? 'set'
   const memoryPatch: AIMemoryPatch | undefined = option
     ? {
         entityType: card.question.entityType ?? 'workflow',
         entityId: card.question.entityId ?? card.memoryKey,
-        operation: 'set',
-        field: 'thisWeekImportance',
+        operation: patchOperation,
+        field: patchField,
         value: option.value,
-        confidence: option.id === 'not_sure' ? 0.45 : 0.9,
+        confidence: option.confidence ?? 0.9,
         source: 'button_answer',
         sourceMessageId: props.message.id,
       }
@@ -581,8 +678,8 @@ async function persistClarificationFollowUp(
       ? {
           entityType: card.question.entityType ?? 'workflow',
           entityId: card.question.entityId ?? card.memoryKey,
-          operation: 'set',
-          field: 'whyItMatters',
+          operation: patchOperation,
+          field: patchField,
           value: note,
           confidence: 0.9,
           source: 'free_text',
@@ -594,9 +691,9 @@ async function persistClarificationFollowUp(
       entityKey: card.memoryKey,
       entityType: card.question.entityType ?? 'workflow',
       displayName: clarificationDisplayName(card),
-      questionId: `${card.question.id}:why_now`,
+      questionId: `${card.question.id}:${step?.id ?? 'follow_up'}`,
       eventType: 'answered',
-      question: clarificationFollowUpPrompt(card),
+      question: step?.prompt ?? clarificationFollowUpPrompt(card),
       selectedOptionId: option?.id,
       selectedLabel: option?.label,
       freeText: note,
@@ -609,7 +706,7 @@ async function persistClarificationFollowUp(
         candidateTaskIds: card.candidateTaskIds,
         coverage: card.coverage,
         retrieval: card.debug?.retrieval,
-        followUp: 'why_now',
+        followUp: step?.id ?? 'follow_up',
       },
     })
     clarificationStatus.value = card.locale === 'he'
@@ -623,6 +720,30 @@ async function persistClarificationFollowUp(
     clarificationStatus.value = card.locale === 'he'
       ? 'נשמר מקומית; הסנכרון יושלם אחרי חיבור תקין.'
       : 'Saved locally; sync will complete when the connection is ready.'
+  }
+}
+
+function collectClarificationEvidence(card: AIClarificationArtifact): {
+  selectedLabel?: string
+  freeText?: string
+  followUpLabel?: string
+  followUpFreeText?: string
+} {
+  const key = clarificationKey(card)
+  const steps = clarificationFollowUpSteps(card)
+  const followUpLines: string[] = []
+  for (const step of steps) {
+    const inputKey = `${key}:${step.id}`
+    const selected = clarificationFollowUpAnswers.value[inputKey]
+    const label = step.options.find(option => option.id === selected)?.label
+    const text = clarificationFollowUpFreeText.value[inputKey]?.trim()
+    if (label) followUpLines.push(`${step.prompt}: ${label}`)
+    if (text) followUpLines.push(`${step.prompt}: ${text}`)
+  }
+  return {
+    selectedLabel: card.question.options.find(item => item.id === clarificationAnswers.value[key])?.label,
+    freeText: clarificationFreeText.value[key]?.trim(),
+    followUpLabel: followUpLines.join(' | ') || undefined,
   }
 }
 
@@ -1465,15 +1586,15 @@ async function saveSchedule() {
                   :key="option.id"
                   type="button"
                   class="weekly-question-option"
-                  :class="{ selected: clarificationFollowUpAnswers[clarificationKey(clarification)] === option.id }"
+                  :class="{ selected: clarificationFollowUpAnswers[clarificationFollowUpInputKey(clarification)] === option.id }"
                   :disabled="clarificationFollowUpSavedLocal[clarificationKey(clarification)]"
-                  @click="clarificationFollowUpAnswers[clarificationKey(clarification)] = option.id"
+                  @click="clarificationFollowUpAnswers[clarificationFollowUpInputKey(clarification)] = option.id"
                 >
                   {{ option.label }}
                 </button>
               </div>
               <textarea
-                v-model="clarificationFollowUpFreeText[clarificationKey(clarification)]"
+                v-model="clarificationFollowUpFreeText[clarificationFollowUpInputKey(clarification)]"
                 class="weekly-question-free-text"
                 :placeholder="clarificationFollowUpPlaceholder(clarification)"
                 :disabled="clarificationFollowUpSavedLocal[clarificationKey(clarification)]"
@@ -1483,7 +1604,7 @@ async function saveSchedule() {
                 <button
                   type="button"
                   class="weekly-question-apply"
-                  :disabled="clarificationFollowUpSavedLocal[clarificationKey(clarification)] || (!clarificationFollowUpAnswers[clarificationKey(clarification)] && !clarificationFollowUpFreeText[clarificationKey(clarification)]?.trim())"
+                  :disabled="clarificationFollowUpSavedLocal[clarificationKey(clarification)] || (!clarificationFollowUpAnswers[clarificationFollowUpInputKey(clarification)] && !clarificationFollowUpFreeText[clarificationFollowUpInputKey(clarification)]?.trim())"
                   @click="saveClarificationFollowUp(clarification, $event)"
                 >
                   <CheckCircle2 :size="13" />

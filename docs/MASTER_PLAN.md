@@ -61,6 +61,7 @@
 - 2026-06-08: Added a focused AI memory schema contract test for server-backed entities, clarification events, recommendation feedback, Postgres-native graph edges, RLS, migration order, and missing-schema client fallback before any live Supabase migration step.
 - 2026-06-08: Clarification continuation messages now include the actual selected button/free-text answer as compact quoted context, so localhost flows still proceed correctly before live Supabase memory migrations are applied.
 - 2026-06-08: Clarification continuations now run as hidden control messages with a typed mode marker and bypass the ask gate once, so answering a card does not add noisy chat content or immediately re-ask the same question while persistence is delayed.
+- 2026-06-08: Weekly clarification now uses a progressive one-question-at-a-time ladder for button-only answers: project/category, why it matters now, success this week, and slip risk. Free text can still satisfy enough context and continue immediately.
 
 ---
 

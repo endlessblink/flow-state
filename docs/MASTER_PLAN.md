@@ -16,6 +16,9 @@
 - Keep memory editable and auditable through event history instead of overwriting meaning silently.
 - Research validation update: treat memory as tiered session/episodic/semantic/procedural state, not one generic blob.
 - Research validation update: add lifecycle rules for confidence decay, stale confirmation, summarization, retention, and selective retrieval so memory does not become slow or noisy.
+- Research validation update 2: add `memory_type`, `scope`, `reinforcement_count`, `last_reinforced`, `related_entities`, and optional vector embedding support when the schema graduates beyond the first clarification slice.
+- Research validation update 2: user-authored facts and corrections outrank model inferences; model inferences stay low confidence until confirmed.
+- Graph update: add a Postgres-native `ai_context_edges` relation table before considering a separate graph database. Treat projects/tasks/weeks/preferences/workflows as nodes and store edges such as `belongs_to`, `blocks`, `follow_up`, `part_of_week`, and `preference_affects`.
 
 **Acceptance**:
 - Synthetic buckets persist through `ai_context_entities`/`ai_clarification_events`, not localStorage.
@@ -23,6 +26,8 @@
 - Weekly planning can recall saved answers for `Work`, `My Projects`, and `uncategorized` across sessions/devices.
 - Memory retrieval is bounded/cached enough that the sidebar does not feel stuck.
 - Free-text clarification answers are stored as user-authored evidence, not prompt instructions.
+- Memory rows can be versioned or audited so correction history remains inspectable after summaries are compacted.
+- Entity relationships can be queried server-side without introducing Neo4j/Memgraph deployment complexity.
 
 ---
 
@@ -40,6 +45,8 @@
 - Use recent clarification history and cooldowns before asking.
 - Research validation update: compute an explicit coverage/uncertainty score before asking or ranking.
 - Research validation update: ask first when weak context would materially affect planning; otherwise proceed with visible uncertainty.
+- Research validation update 2: use a concrete coverage policy: coverage > 0.8 proceeds, 0.5-0.8 proceeds with visible uncertainty when materiality is low/medium, and < 0.5 with high materiality asks one question first.
+- Research validation update 2: choose the question with highest expected value: missing impact, stakes, energy fit, stakeholder/commitment, dependency, history, or preference dimension that most changes the current answer.
 
 **Acceptance**:
 - Missing meaning/stakes/success criteria triggers one clarification card, not a full generic plan.
@@ -47,6 +54,7 @@
 - No answer ranks importance from project/task names alone.
 - Recently answered, dismissed, or uncertainty-accepted questions are not asked again inside the cooldown window.
 - Cold-start users get one lightweight question or neutral candidates, not a dense interview.
+- Clarification events record `coverage_score_at_time`, `uncertainty_dimensions`, and answer path type when available.
 
 ---
 
@@ -63,12 +71,15 @@
 - Require every recommendation to cite task evidence plus project/context evidence or mark "context unknown."
 - Research validation update: normalize ranking inputs with explicit caps, decay functions, and user override signals so due dates, priority, or project names cannot dominate alone.
 - Research validation update: add adversarial tests for ambiguous names, conflicting corrections, prompt-injection-like free text, stale context, and high-uncertainty task sets.
+- Research validation update 2: use tunable ranking bands: impact/life consequences/commitments 25-30%, dependencies/project momentum/avoided work 20-25%, energy/workload/confidence 20%, urgency/effort 15-20%, and user overrides/recency about 10%.
+- Research validation update 2: aggregate repeated postpone/dismiss reasons into preference facts, for example "deep work often postponed Friday" or "not important this month."
 
 **Acceptance**:
 - Regression tests fail if answers say a task is high stakes or meaningful from a name alone.
 - Tests fail on generic phrases like "looks like meaningful work" without evidence.
 - Tests cover postponed/dismissed suggestions, stale context, correction overrides, and uncertainty handling.
 - Tests assert visible evidence, confidence, omissions, and user override controls so ranking does not become a black box.
+- Tests include cold-start, conflicting corrections, high-uncertainty sets, adversarial free text, and citation audits for unsupported prioritization.
 
 ---
 
@@ -85,12 +96,15 @@
 - Add "Too much" / simplify controls that reduce plan size and defer nice-to-haves.
 - Research validation update: persist recommendation feedback separately from clarification memory: accept/postpone/dismiss/simplify/explain actions, revisit dates, outcome signals, and reasons.
 - Research validation update: treat postponement as lightweight deferral, not permanent rejection.
+- Research validation update 2: recommendation feedback should link back to generated plan/recommendation IDs and aggregate into preferences when patterns repeat.
+- Research validation update 2: add reason categories such as too_hard, low_energy, not_important, wrong_context, already_done, needs_more_info, and free-text evidence.
 
 **Acceptance**:
 - Dismissed suggestions are downranked or hidden until cooldown/re-engagement.
 - Postponed suggestions respect the chosen revisit window.
 - User feedback changes future recommendations and is visible in memory/event history.
 - Accepted/time-blocked/completed/timer-started suggestions become implicit positive signals for future planning.
+- Postponement uses exponential backoff plus revisit triggers such as deadline proximity, weekly review, or user re-engagement.
 
 ---
 
@@ -107,6 +121,7 @@
 - Log enough local/server debug data to diagnose bridge timeout vs memory timeout vs formatting timeout.
 - Research validation update: log retrieval source counts, cache hit/miss, and path type without exposing private details in normal prose.
 - Research validation update: distinguish clarify-first, generated-with-uncertainty, structured-model, reliability-fallback, and feedback-updated answer paths.
+- Research validation update 2: timeline phases should map to the agent loop: Retrieve, score uncertainty, clarify/generate, cite/format, record outcome.
 
 **Acceptance**:
 - The activity timeline shows the current phase within one second.
@@ -129,12 +144,15 @@
 - Refresh stale context with confirmation rather than silently reusing it.
 - Research validation update: use hybrid retrieval: exact entity key lookup first, structured filters second, semantic/vector recall only when needed.
 - Research validation update: add procedural memory for repeated workflows such as weekly planning style, preferred controls, and low-overwhelm defaults.
+- Research validation update 2: keep retrieval staged: exact key lookup must be fast enough for clarify-first; semantic/vector recall can be skipped under timeout without creating fake certainty.
+- Research validation update 2: add procedural preferences for concise/detailed mode, question tolerance, planning ritual style, and preferred amount of automation.
 
 **Acceptance**:
 - The same project/context answer improves later "what should I do", weekly plan, and task breakdown requests.
 - User corrections stop repeated wrong framing.
 - Stale context prompts are short, button-based, and respect cooldowns.
 - Retrieval remains selective: only relevant facts enter the model prompt, never raw memory dumps.
+- Cold-start behavior degrades gracefully to neutral candidates or one lightweight preference question.
 
 ---
 
@@ -149,11 +167,15 @@
 - Persist action, reason enum, optional free text, revisit date, recommendation/task IDs, and outcome signals.
 - Downrank or hide postponed/dismissed suggestions until revisit/cooldown.
 - Use accepted/time-blocked/completed/timer-started suggestions as positive follow-through signals.
+- Link feedback to generated plan/recommendation IDs when available.
+- Aggregate repeated explicit and implicit feedback into durable preference facts.
+- Store `implicit_positive` signals from timer start/completion separately from explicit feedback.
 
 **Acceptance**:
 - A dismissed recommendation does not immediately reappear as a top suggestion.
 - A postponed recommendation respects the revisit date.
 - Feedback changes ranking evidence in later weekly/next-action responses.
+- Feedback reason patterns become inspectable preference memory rather than hidden ranking magic.
 
 ---
 
@@ -169,11 +191,15 @@
 - Summarize old events into compact semantic facts while preserving corrections.
 - Archive or compact old low-value events after a retention window.
 - Re-index summaries for semantic retrieval.
+- Use reinforcement count and last reinforced date to slow decay for repeatedly confirmed facts.
+- Summarize on schedule or size threshold; only promote high-confidence verified facts.
+- Archive old low-value events after a defined window while keeping corrections and source links auditable.
 
 **Acceptance**:
 - Memory retrieval stays bounded as event count grows.
 - Old facts become stale and ask for confirmation instead of being reused as fresh truth.
 - Corrections remain auditable after summarization.
+- Stale facts trigger confirmation when accessed for a materially important recommendation.
 
 ---
 
@@ -188,11 +214,14 @@
 - Add cache keys and short TTLs for active conversation/project memory.
 - Track retrieval timings and source counts in debug metadata.
 - Limit prompt injection exposure by summarizing retrieved user text as evidence, not instructions.
+- Add memory coverage score computation to retrieval output.
+- Support optional pgvector/vector_embedding later, but keep exact key lookup as the primary source of truth.
 
 **Acceptance**:
 - Clarify-first path appears quickly even when semantic retrieval is skipped or slow.
 - Memory retrieval has a clear timeout/fallback that does not produce fake certainty.
 - Debug data identifies cache hit/miss and retrieval stage timings.
+- Memory retrieval can return "insufficient coverage" as an intentional state instead of forcing generation.
 
 ---
 
@@ -207,11 +236,53 @@
 - Add cross-user access tests for memory tables.
 - Sanitize/free-text handling: store raw user text as evidence but inject it into prompts only as quoted data.
 - Add export/delete hooks or documented paths for future privacy controls.
+- Add prompt-injection regression tests where free text tries to override the system or reveal unrelated memory.
+- Keep raw user text out of system-role instructions; inject as quoted evidence with source labels only.
 
 **Acceptance**:
 - One user cannot read or write another user's AI memory rows.
 - Free-text memory cannot override system rules in prompt construction.
 - Memory rows are inspectable and deletable through supported code paths or documented migration follow-up.
+- Prompt-injection-like memory text cannot change output policy or cross-entity retrieval boundaries.
+
+---
+
+### TASK-1840: Explicit uncertainty scoring and cold-start policy (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
+
+**Why**: Research validation flagged that "uncertainty score" was too vague to implement consistently. The assistant needs a deterministic policy for ask vs. proceed with uncertainty vs. neutral candidates.
+
+**Scope**:
+- Compute coverage across impact, energy fit, stakeholders/commitments, dependencies, history, and preferences.
+- Compute materiality by intent: weekly planning and prioritization are high materiality; mechanical list/show actions are low materiality.
+- Ask one question when coverage is below 0.5 and materiality is high.
+- Proceed with visible uncertainty when coverage is 0.5-0.8 or materiality is medium/low.
+- For cold-start, show one lightweight question or neutral candidates without ranking claims.
+
+**Acceptance**:
+- The same task set consistently chooses ask/proceed/neutral based on coverage and intent.
+- Low-context weekly planning does not produce a ranked plan unless the user chooses uncertainty.
+- Mechanical actions are not blocked by unnecessary clarification.
+
+---
+
+### TASK-1841: Agent-memory evaluation rubric and citation audit (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1832
+
+**Why**: Research validation recommended scoring answer quality across groundedness, brevity, uncertainty, learning, user control, realism, and safety. FlowState needs this as an evaluation suite, not subjective review.
+
+**Scope**:
+- Add a bad/acceptable/excellent rubric for groundedness, scannability, uncertainty handling, learning/adaptation, user control, realism, and safety.
+- Add citation audits proving recommendations reference supplied task/memory evidence or explicitly mark unknown.
+- Add LLM-as-judge or scripted checks for filler, unsupported prioritization, repeated questions, and prompt-injection vulnerability.
+- Include human-review scenarios for cold-start and conflicting memory.
+
+**Acceptance**:
+- Eval fails on fake reasoning even when prose sounds polished.
+- Eval fails on broad generic plans that exceed the low-overwhelm contract.
+- Eval catches repeated clarification questions inside cooldown.
 
 ---
 

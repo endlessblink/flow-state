@@ -1,6 +1,7 @@
 import type { Task } from '@/types/tasks'
 import type {
   AIClarificationArtifact,
+  AIClarificationCoverage,
   AIClarificationEvent,
   AIClarificationQuestion,
   AIMemoryQuestionOption,
@@ -523,9 +524,12 @@ export function buildWeeklyPlanReliabilityFallback(context: WeekContext, caveats
 export function buildWeeklyPlanningInterview(
   context: WeekContext,
   recentEvents: AIClarificationEvent[] = [],
+  debug?: AIClarificationArtifact['debug'],
 ): AIClarificationArtifact | null {
   const selected = selectQuickDraftTasks(context.tasks)
-  const question = selectClarificationQuestion(context, selected, recentEvents)
+  const coverage = computeWeeklyPlanningCoverage(context, selected)
+  if (coverage.decision !== 'ask') return null
+  const question = selectClarificationQuestion(context, selected, recentEvents, coverage)
   if (!question) return null
   const memoryKey = clarificationMemoryKey(question, context)
   return {
@@ -541,6 +545,21 @@ export function buildWeeklyPlanningInterview(
     candidateTaskIds: selected.map(task => task.id),
     actions: ['generate_current', 'show_candidates', 'pause_save'],
     memoryKey,
+    coverage,
+    pathType: 'clarify_first',
+    debug: debug ?? {
+      retrieval: {
+        source: 'fallback',
+        entityKeyCount: 0,
+        eventCount: recentEvents.length,
+        projectContextCount: context.projectContexts.length,
+        taskContextCount: context.taskContexts.length,
+      },
+      reason: coverage.missing.length
+        ? `missing ${coverage.missing.join(', ')}`
+        : 'weekly planning context coverage is too low',
+      candidateCount: selected.length,
+    },
   }
 }
 
@@ -580,9 +599,12 @@ function selectClarificationQuestion(
   context: WeekContext,
   selected: PlannerTaskSnapshot[],
   recentEvents: AIClarificationEvent[],
+  coverage: AIClarificationCoverage,
 ): AIClarificationQuestion | null {
+  const preferredReasons = coverage.missing
   const taskQuestion = buildQuickDraftQuestions(context, selected)
     .filter(question => question.entityType !== undefined)
+    .sort((a, b) => questionPriority(b.reason, preferredReasons) - questionPriority(a.reason, preferredReasons))
     .find(question => {
       const key = clarificationMemoryKey(question as AIClarificationQuestion, context)
       return !recentClarificationResolved(recentEvents, key, question.id || question.question)
@@ -627,6 +649,85 @@ function selectClarificationQuestion(
     freeTextPatch: { field: 'whyItMatters', operation: 'set' },
     freeTextPlaceholder: locale === 'he' ? 'אופציונלי: מה ייחשב שבוע טוב?' : 'Optional: what would make this a good week?',
     relatedTaskIds: selected.slice(0, 5).map(task => task.id),
+  }
+}
+
+function questionPriority(reason: string | undefined, missing: AIClarificationCoverage['missing']): number {
+  if (!reason) return 0
+  let score = 0
+  if (reason.includes('project') && missing.includes('project_meaning')) score += 3
+  if (reason.includes('task') && missing.includes('task_context')) score += 3
+  if (reason.includes('stake') && missing.includes('impact')) score += 2
+  if (reason.includes('priority') && missing.includes('preferences')) score += 2
+  return score
+}
+
+function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTaskSnapshot[]): AIClarificationCoverage {
+  const relevant = selected.length ? selected : context.tasks.slice(0, 5)
+  const denominator = Math.max(1, relevant.length)
+  const projectMeaning = relevant.filter(task => hasUsableProjectContext(task)).length / denominator
+  const taskContext = relevant.filter(task => hasTaskLevelPlanningContext(task)).length / denominator
+  const impact = relevant.filter(task =>
+    task.derived.projectImportanceScore >= 0.4 ||
+    task.derived.hasMoneyClientHealthFamilyLegalSignal ||
+    task.derived.hasHumanOrExternalStakeholder ||
+    task.dependencies?.blocksTaskIds.length,
+  ).length / denominator
+  const stakeholders = relevant.filter(task =>
+    task.derived.hasHumanOrExternalStakeholder ||
+    task.derived.hasMoneyClientHealthFamilyLegalSignal,
+  ).length / denominator
+  const dependencies = relevant.filter(task =>
+    task.dependencies?.blocksTaskIds.length ||
+    task.dependencies?.blockedByTaskIds.length ||
+    task.subtasks?.some(subtask => !subtask.isCompleted),
+  ).length / denominator
+  const history = relevant.filter(task =>
+    task.history.postponedCount > 0 ||
+    task.history.timerMinutesLast7Days > 0 ||
+    task.status === 'in_progress',
+  ).length / denominator
+  const energyFit = relevant.filter(task => task.estimateMinutes || task.derived.quickErrandScore >= 0.55 || task.derived.substantialWorkScore >= 0.55).length / denominator
+  const preferences = context.projectContexts.some(ctx => ctx.taskSelectionHints.length || ctx.nonGoals.length || ctx.userCorrections.length) ? 1 : 0
+  const dimensions: AIClarificationCoverage['dimensions'] = {
+    impact,
+    energy_fit: energyFit,
+    stakeholders,
+    dependencies,
+    history,
+    preferences,
+    project_meaning: projectMeaning,
+    task_context: taskContext,
+  }
+  const weights: Record<keyof typeof dimensions, number> = {
+    impact: 0.22,
+    project_meaning: 0.20,
+    task_context: 0.16,
+    stakeholders: 0.14,
+    dependencies: 0.12,
+    history: 0.08,
+    energy_fit: 0.05,
+    preferences: 0.03,
+  }
+  const score = Object.entries(dimensions).reduce((sum, [key, value]) => {
+    return sum + (weights[key as keyof typeof weights] ?? 0) * Number(value ?? 0)
+  }, 0)
+  const missing = Object.entries(dimensions)
+    .filter(([key, value]) => Number(value ?? 0) < (key === 'preferences' ? 0.2 : 0.45))
+    .map(([key]) => key as AIClarificationCoverage['missing'][number])
+  const materiality: AIClarificationCoverage['materiality'] = context.tasks.length >= 3 ? 'high' : 'medium'
+  const roundedScore = Number(score.toFixed(3))
+  const decision: AIClarificationCoverage['decision'] = roundedScore < 0.5 && materiality === 'high'
+    ? 'ask'
+    : roundedScore < 0.8
+      ? 'proceed_with_uncertainty'
+      : 'proceed'
+  return {
+    score: roundedScore,
+    materiality,
+    dimensions,
+    missing,
+    decision,
   }
 }
 

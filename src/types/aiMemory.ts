@@ -98,6 +98,32 @@ export interface AIClarificationQuestion {
   relatedTaskIds: string[]
 }
 
+export type AIUncertaintyDimension =
+  | 'impact'
+  | 'energy_fit'
+  | 'stakeholders'
+  | 'dependencies'
+  | 'history'
+  | 'preferences'
+  | 'project_meaning'
+  | 'task_context'
+
+export type AIClarificationPathType =
+  | 'clarify_first'
+  | 'generated_with_uncertainty'
+  | 'showed_candidates'
+  | 'pause_save'
+  | 'context_sufficient'
+  | 'memory_timeout'
+
+export interface AIClarificationCoverage {
+  score: number
+  materiality: 'low' | 'medium' | 'high'
+  dimensions: Partial<Record<AIUncertaintyDimension, number>>
+  missing: AIUncertaintyDimension[]
+  decision: 'ask' | 'proceed_with_uncertainty' | 'proceed' | 'neutral_candidates'
+}
+
 export interface AIClarificationArtifact {
   schemaVersion: 'ai-clarification.v1'
   kind: 'weekly_planning' | 'response_quality'
@@ -109,6 +135,21 @@ export interface AIClarificationArtifact {
   candidateTaskIds: string[]
   actions: Array<'generate_current' | 'show_candidates' | 'pause_save'>
   memoryKey: string
+  coverage?: AIClarificationCoverage
+  pathType?: AIClarificationPathType
+  debug?: {
+    retrieval: {
+      source: 'exact_entity_lookup' | 'legacy_context' | 'fallback'
+      entityKeyCount: number
+      eventCount: number
+      projectContextCount: number
+      taskContextCount: number
+      elapsedMs?: number
+      timedOut?: boolean
+    }
+    reason: string
+    candidateCount: number
+  }
 }
 
 export interface AIContextEntity {
@@ -127,6 +168,12 @@ export interface AIContextEntity {
   lastAnsweredAt?: string | null
   askCount: number
   staleAfter?: string | null
+  memoryType?: 'semantic' | 'episodic_summary' | 'preference' | 'procedural' | null
+  scope?: 'user' | 'project' | 'task' | 'week' | 'workflow' | null
+  reinforcementCount?: number
+  lastReinforcedAt?: string | null
+  relatedEntities?: string[]
+  decayScore?: number | null
 }
 
 export interface AIClarificationEvent {
@@ -141,6 +188,10 @@ export interface AIClarificationEvent {
   freeText?: string | null
   memoryPatch?: AIMemoryPatch | null
   sourceMessageId?: string | null
+  coverageScoreAtTime?: number | null
+  uncertaintyDimensions?: AIUncertaintyDimension[] | null
+  pathType?: AIClarificationPathType | null
+  contextSnapshot?: Record<string, unknown> | null
   createdAt?: string | null
 }
 
@@ -156,4 +207,41 @@ export interface AIClarificationEventInput {
   freeText?: string
   memoryPatch?: AIMemoryPatch
   sourceMessageId?: string
+  coverageScoreAtTime?: number
+  uncertaintyDimensions?: AIUncertaintyDimension[]
+  pathType?: AIClarificationPathType
+  contextSnapshot?: Record<string, unknown>
+}
+
+export interface AIRecommendationFeedbackInput {
+  generatedPlanId?: string
+  recommendationId: string
+  taskId?: string
+  entityKey?: string
+  action: 'accept' | 'timeblock' | 'postpone' | 'dismiss' | 'simplify' | 'explain'
+  reasonCategory?: 'too_hard' | 'low_energy' | 'not_important' | 'wrong_context' | 'already_done' | 'needs_more_info' | 'too_much' | 'other'
+  freeText?: string
+  revisitAt?: string | null
+  outcomeSignals?: Record<string, unknown>
+  implicitPositive?: boolean
+  sourceMessageId?: string
+}
+
+export interface AIContextEdgeInput {
+  sourceEntityKey: string
+  targetEntityKey: string
+  relationType:
+    | 'belongs_to'
+    | 'blocks'
+    | 'blocked_by'
+    | 'follow_up'
+    | 'corrected_by'
+    | 'similar_to'
+    | 'part_of_week'
+    | 'preference_affects'
+    | 'mentioned_with'
+  confidence?: number
+  evidence?: Record<string, unknown>
+  sourceEventId?: string
+  validUntil?: string | null
 }

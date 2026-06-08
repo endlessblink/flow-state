@@ -1786,6 +1786,11 @@ export function useAIChat() {
         let weekMemory: WeekContextMemoryInput = {}
         let clarificationEvents: AIClarificationEvent[] = []
         const now = new Date()
+        const memoryStartedAt = performance.now()
+        let memoryTimedOut = false
+        let memoryEntityKeyCount = 0
+        let memoryProjectContextCount = 0
+        let memoryTaskContextCount = 0
         try {
           const db = useSupabaseDatabase()
           const taskIds = uniqueSupabaseIds(cardTasks.map(task => String(task.id || '')))
@@ -1801,6 +1806,7 @@ export function useAIChat() {
           const projectEntityKeys = rawProjectIds.map(projectEntityKey)
           const weekEntityKey = `week:${buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, now).weekStartIso}`
           const entityKeys = uniqueStrings([...projectEntityKeys, ...taskEntityKeys, weekEntityKey])
+          memoryEntityKeyCount = entityKeys.length
           const [projectContexts, taskContexts, contextEntities, events] = await withTimeout(Promise.all([
             db.fetchProjectContexts(projectIds),
             db.fetchTaskContexts(taskIds),
@@ -1816,14 +1822,54 @@ export function useAIChat() {
             taskContexts: [...taskContexts, ...entityTaskContexts]
               .filter((ctx, index, all) => all.findIndex(item => item.taskId === ctx.taskId) === index),
           }
+          memoryProjectContextCount = weekMemory.projectContexts?.length ?? 0
+          memoryTaskContextCount = weekMemory.taskContexts?.length ?? 0
+          await db.upsertAIContextEdges([
+            ...cardTasks.flatMap(task => {
+              const taskId = String(task.id || '')
+              if (!taskId) return []
+              const projectId = taskStore.getTask(taskId)?.projectId || String(task.projectId || '') || 'uncategorized'
+              return [
+                {
+                  sourceEntityKey: taskEntityKey(taskId),
+                  targetEntityKey: projectEntityKey(projectId),
+                  relationType: 'belongs_to' as const,
+                  confidence: 0.95,
+                  evidence: { source: 'weekly_plan_candidates' },
+                },
+                {
+                  sourceEntityKey: taskEntityKey(taskId),
+                  targetEntityKey: weekEntityKey,
+                  relationType: 'part_of_week' as const,
+                  confidence: 0.7,
+                  evidence: { source: 'weekly_plan_candidates' },
+                },
+              ]
+            }),
+          ])
         } catch (memoryErr) {
           console.warn('[AIChat:WeeklyPlan] Memory fetch skipped or timed out:', memoryErr)
           updateChatPhase(phaseActivityId, 'Memory skipped', 'Using task data now')
+          memoryTimedOut = true
           weekMemory = {}
         }
         updateChatPhase(phaseActivityId, 'Checking needed context', `${cardTasks.length} task candidates`)
         const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, now, weekMemory)
-        const clarification = buildWeeklyPlanningInterview(weekContext, clarificationEvents)
+        const clarification = buildWeeklyPlanningInterview(weekContext, clarificationEvents, {
+          retrieval: {
+            source: memoryTimedOut ? 'fallback' : 'exact_entity_lookup',
+            entityKeyCount: memoryEntityKeyCount,
+            eventCount: clarificationEvents.length,
+            projectContextCount: memoryProjectContextCount,
+            taskContextCount: memoryTaskContextCount,
+            elapsedMs: Math.round(performance.now() - memoryStartedAt),
+            timedOut: memoryTimedOut,
+          },
+          reason: memoryTimedOut
+            ? 'memory retrieval timed out; ask-before-plan prevents fake certainty'
+            : 'coverage score says a missing context dimension would materially change ranking',
+          candidateCount: cardTasks.length,
+        })
         if (clarification) {
           if (lastMsg && lastMsg.isStreaming) {
             lastMsg.content = ''
@@ -1843,6 +1889,14 @@ export function useAIChat() {
               eventType: 'asked',
               question: clarification.question.question,
               sourceMessageId: lastMsg?.id,
+              coverageScoreAtTime: clarification.coverage?.score,
+              uncertaintyDimensions: clarification.coverage?.missing,
+              pathType: clarification.pathType,
+              contextSnapshot: {
+                candidateTaskIds: clarification.candidateTaskIds,
+                coverage: clarification.coverage,
+                retrieval: clarification.debug?.retrieval,
+              },
             })
           } catch (eventErr) {
             console.warn('[AIChat:WeeklyPlan] Could not record clarification ask:', eventErr)

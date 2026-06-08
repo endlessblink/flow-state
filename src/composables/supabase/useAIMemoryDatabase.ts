@@ -2,7 +2,9 @@ import type {
   AIClarificationEvent,
   AIClarificationEventInput,
   AIContextEntity,
+  AIContextEdgeInput,
   AIMemoryPatch,
+  AIRecommendationFeedbackInput,
   ProjectContext,
   TaskContext,
 } from '@/types/aiMemory'
@@ -65,6 +67,12 @@ type AIContextEntityRow = {
   last_answered_at?: string | null
   ask_count?: number
   stale_after?: string | null
+  memory_type?: AIContextEntity['memoryType']
+  scope?: AIContextEntity['scope']
+  reinforcement_count?: number
+  last_reinforced_at?: string | null
+  related_entities?: unknown
+  decay_score?: number | null
 }
 
 type AIClarificationEventRow = {
@@ -79,6 +87,10 @@ type AIClarificationEventRow = {
   free_text?: string | null
   memory_patch?: AIMemoryPatch | null
   source_message_id?: string | null
+  coverage_score_at_time?: number | null
+  uncertainty_dimensions?: unknown
+  path_type?: AIClarificationEvent['pathType']
+  context_snapshot?: Record<string, unknown> | null
   created_at?: string | null
 }
 
@@ -198,6 +210,12 @@ function toAIContextEntity(row: AIContextEntityRow): AIContextEntity {
     lastAnsweredAt: row.last_answered_at ?? null,
     askCount: Number(row.ask_count ?? 0),
     staleAfter: row.stale_after ?? null,
+    memoryType: row.memory_type ?? null,
+    scope: row.scope ?? null,
+    reinforcementCount: Number(row.reinforcement_count ?? 0),
+    lastReinforcedAt: row.last_reinforced_at ?? null,
+    relatedEntities: stringArray(row.related_entities),
+    decayScore: typeof row.decay_score === 'number' ? row.decay_score : row.decay_score == null ? null : Number(row.decay_score),
   }
 }
 
@@ -214,6 +232,10 @@ function toAIClarificationEvent(row: AIClarificationEventRow): AIClarificationEv
     freeText: row.free_text ?? null,
     memoryPatch: row.memory_patch ?? null,
     sourceMessageId: row.source_message_id ?? null,
+    coverageScoreAtTime: row.coverage_score_at_time == null ? null : Number(row.coverage_score_at_time),
+    uncertaintyDimensions: stringArray(row.uncertainty_dimensions) as AIClarificationEvent['uncertaintyDimensions'],
+    pathType: row.path_type ?? null,
+    contextSnapshot: row.context_snapshot ?? null,
     createdAt: row.created_at ?? null,
   }
 }
@@ -279,6 +301,14 @@ function mergeFactPatch(facts: Record<string, unknown>, patch?: AIMemoryPatch, f
   }
   if (freeText) next.whyItMatters = freeText
   return next
+}
+
+function aiEntityScope(entityType: AIContextEntity['entityType']): AIContextEntity['scope'] {
+  if (entityType === 'project' || entityType === 'synthetic_group') return 'project'
+  if (entityType === 'task') return 'task'
+  if (entityType === 'week') return 'week'
+  if (entityType === 'workflow') return 'workflow'
+  return 'user'
 }
 
 function clarificationAnsweredRecently(events: AIClarificationEvent[], cooldownDays: number): boolean {
@@ -465,6 +495,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
             last_asked_at: input.eventType === 'asked' ? now : existing?.last_asked_at ?? null,
             last_answered_at: input.eventType === 'answered' ? now : existing?.last_answered_at ?? null,
             ask_count: Number(existing?.ask_count ?? 0) + (input.eventType === 'asked' ? 1 : 0),
+            memory_type: existing?.memory_type ?? (input.entityType === 'preference' ? 'preference' : 'semantic'),
+            scope: existing?.scope ?? aiEntityScope(input.entityType),
+            reinforcement_count: Number(existing?.reinforcement_count ?? 0) + (input.eventType === 'answered' ? 1 : 0),
+            last_reinforced_at: input.eventType === 'answered' ? now : existing?.last_reinforced_at ?? null,
           }, { onConflict: 'user_id,entity_key' })
         if (upsertError) throw upsertError
 
@@ -482,12 +516,82 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
             free_text: input.freeText,
             memory_patch: input.memoryPatch ?? null,
             source_message_id: input.sourceMessageId,
+            coverage_score_at_time: input.coverageScoreAtTime,
+            uncertainty_dimensions: input.uncertaintyDimensions ?? [],
+            path_type: input.pathType,
+            context_snapshot: input.contextSnapshot,
           })
         if (eventError) throw eventError
       }, 'recordAIClarificationEvent')
       invalidateCache.all()
     } catch (e) {
       handleError(e, 'recordAIClarificationEvent')
+      throw e
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
+  const recordAIRecommendationFeedback = async (input: AIRecommendationFeedbackInput): Promise<void> => {
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) throw new Error('Cannot save AI recommendation feedback without an authenticated user.')
+    try {
+      isSyncing.value = true
+      await withRetry(async () => {
+        const { error } = await getSupabase()
+          .from('ai_recommendation_feedback')
+          .insert({
+            user_id: userId,
+            generated_plan_id: input.generatedPlanId,
+            recommendation_id: input.recommendationId,
+            task_id: input.taskId && isSupabaseUuid(input.taskId) ? input.taskId : null,
+            entity_key: input.entityKey,
+            action: input.action,
+            reason_category: input.reasonCategory,
+            free_text: input.freeText,
+            revisit_at: input.revisitAt,
+            outcome_signals: input.outcomeSignals ?? {},
+            implicit_positive: Boolean(input.implicitPositive),
+            source_message_id: input.sourceMessageId,
+          })
+        if (error) throw error
+      }, 'recordAIRecommendationFeedback')
+      invalidateCache.all()
+    } catch (e) {
+      handleError(e, 'recordAIRecommendationFeedback')
+      throw e
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
+  const upsertAIContextEdges = async (edges: AIContextEdgeInput[]): Promise<void> => {
+    const cleanEdges = edges.filter(edge => edge.sourceEntityKey && edge.targetEntityKey && edge.relationType)
+    if (!cleanEdges.length) return
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) throw new Error('Cannot save AI context edges without an authenticated user.')
+    try {
+      isSyncing.value = true
+      await withRetry(async () => {
+        const { error } = await getSupabase()
+          .from('ai_context_edges')
+          .upsert(cleanEdges.map(edge => ({
+            user_id: userId,
+            source_entity_key: edge.sourceEntityKey,
+            target_entity_key: edge.targetEntityKey,
+            relation_type: edge.relationType,
+            confidence: Math.max(0, Math.min(1, edge.confidence ?? 0.6)),
+            evidence: edge.evidence ?? {},
+            source_event_id: edge.sourceEventId && isSupabaseUuid(edge.sourceEventId) ? edge.sourceEventId : null,
+            valid_until: edge.validUntil,
+          })), { onConflict: 'user_id,source_entity_key,target_entity_key,relation_type' })
+        if (error) throw error
+      }, 'upsertAIContextEdges')
+      invalidateCache.all()
+    } catch (e) {
+      handleError(e, 'upsertAIContextEdges')
       throw e
     } finally {
       isSyncing.value = false
@@ -600,6 +704,8 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     fetchAIClarificationEvents,
     shouldAskClarification,
     recordAIClarificationEvent,
+    recordAIRecommendationFeedback,
+    upsertAIContextEdges,
     applyAIMemoryPatch,
   }
 }

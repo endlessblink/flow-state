@@ -9,7 +9,7 @@ import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
-import { buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
+import { buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -685,6 +685,32 @@ describe('AI sidebar-first desktop experience', () => {
       field: 'domain',
       source: 'button_answer',
     })
+
+    const interview = buildWeeklyPlanningInterview(context, [], {
+      retrieval: {
+        source: 'exact_entity_lookup',
+        entityKeyCount: 4,
+        eventCount: 0,
+        projectContextCount: 0,
+        taskContextCount: 0,
+        elapsedMs: 12,
+      },
+      reason: 'coverage score says context would change ranking',
+      candidateCount: 3,
+    })
+    expect(interview).toMatchObject({
+      schemaVersion: 'ai-clarification.v1',
+      pathType: 'clarify_first',
+      coverage: expect.objectContaining({
+        decision: 'ask',
+        materiality: 'high',
+      }),
+      debug: expect.objectContaining({
+        retrieval: expect.objectContaining({ entityKeyCount: 4, elapsedMs: 12 }),
+      }),
+    })
+    expect(interview?.coverage?.score).toBeLessThan(0.5)
+    expect(interview?.coverage?.missing).toEqual(expect.arrayContaining(['project_meaning']))
   })
 
   it('uses saved project context as ranking evidence instead of project-name guessing', () => {
@@ -870,7 +896,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('FINAL_FORMATTER_TIMEOUT_MS')
     expect(aiChat).toContain('WEEK_PLAN_STRUCTURED_TIMEOUT_MS = 8_000')
     expect(aiChat).toContain('isBridgeActive() && isWeekPlan')
-    expect(aiChat).toContain('buildWeeklyPlanningInterview(weekContext, clarificationEvents)')
+    expect(aiChat).toContain('buildWeeklyPlanningInterview(weekContext, clarificationEvents, {')
     expect(aiChat).toContain('timeout: WEEK_PLAN_STRUCTURED_TIMEOUT_MS')
     expect(aiChat).toContain('} else if (isBridgeActive())')
     expect(aiChat).not.toContain('const immediateFallback = buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
@@ -1221,7 +1247,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('parseWeeklyPlanOutput')
     expect(aiChat).toContain('fetchProjectContexts(projectIds)')
     expect(aiChat).toContain('fetchTaskContexts(taskIds)')
-    expect(aiChat).toContain('const clarification = buildWeeklyPlanningInterview(weekContext, clarificationEvents)')
+    expect(aiChat).toContain('const clarification = buildWeeklyPlanningInterview(weekContext, clarificationEvents, {')
     expect(aiChat).toContain('clarification,')
     expect(aiChat).toContain('recordAIClarificationEvent')
     expect(aiChat).toContain('weeklyPlan: finalPlan')
@@ -1255,8 +1281,13 @@ describe('AI sidebar-first desktop experience', () => {
     expect(chatMessage).toContain('Grounded task-evidence plan')
     expect(chatMessage).toContain('applyWeeklyQuestion')
     expect(chatMessage).toContain('applyAIMemoryPatch')
+    expect(chatMessage).toContain('recordRecommendationFeedback')
+    expect(chatMessage).toContain('weekly-feedback-btn')
+    expect(chatMessage).toContain('Why ask?')
+    expect(chatMessage).toContain('clarificationDebugLines')
     expect(chatMessage).toContain('createTaskWithUndo')
     expect(src('src/services/ai/chatPersistence.ts')).toContain('weeklyPlan: m.metadata.weeklyPlan')
+    expect(src('src/services/ai/chatPersistence.ts')).toContain('clarification: m.metadata.clarification')
     expect(src('src/composables/useAIChat.ts')).toContain('fetchProjectContexts(projectIds)')
     expect(src('src/composables/useAIChat.ts')).toContain('fetchTaskContexts(taskIds)')
     expect(src('src/composables/useAIChat.ts')).toContain('uniqueSupabaseIds')
@@ -1265,11 +1296,17 @@ describe('AI sidebar-first desktop experience', () => {
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain("from('ai_context_entities')")
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain("from('ai_clarification_events')")
     expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('recordAIClarificationEvent')
+    expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('recordAIRecommendationFeedback')
+    expect(src('src/composables/supabase/useAIMemoryDatabase.ts')).toContain('upsertAIContextEdges')
     expect(src('supabase/migrations/20260608090000_ai_clarification_memory.sql')).toContain('create table if not exists public.ai_context_entities')
     expect(src('supabase/migrations/20260608090000_ai_clarification_memory.sql')).toContain('create table if not exists public.ai_clarification_events')
+    expect(src('supabase/migrations/20260608093000_ai_assistant_memory_metadata.sql')).toContain('create table if not exists public.ai_recommendation_feedback')
+    expect(src('supabase/migrations/20260608093000_ai_assistant_memory_metadata.sql')).toContain('create table if not exists public.ai_context_edges')
     expect(src('src/composables/useAIChat.ts')).toContain('LOW-OVERWHELM QUALITY CONTRACT')
     expect(src('src/composables/useAIChat.ts')).toContain('No greeting, throat-clearing, recap, motivational line, or generic productivity advice')
     expect(src('src/composables/useAIChat.ts')).toContain('if (clarification)')
+    expect(src('src/composables/useAIChat.ts')).toContain('coverageScoreAtTime: clarification.coverage?.score')
+    expect(src('src/composables/useAIChat.ts')).toContain('pathType: clarification.pathType')
     expect(src('src/composables/useAIChat.ts')).toContain('must not infer importance, stakes, work/personal category, or success criteria from project names alone')
     expect(aiChat).toContain('depends on:')
     expect(aiChat).toContain('connections:')

@@ -38,7 +38,7 @@ import { buildDayPlanTaskUpdates } from '@/services/ai/pipeline/dayPlan'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import type { WeeklyPlanOutput, WeeklyPlanRecommendation } from '@/services/ai/pipeline/weeklyPlan'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-import type { AIClarificationArtifact, AIClarificationQuestion, AIMemoryPatch } from '@/types/aiMemory'
+import type { AIClarificationArtifact, AIClarificationQuestion, AIMemoryPatch, AIRecommendationFeedbackInput } from '@/types/aiMemory'
 
 // ============================================================================
 // Props
@@ -87,6 +87,8 @@ const clarificationAnswers = ref<Record<string, string>>({})
 const clarificationFreeText = ref<Record<string, string>>({})
 const clarificationApplying = ref(false)
 const clarificationStatus = ref('')
+const recommendationFeedbackLoading = ref<Record<string, string>>({})
+const recommendationFeedbackStatus = ref<Record<string, string>>({})
 
 // Track which tasks have been actioned (for visual feedback)
 const completedTaskIds = ref<Set<string>>(new Set())
@@ -336,6 +338,99 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
     weeklyQuestionApplied.value[key] = weeklyPlan.value?.locale === 'he' ? 'הפעולה נכשלה' : 'Action failed'
   } finally {
     delete weeklyQuestionApplying.value[key]
+  }
+}
+
+function clarificationKey(card: AIClarificationArtifact): string {
+  return card.question.id || card.question.question
+}
+
+function clarificationActionLabel(action: AIClarificationArtifact['actions'][number], locale: 'he' | 'en'): string {
+  if (action === 'generate_current') return locale === 'he' ? 'להמשיך עם אי-ודאות' : 'Generate with current info'
+  if (action === 'show_candidates') return locale === 'he' ? 'להראות מועמדים בלבד' : 'Show candidates only'
+  return locale === 'he' ? 'להשהות ולשמור' : 'Pause and save'
+}
+
+function clarificationActionEvent(action: AIClarificationArtifact['actions'][number]) {
+  if (action === 'generate_current') return 'generated_with_uncertainty' as const
+  if (action === 'show_candidates') return 'showed_candidates' as const
+  return 'dismissed' as const
+}
+
+function clarificationDisplayName(card: AIClarificationArtifact): string {
+  const question = card.question
+  if (question.entityType === 'project' && question.entityId) {
+    return taskStore.getProjectDisplayName?.(question.entityId) || question.entityId
+  }
+  if (question.entityType === 'task' && question.entityId) {
+    return taskMap.value.get(question.entityId)?.title || question.entityId
+  }
+  return question.entityId || card.memoryKey
+}
+
+async function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEvent) {
+  event.stopPropagation()
+  if (clarificationApplying.value) return
+  const key = clarificationKey(card)
+  const selectedId = clarificationAnswers.value[key]
+  const note = clarificationFreeText.value[key]?.trim()
+  const option = card.question.options.find(item => item.id === selectedId)
+  if (!option && !note) return
+
+  clarificationApplying.value = true
+  clarificationStatus.value = ''
+  try {
+    if (option?.memoryPatch) {
+      await aiMemoryDb.applyAIMemoryPatch({
+        ...option.memoryPatch,
+        sourceMessageId: props.message.id,
+      })
+    }
+    await aiMemoryDb.recordAIClarificationEvent({
+      entityKey: card.memoryKey,
+      entityType: card.question.entityType ?? 'workflow',
+      displayName: clarificationDisplayName(card),
+      questionId: card.question.id,
+      eventType: 'answered',
+      question: card.question.question,
+      selectedOptionId: option?.id,
+      selectedLabel: option?.label,
+      freeText: note,
+      memoryPatch: option?.memoryPatch ? { ...option.memoryPatch, sourceMessageId: props.message.id } : undefined,
+      sourceMessageId: props.message.id,
+    })
+    clarificationStatus.value = card.locale === 'he' ? 'נשמר. אפשר לבקש שוב כדי להמשיך.' : 'Saved. Ask again to continue.'
+  } catch (err) {
+    console.error('[ChatMessage] Clarification save failed:', err)
+    clarificationStatus.value = card.locale === 'he' ? 'השמירה נכשלה' : 'Save failed'
+  } finally {
+    clarificationApplying.value = false
+  }
+}
+
+async function recordClarificationEscape(card: AIClarificationArtifact, action: AIClarificationArtifact['actions'][number], event: MouseEvent) {
+  event.stopPropagation()
+  if (clarificationApplying.value) return
+  clarificationApplying.value = true
+  clarificationStatus.value = ''
+  try {
+    await aiMemoryDb.recordAIClarificationEvent({
+      entityKey: card.memoryKey,
+      entityType: card.question.entityType ?? 'workflow',
+      displayName: clarificationDisplayName(card),
+      questionId: card.question.id,
+      eventType: clarificationActionEvent(action),
+      question: card.question.question,
+      sourceMessageId: props.message.id,
+    })
+    clarificationStatus.value = card.locale === 'he'
+      ? 'נשמר. השאלה לא תחזור מיד.'
+      : 'Saved. I will not ask this again right away.'
+  } catch (err) {
+    console.error('[ChatMessage] Clarification escape failed:', err)
+    clarificationStatus.value = card.locale === 'he' ? 'השמירה נכשלה' : 'Save failed'
+  } finally {
+    clarificationApplying.value = false
   }
 }
 
@@ -709,6 +804,7 @@ async function markTaskDone(taskId: string, event: MouseEvent) {
   try {
     await executeTool({ tool: 'update_task', parameters: { taskId, updates: { status: 'done' } } })
     completedTaskIds.value.add(taskId)
+    await recordRecommendationFeedbackForTask(taskId, 'accept', undefined, true)
   } catch (err) {
     console.error('[ChatMessage] Mark done failed:', err)
   } finally {
@@ -724,6 +820,7 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   try {
     await executeTool({ tool: 'start_timer', parameters: { taskId } })
     timerStartedTaskIds.value.add(taskId)
+    await recordRecommendationFeedbackForTask(taskId, 'timeblock', undefined, true)
   } catch (err) {
     console.error('[ChatMessage] Start timer failed:', err)
   } finally {
@@ -731,9 +828,95 @@ async function startTaskTimer(taskId: string, event: MouseEvent) {
   }
 }
 
-function dismissCardTask(taskId: string, event: MouseEvent) {
+async function dismissCardTask(taskId: string, event: MouseEvent) {
   event.stopPropagation()
   dismissedCardTaskIds.value = new Set([...dismissedCardTaskIds.value, taskId])
+  await recordRecommendationFeedbackForTask(taskId, 'dismiss', 'not_important')
+}
+
+function recommendationEntityKey(rec: WeeklyPlanRecommendation): string | undefined {
+  const task = taskMap.value.get(rec.primaryTaskId)
+  if (task?.projectId) return `project:${task.projectId}`
+  return rec.primaryTaskId ? `task:${rec.primaryTaskId}` : undefined
+}
+
+function feedbackStatusLabel(action: AIRecommendationFeedbackInput['action'], locale: 'he' | 'en'): string {
+  if (locale === 'he') {
+    if (action === 'postpone') return 'נדחה ונשמר כמשוב'
+    if (action === 'dismiss') return 'הוסר ונשמר כמשוב'
+    if (action === 'simplify') return 'נשמר: פחות עומס'
+    if (action === 'explain') return 'נשמר: צריך הסבר'
+    if (action === 'timeblock') return 'נשמר כאיתות חיובי'
+    return 'נשמר כמשוב'
+  }
+  if (action === 'postpone') return 'Postponed and saved as feedback'
+  if (action === 'dismiss') return 'Dismissed and saved as feedback'
+  if (action === 'simplify') return 'Saved: too much'
+  if (action === 'explain') return 'Saved: needs more info'
+  if (action === 'timeblock') return 'Saved as positive signal'
+  return 'Saved as feedback'
+}
+
+async function recordRecommendationFeedback(
+  rec: WeeklyPlanRecommendation,
+  action: AIRecommendationFeedbackInput['action'],
+  reasonCategory?: AIRecommendationFeedbackInput['reasonCategory'],
+  implicitPositive = false,
+) {
+  const key = `${rec.sectionId}:${action}`
+  if (recommendationFeedbackLoading.value[key]) return
+  recommendationFeedbackLoading.value[key] = action
+  try {
+    await aiMemoryDb.recordAIRecommendationFeedback({
+      generatedPlanId: weeklyPlan.value?.requestId,
+      recommendationId: rec.sectionId,
+      taskId: rec.primaryTaskId,
+      entityKey: recommendationEntityKey(rec),
+      action,
+      reasonCategory,
+      implicitPositive,
+      sourceMessageId: props.message.id,
+    })
+    if (action === 'dismiss') {
+      dismissedCardTaskIds.value = new Set([...dismissedCardTaskIds.value, ...weeklyPlanTaskIds(rec)])
+    }
+    recommendationFeedbackStatus.value[rec.sectionId] = feedbackStatusLabel(action, weeklyPlan.value?.locale ?? 'en')
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (!message.includes('authenticated user')) {
+      console.error('[ChatMessage] Recommendation feedback failed:', err)
+    }
+    recommendationFeedbackStatus.value[rec.sectionId] = weeklyPlan.value?.locale === 'he'
+      ? 'המשוב מקומי עד כניסה לחשבון'
+      : 'Feedback is local until signed in'
+  } finally {
+    delete recommendationFeedbackLoading.value[key]
+  }
+}
+
+function clarificationDebugLines(card: AIClarificationArtifact): string[] {
+  const lines: string[] = []
+  if (card.coverage) {
+    lines.push(`coverage ${Math.round(card.coverage.score * 100)}% / ${card.coverage.materiality}`)
+    if (card.coverage.missing.length) lines.push(`missing: ${card.coverage.missing.join(', ')}`)
+  }
+  if (card.debug?.retrieval) {
+    const retrieval = card.debug.retrieval
+    lines.push(`memory: ${retrieval.entityKeyCount} keys, ${retrieval.eventCount} events, ${retrieval.elapsedMs ?? '?'}ms${retrieval.timedOut ? ', timed out' : ''}`)
+  }
+  if (card.debug?.reason) lines.push(card.debug.reason)
+  return lines
+}
+
+async function recordRecommendationFeedbackForTask(
+  taskId: string,
+  action: AIRecommendationFeedbackInput['action'],
+  reasonCategory?: AIRecommendationFeedbackInput['reasonCategory'],
+  implicitPositive = false,
+) {
+  const rec = weeklyPlanRecommendationForTask(taskId)
+  if (!rec) return
+  await recordRecommendationFeedback(rec, action, reasonCategory, implicitPositive)
 }
 
 async function applyDayPlan(event: MouseEvent) {
@@ -909,9 +1092,81 @@ async function saveSchedule() {
         <span class="thinking-label">{{ thinkingLabel }}</span>
       </div>
 
+      <!-- Clarification Card — one low-overwhelm question before broad planning. -->
+      <article
+        v-if="clarification"
+        class="ai-clarification-message"
+        :lang="clarification.locale"
+        :dir="clarification.direction"
+        data-testid="ai-clarification"
+      >
+        <header class="ai-clarification-header">
+          <div class="weekly-plan-source">{{ clarification.progressLabel }}</div>
+          <h2>{{ clarification.locale === 'he' ? 'שאלה קצרה לפני התכנון' : 'Quick question before planning' }}</h2>
+          <p>{{ clarification.summary }}</p>
+          <details v-if="clarificationDebugLines(clarification).length" class="ai-debug-details">
+            <summary>{{ clarification.locale === 'he' ? 'למה אני שואל?' : 'Why ask?' }}</summary>
+            <ul>
+              <li v-for="line in clarificationDebugLines(clarification)" :key="line">{{ line }}</li>
+            </ul>
+          </details>
+        </header>
+
+        <section class="weekly-plan-questions">
+          <div class="weekly-plan-question">
+            <p>{{ clarification.question.question }}</p>
+            <div v-if="clarification.question.options?.length" class="weekly-question-options">
+              <button
+                v-for="option in clarification.question.options"
+                :key="option.id"
+                type="button"
+                class="weekly-question-option"
+                :class="{ selected: clarificationAnswers[clarificationKey(clarification)] === option.id }"
+                :title="option.effect"
+                @click="clarificationAnswers[clarificationKey(clarification)] = option.id"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+            <textarea
+              v-if="clarification.question.allowFreeText"
+              v-model="clarificationFreeText[clarificationKey(clarification)]"
+              class="weekly-question-free-text"
+              :placeholder="clarification.question.freeTextPlaceholder || (clarification.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...')"
+              rows="2"
+            />
+            <div class="weekly-question-action-row">
+              <button
+                type="button"
+                class="weekly-question-apply"
+                :disabled="clarificationApplying || (!clarificationAnswers[clarificationKey(clarification)] && !clarificationFreeText[clarificationKey(clarification)]?.trim())"
+                @click="saveClarificationAnswer(clarification, $event)"
+              >
+                <Loader2 v-if="clarificationApplying" :size="13" class="spin" />
+                <CheckCircle2 v-else :size="13" />
+                {{ clarification.locale === 'he' ? 'שמור תשובה' : 'Save answer' }}
+              </button>
+              <button
+                v-for="action in clarification.actions"
+                :key="action"
+                type="button"
+                class="weekly-question-escape"
+                :disabled="clarificationApplying"
+                @click="recordClarificationEscape(clarification, action, $event)"
+              >
+                {{ clarificationActionLabel(action, clarification.locale) }}
+              </button>
+              <span v-if="clarificationStatus" class="weekly-question-status">
+                {{ clarificationStatus }}
+              </span>
+            </div>
+          </div>
+        </section>
+      </article>
+
       <!-- Structured Weekly Plan — rendered from task IDs, not markdown cards. -->
       <article
-        v-if="weeklyPlan"
+        v-else-if="weeklyPlan"
         class="weekly-plan-message"
         :lang="weeklyPlan.locale"
         :dir="weeklyPlan.direction"
@@ -1000,6 +1255,43 @@ async function saveSchedule() {
             <strong>{{ weeklyPlan.locale === 'he' ? 'הצעד הבא' : 'Next action' }}:</strong>
             {{ rec.nextAction }}
           </p>
+          <div class="weekly-feedback-row" @click.stop>
+            <button
+              type="button"
+              class="weekly-feedback-btn"
+              :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:accept`])"
+              @click="recordRecommendationFeedback(rec, 'accept', undefined, true)"
+            >
+              {{ weeklyPlan.locale === 'he' ? 'קבל' : 'Accept' }}
+            </button>
+            <button
+              type="button"
+              class="weekly-feedback-btn"
+              :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:postpone`])"
+              @click="recordRecommendationFeedback(rec, 'postpone', 'low_energy')"
+            >
+              {{ weeklyPlan.locale === 'he' ? 'דחה' : 'Postpone' }}
+            </button>
+            <button
+              type="button"
+              class="weekly-feedback-btn"
+              :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:dismiss`])"
+              @click="recordRecommendationFeedback(rec, 'dismiss', 'not_important')"
+            >
+              {{ weeklyPlan.locale === 'he' ? 'לא חשוב' : 'Not important' }}
+            </button>
+            <button
+              type="button"
+              class="weekly-feedback-btn"
+              :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:simplify`])"
+              @click="recordRecommendationFeedback(rec, 'simplify', 'too_much')"
+            >
+              {{ weeklyPlan.locale === 'he' ? 'יותר מדי' : 'Too much' }}
+            </button>
+            <span v-if="recommendationFeedbackStatus[rec.sectionId]" class="weekly-question-status">
+              {{ recommendationFeedbackStatus[rec.sectionId] }}
+            </span>
+          </div>
 
           <div class="weekly-plan-cards">
             <template v-for="taskId in weeklyPlanTaskIds(rec)" :key="`${rec.sectionId}:${taskId}`">
@@ -2485,7 +2777,8 @@ async function saveSchedule() {
    Structured Weekly Plan
    ============================================================================ */
 
-.weekly-plan-message {
+.weekly-plan-message,
+.ai-clarification-message {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -2495,13 +2788,15 @@ async function saveSchedule() {
   overflow-anchor: none;
 }
 
-.weekly-plan-header {
+.weekly-plan-header,
+.ai-clarification-header {
   display: flex;
   flex-direction: column;
   gap: var(--space-1_5);
 }
 
-.weekly-plan-header h2 {
+.weekly-plan-header h2,
+.ai-clarification-header h2 {
   margin: 0;
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
@@ -2509,11 +2804,29 @@ async function saveSchedule() {
 }
 
 .weekly-plan-header p,
+.ai-clarification-header p,
 .weekly-plan-questions p,
 .weekly-plan-section p,
 .weekly-plan-footer p {
   margin-block: 0;
   color: var(--text-secondary);
+}
+
+.ai-debug-details {
+  margin-block-start: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.ai-debug-details summary {
+  width: max-content;
+  cursor: pointer;
+  color: var(--text-tertiary);
+}
+
+.ai-debug-details ul {
+  margin: var(--space-1) 0 0;
+  padding-inline-start: var(--space-4);
 }
 
 .weekly-plan-source {
@@ -2572,6 +2885,39 @@ async function saveSchedule() {
 
 .weekly-next-action {
   color: var(--text-primary) !important;
+}
+
+.weekly-feedback-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1_5);
+}
+
+.weekly-feedback-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding-block: var(--space-0_5);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.weekly-feedback-btn:hover {
+  border-color: var(--glass-border-strong);
+  color: var(--text-primary);
+  background: var(--glass-bg-soft);
+}
+
+.weekly-feedback-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .weekly-plan-cards {
@@ -2666,6 +3012,32 @@ async function saveSchedule() {
 }
 
 .weekly-question-apply:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.weekly-question-escape {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.weekly-question-escape:hover {
+  border-color: var(--glass-border-strong);
+  color: var(--text-primary);
+  background: var(--glass-bg-soft);
+}
+
+.weekly-question-escape:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }

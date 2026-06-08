@@ -162,6 +162,7 @@ export async function saveConversationToSupabase(conversation: Conversation): Pr
         latencyMs: m.metadata.latencyMs,
         forceDirection: m.metadata.forceDirection,
         weeklyPlan: m.metadata.weeklyPlan,
+        clarification: m.metadata.clarification,
         scheduleQuestion: m.metadata.scheduleQuestion,
       } : undefined,
       // actions intentionally omitted (function handlers)

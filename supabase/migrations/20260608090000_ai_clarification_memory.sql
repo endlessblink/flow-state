@@ -9,8 +9,8 @@ create table if not exists public.ai_context_entities (
   entity_type text not null
     check (entity_type in ('project','task','week','preference','synthetic_group','workflow')),
   display_name text not null,
-  canonical_project_id uuid references public.projects(id) on delete set null,
-  canonical_task_id uuid references public.tasks(id) on delete set null,
+  canonical_project_id text references public.projects(id) on delete set null,
+  canonical_task_id text references public.tasks(id) on delete set null,
   summary text,
   facts jsonb not null default '{}'::jsonb,
   corrections jsonb not null default '[]'::jsonb,

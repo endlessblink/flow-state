@@ -24,7 +24,7 @@ create table if not exists public.ai_recommendation_feedback (
   user_id uuid references auth.users(id) on delete cascade not null,
   generated_plan_id text,
   recommendation_id text not null,
-  task_id uuid references public.tasks(id) on delete set null,
+  task_id text references public.tasks(id) on delete set null,
   entity_key text,
   action text not null
     check (action in ('accept','timeblock','postpone','dismiss','simplify','explain')),

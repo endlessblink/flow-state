@@ -230,6 +230,7 @@
 - 2026-06-08: Broad clarification now uses heuristic EVPI candidate scoring instead of a single hardcoded mode prompt. It scores targeted parameters, skips recently resolved prompt variants, records selected score/user cost/candidate metadata in debug, and can ask the next high-value missing dimension without repeating the same generic ranking-focus question.
 - 2026-06-08: Weekly planning retrieval now loads scoped `ai_parameter_beliefs` and uses them in coverage/EVPI scoring. Week/preference beliefs can raise impact or preference confidence, but project meaning and task context still require project/task-scoped evidence, so one broad answer cannot fake full project understanding.
 - 2026-06-08: Broad EVPI prompt selection now refuses below-threshold fallback questions. If coverage says high-materiality context is missing but no available prompt actually targets that missing dimension with enough information value, the clarification builder returns no weak card instead of asking an unrelated low-value question just because it appears in the prompt list.
+- 2026-06-08: Weekly EVPI selection now has the same below-threshold guard as broad clarification: if no non-repeated weekly question clears the EVPI ask threshold, the interview returns no card instead of falling back to any available question. Weekly coverage also consumes saved stakeholder/commitment beliefs, and regression coverage proves high-confidence weekly/stakeholder beliefs suppress a weak week-priority re-ask.
 
 ---
 

@@ -1097,7 +1097,6 @@ function selectHighestEVPIQuestion(
       return questionPriority(b.reason, preferredReasons) - questionPriority(a.reason, preferredReasons)
     })
   const selected = scored.find(candidate => !candidate.skippedReason && candidate.selectedScore > CLARIFICATION_EVPI_ASK_THRESHOLD)
-    ?? scored.find(candidate => !candidate.skippedReason)
   if (!selected) return null
   return {
     question: selected.question,
@@ -1244,7 +1243,7 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
   const dimensions: AIClarificationCoverage['dimensions'] = {
     impact: Math.max(impact, strongestBelief([...projectBeliefs, ...taskBeliefs, ...weekAndPreferenceBeliefs], ['impact', 'currentStakes', 'thisWeekImportance', 'stakeholders'])),
     energy_fit: Math.max(energyFit, strongestBelief([...taskBeliefs, ...weekAndPreferenceBeliefs], ['energy_fit', 'energy', 'workload', 'effort'])),
-    stakeholders,
+    stakeholders: Math.max(stakeholders, strongestBelief([...projectBeliefs, ...taskBeliefs, ...weekAndPreferenceBeliefs], ['stakeholders', 'commitments', 'currentStakes'])),
     dependencies: Math.max(dependencies, strongestBelief([...taskBeliefs, ...weekAndPreferenceBeliefs], ['dependencies', 'blocking', 'sequence'])),
     history: Math.max(history, strongestBelief([...taskBeliefs, ...weekAndPreferenceBeliefs], ['history', 'postponed', 'follow_through'])),
     preferences: Math.max(preferences, strongestBelief(weekAndPreferenceBeliefs, ['preferences', 'rankingFocus', 'taskSelectionHints', 'thisWeekImportance'])),

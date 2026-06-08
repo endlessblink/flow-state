@@ -1291,6 +1291,98 @@ describe('AI sidebar-first desktop experience', () => {
     expect(prompt).toContain('"parameterKey": "thisWeekImportance"')
   })
 
+  it('does not ask a weak weekly clarification when the only available question is below EVPI threshold', () => {
+    const tasks = [
+      {
+        id: 'loose-1',
+        title: 'Inbox item one',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: null,
+        projectId: undefined,
+        estimatedDuration: null,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'loose-2',
+        title: 'Inbox item two',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: null,
+        projectId: undefined,
+        estimatedDuration: null,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'loose-3',
+        title: 'Inbox item three',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: null,
+        projectId: undefined,
+        estimatedDuration: null,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+      {
+        parameterBeliefs: [
+          {
+            entityKey: 'week:2026-06-02',
+            entityType: 'week',
+            parameterKey: 'thisWeekImportance',
+            beliefJson: { value: 'client_money', selectedLabel: 'Client or money' },
+            confidence: 0.99,
+            impactWeight: 0.85,
+            updatedAt: '2026-06-07T08:30:00.000Z',
+          },
+          {
+            entityKey: 'workflow:weekly_planning',
+            entityType: 'workflow',
+            parameterKey: 'rankingFocus',
+            beliefJson: { value: 'real_consequence' },
+            confidence: 0.99,
+            impactWeight: 0.75,
+            updatedAt: '2026-06-07T08:30:00.000Z',
+          },
+          {
+            entityKey: 'week:2026-06-02',
+            entityType: 'week',
+            parameterKey: 'stakeholders',
+            beliefJson: { value: 'no external stakeholder this week' },
+            confidence: 0.99,
+            impactWeight: 0.8,
+            updatedAt: '2026-06-07T08:30:00.000Z',
+          },
+        ],
+      },
+    )
+
+    const interview = buildWeeklyPlanningInterview(context, [])
+
+    expect(context.tasks).toHaveLength(3)
+    expect(interview).toBeNull()
+  })
+
   it('uses saved project context as ranking evidence instead of project-name guessing', () => {
     const tasks = [
       {

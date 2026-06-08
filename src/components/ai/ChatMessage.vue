@@ -422,19 +422,25 @@ function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEven
   if (!option && !note) return
 
   clarificationSavedLocal.value[key] = true
-  if (note) {
+  const hasEnoughContextToContinue = Boolean(note) || card.kind === 'response_quality'
+  if (hasEnoughContextToContinue) {
     clarificationFollowUpSavedLocal.value[key] = true
   }
   clarificationStatus.value = card.locale === 'he'
     ? 'נשמר מקומית. מסנכרן ברקע...'
     : 'Saved locally. Syncing in the background...'
   void persistClarificationAnswer(card, option, note)
-  if (note) {
+  if (hasEnoughContextToContinue) {
     emit('continueChat', clarificationContinueMessage(card))
   }
 }
 
 function clarificationContinueMessage(card: AIClarificationArtifact): string {
+  if (card.kind === 'response_quality') {
+    return card.locale === 'he'
+      ? 'המשך עם התשובה לפי ההקשר ששמרתי עכשיו. תן תשובה קצרה וממוקדת, בלי רשימה ארוכה.'
+      : 'Continue with the answer using the context I just saved. Keep it short and focused, not a long list.'
+  }
   return card.locale === 'he'
     ? 'המשך לתכנן את השבוע עם ההקשר ששמרתי עכשיו. תן קודם תקציר קצר בלבד, בלי רשימה ארוכה.'
     : 'Continue planning the week using the context I just saved. Start with a short summary only, not a long list.'

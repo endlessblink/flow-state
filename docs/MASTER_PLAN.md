@@ -142,9 +142,9 @@
 
 ---
 
-### TASK-1835: Broaden memory-aware chat beyond weekly planning (📋 PLANNED)
+### TASK-1835: Broaden memory-aware chat beyond weekly planning (🔄 IN PROGRESS)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
 
 **Why**: The system should improve all FlowState chat answers over time, not only "plan my week." The assistant should remember user preferences, corrections, recurring project meanings, task-selection hints, and answer-quality feedback.
 
@@ -164,6 +164,9 @@
 - Stale context prompts are short, button-based, and respect cooldowns.
 - Retrieval remains selective: only relevant facts enter the model prompt, never raw memory dumps.
 - Cold-start behavior degrades gracefully to neutral candidates or one lightweight preference question.
+
+**Progress**:
+- 2026-06-08: Added a deterministic `response_quality` clarification card before high-materiality non-weekly task recommendations so day plans, smart lanes, and prioritization/overwhelm prompts can ask one button-based direction question instead of dumping broad prose.
 
 ---
 

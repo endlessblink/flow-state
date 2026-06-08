@@ -1394,6 +1394,75 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week')
   })
 
+  it('continues response-quality clarification with a non-weekly concise answer prompt', async () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-response-quality-clarification',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            clarification: {
+              schemaVersion: 'ai-clarification.v1',
+              kind: 'response_quality',
+              locale: 'en',
+              direction: 'ltr',
+              progressLabel: 'Clarifying direction • Step 1/1',
+              summary: 'One missing preference would change the recommendation.',
+              memoryKey: 'workflow:task_answer:day_plan',
+              pathType: 'clarify_first',
+              candidateTaskIds: ['task-a'],
+              actions: ['generate_current', 'show_candidates', 'pause_save'],
+              coverage: {
+                score: 0.46,
+                materiality: 'high',
+                dimensions: { preferences: 0.25, impact: 0.35 },
+                missing: ['preferences', 'impact'],
+                decision: 'ask',
+              },
+              question: {
+                id: 'response_quality_day_plan',
+                entityType: 'workflow',
+                entityId: 'day_plan',
+                reason: 'missing_response_direction',
+                question: 'What should guide this answer?',
+                options: [{
+                  id: 'ranking_impact',
+                  label: 'Real impact',
+                  effect: 'Rank by real-world consequence.',
+                  memoryPatch: {
+                    entityType: 'workflow',
+                    entityId: 'day_plan',
+                    operation: 'set',
+                    field: 'rankingFocus',
+                    value: 'real impact or consequence',
+                    confidence: 0.9,
+                    source: 'button_answer',
+                  },
+                }],
+                allowFreeText: true,
+                relatedTaskIds: ['task-a'],
+              },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    await wrapper.get('.weekly-question-option').trigger('click')
+    await wrapper.get('.weekly-question-apply').trigger('click')
+    await nextTick()
+
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue with the answer using the context I just saved')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('week')
+  })
+
   it('keeps deterministic task answers from spinning forever when formatter output fails', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 
@@ -1750,6 +1819,12 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('auditChatResponseQuality')
     expect(aiChat).toContain('chatQuality: responseQuality')
     expect(aiChat).toContain('Repairing answer quality')
+    expect(aiChat).toContain('shouldAskBroadTaskClarification')
+    expect(aiChat).toContain('buildBroadTaskClarification')
+    expect(aiChat).toContain("kind: 'response_quality'")
+    expect(aiChat).toContain('What should guide this answer?')
+    expect(aiChat).toContain('broad task answer would otherwise rank')
+    expect(aiChat).toContain('workflow:task_answer:')
     expect(aiChat).toContain('buildWeeklyPlanPrompt')
     expect(aiChat).toContain('parseWeeklyPlanOutput')
     expect(aiChat).toContain('fetchProjectContexts(projectIds)')

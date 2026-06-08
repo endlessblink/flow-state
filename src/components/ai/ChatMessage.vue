@@ -909,7 +909,11 @@ async function saveSchedule() {
       >
         <header class="weekly-plan-header">
           <div v-if="weeklyPlan.source === 'quick_draft'" class="weekly-plan-source">
-            {{ weeklyPlan.locale === 'he' ? 'תוכנית מקורקעת מנתוני המשימות' : 'Grounded task-evidence plan' }}
+            {{
+              weeklyPlan.recommendations.length
+                ? (weeklyPlan.locale === 'he' ? 'תוכנית מקורקעת מנתוני המשימות' : 'Grounded task-evidence plan')
+                : (weeklyPlan.locale === 'he' ? 'ממתין להקשר אמין' : 'Waiting for reliable context')
+            }}
           </div>
           <h2>{{ weeklyPlan.headline }}</h2>
           <p>{{ weeklyPlan.weekRead.summary }}</p>

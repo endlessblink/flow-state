@@ -1,4 +1,5 @@
 export type AIMemoryEntityType = 'project' | 'task'
+export type AIContextEntityType = AIMemoryEntityType | 'week' | 'preference' | 'synthetic_group' | 'workflow'
 
 export type AIMemoryDomain =
   | 'work'
@@ -79,4 +80,80 @@ export interface AIMemoryQuestionOption {
   label: string
   effect: string
   memoryPatch?: AIMemoryPatch
+}
+
+export interface AIClarificationQuestion {
+  id: string
+  entityType?: AIContextEntityType
+  entityId?: string
+  reason: string
+  question: string
+  options: AIMemoryQuestionOption[]
+  allowFreeText?: boolean
+  freeTextPatch?: {
+    field: string
+    operation: 'set' | 'append'
+  }
+  freeTextPlaceholder?: string
+  relatedTaskIds: string[]
+}
+
+export interface AIClarificationArtifact {
+  schemaVersion: 'ai-clarification.v1'
+  kind: 'weekly_planning' | 'response_quality'
+  locale: 'he' | 'en'
+  direction: 'rtl' | 'ltr'
+  progressLabel: string
+  summary: string
+  question: AIClarificationQuestion
+  candidateTaskIds: string[]
+  actions: Array<'generate_current' | 'show_candidates' | 'pause_save'>
+  memoryKey: string
+}
+
+export interface AIContextEntity {
+  id?: string
+  entityKey: string
+  entityType: AIContextEntityType
+  displayName: string
+  canonicalProjectId?: string | null
+  canonicalTaskId?: string | null
+  summary?: string | null
+  facts: Record<string, unknown>
+  corrections: string[]
+  confidence: number
+  completenessScore: number
+  lastAskedAt?: string | null
+  lastAnsweredAt?: string | null
+  askCount: number
+  staleAfter?: string | null
+}
+
+export interface AIClarificationEvent {
+  id?: string
+  entityKey: string
+  entityType: AIContextEntityType
+  questionId: string
+  eventType: 'asked' | 'answered' | 'dismissed' | 'generated_with_uncertainty' | 'showed_candidates' | 'correction'
+  question?: string | null
+  selectedOptionId?: string | null
+  selectedLabel?: string | null
+  freeText?: string | null
+  memoryPatch?: AIMemoryPatch | null
+  sourceMessageId?: string | null
+  createdAt?: string | null
+}
+
+export interface AIClarificationEventInput {
+  entityKey: string
+  entityType: AIContextEntityType
+  displayName: string
+  questionId: string
+  eventType: AIClarificationEvent['eventType']
+  question?: string
+  selectedOptionId?: string
+  selectedLabel?: string
+  freeText?: string
+  memoryPatch?: AIMemoryPatch
+  sourceMessageId?: string
 }

@@ -52,6 +52,7 @@ import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirecti
 import { collectCardTasks, ensureCardTaskMentions, parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 import {
   buildQuickDraftWeeklyPlan,
+  buildWeeklyPlanReliabilityFallback,
   buildWeekContextFromToolResults,
   buildWeeklyPlanPrompt,
   parseWeeklyPlanOutput,
@@ -122,6 +123,7 @@ const activeProviderRef = ref<string | null>(null)
 const FINAL_FORMATTER_TIMEOUT_MS = 45_000
 const WEEK_PLAN_BRIDGE_FORMATTER_TIMEOUT_MS = 12_000
 const WEEK_PLAN_STRUCTURED_TIMEOUT_MS = 8_000
+const WEEK_PLAN_MEMORY_TIMEOUT_MS = 1_500
 
 // AI Personality mode
 const aiPersonality = ref<'professional' | 'grid_handler'>('professional')
@@ -457,6 +459,54 @@ export function useAIChat() {
       for (const taskId of taskIds) {
         window.dispatchEvent(new CustomEvent('task-action-flash', { detail: { taskId } }))
       }
+    }
+  }
+
+  function beginChatPhase(label: string, message?: string): string {
+    return store.addActivityEvent({
+      type: 'thinking',
+      status: 'running',
+      label,
+      message,
+      id: 'ai-chat-phase-live',
+    })
+  }
+
+  function updateChatPhase(activityId: string, label: string, message?: string): void {
+    store.updateActivityEvent(activityId, {
+      status: 'running',
+      label,
+      message,
+    })
+  }
+
+  function finishChatPhase(activityId: string, label = 'Response ready', message?: string): void {
+    store.updateActivityEvent(activityId, {
+      status: 'success',
+      label,
+      message,
+    })
+  }
+
+  function failChatPhase(activityId: string, label = 'Response failed', message?: string): void {
+    store.updateActivityEvent(activityId, {
+      status: 'failed',
+      label,
+      message,
+    })
+  }
+
+  async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
+        }),
+      ])
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
     }
   }
 
@@ -1499,16 +1549,19 @@ export function useAIChat() {
 
     // Start streaming response
     store.startStreamingMessage()
+    const phaseActivityId = beginChatPhase('Preparing response', activeProviderRef.value ? `Using ${activeProviderRef.value}` : undefined)
 
     try {
       // ── Step 1: Handle greeting (no tools, no LLM) ──────────────────
       if (routed.type === 'greeting') {
+        updateChatPhase(phaseActivityId, 'Answering directly', 'No tools needed')
         const greeting = getTemplate('greeting', outputLanguage)
         const lastMsg = store.messages[store.messages.length - 1]
         if (lastMsg && lastMsg.isStreaming) {
           lastMsg.content = greeting
           store.streamingContent = greeting
         }
+        finishChatPhase(phaseActivityId)
         store.completeStreamingMessage()
         return
       }
@@ -1516,6 +1569,7 @@ export function useAIChat() {
       // ── Step 2: Execute pre-built tool calls ────────────────────────
       const toolResults: ToolResult[] = []
       for (const call of routed.tools) {
+        updateChatPhase(phaseActivityId, 'Reading task data', call.tool.replace(/_/g, ' '))
         console.log(`[AIChat:Deterministic] Executing tool: ${call.tool}`, call.parameters)
         trackToolCall(sessionId, call.tool)
         const activityId = beginToolActivity(call)
@@ -1559,23 +1613,27 @@ export function useAIChat() {
       // ── Step 3: Handle errors ───────────────────────────────────────
       const failedTools = toolResults.filter(r => !r.success)
       if (failedTools.length > 0 && toolResults.every(r => !r.success)) {
+        updateChatPhase(phaseActivityId, 'Tool failed', failedTools[0].message)
         // All tools failed — show error template
         const errorMsg = getTemplate('tool_error', outputLanguage, failedTools[0].message)
         if (lastMsg && lastMsg.isStreaming) {
           lastMsg.content = errorMsg
           store.streamingContent = errorMsg
         }
+        failChatPhase(phaseActivityId, 'Tool failed', failedTools[0].message)
         store.completeStreamingMessage()
         return
       }
 
       // ── Step 4a: For skipLLM intents → template response ────────────
       if (routed.skipLLM) {
+        updateChatPhase(phaseActivityId, 'Formatting answer', 'Template response')
         const templateResponse = buildTemplateResponse({ ...routed, language: outputLanguage }, toolResults)
         if (lastMsg && lastMsg.isStreaming) {
           lastMsg.content = templateResponse
           store.streamingContent = templateResponse
         }
+        finishChatPhase(phaseActivityId)
         store.completeStreamingMessage()
         return
       }
@@ -1611,8 +1669,20 @@ export function useAIChat() {
 
       const languageName = languageNameFor(outputLanguage)
       const hasTaskList = collectCardTasks(toolResults).length > 0
-      if (hasTaskList) {
-        const memorySummary = await buildAIMemorySummaryForToolResults(toolResults, outputLanguage)
+      const isDayPlan = routed.responseMode === 'day_plan'
+      const isSmartLanes = routed.responseMode === 'smart_lanes'
+      const isWeeklyReview = routed.responseMode === 'weekly_review'
+      const isWeekPlan = routed.responseMode === 'week_plan'
+      if (hasTaskList && !isWeekPlan) {
+        updateChatPhase(phaseActivityId, 'Loading context memory', `${collectCardTasks(toolResults).length} task candidates`)
+        const memorySummary = await withTimeout(
+          buildAIMemorySummaryForToolResults(toolResults, outputLanguage),
+          WEEK_PLAN_MEMORY_TIMEOUT_MS,
+          'chat_memory_summary_timeout',
+        ).catch(memoryErr => {
+          console.warn('[AIChat:Deterministic] Memory summary skipped or timed out:', memoryErr)
+          return ''
+        })
         if (memorySummary) toolResultsSummary += `\n\n${memorySummary}`
       }
 
@@ -1629,11 +1699,8 @@ export function useAIChat() {
 
       // TASK-1814: structured `cards` block → grouped interactive cards with a reason
       // on each (rendered by ChatMessage). Only for bridge brains with a task list.
-      const isDayPlan = routed.responseMode === 'day_plan'
-      const isSmartLanes = routed.responseMode === 'smart_lanes'
-      const isWeeklyReview = routed.responseMode === 'weekly_review'
-      const isWeekPlan = routed.responseMode === 'week_plan'
       if (isWeekPlan && hasTaskList) {
+        updateChatPhase(phaseActivityId, 'Preparing weekly plan', 'Loading saved project context')
         const cardTasks = collectCardTasks(toolResults)
         let weekMemory: WeekContextMemoryInput = {}
         try {
@@ -1645,25 +1712,29 @@ export function useAIChat() {
               return id ? taskStore.getTask(id)?.projectId || String(task.projectId || '') : String(task.projectId || '')
             })
           )
-          const [projectContexts, taskContexts] = await Promise.all([
+          const [projectContexts, taskContexts] = await withTimeout(Promise.all([
             db.fetchProjectContexts(projectIds),
             db.fetchTaskContexts(taskIds),
-          ])
+          ]), WEEK_PLAN_MEMORY_TIMEOUT_MS, 'weekly_plan_memory_timeout')
           weekMemory = { projectContexts, taskContexts }
-        } catch {
+        } catch (memoryErr) {
+          console.warn('[AIChat:WeeklyPlan] Memory fetch skipped or timed out:', memoryErr)
+          updateChatPhase(phaseActivityId, 'Memory skipped', 'Using task data now')
           weekMemory = {}
         }
+        updateChatPhase(phaseActivityId, 'Building quick plan', `${cardTasks.length} task candidates`)
         const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, new Date(), weekMemory)
         const immediatePlan = buildQuickDraftWeeklyPlan(weekContext)
-        if (lastMsg && lastMsg.isStreaming) {
-          lastMsg.content = ''
-          store.streamingContent = ''
-          lastMsg.metadata = {
-            ...lastMsg.metadata,
-            weeklyPlan: immediatePlan,
-          } as Record<string, unknown>
-        }
         if (immediatePlan.recommendations.length === 0 && immediatePlan.openQuestions.length > 0) {
+          if (lastMsg && lastMsg.isStreaming) {
+            lastMsg.content = ''
+            store.streamingContent = ''
+            lastMsg.metadata = {
+              ...lastMsg.metadata,
+              weeklyPlan: immediatePlan,
+            } as Record<string, unknown>
+          }
+          finishChatPhase(phaseActivityId, 'Clarification ready', 'Waiting for one answer')
           store.completeStreamingMessage()
           return
         }
@@ -1671,6 +1742,7 @@ export function useAIChat() {
         let weeklyPlan: WeeklyPlanOutput | null = null
         let validationErrors: string[] = []
         try {
+          updateChatPhase(phaseActivityId, 'Refining plan', `Bridge timeout ${WEEK_PLAN_STRUCTURED_TIMEOUT_MS / 1000}s`)
           const structuredMessages: RouterChatMessage[] = [
             {
               role: 'system',
@@ -1726,7 +1798,7 @@ export function useAIChat() {
           validationErrors = [planErr instanceof Error ? planErr.message : 'provider_failed']
         }
 
-        const finalPlan = weeklyPlan ?? immediatePlan
+        const finalPlan = weeklyPlan ?? buildWeeklyPlanReliabilityFallback(weekContext, validationErrors)
         if (validationErrors.length && finalPlan.source === 'quick_draft') {
           finalPlan.quality.caveats = [...finalPlan.quality.caveats, ...validationErrors.slice(0, 3)]
         }
@@ -1739,6 +1811,7 @@ export function useAIChat() {
           } as Record<string, unknown>
         }
 
+        finishChatPhase(phaseActivityId, 'Weekly plan ready', finalPlan.source === 'quick_draft' ? 'Used quick plan' : 'Used structured plan')
         try {
           const currentRouter = await getRouter()
           const lastUsed = currentRouter.getLastUsedProvider()
@@ -1789,6 +1862,7 @@ export function useAIChat() {
 
       let formattedResponse = ''
       try {
+        updateChatPhase(phaseActivityId, 'Writing concise answer', activeProviderRef.value ? `Using ${activeProviderRef.value}` : undefined)
         for await (const chunk of router.chatStream(formatterMessages, {
           taskType: 'chat',
           forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
@@ -1884,11 +1958,13 @@ export function useAIChat() {
         if (lastUsed) activeProviderRef.value = lastUsed
       } catch { /* ignore */ }
 
+      finishChatPhase(phaseActivityId)
       store.completeStreamingMessage()
 
     } catch (err) {
       const rawError = err instanceof Error ? err.message : 'Failed to get response'
       const errorMessage = formatUserFriendlyError(rawError)
+      failChatPhase(phaseActivityId, 'Response failed', errorMessage)
       store.failStreamingMessage(errorMessage)
       console.error('[AIChat:Deterministic] Error:', err)
     }

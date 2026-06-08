@@ -484,6 +484,35 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
   }
 }
 
+export function buildWeeklyPlanReliabilityFallback(context: WeekContext, caveats: string[] = []): WeeklyPlanOutput {
+  const locale = context.locale
+  const selected = selectQuickDraftTasks(context.tasks)
+  const openQuestions = buildQuickDraftQuestions(context, selected).slice(0, 1)
+  return {
+    schemaVersion: 'weekly-plan.v2',
+    requestId: context.requestId,
+    locale,
+    direction: context.direction,
+    headline: locale === 'he' ? 'לא קיבלתי תוכנית מספיק אמינה' : 'I did not get a reliable enough plan',
+    weekRead: {
+      summary: locale === 'he'
+        ? 'לא אציג דירוג חלש רק כדי למלא תשובה. צריך תשובה קצרה או ניסיון נוסף עם יותר הקשר.'
+        : 'I will not show a weak ranking just to fill the response. This needs one short answer or another pass with more context.',
+      workloadReality: '',
+      mainTradeoff: '',
+    },
+    recommendations: [],
+    deferrals: [],
+    openQuestions,
+    quality: {
+      selectedTaskCount: 0,
+      confidence: 'low',
+      caveats: caveats.slice(0, 4),
+    },
+    source: 'quick_draft',
+  }
+}
+
 function buildClarificationFirstWeeklyPlan(
   context: WeekContext,
   openQuestions: WeeklyPlanOutput['openQuestions'],

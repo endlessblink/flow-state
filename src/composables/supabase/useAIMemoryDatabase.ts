@@ -1,4 +1,11 @@
-import type { AIMemoryPatch, ProjectContext, TaskContext } from '@/types/aiMemory'
+import type {
+  AIClarificationEvent,
+  AIClarificationEventInput,
+  AIContextEntity,
+  AIMemoryPatch,
+  ProjectContext,
+  TaskContext,
+} from '@/types/aiMemory'
 import { getSupabase, invalidateCache, swrCache, type DatabaseContext } from './_infrastructure'
 
 type ProjectContextRow = {
@@ -40,6 +47,39 @@ type TaskContextRow = {
   last_confirmed_at?: string | null
   last_updated_at?: string | null
   stale_after?: string | null
+}
+
+type AIContextEntityRow = {
+  id?: string
+  entity_key: string
+  entity_type: AIContextEntity['entityType']
+  display_name: string
+  canonical_project_id?: string | null
+  canonical_task_id?: string | null
+  summary?: string | null
+  facts?: Record<string, unknown> | null
+  corrections?: unknown
+  confidence?: number
+  completeness_score?: number
+  last_asked_at?: string | null
+  last_answered_at?: string | null
+  ask_count?: number
+  stale_after?: string | null
+}
+
+type AIClarificationEventRow = {
+  id?: string
+  entity_key: string
+  entity_type: AIClarificationEvent['entityType']
+  question_id: string
+  event_type: AIClarificationEvent['eventType']
+  question?: string | null
+  selected_option_id?: string | null
+  selected_label?: string | null
+  free_text?: string | null
+  memory_patch?: AIMemoryPatch | null
+  source_message_id?: string | null
+  created_at?: string | null
 }
 
 const PROJECT_FIELD_MAP: Record<string, keyof ProjectContextRow> = {
@@ -141,6 +181,43 @@ function toTaskContext(row: TaskContextRow): TaskContext {
   }
 }
 
+function toAIContextEntity(row: AIContextEntityRow): AIContextEntity {
+  return {
+    id: row.id,
+    entityKey: row.entity_key,
+    entityType: row.entity_type,
+    displayName: row.display_name,
+    canonicalProjectId: row.canonical_project_id ?? null,
+    canonicalTaskId: row.canonical_task_id ?? null,
+    summary: row.summary ?? null,
+    facts: row.facts ?? {},
+    corrections: stringArray(row.corrections),
+    confidence: Number(row.confidence ?? 0),
+    completenessScore: Number(row.completeness_score ?? 0),
+    lastAskedAt: row.last_asked_at ?? null,
+    lastAnsweredAt: row.last_answered_at ?? null,
+    askCount: Number(row.ask_count ?? 0),
+    staleAfter: row.stale_after ?? null,
+  }
+}
+
+function toAIClarificationEvent(row: AIClarificationEventRow): AIClarificationEvent {
+  return {
+    id: row.id,
+    entityKey: row.entity_key,
+    entityType: row.entity_type,
+    questionId: row.question_id,
+    eventType: row.event_type,
+    question: row.question ?? null,
+    selectedOptionId: row.selected_option_id ?? null,
+    selectedLabel: row.selected_label ?? null,
+    freeText: row.free_text ?? null,
+    memoryPatch: row.memory_patch ?? null,
+    sourceMessageId: row.source_message_id ?? null,
+    createdAt: row.created_at ?? null,
+  }
+}
+
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.map(value => value.trim()).filter(Boolean))]
 }
@@ -170,6 +247,47 @@ function computeTaskCompleteness(row: TaskContextRow): number {
     row.urgency_window && row.urgency_window !== 'unknown',
   ].filter(Boolean).length
   return Number((filled / 5).toFixed(3))
+}
+
+function computeAIEntityCompleteness(facts: Record<string, unknown>): number {
+  const filled = [
+    facts.domain,
+    facts.whyItMatters,
+    facts.successCriteria,
+    facts.currentStakes,
+    facts.urgencyWindow,
+    facts.thisWeekImportance,
+  ].filter(value => Array.isArray(value) ? value.length > 0 : Boolean(value)).length
+  return Number((filled / 6).toFixed(3))
+}
+
+function mergeFactPatch(facts: Record<string, unknown>, patch?: AIMemoryPatch, freeText?: string): Record<string, unknown> {
+  const next = { ...facts }
+  if (patch) {
+    if (patch.operation === 'append') {
+      const current = Array.isArray(next[patch.field]) ? next[patch.field] as unknown[] : []
+      next[patch.field] = uniqueStrings([...current.map(String), String(patch.value)])
+    } else if (patch.operation === 'reject') {
+      const current = Array.isArray(next.userCorrections) ? next.userCorrections as unknown[] : []
+      next.userCorrections = uniqueStrings([...current.map(String), `Rejected: ${String(patch.value)}`])
+    } else if (patch.operation === 'deprecate') {
+      const current = Array.isArray(next.deprecated) ? next.deprecated as unknown[] : []
+      next.deprecated = uniqueStrings([...current.map(String), `${patch.field}: ${String(patch.value)}`])
+    } else if (patch.operation !== 'confirm') {
+      next[patch.field] = patch.value
+    }
+  }
+  if (freeText) next.whyItMatters = freeText
+  return next
+}
+
+function clarificationAnsweredRecently(events: AIClarificationEvent[], cooldownDays: number): boolean {
+  const cutoff = Date.now() - cooldownDays * 24 * 60 * 60 * 1000
+  return events.some(event =>
+    ['answered', 'dismissed', 'generated_with_uncertainty', 'showed_candidates'].includes(event.eventType) &&
+    event.createdAt &&
+    new Date(event.createdAt).getTime() >= cutoff
+  )
 }
 
 export function useAIMemoryDatabase(ctx: DatabaseContext) {
@@ -257,6 +375,122 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     } catch (e) {
       handleError(e, 'searchAIMemory')
       return { projects: [], tasks: [] }
+    }
+  }
+
+  const fetchAIContextEntities = async (entityKeys: string[]): Promise<AIContextEntity[]> => {
+    const keys = uniqueStrings(entityKeys)
+    if (!keys.length) return []
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) return []
+    try {
+      return await withRetry(async () => {
+        const { data, error } = await getSupabase()
+          .from('ai_context_entities')
+          .select('*')
+          .eq('user_id', userId)
+          .in('entity_key', keys)
+        if (error) throw error
+        return ((data ?? []) as AIContextEntityRow[]).map(toAIContextEntity)
+      }, 'fetchAIContextEntities')
+    } catch (e) {
+      handleError(e, 'fetchAIContextEntities')
+      return []
+    }
+  }
+
+  const fetchAIClarificationEvents = async (entityKeys: string[], limit = 20): Promise<AIClarificationEvent[]> => {
+    const keys = uniqueStrings(entityKeys)
+    if (!keys.length) return []
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) return []
+    try {
+      return await withRetry(async () => {
+        const { data, error } = await getSupabase()
+          .from('ai_clarification_events')
+          .select('*')
+          .eq('user_id', userId)
+          .in('entity_key', keys)
+          .order('created_at', { ascending: false })
+          .limit(limit)
+        if (error) throw error
+        return ((data ?? []) as AIClarificationEventRow[]).map(toAIClarificationEvent)
+      }, 'fetchAIClarificationEvents')
+    } catch (e) {
+      handleError(e, 'fetchAIClarificationEvents')
+      return []
+    }
+  }
+
+  const shouldAskClarification = async (entityKey: string, questionId: string, cooldownDays = 7): Promise<boolean> => {
+    const events = await fetchAIClarificationEvents([entityKey], 20)
+    return !clarificationAnsweredRecently(events.filter(event => event.questionId === questionId), cooldownDays)
+  }
+
+  const recordAIClarificationEvent = async (input: AIClarificationEventInput): Promise<void> => {
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) throw new Error('Cannot save AI clarification without an authenticated user.')
+    const now = new Date().toISOString()
+    try {
+      isSyncing.value = true
+      await withRetry(async () => {
+        const { data: existingData, error: fetchError } = await getSupabase()
+          .from('ai_context_entities')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('entity_key', input.entityKey)
+          .maybeSingle()
+        if (fetchError) throw fetchError
+        const existing = (existingData ?? null) as AIContextEntityRow | null
+        const facts = mergeFactPatch(existing?.facts ?? {}, input.memoryPatch, input.freeText)
+        const corrections = input.eventType === 'correction'
+          ? uniqueStrings([...stringArray(existing?.corrections), input.freeText || input.selectedLabel || input.questionId])
+          : stringArray(existing?.corrections)
+        const { error: upsertError } = await getSupabase()
+          .from('ai_context_entities')
+          .upsert({
+            ...(existing ?? {}),
+            user_id: userId,
+            entity_key: input.entityKey,
+            entity_type: input.entityType,
+            display_name: input.displayName,
+            summary: typeof facts.whyItMatters === 'string' ? facts.whyItMatters : existing?.summary ?? null,
+            facts,
+            corrections,
+            confidence: Math.max(Number(existing?.confidence ?? 0), input.eventType === 'answered' ? 0.85 : 0.4),
+            completeness_score: computeAIEntityCompleteness(facts),
+            last_asked_at: input.eventType === 'asked' ? now : existing?.last_asked_at ?? null,
+            last_answered_at: input.eventType === 'answered' ? now : existing?.last_answered_at ?? null,
+            ask_count: Number(existing?.ask_count ?? 0) + (input.eventType === 'asked' ? 1 : 0),
+          }, { onConflict: 'user_id,entity_key' })
+        if (upsertError) throw upsertError
+
+        const { error: eventError } = await getSupabase()
+          .from('ai_clarification_events')
+          .insert({
+            user_id: userId,
+            entity_key: input.entityKey,
+            entity_type: input.entityType,
+            question_id: input.questionId,
+            event_type: input.eventType,
+            question: input.question,
+            selected_option_id: input.selectedOptionId,
+            selected_label: input.selectedLabel,
+            free_text: input.freeText,
+            memory_patch: input.memoryPatch ?? null,
+            source_message_id: input.sourceMessageId,
+          })
+        if (eventError) throw eventError
+      }, 'recordAIClarificationEvent')
+      invalidateCache.all()
+    } catch (e) {
+      handleError(e, 'recordAIClarificationEvent')
+      throw e
+    } finally {
+      isSyncing.value = false
     }
   }
 
@@ -358,6 +592,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     fetchProjectContexts,
     fetchTaskContexts,
     searchAIMemory,
+    fetchAIContextEntities,
+    fetchAIClarificationEvents,
+    shouldAskClarification,
+    recordAIClarificationEvent,
     applyAIMemoryPatch,
   }
 }

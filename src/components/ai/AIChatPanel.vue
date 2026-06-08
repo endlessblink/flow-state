@@ -328,7 +328,8 @@ async function handleUndo() {
 
 const activityItems = computed(() => {
   const items = [...(store.activityEvents || [])]
-  if (isGenerating.value) {
+  const livePhase = items.find(item => item.id === 'ai-chat-phase-live' && item.status === 'running')
+  if (isGenerating.value && !livePhase) {
     items.unshift({
       id: 'ai-thinking-live',
       type: 'thinking' as const,

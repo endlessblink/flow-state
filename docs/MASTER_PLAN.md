@@ -15,6 +15,19 @@
 
 ---
 
+### TASK-1829: Apply AI clarification memory migration after UI wiring (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED (filed 2026-06-08)
+
+**Why**: `supabase/migrations/20260608090000_ai_clarification_memory.sql` adds a general clarification-memory schema, but the current app still uses the earlier project/task context tables. Keep the additive migration preserved in git, then apply it only when the UI/service path writes and reads these records.
+
+**Scope**:
+- Wire the clarification answer flow to `ai_context_entities` and `ai_clarification_events`, or remove the migration before release if the older `project_contexts`/`task_contexts` schema remains the chosen path.
+- Apply the migration to production only after the code path is live-ready.
+- Validate RLS with one user-owned answer and one rejected cross-user access attempt.
+
+---
+
 ### ~~TASK-1815~~: Flagship flow — "Overwhelmed → AI reorders my day" (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.93 deployed) | **Depends on**: TASK-1814 (AI chat now intelligent)

@@ -491,6 +491,16 @@ describe('AI memory pending write queue', () => {
     })
     expect(new Date(String(entityPayload.stale_after)).getTime()).toBeGreaterThan(Date.now() + 40 * 24 * 60 * 60 * 1000)
     expect(parameterBeliefUpsertCount).toBeGreaterThan(0)
+    const beliefPayload = upsertPayloads.ai_parameter_beliefs?.[0] as Record<string, unknown>
+    expect(beliefPayload).toMatchObject({
+      entity_key: 'project:uncategorized',
+      parameter_key: 'stale_context',
+      stale_after: expect.any(String),
+      last_reinforced_at: expect.any(String),
+      reinforcement_count: 1,
+      decay_score: 1,
+    })
+    expect(new Date(String(beliefPayload.stale_after)).getTime()).toBeGreaterThan(Date.now() + 40 * 24 * 60 * 60 * 1000)
   })
 
   it('applies patch-only synthetic context updates to ai_context_entities instead of skipping them', async () => {

@@ -1815,6 +1815,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
               confidence: Math.max(currentConfidence, belief.confidence ?? 0.78),
               impact_weight: belief.impactWeight ?? Number(existingBelief?.impact_weight ?? 0.5),
               last_answered_at: nowBelief,
+              stale_after: nextStaleAfterIso(nowBelief),
+              last_reinforced_at: nowBelief,
+              reinforcement_count: Number(existingBelief?.reinforcement_count ?? 0) + 1,
+              decay_score: 1,
               source_question_id: belief.sourceQuestionId ?? input.questionId,
               source_event_id: belief.sourceEventId && isSupabaseUuid(belief.sourceEventId) ? belief.sourceEventId : existingBelief?.source_event_id ?? null,
             }, { onConflict: 'user_id,entity_key,parameter_key' })

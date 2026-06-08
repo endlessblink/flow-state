@@ -435,6 +435,7 @@
 - 2026-06-08: Weekly planning now has the same stale-belief refresh path as broad planning. Weekly retrieval fetches clarification events for week/preference/workflow belief keys, and `buildWeeklyPlanningInterview` asks a focused refresh card for stale remembered answers before ranking from old saved priorities.
 - 2026-06-08: Post-clarification weekly continuation now avoids the slow broad model pass and returns a bounded local 1-3 item quick draft from saved context/task signals. The sidebar also flushes queued clarification continuations on the next tick after generation settles, so answers are not dropped while the prior clarification card is completing. Verified with the AI regression bundle and the localhost Playwright AI-chat quality smoke (`10 passed`).
 - 2026-06-08: Lifecycle snapshot compaction now preserves user corrections as bounded, sanitized snapshot facts and includes a short corrections line in the compact summary. This keeps correction history auditable after noisy clarification events are summarized, instead of letting summarization erase "the user corrected this framing" evidence.
+- 2026-06-08: Authenticated clarification-derived parameter beliefs now refresh the same lifecycle fields as local fallback beliefs: `stale_after`, `last_reinforced_at`, `reinforcement_count`, and `decay_score`. This keeps VPS/server-backed answers from immediately aging out or being re-asked after a stale-context refresh confirmation.
 
 ---
 

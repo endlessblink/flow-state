@@ -2239,6 +2239,13 @@ export function useAIChat() {
           exactEntityCount: 0,
           semanticCandidateCount: 0,
           semanticSkippedReason: 'no_related_entities' as const,
+          lifecycle: {
+            staleEntityKeys: [],
+            refreshEntityKeys: [],
+            summarizeEntityKeys: [],
+            archiveEventCount: 0,
+            lowConfidenceEntityCount: 0,
+          },
         }
         try {
           const db = useSupabaseDatabase()

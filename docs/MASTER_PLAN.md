@@ -6,7 +6,7 @@
 
 **Goal**: Make FlowState chat consistently useful across weekly planning, "what should I do", prioritization, task breakdown, smart lanes, follow-up tasks, and general agent help by combining server-backed memory, explicit uncertainty, low-overwhelm UX, feedback learning, and testable answer-quality gates.
 
-**Current execution cursor**: **Stage 1 → Stage 2**. The lane is consolidated; continue proving server-backed memory/retrieval and the clarification decision loop before adding broader UI/learning layers.
+**Current execution cursor**: **Checkpoint after packets 1-8**. The lane is consolidated; finish and verify the current TASK-1837 memory lifecycle diagnostics slice, then move to Stage 6/8 debug visibility and localhost end-to-end proof. Do not ask the user to test until Stage 8 passes in a real browser.
 
 **Why this lane exists**: This work has too many coupled failure modes to track as isolated fixes. Use this lane as the single source of truth so every change is tied to a phase, a proof gate, and a user-visible quality outcome. If a future session feels lost, resume from the current execution cursor and the first incomplete proof gate below.
 
@@ -27,10 +27,10 @@
 5. Commit and push only after the plan file, tests, and proof evidence match the actual current state.
 
 **Operator board for the active lane**:
-- **Current slice**: Stage 2 clarification escape behavior. `generate_current` must continue through chat only after explicit user choice, must keep the answer uncertainty-marked, and must not restore confident fallback prose during quality repair.
-- **Current proof**: focused mounted test, AI-focused regression suite, type-check, production build, and localhost smoke for clarification -> generate with current info.
-- **Next slice**: Stage 2/3 answer-after-clarification quality. Button-only answers should ask at most one useful follow-up, then continue with concise output that cites evidence or says context unknown.
-- **Blocked until current proof is green**: feedback controls expansion, lifecycle/summarization, broader UI polish, Electron packaging.
+- **Current slice**: TASK-1837 memory lifecycle diagnostics. Server-backed AI memory must expose stale/decayed/noisy context signals for refresh, summarization, and retention without dumping raw memory text into prompts.
+- **Current proof**: focused lifecycle/retrieval tests, AI-focused regression suite, type-check, production build, and no unrelated Electron packaging work.
+- **Next slice**: Stage 6/8 debug visibility and localhost E2E. Surface why the assistant asked/proceeded, why it is slow, and prove the browser flow: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity.
+- **Blocked until current proof is green**: background summarization jobs, broader UI polish, Electron packaging.
 - **User-test rule**: no user test request until Stage 8 proves the full localhost loop in browser: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity -> feedback/debug visible.
 
 **Concrete task lane packets**:
@@ -46,7 +46,9 @@
 10. **Localhost QA gate**: automated unit/contract tests, type-check/build, then real localhost browser smoke covering prompt -> clarification -> answer/uncertainty -> feedback -> no barrage -> no stuck activity.
 11. **Electron gate**: deferred until localhost proves the full loop and the user explicitly re-enables desktop packaging/updater work.
 
-**Current packet cursor**: packet 7, "future retrieval of feedback". Broad inline recommendation cards now save feedback; later broad fallback answers retrieve those signals and avoid suppressed recommendations. Next packet is lifecycle/summarization once localhost proof stays green.
+**Current packet cursor**: packet 8, "memory lifecycle". Lifecycle policy now marks stale/decayed/noisy memory for refresh, summarization, and retention diagnostics. Next slice should decide whether to surface lifecycle diagnostics in the UI/debug panel or add the background summarization job.
+
+**Resume rule for future agents**: Start from the operator board above, then the first non-green proof gate in the stage table. Do not reinterpret this lane as a weekly-plan copywriting task, a local-only memory hack, or an Electron updater task. The intended product behavior is a durable AI chat quality system that learns useful context, asks the right low-friction questions, avoids overwhelming answers, and proves that behavior locally before desktop delivery.
 
 | Stage | Task(s) | Required outcome | Status | Proof gate before moving on |
 | --- | --- | --- | --- | --- |
@@ -57,7 +59,7 @@
 | 4 | TASK-1832, TASK-1841 | Answer-quality evaluator: groundedness, brevity, evidence, unsupported-ranking rejection, bad/acceptable/excellent rubric | 🔄 In progress | Eval/tests fail generic prose, name-only importance, repeated templates, missing evidence, and overlong answers |
 | 5 | TASK-1833, TASK-1836 | User feedback loop: accept/postpone/dismiss/simplify controls, reason chips, cooldowns, revisit dates, implicit positives | 🔄 In progress | UI tests prove feedback persists, current suggestions suppress immediately, future ranking respects feedback |
 | 6 | TASK-1834 | Observability and speed: concise phases, timings, path type, slow-step diagnostics, no duplicate thinking rows | 🔄 In progress | Activity-row tests plus localhost smoke show answer phase changes and no stuck spinner after saving clarification |
-| 7 | TASK-1837 | Memory lifecycle: fact promotion, confidence decay, summaries/snapshots, stale confirmations, export/delete policy | 📋 Planned | Lifecycle tests prove stale facts refresh, corrections stay auditable, retrieval stays bounded |
+| 7 | TASK-1837 | Memory lifecycle: fact promotion, confidence decay, summaries/snapshots, stale confirmations, export/delete policy | 🔄 In progress | Lifecycle tests prove stale facts refresh, corrections stay auditable, retrieval stays bounded |
 | 8 | TASK-1842 | Localhost end-to-end QA: real browser flow from prompt → clarification → answer/uncertainty → feedback/debug | 📋 Planned | Playwright/browser evidence proves no content barrage before clarification and no stuck card after answer |
 | 9 | TASK-1843 | Electron packaging/updater gate after localhost stabilization | ⏸ Deferred | Only run Electron build/update when user explicitly re-enables Electron for this lane |
 
@@ -348,6 +350,11 @@
 - Old facts become stale and ask for confirmation instead of being reused as fresh truth.
 - Corrections remain auditable after summarization.
 - Stale facts trigger confirmation when accessed for a materially important recommendation.
+
+**Progress**:
+- 2026-06-08: Added a central `memoryLifecycle` policy that computes effective confidence with decay/reinforcement, flags explicit stale dates and old confirmations for refresh, detects noisy event history for summarization, and counts year-old events for retention/archive follow-up.
+- 2026-06-08: Weekly memory retrieval diagnostics now include lifecycle summary fields (`staleEntityKeys`, `refreshEntityKeys`, `summarizeEntityKeys`, `archiveEventCount`, `lowConfidenceEntityCount`) without injecting raw memory text into normal prompts.
+- 2026-06-08: Verified the lifecycle slice with focused lifecycle/retrieval/sidebar tests, the AI regression bundle, `npm run type-check`, and localhost web `npm run build`; Electron packaging remains intentionally deferred for this lane.
 
 ---
 

@@ -93,16 +93,28 @@ describe('retrieveWeeklyAIMemory', () => {
           summary: 'Synthetic bucket context',
           facts: { whyItMatters: 'User said uncategorized is mostly admin cleanup' },
           relatedEntities: ['preference:planning_style'],
+          lastAnsweredAt: '2026-03-01T08:00:00.000Z',
+          staleAfter: '2026-06-01T08:00:00.000Z',
         }),
       ]),
-      fetchAIClarificationEvents: vi.fn(async () => [{
-        entityKey: 'project:uncategorized',
-        entityType: 'synthetic_group',
-        questionId: 'project_domain',
-        eventType: 'answered',
-        selectedLabel: 'Admin',
-        createdAt: '2026-06-08T08:00:00.000Z',
-      }]),
+      fetchAIClarificationEvents: vi.fn(async () => [
+        {
+          entityKey: 'project:uncategorized',
+          entityType: 'synthetic_group',
+          questionId: 'project_domain',
+          eventType: 'answered',
+          selectedLabel: 'Admin',
+          createdAt: '2026-06-08T08:00:00.000Z',
+        },
+        ...Array.from({ length: 20 }, (_, index) => ({
+          entityKey: 'project:uncategorized',
+          entityType: 'synthetic_group' as const,
+          questionId: `old-${index}`,
+          eventType: 'answered' as const,
+          selectedLabel: 'Old answer',
+          createdAt: '2025-10-01T08:00:00.000Z',
+        })),
+      ]),
       fetchAIRecommendationFeedback: vi.fn(async () => feedback),
     })
 
@@ -134,12 +146,12 @@ describe('retrieveWeeklyAIMemory', () => {
     expect(result.memory.projectContexts?.map(ctx => ctx.projectId)).toEqual([projectId, 'uncategorized'])
     expect(result.memory.taskContexts?.map(ctx => ctx.taskId)).toEqual([taskId])
     expect(result.memory.recommendationFeedback).toEqual(feedback)
-    expect(result.clarificationEvents).toHaveLength(1)
+    expect(result.clarificationEvents).toHaveLength(21)
     expect(result.edges).toHaveLength(4)
     expect(result.diagnostics).toMatchObject({
       source: 'hybrid_sql',
       entityKeyCount: 5,
-      eventCount: 1,
+      eventCount: 21,
       projectContextCount: 2,
       taskContextCount: 1,
       feedbackCount: 1,
@@ -147,6 +159,11 @@ describe('retrieveWeeklyAIMemory', () => {
       exactEntityCount: 1,
       semanticCandidateCount: 1,
       semanticSkippedReason: 'pgvector_not_configured',
+    })
+    expect(result.diagnostics.lifecycle).toMatchObject({
+      staleEntityKeys: ['project:uncategorized'],
+      refreshEntityKeys: ['project:uncategorized'],
+      summarizeEntityKeys: ['project:uncategorized'],
     })
     expect(JSON.stringify(result.diagnostics)).not.toContain('User said uncategorized')
   })

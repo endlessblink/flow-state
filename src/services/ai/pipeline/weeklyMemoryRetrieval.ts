@@ -1,5 +1,6 @@
 import type { AIClarificationEvent, AIContextEdgeInput, AIContextEntity, ProjectContext, TaskContext, AIRecommendationFeedback } from '@/types/aiMemory'
 import type { WeekContextMemoryInput } from './weeklyPlan'
+import { summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 
 type CardTaskLike = Record<string, unknown>
 
@@ -17,6 +18,7 @@ export type WeeklyMemoryRetrievalDiagnostics = {
   exactEntityCount: number
   semanticCandidateCount: number
   semanticSkippedReason?: 'pgvector_not_configured' | 'no_related_entities'
+  lifecycle: AIMemoryLifecycleSummary
 }
 
 export type WeeklyMemoryDb = {
@@ -71,6 +73,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
     exactEntityCount: 0,
     semanticCandidateCount: 0,
     semanticSkippedReason: 'no_related_entities',
+    lifecycle: emptyLifecycleSummary(),
   })
 
   try {
@@ -83,6 +86,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
     ]), input.timeoutMs, 'weekly_plan_memory_timeout')
     const entityProjectContexts = contextEntities.map(entityToProjectContext).filter((ctx): ctx is ProjectContext => Boolean(ctx))
     const entityTaskContexts = contextEntities.map(entityToTaskContext).filter((ctx): ctx is TaskContext => Boolean(ctx))
+    const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now)
     const memory: WeekContextMemoryInput = {
       projectContexts: uniqueBy([...projectContexts, ...entityProjectContexts], ctx => ctx.projectId),
       taskContexts: uniqueBy([...taskContexts, ...entityTaskContexts], ctx => ctx.taskId),
@@ -108,6 +112,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
         exactEntityCount: contextEntities.length,
         semanticCandidateCount: semanticCandidateKeys.length,
         semanticSkippedReason: semanticCandidateKeys.length ? 'pgvector_not_configured' : 'no_related_entities',
+        lifecycle,
       },
     }
   } catch {
@@ -119,6 +124,16 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
       edges: buildWeeklyMemoryEdges(input.cardTasks, weekEntityKey, input.getTaskProjectId),
       diagnostics: fallbackDiagnostics(true),
     }
+  }
+}
+
+function emptyLifecycleSummary(): AIMemoryLifecycleSummary {
+  return {
+    staleEntityKeys: [],
+    refreshEntityKeys: [],
+    summarizeEntityKeys: [],
+    archiveEventCount: 0,
+    lowConfidenceEntityCount: 0,
   }
 }
 

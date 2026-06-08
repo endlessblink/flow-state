@@ -337,12 +337,40 @@ export interface AIContextEdge {
   createdAt?: string | null
 }
 
+export interface AIMemorySnapshot {
+  id?: string
+  snapshotKey: string
+  scope: 'user' | 'project' | 'task' | 'week' | 'workflow'
+  entityKeys: string[]
+  summaryText: string
+  facts: Record<string, unknown>
+  sourceEventCount: number
+  sourceEntityCount: number
+  confidence: number
+  staleAfter?: string | null
+  createdAt?: string | null
+  updatedAt?: string | null
+}
+
+export interface AIMemorySnapshotInput {
+  snapshotKey: string
+  scope: AIMemorySnapshot['scope']
+  entityKeys: string[]
+  summaryText: string
+  facts?: Record<string, unknown>
+  sourceEventCount?: number
+  sourceEntityCount?: number
+  confidence?: number
+  staleAfter?: string | null
+}
+
 export interface AIMemoryDebugSnapshot {
   contextEntities: AIContextEntity[]
   contextEdges: AIContextEdge[]
   clarificationEvents: AIClarificationEvent[]
   parameterBeliefs: AIParameterBelief[]
   recommendationFeedback: AIRecommendationFeedback[]
+  memorySnapshots: AIMemorySnapshot[]
   schemaStatus: 'ready' | 'partial' | 'missing' | 'local_only'
   schemaMissingTables: string[]
   pendingWriteCount: number

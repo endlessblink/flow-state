@@ -518,6 +518,7 @@ describe('AI memory pending write queue', () => {
       'ai_clarification_events',
       'ai_parameter_beliefs',
       'ai_recommendation_feedback',
+      'ai_memory_snapshots',
     ])
     tableRows = {
       ai_context_entities: [{
@@ -562,6 +563,17 @@ describe('AI memory pending write queue', () => {
         implicit_positive: false,
         created_at: '2026-06-08T09:05:00.000Z',
       }],
+      ai_memory_snapshots: [{
+        snapshot_key: 'workflow:task_answer:general:2026-06',
+        scope: 'workflow',
+        entity_keys: ['workflow:task_answer:general'],
+        summary_text: 'User wants broad recommendations to focus on real impact.',
+        facts: { rankingFocus: 'real impact' },
+        source_event_count: 12,
+        source_entity_count: 1,
+        confidence: 0.82,
+        updated_at: '2026-06-08T09:10:00.000Z',
+      }],
     }
     const db = useAIMemoryDatabase(createContext())
 
@@ -572,6 +584,11 @@ describe('AI memory pending write queue', () => {
     expect(snapshot.clarificationEvents[0]).toMatchObject({ selectedLabel: 'Real impact' })
     expect(snapshot.parameterBeliefs[0]).toMatchObject({ parameterKey: 'rankingFocus', confidence: 0.9 })
     expect(snapshot.recommendationFeedback[0]).toMatchObject({ action: 'dismiss', reasonCategory: 'not_important' })
+    expect(snapshot.memorySnapshots[0]).toMatchObject({
+      snapshotKey: 'workflow:task_answer:general:2026-06',
+      scope: 'workflow',
+      sourceEventCount: 12,
+    })
     expect(snapshot.schemaStatus).toBe('ready')
     expect(snapshot.schemaMissingTables).toEqual([])
     expect(snapshot.pendingWriteCount).toBe(0)
@@ -587,6 +604,7 @@ describe('AI memory pending write queue', () => {
       'ai_clarification_events',
       'ai_context_edges',
       'ai_context_entities',
+      'ai_memory_snapshots',
       'ai_parameter_beliefs',
       'ai_recommendation_feedback',
     ])
@@ -601,6 +619,55 @@ describe('AI memory pending write queue', () => {
 
     expect(snapshot.schemaStatus).toBe('local_only')
     expect(snapshot.schemaMissingTables).toEqual([])
+  })
+
+  it('writes and reads compact AI memory snapshots for lifecycle summarization', async () => {
+    readyTables = new Set(['ai_memory_snapshots'])
+    tableRows = {
+      ai_memory_snapshots: [{
+        snapshot_key: 'project:ai-planner:summary',
+        scope: 'project',
+        entity_keys: ['project:ai-planner'],
+        summary_text: 'AI Planner is high-value product-quality work confirmed by the user.',
+        facts: { whyItMatters: 'Assistant quality' },
+        source_event_count: 24,
+        source_entity_count: 1,
+        confidence: 0.88,
+        stale_after: '2026-08-01T00:00:00.000Z',
+        updated_at: '2026-06-08T09:00:00.000Z',
+      }],
+    }
+    const db = useAIMemoryDatabase(createContext())
+
+    await db.upsertAIMemorySnapshot({
+      snapshotKey: 'project:ai-planner:summary',
+      scope: 'project',
+      entityKeys: ['project:ai-planner'],
+      summaryText: 'AI Planner is high-value product-quality work confirmed by the user.',
+      facts: { whyItMatters: 'Assistant quality' },
+      sourceEventCount: 24,
+      sourceEntityCount: 1,
+      confidence: 0.88,
+      staleAfter: '2026-08-01T00:00:00.000Z',
+    })
+
+    expect(upsertPayloads.ai_memory_snapshots?.[0]).toMatchObject({
+      user_id: '00000000-0000-4000-8000-000000000001',
+      snapshot_key: 'project:ai-planner:summary',
+      scope: 'project',
+      entity_keys: ['project:ai-planner'],
+      source_event_count: 24,
+      source_entity_count: 1,
+      confidence: 0.88,
+    })
+
+    const snapshots = await db.fetchAIMemorySnapshots({ entityKeys: ['project:ai-planner'], scopes: ['project'], limit: 5 })
+    expect(snapshots).toHaveLength(1)
+    expect(snapshots[0]).toMatchObject({
+      snapshotKey: 'project:ai-planner:summary',
+      summaryText: expect.stringContaining('AI Planner'),
+      sourceEventCount: 24,
+    })
   })
 
   it('clears guest local AI memory observations and pending writes', async () => {
@@ -639,6 +706,7 @@ describe('AI memory pending write queue', () => {
       'ai_clarification_events',
       'ai_parameter_beliefs',
       'ai_recommendation_feedback',
+      'ai_memory_snapshots',
     ])
     const db = useAIMemoryDatabase(createContext())
 
@@ -648,6 +716,7 @@ describe('AI memory pending write queue', () => {
       'ai_context_edges',
       'ai_recommendation_feedback',
       'ai_parameter_beliefs',
+      'ai_memory_snapshots',
       'ai_clarification_events',
       'ai_context_entities',
     ])

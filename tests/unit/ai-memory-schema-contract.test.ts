@@ -7,6 +7,7 @@ const migrationFiles = [
   'supabase/migrations/20260608090000_ai_clarification_memory.sql',
   'supabase/migrations/20260608093000_ai_assistant_memory_metadata.sql',
   'supabase/migrations/20260608100000_ai_parameter_beliefs.sql',
+  'supabase/migrations/20260608103000_ai_memory_snapshots.sql',
 ]
 
 const migrations = migrationFiles
@@ -104,6 +105,21 @@ const tableColumns: Record<string, string[]> = {
     'created_at',
     'updated_at',
   ],
+  ai_memory_snapshots: [
+    'id',
+    'user_id',
+    'snapshot_key',
+    'scope',
+    'entity_keys',
+    'summary_text',
+    'facts',
+    'source_event_count',
+    'source_entity_count',
+    'confidence',
+    'stale_after',
+    'created_at',
+    'updated_at',
+  ],
 }
 
 function createTableBlock(table: string): string {
@@ -179,6 +195,9 @@ describe('AI memory schema contract', () => {
       'idx_ai_context_edges_target',
       'idx_ai_parameter_beliefs_user_entity',
       'idx_ai_parameter_beliefs_user_parameter',
+      'idx_ai_memory_snapshots_user_scope',
+      'idx_ai_memory_snapshots_user_key',
+      'idx_ai_memory_snapshots_stale',
     ]
     for (const indexName of requiredIndexes) {
       expect(migrations).toContain(`create index if not exists ${indexName}`)

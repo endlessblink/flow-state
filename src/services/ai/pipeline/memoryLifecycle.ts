@@ -1,4 +1,4 @@
-import type { AIClarificationEvent, AIContextEntity } from '@/types/aiMemory'
+import type { AIClarificationEvent, AIContextEntity, AIMemorySnapshotInput } from '@/types/aiMemory'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -84,6 +84,61 @@ export function summarizeAIMemoryLifecycle(
   }
 }
 
+export function buildAIMemorySnapshotInput(input: {
+  snapshotKey: string
+  scope: AIMemorySnapshotInput['scope']
+  entityKeys: string[]
+  entities: AIContextEntity[]
+  events: AIClarificationEvent[]
+  now?: Date
+}): AIMemorySnapshotInput {
+  const entityKeys = uniqueStrings(input.entityKeys)
+  const entityKeySet = new Set(entityKeys)
+  const entities = input.entities.filter(entity => entityKeySet.has(entity.entityKey))
+  const events = input.events.filter(event => entityKeySet.has(event.entityKey))
+  const now = input.now ?? new Date()
+  const latestAnswers = events
+    .filter(event => event.eventType === 'answered')
+    .sort((a, b) => (parseMs(b.createdAt ?? null) ?? 0) - (parseMs(a.createdAt ?? null) ?? 0))
+    .slice(0, 4)
+    .map(event => sanitizeSnapshotText(event.selectedLabel || event.freeText || event.questionId, 120))
+    .filter(Boolean)
+  const entitySummaries = entities
+    .slice(0, 4)
+    .map(entity => {
+      const meaning = entity.summary
+        || stringFact(entity.facts, 'whyItMatters')
+        || stringFact(entity.facts, 'domain')
+        || entity.displayName
+      return `${sanitizeSnapshotText(entity.displayName, 80)}: ${sanitizeSnapshotText(meaning, 160)}`
+    })
+  const summaryText = [
+    ...entitySummaries,
+    latestAnswers.length ? `Recent answers: ${latestAnswers.join('; ')}` : '',
+  ].filter(Boolean).join(' | ') || 'No compact memory facts available yet.'
+  const confidence = entities.length
+    ? entities.reduce((sum, entity) => sum + Math.max(0, Math.min(1, entity.confidence ?? 0)), 0) / entities.length
+    : 0.5
+  const staleAfter = new Date(now.getTime() + 90 * DAY_MS).toISOString()
+
+  return {
+    snapshotKey: input.snapshotKey,
+    scope: input.scope,
+    entityKeys,
+    summaryText: sanitizeSnapshotText(summaryText, 520),
+    facts: {
+      entityCount: entities.length,
+      eventCount: events.length,
+      latestAnswers,
+      summarizedAt: now.toISOString(),
+    },
+    sourceEventCount: events.length,
+    sourceEntityCount: entities.length,
+    confidence: Number(confidence.toFixed(3)),
+    staleAfter,
+  }
+}
+
 function parseMs(value: string | null): number | null {
   if (!value) return null
   const parsed = new Date(value).getTime()
@@ -92,4 +147,22 @@ function parseMs(value: string | null): number | null {
 
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value))
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values.map(value => value.trim()).filter(Boolean))]
+}
+
+function stringFact(facts: Record<string, unknown>, key: string): string {
+  const value = facts[key]
+  return typeof value === 'string' ? value : ''
+}
+
+function sanitizeSnapshotText(value: unknown, maxLength: number): string {
+  const text = String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
+    .replace(/```+/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+  return text.length > maxLength ? `${text.slice(0, Math.max(0, maxLength - 1)).trim()}...` : text
 }

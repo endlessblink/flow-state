@@ -6,6 +6,8 @@ import type {
   AIContextEdgeInput,
   AIMemoryDebugSnapshot,
   AIMemoryPatch,
+  AIMemorySnapshot,
+  AIMemorySnapshotInput,
   AIParameterBelief,
   AIParameterBeliefInput,
   AIRecommendationFeedback,
@@ -141,6 +143,21 @@ type AIContextEdgeRow = {
   valid_from?: string | null
   valid_until?: string | null
   created_at?: string | null
+}
+
+type AIMemorySnapshotRow = {
+  id?: string
+  snapshot_key: string
+  scope: AIMemorySnapshot['scope']
+  entity_keys?: unknown
+  summary_text: string
+  facts?: Record<string, unknown> | null
+  source_event_count?: number
+  source_entity_count?: number
+  confidence?: number
+  stale_after?: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 type PendingAIMemoryWrite =
@@ -340,6 +357,23 @@ function toAIParameterBelief(row: AIParameterBeliefRow): AIParameterBelief {
     lastAnsweredAt: row.last_answered_at ?? null,
     sourceQuestionId: row.source_question_id ?? null,
     sourceEventId: row.source_event_id ?? null,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  }
+}
+
+function toAIMemorySnapshot(row: AIMemorySnapshotRow): AIMemorySnapshot {
+  return {
+    id: row.id,
+    snapshotKey: row.snapshot_key,
+    scope: row.scope,
+    entityKeys: stringArray(row.entity_keys),
+    summaryText: row.summary_text,
+    facts: row.facts ?? {},
+    sourceEventCount: Number(row.source_event_count ?? 0),
+    sourceEntityCount: Number(row.source_entity_count ?? 0),
+    confidence: Number(row.confidence ?? 0.5),
+    staleAfter: row.stale_after ?? null,
     createdAt: row.created_at ?? null,
     updatedAt: row.updated_at ?? null,
   }
@@ -588,7 +622,8 @@ function isAIMemorySchemaMissing(error: unknown): boolean {
     message.includes('ai_clarification_events') ||
     message.includes('ai_recommendation_feedback') ||
     message.includes('ai_context_edges') ||
-    message.includes('ai_parameter_beliefs')
+    message.includes('ai_parameter_beliefs') ||
+    message.includes('ai_memory_snapshots')
   )
 }
 
@@ -1178,6 +1213,40 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
+  const fetchAIMemorySnapshots = async (
+    input: { entityKeys?: string[]; scopes?: AIMemorySnapshot['scope'][]; limit?: number } = {},
+  ): Promise<AIMemorySnapshot[]> => {
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) return []
+    const limit = input.limit ?? 20
+    try {
+      return await withRetry(async () => {
+        let query = getSupabase()
+          .from('ai_memory_snapshots')
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false })
+          .limit(limit)
+        if (input.scopes?.length) query = query.in('scope', input.scopes)
+        const { data, error } = await query
+        if (error) throw error
+        const entityKeys = new Set(uniqueStrings(input.entityKeys ?? []))
+        return ((data ?? []) as AIMemorySnapshotRow[])
+          .map(toAIMemorySnapshot)
+          .filter(snapshot => !entityKeys.size || snapshot.entityKeys.some(key => entityKeys.has(key)))
+          .slice(0, limit)
+      }, 'fetchAIMemorySnapshots')
+    } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('fetchAIMemorySnapshots')
+        return []
+      }
+      handleError(e, 'fetchAIMemorySnapshots')
+      return []
+    }
+  }
+
   const fetchAIMemoryDebugSnapshot = async (limit = 8): Promise<AIMemoryDebugSnapshot> => {
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
@@ -1187,6 +1256,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       clarificationEvents: [],
       parameterBeliefs: [],
       recommendationFeedback: [],
+      memorySnapshots: [],
       schemaStatus: userId ? 'ready' : 'local_only',
       schemaMissingTables: [],
       pendingWriteCount: getPendingAIMemoryWriteCount(),
@@ -1200,6 +1270,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       'ai_clarification_events',
       'ai_parameter_beliefs',
       'ai_recommendation_feedback',
+      'ai_memory_snapshots',
     ]
     const missingTables = new Set<string>()
     const safeRead = async <T>(label: string, table: string, read: () => Promise<T[]>): Promise<T[]> => {
@@ -1216,7 +1287,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       }
     }
 
-    const [contextEntities, contextEdges, clarificationEvents, parameterBeliefs, recommendationFeedback] = await Promise.all([
+    const [contextEntities, contextEdges, clarificationEvents, parameterBeliefs, recommendationFeedback, memorySnapshots] = await Promise.all([
       safeRead('fetchAIMemoryDebugSnapshot:entities', 'ai_context_entities', async () => {
         const { data, error } = await getSupabase()
           .from('ai_context_entities')
@@ -1267,6 +1338,16 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (error) throw error
         return ((data ?? []) as AIRecommendationFeedbackRow[]).map(toAIRecommendationFeedback)
       }),
+      safeRead('fetchAIMemoryDebugSnapshot:snapshots', 'ai_memory_snapshots', async () => {
+        const { data, error } = await getSupabase()
+          .from('ai_memory_snapshots')
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false })
+          .limit(limit)
+        if (error) throw error
+        return ((data ?? []) as AIMemorySnapshotRow[]).map(toAIMemorySnapshot)
+      }),
     ])
     const schemaMissingTables = [...missingTables].sort()
     const schemaStatus: AIMemoryDebugSnapshot['schemaStatus'] = schemaMissingTables.length === 0
@@ -1281,6 +1362,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       clarificationEvents,
       parameterBeliefs,
       recommendationFeedback,
+      memorySnapshots,
       schemaStatus,
       schemaMissingTables,
       pendingWriteCount: getPendingAIMemoryWriteCount(),
@@ -1301,6 +1383,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       'ai_context_edges',
       'ai_recommendation_feedback',
       'ai_parameter_beliefs',
+      'ai_memory_snapshots',
       'ai_clarification_events',
       'ai_context_entities',
     ]
@@ -1326,6 +1409,43 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       invalidateCache.all()
     } catch (e) {
       handleError(e, 'clearAIMemoryDebugData')
+      throw e
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
+  const upsertAIMemorySnapshot = async (input: AIMemorySnapshotInput): Promise<void> => {
+    if (!input.snapshotKey || !input.summaryText.trim()) return
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) throw new Error('Cannot save AI memory snapshot without an authenticated user.')
+    try {
+      isSyncing.value = true
+      await withRetry(async () => {
+        const { error } = await getSupabase()
+          .from('ai_memory_snapshots')
+          .upsert({
+            user_id: userId,
+            snapshot_key: input.snapshotKey,
+            scope: input.scope,
+            entity_keys: uniqueStrings(input.entityKeys),
+            summary_text: input.summaryText.trim(),
+            facts: input.facts ?? {},
+            source_event_count: Math.max(0, input.sourceEventCount ?? 0),
+            source_entity_count: Math.max(0, input.sourceEntityCount ?? input.entityKeys.length),
+            confidence: Math.max(0, Math.min(1, input.confidence ?? 0.65)),
+            stale_after: input.staleAfter ?? null,
+          }, { onConflict: 'user_id,snapshot_key' })
+        if (error) throw error
+      }, 'upsertAIMemorySnapshot')
+      invalidateCache.all()
+    } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('upsertAIMemorySnapshot')
+        return
+      }
+      handleError(e, 'upsertAIMemorySnapshot')
       throw e
     } finally {
       isSyncing.value = false
@@ -1845,6 +1965,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     fetchAIRecommendationFeedback,
     fetchAIParameterBeliefs,
     fetchAIContextEdges,
+    fetchAIMemorySnapshots,
     fetchAIMemoryDebugSnapshot,
     clearAIMemoryDebugData,
     shouldAskClarification,
@@ -1852,6 +1973,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     recordAIRecommendationFeedback,
     upsertAIParameterBelief,
     upsertAIContextEdges,
+    upsertAIMemorySnapshot,
     flushPendingAIMemoryWrites,
     getPendingAIMemoryWriteCount,
     applyAIMemoryPatch,

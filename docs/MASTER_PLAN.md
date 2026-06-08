@@ -129,6 +129,7 @@
 - 2026-06-08: Settings > AI memory debug now reports server schema status (`ready`, `partial`, `missing`, or `local_only`) plus missing table names and queued writes. This makes Supabase schema-cache/migration drift visible during localhost/VPS testing instead of showing an empty memory panel with no diagnosis.
 - 2026-06-08: Broad task-list memory now also retrieves global workflow/preference keys such as `preference:brevity` and response-quality workflow memories. A saved simplify/too-much signal becomes a direct `compactPreference` flag, and deterministic broad fallbacks cap the next non-weekly draft to one recommendation instead of repeating a dense answer.
 - 2026-06-08: Authenticated schema-cache misses now mirror queued clarification events, recommendation feedback, and parameter beliefs into the local AI-memory fallback immediately, and schema-missing reads return those local rows. This prevents repeated clarification/stale-refresh questions while VPS migrations or Supabase schema cache visibility lag behind the UI.
+- 2026-06-08: Added server-backed `ai_memory_snapshots` for lifecycle summarization. Snapshots are keyed by text `snapshot_key`, scoped by user/project/task/week/workflow, RLS-protected, indexed for hot retrieval, visible in Settings > AI memory debug, and clearable with the rest of the AI memory layer.
 
 ---
 
@@ -409,6 +410,7 @@
 - 2026-06-08: Clarification-card debug disclosure now surfaces memory lifecycle pressure (`need refresh`, `need summary`, old events, low confidence) behind "Why ask?" so diagnostics are inspectable without adding normal-response clutter.
 - 2026-06-08: Localhost browser smoke on isolated `http://127.0.0.1:5562` loaded the app, dismissed onboarding, opened the AI sidebar, and captured `/tmp/flowstate-ai-debug-smoke-sidebar.png`; this proves the updated chat UI is not blank or blocked, but Stage 8 full prompt-to-answer smoke is still pending.
 - 2026-06-08: Broad task-memory retrieval now computes the same lifecycle diagnostics as weekly retrieval. Stale synthetic/project facts, refresh-needed context, noisy summaries, old events, and low-confidence counts are exposed through retrieval diagnostics and a compact `memory lifecycle` evidence line, while the chat activity metadata carries those lifecycle counts for debug disclosure instead of adding normal answer prose.
+- 2026-06-08: Added a deterministic lifecycle snapshot builder that compacts selected entities and clarification events into a bounded, sanitized `AIMemorySnapshotInput` with source counts, confidence, summary facts, and a future `staleAfter`. This creates the concrete artifact background summarization jobs can write later, without blocking the current localhost chat flow.
 - 2026-06-08: Broad ask-before-answer now turns refresh-needed lifecycle signals into a first-class stale-context card before broad ranking. The card asks whether the old context is still true, stores the answer against the stale entity key, and fetches recent events for that entity so the same refresh is not asked again immediately. Focused tests prove stale refresh outranks generic broad-ranking questions and recent refresh answers suppress repeats.
 - 2026-06-08: Server-backed clarification answers now refresh `ai_context_entities` lifecycle fields directly: answered events update `last_answered_at`, `last_reinforced_at`, increment `reinforcement_count`, reset `decay_score`, and roll `stale_after` forward by 45 days. This makes stale-context confirmations actually fresh in server memory instead of only adding an audit event.
 
@@ -466,6 +468,7 @@
 - 2026-06-08: Weekly planning now treats stale project/task context as an uncertainty dimension and asks a short refresh question instead of silently ranking from expired memory.
 - 2026-06-08: Settings > AI memory debug now has a Clear action for the new server-backed AI memory layer. It removes user-scoped AI context edges, recommendation feedback, parameter beliefs, clarification events, context entities, pending AI-memory writes, and local fallback rows, with tests covering both guest/local and authenticated server deletion paths.
 - 2026-06-08: Chat-quality audits now fail prompt-injection-like clarification or recommendation evidence (`ignore previous instructions`, `system prompt`, reveal-memory requests, etc.). This turns the "quoted evidence only" policy into an executable safety gate for memory-backed broad answers.
+- 2026-06-08: AI memory snapshots are now included in schema contracts, debug inspection, and clear/delete paths, so compacted memory rows inherit the same user-scoped privacy/debug behavior as context entities, clarification events, parameter beliefs, feedback, and graph edges.
 
 ---
 

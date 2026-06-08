@@ -171,11 +171,14 @@ describe('AI memory schema contract', () => {
 
   it('keeps synthetic and workflow memory keyed by text, not UUID-only project ids', () => {
     expect(createTableBlock('ai_context_entities')).toContain('entity_key text not null')
-    expect(createTableBlock('ai_context_entities')).toContain('canonical_project_id text references public.projects(id)')
-    expect(createTableBlock('ai_context_entities')).toContain('canonical_task_id text references public.tasks(id)')
+    expect(createTableBlock('ai_context_entities')).toContain('canonical_project_id text')
+    expect(createTableBlock('ai_context_entities')).toContain('canonical_task_id text')
+    expect(createTableBlock('ai_context_entities')).not.toContain('canonical_project_id text references public.projects(id)')
+    expect(createTableBlock('ai_context_entities')).not.toContain('canonical_task_id text references public.tasks(id)')
     expect(createTableBlock('ai_clarification_events')).toContain('entity_key text not null')
     expect(createTableBlock('ai_parameter_beliefs')).toContain('entity_key text not null')
-    expect(createTableBlock('ai_recommendation_feedback')).toContain('task_id text references public.tasks(id)')
+    expect(createTableBlock('ai_recommendation_feedback')).toContain('task_id text')
+    expect(createTableBlock('ai_recommendation_feedback')).not.toContain('task_id text references public.tasks(id)')
     expect(createTableBlock('ai_context_edges')).toContain('source_entity_key text not null')
     expect(createTableBlock('ai_context_edges')).toContain('target_entity_key text not null')
     expect(memoryDbSource).toContain('function aiContextEntityKeyFromPatch')

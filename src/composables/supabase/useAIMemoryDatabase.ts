@@ -168,6 +168,7 @@ type PendingAIMemoryWrite =
   | { kind: 'clarification_event'; input: AIClarificationEventInput; queuedAt: string; attempts: number }
   | { kind: 'recommendation_feedback'; input: AIRecommendationFeedbackInput; queuedAt: string; attempts: number }
   | { kind: 'parameter_belief'; input: AIParameterBeliefInput; queuedAt: string; attempts: number }
+  | { kind: 'memory_snapshot'; input: AIMemorySnapshotInput; queuedAt: string; attempts: number }
   | { kind: 'context_entity_patch'; input: AIMemoryPatch; queuedAt: string; attempts: number }
   | { kind: 'context_edges'; input: AIContextEdgeInput[]; queuedAt: string; attempts: number }
 
@@ -185,6 +186,7 @@ type LocalAIClarificationMemory = {
   events: AIClarificationEvent[]
   parameterBeliefs: AIParameterBelief[]
   recommendationFeedback?: AIRecommendationFeedback[]
+  memorySnapshots?: AIMemorySnapshot[]
 }
 
 const PROJECT_FIELD_MAP: Record<string, keyof ProjectContextRow> = {
@@ -390,19 +392,20 @@ function toAIMemorySnapshot(row: AIMemorySnapshotRow): AIMemorySnapshot {
 }
 
 function readLocalAIClarificationMemory(): LocalAIClarificationMemory {
-  if (typeof localStorage === 'undefined') return { contextEntities: [], events: [], parameterBeliefs: [], recommendationFeedback: [] }
+  if (typeof localStorage === 'undefined') return { contextEntities: [], events: [], parameterBeliefs: [], recommendationFeedback: [], memorySnapshots: [] }
   try {
     const raw = localStorage.getItem(LOCAL_AI_CLARIFICATION_MEMORY_KEY)
-    if (!raw) return { contextEntities: [], events: [], parameterBeliefs: [], recommendationFeedback: [] }
+    if (!raw) return { contextEntities: [], events: [], parameterBeliefs: [], recommendationFeedback: [], memorySnapshots: [] }
     const parsed = JSON.parse(raw) as Partial<LocalAIClarificationMemory>
     return {
       contextEntities: Array.isArray(parsed.contextEntities) ? parsed.contextEntities : [],
       events: Array.isArray(parsed.events) ? parsed.events : [],
       parameterBeliefs: Array.isArray(parsed.parameterBeliefs) ? parsed.parameterBeliefs : [],
       recommendationFeedback: Array.isArray(parsed.recommendationFeedback) ? parsed.recommendationFeedback : [],
+      memorySnapshots: Array.isArray(parsed.memorySnapshots) ? parsed.memorySnapshots : [],
     }
   } catch {
-    return { contextEntities: [], events: [], parameterBeliefs: [], recommendationFeedback: [] }
+    return { contextEntities: [], events: [], parameterBeliefs: [], recommendationFeedback: [], memorySnapshots: [] }
   }
 }
 
@@ -413,6 +416,7 @@ function writeLocalAIClarificationMemory(memory: LocalAIClarificationMemory) {
     events: memory.events.slice(0, 80),
     parameterBeliefs: memory.parameterBeliefs.slice(0, 80),
     recommendationFeedback: (memory.recommendationFeedback ?? []).slice(0, 80),
+    memorySnapshots: (memory.memorySnapshots ?? []).slice(0, 40),
   }))
 }
 
@@ -558,6 +562,7 @@ function recordLocalAIContextEntityPatch(patch: AIMemoryPatch): void {
     events: memory.events,
     parameterBeliefs: memory.parameterBeliefs,
     recommendationFeedback: memory.recommendationFeedback ?? [],
+    memorySnapshots: memory.memorySnapshots ?? [],
   })
 }
 
@@ -582,6 +587,7 @@ function recordLocalAIClarificationEvent(input: AIClarificationEventInput) {
       .sort((a, b) => new Date(b.updatedAt ?? b.lastAnsweredAt ?? 0).getTime() - new Date(a.updatedAt ?? a.lastAnsweredAt ?? 0).getTime())
       .slice(0, 80),
     recommendationFeedback: memory.recommendationFeedback ?? [],
+    memorySnapshots: memory.memorySnapshots ?? [],
   })
 }
 
@@ -620,6 +626,47 @@ function localAIRecommendationFeedback(input: { taskIds?: string[]; entityKeys?:
     })
     .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
     .slice(0, input.limit ?? 80)
+}
+
+function localAIMemorySnapshot(input: AIMemorySnapshotInput, now: string): AIMemorySnapshot {
+  return {
+    id: `local-${now}-${input.snapshotKey}`,
+    snapshotKey: input.snapshotKey,
+    scope: input.scope,
+    entityKeys: uniqueStrings(input.entityKeys),
+    summaryText: input.summaryText.trim(),
+    facts: input.facts ?? {},
+    sourceEventCount: Math.max(0, input.sourceEventCount ?? 0),
+    sourceEntityCount: Math.max(0, input.sourceEntityCount ?? input.entityKeys.length),
+    confidence: Math.max(0, Math.min(1, input.confidence ?? 0.65)),
+    staleAfter: input.staleAfter ?? null,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+function recordLocalAIMemorySnapshot(input: AIMemorySnapshotInput): void {
+  if (!input.snapshotKey || !input.summaryText.trim()) return
+  const now = new Date().toISOString()
+  const memory = readLocalAIClarificationMemory()
+  const nextSnapshot = localAIMemorySnapshot(input, now)
+  const nextSnapshotsByKey = new Map((memory.memorySnapshots ?? []).map(snapshot => [snapshot.snapshotKey, snapshot]))
+  nextSnapshotsByKey.set(nextSnapshot.snapshotKey, nextSnapshot)
+  writeLocalAIClarificationMemory({
+    ...memory,
+    memorySnapshots: [...nextSnapshotsByKey.values()]
+      .sort((a, b) => new Date(b.updatedAt ?? b.createdAt ?? 0).getTime() - new Date(a.updatedAt ?? a.createdAt ?? 0).getTime())
+      .slice(0, 40),
+  })
+}
+
+function localAIMemorySnapshots(input: { entityKeys?: string[]; scopes?: AIMemorySnapshot['scope'][]; limit?: number }): AIMemorySnapshot[] {
+  const entityKeys = new Set(uniqueStrings(input.entityKeys ?? []))
+  const scopes = new Set(input.scopes ?? [])
+  return (readLocalAIClarificationMemory().memorySnapshots ?? [])
+    .filter(snapshot => (!scopes.size || scopes.has(snapshot.scope)) && (!entityKeys.size || snapshot.entityKeys.some(key => entityKeys.has(key))))
+    .sort((a, b) => new Date(b.updatedAt ?? b.createdAt ?? 0).getTime() - new Date(a.updatedAt ?? a.createdAt ?? 0).getTime())
+    .slice(0, input.limit ?? 20)
 }
 
 function localAIRecommendationFeedbackEvent(input: AIRecommendationFeedbackInput, now: string): AIRecommendationFeedback {
@@ -662,11 +709,13 @@ function recordLocalAIRecommendationFeedback(input: AIRecommendationFeedbackInpu
     nextBeliefsByKey.set(key, existing && existing.confidence > belief.confidence ? existing : belief)
   }
   writeLocalAIClarificationMemory({
+    contextEntities: memory.contextEntities ?? [],
     events: memory.events,
     parameterBeliefs: [...nextBeliefsByKey.values()]
       .sort((a, b) => new Date(b.updatedAt ?? b.lastAnsweredAt ?? 0).getTime() - new Date(a.updatedAt ?? a.lastAnsweredAt ?? 0).getTime())
       .slice(0, 80),
     recommendationFeedback: [feedback, ...(memory.recommendationFeedback ?? [])].slice(0, 80),
+    memorySnapshots: memory.memorySnapshots ?? [],
   })
 }
 
@@ -765,6 +814,9 @@ function pendingAIMemoryWriteKey(write: PendingAIMemoryWrite): string {
   }
   if (write.kind === 'parameter_belief') {
     return `${write.kind}:${write.input.entityKey}:${write.input.parameterKey}:${write.input.sourceQuestionId ?? ''}`
+  }
+  if (write.kind === 'memory_snapshot') {
+    return `${write.kind}:${write.input.snapshotKey}`
   }
   if (write.kind === 'context_entity_patch') {
     return `${write.kind}:${write.input.entityType}:${write.input.entityId}:${write.input.operation}:${write.input.field}:${write.input.sourceMessageId ?? ''}`
@@ -1348,7 +1400,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
   ): Promise<AIMemorySnapshot[]> => {
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
-    if (!userId) return []
+    if (!userId) return localAIMemorySnapshots(input)
     const limit = input.limit ?? 20
     try {
       return await withRetry(async () => {
@@ -1370,7 +1422,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     } catch (e) {
       if (isAIMemorySchemaMissing(e)) {
         logMissingAIMemorySchema('fetchAIMemorySnapshots')
-        return []
+        return localAIMemorySnapshots(input)
       }
       handleError(e, 'fetchAIMemorySnapshots')
       return []
@@ -1387,7 +1439,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       clarificationEvents: localMemory().events.slice(0, limit),
       parameterBeliefs: localMemory().parameterBeliefs.slice(0, limit),
       recommendationFeedback: (localMemory().recommendationFeedback ?? []).slice(0, limit),
-      memorySnapshots: [],
+      memorySnapshots: (localMemory().memorySnapshots ?? []).slice(0, limit),
       schemaStatus: userId ? 'ready' : 'local_only',
       schemaMissingTables: [],
       pendingWriteCount: getPendingAIMemoryWriteCount(),
@@ -1502,7 +1554,9 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
       recommendationFeedback: missingTables.has('ai_recommendation_feedback')
         ? (local.recommendationFeedback ?? []).slice(0, limit)
         : recommendationFeedback,
-      memorySnapshots,
+      memorySnapshots: missingTables.has('ai_memory_snapshots')
+        ? (local.memorySnapshots ?? []).slice(0, limit)
+        : memorySnapshots,
       schemaStatus,
       schemaMissingTables,
       pendingWriteCount: getPendingAIMemoryWriteCount(),
@@ -1555,11 +1609,14 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
-  const upsertAIMemorySnapshot = async (input: AIMemorySnapshotInput): Promise<void> => {
+  const upsertAIMemorySnapshot = async (input: AIMemorySnapshotInput, options: AIMemoryWriteOptions = {}): Promise<void> => {
     if (!input.snapshotKey || !input.summaryText.trim()) return
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
-    if (!userId) throw new Error('Cannot save AI memory snapshot without an authenticated user.')
+    if (!userId) {
+      recordLocalAIMemorySnapshot(input)
+      return
+    }
     try {
       isSyncing.value = true
       await withRetry(async () => {
@@ -1580,9 +1637,20 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (error) throw error
       }, 'upsertAIMemorySnapshot')
       invalidateCache.all()
+      if (!options.skipQueue) void flushPendingAIMemoryWrites()
     } catch (e) {
       if (isAIMemorySchemaMissing(e)) {
         logMissingAIMemorySchema('upsertAIMemorySnapshot')
+        if (options.skipQueue) {
+          throw e
+        }
+        recordLocalAIMemorySnapshot(input)
+        enqueuePendingAIMemoryWrite({
+          kind: 'memory_snapshot',
+          input,
+          queuedAt: new Date().toISOString(),
+          attempts: 0,
+        })
         return
       }
       handleError(e, 'upsertAIMemorySnapshot')
@@ -2163,6 +2231,8 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
             await recordAIRecommendationFeedback(write.input, { skipQueue: true })
           } else if (write.kind === 'parameter_belief') {
             await upsertAIParameterBelief(write.input, { skipQueue: true })
+          } else if (write.kind === 'memory_snapshot') {
+            await upsertAIMemorySnapshot(write.input, { skipQueue: true })
           } else if (write.kind === 'context_entity_patch') {
             await applyAIMemoryPatch(write.input, { skipQueue: true })
           } else {

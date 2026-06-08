@@ -967,6 +967,84 @@ describe('AI memory pending write queue', () => {
     })
   })
 
+  it('stores guest compact AI memory snapshots locally for localhost summarization', async () => {
+    const db = useAIMemoryDatabase(createGuestContext())
+
+    await db.upsertAIMemorySnapshot({
+      snapshotKey: 'workflow:task_answer:general:summary',
+      scope: 'workflow',
+      entityKeys: ['workflow:task_answer:general'],
+      summaryText: 'User wants broad task answers to stay compact and impact-focused.',
+      facts: { rankingFocus: 'impact', brevity: 'compact' },
+      sourceEventCount: 21,
+      sourceEntityCount: 1,
+      confidence: 0.86,
+      staleAfter: '2026-08-01T00:00:00.000Z',
+    })
+
+    const snapshots = await db.fetchAIMemorySnapshots({
+      entityKeys: ['workflow:task_answer:general'],
+      scopes: ['workflow'],
+      limit: 5,
+    })
+    const debug = await db.fetchAIMemoryDebugSnapshot(5)
+
+    expect(snapshots).toHaveLength(1)
+    expect(snapshots[0]).toMatchObject({
+      snapshotKey: 'workflow:task_answer:general:summary',
+      scope: 'workflow',
+      sourceEventCount: 21,
+      confidence: 0.86,
+    })
+    expect(debug.schemaStatus).toBe('local_only')
+    expect(debug.memorySnapshots[0]).toMatchObject({
+      snapshotKey: 'workflow:task_answer:general:summary',
+      summaryText: expect.stringContaining('compact'),
+    })
+  })
+
+  it('queues and mirrors compact snapshots while ai_memory_snapshots schema is missing, then flushes them', async () => {
+    const db = useAIMemoryDatabase(createContext())
+
+    await db.upsertAIMemorySnapshot({
+      snapshotKey: 'project:ai-planner:summary',
+      scope: 'project',
+      entityKeys: ['project:ai-planner'],
+      summaryText: 'AI Planner memory was compacted from noisy clarification history.',
+      facts: { whyItMatters: 'Assistant quality' },
+      sourceEventCount: 24,
+      sourceEntityCount: 1,
+      confidence: 0.88,
+      staleAfter: '2026-08-01T00:00:00.000Z',
+    })
+
+    expect(getPendingAIMemoryWriteCount()).toBe(1)
+    expect(await db.fetchAIMemorySnapshots({ entityKeys: ['project:ai-planner'], scopes: ['project'], limit: 5 })).toEqual([
+      expect.objectContaining({
+        snapshotKey: 'project:ai-planner:summary',
+        summaryText: expect.stringContaining('compacted'),
+        sourceEventCount: 24,
+      }),
+    ])
+    expect((await db.fetchAIMemoryDebugSnapshot(5)).memorySnapshots[0]).toMatchObject({
+      snapshotKey: 'project:ai-planner:summary',
+    })
+
+    readyTables = new Set(['ai_memory_snapshots'])
+    await db.flushPendingAIMemoryWrites()
+
+    expect(getPendingAIMemoryWriteCount()).toBe(0)
+    expect(upsertPayloads.ai_memory_snapshots?.[0]).toMatchObject({
+      user_id: '00000000-0000-4000-8000-000000000001',
+      snapshot_key: 'project:ai-planner:summary',
+      scope: 'project',
+      entity_keys: ['project:ai-planner'],
+      source_event_count: 24,
+      source_entity_count: 1,
+      confidence: 0.88,
+    })
+  })
+
   it('clears guest local AI memory observations and pending writes', async () => {
     const db = useAIMemoryDatabase(createGuestContext())
 

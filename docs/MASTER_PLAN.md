@@ -20,7 +20,7 @@
 | 8 | TASK-1835 | Broaden memory-aware chat beyond weekly planning: shared retrieval, corrections, preferences, stale refresh | 🔄 In progress | Non-weekly clarification tests and continuation tests |
 | 9 | TASK-1834 | Observability: phase timing, retrieval/debug metadata, path types, slow-answer diagnosis | 🔄 In progress | Activity-row tests and debug metadata assertions |
 | 10 | TASK-1837 | Memory lifecycle: summarization, confidence decay, retention, stale confirmation, export/delete policy | 📋 Planned | Lifecycle tests for stale/summary/correction behavior |
-| 11 | TASK-1840 | Explicit uncertainty scoring and cold-start policy | 📋 Planned | Ask/proceed/neutral decision tests |
+| 11 | TASK-1840 | Explicit uncertainty scoring and cold-start policy | ✅ Localhost coded | Ask/proceed/neutral decision tests |
 | 12 | TASK-1841 | Agent-memory evaluation rubric and citation audit | 📋 Planned | Eval suite catches fake reasoning and repeated questions |
 | 13 | TASK-1842 | Localhost end-to-end QA lane: dev-server/manual browser checks for weekly plan, response-quality clarification, feedback, debug | 📋 Planned | Browser evidence and documented expected behavior |
 | 14 | TASK-1843 | Electron gate: package, updater manifest, desktop verification after localhost is stable | ⏸ Deferred | `npm run electron:build` and updater manifest only after user re-enables Electron |
@@ -354,6 +354,9 @@
 - The same task set consistently chooses ask/proceed/neutral based on coverage and intent.
 - Low-context weekly planning does not produce a ranked plan unless the user chooses uncertainty.
 - Mechanical actions are not blocked by unnecessary clarification.
+
+**Progress**:
+- 2026-06-08: Extracted the ask/proceed/neutral decision rule into a shared uncertainty policy, including high-materiality ask thresholds, medium-coverage proceed-with-uncertainty behavior, and neutral cold-start handling. Focused tests cover high/medium/low materiality, forced missing project/stale context, sufficient context, and cold-start behavior.
 
 ---
 

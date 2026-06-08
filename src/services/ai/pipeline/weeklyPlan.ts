@@ -13,6 +13,7 @@ import type {
   TaskContext,
 } from '@/types/aiMemory'
 import { memoryEvidencePolicy, sanitizeWeekContextForPrompt } from './memoryEvidence'
+import { decideClarificationPath } from './uncertaintyPolicy'
 
 export type PlannerLocale = 'en' | 'he'
 export type PlannerDirection = 'ltr' | 'rtl'
@@ -1005,25 +1006,19 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
     .filter(([key, value]) => Number(value ?? 0) < (key === 'preferences' ? 0.2 : key === 'stale_context' ? 1 : 0.45))
     .map(([key]) => key as AIClarificationCoverage['missing'][number])
   const materiality: AIClarificationCoverage['materiality'] = context.tasks.length >= 3 ? 'high' : 'medium'
-  const score = missing.includes('project_meaning') && materiality === 'high'
-    ? Math.min(rawScore, 0.49)
-    : missing.includes('stale_context') && materiality === 'high'
-      ? Math.min(rawScore, 0.49)
-      : rawScore
-  const roundedScore = Number(score.toFixed(3))
-  const hasStaleMaterialContext = missing.includes('stale_context') && materiality === 'high'
-  const hasMaterialMissingProjectMeaning = missing.includes('project_meaning') && materiality === 'high'
-  const decision: AIClarificationCoverage['decision'] = hasStaleMaterialContext || hasMaterialMissingProjectMeaning || (roundedScore < 0.5 && materiality === 'high')
-    ? 'ask'
-    : roundedScore < 0.8
-      ? 'proceed_with_uncertainty'
-      : 'proceed'
+  const policy = decideClarificationPath({
+    score: rawScore,
+    materiality,
+    missing,
+    candidateCount: relevant.length,
+    forceAskDimensions: ['project_meaning', 'stale_context'],
+  })
   return {
-    score: roundedScore,
+    score: policy.score,
     materiality,
     dimensions,
     missing,
-    decision,
+    decision: policy.decision,
   }
 }
 

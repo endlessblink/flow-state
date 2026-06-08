@@ -430,6 +430,7 @@
 - 2026-06-08: Parameter beliefs now have the same lifecycle metadata needed for repeat-question suppression and stale refresh. Added server columns/indexes for `stale_after`, `last_reinforced_at`, `reinforcement_count`, and `decay_score`; authenticated and local fallback belief writes now refresh those fields so saved clarification preferences can decay or refresh instead of staying permanently fresh.
 - 2026-06-08: Weekly and broad memory retrieval now treat stale/low-confidence parameter beliefs as refresh-needed rather than active evidence. Stale remembered answers no longer suppress clarification, force compact-answer preferences, or enter planning prompts; lifecycle diagnostics expose stale/refresh-needed belief keys so debug output can explain why a saved answer was not reused.
 - 2026-06-08: Broad clarification now turns stale parameter-belief diagnostics into a refresh card, not just debug metadata. The card targets the owning workflow/preference entity, stores the refreshed belief field, and fetches recent refresh events for stale belief entity keys so answered refreshes do not immediately repeat.
+- 2026-06-08: Weekly planning now has the same stale-belief refresh path as broad planning. Weekly retrieval fetches clarification events for week/preference/workflow belief keys, and `buildWeeklyPlanningInterview` asks a focused refresh card for stale remembered answers before ranking from old saved priorities.
 
 ---
 

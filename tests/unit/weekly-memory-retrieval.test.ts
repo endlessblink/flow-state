@@ -187,18 +187,20 @@ describe('retrieveWeeklyAIMemory', () => {
       scopes: ['user', 'project', 'task', 'week'],
       limit: 12,
     })
+    const expectedBeliefEntityKeys = [
+      `project:${projectId}`,
+      'project:uncategorized',
+      `task:${taskId}`,
+      'task:local-temp-task',
+      'week:2026-06-08',
+      'preference:ranking_focus',
+      'preference:energy_fit',
+      'preference:follow_through',
+      'preference:brevity',
+    ]
+    expect(db.fetchAIClarificationEvents).toHaveBeenCalledWith(expectedBeliefEntityKeys, 40)
     expect(db.fetchAIParameterBeliefs).toHaveBeenCalledWith({
-      entityKeys: [
-        `project:${projectId}`,
-        'project:uncategorized',
-        `task:${taskId}`,
-        'task:local-temp-task',
-        'week:2026-06-08',
-        'preference:ranking_focus',
-        'preference:energy_fit',
-        'preference:follow_through',
-        'preference:brevity',
-      ],
+      entityKeys: expectedBeliefEntityKeys,
       limit: 60,
     })
     expect(result.memory.projectContexts?.map(ctx => ctx.projectId)).toEqual([projectId])

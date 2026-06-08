@@ -1690,6 +1690,112 @@ describe('AI sidebar-first desktop experience', () => {
     expect(quickDraft.openQuestions[0].reason).toBe('stale_project_context')
   })
 
+  it('asks to refresh stale weekly parameter beliefs before ranking from old saved answers', () => {
+    const tasks = [
+      {
+        id: 'task-week-belief-a',
+        title: 'Improve planner memory retrieval',
+        description: 'Product quality work tied to the assistant planning layer.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'ai-planner',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      },
+      {
+        id: 'task-week-belief-b',
+        title: 'Tighten answer quality checks',
+        description: 'Ensures weekly recommendations cite real task and memory context.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-11',
+        projectId: 'ai-planner',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      },
+      {
+        id: 'task-week-belief-c',
+        title: 'Ship feedback learning controls',
+        description: 'Connects user feedback to future recommendation behavior.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-12',
+        projectId: 'ai-planner',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      },
+    ] as Task[]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-08T09:00:00Z'),
+    )
+    const lifecycle = {
+      staleEntityKeys: [],
+      refreshEntityKeys: [],
+      staleParameterBeliefKeys: ['week:2026-06-08:thisWeekImportance'],
+      refreshParameterBeliefKeys: ['week:2026-06-08:thisWeekImportance'],
+      summarizeEntityKeys: [],
+      archiveEventCount: 0,
+      lowConfidenceEntityCount: 0,
+      lowConfidenceBeliefCount: 0,
+    }
+
+    const interview = buildWeeklyPlanningInterview(context, [], {
+      retrieval: {
+        source: 'hybrid_sql',
+        entityKeyCount: 5,
+        eventCount: 0,
+        projectContextCount: 0,
+        taskContextCount: 0,
+        lifecycle,
+      },
+      reason: 'stale remembered answer needs refresh',
+      candidateCount: 3,
+    })
+
+    expect(interview?.memoryKey).toBe('week:2026-06-08')
+    expect(interview?.question.id).toBe('memory_refresh_week_2026_06_08_thisWeekImportance')
+    expect(interview?.question.reason).toBe('stale_context')
+    expect(interview?.question.options[0]?.memoryPatch).toMatchObject({
+      entityType: 'week',
+      entityId: '2026-06-08',
+      field: 'thisWeekImportance',
+    })
+    expect(interview?.coverage?.missing).toContain('stale_context')
+    expect(interview?.debug?.evpi?.targetedParameters).toEqual(['stale_context'])
+
+    const recentRefresh = {
+      entityKey: 'week:2026-06-08',
+      entityType: 'week',
+      questionId: 'memory_refresh_week_2026_06_08_thisWeekImportance',
+      eventType: 'answered',
+      createdAt: '2026-06-08T08:30:00Z',
+    } as const
+    const deduped = buildWeeklyPlanningInterview(context, [recentRefresh], {
+      retrieval: {
+        source: 'hybrid_sql',
+        entityKeyCount: 5,
+        eventCount: 1,
+        projectContextCount: 0,
+        taskContextCount: 0,
+        lifecycle,
+      },
+    })
+    expect(deduped?.question.id).not.toBe('memory_refresh_week_2026_06_08_thisWeekImportance')
+  })
+
   it('lets weekly-plan question buttons create a linked follow-up task with optional user text', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({

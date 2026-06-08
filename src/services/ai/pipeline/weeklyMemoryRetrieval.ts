@@ -97,7 +97,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
       input.db.fetchProjectContexts(projectIds),
       input.db.fetchTaskContexts(taskIds),
       input.db.fetchAIContextEntities(entityKeys),
-      input.db.fetchAIClarificationEvents(entityKeys, 40),
+      input.db.fetchAIClarificationEvents(beliefEntityKeys, 40),
       input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 }),
       input.db.fetchAIContextEdges?.({ entityKeys, limit: 80 }) ?? Promise.resolve([]),
       input.db.fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week'], limit: 12 }) ?? Promise.resolve([]),

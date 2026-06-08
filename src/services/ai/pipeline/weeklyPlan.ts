@@ -5,6 +5,7 @@ import type {
   AIClarificationEvent,
   AIClarificationEVPIScore,
   AIClarificationQuestion,
+  AIContextEntityType,
   AIUncertaintyDimension,
   AIMemoryPatchOperation,
   AIMemoryQuestionOption,
@@ -796,6 +797,8 @@ export function buildWeeklyPlanningInterview(
 ): AIClarificationArtifact | null {
   const selected = selectQuickDraftTasks(context.tasks)
   const coverage = computeWeeklyPlanningCoverage(context, selected)
+  const staleBeliefInterview = buildWeeklyStaleBeliefRefreshInterview(context, selected, recentEvents, coverage, debug)
+  if (staleBeliefInterview) return staleBeliefInterview
   if (coverage.decision !== 'ask') return null
   const selection = selectClarificationQuestion(context, selected, recentEvents, coverage)
   const question = selection?.question ?? null
@@ -834,6 +837,156 @@ export function buildWeeklyPlanningInterview(
       evpi: evpiDebug,
     },
   }
+}
+
+function buildWeeklyStaleBeliefRefreshInterview(
+  context: WeekContext,
+  selected: PlannerTaskSnapshot[],
+  recentEvents: AIClarificationEvent[],
+  coverage: AIClarificationCoverage,
+  debug?: AIClarificationArtifact['debug'],
+): AIClarificationArtifact | null {
+  const refreshKey = debug?.retrieval?.lifecycle?.refreshParameterBeliefKeys?.[0]
+  if (!refreshKey) return null
+  const entityKey = beliefEntityKey(refreshKey)
+  const questionId = `memory_refresh_${safeQuestionSuffix(refreshKey)}`
+  if (recentClarificationResolved(recentEvents, entityKey, questionId)) return null
+
+  const entity = weeklyEntityFromKey(entityKey)
+  const field = staleRefreshField(refreshKey)
+  const locale = context.locale
+  const isHebrew = locale === 'he'
+  const displayName = displayNameFromEntityKey(refreshKey)
+  const refreshCoverage: AIClarificationCoverage = {
+    ...coverage,
+    decision: 'ask',
+    materiality: coverage.materiality === 'low' ? 'medium' : coverage.materiality,
+    missing: [...new Set<AIUncertaintyDimension>([...coverage.missing, 'stale_context'])],
+    dimensions: {
+      ...coverage.dimensions,
+      stale_context: 0,
+    },
+  }
+
+  return {
+    schemaVersion: 'ai-clarification.v1',
+    kind: 'weekly_planning',
+    locale,
+    direction: context.direction,
+    progressLabel: isHebrew ? 'מרענן הקשר • שלב 1/1' : 'Refreshing context • Step 1/1',
+    summary: isHebrew
+      ? 'מצאתי תשובה שמורה ישנה שיכולה לשנות את הדירוג, אז אשאל לפני תוכנית רחבה.'
+      : 'I found an old saved answer that could change the ranking, so I should refresh it before a broad plan.',
+    question: {
+      id: questionId,
+      entityType: entity.entityType,
+      entityId: entity.entityId,
+      reason: 'stale_context',
+      question: isHebrew
+        ? `התשובה השמורה לגבי "${displayName}" עדיין נכונה?`
+        : `Is the saved answer for "${displayName}" still true?`,
+      options: [
+        staleRefreshOption(entity, field, isHebrew, 'still_true', isHebrew ? 'עדיין נכון' : 'Still true', 'still true', 0.9),
+        staleRefreshOption(entity, field, isHebrew, 'partly_changed', isHebrew ? 'השתנה חלקית' : 'Partly changed', 'partly changed', 0.78),
+        staleRefreshOption(entity, field, isHebrew, 'no_longer_true', isHebrew ? 'כבר לא נכון' : 'No longer true', 'no longer true', 0.86, 'reject'),
+        staleRefreshOption(entity, field, isHebrew, 'not_sure', isHebrew ? 'לא בטוח' : 'Not sure', 'not sure', 0.45),
+      ],
+      allowFreeText: true,
+      freeTextPatch: { field, operation: 'set' },
+      freeTextPlaceholder: isHebrew ? 'אופציונלי: מה השתנה?' : 'Optional: what changed?',
+      relatedTaskIds: selected.slice(0, 5).map(task => task.id),
+    },
+    candidateTaskIds: selected.map(task => task.id),
+    actions: ['generate_current', 'show_candidates', 'pause_save'],
+    memoryKey: entityKey,
+    coverage: refreshCoverage,
+    pathType: 'clarify_first',
+    debug: {
+      ...(debug ?? {
+        retrieval: {
+          source: 'fallback',
+          entityKeyCount: 0,
+          eventCount: recentEvents.length,
+          projectContextCount: context.projectContexts.length,
+          taskContextCount: context.taskContexts.length,
+        },
+        reason: `stale remembered answer ${refreshKey} needs refresh`,
+        candidateCount: selected.length,
+      }),
+      reason: `stale remembered answer ${refreshKey} needs refresh before weekly ranking`,
+      candidateCount: selected.length,
+      evpi: {
+        targetedParameters: ['stale_context'],
+        heuristicEvpi: 0.734,
+        userCost: 0.15,
+        selectedScore: 0.584,
+        askThreshold: CLARIFICATION_EVPI_ASK_THRESHOLD,
+        coverageScore: coverage.score,
+        candidates: [{
+          questionId,
+          reason: 'stale_context',
+          targetedParameters: ['stale_context'],
+          heuristicEvpi: 0.734,
+          userCost: 0.15,
+          selectedScore: 0.584,
+        }],
+      },
+    },
+  }
+}
+
+function staleRefreshOption(
+  entity: { entityType: AIContextEntityType; entityId: string },
+  field: string,
+  isHebrew: boolean,
+  id: string,
+  label: string,
+  value: string,
+  confidence: number,
+  operation: AIMemoryPatchOperation = 'set',
+): AIMemoryQuestionOption {
+  return {
+    id,
+    label,
+    effect: isHebrew ? 'לרענן את הזיכרון בלי לנחש.' : 'Refresh memory without guessing.',
+    memoryPatch: {
+      entityType: entity.entityType,
+      entityId: entity.entityId,
+      operation,
+      field,
+      value,
+      confidence,
+      source: 'button_answer',
+    },
+  }
+}
+
+function beliefEntityKey(refreshKey: string): string {
+  const separator = refreshKey.lastIndexOf(':')
+  return separator > 0 ? refreshKey.slice(0, separator) : refreshKey
+}
+
+function staleRefreshField(refreshKey: string): string {
+  const separator = refreshKey.lastIndexOf(':')
+  return separator > 0 ? refreshKey.slice(separator + 1) || 'stale_context' : 'stale_context'
+}
+
+function weeklyEntityFromKey(entityKey: string): { entityType: AIContextEntityType; entityId: string } {
+  const separator = entityKey.indexOf(':')
+  const prefix = separator > 0 ? entityKey.slice(0, separator) : 'week'
+  const id = separator > 0 ? entityKey.slice(separator + 1) : entityKey
+  if (prefix === 'project' || prefix === 'task' || prefix === 'week' || prefix === 'preference' || prefix === 'workflow') {
+    return { entityType: prefix, entityId: id }
+  }
+  return { entityType: 'synthetic_group', entityId: id }
+}
+
+function safeQuestionSuffix(value: string): string {
+  return value.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80) || 'context'
+}
+
+function displayNameFromEntityKey(entityKey: string): string {
+  return entityKey.replace(/^(project|task|week|preference|workflow):/, '').replace(/[_-]+/g, ' ')
 }
 
 function buildClarificationFirstWeeklyPlan(

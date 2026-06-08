@@ -28,7 +28,7 @@
 
 **Operator board for the active lane**:
 - **Current slice**: LANE-1 server schema readiness. Wire and run a read-only live Supabase REST checker for all AI memory tables/columns, then apply/refresh migrations only through an explicit production-safe path.
-- **Current proof**: MASTER_PLAN has a complete packet queue, repeatable localhost browser proof, and a focused schema contract test. The live REST schema check currently fails because all six server AI memory tables are absent from the schema cache.
+- **Current proof**: MASTER_PLAN has a complete packet queue, repeatable localhost browser proof, and a focused schema contract test. Fresh read-only live REST schema evidence from 2026-06-08 reports `status: "missing"` because all six server AI memory tables are absent from the schema cache.
 - **Next slice after current proof**: production/VPS migration application or schema-cache refresh, followed by the same read-only checker passing against `https://api.in-theflow.com`.
 - **Blocked until current proof is green**: background summarization jobs, pgvector/semantic recall, broader UI polish, Electron packaging, broad user testing, and any claim that server-backed memory works across devices.
 - **User-test rule**: no user test request until Stage 8/LANE-10 proves the full localhost loop in browser: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity -> feedback/debug visible.
@@ -144,6 +144,8 @@
 - 2026-06-08: Re-ran the read-only live schema checker after the handoff hardening. `https://api.in-theflow.com` still returns PGRST205 for all six AI-memory tables, so the server-backed memory lane remains gated on the explicit live migration/schema-cache apply step.
 - 2026-06-08: The read-only live schema checker now retries PGRST205 schema-cache misses with configurable `AI_MEMORY_SCHEMA_RETRIES`/`AI_MEMORY_SCHEMA_RETRY_MS`, and the live apply helper uses a longer post-apply wait window before failing. This keeps the VPS handoff strict while avoiding false failure when PostgREST needs a few seconds to reload after `notify pgrst, 'reload schema';`.
 - 2026-06-08: The read-only AI memory schema checker now emits machine-readable readiness evidence via `--json`/`--json-out` and an offline `--print-contract` mode. The schema contract test executes the offline mode and compares its required tables/columns to the migration/runtime contract, so VPS handoff can archive exact readiness reports instead of scraping human logs. This is proof tooling only; live Supabase still needs the explicit schema apply/cache-refresh gate before cross-device AI memory is ready.
+- 2026-06-08: Re-ran the read-only live schema checker with `--json-out`; `/tmp/flowstate-ai-memory-live-readiness.json` reports `status: "missing"`, `okTableCount: 0`, and PGRST205 for `ai_context_entities`, `ai_clarification_events`, `ai_parameter_beliefs`, `ai_recommendation_feedback`, `ai_context_edges`, and `ai_memory_snapshots`. Localhost fallback remains the only current runtime path until production DB migration/cache refresh is explicitly applied.
+- 2026-06-08: Clarification saved-state copy now distinguishes local-only memory from durable server memory. In unauthenticated/localhost mode the card says "Saved locally on this device. Sign in for cross-device memory."; authenticated schema-missing writes still report queued memory updates. Unit coverage plus the localhost Playwright smoke now assert this wording so the UI does not falsely imply cross-device memory before the VPS schema gate is green.
 
 ---
 

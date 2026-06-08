@@ -2267,6 +2267,64 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).toContain('Saved locally. 2 memory updates queued for sync.')
   })
 
+  it('does not imply cross-device memory when a clarification is saved in local-only mode', async () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-clarification-local-only-memory',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            clarification: {
+              schemaVersion: 'ai-clarification.v1',
+              kind: 'response_quality',
+              responseMode: 'general',
+              locale: 'en',
+              direction: 'ltr',
+              progressLabel: 'Clarifying direction • Step 1/1',
+              summary: 'One missing preference would change the recommendation.',
+              memoryKey: 'workflow:task_answer:general',
+              pathType: 'clarify_first',
+              candidateTaskIds: ['task-a'],
+              actions: ['generate_current', 'show_candidates', 'pause_save'],
+              coverage: {
+                score: 0.48,
+                materiality: 'high',
+                dimensions: { preferences: 0.1 },
+                missing: ['preferences'],
+                decision: 'ask',
+              },
+              question: {
+                id: 'response_quality_general',
+                entityType: 'workflow',
+                entityId: 'general',
+                reason: 'missing_response_direction',
+                question: 'What should guide this answer?',
+                options: [{ id: 'ranking_impact', label: 'Real impact', effect: 'Rank by real-world consequence.' }],
+                allowFreeText: true,
+                relatedTaskIds: ['task-a'],
+              },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    await wrapper.get('.weekly-question-option').trigger('click')
+    await wrapper.get('.weekly-question-apply').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Saved locally on this device. Sign in for cross-device memory.')
+    expect(wrapper.text()).not.toContain('Saved. Continuing with this context.')
+  })
+
   it('keeps clarification as a concise interview before broad weekly planning', async () => {
     const wrapper = mount(ChatMessage, {
       props: {

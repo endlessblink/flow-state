@@ -34,6 +34,7 @@ import { detectLanguage } from '@/services/ai/pipeline/languageDetector'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useCanvasStore } from '@/stores/canvas'
 import { useLaneStore } from '@/stores/lanes'
+import { useAuthStore } from '@/stores/auth'
 import { buildDayPlanTaskUpdates } from '@/services/ai/pipeline/dayPlan'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import type { WeeklyPlanOutput, WeeklyPlanRecommendation } from '@/services/ai/pipeline/weeklyPlan'
@@ -124,6 +125,7 @@ const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const laneStore = useLaneStore()
 const aiMemoryDb = useSupabaseDatabase()
+const authStore = useAuthStore()
 
 function pendingAIMemoryWriteCount(): number {
   return typeof aiMemoryDb.getPendingAIMemoryWriteCount === 'function'
@@ -137,6 +139,11 @@ function clarificationPersistedStatus(locale: 'he' | 'en'): string {
     return locale === 'he'
       ? `נשמר מקומית. ${pending} עדכוני זיכרון ממתינים לסנכרון.`
       : `Saved locally. ${pending} memory update${pending === 1 ? '' : 's'} queued for sync.`
+  }
+  if (!authStore.user?.id) {
+    return locale === 'he'
+      ? 'נשמר מקומית במכשיר הזה. התחברות נדרשת לזיכרון בין מכשירים.'
+      : 'Saved locally on this device. Sign in for cross-device memory.'
   }
   return locale === 'he' ? 'נשמר. ממשיך עם ההקשר הזה.' : 'Saved. Continuing with this context.'
 }

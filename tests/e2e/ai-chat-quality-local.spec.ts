@@ -270,6 +270,7 @@ test('weekly planning asks first, does not dump recommendations, and does not ge
   await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
   await expect(input).toBeEnabled({ timeout: 10_000 })
   await expect(page.locator('[data-testid="ai-clarification-saved"]').first()).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('[data-testid="ai-clarification-saved"]').first()).toContainText('Saved locally on this device', { timeout: 10_000 })
   await expect(page.locator('.ai-chat-messages')).not.toContainText(/project meaning\/stakes are unknown.*project meaning\/stakes are unknown/i)
   await expect(page.locator('[data-testid="ai-clarification-follow-up"]')).toHaveCount(0)
 
@@ -422,6 +423,7 @@ test.describe('broad task answers ask one specific question before recommendatio
       await clarification.locator('.weekly-question-apply').first().click()
       await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
       await expect(page.locator('[data-testid="ai-clarification-saved"]').last()).toBeVisible({ timeout: 10_000 })
+      await expect(page.locator('[data-testid="ai-clarification-saved"]').last()).toContainText('Saved locally on this device', { timeout: 10_000 })
       await expect(input).toBeEnabled({ timeout: 10_000 })
 
       const clarificationCountAfterAnswer = await page.locator('[data-testid="ai-clarification"]').count()

@@ -33,9 +33,9 @@ To apply to the live VPS database, rerun exactly:
 This will run:
   scp -i "$SSH_KEY" "$BUNDLE_PATH" "$VPS_USER@$VPS_HOST:$REMOTE_BUNDLE_PATH"
   ssh -i "$SSH_KEY" "$VPS_USER@$VPS_HOST" 'docker exec -i \$($PGCONTAINER_CMD) psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f "$REMOTE_BUNDLE_PATH"'
-
-After apply, verify:
   npm run check:ai-memory-schema
+
+After apply, optionally run the guarded write/read/delete probe:
   AI_MEMORY_CRUD_PROBE=1 npm run check:ai-memory-crud
 EOF
   exit 0
@@ -49,7 +49,9 @@ echo "[ai-memory-live] Applying bundle with psql ON_ERROR_STOP=1 ..."
 ssh -i "$SSH_KEY" "$VPS_USER@$VPS_HOST" \
   "docker exec -i \$($PGCONTAINER_CMD) psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f '$REMOTE_BUNDLE_PATH'"
 
-echo "[ai-memory-live] Live migration apply completed."
+echo "[ai-memory-live] Running read-only REST schema readiness check ..."
+npm run check:ai-memory-schema
+
+echo "[ai-memory-live] Live migration apply completed and REST schema readiness passed."
 echo "[ai-memory-live] Verify now with:"
-echo "  npm run check:ai-memory-schema"
 echo "  AI_MEMORY_CRUD_PROBE=1 npm run check:ai-memory-crud"

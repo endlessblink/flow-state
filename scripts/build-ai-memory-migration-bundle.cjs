@@ -64,6 +64,9 @@ function main() {
 
   const body = MIGRATION_FILES.map(migrationBody).join('\n')
   const footer = [
+    '-- Ask PostgREST/Supabase REST to reload the schema cache after applying.',
+    "notify pgrst, 'reload schema';",
+    '',
     '-- Verification query for psql:',
     '-- select table_name from information_schema.tables where table_schema = \'public\' and table_name like \'ai_%\' order by table_name;',
     '',

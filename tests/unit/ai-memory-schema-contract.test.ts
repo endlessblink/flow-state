@@ -261,6 +261,7 @@ describe('AI memory schema contract', () => {
 
     expect(liveMigrationBundler).toContain('drop policy if exists')
     expect(liveMigrationBundler).toContain('Review before applying to production')
+    expect(liveMigrationBundler).toContain("notify pgrst, 'reload schema'")
     expect(liveMigrationBundler).toContain('npm run check:ai-memory-schema')
   })
 
@@ -285,6 +286,7 @@ describe('AI memory schema contract', () => {
     expect(liveMigrationApplier).toContain('npm run build:ai-memory-migration-bundle')
     expect(liveMigrationApplier).toContain('psql -v ON_ERROR_STOP=1')
     expect(liveMigrationApplier).toContain('npm run check:ai-memory-schema')
+    expect(liveMigrationApplier).toContain('Live migration apply completed and REST schema readiness passed')
     expect(liveMigrationApplier).toContain('AI_MEMORY_CRUD_PROBE=1 npm run check:ai-memory-crud')
   })
 })

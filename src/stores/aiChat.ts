@@ -67,6 +67,16 @@ export interface AIActivityEvent {
   shouldReveal?: boolean
   undoAvailable?: boolean
   timestamp: number
+  metadata?: {
+    phase?: string
+    pathType?: string
+    source?: string
+    reason?: string
+    startedAt?: number
+    elapsedMs?: number
+    timedOut?: boolean
+    qualityFailures?: string[]
+  }
 }
 
 /**
@@ -1294,6 +1304,20 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
   function addActivityEvent(event: Omit<AIActivityEvent, 'id' | 'timestamp'> & { id?: string; timestamp?: number }): string {
     const id = event.id || `ai-activity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const existingIndex = activityEvents.value.findIndex((item) => item.id === id)
+    if (existingIndex !== -1) {
+      activityEvents.value[existingIndex] = {
+        ...activityEvents.value[existingIndex],
+        ...event,
+        id,
+        timestamp: event.timestamp || Date.now(),
+        metadata: {
+          ...activityEvents.value[existingIndex].metadata,
+          ...event.metadata,
+        },
+      }
+      return id
+    }
     activityEvents.value.unshift({
       ...event,
       id,
@@ -1310,6 +1334,10 @@ export const useAIChatStore = defineStore('aiChat', () => {
       ...activityEvents.value[index],
       ...patch,
       timestamp: patch.timestamp || Date.now(),
+      metadata: {
+        ...activityEvents.value[index].metadata,
+        ...patch.metadata,
+      },
     }
   }
 

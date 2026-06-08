@@ -465,36 +465,62 @@ export function useAIChat() {
   }
 
   function beginChatPhase(label: string, message?: string): string {
+    const startedAt = Date.now()
     return store.addActivityEvent({
       type: 'thinking',
       status: 'running',
       label,
       message,
       id: 'ai-chat-phase-live',
+      metadata: {
+        phase: label,
+        startedAt,
+      },
     })
   }
 
   function updateChatPhase(activityId: string, label: string, message?: string): void {
+    const existing = store.activityEvents.find(event => event.id === activityId)
+    const startedAt = existing?.metadata?.startedAt ?? Date.now()
     store.updateActivityEvent(activityId, {
       status: 'running',
       label,
       message,
+      metadata: {
+        phase: label,
+        startedAt,
+        elapsedMs: Date.now() - startedAt,
+      },
     })
   }
 
   function finishChatPhase(activityId: string, label = 'Response ready', message?: string): void {
+    const existing = store.activityEvents.find(event => event.id === activityId)
+    const startedAt = existing?.metadata?.startedAt ?? Date.now()
     store.updateActivityEvent(activityId, {
       status: 'success',
       label,
       message,
+      metadata: {
+        phase: label,
+        startedAt,
+        elapsedMs: Date.now() - startedAt,
+      },
     })
   }
 
   function failChatPhase(activityId: string, label = 'Response failed', message?: string): void {
+    const existing = store.activityEvents.find(event => event.id === activityId)
+    const startedAt = existing?.metadata?.startedAt ?? Date.now()
     store.updateActivityEvent(activityId, {
       status: 'failed',
       label,
       message,
+      metadata: {
+        phase: label,
+        startedAt,
+        elapsedMs: Date.now() - startedAt,
+      },
     })
   }
 
@@ -1885,6 +1911,18 @@ export function useAIChat() {
           candidateCount: cardTasks.length,
         })
         if (clarification) {
+          const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
+          const startedAt = existingPhase?.metadata?.startedAt ?? Date.now()
+          store.updateActivityEvent(phaseActivityId, {
+            metadata: {
+              startedAt,
+              elapsedMs: Date.now() - startedAt,
+              pathType: clarification.pathType,
+              source: clarification.debug?.retrieval?.source,
+              reason: clarification.debug?.reason,
+              timedOut: clarification.debug?.retrieval?.timedOut,
+            },
+          })
           if (lastMsg && lastMsg.isStreaming) {
             lastMsg.content = ''
             store.streamingContent = ''
@@ -1986,6 +2024,18 @@ export function useAIChat() {
         if (validationErrors.length && finalPlan.source === 'quick_draft') {
           finalPlan.quality.caveats = [...finalPlan.quality.caveats, ...validationErrors.slice(0, 3)]
         }
+        const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
+        const startedAt = existingPhase?.metadata?.startedAt ?? Date.now()
+        store.updateActivityEvent(phaseActivityId, {
+          metadata: {
+            startedAt,
+            elapsedMs: Date.now() - startedAt,
+            pathType: finalPlan.source === 'quick_draft' ? 'reliability_fallback' : 'structured_model',
+            source: finalPlan.source,
+            reason: validationErrors[0],
+            qualityFailures: validationErrors.slice(0, 3),
+          },
+        })
         if (lastMsg && lastMsg.isStreaming) {
           lastMsg.content = ''
           store.streamingContent = ''
@@ -2132,6 +2182,18 @@ export function useAIChat() {
       let responseQuality = auditChatResponseQuality(qualityInput)
       if (!isWeekPlan && responseQuality.level === 'bad' && hasTaskList) {
         updateChatPhase(phaseActivityId, 'Repairing answer quality', responseQuality.failures.slice(0, 2).join(', '))
+        const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
+        const startedAt = existingPhase?.metadata?.startedAt ?? Date.now()
+        store.updateActivityEvent(phaseActivityId, {
+          metadata: {
+            startedAt,
+            elapsedMs: Date.now() - startedAt,
+            pathType: 'quality_repair',
+            source: 'chat_quality_audit',
+            reason: responseQuality.failures[0],
+            qualityFailures: responseQuality.failures,
+          },
+        })
         const fallbackResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
         const fallbackCardData = parseCardGroups(fallbackResponse, toolResults)
         const fallbackQuality = auditChatResponseQuality({

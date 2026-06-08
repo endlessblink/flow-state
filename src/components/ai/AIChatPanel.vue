@@ -384,6 +384,16 @@ function activityStatusText(status: string, undoAvailable?: boolean) {
   return status
 }
 
+function activityElapsedText(item: { metadata?: { elapsedMs?: number; timedOut?: boolean } }): string {
+  const elapsedMs = item.metadata?.elapsedMs
+  if (typeof elapsedMs !== 'number' || !Number.isFinite(elapsedMs) || elapsedMs < 100) {
+    return item.metadata?.timedOut ? 'timeout' : ''
+  }
+  const seconds = elapsedMs / 1000
+  const elapsed = seconds < 10 ? `${seconds.toFixed(1)}s` : `${Math.round(seconds)}s`
+  return item.metadata?.timedOut ? `${elapsed} timeout` : elapsed
+}
+
 function revealActivityOnCanvas(item: { taskIds?: string[]; visualKind?: 'spotlight' | 'changed' | 'pending' | 'removed' }) {
   const taskIds = item.taskIds?.filter(Boolean) || []
   if (taskIds.length === 0 || typeof window === 'undefined') return
@@ -1102,6 +1112,9 @@ onUnmounted(() => {
             <span class="activity-copy">
               <span class="activity-label">{{ item.label }}</span>
               <span v-if="item.message" class="activity-message">{{ item.message }}</span>
+              <span v-if="activityElapsedText(item)" class="activity-elapsed" data-testid="ai-activity-elapsed">
+                {{ activityElapsedText(item) }}
+              </span>
             </span>
             <button
               v-if="item.shouldReveal && item.taskIds?.length"
@@ -1993,6 +2006,13 @@ onUnmounted(() => {
   white-space: nowrap;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
+}
+
+.activity-elapsed {
+  flex-shrink: 0;
+  color: var(--text-quaternary, var(--text-tertiary));
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
 }
 
 .activity-status {

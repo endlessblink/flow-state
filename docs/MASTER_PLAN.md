@@ -112,9 +112,9 @@
 
 ---
 
-### TASK-1834: Chat observability for slow or low-quality answers (📋 PLANNED)
+### TASK-1834: Chat observability for slow or low-quality answers (🔄 IN PROGRESS)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
 
 **Why**: The sidebar currently appears to hang while the bridge thinks. The user needs to see what phase is slow and the app needs debug data to explain latency and quality failures.
 
@@ -132,6 +132,10 @@
 - Weekly planning has bounded timeouts and a safe reliability fallback instead of spinning.
 - Debug metadata identifies whether the answer was clarification-first, generated with uncertainty, model-planned, or fallback.
 - Slow answers can be attributed to task read, memory retrieval, bridge generation, formatting, or persistence.
+
+**Progress**:
+- 2026-06-08: Chat phase activity events now update in place, preserve elapsed timing metadata, and annotate key paths such as clarify-first, structured-model, reliability-fallback, and quality-repair.
+- 2026-06-08: Sidebar activity rows show concise elapsed timing so slow phases are visible without dumping debug prose into the answer.
 
 ---
 

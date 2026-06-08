@@ -165,6 +165,50 @@ describe('AI sidebar-first desktop experience', () => {
     })
   })
 
+  it('updates same-id chat phases in place and keeps elapsed metadata', () => {
+    const store = useAIChatStore()
+
+    store.addActivityEvent({
+      id: 'ai-chat-phase-live',
+      type: 'thinking',
+      status: 'running',
+      label: 'Retrieving memory',
+      metadata: { startedAt: 1_000, phase: 'Retrieving memory' },
+      timestamp: 1_000,
+    })
+    store.addActivityEvent({
+      id: 'ai-chat-phase-live',
+      type: 'thinking',
+      status: 'running',
+      label: 'Checking needed context',
+      metadata: { startedAt: 2_000, elapsedMs: 250, phase: 'Checking needed context' },
+      timestamp: 2_250,
+    })
+    store.updateActivityEvent('ai-chat-phase-live', {
+      status: 'success',
+      label: 'Clarification ready',
+      metadata: {
+        elapsedMs: 1250,
+        pathType: 'clarify_first',
+        source: 'exact_entity_lookup',
+      },
+      timestamp: 3_250,
+    })
+
+    expect(store.activityEvents).toHaveLength(1)
+    expect(store.activityEvents[0]).toMatchObject({
+      id: 'ai-chat-phase-live',
+      status: 'success',
+      label: 'Clarification ready',
+      metadata: {
+        startedAt: 2_000,
+        elapsedMs: 1250,
+        pathType: 'clarify_first',
+        source: 'exact_entity_lookup',
+      },
+    })
+  })
+
   it('renders timeline rows from real activity state in the AI sidebar', () => {
     const store = useAIChatStore()
     store.openPanel()
@@ -174,6 +218,7 @@ describe('AI sidebar-first desktop experience', () => {
       label: 'Reading FlowState',
       message: 'list tasks',
       tool: 'list_tasks',
+      metadata: { elapsedMs: 1250 },
     })
     store.addActivityEvent({
       type: 'destructive',
@@ -209,6 +254,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.find('[data-testid="ai-activity-running"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="ai-activity-waiting_confirmation"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Reading FlowState')
+    expect(wrapper.get('[data-testid="ai-activity-elapsed"]').text()).toContain('1.3s')
     expect(wrapper.text()).toContain('Waiting for confirmation')
     expect(wrapper.text()).toContain('Undo available')
   })

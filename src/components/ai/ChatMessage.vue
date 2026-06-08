@@ -124,6 +124,22 @@ const canvasStore = useCanvasStore()
 const laneStore = useLaneStore()
 const aiMemoryDb = useSupabaseDatabase()
 
+function pendingAIMemoryWriteCount(): number {
+  return typeof aiMemoryDb.getPendingAIMemoryWriteCount === 'function'
+    ? aiMemoryDb.getPendingAIMemoryWriteCount()
+    : 0
+}
+
+function clarificationPersistedStatus(locale: 'he' | 'en'): string {
+  const pending = pendingAIMemoryWriteCount()
+  if (pending > 0) {
+    return locale === 'he'
+      ? `נשמר מקומית. ${pending} עדכוני זיכרון ממתינים לסנכרון.`
+      : `Saved locally. ${pending} memory update${pending === 1 ? '' : 's'} queued for sync.`
+  }
+  return locale === 'he' ? 'נשמר. ממשיך עם ההקשר הזה.' : 'Saved. Continuing with this context.'
+}
+
 const taskMap = computed(() => {
   const map = new Map<string, Task>()
   for (const task of taskStore.tasks) {
@@ -672,7 +688,7 @@ async function persistClarificationAnswer(
         retrieval: card.debug?.retrieval,
       },
     })
-    clarificationStatus.value = card.locale === 'he' ? 'נשמר. ממשיך עם ההקשר הזה.' : 'Saved. Continuing with this context.'
+    clarificationStatus.value = clarificationPersistedStatus(card.locale)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (!message.includes('authenticated user')) {
@@ -763,9 +779,7 @@ async function persistClarificationFollowUp(
         followUp: step?.id ?? 'follow_up',
       },
     })
-    clarificationStatus.value = card.locale === 'he'
-      ? 'נשמר. ממשיך עם ההקשר הזה.'
-      : 'Saved. Continuing with this context.'
+    clarificationStatus.value = clarificationPersistedStatus(card.locale)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (!message.includes('authenticated user')) {
@@ -833,9 +847,12 @@ async function recordClarificationEscape(card: AIClarificationArtifact, action: 
         retrieval: card.debug?.retrieval,
       },
     })
-    clarificationStatus.value = card.locale === 'he'
-      ? action === 'pause_save' ? 'נשמר. השאלה לא תחזור מיד.' : 'נשמר. מציג תוצאה מוגבלת לפי הנתונים הקיימים.'
-      : action === 'pause_save' ? 'Saved. I will not ask this again right away.' : 'Saved. Showing a limited result from current data.'
+    const persisted = clarificationPersistedStatus(card.locale)
+    clarificationStatus.value = pendingAIMemoryWriteCount() > 0
+      ? persisted
+      : card.locale === 'he'
+        ? action === 'pause_save' ? 'נשמר. השאלה לא תחזור מיד.' : 'נשמר. מציג תוצאה מוגבלת לפי הנתונים הקיימים.'
+        : action === 'pause_save' ? 'Saved. I will not ask this again right away.' : 'Saved. Showing a limited result from current data.'
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (!message.includes('authenticated user')) {
@@ -1434,6 +1451,10 @@ async function saveRecommendationFeedbackChoice(rec: WeeklyPlanRecommendation) {
 
 function clarificationDebugLines(card: AIClarificationArtifact): string[] {
   const lines: string[] = []
+  const pendingWrites = pendingAIMemoryWriteCount()
+  if (pendingWrites > 0) {
+    lines.push(`memory sync: ${pendingWrites} queued write${pendingWrites === 1 ? '' : 's'}`)
+  }
   if (card.coverage) {
     lines.push(`coverage ${Math.round(card.coverage.score * 100)}% / ${card.coverage.materiality}`)
     if (card.coverage.missing.length) lines.push(`missing: ${card.coverage.missing.join(', ')}`)

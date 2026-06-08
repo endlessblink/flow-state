@@ -143,6 +143,7 @@
 - 2026-06-08: Hardened the live migration handoff so the generated AI memory SQL bundle notifies PostgREST to reload its schema cache, and the confirmed apply path now runs the read-only `npm run check:ai-memory-schema` gate before declaring completion. The guarded CRUD probe remains explicit because it writes temporary rows.
 - 2026-06-08: Re-ran the read-only live schema checker after the handoff hardening. `https://api.in-theflow.com` still returns PGRST205 for all six AI-memory tables, so the server-backed memory lane remains gated on the explicit live migration/schema-cache apply step.
 - 2026-06-08: The read-only live schema checker now retries PGRST205 schema-cache misses with configurable `AI_MEMORY_SCHEMA_RETRIES`/`AI_MEMORY_SCHEMA_RETRY_MS`, and the live apply helper uses a longer post-apply wait window before failing. This keeps the VPS handoff strict while avoiding false failure when PostgREST needs a few seconds to reload after `notify pgrst, 'reload schema';`.
+- 2026-06-08: The read-only AI memory schema checker now emits machine-readable readiness evidence via `--json`/`--json-out` and an offline `--print-contract` mode. The schema contract test executes the offline mode and compares its required tables/columns to the migration/runtime contract, so VPS handoff can archive exact readiness reports instead of scraping human logs. This is proof tooling only; live Supabase still needs the explicit schema apply/cache-refresh gate before cross-device AI memory is ready.
 
 ---
 

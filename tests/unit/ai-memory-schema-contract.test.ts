@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { execFileSync } from 'node:child_process'
 import { describe, expect, it } from 'vitest'
 
 const root = process.cwd()
@@ -294,5 +295,21 @@ describe('AI memory schema contract', () => {
     expect(liveMigrationApplier).toContain('AI_MEMORY_SCHEMA_RETRY_MS="${AI_MEMORY_SCHEMA_RETRY_MS:-2500}"')
     expect(liveMigrationApplier).toContain('Live migration apply completed and REST schema readiness passed')
     expect(liveMigrationApplier).toContain('AI_MEMORY_CRUD_PROBE=1 npm run check:ai-memory-crud')
+  })
+
+  it('prints the required AI memory schema contract without network access', () => {
+    const output = execFileSync('node', ['scripts/check-ai-memory-schema.cjs', '--print-contract'], {
+      cwd: root,
+      encoding: 'utf8',
+    })
+    const contract = JSON.parse(output) as {
+      mode: string
+      tableCount: number
+      requiredTables: Record<string, string[]>
+    }
+
+    expect(contract.mode).toBe('contract')
+    expect(contract.tableCount).toBe(Object.keys(tableColumns).length)
+    expect(contract.requiredTables).toEqual(tableColumns)
   })
 })

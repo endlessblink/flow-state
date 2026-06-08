@@ -9,6 +9,7 @@
  */
 
 const path = require('node:path')
+const fs = require('node:fs')
 const dotenv = require('dotenv')
 
 dotenv.config({ path: path.join(__dirname, '..', '.env.local'), quiet: true })
@@ -20,6 +21,10 @@ const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON
 const API_KEY = SERVICE_ROLE_KEY || ANON_KEY
 const RETRIES = Number.parseInt(process.env.AI_MEMORY_SCHEMA_RETRIES || '2', 10)
 const RETRY_MS = Number.parseInt(process.env.AI_MEMORY_SCHEMA_RETRY_MS || '1500', 10)
+const ARGS = process.argv.slice(2)
+const JSON_MODE = ARGS.includes('--json') || process.env.AI_MEMORY_SCHEMA_JSON === '1'
+const PRINT_CONTRACT = ARGS.includes('--print-contract')
+const JSON_OUT = argValue('--json-out') || process.env.AI_MEMORY_SCHEMA_JSON_OUT || ''
 
 const REQUIRED_TABLES = {
   ai_context_entities: [
@@ -36,13 +41,13 @@ const REQUIRED_TABLES = {
     'confidence',
     'completeness_score',
     'last_asked_at',
-    'stale_after',
     'last_answered_at',
     'ask_count',
+    'stale_after',
     'memory_type',
     'scope',
-    'last_reinforced_at',
     'reinforcement_count',
+    'last_reinforced_at',
     'related_entities',
     'decay_score',
   ],
@@ -51,8 +56,8 @@ const REQUIRED_TABLES = {
     'user_id',
     'entity_key',
     'entity_type',
-    'event_type',
     'question_id',
+    'event_type',
     'question',
     'selected_option_id',
     'selected_label',
@@ -160,6 +165,12 @@ async function checkTable(table, columns) {
   }
 }
 
+function argValue(name) {
+  const index = ARGS.indexOf(name)
+  if (index === -1) return ''
+  return ARGS[index + 1] || ''
+}
+
 function isSchemaCacheMiss(result) {
   return !result.ok && typeof result.reason === 'string' && result.reason.includes('PGRST205')
 }
@@ -181,14 +192,75 @@ function summarizeError(body) {
   }
 }
 
+function log(message) {
+  if (JSON_MODE) console.error(message)
+  else console.log(message)
+}
+
+function error(message) {
+  console.error(message)
+}
+
+function schemaStatus(results) {
+  const failed = results.filter(result => !result.ok)
+  if (!failed.length) return 'ready'
+  if (failed.length === results.length && failed.every(isSchemaCacheMiss)) return 'missing'
+  return 'partial'
+}
+
+function buildReport(results, startedAt, endedAt) {
+  const failed = results.filter(result => !result.ok)
+  const schemaMisses = failed.filter(isSchemaCacheMiss)
+  return {
+    checkedAt: new Date(endedAt).toISOString(),
+    elapsedMs: endedAt - startedAt,
+    supabaseUrl: SUPABASE_URL,
+    authMode: SERVICE_ROLE_KEY ? 'service-role read-only' : 'anon read-only',
+    retryConfig: {
+      retries: Math.max(0, Number.isFinite(RETRIES) ? RETRIES : 0),
+      retryMs: Math.max(0, Number.isFinite(RETRY_MS) ? RETRY_MS : 0),
+    },
+    status: schemaStatus(results),
+    tableCount: results.length,
+    okTableCount: results.length - failed.length,
+    failedTableCount: failed.length,
+    schemaCacheMissCount: schemaMisses.length,
+    missingTables: schemaMisses.map(result => result.table).sort(),
+    failedTables: failed.map(result => result.table).sort(),
+    tables: results,
+    requiredTables: REQUIRED_TABLES,
+  }
+}
+
+function emitJson(report) {
+  const json = JSON.stringify(report, null, 2)
+  if (JSON_OUT) {
+    fs.writeFileSync(JSON_OUT, `${json}\n`)
+    error(`[ai-memory-schema] Wrote JSON report to ${JSON_OUT}`)
+    return
+  }
+  console.log(json)
+}
+
 async function main() {
+  if (PRINT_CONTRACT) {
+    emitJson({
+      checkedAt: new Date().toISOString(),
+      mode: 'contract',
+      tableCount: Object.keys(REQUIRED_TABLES).length,
+      requiredTables: REQUIRED_TABLES,
+    })
+    return
+  }
+
   if (!SUPABASE_URL || !API_KEY) {
-    console.error('[ai-memory-schema] Missing SUPABASE_URL/VITE_SUPABASE_URL or Supabase key env.')
+    error('[ai-memory-schema] Missing SUPABASE_URL/VITE_SUPABASE_URL or Supabase key env.')
     process.exit(2)
   }
 
-  console.log(`[ai-memory-schema] Checking ${Object.keys(REQUIRED_TABLES).length} AI memory tables at ${SUPABASE_URL}`)
-  console.log(`[ai-memory-schema] Auth mode: ${SERVICE_ROLE_KEY ? 'service-role read-only' : 'anon read-only'}`)
+  const startedAt = Date.now()
+  log(`[ai-memory-schema] Checking ${Object.keys(REQUIRED_TABLES).length} AI memory tables at ${SUPABASE_URL}`)
+  log(`[ai-memory-schema] Auth mode: ${SERVICE_ROLE_KEY ? 'service-role read-only' : 'anon read-only'}`)
 
   let results = []
   const maxAttempts = Math.max(1, 1 + (Number.isFinite(RETRIES) ? RETRIES : 0))
@@ -200,9 +272,9 @@ async function main() {
       const result = await checkTable(table, columns)
       results.push(result)
       if (result.ok) {
-        console.log(`[ai-memory-schema] OK ${table}`)
+        log(`[ai-memory-schema] OK ${table}`)
       } else {
-        console.error(`[ai-memory-schema] FAIL ${table}: HTTP ${result.status} ${result.reason}`)
+        error(`[ai-memory-schema] FAIL ${table}: HTTP ${result.status} ${result.reason}`)
       }
     }
 
@@ -211,19 +283,21 @@ async function main() {
     if (!failed.length) break
     if (attempt >= maxAttempts || schemaMisses.length !== failed.length) break
 
-    console.error(`[ai-memory-schema] Schema cache still missing ${schemaMisses.length} table(s); retrying in ${retryDelay}ms (${attempt}/${maxAttempts - 1})...`)
+    error(`[ai-memory-schema] Schema cache still missing ${schemaMisses.length} table(s); retrying in ${retryDelay}ms (${attempt}/${maxAttempts - 1})...`)
     if (retryDelay > 0) {
       await sleep(retryDelay)
     }
   }
 
   const failed = results.filter(result => !result.ok)
+  const report = buildReport(results, startedAt, Date.now())
+  if (JSON_MODE || JSON_OUT) emitJson(report)
   if (failed.length) {
-    console.error(`[ai-memory-schema] ${failed.length}/${results.length} table checks failed. Apply AI memory migrations or refresh the REST schema cache.`)
+    error(`[ai-memory-schema] ${failed.length}/${results.length} table checks failed. Apply AI memory migrations or refresh the REST schema cache.`)
     process.exit(1)
   }
 
-  console.log('[ai-memory-schema] All AI memory tables/columns are visible through Supabase REST.')
+  log('[ai-memory-schema] All AI memory tables/columns are visible through Supabase REST.')
 }
 
 main().catch(error => {

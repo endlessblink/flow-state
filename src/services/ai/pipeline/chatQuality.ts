@@ -99,11 +99,14 @@ const BROAD_TASK_QUALITY_MODES = new Set<ChatQualityMode>([
 
 export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAudit {
   const text = normalizeText(input.text)
+  const displayLines = input.text
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
   const failures: string[] = []
   const warnings: string[] = []
-  const lines = text.split(/\n+/).map(line => line.trim()).filter(Boolean)
-  const bulletLines = lines.filter(line => /^[-*•]|\d+[.)]/.test(line))
-  const paragraphCount = lines.filter(line => line.length > 180).length
+  const bulletLines = displayLines.filter(line => /^[-*•]|\d+[.)]/.test(line))
+  const proseParagraphs = displayLines.filter(line => line.length > 180)
   const mode = input.mode ?? 'general'
   const isBroadTaskAnswer = input.hasTaskList && BROAD_TASK_QUALITY_MODES.has(mode)
   const path = input.responsePath ?? 'direct_answer'
@@ -118,7 +121,7 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   if (input.hasTaskList && !input.hasCards && input.taskCount > 0) failures.push('missing_task_cards')
   if (text.length > (input.hasCards ? 1200 : 850)) failures.push('too_verbose')
   else if (text.length > (input.hasCards ? 850 : 600)) warnings.push('verbose')
-  if (paragraphCount > 1) failures.push('wall_of_text')
+  if (proseParagraphs.length > 1) failures.push('wall_of_text')
   if (bulletLines.length > 6) failures.push('too_many_visible_items')
   else if (bulletLines.length > 4) warnings.push('many_visible_items')
   if (GENERIC_FILLER_RE.test(text)) failures.push('generic_filler')
@@ -134,7 +137,7 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   if (isBroadTaskAnswer && SHALLOW_REASON_RE.test(text) && !STAKE_RE.test(text)) {
     failures.push('metadata_only_reasoning')
   }
-  if (hasRepeatedLineShape(lines)) failures.push('repeated_template_structure')
+  if (hasRepeatedLineShape(displayLines)) failures.push('repeated_template_structure')
   if (input.structuredOutputFailed && path !== 'deterministic_fallback') {
     failures.push('missing_deterministic_fallback_after_structured_failure')
   }
@@ -177,7 +180,7 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
       : input.hasCards || STAKE_RE.test(text) || visibleUncertainty
         ? 1
         : 0.65,
-    scannability: text.length <= (input.hasCards ? 850 : 600) && bulletLines.length <= 4 && paragraphCount <= 1
+    scannability: text.length <= (input.hasCards ? 850 : 600) && bulletLines.length <= 4 && proseParagraphs.length <= 1
       ? 1
       : text.length <= (input.hasCards ? 1200 : 850) && bulletLines.length <= 6
         ? 0.65

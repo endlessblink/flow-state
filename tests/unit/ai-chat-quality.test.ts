@@ -263,4 +263,38 @@ describe('chat quality evidence audit', () => {
       'repeated_recommendation_evidence:rec_a,rec_b,rec_c',
     ]))
   })
+
+  it('rejects broad numbered prose dumps before they reach the user', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 8,
+      recommendationCount: 8,
+      contextUnknown: true,
+      coverageScore: 0.46,
+      highMateriality: true,
+      hasVisibleUncertainty: true,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: [
+        'Limited context: this is only a candidate ordering, not confirmed importance.',
+        '1. Task A — due soon, so start here.',
+        '2. Task B — high priority, so start here.',
+        '3. Task C — overdue, so start here.',
+        '4. Task D — medium priority, so start here.',
+        '5. Task E — due tomorrow, so start here.',
+        '6. Task F — due soon, so start here.',
+        '7. Task G — high priority, so start here.',
+      ].join('\n'),
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toEqual(expect.arrayContaining([
+      'too_many_visible_items',
+      'too_many_low_context_recommendations',
+    ]))
+    expect(audit.checks.scannability).toBeLessThan(0.6)
+  })
 })

@@ -516,6 +516,7 @@
 - 2026-06-08: Added a regression for the realistic cache-first weekly-planning case where task notes/subtasks exist but project meaning is still unknown. The clarification policy now treats project meaning and stale context as forced missing dimensions in EVPI scoring, so a project-understanding question beats a broader week-priority question when project meaning is the blocker.
 - 2026-06-08: Added mode-specific chat-quality regressions for prioritization, next-task, and overdue-triage outputs. These tests prevent polished but fake broad answers from bypassing the audit just because they are not weekly/day-plan response modes.
 - 2026-06-08: Broad post-clarification quality gates now check the actual selected/free-text clarification value, not just generic "your clarification" wording. Answers that claim to honor a clarification but omit the user's chosen value fail with `clarification_value_not_reflected`; paraphrased free-text answers pass when they preserve meaningful terms.
+- 2026-06-08: Broad answer scannability audits now inspect the rendered line structure before whitespace normalization. Numbered recommendation dumps with too many visible items fail with `too_many_visible_items`/`too_many_low_context_recommendations`, which routes them into the deterministic repair path instead of letting a long prose list reach the chat.
 
 ---
 

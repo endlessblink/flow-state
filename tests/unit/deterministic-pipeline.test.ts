@@ -70,10 +70,11 @@ describe('intentRouter — routeIntentByKeywords()', () => {
     ['help me prioritize'],
     ['prioritize my tasks'],
     ['מה הכי חשוב'],
-  ])('routes "%s" to prioritization mode, not a generic overdue dump', (input) => {
+  ])('routes "%s" to prioritization mode over the active task list, not a generic overdue dump', (input) => {
     const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
-    expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
+    expect(result.tools.some(t => t.tool === 'list_tasks')).toBe(true)
+    expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(false)
     expect(result.responseMode).toBe('prioritization')
   })
 

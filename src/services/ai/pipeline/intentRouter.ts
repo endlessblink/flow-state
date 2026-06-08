@@ -584,7 +584,9 @@ export function routeIntentByKeywords(
       break
 
     case 'get_overdue_tasks':
-      toolCall = { tool: 'get_overdue_tasks', parameters: {} }
+      toolCall = responseMode === 'prioritization'
+        ? { tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 30 } }
+        : { tool: 'get_overdue_tasks', parameters: {} }
       break
 
     case 'suggest_next_task':
@@ -779,7 +781,10 @@ export async function routeIntent(
 
       default: {
         // No-parameter read tools: list_tasks, get_overdue_tasks, suggest_next_task, etc.
-        toolCall = { tool: classification.tool, parameters: {} }
+        const responseMode = responseModeForMessageAndTool(userMessage, classification.tool)
+        toolCall = responseMode === 'prioritization'
+          ? { tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 30 } }
+          : { tool: classification.tool, parameters: {} }
         break
       }
     }

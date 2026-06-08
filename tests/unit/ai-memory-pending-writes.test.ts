@@ -83,6 +83,19 @@ function createContext(): DatabaseContext {
   }
 }
 
+function createGuestContext(): DatabaseContext {
+  return {
+    authStore: {
+      isInitialized: true,
+      initialize: vi.fn(async () => undefined),
+    } as unknown as DatabaseContext['authStore'],
+    isSyncing: ref(false),
+    getUserIdSafe: () => null,
+    withRetry: async <T>(operation: () => Promise<T>) => operation(),
+    handleError: vi.fn(),
+  }
+}
+
 describe('AI memory pending write queue', () => {
   beforeEach(() => {
     readyTables = new Set()
@@ -92,6 +105,54 @@ describe('AI memory pending write queue', () => {
     parameterBeliefUpsertCount = 0
     tableRows = {}
     clearPendingAIMemoryWritesForTest()
+    localStorage.removeItem('flowstate-ai-clarification-local-memory-v1')
+  })
+
+  it('stores guest clarification answers locally so broad prompts do not re-ask immediately', async () => {
+    const db = useAIMemoryDatabase(createGuestContext())
+
+    await db.recordAIClarificationEvent({
+      entityKey: 'workflow:task_answer:next_task',
+      entityType: 'workflow',
+      displayName: 'next_task',
+      questionId: 'response_quality_next_task',
+      eventType: 'answered',
+      question: 'What would make one task right for now?',
+      selectedOptionId: 'ranking_energy',
+      selectedLabel: 'Energy fit',
+      memoryPatch: {
+        entityType: 'workflow',
+        entityId: 'next_task',
+        operation: 'set',
+        field: 'rankingFocus',
+        value: 'energy fit right now',
+        confidence: 0.9,
+        source: 'button_answer',
+      },
+      coverageScoreAtTime: 0.42,
+      uncertaintyDimensions: ['preferences', 'impact'],
+      pathType: 'clarify_first',
+    })
+
+    const events = await db.fetchAIClarificationEvents(['workflow:task_answer:next_task'], 10)
+    const beliefs = await db.fetchAIParameterBeliefs({
+      entityKeys: ['workflow:task_answer:next_task'],
+      parameterKeys: ['rankingFocus'],
+      limit: 10,
+    })
+
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({
+      eventType: 'answered',
+      selectedLabel: 'Energy fit',
+      questionId: 'response_quality_next_task',
+    })
+    expect(beliefs).toHaveLength(1)
+    expect(beliefs[0]).toMatchObject({
+      entityKey: 'workflow:task_answer:next_task',
+      parameterKey: 'rankingFocus',
+      confidence: 0.9,
+    })
   })
 
   it('queues clarification writes skipped by missing schema and flushes them later', async () => {

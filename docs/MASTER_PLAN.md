@@ -170,6 +170,7 @@
 - 2026-06-08: Missing-card repair now replaces noisy model prose with the concise grounded fallback when the formatter output already fails quality checks or follows a clarification continuation, instead of appending fallback cards under a broad content dump.
 - 2026-06-08: Added an in-memory pending AI memory write queue for missing-schema/schema-cache timing failures. Clarification events, recommendation feedback, parameter beliefs, and context edges now enqueue instead of being lost when migrations are not visible yet, and can flush after schema availability without blocking the chat UI.
 - 2026-06-08: Broad ask-before-answer routing now distinguishes prioritization, next-task, overdue-triage, and task-breakdown response modes instead of collapsing them into generic task answers. This lets the clarification gate ask a relevant one-card question for "prioritize", "what should I do next", and overdue triage flows before broad recommendations.
+- 2026-06-08: Guest/localhost clarification answers now persist in the AI memory database composable's local fallback, including derived `rankingFocus` parameter beliefs. This makes saved response-direction answers retrievable immediately without Supabase auth, so the same broad card is not re-asked in the next prompt while server sync is unavailable.
 
 ---
 
@@ -199,6 +200,7 @@
 - 2026-06-08: Answered clarification events now derive/update server parameter beliefs with confidence, impact weight, selected label/free text, question evidence, and missing-dimension keys. This keeps EVPI inputs durable for VPS/local parity instead of recalculating only from transient chat state.
 - 2026-06-08: Broad clarification coverage now consumes durable parameter beliefs, not only recent events. Unit tests prove a saved high-confidence `rankingFocus` belief suppresses the response-direction card and lets the assistant proceed without repeating the ladder question.
 - 2026-06-08: Response-quality coverage now treats prioritization, next-task, overdue-triage, and task-breakdown modes as high-materiality even when only a few task candidates are visible. A saved high-confidence `rankingFocus` belief still suppresses re-asking for those modes.
+- 2026-06-08: Prioritization routing now loads the active task list rather than the overdue-only tool. This prevents "prioritize my tasks" from skipping the clarification gate simply because there are no overdue tasks.
 
 ---
 
@@ -324,6 +326,7 @@
 - 2026-06-08: Broad fallback card selection now applies recent recommendation feedback: dismissed/postponed inline cards are filtered out during cooldown, while accepted/timeblocked cards get a small positive boost. Inline task feedback is matched by recommendation ID so one postponed task does not suppress the whole project.
 - 2026-06-08: Extracted broad clarification policy into a tested pipeline module. Regression coverage now proves cold-start day/smart/general broad requests ask one concise direction question, recent answered/proceed-with-uncertainty events suppress repeats, stale decisions can refresh, and weekly planning stays on its separate interview path.
 - 2026-06-08: Broad clarification cards are now mode-specific: prioritization asks what should decide the priority order, next-task asks what makes one task right now, and overdue triage asks how to treat overdue items. Tests prove these paths no longer ask the generic "what should guide this answer?" question.
+- 2026-06-08: Localhost Playwright now proves broad-flow behavior for `prioritize my tasks`, `what should I do next?`, and `show me overdue tasks`: each prompt asks one mode-specific card before recommendations, hides task cards while asking, saves the button answer, leaves no stuck running activity, and does not re-ask the same question on the next prompt.
 
 ---
 
@@ -516,6 +519,7 @@
 - 2026-06-08: Added repeatable guest-mode Playwright smoke `tests/e2e/ai-chat-quality-local.spec.ts` plus dedicated localhost config `tests/e2e/playwright.ai-chat-quality-local.config.ts`. The smoke seeds the real `FlowStateReadCache` IndexedDB layer used by the current cache-first app boot, opens the real AI sidebar, sends "Help me plan this week from my tasks", verifies exactly one clarification before any weekly plan/inline cards/candidate-card barrage, answers one clarification, verifies no follow-up gate appears, verifies no running activity row remains, verifies the input is enabled, and captures `/tmp/flowstate-ai-chat-quality-stage8.png`.
 - 2026-06-08: Extended the localhost smoke to cover the post-clarification plan and feedback loop. After the user answers the clarification ladder, structured-model failure now falls back to a compact deterministic quick draft instead of the empty "not reliable enough" plan, no second "quick question before ranking" appears, repeated unknown-stakes wording is suppressed, the "Why ask?" debug disclosure exposes coverage/retrieval/EVPI details, postponing a recommendation opens reason/revisit controls, saving feedback hides the recommendation immediately even in guest mode, and no running activity row remains.
 - 2026-06-08: Re-ran the localhost smoke after fixing the project-meaning clarification gap. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed on localhost: the flow loaded seeded cache-first tasks, asked before broad weekly output, continued after saved answers, showed compact recommendation cards, saved postpone feedback, hid the postponed card, and left zero running activity rows.
+- 2026-06-08: Extended and re-ran `tests/e2e/ai-chat-quality-local.spec.ts` for broad non-weekly prompts. The localhost browser proof now covers weekly planning plus prioritization, next-task, and overdue-triage one-card clarification loops with no pre-answer recommendation barrage and guest-mode no-repeat memory.
 
 ---
 

@@ -156,6 +156,12 @@ type AIMemoryWriteOptions = {
 const pendingAIMemoryWrites: PendingAIMemoryWrite[] = []
 let isFlushingPendingAIMemoryWrites = false
 const MAX_PENDING_AI_MEMORY_WRITES = 80
+const LOCAL_AI_CLARIFICATION_MEMORY_KEY = 'flowstate-ai-clarification-local-memory-v1'
+
+type LocalAIClarificationMemory = {
+  events: AIClarificationEvent[]
+  parameterBeliefs: AIParameterBelief[]
+}
 
 const PROJECT_FIELD_MAP: Record<string, keyof ProjectContextRow> = {
   summary: 'summary',
@@ -336,6 +342,108 @@ function toAIParameterBelief(row: AIParameterBeliefRow): AIParameterBelief {
     createdAt: row.created_at ?? null,
     updatedAt: row.updated_at ?? null,
   }
+}
+
+function readLocalAIClarificationMemory(): LocalAIClarificationMemory {
+  if (typeof localStorage === 'undefined') return { events: [], parameterBeliefs: [] }
+  try {
+    const raw = localStorage.getItem(LOCAL_AI_CLARIFICATION_MEMORY_KEY)
+    if (!raw) return { events: [], parameterBeliefs: [] }
+    const parsed = JSON.parse(raw) as Partial<LocalAIClarificationMemory>
+    return {
+      events: Array.isArray(parsed.events) ? parsed.events : [],
+      parameterBeliefs: Array.isArray(parsed.parameterBeliefs) ? parsed.parameterBeliefs : [],
+    }
+  } catch {
+    return { events: [], parameterBeliefs: [] }
+  }
+}
+
+function writeLocalAIClarificationMemory(memory: LocalAIClarificationMemory) {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(LOCAL_AI_CLARIFICATION_MEMORY_KEY, JSON.stringify({
+    events: memory.events.slice(0, 80),
+    parameterBeliefs: memory.parameterBeliefs.slice(0, 80),
+  }))
+}
+
+function localAIClarificationEvent(input: AIClarificationEventInput, now: string): AIClarificationEvent {
+  return {
+    id: `local-${now}-${input.questionId}`,
+    entityKey: input.entityKey,
+    entityType: input.entityType,
+    questionId: input.questionId,
+    eventType: input.eventType,
+    question: input.question ?? null,
+    selectedOptionId: input.selectedOptionId ?? null,
+    selectedLabel: input.selectedLabel ?? null,
+    freeText: input.freeText ?? null,
+    memoryPatch: input.memoryPatch ?? null,
+    sourceMessageId: input.sourceMessageId ?? null,
+    coverageScoreAtTime: input.coverageScoreAtTime ?? null,
+    uncertaintyDimensions: input.uncertaintyDimensions ?? null,
+    pathType: input.pathType ?? null,
+    contextSnapshot: input.contextSnapshot ?? null,
+    createdAt: now,
+  }
+}
+
+function localAIParameterBeliefsFromClarification(input: AIClarificationEventInput, now: string): AIParameterBelief[] {
+  return beliefInputsFromClarification(input).map(belief => ({
+    id: `local-${now}-${belief.entityKey}-${belief.parameterKey}`,
+    entityKey: belief.entityKey,
+    entityType: belief.entityType,
+    parameterKey: belief.parameterKey,
+    beliefJson: {
+      value: belief.value,
+      selectedLabel: belief.selectedLabel,
+      freeText: belief.freeText,
+      lastUpdated: now,
+      evidence: belief.evidence ?? {},
+    },
+    confidence: belief.confidence ?? 0.78,
+    impactWeight: belief.impactWeight ?? aiParameterImpactWeight(belief.parameterKey),
+    lastAnsweredAt: now,
+    sourceQuestionId: belief.sourceQuestionId ?? input.questionId,
+    sourceEventId: belief.sourceEventId ?? null,
+    createdAt: now,
+    updatedAt: now,
+  }))
+}
+
+function recordLocalAIClarificationEvent(input: AIClarificationEventInput) {
+  const now = new Date().toISOString()
+  const memory = readLocalAIClarificationMemory()
+  const event = localAIClarificationEvent(input, now)
+  const nextBeliefsByKey = new Map(memory.parameterBeliefs.map(belief => [`${belief.entityKey}:${belief.parameterKey}`, belief]))
+  for (const belief of localAIParameterBeliefsFromClarification(input, now)) {
+    const key = `${belief.entityKey}:${belief.parameterKey}`
+    const existing = nextBeliefsByKey.get(key)
+    nextBeliefsByKey.set(key, existing && existing.confidence > belief.confidence ? existing : belief)
+  }
+  writeLocalAIClarificationMemory({
+    events: [event, ...memory.events].slice(0, 80),
+    parameterBeliefs: [...nextBeliefsByKey.values()]
+      .sort((a, b) => new Date(b.updatedAt ?? b.lastAnsweredAt ?? 0).getTime() - new Date(a.updatedAt ?? a.lastAnsweredAt ?? 0).getTime())
+      .slice(0, 80),
+  })
+}
+
+function localAIClarificationEvents(entityKeys: string[], limit: number): AIClarificationEvent[] {
+  const keys = new Set(entityKeys)
+  return readLocalAIClarificationMemory().events
+    .filter(event => keys.has(event.entityKey))
+    .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+    .slice(0, limit)
+}
+
+function localAIParameterBeliefs(input: { entityKeys?: string[]; parameterKeys?: string[]; limit?: number }): AIParameterBelief[] {
+  const entityKeys = new Set(uniqueStrings(input.entityKeys ?? []))
+  const parameterKeys = new Set(uniqueStrings(input.parameterKeys ?? []))
+  return readLocalAIClarificationMemory().parameterBeliefs
+    .filter(belief => (!entityKeys.size || entityKeys.has(belief.entityKey)) && (!parameterKeys.size || parameterKeys.has(belief.parameterKey)))
+    .sort((a, b) => new Date(b.updatedAt ?? b.lastAnsweredAt ?? 0).getTime() - new Date(a.updatedAt ?? a.lastAnsweredAt ?? 0).getTime())
+    .slice(0, input.limit ?? 80)
 }
 
 function toAIContextEdge(row: AIContextEdgeRow): AIContextEdge {
@@ -705,7 +813,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     if (!keys.length) return []
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
-    if (!userId) return []
+    if (!userId) return localAIClarificationEvents(keys, limit)
     try {
       return await withRetry(async () => {
         const { data, error } = await getSupabase()
@@ -791,7 +899,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     if (!entityKeys.length && !parameterKeys.length) return []
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
-    if (!userId) return []
+    if (!userId) return localAIParameterBeliefs(input)
     const limit = input.limit ?? 80
     try {
       return await withRetry(async () => {
@@ -1046,7 +1154,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
   const recordAIClarificationEvent = async (input: AIClarificationEventInput, options: AIMemoryWriteOptions = {}): Promise<void> => {
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
-    if (!userId) throw new Error('Cannot save AI clarification without an authenticated user.')
+    if (!userId) {
+      recordLocalAIClarificationEvent(input)
+      return
+    }
     const now = new Date().toISOString()
     try {
       isSyncing.value = true

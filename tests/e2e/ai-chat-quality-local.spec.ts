@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const todayIso = () => new Date().toISOString()
 const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
@@ -75,7 +75,7 @@ function seededTasks(): SeedTask[] {
     }),
     task('ai-local-task-2', 'Review Work bucket priorities', {
       priority: 'high',
-      dueDate: inDays(1),
+      dueDate: inDays(-1),
       description: 'Ambiguous bucket. The assistant must not infer stakes from the label alone.',
     }),
     task('ai-local-task-3', 'Buy printer paper', {
@@ -218,6 +218,11 @@ async function answerVisibleClarification(page: Page) {
   await card.locator('.weekly-question-apply').first().click()
 }
 
+async function sendChat(input: Locator, message: string) {
+  await input.fill(message)
+  await input.page().locator('.send-btn').click()
+}
+
 test('weekly planning asks first, does not dump recommendations, and does not get stuck after answers', async ({ page }) => {
   await seedGuestWorkspace(page)
   await stubBridge(page)
@@ -258,4 +263,56 @@ test('weekly planning asks first, does not dump recommendations, and does not ge
   await expect(input).toBeEnabled({ timeout: 10_000 })
 
   await page.screenshot({ path: '/tmp/flowstate-ai-chat-quality-stage8.png', fullPage: false })
+})
+
+test.describe('broad task answers ask one specific question before recommendations', () => {
+  const cases = [
+    {
+      prompt: 'prioritize my tasks',
+      question: 'What should decide the priority order?',
+      option: 'Project momentum',
+    },
+    {
+      prompt: 'what should I do next?',
+      question: 'What would make one task right for now?',
+      option: 'Energy fit',
+    },
+    {
+      prompt: 'show me overdue tasks',
+      question: 'How should I treat overdue tasks?',
+      option: 'Hard commitments',
+    },
+  ]
+
+  for (const scenario of cases) {
+    test(`${scenario.prompt} uses a targeted one-card clarification and no-repeat memory`, async ({ page }) => {
+      await seedGuestWorkspace(page)
+      await stubBridge(page)
+
+      const input = await openAIChat(page)
+      await sendChat(input, scenario.prompt)
+
+      const clarification = page.locator('[data-testid="ai-clarification"]').last()
+      await expect(clarification).toBeVisible({ timeout: 30_000 })
+      await expect(clarification).toContainText(scenario.question)
+      await expect(clarification.getByText(scenario.option, { exact: true })).toBeVisible()
+      await expect(page.locator('[data-testid="weekly-plan"]')).toHaveCount(0)
+      await expect(page.locator('[data-testid="inline-plan-card"]')).toHaveCount(0)
+      await expect(page.locator('[data-testid="ai-clarification-candidate-card"]')).toHaveCount(0)
+      await expect(page.locator('.ai-chat-messages')).not.toContainText(/best plan|Top Recommendations|Recommended Focus Areas/i)
+
+      await clarification.getByText(scenario.option, { exact: true }).click()
+      await clarification.locator('.weekly-question-apply').first().click()
+      await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+      await expect(page.locator('[data-testid="ai-clarification-saved"]').last()).toBeVisible({ timeout: 10_000 })
+      await expect(input).toBeEnabled({ timeout: 10_000 })
+
+      const clarificationCountAfterAnswer = await page.locator('[data-testid="ai-clarification"]').count()
+      await sendChat(input, scenario.prompt)
+      await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+      await expect(page.locator('[data-testid="ai-clarification"]')).toHaveCount(clarificationCountAfterAnswer)
+      await expect(page.locator('.ai-chat-messages')).not.toContainText(new RegExp(`${scenario.question}.*${scenario.question}`, 's'))
+      await expect(input).toBeEnabled({ timeout: 10_000 })
+    })
+  }
 })

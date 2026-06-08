@@ -445,6 +445,7 @@
 - 2026-06-08: Added `globalChatMemory` for non-task/freeform responses. It exact-fetches workflow/preference entities, recent clarification decisions, and selected parameter beliefs with a 1.5s timeout in the chat pipeline, producing a compact quoted-evidence packet instead of raw memory prose.
 - 2026-06-08: Broad/global retrieval now exact-fetches compact `ai_memory_snapshots` before generation. Snapshot evidence is bounded, sanitized, counted in diagnostics, and covered by focused retrieval tests so future summarization jobs can reduce prompt bloat without adding a separate graph/vector dependency.
 - 2026-06-08: Weekly planning retrieval now exact-fetches compact `ai_memory_snapshots` for user/project/task/week scopes, passes sanitized snapshot evidence into the weekly-plan prompt, and carries `snapshotCount` through diagnostics/debug metadata. Focused tests cover retrieval, prompt sanitization, and timeout fallback.
+- 2026-06-08: Playwright global setup now clears `ai_memory_snapshots` with the other AI memory tables, preventing stale summarized memory from hiding clarification-first regressions in localhost smoke tests.
 
 ---
 

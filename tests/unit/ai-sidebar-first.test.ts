@@ -2964,6 +2964,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(src('supabase/migrations/20260608090000_ai_clarification_memory.sql')).toContain('create table if not exists public.ai_clarification_events')
     expect(src('supabase/migrations/20260608093000_ai_assistant_memory_metadata.sql')).toContain('create table if not exists public.ai_recommendation_feedback')
     expect(src('supabase/migrations/20260608093000_ai_assistant_memory_metadata.sql')).toContain('create table if not exists public.ai_context_edges')
+    expect(src('tests/global-setup.ts')).toContain("'ai_memory_snapshots'")
     expect(src('src/composables/useAIChat.ts')).toContain('LOW-OVERWHELM QUALITY CONTRACT')
     expect(src('src/composables/useAIChat.ts')).toContain('No greeting, throat-clearing, recap, motivational line, or generic productivity advice')
     expect(src('src/composables/useAIChat.ts')).toContain('if (clarification)')

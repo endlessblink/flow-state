@@ -58,6 +58,7 @@ async function ensureTestUser() {
   for (const table of [
     'ai_recommendation_feedback',
     'ai_parameter_beliefs',
+    'ai_memory_snapshots',
     'ai_clarification_events',
     'ai_context_edges',
     'ai_context_entities',

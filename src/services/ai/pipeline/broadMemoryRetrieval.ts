@@ -45,8 +45,11 @@ export const BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS = [
   'workflow:task_answer:overdue_triage',
   'preference:planning_style',
   'preference:energy',
+  'preference:energy_fit',
   'preference:constraints',
   'preference:brevity',
+  'preference:ranking_focus',
+  'preference:follow_through',
 ]
 
 export type BroadMemoryRetrievalResult = {

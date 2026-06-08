@@ -30,6 +30,15 @@ function contextEntity(input: Partial<AIContextEntity> & Pick<AIContextEntity, '
 }
 
 describe('retrieveGlobalChatMemory', () => {
+  it('includes aggregate recommendation-feedback preference keys in global memory retrieval', () => {
+    expect(GLOBAL_CHAT_MEMORY_ENTITY_KEYS).toEqual(expect.arrayContaining([
+      'preference:brevity',
+      'preference:ranking_focus',
+      'preference:energy_fit',
+      'preference:follow_through',
+    ]))
+  })
+
   it('builds a bounded evidence packet for non-task assistant responses', async () => {
     const belief: AIParameterBelief = {
       id: 'belief-1',

@@ -198,6 +198,43 @@ describe('AI memory pending write queue', () => {
     })
   })
 
+  it('aggregates repeated guest recommendation feedback into preference memory', async () => {
+    const db = useAIMemoryDatabase(createGuestContext())
+
+    for (const id of ['a', 'b', 'c']) {
+      await db.recordAIRecommendationFeedback({
+        recommendationId: `inline_task_${id}`,
+        taskId: `local-task-${id}`,
+        entityKey: `task:local-task-${id}`,
+        action: 'dismiss',
+        reasonCategory: 'not_important',
+        sourceMessageId: `msg-${id}`,
+      })
+    }
+
+    const beliefs = await db.fetchAIParameterBeliefs({
+      entityKeys: ['preference:ranking_focus'],
+      parameterKeys: ['rankingFocus'],
+      limit: 10,
+    })
+
+    expect(beliefs).toHaveLength(1)
+    expect(beliefs[0]).toMatchObject({
+      entityKey: 'preference:ranking_focus',
+      entityType: 'preference',
+      parameterKey: 'rankingFocus',
+      confidence: 0.82,
+      sourceQuestionId: 'recommendation_feedback:aggregate:ranking_focus',
+    })
+    expect(beliefs[0]?.beliefJson).toMatchObject({
+      value: expect.stringContaining('Repeated feedback'),
+      evidence: expect.objectContaining({
+        feedbackCount: 3,
+        reasonCounts: { not_important: 3 },
+      }),
+    })
+  })
+
   it('retrieves guest local feedback through broad task memory inputs', async () => {
     const db = useAIMemoryDatabase(createGuestContext())
 
@@ -291,6 +328,74 @@ describe('AI memory pending write queue', () => {
 
     expect(feedbackInsertCount).toBe(1)
     expect(parameterBeliefUpsertCount).toBe(1)
+  })
+
+  it('aggregates repeated server recommendation feedback into preference beliefs', async () => {
+    readyTables = new Set(['ai_recommendation_feedback', 'ai_parameter_beliefs'])
+    tableRows = {
+      ai_recommendation_feedback: [
+        {
+          id: 'feedback-a',
+          recommendation_id: 'inline_task_a',
+          task_id: null,
+          entity_key: 'task:a',
+          action: 'dismiss',
+          reason_category: 'not_important',
+          free_text: null,
+          revisit_at: null,
+          outcome_signals: {},
+          implicit_positive: false,
+          source_message_id: 'msg-a',
+          created_at: '2026-06-08T08:00:00.000Z',
+        },
+        {
+          id: 'feedback-b',
+          recommendation_id: 'inline_task_b',
+          task_id: null,
+          entity_key: 'task:b',
+          action: 'postpone',
+          reason_category: 'wrong_context',
+          free_text: null,
+          revisit_at: null,
+          outcome_signals: {},
+          implicit_positive: false,
+          source_message_id: 'msg-b',
+          created_at: '2026-06-08T08:05:00.000Z',
+        },
+      ],
+    }
+    const db = useAIMemoryDatabase(createContext())
+
+    await db.recordAIRecommendationFeedback({
+      recommendationId: 'inline_task_c',
+      entityKey: 'task:c',
+      action: 'dismiss',
+      reasonCategory: 'needs_more_info',
+      sourceMessageId: 'msg-c',
+    })
+
+    expect(feedbackInsertCount).toBe(1)
+    expect(parameterBeliefUpsertCount).toBe(2)
+    expect(upsertPayloads.ai_parameter_beliefs).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        entity_key: 'preference:ranking_focus',
+        entity_type: 'preference',
+        parameter_key: 'rankingFocus',
+        confidence: 0.82,
+        source_question_id: 'recommendation_feedback:aggregate:ranking_focus',
+        belief_json: expect.objectContaining({
+          value: expect.stringContaining('Repeated feedback'),
+          evidence: expect.objectContaining({
+            feedbackCount: 3,
+            reasonCounts: {
+              not_important: 1,
+              wrong_context: 1,
+              needs_more_info: 1,
+            },
+          }),
+        }),
+      }),
+    ]))
   })
 
   it('refreshes stale context entity freshness when a stale-context clarification is answered', async () => {

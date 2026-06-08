@@ -8,8 +8,11 @@ export const GLOBAL_CHAT_MEMORY_ENTITY_KEYS = [
   'workflow:task_answer:week_plan',
   'preference:planning_style',
   'preference:energy',
+  'preference:energy_fit',
   'preference:constraints',
   'preference:brevity',
+  'preference:ranking_focus',
+  'preference:follow_through',
 ]
 
 export const GLOBAL_CHAT_MEMORY_PARAMETER_KEYS = [

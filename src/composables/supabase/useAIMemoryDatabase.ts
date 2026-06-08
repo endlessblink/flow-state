@@ -481,26 +481,7 @@ function localAIRecommendationFeedbackEvent(input: AIRecommendationFeedbackInput
 }
 
 function localAIParameterBeliefsFromRecommendationFeedback(input: AIRecommendationFeedbackInput, now: string): AIParameterBelief[] {
-  return beliefInputsFromRecommendationFeedback(input).map(belief => ({
-    id: `local-${now}-${belief.entityKey}-${belief.parameterKey}`,
-    entityKey: belief.entityKey,
-    entityType: belief.entityType,
-    parameterKey: belief.parameterKey,
-    beliefJson: {
-      value: belief.value,
-      selectedLabel: belief.selectedLabel,
-      freeText: belief.freeText,
-      lastUpdated: now,
-      evidence: belief.evidence ?? {},
-    },
-    confidence: belief.confidence ?? Math.min(1, 0.55 + (belief.confidenceBoost ?? 0)),
-    impactWeight: belief.impactWeight ?? aiParameterImpactWeight(belief.parameterKey),
-    lastAnsweredAt: now,
-    sourceQuestionId: belief.sourceQuestionId ?? null,
-    sourceEventId: belief.sourceEventId ?? null,
-    createdAt: now,
-    updatedAt: now,
-  }))
+  return beliefInputsFromRecommendationFeedback(input).map(belief => localAIParameterBeliefFromInput(belief, now))
 }
 
 function recordLocalAIRecommendationFeedback(input: AIRecommendationFeedbackInput) {
@@ -508,7 +489,14 @@ function recordLocalAIRecommendationFeedback(input: AIRecommendationFeedbackInpu
   const memory = readLocalAIClarificationMemory()
   const feedback = localAIRecommendationFeedbackEvent(input, now)
   const nextBeliefsByKey = new Map(memory.parameterBeliefs.map(belief => [`${belief.entityKey}:${belief.parameterKey}`, belief]))
-  for (const belief of localAIParameterBeliefsFromRecommendationFeedback(input, now)) {
+  const aggregateInputs = aggregateBeliefInputsFromRecommendationFeedback(input, [
+    feedback,
+    ...(memory.recommendationFeedback ?? []),
+  ])
+  for (const belief of [
+    ...localAIParameterBeliefsFromRecommendationFeedback(input, now),
+    ...aggregateInputs.map(aggregate => localAIParameterBeliefFromInput(aggregate, now)),
+  ]) {
     const key = `${belief.entityKey}:${belief.parameterKey}`
     const existing = nextBeliefsByKey.get(key)
     nextBeliefsByKey.set(key, existing && existing.confidence > belief.confidence ? existing : belief)
@@ -520,6 +508,29 @@ function recordLocalAIRecommendationFeedback(input: AIRecommendationFeedbackInpu
       .slice(0, 80),
     recommendationFeedback: [feedback, ...(memory.recommendationFeedback ?? [])].slice(0, 80),
   })
+}
+
+function localAIParameterBeliefFromInput(input: AIParameterBeliefInput, now: string): AIParameterBelief {
+  return {
+    id: `local-${now}-${input.entityKey}-${input.parameterKey}`,
+    entityKey: input.entityKey,
+    entityType: input.entityType,
+    parameterKey: input.parameterKey,
+    beliefJson: {
+      value: input.value,
+      selectedLabel: input.selectedLabel,
+      freeText: input.freeText,
+      lastUpdated: now,
+      evidence: input.evidence ?? {},
+    },
+    confidence: input.confidence ?? Math.min(1, 0.55 + (input.confidenceBoost ?? 0)),
+    impactWeight: input.impactWeight ?? aiParameterImpactWeight(input.parameterKey),
+    lastAnsweredAt: now,
+    sourceQuestionId: input.sourceQuestionId ?? null,
+    sourceEventId: input.sourceEventId ?? null,
+    createdAt: now,
+    updatedAt: now,
+  }
 }
 
 function toAIContextEdge(row: AIContextEdgeRow): AIContextEdge {
@@ -765,6 +776,90 @@ function beliefInputsFromRecommendationFeedback(input: AIRecommendationFeedbackI
     })
   }
   return beliefs
+}
+
+type RecommendationFeedbackAggregate = {
+  entityKey: string
+  entityType: AIParameterBeliefInput['entityType']
+  parameterKey: string
+  sourceQuestionId: string
+  value: string
+  match: (feedback: Pick<AIRecommendationFeedback, 'action' | 'reasonCategory' | 'implicitPositive'>) => boolean
+}
+
+function recommendationFeedbackAggregate(input: AIRecommendationFeedbackInput): RecommendationFeedbackAggregate | null {
+  if (input.action === 'simplify' || input.reasonCategory === 'too_much') {
+    return {
+      entityKey: 'preference:brevity',
+      entityType: 'preference',
+      parameterKey: 'preferences',
+      sourceQuestionId: 'recommendation_feedback:aggregate:brevity',
+      value: 'Repeated feedback says AI planning answers should stay shorter and show fewer recommendations by default.',
+      match: feedback => feedback.action === 'simplify' || feedback.reasonCategory === 'too_much',
+    }
+  }
+  if (input.reasonCategory === 'low_energy' || input.reasonCategory === 'too_hard') {
+    return {
+      entityKey: 'preference:energy_fit',
+      entityType: 'preference',
+      parameterKey: 'energy_fit',
+      sourceQuestionId: 'recommendation_feedback:aggregate:energy_fit',
+      value: 'Repeated feedback says recommendations should account for energy and task difficulty before ranking.',
+      match: feedback => feedback.reasonCategory === 'low_energy' || feedback.reasonCategory === 'too_hard',
+    }
+  }
+  if (input.reasonCategory === 'not_important' || input.reasonCategory === 'wrong_context' || input.reasonCategory === 'needs_more_info') {
+    return {
+      entityKey: 'preference:ranking_focus',
+      entityType: 'preference',
+      parameterKey: 'rankingFocus',
+      sourceQuestionId: 'recommendation_feedback:aggregate:ranking_focus',
+      value: 'Repeated feedback says weak-context recommendations should be downranked until importance or context is confirmed.',
+      match: feedback => feedback.reasonCategory === 'not_important' || feedback.reasonCategory === 'wrong_context' || feedback.reasonCategory === 'needs_more_info',
+    }
+  }
+  if (input.implicitPositive || input.action === 'accept' || input.action === 'timeblock') {
+    return {
+      entityKey: 'preference:follow_through',
+      entityType: 'preference',
+      parameterKey: 'history',
+      sourceQuestionId: 'recommendation_feedback:aggregate:positive_signal',
+      value: 'Repeated accept/time-block feedback is a positive follow-through signal for similar recommendations.',
+      match: feedback => Boolean(feedback.implicitPositive) || feedback.action === 'accept' || feedback.action === 'timeblock',
+    }
+  }
+  return null
+}
+
+function aggregateBeliefInputsFromRecommendationFeedback(
+  input: AIRecommendationFeedbackInput,
+  recentFeedback: AIRecommendationFeedback[],
+): AIParameterBeliefInput[] {
+  const aggregate = recommendationFeedbackAggregate(input)
+  if (!aggregate) return []
+  const matching = recentFeedback.filter(aggregate.match)
+  if (matching.length < 3) return []
+  const reasonCounts = matching.reduce<Record<string, number>>((counts, feedback) => {
+    const key = feedback.reasonCategory || feedback.action
+    counts[key] = (counts[key] ?? 0) + 1
+    return counts
+  }, {})
+  return [{
+    entityKey: aggregate.entityKey,
+    entityType: aggregate.entityType,
+    parameterKey: aggregate.parameterKey,
+    value: aggregate.value,
+    confidence: Math.min(0.95, 0.82 + Math.max(0, matching.length - 3) * 0.03),
+    impactWeight: aiParameterImpactWeight(aggregate.parameterKey),
+    sourceQuestionId: aggregate.sourceQuestionId,
+    evidence: {
+      feedbackCount: matching.length,
+      reasonCounts,
+      latestRecommendationId: input.recommendationId,
+      latestAction: input.action,
+      latestReasonCategory: input.reasonCategory,
+    },
+  }]
 }
 
 function clarificationAnsweredRecently(events: AIClarificationEvent[], cooldownDays: number): boolean {
@@ -1252,6 +1347,41 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     return !clarificationAnsweredRecently(events.filter(event => event.questionId === questionId), cooldownDays)
   }
 
+  const fetchRecentRecommendationFeedbackForAggregation = async (
+    userId: string,
+    latest: AIRecommendationFeedbackInput,
+  ): Promise<AIRecommendationFeedback[]> => {
+    const { data, error } = await getSupabase()
+      .from('ai_recommendation_feedback')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(40)
+    if (error) throw error
+    const latestEvent: AIRecommendationFeedback = {
+      id: `latest-${latest.recommendationId}-${latest.action}`,
+      generatedPlanId: latest.generatedPlanId ?? null,
+      recommendationId: latest.recommendationId,
+      taskId: latest.taskId ?? null,
+      entityKey: latest.entityKey ?? null,
+      action: latest.action,
+      reasonCategory: latest.reasonCategory ?? null,
+      freeText: latest.freeText ?? null,
+      revisitAt: latest.revisitAt ?? null,
+      outcomeSignals: latest.outcomeSignals ?? {},
+      implicitPositive: Boolean(latest.implicitPositive),
+      sourceMessageId: latest.sourceMessageId ?? null,
+      createdAt: new Date().toISOString(),
+    }
+    const recent = ((data ?? []) as AIRecommendationFeedbackRow[]).map(row => toAIRecommendationFeedback(row))
+    const byKey = new Map<string, AIRecommendationFeedback>()
+    for (const feedback of [latestEvent, ...recent]) {
+      const key = feedback.id || `${feedback.recommendationId}:${feedback.action}:${feedback.createdAt ?? ''}`
+      if (!byKey.has(key)) byKey.set(key, feedback)
+    }
+    return [...byKey.values()]
+  }
+
   const recordAIClarificationEvent = async (input: AIClarificationEventInput, options: AIMemoryWriteOptions = {}): Promise<void> => {
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
@@ -1423,6 +1553,18 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
             continue
           }
           throw beliefError
+        }
+      }
+      try {
+        const recentFeedback = await fetchRecentRecommendationFeedbackForAggregation(userId, input)
+        for (const belief of aggregateBeliefInputsFromRecommendationFeedback(input, recentFeedback)) {
+          await upsertAIParameterBelief(belief, { skipQueue: options.skipQueue })
+        }
+      } catch (aggregateError) {
+        if (isAIMemorySchemaMissing(aggregateError)) {
+          logMissingAIMemorySchema('recordAIRecommendationFeedback:aggregateBelief')
+        } else {
+          throw aggregateError
         }
       }
       invalidateCache.all()

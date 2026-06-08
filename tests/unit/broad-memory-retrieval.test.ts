@@ -252,6 +252,49 @@ describe('retrieveBroadAIMemory', () => {
     expect(result.summary).toContain('remembered answer for preference:brevity')
   })
 
+  it('fetches aggregate recommendation-feedback preference keys for broad task answers', async () => {
+    expect(BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS).toEqual(expect.arrayContaining([
+      'preference:brevity',
+      'preference:ranking_focus',
+      'preference:energy_fit',
+      'preference:follow_through',
+    ]))
+
+    const rankingBelief: AIParameterBelief = {
+      id: 'belief-ranking-focus',
+      entityKey: 'preference:ranking_focus',
+      entityType: 'preference',
+      parameterKey: 'rankingFocus',
+      beliefJson: {
+        value: 'Repeated feedback says weak-context recommendations should be downranked.',
+      },
+      confidence: 0.82,
+      impactWeight: 0.65,
+      sourceQuestionId: 'recommendation_feedback:aggregate:ranking_focus',
+    }
+    const db = dbStub({
+      fetchAIParameterBeliefs: vi.fn(async () => [rankingBelief]),
+    })
+
+    const result = await retrieveBroadAIMemory({
+      db,
+      lang: 'en',
+      cardTasks: [{ id: 'local-a', projectId: 'uncategorized', title: 'First task' }],
+    })
+
+    expect(result.entityKeys).toEqual(expect.arrayContaining([
+      'preference:ranking_focus',
+      'preference:energy_fit',
+      'preference:follow_through',
+    ]))
+    expect(db.fetchAIParameterBeliefs).toHaveBeenCalledWith({
+      entityKeys: result.entityKeys,
+      limit: 40,
+    })
+    expect(result.summary).toContain('remembered answer for preference:ranking_focus')
+    expect(result.summary).toContain('weak-context recommendations should be downranked')
+  })
+
   it('surfaces stale broad memory lifecycle pressure in diagnostics and evidence summary', async () => {
     const oldEvent: AIClarificationEvent = {
       id: 'event-old',

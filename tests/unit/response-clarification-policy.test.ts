@@ -39,4 +39,30 @@ describe('computeBroadTaskClarificationCoverage', () => {
       decision: 'proceed',
     })
   })
+
+  it.each([
+    'prioritization',
+    'next_task',
+    'overdue_triage',
+  ] as const)('treats %s as high-materiality even with a small candidate set', (mode) => {
+    expect(computeBroadTaskClarificationCoverage(mode, 2)).toMatchObject({
+      materiality: 'high',
+      decision: 'ask',
+    })
+  })
+
+  it('lets saved response-direction memory suppress prioritization re-asks', () => {
+    expect(computeBroadTaskClarificationCoverage('prioritization', 6, [{
+      entityKey: 'workflow:task_answer:prioritization',
+      entityType: 'workflow',
+      parameterKey: 'rankingFocus',
+      beliefJson: { value: 'project momentum' },
+      confidence: 0.9,
+      impactWeight: 0.65,
+    }])).toMatchObject({
+      materiality: 'high',
+      missing: [],
+      decision: 'proceed',
+    })
+  })
 })

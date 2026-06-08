@@ -62,7 +62,15 @@ export interface RoutedIntent {
    * Only set for deterministic write actions where no reasoning is needed.
    */
   skipLLM?: boolean
-  responseMode?: 'day_plan' | 'smart_lanes' | 'weekly_review' | 'week_plan'
+  responseMode?:
+    | 'day_plan'
+    | 'smart_lanes'
+    | 'weekly_review'
+    | 'week_plan'
+    | 'prioritization'
+    | 'next_task'
+    | 'overdue_triage'
+    | 'task_breakdown'
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +224,32 @@ const FORMAT_DIRECTIVES: Record<IntentType, string> = {
     'Summarize these productivity statistics with insights about trends.',
   greeting: 'Respond with a short, friendly greeting.',
   freeform: 'Respond naturally and helpfully.',
+}
+
+function responseModeForTool(tool: string): RoutedIntent['responseMode'] {
+  switch (tool) {
+    case 'get_weekly_summary':
+      return 'weekly_review'
+    case 'suggest_next_task':
+      return 'next_task'
+    case 'get_overdue_tasks':
+      return 'overdue_triage'
+    case 'create_subtasks':
+      return 'task_breakdown'
+    default:
+      return undefined
+  }
+}
+
+function responseModeForMessageAndTool(userMessage: string, tool: string): RoutedIntent['responseMode'] {
+  const lower = userMessage.toLowerCase()
+  if (
+    tool === 'get_overdue_tasks' &&
+    /(prioriti[sz]e|priority|important|most important|help me priorit|לתעדף|סדר עדיפויות|הכי חשוב|מה חשוב)/i.test(lower)
+  ) {
+    return 'prioritization'
+  }
+  return responseModeForTool(tool)
 }
 
 // ---------------------------------------------------------------------------
@@ -479,7 +513,7 @@ export function routeIntentByKeywords(
 
   let toolCall: ToolCall
   let skipLLM = false
-  let responseMode: RoutedIntent['responseMode']
+  let responseMode: RoutedIntent['responseMode'] = responseModeForMessageAndTool(userMessage, primaryTool)
 
   switch (primaryTool) {
     // ── Timer ────────────────────────────────────────────────────────────
@@ -568,7 +602,6 @@ export function routeIntentByKeywords(
     case 'get_weekly_summary':
       toolCall = { tool: 'get_weekly_summary', parameters: {} }
       // TASK-1820: render the completed-this-week tasks as real cards.
-      responseMode = 'weekly_review'
       break
 
     // ── Default: pass through with empty parameters ──────────────────────
@@ -757,7 +790,7 @@ export async function routeIntent(
       language,
       formatDirective: FORMAT_DIRECTIVES[intentType],
       skipLLM,
-      responseMode: classification.tool === 'get_weekly_summary' ? 'weekly_review' : undefined,
+      responseMode: responseModeForMessageAndTool(userMessage, classification.tool),
     }
   }
 

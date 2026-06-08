@@ -169,6 +169,7 @@
 - 2026-06-08: Formatter timeout, missing-card fallback, and quality-repair paths now use the same clarification evidence as the main formatter, so post-clarification fallback prose and card reasons do not revert to generic ranking claims.
 - 2026-06-08: Missing-card repair now replaces noisy model prose with the concise grounded fallback when the formatter output already fails quality checks or follows a clarification continuation, instead of appending fallback cards under a broad content dump.
 - 2026-06-08: Added an in-memory pending AI memory write queue for missing-schema/schema-cache timing failures. Clarification events, recommendation feedback, parameter beliefs, and context edges now enqueue instead of being lost when migrations are not visible yet, and can flush after schema availability without blocking the chat UI.
+- 2026-06-08: Broad ask-before-answer routing now distinguishes prioritization, next-task, overdue-triage, and task-breakdown response modes instead of collapsing them into generic task answers. This lets the clarification gate ask a relevant one-card question for "prioritize", "what should I do next", and overdue triage flows before broad recommendations.
 
 ---
 
@@ -197,6 +198,7 @@
 - 2026-06-08: Added local heuristic EVPI scoring over existing coverage dimensions, including targeted parameters, user cost, selected score, skipped candidates, clarification debug display, and event context metadata. Mounted tests verify project-meaning questions outrank broad week questions when project meaning is the high-value missing context, and recently answered questions are skipped.
 - 2026-06-08: Answered clarification events now derive/update server parameter beliefs with confidence, impact weight, selected label/free text, question evidence, and missing-dimension keys. This keeps EVPI inputs durable for VPS/local parity instead of recalculating only from transient chat state.
 - 2026-06-08: Broad clarification coverage now consumes durable parameter beliefs, not only recent events. Unit tests prove a saved high-confidence `rankingFocus` belief suppresses the response-direction card and lets the assistant proceed without repeating the ladder question.
+- 2026-06-08: Response-quality coverage now treats prioritization, next-task, overdue-triage, and task-breakdown modes as high-materiality even when only a few task candidates are visible. A saved high-confidence `rankingFocus` belief still suppresses re-asking for those modes.
 
 ---
 
@@ -321,6 +323,7 @@
 - 2026-06-08: Broad non-weekly memory summaries now retrieve recent recommendation feedback by task/project entity keys, so later broad answers can see postponed/dismissed inline-card signals instead of only weekly plans learning from feedback.
 - 2026-06-08: Broad fallback card selection now applies recent recommendation feedback: dismissed/postponed inline cards are filtered out during cooldown, while accepted/timeblocked cards get a small positive boost. Inline task feedback is matched by recommendation ID so one postponed task does not suppress the whole project.
 - 2026-06-08: Extracted broad clarification policy into a tested pipeline module. Regression coverage now proves cold-start day/smart/general broad requests ask one concise direction question, recent answered/proceed-with-uncertainty events suppress repeats, stale decisions can refresh, and weekly planning stays on its separate interview path.
+- 2026-06-08: Broad clarification cards are now mode-specific: prioritization asks what should decide the priority order, next-task asks what makes one task right now, and overdue triage asks how to treat overdue items. Tests prove these paths no longer ask the generic "what should guide this answer?" question.
 
 ---
 

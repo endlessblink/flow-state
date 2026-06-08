@@ -64,6 +64,9 @@ describe('broad task clarification policy', () => {
     expect(shouldAskBroadTaskClarification('open this task', routed('general'), true)).toBe(false)
     expect(shouldAskBroadTaskClarification('plan my day', routed('day_plan'), true)).toBe(true)
     expect(shouldAskBroadTaskClarification('show smart lanes', routed('smart_lanes'), true)).toBe(true)
+    expect(shouldAskBroadTaskClarification('prioritize my tasks', routed('prioritization'), true)).toBe(true)
+    expect(shouldAskBroadTaskClarification('what is next?', routed('next_task'), true)).toBe(true)
+    expect(shouldAskBroadTaskClarification('show overdue', routed('overdue_triage'), true)).toBe(true)
     expect(shouldAskBroadTaskClarification('plan my week', routed('week_plan'), true)).toBe(false)
     expect(shouldAskBroadTaskClarification('what should I do next?', routed('general'), false)).toBe(false)
   })
@@ -91,6 +94,46 @@ describe('broad task clarification policy', () => {
     expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [], [belief()])).toBeNull()
   })
 
+  it('asks a priority-specific question for prioritization requests', () => {
+    const card = buildBroadTaskClarification(routed('prioritization'), taskResult(6), 'en', [])
+
+    expect(card?.question.question).toBe('What should decide the priority order?')
+    expect(card?.question.options.map(option => option.label)).toEqual([
+      'Real consequence',
+      'Commitment',
+      'Money/health',
+      'Project momentum',
+      'Not sure',
+    ])
+    expect(card?.memoryKey).toBe('workflow:task_answer:prioritization')
+  })
+
+  it('asks a next-action question for next-task requests', () => {
+    const card = buildBroadTaskClarification(routed('next_task'), taskResult(4), 'en', [])
+
+    expect(card?.question.question).toBe('What would make one task right for now?')
+    expect(card?.question.options.map(option => option.label)).toEqual([
+      'Energy fit',
+      'Most meaningful',
+      'Most urgent',
+      'Easy start',
+      'Not sure',
+    ])
+  })
+
+  it('asks an overdue-triage question instead of treating overdue as automatically important', () => {
+    const card = buildBroadTaskClarification(routed('overdue_triage'), taskResult(4), 'en', [])
+
+    expect(card?.question.question).toBe('How should I treat overdue tasks?')
+    expect(card?.question.options.map(option => option.label)).toEqual([
+      'Hard commitments',
+      'Real risk',
+      'Quick reset',
+      'Filter stale',
+      'Not sure',
+    ])
+  })
+
   it('uses a shorter cooldown for unanswered asked-only cards and asks again after stale decisions', () => {
     expect(hasRecentClarificationDecision([event('asked', 0.5)], now)).toBe(true)
     expect(hasRecentClarificationDecision([event('asked', 2)], now)).toBe(false)
@@ -104,6 +147,7 @@ describe('broad task clarification policy', () => {
 
   it('uses stable workflow memory keys for synthetic broad-answer buckets', () => {
     expect(broadTaskClarificationMemoryKey(routed('day_plan'))).toBe('workflow:task_answer:day_plan')
+    expect(broadTaskClarificationMemoryKey(routed('prioritization'))).toBe('workflow:task_answer:prioritization')
     expect(broadTaskClarificationMemoryKey(routed())).toBe('workflow:task_answer:general')
   })
 })

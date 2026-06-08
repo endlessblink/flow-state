@@ -7,7 +7,15 @@ export function computeBroadTaskClarificationCoverage(
   candidateCount: number,
   beliefs: AIParameterBelief[] = [],
 ): AIClarificationCoverage {
-  const materiality = candidateCount >= 3 || responseMode === 'day_plan' || responseMode === 'smart_lanes'
+  const highMaterialityModes: Array<RoutedIntent['responseMode']> = [
+    'day_plan',
+    'smart_lanes',
+    'prioritization',
+    'next_task',
+    'overdue_triage',
+    'task_breakdown',
+  ]
+  const materiality = candidateCount >= 3 || (responseMode ? highMaterialityModes.includes(responseMode) : false)
     ? 'high'
     : candidateCount > 0
       ? 'medium'

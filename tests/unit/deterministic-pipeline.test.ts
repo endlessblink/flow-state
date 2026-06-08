@@ -63,6 +63,18 @@ describe('intentRouter — routeIntentByKeywords()', () => {
     const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
+    expect(result.responseMode).toBe('overdue_triage')
+  })
+
+  it.each([
+    ['help me prioritize'],
+    ['prioritize my tasks'],
+    ['מה הכי חשוב'],
+  ])('routes "%s" to prioritization mode, not a generic overdue dump', (input) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
+    expect(result.type).toBe('task_query')
+    expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
+    expect(result.responseMode).toBe('prioritization')
   })
 
   // ── Suggestion queries ────────────────────────────────────────────────────
@@ -74,6 +86,7 @@ describe('intentRouter — routeIntentByKeywords()', () => {
     const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'suggest_next_task')).toBe(true)
+    expect(result.responseMode).toBe('next_task')
   })
 
   // ── Timer actions ─────────────────────────────────────────────────────────

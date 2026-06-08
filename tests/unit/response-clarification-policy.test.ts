@@ -24,4 +24,19 @@ describe('computeBroadTaskClarificationCoverage', () => {
       decision: 'neutral_candidates',
     })
   })
+
+  it('treats saved response-direction beliefs as enough coverage to avoid re-asking', () => {
+    expect(computeBroadTaskClarificationCoverage('day_plan', 8, [{
+      entityKey: 'workflow:task_answer:day_plan',
+      entityType: 'workflow',
+      parameterKey: 'rankingFocus',
+      beliefJson: { value: 'real impact or consequence' },
+      confidence: 0.9,
+      impactWeight: 0.65,
+    }])).toMatchObject({
+      materiality: 'high',
+      missing: [],
+      decision: 'proceed',
+    })
+  })
 })

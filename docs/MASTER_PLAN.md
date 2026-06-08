@@ -126,9 +126,9 @@
 
 ---
 
-### TASK-1831: Global low-overwhelm clarify-before-answer contract (📋 PLANNED)
+### TASK-1831: Global low-overwhelm clarify-before-answer contract (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1830
 
 **Why**: The chat should not dump long, generic recommendations when context is missing. This applies broadly to planning, prioritization, task breakdowns, "what should I do", and other agent answers, not only weekly planning.
 
@@ -158,6 +158,7 @@
 - 2026-06-08: Added a focused AI memory schema contract test for server-backed entities, clarification events, recommendation feedback, Postgres-native graph edges, RLS, migration order, and missing-schema client fallback before any live Supabase migration step.
 - 2026-06-08: Clarification continuation messages now include the actual selected button/free-text answer as compact quoted context, so localhost flows still proceed correctly before live Supabase memory migrations are applied.
 - 2026-06-08: Clarification continuations now run as hidden control messages with a typed mode marker and bypass the ask gate once, so answering a card does not add noisy chat content or immediately re-ask the same question while persistence is delayed.
+- 2026-06-08: Broad response-quality clarification now checks saved `ai_parameter_beliefs` for the workflow key before asking. A high-confidence saved `rankingFocus`/preference belief raises coverage to `proceed`, so the same broad-answer guidance question is not re-asked after it has already been answered and persisted.
 - 2026-06-08: Weekly clarification now uses a progressive one-question-at-a-time ladder for button-only answers: project/category, why it matters now, success this week, and slip risk. Free text can still satisfy enough context and continue immediately.
 - 2026-06-08: Response-quality clarification no longer treats one button click as enough context. Button-only broad prompts now ask one short follow-up about what the answer should help the user do before continuing.
 - 2026-06-08: The "generate with current info" escape now explicitly continues the chat through the clarification-continuation path with instructions to mark missing context as unknown, rather than only showing local candidate cards.
@@ -193,6 +194,7 @@
 **Progress**:
 - 2026-06-08: Added local heuristic EVPI scoring over existing coverage dimensions, including targeted parameters, user cost, selected score, skipped candidates, clarification debug display, and event context metadata. Mounted tests verify project-meaning questions outrank broad week questions when project meaning is the high-value missing context, and recently answered questions are skipped.
 - 2026-06-08: Answered clarification events now derive/update server parameter beliefs with confidence, impact weight, selected label/free text, question evidence, and missing-dimension keys. This keeps EVPI inputs durable for VPS/local parity instead of recalculating only from transient chat state.
+- 2026-06-08: Broad clarification coverage now consumes durable parameter beliefs, not only recent events. Unit tests prove a saved high-confidence `rankingFocus` belief suppresses the response-direction card and lets the assistant proceed without repeating the ladder question.
 
 ---
 

@@ -1,4 +1,4 @@
-import type { AIClarificationArtifact, AIClarificationEvent } from '@/types/aiMemory'
+import type { AIClarificationArtifact, AIClarificationEvent, AIParameterBelief } from '@/types/aiMemory'
 import { collectCardTasks, type CardToolResult } from './cardsBlock'
 import type { RoutedIntent } from './intentRouter'
 import { computeBroadTaskClarificationCoverage } from './responseClarificationPolicy'
@@ -33,13 +33,14 @@ export function buildBroadTaskClarification(
   toolResults: CardToolResult[],
   lang: ChatOutputLanguage,
   events: AIClarificationEvent[],
+  beliefs: AIParameterBelief[] = [],
 ): AIClarificationArtifact | null {
   const candidateTaskIds = collectCardTasks(toolResults)
     .map(task => String(task.id || ''))
     .filter(Boolean)
     .slice(0, 12)
   if (!candidateTaskIds.length || hasRecentClarificationDecision(events)) return null
-  const coverage = computeBroadTaskClarificationCoverage(routed.responseMode, candidateTaskIds.length)
+  const coverage = computeBroadTaskClarificationCoverage(routed.responseMode, candidateTaskIds.length, beliefs)
   if (coverage.decision !== 'ask') return null
 
   const memoryKey = broadTaskClarificationMemoryKey(routed)

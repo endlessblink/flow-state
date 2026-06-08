@@ -5,7 +5,7 @@ import {
   hasRecentClarificationDecision,
   shouldAskBroadTaskClarification,
 } from '@/services/ai/pipeline/broadClarification'
-import type { AIClarificationEvent } from '@/types/aiMemory'
+import type { AIClarificationEvent, AIParameterBelief } from '@/types/aiMemory'
 import type { RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 
 function routed(responseMode?: RoutedIntent['responseMode']): RoutedIntent {
@@ -44,6 +44,18 @@ function event(eventType: AIClarificationEvent['eventType'], daysAgo: number): A
   }
 }
 
+function belief(parameterKey = 'rankingFocus', confidence = 0.9): AIParameterBelief {
+  return {
+    id: `belief-${parameterKey}`,
+    entityKey: 'workflow:task_answer:day_plan',
+    entityType: 'workflow',
+    parameterKey,
+    beliefJson: { value: 'real impact or consequence' },
+    confidence,
+    impactWeight: 0.65,
+  }
+}
+
 describe('broad task clarification policy', () => {
   const now = Date.UTC(2026, 5, 8)
 
@@ -73,6 +85,10 @@ describe('broad task clarification policy', () => {
     expect(hasRecentClarificationDecision([event('generated_with_uncertainty', 6)], now)).toBe(true)
     expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [event('answered', 6)])).toBeNull()
     expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [event('generated_with_uncertainty', 6)])).toBeNull()
+  })
+
+  it('suppresses repeat questions when a saved parameter belief already answers the ladder', () => {
+    expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [], [belief()])).toBeNull()
   })
 
   it('uses a shorter cooldown for unanswered asked-only cards and asks again after stale decisions', () => {

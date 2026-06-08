@@ -1916,15 +1916,18 @@ export function useAIChat() {
       if (!isClarificationContinuation && shouldAskBroadTaskClarification(content, routed, hasTaskList)) {
         updateChatPhase(phaseActivityId, 'Checking needed context', `${collectCardTasks(toolResults).length} task candidates`)
         const memoryKey = broadTaskClarificationMemoryKey(routed)
-        const broadClarificationEvents = await withTimeout(
-          useSupabaseDatabase().fetchAIClarificationEvents([memoryKey], 20),
+        const db = useSupabaseDatabase()
+        const [broadClarificationEvents, broadClarificationBeliefs] = await withTimeout(Promise.all([
+          db.fetchAIClarificationEvents([memoryKey], 20),
+          db.fetchAIParameterBeliefs({ entityKeys: [memoryKey], parameterKeys: ['rankingFocus', 'preferences', 'impact'], limit: 12 }),
+        ]),
           WEEK_PLAN_MEMORY_TIMEOUT_MS,
           'broad_task_clarification_events_timeout',
         ).catch(memoryErr => {
-          console.warn('[AIChat:Deterministic] Broad clarification events skipped or timed out:', memoryErr)
-          return [] as AIClarificationEvent[]
+          console.warn('[AIChat:Deterministic] Broad clarification memory skipped or timed out:', memoryErr)
+          return [[], []]
         })
-        const broadClarification = buildBroadTaskClarification(routed, toolResults, outputLanguage, broadClarificationEvents)
+        const broadClarification = buildBroadTaskClarification(routed, toolResults, outputLanguage, broadClarificationEvents, broadClarificationBeliefs)
         if (broadClarification) {
           const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
           const startedAt = existingPhase?.metadata?.startedAt ?? Date.now()

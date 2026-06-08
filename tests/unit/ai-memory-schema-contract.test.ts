@@ -19,6 +19,7 @@ const migrations = migrationFiles
 const memoryDbSource = readFileSync(join(root, 'src/composables/supabase/useAIMemoryDatabase.ts'), 'utf8')
 const aiMemoryTypes = readFileSync(join(root, 'src/types/aiMemory.ts'), 'utf8')
 const liveSchemaChecker = readFileSync(join(root, 'scripts/check-ai-memory-schema.cjs'), 'utf8')
+const crudSmokeChecker = readFileSync(join(root, 'scripts/check-ai-memory-crud.cjs'), 'utf8')
 const liveMigrationBundler = readFileSync(join(root, 'scripts/build-ai-memory-migration-bundle.cjs'), 'utf8')
 
 const tableColumns: Record<string, string[]> = {
@@ -260,5 +261,18 @@ describe('AI memory schema contract', () => {
     expect(liveMigrationBundler).toContain('drop policy if exists')
     expect(liveMigrationBundler).toContain('Review before applying to production')
     expect(liveMigrationBundler).toContain('npm run check:ai-memory-schema')
+  })
+
+  it('keeps the AI memory CRUD smoke guarded and aligned with server memory tables', () => {
+    for (const table of Object.keys(tableColumns)) {
+      expect(crudSmokeChecker, `${table} CRUD smoke table`).toContain(table)
+    }
+
+    expect(crudSmokeChecker).toContain('AI_MEMORY_CRUD_PROBE')
+    expect(crudSmokeChecker).toContain("AI_MEMORY_CRUD_PROBE === '1'")
+    expect(crudSmokeChecker).toContain('Refusing to write probe rows')
+    expect(crudSmokeChecker).toContain('probe:ai-memory:')
+    expect(crudSmokeChecker).toContain('cleanup')
+    expect(crudSmokeChecker).toContain('Probe rows inserted, read, and deleted successfully')
   })
 })

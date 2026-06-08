@@ -26,6 +26,7 @@
     "restore": "node scripts/restore-from-shadow.cjs",
     "restore:dry-run": "node scripts/restore-from-shadow.cjs --dry-run",
     "check:ai-memory-schema": "node scripts/check-ai-memory-schema.cjs",
+    "check:ai-memory-crud": "node scripts/check-ai-memory-crud.cjs",
     "build:ai-memory-migration-bundle": "node scripts/build-ai-memory-migration-bundle.cjs",
     "dev:manager": "cd watchpost && npm start",
     "postinstall": "node scripts/patch-electron-builder-dependency-parser.cjs && ([ -d watchpost ] && cd watchpost && npm install || true)",

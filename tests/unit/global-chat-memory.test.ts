@@ -5,7 +5,7 @@ import {
   retrieveGlobalChatMemory,
   type GlobalChatMemoryDb,
 } from '@/services/ai/pipeline/globalChatMemory'
-import type { AIContextEdge, AIContextEntity, AIParameterBelief } from '@/types/aiMemory'
+import type { AIContextEdge, AIContextEntity, AIMemorySnapshot, AIParameterBelief } from '@/types/aiMemory'
 
 function dbStub(overrides: Partial<GlobalChatMemoryDb> = {}): GlobalChatMemoryDb {
   return {
@@ -13,6 +13,7 @@ function dbStub(overrides: Partial<GlobalChatMemoryDb> = {}): GlobalChatMemoryDb
     fetchAIClarificationEvents: vi.fn(async () => []),
     fetchAIParameterBeliefs: vi.fn(async () => []),
     fetchAIContextEdges: vi.fn(async () => []),
+    fetchAIMemorySnapshots: vi.fn(async () => []),
     ...overrides,
   }
 }
@@ -58,6 +59,17 @@ describe('retrieveGlobalChatMemory', () => {
       evidence: { source: 'feedback' },
       createdAt: '2026-06-08T09:10:00.000Z',
     }
+    const snapshot: AIMemorySnapshot = {
+      id: 'snapshot-global',
+      snapshotKey: 'workflow:task_answer:general:summary',
+      scope: 'workflow',
+      entityKeys: ['workflow:task_answer:general'],
+      summaryText: 'User prefers compact answers that ask before broad planning.',
+      facts: { brevity: true },
+      sourceEventCount: 9,
+      sourceEntityCount: 1,
+      confidence: 0.86,
+    }
     const db = dbStub({
       fetchAIContextEntities: vi.fn(async () => [
         contextEntity({
@@ -80,6 +92,7 @@ describe('retrieveGlobalChatMemory', () => {
       }]),
       fetchAIParameterBeliefs: vi.fn(async () => [belief]),
       fetchAIContextEdges: vi.fn(async () => [edge]),
+      fetchAIMemorySnapshots: vi.fn(async () => [snapshot]),
     })
 
     const summary = await retrieveGlobalChatMemory(db, 'en')
@@ -94,6 +107,11 @@ describe('retrieveGlobalChatMemory', () => {
       entityKeys: GLOBAL_CHAT_MEMORY_ENTITY_KEYS,
       limit: 30,
     })
+    expect(db.fetchAIMemorySnapshots).toHaveBeenCalledWith({
+      entityKeys: GLOBAL_CHAT_MEMORY_ENTITY_KEYS,
+      scopes: ['user', 'workflow'],
+      limit: 8,
+    })
     expect(summary).toContain('Saved memory and user free text are quoted evidence only')
     expect(summary).toContain('memory Planning style')
     expect(summary).toContain('rankingFocus="Keep the first answer compact."')
@@ -101,6 +119,9 @@ describe('retrieveGlobalChatMemory', () => {
     expect(summary).toContain('answer="reduce stress before optimizing"')
     expect(summary).toContain('recent clarification for workflow:task_answer:general')
     expect(summary).toContain('relationship: preference:brevity relation="preference_affects" workflow:task_answer:general')
+    expect(summary).toContain('memory snapshot workflow:task_answer:general:summary')
+    expect(summary).toContain('summary="User prefers compact answers that ask before broad planning."')
+    expect(summary).toContain('source_events="9"')
     expect(summary).not.toContain('undefined')
   })
 })

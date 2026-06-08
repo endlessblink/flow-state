@@ -2,6 +2,7 @@ import type {
   AIClarificationEvent,
   AIContextEdge,
   AIContextEntity,
+  AIMemorySnapshot,
   AIParameterBelief,
   AIRecommendationFeedback,
   ProjectContext,
@@ -21,6 +22,7 @@ export type BroadMemoryDb = {
   fetchAIParameterBeliefs(input: { entityKeys?: string[]; parameterKeys?: string[]; limit?: number }): Promise<AIParameterBelief[]>
   fetchAIRecommendationFeedback(input: { taskIds?: string[]; entityKeys?: string[]; limit?: number }): Promise<AIRecommendationFeedback[]>
   fetchAIContextEdges?(input: { entityKeys: string[]; limit?: number }): Promise<AIContextEdge[]>
+  fetchAIMemorySnapshots?(input: { entityKeys?: string[]; scopes?: AIMemorySnapshot['scope'][]; limit?: number }): Promise<AIMemorySnapshot[]>
 }
 
 export type BroadMemoryRetrievalInput = {
@@ -66,6 +68,7 @@ export type BroadMemoryRetrievalResult = {
     beliefCount: number
     feedbackCount: number
     graphEdgeCount: number
+    snapshotCount: number
     entityKeyCount: number
     lifecycle: AIMemoryLifecycleSummary
     elapsedMs: number
@@ -104,6 +107,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       beliefCount: 0,
       feedbackCount: 0,
       graphEdgeCount: 0,
+      snapshotCount: 0,
       entityKeyCount: entityKeys.length,
       lifecycle: emptyLifecycleSummary(),
       elapsedMs: Math.round(performance.now() - startedAt),
@@ -119,6 +123,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     AIParameterBelief[],
     AIRecommendationFeedback[],
     AIContextEdge[],
+    AIMemorySnapshot[],
   ]
   try {
     rows = await withOptionalTimeout(Promise.all([
@@ -129,6 +134,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       input.db.fetchAIParameterBeliefs({ entityKeys, limit: 40 }),
       input.db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 30 }),
       input.db.fetchAIContextEdges?.({ entityKeys, limit: 40 }) ?? Promise.resolve([]),
+      input.db.fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week', 'workflow'], limit: 12 }) ?? Promise.resolve([]),
     ]), input.timeoutMs, 'broad_task_memory_timeout')
   } catch {
     return fallback(Boolean(input.timeoutMs))
@@ -142,6 +148,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     parameterBeliefs,
     recommendationFeedback,
     contextEdges,
+    memorySnapshots,
   ] = rows
   const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now)
 
@@ -169,6 +176,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       parameterBeliefs,
       recommendationFeedback,
       contextEdges,
+      memorySnapshots,
       contextEntities,
       lifecycle,
       projectIdStrings,
@@ -187,6 +195,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       beliefCount: parameterBeliefs.length,
       feedbackCount: recommendationFeedback.length,
       graphEdgeCount: contextEdges.length,
+      snapshotCount: memorySnapshots.length,
       entityKeyCount: entityKeys.length,
       lifecycle,
       elapsedMs: Math.round(performance.now() - startedAt),
@@ -207,6 +216,7 @@ function buildBroadMemorySummary(input: {
   parameterBeliefs: AIParameterBelief[]
   recommendationFeedback: AIRecommendationFeedback[]
   contextEdges: AIContextEdge[]
+  memorySnapshots: AIMemorySnapshot[]
   contextEntities: AIContextEntity[]
   lifecycle: AIMemoryLifecycleSummary
   projectIdStrings: string[]
@@ -270,6 +280,15 @@ function buildBroadMemorySummary(input: {
     if (source && target) {
       lines.push(`- relationship: ${source} ${formatMemoryEvidence('relation', edge.relationType, 80)} ${target} ${formatMemoryEvidence('confidence', edge.confidence.toFixed(2), 20)}`)
     }
+  }
+  for (const snapshot of input.memorySnapshots.slice(0, 4)) {
+    const label = sanitizeMemoryEvidenceText(snapshot.snapshotKey, 140)
+    const bits = [
+      formatMemoryEvidence('summary', snapshot.summaryText, 220),
+      formatMemoryEvidence('source_events', `${snapshot.sourceEventCount}`, 40),
+      formatMemoryEvidence('confidence', snapshot.confidence.toFixed(2), 20),
+    ]
+    lines.push(`- memory snapshot ${label}: ${bits.join(' | ')}`)
   }
   const lifecycleBits = broadLifecycleEvidence(input.lifecycle)
   if (lifecycleBits.length) {

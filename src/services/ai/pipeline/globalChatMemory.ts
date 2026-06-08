@@ -1,4 +1,4 @@
-import type { AIClarificationEvent, AIContextEdge, AIContextEntity, AIParameterBelief } from '@/types/aiMemory'
+import type { AIClarificationEvent, AIContextEdge, AIContextEntity, AIMemorySnapshot, AIParameterBelief } from '@/types/aiMemory'
 import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from './memoryEvidence'
 
 export const GLOBAL_CHAT_MEMORY_ENTITY_KEYS = [
@@ -33,19 +33,21 @@ export type GlobalChatMemoryDb = {
   fetchAIClarificationEvents(entityKeys: string[], limit?: number): Promise<AIClarificationEvent[]>
   fetchAIParameterBeliefs(input: { entityKeys?: string[]; parameterKeys?: string[]; limit?: number }): Promise<AIParameterBelief[]>
   fetchAIContextEdges?(input: { entityKeys: string[]; limit?: number }): Promise<AIContextEdge[]>
+  fetchAIMemorySnapshots?(input: { entityKeys?: string[]; scopes?: AIMemorySnapshot['scope'][]; limit?: number }): Promise<AIMemorySnapshot[]>
 }
 
 export async function retrieveGlobalChatMemory(
   db: GlobalChatMemoryDb,
   lang: 'he' | 'en',
 ): Promise<string> {
-  const [entities, events, beliefs, edges] = await Promise.all([
+  const [entities, events, beliefs, edges, snapshots] = await Promise.all([
     db.fetchAIContextEntities(GLOBAL_CHAT_MEMORY_ENTITY_KEYS),
     db.fetchAIClarificationEvents(GLOBAL_CHAT_MEMORY_ENTITY_KEYS, 20),
     db.fetchAIParameterBeliefs({ parameterKeys: GLOBAL_CHAT_MEMORY_PARAMETER_KEYS, limit: 30 }),
     db.fetchAIContextEdges?.({ entityKeys: GLOBAL_CHAT_MEMORY_ENTITY_KEYS, limit: 30 }) ?? Promise.resolve([]),
+    db.fetchAIMemorySnapshots?.({ entityKeys: GLOBAL_CHAT_MEMORY_ENTITY_KEYS, scopes: ['user', 'workflow'], limit: 8 }) ?? Promise.resolve([]),
   ])
-  return buildGlobalChatMemorySummary({ lang, entities, events, beliefs, edges })
+  return buildGlobalChatMemorySummary({ lang, entities, events, beliefs, edges, snapshots })
 }
 
 export function buildGlobalChatMemorySummary(input: {
@@ -54,6 +56,7 @@ export function buildGlobalChatMemorySummary(input: {
   events: AIClarificationEvent[]
   beliefs: AIParameterBelief[]
   edges: AIContextEdge[]
+  snapshots: AIMemorySnapshot[]
 }): string {
   const lines: string[] = [buildMemoryEvidenceHeader(input.lang)]
   for (const entity of input.entities.slice(0, 6)) {
@@ -87,6 +90,10 @@ export function buildGlobalChatMemorySummary(input: {
     const source = sanitizeMemoryEvidenceText(edge.sourceEntityKey, 120)
     const target = sanitizeMemoryEvidenceText(edge.targetEntityKey, 120)
     lines.push(`- relationship: ${source} ${formatMemoryEvidence('relation', edge.relationType, 80)} ${target} ${formatMemoryEvidence('confidence', edge.confidence.toFixed(2), 20)}`)
+  }
+  for (const snapshot of input.snapshots.slice(0, 4)) {
+    const label = sanitizeMemoryEvidenceText(snapshot.snapshotKey, 140)
+    lines.push(`- memory snapshot ${label}: ${formatMemoryEvidence('summary', snapshot.summaryText, 220)} | ${formatMemoryEvidence('source_events', `${snapshot.sourceEventCount}`, 40)} | ${formatMemoryEvidence('confidence', snapshot.confidence.toFixed(2), 20)}`)
   }
   return lines.length > 1 ? lines.join('\n') : ''
 }

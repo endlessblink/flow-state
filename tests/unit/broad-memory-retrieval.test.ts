@@ -8,6 +8,7 @@ import type {
   AIClarificationEvent,
   AIContextEdge,
   AIContextEntity,
+  AIMemorySnapshot,
   AIParameterBelief,
   AIRecommendationFeedback,
   ProjectContext,
@@ -26,6 +27,7 @@ function dbStub(overrides: Partial<BroadMemoryDb> = {}): BroadMemoryDb {
     fetchAIParameterBeliefs: vi.fn(async () => []),
     fetchAIRecommendationFeedback: vi.fn(async () => []),
     fetchAIContextEdges: vi.fn(async () => []),
+    fetchAIMemorySnapshots: vi.fn(async () => []),
     ...overrides,
   }
 }
@@ -341,5 +343,38 @@ describe('retrieveBroadAIMemory', () => {
     expect(result.summary).toContain('refresh_needed')
     expect(result.summary).toContain('stale')
     expect(result.summary).toContain('old_events')
+  })
+
+  it('retrieves compact memory snapshots as bounded broad-answer evidence', async () => {
+    const snapshots: AIMemorySnapshot[] = [{
+      snapshotKey: 'project:uncategorized:summary',
+      scope: 'project',
+      entityKeys: ['project:uncategorized'],
+      summaryText: 'Uncategorized is mostly low-stakes admin unless the task note says otherwise.',
+      facts: { domain: 'admin' },
+      sourceEventCount: 18,
+      sourceEntityCount: 1,
+      confidence: 0.84,
+      updatedAt: '2026-06-08T09:00:00.000Z',
+    }]
+    const db = dbStub({
+      fetchAIMemorySnapshots: vi.fn(async () => snapshots),
+    })
+
+    const result = await retrieveBroadAIMemory({
+      db,
+      lang: 'en',
+      cardTasks: [{ id: 'local-task', projectId: 'uncategorized', title: 'Loose admin task' }],
+    })
+
+    expect(db.fetchAIMemorySnapshots).toHaveBeenCalledWith({
+      entityKeys: result.entityKeys,
+      scopes: ['user', 'project', 'task', 'week', 'workflow'],
+      limit: 12,
+    })
+    expect(result.diagnostics.snapshotCount).toBe(1)
+    expect(result.summary).toContain('memory snapshot project:uncategorized:summary')
+    expect(result.summary).toContain('summary="Uncategorized is mostly low-stakes admin unless the task note says otherwise."')
+    expect(result.summary).toContain('source_events="18"')
   })
 })

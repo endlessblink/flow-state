@@ -130,6 +130,7 @@
 - 2026-06-08: Broad task-list memory now also retrieves global workflow/preference keys such as `preference:brevity` and response-quality workflow memories. A saved simplify/too-much signal becomes a direct `compactPreference` flag, and deterministic broad fallbacks cap the next non-weekly draft to one recommendation instead of repeating a dense answer.
 - 2026-06-08: Authenticated schema-cache misses now mirror queued clarification events, recommendation feedback, and parameter beliefs into the local AI-memory fallback immediately, and schema-missing reads return those local rows. This prevents repeated clarification/stale-refresh questions while VPS migrations or Supabase schema cache visibility lag behind the UI.
 - 2026-06-08: Added server-backed `ai_memory_snapshots` for lifecycle summarization. Snapshots are keyed by text `snapshot_key`, scoped by user/project/task/week/workflow, RLS-protected, indexed for hot retrieval, visible in Settings > AI memory debug, and clearable with the rest of the AI memory layer.
+- 2026-06-08: Broad task-list and global/freeform memory retrieval now consume bounded `ai_memory_snapshots` as quoted prompt evidence, with `snapshotCount` diagnostics on broad retrieval. This turns lifecycle summaries into real answer context instead of leaving them as debug-only rows.
 
 ---
 
@@ -416,9 +417,9 @@
 
 ---
 
-### TASK-1838: Hybrid retrieval and latency budget for AI memory (📋 PLANNED)
+### TASK-1838: Hybrid retrieval and latency budget for AI memory (🔄 IN PROGRESS)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1835
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1835
 
 **Why**: Research validation flagged retrieval latency as a risk. Server memory improves answer quality but can make the sidebar feel slow unless retrieval is exact, selective, cached, and progressively enhanced.
 
@@ -440,6 +441,7 @@
 - 2026-06-08: Extracted weekly memory retrieval into a bounded SQL-first helper. The helper retrieves UUID-only legacy contexts, server context entities, clarification events, recommendation feedback, and graph edges separately so synthetic buckets never enter UUID-only calls. Semantic/vector recall remains pgvector-ready metadata only until the database function is available. Focused tests cover bounded diagnostics, feedback/event counts, synthetic bucket safety, and timeout fallback.
 - 2026-06-08: Added `broadMemoryRetrieval` for non-weekly task-list answers. The helper keeps UUID-only legacy calls filtered to real UUIDs, sends synthetic/local entities through text keys (`project:uncategorized`, `task:local-task`), includes safe quoted evidence from parameter beliefs and recent clarification answers, and returns concise retrieval diagnostics for future debug display.
 - 2026-06-08: Added `globalChatMemory` for non-task/freeform responses. It exact-fetches workflow/preference entities, recent clarification decisions, and selected parameter beliefs with a 1.5s timeout in the chat pipeline, producing a compact quoted-evidence packet instead of raw memory prose.
+- 2026-06-08: Broad/global retrieval now exact-fetches compact `ai_memory_snapshots` before generation. Snapshot evidence is bounded, sanitized, counted in diagnostics, and covered by focused retrieval tests so future summarization jobs can reduce prompt bloat without adding a separate graph/vector dependency.
 
 ---
 

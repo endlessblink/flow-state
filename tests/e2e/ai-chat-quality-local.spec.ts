@@ -333,6 +333,21 @@ test.describe('broad task answers ask one specific question before recommendatio
       question: 'How should I treat overdue tasks?',
       option: 'Hard commitments',
     },
+    {
+      prompt: "I'm overwhelmed, reorder my day",
+      question: 'What should guide this answer?',
+      option: 'Real impact',
+    },
+    {
+      prompt: 'Suggest smart lanes for my current tasks',
+      question: 'What should guide this answer?',
+      option: 'Real impact',
+    },
+    {
+      prompt: 'break down my tasks into next steps',
+      question: 'What should guide this answer?',
+      option: 'Real impact',
+    },
   ]
 
   for (const scenario of cases) {

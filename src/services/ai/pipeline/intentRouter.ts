@@ -279,6 +279,16 @@ function isGreeting(message: string): boolean {
   return GREETING_PATTERNS.some(re => re.test(trimmed))
 }
 
+function isBroadTaskBreakdownRequest(message: string): boolean {
+  const lower = message.toLowerCase()
+  const asksForBreakdown = /(break down|break it down|split task|subtasks?|next steps|לפצל|תת[- ]?משימה|פרק ל)/i.test(lower)
+  if (!asksForBreakdown) return false
+
+  return /\b(my|all|current|existing|open|today'?s|this week'?s)\s+tasks?\b/i.test(lower) ||
+    /\btasks?\s+(into|to)\s+(next steps|steps|subtasks?)\b/i.test(lower) ||
+    /(המשימות שלי|כל המשימות|משימות פתוחות|המשימות הנוכחיות)/.test(lower)
+}
+
 // ---------------------------------------------------------------------------
 // LLM-based intent classification (Layer 1 upgrade)
 // ---------------------------------------------------------------------------
@@ -474,6 +484,16 @@ export function routeIntentByKeywords(
     }
   }
 
+  if (isBroadTaskBreakdownRequest(userMessage)) {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 25 } }],
+      language,
+      formatDirective: 'Break broad task requests into grounded next-step suggestions only after reading the current task list. Do not create subtasks unless the user confirms specific write actions.',
+      responseMode: 'task_breakdown',
+    }
+  }
+
   // TASK-1821: forward planning ("plan my week/day", "תכנן את השבוע", "מה לעשות השבוע").
   // Predicate/tense beats the time word, so this intercepts BEFORE keyword hints —
   // otherwise the bare "week"/"השבוע" keyword would misroute it to the retrospective
@@ -606,6 +626,11 @@ export function routeIntentByKeywords(
       // TASK-1820: render the completed-this-week tasks as real cards.
       break
 
+    case 'create_subtasks':
+      toolCall = { tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 25 } }
+      responseMode = 'task_breakdown'
+      break
+
     // ── Default: pass through with empty parameters ──────────────────────
 
     default:
@@ -680,6 +705,16 @@ export async function routeIntent(
       language,
       formatDirective: 'Build smart task lanes from the real task list. Suggest lane names/themes, include existing tasks that belong in each lane, and add concrete new child tasks only when a large task should be broken down.',
       responseMode: 'smart_lanes',
+    }
+  }
+
+  if (isBroadTaskBreakdownRequest(userMessage)) {
+    return {
+      type: 'task_query',
+      tools: [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 25 } }],
+      language,
+      formatDirective: 'Break broad task requests into grounded next-step suggestions only after reading the current task list. Do not create subtasks unless the user confirms specific write actions.',
+      responseMode: 'task_breakdown',
     }
   }
 

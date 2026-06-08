@@ -153,6 +153,17 @@ describe('intentRouter — routeIntentByKeywords()', () => {
     expect(result.skipLLM).toBeFalsy()
   })
 
+  it('routes broad task breakdown requests through read-first clarification instead of creating subtasks', () => {
+    const result = routeIntentByKeywords('break down my tasks into next steps', mockTasks, entityMemory)
+
+    expect(result.type).toBe('task_query')
+    expect(result.responseMode).toBe('task_breakdown')
+    expect(result.tools).toEqual([
+      { tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 25 } },
+    ])
+    expect(result.tools.some(t => t.tool === 'create_subtasks')).toBe(false)
+  })
+
   // ── Done / complete actions ───────────────────────────────────────────────
 
   it('routes "mark done video project" to task_action with mark_task_done via keyword match', () => {

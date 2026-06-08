@@ -1976,43 +1976,14 @@ describe('AI sidebar-first desktop experience', () => {
     await wrapper.get('.weekly-question-apply').trigger('click')
     await nextTick()
 
-    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Why does this matter right now?')
-    expect(wrapper.text()).toContain('Deadline/commitment')
-    expect(wrapper.text()).not.toContain('This broad plan should stay hidden')
-    expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false)
-    expect(wrapper.emitted('continueChat')).toBeUndefined()
-
-    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-option').trigger('click')
-    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
-    await nextTick()
-
-    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(false)
-    expect(wrapper.text()).toContain('What would count as good progress this week?')
-    expect(wrapper.text()).toContain('Ship usable')
-    expect(wrapper.emitted('continueChat')).toBeUndefined()
-
-    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-option').trigger('click')
-    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
-    await nextTick()
-
-    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(false)
-    expect(wrapper.text()).toContain('What happens if this slips?')
-    expect(wrapper.text()).toContain('Nothing serious')
-    expect(wrapper.emitted('continueChat')).toBeUndefined()
-
-    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-option').trigger('click')
-    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
-    await nextTick()
-
     expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Context saved')
+    expect(wrapper.text()).not.toContain('This broad plan should stay hidden')
+    expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false)
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Work/Product"')
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Why now: "Deadline/commitment | Ship usable | Nothing serious"')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('Why now:')
   })
 
   it('does not ask the why-now follow-up again when the first clarification already includes free text', async () => {
@@ -2076,7 +2047,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Note: "This matters because it is the core product quality issue."')
   })
 
-  it('asks one follow-up before continuing a button-only response-quality clarification', async () => {
+  it('continues immediately after a button-only response-quality clarification', async () => {
     const wrapper = mount(ChatMessage, {
       props: {
         message: {
@@ -2153,24 +2124,17 @@ describe('AI sidebar-first desktop experience', () => {
     await wrapper.get('.weekly-question-apply').trigger('click')
     await nextTick()
 
-    expect(wrapper.emitted('continueChat')).toBeUndefined()
-    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('What should this answer help you do?')
-    expect(wrapper.text()).not.toContain('Suggested 3 tasks to work on next')
-    expect(wrapper.text()).not.toContain('Hidden candidate while clarifying')
-
-    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-option').trigger('click')
-    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
-    await nextTick()
-
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue with the answer using the clarification I just answered')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Real impact"')
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Why now: "Choose next action"')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('week')
+    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('Suggested 3 tasks to work on next')
+    expect(wrapper.text()).not.toContain('Hidden candidate while clarifying')
   })
 
-  it('keeps follow-up free text as explicit evidence for the continued answer', async () => {
+  it('keeps first-answer free text as explicit evidence for the continued answer', async () => {
     const wrapper = mount(ChatMessage, {
       props: {
         message: {
@@ -2219,16 +2183,13 @@ describe('AI sidebar-first desktop experience', () => {
     })
 
     await wrapper.get('.weekly-question-option').trigger('click')
+    await wrapper.get('.weekly-question-free-text').setValue('Pick the one that reduces open loops fastest.')
     await wrapper.get('.weekly-question-apply').trigger('click')
-    await nextTick()
-
-    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-free-text').setValue('Pick the one that reduces open loops fastest.')
-    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
     await nextTick()
 
     const continuation = wrapper.emitted('continueChat')?.[0]?.[0] as string
     expect(continuation).toContain('Answer: "Reduce stress"')
-    expect(continuation).toContain('Why-now note: "Pick the one that reduces open loops fastest."')
+    expect(continuation).toContain('Note: "Pick the one that reduces open loops fastest."')
     expect(continuation).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
   })
 
@@ -2908,7 +2869,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(chatMessage).toContain('weekly-feedback-btn')
     expect(chatMessage).toContain('inline-postpone-btn')
     expect(chatMessage).toContain('clarificationSavedLocal')
-    expect(chatMessage).toContain('Saved locally. Syncing in the background')
+    expect(chatMessage).toContain('Saved locally. Continuing with a short answer')
     expect(chatMessage).toContain('data-testid="ai-clarification-follow-up"')
     expect(chatMessage).toContain('data-testid="ai-clarification-saved"')
     expect(chatMessage).toContain('Why does this matter right now?')

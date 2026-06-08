@@ -572,20 +572,15 @@ function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEven
   if (!option && !note) return
 
   clarificationSavedLocal.value[key] = true
-  const hasEnoughContextToContinue = Boolean(note) || clarificationFollowUpSteps(card).length === 0
-  if (hasEnoughContextToContinue) {
-    clarificationFollowUpSavedLocal.value[key] = true
-  }
+  clarificationFollowUpSavedLocal.value[key] = true
   clarificationStatus.value = card.locale === 'he'
-    ? 'נשמר מקומית. מסנכרן ברקע...'
-    : 'Saved locally. Syncing in the background...'
+    ? 'נשמר מקומית. ממשיך לתשובה קצרה...'
+    : 'Saved locally. Continuing with a short answer...'
   void persistClarificationAnswer(card, option, note)
-  if (hasEnoughContextToContinue) {
-    emit('continueChat', clarificationContinueMessage(card, {
-      selectedLabel: option?.label,
-      freeText: note,
-    }))
-  }
+  emit('continueChat', clarificationContinueMessage(card, {
+    selectedLabel: option?.label,
+    freeText: note,
+  }))
 }
 
 function formatClarificationContinuationEvidence(input: {

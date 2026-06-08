@@ -218,15 +218,6 @@ async function answerVisibleClarification(page: Page) {
   await card.locator('.weekly-question-apply').first().click()
 }
 
-async function continueFromSavedClarification(page: Page) {
-  const saved = page.locator('[data-testid="ai-clarification-saved"]').first()
-  await expect(saved).toBeVisible({ timeout: 10_000 })
-  const continueButton = saved.locator('.weekly-question-apply').first()
-  if (await continueButton.isVisible({ timeout: 1_000 }).catch(() => false)) {
-    await continueButton.click()
-  }
-}
-
 test('weekly planning asks first, does not dump recommendations, and does not get stuck after answers', async ({ page }) => {
   await seedGuestWorkspace(page)
   await stubBridge(page)
@@ -246,22 +237,12 @@ test('weekly planning asks first, does not dump recommendations, and does not ge
   await expect(input).toBeEnabled()
 
   await answerVisibleClarification(page)
-  await expect(page.locator('[data-testid="ai-clarification-follow-up"]')).toBeVisible({ timeout: 15_000 })
-
-  for (let i = 0; i < 4; i += 1) {
-    const followUp = page.locator('[data-testid="ai-clarification-follow-up"]').last()
-    if (!(await followUp.isVisible({ timeout: 2_000 }).catch(() => false))) break
-    await followUp.locator('.weekly-question-option').first().click()
-    await followUp.locator('.weekly-question-apply').first().click()
-  }
-
   await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
   await expect(input).toBeEnabled({ timeout: 10_000 })
   await expect(page.locator('[data-testid="ai-clarification-saved"]').first()).toBeVisible({ timeout: 10_000 })
   await expect(page.locator('.ai-chat-messages')).not.toContainText(/project meaning\/stakes are unknown.*project meaning\/stakes are unknown/i)
+  await expect(page.locator('[data-testid="ai-clarification-follow-up"]')).toHaveCount(0)
 
-  await continueFromSavedClarification(page)
-  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
   await expect(page.locator('[data-testid="weekly-plan"]').last()).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('[data-testid="inline-plan-card"]').first()).toBeVisible({ timeout: 10_000 })
   await expect(page.locator('.weekly-plan-section').first()).toBeVisible({ timeout: 10_000 })

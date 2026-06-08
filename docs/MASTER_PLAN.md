@@ -2,35 +2,45 @@
 
 ## 🔜 Next Up — AI flows (TASK-1814 follow-ups; start here after restart)
 
-## AI Chat Quality System Lane — localhost first, Electron later
+## AI Chat Quality System Full Delivery Lane — localhost first, Electron later
 
-**Goal**: Make FlowState chat produce high-quality, low-overwhelm answers across planning, prioritization, task breakdown, and follow-up workflows by grounding responses in server-backed memory, explicit uncertainty, user feedback, and evidence-based UI controls.
+**Goal**: Make FlowState chat consistently useful across weekly planning, "what should I do", prioritization, task breakdown, smart lanes, follow-up tasks, and general agent help by combining server-backed memory, explicit uncertainty, low-overwhelm UX, feedback learning, and testable answer-quality gates.
 
-**Lane rule**: Work this lane in order. Do not ask the user to test a phase until localhost behavior is verified by focused tests plus `npm run type-check` and `npm run build`. Electron packaging/update verification is a later gate after localhost proves the flow.
+**Current execution cursor**: **Stage 0 → Stage 1**. Finish lane consolidation, then prove the localhost clarification loop end-to-end before adding more UI/learning layers.
 
-| Order | Task | Slice | Status | Localhost proof |
+**Hard lane rules**:
+- Work stages in order. Do not jump to polish, Electron, or broad UI expansion while the current stage lacks localhost proof.
+- Do not ask the user to test until the relevant stage passes automated checks plus a real localhost browser smoke.
+- Default response contract: ask one high-value button-based clarification before broad recommendations when missing context would materially change the answer.
+- Suppress broad plan/recommendation prose until the user answers, chooses "continue with uncertainty", or the system has enough grounded context.
+- Every recommendation must cite task evidence plus memory/context evidence, or explicitly mark the missing evidence.
+- User-authored facts and corrections outrank model inference. Project/task names alone never establish importance, stakes, domain, or success criteria.
+- Electron packaging/update work is deferred until localhost behavior is reliable and the user re-enables Electron for this lane.
+
+| Stage | Task(s) | Required outcome | Status | Proof gate before moving on |
 | --- | --- | --- | --- | --- |
-| 1 | TASK-1830 | Server-backed structured memory core: entities, events, synthetic keys, graph edges, missing-schema fallback | 🔄 In progress | Contract tests for migrations/RLS/client fallback |
-| 2 | TASK-1831 | Global clarify-before-answer contract: one question at a time, cooldowns, generate-with-uncertainty escapes | 🔄 In progress | Mounted clarification-card tests and continuation tests |
-| 3 | TASK-1831A | EVPI-style clarification scoring: target parameters, heuristic EVPI, user cost, selected score, event/debug metadata | ✅ Localhost coded | Unit tests showing highest-value non-repeated question is selected |
-| 4 | TASK-1838 | Hybrid retrieval pipeline: exact SQL entities, event history, feedback, optional pgvector-ready semantic recall, timeout-safe fallback | ✅ Localhost coded | Retrieval tests with bounded context and no raw memory dumps |
-| 5 | TASK-1832 | Answer-quality evaluator and ranking rubric: bad/acceptable/excellent, evidence arrays, anti-fake-reasoning checks | 🔄 In progress | Quality tests reject generic/unsupported ranking |
-| 6 | TASK-1833 | Planning UI controls: task cards, accept/postpone/dismiss/simplify, reason chips, immediate visual suppression | 🔄 In progress | Mounted UI tests for feedback payloads and visual suppression |
-| 7 | TASK-1836 | Recommendation feedback learning: cooldowns, revisit dates, implicit positives, preference aggregation | 📋 Planned | Ranking tests prove dismissed/postponed items do not reappear unchanged |
-| 8 | TASK-1835 | Broaden memory-aware chat beyond weekly planning: shared retrieval, corrections, preferences, stale refresh | 🔄 In progress | Non-weekly clarification tests and continuation tests |
-| 9 | TASK-1834 | Observability: phase timing, retrieval/debug metadata, path types, slow-answer diagnosis | 🔄 In progress | Activity-row tests and debug metadata assertions |
-| 10 | TASK-1837 | Memory lifecycle: summarization, confidence decay, retention, stale confirmation, export/delete policy | 📋 Planned | Lifecycle tests for stale/summary/correction behavior |
-| 11 | TASK-1840 | Explicit uncertainty scoring and cold-start policy | ✅ Localhost coded | Ask/proceed/neutral decision tests |
-| 12 | TASK-1841 | Agent-memory evaluation rubric and citation audit | 📋 Planned | Eval suite catches fake reasoning and repeated questions |
-| 13 | TASK-1842 | Localhost end-to-end QA lane: dev-server/manual browser checks for weekly plan, response-quality clarification, feedback, debug | 📋 Planned | Browser evidence and documented expected behavior |
-| 14 | TASK-1843 | Electron gate: package, updater manifest, desktop verification after localhost is stable | ⏸ Deferred | `npm run electron:build` and updater manifest only after user re-enables Electron |
+| 0 | This lane + TASK-1842 | Single execution lane, active cursor, localhost-only gate, no vague partial phases | 🔄 Active now | MASTER_PLAN lane lists all stages, dependencies, proof, and user-test gate |
+| 1 | TASK-1830, TASK-1838, TASK-1839 | VPS-safe memory substrate: server entities/events/edges, synthetic keys, missing-schema fallback, SQL-first retrieval, RLS/prompt-injection safety | 🔄 In progress | Contract tests, retrieval tests, no UUID errors for `Work`/`My Projects`/`uncategorized`, bounded retrieval diagnostics |
+| 2 | TASK-1840, TASK-1831A, TASK-1831 | Clarification decision engine: coverage/materiality policy, heuristic EVPI, one-question ladder, cooldown/dedupe, continue-with-uncertainty escapes | 🔄 In progress | Unit + mounted tests prove highest-value non-repeated question appears and answering it does not re-ask or dump content |
+| 3 | TASK-1835 | Apply the same ask-before-answer contract to all broad chat flows, not only weekly planning | 🔄 In progress | Non-weekly tests for day plan, smart lanes, prioritization, "what should I do", and task breakdown prompts |
+| 4 | TASK-1832, TASK-1841 | Answer-quality evaluator: groundedness, brevity, evidence, unsupported-ranking rejection, bad/acceptable/excellent rubric | 🔄 In progress | Eval/tests fail generic prose, name-only importance, repeated templates, missing evidence, and overlong answers |
+| 5 | TASK-1833, TASK-1836 | User feedback loop: accept/postpone/dismiss/simplify controls, reason chips, cooldowns, revisit dates, implicit positives | 🔄 In progress | UI tests prove feedback persists, current suggestions suppress immediately, future ranking respects feedback |
+| 6 | TASK-1834 | Observability and speed: concise phases, timings, path type, slow-step diagnostics, no duplicate thinking rows | 🔄 In progress | Activity-row tests plus localhost smoke show answer phase changes and no stuck spinner after saving clarification |
+| 7 | TASK-1837 | Memory lifecycle: fact promotion, confidence decay, summaries/snapshots, stale confirmations, export/delete policy | 📋 Planned | Lifecycle tests prove stale facts refresh, corrections stay auditable, retrieval stays bounded |
+| 8 | TASK-1842 | Localhost end-to-end QA: real browser flow from prompt → clarification → answer/uncertainty → feedback/debug | 📋 Planned | Playwright/browser evidence proves no content barrage before clarification and no stuck card after answer |
+| 9 | TASK-1843 | Electron packaging/updater gate after localhost stabilization | ⏸ Deferred | Only run Electron build/update when user explicitly re-enables Electron for this lane |
 
-**Research-backed additions still to implement**:
-- `ai_parameter_beliefs` or equivalent structured parameter-belief store for deadline, priority, scope, energy fit, dependencies, success criteria, constraints, and preferences.
-- pgvector-ready memory records with metadata filters, HNSW indexing when available, and SQL-first hybrid retrieval.
-- Clarification event metadata for `targeted_parameters`, `heuristic_evpi`, `selected_score`, and dedupe/cooldown outcomes.
-- Snapshot/summarization jobs that compact old event history into inspectable semantic facts without erasing corrections.
-- Feedback aggregation that turns repeated dismiss/postpone reasons into explicit preference facts instead of hidden ranking magic.
+**Research-backed requirements captured in the stages**:
+- Hybrid memory: session, episodic events, semantic facts/summaries, procedural preferences.
+- Server-backed persistence for VPS/localhost parity: `ai_context_entities`, `ai_clarification_events`, `ai_context_edges`, recommendation feedback, and later `ai_parameter_beliefs`.
+- Hybrid retrieval: exact entity key lookup first, structured filters and recent events second, optional pgvector/semantic recall only when needed and timeout-safe.
+- EVPI-inspired clarification selection: information value ~= uncertainty * impact * expected reduction - user cost.
+- Low-overwhelm UX: one question per turn, 3-5 buttons, optional free text, visible escape hatches, concise output, progressive disclosure.
+- Feedback learning: dismissed/postponed/ignored recommendations affect cooldowns and preference facts; accepted/time-blocked/completed/timer-started actions are positive signals.
+- Lifecycle: confidence decay, stale refresh, summarization/snapshots, retention, export/delete, and correction auditability.
+- Evaluation: groundedness, specificity, brevity, uncertainty handling, learning/adaptation, user control, realism, safety, citation audit, and adversarial free-text tests.
+
+**User-test gate**: The user should only be asked to test after Stage 8 has a passing localhost browser smoke and the final response says exactly what changed, what to try, what should no longer happen, and what is still intentionally not built.
 
 ---
 

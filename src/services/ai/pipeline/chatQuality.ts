@@ -170,7 +170,7 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
     warnings.push('missing_debug_disclosure')
   }
   if ((path === 'feedback_updated' || input.hasFeedbackControls) && input.hasLearningSignal === false) {
-    warnings.push('feedback_not_recorded_as_learning_signal')
+    failures.push('feedback_not_recorded_as_learning_signal')
   }
   if ((path === 'deterministic_fallback' || input.contextUnknown || mediumCoverage) && recommendationCount > 3) {
     failures.push('too_many_low_context_recommendations')

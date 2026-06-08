@@ -543,6 +543,7 @@
 - 2026-06-08: Added conflicting-correction citation audits. If saved context evidence says the user corrected prior high-stakes/importance framing, a recommendation that still calls the task high stakes, strategic, critical, or meaningful fails with `conflicting_correction_ignored`; neutral handling of the correction remains acceptable.
 - 2026-06-08: Added stale-context citation audits. Recommendation evidence now fails with `stale_context_used_as_active_evidence` when expired/refresh-needed memory is cited as active project understanding, while stale context marked as missing/needs refresh remains valid uncertainty evidence.
 - 2026-06-08: Added a deterministic broad-answer quality floor after the normal formatter and fallback both fail audit. The final user-visible fallback is capped to one candidate card, marks project context as unknown/needs refresh, and preserves the user's clarification value instead of leaking verbose or fake reasoning.
+- 2026-06-08: Recommendation-card learning signals are now an executable quality gate. If broad task cards expose feedback controls but the response path does not prove those controls feed memory/learning, the audit fails with `feedback_not_recorded_as_learning_signal`; the runtime marks inline card groups as learning-enabled because accept/postpone/dismiss actions write recommendation feedback.
 
 ---
 
@@ -575,6 +576,7 @@
 - 2026-06-08: Extended and re-ran the localhost browser proof for day-plan, smart-lane, and broad task-breakdown prompts. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` now covers 8 prompt paths and passes with no pre-answer recommendation barrage, no repeated clarification after the saved answer, and no stuck activity row.
 - 2026-06-08: Extended and re-ran the localhost browser proof for broad feedback suppression. The suite now covers 9 prompt/feedback paths, including broad postpone feedback that visibly saves, hides the exact card immediately, and prevents the same task from reappearing in the next broad answer.
 - 2026-06-08: Re-ran the 9-path localhost smoke after quality-floor observability and inline feedback-status fixes. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed 9/9 against a manually started Vite server on `127.0.0.1:5564`.
+- 2026-06-08: Re-ran the 9-path localhost smoke after turning recommendation-card learning signals into an audit failure. The Playwright webServer helper still timed out before tests started, so Vite was started manually on `127.0.0.1:5564`; `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` then passed 9/9.
 
 ---
 

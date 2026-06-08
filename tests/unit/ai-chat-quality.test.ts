@@ -363,4 +363,20 @@ describe('chat quality evidence audit', () => {
     ]))
     expect(audit.checks.scannability).toBeLessThan(0.6)
   })
+
+  it('rejects recommendation cards whose controls do not feed learning', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'next_task',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 2,
+      hasFeedbackControls: true,
+      hasLearningSignal: false,
+      text: 'Limited context: use these cards as candidates and adjust anything wrong.',
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('feedback_not_recorded_as_learning_signal')
+  })
 })

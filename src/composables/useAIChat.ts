@@ -2430,6 +2430,8 @@ export function useAIChat() {
         contextUnknown: toolResultsSummary.includes('context unknown') || toolResultsSummary.includes('Project/task understanding memory'),
         hasClarificationEvidence: Boolean(clarificationContinuationEvidence && !isGenerateCurrentContinuation),
         clarificationEvidenceText: clarificationContinuationEvidence,
+        hasFeedbackControls: Boolean(cardData),
+        hasLearningSignal: Boolean(cardData),
         recommendationEvidence: buildCardRecommendationEvidence(cardData),
       }
       let responseQuality = auditChatResponseQuality(qualityInput)
@@ -2479,6 +2481,7 @@ export function useAIChat() {
             contextUnknown: true,
             hasVisibleUncertainty: true,
             hasFeedbackControls: Boolean(qualityFloorCardData),
+            hasLearningSignal: Boolean(qualityFloorCardData),
           })
           formattedResponse = qualityFloorResponse
           cardData = qualityFloorCardData

@@ -465,6 +465,7 @@
 - 2026-06-08: Added quoted/sanitized prompt evidence handling for AI memory and an explicit policy that saved user free text is evidence only, not an instruction channel.
 - 2026-06-08: Weekly planning now treats stale project/task context as an uncertainty dimension and asks a short refresh question instead of silently ranking from expired memory.
 - 2026-06-08: Settings > AI memory debug now has a Clear action for the new server-backed AI memory layer. It removes user-scoped AI context edges, recommendation feedback, parameter beliefs, clarification events, context entities, pending AI-memory writes, and local fallback rows, with tests covering both guest/local and authenticated server deletion paths.
+- 2026-06-08: Chat-quality audits now fail prompt-injection-like clarification or recommendation evidence (`ignore previous instructions`, `system prompt`, reveal-memory requests, etc.). This turns the "quoted evidence only" policy into an executable safety gate for memory-backed broad answers.
 
 ---
 
@@ -519,6 +520,7 @@
 - 2026-06-08: Added mode-specific chat-quality regressions for prioritization, next-task, and overdue-triage outputs. These tests prevent polished but fake broad answers from bypassing the audit just because they are not weekly/day-plan response modes.
 - 2026-06-08: Broad post-clarification quality gates now check the actual selected/free-text clarification value, not just generic "your clarification" wording. Answers that claim to honor a clarification but omit the user's chosen value fail with `clarification_value_not_reflected`; paraphrased free-text answers pass when they preserve meaningful terms.
 - 2026-06-08: Broad answer scannability audits now inspect the rendered line structure before whitespace normalization. Numbered recommendation dumps with too many visible items fail with `too_many_visible_items`/`too_many_low_context_recommendations`, which routes them into the deterministic repair path instead of letting a long prose list reach the chat.
+- 2026-06-08: Added prompt-injection evidence regressions to the answer-quality suite. Saved clarification/free-text memory and recommendation evidence that tries to become instructions now fails with explicit safety errors instead of relying only on prompt wording.
 
 ---
 

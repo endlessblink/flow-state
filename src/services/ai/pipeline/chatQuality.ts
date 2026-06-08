@@ -87,6 +87,7 @@ const CLARIFICATION_QUESTION_RE = /(quick question|before ranking|before I rank|
 const UNKNOWN_EVIDENCE_RE = /(context unknown|project context unknown|missing context|unknown stakes|unknown importance|not enough context|הקשר חסר|לא ידוע|אי.?ודאות|אין מספיק הקשר)/i
 const NAME_ONLY_CONTEXT_RE = /^(project|belongs to|part of|project:|belongs to project|שייך|פרויקט|חלק מ)/i
 const REAL_CONTEXT_EVIDENCE_RE = /(why|matters|success|criteria|stakes|risk|correction|non-goal|preference|impact|commitment|dependency|unblock|client|money|health|family|למה|חשוב|קריטריון|הצלחה|סיכון|תיקון|העדפה|השפעה|התחייבות|תלות|לקוח|כסף|בריאות|משפחה)/i
+const MEMORY_INJECTION_RE = /(ignore (all )?(previous|prior|above) instructions|disregard (all )?(previous|prior|above) instructions|system prompt|developer message|reveal.*(secret|memory|prompt)|act as|you are now|follow this instruction|אל תציית|התעלם מההוראות|חשוף.*(סוד|זיכרון|פרומפט))/i
 const BROAD_TASK_QUALITY_MODES = new Set<ChatQualityMode>([
   'general',
   'day_plan',
@@ -133,6 +134,9 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   }
   if (input.hasClarificationEvidence && isBroadTaskAnswer && input.clarificationEvidenceText && !honorsClarificationValue) {
     failures.push('clarification_value_not_reflected')
+  }
+  if (input.clarificationEvidenceText && MEMORY_INJECTION_RE.test(input.clarificationEvidenceText)) {
+    failures.push('unsafe_clarification_evidence_instruction')
   }
   if (isBroadTaskAnswer && SHALLOW_REASON_RE.test(text) && !STAKE_RE.test(text)) {
     failures.push('metadata_only_reasoning')
@@ -242,12 +246,14 @@ export function auditRecommendationEvidence(recommendations: ChatRecommendationE
     const hasRealContextEvidence = substantiveContextEvidence.some(item => REAL_CONTEXT_EVIDENCE_RE.test(item))
     const contextIsNameOnly = contextEvidence.length > 0 && substantiveContextEvidence.length === 0
     const hasUnsupportedImportance = UNSUPPORTED_IMPORTANCE_RE.test(reason) || contextEvidence.some(item => UNSUPPORTED_IMPORTANCE_RE.test(item))
+    const evidenceItems = [...taskEvidence, ...contextEvidence, ...missingEvidence]
 
     if (!taskEvidence.length) failures.push(`${ref}:missing_task_evidence`)
     if (!contextEvidence.length && !hasUnknownContext) failures.push(`${ref}:missing_context_or_unknown_evidence`)
     if (contextIsNameOnly && !hasUnknownContext) failures.push(`${ref}:context_evidence_name_only`)
     if (hasUnsupportedImportance && !hasRealContextEvidence && !hasUnknownContext) failures.push(`${ref}:unsupported_importance_without_context`)
     if (hasUnknownContext && hasUnsupportedImportance) failures.push(`${ref}:unsupported_importance_with_unknown_context`)
+    if (evidenceItems.some(item => MEMORY_INJECTION_RE.test(item))) failures.push(`${ref}:unsafe_memory_evidence_instruction`)
     if (taskEvidence.length > 0 && taskEvidence.every(item => SHALLOW_REASON_RE.test(item)) && !hasRealContextEvidence && !hasUnknownContext) {
       failures.push(`${ref}:metadata_only_evidence`)
     }
@@ -256,7 +262,7 @@ export function auditRecommendationEvidence(recommendations: ChatRecommendationE
     }
 
     addShape(reasonShapes, reasonShape(reason), ref)
-    addShape(evidenceShapes, evidenceShape([...taskEvidence, ...contextEvidence, ...missingEvidence]), ref)
+    addShape(evidenceShapes, evidenceShape(evidenceItems), ref)
   })
 
   for (const refs of reasonShapes.values()) {

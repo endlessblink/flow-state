@@ -196,6 +196,15 @@ async function answerVisibleClarification(page: Page) {
   await card.locator('.weekly-question-apply').first().click()
 }
 
+async function continueFromSavedClarification(page: Page) {
+  const saved = page.locator('[data-testid="ai-clarification-saved"]').first()
+  await expect(saved).toBeVisible({ timeout: 10_000 })
+  const continueButton = saved.locator('.weekly-question-apply').first()
+  if (await continueButton.isVisible({ timeout: 1_000 }).catch(() => false)) {
+    await continueButton.click()
+  }
+}
+
 test('weekly planning asks first, does not dump recommendations, and does not get stuck after answers', async ({ page }) => {
   await seedGuestWorkspace(page)
   await stubBridge(page)
@@ -206,6 +215,8 @@ test('weekly planning asks first, does not dump recommendations, and does not ge
 
   const clarification = page.locator('[data-testid="ai-clarification"]')
   await expect(clarification).toHaveCount(1, { timeout: 30_000 })
+  await clarification.locator('summary', { hasText: /Why ask/i }).click()
+  await expect(clarification.locator('.ai-debug-details')).toContainText(/coverage|reason|source/i)
   await expect(page.locator('[data-testid="weekly-plan"]')).toHaveCount(0)
   await expect(page.locator('[data-testid="inline-plan-card"]')).toHaveCount(0)
   await expect(page.locator('[data-testid="ai-clarification-candidate-card"]')).toHaveCount(0)
@@ -226,5 +237,22 @@ test('weekly planning asks first, does not dump recommendations, and does not ge
   await expect(input).toBeEnabled({ timeout: 10_000 })
   await expect(page.locator('[data-testid="ai-clarification-saved"]').first()).toBeVisible({ timeout: 10_000 })
   await expect(page.locator('.ai-chat-messages')).not.toContainText(/project meaning\/stakes are unknown.*project meaning\/stakes are unknown/i)
+
+  await continueFromSavedClarification(page)
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+  await expect(page.locator('[data-testid="weekly-plan"]').last()).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('[data-testid="inline-plan-card"]').first()).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('.weekly-plan-section').first()).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('[data-testid="weekly-plan-questions"]')).toHaveCount(0)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/project meaning\/stakes are unknown.*project meaning\/stakes are unknown/i)
+
+  const firstRecommendation = page.locator('.weekly-plan-section').first()
+  await firstRecommendation.getByRole('button', { name: /^Postpone$/ }).click()
+  await expect(page.locator('[data-testid="weekly-feedback-detail"]').first()).toBeVisible({ timeout: 5_000 })
+  await page.locator('[data-testid="weekly-feedback-detail"]').first().getByRole('button', { name: /Save feedback/i }).click()
+  await expect(firstRecommendation).toBeHidden({ timeout: 10_000 })
+  await expect(page.locator('.ai-chat-messages')).toContainText(/Postponed and saved as feedback|Feedback is local until signed in/i)
+  await expect(input).toBeEnabled({ timeout: 10_000 })
+
   await page.screenshot({ path: '/tmp/flowstate-ai-chat-quality-stage8.png', fullPage: false })
 })

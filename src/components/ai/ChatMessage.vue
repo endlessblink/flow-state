@@ -1389,6 +1389,11 @@ async function recordRecommendationFeedback(
   const key = `${rec.sectionId}:${action}`
   if (recommendationFeedbackLoading.value[key]) return
   recommendationFeedbackLoading.value[key] = action
+  const shouldSuppress = ['dismiss', 'postpone', 'simplify'].includes(action)
+  if (shouldSuppress) {
+    dismissedCardTaskIds.value = new Set([...dismissedCardTaskIds.value, ...weeklyPlanTaskIds(rec)])
+    suppressedRecommendationIds.value[rec.sectionId] = true
+  }
   try {
     await aiMemoryDb.recordAIRecommendationFeedback({
       generatedPlanId: weeklyPlan.value?.requestId,
@@ -1402,10 +1407,6 @@ async function recordRecommendationFeedback(
       implicitPositive,
       sourceMessageId: props.message.id,
     })
-    if (['dismiss', 'postpone', 'simplify'].includes(action)) {
-      dismissedCardTaskIds.value = new Set([...dismissedCardTaskIds.value, ...weeklyPlanTaskIds(rec)])
-      suppressedRecommendationIds.value[rec.sectionId] = true
-    }
     recommendationFeedbackChoiceOpen.value[rec.sectionId] = ''
     recommendationFeedbackStatus.value[rec.sectionId] = feedbackStatusLabel(action, weeklyPlan.value?.locale ?? 'en')
   } catch (err) {

@@ -572,13 +572,24 @@ export function auditWeeklyPlanQuality(plan: WeeklyPlanOutput, context: WeekCont
   }
 }
 
-export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutput {
+type QuickDraftOptions = {
+  allowClarificationFirst?: boolean
+  compactUncertainty?: boolean
+}
+
+export function buildQuickDraftWeeklyPlan(
+  context: WeekContext,
+  options: QuickDraftOptions = {},
+): WeeklyPlanOutput {
   const selected = selectQuickDraftTasks(context.tasks)
   const openQuestions = buildQuickDraftQuestions(context, selected)
+  const allowClarificationFirst = options.allowClarificationFirst ?? true
+  const compactUncertainty = options.compactUncertainty ?? false
   const topTaskQuestion = selected[0]
     ? openQuestions.find(question => question.relatedTaskIds.includes(selected[0].id))
     : undefined
   const shouldClarifyBeforeRanking = Boolean(
+    allowClarificationFirst &&
     selected[0] &&
     topTaskQuestion &&
     (topTaskQuestion.reason === 'stale_project_context' || needsPlanningClarification(selected[0])),
@@ -598,7 +609,7 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
   const workstreamByTaskId = buildWorkstreamLookup(context.workstreams)
   const locale = context.locale
   const recommendations = selected.map((task, index): WeeklyPlanRecommendation => {
-    const evidence = quickDraftEvidence(task)
+    const evidence = quickDraftEvidence(task, { compactUncertainty })
     const stream = workstreamByTaskId.get(task.id)
     const relatedTaskIds = stream?.taskIds.filter(id => id !== task.id).slice(0, 2) ?? []
     const focusArea = stream?.label ?? (task.project?.name || task.tags?.[0] || (locale === 'he' ? 'הקשר מוגבל' : 'Limited task context'))
@@ -610,8 +621,8 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
       relatedTaskIds,
       recommendationType: quickDraftType(task),
       title: task.title,
-      whyThisMatters: quickDraftWhyThisMatters(task, stream, locale),
-      whyThisWeek: quickDraftWhyThisWeek(task, evidence, locale),
+      whyThisMatters: quickDraftWhyThisMatters(task, stream, locale, { compactUncertainty }),
+      whyThisWeek: quickDraftWhyThisWeek(task, evidence, locale, { compactUncertainty }),
       riskIfIgnored: quickDraftRisk(task, locale),
       nextAction: quickDraftNextAction(task, locale),
       evidence,
@@ -653,11 +664,19 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
       revisitIso: task.dueIso ?? null,
         })),
     ].slice(0, 4),
-    openQuestions: openQuestions.slice(0, 1),
+    openQuestions: allowClarificationFirst ? openQuestions.slice(0, 1) : [],
     quality: {
       selectedTaskCount: recommendations.length,
       confidence: 'low',
-      caveats: [locale === 'he' ? 'תשובת המודל נדחתה או לא חזרה בזמן; מוצגת תוכנית מקורקעת מנתוני המשימות.' : 'The model answer was rejected or unavailable; showing a grounded plan from task evidence.'],
+      caveats: [
+        compactUncertainty
+          ? (locale === 'he'
+              ? 'התשובה נשענת על ההקשר שענית ועל אותות משימה זמינים; לא מוצגת חשיבות מומצאת.'
+              : 'This uses your clarification plus available task signals; no invented importance is shown.')
+          : (locale === 'he'
+              ? 'תשובת המודל נדחתה או לא חזרה בזמן; מוצגת תוכנית מקורקעת מנתוני המשימות.'
+              : 'The model answer was rejected or unavailable; showing a grounded plan from task evidence.'),
+      ],
     },
     source: 'quick_draft',
   }
@@ -1908,7 +1927,10 @@ function planningScore(signals: TaskSignals): number {
   return 0.24 * signals.urgency + 0.28 * signals.impact + 0.18 * signals.dependency + 0.16 * signals.avoidanceRisk + 0.08 * signals.workloadFit + 0.06 * signals.contextRichness
 }
 
-function quickDraftEvidence(task: PlannerTaskSnapshot): WeeklyPlanRecommendation['evidence'] {
+function quickDraftEvidence(
+  task: PlannerTaskSnapshot,
+  options: { compactUncertainty?: boolean } = {},
+): WeeklyPlanRecommendation['evidence'] {
   const evidence: WeeklyPlanRecommendation['evidence'] = []
   if (task.taskContext?.whyItMatters || task.taskContext?.summary) {
     evidence.push({
@@ -1929,7 +1951,7 @@ function quickDraftEvidence(task: PlannerTaskSnapshot): WeeklyPlanRecommendation
       taskId: task.id,
       field: 'missingContext',
       value: 'project context unknown; importance must not be inferred from project name',
-      interpretation: 'project meaning/stakes are unknown',
+      interpretation: options.compactUncertainty ? 'context unknown' : 'project meaning/stakes are unknown',
     })
   }
   if (task.notes) evidence.push({ taskId: task.id, field: 'notes', value: task.notes.slice(0, 140), interpretation: 'notes add context' })
@@ -1957,7 +1979,12 @@ function quickDraftType(task: PlannerTaskSnapshot): WeeklyPlanRecommendation['re
   return 'protect'
 }
 
-function quickDraftWhyThisMatters(task: PlannerTaskSnapshot, stream: PlannerWorkstream | undefined, locale: PlannerLocale): string {
+function quickDraftWhyThisMatters(
+  task: PlannerTaskSnapshot,
+  stream: PlannerWorkstream | undefined,
+  locale: PlannerLocale,
+  options: { compactUncertainty?: boolean } = {},
+): string {
   const openSubtaskCount = task.subtasks?.filter(subtask => !subtask.isCompleted).length ?? 0
   if (task.taskContext?.whyItMatters || task.taskContext?.summary) {
     const context = task.taskContext.whyItMatters || task.taskContext.summary
@@ -1972,6 +1999,11 @@ function quickDraftWhyThisMatters(task: PlannerTaskSnapshot, stream: PlannerWork
       : `Saved project context says this matters because: ${context}`
   }
   if (task.derived.substantialWorkScore >= 0.55) {
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? 'מועמד זמני לפי אותות משימה, בלי לטעון לחשיבות שלא נשמרה.'
+        : 'Tentative pick from task signals, without claiming unsaved importance.'
+    }
     return locale === 'he'
       ? 'אין לי עדיין הקשר שמסביר למה זה חשוב. אני משאיר את זה כמועמד בגלל אותות משימה בלבד, לא כדירוג חשיבות ודאי.'
       : 'I do not have saved context explaining why this matters yet. I am treating it as a candidate from task signals only, not as proven importance.'
@@ -2016,21 +2048,35 @@ function quickDraftWhyThisMatters(task: PlannerTaskSnapshot, stream: PlannerWork
     : 'There is limited deeper context, but the available signals still justify considering this before weaker alternatives.'
 }
 
-function quickDraftWhyThisWeek(task: PlannerTaskSnapshot, evidence: WeeklyPlanRecommendation['evidence'], locale: PlannerLocale): string {
-  const signals = evidence.map(item => item.interpretation).join(locale === 'he' ? ' · ' : ' · ')
+function quickDraftWhyThisWeek(
+  task: PlannerTaskSnapshot,
+  evidence: WeeklyPlanRecommendation['evidence'],
+  locale: PlannerLocale,
+  options: { compactUncertainty?: boolean } = {},
+): string {
+  const signalItems = options.compactUncertainty
+    ? evidence.filter(item => item.field !== 'missingContext')
+    : evidence
+  const signals = signalItems.map(item => item.interpretation).join(locale === 'he' ? ' · ' : ' · ')
+  const signalText = signals || (locale === 'he' ? 'אותות משימה זמינים' : 'available task signals')
   if (task.derived.substantialWorkScore >= 0.55) {
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? `השבוע לפי ${signalText}.`
+        : `This week from ${signalText}.`
+    }
     return locale === 'he'
       ? `השבוע רק לפי אותות המשימה, לא לפי חשיבות פרויקט מוכחת. אותות: ${signals}`
       : `This week based on task signals only, not proven project importance. Signals: ${signals}`
   }
-  if (task.derived.isOverdue) return locale === 'he' ? `השבוע כי היא כבר באיחור. אותות: ${signals}` : `This week because it is already overdue. Signals: ${signals}`
+  if (task.derived.isOverdue) return locale === 'he' ? `השבוע כי היא כבר באיחור. אותות: ${signalText}` : `This week because it is already overdue. Signals: ${signalText}`
   if (typeof task.derived.daysUntilDue === 'number' && task.derived.daysUntilDue <= 7) {
     return locale === 'he'
-      ? `השבוע כי היא בתוך חלון הזמן הקרוב. אותות: ${signals}`
-      : `This week because it falls inside the near-term planning window. Signals: ${signals}`
+      ? `השבוע כי היא בתוך חלון הזמן הקרוב. אותות: ${signalText}`
+      : `This week because it falls inside the near-term planning window. Signals: ${signalText}`
   }
-  if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? `השבוע כדי לשחרר עבודה תלויה. אותות: ${signals}` : `This week to unblock dependent work. Signals: ${signals}`
-  return locale === 'he' ? `השבוע לפי האותות החזקים ביותר בכרטיס: ${signals}` : `This week based on the strongest card signals: ${signals}`
+  if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? `השבוע כדי לשחרר עבודה תלויה. אותות: ${signalText}` : `This week to unblock dependent work. Signals: ${signalText}`
+  return locale === 'he' ? `השבוע לפי האותות החזקים ביותר בכרטיס: ${signalText}` : `This week based on the strongest card signals: ${signalText}`
 }
 
 function quickDraftRisk(task: PlannerTaskSnapshot, locale: PlannerLocale): string {

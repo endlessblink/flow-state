@@ -54,6 +54,7 @@ import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
 import { collectCardTasks, ensureCardTaskMentions, parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 import {
+  buildQuickDraftWeeklyPlan,
   buildWeeklyPlanningInterview,
   buildWeeklyPlanReliabilityFallback,
   buildWeekContextFromToolResults,
@@ -2398,7 +2399,14 @@ export function useAIChat() {
           validationErrors = [planErr instanceof Error ? planErr.message : 'provider_failed']
         }
 
-        const finalPlan = weeklyPlan ?? buildWeeklyPlanReliabilityFallback(weekContext, validationErrors)
+        const finalPlan = weeklyPlan ?? (
+          isClarificationContinuation
+            ? buildQuickDraftWeeklyPlan(weekContext, {
+                allowClarificationFirst: false,
+                compactUncertainty: true,
+              })
+            : buildWeeklyPlanReliabilityFallback(weekContext, validationErrors)
+        )
         if (validationErrors.length && finalPlan.source === 'quick_draft') {
           finalPlan.quality.caveats = [...finalPlan.quality.caveats, ...validationErrors.slice(0, 3)]
         }

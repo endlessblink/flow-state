@@ -2553,7 +2553,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('clarification,')
     expect(aiChat).toContain('recordAIClarificationEvent')
     expect(aiChat).toContain('weeklyPlan: finalPlan')
-    expect(aiChat).toContain('const finalPlan = weeklyPlan ?? buildWeeklyPlanReliabilityFallback(weekContext, validationErrors)')
+    expect(aiChat).toContain('compactUncertainty: true')
     expect(aiChat).toContain('buildWeeklyPlanReliabilityFallback')
     expect(aiChat).toContain('Return ONLY valid JSON matching schemaVersion weekly-plan.v2')
     expect(aiChat).toContain('store.completeStreamingMessage()')

@@ -1854,6 +1854,11 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('USER CLARIFICATION TO HONOR')
     expect(aiChat).toContain('Do not ignore this clarification when choosing or wording recommendations.')
     expect(aiChat).toContain('Data:\\n${clarificationContextForFormatter}${toolResultsSummary}')
+    expect(aiChat).toContain('type FormatterFallbackOptions')
+    expect(aiChat).toContain('clarificationEvidence: isGenerateCurrentContinuation ? undefined : clarificationContinuationEvidence')
+    expect(aiChat).toContain('matches your clarification')
+    expect(aiChat).toContain('Short draft using your clarification')
+    expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language, routed.responseMode, formatterFallbackOptions)')
   })
 
   it('queues clarification continuation instead of dropping it while generation is settling', () => {
@@ -1930,7 +1935,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).not.toContain('const immediateFallback = buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
     expect(aiChat).not.toContain('lastMsg.content = cleanResponse(immediateDisplay)')
     expect(aiChat).not.toContain('cardGroups: { groups: immediateCards.groups, total: immediateCards.total, kind: immediateCards.kind }')
-    expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language, routed.responseMode, { uncertaintyOnly: isGenerateCurrentContinuation })')
+    expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language, routed.responseMode, formatterFallbackOptions)')
     expect(aiChat).toContain("Formatter timed out or failed; using fallback answer")
   })
 

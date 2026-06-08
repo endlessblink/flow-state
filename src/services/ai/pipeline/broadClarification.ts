@@ -1,6 +1,7 @@
-import type { AIClarificationArtifact, AIClarificationEvent, AIClarificationEVPIScore, AIParameterBelief, AIUncertaintyDimension } from '@/types/aiMemory'
+import type { AIClarificationArtifact, AIClarificationEvent, AIClarificationEVPIScore, AIContextEntityType, AIParameterBelief, AIUncertaintyDimension } from '@/types/aiMemory'
 import { collectCardTasks, type CardToolResult } from './cardsBlock'
 import type { RoutedIntent } from './intentRouter'
+import type { AIMemoryLifecycleSummary } from './memoryLifecycle'
 import { computeBroadTaskClarificationCoverage } from './responseClarificationPolicy'
 
 type ChatOutputLanguage = 'en' | 'he'
@@ -55,6 +56,7 @@ export function buildBroadTaskClarification(
   lang: ChatOutputLanguage,
   events: AIClarificationEvent[],
   beliefs: AIParameterBelief[] = [],
+  lifecycle?: AIMemoryLifecycleSummary,
 ): AIClarificationArtifact | null {
   const candidateTaskIds = collectCardTasks(toolResults)
     .map(task => String(task.id || ''))
@@ -62,6 +64,10 @@ export function buildBroadTaskClarification(
     .slice(0, 12)
   if (!candidateTaskIds.length || hasRecentAskedOnlyClarification(events)) return null
   const coverage = computeBroadTaskClarificationCoverage(routed.responseMode, candidateTaskIds.length, beliefs)
+
+  const staleRefreshCard = buildBroadStaleRefreshClarification(routed, lang, candidateTaskIds, events, coverage, lifecycle)
+  if (staleRefreshCard) return staleRefreshCard
+
   if (coverage.decision !== 'ask') return null
 
   const memoryKey = broadTaskClarificationMemoryKey(routed)
@@ -124,6 +130,161 @@ export function buildBroadTaskClarification(
       evpi: selection.evpi,
     },
   }
+}
+
+function buildBroadStaleRefreshClarification(
+  routed: RoutedIntent,
+  lang: ChatOutputLanguage,
+  candidateTaskIds: string[],
+  events: AIClarificationEvent[],
+  coverage: NonNullable<AIClarificationArtifact['coverage']>,
+  lifecycle?: AIMemoryLifecycleSummary,
+): AIClarificationArtifact | null {
+  const refreshKey = lifecycle?.refreshEntityKeys[0]
+  if (!refreshKey) return null
+  const entityId = refreshKey.includes(':') ? refreshKey.slice(refreshKey.indexOf(':') + 1) : refreshKey
+  const entityType = broadEntityTypeFromKey(refreshKey)
+  const questionId = `memory_refresh_${safeQuestionSuffix(refreshKey)}`
+  if (recentBroadPromptResolved(events, refreshKey, questionId, questionId)) return null
+
+  const isHebrew = lang === 'he'
+  const displayName = broadEntityDisplayName(refreshKey)
+  return {
+    schemaVersion: 'ai-clarification.v1',
+    kind: 'response_quality',
+    locale: lang,
+    direction: isHebrew ? 'rtl' : 'ltr',
+    progressLabel: isHebrew ? 'מרענן הקשר · שלב 1/1' : 'Refreshing context • Step 1/1',
+    summary: isHebrew
+      ? 'מצאתי הקשר ישן שיכול לשנות את הדירוג, אז אשאל לפני תשובה רחבה.'
+      : 'I found old context that could change the ranking, so I should refresh it before a broad answer.',
+    memoryKey: refreshKey,
+    pathType: 'clarify_first',
+    candidateTaskIds,
+    actions: ['generate_current', 'show_candidates', 'pause_save'],
+    coverage: {
+      ...coverage,
+      missing: [...new Set([...coverage.missing, 'stale_context' as AIUncertaintyDimension])],
+      decision: 'ask',
+      materiality: coverage.materiality === 'low' ? 'medium' : coverage.materiality,
+    },
+    question: {
+      id: questionId,
+      entityType,
+      entityId,
+      reason: 'stale_context',
+      question: isHebrew
+        ? `ההקשר הישן של "${displayName}" עדיין נכון?`
+        : `Is the old context for "${displayName}" still true?`,
+      options: [
+        {
+          id: 'still_true',
+          label: isHebrew ? 'עדיין נכון' : 'Still true',
+          effect: isHebrew ? 'לאשר את ההקשר בלי להמציא חשיבות חדשה.' : 'Confirm the context without inventing new importance.',
+          memoryPatch: {
+            entityType,
+            entityId,
+            operation: 'confirm',
+            field: 'stale_context',
+            value: 'still true',
+            confidence: 0.9,
+            source: 'button_answer',
+          },
+        },
+        {
+          id: 'partly_changed',
+          label: isHebrew ? 'השתנה חלקית' : 'Partly changed',
+          effect: isHebrew ? 'לשמור שהתשובה צריכה להתייחס לשינוי.' : 'Remember that the answer should account for a change.',
+          memoryPatch: {
+            entityType,
+            entityId,
+            operation: 'set',
+            field: 'stale_context',
+            value: 'partly changed',
+            confidence: 0.78,
+            source: 'button_answer',
+          },
+        },
+        {
+          id: 'no_longer_true',
+          label: isHebrew ? 'כבר לא נכון' : 'No longer true',
+          effect: isHebrew ? 'לא להשתמש בהקשר הישן כעובדה טרייה.' : 'Do not reuse the old context as fresh truth.',
+          memoryPatch: {
+            entityType,
+            entityId,
+            operation: 'reject',
+            field: 'stale_context',
+            value: 'no longer true',
+            confidence: 0.86,
+            source: 'button_answer',
+          },
+        },
+        {
+          id: 'not_sure',
+          label: isHebrew ? 'לא בטוח' : 'Not sure',
+          effect: isHebrew ? 'לסמן אי ודאות במקום לנחש.' : 'Mark uncertainty instead of guessing.',
+          memoryPatch: {
+            entityType,
+            entityId,
+            operation: 'set',
+            field: 'stale_context',
+            value: 'not sure',
+            confidence: 0.45,
+            source: 'button_answer',
+          },
+        },
+      ],
+      allowFreeText: true,
+      freeTextPatch: { field: 'stale_context', operation: 'set' },
+      freeTextPlaceholder: isHebrew ? 'אופציונלי: מה השתנה?' : 'Optional: what changed?',
+      relatedTaskIds: candidateTaskIds.slice(0, 5),
+    },
+    debug: {
+      retrieval: {
+        source: 'hybrid_sql',
+        entityKeyCount: lifecycle?.refreshEntityKeys.length ?? 1,
+        eventCount: events.length,
+        projectContextCount: 0,
+        taskContextCount: 0,
+        lifecycle,
+      },
+      reason: `stale memory refresh selected for ${refreshKey} before ranking ${candidateTaskIds.length} candidates`,
+      candidateCount: candidateTaskIds.length,
+      evpi: {
+        targetedParameters: ['stale_context'],
+        heuristicEvpi: 0.734,
+        userCost: 0.15,
+        selectedScore: 0.584,
+        askThreshold: BROAD_CLARIFICATION_EVPI_ASK_THRESHOLD,
+        coverageScore: coverage.score,
+        candidates: [{
+          questionId,
+          reason: 'stale_context',
+          targetedParameters: ['stale_context'],
+          heuristicEvpi: 0.734,
+          userCost: 0.15,
+          selectedScore: 0.584,
+        }],
+      },
+    },
+  }
+}
+
+function broadEntityTypeFromKey(entityKey: string): AIContextEntityType {
+  if (entityKey.startsWith('task:')) return 'task'
+  if (entityKey.startsWith('project:')) return 'project'
+  if (entityKey.startsWith('workflow:')) return 'workflow'
+  if (entityKey.startsWith('preference:')) return 'preference'
+  return 'synthetic_group'
+}
+
+function safeQuestionSuffix(value: string): string {
+  return value.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80) || 'context'
+}
+
+function broadEntityDisplayName(entityKey: string): string {
+  const raw = entityKey.includes(':') ? entityKey.slice(entityKey.indexOf(':') + 1) : entityKey
+  return raw.replace(/[_-]+/g, ' ')
 }
 
 type BroadTaskPromptOption = {

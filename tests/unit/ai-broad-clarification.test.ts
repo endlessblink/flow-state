@@ -183,4 +183,58 @@ describe('broad task clarification policy', () => {
     expect(broadTaskClarificationMemoryKey(routed('prioritization'))).toBe('workflow:task_answer:prioritization')
     expect(broadTaskClarificationMemoryKey(routed())).toBe('workflow:task_answer:general')
   })
+
+  it('asks a stale-context refresh question before broad ranking when lifecycle says memory needs refresh', () => {
+    const card = buildBroadTaskClarification(routed('prioritization'), taskResult(6), 'en', [], [
+      belief('rankingFocus', 0.9),
+      belief('impact', 0.9),
+      belief('dependencies', 0.9),
+    ], {
+      staleEntityKeys: ['project:uncategorized'],
+      refreshEntityKeys: ['project:uncategorized'],
+      summarizeEntityKeys: [],
+      archiveEventCount: 0,
+      lowConfidenceEntityCount: 0,
+    })
+
+    expect(card?.memoryKey).toBe('project:uncategorized')
+    expect(card?.question.id).toBe('memory_refresh_project_uncategorized')
+    expect(card?.question.reason).toBe('stale_context')
+    expect(card?.question.question).toBe('Is the old context for "uncategorized" still true?')
+    expect(card?.question.options.map(option => option.label)).toEqual([
+      'Still true',
+      'Partly changed',
+      'No longer true',
+      'Not sure',
+    ])
+    expect(card?.coverage?.missing).toContain('stale_context')
+    expect(card?.debug?.evpi?.targetedParameters).toEqual(['stale_context'])
+  })
+
+  it('does not repeat a stale-context refresh question after the user answered it recently', () => {
+    const recentRefresh: AIClarificationEvent = {
+      id: 'refresh-answer',
+      entityKey: 'project:uncategorized',
+      entityType: 'project',
+      eventType: 'answered',
+      questionId: 'memory_refresh_project_uncategorized',
+      question: 'Is the old context for "uncategorized" still true?',
+      selectedLabel: 'Still true',
+      createdAt: new Date(Date.UTC(2026, 5, 8)).toISOString(),
+    }
+
+    const card = buildBroadTaskClarification(routed('prioritization'), taskResult(6), 'en', [recentRefresh], [
+      belief('rankingFocus', 0.9),
+      belief('impact', 0.9),
+      belief('dependencies', 0.9),
+    ], {
+      staleEntityKeys: ['project:uncategorized'],
+      refreshEntityKeys: ['project:uncategorized'],
+      summarizeEntityKeys: [],
+      archiveEventCount: 0,
+      lowConfidenceEntityCount: 0,
+    })
+
+    expect(card).toBeNull()
+  })
 })

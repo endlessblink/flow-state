@@ -1826,9 +1826,10 @@ export function useAIChat() {
       const isWeeklyReview = routed.responseMode === 'weekly_review'
       const isWeekPlan = routed.responseMode === 'week_plan'
       let broadRecommendationFeedback: AIRecommendationFeedback[] = []
+      let memoryResult: AIMemorySummaryResult = { summary: '', recommendationFeedback: [], compactPreference: false }
       if (hasTaskList && !isWeekPlan) {
         updateChatPhase(phaseActivityId, 'Loading context memory', `${collectCardTasks(toolResults).length} task candidates`)
-        const memoryResult = await withTimeout(
+        memoryResult = await withTimeout(
           buildAIMemorySummaryForToolResults(toolResults, outputLanguage),
           WEEK_PLAN_MEMORY_TIMEOUT_MS,
           'chat_memory_summary_timeout',
@@ -1872,8 +1873,10 @@ export function useAIChat() {
         updateChatPhase(phaseActivityId, 'Checking needed context', `${collectCardTasks(toolResults).length} task candidates`)
         const memoryKey = broadTaskClarificationMemoryKey(routed)
         const db = useSupabaseDatabase()
+        const refreshEntityKeys = memoryResult.diagnostics?.lifecycle.refreshEntityKeys ?? []
+        const clarificationEntityKeys = [...new Set([memoryKey, ...refreshEntityKeys])]
         const [broadClarificationEvents, broadClarificationBeliefs] = await withTimeout(Promise.all([
-          db.fetchAIClarificationEvents([memoryKey], 20),
+          db.fetchAIClarificationEvents(clarificationEntityKeys, 20),
           db.fetchAIParameterBeliefs({ entityKeys: [memoryKey], parameterKeys: ['rankingFocus', 'preferences', 'impact'], limit: 12 }),
         ]),
           WEEK_PLAN_MEMORY_TIMEOUT_MS,
@@ -1882,7 +1885,14 @@ export function useAIChat() {
           console.warn('[AIChat:Deterministic] Broad clarification memory skipped or timed out:', memoryErr)
           return [[], []]
         })
-        const broadClarification = buildBroadTaskClarification(routed, toolResults, outputLanguage, broadClarificationEvents, broadClarificationBeliefs)
+        const broadClarification = buildBroadTaskClarification(
+          routed,
+          toolResults,
+          outputLanguage,
+          broadClarificationEvents,
+          broadClarificationBeliefs,
+          memoryResult.diagnostics?.lifecycle,
+        )
         if (broadClarification) {
           const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
           const startedAt = existingPhase?.metadata?.startedAt ?? Date.now()

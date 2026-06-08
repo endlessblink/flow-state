@@ -2,6 +2,122 @@
 
 ## 🔜 Next Up — AI flows (TASK-1814 follow-ups; start here after restart)
 
+### TASK-1830: Server-backed AI context memory for all chat flows (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1828, TASK-1829
+
+**Why**: AI chat quality cannot be fixed by prettier weekly-plan prose or local-only clarification state. The assistant needs a VPS-safe, cross-device system of record for what projects, task groups, recurring workflows, and user preferences mean, including synthetic entities like `Work`, `My Projects`, and `uncategorized`.
+
+**Scope**:
+- Add durable server-backed entities for project/task/week/preference/synthetic/workflow context.
+- Store clarification history, answers, dismissals, corrections, and "generate with uncertainty" choices so the assistant does not repeatedly ask the same questions.
+- Support non-UUID entity keys without writing them into UUID-only Supabase columns.
+- Retrieve relevant memory before planning or ranking, then merge it with existing project/task context rows.
+- Keep memory editable and auditable through event history instead of overwriting meaning silently.
+
+**Acceptance**:
+- Synthetic buckets persist through `ai_context_entities`/`ai_clarification_events`, not localStorage.
+- UUID-only project/task context calls filter non-UUID IDs and never throw `invalid input syntax for type uuid`.
+- Weekly planning can recall saved answers for `Work`, `My Projects`, and `uncategorized` across sessions/devices.
+
+---
+
+### TASK-1831: Global low-overwhelm clarify-before-answer contract (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830
+
+**Why**: The chat should not dump long, generic recommendations when context is missing. This applies broadly to planning, prioritization, task breakdowns, "what should I do", and other agent answers, not only weekly planning.
+
+**Scope**:
+- Before producing a broad recommendation, detect missing context that would materially change the answer.
+- Ask one concise button-based clarification with optional free text by default.
+- Provide escape actions: generate with current info, show candidates only, pause/save.
+- Keep default responses short, scannable, and grounded; avoid walls of text unless the user asks for detail.
+- Use recent clarification history and cooldowns before asking.
+
+**Acceptance**:
+- Missing meaning/stakes/success criteria triggers one clarification card, not a full generic plan.
+- The assistant can proceed only when the user explicitly chooses to generate with uncertainty.
+- No answer ranks importance from project/task names alone.
+
+---
+
+### TASK-1832: High-quality planning rubric and anti-fake-reasoning evaluator (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
+
+**Why**: "High quality" must be testable. The current failures are not only bugs; they are answer-quality regressions: filler prose, unsupported importance, overwhelming length, repeated questions, and recommendations that ignore consequences, commitments, dependencies, emotional friction, and project momentum.
+
+**Scope**:
+- Add a strict task-ranking rubric with bounded weights: importance/impact, life consequences, commitments, dependencies, project momentum, avoided work, energy/fit, urgency, workload realism, and confidence.
+- Add bad/acceptable/excellent answer criteria for weekly planning and broader chat recommendations.
+- Add automated checks that penalize generic phrases, unsupported ranking, missing evidence, excess length, and repeated clarification questions.
+- Require every recommendation to cite task evidence plus project/context evidence or mark "context unknown."
+
+**Acceptance**:
+- Regression tests fail if answers say a task is high stakes or meaningful from a name alone.
+- Tests fail on generic phrases like "looks like meaningful work" without evidence.
+- Tests cover postponed/dismissed suggestions, stale context, correction overrides, and uncertainty handling.
+
+---
+
+### TASK-1833: Planning UI controls for accept/postpone/dismiss/feedback (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1831, TASK-1832
+
+**Why**: A trustworthy AI planner needs user agency. Suggestions should be reviewable cards with controls, not prose the user has to mentally parse and correct.
+
+**Scope**:
+- Render concise recommendation cards with "why now", expected impact, tradeoff, confidence, and inline reasoning disclosure.
+- Add controls for accept/time-block, postpone, dismiss with reason, explain more, and adjust preferences.
+- Save feedback as memory events so dismissed or postponed suggestions do not keep reappearing unchanged.
+- Add "Too much" / simplify controls that reduce plan size and defer nice-to-haves.
+
+**Acceptance**:
+- Dismissed suggestions are downranked or hidden until cooldown/re-engagement.
+- Postponed suggestions respect the chosen revisit window.
+- User feedback changes future recommendations and is visible in memory/event history.
+
+---
+
+### TASK-1834: Chat observability for slow or low-quality answers (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
+
+**Why**: The sidebar currently appears to hang while the bridge thinks. The user needs to see what phase is slow and the app needs debug data to explain latency and quality failures.
+
+**Scope**:
+- Show concise live phases: reading tasks, retrieving memory, deciding whether to ask, generating answer, formatting.
+- Add timing metadata for each phase and structured fallback reasons.
+- Avoid duplicate "Thinking" rows when a more specific phase is running.
+- Log enough local/server debug data to diagnose bridge timeout vs memory timeout vs formatting timeout.
+
+**Acceptance**:
+- The activity timeline shows the current phase within one second.
+- Weekly planning has bounded timeouts and a safe reliability fallback instead of spinning.
+- Debug metadata identifies whether the answer was clarification-first, generated with uncertainty, model-planned, or fallback.
+
+---
+
+### TASK-1835: Broaden memory-aware chat beyond weekly planning (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
+
+**Why**: The system should improve all FlowState chat answers over time, not only "plan my week." The assistant should remember user preferences, corrections, recurring project meanings, task-selection hints, and answer-quality feedback.
+
+**Scope**:
+- Introduce shared context retrieval for planning, prioritization, task breakdown, next-action, grouping, and reflective coaching intents.
+- Add preference memory for concise/detailed mode, question frequency, planning style, and tolerated uncertainty.
+- Promote user corrections into memory and suppress previously rejected framings.
+- Refresh stale context with confirmation rather than silently reusing it.
+
+**Acceptance**:
+- The same project/context answer improves later "what should I do", weekly plan, and task breakdown requests.
+- User corrections stop repeated wrong framing.
+- Stale context prompts are short, button-based, and respect cooldowns.
+
+---
+
 ### TASK-1828: Apply AI context memory migration and validate live chat learning (📋 PLANNED)
 
 **Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-07)

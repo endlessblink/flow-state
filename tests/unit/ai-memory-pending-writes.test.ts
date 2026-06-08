@@ -6,6 +6,7 @@ import {
   getPendingAIMemoryWriteCount,
   useAIMemoryDatabase,
 } from '@/composables/supabase/useAIMemoryDatabase'
+import { retrieveBroadAIMemory } from '@/services/ai/pipeline/broadMemoryRetrieval'
 
 let readyTables = new Set<string>()
 let entityUpsertCount = 0
@@ -527,6 +528,48 @@ describe('AI memory pending write queue', () => {
       decayScore: 1,
     })
     expect(new Date(String(entities[0]?.staleAfter)).getTime()).toBeGreaterThan(Date.now() + 40 * 24 * 60 * 60 * 1000)
+  })
+
+  it('uses local stale-refresh answers as fresh retrieval evidence instead of immediately asking again', async () => {
+    const db = useAIMemoryDatabase(createGuestContext())
+
+    await db.recordAIClarificationEvent({
+      entityKey: 'project:uncategorized',
+      entityType: 'project',
+      displayName: 'uncategorized',
+      questionId: 'memory_refresh_project_uncategorized',
+      eventType: 'answered',
+      question: 'Is the old context for "uncategorized" still true?',
+      selectedOptionId: 'partly_changed',
+      selectedLabel: 'Partly changed',
+      freeText: 'This bucket is admin cleanup unless a task has a real deadline.',
+      memoryPatch: {
+        entityType: 'project',
+        entityId: 'uncategorized',
+        operation: 'set',
+        field: 'whyItMatters',
+        value: 'Admin cleanup unless a task has a real deadline.',
+        confidence: 0.88,
+        source: 'free_text',
+      },
+      uncertaintyDimensions: ['stale_context'],
+      pathType: 'clarify_first',
+    })
+
+    const result = await retrieveBroadAIMemory({
+      db,
+      lang: 'en',
+      now: new Date(),
+      cardTasks: [{ id: 'local-admin-task', projectId: 'uncategorized', title: 'Loose admin task' }],
+      getTaskProjectId: () => 'uncategorized',
+      getProjectDisplayName: () => 'uncategorized',
+    })
+
+    expect(result.diagnostics.lifecycle.refreshEntityKeys).toEqual([])
+    expect(result.diagnostics.projectContextCount).toBe(1)
+    expect(result.summary).toContain('project uncategorized')
+    expect(result.summary).toContain('Admin cleanup unless a task has a real deadline.')
+    expect(result.summary).not.toContain('refresh_needed')
   })
 
   it('queues parameter belief writes skipped by missing schema and flushes them later', async () => {

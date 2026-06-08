@@ -132,6 +132,7 @@
 - 2026-06-08: Added server-backed `ai_memory_snapshots` for lifecycle summarization. Snapshots are keyed by text `snapshot_key`, scoped by user/project/task/week/workflow, RLS-protected, indexed for hot retrieval, visible in Settings > AI memory debug, and clearable with the rest of the AI memory layer.
 - 2026-06-08: Broad task-list and global/freeform memory retrieval now consume bounded `ai_memory_snapshots` as quoted prompt evidence, with `snapshotCount` diagnostics on broad retrieval. This turns lifecycle summaries into real answer context instead of leaving them as debug-only rows.
 - 2026-06-08: Weekly and broad retrieval now separate stale/refresh-needed memory from active planning evidence. Expired, old-confirmation, or low-confidence project/task context remains visible in lifecycle diagnostics and refresh signals, but is not promoted into `projectContexts`, `taskContexts`, remembered answers, or active broad-answer summary lines that could justify ranking as if it were fresh.
+- 2026-06-08: Added an end-to-end local stale-refresh regression: answering a stale-context clarification writes a fresh local context entity, broad retrieval then treats it as active evidence, and lifecycle diagnostics no longer report `refresh_needed` for that entity. This protects guest/schema-cache fallback from asking the same stale-refresh question immediately after the user answered it.
 
 ---
 

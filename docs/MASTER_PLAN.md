@@ -6,7 +6,7 @@
 
 **Goal**: Make FlowState chat consistently useful across weekly planning, "what should I do", prioritization, task breakdown, smart lanes, follow-up tasks, and general agent help by combining server-backed memory, explicit uncertainty, low-overwhelm UX, feedback learning, and testable answer-quality gates.
 
-**Current execution cursor**: **Checkpoint after packets 1-8**. The lane is consolidated; finish and verify the current TASK-1837 memory lifecycle diagnostics slice, then move to Stage 6/8 debug visibility and localhost end-to-end proof. Do not ask the user to test until Stage 8 passes in a real browser.
+**Current execution cursor**: **LANE-0 regroup → LANE-10 localhost E2E proof**. The lane is now treated as one full delivery track, not scattered AI-chat patches. First keep this task lane current, then finish the localhost prompt-to-answer proof. Do not ask the user to test until Stage 8/LANE-10 passes in a real browser.
 
 **Why this lane exists**: This work has too many coupled failure modes to track as isolated fixes. Use this lane as the single source of truth so every change is tied to a phase, a proof gate, and a user-visible quality outcome. If a future session feels lost, resume from the current execution cursor and the first incomplete proof gate below.
 
@@ -27,26 +27,30 @@
 5. Commit and push only after the plan file, tests, and proof evidence match the actual current state.
 
 **Operator board for the active lane**:
-- **Current slice**: TASK-1837 memory lifecycle diagnostics. Server-backed AI memory must expose stale/decayed/noisy context signals for refresh, summarization, and retention without dumping raw memory text into prompts.
-- **Current proof**: focused lifecycle/retrieval tests, AI-focused regression suite, type-check, production build, and no unrelated Electron packaging work.
-- **Next slice**: Stage 6/8 debug visibility and localhost E2E. Surface why the assistant asked/proceeded, why it is slow, and prove the browser flow: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity.
-- **Blocked until current proof is green**: background summarization jobs, broader UI polish, Electron packaging.
-- **User-test rule**: no user test request until Stage 8 proves the full localhost loop in browser: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity -> feedback/debug visible.
+- **Current slice**: LANE-0 regroup, then LANE-10 localhost E2E. The implementation has many partial slices; the next value is proving the real chat loop works locally without barrage/stuck states.
+- **Current proof**: MASTER_PLAN has a complete packet queue with one current cursor, plus a repeatable localhost browser proof that covers prompt -> clarification -> answer/uncertainty -> feedback/debug.
+- **Next slice after proof**: LANE-3/LANE-5 broad-flow coverage and feedback learning gaps discovered by the localhost proof.
+- **Blocked until current proof is green**: background summarization jobs, pgvector/semantic recall, broader UI polish, Electron packaging, and user-facing test instructions.
+- **User-test rule**: no user test request until Stage 8/LANE-10 proves the full localhost loop in browser: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity -> feedback/debug visible.
 
-**Concrete task lane packets**:
-1. **Memory substrate**: Supabase-safe `ai_context_entities`, clarification events, recommendation feedback, parameter beliefs, text entity keys, synthetic buckets, graph edges, RLS, and missing-schema fallback.
-2. **Retrieval substrate**: exact entity-key lookup, UUID-safe legacy project/task context lookup, recent events, feedback retrieval, graph edge retrieval, bounded diagnostics, and optional pgvector metadata without blocking the hot path.
-3. **Clarification decision engine**: coverage/materiality scoring, heuristic EVPI, highest-value non-repeated question selection, cooldowns, path types, selected-score debug metadata, and answer-to-belief updates.
-4. **Low-overwhelm chat contract**: one button-based question before broad answers when context is missing, no recommendation barrage while asking, explicit "continue with uncertainty" escape, concise fallback, and progressive follow-up ladder.
-5. **Broad-flow coverage**: apply the same contract to weekly planning, day planning, smart lanes, "what should I do", prioritization, task breakdown, follow-up task suggestions, and general agent help.
-6. **Answer quality gates**: bad/acceptable/excellent rubric, grounded evidence arrays, no name-only importance, no generic filler, no repeated templates, no overlong first response, and repair paths that do not reintroduce fluff.
-7. **Feedback learning**: accept/timeblock/postpone/dismiss/simplify controls, reason chips, revisit dates, immediate UI suppression, future retrieval of feedback, cooldown/backoff, and positive follow-through signals.
-8. **Memory lifecycle**: fact promotion, correction overrides, confidence decay, stale refresh, summarization/snapshots, retention/export/delete policy, and prompt-injection-safe evidence handling.
-9. **Observability and speed**: visible phases, phase timings, retrieval/source counts, clarify/generate path labels, no duplicate thinking rows, no stuck spinner after saving a clarification, and debug details behind disclosure.
-10. **Localhost QA gate**: automated unit/contract tests, type-check/build, then real localhost browser smoke covering prompt -> clarification -> answer/uncertainty -> feedback -> no barrage -> no stuck activity.
-11. **Electron gate**: deferred until localhost proves the full loop and the user explicitly re-enables desktop packaging/updater work.
+**Authoritative task lane queue**:
 
-**Current packet cursor**: packet 8, "memory lifecycle". Lifecycle policy now marks stale/decayed/noisy memory for refresh, summarization, and retention diagnostics. Next slice should decide whether to surface lifecycle diagnostics in the UI/debug panel or add the background summarization job.
+| Lane | Status | Task refs | Product outcome | Files/surfaces | Proof gate |
+| --- | --- | --- | --- | --- | --- |
+| LANE-0: Regroup and cursor discipline | 🔄 CURRENT | This top lane + TASK-1842 | One source of truth that prevents scattered fixes and stale "current slice" drift | `docs/MASTER_PLAN.md` | Lane lists all packets, current cursor, blocked work, and user-test gate |
+| LANE-1: VPS-safe memory substrate | 🔄 In progress | TASK-1830, TASK-1839 | Durable memory for real projects, synthetic buckets, preferences, corrections, and events; no UUID failures for `Work`, `My Projects`, or `uncategorized` | Supabase migrations, memory repositories, schema contract tests | Contract/retrieval tests pass; missing live schema degrades without chat failure |
+| LANE-2: Hybrid retrieval and latency budget | 🔄 In progress | TASK-1838 | Fast exact-key retrieval first; bounded recent events/feedback/edges; optional pgvector later without blocking the hot path | `weeklyMemoryRetrieval`, memory diagnostics, timeout/cache helpers | Retrieval tests prove bounded diagnostics, synthetic-key safety, and timeout fallback |
+| LANE-3: Coverage, uncertainty, and EVPI question choice | 🔄 In progress | TASK-1840, TASK-1831A, TASK-1831 | Ask the most valuable non-repeated question; do not treat one random button answer as enough context | uncertainty policy, EVPI scoring, parameter beliefs, clarification events | Tests prove high-value question selection, cooldown/dedupe, answer-to-belief update, and no immediate re-ask |
+| LANE-4: Low-overwhelm answer contract | 🔄 In progress | TASK-1831, TASK-1832 | Broad requests start with one concise card or a visible uncertainty escape; no generic plan dump by default | chat pipeline, deterministic fallback, repair/audit helpers, clarification UI | Tests fail overlong first answers, name-only importance, unsupported ranking, and filler prose |
+| LANE-5: Broad-flow coverage beyond weekly planning | 🔄 In progress | TASK-1835 | Same contract for "what should I do", day plan, smart lanes, prioritization, task breakdown, follow-up task suggestions, and general agent help | intent router, deterministic flows, formatter prompts, fallback cards | Non-weekly tests prove ask/proceed/neutral behavior and no hidden task-card barrage while asking |
+| LANE-6: Feedback learning and suppression | 🔄 In progress | TASK-1833, TASK-1836 | Accept/postpone/dismiss/simplify actions immediately change current UI and later retrieval/ranking | inline recommendation cards, feedback store, memory retrieval, cooldown rules | UI/unit tests prove postponed/dismissed items suppress until revisit and accepted/timeblocked items become positive signals |
+| LANE-7: Memory lifecycle and safety | 🔄 In progress | TASK-1837, TASK-1839 | Memory stays useful over time: stale refresh, confidence decay, summaries, retention, correction audit, prompt-injection-safe evidence | lifecycle policy, retrieval diagnostics, prompt evidence builders | Lifecycle/security tests prove stale facts are refreshed, old/noisy events are flagged, and free text is quoted evidence only |
+| LANE-8: Observability and speed | 🔄 In progress | TASK-1834 | User can see concise phases and debug reasons without reading internal dumps; no duplicate thinking rows or stuck spinner after saving | activity timeline, clarification debug disclosure, phase timing metadata | Activity/UI tests and browser smoke show phase changes, slow-step attribution, and no stuck running row |
+| LANE-9: Answer-quality evaluation rubric | 📋 Planned | TASK-1841 | Bad/acceptable/excellent scoring becomes executable, not subjective vibe review | eval fixtures, citation audit, adversarial scenarios | Eval fails fake reasoning, repeated questions, excess length, missing evidence, and conflicting-correction misuse |
+| LANE-10: Localhost E2E proof | 📋 NEXT | TASK-1842 | Real browser proves the end-to-end loop before the user is asked to test | Playwright/localhost smoke, seeded tasks, bridge stubs, screenshots | Prompt -> one clarification -> answers/follow-ups -> concise plan/uncertainty -> feedback/debug -> no barrage -> no stuck activity |
+| LANE-11: Electron delivery gate | ⏸ Deferred | TASK-1843 | Desktop packaging/updater only after localhost proves behavior and user re-enables Electron | Electron build/update/deploy surfaces | Explicit user re-enable, then Electron build/update verification |
+
+**Current lane cursor**: LANE-10 is active. The task lane is now explicit, and the first repeatable localhost smoke exists. Continue hardening the prompt-to-answer E2E until it covers feedback controls and debug disclosure, then use failures from that proof to drive LANE-3/LANE-5/LANE-8 fixes. LANE-1 through LANE-8 have partial implementation and focused tests, but the system is not ready for user testing until LANE-10 proves the full integrated behavior including feedback/debug.
 
 **Resume rule for future agents**: Start from the operator board above, then the first non-green proof gate in the stage table. Do not reinterpret this lane as a weekly-plan copywriting task, a local-only memory hack, or an Electron updater task. The intended product behavior is a durable AI chat quality system that learns useful context, asks the right low-friction questions, avoids overwhelming answers, and proves that behavior locally before desktop delivery.
 
@@ -475,6 +479,7 @@
 
 **Progress**:
 - 2026-06-08: Localhost smoke against `http://127.0.0.1:5546` seeded ambiguous tasks, sent "what should I do next?", verified exactly one clarification card, no recommendation cards/long-plan markers before answering, a second follow-up after a button-only answer, enabled input, and no stuck running activity. Screenshot evidence: `/tmp/flowstate-ai-chat-quality-smoke-pass.png`.
+- 2026-06-08: Added repeatable guest-mode Playwright smoke `tests/e2e/ai-chat-quality-local.spec.ts` plus dedicated localhost config `tests/e2e/playwright.ai-chat-quality-local.config.ts`. The smoke creates tasks through the real quick-add UI, opens the real AI sidebar, sends "Help me plan this week from my tasks", verifies exactly one clarification before any weekly plan/inline cards/candidate-card barrage, answers the follow-up ladder, verifies no running activity row remains, verifies the input is enabled, and captures `/tmp/flowstate-ai-chat-quality-stage8.png`.
 
 ---
 

@@ -53,6 +53,23 @@ async function ensureTestUser() {
   await supabase.from('timer_sessions').delete().eq('user_id', userId)
   await supabase.from('pomodoro_history').delete().eq('user_id', userId)
   await supabase.from('quick_sort_sessions').delete().eq('user_id', userId)
+  // AI chat memory must also start clean; stale answers here can hide
+  // clarification-first behavior in localhost smoke tests.
+  for (const table of [
+    'ai_recommendation_feedback',
+    'ai_parameter_beliefs',
+    'ai_clarification_events',
+    'ai_context_edges',
+    'ai_context_entities',
+  ]) {
+    const { error } = await supabase.from(table).delete().eq('user_id', userId)
+    const missingTable =
+      error?.code === '42P01' ||
+      /does not exist|schema cache/i.test(error?.message || '')
+    if (error && !missingTable) {
+      console.warn(`[global-setup] Could not clear ${table}:`, error.message)
+    }
+  }
   await supabase.from('tasks').delete().eq('user_id', userId)
   await supabase.from('groups').delete().eq('user_id', userId)
   await supabase.from('projects').delete().eq('user_id', userId)

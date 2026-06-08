@@ -161,6 +161,24 @@ describe('chat quality evidence audit', () => {
     expect(audit.failures).not.toContain('unsupported_importance_with_unknown_context')
   })
 
+  it('rejects Hebrew fake importance claims when project context is unknown', () => {
+    const audit = auditChatResponseQuality({
+      language: 'he',
+      mode: 'next_task',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 2,
+      contextUnknown: true,
+      hasVisibleUncertainty: true,
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'הקשר חסר: עדיין זו נראית עבודה משמעותית וקריטית, לכן כדאי להתחיל כאן.',
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('unsupported_importance_with_unknown_context')
+  })
+
   it('rejects recommendations that infer importance from project names or shallow task metadata', () => {
     const audit = auditRecommendationEvidence([
       {

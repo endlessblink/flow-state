@@ -56,6 +56,9 @@
 - Cold-start users get one lightweight question or neutral candidates, not a dense interview.
 - Clarification events record `coverage_score_at_time`, `uncertainty_dimensions`, and answer path type when available.
 
+**Progress**:
+- 2026-06-08: Clarification cards now continue automatically after the final saved answer, while still asking the one useful follow-up when the first answer lacks enough context.
+
 ---
 
 ### TASK-1832: High-quality planning rubric and anti-fake-reasoning evaluator (🔄 IN PROGRESS)
@@ -233,9 +236,9 @@
 
 ---
 
-### TASK-1839: Privacy, RLS, and prompt-injection hardening for AI memory (📋 PLANNED)
+### TASK-1839: Privacy, RLS, and prompt-injection hardening for AI memory (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1830
 
 **Why**: Research validation flagged privacy and prompt injection risk. User-authored memory can contain private data and arbitrary text, so it must remain tenant-scoped and must not become an instruction channel.
 
@@ -252,6 +255,9 @@
 - Free-text memory cannot override system rules in prompt construction.
 - Memory rows are inspectable and deletable through supported code paths or documented migration follow-up.
 - Prompt-injection-like memory text cannot change output policy or cross-entity retrieval boundaries.
+
+**Progress**:
+- 2026-06-08: Added quoted/sanitized prompt evidence handling for AI memory and an explicit policy that saved user free text is evidence only, not an instruction channel.
 
 ---
 

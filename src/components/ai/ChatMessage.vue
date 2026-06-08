@@ -429,6 +429,9 @@ function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEven
     ? 'נשמר מקומית. מסנכרן ברקע...'
     : 'Saved locally. Syncing in the background...'
   void persistClarificationAnswer(card, option, note)
+  if (note) {
+    emit('continueChat', clarificationContinueMessage(card))
+  }
 }
 
 function clarificationContinueMessage(card: AIClarificationArtifact): string {
@@ -475,7 +478,7 @@ async function persistClarificationAnswer(
         retrieval: card.debug?.retrieval,
       },
     })
-    clarificationStatus.value = card.locale === 'he' ? 'נשמר. אפשר לבקש שוב כדי להמשיך.' : 'Saved. Ask again to continue.'
+    clarificationStatus.value = card.locale === 'he' ? 'נשמר. ממשיך עם ההקשר הזה.' : 'Saved. Continuing with this context.'
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (!message.includes('authenticated user')) {
@@ -501,6 +504,7 @@ function saveClarificationFollowUp(card: AIClarificationArtifact, event: MouseEv
     ? 'נשמר מקומית. זה מספיק כדי להמשיך בלי להציף.'
     : 'Saved locally. That is enough to continue without a broad dump.'
   void persistClarificationFollowUp(card, option, note)
+  emit('continueChat', clarificationContinueMessage(card))
 }
 
 async function persistClarificationFollowUp(
@@ -555,8 +559,8 @@ async function persistClarificationFollowUp(
       },
     })
     clarificationStatus.value = card.locale === 'he'
-      ? 'נשמר. בקש שוב תוכנית, ואשתמש בהקשר הזה.'
-      : 'Saved. Ask for the plan again and I will use this context.'
+      ? 'נשמר. ממשיך עם ההקשר הזה.'
+      : 'Saved. Continuing with this context.'
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (!message.includes('authenticated user')) {

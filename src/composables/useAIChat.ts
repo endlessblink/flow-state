@@ -46,6 +46,7 @@ import { digestToolResults } from '@/services/ai/pipeline/preDigestedReasoning'
 import { detectFluff, extractTaskTitlesFromResults } from '@/services/ai/pipeline/fluffDetector'
 import { EntityMemory } from '@/services/ai/pipeline/entityMemory'
 import { auditChatResponseQuality, type ChatQualityMode } from '@/services/ai/pipeline/chatQuality'
+import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from '@/services/ai/pipeline/memoryEvidence'
 import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
@@ -886,33 +887,29 @@ export function useAIChat() {
         db.fetchProjectContexts(projectIds),
         db.fetchTaskContexts(taskIds),
       ])
-      const lines: string[] = [
-        lang === 'he'
-          ? 'זיכרון הבנת פרויקטים/משימות: אין להסיק חשיבות, קטגוריה, סיכון או קריטריוני הצלחה משמות פרויקטים בלבד.'
-          : 'Project/task understanding memory: do not infer importance, category, stakes, or success criteria from project names alone.',
-      ]
+      const lines: string[] = [buildMemoryEvidenceHeader(lang)]
       for (const ctx of projectContexts.slice(0, 8)) {
-        const projectName = taskStore.getProjectDisplayName?.(ctx.projectId) || ctx.projectId
+        const projectName = sanitizeMemoryEvidenceText(taskStore.getProjectDisplayName?.(ctx.projectId) || ctx.projectId, 120)
         const bits = [
-          `domain=${ctx.domain}`,
-          ctx.currentStakes !== 'unknown' ? `stakes=${ctx.currentStakes}` : '',
-          ctx.whyItMatters ? `why="${ctx.whyItMatters.slice(0, 160)}"` : '',
-          ctx.successCriteria.length ? `success="${ctx.successCriteria.slice(0, 2).join('; ').slice(0, 160)}"` : '',
+          formatMemoryEvidence('domain', ctx.domain, 80),
+          ctx.currentStakes !== 'unknown' ? formatMemoryEvidence('stakes', ctx.currentStakes, 80) : '',
+          ctx.whyItMatters ? formatMemoryEvidence('why', ctx.whyItMatters, 160) : '',
+          ctx.successCriteria.length ? formatMemoryEvidence('success', ctx.successCriteria.slice(0, 2).join('; '), 160) : '',
         ].filter(Boolean)
         if (bits.length) lines.push(`- project ${projectName}: ${bits.join(' | ')}`)
       }
       for (const ctx of taskContexts.slice(0, 8)) {
-        const taskName = taskStore.getTask(ctx.taskId)?.title || ctx.taskId
+        const taskName = sanitizeMemoryEvidenceText(taskStore.getTask(ctx.taskId)?.title || ctx.taskId, 160)
         const bits = [
-          ctx.currentStakes !== 'unknown' ? `stakes=${ctx.currentStakes}` : '',
-          ctx.whyItMatters ? `why="${ctx.whyItMatters.slice(0, 160)}"` : '',
-          ctx.successCriteria.length ? `success="${ctx.successCriteria.slice(0, 2).join('; ').slice(0, 160)}"` : '',
+          ctx.currentStakes !== 'unknown' ? formatMemoryEvidence('stakes', ctx.currentStakes, 80) : '',
+          ctx.whyItMatters ? formatMemoryEvidence('why', ctx.whyItMatters, 160) : '',
+          ctx.successCriteria.length ? formatMemoryEvidence('success', ctx.successCriteria.slice(0, 2).join('; '), 160) : '',
         ].filter(Boolean)
         if (bits.length) lines.push(`- task ${taskName}: ${bits.join(' | ')}`)
       }
       const projectsWithoutContext = projectIds
         .filter(id => !projectContexts.some(ctx => ctx.projectId === id))
-        .map(id => taskStore.getProjectDisplayName?.(id) || id)
+        .map(id => sanitizeMemoryEvidenceText(taskStore.getProjectDisplayName?.(id) || id, 120))
         .slice(0, 5)
       if (projectsWithoutContext.length) {
         lines.push(`- context unknown for projects: ${projectsWithoutContext.join(', ')}`)

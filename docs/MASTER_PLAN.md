@@ -122,6 +122,7 @@
 **Progress**:
 - 2026-06-08: Pending AI memory write tests now prove clarification events, recommendation feedback, and parameter beliefs all queue during schema-cache/migration misses and flush after the server schema becomes available. This protects saved clarification answers, postpone/dismiss/simplify learning signals, and EVPI belief updates during VPS rollout timing gaps.
 - 2026-06-08: Broad non-weekly task answers now retrieve server-backed `ai_context_entities`, `ai_clarification_events`, `ai_parameter_beliefs`, and `ai_recommendation_feedback` by text entity key before formatting task-list responses. This closes the gap where weekly planning could recall synthetic bucket context but general "what should I do" answers still ignored durable `Work`/`My Projects`/`uncategorized` memory.
+- 2026-06-08: Ordinary freeform/ReAct prompts and non-task deterministic formatter paths now receive a bounded global memory packet from server-backed workflow/preference entities, recent clarification events, and parameter beliefs. This makes the first Slice 1 requirement closer to true: assistant responses are no longer prompt-only when no task-list tool result is present.
 
 ---
 
@@ -400,6 +401,7 @@
 **Progress**:
 - 2026-06-08: Extracted weekly memory retrieval into a bounded SQL-first helper. The helper retrieves UUID-only legacy contexts, server context entities, clarification events, recommendation feedback, and graph edges separately so synthetic buckets never enter UUID-only calls. Semantic/vector recall remains pgvector-ready metadata only until the database function is available. Focused tests cover bounded diagnostics, feedback/event counts, synthetic bucket safety, and timeout fallback.
 - 2026-06-08: Added `broadMemoryRetrieval` for non-weekly task-list answers. The helper keeps UUID-only legacy calls filtered to real UUIDs, sends synthetic/local entities through text keys (`project:uncategorized`, `task:local-task`), includes safe quoted evidence from parameter beliefs and recent clarification answers, and returns concise retrieval diagnostics for future debug display.
+- 2026-06-08: Added `globalChatMemory` for non-task/freeform responses. It exact-fetches workflow/preference entities, recent clarification decisions, and selected parameter beliefs with a 1.5s timeout in the chat pipeline, producing a compact quoted-evidence packet instead of raw memory prose.
 
 ---
 

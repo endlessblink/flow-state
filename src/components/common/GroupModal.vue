@@ -11,7 +11,7 @@
           <h2 class="modal-title">
             {{ isEditing ? 'Edit Group' : 'Create Custom Group' }}
           </h2>
-          <button class="close-btn" @click="$emit('close')">
+          <button class="close-btn" :aria-label="$t('close')"  @click="$emit('close')">
             <X :size="16" :stroke-width="1.5" />
           </button>
         </div>

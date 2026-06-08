@@ -206,7 +206,7 @@ function close() {
   >
     <div v-if="task" class="quick-edit-popover">
       <!-- Close Button -->
-      <button class="close-btn" title="Close" @click="close">
+      <button class="close-btn" title="Close" aria-label="Close"  @click="close">
         <X :size="14" />
       </button>
 

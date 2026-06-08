@@ -8,7 +8,7 @@
             <h2 class="modal-title">
               Edit Task
             </h2>
-            <button class="close-btn" @click="handleCloseRequest">
+            <button class="close-btn" :aria-label="$t('close')"  @click="handleCloseRequest">
               <X :size="16" />
             </button>
           </div>

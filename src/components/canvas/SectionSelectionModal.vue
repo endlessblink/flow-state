@@ -12,7 +12,7 @@
             <Layout :size="18" />
             Move to Section
           </h2>
-          <button class="close-btn" @click="$emit('cancel')">
+          <button class="close-btn" :aria-label="$t('close')"  @click="$emit('cancel')">
             <X :size="16" />
           </button>
         </div>

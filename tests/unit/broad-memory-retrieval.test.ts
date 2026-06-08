@@ -254,6 +254,47 @@ describe('retrieveBroadAIMemory', () => {
     expect(result.summary).toContain('remembered answer for preference:brevity')
   })
 
+  it('does not use stale parameter beliefs as active broad-answer memory', async () => {
+    const staleBrevityBelief: AIParameterBelief = {
+      id: 'belief-stale-brevity',
+      entityKey: 'preference:brevity',
+      entityType: 'preference',
+      parameterKey: 'preferences',
+      beliefJson: {
+        value: 'User once said answers were too much; keep everything compact.',
+      },
+      confidence: 0.9,
+      impactWeight: 0.65,
+      sourceQuestionId: 'recommendation_feedback:simplify',
+      lastReinforcedAt: '2026-01-01T09:00:00.000Z',
+      staleAfter: '2026-05-01T00:00:00.000Z',
+      decayScore: 1,
+    }
+    const db = dbStub({
+      fetchAIParameterBeliefs: vi.fn(async () => [staleBrevityBelief]),
+    })
+
+    const result = await retrieveBroadAIMemory({
+      db,
+      lang: 'en',
+      now: new Date('2026-06-08T10:00:00.000Z'),
+      cardTasks: [
+        { id: 'local-a', projectId: 'uncategorized', title: 'First task' },
+        { id: 'local-b', projectId: 'uncategorized', title: 'Second task' },
+      ],
+    })
+
+    expect(result.compactPreference).toBe(false)
+    expect(result.diagnostics.beliefCount).toBe(0)
+    expect(result.diagnostics.lifecycle).toMatchObject({
+      staleParameterBeliefKeys: ['preference:brevity:preferences'],
+      refreshParameterBeliefKeys: ['preference:brevity:preferences'],
+    })
+    expect(result.summary).toContain('belief_refresh_needed')
+    expect(result.summary).not.toContain('User once said answers were too much')
+    expect(result.summary).not.toContain('remembered answer for preference:brevity')
+  })
+
   it('fetches aggregate recommendation-feedback preference keys for broad task answers', async () => {
     expect(BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS).toEqual(expect.arrayContaining([
       'preference:brevity',

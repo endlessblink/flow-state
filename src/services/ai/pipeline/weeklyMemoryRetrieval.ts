@@ -1,6 +1,6 @@
 import type { AIClarificationEvent, AIContextEdge, AIContextEdgeInput, AIContextEntity, AIMemorySnapshot, AIParameterBelief, ProjectContext, TaskContext, AIRecommendationFeedback } from '@/types/aiMemory'
 import type { WeekContextMemoryInput } from './weeklyPlan'
-import { assessAIMemoryFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
+import { assessAIParameterBeliefFreshness, assessAIMemoryFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 
 type CardTaskLike = Record<string, unknown>
 const WEEKLY_GLOBAL_MEMORY_ENTITY_KEYS = [
@@ -103,9 +103,12 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
       input.db.fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week'], limit: 12 }) ?? Promise.resolve([]),
       input.db.fetchAIParameterBeliefs?.({ entityKeys: beliefEntityKeys, limit: 60 }) ?? Promise.resolve([]),
     ]), input.timeoutMs, 'weekly_plan_memory_timeout')
-    const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now)
+    const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now, parameterBeliefs)
     const refreshEntityKeys = new Set(lifecycle.refreshEntityKeys)
-    const freshParameterBeliefs = parameterBeliefs.filter(belief => !refreshEntityKeys.has(belief.entityKey))
+    const freshParameterBeliefs = parameterBeliefs.filter(belief =>
+      !refreshEntityKeys.has(belief.entityKey) &&
+      assessAIParameterBeliefFreshness(belief, input.now).fresh
+    )
     const entityProjectContexts = contextEntities
       .filter(entity => !refreshEntityKeys.has(entity.entityKey))
       .map(entityToProjectContext)
@@ -165,9 +168,12 @@ function emptyLifecycleSummary(): AIMemoryLifecycleSummary {
   return {
     staleEntityKeys: [],
     refreshEntityKeys: [],
+    staleParameterBeliefKeys: [],
+    refreshParameterBeliefKeys: [],
     summarizeEntityKeys: [],
     archiveEventCount: 0,
     lowConfidenceEntityCount: 0,
+    lowConfidenceBeliefCount: 0,
   }
 }
 

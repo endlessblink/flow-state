@@ -2087,9 +2087,12 @@ export function useAIChat() {
           lifecycle: {
             staleEntityKeys: [],
             refreshEntityKeys: [],
+            staleParameterBeliefKeys: [],
+            refreshParameterBeliefKeys: [],
             summarizeEntityKeys: [],
             archiveEventCount: 0,
             lowConfidenceEntityCount: 0,
+            lowConfidenceBeliefCount: 0,
           },
         }
         try {

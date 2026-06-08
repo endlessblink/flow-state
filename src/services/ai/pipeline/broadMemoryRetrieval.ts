@@ -9,7 +9,7 @@ import type {
   TaskContext,
 } from '@/types/aiMemory'
 import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from './memoryEvidence'
-import { assessAIMemoryFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
+import { assessAIParameterBeliefFreshness, assessAIMemoryFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 import { projectEntityKey, taskEntityKey } from './weeklyMemoryRetrieval'
 
 type CardTaskLike = Record<string, unknown>
@@ -150,10 +150,13 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     contextEdges,
     memorySnapshots,
   ] = rows
-  const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now)
+  const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now, parameterBeliefs)
   const refreshEntityKeys = new Set(lifecycle.refreshEntityKeys)
   const activeClarificationEvents = clarificationEvents.filter(event => !refreshEntityKeys.has(event.entityKey))
-  const activeParameterBeliefs = parameterBeliefs.filter(belief => !refreshEntityKeys.has(belief.entityKey))
+  const activeParameterBeliefs = parameterBeliefs.filter(belief =>
+    !refreshEntityKeys.has(belief.entityKey) &&
+    assessAIParameterBeliefFreshness(belief, input.now).fresh
+  )
 
   const projectContexts = uniqueBy(
     [
@@ -328,19 +331,25 @@ function emptyLifecycleSummary(): AIMemoryLifecycleSummary {
   return {
     staleEntityKeys: [],
     refreshEntityKeys: [],
+    staleParameterBeliefKeys: [],
+    refreshParameterBeliefKeys: [],
     summarizeEntityKeys: [],
     archiveEventCount: 0,
     lowConfidenceEntityCount: 0,
+    lowConfidenceBeliefCount: 0,
   }
 }
 
 function broadLifecycleEvidence(lifecycle: AIMemoryLifecycleSummary): string[] {
   const bits: string[] = []
   if (lifecycle.refreshEntityKeys.length) bits.push(formatMemoryEvidence('refresh_needed', `${lifecycle.refreshEntityKeys.length} memory item(s)`, 80))
+  if (lifecycle.refreshParameterBeliefKeys.length) bits.push(formatMemoryEvidence('belief_refresh_needed', `${lifecycle.refreshParameterBeliefKeys.length} remembered answer(s)`, 80))
   if (lifecycle.staleEntityKeys.length) bits.push(formatMemoryEvidence('stale', `${lifecycle.staleEntityKeys.length} memory item(s)`, 80))
+  if (lifecycle.staleParameterBeliefKeys.length) bits.push(formatMemoryEvidence('stale_beliefs', `${lifecycle.staleParameterBeliefKeys.length} remembered answer(s)`, 80))
   if (lifecycle.summarizeEntityKeys.length) bits.push(formatMemoryEvidence('summarize_needed', `${lifecycle.summarizeEntityKeys.length} memory item(s)`, 80))
   if (lifecycle.archiveEventCount) bits.push(formatMemoryEvidence('old_events', `${lifecycle.archiveEventCount}`, 40))
   if (lifecycle.lowConfidenceEntityCount) bits.push(formatMemoryEvidence('low_confidence', `${lifecycle.lowConfidenceEntityCount}`, 40))
+  if (lifecycle.lowConfidenceBeliefCount) bits.push(formatMemoryEvidence('low_confidence_beliefs', `${lifecycle.lowConfidenceBeliefCount}`, 40))
   return bits
 }
 

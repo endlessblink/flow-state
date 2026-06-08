@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { assessAIContextEntityLifecycle, assessAIMemoryFreshness, buildAIMemorySnapshotInput, summarizeAIMemoryLifecycle } from '@/services/ai/pipeline/memoryLifecycle'
-import type { AIClarificationEvent, AIContextEntity } from '@/types/aiMemory'
+import { assessAIContextEntityLifecycle, assessAIMemoryFreshness, assessAIParameterBeliefFreshness, buildAIMemorySnapshotInput, summarizeAIMemoryLifecycle } from '@/services/ai/pipeline/memoryLifecycle'
+import type { AIClarificationEvent, AIContextEntity, AIParameterBelief } from '@/types/aiMemory'
 
 function entity(overrides: Partial<AIContextEntity> = {}): AIContextEntity {
   return {
@@ -27,6 +27,21 @@ function event(daysAgo: number, key = 'project:ai-planner'): AIClarificationEven
     questionId: `q-${daysAgo}`,
     eventType: 'answered',
     createdAt: date.toISOString(),
+  }
+}
+
+function belief(overrides: Partial<AIParameterBelief> = {}): AIParameterBelief {
+  return {
+    entityKey: 'preference:ranking_focus',
+    entityType: 'preference',
+    parameterKey: 'rankingFocus',
+    beliefJson: { value: 'Real impact first' },
+    confidence: 0.85,
+    impactWeight: 0.8,
+    lastReinforcedAt: '2026-06-01T10:00:00.000Z',
+    staleAfter: '2026-07-01T10:00:00.000Z',
+    decayScore: 1,
+    ...overrides,
   }
 }
 
@@ -91,6 +106,24 @@ describe('AI memory lifecycle policy', () => {
     const summary = summarizeAIMemoryLifecycle([entity()], [event(370)], now)
 
     expect(summary.archiveEventCount).toBe(1)
+  })
+
+  it('marks stale parameter beliefs as refresh-needed instead of fresh clarification memory', () => {
+    const stale = belief({
+      staleAfter: '2026-05-01T00:00:00.000Z',
+      lastReinforcedAt: '2026-01-01T00:00:00.000Z',
+    })
+    const fresh = belief({ parameterKey: 'energyFit' })
+
+    expect(assessAIParameterBeliefFreshness(stale, now)).toMatchObject({
+      fresh: false,
+      reasons: expect.arrayContaining(['explicit_stale_after', 'old_confirmation']),
+    })
+    expect(assessAIParameterBeliefFreshness(fresh, now)).toMatchObject({ fresh: true, reasons: [] })
+
+    const summary = summarizeAIMemoryLifecycle([], [], now, [stale, fresh])
+    expect(summary.staleParameterBeliefKeys).toEqual(['preference:ranking_focus:rankingFocus'])
+    expect(summary.refreshParameterBeliefKeys).toEqual(['preference:ranking_focus:rankingFocus'])
   })
 
   it('builds a bounded sanitized snapshot input from noisy lifecycle history', () => {

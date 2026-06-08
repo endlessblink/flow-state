@@ -259,4 +259,46 @@ describe('retrieveWeeklyAIMemory', () => {
     expect(result.diagnostics.parameterBeliefCount).toBe(0)
     expect(result.edges).toHaveLength(2)
   })
+
+  it('filters stale parameter beliefs out of weekly planning memory', async () => {
+    const staleBelief: AIParameterBelief = {
+      entityKey: 'week:2026-06-08',
+      entityType: 'week',
+      parameterKey: 'thisWeekImportance',
+      beliefJson: { value: 'old launch focus' },
+      confidence: 0.9,
+      impactWeight: 0.85,
+      lastReinforcedAt: '2026-01-01T08:00:00.000Z',
+      staleAfter: '2026-05-01T08:00:00.000Z',
+      decayScore: 1,
+    }
+    const freshBelief: AIParameterBelief = {
+      entityKey: 'preference:ranking_focus',
+      entityType: 'preference',
+      parameterKey: 'rankingFocus',
+      beliefJson: { value: 'real consequences first' },
+      confidence: 0.88,
+      impactWeight: 0.75,
+      lastReinforcedAt: '2026-06-08T08:00:00.000Z',
+      staleAfter: '2026-07-08T08:00:00.000Z',
+      decayScore: 1,
+    }
+    const db = dbStub({
+      fetchAIParameterBeliefs: vi.fn(async () => [staleBelief, freshBelief]),
+    })
+
+    const result = await retrieveWeeklyAIMemory({
+      db,
+      now: new Date('2026-06-08T10:00:00.000Z'),
+      timeoutMs: 200,
+      cardTasks: [{ id: taskId, projectId, title: 'Known task' }],
+    })
+
+    expect(result.memory.parameterBeliefs).toEqual([freshBelief])
+    expect(result.diagnostics.parameterBeliefCount).toBe(1)
+    expect(result.diagnostics.lifecycle).toMatchObject({
+      staleParameterBeliefKeys: ['week:2026-06-08:thisWeekImportance'],
+      refreshParameterBeliefKeys: ['week:2026-06-08:thisWeekImportance'],
+    })
+  })
 })

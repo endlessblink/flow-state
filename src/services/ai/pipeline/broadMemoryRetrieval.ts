@@ -9,7 +9,7 @@ import type {
   TaskContext,
 } from '@/types/aiMemory'
 import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from './memoryEvidence'
-import { summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
+import { assessAIMemoryFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 import { projectEntityKey, taskEntityKey } from './weeklyMemoryRetrieval'
 
 type CardTaskLike = Record<string, unknown>
@@ -151,18 +151,27 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     memorySnapshots,
   ] = rows
   const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now)
+  const refreshEntityKeys = new Set(lifecycle.refreshEntityKeys)
+  const activeClarificationEvents = clarificationEvents.filter(event => !refreshEntityKeys.has(event.entityKey))
+  const activeParameterBeliefs = parameterBeliefs.filter(belief => !refreshEntityKeys.has(belief.entityKey))
 
   const projectContexts = uniqueBy(
     [
-      ...legacyProjectContexts,
-      ...contextEntities.map(entityToProjectContext).filter((ctx): ctx is ProjectContext => Boolean(ctx)),
+      ...legacyProjectContexts.filter(ctx => contextFresh(ctx, input.now)),
+      ...contextEntities
+        .filter(entity => !refreshEntityKeys.has(entity.entityKey))
+        .map(entityToProjectContext)
+        .filter((ctx): ctx is ProjectContext => Boolean(ctx)),
     ],
     ctx => ctx.projectId,
   )
   const taskContexts = uniqueBy(
     [
-      ...legacyTaskContexts,
-      ...contextEntities.map(entityToTaskContext).filter((ctx): ctx is TaskContext => Boolean(ctx)),
+      ...legacyTaskContexts.filter(ctx => contextFresh(ctx, input.now)),
+      ...contextEntities
+        .filter(entity => !refreshEntityKeys.has(entity.entityKey))
+        .map(entityToTaskContext)
+        .filter((ctx): ctx is TaskContext => Boolean(ctx)),
     ],
     ctx => ctx.taskId,
   )
@@ -172,8 +181,8 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       lang: input.lang,
       projectContexts,
       taskContexts,
-      clarificationEvents,
-      parameterBeliefs,
+      clarificationEvents: activeClarificationEvents,
+      parameterBeliefs: activeParameterBeliefs,
       recommendationFeedback,
       contextEdges,
       memorySnapshots,
@@ -184,7 +193,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       getProjectDisplayName: input.getProjectDisplayName,
     }),
     recommendationFeedback,
-    compactPreference: hasCompactPreference(contextEntities, parameterBeliefs, recommendationFeedback),
+    compactPreference: hasCompactPreference(contextEntities, activeParameterBeliefs, recommendationFeedback),
     entityKeys,
     diagnostics: {
       source: 'hybrid_sql',
@@ -192,7 +201,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       taskContextCount: taskContexts.length,
       exactEntityCount: contextEntities.length,
       eventCount: clarificationEvents.length,
-      beliefCount: parameterBeliefs.length,
+      beliefCount: activeParameterBeliefs.length,
       feedbackCount: recommendationFeedback.length,
       graphEdgeCount: contextEdges.length,
       snapshotCount: memorySnapshots.length,
@@ -427,6 +436,15 @@ async function withOptionalTimeout<T>(promise: Promise<T>, timeoutMs: number | u
 
 function uniqueBy<T>(items: T[], keyOf: (item: T) => string): T[] {
   return items.filter((item, index, all) => all.findIndex(other => keyOf(other) === keyOf(item)) === index)
+}
+
+function contextFresh(ctx: ProjectContext | TaskContext, now: Date = new Date()): boolean {
+  return assessAIMemoryFreshness({
+    staleAfter: ctx.staleAfter,
+    lastConfirmedAt: ctx.lastConfirmedAt,
+    lastUpdatedAt: ctx.lastUpdatedAt,
+    confidence: ctx.confidence,
+  }, now).fresh
 }
 
 function factString(facts: Record<string, unknown>, field: string): string | null {

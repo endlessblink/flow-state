@@ -339,10 +339,14 @@ describe('retrieveBroadAIMemory', () => {
       refreshEntityKeys: ['project:uncategorized'],
       archiveEventCount: 1,
     })
+    expect(result.diagnostics.projectContextCount).toBe(0)
     expect(result.summary).toContain('memory lifecycle')
     expect(result.summary).toContain('refresh_needed')
     expect(result.summary).toContain('stale')
     expect(result.summary).toContain('old_events')
+    expect(result.summary).toContain('context unknown for projects: uncategorized')
+    expect(result.summary).not.toContain('Old context that should be refreshed before broad ranking.')
+    expect(result.summary).not.toContain('Creative work')
   })
 
   it('retrieves compact memory snapshots as bounded broad-answer evidence', async () => {

@@ -1,6 +1,6 @@
 import type { AIClarificationEvent, AIContextEdge, AIContextEdgeInput, AIContextEntity, AIMemorySnapshot, AIParameterBelief, ProjectContext, TaskContext, AIRecommendationFeedback } from '@/types/aiMemory'
 import type { WeekContextMemoryInput } from './weeklyPlan'
-import { summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
+import { assessAIMemoryFreshness, summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 
 type CardTaskLike = Record<string, unknown>
 const WEEKLY_GLOBAL_MEMORY_ENTITY_KEYS = [
@@ -103,14 +103,24 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
       input.db.fetchAIMemorySnapshots?.({ entityKeys, scopes: ['user', 'project', 'task', 'week'], limit: 12 }) ?? Promise.resolve([]),
       input.db.fetchAIParameterBeliefs?.({ entityKeys: beliefEntityKeys, limit: 60 }) ?? Promise.resolve([]),
     ]), input.timeoutMs, 'weekly_plan_memory_timeout')
-    const entityProjectContexts = contextEntities.map(entityToProjectContext).filter((ctx): ctx is ProjectContext => Boolean(ctx))
-    const entityTaskContexts = contextEntities.map(entityToTaskContext).filter((ctx): ctx is TaskContext => Boolean(ctx))
     const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now)
+    const refreshEntityKeys = new Set(lifecycle.refreshEntityKeys)
+    const freshParameterBeliefs = parameterBeliefs.filter(belief => !refreshEntityKeys.has(belief.entityKey))
+    const entityProjectContexts = contextEntities
+      .filter(entity => !refreshEntityKeys.has(entity.entityKey))
+      .map(entityToProjectContext)
+      .filter((ctx): ctx is ProjectContext => Boolean(ctx))
+    const entityTaskContexts = contextEntities
+      .filter(entity => !refreshEntityKeys.has(entity.entityKey))
+      .map(entityToTaskContext)
+      .filter((ctx): ctx is TaskContext => Boolean(ctx))
+    const freshProjectContexts = projectContexts.filter(ctx => contextFresh(ctx, input.now))
+    const freshTaskContexts = taskContexts.filter(ctx => contextFresh(ctx, input.now))
     const memory: WeekContextMemoryInput = {
-      projectContexts: uniqueBy([...projectContexts, ...entityProjectContexts], ctx => ctx.projectId),
-      taskContexts: uniqueBy([...taskContexts, ...entityTaskContexts], ctx => ctx.taskId),
+      projectContexts: uniqueBy([...freshProjectContexts, ...entityProjectContexts], ctx => ctx.projectId),
+      taskContexts: uniqueBy([...freshTaskContexts, ...entityTaskContexts], ctx => ctx.taskId),
       memorySnapshots,
-      parameterBeliefs,
+      parameterBeliefs: freshParameterBeliefs,
       recommendationFeedback,
     }
     const semanticCandidateKeys = uniqueStrings(contextEntities.flatMap(entity => entity.relatedEntities ?? []))
@@ -130,7 +140,7 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
         feedbackCount: recommendationFeedback.length,
         graphEdgeCount: contextEdges.length,
         snapshotCount: memorySnapshots.length,
-        parameterBeliefCount: parameterBeliefs.length,
+        parameterBeliefCount: freshParameterBeliefs.length,
         elapsedMs: Math.round(performance.now() - startedAt),
         timedOut: false,
         exactEntityCount: contextEntities.length,
@@ -211,6 +221,15 @@ function uniqueStrings(values: string[]): string[] {
 
 function uniqueBy<T>(items: T[], keyOf: (item: T) => string): T[] {
   return items.filter((item, index, all) => all.findIndex(other => keyOf(other) === keyOf(item)) === index)
+}
+
+function contextFresh(ctx: ProjectContext | TaskContext, now: Date): boolean {
+  return assessAIMemoryFreshness({
+    staleAfter: ctx.staleAfter,
+    lastConfirmedAt: ctx.lastConfirmedAt,
+    lastUpdatedAt: ctx.lastUpdatedAt,
+    confidence: ctx.confidence,
+  }, now).fresh
 }
 
 function factString(facts: Record<string, unknown>, field: string): string | null {

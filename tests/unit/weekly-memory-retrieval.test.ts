@@ -201,7 +201,7 @@ describe('retrieveWeeklyAIMemory', () => {
       ],
       limit: 60,
     })
-    expect(result.memory.projectContexts?.map(ctx => ctx.projectId)).toEqual([projectId, 'uncategorized'])
+    expect(result.memory.projectContexts?.map(ctx => ctx.projectId)).toEqual([projectId])
     expect(result.memory.taskContexts?.map(ctx => ctx.taskId)).toEqual([taskId])
     expect(result.memory.memorySnapshots).toEqual(memorySnapshots)
     expect(result.memory.parameterBeliefs).toEqual(parameterBeliefs)
@@ -212,7 +212,7 @@ describe('retrieveWeeklyAIMemory', () => {
       source: 'hybrid_sql',
       entityKeyCount: 5,
       eventCount: 21,
-      projectContextCount: 2,
+      projectContextCount: 1,
       taskContextCount: 1,
       feedbackCount: 1,
       graphEdgeCount: 1,
@@ -228,6 +228,8 @@ describe('retrieveWeeklyAIMemory', () => {
       refreshEntityKeys: ['project:uncategorized'],
       summarizeEntityKeys: ['project:uncategorized'],
     })
+    expect(JSON.stringify(result.memory)).not.toContain('User said uncategorized')
+    expect(JSON.stringify(result.memory)).not.toContain('Synthetic bucket context')
     expect(JSON.stringify(result.diagnostics)).not.toContain('User said uncategorized')
   })
 

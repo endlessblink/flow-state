@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assessAIContextEntityLifecycle, buildAIMemorySnapshotInput, summarizeAIMemoryLifecycle } from '@/services/ai/pipeline/memoryLifecycle'
+import { assessAIContextEntityLifecycle, assessAIMemoryFreshness, buildAIMemorySnapshotInput, summarizeAIMemoryLifecycle } from '@/services/ai/pipeline/memoryLifecycle'
 import type { AIClarificationEvent, AIContextEntity } from '@/types/aiMemory'
 
 function entity(overrides: Partial<AIContextEntity> = {}): AIContextEntity {
@@ -42,6 +42,23 @@ describe('AI memory lifecycle policy', () => {
     expect(decision.stale).toBe(true)
     expect(decision.needsRefresh).toBe(true)
     expect(decision.reasons).toEqual(expect.arrayContaining(['explicit_stale_after', 'old_confirmation']))
+  })
+
+  it('separates fresh active evidence from stale context that needs confirmation', () => {
+    const stale = assessAIMemoryFreshness({
+      staleAfter: '2026-06-01T00:00:00.000Z',
+      lastConfirmedAt: '2026-03-01T00:00:00.000Z',
+      confidence: 0.8,
+    }, now)
+    const fresh = assessAIMemoryFreshness({
+      staleAfter: '2026-07-01T00:00:00.000Z',
+      lastConfirmedAt: '2026-06-01T00:00:00.000Z',
+      confidence: 0.8,
+    }, now)
+
+    expect(stale.fresh).toBe(false)
+    expect(stale.reasons).toEqual(expect.arrayContaining(['explicit_stale_after', 'old_confirmation']))
+    expect(fresh).toMatchObject({ fresh: true, reasons: [] })
   })
 
   it('uses reinforcement to slow confidence decay for repeatedly confirmed facts', () => {

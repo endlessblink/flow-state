@@ -20,6 +20,38 @@ export type AIMemoryLifecycleSummary = {
   lowConfidenceEntityCount: number
 }
 
+export type AIMemoryFreshnessInput = {
+  staleAfter?: string | null
+  lastConfirmedAt?: string | null
+  lastUpdatedAt?: string | null
+  confidence?: number | null
+}
+
+export type AIMemoryFreshnessDecision = {
+  fresh: boolean
+  reasons: Array<'explicit_stale_after' | 'old_confirmation' | 'low_confidence'>
+}
+
+export function assessAIMemoryFreshness(
+  input: AIMemoryFreshnessInput,
+  now: Date = new Date(),
+): AIMemoryFreshnessDecision {
+  const nowMs = now.getTime()
+  const staleAfterMs = parseMs(input.staleAfter ?? null)
+  const lastConfirmedMs = parseMs(input.lastConfirmedAt ?? input.lastUpdatedAt ?? null)
+  const confidence = typeof input.confidence === 'number' ? clamp01(input.confidence) : 0.5
+  const reasons: AIMemoryFreshnessDecision['reasons'] = []
+
+  if (staleAfterMs && staleAfterMs <= nowMs) reasons.push('explicit_stale_after')
+  if (lastConfirmedMs && nowMs - lastConfirmedMs > 45 * DAY_MS) reasons.push('old_confirmation')
+  if (confidence < 0.45) reasons.push('low_confidence')
+
+  return {
+    fresh: reasons.length === 0,
+    reasons,
+  }
+}
+
 export function assessAIContextEntityLifecycle(
   entity: AIContextEntity,
   events: AIClarificationEvent[] = [],
@@ -32,7 +64,7 @@ export function assessAIContextEntityLifecycle(
   const reinforcementCount = Math.max(0, entity.reinforcementCount ?? 0)
   const baseConfidence = clamp01(entity.confidence)
   const storedDecay = typeof entity.decayScore === 'number' ? clamp01(entity.decayScore) : null
-  const ageDays = lastTouchedMs && Number.isFinite(nowMs) ? Math.max(0, (nowMs - lastTouchedMs) / DAY_MS) : 90
+  const ageDays = lastTouchedMs && Number.isFinite(nowMs) ? Math.max(0, (nowMs - lastTouchedMs) / DAY_MS) : 0
   const decayGraceDays = 30 + Math.min(45, reinforcementCount * 10)
   const timeDecay = ageDays <= decayGraceDays ? 1 : Math.max(0.25, 1 - ((ageDays - decayGraceDays) / 120))
   const effectiveConfidence = clamp01(baseConfidence * timeDecay * (storedDecay ?? 1))

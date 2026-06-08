@@ -4,6 +4,8 @@ import type {
   AIContextEntity,
   AIContextEdgeInput,
   AIMemoryPatch,
+  AIParameterBelief,
+  AIParameterBeliefInput,
   AIRecommendationFeedback,
   AIRecommendationFeedbackInput,
   ProjectContext,
@@ -109,6 +111,21 @@ type AIRecommendationFeedbackRow = {
   implicit_positive?: boolean
   source_message_id?: string | null
   created_at?: string | null
+}
+
+type AIParameterBeliefRow = {
+  id?: string
+  entity_key: string
+  entity_type: AIParameterBelief['entityType']
+  parameter_key: string
+  belief_json?: Record<string, unknown> | null
+  confidence?: number
+  impact_weight?: number
+  last_answered_at?: string | null
+  source_question_id?: string | null
+  source_event_id?: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 const PROJECT_FIELD_MAP: Record<string, keyof ProjectContextRow> = {
@@ -275,6 +292,23 @@ function toAIRecommendationFeedback(row: AIRecommendationFeedbackRow): AIRecomme
   }
 }
 
+function toAIParameterBelief(row: AIParameterBeliefRow): AIParameterBelief {
+  return {
+    id: row.id,
+    entityKey: row.entity_key,
+    entityType: row.entity_type,
+    parameterKey: row.parameter_key,
+    beliefJson: row.belief_json ?? {},
+    confidence: Number(row.confidence ?? 0),
+    impactWeight: Number(row.impact_weight ?? 0.5),
+    lastAnsweredAt: row.last_answered_at ?? null,
+    sourceQuestionId: row.source_question_id ?? null,
+    sourceEventId: row.source_event_id ?? null,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  }
+}
+
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.map(value => value.trim()).filter(Boolean))]
 }
@@ -293,7 +327,8 @@ function isAIMemorySchemaMissing(error: unknown): boolean {
     message.includes('ai_context_entities') ||
     message.includes('ai_clarification_events') ||
     message.includes('ai_recommendation_feedback') ||
-    message.includes('ai_context_edges')
+    message.includes('ai_context_edges') ||
+    message.includes('ai_parameter_beliefs')
   )
 }
 
@@ -362,6 +397,40 @@ function aiEntityScope(entityType: AIContextEntity['entityType']): AIContextEnti
   if (entityType === 'week') return 'week'
   if (entityType === 'workflow') return 'workflow'
   return 'user'
+}
+
+function aiParameterImpactWeight(parameterKey: string): number {
+  if (['project_meaning', 'impact', 'whyItMatters', 'currentStakes'].includes(parameterKey)) return 0.85
+  if (['dependencies', 'stakeholders', 'successCriteria', 'failureRisks'].includes(parameterKey)) return 0.75
+  if (['energy_fit', 'preferences', 'taskSelectionHints', 'rankingFocus'].includes(parameterKey)) return 0.65
+  if (['history', 'task_context', 'stale_context'].includes(parameterKey)) return 0.55
+  return 0.5
+}
+
+function beliefInputsFromClarification(input: AIClarificationEventInput): AIParameterBeliefInput[] {
+  if (input.eventType !== 'answered') return []
+  const parameterKeys = uniqueStrings([
+    ...(input.uncertaintyDimensions ?? []),
+    input.memoryPatch?.field ?? '',
+  ])
+  if (!parameterKeys.length) return []
+  return parameterKeys.map(parameterKey => ({
+    entityKey: input.entityKey,
+    entityType: input.entityType,
+    parameterKey,
+    value: input.memoryPatch?.field === parameterKey ? input.memoryPatch.value : input.selectedLabel ?? input.freeText,
+    selectedLabel: input.selectedLabel,
+    freeText: input.freeText,
+    confidence: input.memoryPatch?.confidence ?? (input.freeText ? 0.9 : 0.78),
+    impactWeight: aiParameterImpactWeight(parameterKey),
+    sourceQuestionId: input.questionId,
+    evidence: {
+      question: input.question,
+      selectedOptionId: input.selectedOptionId,
+      sourceMessageId: input.sourceMessageId,
+      pathType: input.pathType,
+    },
+  }))
 }
 
 function clarificationAnsweredRecently(events: AIClarificationEvent[], cooldownDays: number): boolean {
@@ -570,6 +639,105 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
+  const fetchAIParameterBeliefs = async (
+    input: { entityKeys?: string[]; parameterKeys?: string[]; limit?: number },
+  ): Promise<AIParameterBelief[]> => {
+    const entityKeys = uniqueStrings(input.entityKeys ?? [])
+    const parameterKeys = uniqueStrings(input.parameterKeys ?? [])
+    if (!entityKeys.length && !parameterKeys.length) return []
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) return []
+    const limit = input.limit ?? 80
+    try {
+      return await withRetry(async () => {
+        let query = getSupabase()
+          .from('ai_parameter_beliefs')
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false })
+          .limit(limit)
+        if (entityKeys.length) query = query.in('entity_key', entityKeys)
+        if (parameterKeys.length) query = query.in('parameter_key', parameterKeys)
+        const { data, error } = await query
+        if (error) throw error
+        return ((data ?? []) as AIParameterBeliefRow[]).map(toAIParameterBelief)
+      }, 'fetchAIParameterBeliefs')
+    } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('fetchAIParameterBeliefs')
+        return []
+      }
+      handleError(e, 'fetchAIParameterBeliefs')
+      return []
+    }
+  }
+
+  const upsertAIParameterBelief = async (input: AIParameterBeliefInput): Promise<void> => {
+    if (!input.entityKey || !input.parameterKey) return
+    if (!authStore.isInitialized) await authStore.initialize()
+    const userId = getUserIdSafe()
+    if (!userId) throw new Error('Cannot save AI parameter belief without an authenticated user.')
+    const now = new Date().toISOString()
+    try {
+      isSyncing.value = true
+      await withRetry(async () => {
+        const { data: existingData, error: fetchError } = await getSupabase()
+          .from('ai_parameter_beliefs')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('entity_key', input.entityKey)
+          .eq('parameter_key', input.parameterKey)
+          .maybeSingle()
+        if (fetchError) throw fetchError
+        const existing = (existingData ?? null) as AIParameterBeliefRow | null
+        const currentConfidence = Number(existing?.confidence ?? 0)
+        const nextConfidence = Math.max(
+          currentConfidence,
+          input.confidence ?? Math.min(1, currentConfidence + (input.confidenceBoost ?? 0.55)),
+        )
+        const existingBelief = existing?.belief_json ?? {}
+        const evidence = {
+          ...existingBelief,
+          value: input.value ?? existingBelief.value,
+          selectedLabel: input.selectedLabel ?? existingBelief.selectedLabel,
+          freeText: input.freeText ?? existingBelief.freeText,
+          lastUpdated: now,
+          evidence: {
+            ...(typeof existingBelief.evidence === 'object' && existingBelief.evidence ? existingBelief.evidence as Record<string, unknown> : {}),
+            ...(input.evidence ?? {}),
+          },
+        }
+        const { error: upsertError } = await getSupabase()
+          .from('ai_parameter_beliefs')
+          .upsert({
+            ...(existing ?? {}),
+            user_id: userId,
+            entity_key: input.entityKey,
+            entity_type: input.entityType,
+            parameter_key: input.parameterKey,
+            belief_json: evidence,
+            confidence: nextConfidence,
+            impact_weight: Math.max(0, Math.min(1, input.impactWeight ?? Number(existing?.impact_weight ?? 0.5))),
+            last_answered_at: now,
+            source_question_id: input.sourceQuestionId ?? existing?.source_question_id ?? null,
+            source_event_id: input.sourceEventId && isSupabaseUuid(input.sourceEventId) ? input.sourceEventId : existing?.source_event_id ?? null,
+          }, { onConflict: 'user_id,entity_key,parameter_key' })
+        if (upsertError) throw upsertError
+      }, 'upsertAIParameterBelief')
+      invalidateCache.all()
+    } catch (e) {
+      if (isAIMemorySchemaMissing(e)) {
+        logMissingAIMemorySchema('upsertAIParameterBelief')
+        return
+      }
+      handleError(e, 'upsertAIParameterBelief')
+      throw e
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
   const shouldAskClarification = async (entityKey: string, questionId: string, cooldownDays = 7): Promise<boolean> => {
     const events = await fetchAIClarificationEvents([entityKey], 20)
     return !clarificationAnsweredRecently(events.filter(event => event.questionId === questionId), cooldownDays)
@@ -638,6 +806,47 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
             context_snapshot: input.contextSnapshot,
           })
         if (eventError) throw eventError
+
+        for (const belief of beliefInputsFromClarification(input)) {
+          const { data: existingBeliefData, error: beliefFetchError } = await getSupabase()
+            .from('ai_parameter_beliefs')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('entity_key', belief.entityKey)
+            .eq('parameter_key', belief.parameterKey)
+            .maybeSingle()
+          if (beliefFetchError) throw beliefFetchError
+          const existingBelief = (existingBeliefData ?? null) as AIParameterBeliefRow | null
+          const currentConfidence = Number(existingBelief?.confidence ?? 0)
+          const nowBelief = new Date().toISOString()
+          const existingBeliefJson = existingBelief?.belief_json ?? {}
+          const { error: beliefUpsertError } = await getSupabase()
+            .from('ai_parameter_beliefs')
+            .upsert({
+              ...(existingBelief ?? {}),
+              user_id: userId,
+              entity_key: belief.entityKey,
+              entity_type: belief.entityType,
+              parameter_key: belief.parameterKey,
+              belief_json: {
+                ...existingBeliefJson,
+                value: belief.value ?? existingBeliefJson.value,
+                selectedLabel: belief.selectedLabel ?? existingBeliefJson.selectedLabel,
+                freeText: belief.freeText ?? existingBeliefJson.freeText,
+                lastUpdated: nowBelief,
+                evidence: {
+                  ...(typeof existingBeliefJson.evidence === 'object' && existingBeliefJson.evidence ? existingBeliefJson.evidence as Record<string, unknown> : {}),
+                  ...(belief.evidence ?? {}),
+                },
+              },
+              confidence: Math.max(currentConfidence, belief.confidence ?? 0.78),
+              impact_weight: belief.impactWeight ?? Number(existingBelief?.impact_weight ?? 0.5),
+              last_answered_at: nowBelief,
+              source_question_id: belief.sourceQuestionId ?? input.questionId,
+              source_event_id: belief.sourceEventId && isSupabaseUuid(belief.sourceEventId) ? belief.sourceEventId : existingBelief?.source_event_id ?? null,
+            }, { onConflict: 'user_id,entity_key,parameter_key' })
+          if (beliefUpsertError) throw beliefUpsertError
+        }
       }, 'recordAIClarificationEvent')
       invalidateCache.all()
     } catch (e) {
@@ -831,9 +1040,11 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     fetchAIContextEntities,
     fetchAIClarificationEvents,
     fetchAIRecommendationFeedback,
+    fetchAIParameterBeliefs,
     shouldAskClarification,
     recordAIClarificationEvent,
     recordAIRecommendationFeedback,
+    upsertAIParameterBelief,
     upsertAIContextEdges,
     applyAIMemoryPatch,
   }

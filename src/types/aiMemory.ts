@@ -267,6 +267,36 @@ export interface AIRecommendationFeedback {
   createdAt?: string | null
 }
 
+export interface AIParameterBelief {
+  id?: string
+  entityKey: string
+  entityType: AIContextEntityType
+  parameterKey: string
+  beliefJson: Record<string, unknown>
+  confidence: number
+  impactWeight: number
+  lastAnsweredAt?: string | null
+  sourceQuestionId?: string | null
+  sourceEventId?: string | null
+  createdAt?: string | null
+  updatedAt?: string | null
+}
+
+export interface AIParameterBeliefInput {
+  entityKey: string
+  entityType: AIContextEntityType
+  parameterKey: string
+  value?: unknown
+  selectedLabel?: string
+  freeText?: string
+  confidence?: number
+  confidenceBoost?: number
+  impactWeight?: number
+  sourceQuestionId?: string
+  sourceEventId?: string
+  evidence?: Record<string, unknown>
+}
+
 export interface AIContextEdgeInput {
   sourceEntityKey: string
   targetEntityKey: string

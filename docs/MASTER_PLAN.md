@@ -1,12 +1,14 @@
 # FlowState MASTER_PLAN.md
 
-## 🔜 Next Up — AI flows (TASK-1814 follow-ups; start here after restart)
+## 🔜 Next Up — AI Chat Quality System (start here after restart)
 
 ## AI Chat Quality System Full Delivery Lane — localhost first, Electron later
 
 **Goal**: Make FlowState chat consistently useful across weekly planning, "what should I do", prioritization, task breakdown, smart lanes, follow-up tasks, and general agent help by combining server-backed memory, explicit uncertainty, low-overwhelm UX, feedback learning, and testable answer-quality gates.
 
 **Current execution cursor**: **Stage 1 → Stage 2**. The lane is consolidated; continue proving server-backed memory/retrieval and the clarification decision loop before adding broader UI/learning layers.
+
+**Why this lane exists**: This work has too many coupled failure modes to track as isolated fixes. Use this lane as the single source of truth so every change is tied to a phase, a proof gate, and a user-visible quality outcome. If a future session feels lost, resume from the current execution cursor and the first incomplete proof gate below.
 
 **Hard lane rules**:
 - Work stages in order. Do not jump to polish, Electron, or broad UI expansion while the current stage lacks localhost proof.
@@ -16,6 +18,13 @@
 - Every recommendation must cite task evidence plus memory/context evidence, or explicitly mark the missing evidence.
 - User-authored facts and corrections outrank model inference. Project/task names alone never establish importance, stakes, domain, or success criteria.
 - Electron packaging/update work is deferred until localhost behavior is reliable and the user re-enables Electron for this lane.
+
+**Execution checklist**:
+1. Finish the current stage only. Do not start later UI polish or Electron delivery while the stage proof gate is red.
+2. After every code slice, update the relevant task progress note with what changed and what was proven.
+3. Run focused tests for the slice, then the AI-focused suite, then localhost/browser smoke when user-visible behavior changed.
+4. If localhost smoke fails, keep fixing. Do not ask the user to test a flow that is stuck, verbose, or missing persistence proof.
+5. Commit and push only after the plan file, tests, and proof evidence match the actual current state.
 
 | Stage | Task(s) | Required outcome | Status | Proof gate before moving on |
 | --- | --- | --- | --- | --- |
@@ -41,6 +50,13 @@
 - Evaluation: groundedness, specificity, brevity, uncertainty handling, learning/adaptation, user control, realism, safety, citation audit, and adversarial free-text tests.
 
 **User-test gate**: The user should only be asked to test after Stage 8 has a passing localhost browser smoke and the final response says exactly what changed, what to try, what should no longer happen, and what is still intentionally not built.
+
+**Not ready for user testing until**:
+- Stage 1 proves server-backed memory does not fail on synthetic buckets or missing schemas.
+- Stage 2 proves answering a clarification saves/updates durable belief state and continues without a stuck activity row.
+- Stage 3 proves non-weekly broad prompts follow the same ask-before-answer contract.
+- Stage 5 proves feedback controls can suppress/postpone suggestions instead of making the user read and mentally correct them.
+- Stage 8 proves the complete localhost flow in a real browser.
 
 ---
 
@@ -99,6 +115,7 @@
 - Clarification events record `coverage_score_at_time`, `uncertainty_dimensions`, and answer path type when available.
 
 **Progress**:
+- 2026-06-08: Added server-backed `ai_parameter_beliefs` schema keyed by text `entity_key` rather than UUIDs, so synthetic buckets and workflow entities can store uncertainty slots such as impact, preferences, stakes, dependencies, and success criteria.
 - 2026-06-08: Clarification cards now continue automatically after the final saved answer, while still asking the one useful follow-up when the first answer lacks enough context.
 - 2026-06-08: Added a focused AI memory schema contract test for server-backed entities, clarification events, recommendation feedback, Postgres-native graph edges, RLS, migration order, and missing-schema client fallback before any live Supabase migration step.
 - 2026-06-08: Clarification continuation messages now include the actual selected button/free-text answer as compact quoted context, so localhost flows still proceed correctly before live Supabase memory migrations are applied.
@@ -131,6 +148,7 @@
 
 **Progress**:
 - 2026-06-08: Added local heuristic EVPI scoring over existing coverage dimensions, including targeted parameters, user cost, selected score, skipped candidates, clarification debug display, and event context metadata. Mounted tests verify project-meaning questions outrank broad week questions when project meaning is the high-value missing context, and recently answered questions are skipped.
+- 2026-06-08: Answered clarification events now derive/update server parameter beliefs with confidence, impact weight, selected label/free text, question evidence, and missing-dimension keys. This keeps EVPI inputs durable for VPS/local parity instead of recalculating only from transient chat state.
 
 ---
 

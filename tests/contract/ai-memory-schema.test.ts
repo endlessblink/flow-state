@@ -8,6 +8,7 @@ function src(path: string) {
 
 const clarificationMigration = src('supabase/migrations/20260608090000_ai_clarification_memory.sql')
 const metadataMigration = src('supabase/migrations/20260608093000_ai_assistant_memory_metadata.sql')
+const parameterBeliefsMigration = src('supabase/migrations/20260608100000_ai_parameter_beliefs.sql')
 const aiMemoryDatabase = src('src/composables/supabase/useAIMemoryDatabase.ts')
 
 function expectContainsAll(source: string, values: string[]) {
@@ -44,13 +45,14 @@ describe('AI memory database schema contract', () => {
   })
 
   it('enforces RLS for every AI memory table that stores user-specific state', () => {
-    const combinedMigration = `${clarificationMigration}\n${metadataMigration}`
+    const combinedMigration = `${clarificationMigration}\n${metadataMigration}\n${parameterBeliefsMigration}`
 
     for (const table of [
       'ai_context_entities',
       'ai_clarification_events',
       'ai_recommendation_feedback',
       'ai_context_edges',
+      'ai_parameter_beliefs',
     ]) {
       expect(combinedMigration).toContain(`alter table public.${table} enable row level security`)
       expect(combinedMigration).toContain(`on public.${table} for select using (auth.uid() = user_id)`)
@@ -61,6 +63,7 @@ describe('AI memory database schema contract', () => {
       'ai_context_entities',
       'ai_recommendation_feedback',
       'ai_context_edges',
+      'ai_parameter_beliefs',
     ]) {
       expect(combinedMigration).toContain(`on public.${table} for update using (auth.uid() = user_id)`)
       expect(combinedMigration).toContain(`on public.${table} for delete using (auth.uid() = user_id)`)
@@ -122,6 +125,24 @@ describe('AI memory database schema contract', () => {
     expect(migrations.indexOf('20260608093000_ai_assistant_memory_metadata.sql')).toBeGreaterThan(
       migrations.indexOf('20260608090000_ai_clarification_memory.sql'),
     )
+    expect(migrations.indexOf('20260608100000_ai_parameter_beliefs.sql')).toBeGreaterThan(
+      migrations.indexOf('20260608093000_ai_assistant_memory_metadata.sql'),
+    )
+  })
+
+  it('stores parameter beliefs by text entity key so synthetic buckets are not UUID-cast', () => {
+    expectContainsAll(parameterBeliefsMigration, [
+      'create table if not exists public.ai_parameter_beliefs',
+      'entity_key text not null',
+      'parameter_key text not null',
+      'belief_json jsonb not null',
+      'confidence numeric(4,3)',
+      'impact_weight numeric(4,3)',
+      'unique(user_id, entity_key, parameter_key)',
+      'idx_ai_parameter_beliefs_user_entity',
+      'idx_ai_parameter_beliefs_low_confidence',
+    ])
+    expect(parameterBeliefsMigration).not.toContain('project_id uuid')
   })
 
   it('no-ops cleanly when the live database has not applied the AI memory migrations yet', () => {
@@ -131,6 +152,7 @@ describe('AI memory database schema contract', () => {
       'ai_clarification_events',
       'ai_recommendation_feedback',
       'ai_context_edges',
+      'ai_parameter_beliefs',
       'logMissingAIMemorySchema',
       'return []',
       'return',
@@ -145,5 +167,19 @@ describe('AI memory database schema contract', () => {
     expect(recordStart).toBeGreaterThanOrEqual(0)
     expect(entityUpsert).toBeGreaterThan(recordStart)
     expect(eventInsert).toBeGreaterThan(entityUpsert)
+  })
+
+  it('updates parameter beliefs after answered clarification events', () => {
+    const recordStart = aiMemoryDatabase.indexOf('const recordAIClarificationEvent')
+    const eventInsert = aiMemoryDatabase.indexOf(".from('ai_clarification_events')", recordStart)
+    const beliefInputs = aiMemoryDatabase.indexOf('beliefInputsFromClarification(input)', eventInsert)
+    const beliefUpsert = aiMemoryDatabase.indexOf(".from('ai_parameter_beliefs')", beliefInputs)
+
+    expect(recordStart).toBeGreaterThanOrEqual(0)
+    expect(eventInsert).toBeGreaterThan(recordStart)
+    expect(beliefInputs).toBeGreaterThan(eventInsert)
+    expect(beliefUpsert).toBeGreaterThan(beliefInputs)
+    expect(aiMemoryDatabase).toContain('fetchAIParameterBeliefs')
+    expect(aiMemoryDatabase).toContain('upsertAIParameterBelief')
   })
 })

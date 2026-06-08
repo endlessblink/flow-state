@@ -67,4 +67,17 @@ describe('decideClarificationPath', () => {
       reason: 'cold_start',
     })
   })
+
+  it('does not block low-materiality mechanical requests behind clarification even with low coverage', () => {
+    expect(decideClarificationPath({
+      score: 0.18,
+      materiality: 'low',
+      missing: ['impact', 'preferences'],
+      candidateCount: 4,
+    })).toMatchObject({
+      decision: 'proceed_with_uncertainty',
+      score: 0.18,
+      reason: 'medium_coverage',
+    })
+  })
 })

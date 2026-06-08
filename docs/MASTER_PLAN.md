@@ -509,9 +509,9 @@
 
 ---
 
-### TASK-1840: Explicit uncertainty scoring and cold-start policy (📋 PLANNED)
+### TASK-1840: Explicit uncertainty scoring and cold-start policy (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831
 
 **Why**: Research validation flagged that "uncertainty score" was too vague to implement consistently. The assistant needs a deterministic policy for ask vs. proceed with uncertainty vs. neutral candidates.
 
@@ -530,6 +530,7 @@
 **Progress**:
 - 2026-06-08: Extracted the ask/proceed/neutral decision rule into a shared uncertainty policy, including high-materiality ask thresholds, medium-coverage proceed-with-uncertainty behavior, and neutral cold-start handling. Focused tests cover high/medium/low materiality, forced missing project/stale context, sufficient context, and cold-start behavior.
 - 2026-06-08: Routed mechanical overdue display requests separately from overdue triage. Unit coverage proves `show overdue` / `list overdue tasks` still retrieve overdue tasks but have no `overdue_triage` response mode, while `triage overdue tasks` remains high-materiality and asks before ranking. Browser coverage proves the visible chat shows data without a clarification gate for `show me overdue tasks`.
+- 2026-06-08: Added a direct uncertainty-policy regression for low-materiality mechanical requests with non-empty candidates and very low coverage. These now proceed with visible uncertainty instead of being blocked behind a clarification question, preserving the distinction between list/show actions and high-materiality ranking.
 
 ---
 

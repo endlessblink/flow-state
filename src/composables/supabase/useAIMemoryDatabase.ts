@@ -126,6 +126,10 @@ type AIParameterBeliefRow = {
   confidence?: number
   impact_weight?: number
   last_answered_at?: string | null
+  stale_after?: string | null
+  last_reinforced_at?: string | null
+  reinforcement_count?: number
+  decay_score?: number | null
   source_question_id?: string | null
   source_event_id?: string | null
   created_at?: string | null
@@ -357,6 +361,10 @@ function toAIParameterBelief(row: AIParameterBeliefRow): AIParameterBelief {
     confidence: Number(row.confidence ?? 0),
     impactWeight: Number(row.impact_weight ?? 0.5),
     lastAnsweredAt: row.last_answered_at ?? null,
+    staleAfter: row.stale_after ?? null,
+    lastReinforcedAt: row.last_reinforced_at ?? null,
+    reinforcementCount: Number(row.reinforcement_count ?? 0),
+    decayScore: typeof row.decay_score === 'number' ? row.decay_score : row.decay_score == null ? null : Number(row.decay_score),
     sourceQuestionId: row.source_question_id ?? null,
     sourceEventId: row.source_event_id ?? null,
     createdAt: row.created_at ?? null,
@@ -450,6 +458,10 @@ function localAIParameterBeliefsFromClarification(input: AIClarificationEventInp
     confidence: belief.confidence ?? 0.78,
     impactWeight: belief.impactWeight ?? aiParameterImpactWeight(belief.parameterKey),
     lastAnsweredAt: now,
+    staleAfter: nextStaleAfterIso(now),
+    lastReinforcedAt: now,
+    reinforcementCount: 1,
+    decayScore: 1,
     sourceQuestionId: belief.sourceQuestionId ?? input.questionId,
     sourceEventId: belief.sourceEventId ?? null,
     createdAt: now,
@@ -674,6 +686,10 @@ function localAIParameterBeliefFromInput(input: AIParameterBeliefInput, now: str
     confidence: input.confidence ?? Math.min(1, 0.55 + (input.confidenceBoost ?? 0)),
     impactWeight: input.impactWeight ?? aiParameterImpactWeight(input.parameterKey),
     lastAnsweredAt: now,
+    staleAfter: nextStaleAfterIso(now),
+    lastReinforcedAt: now,
+    reinforcementCount: 1,
+    decayScore: 1,
     sourceQuestionId: input.sourceQuestionId ?? null,
     sourceEventId: input.sourceEventId ?? null,
     createdAt: now,
@@ -1621,6 +1637,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
             confidence: nextConfidence,
             impact_weight: Math.max(0, Math.min(1, input.impactWeight ?? Number(existing?.impact_weight ?? 0.5))),
             last_answered_at: now,
+            stale_after: nextStaleAfterIso(now),
+            last_reinforced_at: now,
+            reinforcement_count: Number(existing?.reinforcement_count ?? 0) + 1,
+            decay_score: 1,
             source_question_id: input.sourceQuestionId ?? existing?.source_question_id ?? null,
             source_event_id: input.sourceEventId && isSupabaseUuid(input.sourceEventId) ? input.sourceEventId : existing?.source_event_id ?? null,
           }, { onConflict: 'user_id,entity_key,parameter_key' })

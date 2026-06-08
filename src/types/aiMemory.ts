@@ -287,6 +287,10 @@ export interface AIParameterBelief {
   confidence: number
   impactWeight: number
   lastAnsweredAt?: string | null
+  staleAfter?: string | null
+  lastReinforcedAt?: string | null
+  reinforcementCount?: number
+  decayScore?: number | null
   sourceQuestionId?: string | null
   sourceEventId?: string | null
   createdAt?: string | null

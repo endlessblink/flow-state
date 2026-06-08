@@ -178,7 +178,11 @@ describe('AI memory pending write queue', () => {
       entityKey: 'workflow:task_answer:next_task',
       parameterKey: 'rankingFocus',
       confidence: 0.9,
+      lastReinforcedAt: expect.any(String),
+      reinforcementCount: 1,
+      decayScore: 1,
     })
+    expect(new Date(String(beliefs[0]?.staleAfter)).getTime()).toBeGreaterThan(Date.now() + 40 * 24 * 60 * 60 * 1000)
   })
 
   it('stores guest recommendation feedback locally so broad suggestions can learn without auth', async () => {
@@ -658,13 +662,23 @@ describe('AI memory pending write queue', () => {
       entityKey: 'synthetic:Work',
       parameterKey: 'impact',
       confidence: 0.86,
+      lastReinforcedAt: expect.any(String),
+      reinforcementCount: 1,
+      decayScore: 1,
     })
+    expect(new Date(String(immediateBeliefs[0]?.staleAfter)).getTime()).toBeGreaterThan(Date.now() + 40 * 24 * 60 * 60 * 1000)
 
     readyTables = new Set(['ai_parameter_beliefs'])
     await db.flushPendingAIMemoryWrites()
 
     expect(getPendingAIMemoryWriteCount()).toBe(0)
     expect(parameterBeliefUpsertCount).toBe(1)
+    expect(upsertPayloads.ai_parameter_beliefs?.[0]).toMatchObject({
+      stale_after: expect.any(String),
+      last_reinforced_at: expect.any(String),
+      reinforcement_count: 1,
+      decay_score: 1,
+    })
   })
 
   it('reads a bounded debug snapshot across server-backed memory tables', async () => {

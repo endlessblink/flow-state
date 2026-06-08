@@ -9,6 +9,7 @@ const migrationFiles = [
   'supabase/migrations/20260608100000_ai_parameter_beliefs.sql',
   'supabase/migrations/20260608103000_ai_memory_snapshots.sql',
   'supabase/migrations/20260608110000_ai_clarification_event_delete_policy.sql',
+  'supabase/migrations/20260608111500_ai_parameter_belief_lifecycle.sql',
 ]
 
 const migrations = migrationFiles
@@ -101,6 +102,10 @@ const tableColumns: Record<string, string[]> = {
     'confidence',
     'impact_weight',
     'last_answered_at',
+    'stale_after',
+    'last_reinforced_at',
+    'reinforcement_count',
+    'decay_score',
     'source_question_id',
     'source_event_id',
     'created_at',
@@ -198,6 +203,7 @@ describe('AI memory schema contract', () => {
       'idx_ai_context_edges_target',
       'idx_ai_parameter_beliefs_user_entity',
       'idx_ai_parameter_beliefs_user_parameter',
+      'idx_ai_parameter_beliefs_stale',
       'idx_ai_memory_snapshots_user_scope',
       'idx_ai_memory_snapshots_user_key',
       'idx_ai_memory_snapshots_stale',

@@ -486,6 +486,67 @@ function beliefInputsFromClarification(input: AIClarificationEventInput): AIPara
   }))
 }
 
+function beliefInputsFromRecommendationFeedback(input: AIRecommendationFeedbackInput): AIParameterBeliefInput[] {
+  const targetEntityKey = input.entityKey || (input.taskId ? `task:${input.taskId}` : `recommendation:${input.recommendationId}`)
+  const evidence = {
+    recommendationId: input.recommendationId,
+    action: input.action,
+    reasonCategory: input.reasonCategory,
+    revisitAt: input.revisitAt,
+    sourceMessageId: input.sourceMessageId,
+  }
+  const beliefs: AIParameterBeliefInput[] = []
+  if (input.action === 'simplify' || input.reasonCategory === 'too_much') {
+    beliefs.push({
+      entityKey: 'preference:brevity',
+      entityType: 'preference',
+      parameterKey: 'preferences',
+      value: 'User prefers shorter AI planning answers when recommendations feel like too much.',
+      confidenceBoost: 0.2,
+      impactWeight: aiParameterImpactWeight('preferences'),
+      sourceQuestionId: 'recommendation_feedback:simplify',
+      evidence,
+    })
+  }
+  if (input.reasonCategory === 'low_energy' || input.reasonCategory === 'too_hard') {
+    beliefs.push({
+      entityKey: targetEntityKey,
+      entityType: input.taskId ? 'task' : 'workflow',
+      parameterKey: 'energy_fit',
+      value: `Recommendation was ${input.action} because ${input.reasonCategory}.`,
+      confidenceBoost: 0.2,
+      impactWeight: aiParameterImpactWeight('energy_fit'),
+      sourceQuestionId: 'recommendation_feedback:energy_fit',
+      evidence,
+    })
+  }
+  if (input.reasonCategory === 'not_important' || input.reasonCategory === 'wrong_context' || input.reasonCategory === 'needs_more_info') {
+    beliefs.push({
+      entityKey: targetEntityKey,
+      entityType: input.taskId ? 'task' : 'workflow',
+      parameterKey: 'rankingFocus',
+      value: `Recommendation was ${input.action} because ${input.reasonCategory}; reduce similar ranking weight until context changes.`,
+      confidenceBoost: 0.25,
+      impactWeight: aiParameterImpactWeight('rankingFocus'),
+      sourceQuestionId: 'recommendation_feedback:ranking_focus',
+      evidence,
+    })
+  }
+  if (input.implicitPositive || input.action === 'accept' || input.action === 'timeblock') {
+    beliefs.push({
+      entityKey: targetEntityKey,
+      entityType: input.taskId ? 'task' : 'workflow',
+      parameterKey: 'history',
+      value: `User ${input.action}ed this recommendation; treat similar suggestions as a positive signal.`,
+      confidenceBoost: 0.18,
+      impactWeight: aiParameterImpactWeight('history'),
+      sourceQuestionId: 'recommendation_feedback:positive_signal',
+      evidence,
+    })
+  }
+  return beliefs
+}
+
 function clarificationAnsweredRecently(events: AIClarificationEvent[], cooldownDays: number): boolean {
   const cutoff = Date.now() - cooldownDays * 24 * 60 * 60 * 1000
   return events.some(event =>
@@ -959,6 +1020,17 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
           })
         if (error) throw error
       }, 'recordAIRecommendationFeedback')
+      for (const belief of beliefInputsFromRecommendationFeedback(input)) {
+        try {
+          await upsertAIParameterBelief(belief, { skipQueue: options.skipQueue })
+        } catch (beliefError) {
+          if (options.skipQueue && isAIMemorySchemaMissing(beliefError)) {
+            logMissingAIMemorySchema('recordAIRecommendationFeedback:derivedBelief')
+            continue
+          }
+          throw beliefError
+        }
+      }
       invalidateCache.all()
       if (!options.skipQueue) void flushPendingAIMemoryWrites()
     } catch (e) {

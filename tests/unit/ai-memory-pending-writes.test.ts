@@ -135,6 +135,24 @@ describe('AI memory pending write queue', () => {
 
     expect(getPendingAIMemoryWriteCount()).toBe(0)
     expect(feedbackInsertCount).toBe(1)
+    expect(parameterBeliefUpsertCount).toBe(0)
+  })
+
+  it('promotes recommendation feedback into parameter beliefs when the belief table exists', async () => {
+    readyTables = new Set(['ai_recommendation_feedback', 'ai_parameter_beliefs'])
+    const db = useAIMemoryDatabase(createContext())
+
+    await expect(db.recordAIRecommendationFeedback({
+      recommendationId: 'inline_task_task-1',
+      taskId: '11111111-1111-4111-8111-111111111111',
+      entityKey: 'project:uncategorized',
+      action: 'dismiss',
+      reasonCategory: 'not_important',
+      sourceMessageId: 'msg_1',
+    })).resolves.toBeUndefined()
+
+    expect(feedbackInsertCount).toBe(1)
+    expect(parameterBeliefUpsertCount).toBe(1)
   })
 
   it('queues parameter belief writes skipped by missing schema and flushes them later', async () => {

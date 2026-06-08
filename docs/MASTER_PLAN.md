@@ -321,9 +321,9 @@
 
 ---
 
-### TASK-1836: Recommendation feedback and postponement memory (📋 PLANNED)
+### TASK-1836: Recommendation feedback and postponement memory (🔄 IN PROGRESS)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1833
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1833
 
 **Why**: Research validation flagged that plans will keep feeling repetitive unless accept/postpone/dismiss actions become durable learning signals. Postponed work should not reappear every plan unchanged, and accepted work should become evidence of what the user actually follows through on.
 
@@ -346,6 +346,7 @@
 - Feedback reason patterns become inspectable preference memory rather than hidden ranking magic.
 - 2026-06-08: Broad non-weekly task-answer memory now retrieves recent `ai_recommendation_feedback` by UUID task IDs and text entity keys (`task:*`, `project:*`), so inline accept/postpone/dismiss signals can affect later broad answers even when task IDs are local or synthetic.
 - 2026-06-08: Broad fallback ranking now uses retrieved feedback directly: recent dismiss/postpone events suppress tasks until cooldown/revisit, simplify applies a smaller penalty, and accept/timeblock/implicit-positive events boost follow-through.
+- 2026-06-08: Recommendation feedback now promotes conservative durable parameter beliefs after the raw feedback event is saved. Simplify/too-much updates `preference:brevity`, low-energy/too-hard updates `energy_fit`, not-important/wrong-context/needs-more-info updates `rankingFocus`, and accept/timeblock/implicit positives update `history`; rollout tests prove feedback still flushes even if the belief table is unavailable.
 
 ---
 

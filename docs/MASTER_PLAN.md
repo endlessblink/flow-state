@@ -14,11 +14,15 @@
 - Support non-UUID entity keys without writing them into UUID-only Supabase columns.
 - Retrieve relevant memory before planning or ranking, then merge it with existing project/task context rows.
 - Keep memory editable and auditable through event history instead of overwriting meaning silently.
+- Research validation update: treat memory as tiered session/episodic/semantic/procedural state, not one generic blob.
+- Research validation update: add lifecycle rules for confidence decay, stale confirmation, summarization, retention, and selective retrieval so memory does not become slow or noisy.
 
 **Acceptance**:
 - Synthetic buckets persist through `ai_context_entities`/`ai_clarification_events`, not localStorage.
 - UUID-only project/task context calls filter non-UUID IDs and never throw `invalid input syntax for type uuid`.
 - Weekly planning can recall saved answers for `Work`, `My Projects`, and `uncategorized` across sessions/devices.
+- Memory retrieval is bounded/cached enough that the sidebar does not feel stuck.
+- Free-text clarification answers are stored as user-authored evidence, not prompt instructions.
 
 ---
 
@@ -34,11 +38,15 @@
 - Provide escape actions: generate with current info, show candidates only, pause/save.
 - Keep default responses short, scannable, and grounded; avoid walls of text unless the user asks for detail.
 - Use recent clarification history and cooldowns before asking.
+- Research validation update: compute an explicit coverage/uncertainty score before asking or ranking.
+- Research validation update: ask first when weak context would materially affect planning; otherwise proceed with visible uncertainty.
 
 **Acceptance**:
 - Missing meaning/stakes/success criteria triggers one clarification card, not a full generic plan.
 - The assistant can proceed only when the user explicitly chooses to generate with uncertainty.
 - No answer ranks importance from project/task names alone.
+- Recently answered, dismissed, or uncertainty-accepted questions are not asked again inside the cooldown window.
+- Cold-start users get one lightweight question or neutral candidates, not a dense interview.
 
 ---
 
@@ -53,11 +61,14 @@
 - Add bad/acceptable/excellent answer criteria for weekly planning and broader chat recommendations.
 - Add automated checks that penalize generic phrases, unsupported ranking, missing evidence, excess length, and repeated clarification questions.
 - Require every recommendation to cite task evidence plus project/context evidence or mark "context unknown."
+- Research validation update: normalize ranking inputs with explicit caps, decay functions, and user override signals so due dates, priority, or project names cannot dominate alone.
+- Research validation update: add adversarial tests for ambiguous names, conflicting corrections, prompt-injection-like free text, stale context, and high-uncertainty task sets.
 
 **Acceptance**:
 - Regression tests fail if answers say a task is high stakes or meaningful from a name alone.
 - Tests fail on generic phrases like "looks like meaningful work" without evidence.
 - Tests cover postponed/dismissed suggestions, stale context, correction overrides, and uncertainty handling.
+- Tests assert visible evidence, confidence, omissions, and user override controls so ranking does not become a black box.
 
 ---
 
@@ -72,11 +83,14 @@
 - Add controls for accept/time-block, postpone, dismiss with reason, explain more, and adjust preferences.
 - Save feedback as memory events so dismissed or postponed suggestions do not keep reappearing unchanged.
 - Add "Too much" / simplify controls that reduce plan size and defer nice-to-haves.
+- Research validation update: persist recommendation feedback separately from clarification memory: accept/postpone/dismiss/simplify/explain actions, revisit dates, outcome signals, and reasons.
+- Research validation update: treat postponement as lightweight deferral, not permanent rejection.
 
 **Acceptance**:
 - Dismissed suggestions are downranked or hidden until cooldown/re-engagement.
 - Postponed suggestions respect the chosen revisit window.
 - User feedback changes future recommendations and is visible in memory/event history.
+- Accepted/time-blocked/completed/timer-started suggestions become implicit positive signals for future planning.
 
 ---
 
@@ -91,11 +105,14 @@
 - Add timing metadata for each phase and structured fallback reasons.
 - Avoid duplicate "Thinking" rows when a more specific phase is running.
 - Log enough local/server debug data to diagnose bridge timeout vs memory timeout vs formatting timeout.
+- Research validation update: log retrieval source counts, cache hit/miss, and path type without exposing private details in normal prose.
+- Research validation update: distinguish clarify-first, generated-with-uncertainty, structured-model, reliability-fallback, and feedback-updated answer paths.
 
 **Acceptance**:
 - The activity timeline shows the current phase within one second.
 - Weekly planning has bounded timeouts and a safe reliability fallback instead of spinning.
 - Debug metadata identifies whether the answer was clarification-first, generated with uncertainty, model-planned, or fallback.
+- Slow answers can be attributed to task read, memory retrieval, bridge generation, formatting, or persistence.
 
 ---
 
@@ -110,11 +127,91 @@
 - Add preference memory for concise/detailed mode, question frequency, planning style, and tolerated uncertainty.
 - Promote user corrections into memory and suppress previously rejected framings.
 - Refresh stale context with confirmation rather than silently reusing it.
+- Research validation update: use hybrid retrieval: exact entity key lookup first, structured filters second, semantic/vector recall only when needed.
+- Research validation update: add procedural memory for repeated workflows such as weekly planning style, preferred controls, and low-overwhelm defaults.
 
 **Acceptance**:
 - The same project/context answer improves later "what should I do", weekly plan, and task breakdown requests.
 - User corrections stop repeated wrong framing.
 - Stale context prompts are short, button-based, and respect cooldowns.
+- Retrieval remains selective: only relevant facts enter the model prompt, never raw memory dumps.
+
+---
+
+### TASK-1836: Recommendation feedback and postponement memory (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1833
+
+**Why**: Research validation flagged that plans will keep feeling repetitive unless accept/postpone/dismiss actions become durable learning signals. Postponed work should not reappear every plan unchanged, and accepted work should become evidence of what the user actually follows through on.
+
+**Scope**:
+- Add a server-backed `recommendation_feedback` table or equivalent event type.
+- Persist action, reason enum, optional free text, revisit date, recommendation/task IDs, and outcome signals.
+- Downrank or hide postponed/dismissed suggestions until revisit/cooldown.
+- Use accepted/time-blocked/completed/timer-started suggestions as positive follow-through signals.
+
+**Acceptance**:
+- A dismissed recommendation does not immediately reappear as a top suggestion.
+- A postponed recommendation respects the revisit date.
+- Feedback changes ranking evidence in later weekly/next-action responses.
+
+---
+
+### TASK-1837: Memory lifecycle, summarization, and retention policy (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830
+
+**Why**: Research validation flagged memory bloat and stale facts as the biggest architectural gap. Append-only clarification events are useful for auditability, but without summarization and retention the system will get slower, noisier, and harder to trust.
+
+**Scope**:
+- Define fact promotion rules: what becomes durable memory vs. event-only evidence.
+- Add confidence decay and stale confirmation rules.
+- Summarize old events into compact semantic facts while preserving corrections.
+- Archive or compact old low-value events after a retention window.
+- Re-index summaries for semantic retrieval.
+
+**Acceptance**:
+- Memory retrieval stays bounded as event count grows.
+- Old facts become stale and ask for confirmation instead of being reused as fresh truth.
+- Corrections remain auditable after summarization.
+
+---
+
+### TASK-1838: Hybrid retrieval and latency budget for AI memory (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1835
+
+**Why**: Research validation flagged retrieval latency as a risk. Server memory improves answer quality but can make the sidebar feel slow unless retrieval is exact, selective, cached, and progressively enhanced.
+
+**Scope**:
+- Retrieval order: exact entity keys, structured filters, recent events, semantic/vector recall only when needed.
+- Add cache keys and short TTLs for active conversation/project memory.
+- Track retrieval timings and source counts in debug metadata.
+- Limit prompt injection exposure by summarizing retrieved user text as evidence, not instructions.
+
+**Acceptance**:
+- Clarify-first path appears quickly even when semantic retrieval is skipped or slow.
+- Memory retrieval has a clear timeout/fallback that does not produce fake certainty.
+- Debug data identifies cache hit/miss and retrieval stage timings.
+
+---
+
+### TASK-1839: Privacy, RLS, and prompt-injection hardening for AI memory (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830
+
+**Why**: Research validation flagged privacy and prompt injection risk. User-authored memory can contain private data and arbitrary text, so it must remain tenant-scoped and must not become an instruction channel.
+
+**Scope**:
+- Verify RLS for context entities, clarification events, and recommendation feedback.
+- Add cross-user access tests for memory tables.
+- Sanitize/free-text handling: store raw user text as evidence but inject it into prompts only as quoted data.
+- Add export/delete hooks or documented paths for future privacy controls.
+
+**Acceptance**:
+- One user cannot read or write another user's AI memory rows.
+- Free-text memory cannot override system rules in prompt construction.
+- Memory rows are inspectable and deletable through supported code paths or documented migration follow-up.
 
 ---
 

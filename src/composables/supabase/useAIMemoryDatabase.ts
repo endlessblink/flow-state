@@ -495,6 +495,10 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
   }
 
   const applyAIMemoryPatch = async (patch: AIMemoryPatch): Promise<void> => {
+    if (patch.entityType !== 'project' && patch.entityType !== 'task') {
+      console.debug(`[AIMemory] Skipping legacy UUID memory patch for general entity: ${patch.entityType}:${patch.entityId}`)
+      return
+    }
     if (!isSupabaseUuid(patch.entityId)) {
       console.debug(`[AIMemory] Skipping ${patch.entityType} memory patch for non-Supabase UUID: ${patch.entityId}`)
       return

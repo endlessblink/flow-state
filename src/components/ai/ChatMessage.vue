@@ -38,7 +38,7 @@ import { buildDayPlanTaskUpdates } from '@/services/ai/pipeline/dayPlan'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import type { WeeklyPlanOutput, WeeklyPlanRecommendation } from '@/services/ai/pipeline/weeklyPlan'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-import type { AIMemoryPatch } from '@/types/aiMemory'
+import type { AIClarificationArtifact, AIClarificationQuestion, AIMemoryPatch } from '@/types/aiMemory'
 
 // ============================================================================
 // Props
@@ -83,6 +83,10 @@ const weeklyQuestionAnswers = ref<Record<string, string>>({})
 const weeklyQuestionFreeText = ref<Record<string, string>>({})
 const weeklyQuestionApplying = ref<Record<string, boolean>>({})
 const weeklyQuestionApplied = ref<Record<string, string>>({})
+const clarificationAnswers = ref<Record<string, string>>({})
+const clarificationFreeText = ref<Record<string, string>>({})
+const clarificationApplying = ref(false)
+const clarificationStatus = ref('')
 
 // Track which tasks have been actioned (for visual feedback)
 const completedTaskIds = ref<Set<string>>(new Set())
@@ -194,6 +198,12 @@ const weeklyPlan = computed(() => {
   const meta = props.message.metadata as Record<string, unknown> | undefined
   const plan = meta?.weeklyPlan as WeeklyPlanOutput | undefined
   return plan?.schemaVersion === 'weekly-plan.v2' ? plan : null
+})
+
+const clarification = computed(() => {
+  const meta = props.message.metadata as Record<string, unknown> | undefined
+  const card = meta?.clarification as AIClarificationArtifact | undefined
+  return card?.schemaVersion === 'ai-clarification.v1' ? card : null
 })
 
 const weeklyPlanSnapshotDueByTaskId = computed(() => {

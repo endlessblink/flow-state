@@ -1,5 +1,12 @@
 import type { Task } from '@/types/tasks'
-import type { AIMemoryQuestionOption, ProjectContext, TaskContext } from '@/types/aiMemory'
+import type {
+  AIClarificationArtifact,
+  AIClarificationEvent,
+  AIClarificationQuestion,
+  AIMemoryQuestionOption,
+  ProjectContext,
+  TaskContext,
+} from '@/types/aiMemory'
 
 export type PlannerLocale = 'en' | 'he'
 export type PlannerDirection = 'ltr' | 'rtl'
@@ -513,6 +520,30 @@ export function buildWeeklyPlanReliabilityFallback(context: WeekContext, caveats
   }
 }
 
+export function buildWeeklyPlanningInterview(
+  context: WeekContext,
+  recentEvents: AIClarificationEvent[] = [],
+): AIClarificationArtifact | null {
+  const selected = selectQuickDraftTasks(context.tasks)
+  const question = selectClarificationQuestion(context, selected, recentEvents)
+  if (!question) return null
+  const memoryKey = clarificationMemoryKey(question, context)
+  return {
+    schemaVersion: 'ai-clarification.v1',
+    kind: 'weekly_planning',
+    locale: context.locale,
+    direction: context.direction,
+    progressLabel: context.locale === 'he' ? 'מבהיר סדרי עדיפויות • שלב 1/3' : 'Clarifying priorities • Step 1/3',
+    summary: context.locale === 'he'
+      ? 'חסר לי פרט אחד שישנה את הדירוג, אז אני עוצר לפני תוכנית רחבה.'
+      : 'I am missing one detail that would change the ranking, so I am stopping before a broad plan.',
+    question,
+    candidateTaskIds: selected.map(task => task.id),
+    actions: ['generate_current', 'show_candidates', 'pause_save'],
+    memoryKey,
+  }
+}
+
 function buildClarificationFirstWeeklyPlan(
   context: WeekContext,
   openQuestions: WeeklyPlanOutput['openQuestions'],
@@ -542,6 +573,103 @@ function buildClarificationFirstWeeklyPlan(
         : 'No full plan was generated until the answer is saved or you choose to proceed with uncertainty.'],
     },
     source: 'quick_draft',
+  }
+}
+
+function selectClarificationQuestion(
+  context: WeekContext,
+  selected: PlannerTaskSnapshot[],
+  recentEvents: AIClarificationEvent[],
+): AIClarificationQuestion | null {
+  const taskQuestion = buildQuickDraftQuestions(context, selected)
+    .filter(question => question.entityType !== undefined)
+    .find(question => {
+      const key = clarificationMemoryKey(question as AIClarificationQuestion, context)
+      return !recentClarificationResolved(recentEvents, key, question.id || question.question)
+    })
+
+  if (taskQuestion) {
+    return {
+      id: taskQuestion.id || `clarify_${taskQuestion.entityType}_${taskQuestion.entityId}`,
+      entityType: taskQuestion.entityType,
+      entityId: taskQuestion.entityId,
+      reason: taskQuestion.reason || 'missing_context',
+      question: taskQuestion.question,
+      options: taskQuestion.options ?? [],
+      allowFreeText: taskQuestion.allowFreeText,
+      freeTextPatch: taskQuestion.freeTextPatch,
+      freeTextPlaceholder: taskQuestion.freeTextPlaceholder,
+      relatedTaskIds: taskQuestion.relatedTaskIds ?? [],
+    }
+  }
+
+  const unknownContextCount = context.tasks.filter(needsPlanningClarification).length
+  if (unknownContextCount < 2) return null
+  const questionId = `week_importance_${context.weekStartIso}`
+  const memoryKey = `week:${context.weekStartIso}`
+  if (recentClarificationResolved(recentEvents, memoryKey, questionId)) return null
+  const locale = context.locale
+  return {
+    id: questionId,
+    entityType: 'week',
+    entityId: context.weekStartIso,
+    reason: 'missing_week_priorities',
+    question: locale === 'he' ? 'מה הכי חשוב להגן עליו השבוע?' : 'What matters most to protect this week?',
+    options: [
+      weekOption(context.weekStartIso, 'work_commitment', locale === 'he' ? 'התחייבות עבודה' : 'Work commitment', 'thisWeekImportance', 'work_commitment'),
+      weekOption(context.weekStartIso, 'client_money', locale === 'he' ? 'לקוח/כסף' : 'Client or money', 'thisWeekImportance', 'client_money'),
+      weekOption(context.weekStartIso, 'family_admin', locale === 'he' ? 'משפחה/אדמין' : 'Family or admin', 'thisWeekImportance', 'family_admin'),
+      weekOption(context.weekStartIso, 'creative_momentum', locale === 'he' ? 'מומנטום יצירתי' : 'Creative momentum', 'thisWeekImportance', 'creative_momentum'),
+      weekOption(context.weekStartIso, 'reduce_chaos', locale === 'he' ? 'להוריד עומס' : 'Reduce chaos', 'thisWeekImportance', 'reduce_chaos'),
+      weekOption(context.weekStartIso, 'not_sure', locale === 'he' ? 'לא בטוח' : 'Not sure', 'thisWeekImportance', 'unknown'),
+    ],
+    allowFreeText: true,
+    freeTextPatch: { field: 'whyItMatters', operation: 'set' },
+    freeTextPlaceholder: locale === 'he' ? 'אופציונלי: מה ייחשב שבוע טוב?' : 'Optional: what would make this a good week?',
+    relatedTaskIds: selected.slice(0, 5).map(task => task.id),
+  }
+}
+
+function recentClarificationResolved(events: AIClarificationEvent[], entityKey: string, questionId: string): boolean {
+  const cooldownMs = 14 * MS_PER_DAY
+  const cutoff = Date.now() - cooldownMs
+  return events.some(event =>
+    event.entityKey === entityKey &&
+    event.questionId === questionId &&
+    ['answered', 'dismissed', 'generated_with_uncertainty', 'showed_candidates'].includes(event.eventType) &&
+    event.createdAt &&
+    new Date(event.createdAt).getTime() >= cutoff
+  )
+}
+
+function clarificationMemoryKey(question: Pick<AIClarificationQuestion, 'entityType' | 'entityId'>, context: WeekContext): string {
+  if (question.entityType === 'project' && question.entityId) return `project:${question.entityId}`
+  if (question.entityType === 'task' && question.entityId) return `task:${question.entityId}`
+  if (question.entityType === 'week' && question.entityId) return `week:${question.entityId}`
+  if (question.entityType && question.entityId) return `${question.entityType}:${question.entityId}`
+  return `week:${context.weekStartIso}`
+}
+
+function weekOption(
+  weekId: string,
+  id: string,
+  label: string,
+  field: string,
+  value: string,
+): AIMemoryQuestionOption {
+  return {
+    id,
+    label,
+    effect: 'Save this as weekly planning context.',
+    memoryPatch: {
+      entityType: 'week',
+      entityId: weekId,
+      operation: 'set',
+      field,
+      value,
+      confidence: 0.9,
+      source: 'button_answer',
+    },
   }
 }
 

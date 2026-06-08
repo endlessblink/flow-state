@@ -51,7 +51,7 @@ import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
 import { collectCardTasks, ensureCardTaskMentions, parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
 import {
-  buildQuickDraftWeeklyPlan,
+  buildWeeklyPlanningInterview,
   buildWeeklyPlanReliabilityFallback,
   buildWeekContextFromToolResults,
   buildWeeklyPlanPrompt,
@@ -59,6 +59,7 @@ import {
   type WeekContextMemoryInput,
   type WeeklyPlanOutput,
 } from '@/services/ai/pipeline/weeklyPlan'
+import type { AIClarificationEvent, AIContextEntity, ProjectContext, TaskContext } from '@/types/aiMemory'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
@@ -760,6 +761,86 @@ export function useAIChat() {
 
   function uniqueSupabaseIds(values: string[]): string[] {
     return [...new Set(values.map(value => value.trim()).filter(isSupabaseUuid))]
+  }
+
+  function uniqueStrings(values: string[]): string[] {
+    return [...new Set(values.map(value => value.trim()).filter(Boolean))]
+  }
+
+  function projectEntityKey(projectId: string): string {
+    return `project:${projectId || 'uncategorized'}`
+  }
+
+  function taskEntityKey(taskId: string): string {
+    return `task:${taskId}`
+  }
+
+  function factString(facts: Record<string, unknown>, field: string): string | null {
+    const value = facts[field]
+    return typeof value === 'string' && value.trim() ? value.trim() : null
+  }
+
+  function factArray(facts: Record<string, unknown>, field: string): string[] {
+    const value = facts[field]
+    if (Array.isArray(value)) return value.map(String).filter(Boolean)
+    if (typeof value === 'string' && value.trim()) return [value.trim()]
+    return []
+  }
+
+  function entityToProjectContext(entity: AIContextEntity): ProjectContext | null {
+    if (entity.entityType !== 'project' && entity.entityType !== 'synthetic_group') return null
+    const projectId = entity.canonicalProjectId || entity.entityKey.replace(/^project:/, '').replace(/^synthetic_group:/, '')
+    if (!projectId) return null
+    const facts = entity.facts ?? {}
+    const domain = factString(facts, 'domain')
+    const currentStakes = factString(facts, 'currentStakes')
+    const urgencyWindow = factString(facts, 'urgencyWindow')
+    return {
+      projectId,
+      summary: entity.summary ?? factString(facts, 'summary'),
+      domain: domain === 'work' || domain === 'personal' || domain === 'creative' || domain === 'admin' || domain === 'learning' || domain === 'health' ? domain : 'unknown',
+      lifeArea: factString(facts, 'lifeArea'),
+      whyItMatters: factString(facts, 'whyItMatters') ?? factString(facts, 'thisWeekImportance'),
+      successCriteria: factArray(facts, 'successCriteria'),
+      failureRisks: factArray(facts, 'failureRisks'),
+      currentStakes: currentStakes === 'low' || currentStakes === 'medium' || currentStakes === 'high' || currentStakes === 'critical' ? currentStakes : 'unknown',
+      urgencyWindow: urgencyWindow === 'none' || urgencyWindow === 'this_week' || urgencyWindow === 'this_month' || urgencyWindow === 'date_bound' ? urgencyWindow : 'unknown',
+      preferredCadence: null,
+      taskSelectionHints: factArray(facts, 'taskSelectionHints'),
+      nonGoals: factArray(facts, 'nonGoals'),
+      userCorrections: [...entity.corrections, ...factArray(facts, 'userCorrections')],
+      confidence: entity.confidence,
+      completenessScore: entity.completenessScore,
+      lastConfirmedAt: entity.lastAnsweredAt ?? null,
+      lastUpdatedAt: entity.lastAnsweredAt ?? entity.lastAskedAt ?? null,
+      staleAfter: entity.staleAfter ?? null,
+    }
+  }
+
+  function entityToTaskContext(entity: AIContextEntity): TaskContext | null {
+    if (entity.entityType !== 'task') return null
+    const taskId = entity.canonicalTaskId || entity.entityKey.replace(/^task:/, '')
+    if (!taskId) return null
+    const facts = entity.facts ?? {}
+    const currentStakes = factString(facts, 'currentStakes')
+    const urgencyWindow = factString(facts, 'urgencyWindow')
+    return {
+      taskId,
+      projectId: factString(facts, 'projectId'),
+      summary: entity.summary ?? factString(facts, 'summary'),
+      whyItMatters: factString(facts, 'whyItMatters'),
+      successCriteria: factArray(facts, 'successCriteria'),
+      currentStakes: currentStakes === 'low' || currentStakes === 'medium' || currentStakes === 'high' || currentStakes === 'critical' ? currentStakes : 'unknown',
+      urgencyWindow: urgencyWindow === 'none' || urgencyWindow === 'this_week' || urgencyWindow === 'this_month' || urgencyWindow === 'date_bound' ? urgencyWindow : 'unknown',
+      selectionHints: factArray(facts, 'selectionHints'),
+      nonGoals: factArray(facts, 'nonGoals'),
+      userCorrections: [...entity.corrections, ...factArray(facts, 'userCorrections')],
+      confidence: entity.confidence,
+      completenessScore: entity.completenessScore,
+      lastConfirmedAt: entity.lastAnsweredAt ?? null,
+      lastUpdatedAt: entity.lastAnsweredAt ?? entity.lastAskedAt ?? null,
+      staleAfter: entity.staleAfter ?? null,
+    }
   }
 
   async function buildAIMemorySummaryForToolResults(toolResults: ToolResult[], lang: 'he' | 'en'): Promise<string> {
@@ -1703,36 +1784,68 @@ export function useAIChat() {
         updateChatPhase(phaseActivityId, 'Preparing weekly plan', 'Loading saved project context')
         const cardTasks = collectCardTasks(toolResults)
         let weekMemory: WeekContextMemoryInput = {}
+        let clarificationEvents: AIClarificationEvent[] = []
+        const now = new Date()
         try {
           const db = useSupabaseDatabase()
           const taskIds = uniqueSupabaseIds(cardTasks.map(task => String(task.id || '')))
-          const projectIds = uniqueSupabaseIds(cardTasks
+          const taskEntityKeys = uniqueStrings(cardTasks.map(task => String(task.id || '')).filter(Boolean).map(taskEntityKey))
+          const rawProjectIds = uniqueStrings(cardTasks
             .map(task => {
               const id = String(task.id || '')
               return id ? taskStore.getTask(id)?.projectId || String(task.projectId || '') : String(task.projectId || '')
             })
+            .map(projectId => projectId || 'uncategorized')
           )
-          const [projectContexts, taskContexts] = await withTimeout(Promise.all([
+          const projectIds = uniqueSupabaseIds(rawProjectIds)
+          const projectEntityKeys = rawProjectIds.map(projectEntityKey)
+          const weekEntityKey = `week:${buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, now).weekStartIso}`
+          const entityKeys = uniqueStrings([...projectEntityKeys, ...taskEntityKeys, weekEntityKey])
+          const [projectContexts, taskContexts, contextEntities, events] = await withTimeout(Promise.all([
             db.fetchProjectContexts(projectIds),
             db.fetchTaskContexts(taskIds),
+            db.fetchAIContextEntities(entityKeys),
+            db.fetchAIClarificationEvents(entityKeys, 40),
           ]), WEEK_PLAN_MEMORY_TIMEOUT_MS, 'weekly_plan_memory_timeout')
-          weekMemory = { projectContexts, taskContexts }
+          clarificationEvents = events
+          const entityProjectContexts = contextEntities.map(entityToProjectContext).filter((ctx): ctx is ProjectContext => Boolean(ctx))
+          const entityTaskContexts = contextEntities.map(entityToTaskContext).filter((ctx): ctx is TaskContext => Boolean(ctx))
+          weekMemory = {
+            projectContexts: [...projectContexts, ...entityProjectContexts]
+              .filter((ctx, index, all) => all.findIndex(item => item.projectId === ctx.projectId) === index),
+            taskContexts: [...taskContexts, ...entityTaskContexts]
+              .filter((ctx, index, all) => all.findIndex(item => item.taskId === ctx.taskId) === index),
+          }
         } catch (memoryErr) {
           console.warn('[AIChat:WeeklyPlan] Memory fetch skipped or timed out:', memoryErr)
           updateChatPhase(phaseActivityId, 'Memory skipped', 'Using task data now')
           weekMemory = {}
         }
-        updateChatPhase(phaseActivityId, 'Building quick plan', `${cardTasks.length} task candidates`)
-        const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, new Date(), weekMemory)
-        const immediatePlan = buildQuickDraftWeeklyPlan(weekContext)
-        if (immediatePlan.recommendations.length === 0 && immediatePlan.openQuestions.length > 0) {
+        updateChatPhase(phaseActivityId, 'Checking needed context', `${cardTasks.length} task candidates`)
+        const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, now, weekMemory)
+        const clarification = buildWeeklyPlanningInterview(weekContext, clarificationEvents)
+        if (clarification) {
           if (lastMsg && lastMsg.isStreaming) {
             lastMsg.content = ''
             store.streamingContent = ''
             lastMsg.metadata = {
               ...lastMsg.metadata,
-              weeklyPlan: immediatePlan,
+              clarification,
             } as Record<string, unknown>
+          }
+          try {
+            const db = useSupabaseDatabase()
+            await db.recordAIClarificationEvent({
+              entityKey: clarification.memoryKey,
+              entityType: clarification.question.entityType ?? 'workflow',
+              displayName: clarification.question.entityId ?? clarification.memoryKey,
+              questionId: clarification.question.id,
+              eventType: 'asked',
+              question: clarification.question.question,
+              sourceMessageId: lastMsg?.id,
+            })
+          } catch (eventErr) {
+            console.warn('[AIChat:WeeklyPlan] Could not record clarification ask:', eventErr)
           }
           finishChatPhase(phaseActivityId, 'Clarification ready', 'Waiting for one answer')
           store.completeStreamingMessage()

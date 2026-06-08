@@ -50,7 +50,9 @@ ssh -i "$SSH_KEY" "$VPS_USER@$VPS_HOST" \
   "docker exec -i \$($PGCONTAINER_CMD) psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f '$REMOTE_BUNDLE_PATH'"
 
 echo "[ai-memory-live] Running read-only REST schema readiness check ..."
-npm run check:ai-memory-schema
+AI_MEMORY_SCHEMA_RETRIES="${AI_MEMORY_SCHEMA_RETRIES:-12}" \
+AI_MEMORY_SCHEMA_RETRY_MS="${AI_MEMORY_SCHEMA_RETRY_MS:-2500}" \
+  npm run check:ai-memory-schema
 
 echo "[ai-memory-live] Live migration apply completed and REST schema readiness passed."
 echo "[ai-memory-live] Verify now with:"

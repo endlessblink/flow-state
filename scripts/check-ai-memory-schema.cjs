@@ -18,6 +18,8 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL 
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''
 const API_KEY = SERVICE_ROLE_KEY || ANON_KEY
+const RETRIES = Number.parseInt(process.env.AI_MEMORY_SCHEMA_RETRIES || '2', 10)
+const RETRY_MS = Number.parseInt(process.env.AI_MEMORY_SCHEMA_RETRY_MS || '1500', 10)
 
 const REQUIRED_TABLES = {
   ai_context_entities: [
@@ -158,6 +160,14 @@ async function checkTable(table, columns) {
   }
 }
 
+function isSchemaCacheMiss(result) {
+  return !result.ok && typeof result.reason === 'string' && result.reason.includes('PGRST205')
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 function summarizeError(body) {
   if (!body) return 'no response body'
   try {
@@ -180,14 +190,30 @@ async function main() {
   console.log(`[ai-memory-schema] Checking ${Object.keys(REQUIRED_TABLES).length} AI memory tables at ${SUPABASE_URL}`)
   console.log(`[ai-memory-schema] Auth mode: ${SERVICE_ROLE_KEY ? 'service-role read-only' : 'anon read-only'}`)
 
-  const results = []
-  for (const [table, columns] of Object.entries(REQUIRED_TABLES)) {
-    const result = await checkTable(table, columns)
-    results.push(result)
-    if (result.ok) {
-      console.log(`[ai-memory-schema] OK ${table}`)
-    } else {
-      console.error(`[ai-memory-schema] FAIL ${table}: HTTP ${result.status} ${result.reason}`)
+  let results = []
+  const maxAttempts = Math.max(1, 1 + (Number.isFinite(RETRIES) ? RETRIES : 0))
+  const retryDelay = Math.max(0, Number.isFinite(RETRY_MS) ? RETRY_MS : 0)
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    results = []
+    for (const [table, columns] of Object.entries(REQUIRED_TABLES)) {
+      const result = await checkTable(table, columns)
+      results.push(result)
+      if (result.ok) {
+        console.log(`[ai-memory-schema] OK ${table}`)
+      } else {
+        console.error(`[ai-memory-schema] FAIL ${table}: HTTP ${result.status} ${result.reason}`)
+      }
+    }
+
+    const failed = results.filter(result => !result.ok)
+    const schemaMisses = failed.filter(isSchemaCacheMiss)
+    if (!failed.length) break
+    if (attempt >= maxAttempts || schemaMisses.length !== failed.length) break
+
+    console.error(`[ai-memory-schema] Schema cache still missing ${schemaMisses.length} table(s); retrying in ${retryDelay}ms (${attempt}/${maxAttempts - 1})...`)
+    if (retryDelay > 0) {
+      await sleep(retryDelay)
     }
   }
 

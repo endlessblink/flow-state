@@ -141,6 +141,7 @@
 - 2026-06-08: Added `npm run apply:ai-memory-live-migration`, a dry-run-by-default production helper that regenerates the SQL bundle and prints the exact VPS `scp`/`ssh psql -v ON_ERROR_STOP=1` commands. It only mutates the live database when both `APPLY_AI_MEMORY_LIVE=1` and `CONFIRM_AI_MEMORY_LIVE=APPLY` are set, then instructs the operator to run the read-only schema check and guarded CRUD smoke. Dry-run passed and made no production changes.
 - 2026-06-08: Hardened the live migration handoff so the generated AI memory SQL bundle notifies PostgREST to reload its schema cache, and the confirmed apply path now runs the read-only `npm run check:ai-memory-schema` gate before declaring completion. The guarded CRUD probe remains explicit because it writes temporary rows.
 - 2026-06-08: Re-ran the read-only live schema checker after the handoff hardening. `https://api.in-theflow.com` still returns PGRST205 for all six AI-memory tables, so the server-backed memory lane remains gated on the explicit live migration/schema-cache apply step.
+- 2026-06-08: The read-only live schema checker now retries PGRST205 schema-cache misses with configurable `AI_MEMORY_SCHEMA_RETRIES`/`AI_MEMORY_SCHEMA_RETRY_MS`, and the live apply helper uses a longer post-apply wait window before failing. This keeps the VPS handoff strict while avoiding false failure when PostgREST needs a few seconds to reload after `notify pgrst, 'reload schema';`.
 
 ---
 

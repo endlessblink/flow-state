@@ -133,6 +133,7 @@
 - 2026-06-08: Localhost generate-current smoke now shows a limited uncertainty-marked draft instead of confident impact/risk fallback prose, with no long-plan dump and no stuck generation state.
 - 2026-06-08: Clarification follow-up answers are now preserved as user-authored evidence in the deterministic formatter prompt, including free-text follow-up notes, so the answer after clarification can use what the user actually said instead of only bypassing the ask gate.
 - 2026-06-08: Formatter timeout, missing-card fallback, and quality-repair paths now use the same clarification evidence as the main formatter, so post-clarification fallback prose and card reasons do not revert to generic ranking claims.
+- 2026-06-08: Missing-card repair now replaces noisy model prose with the concise grounded fallback when the formatter output already fails quality checks or follows a clarification continuation, instead of appending fallback cards under a broad content dump.
 
 ---
 

@@ -2424,9 +2424,21 @@ export function useAIChat() {
         if (fallbackCardData) {
           const formatterProse = stripCardsBlock(formattedResponse).trim()
           const fallbackProse = stripCardsBlock(fallbackResponse).trim()
-          formattedResponse = [formatterProse, fallbackProse, fallbackCardData.rawBlock]
-            .filter(Boolean)
-            .join('\n\n')
+          const missingCardQuality = auditChatResponseQuality({
+            text: formatterProse,
+            language: outputLanguage,
+            mode: qualityModeForResponseMode(routed.responseMode),
+            hasTaskList,
+            hasCards: false,
+            taskCount: collectCardTasks(toolResults).length,
+            contextUnknown: toolResultsSummary.includes('context unknown') || toolResultsSummary.includes('Project/task understanding memory'),
+          })
+          const shouldReplaceMissingCardProse = isClarificationContinuation || missingCardQuality.level === 'bad'
+          formattedResponse = shouldReplaceMissingCardProse
+            ? fallbackResponse
+            : [formatterProse, fallbackProse, fallbackCardData.rawBlock]
+                .filter(Boolean)
+                .join('\n\n')
           cardData = parseCardGroups(formattedResponse, toolResults)
         }
       }

@@ -1939,6 +1939,16 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain("Formatter timed out or failed; using fallback answer")
   })
 
+  it('replaces noisy missing-card prose instead of appending fallback cards under it', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+
+    expect(aiChat).toContain('const missingCardQuality = auditChatResponseQuality({')
+    expect(aiChat).toContain("const shouldReplaceMissingCardProse = isClarificationContinuation || missingCardQuality.level === 'bad'")
+    expect(aiChat).toContain('formattedResponse = shouldReplaceMissingCardProse')
+    expect(aiChat).toContain('? fallbackResponse')
+    expect(aiChat).toContain(': [formatterProse, fallbackProse, fallbackCardData.rawBlock]')
+  })
+
   it('does not force-scroll the chat while the user is reading older streaming content', () => {
     const panel = src('src/components/ai/AIChatPanel.vue')
 

@@ -135,6 +135,7 @@ describe('AI memory lifecycle policy', () => {
         entity({
           summary: 'Improve assistant planning from saved project context.',
           facts: { whyItMatters: 'Prevents fake weekly planning.' },
+          corrections: ['Do not frame this as UI polish.'],
           confidence: 0.9,
         }),
       ],
@@ -148,6 +149,11 @@ describe('AI memory lifecycle policy', () => {
           ...event(2),
           selectedLabel: 'Client dependency',
         },
+        {
+          ...event(3),
+          eventType: 'correction',
+          freeText: 'This is not a low-stakes admin task.',
+        },
       ],
       now,
     })
@@ -156,14 +162,19 @@ describe('AI memory lifecycle policy', () => {
       snapshotKey: 'project:ai-planner:summary',
       scope: 'project',
       entityKeys: ['project:ai-planner'],
-      sourceEventCount: 2,
+      sourceEventCount: 3,
       sourceEntityCount: 1,
       confidence: 0.9,
     })
     expect(snapshot.summaryText).toContain('Improve assistant planning')
     expect(snapshot.summaryText).toContain('Recent answers')
+    expect(snapshot.summaryText).toContain('Corrections')
     expect(snapshot.summaryText.length).toBeLessThanOrEqual(520)
     expect(snapshot.facts.latestAnswers).toEqual(['Real impact first', 'Client dependency'])
+    expect(snapshot.facts.corrections).toEqual([
+      'Do not frame this as UI polish.',
+      'correction: This is not a low-stakes admin task.',
+    ])
     expect(new Date(String(snapshot.staleAfter)).getTime()).toBeGreaterThan(now.getTime())
   })
 })

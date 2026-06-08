@@ -159,6 +159,16 @@ export function buildAIMemorySnapshotInput(input: {
     .slice(0, 4)
     .map(event => sanitizeSnapshotText(event.selectedLabel || event.freeText || event.questionId, 120))
     .filter(Boolean)
+  const corrections = uniqueStrings([
+    ...entities.flatMap(entity => entity.corrections ?? []),
+    ...events
+      .filter(event => event.eventType === 'correction' || event.memoryPatch?.source === 'user_correction')
+      .sort((a, b) => (parseMs(b.createdAt ?? null) ?? 0) - (parseMs(a.createdAt ?? null) ?? 0))
+      .map(event => correctionSnapshotText(event)),
+  ])
+    .map(value => sanitizeSnapshotText(value, 140))
+    .filter(Boolean)
+    .slice(0, 4)
   const entitySummaries = entities
     .slice(0, 4)
     .map(entity => {
@@ -171,6 +181,7 @@ export function buildAIMemorySnapshotInput(input: {
   const summaryText = [
     ...entitySummaries,
     latestAnswers.length ? `Recent answers: ${latestAnswers.join('; ')}` : '',
+    corrections.length ? `Corrections: ${corrections.join('; ')}` : '',
   ].filter(Boolean).join(' | ') || 'No compact memory facts available yet.'
   const confidence = entities.length
     ? entities.reduce((sum, entity) => sum + Math.max(0, Math.min(1, entity.confidence ?? 0)), 0) / entities.length
@@ -186,6 +197,7 @@ export function buildAIMemorySnapshotInput(input: {
       entityCount: entities.length,
       eventCount: events.length,
       latestAnswers,
+      corrections,
       summarizedAt: now.toISOString(),
     },
     sourceEventCount: events.length,
@@ -193,6 +205,14 @@ export function buildAIMemorySnapshotInput(input: {
     confidence: Number(confidence.toFixed(3)),
     staleAfter,
   }
+}
+
+function correctionSnapshotText(event: AIClarificationEvent): string {
+  const value = event.freeText
+    || event.selectedLabel
+    || event.memoryPatch?.field
+    || event.questionId
+  return `correction: ${value}`
 }
 
 function parseMs(value: string | null): number | null {

@@ -1056,6 +1056,77 @@ describe('AI sidebar-first desktop experience', () => {
     expect(buildWeeklyPlanPrompt(context)).toContain('recommendationFeedbackSummary')
   })
 
+  it('asks to refresh stale project context before using it for weekly ranking', () => {
+    const baseTask = {
+      status: 'todo',
+      priority: 'high',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '2026-06-12',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+      estimatedDuration: 60,
+      projectId: 'stale-ai-planner',
+    } satisfies Partial<Task>
+    const tasks = [
+      {
+        ...baseTask,
+        id: 'task-stale-memory-a',
+        title: 'Improve weekly planner memory',
+        description: 'Product quality work tied to the assistant planning layer.',
+      } as Task,
+      {
+        ...baseTask,
+        id: 'task-stale-memory-b',
+        title: 'Tighten planner evidence audit',
+        description: 'Ensures weekly recommendations cite real task and memory context.',
+      } as Task,
+      {
+        ...baseTask,
+        id: 'task-stale-memory-c',
+        title: 'Ship clarification feedback controls',
+        description: 'Connects user feedback to future recommendation behavior.',
+      } as Task,
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+      {
+        projectContexts: [{
+          projectId: 'stale-ai-planner',
+          summary: 'Make the AI weekly planner feel grounded in real project context.',
+          domain: 'work',
+          whyItMatters: 'This is the core product quality issue.',
+          successCriteria: ['The plan asks before ranking when meaning is unclear.'],
+          failureRisks: [],
+          currentStakes: 'high',
+          urgencyWindow: 'this_week',
+          taskSelectionHints: [],
+          nonGoals: [],
+          userCorrections: [],
+          confidence: 0.95,
+          completenessScore: 0.9,
+          lastConfirmedAt: '2026-04-01T09:00:00Z',
+          lastUpdatedAt: '2026-04-01T09:00:00Z',
+          staleAfter: '2026-05-15T09:00:00Z',
+        }],
+      },
+    )
+
+    const interview = buildWeeklyPlanningInterview(context, [])
+    const quickDraft = buildQuickDraftWeeklyPlan(context)
+
+    expect(interview?.coverage?.decision).toBe('ask')
+    expect(interview?.coverage?.missing).toContain('stale_context')
+    expect(interview?.question.reason).toBe('stale_project_context')
+    expect(interview?.question.options.map(option => option.label)).toEqual(expect.arrayContaining(['Still true', 'Partly changed', 'No longer true']))
+    expect(quickDraft.recommendations).toHaveLength(0)
+    expect(quickDraft.openQuestions[0].reason).toBe('stale_project_context')
+  })
+
   it('lets weekly-plan question buttons create a linked follow-up task with optional user text', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({

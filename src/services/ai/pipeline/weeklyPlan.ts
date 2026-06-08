@@ -4,6 +4,7 @@ import type {
   AIClarificationCoverage,
   AIClarificationEvent,
   AIClarificationQuestion,
+  AIMemoryPatchOperation,
   AIMemoryQuestionOption,
   AIRecommendationFeedback,
   ProjectContext,
@@ -560,7 +561,11 @@ export function buildQuickDraftWeeklyPlan(context: WeekContext): WeeklyPlanOutpu
   const topTaskQuestion = selected[0]
     ? openQuestions.find(question => question.relatedTaskIds.includes(selected[0].id))
     : undefined
-  const shouldClarifyBeforeRanking = Boolean(selected[0] && topTaskQuestion && needsPlanningClarification(selected[0]))
+  const shouldClarifyBeforeRanking = Boolean(
+    selected[0] &&
+    topTaskQuestion &&
+    (topTaskQuestion.reason === 'stale_project_context' || needsPlanningClarification(selected[0])),
+  )
   if (shouldClarifyBeforeRanking && topTaskQuestion) {
     return buildClarificationFirstWeeklyPlan(context, [topTaskQuestion])
   }
@@ -804,6 +809,7 @@ function selectClarificationQuestion(
 function questionPriority(reason: string | undefined, missing: AIClarificationCoverage['missing']): number {
   if (!reason) return 0
   let score = 0
+  if (reason.includes('stale') && missing.includes('stale_context')) score += 4
   if (reason.includes('project') && missing.includes('project_meaning')) score += 3
   if (reason.includes('task') && missing.includes('task_context')) score += 3
   if (reason.includes('stake') && missing.includes('impact')) score += 2
@@ -838,6 +844,7 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
   ).length / denominator
   const energyFit = relevant.filter(task => task.estimateMinutes || task.derived.quickErrandScore >= 0.55 || task.derived.substantialWorkScore >= 0.55).length / denominator
   const preferences = context.projectContexts.some(ctx => ctx.taskSelectionHints.length || ctx.nonGoals.length || ctx.userCorrections.length) ? 1 : 0
+  const staleContext = relevant.some(task => isProjectContextStale(task.projectContext, context.nowIso) || isTaskContextStale(task.taskContext, context.nowIso)) ? 0 : 1
   const dimensions: AIClarificationCoverage['dimensions'] = {
     impact,
     energy_fit: energyFit,
@@ -847,26 +854,35 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
     preferences,
     project_meaning: projectMeaning,
     task_context: taskContext,
+    stale_context: staleContext,
   }
   const weights: Record<keyof typeof dimensions, number> = {
     impact: 0.22,
-    project_meaning: 0.20,
-    task_context: 0.16,
-    stakeholders: 0.14,
-    dependencies: 0.12,
+    project_meaning: 0.18,
+    task_context: 0.14,
+    stale_context: 0.14,
+    stakeholders: 0.13,
+    dependencies: 0.11,
     history: 0.08,
     energy_fit: 0.05,
     preferences: 0.03,
   }
-  const score = Object.entries(dimensions).reduce((sum, [key, value]) => {
+  const rawScore = Object.entries(dimensions).reduce((sum, [key, value]) => {
     return sum + (weights[key as keyof typeof weights] ?? 0) * Number(value ?? 0)
   }, 0)
   const missing = Object.entries(dimensions)
-    .filter(([key, value]) => Number(value ?? 0) < (key === 'preferences' ? 0.2 : 0.45))
+    .filter(([key, value]) => Number(value ?? 0) < (key === 'preferences' ? 0.2 : key === 'stale_context' ? 1 : 0.45))
     .map(([key]) => key as AIClarificationCoverage['missing'][number])
   const materiality: AIClarificationCoverage['materiality'] = context.tasks.length >= 3 ? 'high' : 'medium'
+  const score = missing.includes('project_meaning') && materiality === 'high'
+    ? Math.min(rawScore, 0.49)
+    : missing.includes('stale_context') && materiality === 'high'
+      ? Math.min(rawScore, 0.49)
+      : rawScore
   const roundedScore = Number(score.toFixed(3))
-  const decision: AIClarificationCoverage['decision'] = roundedScore < 0.5 && materiality === 'high'
+  const hasStaleMaterialContext = missing.includes('stale_context') && materiality === 'high'
+  const hasMaterialMissingProjectMeaning = missing.includes('project_meaning') && materiality === 'high'
+  const decision: AIClarificationCoverage['decision'] = hasStaleMaterialContext || hasMaterialMissingProjectMeaning || (roundedScore < 0.5 && materiality === 'high')
     ? 'ask'
     : roundedScore < 0.8
       ? 'proceed_with_uncertainty'
@@ -972,6 +988,34 @@ function selectQuickDraftTasks(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapsho
 function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSnapshot[]): WeeklyPlanOutput['openQuestions'] {
   const locale = context.locale
   const questions: WeeklyPlanOutput['openQuestions'] = []
+  const staleProjectTask = selected.find(task => task.project?.id && isProjectContextStale(task.projectContext, context.nowIso))
+  if (staleProjectTask?.project?.id && staleProjectTask.projectContext) {
+    const projectId = staleProjectTask.project.id
+    const projectName = staleProjectTask.project.name || projectId
+    const staleText = staleContextSummary(staleProjectTask.projectContext)
+    questions.push({
+      id: `stale_project_context_${projectId}`,
+      entityType: 'project',
+      entityId: projectId,
+      reason: 'stale_project_context',
+      question: locale === 'he'
+        ? `ההקשר הישן של "${projectName}" עדיין נכון?`
+        : `Is the old context for "${projectName}" still true?`,
+      options: [
+        staleProjectOption(projectId, 'still_true', locale === 'he' ? 'עדיין נכון' : 'Still true', 'confirm', 'lastConfirmedAt', context.nowIso),
+        staleProjectOption(projectId, 'partly_changed', locale === 'he' ? 'השתנה חלקית' : 'Partly changed', 'append', 'userCorrections', 'Context partly changed; ask for updated wording.'),
+        staleProjectOption(projectId, 'no_longer_true', locale === 'he' ? 'כבר לא נכון' : 'No longer true', 'deprecate', 'summary', staleText || projectName),
+        staleProjectOption(projectId, 'not_sure', locale === 'he' ? 'לא בטוח' : 'Not sure', 'set', 'confidence', 0.45),
+      ],
+      allowFreeText: true,
+      freeTextPatch: { field: 'whyItMatters', operation: 'set' },
+      freeTextPlaceholder: locale === 'he'
+        ? (staleText ? `הקשר ישן: ${staleText}` : 'אופציונלי: מה השתנה?')
+        : (staleText ? `Old context: ${staleText}` : 'Optional: what changed?'),
+      relatedTaskIds: [staleProjectTask.id],
+    })
+  }
+
   const missingProjectTask = selected.find(task => task.project?.id && needsPlanningClarification(task))
   if (missingProjectTask?.project?.id) {
     const projectId = missingProjectTask.project.id
@@ -1094,6 +1138,30 @@ function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSna
   return questions.slice(0, 2)
 }
 
+function staleProjectOption(
+  projectId: string,
+  id: string,
+  label: string,
+  operation: AIMemoryPatchOperation,
+  field: string,
+  value: unknown,
+): AIMemoryQuestionOption {
+  return {
+    id,
+    label,
+    effect: 'Refresh saved project context before using it for ranking.',
+    memoryPatch: {
+      entityType: 'project',
+      entityId: projectId,
+      operation,
+      field,
+      value,
+      confidence: id === 'not_sure' ? 0.45 : 0.9,
+      source: 'button_answer',
+    },
+  }
+}
+
 function projectOption(projectId: string, domain: ProjectContext['domain'], label: string, effect: string): AIMemoryQuestionOption {
   return {
     id: `domain_${domain}`,
@@ -1208,6 +1276,38 @@ function hasUsableProjectContext(task: PlannerTaskSnapshot): boolean {
     ctx.currentStakes !== 'unknown' ||
     ctx.summary,
   )
+}
+
+function isProjectContextStale(ctx: ProjectContextSnapshot | undefined, nowIso: string): boolean {
+  if (!ctx) return false
+  return isMemoryContextStale(ctx.staleAfter, ctx.lastConfirmedAt, nowIso)
+}
+
+function isTaskContextStale(ctx: TaskContextSnapshot | undefined, nowIso: string): boolean {
+  if (!ctx) return false
+  return isMemoryContextStale(ctx.staleAfter, ctx.lastConfirmedAt, nowIso)
+}
+
+function isMemoryContextStale(staleAfter: string | null | undefined, lastConfirmedAt: string | null | undefined, nowIso: string): boolean {
+  const nowMs = new Date(nowIso).getTime()
+  if (!Number.isFinite(nowMs)) return false
+  if (staleAfter) {
+    const staleAfterMs = new Date(staleAfter).getTime()
+    if (Number.isFinite(staleAfterMs) && staleAfterMs <= nowMs) return true
+  }
+  if (lastConfirmedAt) {
+    const lastConfirmedMs = new Date(lastConfirmedAt).getTime()
+    if (Number.isFinite(lastConfirmedMs) && nowMs - lastConfirmedMs > 45 * MS_PER_DAY) return true
+  }
+  return false
+}
+
+function staleContextSummary(ctx: ProjectContextSnapshot): string {
+  return [
+    ctx.whyItMatters,
+    ctx.summary,
+    ...ctx.successCriteria.slice(0, 1),
+  ].map(value => String(value ?? '').trim()).find(Boolean) ?? ''
 }
 
 function hasUsableTaskContext(task: PlannerTaskSnapshot): boolean {

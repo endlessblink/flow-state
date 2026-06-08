@@ -107,6 +107,7 @@ export type AIUncertaintyDimension =
   | 'preferences'
   | 'project_meaning'
   | 'task_context'
+  | 'stale_context'
 
 export type AIClarificationPathType =
   | 'clarify_first'

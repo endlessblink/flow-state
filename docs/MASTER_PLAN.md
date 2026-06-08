@@ -6,7 +6,7 @@
 
 **Goal**: Make FlowState chat consistently useful across weekly planning, "what should I do", prioritization, task breakdown, smart lanes, follow-up tasks, and general agent help by combining server-backed memory, explicit uncertainty, low-overwhelm UX, feedback learning, and testable answer-quality gates.
 
-**Current execution cursor**: **Stage 0 → Stage 1**. Finish lane consolidation, then prove the localhost clarification loop end-to-end before adding more UI/learning layers.
+**Current execution cursor**: **Stage 1 → Stage 2**. The lane is consolidated; continue proving server-backed memory/retrieval and the clarification decision loop before adding broader UI/learning layers.
 
 **Hard lane rules**:
 - Work stages in order. Do not jump to polish, Electron, or broad UI expansion while the current stage lacks localhost proof.
@@ -19,7 +19,7 @@
 
 | Stage | Task(s) | Required outcome | Status | Proof gate before moving on |
 | --- | --- | --- | --- | --- |
-| 0 | This lane + TASK-1842 | Single execution lane, active cursor, localhost-only gate, no vague partial phases | 🔄 Active now | MASTER_PLAN lane lists all stages, dependencies, proof, and user-test gate |
+| 0 | This lane + TASK-1842 | Single execution lane, active cursor, localhost-only gate, no vague partial phases | ✅ Done | MASTER_PLAN lane lists all stages, dependencies, proof, and user-test gate |
 | 1 | TASK-1830, TASK-1838, TASK-1839 | VPS-safe memory substrate: server entities/events/edges, synthetic keys, missing-schema fallback, SQL-first retrieval, RLS/prompt-injection safety | 🔄 In progress | Contract tests, retrieval tests, no UUID errors for `Work`/`My Projects`/`uncategorized`, bounded retrieval diagnostics |
 | 2 | TASK-1840, TASK-1831A, TASK-1831 | Clarification decision engine: coverage/materiality policy, heuristic EVPI, one-question ladder, cooldown/dedupe, continue-with-uncertainty escapes | 🔄 In progress | Unit + mounted tests prove highest-value non-repeated question appears and answering it does not re-ask or dump content |
 | 3 | TASK-1835 | Apply the same ask-before-answer contract to all broad chat flows, not only weekly planning | 🔄 In progress | Non-weekly tests for day plan, smart lanes, prioritization, "what should I do", and task breakdown prompts |
@@ -104,6 +104,7 @@
 - 2026-06-08: Clarification continuation messages now include the actual selected button/free-text answer as compact quoted context, so localhost flows still proceed correctly before live Supabase memory migrations are applied.
 - 2026-06-08: Clarification continuations now run as hidden control messages with a typed mode marker and bypass the ask gate once, so answering a card does not add noisy chat content or immediately re-ask the same question while persistence is delayed.
 - 2026-06-08: Weekly clarification now uses a progressive one-question-at-a-time ladder for button-only answers: project/category, why it matters now, success this week, and slip risk. Free text can still satisfy enough context and continue immediately.
+- 2026-06-08: Response-quality clarification no longer treats one button click as enough context. Button-only broad prompts now ask one short follow-up about what the answer should help the user do before continuing.
 
 ---
 
@@ -244,6 +245,7 @@
 - 2026-06-08: Added a deterministic `response_quality` clarification card before high-materiality non-weekly task recommendations so day plans, smart lanes, and prioritization/overwhelm prompts can ask one button-based direction question instead of dumping broad prose.
 - 2026-06-08: Response-quality clarification answers now route back into the matching deterministic flow (`day_plan`, `smart_lanes`, or general task recommendation) instead of falling through as vague freeform continuation text.
 - 2026-06-08: Broader non-weekly task answers now use the shared uncertainty policy for ask/proceed/neutral decisions instead of a fixed hardcoded ask path. Focused tests cover high-materiality broad recommendations, tiny task sets that proceed with uncertainty, and cold-start neutral candidates.
+- 2026-06-08: Clarification messages now suppress the generic tool-result task list while asking. Candidate tasks only appear through explicit "show candidates" style escapes, preventing the old barrage of task cards under a question.
 
 ---
 
@@ -409,6 +411,9 @@
 - No active test case leaves the sidebar stuck after a clarification answer.
 - No generic plan dump appears before the clarification gate is satisfied or bypassed explicitly.
 - Known missing pieces are listed as lane tasks, not handed to the user as "please test."
+
+**Progress**:
+- 2026-06-08: Localhost smoke against `http://127.0.0.1:5546` seeded ambiguous tasks, sent "what should I do next?", verified exactly one clarification card, no recommendation cards/long-plan markers before answering, a second follow-up after a button-only answer, enabled input, and no stuck running activity. Screenshot evidence: `/tmp/flowstate-ai-chat-quality-smoke-pass.png`.
 
 ---
 

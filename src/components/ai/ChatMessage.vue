@@ -403,9 +403,40 @@ type ClarificationFollowUpStep = {
 }
 
 function clarificationFollowUpSteps(card: AIClarificationArtifact): ClarificationFollowUpStep[] {
-  if (card.kind !== 'weekly_planning') return []
   const locale = card.locale
   const steps: ClarificationFollowUpStep[] = []
+
+  if (card.kind === 'response_quality') {
+    steps.push({
+      id: 'answer_success',
+      field: 'taskSelectionHints',
+      operation: 'append',
+      prompt: locale === 'he' ? 'מה הכי חשוב שהתשובה תעזור לך לעשות?' : 'What should this answer help you do?',
+      placeholder: locale === 'he'
+        ? 'אופציונלי: כתוב מה יהפוך את התשובה לשימושית'
+        : 'Optional: what would make the answer useful?',
+      options: locale === 'he'
+        ? [
+            { id: 'choose_next', label: 'לבחור צעד הבא', value: 'choose the next action' },
+            { id: 'reduce_overload', label: 'להוריד עומס', value: 'reduce overwhelm' },
+            { id: 'rank_by_stakes', label: 'לדרג לפי השלכות', value: 'rank by stakes and consequences' },
+            { id: 'find_quick_win', label: 'למצוא ניצחון מהיר', value: 'find a quick win' },
+            { id: 'avoid_wrong_work', label: 'להימנע מעבודה לא נכונה', value: 'avoid the wrong work' },
+            { id: 'not_sure', label: 'לא בטוח', value: 'unclear success criterion', confidence: 0.45 },
+          ]
+        : [
+            { id: 'choose_next', label: 'Choose next action', value: 'choose the next action' },
+            { id: 'reduce_overload', label: 'Reduce overwhelm', value: 'reduce overwhelm' },
+            { id: 'rank_by_stakes', label: 'Rank by stakes', value: 'rank by stakes and consequences' },
+            { id: 'find_quick_win', label: 'Find quick win', value: 'find a quick win' },
+            { id: 'avoid_wrong_work', label: 'Avoid wrong work', value: 'avoid the wrong work' },
+            { id: 'not_sure', label: 'Not sure', value: 'unclear success criterion', confidence: 0.45 },
+          ],
+    })
+    return steps
+  }
+
+  if (card.kind !== 'weekly_planning') return []
 
   steps.push({
     id: 'why_now',
@@ -525,7 +556,7 @@ function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEven
   if (!option && !note) return
 
   clarificationSavedLocal.value[key] = true
-  const hasEnoughContextToContinue = Boolean(note) || card.kind === 'response_quality'
+  const hasEnoughContextToContinue = Boolean(note) || clarificationFollowUpSteps(card).length === 0
   if (hasEnoughContextToContinue) {
     clarificationFollowUpSavedLocal.value[key] = true
   }
@@ -749,8 +780,8 @@ function collectClarificationEvidence(card: AIClarificationArtifact): {
     const selected = clarificationFollowUpAnswers.value[inputKey]
     const label = step.options.find(option => option.id === selected)?.label
     const text = clarificationFollowUpFreeText.value[inputKey]?.trim()
-    if (label) followUpLines.push(`${step.prompt}: ${label}`)
-    if (text) followUpLines.push(`${step.prompt}: ${text}`)
+    if (label) followUpLines.push(label)
+    if (text) followUpLines.push(text)
   }
   return {
     selectedLabel: card.question.options.find(item => item.id === clarificationAnswers.value[key])?.label,
@@ -921,6 +952,7 @@ export interface ChatToolResultData {
  */
 const toolResults = computed(() => {
   if (isStreaming.value) return []
+  if (clarification.value) return []
   const meta = props.message.metadata as Record<string, unknown>
   if (!meta?.toolResults || !Array.isArray(meta.toolResults)) return []
   return meta.toolResults as Array<{

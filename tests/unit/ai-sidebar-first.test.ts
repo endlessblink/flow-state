@@ -1561,9 +1561,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).toContain('Context saved')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Work/Product"')
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Why now: "Why does this matter right now?: Deadline/commitment')
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('What would count as good progress this week?: Ship usable')
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('What happens if this slips?: Nothing serious')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Why now: "Deadline/commitment | Ship usable | Nothing serious"')
   })
 
   it('does not ask the why-now follow-up again when the first clarification already includes free text', async () => {
@@ -1627,7 +1625,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Note: "This matters because it is the core product quality issue."')
   })
 
-  it('continues response-quality clarification with a non-weekly concise answer prompt', async () => {
+  it('asks one follow-up before continuing a button-only response-quality clarification', async () => {
     const wrapper = mount(ChatMessage, {
       props: {
         message: {
@@ -1678,6 +1676,18 @@ describe('AI sidebar-first desktop experience', () => {
                 relatedTaskIds: ['task-a'],
               },
             },
+            toolResults: [{
+              success: true,
+              message: 'Suggested 3 tasks to work on next',
+              tool: 'get_overdue_tasks',
+              type: 'read',
+              data: [{
+                id: 'task-a',
+                title: 'Hidden candidate while clarifying',
+                status: 'todo',
+                priority: 'medium',
+              }],
+            }],
           },
         },
       },
@@ -1692,8 +1702,19 @@ describe('AI sidebar-first desktop experience', () => {
     await wrapper.get('.weekly-question-apply').trigger('click')
     await nextTick()
 
+    expect(wrapper.emitted('continueChat')).toBeUndefined()
+    expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('What should this answer help you do?')
+    expect(wrapper.text()).not.toContain('Suggested 3 tasks to work on next')
+    expect(wrapper.text()).not.toContain('Hidden candidate while clarifying')
+
+    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-option').trigger('click')
+    await wrapper.find('[data-testid="ai-clarification-follow-up"] .weekly-question-apply').trigger('click')
+    await nextTick()
+
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue with the answer using the clarification I just answered')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Real impact"')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Why now: "Choose next action"')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('week')
   })

@@ -233,6 +233,7 @@
 **Progress**:
 - 2026-06-08: Chat phase activity events now update in place, preserve elapsed timing metadata, and annotate key paths such as clarify-first, structured-model, reliability-fallback, and quality-repair.
 - 2026-06-08: Sidebar activity rows show concise elapsed timing so slow phases are visible without dumping debug prose into the answer.
+- 2026-06-08: Clarification continuations now add a visible "Answer queued" activity row when the user answers while generation is settling, then mark it as accepted when the queued continuation is sent. This prevents the UI from looking inert after saving a clarification answer.
 
 ---
 

@@ -104,6 +104,7 @@ const showChatHistory = ref(false)
 const chatHistoryContainerRef = ref<HTMLElement | null>(null)
 const lastUserMessage = ref<string>('')
 const pendingContinueMessage = ref<string>('')
+const queuedContinuationActivityId = 'ai-clarification-continuation-queued'
 
 // Panel sizing mode: compact (380px) | expanded (600px) | fullscreen
 const panelMode = ref<'compact' | 'expanded' | 'fullscreen'>('compact')
@@ -260,6 +261,16 @@ function handleContinueChat(message: string) {
   if (!trimmed) return
   if (isGenerating.value) {
     pendingContinueMessage.value = trimmed
+    store.addActivityEvent({
+      id: queuedContinuationActivityId,
+      type: 'thinking',
+      status: 'running',
+      label: 'Answer queued',
+      message: 'Continuing after current response settles',
+      metadata: {
+        phase: 'Clarification continuation queued',
+      },
+    })
     return
   }
   pendingContinueMessage.value = ''
@@ -270,6 +281,11 @@ watch(isGenerating, (generating) => {
   if (generating || !pendingContinueMessage.value) return
   const message = pendingContinueMessage.value
   pendingContinueMessage.value = ''
+  store.updateActivityEvent(queuedContinuationActivityId, {
+    status: 'success',
+    label: 'Continuing with answer',
+    message: 'Clarification answer accepted',
+  })
   sendMessage(message, { skipHistory: true })
 })
 

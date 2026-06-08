@@ -1731,6 +1731,43 @@ describe('AI sidebar-first desktop experience', () => {
     expect(panel).toContain('sendMessage(trimmed, { skipHistory: true })')
   })
 
+  it('shows a queued continuation activity row after a clarification answer while generation is settling', async () => {
+    const store = useAIChatStore()
+    store.openPanel()
+    store.createConversation()
+    store.startStreamingMessage()
+
+    const wrapper = mount(AIChatPanel, {
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+        },
+        stubs: {
+          ChatMessage: {
+            props: ['message'],
+            emits: ['continueChat'],
+            template: '<button data-testid="emit-continue" @click="$emit(\'continueChat\', \'Continue after clarification\')">continue</button>',
+          },
+          CustomSelect: true,
+          OverflowTooltip: {
+            template: '<span><slot /></span>',
+          },
+        },
+      },
+    })
+
+    await wrapper.get('[data-testid="emit-continue"]').trigger('click')
+    await nextTick()
+
+    expect(store.activityEvents).toContainEqual(expect.objectContaining({
+      id: 'ai-clarification-continuation-queued',
+      status: 'running',
+      label: 'Answer queued',
+      message: 'Continuing after current response settles',
+    }))
+    expect(wrapper.get('[data-testid="ai-activity-timeline"]').text()).toContain('Answer queued')
+  })
+
   it('routes clarification continuation without asking the same card again', () => {
     const aiChat = src('src/composables/useAIChat.ts')
     const chatMessage = src('src/components/ai/ChatMessage.vue')

@@ -186,6 +186,7 @@
 - 2026-06-08: Localhost Playwright smoke passed for the full ask-before-answer loop: weekly planning asks first with no recommendation dump, answering continues without a stuck running state, broad prompts ask one targeted card for prioritization/next-task/overdue/day/smart-lane/breakdown flows, recent answers suppress repeats, "too much" feedback compacts the next answer, and postpone feedback suppresses repeated tasks. Verified with `npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts` after manually starting Vite on `127.0.0.1:5564`.
 - 2026-06-08: Re-ran the localhost AI chat quality smoke after stale-memory active-evidence filtering and stale-refresh local retrieval proof. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed 9/9 against a manually started Vite server on `127.0.0.1:5564`, covering weekly ask-first, no pre-answer barrage, no stuck running row, compact continuation, too-much feedback, postpone suppression, and no-repeat broad clarification across prioritization/next-task/overdue/day-plan/smart-lane/task-breakdown prompts.
 - 2026-06-08: Weekly post-clarification continuations now use a compact 1-3 recommendation contract across the structured prompt, validator/parser, repair prompt, and quick-draft fallback. Answering one question can produce a short useful result, but not a broad weekly dump.
+- 2026-06-08: Mechanical overdue-list requests are now separated from overdue triage. `show/list overdue tasks` keeps the deterministic overdue-data tool but bypasses the broad clarification gate, while explicit triage/rank/prioritize overdue prompts still ask one targeted question before recommendations. Localhost Playwright passed 10/10 on `127.0.0.1:5564`, including the new no-clarification mechanical overdue-list case plus the explicit overdue-triage clarification case.
 
 ---
 
@@ -508,6 +509,7 @@
 
 **Progress**:
 - 2026-06-08: Extracted the ask/proceed/neutral decision rule into a shared uncertainty policy, including high-materiality ask thresholds, medium-coverage proceed-with-uncertainty behavior, and neutral cold-start handling. Focused tests cover high/medium/low materiality, forced missing project/stale context, sufficient context, and cold-start behavior.
+- 2026-06-08: Routed mechanical overdue display requests separately from overdue triage. Unit coverage proves `show overdue` / `list overdue tasks` still retrieve overdue tasks but have no `overdue_triage` response mode, while `triage overdue tasks` remains high-materiality and asks before ranking. Browser coverage proves the visible chat shows data without a clarification gate for `show me overdue tasks`.
 
 ---
 
@@ -577,6 +579,7 @@
 - 2026-06-08: Extended and re-ran the localhost browser proof for broad feedback suppression. The suite now covers 9 prompt/feedback paths, including broad postpone feedback that visibly saves, hides the exact card immediately, and prevents the same task from reappearing in the next broad answer.
 - 2026-06-08: Re-ran the 9-path localhost smoke after quality-floor observability and inline feedback-status fixes. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed 9/9 against a manually started Vite server on `127.0.0.1:5564`.
 - 2026-06-08: Re-ran the 9-path localhost smoke after turning recommendation-card learning signals into an audit failure. The Playwright webServer helper still timed out before tests started, so Vite was started manually on `127.0.0.1:5564`; `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` then passed 9/9.
+- 2026-06-08: Extended and re-ran the localhost smoke for mechanical-vs-triage overdue behavior. The suite now has 10 paths and proves `show me overdue tasks` displays overdue data without any clarification card, while `triage my overdue tasks` still asks the mode-specific "How should I treat overdue tasks?" card, saves the answer, suppresses repeats, and leaves no stuck activity row.
 
 ---
 

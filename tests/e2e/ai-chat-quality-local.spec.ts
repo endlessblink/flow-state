@@ -353,6 +353,20 @@ test('broad postpone feedback suppresses the same task in the next broad answer'
   await expect(input).toBeEnabled({ timeout: 10_000 })
 })
 
+test('mechanical overdue list request shows data without a clarification gate', async ({ page }) => {
+  await seedGuestWorkspace(page)
+  await stubBridge(page)
+
+  const input = await openAIChat(page)
+  await sendChat(input, 'show me overdue tasks')
+
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+  await expect(page.locator('[data-testid="ai-clarification"]')).toHaveCount(0)
+  await expect(page.locator('[data-testid="inline-ai-task-card"]').first()).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('.chat-message').last()).not.toContainText(/How should I treat overdue tasks|What should guide this answer/i)
+  await expect(input).toBeEnabled({ timeout: 10_000 })
+})
+
 test.describe('broad task answers ask one specific question before recommendations', () => {
   const cases = [
     {
@@ -366,7 +380,7 @@ test.describe('broad task answers ask one specific question before recommendatio
       option: 'Energy fit',
     },
     {
-      prompt: 'show me overdue tasks',
+      prompt: 'triage my overdue tasks',
       question: 'How should I treat overdue tasks?',
       option: 'Hard commitments',
     },

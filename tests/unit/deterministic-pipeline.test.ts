@@ -57,13 +57,23 @@ describe('intentRouter — routeIntentByKeywords()', () => {
   // ── Overdue queries ───────────────────────────────────────────────────────
 
   it.each([
-    ['overdue tasks'],
+    ['triage overdue tasks'],
     ['באיחור'],
   ])('routes "%s" to task_query with get_overdue_tasks tool', (input) => {
     const result = routeIntentByKeywords(input, mockTasks, entityMemory)
     expect(result.type).toBe('task_query')
     expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
     expect(result.responseMode).toBe('overdue_triage')
+  })
+
+  it.each([
+    ['show overdue'],
+    ['list overdue tasks'],
+  ])('routes mechanical overdue list request "%s" without triage mode', (input) => {
+    const result = routeIntentByKeywords(input, mockTasks, entityMemory)
+    expect(result.type).toBe('task_query')
+    expect(result.tools.some(t => t.tool === 'get_overdue_tasks')).toBe(true)
+    expect(result.responseMode).toBeUndefined()
   })
 
   it.each([

@@ -249,6 +249,13 @@ function responseModeForMessageAndTool(userMessage: string, tool: string): Route
   ) {
     return 'prioritization'
   }
+  if (
+    tool === 'get_overdue_tasks' &&
+    /(^|\b)(show|list|display|open|view)\b|הצג|הראה|רשימת/i.test(lower) &&
+    !/(triage|rank|order|sort|decide|choose|focus|treat|handle|prioriti[sz]e|לתעדף|לדרג|למיין|לטפל|להתמקד)/i.test(lower)
+  ) {
+    return undefined
+  }
   return responseModeForTool(tool)
 }
 

@@ -12,15 +12,18 @@
 | --- | --- | --- | --- | --- |
 | 1 | TASK-1830 | Server-backed structured memory core: entities, events, synthetic keys, graph edges, missing-schema fallback | 🔄 In progress | Contract tests for migrations/RLS/client fallback |
 | 2 | TASK-1831 | Global clarify-before-answer contract: one question at a time, cooldowns, generate-with-uncertainty escapes | 🔄 In progress | Mounted clarification-card tests and continuation tests |
-| 3 | TASK-1831A | EVPI-style clarification scoring: target parameters, heuristic EVPI, user cost, selected score, event/debug metadata | 🔄 Current slice | Unit tests showing highest-value non-repeated question is selected |
-| 4 | TASK-1835 | Hybrid retrieval pipeline: exact SQL entities, event history, feedback, optional pgvector-ready semantic recall, timeout-safe fallback | 📋 Planned | Retrieval tests with bounded context and no raw memory dumps |
+| 3 | TASK-1831A | EVPI-style clarification scoring: target parameters, heuristic EVPI, user cost, selected score, event/debug metadata | ✅ Localhost coded | Unit tests showing highest-value non-repeated question is selected |
+| 4 | TASK-1838 | Hybrid retrieval pipeline: exact SQL entities, event history, feedback, optional pgvector-ready semantic recall, timeout-safe fallback | ✅ Localhost coded | Retrieval tests with bounded context and no raw memory dumps |
 | 5 | TASK-1832 | Answer-quality evaluator and ranking rubric: bad/acceptable/excellent, evidence arrays, anti-fake-reasoning checks | 🔄 In progress | Quality tests reject generic/unsupported ranking |
 | 6 | TASK-1833 | Planning UI controls: task cards, accept/postpone/dismiss/simplify, reason chips, immediate visual suppression | 🔄 In progress | Mounted UI tests for feedback payloads and visual suppression |
 | 7 | TASK-1836 | Recommendation feedback learning: cooldowns, revisit dates, implicit positives, preference aggregation | 📋 Planned | Ranking tests prove dismissed/postponed items do not reappear unchanged |
-| 8 | TASK-1834 | Observability: phase timing, retrieval/debug metadata, path types, slow-answer diagnosis | 🔄 In progress | Activity-row tests and debug metadata assertions |
-| 9 | TASK-1837 | Memory lifecycle: summarization, confidence decay, retention, stale confirmation, export/delete policy | 📋 Planned | Lifecycle tests for stale/summary/correction behavior |
-| 10 | TASK-1838 | Localhost end-to-end QA lane: dev-server/manual browser checks for weekly plan, response-quality clarification, feedback, debug | 📋 Planned | Browser evidence and documented expected behavior |
-| 11 | TASK-1839 | Electron gate: package, updater manifest, desktop verification after localhost is stable | ⏸ Deferred | `npm run electron:build` and updater manifest only after user re-enables Electron |
+| 8 | TASK-1835 | Broaden memory-aware chat beyond weekly planning: shared retrieval, corrections, preferences, stale refresh | 🔄 In progress | Non-weekly clarification tests and continuation tests |
+| 9 | TASK-1834 | Observability: phase timing, retrieval/debug metadata, path types, slow-answer diagnosis | 🔄 In progress | Activity-row tests and debug metadata assertions |
+| 10 | TASK-1837 | Memory lifecycle: summarization, confidence decay, retention, stale confirmation, export/delete policy | 📋 Planned | Lifecycle tests for stale/summary/correction behavior |
+| 11 | TASK-1840 | Explicit uncertainty scoring and cold-start policy | 📋 Planned | Ask/proceed/neutral decision tests |
+| 12 | TASK-1841 | Agent-memory evaluation rubric and citation audit | 📋 Planned | Eval suite catches fake reasoning and repeated questions |
+| 13 | TASK-1842 | Localhost end-to-end QA lane: dev-server/manual browser checks for weekly plan, response-quality clarification, feedback, debug | 📋 Planned | Browser evidence and documented expected behavior |
+| 14 | TASK-1843 | Electron gate: package, updater manifest, desktop verification after localhost is stable | ⏸ Deferred | `npm run electron:build` and updater manifest only after user re-enables Electron |
 
 **Research-backed additions still to implement**:
 - `ai_parameter_beliefs` or equivalent structured parameter-belief store for deadline, priority, scope, energy fit, dependencies, success criteria, constraints, and preferences.
@@ -303,6 +306,9 @@
 - Debug data identifies cache hit/miss and retrieval stage timings.
 - Memory retrieval can return "insufficient coverage" as an intentional state instead of forcing generation.
 
+**Progress**:
+- 2026-06-08: Extracted weekly memory retrieval into a bounded SQL-first helper. The helper retrieves UUID-only legacy contexts, server context entities, clarification events, recommendation feedback, and graph edges separately so synthetic buckets never enter UUID-only calls. Semantic/vector recall remains pgvector-ready metadata only until the database function is available. Focused tests cover bounded diagnostics, feedback/event counts, synthetic bucket safety, and timeout fallback.
+
 ---
 
 ### TASK-1839: Privacy, RLS, and prompt-injection hardening for AI memory (🔄 IN PROGRESS)
@@ -367,6 +373,45 @@
 - Eval fails on fake reasoning even when prose sounds polished.
 - Eval fails on broad generic plans that exceed the low-overwhelm contract.
 - Eval catches repeated clarification questions inside cooldown.
+
+---
+
+### TASK-1842: Localhost end-to-end QA lane for AI chat quality (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831, TASK-1832, TASK-1833, TASK-1838
+
+**Why**: The user should not be asked to test half-built behavior. Localhost must prove the full chat loop before Electron or user validation: context retrieval, one-question clarification, saved answer continuation, concise output, feedback controls, and slow-phase debug.
+
+**Scope**:
+- Run the localhost app and test the chat in browser against the real UI, not only unit tests.
+- Verify the weekly plan path asks before broad output when context is missing.
+- Verify answering a clarification persists locally/server-side when schema exists or continues with quoted answer fallback when schema is missing.
+- Verify the assistant does not dump long generic plan prose unless the user chooses "continue with uncertainty."
+- Verify feedback controls suppress/postpone recommendations and show concise state changes.
+- Capture debug evidence for retrieval, clarification, generation, and persistence phases.
+
+**Acceptance**:
+- Browser test evidence shows the user-visible behavior changed.
+- No active test case leaves the sidebar stuck after a clarification answer.
+- No generic plan dump appears before the clarification gate is satisfied or bypassed explicitly.
+- Known missing pieces are listed as lane tasks, not handed to the user as "please test."
+
+---
+
+### TASK-1843: Electron packaging and updater gate after localhost stabilization (⏸ DEFERRED)
+
+**Priority**: P1 | **Status**: ⏸ DEFERRED (filed 2026-06-08) | **Depends on**: TASK-1842
+
+**Why**: The user explicitly paused Electron work for this flow. Electron packaging and updater verification should happen only after localhost proves the behavior is correct.
+
+**Scope**:
+- Re-enable Electron build only after localhost AI chat QA passes.
+- Run desktop-specific UI checks for the sidebar and updater delivery.
+- Build Electron, verify update artifacts, then deploy only when explicitly re-enabled.
+
+**Acceptance**:
+- `npm run electron:build` is not used as proof for this lane until localhost is stable.
+- Electron updater work resumes only when the user asks to move from localhost to desktop delivery.
 
 ---
 

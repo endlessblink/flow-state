@@ -61,6 +61,7 @@ import {
   type WeekContextMemoryInput,
   type WeeklyPlanOutput,
 } from '@/services/ai/pipeline/weeklyPlan'
+import { retrieveWeeklyAIMemory, type WeeklyMemoryRetrievalDiagnostics } from '@/services/ai/pipeline/weeklyMemoryRetrieval'
 import type { AIClarificationArtifact, AIClarificationEvent, AIContextEntity, ProjectContext, TaskContext } from '@/types/aiMemory'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
@@ -2055,91 +2056,54 @@ export function useAIChat() {
         let weekMemory: WeekContextMemoryInput = {}
         let clarificationEvents: AIClarificationEvent[] = []
         const now = new Date()
-        const memoryStartedAt = performance.now()
-        let memoryTimedOut = false
-        let memoryEntityKeyCount = 0
-        let memoryProjectContextCount = 0
-        let memoryTaskContextCount = 0
-        let memoryFeedbackCount = 0
+        let memoryDiagnostics: WeeklyMemoryRetrievalDiagnostics = {
+          source: 'fallback' as const,
+          entityKeyCount: 0,
+          eventCount: 0,
+          projectContextCount: 0,
+          taskContextCount: 0,
+          feedbackCount: 0,
+          elapsedMs: 0,
+          timedOut: false,
+          exactEntityCount: 0,
+          semanticCandidateCount: 0,
+          semanticSkippedReason: 'no_related_entities' as const,
+        }
         try {
           const db = useSupabaseDatabase()
-          const taskIds = uniqueSupabaseIds(cardTasks.map(task => String(task.id || '')))
-          const taskEntityKeys = uniqueStrings(cardTasks.map(task => String(task.id || '')).filter(Boolean).map(taskEntityKey))
-          const rawProjectIds = uniqueStrings(cardTasks
-            .map(task => {
-              const id = String(task.id || '')
-              return id ? taskStore.getTask(id)?.projectId || String(task.projectId || '') : String(task.projectId || '')
-            })
-            .map(projectId => projectId || 'uncategorized')
-          )
-          const projectIds = uniqueSupabaseIds(rawProjectIds)
-          const projectEntityKeys = rawProjectIds.map(projectEntityKey)
-          const weekEntityKey = `week:${buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, now).weekStartIso}`
-          const entityKeys = uniqueStrings([...projectEntityKeys, ...taskEntityKeys, weekEntityKey])
-          memoryEntityKeyCount = entityKeys.length
-          const [projectContexts, taskContexts, contextEntities, events, recommendationFeedback] = await withTimeout(Promise.all([
-            db.fetchProjectContexts(projectIds),
-            db.fetchTaskContexts(taskIds),
-            db.fetchAIContextEntities(entityKeys),
-            db.fetchAIClarificationEvents(entityKeys, 40),
-            db.fetchAIRecommendationFeedback({ taskIds, entityKeys, limit: 80 }),
-          ]), WEEK_PLAN_MEMORY_TIMEOUT_MS, 'weekly_plan_memory_timeout')
-          clarificationEvents = events
-          const entityProjectContexts = contextEntities.map(entityToProjectContext).filter((ctx): ctx is ProjectContext => Boolean(ctx))
-          const entityTaskContexts = contextEntities.map(entityToTaskContext).filter((ctx): ctx is TaskContext => Boolean(ctx))
-          weekMemory = {
-            projectContexts: [...projectContexts, ...entityProjectContexts]
-              .filter((ctx, index, all) => all.findIndex(item => item.projectId === ctx.projectId) === index),
-            taskContexts: [...taskContexts, ...entityTaskContexts]
-              .filter((ctx, index, all) => all.findIndex(item => item.taskId === ctx.taskId) === index),
-            recommendationFeedback,
-          }
-          memoryProjectContextCount = weekMemory.projectContexts?.length ?? 0
-          memoryTaskContextCount = weekMemory.taskContexts?.length ?? 0
-          memoryFeedbackCount = recommendationFeedback.length
-          await db.upsertAIContextEdges([
-            ...cardTasks.flatMap(task => {
-              const taskId = String(task.id || '')
-              if (!taskId) return []
-              const projectId = taskStore.getTask(taskId)?.projectId || String(task.projectId || '') || 'uncategorized'
-              return [
-                {
-                  sourceEntityKey: taskEntityKey(taskId),
-                  targetEntityKey: projectEntityKey(projectId),
-                  relationType: 'belongs_to' as const,
-                  confidence: 0.95,
-                  evidence: { source: 'weekly_plan_candidates' },
-                },
-                {
-                  sourceEntityKey: taskEntityKey(taskId),
-                  targetEntityKey: weekEntityKey,
-                  relationType: 'part_of_week' as const,
-                  confidence: 0.7,
-                  evidence: { source: 'weekly_plan_candidates' },
-                },
-              ]
-            }),
-          ])
+          const retrieval = await retrieveWeeklyAIMemory({
+            db,
+            cardTasks,
+            now,
+            timeoutMs: WEEK_PLAN_MEMORY_TIMEOUT_MS,
+            getTaskProjectId: taskId => taskStore.getTask(taskId)?.projectId,
+          })
+          weekMemory = retrieval.memory
+          clarificationEvents = retrieval.clarificationEvents
+          memoryDiagnostics = retrieval.diagnostics
+          await db.upsertAIContextEdges(retrieval.edges)
         } catch (memoryErr) {
           console.warn('[AIChat:WeeklyPlan] Memory fetch skipped or timed out:', memoryErr)
           updateChatPhase(phaseActivityId, 'Memory skipped', 'Using task data now')
-          memoryTimedOut = true
           weekMemory = {}
         }
         updateChatPhase(phaseActivityId, 'Checking needed context', `${cardTasks.length} task candidates`)
         const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, now, weekMemory)
         const clarification = isClarificationContinuation ? null : buildWeeklyPlanningInterview(weekContext, clarificationEvents, {
           retrieval: {
-            source: memoryTimedOut ? 'fallback' : 'exact_entity_lookup',
-            entityKeyCount: memoryEntityKeyCount,
+            source: memoryDiagnostics.source,
+            entityKeyCount: memoryDiagnostics.entityKeyCount,
             eventCount: clarificationEvents.length,
-            projectContextCount: memoryProjectContextCount,
-            taskContextCount: memoryTaskContextCount,
-            elapsedMs: Math.round(performance.now() - memoryStartedAt),
-            timedOut: memoryTimedOut,
-            feedbackCount: memoryFeedbackCount,
+            projectContextCount: memoryDiagnostics.projectContextCount,
+            taskContextCount: memoryDiagnostics.taskContextCount,
+            elapsedMs: memoryDiagnostics.elapsedMs,
+            timedOut: memoryDiagnostics.timedOut,
+            feedbackCount: memoryDiagnostics.feedbackCount,
+            exactEntityCount: memoryDiagnostics.exactEntityCount,
+            semanticCandidateCount: memoryDiagnostics.semanticCandidateCount,
+            semanticSkippedReason: memoryDiagnostics.semanticSkippedReason,
           },
-          reason: memoryTimedOut
+          reason: memoryDiagnostics.timedOut
             ? 'memory retrieval timed out; ask-before-plan prevents fake certainty'
             : 'coverage score says a missing context dimension would materially change ranking',
           candidateCount: cardTasks.length,
@@ -2184,7 +2148,7 @@ export function useAIChat() {
                   coverage: clarification.coverage,
                   evpi: clarification.debug?.evpi,
                   retrieval: clarification.debug?.retrieval,
-                  feedbackCount: memoryFeedbackCount,
+                  feedbackCount: memoryDiagnostics.feedbackCount,
                 },
               })
             } catch (eventErr) {

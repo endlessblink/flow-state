@@ -158,7 +158,7 @@ export interface AIClarificationArtifact {
   pathType?: AIClarificationPathType
   debug?: {
     retrieval: {
-      source: 'exact_entity_lookup' | 'legacy_context' | 'fallback'
+      source: 'exact_entity_lookup' | 'legacy_context' | 'hybrid_sql' | 'fallback'
       entityKeyCount: number
       eventCount: number
       projectContextCount: number
@@ -166,6 +166,9 @@ export interface AIClarificationArtifact {
       feedbackCount?: number
       elapsedMs?: number
       timedOut?: boolean
+      exactEntityCount?: number
+      semanticCandidateCount?: number
+      semanticSkippedReason?: 'pgvector_not_configured' | 'no_related_entities'
     }
     reason: string
     candidateCount: number

@@ -285,6 +285,8 @@ describe('AI memory schema contract', () => {
 
   it('keeps the live AI memory migration applier dry-run by default and double-confirmed', () => {
     expect(liveMigrationApplier).toContain('DRY RUN ONLY')
+    expect(liveMigrationApplier).toContain('AI_MEMORY_PREFLIGHT_ONLY')
+    expect(liveMigrationApplier).toContain('Preflight completed. No production database changes were made.')
     expect(liveMigrationApplier).toContain('APPLY_AI_MEMORY_LIVE')
     expect(liveMigrationApplier).toContain('CONFIRM_AI_MEMORY_LIVE')
     expect(liveMigrationApplier).toContain('CONFIRM_AI_MEMORY_LIVE=APPLY')

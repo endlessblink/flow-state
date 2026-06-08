@@ -546,6 +546,7 @@
 - 2026-06-08: Added stale-context citation audits. Recommendation evidence now fails with `stale_context_used_as_active_evidence` when expired/refresh-needed memory is cited as active project understanding, while stale context marked as missing/needs refresh remains valid uncertainty evidence.
 - 2026-06-08: Added a deterministic broad-answer quality floor after the normal formatter and fallback both fail audit. The final user-visible fallback is capped to one candidate card, marks project context as unknown/needs refresh, and preserves the user's clarification value instead of leaking verbose or fake reasoning.
 - 2026-06-08: Recommendation-card learning signals are now an executable quality gate. If broad task cards expose feedback controls but the response path does not prove those controls feed memory/learning, the audit fails with `feedback_not_recorded_as_learning_signal`; the runtime marks inline card groups as learning-enabled because accept/postpone/dismiss actions write recommendation feedback.
+- 2026-06-08: The bad/acceptable/excellent chat-quality rubric now includes an explicit realism/load dimension. Broad card sets with 4-5 recommendations are capped at acceptable with a `broad_recommendation_load` warning, while 6+ broad recommendations fail with `unrealistic_recommendation_load`; warnings now prevent an answer from scoring excellent.
 
 ---
 

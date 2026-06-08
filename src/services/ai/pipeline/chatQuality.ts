@@ -30,6 +30,7 @@ export type ChatQualityAudit = {
     uncertainty: number
     userControl: number
     learning: number
+    realism: number
     safety: number
   }
 }
@@ -175,6 +176,11 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   if ((path === 'deterministic_fallback' || input.contextUnknown || mediumCoverage) && recommendationCount > 3) {
     failures.push('too_many_low_context_recommendations')
   }
+  if (isBroadTaskAnswer && input.hasCards && recommendationCount > 5) {
+    failures.push('unrealistic_recommendation_load')
+  } else if (isBroadTaskAnswer && input.hasCards && recommendationCount > 3) {
+    warnings.push('broad_recommendation_load')
+  }
   if (input.recommendationEvidence) {
     const evidenceAudit = auditRecommendationEvidence(input.recommendationEvidence)
     failures.push(...evidenceAudit.failures)
@@ -199,17 +205,25 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
       ? (input.hasFeedbackControls || input.hasEscapeHatch || path === 'clarification_first' ? 1 : 0.45)
       : 0.8,
     learning: input.hasLearningSignal || input.hasClarificationEvidence || path === 'clarification_first' ? 1 : 0.65,
+    realism: !isBroadTaskAnswer || !input.hasCards
+      ? 0.8
+      : recommendationCount <= 3
+        ? 1
+        : recommendationCount <= 5
+          ? 0.65
+          : 0.25,
     safety: failures.some(failure => [
       'unsupported_importance_language',
       'repeated_clarification_question',
       'missing_high_evpi_clarification',
+      'unrealistic_recommendation_load',
     ].includes(failure)) ? 0.2 : 1,
   }
   const averageCheckScore = Object.values(checks).reduce((sum, value) => sum + value, 0) / Object.values(checks).length
   const score = clamp01(averageCheckScore - failures.length * 0.16 - warnings.length * 0.04)
   const level: ChatQualityLevel = failures.length > 0 || score < 0.6
     ? 'bad'
-    : score >= 0.82
+    : score >= 0.82 && warnings.length === 0
       ? 'excellent'
       : 'acceptable'
 

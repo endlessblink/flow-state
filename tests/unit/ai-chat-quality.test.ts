@@ -360,8 +360,31 @@ describe('chat quality evidence audit', () => {
     expect(audit.failures).toEqual(expect.arrayContaining([
       'too_many_visible_items',
       'too_many_low_context_recommendations',
+      'unrealistic_recommendation_load',
     ]))
     expect(audit.checks.scannability).toBeLessThan(0.6)
+    expect(audit.checks.realism).toBeLessThan(0.6)
+  })
+
+  it('scores heavier but controlled broad card sets as acceptable instead of excellent', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 5,
+      recommendationCount: 4,
+      hasClarificationEvidence: true,
+      clarificationEvidenceText: 'User chose "dependency or blocker" before ranking.',
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Matches your clarification: rank by dependency first. Use the four cards as candidates and adjust anything wrong.',
+    })
+
+    expect(audit.level).toBe('acceptable')
+    expect(audit.failures).toEqual([])
+    expect(audit.warnings).toContain('broad_recommendation_load')
+    expect(audit.checks.realism).toBeLessThan(1)
   })
 
   it('rejects recommendation cards whose controls do not feed learning', () => {

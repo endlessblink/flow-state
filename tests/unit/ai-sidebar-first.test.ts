@@ -1333,6 +1333,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Context saved')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Work/Product"')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Why now: "Deadline/commitment"')
   })
 
   it('does not ask the why-now follow-up again when the first clarification already includes free text', async () => {
@@ -1392,6 +1394,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('Why does this matter right now?')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Work/Product"')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Note: "This matters because it is the core product quality issue."')
   })
 
   it('continues response-quality clarification with a non-weekly concise answer prompt', async () => {
@@ -1459,7 +1463,8 @@ describe('AI sidebar-first desktop experience', () => {
     await wrapper.get('.weekly-question-apply').trigger('click')
     await nextTick()
 
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue with the answer using the context I just saved')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue with the answer using the clarification I just answered')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Real impact"')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('week')
   })
 

@@ -59,6 +59,7 @@
 **Progress**:
 - 2026-06-08: Clarification cards now continue automatically after the final saved answer, while still asking the one useful follow-up when the first answer lacks enough context.
 - 2026-06-08: Added a focused AI memory schema contract test for server-backed entities, clarification events, recommendation feedback, Postgres-native graph edges, RLS, migration order, and missing-schema client fallback before any live Supabase migration step.
+- 2026-06-08: Clarification continuation messages now include the actual selected button/free-text answer as compact quoted context, so localhost flows still proceed correctly before live Supabase memory migrations are applied.
 
 ---
 

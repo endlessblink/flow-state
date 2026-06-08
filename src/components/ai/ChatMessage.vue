@@ -431,19 +431,58 @@ function saveClarificationAnswer(card: AIClarificationArtifact, event: MouseEven
     : 'Saved locally. Syncing in the background...'
   void persistClarificationAnswer(card, option, note)
   if (hasEnoughContextToContinue) {
-    emit('continueChat', clarificationContinueMessage(card))
+    emit('continueChat', clarificationContinueMessage(card, {
+      selectedLabel: option?.label,
+      freeText: note,
+    }))
   }
 }
 
-function clarificationContinueMessage(card: AIClarificationArtifact): string {
+function formatClarificationContinuationEvidence(input: {
+  selectedLabel?: string
+  freeText?: string
+  followUpLabel?: string
+  followUpFreeText?: string
+}, locale: 'he' | 'en'): string {
+  const lines: string[] = []
+  const clipped = (value: string) => value.length > 240 ? `${value.slice(0, 237)}...` : value
+  if (locale === 'he') {
+    if (input.selectedLabel) lines.push(`תשובה: "${input.selectedLabel}"`)
+    if (input.freeText) lines.push(`הערה: "${clipped(input.freeText)}"`)
+    if (input.followUpLabel) lines.push(`למה עכשיו: "${input.followUpLabel}"`)
+    if (input.followUpFreeText) lines.push(`הערת המשך: "${clipped(input.followUpFreeText)}"`)
+    return lines.join('\n')
+  }
+  if (input.selectedLabel) lines.push(`Answer: "${input.selectedLabel}"`)
+  if (input.freeText) lines.push(`Note: "${clipped(input.freeText)}"`)
+  if (input.followUpLabel) lines.push(`Why now: "${input.followUpLabel}"`)
+  if (input.followUpFreeText) lines.push(`Why-now note: "${clipped(input.followUpFreeText)}"`)
+  return lines.join('\n')
+}
+
+function clarificationContinueMessage(
+  card: AIClarificationArtifact,
+  evidence: {
+    selectedLabel?: string
+    freeText?: string
+    followUpLabel?: string
+    followUpFreeText?: string
+  } = {},
+): string {
+  const evidenceText = formatClarificationContinuationEvidence(evidence, card.locale)
+  const evidenceBlock = evidenceText
+    ? card.locale === 'he'
+      ? `\n\nהקשר שעניתי עכשיו:\n${evidenceText}`
+      : `\n\nContext I just answered:\n${evidenceText}`
+    : ''
   if (card.kind === 'response_quality') {
     return card.locale === 'he'
-      ? 'המשך עם התשובה לפי ההקשר ששמרתי עכשיו. תן תשובה קצרה וממוקדת, בלי רשימה ארוכה.'
-      : 'Continue with the answer using the context I just saved. Keep it short and focused, not a long list.'
+      ? `המשך עם התשובה לפי ההקשר שעניתי עכשיו. תן תשובה קצרה וממוקדת, בלי רשימה ארוכה.${evidenceBlock}`
+      : `Continue with the answer using the clarification I just answered. Keep it short and focused, not a long list.${evidenceBlock}`
   }
   return card.locale === 'he'
-    ? 'המשך לתכנן את השבוע עם ההקשר ששמרתי עכשיו. תן קודם תקציר קצר בלבד, בלי רשימה ארוכה.'
-    : 'Continue planning the week using the context I just saved. Start with a short summary only, not a long list.'
+    ? `המשך לתכנן את השבוע עם ההקשר שעניתי עכשיו. תן קודם תקציר קצר בלבד, בלי רשימה ארוכה.${evidenceBlock}`
+    : `Continue planning the week using the clarification I just answered. Start with a short summary only, not a long list.${evidenceBlock}`
 }
 
 function continueAfterClarification(card: AIClarificationArtifact, event: MouseEvent) {
@@ -510,7 +549,12 @@ function saveClarificationFollowUp(card: AIClarificationArtifact, event: MouseEv
     ? 'נשמר מקומית. זה מספיק כדי להמשיך בלי להציף.'
     : 'Saved locally. That is enough to continue without a broad dump.'
   void persistClarificationFollowUp(card, option, note)
-  emit('continueChat', clarificationContinueMessage(card))
+  emit('continueChat', clarificationContinueMessage(card, {
+    selectedLabel: card.question.options.find(item => item.id === clarificationAnswers.value[key])?.label,
+    freeText: clarificationFreeText.value[key]?.trim(),
+    followUpLabel: option?.label,
+    followUpFreeText: note,
+  }))
 }
 
 async function persistClarificationFollowUp(

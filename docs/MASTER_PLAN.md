@@ -591,6 +591,7 @@
 - 2026-06-08: Re-ran the 9-path localhost smoke after quality-floor observability and inline feedback-status fixes. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed 9/9 against a manually started Vite server on `127.0.0.1:5564`.
 - 2026-06-08: Re-ran the 9-path localhost smoke after turning recommendation-card learning signals into an audit failure. The Playwright webServer helper still timed out before tests started, so Vite was started manually on `127.0.0.1:5564`; `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` then passed 9/9.
 - 2026-06-08: Extended and re-ran the localhost smoke for mechanical-vs-triage overdue behavior. The suite now has 10 paths and proves `show me overdue tasks` displays overdue data without any clarification card, while `triage my overdue tasks` still asks the mode-specific "How should I treat overdue tasks?" card, saves the answer, suppresses repeats, and leaves no stuck activity row.
+- 2026-06-08: The AI chat quality localhost smoke is now self-contained: Playwright starts Vite through `scripts/start-ai-chat-quality-server.cjs` instead of requiring a manually started server. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed 10/10 from a clear port, proving the prompt -> clarification -> concise answer/feedback/no-repeat loop can be verified before user testing.
 
 ---
 

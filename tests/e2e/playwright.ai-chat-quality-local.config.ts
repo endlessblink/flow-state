@@ -20,9 +20,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx vite --host 127.0.0.1 --port 5564 --strictPort',
+    command: 'node ../../scripts/start-ai-chat-quality-server.cjs',
     url: 'http://127.0.0.1:5564',
     reuseExistingServer: true,
-    timeout: 120 * 1000,
+    timeout: 180 * 1000,
   },
 })

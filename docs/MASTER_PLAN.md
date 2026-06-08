@@ -160,6 +160,7 @@
 - 2026-06-08: Clarification follow-up answers are now preserved as user-authored evidence in the deterministic formatter prompt, including free-text follow-up notes, so the answer after clarification can use what the user actually said instead of only bypassing the ask gate.
 - 2026-06-08: Formatter timeout, missing-card fallback, and quality-repair paths now use the same clarification evidence as the main formatter, so post-clarification fallback prose and card reasons do not revert to generic ranking claims.
 - 2026-06-08: Missing-card repair now replaces noisy model prose with the concise grounded fallback when the formatter output already fails quality checks or follows a clarification continuation, instead of appending fallback cards under a broad content dump.
+- 2026-06-08: Added an in-memory pending AI memory write queue for missing-schema/schema-cache timing failures. Clarification events, recommendation feedback, parameter beliefs, and context edges now enqueue instead of being lost when migrations are not visible yet, and can flush after schema availability without blocking the chat UI.
 
 ---
 

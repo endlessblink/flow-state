@@ -159,6 +159,20 @@ describe('AI memory database schema contract', () => {
     ])
   })
 
+  it('queues skipped AI memory writes so schema-cache timing does not lose user answers', () => {
+    expectContainsAll(aiMemoryDatabase, [
+      'type PendingAIMemoryWrite',
+      'pendingAIMemoryWrites',
+      'enqueuePendingAIMemoryWrite',
+      'flushPendingAIMemoryWrites',
+      'getPendingAIMemoryWriteCount',
+      "kind: 'clarification_event'",
+      "kind: 'recommendation_feedback'",
+      "kind: 'parameter_belief'",
+      "kind: 'context_edges'",
+    ])
+  })
+
   it('upserts a memory entity before recording a clarification event answer', () => {
     const recordStart = aiMemoryDatabase.indexOf('const recordAIClarificationEvent')
     const entityUpsert = aiMemoryDatabase.indexOf(".from('ai_context_entities')", recordStart)

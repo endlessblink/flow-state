@@ -128,6 +128,20 @@ type AIParameterBeliefRow = {
   updated_at?: string | null
 }
 
+type PendingAIMemoryWrite =
+  | { kind: 'clarification_event'; input: AIClarificationEventInput; queuedAt: string; attempts: number }
+  | { kind: 'recommendation_feedback'; input: AIRecommendationFeedbackInput; queuedAt: string; attempts: number }
+  | { kind: 'parameter_belief'; input: AIParameterBeliefInput; queuedAt: string; attempts: number }
+  | { kind: 'context_edges'; input: AIContextEdgeInput[]; queuedAt: string; attempts: number }
+
+type AIMemoryWriteOptions = {
+  skipQueue?: boolean
+}
+
+const pendingAIMemoryWrites: PendingAIMemoryWrite[] = []
+let isFlushingPendingAIMemoryWrites = false
+const MAX_PENDING_AI_MEMORY_WRITES = 80
+
 const PROJECT_FIELD_MAP: Record<string, keyof ProjectContextRow> = {
   summary: 'summary',
   domain: 'domain',
@@ -334,6 +348,45 @@ function isAIMemorySchemaMissing(error: unknown): boolean {
 
 function logMissingAIMemorySchema(context: string): void {
   console.debug(`[AIMemory] ${context} skipped because AI memory migrations are not applied yet.`)
+}
+
+function pendingAIMemoryWriteKey(write: PendingAIMemoryWrite): string {
+  if (write.kind === 'clarification_event') {
+    return `${write.kind}:${write.input.entityKey}:${write.input.questionId}:${write.input.eventType}:${write.input.sourceMessageId ?? ''}:${write.input.selectedOptionId ?? ''}:${write.input.freeText ?? ''}`
+  }
+  if (write.kind === 'recommendation_feedback') {
+    return `${write.kind}:${write.input.recommendationId}:${write.input.taskId ?? ''}:${write.input.entityKey ?? ''}:${write.input.action}:${write.input.sourceMessageId ?? ''}`
+  }
+  if (write.kind === 'parameter_belief') {
+    return `${write.kind}:${write.input.entityKey}:${write.input.parameterKey}:${write.input.sourceQuestionId ?? ''}`
+  }
+  return `${write.kind}:${write.input.map(edge => `${edge.sourceEntityKey}>${edge.relationType}>${edge.targetEntityKey}`).sort().join('|')}`
+}
+
+function enqueuePendingAIMemoryWrite(write: PendingAIMemoryWrite): void {
+  const key = pendingAIMemoryWriteKey(write)
+  const existing = pendingAIMemoryWrites.findIndex(item => pendingAIMemoryWriteKey(item) === key)
+  if (existing >= 0) {
+    pendingAIMemoryWrites[existing] = {
+      ...write,
+      attempts: pendingAIMemoryWrites[existing].attempts,
+      queuedAt: pendingAIMemoryWrites[existing].queuedAt,
+    } as PendingAIMemoryWrite
+    return
+  }
+  pendingAIMemoryWrites.push(write)
+  if (pendingAIMemoryWrites.length > MAX_PENDING_AI_MEMORY_WRITES) {
+    pendingAIMemoryWrites.splice(0, pendingAIMemoryWrites.length - MAX_PENDING_AI_MEMORY_WRITES)
+  }
+}
+
+export function getPendingAIMemoryWriteCount(): number {
+  return pendingAIMemoryWrites.length
+}
+
+export function clearPendingAIMemoryWritesForTest(): void {
+  pendingAIMemoryWrites.splice(0, pendingAIMemoryWrites.length)
+  isFlushingPendingAIMemoryWrites = false
 }
 
 function computeProjectCompleteness(row: ProjectContextRow): number {
@@ -673,7 +726,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
-  const upsertAIParameterBelief = async (input: AIParameterBeliefInput): Promise<void> => {
+  const upsertAIParameterBelief = async (input: AIParameterBeliefInput, options: AIMemoryWriteOptions = {}): Promise<void> => {
     if (!input.entityKey || !input.parameterKey) return
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
@@ -726,9 +779,19 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (upsertError) throw upsertError
       }, 'upsertAIParameterBelief')
       invalidateCache.all()
+      if (!options.skipQueue) void flushPendingAIMemoryWrites()
     } catch (e) {
       if (isAIMemorySchemaMissing(e)) {
         logMissingAIMemorySchema('upsertAIParameterBelief')
+        if (options.skipQueue) {
+          throw e
+        }
+        enqueuePendingAIMemoryWrite({
+          kind: 'parameter_belief',
+          input,
+          queuedAt: new Date().toISOString(),
+          attempts: 0,
+        })
         return
       }
       handleError(e, 'upsertAIParameterBelief')
@@ -743,7 +806,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     return !clarificationAnsweredRecently(events.filter(event => event.questionId === questionId), cooldownDays)
   }
 
-  const recordAIClarificationEvent = async (input: AIClarificationEventInput): Promise<void> => {
+  const recordAIClarificationEvent = async (input: AIClarificationEventInput, options: AIMemoryWriteOptions = {}): Promise<void> => {
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
     if (!userId) throw new Error('Cannot save AI clarification without an authenticated user.')
@@ -849,9 +912,19 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         }
       }, 'recordAIClarificationEvent')
       invalidateCache.all()
+      if (!options.skipQueue) void flushPendingAIMemoryWrites()
     } catch (e) {
       if (isAIMemorySchemaMissing(e)) {
         logMissingAIMemorySchema('recordAIClarificationEvent')
+        if (options.skipQueue) {
+          throw e
+        }
+        enqueuePendingAIMemoryWrite({
+          kind: 'clarification_event',
+          input,
+          queuedAt: new Date().toISOString(),
+          attempts: 0,
+        })
         return
       }
       handleError(e, 'recordAIClarificationEvent')
@@ -861,7 +934,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
-  const recordAIRecommendationFeedback = async (input: AIRecommendationFeedbackInput): Promise<void> => {
+  const recordAIRecommendationFeedback = async (input: AIRecommendationFeedbackInput, options: AIMemoryWriteOptions = {}): Promise<void> => {
     if (!authStore.isInitialized) await authStore.initialize()
     const userId = getUserIdSafe()
     if (!userId) throw new Error('Cannot save AI recommendation feedback without an authenticated user.')
@@ -887,9 +960,19 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (error) throw error
       }, 'recordAIRecommendationFeedback')
       invalidateCache.all()
+      if (!options.skipQueue) void flushPendingAIMemoryWrites()
     } catch (e) {
       if (isAIMemorySchemaMissing(e)) {
         logMissingAIMemorySchema('recordAIRecommendationFeedback')
+        if (options.skipQueue) {
+          throw e
+        }
+        enqueuePendingAIMemoryWrite({
+          kind: 'recommendation_feedback',
+          input,
+          queuedAt: new Date().toISOString(),
+          attempts: 0,
+        })
         return
       }
       handleError(e, 'recordAIRecommendationFeedback')
@@ -899,7 +982,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
-  const upsertAIContextEdges = async (edges: AIContextEdgeInput[]): Promise<void> => {
+  const upsertAIContextEdges = async (edges: AIContextEdgeInput[], options: AIMemoryWriteOptions = {}): Promise<void> => {
     const cleanEdges = edges.filter(edge => edge.sourceEntityKey && edge.targetEntityKey && edge.relationType)
     if (!cleanEdges.length) return
     if (!authStore.isInitialized) await authStore.initialize()
@@ -923,9 +1006,19 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
         if (error) throw error
       }, 'upsertAIContextEdges')
       invalidateCache.all()
+      if (!options.skipQueue) void flushPendingAIMemoryWrites()
     } catch (e) {
       if (isAIMemorySchemaMissing(e)) {
         logMissingAIMemorySchema('upsertAIContextEdges')
+        if (options.skipQueue) {
+          throw e
+        }
+        enqueuePendingAIMemoryWrite({
+          kind: 'context_edges',
+          input: cleanEdges,
+          queuedAt: new Date().toISOString(),
+          attempts: 0,
+        })
         return
       }
       handleError(e, 'upsertAIContextEdges')
@@ -1033,6 +1126,40 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     }
   }
 
+  const flushPendingAIMemoryWrites = async (): Promise<void> => {
+    if (isFlushingPendingAIMemoryWrites || !pendingAIMemoryWrites.length) return
+    if (!authStore.isInitialized) await authStore.initialize()
+    if (!getUserIdSafe()) return
+
+    isFlushingPendingAIMemoryWrites = true
+    const remaining: PendingAIMemoryWrite[] = []
+    const writes = pendingAIMemoryWrites.splice(0, pendingAIMemoryWrites.length)
+    try {
+      for (const write of writes) {
+        try {
+          if (write.kind === 'clarification_event') {
+            await recordAIClarificationEvent(write.input, { skipQueue: true })
+          } else if (write.kind === 'recommendation_feedback') {
+            await recordAIRecommendationFeedback(write.input, { skipQueue: true })
+          } else if (write.kind === 'parameter_belief') {
+            await upsertAIParameterBelief(write.input, { skipQueue: true })
+          } else {
+            await upsertAIContextEdges(write.input, { skipQueue: true })
+          }
+        } catch (error) {
+          if (isAIMemorySchemaMissing(error)) {
+            remaining.push({ ...write, attempts: write.attempts + 1 })
+            continue
+          }
+          handleError(error, `flushPendingAIMemoryWrites:${write.kind}`)
+        }
+      }
+    } finally {
+      pendingAIMemoryWrites.unshift(...remaining)
+      isFlushingPendingAIMemoryWrites = false
+    }
+  }
+
   return {
     fetchProjectContexts,
     fetchTaskContexts,
@@ -1046,6 +1173,8 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     recordAIRecommendationFeedback,
     upsertAIParameterBelief,
     upsertAIContextEdges,
+    flushPendingAIMemoryWrites,
+    getPendingAIMemoryWriteCount,
     applyAIMemoryPatch,
   }
 }

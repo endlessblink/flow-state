@@ -27,7 +27,7 @@ create table if not exists public.ai_recommendation_feedback (
   task_id text references public.tasks(id) on delete set null,
   entity_key text,
   action text not null
-    check (action in ('accept','timeblock','postpone','dismiss','simplify','explain')),
+    check (action in ('accept','timeblock','postpone','dismiss','simplify','explain','ignore')),
   reason_category text
     check (reason_category in ('too_hard','low_energy','not_important','wrong_context','already_done','needs_more_info','too_much','other')),
   free_text text,

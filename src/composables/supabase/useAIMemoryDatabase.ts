@@ -935,13 +935,15 @@ function beliefInputsFromRecommendationFeedback(input: AIRecommendationFeedbackI
       evidence,
     })
   }
-  if (input.reasonCategory === 'not_important' || input.reasonCategory === 'wrong_context' || input.reasonCategory === 'needs_more_info') {
+  if (input.action === 'ignore' || input.reasonCategory === 'not_important' || input.reasonCategory === 'wrong_context' || input.reasonCategory === 'needs_more_info') {
     beliefs.push({
       entityKey: targetEntityKey,
       entityType: input.taskId ? 'task' : 'workflow',
       parameterKey: 'rankingFocus',
-      value: `Recommendation was ${input.action} because ${input.reasonCategory}; reduce similar ranking weight until context changes.`,
-      confidenceBoost: 0.25,
+      value: input.action === 'ignore' && !input.reasonCategory
+        ? 'Recommendation was ignored; slightly reduce similar ranking weight until stronger context or follow-through appears.'
+        : `Recommendation was ${input.action} because ${input.reasonCategory}; reduce similar ranking weight until context changes.`,
+      confidenceBoost: input.action === 'ignore' ? 0.14 : 0.25,
       impactWeight: aiParameterImpactWeight('rankingFocus'),
       sourceQuestionId: 'recommendation_feedback:ranking_focus',
       evidence,
@@ -992,14 +994,14 @@ function recommendationFeedbackAggregate(input: AIRecommendationFeedbackInput): 
       match: feedback => feedback.reasonCategory === 'low_energy' || feedback.reasonCategory === 'too_hard',
     }
   }
-  if (input.reasonCategory === 'not_important' || input.reasonCategory === 'wrong_context' || input.reasonCategory === 'needs_more_info') {
+  if (input.action === 'ignore' || input.reasonCategory === 'not_important' || input.reasonCategory === 'wrong_context' || input.reasonCategory === 'needs_more_info') {
     return {
       entityKey: 'preference:ranking_focus',
       entityType: 'preference',
       parameterKey: 'rankingFocus',
       sourceQuestionId: 'recommendation_feedback:aggregate:ranking_focus',
-      value: 'Repeated feedback says weak-context recommendations should be downranked until importance or context is confirmed.',
-      match: feedback => feedback.reasonCategory === 'not_important' || feedback.reasonCategory === 'wrong_context' || feedback.reasonCategory === 'needs_more_info',
+      value: 'Repeated ignored or weak-context feedback says recommendations should be downranked until importance, context, or follow-through is confirmed.',
+      match: feedback => feedback.action === 'ignore' || feedback.reasonCategory === 'not_important' || feedback.reasonCategory === 'wrong_context' || feedback.reasonCategory === 'needs_more_info',
     }
   }
   if (input.implicitPositive || input.action === 'accept' || input.action === 'timeblock') {

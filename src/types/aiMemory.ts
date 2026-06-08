@@ -260,7 +260,7 @@ export interface AIRecommendationFeedbackInput {
   recommendationId: string
   taskId?: string
   entityKey?: string
-  action: 'accept' | 'timeblock' | 'postpone' | 'dismiss' | 'simplify' | 'explain'
+  action: 'accept' | 'timeblock' | 'postpone' | 'dismiss' | 'simplify' | 'explain' | 'ignore'
   reasonCategory?: 'too_hard' | 'low_energy' | 'not_important' | 'wrong_context' | 'already_done' | 'needs_more_info' | 'too_much' | 'other'
   freeText?: string
   revisitAt?: string | null

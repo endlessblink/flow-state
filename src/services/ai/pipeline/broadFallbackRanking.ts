@@ -48,6 +48,8 @@ export function broadFeedbackSignal(
       suppressed ||= revisitInFuture || ageDays < 7
     } else if (event.action === 'simplify') {
       penalty = Math.max(penalty, ageDays < 7 ? 0.35 : 0.15)
+    } else if (event.action === 'ignore') {
+      penalty = Math.max(penalty, ageDays < 7 ? 0.25 : 0.1)
     } else if (event.action === 'accept' || event.action === 'timeblock' || event.implicitPositive) {
       positiveBoost = Math.max(positiveBoost, ageDays < 14 ? 0.25 : 0.1)
     }

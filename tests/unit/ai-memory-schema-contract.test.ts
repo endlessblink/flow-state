@@ -191,7 +191,7 @@ describe('AI memory schema contract', () => {
     for (const value of ['belongs_to', 'blocks', 'blocked_by', 'follow_up', 'corrected_by', 'similar_to', 'part_of_week', 'preference_affects', 'mentioned_with']) {
       expect(migrations).toContain(`'${value}'`)
     }
-    for (const value of ['accept', 'timeblock', 'postpone', 'dismiss', 'simplify', 'explain']) {
+    for (const value of ['accept', 'timeblock', 'postpone', 'dismiss', 'simplify', 'explain', 'ignore']) {
       expect(migrations).toContain(`'${value}'`)
     }
     for (const value of ['too_hard', 'low_energy', 'not_important', 'wrong_context', 'already_done', 'needs_more_info', 'too_much', 'other']) {

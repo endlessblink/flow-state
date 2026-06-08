@@ -225,6 +225,45 @@ describe('AI memory pending write queue', () => {
     })
   })
 
+  it('stores ignored guest recommendation feedback as a mild ranking-focus signal', async () => {
+    const db = useAIMemoryDatabase(createGuestContext())
+
+    await db.recordAIRecommendationFeedback({
+      recommendationId: 'inline_task_ignored',
+      taskId: 'local-ignored',
+      entityKey: 'task:local-ignored',
+      action: 'ignore',
+      sourceMessageId: 'msg-ignored',
+    })
+
+    const feedback = await db.fetchAIRecommendationFeedback({
+      taskIds: ['local-ignored'],
+      entityKeys: ['task:local-ignored'],
+      limit: 10,
+    })
+    const beliefs = await db.fetchAIParameterBeliefs({
+      entityKeys: ['task:local-ignored'],
+      parameterKeys: ['rankingFocus'],
+      limit: 10,
+    })
+
+    expect(feedback).toHaveLength(1)
+    expect(feedback[0]).toMatchObject({
+      recommendationId: 'inline_task_ignored',
+      action: 'ignore',
+    })
+    expect(beliefs).toHaveLength(1)
+    expect(beliefs[0]).toMatchObject({
+      entityKey: 'task:local-ignored',
+      parameterKey: 'rankingFocus',
+      sourceQuestionId: 'recommendation_feedback:ranking_focus',
+    })
+    expect(beliefs[0]?.confidence).toBeCloseTo(0.69)
+    expect(beliefs[0]?.beliefJson).toMatchObject({
+      value: expect.stringContaining('ignored'),
+    })
+  })
+
   it('aggregates repeated guest recommendation feedback into preference memory', async () => {
     const db = useAIMemoryDatabase(createGuestContext())
 
@@ -254,7 +293,7 @@ describe('AI memory pending write queue', () => {
       sourceQuestionId: 'recommendation_feedback:aggregate:ranking_focus',
     })
     expect(beliefs[0]?.beliefJson).toMatchObject({
-      value: expect.stringContaining('Repeated feedback'),
+      value: expect.stringContaining('Repeated ignored or weak-context feedback'),
       evidence: expect.objectContaining({
         feedbackCount: 3,
         reasonCounts: { not_important: 3 },
@@ -440,7 +479,7 @@ describe('AI memory pending write queue', () => {
         confidence: 0.82,
         source_question_id: 'recommendation_feedback:aggregate:ranking_focus',
         belief_json: expect.objectContaining({
-          value: expect.stringContaining('Repeated feedback'),
+          value: expect.stringContaining('Repeated ignored or weak-context feedback'),
           evidence: expect.objectContaining({
             feedbackCount: 3,
             reasonCounts: {

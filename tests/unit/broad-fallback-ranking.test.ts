@@ -100,6 +100,35 @@ describe('broad fallback ranking feedback memory', () => {
     expect(broadFeedbackMatchesTask(inlineProjectFeedback, second)).toBe(false)
   })
 
+  it('treats ignored recommendations as mild negative signals without suppressing the task', () => {
+    vi.setSystemTime(new Date(now))
+    const ignored = task('task-ignored', 'Write stakeholder update', 'project-a', {
+      description: 'Send the stakeholder update.',
+    })
+    const signal = broadFeedbackSignal(ignored, [
+      feedback({
+        recommendationId: 'inline_next_task_task-ignored',
+        taskId: 'task-ignored',
+        entityKey: 'task:task-ignored',
+        action: 'ignore',
+      }),
+    ], now)
+
+    expect(signal).toMatchObject({
+      suppressed: false,
+      penalty: 0.25,
+    })
+    expect(scoreBroadFallbackTask(ignored, [
+      feedback({
+        recommendationId: 'inline_next_task_task-ignored',
+        taskId: 'task-ignored',
+        entityKey: 'task:task-ignored',
+        action: 'ignore',
+      }),
+    ])).toBeLessThan(scoreBroadFallbackTask(ignored, []))
+    vi.useRealTimers()
+  })
+
   it('uses accepted feedback as a positive follow-through signal', () => {
     vi.setSystemTime(new Date(now))
     const accepted = task('task-accepted', 'Write client update', 'project-a', {

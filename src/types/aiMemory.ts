@@ -65,7 +65,7 @@ export interface TaskContext {
 }
 
 export interface AIMemoryPatch {
-  entityType: AIMemoryEntityType
+  entityType: AIContextEntityType
   entityId: string
   operation: AIMemoryPatchOperation
   field: string

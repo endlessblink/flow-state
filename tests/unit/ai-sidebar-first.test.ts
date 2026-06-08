@@ -1437,6 +1437,71 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).toContain('Define planner memory success criteria')
   })
 
+  it('continues the chat only when the user explicitly chooses to generate with uncertainty', async () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-clarification-generate-current',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            clarification: {
+              schemaVersion: 'ai-clarification.v1',
+              kind: 'response_quality',
+              locale: 'en',
+              direction: 'ltr',
+              progressLabel: 'Clarifying direction • Step 1/1',
+              summary: 'One missing preference would change the recommendation.',
+              memoryKey: 'workflow:task_answer:day_plan',
+              pathType: 'clarify_first',
+              candidateTaskIds: ['task-a'],
+              actions: ['generate_current', 'show_candidates', 'pause_save'],
+              coverage: {
+                score: 0.42,
+                materiality: 'high',
+                dimensions: { preferences: 0.2, impact: 0.3 },
+                missing: ['preferences', 'impact'],
+                decision: 'ask',
+              },
+              question: {
+                id: 'response_quality_day_plan',
+                entityType: 'workflow',
+                entityId: 'day_plan',
+                reason: 'missing_response_direction',
+                question: 'What should guide this answer?',
+                options: [{ id: 'ranking_impact', label: 'Real impact', effect: 'Rank by real-world consequence.' }],
+                allowFreeText: true,
+                relatedTaskIds: ['task-a'],
+              },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    const generateButton = wrapper.findAll('.weekly-question-escape')
+      .find(button => button.text().includes('Generate with current info'))
+    expect(generateButton).toBeTruthy()
+
+    await generateButton!.trigger('click')
+    await flushPromises()
+
+    const continuation = wrapper.emitted('continueChat')?.[0]?.[0] as string | undefined
+    expect(continuation).toContain('Continue with the answer using current task data')
+    expect(continuation).toContain('mark missing context as unknown')
+    expect(continuation).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
+    expect(supabaseDbMocks.recordAIClarificationEvent).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: 'generated_with_uncertainty',
+      pathType: 'generated_with_uncertainty',
+    }))
+  })
+
   it('keeps clarification as a concise interview before broad weekly planning', async () => {
     const wrapper = mount(ChatMessage, {
       props: {
@@ -1793,7 +1858,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).not.toContain('const immediateFallback = buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
     expect(aiChat).not.toContain('lastMsg.content = cleanResponse(immediateDisplay)')
     expect(aiChat).not.toContain('cardGroups: { groups: immediateCards.groups, total: immediateCards.total, kind: immediateCards.kind }')
-    expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language, routed.responseMode)')
+    expect(aiChat).toContain('buildFormatterFallback(toolResults, routed.language, routed.responseMode, { uncertaintyOnly: isGenerateCurrentContinuation })')
     expect(aiChat).toContain("Formatter timed out or failed; using fallback answer")
   })
 

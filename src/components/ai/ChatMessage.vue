@@ -623,6 +623,17 @@ function clarificationContinueMessage(
     : `Continue planning the week using the clarification I just answered. Start with a short summary only, not a long list.${evidenceBlock}${continuationMarker}`
 }
 
+function clarificationUncertaintyContinueMessage(card: AIClarificationArtifact): string {
+  const continuationMode = card.kind === 'weekly_planning'
+    ? 'week_plan'
+    : card.question.entityId || 'general'
+  const continuationMarker = `\n\n[FLOWSTATE_CLARIFICATION_CONTINUATION mode=${continuationMode}]`
+  if (card.locale === 'he') {
+    return `המשך עם תשובה לפי נתוני המשימות הקיימים בלבד. סמן הקשר חסר כלא ידוע, אל תסיק חשיבות משמות בלבד, ותן תשובה קצרה ומעשית בלי רשימה ארוכה.${continuationMarker}`
+  }
+  return `Continue with the answer using current task data only. Clearly mark missing context as unknown, do not infer importance from names alone, and keep it short and actionable instead of a long list.${continuationMarker}`
+}
+
 function continueAfterClarification(card: AIClarificationArtifact, event: MouseEvent) {
   event.stopPropagation()
   emit('continueChat', clarificationContinueMessage(card))
@@ -798,6 +809,7 @@ async function recordClarificationEscape(card: AIClarificationArtifact, action: 
   const key = clarificationKey(card)
   if (action === 'generate_current') {
     clarificationInlineMode.value[key] = 'uncertainty'
+    emit('continueChat', clarificationUncertaintyContinueMessage(card))
   } else if (action === 'show_candidates') {
     clarificationInlineMode.value[key] = 'candidates'
   }

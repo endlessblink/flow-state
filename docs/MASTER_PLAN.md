@@ -26,6 +26,13 @@
 4. If localhost smoke fails, keep fixing. Do not ask the user to test a flow that is stuck, verbose, or missing persistence proof.
 5. Commit and push only after the plan file, tests, and proof evidence match the actual current state.
 
+**Operator board for the active lane**:
+- **Current slice**: Stage 2 clarification escape behavior. `generate_current` must continue through chat only after explicit user choice, must keep the answer uncertainty-marked, and must not restore confident fallback prose during quality repair.
+- **Current proof**: focused mounted test, AI-focused regression suite, type-check, production build, and localhost smoke for clarification -> generate with current info.
+- **Next slice**: Stage 2/3 answer-after-clarification quality. Button-only answers should ask at most one useful follow-up, then continue with concise output that cites evidence or says context unknown.
+- **Blocked until current proof is green**: feedback controls expansion, lifecycle/summarization, broader UI polish, Electron packaging.
+- **User-test rule**: no user test request until Stage 8 proves the full localhost loop in browser: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity -> feedback/debug visible.
+
 | Stage | Task(s) | Required outcome | Status | Proof gate before moving on |
 | --- | --- | --- | --- | --- |
 | 0 | This lane + TASK-1842 | Single execution lane, active cursor, localhost-only gate, no vague partial phases | ✅ Done | MASTER_PLAN lane lists all stages, dependencies, proof, and user-test gate |
@@ -122,6 +129,8 @@
 - 2026-06-08: Clarification continuations now run as hidden control messages with a typed mode marker and bypass the ask gate once, so answering a card does not add noisy chat content or immediately re-ask the same question while persistence is delayed.
 - 2026-06-08: Weekly clarification now uses a progressive one-question-at-a-time ladder for button-only answers: project/category, why it matters now, success this week, and slip risk. Free text can still satisfy enough context and continue immediately.
 - 2026-06-08: Response-quality clarification no longer treats one button click as enough context. Button-only broad prompts now ask one short follow-up about what the answer should help the user do before continuing.
+- 2026-06-08: The "generate with current info" escape now explicitly continues the chat through the clarification-continuation path with instructions to mark missing context as unknown, rather than only showing local candidate cards.
+- 2026-06-08: Localhost generate-current smoke now shows a limited uncertainty-marked draft instead of confident impact/risk fallback prose, with no long-plan dump and no stuck generation state.
 
 ---
 

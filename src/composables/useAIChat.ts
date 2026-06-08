@@ -1217,6 +1217,24 @@ export function useAIChat() {
       : 'there is limited context, but it needs a decision instead of staying open'
   }
 
+  function fallbackTaskUncertaintyReason(task: Record<string, unknown>, lang: 'he' | 'en'): string {
+    const description = String(task.description || '').trim()
+    if (description) {
+      const clipped = description.length > 90 ? `${description.slice(0, 87)}...` : description
+      return lang === 'he'
+        ? `יש הערה שאפשר להשתמש בה, אבל החשיבות עדיין צריכה אישור: ${clipped}`
+        : `there is a note to use, but importance still needs confirmation: ${clipped}`
+    }
+    if (task.dueDate || task.daysOverdue) {
+      return lang === 'he'
+        ? 'יש אות תזמון, אבל המשמעות והסיכון האמיתיים עדיין לא ידועים'
+        : 'timing is visible, but real importance and risk are still unknown'
+    }
+    return lang === 'he'
+      ? 'ההקשר חסר; זו מועמדת לבדיקה, לא דירוג חשיבות'
+      : 'context is missing; treat this as a candidate, not an importance ranking'
+  }
+
   function fallbackTaskImpact(task: Record<string, unknown>, lang: 'he' | 'en'): string {
     const text = `${String(task.title || '')} ${String(task.description || '')}`.toLowerCase()
     if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום)/i.test(text)) {
@@ -1256,10 +1274,15 @@ export function useAIChat() {
       : 'give it a defined slot or it will keep competing with noise'
   }
 
-  function fallbackTaskRecommendation(task: Record<string, unknown> & { title?: string }, lang: 'he' | 'en'): string {
+  function fallbackTaskRecommendation(task: Record<string, unknown> & { title?: string }, lang: 'he' | 'en', options: { uncertaintyOnly?: boolean } = {}): string {
     const title = task.title || ''
-    const why = fallbackTaskReason(task, lang)
+    const why = options.uncertaintyOnly ? fallbackTaskUncertaintyReason(task, lang) : fallbackTaskReason(task, lang)
     const slot = fallbackTaskSlot(task, lang)
+    if (options.uncertaintyOnly) {
+      return lang === 'he'
+        ? `- **${title}** — ${why}. הצעד הנכון: להחליט אם היא באמת שייכת לעכשיו.`
+        : `- **${title}** — ${why}. Best move: decide whether it truly belongs now.`
+    }
     return lang === 'he'
       ? `- **${title}** — ${why}. הצעד הנכון: ${slot}.`
       : `- **${title}** — ${why}. Best move: ${slot}.`
@@ -1287,25 +1310,28 @@ export function useAIChat() {
       .slice(0, WEEKLY_FALLBACK_ASPECT_LIMIT)
   }
 
-  function buildFallbackCards(tasks: Array<Record<string, unknown> & { title?: string }>, lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode']): string {
+  function buildFallbackCards(tasks: Array<Record<string, unknown> & { title?: string }>, lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode'], options: { uncertaintyOnly?: boolean } = {}): string {
     const aspects = responseMode === 'week_plan' ? buildFallbackAspects(tasks, lang) : []
     const groups = aspects.length > 0
       ? aspects.map(aspect => ({
           name: aspect.name,
           items: aspect.tasks.map((task, index) => ({
             i: Number(task.__cardIndex) || index + 1,
-            reason: fallbackTaskReason(task, lang),
+            reason: options.uncertaintyOnly ? fallbackTaskUncertaintyReason(task, lang) : fallbackTaskReason(task, lang),
           })),
         }))
       : [{
           name: lang === 'he' ? 'מוקדי השבוע' : 'Weekly focus',
-          items: tasks.map((task, index) => ({ i: Number(task.__cardIndex) || index + 1, reason: fallbackTaskReason(task, lang) })),
+          items: tasks.map((task, index) => ({
+            i: Number(task.__cardIndex) || index + 1,
+            reason: options.uncertaintyOnly ? fallbackTaskUncertaintyReason(task, lang) : fallbackTaskReason(task, lang),
+          })),
         }]
     const kind = responseMode ? `"kind":"${responseMode}",` : ''
     return `\n\n\`\`\`cards\n{${kind}"groups":${JSON.stringify(groups)}}\n\`\`\``
   }
 
-  function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode']): string {
+  function buildFormatterFallback(toolResults: ToolResult[], lang: 'he' | 'en', responseMode?: RoutedIntent['responseMode'], options: { uncertaintyOnly?: boolean } = {}): string {
     const tasks = rankFallbackTasks(getTaskItemsFromToolResults(toolResults).filter(task => task.title)).slice(0, responseMode === 'week_plan' ? WEEKLY_FALLBACK_TASK_LIMIT : 3)
     if (tasks.length === 0) {
       return lang === 'he'
@@ -1314,11 +1340,15 @@ export function useAIChat() {
     }
 
     if (responseMode !== 'week_plan') {
-      const lines = tasks.map(task => fallbackTaskRecommendation(task, lang))
-      const intro = lang === 'he'
-        ? 'טיוטת בחירה מהירה לפי השפעה, תלות וסיכון אמיתי:'
-        : 'Fast draft based on impact, dependency, and real risk:'
-      return [intro, ...lines].filter(Boolean).join('\n') + buildFallbackCards(tasks, lang, responseMode)
+      const lines = tasks.map(task => fallbackTaskRecommendation(task, lang, options))
+      const intro = options.uncertaintyOnly
+        ? lang === 'he'
+          ? 'טיוטה מוגבלת לפי הנתונים הקיימים בלבד; ההקשר האמיתי עדיין לא ידוע:'
+          : 'Limited draft from current task data only; real context is still unknown:'
+        : lang === 'he'
+          ? 'טיוטת בחירה מהירה לפי השפעה, תלות וסיכון אמיתי:'
+          : 'Fast draft based on impact, dependency, and real risk:'
+      return [intro, ...lines].filter(Boolean).join('\n') + buildFallbackCards(tasks, lang, responseMode, options)
     }
 
     const aspects = buildFallbackAspects(tasks, lang)
@@ -1831,6 +1861,7 @@ export function useAIChat() {
     const outputLanguage = resolveChatOutputLanguage(routed.language, chatLanguage.value)
     lastDetectedLanguage.value = outputLanguage
     const isClarificationContinuation = Boolean(clarificationContinuationMode(content))
+    const isGenerateCurrentContinuation = isClarificationContinuation && /current task data only|נתוני המשימות הקיימים בלבד/i.test(content)
 
     // Start streaming response
     store.startStreamingMessage()
@@ -2303,10 +2334,10 @@ export function useAIChat() {
         }
       } catch (formatterErr) {
         console.warn('[AIChat:Deterministic] Formatter timed out or failed; using fallback answer:', formatterErr)
-        formattedResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
+        formattedResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode, { uncertaintyOnly: isGenerateCurrentContinuation })
       }
       if (!formattedResponse.trim()) {
-        formattedResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
+        formattedResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode, { uncertaintyOnly: isGenerateCurrentContinuation })
       }
 
       // Post-check: language mismatch retry (one attempt)
@@ -2337,7 +2368,7 @@ export function useAIChat() {
       // it from the displayed prose. Falls through gracefully if absent/unparseable.
       let cardData = parseCardGroups(formattedResponse, toolResults)
       if (!cardData && cardsInstruction && hasTaskList) {
-        const fallbackResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
+        const fallbackResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode, { uncertaintyOnly: isGenerateCurrentContinuation })
         const fallbackCardData = parseCardGroups(fallbackResponse, toolResults)
         if (fallbackCardData) {
           const formatterProse = stripCardsBlock(formattedResponse).trim()
@@ -2349,7 +2380,7 @@ export function useAIChat() {
         }
       }
       if (isWeekPlan && cardData && weeklyPlanNeedsQualityRepair(formattedResponse, cardData, routed.language)) {
-        const fallbackResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
+        const fallbackResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode, { uncertaintyOnly: isGenerateCurrentContinuation })
         const fallbackCardData = parseCardGroups(fallbackResponse, toolResults)
         if (fallbackCardData) {
           formattedResponse = fallbackResponse
@@ -2390,7 +2421,7 @@ export function useAIChat() {
             qualityFailures: responseQuality.failures,
           },
         })
-        const fallbackResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode)
+        const fallbackResponse = buildFormatterFallback(toolResults, routed.language, routed.responseMode, { uncertaintyOnly: isGenerateCurrentContinuation })
         const fallbackCardData = parseCardGroups(fallbackResponse, toolResults)
         const fallbackQuality = auditChatResponseQuality({
           ...qualityInput,

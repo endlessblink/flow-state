@@ -119,6 +119,10 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   const visibleUncertainty = input.hasVisibleUncertainty ?? UNCERTAINTY_RE.test(text)
   const clarificationTerms = clarificationEvidenceTerms(input.clarificationEvidenceText)
   const honorsClarificationValue = !clarificationTerms.length || clarificationTerms.some(term => clarificationTermMatches(text, term))
+  const clarificationEvidence = input.clarificationEvidenceText ?? ''
+  const clarificationHasNegatingCorrection = Boolean(clarificationEvidence)
+    && CORRECTION_MARKER_RE.test(clarificationEvidence)
+    && NEGATED_IMPORTANCE_RE.test(clarificationEvidence)
   const lowCoverage = typeof input.coverageScore === 'number' && input.coverageScore < 0.5
   const mediumCoverage = typeof input.coverageScore === 'number' && input.coverageScore >= 0.5 && input.coverageScore < 0.72
 
@@ -141,6 +145,9 @@ export function auditChatResponseQuality(input: ChatQualityInput): ChatQualityAu
   }
   if (input.hasClarificationEvidence && isBroadTaskAnswer && input.clarificationEvidenceText && !honorsClarificationValue) {
     failures.push('clarification_value_not_reflected')
+  }
+  if (input.hasClarificationEvidence && isBroadTaskAnswer && clarificationHasNegatingCorrection && UNSUPPORTED_IMPORTANCE_RE.test(text) && !NEGATED_IMPORTANCE_RE.test(text)) {
+    failures.push('conflicting_correction_ignored')
   }
   if (input.clarificationEvidenceText && MEMORY_INJECTION_RE.test(input.clarificationEvidenceText)) {
     failures.push('unsafe_clarification_evidence_instruction')

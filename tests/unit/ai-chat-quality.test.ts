@@ -89,6 +89,42 @@ describe('chat quality evidence audit', () => {
     expect(audit.failures).toContain('unsafe_clarification_evidence_instruction')
   })
 
+  it('rejects broad answers that ignore a user correction saying the work is not important', () => {
+    const audit = auditChatResponseQuality({
+      language: 'en',
+      mode: 'prioritization',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 2,
+      hasClarificationEvidence: true,
+      clarificationEvidenceText: 'User correction: this project is not important this month; wrong context.',
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'Matches your clarification: start here because this is important strategic work.',
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('conflicting_correction_ignored')
+  })
+
+  it('rejects Hebrew broad answers that ignore a correction saying the work is not important', () => {
+    const audit = auditChatResponseQuality({
+      language: 'he',
+      mode: 'next_task',
+      hasTaskList: true,
+      hasCards: true,
+      taskCount: 2,
+      hasClarificationEvidence: true,
+      clarificationEvidenceText: 'תיקון: זה לא חשוב עכשיו ולא קריטי; ההקשר שגוי.',
+      hasFeedbackControls: true,
+      hasLearningSignal: true,
+      text: 'לפי תשובת ההבהרה: כדאי להתחיל כאן כי זו עבודה חשובה וקריטית.',
+    })
+
+    expect(audit.level).toBe('bad')
+    expect(audit.failures).toContain('conflicting_correction_ignored')
+  })
+
   it('rejects next-task answers that only cite shallow task metadata', () => {
     const audit = auditChatResponseQuality({
       language: 'en',

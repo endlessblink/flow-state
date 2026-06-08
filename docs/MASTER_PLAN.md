@@ -219,6 +219,7 @@
 
 **Progress**:
 - 2026-06-08: Weekly recommendation controls now collect explicit postpone/dismiss/simplify reasons with button choices, persist `reasonCategory` + `revisitAt`, and immediately hide the rejected recommendation visually so the chat does not keep showing work the user just pushed back on.
+- 2026-06-08: Broad non-weekly inline recommendation cards now persist accept/timeblock/postpone/dismiss feedback directly to `ai_recommendation_feedback` even without a weekly-plan recommendation object, and the new Later control hides the card immediately with a revisit date.
 
 ---
 

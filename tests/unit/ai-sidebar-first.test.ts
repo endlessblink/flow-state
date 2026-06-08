@@ -2045,6 +2045,75 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).not.toContain('payment decision risk')
   })
 
+  it('persists broad inline card postponement feedback outside weekly plans', async () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push({
+      id: 'task-broad-alpha',
+      title: 'Task Broad Alpha',
+      description: 'This broad recommendation should learn from postpone feedback.',
+      status: 'todo',
+      priority: 'medium',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: null,
+      projectId: 'ai-planner',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Task)
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-broad-inline-feedback',
+          role: 'assistant',
+          content: 'Start with Task Broad Alpha because it reduces the open loop fastest.',
+          timestamp: Date.now(),
+          metadata: {
+            cardGroups: {
+              kind: 'day_plan',
+              total: 1,
+              groups: [{
+                name: 'Now',
+                tasks: [{
+                  id: 'task-broad-alpha',
+                  title: 'Task Broad Alpha',
+                  status: 'todo',
+                  priority: 'medium',
+                  reason: 'reduces open loop',
+                }],
+              }],
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(1)
+    await wrapper.find('.inline-postpone-btn').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(0)
+    expect(supabaseDbMocks.recordAIRecommendationFeedback).toHaveBeenCalledWith(expect.objectContaining({
+      recommendationId: 'inline_day_plan_task-broad-alpha',
+      taskId: 'task-broad-alpha',
+      entityKey: 'project:ai-planner',
+      action: 'postpone',
+      reasonCategory: 'low_energy',
+      sourceMessageId: 'msg-broad-inline-feedback',
+      outcomeSignals: expect.objectContaining({
+        cardKind: 'day_plan',
+        inlineCard: true,
+      }),
+    }))
+    expect(supabaseDbMocks.recordAIRecommendationFeedback.mock.calls[0][0].revisitAt).toEqual(expect.any(String))
+  })
+
   it('saves explicit weekly recommendation feedback and removes the rejected recommendation immediately', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({
@@ -2472,7 +2541,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(chatMessage).toContain('applyWeeklyQuestion')
     expect(chatMessage).toContain('applyAIMemoryPatch')
     expect(chatMessage).toContain('recordRecommendationFeedback')
+    expect(chatMessage).toContain('recordInlineTaskFeedback')
     expect(chatMessage).toContain('weekly-feedback-btn')
+    expect(chatMessage).toContain('inline-postpone-btn')
     expect(chatMessage).toContain('clarificationSavedLocal')
     expect(chatMessage).toContain('Saved locally. Syncing in the background')
     expect(chatMessage).toContain('data-testid="ai-clarification-follow-up"')

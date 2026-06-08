@@ -20,7 +20,7 @@
 import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X } from 'lucide-vue-next'
+import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type Token from 'markdown-it/lib/token.mjs'
 import type Renderer from 'markdown-it/lib/renderer.mjs'
@@ -1280,6 +1280,14 @@ async function dismissCardTask(taskId: string, event: MouseEvent) {
   await recordRecommendationFeedbackForTask(taskId, 'dismiss', 'not_important')
 }
 
+async function postponeCardTask(taskId: string, event: MouseEvent) {
+  event.stopPropagation()
+  dismissedCardTaskIds.value = new Set([...dismissedCardTaskIds.value, taskId])
+  await recordRecommendationFeedbackForTask(taskId, 'postpone', 'low_energy', false, {
+    revisitAt: feedbackRevisitIso('next_week'),
+  })
+}
+
 function recommendationEntityKey(rec: WeeklyPlanRecommendation): string | undefined {
   const task = taskMap.value.get(rec.primaryTaskId)
   if (task?.projectId) return `project:${task.projectId}`
@@ -1447,10 +1455,48 @@ async function recordRecommendationFeedbackForTask(
   action: AIRecommendationFeedbackInput['action'],
   reasonCategory?: AIRecommendationFeedbackInput['reasonCategory'],
   implicitPositive = false,
+  options: Pick<AIRecommendationFeedbackInput, 'freeText' | 'revisitAt'> = {},
 ) {
   const rec = weeklyPlanRecommendationForTask(taskId)
-  if (!rec) return
-  await recordRecommendationFeedback(rec, action, reasonCategory, implicitPositive)
+  if (rec) {
+    await recordRecommendationFeedback(rec, action, reasonCategory, implicitPositive, options)
+    return
+  }
+  await recordInlineTaskFeedback(taskId, action, reasonCategory, implicitPositive, options)
+}
+
+async function recordInlineTaskFeedback(
+  taskId: string,
+  action: AIRecommendationFeedbackInput['action'],
+  reasonCategory?: AIRecommendationFeedbackInput['reasonCategory'],
+  implicitPositive = false,
+  options: Pick<AIRecommendationFeedbackInput, 'freeText' | 'revisitAt'> = {},
+) {
+  const task = taskMap.value.get(taskId)
+  const cardKind = cardGroups.value?.kind || 'task_answer'
+  const entityKey = task?.projectId ? `project:${task.projectId}` : `task:${taskId}`
+  try {
+    await aiMemoryDb.recordAIRecommendationFeedback({
+      recommendationId: `inline_${cardKind}_${taskId}`,
+      taskId,
+      entityKey,
+      action,
+      reasonCategory,
+      freeText: options.freeText,
+      revisitAt: options.revisitAt,
+      implicitPositive,
+      sourceMessageId: props.message.id,
+      outcomeSignals: {
+        cardKind,
+        inlineCard: true,
+      },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (!message.includes('authenticated user')) {
+      console.error('[ChatMessage] Inline recommendation feedback failed:', err)
+    }
+  }
 }
 
 async function applyDayPlan(event: MouseEvent) {
@@ -2044,6 +2090,14 @@ async function saveSchedule() {
                     <Play v-else :size="12" />
                   </button>
                   <button
+                    class="inline-action-btn inline-postpone-btn"
+                    title="Postpone suggestion"
+                    aria-label="Postpone suggestion"
+                    @click="postponeCardTask(taskId, $event)"
+                  >
+                    <CalendarClock :size="12" />
+                  </button>
+                  <button
                     class="inline-action-btn inline-dismiss-btn"
                     title="Hide from these options"
                     aria-label="Hide from these options"
@@ -2115,6 +2169,15 @@ async function saveSchedule() {
                 >
                   <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
                   <Play v-else :size="12" />
+                </button>
+                <button
+                  v-if="!isWeeklyReview"
+                  class="inline-action-btn inline-postpone-btn"
+                  title="Postpone suggestion"
+                  aria-label="Postpone suggestion"
+                  @click="postponeCardTask(task.id, $event)"
+                >
+                  <CalendarClock :size="12" />
                 </button>
                 <button
                   class="inline-action-btn inline-dismiss-btn"
@@ -2259,6 +2322,14 @@ async function saveSchedule() {
               >
                 <Loader2 v-if="actionLoading[task.id] === 'timer'" :size="12" class="spin" />
                 <Play v-else :size="12" />
+              </button>
+              <button
+                class="inline-action-btn inline-postpone-btn"
+                title="Postpone suggestion"
+                aria-label="Postpone suggestion"
+                @click="postponeCardTask(task.id, $event)"
+              >
+                <CalendarClock :size="12" />
               </button>
               <button
                 class="inline-action-btn inline-dismiss-btn"
@@ -3437,6 +3508,17 @@ async function saveSchedule() {
 .inline-timer-btn:hover {
   background: var(--status-in-progress-text);
   color: white;
+}
+
+.inline-postpone-btn {
+  background: var(--warning-bg-light);
+  color: var(--color-warning);
+}
+
+.inline-postpone-btn:hover {
+  background: var(--color-warning);
+  color: white;
+  border-color: var(--color-warning);
 }
 
 .inline-dismiss-btn {

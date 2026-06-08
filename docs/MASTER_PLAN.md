@@ -508,6 +508,7 @@
 - 2026-06-08: Chat-quality audits now fail prompt-injection-like clarification or recommendation evidence (`ignore previous instructions`, `system prompt`, reveal-memory requests, etc.). This turns the "quoted evidence only" policy into an executable safety gate for memory-backed broad answers.
 - 2026-06-08: AI memory snapshots are now included in schema contracts, debug inspection, and clear/delete paths, so compacted memory rows inherit the same user-scoped privacy/debug behavior as context entities, clarification events, parameter beliefs, feedback, and graph edges.
 - 2026-06-08: Added the missing RLS delete policy for `ai_clarification_events`. Clarification history remains append-only during normal assistant operation, but authenticated users can now clear their own event rows through the memory clear/delete path. Schema contract tests now require user-owned delete policies for every clearable AI memory table.
+- 2026-06-08: Added authenticated schema-missing clear/delete regression coverage. When the server AI-memory tables are still absent from PostgREST, clearing AI memory now proves local fallback rows and queued writes are removed so old clarification/feedback events cannot flush later and repopulate memory after a user clear.
 
 ---
 

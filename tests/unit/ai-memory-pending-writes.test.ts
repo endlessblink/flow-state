@@ -957,6 +957,41 @@ describe('AI memory pending write queue', () => {
     expect(getPendingAIMemoryWriteCount()).toBe(0)
   })
 
+  it('clears authenticated schema-missing fallback memory and queued writes', async () => {
+    const db = useAIMemoryDatabase(createContext())
+
+    await db.recordAIClarificationEvent({
+      entityKey: 'synthetic:Work',
+      entityType: 'synthetic_group',
+      displayName: 'Work',
+      questionId: 'weekly-domain',
+      eventType: 'answered',
+      question: 'What kind of project is Work?',
+      selectedOptionId: 'work_product',
+      selectedLabel: 'Work/product',
+      coverageScoreAtTime: 0.34,
+      pathType: 'clarify_first',
+      uncertaintyDimensions: ['project_meaning'],
+    })
+    await db.recordAIRecommendationFeedback({
+      recommendationId: 'inline_task_local',
+      taskId: 'local-task',
+      entityKey: 'task:local-task',
+      action: 'dismiss',
+      reasonCategory: 'wrong_context',
+    })
+
+    expect(getPendingAIMemoryWriteCount()).toBeGreaterThan(0)
+    expect(await db.fetchAIClarificationEvents(['synthetic:Work'], 10)).toHaveLength(1)
+    expect(await db.fetchAIRecommendationFeedback({ entityKeys: ['task:local-task'], limit: 10 })).toHaveLength(1)
+
+    await db.clearAIMemoryDebugData()
+
+    expect(getPendingAIMemoryWriteCount()).toBe(0)
+    expect(await db.fetchAIClarificationEvents(['synthetic:Work'], 10)).toHaveLength(0)
+    expect(await db.fetchAIRecommendationFeedback({ entityKeys: ['task:local-task'], limit: 10 })).toHaveLength(0)
+  })
+
   it('clears server-backed AI memory tables in dependency order', async () => {
     readyTables = new Set([
       'ai_context_entities',

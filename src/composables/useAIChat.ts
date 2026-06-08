@@ -51,7 +51,7 @@ import {
   buildBroadTaskClarification,
   shouldAskBroadTaskClarification,
 } from '@/services/ai/pipeline/broadClarification'
-import { retrieveBroadAIMemory } from '@/services/ai/pipeline/broadMemoryRetrieval'
+import { retrieveBroadAIMemory, type BroadMemoryRetrievalResult } from '@/services/ai/pipeline/broadMemoryRetrieval'
 import { retrieveGlobalChatMemory } from '@/services/ai/pipeline/globalChatMemory'
 import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
@@ -123,6 +123,7 @@ type AIMemorySummaryResult = {
   summary: string
   recommendationFeedback: AIRecommendationFeedback[]
   compactPreference?: boolean
+  diagnostics?: BroadMemoryRetrievalResult['diagnostics']
 }
 
 export function resolveChatOutputLanguage(detectedLanguage: ChatOutputLanguage, chatLanguage: ChatLanguage): ChatOutputLanguage {
@@ -1839,6 +1840,21 @@ export function useAIChat() {
         formatterFallbackOptions.recommendationFeedback = broadRecommendationFeedback
         formatterFallbackOptions.compactPreference = memoryResult.compactPreference
         if (memoryResult.summary) toolResultsSummary += `\n\n${memoryResult.summary}`
+        if (memoryResult.diagnostics) {
+          const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
+          const startedAt = existingPhase?.metadata?.startedAt ?? Date.now()
+          store.updateActivityEvent(phaseActivityId, {
+            metadata: {
+              startedAt,
+              elapsedMs: Date.now() - startedAt,
+              source: memoryResult.diagnostics.source,
+              entityKeyCount: memoryResult.diagnostics.entityKeyCount,
+              feedbackCount: memoryResult.diagnostics.feedbackCount,
+              timedOut: memoryResult.diagnostics.timedOut,
+              lifecycle: memoryResult.diagnostics.lifecycle,
+            },
+          })
+        }
       }
       if (!hasTaskList) {
         const globalMemorySummary = await withTimeout(

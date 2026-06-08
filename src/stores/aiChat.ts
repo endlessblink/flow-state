@@ -76,6 +76,15 @@ export interface AIActivityEvent {
     elapsedMs?: number
     timedOut?: boolean
     qualityFailures?: string[]
+    entityKeyCount?: number
+    feedbackCount?: number
+    lifecycle?: {
+      staleEntityKeys: string[]
+      refreshEntityKeys: string[]
+      summarizeEntityKeys: string[]
+      archiveEventCount: number
+      lowConfidenceEntityCount: number
+    }
   }
 }
 

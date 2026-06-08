@@ -251,4 +251,52 @@ describe('retrieveBroadAIMemory', () => {
     expect(result.summary).toContain('preferences="Keep broad planning answers compact after too-much feedback."')
     expect(result.summary).toContain('remembered answer for preference:brevity')
   })
+
+  it('surfaces stale broad memory lifecycle pressure in diagnostics and evidence summary', async () => {
+    const oldEvent: AIClarificationEvent = {
+      id: 'event-old',
+      entityKey: 'project:uncategorized',
+      entityType: 'synthetic_group',
+      questionId: 'project_meaning',
+      eventType: 'answered',
+      selectedLabel: 'Creative work',
+      createdAt: '2025-05-01T09:00:00.000Z',
+    }
+    const db = dbStub({
+      fetchAIContextEntities: vi.fn(async () => [
+        contextEntity({
+          entityKey: 'project:uncategorized',
+          entityType: 'synthetic_group',
+          facts: {
+            domain: 'creative',
+            whyItMatters: 'Old context that should be refreshed before broad ranking.',
+          },
+          staleAfter: '2026-05-01T00:00:00.000Z',
+          lastAnsweredAt: '2026-03-01T00:00:00.000Z',
+          confidence: 0.7,
+        }),
+      ]),
+      fetchAIClarificationEvents: vi.fn(async () => [oldEvent]),
+    })
+
+    const result = await retrieveBroadAIMemory({
+      db,
+      lang: 'en',
+      now: new Date('2026-06-08T10:00:00.000Z'),
+      cardTasks: [{ id: 'local-task', projectId: 'uncategorized', title: 'Loose creative task' }],
+      getTaskProjectId: () => 'uncategorized',
+      getTaskTitle: () => 'Loose creative task',
+      getProjectDisplayName: () => 'uncategorized',
+    })
+
+    expect(result.diagnostics.lifecycle).toMatchObject({
+      staleEntityKeys: ['project:uncategorized'],
+      refreshEntityKeys: ['project:uncategorized'],
+      archiveEventCount: 1,
+    })
+    expect(result.summary).toContain('memory lifecycle')
+    expect(result.summary).toContain('refresh_needed')
+    expect(result.summary).toContain('stale')
+    expect(result.summary).toContain('old_events')
+  })
 })

@@ -6,7 +6,7 @@
 
 **Goal**: Make FlowState chat consistently useful across weekly planning, "what should I do", prioritization, task breakdown, smart lanes, follow-up tasks, and general agent help by combining server-backed memory, explicit uncertainty, low-overwhelm UX, feedback learning, and testable answer-quality gates.
 
-**Current execution cursor**: **LANE-5/LANE-6 broad-flow localhost proof and feedback suppression**. The lane is now treated as one full delivery track, not scattered AI-chat patches. The current localhost proof covers the main broad task-answer entry points, but do not ask the user to test broadly until suppression/cooldown, lifecycle, and quality gates prove the flow cannot regress into repeated questions, generic fallback prose, or low-context recommendation dumps.
+**Current execution cursor**: **LANE-7/LANE-9 lifecycle diagnostics and answer-quality hardening**. The lane is now treated as one full delivery track, not scattered AI-chat patches. The current localhost proof covers the main broad task-answer entry points plus first feedback suppression, but do not ask the user to test broadly until lifecycle, stale-context refresh behavior, and quality gates prove the flow cannot regress into repeated questions, generic fallback prose, or low-context recommendation dumps.
 
 **Why this lane exists**: This work has too many coupled failure modes to track as isolated fixes. Use this lane as the single source of truth so every change is tied to a phase, a proof gate, and a user-visible quality outcome. If a future session feels lost, resume from the current execution cursor and the first incomplete proof gate below.
 
@@ -27,9 +27,9 @@
 5. Commit and push only after the plan file, tests, and proof evidence match the actual current state.
 
 **Operator board for the active lane**:
-- **Current slice**: LANE-5/LANE-6 broad-flow coverage plus feedback suppression. Prove day planning, smart lanes, task breakdown, prioritization, next-task, and overdue triage follow the same one-card ask-before-answer behavior, then make feedback/cooldowns change later recommendations.
+- **Current slice**: LANE-7/LANE-9 lifecycle diagnostics plus answer-quality hardening. Prove broad memory retrieval can detect stale, low-confidence, noisy, or old memory without dumping it into normal prose, then turn those signals into refresh prompts and eval failures for fake/generic answers.
 - **Current proof**: MASTER_PLAN has a complete packet queue with one current cursor, plus a repeatable localhost browser proof that covers prompt -> one clarification -> answer/uncertainty -> feedback/debug -> no-repeat.
-- **Next slice after broad-flow proof**: LANE-6 suppression/cooldown learning, then LANE-7 lifecycle/stale-context rules and LANE-9 answer-quality eval hardening.
+- **Next slice after current proof**: stale-refresh prompt continuation, then answer-quality eval hardening for broad post-clarification plans.
 - **Blocked until current proof is green**: background summarization jobs, pgvector/semantic recall, broader UI polish, Electron packaging, and user-facing test instructions.
 - **User-test rule**: no user test request until Stage 8/LANE-10 proves the full localhost loop in browser: prompt -> one clarification -> answer/uncertainty -> no barrage -> no stuck activity -> feedback/debug visible.
 
@@ -44,7 +44,7 @@
 | LANE-4: Low-overwhelm answer contract | 🔄 In progress | TASK-1831, TASK-1832 | Broad requests start with one concise card or a visible uncertainty escape; no generic plan dump by default | chat pipeline, deterministic fallback, repair/audit helpers, clarification UI | Tests fail overlong first answers, name-only importance, unsupported ranking, and filler prose |
 | LANE-5: Broad-flow coverage beyond weekly planning | ✅ First proof done | TASK-1835 | Same contract for "what should I do", day plan, smart lanes, prioritization, task breakdown, follow-up task suggestions, and general agent help | intent router, deterministic flows, formatter prompts, fallback cards | Non-weekly tests prove ask/proceed/neutral behavior and no hidden task-card barrage while asking |
 | LANE-6: Feedback learning and suppression | ✅ First proof done | TASK-1833, TASK-1836 | Accept/postpone/dismiss/simplify actions immediately change current UI and later retrieval/ranking | inline recommendation cards, feedback store, memory retrieval, cooldown rules | UI/unit tests prove postponed/dismissed items suppress until revisit and accepted/timeblocked items become positive signals |
-| LANE-7: Memory lifecycle and safety | 🔄 In progress | TASK-1837, TASK-1839 | Memory stays useful over time: stale refresh, confidence decay, summaries, retention, correction audit, prompt-injection-safe evidence | lifecycle policy, retrieval diagnostics, prompt evidence builders | Lifecycle/security tests prove stale facts are refreshed, old/noisy events are flagged, and free text is quoted evidence only |
+| LANE-7: Memory lifecycle and safety | 🔄 First diagnostic proof done | TASK-1837, TASK-1839 | Memory stays useful over time: stale refresh, confidence decay, summaries, retention, correction audit, prompt-injection-safe evidence | lifecycle policy, retrieval diagnostics, prompt evidence builders | Lifecycle/security tests prove stale facts are refreshed, old/noisy events are flagged, and free text is quoted evidence only |
 | LANE-8: Observability and speed | 🔄 In progress | TASK-1834 | User can see concise phases and debug reasons without reading internal dumps; no duplicate thinking rows or stuck spinner after saving | activity timeline, clarification debug disclosure, phase timing metadata | Activity/UI tests and browser smoke show phase changes, slow-step attribution, and no stuck running row |
 | LANE-9: Answer-quality evaluation rubric | 🔄 In progress | TASK-1841 | Bad/acceptable/excellent scoring becomes executable, not subjective vibe review | eval fixtures, citation audit, adversarial scenarios | Eval fails fake reasoning, repeated questions, excess length, missing evidence, and conflicting-correction misuse |
 | LANE-10: Localhost E2E proof | ✅ Broad-flow proof done | TASK-1842 | Real browser proves the end-to-end loop before the user is asked to test | Playwright/localhost smoke, seeded tasks, bridge stubs, screenshots | Prompt -> one clarification -> answers/follow-ups -> concise plan/uncertainty -> feedback/debug -> no barrage -> no stuck activity -> too-much feedback changes next broad answer |
@@ -63,7 +63,7 @@
 | 4 | TASK-1832, TASK-1841 | Answer-quality evaluator: groundedness, brevity, evidence, unsupported-ranking rejection, bad/acceptable/excellent rubric | 🔄 In progress | Eval/tests fail generic prose, name-only importance, repeated templates, missing evidence, and overlong answers |
 | 5 | TASK-1833, TASK-1836 | User feedback loop: accept/postpone/dismiss/simplify controls, reason chips, cooldowns, revisit dates, implicit positives | ✅ First proof done | UI tests prove feedback persists, current suggestions suppress immediately, future ranking respects feedback |
 | 6 | TASK-1834 | Observability and speed: concise phases, timings, path type, slow-step diagnostics, no duplicate thinking rows | 🔄 In progress | Activity-row tests plus localhost smoke show answer phase changes and no stuck spinner after saving clarification |
-| 7 | TASK-1837 | Memory lifecycle: fact promotion, confidence decay, summaries/snapshots, stale confirmations, export/delete policy | 🔄 In progress | Lifecycle tests prove stale facts refresh, corrections stay auditable, retrieval stays bounded |
+| 7 | TASK-1837 | Memory lifecycle: fact promotion, confidence decay, summaries/snapshots, stale confirmations, export/delete policy | 🔄 First diagnostic proof done | Lifecycle tests prove stale facts refresh, corrections stay auditable, retrieval stays bounded |
 | 8 | TASK-1842 | Localhost end-to-end QA: real browser flow from prompt → clarification → answer/uncertainty → feedback/debug | ✅ First proof done | Playwright/browser evidence proves no content barrage before clarification and no stuck card after answer |
 | 9 | TASK-1843 | Electron packaging/updater gate after localhost stabilization | ⏸ Deferred | Only run Electron build/update when user explicitly re-enables Electron for this lane |
 
@@ -377,9 +377,9 @@
 
 ---
 
-### TASK-1837: Memory lifecycle, summarization, and retention policy (📋 PLANNED)
+### TASK-1837: Memory lifecycle, summarization, and retention policy (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-06-08) | **Depends on**: TASK-1830
 
 **Why**: Research validation flagged memory bloat and stale facts as the biggest architectural gap. Append-only clarification events are useful for auditability, but without summarization and retention the system will get slower, noisier, and harder to trust.
 
@@ -405,6 +405,7 @@
 - 2026-06-08: Verified the lifecycle slice with focused lifecycle/retrieval/sidebar tests, the AI regression bundle, `npm run type-check`, and localhost web `npm run build`; Electron packaging remains intentionally deferred for this lane.
 - 2026-06-08: Clarification-card debug disclosure now surfaces memory lifecycle pressure (`need refresh`, `need summary`, old events, low confidence) behind "Why ask?" so diagnostics are inspectable without adding normal-response clutter.
 - 2026-06-08: Localhost browser smoke on isolated `http://127.0.0.1:5562` loaded the app, dismissed onboarding, opened the AI sidebar, and captured `/tmp/flowstate-ai-debug-smoke-sidebar.png`; this proves the updated chat UI is not blank or blocked, but Stage 8 full prompt-to-answer smoke is still pending.
+- 2026-06-08: Broad task-memory retrieval now computes the same lifecycle diagnostics as weekly retrieval. Stale synthetic/project facts, refresh-needed context, noisy summaries, old events, and low-confidence counts are exposed through retrieval diagnostics and a compact `memory lifecycle` evidence line, while the chat activity metadata carries those lifecycle counts for debug disclosure instead of adding normal answer prose.
 
 ---
 

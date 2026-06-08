@@ -8,6 +8,7 @@ import type {
   TaskContext,
 } from '@/types/aiMemory'
 import { buildMemoryEvidenceHeader, formatMemoryEvidence, sanitizeMemoryEvidenceText } from './memoryEvidence'
+import { summarizeAIMemoryLifecycle, type AIMemoryLifecycleSummary } from './memoryLifecycle'
 import { projectEntityKey, taskEntityKey } from './weeklyMemoryRetrieval'
 
 type CardTaskLike = Record<string, unknown>
@@ -27,6 +28,7 @@ export type BroadMemoryRetrievalInput = {
   cardTasks: CardTaskLike[]
   lang: 'he' | 'en'
   timeoutMs?: number
+  now?: Date
   getTaskProjectId?: (taskId: string) => string | null | undefined
   getTaskTitle?: (taskId: string) => string | null | undefined
   getProjectDisplayName?: (projectId: string) => string | null | undefined
@@ -62,6 +64,7 @@ export type BroadMemoryRetrievalResult = {
     feedbackCount: number
     graphEdgeCount: number
     entityKeyCount: number
+    lifecycle: AIMemoryLifecycleSummary
     elapsedMs: number
     timedOut: boolean
   }
@@ -99,6 +102,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       feedbackCount: 0,
       graphEdgeCount: 0,
       entityKeyCount: entityKeys.length,
+      lifecycle: emptyLifecycleSummary(),
       elapsedMs: Math.round(performance.now() - startedAt),
       timedOut,
     },
@@ -136,6 +140,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
     recommendationFeedback,
     contextEdges,
   ] = rows
+  const lifecycle = summarizeAIMemoryLifecycle(contextEntities, clarificationEvents, input.now)
 
   const projectContexts = uniqueBy(
     [
@@ -162,6 +167,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       recommendationFeedback,
       contextEdges,
       contextEntities,
+      lifecycle,
       projectIdStrings,
       getTaskTitle: input.getTaskTitle,
       getProjectDisplayName: input.getProjectDisplayName,
@@ -179,6 +185,7 @@ export async function retrieveBroadAIMemory(input: BroadMemoryRetrievalInput): P
       feedbackCount: recommendationFeedback.length,
       graphEdgeCount: contextEdges.length,
       entityKeyCount: entityKeys.length,
+      lifecycle,
       elapsedMs: Math.round(performance.now() - startedAt),
       timedOut: false,
     },
@@ -198,6 +205,7 @@ function buildBroadMemorySummary(input: {
   recommendationFeedback: AIRecommendationFeedback[]
   contextEdges: AIContextEdge[]
   contextEntities: AIContextEntity[]
+  lifecycle: AIMemoryLifecycleSummary
   projectIdStrings: string[]
   getTaskTitle?: (taskId: string) => string | null | undefined
   getProjectDisplayName?: (projectId: string) => string | null | undefined
@@ -260,6 +268,10 @@ function buildBroadMemorySummary(input: {
       lines.push(`- relationship: ${source} ${formatMemoryEvidence('relation', edge.relationType, 80)} ${target} ${formatMemoryEvidence('confidence', edge.confidence.toFixed(2), 20)}`)
     }
   }
+  const lifecycleBits = broadLifecycleEvidence(input.lifecycle)
+  if (lifecycleBits.length) {
+    lines.push(`- memory lifecycle: ${lifecycleBits.join(' | ')}`)
+  }
   const knownProjectIds = new Set(input.projectContexts.map(ctx => ctx.projectId))
   const projectsWithoutContext = input.projectIdStrings
     .filter(id => !knownProjectIds.has(id) && !input.parameterBeliefs.some(belief => belief.entityKey === projectEntityKey(id)))
@@ -279,6 +291,26 @@ function buildBroadMemorySummary(input: {
     if (target && bits.length) lines.push(`- recommendation feedback for ${target}: ${bits.join(' | ')}`)
   }
   return lines.length > 1 ? lines.join('\n') : ''
+}
+
+function emptyLifecycleSummary(): AIMemoryLifecycleSummary {
+  return {
+    staleEntityKeys: [],
+    refreshEntityKeys: [],
+    summarizeEntityKeys: [],
+    archiveEventCount: 0,
+    lowConfidenceEntityCount: 0,
+  }
+}
+
+function broadLifecycleEvidence(lifecycle: AIMemoryLifecycleSummary): string[] {
+  const bits: string[] = []
+  if (lifecycle.refreshEntityKeys.length) bits.push(formatMemoryEvidence('refresh_needed', `${lifecycle.refreshEntityKeys.length} memory item(s)`, 80))
+  if (lifecycle.staleEntityKeys.length) bits.push(formatMemoryEvidence('stale', `${lifecycle.staleEntityKeys.length} memory item(s)`, 80))
+  if (lifecycle.summarizeEntityKeys.length) bits.push(formatMemoryEvidence('summarize_needed', `${lifecycle.summarizeEntityKeys.length} memory item(s)`, 80))
+  if (lifecycle.archiveEventCount) bits.push(formatMemoryEvidence('old_events', `${lifecycle.archiveEventCount}`, 40))
+  if (lifecycle.lowConfidenceEntityCount) bits.push(formatMemoryEvidence('low_confidence', `${lifecycle.lowConfidenceEntityCount}`, 40))
+  return bits
 }
 
 function hasCompactPreference(

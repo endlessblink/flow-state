@@ -234,6 +234,16 @@
 
 ---
 
+### ~~TASK-1836~~: Add Codex-discoverable Superpowers wrappers (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (2026-06-08)
+
+**Why**: Other Codex instances still did not reliably use Superpowers because the canonical project skills lived only under `.claude/skills`, which is not a Codex skill-discovery surface.
+
+**Shipped**: Added `.codex/skills/superpowers-*` wrapper skills that point to the canonical `.claude/skills/superpowers-*` project skills, and strengthened `AGENTS.md` so Codex/AGENTS-driven instances MUST use `superpowers-flowstate-auto-router` for bugs, fixes, behavior changes, reviews, planning, and completion checks unless the request is trivial or another higher-priority workflow clearly applies.
+
+---
+
 ### ~~BUG-1821~~: "Plan my week" misrouted to the completed-tasks summary (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-07, v1.4.105) | **Depends on**: BUG-1820

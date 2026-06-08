@@ -2038,6 +2038,7 @@ export function useAIChat() {
           taskContextCount: 0,
           feedbackCount: 0,
           graphEdgeCount: 0,
+          snapshotCount: 0,
           elapsedMs: 0,
           timedOut: false,
           exactEntityCount: 0,
@@ -2082,6 +2083,7 @@ export function useAIChat() {
             timedOut: memoryDiagnostics.timedOut,
             feedbackCount: memoryDiagnostics.feedbackCount,
             graphEdgeCount: memoryDiagnostics.graphEdgeCount,
+            snapshotCount: memoryDiagnostics.snapshotCount,
             exactEntityCount: memoryDiagnostics.exactEntityCount,
             semanticCandidateCount: memoryDiagnostics.semanticCandidateCount,
             semanticSkippedReason: memoryDiagnostics.semanticSkippedReason,
@@ -2134,6 +2136,7 @@ export function useAIChat() {
                   retrieval: clarification.debug?.retrieval,
                   feedbackCount: memoryDiagnostics.feedbackCount,
                   graphEdgeCount: memoryDiagnostics.graphEdgeCount,
+                  snapshotCount: memoryDiagnostics.snapshotCount,
                 },
               })
             } catch (eventErr) {

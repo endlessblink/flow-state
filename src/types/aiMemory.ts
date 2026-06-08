@@ -166,6 +166,7 @@ export interface AIClarificationArtifact {
       taskContextCount: number
       feedbackCount?: number
       graphEdgeCount?: number
+      snapshotCount?: number
       elapsedMs?: number
       timedOut?: boolean
       exactEntityCount?: number

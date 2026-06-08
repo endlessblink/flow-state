@@ -1,4 +1,4 @@
-import type { PlannerDirection, PlannerLocale, PlannerTaskSnapshot, ProjectContextSnapshot, TaskContextSnapshot, WeekContext } from './weeklyPlan'
+import type { MemorySnapshotEvidence, PlannerDirection, PlannerLocale, PlannerTaskSnapshot, ProjectContextSnapshot, TaskContextSnapshot, WeekContext } from './weeklyPlan'
 
 const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f-\u009f]/g
 const WHITESPACE_RE = /\s+/g
@@ -64,6 +64,29 @@ export function sanitizeTaskContextForPrompt(ctx: TaskContextSnapshot): TaskCont
   }
 }
 
+export function sanitizeMemorySnapshotForPrompt(snapshot: MemorySnapshotEvidence): MemorySnapshotEvidence {
+  return {
+    ...snapshot,
+    snapshotKey: sanitizeMemoryEvidenceText(snapshot.snapshotKey, 160),
+    entityKeys: sanitizeMemoryEvidenceList(snapshot.entityKeys, 20, 140),
+    summaryText: sanitizeMemoryEvidenceText(snapshot.summaryText, 320),
+    facts: sanitizeMemoryFacts(snapshot.facts),
+  }
+}
+
+function sanitizeMemoryFacts(facts: Record<string, unknown>): Record<string, unknown> {
+  const entries = Object.entries(facts)
+    .slice(0, 12)
+    .map(([key, value]) => {
+      const safeKey = sanitizeMemoryEvidenceText(key, 80)
+      if (Array.isArray(value)) return [safeKey, sanitizeMemoryEvidenceList(value, 6, 160)]
+      if (value && typeof value === 'object') return [safeKey, sanitizeMemoryEvidenceText(JSON.stringify(value), 220)]
+      return [safeKey, sanitizeMemoryEvidenceText(value, 180)]
+    })
+    .filter(([key]) => Boolean(key))
+  return Object.fromEntries(entries)
+}
+
 function sanitizeTaskForPrompt(task: PlannerTaskSnapshot): PlannerTaskSnapshot {
   return {
     ...task,
@@ -102,6 +125,7 @@ export function sanitizeWeekContextForPrompt(context: WeekContext): {
   workstreams: WeekContext['workstreams']
   projectContexts: ProjectContextSnapshot[]
   taskContexts: TaskContextSnapshot[]
+  memorySnapshots: MemorySnapshotEvidence[]
   recommendationFeedback: WeekContext['recommendationFeedback']
   uncertaintyNotes: string[]
   candidateTasks: PlannerTaskSnapshot[]
@@ -121,6 +145,7 @@ export function sanitizeWeekContextForPrompt(context: WeekContext): {
     })),
     projectContexts: context.projectContexts.map(sanitizeProjectContextForPrompt),
     taskContexts: context.taskContexts.map(sanitizeTaskContextForPrompt),
+    memorySnapshots: context.memorySnapshots.map(sanitizeMemorySnapshotForPrompt),
     recommendationFeedback: context.recommendationFeedback,
     uncertaintyNotes: context.uncertaintyNotes.map(note => sanitizeMemoryEvidenceText(note, 180)),
     candidateTasks: context.tasks.map(sanitizeTaskForPrompt),

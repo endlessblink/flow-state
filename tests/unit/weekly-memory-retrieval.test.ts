@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { retrieveWeeklyAIMemory, type WeeklyMemoryDb } from '@/services/ai/pipeline/weeklyMemoryRetrieval'
-import type { AIContextEdge, AIContextEntity, AIRecommendationFeedback, ProjectContext, TaskContext } from '@/types/aiMemory'
+import type { AIContextEdge, AIContextEntity, AIMemorySnapshot, AIRecommendationFeedback, ProjectContext, TaskContext } from '@/types/aiMemory'
 
 const taskId = '11111111-1111-4111-8111-111111111111'
 const projectId = '22222222-2222-4222-8222-222222222222'
@@ -68,6 +68,7 @@ function dbStub(overrides: Partial<WeeklyMemoryDb> = {}): WeeklyMemoryDb {
     fetchAIClarificationEvents: vi.fn(async () => []),
     fetchAIRecommendationFeedback: vi.fn(async () => []),
     fetchAIContextEdges: vi.fn(async () => []),
+    fetchAIMemorySnapshots: vi.fn(async () => []),
     ...overrides,
   }
 }
@@ -92,6 +93,17 @@ describe('retrieveWeeklyAIMemory', () => {
       confidence: 0.95,
       evidence: { source: 'test' },
       createdAt: '2026-06-08T08:10:00.000Z',
+    }]
+    const memorySnapshots: AIMemorySnapshot[] = [{
+      snapshotKey: 'week:2026-06-08:summary',
+      scope: 'week',
+      entityKeys: [`task:${taskId}`, `project:${projectId}`, 'week:2026-06-08'],
+      summaryText: 'User-confirmed weekly focus is memory reliability.',
+      facts: { focus: 'memory reliability' },
+      sourceEventCount: 4,
+      sourceEntityCount: 2,
+      confidence: 0.82,
+      staleAfter: '2026-07-08T08:00:00.000Z',
     }]
     const db = dbStub({
       fetchProjectContexts: vi.fn(async ids => ids.map(id => projectContext(id, 'Legacy project context'))),
@@ -127,6 +139,7 @@ describe('retrieveWeeklyAIMemory', () => {
       ]),
       fetchAIRecommendationFeedback: vi.fn(async () => feedback),
       fetchAIContextEdges: vi.fn(async () => contextEdges),
+      fetchAIMemorySnapshots: vi.fn(async () => memorySnapshots),
     })
 
     const result = await retrieveWeeklyAIMemory({
@@ -158,8 +171,14 @@ describe('retrieveWeeklyAIMemory', () => {
       entityKeys: result.entityKeys,
       limit: 80,
     })
+    expect(db.fetchAIMemorySnapshots).toHaveBeenCalledWith({
+      entityKeys: result.entityKeys,
+      scopes: ['user', 'project', 'task', 'week'],
+      limit: 12,
+    })
     expect(result.memory.projectContexts?.map(ctx => ctx.projectId)).toEqual([projectId, 'uncategorized'])
     expect(result.memory.taskContexts?.map(ctx => ctx.taskId)).toEqual([taskId])
+    expect(result.memory.memorySnapshots).toEqual(memorySnapshots)
     expect(result.memory.recommendationFeedback).toEqual(feedback)
     expect(result.clarificationEvents).toHaveLength(21)
     expect(result.edges).toHaveLength(4)
@@ -171,6 +190,7 @@ describe('retrieveWeeklyAIMemory', () => {
       taskContextCount: 1,
       feedbackCount: 1,
       graphEdgeCount: 1,
+      snapshotCount: 1,
       timedOut: false,
       exactEntityCount: 1,
       semanticCandidateCount: 1,
@@ -206,6 +226,7 @@ describe('retrieveWeeklyAIMemory', () => {
     expect(result.diagnostics.timedOut).toBe(true)
     expect(result.diagnostics.projectContextCount).toBe(0)
     expect(result.diagnostics.taskContextCount).toBe(0)
+    expect(result.diagnostics.snapshotCount).toBe(0)
     expect(result.edges).toHaveLength(2)
   })
 })

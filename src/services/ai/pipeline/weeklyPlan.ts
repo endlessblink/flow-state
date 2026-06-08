@@ -8,6 +8,7 @@ import type {
   AIUncertaintyDimension,
   AIMemoryPatchOperation,
   AIMemoryQuestionOption,
+  AIMemorySnapshot,
   AIRecommendationFeedback,
   ProjectContext,
   TaskContext,
@@ -158,6 +159,18 @@ export type TaskContextSnapshot = Pick<TaskContext,
   | 'staleAfter'
 >
 
+export type MemorySnapshotEvidence = Pick<AIMemorySnapshot,
+  | 'snapshotKey'
+  | 'scope'
+  | 'entityKeys'
+  | 'summaryText'
+  | 'facts'
+  | 'sourceEventCount'
+  | 'sourceEntityCount'
+  | 'confidence'
+  | 'staleAfter'
+>
+
 export type WeekContext = {
   requestId: string
   nowIso: string
@@ -177,6 +190,7 @@ export type WeekContext = {
   tasks: PlannerTaskSnapshot[]
   projectContexts: ProjectContextSnapshot[]
   taskContexts: TaskContextSnapshot[]
+  memorySnapshots: MemorySnapshotEvidence[]
   recommendationFeedback: AIRecommendationFeedback[]
   uncertaintyNotes: string[]
 }
@@ -298,6 +312,7 @@ type ToolResultLike = {
 export type WeekContextMemoryInput = {
   projectContexts?: ProjectContext[]
   taskContexts?: TaskContext[]
+  memorySnapshots?: AIMemorySnapshot[]
   recommendationFeedback?: AIRecommendationFeedback[]
 }
 
@@ -363,6 +378,7 @@ export function buildWeekContextFromToolResults(
     taskContexts: snapshots
       .map(task => task.taskContext)
       .filter((ctx): ctx is TaskContextSnapshot => Boolean(ctx)),
+    memorySnapshots: (memory.memorySnapshots ?? []).slice(0, 8).map(toMemorySnapshotEvidence),
     recommendationFeedback: memory.recommendationFeedback ?? [],
     uncertaintyNotes: buildMemoryUncertaintyNotes(snapshots, locale),
   }
@@ -413,6 +429,7 @@ export function buildWeeklyPlanPrompt(context: WeekContext): string {
       workstreams: promptContext.workstreams,
       projectContexts: promptContext.projectContexts,
       taskContexts: promptContext.taskContexts,
+      memorySnapshots: promptContext.memorySnapshots,
       recommendationFeedbackSummary: summarizeRecommendationFeedbackForPrompt(context),
       uncertaintyNotes: promptContext.uncertaintyNotes,
     },
@@ -1429,6 +1446,20 @@ function toTaskContextSnapshot(ctx: TaskContext): TaskContextSnapshot {
     completenessScore: ctx.completenessScore,
     lastConfirmedAt: ctx.lastConfirmedAt,
     staleAfter: ctx.staleAfter,
+  }
+}
+
+function toMemorySnapshotEvidence(snapshot: AIMemorySnapshot): MemorySnapshotEvidence {
+  return {
+    snapshotKey: snapshot.snapshotKey,
+    scope: snapshot.scope,
+    entityKeys: snapshot.entityKeys.slice(0, 20),
+    summaryText: snapshot.summaryText,
+    facts: snapshot.facts,
+    sourceEventCount: snapshot.sourceEventCount,
+    sourceEntityCount: snapshot.sourceEntityCount,
+    confidence: snapshot.confidence,
+    staleAfter: snapshot.staleAfter ?? null,
   }
 }
 

@@ -444,6 +444,7 @@
 - 2026-06-08: Added `broadMemoryRetrieval` for non-weekly task-list answers. The helper keeps UUID-only legacy calls filtered to real UUIDs, sends synthetic/local entities through text keys (`project:uncategorized`, `task:local-task`), includes safe quoted evidence from parameter beliefs and recent clarification answers, and returns concise retrieval diagnostics for future debug display.
 - 2026-06-08: Added `globalChatMemory` for non-task/freeform responses. It exact-fetches workflow/preference entities, recent clarification decisions, and selected parameter beliefs with a 1.5s timeout in the chat pipeline, producing a compact quoted-evidence packet instead of raw memory prose.
 - 2026-06-08: Broad/global retrieval now exact-fetches compact `ai_memory_snapshots` before generation. Snapshot evidence is bounded, sanitized, counted in diagnostics, and covered by focused retrieval tests so future summarization jobs can reduce prompt bloat without adding a separate graph/vector dependency.
+- 2026-06-08: Weekly planning retrieval now exact-fetches compact `ai_memory_snapshots` for user/project/task/week scopes, passes sanitized snapshot evidence into the weekly-plan prompt, and carries `snapshotCount` through diagnostics/debug metadata. Focused tests cover retrieval, prompt sanitization, and timeout fallback.
 
 ---
 

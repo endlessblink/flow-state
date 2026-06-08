@@ -3,6 +3,7 @@ import {
   broadTaskClarificationMemoryKey,
   buildBroadTaskClarification,
   hasRecentClarificationDecision,
+  selectBroadClarificationPrompt,
   shouldAskBroadTaskClarification,
 } from '@/services/ai/pipeline/broadClarification'
 import type { AIClarificationEvent, AIParameterBelief } from '@/types/aiMemory'
@@ -154,6 +155,25 @@ describe('broad task clarification policy', () => {
     expect(card?.question.id).toBe('response_quality_next_task_energy')
     expect(card?.question.question).toBe('What would make one task right for now?')
     expect(card?.debug?.evpi?.targetedParameters).toEqual(expect.arrayContaining(['energy_fit']))
+  })
+
+  it('does not ask a below-threshold clarification when no available prompt targets the missing dimension', () => {
+    const selection = selectBroadClarificationPrompt('day_plan', 'en', [], {
+      score: 0.49,
+      materiality: 'high',
+      decision: 'ask',
+      missing: ['task_context'],
+      dimensions: {
+        preferences: 0.99,
+        impact: 0.99,
+        energy_fit: 0.99,
+        dependencies: 0.99,
+        history: 0.99,
+        stakeholders: 0.99,
+      },
+    }, 'workflow:task_answer:day_plan', 'day_plan')
+
+    expect(selection).toBeNull()
   })
 
   it('skips a recently resolved broad prompt and exposes the skipped candidate in EVPI debug metadata', () => {

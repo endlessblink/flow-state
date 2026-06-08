@@ -319,7 +319,7 @@ type BroadTaskPrompt = {
   options: BroadTaskPromptOption[]
 }
 
-function selectBroadClarificationPrompt(
+export function selectBroadClarificationPrompt(
   responseMode: RoutedIntent['responseMode'],
   lang: ChatOutputLanguage,
   events: AIClarificationEvent[],
@@ -332,7 +332,6 @@ function selectBroadClarificationPrompt(
     .map(prompt => scoreBroadPrompt(prompt, events, coverage, memoryKey, entityId))
     .sort((a, b) => b.selectedScore - a.selectedScore)
   const selected = scored.find(candidate => !candidate.skippedReason && candidate.selectedScore > BROAD_CLARIFICATION_EVPI_ASK_THRESHOLD)
-    ?? scored.find(candidate => !candidate.skippedReason)
   if (!selected) return null
   return {
     prompt: selected.prompt,

@@ -20,7 +20,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock, Plus, Maximize2 } from 'lucide-vue-next'
+import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock, Plus, Maximize2, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type Token from 'markdown-it/lib/token.mjs'
 import type Renderer from 'markdown-it/lib/renderer.mjs'
@@ -116,6 +116,7 @@ const dayPlanError = ref('')
 const smartLaneApplying = ref(false)
 const smartLaneApplied = ref(false)
 const smartLaneError = ref('')
+const weeklyLaneTrackRefs = ref<Record<string, HTMLElement | null>>({})
 
 // Schedule onboarding
 const selectedDays = ref<Set<string>>(new Set())
@@ -328,6 +329,55 @@ function weeklyPlanRelatedChipIds(rec: WeeklyPlanRecommendation): string[] {
   return [...new Set(rec.relatedTaskIds ?? [])]
     .filter(taskId => taskId !== rec.primaryTaskId && !dismissedCardTaskIds.value.has(taskId))
     .slice(0, 4)
+}
+
+function setWeeklyLaneTrackRef(sectionId: string, el: unknown): void {
+  weeklyLaneTrackRefs.value[sectionId] = el instanceof HTMLElement ? el : null
+}
+
+function scrollWeeklyLane(rec: WeeklyPlanRecommendation, direction: 'previous' | 'next', event: MouseEvent): void {
+  event.stopPropagation()
+  const el = weeklyLaneTrackRefs.value[rec.sectionId]
+  if (!el) return
+  const amount = Math.max(180, Math.round(el.clientWidth * 0.72))
+  const isRtl = (weeklyPlan.value?.direction ?? 'ltr') === 'rtl'
+  const signed = direction === 'next' ? 1 : -1
+  el.scrollBy({
+    left: signed * amount * (isRtl ? -1 : 1),
+    behavior: 'smooth',
+  })
+}
+
+function shouldShowLaneArrows(rec: WeeklyPlanRecommendation): boolean {
+  return weeklyPlanTaskIds(rec).length > 1
+}
+
+function weeklyLaneTitle(rec: WeeklyPlanRecommendation): string {
+  const locale = weeklyPlan.value?.locale ?? 'en'
+  const focus = rec.focusArea.trim()
+  const genericWork = /^(work|work delivery|מסירת עבודה)$/i.test(focus)
+  const limited = /^(limited-context work|limited task context|הקשר חסר|הקשר מוגבל)$/i.test(focus)
+  if (locale === 'he') {
+    if (genericWork) return 'עבודה לא מסווגת'
+    if (limited) return 'נתיב עם הקשר חסר'
+    return focus
+  }
+  if (genericWork) return 'Unclassified work'
+  if (limited) return 'Limited-context lane'
+  return focus
+}
+
+function weeklyLaneSubtitle(rec: WeeklyPlanRecommendation): string {
+  const locale = weeklyPlan.value?.locale ?? 'en'
+  const count = weeklyPlanTaskIds(rec).length
+  const focus = rec.focusArea.trim()
+  const isGeneric = /^(work|work delivery|מסירת עבודה)$/i.test(focus)
+  if (locale === 'he') {
+    const source = isGeneric ? 'מקור: Work, לא משמעות מוכחת' : `מקור: ${focus}`
+    return `${source} · ${count} כרטיסים בנתיב`
+  }
+  const source = isGeneric ? 'Source: Work, not proven meaning' : `Source: ${focus}`
+  return `${source} · ${count} cards in lane`
 }
 
 function weeklyPlanRecommendationForTask(taskId: string): WeeklyPlanRecommendation | undefined {
@@ -2479,19 +2529,15 @@ async function saveSchedule() {
             :data-section-id="rec.sectionId"
             :data-primary-task-id="rec.primaryTaskId"
           >
-            <div class="weekly-lane-header">
-              <div class="weekly-plan-focus" dir="auto">
-                {{ weeklyPlan.locale === 'he' ? 'נתיב' : 'Lane' }}: {{ rec.focusArea }}
-              </div>
+            <header class="weekly-lane-header">
               <span class="weekly-lane-rank">{{ rec.rank }}</span>
-            </div>
-            <h3>{{ rec.title }}</h3>
-            <p>{{ rec.whyThisWeek }}</p>
-            <p class="weekly-next-action">
-              <strong>{{ weeklyPlan.locale === 'he' ? 'הצעד הבא' : 'Next action' }}:</strong>
-              {{ rec.nextAction }}
-            </p>
-            <div class="weekly-lane-actions">
+              <div class="weekly-lane-heading">
+                <div class="weekly-plan-focus" dir="auto">
+                  {{ weeklyPlan.locale === 'he' ? 'נתיב' : 'Lane' }}
+                </div>
+                <h3 dir="auto">{{ weeklyLaneTitle(rec) }}</h3>
+                <p dir="auto">{{ weeklyLaneSubtitle(rec) }}</p>
+              </div>
               <button
                 type="button"
                 class="weekly-open-lane-view"
@@ -2499,48 +2545,80 @@ async function saveSchedule() {
                 @click.stop="emit('requestWide')"
               >
                 <Maximize2 :size="13" />
-                <span>{{ weeklyPlan.locale === 'he' ? 'פתח נתיב רחב' : 'Open lane view' }}</span>
+                <span>{{ weeklyPlan.locale === 'he' ? 'פתח רחב' : 'Wide' }}</span>
               </button>
-            </div>
-            <div
-              class="weekly-lane-track"
-              data-testid="weekly-lane-track"
-            >
-              <template v-for="taskId in weeklyPlanTaskIds(rec)" :key="`${rec.sectionId}:lane:${taskId}`">
-                <button
-                  v-if="taskCardFromId(taskId)"
-                  class="weekly-lane-task"
-                  :class="{
-                    'weekly-lane-task-primary': taskId === rec.primaryTaskId,
-                    'task-completed': completedTaskIds.has(taskId) || taskCardFromId(taskId)?.status === 'done',
-                  }"
-                  :data-testid="taskId === rec.primaryTaskId ? 'inline-plan-card' : undefined"
-                  @click="!isPlanSnapshotCard(taskCardFromId(taskId)) && openQuickEdit(taskCardFromId(taskId)!, $event)"
-                >
-                  <span class="task-priority-dot" :style="{ background: priorityColor(taskCardFromId(taskId)?.priority ?? undefined) }" />
-                  <span class="weekly-lane-task-body">
-                    <span
-                      class="weekly-lane-task-title"
-                      :data-testid="taskId === rec.primaryTaskId ? undefined : 'weekly-related-chip'"
-                      dir="auto"
-                    >
-                      {{ taskCardFromId(taskId)?.title || '(untitled)' }}
+            </header>
+            <div class="weekly-lane-content">
+              <div class="weekly-lane-summary">
+                <p>{{ rec.whyThisWeek }}</p>
+                <p class="weekly-next-action">
+                  <strong>{{ weeklyPlan.locale === 'he' ? 'הצעד הבא' : 'Next' }}:</strong>
+                  {{ rec.nextAction }}
+                </p>
+              </div>
+              <button
+                v-if="shouldShowLaneArrows(rec)"
+                type="button"
+                class="weekly-lane-arrow weekly-lane-arrow-prev"
+                data-testid="weekly-lane-arrow-prev"
+                :aria-label="weeklyPlan.locale === 'he' ? 'גלול לנתיב הקודם' : 'Scroll lane backward'"
+                @click="scrollWeeklyLane(rec, 'previous', $event)"
+              >
+                <ChevronRight v-if="weeklyPlan.direction === 'rtl'" :size="16" />
+                <ChevronLeft v-else :size="16" />
+              </button>
+              <div
+                :ref="el => setWeeklyLaneTrackRef(rec.sectionId, el)"
+                class="weekly-lane-track"
+                data-testid="weekly-lane-track"
+              >
+                <template v-for="taskId in weeklyPlanTaskIds(rec)" :key="`${rec.sectionId}:lane:${taskId}`">
+                  <button
+                    v-if="taskCardFromId(taskId)"
+                    class="weekly-lane-task"
+                    :class="{
+                      'weekly-lane-task-primary': taskId === rec.primaryTaskId,
+                      'task-completed': completedTaskIds.has(taskId) || taskCardFromId(taskId)?.status === 'done',
+                    }"
+                    :data-testid="taskId === rec.primaryTaskId ? 'inline-plan-card' : undefined"
+                    @click="!isPlanSnapshotCard(taskCardFromId(taskId)) && openQuickEdit(taskCardFromId(taskId)!, $event)"
+                  >
+                    <span class="task-priority-dot" :style="{ background: priorityColor(taskCardFromId(taskId)?.priority ?? undefined) }" />
+                    <span class="weekly-lane-task-body">
+                      <span
+                        class="weekly-lane-task-title"
+                        :data-testid="taskId === rec.primaryTaskId ? undefined : 'weekly-related-chip'"
+                        dir="auto"
+                      >
+                        {{ taskCardFromId(taskId)?.title || '(untitled)' }}
+                      </span>
+                      <span class="sr-only" data-testid="weekly-lane-task">{{ taskCardFromId(taskId)?.title || taskId }}</span>
+                      <span v-if="weeklyPlanTaskStaleLabel(taskCardFromId(taskId))" class="grouped-card-reason" dir="auto">
+                        {{ weeklyPlanTaskStaleLabel(taskCardFromId(taskId)) }}
+                      </span>
+                      <span class="task-meta-row">
+                        <span v-if="taskCardFromId(taskId)?.daysOverdue" class="task-overdue-badge">{{ taskCardFromId(taskId)?.daysOverdue }}d overdue</span>
+                        <span v-else-if="taskCardFromId(taskId)?.dueDate" class="task-due-date">{{ formatRelativeDate(taskCardFromId(taskId)?.dueDate ?? '') }}</span>
+                        <span v-if="taskCardFromId(taskId)?.status" class="task-status-badge" :class="'status-' + taskCardFromId(taskId)?.status">{{ taskCardFromId(taskId)?.status }}</span>
+                      </span>
                     </span>
-                    <span class="sr-only" data-testid="weekly-lane-task">{{ taskCardFromId(taskId)?.title || taskId }}</span>
-                    <span v-if="weeklyPlanTaskStaleLabel(taskCardFromId(taskId))" class="grouped-card-reason" dir="auto">
-                      {{ weeklyPlanTaskStaleLabel(taskCardFromId(taskId)) }}
-                    </span>
-                    <span class="task-meta-row">
-                      <span v-if="taskCardFromId(taskId)?.daysOverdue" class="task-overdue-badge">{{ taskCardFromId(taskId)?.daysOverdue }}d overdue</span>
-                      <span v-else-if="taskCardFromId(taskId)?.dueDate" class="task-due-date">{{ formatRelativeDate(taskCardFromId(taskId)?.dueDate ?? '') }}</span>
-                      <span v-if="taskCardFromId(taskId)?.status" class="task-status-badge" :class="'status-' + taskCardFromId(taskId)?.status">{{ taskCardFromId(taskId)?.status }}</span>
-                    </span>
-                  </span>
-                </button>
-                <div v-else class="weekly-missing-task" data-testid="inline-plan-card-missing">
-                  {{ weeklyPlan.locale === 'he' ? 'המשימה כבר לא קיימת' : 'Task no longer exists' }}
-                </div>
-              </template>
+                  </button>
+                  <div v-else class="weekly-missing-task" data-testid="inline-plan-card-missing">
+                    {{ weeklyPlan.locale === 'he' ? 'המשימה כבר לא קיימת' : 'Task no longer exists' }}
+                  </div>
+                </template>
+              </div>
+              <button
+                v-if="shouldShowLaneArrows(rec)"
+                type="button"
+                class="weekly-lane-arrow weekly-lane-arrow-next"
+                data-testid="weekly-lane-arrow-next"
+                :aria-label="weeklyPlan.locale === 'he' ? 'גלול לנתיב הבא' : 'Scroll lane forward'"
+                @click="scrollWeeklyLane(rec, 'next', $event)"
+              >
+                <ChevronLeft v-if="weeklyPlan.direction === 'rtl'" :size="16" />
+                <ChevronRight v-else :size="16" />
+              </button>
             </div>
             <div class="weekly-feedback-row" @click.stop>
               <button
@@ -4315,25 +4393,63 @@ async function saveSchedule() {
 }
 
 .weekly-lane-board {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-  align-items: stretch;
+  min-width: 0;
 }
 
 .weekly-visual-lane {
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+  gap: var(--space-3);
   min-width: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  background: var(--glass-bg-subtle);
+  padding-block: var(--space-3);
+  border-block-start: 1px solid var(--glass-border-faint);
+  background: transparent;
+}
+
+[dir="rtl"] .weekly-visual-lane {
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem);
 }
 
 .weekly-lane-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  min-width: 0;
+  flex-direction: column;
   gap: var(--space-2);
+}
+
+[dir="rtl"] .weekly-lane-header {
+  grid-column: 2;
+}
+
+[dir="rtl"] .weekly-lane-content {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.weekly-lane-heading {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.weekly-lane-heading h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  line-height: 1.25;
+}
+
+.weekly-lane-heading p,
+.weekly-lane-summary p {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  line-height: 1.45;
 }
 
 .weekly-lane-rank {
@@ -4349,9 +4465,25 @@ async function saveSchedule() {
   font-weight: var(--font-semibold);
 }
 
-.weekly-lane-actions {
-  display: flex;
-  justify-content: flex-end;
+.weekly-lane-content {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.weekly-lane-summary {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, auto);
+  gap: var(--space-2);
+  align-items: baseline;
+  min-width: 0;
+}
+
+[dir="rtl"] .weekly-lane-summary {
+  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
 }
 
 .weekly-open-lane-view {
@@ -4374,23 +4506,46 @@ async function saveSchedule() {
   color: var(--text-primary);
 }
 
+.weekly-lane-arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 1.875rem;
+  height: 100%;
+  min-height: 4.75rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.weekly-lane-arrow:hover {
+  border-color: var(--glass-border-strong);
+  color: var(--text-primary);
+  background: var(--glass-bg-soft);
+}
+
 .weekly-lane-track {
   display: flex;
   flex-direction: row;
   gap: var(--space-2);
+  direction: inherit;
   min-width: 0;
-  padding-block: var(--space-1);
+  padding: var(--space-1);
   overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  border-inline: 1px solid var(--glass-border-faint);
 }
 
 .weekly-lane-task {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  width: clamp(11rem, 42vw, 15rem);
-  min-height: 5.25rem;
+  width: clamp(10.5rem, 32vw, 14rem);
+  min-height: 4.75rem;
   flex: 0 0 auto;
   padding: var(--space-2);
   border: 1px solid var(--glass-border);
@@ -4431,7 +4586,34 @@ async function saveSchedule() {
 }
 
 .panel-fullscreen .weekly-lane-task {
-  width: clamp(13rem, 18vw, 17rem);
+  width: clamp(12rem, 17vw, 16rem);
+}
+
+.panel-fullscreen .weekly-visual-lane {
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+}
+
+.panel-fullscreen[dir="rtl"] .weekly-visual-lane,
+[dir="rtl"] .panel-fullscreen .weekly-visual-lane {
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
+}
+
+@media (max-width: 720px) {
+  .weekly-visual-lane,
+  [dir="rtl"] .weekly-visual-lane {
+    grid-template-columns: 1fr;
+  }
+
+  [dir="rtl"] .weekly-lane-header,
+  [dir="rtl"] .weekly-lane-content {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .weekly-lane-summary,
+  [dir="rtl"] .weekly-lane-summary {
+    grid-template-columns: 1fr;
+  }
 }
 
 .weekly-plan-questions {

@@ -533,7 +533,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.get('[data-section-id="rec-renewal"]').text()).toContain('Amit needs numbers')
   })
 
-  it('renders compact weekly plans as visual lanes instead of stacked related task cards', () => {
+  it('renders compact weekly plans as visual lanes instead of stacked related task cards', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push(
       {
@@ -639,13 +639,22 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.findAll('[data-testid="weekly-visual-lane"]')).toHaveLength(1)
     expect(wrapper.findAll('[data-testid="weekly-lane-track"]')).toHaveLength(1)
     expect(wrapper.findAll('[data-testid="weekly-lane-task"]')).toHaveLength(3)
+    expect(wrapper.findAll('[data-testid="weekly-lane-arrow-prev"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="weekly-lane-arrow-next"]')).toHaveLength(1)
+    expect(wrapper.get('.weekly-lane-heading h3').text()).toBe('עבודה לא מסווגת')
+    expect(wrapper.get('.weekly-lane-heading').text()).toContain('מקור: Work')
+    const laneTrack = wrapper.get('[data-testid="weekly-lane-track"]').element as HTMLElement & { scrollBy: ReturnType<typeof vi.fn> }
+    Object.defineProperty(laneTrack, 'clientWidth', { value: 420, configurable: true })
+    laneTrack.scrollBy = vi.fn()
+    await wrapper.get('[data-testid="weekly-lane-arrow-next"]').trigger('click')
+    expect(laneTrack.scrollBy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
     expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(1)
     expect(wrapper.get('[data-testid="inline-plan-card"]').text()).toContain('עבודה עם בינה מעצבת')
     expect(wrapper.findAll('[data-testid="weekly-related-chip"]')).toHaveLength(2)
     expect(wrapper.get('[data-testid="weekly-lane-board"]').text()).toContain('לעדכן את גלית')
     expect(wrapper.get('[data-testid="weekly-lane-board"]').text()).toContain('arthouse')
 
-    wrapper.get('[data-testid="weekly-open-lane-view"]').trigger('click')
+    await wrapper.get('[data-testid="weekly-open-lane-view"]').trigger('click')
     expect(wrapper.emitted('requestWide')).toHaveLength(1)
   })
 

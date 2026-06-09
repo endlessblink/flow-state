@@ -211,6 +211,33 @@ async function seedWeeklyInlineFollowUpConversation(page: Page) {
   })
 }
 
+async function seedAnsweredWeeklyFollowUpMemory(page: Page) {
+  await page.evaluate(() => {
+    const key = 'flowstate-ai-clarification-local-memory-v1'
+    const existing = JSON.parse(localStorage.getItem(key) || '{}')
+    localStorage.setItem(key, JSON.stringify({
+      contextEntities: existing.contextEntities ?? [],
+      events: [
+        {
+          entityKey: 'task:ai-local-task-4',
+          entityType: 'task',
+          displayName: 'Draft follow-up tasks for the memory interview flow',
+          questionId: 'followup_ai-local-task-4',
+          eventType: 'answered',
+          question: 'להוסיף משימת המשך אחרי "Draft follow-up tasks for the memory interview flow"?',
+          selectedOptionId: 'add_followup',
+          selectedLabel: 'כן, להוסיף',
+          createdAt: new Date().toISOString(),
+        },
+        ...(existing.events ?? []),
+      ],
+      parameterBeliefs: existing.parameterBeliefs ?? [],
+      recommendationFeedback: existing.recommendationFeedback ?? [],
+      memorySnapshots: existing.memorySnapshots ?? [],
+    }))
+  })
+}
+
 async function stubBridge(page: Page, options: { missingCardsFromChatCall?: number; hangFromChatCall?: number } = {}) {
   await page.addInitScript(() => {
     ;(window as unknown as { __flowstateBridgeChatCallCount: number }).__flowstateBridgeChatCallCount = 0
@@ -497,6 +524,20 @@ test('weekly inline follow-up click advances the chat instead of staying on the 
   expect(compactTextLength).toBeLessThan(1400)
   await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 15_000 })
   await expect(page.locator('.ai-chat-input-container textarea')).toBeEnabled({ timeout: 5_000 })
+})
+
+test('old answered weekly inline follow-up card hydrates from memory instead of asking again', async ({ page }) => {
+  await seedGuestWorkspace(page)
+  await seedWeeklyInlineFollowUpConversation(page)
+  await seedAnsweredWeeklyFollowUpMemory(page)
+  await stubBridge(page)
+
+  await openAIChat(page)
+  const seededPlan = page.locator('[data-testid="weekly-plan"]').first()
+  await expect(seededPlan).toBeVisible({ timeout: 10_000 })
+  await expect(seededPlan).toContainText(/התשובה כבר נשמרה|Answer already saved/, { timeout: 5_000 })
+  await expect(seededPlan.getByRole('button', { name: 'כן, להוסיף' })).toHaveCount(0)
+  await expect(seededPlan.getByRole('button', { name: 'הוסף משימת מעקב' })).toHaveCount(0)
 })
 
 test('too-much feedback makes the next broad fallback answer compact', async ({ page }) => {

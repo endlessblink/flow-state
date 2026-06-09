@@ -40,6 +40,7 @@ vi.mock('@vueuse/core', async () => {
 
 const supabaseDbMocks = vi.hoisted(() => ({
   applyAIMemoryPatch: vi.fn(async () => undefined),
+  fetchAIClarificationEvents: vi.fn(async () => []),
   recordAIClarificationEvent: vi.fn(async () => undefined),
   recordAIRecommendationFeedback: vi.fn(async () => undefined),
   getPendingAIMemoryWriteCount: vi.fn(() => 0),
@@ -103,6 +104,8 @@ describe('AI sidebar-first desktop experience', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     supabaseDbMocks.applyAIMemoryPatch.mockClear()
+    supabaseDbMocks.fetchAIClarificationEvents.mockReset()
+    supabaseDbMocks.fetchAIClarificationEvents.mockResolvedValue([])
     supabaseDbMocks.recordAIClarificationEvent.mockClear()
     supabaseDbMocks.recordAIRecommendationFeedback.mockClear()
     supabaseDbMocks.getPendingAIMemoryWriteCount.mockReset()
@@ -2152,6 +2155,7 @@ describe('AI sidebar-first desktop experience', () => {
 
     expect(wrapper.text()).toContain('Grounded task-evidence plan')
     await wrapper.get('.weekly-question-option').trigger('click')
+    expect(wrapper.get('.weekly-question-apply').attributes('aria-label')).toBe('Add follow-up task')
     await wrapper.get('.weekly-question-free-text').setValue('Confirm renewal numbers were received')
     await wrapper.get('.weekly-question-apply').trigger('click')
     await flushPromises()
@@ -2164,8 +2168,8 @@ describe('AI sidebar-first desktop experience', () => {
       projectId: 'client-renewals',
       priority: 'high',
     }))
-    expect(wrapper.get('.weekly-question-apply').attributes('aria-label')).toBe('Add follow-up task')
     expect(wrapper.text()).toContain('Follow-up task added')
+    expect(wrapper.find('.weekly-question-apply').exists()).toBe(false)
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week using the context I just answered')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Created a follow-up task.')
     expect(supabaseDbMocks.recordAIClarificationEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -2185,6 +2189,83 @@ describe('AI sidebar-first desktop experience', () => {
         relatedTaskIds: ['task-renewal'],
       }),
     }))
+  })
+
+  it('hydrates old weekly follow-up cards from clarification memory so answered questions are not asked again', async () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push({
+      id: 'task-renewal',
+      title: 'Send renewal proposal to Amit',
+      description: 'Amit asked for numbers before Wednesday budget meeting.',
+      status: 'todo',
+      priority: 'high',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '2026-06-10',
+      projectId: 'client-renewals',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Task)
+    supabaseDbMocks.fetchAIClarificationEvents.mockResolvedValueOnce([{
+      entityKey: 'task:task-renewal',
+      entityType: 'task',
+      displayName: 'Send renewal proposal to Amit',
+      questionId: 'followup_task-renewal',
+      eventType: 'answered',
+      selectedOptionId: 'add_followup',
+      selectedLabel: 'Yes, add it',
+      createdAt: '2026-06-09T08:00:00Z',
+    }])
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-weekly-old-followup-question',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            weeklyPlan: {
+              schemaVersion: 'weekly-plan.v2',
+              requestId: 'req-week',
+              locale: 'en',
+              direction: 'ltr',
+              source: 'quick_draft',
+              headline: 'One answer before ranking',
+              weekRead: { summary: 'Need one answer.', workloadReality: '', mainTradeoff: '' },
+              recommendations: [],
+              deferrals: [],
+              openQuestions: [
+                {
+                  id: 'followup_task-renewal',
+                  entityType: 'task',
+                  entityId: 'task-renewal',
+                  reason: 'follow_up_task_suggestion',
+                  question: 'Add a follow-up task after "Send renewal proposal to Amit"?',
+                  options: [
+                    { id: 'add_followup', label: 'Yes, add it', effect: 'Create a follow-up task linked to this recommendation.' },
+                    { id: 'no_followup', label: 'No follow-up', effect: 'Do not suggest a follow-up for this task again in this plan.' },
+                  ],
+                  allowFreeText: true,
+                  relatedTaskIds: ['task-renewal'],
+                },
+              ],
+              quality: { selectedTaskCount: 0, confidence: 'low', caveats: [] },
+            },
+          },
+        },
+      },
+      global: { stubs: { TaskQuickEditPopover: true } },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    expect(supabaseDbMocks.fetchAIClarificationEvents).toHaveBeenCalledWith(['task:task-renewal'], 50)
+    expect(wrapper.text()).toContain('Answer already saved')
+    expect(wrapper.findAll('.weekly-question-option')).toHaveLength(0)
+    expect(wrapper.find('.weekly-question-apply').exists()).toBe(false)
   })
 
   it('continues weekly planning immediately while follow-up task creation is still pending', async () => {

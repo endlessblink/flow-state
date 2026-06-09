@@ -17,7 +17,7 @@
  * @see TASK-1120 in MASTER_PLAN.md
  */
 
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
 import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock, Plus } from 'lucide-vue-next'
@@ -432,6 +432,61 @@ function weeklyQuestionApplyLabel(question: WeeklyPlanOutput['openQuestions'][nu
 function showWeeklyQuestionStatus(question: WeeklyPlanOutput['openQuestions'][number]): boolean {
   return Boolean(weeklyQuestionApplied.value[weeklyQuestionKey(question)])
 }
+
+function weeklyQuestionAnsweredLabel(): string {
+  return weeklyPlan.value?.locale === 'he' ? 'התשובה כבר נשמרה' : 'Answer already saved'
+}
+
+async function hydrateAnsweredWeeklyQuestions(): Promise<void> {
+  const questions = weeklyPlan.value?.openQuestions ?? []
+  if (!questions.length) return
+
+  const identities = questions.map(question => ({
+    key: weeklyQuestionKey(question),
+    identity: weeklyQuestionMemoryIdentity(question, weeklyQuestionTask(question)),
+  }))
+  const entityKeys = [...new Set(identities.map(item => item.identity.entityKey))]
+  if (!entityKeys.length) return
+
+  traceWeeklyQuestion('answered_hydration_started', {
+    questionCount: questions.length,
+    entityKeys,
+  })
+
+  try {
+    const events = await aiMemoryDb.fetchAIClarificationEvents(entityKeys, 50)
+    const resolved = new Set(events
+      .filter(event => ['answered', 'dismissed', 'generated_with_uncertainty', 'showed_candidates'].includes(event.eventType))
+      .map(event => `${event.entityKey}::${event.questionId}`))
+    const nextApplied = { ...weeklyQuestionApplied.value }
+    for (const item of identities) {
+      if (resolved.has(`${item.identity.entityKey}::${item.key}`)) {
+        nextApplied[item.key] = weeklyQuestionAnsweredLabel()
+      }
+    }
+    weeklyQuestionApplied.value = nextApplied
+    traceWeeklyQuestion('answered_hydration_finished', {
+      matchedCount: Object.keys(nextApplied).filter(key => identities.some(item => item.key === key)).length,
+    })
+  } catch (err) {
+    console.error('[AIChat:WeeklyInlineQuestion]', {
+      stage: 'answered_hydration_failed',
+      messageId: props.message.id,
+      error: err,
+    })
+  }
+}
+
+onMounted(() => {
+  void hydrateAnsweredWeeklyQuestions()
+})
+
+watch(
+  () => weeklyPlan.value?.requestId,
+  () => {
+    void hydrateAnsweredWeeklyQuestions()
+  },
+)
 
 function continueAfterWeeklyQuestion(
   question: WeeklyPlanOutput['openQuestions'][number],
@@ -2177,43 +2232,47 @@ async function saveSchedule() {
             class="weekly-plan-question"
           >
             <p>{{ question.question }}</p>
-            <div v-if="question.options?.length" class="weekly-question-options">
-              <button
-                v-for="option in question.options"
-                :key="option.id"
-                type="button"
-                class="weekly-question-option"
-                :class="{ selected: weeklyQuestionAnswers[question.id || question.question] === option.id }"
-                :title="option.effect"
-                @click="weeklyQuestionAnswers[question.id || question.question] = option.id"
-              >
-                {{ option.label }}
-              </button>
-            </div>
-            <textarea
-              v-if="question.allowFreeText"
-              v-model="weeklyQuestionFreeText[question.id || question.question]"
-              class="weekly-question-free-text"
-              :placeholder="question.freeTextPlaceholder || (weeklyPlan.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...')"
-              rows="2"
-            />
-            <div class="weekly-question-action-row">
-              <button
-                type="button"
-                class="weekly-question-apply"
-                :class="{ 'weekly-question-apply-icon': isWeeklyFollowUpAction(question) }"
-                :title="weeklyQuestionApplyLabel(question)"
-                :aria-label="weeklyQuestionApplyLabel(question)"
-                :disabled="weeklyQuestionApplying[weeklyQuestionKey(question)] || (!weeklyQuestionAnswers[weeklyQuestionKey(question)] && !weeklyQuestionFreeText[weeklyQuestionKey(question)]?.trim())"
-                @click="applyWeeklyQuestion(question, $event)"
-              >
-                <Loader2 v-if="weeklyQuestionApplying[weeklyQuestionKey(question)]" :size="13" class="spin" />
-                <Plus v-else-if="isWeeklyFollowUpAction(question)" :size="14" aria-hidden="true" />
-                <CheckCircle2 v-else :size="13" aria-hidden="true" />
-                <span :class="{ 'sr-only': isWeeklyFollowUpAction(question) }">
-                  {{ weeklyQuestionApplyLabel(question) }}
-                </span>
-              </button>
+            <template v-if="!showWeeklyQuestionStatus(question)">
+              <div v-if="question.options?.length" class="weekly-question-options">
+                <button
+                  v-for="option in question.options"
+                  :key="option.id"
+                  type="button"
+                  class="weekly-question-option"
+                  :class="{ selected: weeklyQuestionAnswers[question.id || question.question] === option.id }"
+                  :title="option.effect"
+                  @click="weeklyQuestionAnswers[question.id || question.question] = option.id"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+              <textarea
+                v-if="question.allowFreeText"
+                v-model="weeklyQuestionFreeText[question.id || question.question]"
+                class="weekly-question-free-text"
+                :placeholder="question.freeTextPlaceholder || (weeklyPlan.locale === 'he' ? 'או כתוב הקשר קצר...' : 'Or add brief context...')"
+                rows="2"
+              />
+              <div class="weekly-question-action-row">
+                <button
+                  type="button"
+                  class="weekly-question-apply"
+                  :class="{ 'weekly-question-apply-icon': isWeeklyFollowUpAction(question) }"
+                  :title="weeklyQuestionApplyLabel(question)"
+                  :aria-label="weeklyQuestionApplyLabel(question)"
+                  :disabled="weeklyQuestionApplying[weeklyQuestionKey(question)] || (!weeklyQuestionAnswers[weeklyQuestionKey(question)] && !weeklyQuestionFreeText[weeklyQuestionKey(question)]?.trim())"
+                  @click="applyWeeklyQuestion(question, $event)"
+                >
+                  <Loader2 v-if="weeklyQuestionApplying[weeklyQuestionKey(question)]" :size="13" class="spin" />
+                  <Plus v-else-if="isWeeklyFollowUpAction(question)" :size="14" aria-hidden="true" />
+                  <CheckCircle2 v-else :size="13" aria-hidden="true" />
+                  <span :class="{ 'sr-only': isWeeklyFollowUpAction(question) }">
+                    {{ weeklyQuestionApplyLabel(question) }}
+                  </span>
+                </button>
+              </div>
+            </template>
+            <div v-else class="weekly-question-action-row">
               <span v-if="showWeeklyQuestionStatus(question)" class="weekly-question-status">
                 {{ weeklyQuestionApplied[weeklyQuestionKey(question)] }}
               </span>

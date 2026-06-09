@@ -112,13 +112,16 @@
 **Acceptance**:
 - Generated follow-up questions must be keyed to the related task, not anonymous weekly text.
 - Clicking an inline weekly question answer must record an `ai_clarification_events` answer with `entityKey = task:<taskId>` and `questionId = followup_<taskId>` before the continuation decision reruns.
+- Historical weekly follow-up cards must hydrate from saved clarification events and render as already answered instead of showing active answer controls.
 - Browser proof must fail if the same inline follow-up question text appears twice after the user answers it.
 - Console logs must show the clarification-event write boundary: `clarification_event_record_started` and `clarification_event_record_succeeded`.
+- Console logs must show the old-card hydration boundary: `answered_hydration_started` and `answered_hydration_finished`.
 
 **Proof**:
-- `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts` → 65/65 passed.
+- `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts` → 66/66 passed.
 - `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --headed --grep "weekly inline follow-up"` → 1/1 passed.
-- `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly bridge stream hang|weekly inline follow-up|too-much feedback"` → 3/3 passed.
+- `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --headed --grep "old answered weekly inline"` → 1/1 passed.
+- `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly bridge stream hang|weekly inline follow-up|old answered weekly inline|too-much feedback"` → 4/4 passed.
 - `npm run type-check` → passed.
 
 **Focused proof gate before user testing**:
@@ -131,7 +134,7 @@
   5. Choose generate/current-info escape and receive a compact 3-5 item weekly plan.
   6. Repeat with an English flexible prompt and verify it routes to weekly planning.
 
-**Gate status**: ✅ Follow-up stuck-click, compact post-continuation output, and duplicate inline follow-up suppression passed in headed localhost on 2026-06-09. The next gate is broader real-flow compactness beyond this seeded follow-up scenario.
+**Gate status**: ✅ Follow-up stuck-click, compact post-continuation output, duplicate inline follow-up suppression, and old-card answered-memory hydration passed in headed localhost on 2026-06-09. The next gate is broader real-flow compactness beyond this seeded follow-up scenario.
 
 ---
 

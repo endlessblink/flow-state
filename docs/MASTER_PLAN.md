@@ -8,7 +8,7 @@
 
 **Why this lane overrides the broader memory lane for now**: The live user flow still produced a generic task-card dump for a Hebrew "plan the rest of the week" request. That means the product-visible planner is not ready, regardless of memory-schema progress. Resume here until the browser flow proves the assistant can clarify, learn, and produce a compact plan without embarrassing output.
 
-**Current cursor**: ✅ Headed localhost follow-up-click and compact-output proof passed on 2026-06-09 after the user reported the inline follow-up card stayed stuck and the continuation answer was too verbose.
+**Current cursor**: ✅ Headed localhost proof now covers stuck follow-up click, compact continuation output, and no duplicate inline follow-up question after the user answers it.
 
 **Hard rules for this focused lane**:
 - Do not add more broad memory architecture work until this lane passes real localhost browser proof.
@@ -103,6 +103,24 @@
 - `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts -t "structured artifact|weekly plan quality gate|continues weekly planning immediately|lets weekly-plan question buttons create"` → 3/3 focused tests passed.
 - `npm run type-check` → passed.
 
+### TASK-1849: Weekly inline follow-up answers suppress the same question (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed/proved 2026-06-09) | **Depends on**: TASK-1847, TASK-1848
+
+**Why**: The real localhost UI could ask the same inline follow-up question again after the user already answered it. The previous proof checked that the chat advanced and got compact, but not that the answered semantic question was recorded and suppressed.
+
+**Acceptance**:
+- Generated follow-up questions must be keyed to the related task, not anonymous weekly text.
+- Clicking an inline weekly question answer must record an `ai_clarification_events` answer with `entityKey = task:<taskId>` and `questionId = followup_<taskId>` before the continuation decision reruns.
+- Browser proof must fail if the same inline follow-up question text appears twice after the user answers it.
+- Console logs must show the clarification-event write boundary: `clarification_event_record_started` and `clarification_event_record_succeeded`.
+
+**Proof**:
+- `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts` → 65/65 passed.
+- `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --headed --grep "weekly inline follow-up"` → 1/1 passed.
+- `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly bridge stream hang|weekly inline follow-up|too-much feedback"` → 3/3 passed.
+- `npm run type-check` → passed.
+
 **Focused proof gate before user testing**:
 - Unit tests for flexible weekly intent, iterative clarification continuation, no blocking memory persistence, and no repeated questions.
 - Playwright localhost user flow with seeded tasks:
@@ -113,7 +131,7 @@
   5. Choose generate/current-info escape and receive a compact 3-5 item weekly plan.
   6. Repeat with an English flexible prompt and verify it routes to weekly planning.
 
-**Gate status**: ✅ Follow-up stuck-click and compact post-continuation output passed in headed localhost on 2026-06-09. The next gate is broader real-flow compactness beyond this seeded follow-up scenario.
+**Gate status**: ✅ Follow-up stuck-click, compact post-continuation output, and duplicate inline follow-up suppression passed in headed localhost on 2026-06-09. The next gate is broader real-flow compactness beyond this seeded follow-up scenario.
 
 ---
 

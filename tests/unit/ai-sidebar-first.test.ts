@@ -1296,6 +1296,59 @@ describe('AI sidebar-first desktop experience', () => {
     }
   })
 
+  it('keys weekly follow-up questions to the related task so answered questions can be suppressed', () => {
+    const tasks = [
+      {
+        id: 'task-renewal-followup',
+        title: 'Send renewal proposal to Amit',
+        description: 'Amit asked for numbers before the Wednesday budget meeting.',
+        status: 'todo',
+        priority: 'high',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'work',
+        projectName: 'Work',
+        estimatedDuration: 45,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task & { projectName: string },
+      {
+        id: 'task-admin-followup',
+        title: 'Buy printer paper',
+        description: 'Small admin task used to keep the task set realistic.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-11',
+        projectId: 'admin',
+        projectName: 'Admin',
+        estimatedDuration: 20,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task & { projectName: string },
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+    )
+
+    const quickDraft = buildQuickDraftWeeklyPlan(context)
+    const followUp = quickDraft.openQuestions.find(question => question.id === 'followup_task-renewal-followup')
+
+    expect(followUp).toMatchObject({
+      entityType: 'task',
+      entityId: 'task-renewal-followup',
+      reason: 'follow_up_task_suggestion',
+      relatedTaskIds: ['task-renewal-followup'],
+    })
+  })
+
   it('uses saved weekly beliefs for impact without treating one answer as project understanding', () => {
     const tasks = [
       {
@@ -2073,6 +2126,9 @@ describe('AI sidebar-first desktop experience', () => {
               openQuestions: [
                 {
                   id: 'followup_task-renewal',
+                  entityType: 'task',
+                  entityId: 'task-renewal',
+                  reason: 'follow_up_task_suggestion',
                   question: 'Add a follow-up task after "Send renewal proposal to Amit"?',
                   options: [
                     { id: 'add_followup', label: 'Yes, add it', effect: 'Create a follow-up task linked to this recommendation.' },
@@ -2112,6 +2168,23 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).toContain('Follow-up task added')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week using the context I just answered')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Created a follow-up task.')
+    expect(supabaseDbMocks.recordAIClarificationEvent).toHaveBeenCalledWith(expect.objectContaining({
+      entityKey: 'task:task-renewal',
+      entityType: 'task',
+      displayName: 'Send renewal proposal to Amit',
+      questionId: 'followup_task-renewal',
+      eventType: 'answered',
+      selectedOptionId: 'add_followup',
+      selectedLabel: 'Yes, add it',
+      freeText: 'Confirm renewal numbers were received',
+      sourceMessageId: 'msg-weekly-followup-question',
+      pathType: 'clarify_first',
+      contextSnapshot: expect.objectContaining({
+        weeklyPlanRequestId: 'req-week',
+        reason: 'follow_up_task_suggestion',
+        relatedTaskIds: ['task-renewal'],
+      }),
+    }))
   })
 
   it('continues weekly planning immediately while follow-up task creation is still pending', async () => {
@@ -2161,6 +2234,9 @@ describe('AI sidebar-first desktop experience', () => {
               openQuestions: [
                 {
                   id: 'followup_task-slow-follow-up',
+                  entityType: 'task',
+                  entityId: 'task-slow-follow-up',
+                  reason: 'follow_up_task_suggestion',
                   question: 'Add a follow-up task after "Slow follow-up parent"?',
                   options: [{ id: 'add_followup', label: 'Yes, add it', effect: 'Create a follow-up task linked to this recommendation.' }],
                   allowFreeText: true,

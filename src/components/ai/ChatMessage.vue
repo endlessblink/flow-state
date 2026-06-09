@@ -39,7 +39,7 @@ import { buildDayPlanTaskUpdates } from '@/services/ai/pipeline/dayPlan'
 import { getUndoSystem } from '@/composables/undoSingleton'
 import type { WeeklyPlanOutput, WeeklyPlanRecommendation } from '@/services/ai/pipeline/weeklyPlan'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
-import type { AIClarificationArtifact, AIClarificationQuestion, AIMemoryPatch, AIRecommendationFeedbackInput } from '@/types/aiMemory'
+import type { AIClarificationArtifact, AIClarificationQuestion, AIContextEntityType, AIMemoryPatch, AIRecommendationFeedbackInput, AIUncertaintyDimension } from '@/types/aiMemory'
 
 // ============================================================================
 // Props
@@ -338,6 +338,86 @@ function weeklyQuestionTask(question: WeeklyPlanOutput['openQuestions'][number])
   return taskId ? taskMap.value.get(taskId) ?? null : null
 }
 
+function weeklyQuestionMemoryIdentity(question: WeeklyPlanOutput['openQuestions'][number], parentTask: Task | null): {
+  entityKey: string
+  entityType: AIContextEntityType
+  displayName: string
+} {
+  if (question.entityType && question.entityId) {
+    return {
+      entityKey: `${question.entityType}:${question.entityId}`,
+      entityType: question.entityType,
+      displayName: question.entityType === 'task'
+        ? (parentTask?.title || question.entityId)
+        : question.entityId,
+    }
+  }
+
+  const relatedTaskId = question.relatedTaskIds?.[0]
+  if (relatedTaskId) {
+    return {
+      entityKey: `task:${relatedTaskId}`,
+      entityType: 'task',
+      displayName: parentTask?.title || relatedTaskId,
+    }
+  }
+
+  const weekId = weeklyPlan.value?.requestId || props.message.id
+  return {
+    entityKey: `week:${weekId}`,
+    entityType: 'week',
+    displayName: weeklyPlan.value?.headline || weekId,
+  }
+}
+
+function weeklyQuestionUncertaintyDimension(question: WeeklyPlanOutput['openQuestions'][number]): AIUncertaintyDimension[] | undefined {
+  if (question.reason === 'missing_project_understanding') return ['project_meaning']
+  if (question.reason === 'missing_task_context') return ['task_context']
+  if (question.reason === 'stale_project_context') return ['stale_context']
+  return undefined
+}
+
+async function recordWeeklyQuestionAnswer(
+  question: WeeklyPlanOutput['openQuestions'][number],
+  parentTask: Task | null,
+  option: NonNullable<WeeklyPlanOutput['openQuestions'][number]['options']>[number] | undefined,
+  note: string,
+): Promise<void> {
+  const identity = weeklyQuestionMemoryIdentity(question, parentTask)
+  traceWeeklyQuestion('clarification_event_record_started', {
+    questionId: weeklyQuestionKey(question),
+    entityKey: identity.entityKey,
+    selectedOptionId: option?.id ?? null,
+  })
+
+  await aiMemoryDb.recordAIClarificationEvent({
+    entityKey: identity.entityKey,
+    entityType: identity.entityType,
+    displayName: identity.displayName,
+    questionId: weeklyQuestionKey(question),
+    eventType: 'answered',
+    question: question.question,
+    selectedOptionId: option?.id,
+    selectedLabel: option?.label,
+    freeText: note,
+    memoryPatch: option?.memoryPatch ? { ...option.memoryPatch, sourceMessageId: props.message.id } : undefined,
+    sourceMessageId: props.message.id,
+    uncertaintyDimensions: weeklyQuestionUncertaintyDimension(question),
+    pathType: 'clarify_first',
+    contextSnapshot: {
+      weeklyPlanRequestId: weeklyPlan.value?.requestId,
+      weeklyPlanSource: weeklyPlan.value?.source,
+      relatedTaskIds: question.relatedTaskIds,
+      reason: question.reason,
+    },
+  })
+
+  traceWeeklyQuestion('clarification_event_record_succeeded', {
+    questionId: weeklyQuestionKey(question),
+    entityKey: identity.entityKey,
+  })
+}
+
 function isWeeklyFollowUpAction(question: WeeklyPlanOutput['openQuestions'][number]): boolean {
   return weeklyQuestionAnswers.value[weeklyQuestionKey(question)] === 'add_followup'
 }
@@ -483,6 +563,7 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
       await aiMemoryDb.applyAIMemoryPatch(patch)
       traceWeeklyQuestion('free_text_patch_succeeded', { key })
     }
+    await recordWeeklyQuestionAnswer(question, parentTask, option, note || '')
     if (selected === 'add_followup') {
       const title = note || (locale === 'he'
         ? `מעקב: ${parentTask?.title || 'משימה'}`

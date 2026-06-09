@@ -185,6 +185,9 @@ async function seedWeeklyInlineFollowUpConversation(page: Page) {
                 deferrals: [],
                 openQuestions: [{
                   id: 'followup_ai-local-task-4',
+                  entityType: 'task',
+                  entityId: 'ai-local-task-4',
+                  reason: 'follow_up_task_suggestion',
                   question: 'להוסיף משימת המשך אחרי "Draft follow-up tasks for the memory interview flow"?',
                   options: [
                     { id: 'add_followup', label: 'כן, להוסיף', effect: 'Create a follow-up task linked to this recommendation.' },
@@ -482,6 +485,9 @@ test('weekly inline follow-up click advances the chat instead of staying on the 
     timeout: 15_000,
   }).toBeGreaterThan(assistantCountBefore)
   await expect(page.locator('.message-assistant').last()).toContainText(/Short plan after your clarification|תוכנית/, { timeout: 15_000 })
+  await expect.poll(async () => page.getByText('להוסיף משימת המשך אחרי "Draft follow-up tasks for the memory interview flow"?').count(), {
+    timeout: 5_000,
+  }).toBe(1)
   const compactPlan = page.locator('[data-testid="weekly-plan"]').last()
   await expect(compactPlan).toContainText(/Compact answer from saved context|תשובה קצרה מההקשר ששמרת/, { timeout: 5_000 })
   await expect(compactPlan.locator('.weekly-plan-section')).toHaveCount(2, { timeout: 5_000 })

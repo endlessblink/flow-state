@@ -1572,6 +1572,9 @@ function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSna
   if (taskNeedingFollowup) {
     questions.push({
       id: `followup_${taskNeedingFollowup.id}`,
+      entityType: 'task',
+      entityId: taskNeedingFollowup.id,
+      reason: 'follow_up_task_suggestion',
       question: locale === 'he'
         ? `להוסיף משימת המשך אחרי "${taskNeedingFollowup.title}"?`
         : `Add a follow-up task after "${taskNeedingFollowup.title}"?`,

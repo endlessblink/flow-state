@@ -256,11 +256,25 @@ function handleQuickAction(action: { label: string; message: string; directTool?
   }
 }
 
+function traceContinuation(stage: string, details: Record<string, unknown> = {}) {
+  console.info('[AIChat:Continuation]', {
+    stage,
+    ...details,
+  })
+}
+
 function handleContinueChat(message: string) {
   const trimmed = message.trim()
   if (!trimmed) return
+  traceContinuation('received', {
+    length: trimmed.length,
+    isGenerating: isGenerating.value,
+  })
   if (isGenerating.value) {
     pendingContinueMessage.value = trimmed
+    traceContinuation('queued', {
+      length: trimmed.length,
+    })
     store.addActivityEvent({
       id: queuedContinuationActivityId,
       type: 'thinking',
@@ -275,6 +289,9 @@ function handleContinueChat(message: string) {
     return
   }
   pendingContinueMessage.value = ''
+  traceContinuation('send_started', {
+    skipHistory: true,
+  })
   sendMessage(trimmed, { skipHistory: true })
 }
 
@@ -282,10 +299,17 @@ function flushPendingContinuation() {
   if (isGenerating.value || !pendingContinueMessage.value) return
   const message = pendingContinueMessage.value
   pendingContinueMessage.value = ''
+  traceContinuation('flush_started', {
+    length: message.length,
+  })
   store.updateActivityEvent(queuedContinuationActivityId, {
     status: 'success',
     label: 'Continuing with answer',
     message: 'Clarification answer accepted',
+  })
+  traceContinuation('send_started', {
+    skipHistory: true,
+    source: 'flush',
   })
   sendMessage(message, { skipHistory: true })
 }

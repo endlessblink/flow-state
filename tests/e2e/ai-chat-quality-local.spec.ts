@@ -146,6 +146,68 @@ async function seedGuestWorkspace(page: Page) {
   }, seededTasks())
 }
 
+async function seedWeeklyInlineFollowUpConversation(page: Page) {
+  await page.evaluate(() => {
+    const now = new Date().toISOString()
+    localStorage.setItem('flowstate-ai-conversations', JSON.stringify({
+      activeConversationId: 'conv-weekly-inline-followup',
+      conversations: [{
+        id: 'conv-weekly-inline-followup',
+        title: 'Seeded weekly follow-up',
+        createdAt: now,
+        updatedAt: now,
+        messages: [
+          {
+            id: 'msg-seeded-weekly-user',
+            role: 'user',
+            content: 'תעזור לי לארגן את שארית השבוע',
+            timestamp: now,
+          },
+          {
+            id: 'msg-seeded-weekly-assistant',
+            role: 'assistant',
+            content: '',
+            timestamp: now,
+            metadata: {
+              weeklyPlan: {
+                schemaVersion: 'weekly-plan.v2',
+                requestId: 'req-seeded-weekly-inline',
+                locale: 'he',
+                direction: 'rtl',
+                source: 'quick_draft',
+                headline: 'צריך תשובה אחת לפני דירוג',
+                weekRead: {
+                  summary: 'לא אציג דירוג רחב בלי הקשר אמין.',
+                  workloadReality: '',
+                  mainTradeoff: '',
+                },
+                recommendations: [],
+                deferrals: [],
+                openQuestions: [{
+                  id: 'followup_ai-local-task-4',
+                  question: 'להוסיף משימת המשך אחרי "Draft follow-up tasks for the memory interview flow"?',
+                  options: [
+                    { id: 'add_followup', label: 'כן, להוסיף', effect: 'Create a follow-up task linked to this recommendation.' },
+                    { id: 'ask_later', label: 'שאל אותי אחר כך', effect: 'Keep the suggestion visible without changing tasks now.' },
+                    { id: 'no_followup', label: 'לא צריך', effect: 'Do not suggest a follow-up for this task again in this plan.' },
+                  ],
+                  allowFreeText: true,
+                  relatedTaskIds: ['ai-local-task-4'],
+                }],
+                quality: {
+                  selectedTaskCount: 0,
+                  confidence: 'low',
+                  caveats: [],
+                },
+              },
+            },
+          },
+        ],
+      }],
+    }))
+  })
+}
+
 async function stubBridge(page: Page, options: { missingCardsFromChatCall?: number; hangFromChatCall?: number } = {}) {
   await page.addInitScript(() => {
     ;(window as unknown as { __flowstateBridgeChatCallCount: number }).__flowstateBridgeChatCallCount = 0
@@ -385,6 +447,43 @@ test('weekly bridge stream hang falls back instead of staying in refining plan',
   await expect(page.locator('.ai-chat-messages')).not.toContainText(/Refining plan|Bridge timeout/i)
   await expect(page.locator('.ai-chat-messages')).not.toContainText(/אותות במשימה מצביעים על כסף.*אותות במשימה מצביעים על כסף/s)
   await expect(input).toBeEnabled({ timeout: 5_000 })
+})
+
+test('weekly inline follow-up click advances the chat instead of staying on the card', async ({ page }) => {
+  await seedGuestWorkspace(page)
+  await seedWeeklyInlineFollowUpConversation(page)
+  await stubBridge(page)
+  const weeklyLogs: string[] = []
+  const continuationLogs: string[] = []
+  page.on('console', msg => {
+    const text = msg.text()
+    if (text.includes('[AIChat:WeeklyInlineQuestion]')) weeklyLogs.push(text)
+    if (text.includes('[AIChat:Continuation]')) continuationLogs.push(text)
+  })
+
+  await openAIChat(page)
+  const seededPlan = page.locator('[data-testid="weekly-plan"]').first()
+  await expect(seededPlan).toBeVisible({ timeout: 10_000 })
+  const assistantCountBefore = await page.locator('.message-assistant').count()
+  await seededPlan.getByRole('button', { name: 'כן, להוסיף' }).click()
+  await seededPlan.getByRole('button', { name: 'הוסף משימת מעקב' }).click()
+
+  await expect(seededPlan).toContainText(/ממשיך עכשיו|משימת מעקב נוספה/, { timeout: 5_000 })
+  await expect.poll(() => weeklyLogs.some(line => line.includes('continuation_emitted')), {
+    timeout: 5_000,
+  }).toBe(true)
+  await expect.poll(() => weeklyLogs.some(line => line.includes('followup_create_started')), {
+    timeout: 5_000,
+  }).toBe(true)
+  await expect.poll(() => continuationLogs.some(line => line.includes('send_started')), {
+    timeout: 5_000,
+  }).toBe(true)
+  await expect.poll(async () => page.locator('.message-assistant').count(), {
+    timeout: 15_000,
+  }).toBeGreaterThan(assistantCountBefore)
+  await expect(page.locator('.message-assistant').last()).toContainText(/Short plan after your clarification|תוכנית/, { timeout: 15_000 })
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 15_000 })
+  await expect(page.locator('.ai-chat-input-container textarea')).toBeEnabled({ timeout: 5_000 })
 })
 
 test('too-much feedback makes the next broad fallback answer compact', async ({ page }) => {

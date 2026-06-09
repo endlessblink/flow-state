@@ -2113,6 +2113,81 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Created a follow-up task.')
   })
 
+  it('continues weekly planning immediately while follow-up task creation is still pending', async () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push({
+      id: 'task-slow-follow-up',
+      title: 'Slow follow-up parent',
+      description: 'Used to prove the chat does not wait for task persistence.',
+      status: 'todo',
+      priority: 'medium',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '',
+      projectId: 'slow-project',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Task)
+    const originalCreate = taskStore.createTask
+    let releaseCreate!: () => void
+    const createStarted = new Promise<void>(resolve => {
+      vi.spyOn(taskStore, 'createTask').mockImplementation(async (taskData: Partial<Task>) => {
+        resolve()
+        await new Promise<void>(release => { releaseCreate = release })
+        return await originalCreate(taskData)
+      })
+    })
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-weekly-slow-followup-question',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            weeklyPlan: {
+              schemaVersion: 'weekly-plan.v2',
+              requestId: 'req-week',
+              locale: 'en',
+              direction: 'ltr',
+              source: 'quick_draft',
+              headline: 'One answer before ranking',
+              weekRead: { summary: 'Need one answer.', workloadReality: '', mainTradeoff: '' },
+              recommendations: [],
+              deferrals: [],
+              openQuestions: [
+                {
+                  id: 'followup_task-slow-follow-up',
+                  question: 'Add a follow-up task after "Slow follow-up parent"?',
+                  options: [{ id: 'add_followup', label: 'Yes, add it', effect: 'Create a follow-up task linked to this recommendation.' }],
+                  allowFreeText: true,
+                  relatedTaskIds: ['task-slow-follow-up'],
+                },
+              ],
+              quality: { selectedTaskCount: 0, confidence: 'low', caveats: [] },
+            },
+          },
+        },
+      },
+      global: { stubs: { TaskQuickEditPopover: true } },
+    })
+
+    await wrapper.get('.weekly-question-option').trigger('click')
+    await wrapper.get('.weekly-question-apply').trigger('click')
+    await createStarted
+    await nextTick()
+
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week using the context I just answered')
+    expect(wrapper.text()).toContain('creating follow-up in background')
+
+    releaseCreate()
+    await flushPromises()
+    await nextTick()
+    expect(taskStore.tasks.some(task => task.title === 'Follow up: Slow follow-up parent')).toBe(true)
+  })
+
   it('shows local candidate cards immediately when clarification is skipped for candidates', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({

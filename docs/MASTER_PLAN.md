@@ -8,7 +8,7 @@
 
 **Why this lane overrides the broader memory lane for now**: The live user flow still produced a generic task-card dump for a Hebrew "plan the rest of the week" request. That means the product-visible planner is not ready, regardless of memory-schema progress. Resume here until the browser flow proves the assistant can clarify, learn, and produce a compact plan without embarrassing output.
 
-**Current cursor**: ✅ Localhost proof passed on 2026-06-08. Next work may return to the broader AI chat quality lane, but do not regress the weekly-planning proof gates below.
+**Current cursor**: ✅ Headed localhost follow-up-click proof passed on 2026-06-09 after the user reported the inline follow-up card stayed stuck. Next work should attack the remaining low-overwhelm output-quality issue: post-continuation answers can still be too verbose even when the click/continuation path works.
 
 **Hard rules for this focused lane**:
 - Do not add more broad memory architecture work until this lane passes real localhost browser proof.
@@ -67,6 +67,24 @@
 - Weekly plan/clarification metadata clears raw `toolResults`/`cardGroups` so `ChatMessage` does not render `Found N tasks` under planning artifacts.
 - Browser proof checks English weekly planning, Hebrew rest-of-week planning, accept/postpone/simplify feedback controls, no generic task dump, and enabled input/no stuck running state.
 
+### TASK-1847: Weekly inline follow-up continuation logging and headed stuck-click proof (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed/proved 2026-06-09) | **Depends on**: TASK-1845, TASK-1846
+
+**Why**: The real localhost UI could stay on the inline "create follow-up task" card after the user clicked the add-follow-up control, and previous verification missed it because it did not run the headed sidebar flow.
+
+**Acceptance**:
+- Clicking the inline follow-up apply control must not wait on task persistence before continuing the chat.
+- The card must show a visible non-stuck status while the follow-up task write runs in the background.
+- Console logs must identify the boundary: child card apply, follow-up create start/success/failure, continuation emit, parent receive/queue/send.
+- Browser proof must run the real sidebar flow in headed localhost before the user is asked to test this path again.
+
+**Proof**:
+- `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly inline follow-up click" --headed` → 1/1 passed.
+- `npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly inline follow-up click|weekly planning asks first|weekly bridge stream hang"` → 3/3 passed.
+- `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts -t "continues weekly planning immediately|lets weekly-plan question buttons create"` → 2/2 focused tests passed.
+- `npm run type-check` → passed.
+
 **Focused proof gate before user testing**:
 - Unit tests for flexible weekly intent, iterative clarification continuation, no blocking memory persistence, and no repeated questions.
 - Playwright localhost user flow with seeded tasks:
@@ -77,7 +95,7 @@
   5. Choose generate/current-info escape and receive a compact 3-5 item weekly plan.
   6. Repeat with an English flexible prompt and verify it routes to weekly planning.
 
-**Gate status**: ✅ Passed on localhost via `npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts` (13/13).
+**Gate status**: ✅ Follow-up stuck-click path passed in headed localhost on 2026-06-09. Earlier broad smoke remains useful, but the next gate should explicitly fail overlong post-continuation answers before asking the user to test again.
 
 ---
 

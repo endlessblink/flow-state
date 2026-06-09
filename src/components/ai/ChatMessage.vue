@@ -363,6 +363,63 @@ function continueAfterWeeklyQuestion(
     : `Continue planning the week using the context I just answered. Keep it short and actionable, not a long list.${evidenceBlock}${continuationMarker}`)
 }
 
+function traceWeeklyQuestion(stage: string, details: Record<string, unknown> = {}): void {
+  console.info('[AIChat:WeeklyInlineQuestion]', {
+    stage,
+    messageId: props.message.id,
+    ...details,
+  })
+}
+
+async function createWeeklyFollowUpTask(input: {
+  key: string
+  question: WeeklyPlanOutput['openQuestions'][number]
+  parentTask: Task | null
+  title: string
+  locale: 'he' | 'en'
+  startedAt: number
+}): Promise<void> {
+  traceWeeklyQuestion('followup_create_started', {
+    key: input.key,
+    questionId: input.question.id,
+    parentTaskId: input.parentTask?.id ?? null,
+    title: input.title,
+  })
+  try {
+    await getUndoSystem().createTaskWithUndo({
+      title: input.title,
+      description: [
+        input.locale === 'he' ? 'נוצר מתשובת מעקב בתוכנית השבועית.' : 'Created from a weekly-plan follow-up answer.',
+        input.parentTask ? `${input.locale === 'he' ? 'משימת מקור' : 'Source task'}: ${input.parentTask.title}` : '',
+        input.question.question,
+      ].filter(Boolean).join('\n'),
+      status: 'todo',
+      priority: input.parentTask?.priority ?? 'medium',
+      projectId: input.parentTask?.projectId || 'uncategorized',
+      parentTaskId: input.parentTask?.id ?? null,
+    })
+    weeklyQuestionApplied.value = {
+      ...weeklyQuestionApplied.value,
+      [input.key]: input.locale === 'he' ? 'משימת מעקב נוספה' : 'Follow-up task added',
+    }
+    traceWeeklyQuestion('followup_create_succeeded', {
+      key: input.key,
+      elapsedMs: Date.now() - input.startedAt,
+    })
+  } catch (err) {
+    console.error('[AIChat:WeeklyInlineQuestion]', {
+      stage: 'followup_create_failed',
+      key: input.key,
+      elapsedMs: Date.now() - input.startedAt,
+      error: err,
+    })
+    weeklyQuestionApplied.value = {
+      ...weeklyQuestionApplied.value,
+      [input.key]: input.locale === 'he' ? 'יצירת משימת המעקב נכשלה' : 'Follow-up task failed',
+    }
+  }
+}
+
 async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][number], event: MouseEvent) {
   event.stopPropagation()
   const key = weeklyQuestionKey(question)
@@ -373,20 +430,29 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
 
   weeklyQuestionApplying.value = { ...weeklyQuestionApplying.value, [key]: true }
   const locale = weeklyPlan.value?.locale ?? 'en'
+  const startedAt = Date.now()
   weeklyQuestionApplied.value = {
     ...weeklyQuestionApplied.value,
     [key]: selected === 'add_followup'
-      ? (locale === 'he' ? 'יוצר משימת מעקב...' : 'Creating follow-up task...')
+      ? (locale === 'he' ? 'ממשיך עכשיו; יוצר משימת מעקב ברקע...' : 'Continuing now; creating follow-up in background...')
       : (locale === 'he' ? 'שומר תשובה...' : 'Saving answer...'),
   }
+  traceWeeklyQuestion('apply_started', {
+    key,
+    questionId: question.id,
+    selected,
+    hasNote: Boolean(note),
+  })
   try {
     const parentTask = weeklyQuestionTask(question)
     const option = question.options?.find(item => item.id === selected)
     if (option?.memoryPatch) {
+      traceWeeklyQuestion('memory_patch_started', { key, field: option.memoryPatch.field })
       await aiMemoryDb.applyAIMemoryPatch({
         ...option.memoryPatch,
         sourceMessageId: props.message.id,
       })
+      traceWeeklyQuestion('memory_patch_succeeded', { key })
     }
     if (note && question.entityType && question.entityId && question.freeTextPatch) {
       const patch: AIMemoryPatch = {
@@ -399,28 +465,15 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
         source: 'free_text',
         sourceMessageId: props.message.id,
       }
+      traceWeeklyQuestion('free_text_patch_started', { key, field: patch.field })
       await aiMemoryDb.applyAIMemoryPatch(patch)
+      traceWeeklyQuestion('free_text_patch_succeeded', { key })
     }
     if (selected === 'add_followup') {
       const title = note || (locale === 'he'
         ? `מעקב: ${parentTask?.title || 'משימה'}`
         : `Follow up: ${parentTask?.title || 'task'}`)
-      await getUndoSystem().createTaskWithUndo({
-        title,
-        description: [
-          locale === 'he' ? 'נוצר מתשובת מעקב בתוכנית השבועית.' : 'Created from a weekly-plan follow-up answer.',
-          parentTask ? `${locale === 'he' ? 'משימת מקור' : 'Source task'}: ${parentTask.title}` : '',
-          question.question,
-        ].filter(Boolean).join('\n'),
-        status: 'todo',
-        priority: parentTask?.priority ?? 'medium',
-        projectId: parentTask?.projectId || 'uncategorized',
-        parentTaskId: parentTask?.id ?? null,
-      })
-      weeklyQuestionApplied.value = {
-        ...weeklyQuestionApplied.value,
-        [key]: locale === 'he' ? 'משימת מעקב נוספה' : 'Follow-up task added',
-      }
+      void createWeeklyFollowUpTask({ key, question, parentTask, title, locale, startedAt })
     } else {
       weeklyQuestionApplied.value = {
         ...weeklyQuestionApplied.value,
@@ -428,8 +481,19 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
       }
     }
     continueAfterWeeklyQuestion(question, option, note)
+    traceWeeklyQuestion('continuation_emitted', {
+      key,
+      elapsedMs: Date.now() - startedAt,
+      followUpBackgrounded: selected === 'add_followup',
+    })
   } catch (err) {
-    console.error('[ChatMessage] Weekly question action failed:', err)
+    console.error('[AIChat:WeeklyInlineQuestion]', {
+      stage: 'apply_failed',
+      key,
+      selected,
+      elapsedMs: Date.now() - startedAt,
+      error: err,
+    })
     weeklyQuestionApplied.value = {
       ...weeklyQuestionApplied.value,
       [key]: locale === 'he' ? 'הפעולה נכשלה' : 'Action failed',
@@ -437,6 +501,10 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
   } finally {
     const { [key]: _done, ...rest } = weeklyQuestionApplying.value
     weeklyQuestionApplying.value = rest
+    traceWeeklyQuestion('apply_finished', {
+      key,
+      elapsedMs: Date.now() - startedAt,
+    })
   }
 }
 

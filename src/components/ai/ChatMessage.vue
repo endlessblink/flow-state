@@ -20,7 +20,7 @@
 import { computed, ref } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock } from 'lucide-vue-next'
+import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock, Plus } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type Token from 'markdown-it/lib/token.mjs'
 import type Renderer from 'markdown-it/lib/renderer.mjs'
@@ -324,6 +324,17 @@ function weeklyQuestionTask(question: WeeklyPlanOutput['openQuestions'][number])
   return taskId ? taskMap.value.get(taskId) ?? null : null
 }
 
+function isWeeklyFollowUpAction(question: WeeklyPlanOutput['openQuestions'][number]): boolean {
+  return weeklyQuestionAnswers.value[weeklyQuestionKey(question)] === 'add_followup'
+}
+
+function weeklyQuestionApplyLabel(question: WeeklyPlanOutput['openQuestions'][number]): string {
+  if (isWeeklyFollowUpAction(question)) {
+    return weeklyPlan.value?.locale === 'he' ? 'הוסף משימת מעקב' : 'Add follow-up task'
+  }
+  return weeklyPlan.value?.locale === 'he' ? 'שמור תשובה' : 'Save answer'
+}
+
 async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][number], event: MouseEvent) {
   event.stopPropagation()
   const key = weeklyQuestionKey(question)
@@ -332,7 +343,14 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
   if (!selected && !note) return
   if (weeklyQuestionApplying.value[key]) return
 
-  weeklyQuestionApplying.value[key] = true
+  weeklyQuestionApplying.value = { ...weeklyQuestionApplying.value, [key]: true }
+  const locale = weeklyPlan.value?.locale ?? 'en'
+  weeklyQuestionApplied.value = {
+    ...weeklyQuestionApplied.value,
+    [key]: selected === 'add_followup'
+      ? (locale === 'he' ? 'יוצר משימת מעקב...' : 'Creating follow-up task...')
+      : (locale === 'he' ? 'שומר תשובה...' : 'Saving answer...'),
+  }
   try {
     const parentTask = weeklyQuestionTask(question)
     const option = question.options?.find(item => item.id === selected)
@@ -356,11 +374,10 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
       await aiMemoryDb.applyAIMemoryPatch(patch)
     }
     if (selected === 'add_followup') {
-      const locale = weeklyPlan.value?.locale ?? 'en'
       const title = note || (locale === 'he'
         ? `מעקב: ${parentTask?.title || 'משימה'}`
         : `Follow up: ${parentTask?.title || 'task'}`)
-      await taskStore.createTaskWithUndo({
+      await getUndoSystem().createTaskWithUndo({
         title,
         description: [
           locale === 'he' ? 'נוצר מתשובת מעקב בתוכנית השבועית.' : 'Created from a weekly-plan follow-up answer.',
@@ -372,15 +389,25 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
         projectId: parentTask?.projectId || 'uncategorized',
         parentTaskId: parentTask?.id ?? null,
       })
-      weeklyQuestionApplied.value[key] = locale === 'he' ? 'משימת מעקב נוספה' : 'Follow-up task added'
+      weeklyQuestionApplied.value = {
+        ...weeklyQuestionApplied.value,
+        [key]: locale === 'he' ? 'משימת מעקב נוספה' : 'Follow-up task added',
+      }
     } else {
-      weeklyQuestionApplied.value[key] = weeklyPlan.value?.locale === 'he' ? 'התשובה נשמרה לתוכנית הזו' : 'Answer saved for this plan'
+      weeklyQuestionApplied.value = {
+        ...weeklyQuestionApplied.value,
+        [key]: locale === 'he' ? 'התשובה נשמרה לתוכנית הזו' : 'Answer saved for this plan',
+      }
     }
   } catch (err) {
     console.error('[ChatMessage] Weekly question action failed:', err)
-    weeklyQuestionApplied.value[key] = weeklyPlan.value?.locale === 'he' ? 'הפעולה נכשלה' : 'Action failed'
+    weeklyQuestionApplied.value = {
+      ...weeklyQuestionApplied.value,
+      [key]: locale === 'he' ? 'הפעולה נכשלה' : 'Action failed',
+    }
   } finally {
-    delete weeklyQuestionApplying.value[key]
+    const { [key]: _done, ...rest } = weeklyQuestionApplying.value
+    weeklyQuestionApplying.value = rest
   }
 }
 
@@ -1986,16 +2013,18 @@ async function saveSchedule() {
               <button
                 type="button"
                 class="weekly-question-apply"
+                :class="{ 'weekly-question-apply-icon': isWeeklyFollowUpAction(question) }"
+                :title="weeklyQuestionApplyLabel(question)"
+                :aria-label="weeklyQuestionApplyLabel(question)"
                 :disabled="weeklyQuestionApplying[weeklyQuestionKey(question)] || (!weeklyQuestionAnswers[weeklyQuestionKey(question)] && !weeklyQuestionFreeText[weeklyQuestionKey(question)]?.trim())"
                 @click="applyWeeklyQuestion(question, $event)"
               >
                 <Loader2 v-if="weeklyQuestionApplying[weeklyQuestionKey(question)]" :size="13" class="spin" />
-                <CheckCircle2 v-else :size="13" />
-                {{
-                  weeklyQuestionAnswers[weeklyQuestionKey(question)] === 'add_followup'
-                    ? (weeklyPlan.locale === 'he' ? 'הוסף משימת מעקב' : 'Add follow-up task')
-                    : (weeklyPlan.locale === 'he' ? 'שמור תשובה' : 'Save answer')
-                }}
+                <Plus v-else-if="isWeeklyFollowUpAction(question)" :size="14" aria-hidden="true" />
+                <CheckCircle2 v-else :size="13" aria-hidden="true" />
+                <span :class="{ 'sr-only': isWeeklyFollowUpAction(question) }">
+                  {{ weeklyQuestionApplyLabel(question) }}
+                </span>
               </button>
               <span v-if="weeklyQuestionApplied[weeklyQuestionKey(question)]" class="weekly-question-status">
                 {{ weeklyQuestionApplied[weeklyQuestionKey(question)] }}
@@ -3942,6 +3971,12 @@ async function saveSchedule() {
 .weekly-question-apply:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.weekly-question-apply-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
 .weekly-question-escape {

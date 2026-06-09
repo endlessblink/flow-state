@@ -2028,8 +2028,6 @@ describe('AI sidebar-first desktop experience', () => {
       createdAt: new Date('2026-06-01T08:00:00Z'),
       updatedAt: new Date('2026-06-07T08:00:00Z'),
     } as Task)
-    const createFollowup = vi.spyOn(taskStore, 'createTaskWithUndo').mockResolvedValue({ id: 'follow-up-task' } as Task)
-
     const wrapper = mount(ChatMessage, {
       props: {
         message: {
@@ -2099,9 +2097,11 @@ describe('AI sidebar-first desktop experience', () => {
     await wrapper.get('.weekly-question-option').trigger('click')
     await wrapper.get('.weekly-question-free-text').setValue('Confirm renewal numbers were received')
     await wrapper.get('.weekly-question-apply').trigger('click')
+    await flushPromises()
     await nextTick()
 
-    expect(createFollowup).toHaveBeenCalledWith(expect.objectContaining({
+    const created = taskStore.tasks.find(task => task.title === 'Confirm renewal numbers were received')
+    expect(created).toEqual(expect.objectContaining({
       title: 'Confirm renewal numbers were received',
       parentTaskId: 'task-renewal',
       projectId: 'client-renewals',

@@ -2107,7 +2107,10 @@ describe('AI sidebar-first desktop experience', () => {
       projectId: 'client-renewals',
       priority: 'high',
     }))
+    expect(wrapper.get('.weekly-question-apply').attributes('aria-label')).toBe('Add follow-up task')
     expect(wrapper.text()).toContain('Follow-up task added')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week using the context I just answered')
+    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Created a follow-up task.')
   })
 
   it('shows local candidate cards immediately when clarification is skipped for candidates', async () => {

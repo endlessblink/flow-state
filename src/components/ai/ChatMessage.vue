@@ -335,6 +335,34 @@ function weeklyQuestionApplyLabel(question: WeeklyPlanOutput['openQuestions'][nu
   return weeklyPlan.value?.locale === 'he' ? 'שמור תשובה' : 'Save answer'
 }
 
+function showWeeklyQuestionStatus(question: WeeklyPlanOutput['openQuestions'][number]): boolean {
+  return Boolean(weeklyQuestionApplied.value[weeklyQuestionKey(question)])
+}
+
+function continueAfterWeeklyQuestion(
+  question: WeeklyPlanOutput['openQuestions'][number],
+  option: NonNullable<WeeklyPlanOutput['openQuestions'][number]['options']>[number] | undefined,
+  note: string,
+): void {
+  const locale = weeklyPlan.value?.locale ?? 'en'
+  const continuationMarker = '\n\n[FLOWSTATE_CLARIFICATION_CONTINUATION mode=week_plan]'
+  const evidence = [
+    option?.label ? (locale === 'he' ? `תשובה: "${option.label}"` : `Answer: "${option.label}"`) : '',
+    note ? (locale === 'he' ? `הערה: "${note.slice(0, 240)}"` : `Note: "${note.slice(0, 240)}"`) : '',
+    isWeeklyFollowUpAction(question)
+      ? (locale === 'he' ? 'נוצרה משימת מעקב.' : 'Created a follow-up task.')
+      : '',
+  ].filter(Boolean).join('\n')
+  const evidenceBlock = evidence
+    ? locale === 'he'
+      ? `\n\nהקשר שעניתי עכשיו:\n${evidence}`
+      : `\n\nContext I just answered:\n${evidence}`
+    : ''
+  emit('continueChat', locale === 'he'
+    ? `המשך לתכנן את השבוע עם ההקשר שעניתי עכשיו. תן תשובה קצרה ומעשית, בלי רשימה ארוכה.${evidenceBlock}${continuationMarker}`
+    : `Continue planning the week using the context I just answered. Keep it short and actionable, not a long list.${evidenceBlock}${continuationMarker}`)
+}
+
 async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][number], event: MouseEvent) {
   event.stopPropagation()
   const key = weeklyQuestionKey(question)
@@ -399,6 +427,7 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
         [key]: locale === 'he' ? 'התשובה נשמרה לתוכנית הזו' : 'Answer saved for this plan',
       }
     }
+    continueAfterWeeklyQuestion(question, option, note)
   } catch (err) {
     console.error('[ChatMessage] Weekly question action failed:', err)
     weeklyQuestionApplied.value = {
@@ -2026,7 +2055,7 @@ async function saveSchedule() {
                   {{ weeklyQuestionApplyLabel(question) }}
                 </span>
               </button>
-              <span v-if="weeklyQuestionApplied[weeklyQuestionKey(question)]" class="weekly-question-status">
+              <span v-if="showWeeklyQuestionStatus(question)" class="weekly-question-status">
                 {{ weeklyQuestionApplied[weeklyQuestionKey(question)] }}
               </span>
             </div>

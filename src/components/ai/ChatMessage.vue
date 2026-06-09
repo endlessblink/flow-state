@@ -40,6 +40,7 @@ import { getUndoSystem } from '@/composables/undoSingleton'
 import type { WeeklyPlanOutput, WeeklyPlanRecommendation } from '@/services/ai/pipeline/weeklyPlan'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { AIClarificationArtifact, AIClarificationQuestion, AIContextEntityType, AIMemoryPatch, AIRecommendationFeedbackInput, AIUncertaintyDimension } from '@/types/aiMemory'
+import { resumeLocalClarificationRuntime } from '@/services/ai/runtime/localClarificationRuntimeClient'
 
 // ============================================================================
 // Props
@@ -236,6 +237,49 @@ const weeklyPlan = computed(() => {
   const plan = meta?.weeklyPlan as WeeklyPlanOutput | undefined
   return plan?.schemaVersion === 'weekly-plan.v2' ? plan : null
 })
+
+function isObsoleteWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][number]): boolean {
+  const text = `${question.id || ''} ${question.reason || ''} ${question.question || ''}`.toLowerCase()
+  return question.reason === 'follow_up_task_suggestion' ||
+    text.includes('followup_') ||
+    text.includes('add a follow-up task after') ||
+    text.includes('להוסיף משימת המשך אחרי')
+}
+
+const visibleWeeklyQuestions = computed(() => {
+  const questions = weeklyPlan.value?.openQuestions ?? []
+  if (!questions.length) return []
+  const visible = questions.filter(question =>
+    !isObsoleteWeeklyQuestion(question) &&
+    !showWeeklyQuestionStatus(question)
+  )
+  const removed = questions.length - visible.length
+  if (removed > 0) {
+    console.info('[AIChat:WeeklyQuestionRender]', {
+      stage: 'obsolete_questions_suppressed',
+      messageId: props.message.id,
+      rawOpenQuestionsCount: questions.length,
+      visibleOpenQuestionsCount: visible.length,
+      removedCount: removed,
+      removedQuestionIds: questions
+        .filter(question => isObsoleteWeeklyQuestion(question) || showWeeklyQuestionStatus(question))
+        .map(question => question.id || question.question),
+      reason: 'obsolete_or_answered_question',
+    })
+  }
+  return visible
+})
+
+const hasVisibleWeeklyPlanContent = computed(() =>
+  Boolean(
+    weeklyPlan.value &&
+    (
+      visibleWeeklyQuestions.value.length > 0 ||
+      weeklyPlan.value.recommendations.length > 0 ||
+      weeklyPlan.value.deferrals.length > 0
+    ),
+  )
+)
 
 const isCompactWeeklyPlan = computed(() =>
   weeklyPlan.value?.presentation?.density === 'compact_after_clarification'
@@ -438,7 +482,7 @@ function weeklyQuestionAnsweredLabel(): string {
 }
 
 async function hydrateAnsweredWeeklyQuestions(): Promise<void> {
-  const questions = weeklyPlan.value?.openQuestions ?? []
+  const questions = visibleWeeklyQuestions.value
   if (!questions.length) return
 
   const identities = questions.map(question => ({
@@ -860,7 +904,24 @@ async function saveClarificationAnswer(card: AIClarificationArtifact, event: Mou
     : 'Saving context...'
   clarificationStatus.value = savingStatus
   await persistClarificationAnswer(card, option, note)
-  if (clarificationStatus.value === savingStatus) {
+  const durableAnswer = [option?.label, note].filter(Boolean).join('\n')
+  if (card.runtime) {
+    clarificationStatus.value = card.locale === 'he'
+      ? 'מחדש את זרימת התכנון...'
+      : 'Resuming planning flow...'
+    const resumeResult = await resumeLocalClarificationRuntime(card, durableAnswer)
+    card.runtime.status = resumeResult.ok && resumeResult.status === 'success' ? 'resumed' : 'failed'
+    card.runtime.error = resumeResult.ok ? undefined : resumeResult.error
+    console.info('[AIChat:ClarificationRuntime]', {
+      stage: 'resume',
+      ok: resumeResult.ok,
+      runId: card.runtime.runId,
+      questionKey: card.runtime.questionKey,
+      status: resumeResult.ok ? resumeResult.status : 'failed',
+      error: resumeResult.ok ? undefined : resumeResult.error,
+    })
+  }
+  if (clarificationStatus.value === savingStatus || card.runtime) {
     clarificationStatus.value = card.locale === 'he'
       ? 'נשמר. ממשיך לשלב הבא...'
       : 'Saved. Continuing to the next step...'
@@ -1387,6 +1448,22 @@ const remainingCardGroups = computed(() => {
 const hasBottomCardGroups = computed(() =>
   !!cardGroups.value && !isWeekPlan.value && (isDayPlan.value || isSmartLanes.value || remainingCardGroups.value.length > 0),
 )
+const hasRenderableMessage = computed(() => {
+  if (isUser.value) return true
+  return Boolean(
+    isThinking.value ||
+    hasRenderedResponse.value ||
+    hasError.value ||
+    hasActions.value ||
+    clarification.value ||
+    (weeklyPlan.value && hasVisibleWeeklyPlanContent.value) ||
+    scheduleQuestion.value ||
+    toolResults.value.length > 0 ||
+    cardGroups.value ||
+    hasInlineCardLayout.value ||
+    hasBottomCardGroups.value,
+  )
+})
 const dayPlanTaskCount = computed(() => {
   const groups = liveCardGroups.value
   return groups.reduce((sum, group) => sum + group.tasks.length, 0)
@@ -1987,6 +2064,7 @@ async function saveSchedule() {
 
 <template>
   <div
+    v-if="hasRenderableMessage"
     class="chat-message"
     :class="{
       'message-user': isUser,
@@ -2205,7 +2283,7 @@ async function saveSchedule() {
 
       <!-- Structured Weekly Plan — rendered from task IDs, not markdown cards. -->
       <article
-        v-else-if="weeklyPlan"
+        v-else-if="weeklyPlan && hasVisibleWeeklyPlanContent"
         class="weekly-plan-message"
         :lang="weeklyPlan.locale"
         :dir="weeklyPlan.direction"
@@ -2221,13 +2299,13 @@ async function saveSchedule() {
         </header>
 
         <section
-          v-if="weeklyPlan.openQuestions.length"
+          v-if="visibleWeeklyQuestions.length"
           class="weekly-plan-questions"
           data-testid="weekly-plan-questions"
         >
           <strong>{{ weeklyPlan.locale === 'he' ? 'שאלה קצרה לפני הדירוג' : 'Quick question before ranking' }}</strong>
           <div
-            v-for="question in weeklyPlan.openQuestions"
+            v-for="question in visibleWeeklyQuestions"
             :key="question.id || question.question"
             class="weekly-plan-question"
           >

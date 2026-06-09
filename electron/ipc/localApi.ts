@@ -88,6 +88,7 @@ function startChild() {
       FLOW_STATE_API_MODE: 'token',
       FLOW_STATE_API_TOKEN: config.token,
       FLOW_STATE_API_PORT: String(config.port),
+      FLOW_STATE_API_DATA_DIR: app.getPath('userData'),
     },
   })
 

@@ -75,6 +75,7 @@ import {
 } from '@/services/ai/pipeline/weeklyPlan'
 import { retrieveWeeklyAIMemory, type WeeklyMemoryRetrievalDiagnostics } from '@/services/ai/pipeline/weeklyMemoryRetrieval'
 import type { AIClarificationArtifact, AIClarificationEvent, AIContextEdgeInput, AIRecommendationFeedback } from '@/types/aiMemory'
+import { assignLocalRuntime, startLocalClarificationRuntime } from '@/services/ai/runtime/localClarificationRuntimeClient'
 import { useWorkProfile } from '@/composables/useWorkProfile'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { setupAIPipeline } from '@/services/ai/pipeline/setup'
@@ -1830,7 +1831,8 @@ export function useAIChat() {
     // Track last detected language for use in confirmation/cancel handlers
     const outputLanguage = resolveChatOutputLanguage(routed.language, chatLanguage.value)
     lastDetectedLanguage.value = outputLanguage
-    const isClarificationContinuation = Boolean(clarificationContinuationMode(content))
+    const deterministicContinuationMode = clarificationContinuationMode(content)
+    const isClarificationContinuation = Boolean(deterministicContinuationMode)
     const isGenerateCurrentContinuation = isClarificationContinuation && /current task data only|נתוני המשימות הקיימים בלבד/i.test(content)
     const clarificationContinuationEvidence = isClarificationContinuation
       ? extractClarificationContinuationEvidence(content)
@@ -2175,7 +2177,7 @@ export function useAIChat() {
         }
         updateChatPhase(phaseActivityId, 'Checking needed context', `${cardTasks.length} task candidates`)
         const weekContext = buildWeekContextFromToolResults(toolResults, taskStore.tasks, outputLanguage, now, weekMemory)
-        const shouldForceCurrentDraft = isGenerateCurrentContinuation
+        const shouldForceCurrentDraft = isGenerateCurrentContinuation || (isClarificationContinuation && deterministicContinuationMode === 'week_plan')
         const clarification = shouldForceCurrentDraft ? null : buildWeeklyPlanningInterview(weekContext, clarificationEvents, {
           retrieval: {
             source: memoryDiagnostics.source,
@@ -2222,15 +2224,44 @@ export function useAIChat() {
               timedOut: clarification.debug?.retrieval?.timedOut,
             },
           })
+          let renderedClarification: AIClarificationArtifact = clarification
           if (lastMsg && lastMsg.isStreaming) {
+            renderedClarification = assignLocalRuntime(clarification, lastMsg.id)
             lastMsg.content = ''
             store.streamingContent = ''
             const { toolResults: _toolResults, cardGroups: _cardGroups, ...metadataWithoutTaskDump } = (lastMsg.metadata ?? {}) as Record<string, unknown>
             lastMsg.metadata = {
               ...metadataWithoutTaskDump,
-              clarification,
+              clarification: renderedClarification,
             } as Record<string, unknown>
           }
+          void (async () => {
+            try {
+              const startResult = await startLocalClarificationRuntime(renderedClarification)
+              if (renderedClarification.runtime) {
+                renderedClarification.runtime.status = startResult.ok && startResult.status === 'suspended'
+                  ? 'suspended'
+                  : startResult.ok
+                    ? 'failed'
+                    : 'unavailable'
+                renderedClarification.runtime.error = startResult.ok ? undefined : startResult.error
+              }
+              console.info('[AIChat:ClarificationRuntime]', {
+                stage: 'start',
+                ok: startResult.ok,
+                runId: renderedClarification.runtime?.runId,
+                questionKey: renderedClarification.runtime?.questionKey,
+                status: startResult.ok ? startResult.status : 'unavailable',
+                error: startResult.ok ? undefined : startResult.error,
+              })
+            } catch (runtimeErr) {
+              if (renderedClarification.runtime) {
+                renderedClarification.runtime.status = 'failed'
+                renderedClarification.runtime.error = runtimeErr instanceof Error ? runtimeErr.message : 'runtime start failed'
+              }
+              console.warn('[AIChat:ClarificationRuntime] start failed:', runtimeErr)
+            }
+          })()
           void (async () => {
             try {
               const db = useSupabaseDatabase()

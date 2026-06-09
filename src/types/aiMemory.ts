@@ -139,7 +139,7 @@ export interface AIClarificationEVPIScore {
     heuristicEvpi: number
     userCost: number
     selectedScore: number
-    skippedReason?: 'recently_resolved' | 'same_question_recently_resolved' | 'no_targets'
+    skippedReason?: 'recently_resolved' | 'same_question_recently_resolved' | 'no_targets' | 'no_durable_planning_update'
   }>
 }
 
@@ -155,6 +155,13 @@ export interface AIClarificationArtifact {
   candidateTaskIds: string[]
   actions: Array<'generate_current' | 'show_candidates' | 'pause_save'>
   memoryKey: string
+  runtime?: {
+    provider: 'mastra_local_api'
+    runId: string
+    questionKey: string
+    status: 'pending' | 'suspended' | 'resumed' | 'failed' | 'unavailable'
+    error?: string
+  }
   coverage?: AIClarificationCoverage
   pathType?: AIClarificationPathType
   debug?: {

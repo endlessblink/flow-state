@@ -35,14 +35,14 @@
     "postinstall": "node scripts/patch-electron-builder-dependency-parser.cjs && ([ -d watchpost ] && cd watchpost && npm install || true)",
     "kill": "bash scripts/kill-flow-state.sh",
     "prebuild": "node scripts/check-vite-secrets.cjs",
-    "build": "npx vite build --mode production",
+    "build": "vite build --mode production",
     "preview": "vite preview",
     "tauri": "bash scripts/sync-doppler.sh && tauri",
     "tauri:cli": "tauri",
     "tauri:rebuild": "bash scripts/sync-doppler.sh && npm run tauri build && ./src-tauri/target/release/flow-state",
     "tauri:install": "bash scripts/build-and-install.sh",
     "tauri:run": "./src-tauri/target/release/flow-state",
-    "electron:build-main": "tsc -p electron/tsconfig.json && mv dist-electron/main.js dist-electron/main.cjs && mv dist-electron/preload.js dist-electron/preload.cjs && node -e \"const fs=require('fs'); const pkg=require('./package.json'); fs.writeFileSync('dist-electron/package.json', JSON.stringify({ name: pkg.name, version: pkg.version, main: 'main.cjs', type: 'commonjs' }));\" && node_modules/.bin/esbuild server/local-api/server.cjs --bundle --platform=node --target=node20 --outfile=dist-electron/local-api-server.cjs",
+    "electron:build-main": "tsc -p electron/tsconfig.json && mv dist-electron/main.js dist-electron/main.cjs && mv dist-electron/preload.js dist-electron/preload.cjs && node -e \"const fs=require('fs'); const pkg=require('./package.json'); fs.writeFileSync('dist-electron/package.json', JSON.stringify({ name: pkg.name, version: pkg.version, main: 'main.cjs', type: 'commonjs' }));\" && node_modules/.bin/esbuild server/local-api/server.cjs --bundle --platform=node --target=node22 --outfile=dist-electron/local-api-server.cjs",
     "electron:dev": "VITE_DEV_SERVER_URL=http://localhost:5546 npm run electron:build-main && electron dist-electron/main.cjs --no-sandbox",
     "electron:patch-builder": "node scripts/patch-electron-builder-dependency-parser.cjs",
     "electron:validate-env": "node scripts/validate-electron-vite-env.cjs",
@@ -256,6 +256,8 @@
     "@capacitor/status-bar": "^8.0.1",
     "@fabianlars/tauri-plugin-oauth": "^2.0.0",
     "@leeoniya/ufuzzy": "^1.0.19",
+    "@mastra/core": "^1.41.0",
+    "@mastra/libsql": "^1.12.1",
     "@supabase/supabase-js": "^2.89.0",
     "@tiptap/extension-color": "^3.15.3",
     "@tiptap/extension-highlight": "^3.15.3",
@@ -293,7 +295,8 @@
     "vue-cal": "^4.10.2",
     "vue-i18n": "^11.2.8",
     "vue-router": "^4.6.4",
-    "vuedraggable": "^4.1.0"
+    "vuedraggable": "^4.1.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.2",
@@ -356,7 +359,7 @@
     "write-file-atomic": "^7.0.0"
   },
   "engines": {
-    "node": ">=20.19.0",
+    "node": ">=22.13.0",
     "npm": ">=10.0.0"
   }
 }

@@ -211,6 +211,112 @@ async function seedWeeklyInlineFollowUpConversation(page: Page) {
   })
 }
 
+async function seedWeeklyPriorityQuestionConversation(page: Page) {
+  await page.evaluate(() => {
+    const now = new Date().toISOString()
+    localStorage.setItem('flowstate-ai-conversations', JSON.stringify({
+      activeConversationId: 'conv-weekly-priority-question',
+      conversations: [{
+        id: 'conv-weekly-priority-question',
+        title: 'Seeded weekly priority',
+        createdAt: now,
+        updatedAt: now,
+        messages: [
+          {
+            id: 'msg-seeded-weekly-priority-user',
+            role: 'user',
+            content: 'תעזור לי לארגן את שארית השבוע',
+            timestamp: now,
+          },
+          {
+            id: 'msg-seeded-weekly-priority-assistant',
+            role: 'assistant',
+            content: '',
+            timestamp: now,
+            metadata: {
+              weeklyPlan: {
+                schemaVersion: 'weekly-plan.v2',
+                requestId: 'req-seeded-weekly-priority',
+                locale: 'he',
+                direction: 'rtl',
+                source: 'quick_draft',
+                headline: 'צריך תשובה אחת לפני דירוג',
+                weekRead: {
+                  summary: 'לא אציג דירוג רחב בלי הקשר אמין.',
+                  workloadReality: '',
+                  mainTradeoff: '',
+                },
+                recommendations: [],
+                deferrals: [],
+                openQuestions: [{
+                  id: `week_importance_${new Date().toISOString().slice(0, 10)}`,
+                  entityType: 'week',
+                  entityId: new Date().toISOString().slice(0, 10),
+                  reason: 'missing_week_priorities',
+                  question: 'מה הכי חשוב להגן עליו השבוע?',
+                  options: [
+                    {
+                      id: 'work_commitment',
+                      label: 'התחייבות עבודה',
+                      effect: 'Use work commitments as the weekly ranking lens.',
+                      memoryPatch: {
+                        entityType: 'week',
+                        entityId: new Date().toISOString().slice(0, 10),
+                        field: 'thisWeekImportance',
+                        operation: 'set',
+                        value: 'work_commitment',
+                        confidence: 0.85,
+                        source: 'clarification',
+                      },
+                    },
+                    {
+                      id: 'client_money',
+                      label: 'לקוח/כסף',
+                      effect: 'Use client or money impact as the weekly ranking lens.',
+                      memoryPatch: {
+                        entityType: 'week',
+                        entityId: new Date().toISOString().slice(0, 10),
+                        field: 'thisWeekImportance',
+                        operation: 'set',
+                        value: 'client_money',
+                        confidence: 0.85,
+                        source: 'clarification',
+                      },
+                    },
+                    {
+                      id: 'reduce_chaos',
+                      label: 'להוריד עומס',
+                      effect: 'Use load reduction as the weekly ranking lens.',
+                      memoryPatch: {
+                        entityType: 'week',
+                        entityId: new Date().toISOString().slice(0, 10),
+                        field: 'thisWeekImportance',
+                        operation: 'set',
+                        value: 'reduce_chaos',
+                        confidence: 0.85,
+                        source: 'clarification',
+                      },
+                    },
+                  ],
+                  allowFreeText: true,
+                  freeTextPatch: { field: 'whyItMatters', operation: 'set' },
+                  freeTextPlaceholder: 'אופציונלי: מה ייחשב שבוע טוב?',
+                  relatedTaskIds: ['ai-local-task-1', 'ai-local-task-2', 'ai-local-task-3'],
+                }],
+                quality: {
+                  selectedTaskCount: 0,
+                  confidence: 'low',
+                  caveats: [],
+                },
+              },
+            },
+          },
+        ],
+      }],
+    }))
+  })
+}
+
 async function seedAnsweredWeeklyFollowUpMemory(page: Page) {
   await page.evaluate(() => {
     const key = 'flowstate-ai-clarification-local-memory-v1'
@@ -493,6 +599,7 @@ test.describe('weekly planning prompt variants route to the same non-dump produc
       expect(clarificationCount + weeklyPlanCount).toBeGreaterThan(0)
       await expect(page.locator('.ai-chat-messages')).not.toContainText(/נמצאו\s+\d+\s+משימות|Found\s+\d+\s+tasks/i)
       await expect(page.locator('.ai-chat-messages')).not.toContainText(/What kind of project is "Work"|איזה סוג פרויקט הוא "Work"/i)
+      await expect(page.locator('.ai-chat-messages')).not.toContainText(/להוסיף משימת המשך אחרי|Add a follow-up task after/i)
       expect(decisionLogs.some(line => /memory_retrieved|ask|proceed|plan_ready/.test(line))).toBe(true)
 
       if (clarificationCount > 0) {
@@ -534,7 +641,7 @@ test('weekly bridge stream hang falls back instead of staying in refining plan',
   await expect(input).toBeEnabled({ timeout: 5_000 })
 })
 
-test('weekly inline follow-up click advances the chat instead of staying on the card', async ({ page }) => {
+test('weekly inline follow-up card is suppressed instead of advancing obsolete action-only flow', async ({ page }) => {
   await seedGuestWorkspace(page)
   await seedWeeklyInlineFollowUpConversation(page)
   await stubBridge(page)
@@ -550,49 +657,60 @@ test('weekly inline follow-up click advances the chat instead of staying on the 
   const seededPlan = page.locator('[data-testid="weekly-plan"]').first()
   await expect(seededPlan).toBeVisible({ timeout: 10_000 })
   const assistantCountBefore = await page.locator('.message-assistant').count()
-  await seededPlan.getByRole('button', { name: 'כן, להוסיף' }).click()
-  await seededPlan.getByRole('button', { name: 'הוסף משימת מעקב' }).click()
 
-  await expect(seededPlan).toContainText(/ממשיך עכשיו|משימת מעקב נוספה/, { timeout: 5_000 })
-  await expect.poll(() => weeklyLogs.some(line => line.includes('continuation_emitted')), {
-    timeout: 5_000,
-  }).toBe(true)
-  await expect.poll(() => weeklyLogs.some(line => line.includes('followup_create_started')), {
-    timeout: 5_000,
-  }).toBe(true)
-  await expect.poll(() => continuationLogs.some(line => line.includes('send_started')), {
-    timeout: 5_000,
-  }).toBe(true)
+  await expect(seededPlan).not.toContainText(/להוסיף משימת המשך אחרי|Add a follow-up task after/i)
+  await expect(seededPlan.locator('[data-testid="weekly-plan-questions"]')).toHaveCount(0)
+  await expect(seededPlan.getByRole('button', { name: 'כן, להוסיף' })).toHaveCount(0)
+  await expect(seededPlan.getByRole('button', { name: 'הוסף משימת מעקב' })).toHaveCount(0)
   await expect.poll(async () => page.locator('.message-assistant').count(), {
-    timeout: 15_000,
-  }).toBeGreaterThan(assistantCountBefore)
-  await expect(page.locator('.message-assistant').last()).toContainText(/Short plan after your clarification|תוכנית/, { timeout: 15_000 })
-  await expect.poll(async () => page.getByText('להוסיף משימת המשך אחרי "Draft follow-up tasks for the memory interview flow"?').count(), {
     timeout: 5_000,
-  }).toBe(1)
-  const compactPlan = page.locator('[data-testid="weekly-plan"]').last()
-  await expect(compactPlan).toContainText(/Compact answer from saved context|תשובה קצרה מההקשר ששמרת/, { timeout: 5_000 })
-  await expect(compactPlan.locator('.weekly-plan-section')).toHaveCount(2, { timeout: 5_000 })
-  await expect(compactPlan.locator('.weekly-plan-footer')).toHaveCount(0)
-  await expect(compactPlan).not.toContainText(/Intentional deferrals|Grounded task-evidence plan|Risk:/i)
-  const compactTextLength = await compactPlan.evaluate(el => (el.textContent || '').trim().length)
-  expect(compactTextLength).toBeLessThan(1400)
+  }).toBe(assistantCountBefore)
+  expect(weeklyLogs.some(line => line.includes('continuation_emitted'))).toBe(false)
+  expect(weeklyLogs.some(line => line.includes('followup_create_started'))).toBe(false)
+  expect(continuationLogs.some(line => line.includes('send_started'))).toBe(false)
   await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 15_000 })
   await expect(page.locator('.ai-chat-input-container textarea')).toBeEnabled({ timeout: 5_000 })
 })
 
-test('old answered weekly inline follow-up card hydrates from memory instead of asking again', async ({ page }) => {
+test('old persisted weekly follow-up card is suppressed instead of asking again', async ({ page }) => {
   await seedGuestWorkspace(page)
   await seedWeeklyInlineFollowUpConversation(page)
   await seedAnsweredWeeklyFollowUpMemory(page)
   await stubBridge(page)
 
   await openAIChat(page)
+  await expect(page.locator('[data-testid="weekly-plan"]')).toHaveCount(0)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/צריך תשובה אחת לפני דירוג|One answer before ranking/i)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/להוסיף משימת המשך אחרי|Add a follow-up task after/i)
+  await expect(page.getByRole('button', { name: 'כן, להוסיף' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'הוסף משימת מעקב' })).toHaveCount(0)
+})
+
+test('answered weekly priority question disappears and continues to compact plan without re-asking', async ({ page }) => {
+  await seedGuestWorkspace(page)
+  await seedWeeklyPriorityQuestionConversation(page)
+  await stubBridge(page)
+
+  await openAIChat(page)
   const seededPlan = page.locator('[data-testid="weekly-plan"]').first()
   await expect(seededPlan).toBeVisible({ timeout: 10_000 })
-  await expect(seededPlan).toContainText(/התשובה כבר נשמרה|Answer already saved/, { timeout: 5_000 })
-  await expect(seededPlan.getByRole('button', { name: 'כן, להוסיף' })).toHaveCount(0)
-  await expect(seededPlan.getByRole('button', { name: 'הוסף משימת מעקב' })).toHaveCount(0)
+  await expect(seededPlan).toContainText('מה הכי חשוב להגן עליו השבוע?', { timeout: 5_000 })
+  const assistantCountBefore = await page.locator('.message-assistant').count()
+
+  await seededPlan.getByRole('button', { name: 'לקוח/כסף' }).click()
+  await seededPlan.getByRole('button', { name: 'שמור תשובה' }).click()
+
+  await expect(seededPlan).not.toContainText('מה הכי חשוב להגן עליו השבוע?', { timeout: 5_000 })
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 30_000 })
+  await expect.poll(async () => page.locator('.message-assistant').count(), {
+    timeout: 15_000,
+  }).toBeGreaterThan(assistantCountBefore)
+
+  const compactPlan = page.locator('[data-testid="weekly-plan"]').last()
+  await expect(compactPlan).toContainText(/תשובה קצרה מההקשר ששמרת|Short plan after your clarification/, { timeout: 10_000 })
+  await expect(compactPlan.locator('[data-testid="weekly-plan-questions"]')).toHaveCount(0)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/מה הכי חשוב להגן עליו השבוע\?.*מה הכי חשוב להגן עליו השבוע\?/s)
+  await expect(page.locator('.ai-chat-input-container textarea')).toBeEnabled({ timeout: 5_000 })
 })
 
 test('too-much feedback makes the next broad fallback answer compact', async ({ page }) => {

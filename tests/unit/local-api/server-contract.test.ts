@@ -60,4 +60,22 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(tokenBlock).toContain('Bearer ${TOKEN}')
     expect(tokenBlock).toContain('return send(res, 401')
   })
+
+  it('keeps AI clarification runtime endpoints behind the same signed-in and bearer-token boundary', () => {
+    const ctxCheck = SERVER_CJS.indexOf("if (!ctx) return send(res, 503, { error: 'not signed in' })")
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+    const startRoute = SERVER_CJS.indexOf("path === '/api/ai/clarifications/start'")
+    const resumeRoute = SERVER_CJS.indexOf("path.match(/^\\/api\\/ai\\/clarifications\\/([^/]+)\\/resume$/)")
+
+    expect(startRoute, 'AI clarification start route not found').toBeGreaterThan(-1)
+    expect(resumeRoute, 'AI clarification resume route not found').toBeGreaterThan(-1)
+    expect(ctxCheck).toBeLessThan(startRoute)
+    expect(tokenCheck).toBeLessThan(startRoute)
+    expect(tokenCheck).toBeLessThan(resumeRoute)
+  })
+
+  it('creates the Mastra AI runtime from the configured local API data directory', () => {
+    expect(SERVER_CJS).toContain("const DATA_DIR = process.env.FLOW_STATE_API_DATA_DIR || join(process.cwd(), '.flowstate-local-api')")
+    expect(SERVER_CJS).toContain('createAIMastraRuntime({ dataDir: DATA_DIR })')
+  })
 })

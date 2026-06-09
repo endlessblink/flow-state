@@ -1173,12 +1173,14 @@ function scoreClarificationQuestion(
   heuristicEvpi: number
   userCost: number
   selectedScore: number
-  skippedReason?: 'recently_resolved' | 'no_targets'
+  skippedReason?: 'recently_resolved' | 'no_targets' | 'no_durable_planning_update'
 } {
   const targetedParameters = targetParametersForQuestion(question, preferredReasons)
   const memoryKey = clarificationMemoryKey(question, context)
   const skippedReason = recentClarificationResolved(recentEvents, memoryKey, question.id || question.question)
     ? 'recently_resolved'
+    : !questionHasDurablePlanningUpdate(question)
+      ? 'no_durable_planning_update'
     : targetedParameters.length === 0
       ? 'no_targets'
       : undefined
@@ -1203,6 +1205,11 @@ function scoreClarificationQuestion(
     selectedScore: Number(selectedScore.toFixed(3)),
     skippedReason,
   }
+}
+
+function questionHasDurablePlanningUpdate(question: AIClarificationQuestion): boolean {
+  if (question.freeTextPatch) return true
+  return Boolean(question.options?.some(option => Boolean(option.memoryPatch)))
 }
 
 function parameterUncertainty(confidence: number): number {
@@ -1561,42 +1568,6 @@ function buildQuickDraftQuestions(context: WeekContext, selected: PlannerTaskSna
       allowFreeText: true,
       freeTextPatch: { field: 'whyItMatters', operation: 'set' },
       relatedTaskIds: [weakSubstantialTask.id],
-    })
-  }
-
-  const taskNeedingFollowup = selected.find(task =>
-    task.derived.hasHumanOrExternalStakeholder ||
-    task.derived.domain === 'work' ||
-    task.subtasks?.some(subtask => !subtask.isCompleted)
-  )
-  if (taskNeedingFollowup) {
-    questions.push({
-      id: `followup_${taskNeedingFollowup.id}`,
-      entityType: 'task',
-      entityId: taskNeedingFollowup.id,
-      reason: 'follow_up_task_suggestion',
-      question: locale === 'he'
-        ? `להוסיף משימת המשך אחרי "${taskNeedingFollowup.title}"?`
-        : `Add a follow-up task after "${taskNeedingFollowup.title}"?`,
-      options: [
-        {
-          id: 'add_followup',
-          label: locale === 'he' ? 'כן, להוסיף' : 'Yes, add it',
-          effect: 'Create a follow-up task linked to this recommendation.',
-        },
-        {
-          id: 'ask_later',
-          label: locale === 'he' ? 'שאל אותי אחר כך' : 'Ask later',
-          effect: 'Keep the suggestion visible without changing tasks now.',
-        },
-        {
-          id: 'no_followup',
-          label: locale === 'he' ? 'לא צריך' : 'No follow-up',
-          effect: 'Do not suggest a follow-up for this task again in this plan.',
-        },
-      ],
-      allowFreeText: true,
-      relatedTaskIds: [taskNeedingFollowup.id],
     })
   }
 

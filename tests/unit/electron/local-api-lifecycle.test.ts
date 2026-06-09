@@ -39,6 +39,16 @@ describe('Electron local API lifecycle regression contract', () => {
     expect(body).not.toMatch(/if\s*\(\s*config\.enabled\s*\)\s*{[^}]*startChild\(\)/)
   })
 
+  it('passes the Electron userData directory to the sidecar for durable local AI runtime storage', () => {
+    const startChild = LOCAL_API_TS.slice(
+      LOCAL_API_TS.indexOf('function startChild()'),
+      LOCAL_API_TS.indexOf('\nfunction stopChild()', LOCAL_API_TS.indexOf('function startChild()')),
+    )
+
+    expect(startChild).toContain('FLOW_STATE_API_DATA_DIR')
+    expect(startChild).toContain("app.getPath('userData')")
+  })
+
   it('keeps the sidecar running when Local Task API is disabled but a session is still available', () => {
     const body = handlerBody('localApi:setEnabled')
 

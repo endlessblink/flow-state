@@ -1299,7 +1299,7 @@ describe('AI sidebar-first desktop experience', () => {
     }
   })
 
-  it('keys weekly follow-up questions to the related task so answered questions can be suppressed', () => {
+  it('does not use follow-up task creation as a pre-ranking weekly clarification', () => {
     const tasks = [
       {
         id: 'task-renewal-followup',
@@ -1342,14 +1342,65 @@ describe('AI sidebar-first desktop experience', () => {
     )
 
     const quickDraft = buildQuickDraftWeeklyPlan(context)
-    const followUp = quickDraft.openQuestions.find(question => question.id === 'followup_task-renewal-followup')
+    const interview = buildWeeklyPlanningInterview(context, [])
 
-    expect(followUp).toMatchObject({
-      entityType: 'task',
-      entityId: 'task-renewal-followup',
-      reason: 'follow_up_task_suggestion',
-      relatedTaskIds: ['task-renewal-followup'],
-    })
+    expect(quickDraft.openQuestions).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        reason: 'follow_up_task_suggestion',
+      }),
+    ]))
+    expect(interview?.question.reason).not.toBe('follow_up_task_suggestion')
+    expect(interview?.question.question ?? '').not.toMatch(/follow-up task|משימת המשך/i)
+  })
+
+  it('only generates weekly pre-ranking questions that can update planning memory', () => {
+    const tasks = [
+      {
+        id: 'task-learning-question',
+        title: 'Prepare pricing review for Dana',
+        description: 'Client decision depends on this before Friday.',
+        status: 'todo',
+        priority: 'high',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'client-launch',
+        projectName: 'Client Launch',
+        estimatedDuration: 90,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task & { projectName: string },
+      {
+        id: 'task-learning-secondary',
+        title: 'Organize launch notes',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-11',
+        projectId: 'client-launch',
+        projectName: 'Client Launch',
+        estimatedDuration: 45,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task & { projectName: string },
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-07T09:00:00Z'),
+    )
+
+    const quickDraft = buildQuickDraftWeeklyPlan(context)
+    expect(quickDraft.openQuestions.length).toBeGreaterThan(0)
+    for (const question of quickDraft.openQuestions) {
+      const optionWritesMemory = question.options?.some(option => Boolean(option.memoryPatch)) ?? false
+      expect(optionWritesMemory || Boolean(question.freeTextPatch)).toBe(true)
+    }
   })
 
   it('uses saved weekly beliefs for impact without treating one answer as project understanding', () => {
@@ -2069,7 +2120,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(deduped?.question.id).not.toBe('memory_refresh_week_2026_06_08_thisWeekImportance')
   })
 
-  it('lets weekly-plan question buttons create a linked follow-up task with optional user text', async () => {
+  it('does not render obsolete action-only weekly follow-up questions', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({
       id: 'task-renewal',
@@ -2154,44 +2205,15 @@ describe('AI sidebar-first desktop experience', () => {
     })
 
     expect(wrapper.text()).toContain('Grounded task-evidence plan')
-    await wrapper.get('.weekly-question-option').trigger('click')
-    expect(wrapper.get('.weekly-question-apply').attributes('aria-label')).toBe('Add follow-up task')
-    await wrapper.get('.weekly-question-free-text').setValue('Confirm renewal numbers were received')
-    await wrapper.get('.weekly-question-apply').trigger('click')
-    await flushPromises()
-    await nextTick()
-
-    const created = taskStore.tasks.find(task => task.title === 'Confirm renewal numbers were received')
-    expect(created).toEqual(expect.objectContaining({
-      title: 'Confirm renewal numbers were received',
-      parentTaskId: 'task-renewal',
-      projectId: 'client-renewals',
-      priority: 'high',
-    }))
-    expect(wrapper.text()).toContain('Follow-up task added')
+    expect(wrapper.text()).not.toContain('Add a follow-up task after')
+    expect(wrapper.findAll('.weekly-question-option')).toHaveLength(0)
     expect(wrapper.find('.weekly-question-apply').exists()).toBe(false)
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week using the context I just answered')
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Created a follow-up task.')
-    expect(supabaseDbMocks.recordAIClarificationEvent).toHaveBeenCalledWith(expect.objectContaining({
-      entityKey: 'task:task-renewal',
-      entityType: 'task',
-      displayName: 'Send renewal proposal to Amit',
-      questionId: 'followup_task-renewal',
-      eventType: 'answered',
-      selectedOptionId: 'add_followup',
-      selectedLabel: 'Yes, add it',
-      freeText: 'Confirm renewal numbers were received',
-      sourceMessageId: 'msg-weekly-followup-question',
-      pathType: 'clarify_first',
-      contextSnapshot: expect.objectContaining({
-        weeklyPlanRequestId: 'req-week',
-        reason: 'follow_up_task_suggestion',
-        relatedTaskIds: ['task-renewal'],
-      }),
-    }))
+    expect(wrapper.emitted('continueChat')).toBeUndefined()
+    expect(taskStore.tasks.some(task => task.parentTaskId === 'task-renewal')).toBe(false)
+    expect(supabaseDbMocks.recordAIClarificationEvent).not.toHaveBeenCalled()
   })
 
-  it('hydrates old weekly follow-up cards from clarification memory so answered questions are not asked again', async () => {
+  it('suppresses obsolete persisted weekly follow-up cards before hydration or render', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({
       id: 'task-renewal',
@@ -2262,13 +2284,16 @@ describe('AI sidebar-first desktop experience', () => {
     await flushPromises()
     await nextTick()
 
-    expect(supabaseDbMocks.fetchAIClarificationEvents).toHaveBeenCalledWith(['task:task-renewal'], 50)
-    expect(wrapper.text()).toContain('Answer already saved')
+    expect(supabaseDbMocks.fetchAIClarificationEvents).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('One answer before ranking')
+    expect(wrapper.text()).not.toContain('Add a follow-up task after')
+    expect(wrapper.find('[data-testid="weekly-plan-questions"]').exists()).toBe(false)
     expect(wrapper.findAll('.weekly-question-option')).toHaveLength(0)
     expect(wrapper.find('.weekly-question-apply').exists()).toBe(false)
   })
 
-  it('continues weekly planning immediately while follow-up task creation is still pending', async () => {
+  it('does not continue from obsolete follow-up task questions that are suppressed at render time', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({
       id: 'task-slow-follow-up',
@@ -2284,15 +2309,7 @@ describe('AI sidebar-first desktop experience', () => {
       createdAt: new Date('2026-06-01T08:00:00Z'),
       updatedAt: new Date('2026-06-07T08:00:00Z'),
     } as Task)
-    const originalCreate = taskStore.createTask
-    let releaseCreate!: () => void
-    const createStarted = new Promise<void>(resolve => {
-      vi.spyOn(taskStore, 'createTask').mockImplementation(async (taskData: Partial<Task>) => {
-        resolve()
-        await new Promise<void>(release => { releaseCreate = release })
-        return await originalCreate(taskData)
-      })
-    })
+    const createTaskSpy = vi.spyOn(taskStore, 'createTask')
 
     const wrapper = mount(ChatMessage, {
       props: {
@@ -2332,18 +2349,13 @@ describe('AI sidebar-first desktop experience', () => {
       global: { stubs: { TaskQuickEditPopover: true } },
     })
 
-    await wrapper.get('.weekly-question-option').trigger('click')
-    await wrapper.get('.weekly-question-apply').trigger('click')
-    await createStarted
+    expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false)
+    expect(wrapper.findAll('.weekly-question-option')).toHaveLength(0)
     await nextTick()
 
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue planning the week using the context I just answered')
-    expect(wrapper.text()).toContain('creating follow-up in background')
-
-    releaseCreate()
-    await flushPromises()
-    await nextTick()
-    expect(taskStore.tasks.some(task => task.title === 'Follow up: Slow follow-up parent')).toBe(true)
+    expect(wrapper.emitted('continueChat')).toBeUndefined()
+    expect(taskStore.tasks.some(task => task.title === 'Follow up: Slow follow-up parent')).toBe(false)
+    expect(createTaskSpy).not.toHaveBeenCalled()
   })
 
   it('shows local candidate cards immediately when clarification is skipped for candidates', async () => {
@@ -2999,7 +3011,7 @@ describe('AI sidebar-first desktop experience', () => {
   it('keeps weekly clarification iterative while preserving the generate-now compact draft escape', () => {
     const aiChat = src('src/composables/useAIChat.ts')
 
-    expect(aiChat).toContain('const shouldForceCurrentDraft = isGenerateCurrentContinuation')
+    expect(aiChat).toContain("const shouldForceCurrentDraft = isGenerateCurrentContinuation || (isClarificationContinuation && deterministicContinuationMode === 'week_plan')")
     expect(aiChat).toContain('buildWeeklyPlanningInterview(weekContext, clarificationEvents')
     expect(aiChat).toContain('if (shouldForceCurrentDraft) {')
     expect(aiChat).toContain("updateChatPhase(phaseActivityId, 'Using saved context', 'Compact local draft')")
@@ -3071,9 +3083,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('function clarificationContinuationMode')
     expect(aiChat).toContain('routeClarificationContinuation')
     expect(aiChat).toContain('const continuationMode = clarificationContinuationMode(trimmedContent)')
-    expect(aiChat).toContain('const isClarificationContinuation = Boolean(clarificationContinuationMode(content))')
+    expect(aiChat).toContain('const isClarificationContinuation = Boolean(deterministicContinuationMode)')
     expect(aiChat).toContain('!isClarificationContinuation && shouldAskBroadTaskClarification')
-    expect(aiChat).toContain('const shouldForceCurrentDraft = isGenerateCurrentContinuation')
+    expect(aiChat).toContain("const shouldForceCurrentDraft = isGenerateCurrentContinuation || (isClarificationContinuation && deterministicContinuationMode === 'week_plan')")
     expect(aiChat).toContain('const clarification = shouldForceCurrentDraft ? null : buildWeeklyPlanningInterview')
   })
 
@@ -3648,7 +3660,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('function persistAIContextEdges')
     expect(aiChat).toContain('persistAIContextEdges(db, retrieval.edges)')
     expect(aiChat).not.toContain('await db.upsertAIContextEdges(retrieval.edges)')
-    expect(aiChat).toContain('const shouldForceCurrentDraft = isGenerateCurrentContinuation')
+    expect(aiChat).toContain("const shouldForceCurrentDraft = isGenerateCurrentContinuation || (isClarificationContinuation && deterministicContinuationMode === 'week_plan')")
     expect(aiChat).toContain('const clarification = shouldForceCurrentDraft ? null : buildWeeklyPlanningInterview(weekContext, clarificationEvents, {')
     expect(aiChat).toContain('clarification,')
     expect(aiChat).toContain('recordAIClarificationEvent')

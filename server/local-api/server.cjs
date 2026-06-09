@@ -26,7 +26,10 @@
 
 const http = require('http')
 const crypto = require('crypto')
+const { mkdirSync } = require('fs')
+const { join } = require('path')
 const { createClient } = require('@supabase/supabase-js')
+const { createAIMastraRuntime } = require('./ai-runtime.cjs')
 
 // --- Mode detection ---------------------------------------------------------
 // parentPort exists only when launched as an Electron utilityProcess.
@@ -46,16 +49,27 @@ if (!TOKEN_MODE) {
 
 const PORT = Number(process.env.FLOW_STATE_API_PORT) || 5577
 const TOKEN = process.env.FLOW_STATE_API_TOKEN || ''
+const DATA_DIR = process.env.FLOW_STATE_API_DATA_DIR || join(process.cwd(), '.flowstate-local-api')
 
 function logErr(msg) {
   console.error(`[local-api] ${msg}`)
 }
+
+mkdirSync(DATA_DIR, { recursive: true })
 
 // --- Auth context (mutable) -------------------------------------------------
 // { supabase, userId } once ready, or null. In service-role mode it is set
 // once at startup; in token mode it is set/replaced when the parent posts a
 // session, and cleared on sign-out.
 let ctx = null
+let aiRuntime = null
+
+function getAIRuntime() {
+  if (!aiRuntime) {
+    aiRuntime = createAIMastraRuntime({ dataDir: DATA_DIR })
+  }
+  return aiRuntime
+}
 
 function buildServiceRoleContext() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || ''
@@ -364,6 +378,21 @@ async function handleGetCurrentTimer(res) {
   send(res, 200, { active: true, session: data })
 }
 
+async function handleAIClarificationStart(req, res) {
+  const body = await readJsonBody(req)
+  const runId = typeof body.runId === 'string' && body.runId.trim()
+    ? body.runId.trim()
+    : crypto.randomUUID()
+  const result = await getAIRuntime().start(body.input || body, runId)
+  send(res, 200, { ok: true, ...result })
+}
+
+async function handleAIClarificationResume(runId, req, res) {
+  const body = await readJsonBody(req)
+  const result = await getAIRuntime().resume(runId, body.resumeData || body)
+  send(res, 200, { ok: true, ...result })
+}
+
 // --- Server -----------------------------------------------------------------
 
 const server = http.createServer(async (req, res) => {
@@ -398,6 +427,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && path === '/api/tasks') {
       return await handleCreateTask(req, res)
+    }
+    if (req.method === 'POST' && path === '/api/ai/clarifications/start') {
+      return await handleAIClarificationStart(req, res)
+    }
+    const clarificationResumeMatch = path.match(/^\/api\/ai\/clarifications\/([^/]+)\/resume$/)
+    if (req.method === 'POST' && clarificationResumeMatch) {
+      return await handleAIClarificationResume(decodeURIComponent(clarificationResumeMatch[1]), req, res)
     }
     const taskMatch = path.match(/^\/api\/tasks\/([^/]+)$/)
     if (req.method === 'PATCH' && taskMatch) {
@@ -439,4 +475,14 @@ server.listen(PORT, '127.0.0.1', () => {
   )
   // Let the parent know we're listening (token mode).
   if (PARENT_PORT) PARENT_PORT.postMessage({ type: 'listening', port: PORT })
+})
+
+process.on('exit', () => {
+  if (aiRuntime) {
+    try {
+      aiRuntime.close()
+    } catch {
+      /* ignore */
+    }
+  }
 })

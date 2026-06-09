@@ -146,7 +146,7 @@ async function seedGuestWorkspace(page: Page) {
   }, seededTasks())
 }
 
-async function stubBridge(page: Page, options: { missingCardsFromChatCall?: number } = {}) {
+async function stubBridge(page: Page, options: { missingCardsFromChatCall?: number; hangFromChatCall?: number } = {}) {
   await page.addInitScript(() => {
     ;(window as unknown as { __flowstateBridgeChatCallCount: number }).__flowstateBridgeChatCallCount = 0
   })
@@ -166,6 +166,18 @@ async function stubBridge(page: Page, options: { missingCardsFromChatCall?: numb
       }
       const bridgeWindow = window as unknown as { __flowstateBridgeChatCallCount?: number }
       bridgeWindow.__flowstateBridgeChatCallCount = (bridgeWindow.__flowstateBridgeChatCallCount || 0) + 1
+
+      if (bridgeOptions.hangFromChatCall && bridgeWindow.__flowstateBridgeChatCallCount >= bridgeOptions.hangFromChatCall) {
+        return new Response(new ReadableStream({
+          start() {
+            // Intentionally leave the stream open to prove the app-level watchdog
+            // exits the weekly planning phase instead of waiting forever.
+          },
+        }), {
+          status: 200,
+          headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
+        })
+      }
 
       if (bridgeOptions.missingCardsFromChatCall && bridgeWindow.__flowstateBridgeChatCallCount >= bridgeOptions.missingCardsFromChatCall) {
         const chunks = [
@@ -352,6 +364,27 @@ test('Hebrew rest-of-week prompt reaches weekly planning without a generic task 
   }
 
   await expect(input).toBeEnabled({ timeout: 10_000 })
+})
+
+test('weekly bridge stream hang falls back instead of staying in refining plan', async ({ page }) => {
+  await seedGuestWorkspace(page)
+  await stubBridge(page, { hangFromChatCall: 1 })
+
+  const input = await openAIChat(page)
+  await sendChat(input, 'תעזור לי לתכנן את שארית השבוע')
+  await answerClarificationIfPresent(page)
+
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 20_000 })
+  await expect(page.locator('[data-testid="weekly-plan"]').last()).toBeVisible({ timeout: 5_000 })
+  const questionCount = await page.locator('[data-testid="weekly-plan-questions"]').count()
+  const inlineCardCount = await page.locator('[data-testid="inline-plan-card"]').count()
+  expect(questionCount + inlineCardCount).toBeGreaterThan(0)
+  expect(inlineCardCount).toBeLessThanOrEqual(3)
+  await expect(page.locator('.weekly-plan-section')).toHaveCount(inlineCardCount, { timeout: 5_000 })
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/נמצאו\s+\d+\s+משימות|Found\s+\d+\s+tasks/i)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/Refining plan|Bridge timeout/i)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/אותות במשימה מצביעים על כסף.*אותות במשימה מצביעים על כסף/s)
+  await expect(input).toBeEnabled({ timeout: 5_000 })
 })
 
 test('too-much feedback makes the next broad fallback answer compact', async ({ page }) => {

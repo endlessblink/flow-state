@@ -3446,7 +3446,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(weeklyPlan).toContain('isSuppressedByRecommendationFeedback')
     expect(weeklyPlan).toContain('feedbackDeferralReason')
     expect(weeklyPlan).toContain("schemaVersion: 'ai-clarification.v1'")
-    expect(weeklyPlan).toContain('I did not get a reliable enough plan')
+    expect(weeklyPlan).toContain('One answer before ranking')
     expect(weeklyPlan).toContain('Best plan from task evidence')
     expect(weeklyPlan).not.toContain('Evidence-only draft:')
 

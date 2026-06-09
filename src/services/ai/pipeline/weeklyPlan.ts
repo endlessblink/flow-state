@@ -258,7 +258,7 @@ export type WeeklyPlanOutput = {
   }>
   openQuestions: Array<{
     id?: string
-    entityType?: 'project' | 'task'
+    entityType?: 'project' | 'task' | 'week'
     entityId?: string
     reason?: string
     question: string
@@ -677,7 +677,9 @@ export function buildQuickDraftWeeklyPlan(
   const recommendations = selected.slice(0, maxRecommendations).map((task, index): WeeklyPlanRecommendation => {
     const evidence = quickDraftEvidence(task, { compactUncertainty })
     const stream = workstreamByTaskId.get(task.id)
-    const relatedTaskIds = stream?.taskIds.filter(id => id !== task.id).slice(0, 2) ?? []
+    const relatedTaskIds = compactUncertainty
+      ? []
+      : (stream?.taskIds.filter(id => id !== task.id).slice(0, 2) ?? [])
     const focusArea = stream?.label ?? (task.project?.name || task.tags?.[0] || (locale === 'he' ? 'הקשר מוגבל' : 'Limited task context'))
     return {
       sectionId: `quick_${index + 1}_${task.id}`,
@@ -689,8 +691,8 @@ export function buildQuickDraftWeeklyPlan(
       title: task.title,
       whyThisMatters: quickDraftWhyThisMatters(task, stream, locale, { compactUncertainty }),
       whyThisWeek: quickDraftWhyThisWeek(task, evidence, locale, { compactUncertainty }),
-      riskIfIgnored: quickDraftRisk(task, locale),
-      nextAction: quickDraftNextAction(task, locale),
+      riskIfIgnored: quickDraftRisk(task, locale, { compactUncertainty }),
+      nextAction: quickDraftNextAction(task, locale, { compactUncertainty }),
       evidence,
       cardPlacement: 'immediately_after_explanation',
     }
@@ -765,17 +767,37 @@ export function buildQuickDraftWeeklyPlan(
 export function buildWeeklyPlanReliabilityFallback(context: WeekContext, caveats: string[] = []): WeeklyPlanOutput {
   const locale = context.locale
   const selected = selectQuickDraftTasks(context.tasks)
-  const openQuestions = buildQuickDraftQuestions(context, selected).slice(0, 1)
+  let openQuestions = buildQuickDraftQuestions(context, selected).slice(0, 1)
+  if (!openQuestions.length) {
+    openQuestions = [{
+      id: `week_importance_${context.weekStartIso}`,
+      entityType: 'week',
+      entityId: context.weekStartIso,
+      reason: 'missing_week_priorities',
+      question: locale === 'he' ? 'מה הכי חשוב להגן עליו השבוע?' : 'What matters most to protect this week?',
+      options: [
+        weekOption(context.weekStartIso, 'work_commitment', locale === 'he' ? 'התחייבות עבודה' : 'Work commitment', 'thisWeekImportance', 'work_commitment'),
+        weekOption(context.weekStartIso, 'money_client', locale === 'he' ? 'לקוח/כסף' : 'Client or money', 'thisWeekImportance', 'money_client'),
+        weekOption(context.weekStartIso, 'family_admin', locale === 'he' ? 'משפחה/אדמין' : 'Family or admin', 'thisWeekImportance', 'family_admin'),
+        weekOption(context.weekStartIso, 'reduce_load', locale === 'he' ? 'להוריד עומס' : 'Reduce load', 'thisWeekImportance', 'reduce_load'),
+        weekOption(context.weekStartIso, 'not_sure', locale === 'he' ? 'לא בטוח' : 'Not sure', 'thisWeekImportance', 'unknown'),
+      ],
+      allowFreeText: true,
+      freeTextPatch: { field: 'whyItMatters', operation: 'set' },
+      freeTextPlaceholder: locale === 'he' ? 'אופציונלי: מה ייחשב שבוע טוב?' : 'Optional: what would make this a good week?',
+      relatedTaskIds: selected.slice(0, 5).map(task => task.id),
+    }]
+  }
   return {
     schemaVersion: 'weekly-plan.v2',
     requestId: context.requestId,
     locale,
     direction: context.direction,
-    headline: locale === 'he' ? 'לא קיבלתי תוכנית מספיק אמינה' : 'I did not get a reliable enough plan',
+    headline: locale === 'he' ? 'צריך תשובה אחת לפני דירוג' : 'One answer before ranking',
     weekRead: {
       summary: locale === 'he'
-        ? 'לא אציג דירוג חלש רק כדי למלא תשובה. צריך תשובה קצרה או ניסיון נוסף עם יותר הקשר.'
-        : 'I will not show a weak ranking just to fill the response. This needs one short answer or another pass with more context.',
+        ? 'לא אציג דירוג רחב בלי הקשר אמין.'
+        : 'I will not show a broad ranking without reliable context.',
       workloadReality: '',
       mainTradeoff: '',
     },
@@ -2305,51 +2327,86 @@ function quickDraftWhyThisMatters(
   if (task.derived.substantialWorkScore >= 0.55) {
     if (options.compactUncertainty) {
       return locale === 'he'
-        ? 'מועמד זמני לפי אותות משימה, בלי לטעון לחשיבות שלא נשמרה.'
-        : 'Tentative pick from task signals, without claiming unsaved importance.'
+        ? 'בחירה זמנית לפי אותות משימה בלבד.'
+        : 'Tentative pick from task signals only.'
     }
     return locale === 'he'
       ? 'אין לי עדיין הקשר שמסביר למה זה חשוב. אני משאיר את זה כמועמד בגלל אותות משימה בלבד, לא כדירוג חשיבות ודאי.'
       : 'I do not have saved context explaining why this matters yet. I am treating it as a candidate from task signals only, not as proven importance.'
   }
   if (task.dependencies?.blocksTaskIds.length) {
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? `חוסמת ${task.dependencies.blocksTaskIds.length} משימות.`
+        : `Blocks ${task.dependencies.blocksTaskIds.length} task${task.dependencies.blocksTaskIds.length === 1 ? '' : 's'}.`
+    }
     return locale === 'he'
       ? `המשימה הזו חוסמת ${task.dependencies.blocksTaskIds.length} משימות נוספות, לכן היא משפיעה על זרימת העבודה מעבר לצ'קבוקס שלה.`
       : `This task blocks ${task.dependencies.blocksTaskIds.length} other task${task.dependencies.blocksTaskIds.length === 1 ? '' : 's'}, so it affects the flow of work beyond its own checkbox.`
   }
   if (task.derived.hasHumanOrExternalStakeholder) {
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? 'נראית כמו התחייבות מול אדם אחר.'
+        : 'Looks like an external commitment.'
+    }
     return locale === 'he'
       ? 'הכותרת או ההערות מצביעות על אדם אחר, תגובה, פגישה או אישור, אז יש כאן התחייבות חיצונית שצריך להגן עליה.'
       : 'The title or notes point to another person, reply, meeting, approval, or client, so this looks like an external commitment to protect.'
   }
   if (task.derived.hasMoneyClientHealthFamilyLegalSignal) {
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? 'יש אותות לכסף, לקוח, בריאות, משפחה או אדמין.'
+        : 'Signals money, client, health, family, or admin.'
+    }
     return locale === 'he'
       ? 'האותות במשימה מצביעים על כסף, לקוח, בריאות, משפחה או אדמין, ולכן יש לה משקל חיים/עבודה מעבר לסידור רשימה.'
       : 'The task signals money, client, health, family, or admin stakes, so it carries life/work weight beyond list cleanup.'
   }
   if (task.history.postponedCount > 0 || task.derived.isStale) {
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? 'נדחתה או התיישנה.'
+        : 'Postponed or stale.'
+    }
     return locale === 'he'
       ? `המשימה נדחתה ${task.history.postponedCount} פעמים או התיישנה, אז הסיכון הוא שהיא תמשיך לשבת פתוחה ולמשוך קשב.`
       : `This task has been postponed ${task.history.postponedCount} time${task.history.postponedCount === 1 ? '' : 's'} or has gone stale, so the risk is continued open-loop attention.`
   }
   if (task.status === 'in_progress' || task.history.timerMinutesLast7Days > 0) {
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? 'כבר התחלת; כדאי לסגור לולאה.'
+        : 'Already started; close the loop.'
+    }
     return locale === 'he'
       ? `כבר הושקעו כאן ${task.history.timerMinutesLast7Days} דקות או שהמשימה בתהליך, כך שיש ערך בלסגור את ההקשר לפני שהוא מתפזר.`
       : `${task.history.timerMinutesLast7Days} minutes are already invested or the task is in progress, so there is value in closing the context before it fades.`
   }
   if (openSubtaskCount > 0) {
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? `${openSubtaskCount} תתי-משימות פתוחות.`
+        : `${openSubtaskCount} open subtasks.`
+    }
     return locale === 'he'
       ? `יש כאן ${openSubtaskCount} תתי-משימות פתוחות, אז עדיף לבחור את תת-הצעד הבא במקום להתייחס לזה ככרטיס שטוח.`
       : `There are ${openSubtaskCount} open subtasks, so choose the next sub-step instead of treating this as a flat card.`
   }
   if (stream) {
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? `חלק מ"${stream.label}".`
+        : `Part of "${stream.label}".`
+    }
     return locale === 'he'
       ? `המשימה יושבת בתוך "${stream.label}", יחד עם ${stream.taskIds.length} משימות קשורות, אז כדאי לראות אותה כחלק מאותו היבט עבודה.`
       : `This sits inside "${stream.label}" with ${stream.taskIds.length} related tasks, so treat it as part of that work aspect.`
   }
   return locale === 'he'
-    ? 'אין מספיק הקשר עמוק, אבל האותות הזמינים עדיין מצדיקים לשקול את זה לפני חלופות חלשות יותר.'
-    : 'There is limited deeper context, but the available signals still justify considering this before weaker alternatives.'
+    ? (options.compactUncertainty ? 'הקשר מוגבל; בחירה זמנית.' : 'אין מספיק הקשר עמוק, אבל האותות הזמינים עדיין מצדיקים לשקול את זה לפני חלופות חלשות יותר.')
+    : (options.compactUncertainty ? 'Limited context; tentative pick.' : 'There is limited deeper context, but the available signals still justify considering this before weaker alternatives.')
 }
 
 function quickDraftWhyThisWeek(
@@ -2366,13 +2423,14 @@ function quickDraftWhyThisWeek(
   if (task.derived.substantialWorkScore >= 0.55) {
     if (options.compactUncertainty) {
       return locale === 'he'
-        ? `השבוע לפי ${signalText}.`
-        : `This week from ${signalText}.`
+        ? signalText
+        : signalText
     }
     return locale === 'he'
       ? `השבוע רק לפי אותות המשימה, לא לפי חשיבות פרויקט מוכחת. אותות: ${signals}`
       : `This week based on task signals only, not proven project importance. Signals: ${signals}`
   }
+  if (options.compactUncertainty) return signalText
   if (task.derived.isOverdue) return locale === 'he' ? `השבוע כי היא כבר באיחור. אותות: ${signalText}` : `This week because it is already overdue. Signals: ${signalText}`
   if (typeof task.derived.daysUntilDue === 'number' && task.derived.daysUntilDue <= 7) {
     return locale === 'he'
@@ -2383,15 +2441,35 @@ function quickDraftWhyThisWeek(
   return locale === 'he' ? `השבוע לפי האותות החזקים ביותר בכרטיס: ${signalText}` : `This week based on the strongest card signals: ${signalText}`
 }
 
-function quickDraftRisk(task: PlannerTaskSnapshot, locale: PlannerLocale): string {
+function quickDraftRisk(
+  task: PlannerTaskSnapshot,
+  locale: PlannerLocale,
+  options: { compactUncertainty?: boolean } = {},
+): string {
+  if (options.compactUncertainty) {
+    if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? 'סיכון: חוסם המשך.' : 'Risk: blocks follow-through.'
+    if (task.history.postponedCount > 0 || task.derived.isStale) return locale === 'he' ? 'סיכון: יישאר פתוח.' : 'Risk: stays open.'
+    if (task.derived.hasHumanOrExternalStakeholder) return locale === 'he' ? 'סיכון: התחייבות נחלשת.' : 'Risk: commitment weakens.'
+    return ''
+  }
   if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? 'אם תתעלם, עבודה קשורה עלולה להישאר תקועה.' : 'If ignored, related work may remain blocked.'
   if (task.history.postponedCount > 0 || task.derived.isStale) return locale === 'he' ? 'אם תתעלם, זה כנראה יישאר לולאה פתוחה גם בשבוע הבא.' : 'If ignored, this is likely to remain an open loop into next week.'
   if (task.derived.hasHumanOrExternalStakeholder) return locale === 'he' ? 'אם תתעלם, ההתחייבות מול אדם אחר או חלון ההחלטה עלולים להיחלש.' : 'If ignored, the commitment to another person or decision window may weaken.'
   return locale === 'he' ? 'אם תתעלם, אין לי מספיק הקשר כדי להעריך סיכון עמוק יותר בלי רענון מודל.' : 'If ignored, there is not enough context here to estimate deeper risk without a model refresh.'
 }
 
-function quickDraftNextAction(task: PlannerTaskSnapshot, locale: PlannerLocale): string {
+function quickDraftNextAction(
+  task: PlannerTaskSnapshot,
+  locale: PlannerLocale,
+  options: { compactUncertainty?: boolean } = {},
+): string {
   const openSubtask = task.subtasks?.find(subtask => !subtask.isCompleted)
+  if (options.compactUncertainty) {
+    if (openSubtask) return locale === 'he' ? `התחל: ${openSubtask.title}.` : `Start: ${openSubtask.title}.`
+    if (task.estimateMinutes != null && task.estimateMinutes <= 30) return locale === 'he' ? 'סגור פעולה קטנה אחת.' : 'Close one small action.'
+    if (task.history.postponedCount > 0 || task.derived.isStale) return locale === 'he' ? 'בחר פתיחה של 10 דקות.' : 'Pick a 10-minute start.'
+    return locale === 'he' ? 'בחר פעולה אחת קטנה.' : 'Choose one small action.'
+  }
   if (openSubtask) return locale === 'he' ? `התחל מתת-המשימה: ${openSubtask.title}.` : `Start with the subtask: ${openSubtask.title}.`
   if (task.estimateMinutes != null && task.estimateMinutes <= 30) return locale === 'he' ? 'בצע את הפעולה הקטנה בכרטיס וסגור אותה אם היא באמת לוקחת פחות מחצי שעה.' : 'Do the small action on the card and close it if it really fits under 30 minutes.'
   if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? 'פתח את הכרטיס ובחר את הצעד המינימלי שישחרר את המשימות התלויות.' : 'Open the card and choose the smallest step that unblocks the dependent tasks.'

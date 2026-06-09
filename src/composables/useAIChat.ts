@@ -664,6 +664,20 @@ export function useAIChat() {
     }
   }
 
+  async function collectStreamContentWithTimeout(
+    streamFactory: () => AsyncIterable<{ content?: string }>,
+    timeoutMs: number,
+    timeoutMessage: string,
+  ): Promise<string> {
+    return withTimeout((async () => {
+      let content = ''
+      for await (const chunk of streamFactory()) {
+        content += chunk.content ?? ''
+      }
+      return content
+    })(), timeoutMs, timeoutMessage)
+  }
+
   function beginToolActivity(call: ToolCall, label?: string): string {
     return store.addActivityEvent({
       tool: call.tool,
@@ -2263,7 +2277,7 @@ export function useAIChat() {
         let weeklyPlan: WeeklyPlanOutput | null = null
         let validationErrors: string[] = []
         try {
-          updateChatPhase(phaseActivityId, 'Refining plan', `Bridge timeout ${WEEK_PLAN_STRUCTURED_TIMEOUT_MS / 1000}s`)
+          updateChatPhase(phaseActivityId, 'Refining plan', `Hard cap ${WEEK_PLAN_STRUCTURED_TIMEOUT_MS / 1000}s`)
           const structuredMessages: RouterChatMessage[] = [
             {
               role: 'system',
@@ -2274,15 +2288,16 @@ export function useAIChat() {
               content: buildWeeklyPlanPrompt(weekContext, { compactAfterClarification: isClarificationContinuation }),
             },
           ]
-          let rawPlan = ''
-          for await (const chunk of router.chatStream(structuredMessages, {
-            taskType: 'chat',
-            forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
-            model: selectedModel.value || undefined,
-            timeout: WEEK_PLAN_STRUCTURED_TIMEOUT_MS,
-          })) {
-            rawPlan += chunk.content
-          }
+          const rawPlan = await collectStreamContentWithTimeout(
+            () => router.chatStream(structuredMessages, {
+              taskType: 'chat',
+              forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+              model: selectedModel.value || undefined,
+              timeout: WEEK_PLAN_STRUCTURED_TIMEOUT_MS,
+            }),
+            WEEK_PLAN_STRUCTURED_TIMEOUT_MS,
+            'weekly_plan_structured_timeout',
+          )
           const parsed = parseWeeklyPlanOutput(rawPlan, weekContext, { compactAfterClarification: isClarificationContinuation })
           if (parsed.ok) {
             weeklyPlan = parsed.value
@@ -2298,15 +2313,16 @@ export function useAIChat() {
                 content: `The JSON failed validation with these errors: ${parsed.errors.join(', ')}. Return the complete corrected JSON object only. Keep the same requestId and only use task IDs from candidateTasks.${isClarificationContinuation ? ' This is a post-clarification continuation, so keep 1-3 recommendations only.' : ''}`,
               },
             ]
-            let repairedRawPlan = ''
-            for await (const chunk of router.chatStream(repairMessages, {
-              taskType: 'chat',
-              forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
-              model: selectedModel.value || undefined,
-              timeout: WEEK_PLAN_STRUCTURED_TIMEOUT_MS,
-            })) {
-              repairedRawPlan += chunk.content
-            }
+            const repairedRawPlan = await collectStreamContentWithTimeout(
+              () => router.chatStream(repairMessages, {
+                taskType: 'chat',
+                forceProvider: selectedProvider.value !== 'auto' ? selectedProvider.value as RouterProviderType : undefined,
+                model: selectedModel.value || undefined,
+                timeout: WEEK_PLAN_STRUCTURED_TIMEOUT_MS,
+              }),
+              WEEK_PLAN_STRUCTURED_TIMEOUT_MS,
+              'weekly_plan_structured_repair_timeout',
+            )
             const repaired = parseWeeklyPlanOutput(repairedRawPlan, weekContext, { compactAfterClarification: isClarificationContinuation })
             if (repaired.ok) {
               weeklyPlan = repaired.value
@@ -2316,7 +2332,11 @@ export function useAIChat() {
           }
         } catch (planErr) {
           console.warn('[AIChat:WeeklyPlan] Structured planning failed; using grounded quick draft:', planErr)
-          validationErrors = [planErr instanceof Error ? planErr.message : 'provider_failed']
+          const failureReason = planErr instanceof Error ? planErr.message : 'provider_failed'
+          validationErrors = [failureReason]
+          if (/timeout/i.test(failureReason)) {
+            weeklyPlan = buildWeeklyPlanReliabilityFallback(weekContext, [failureReason])
+          }
         }
 
         const finalPlan = weeklyPlan ?? (
@@ -2329,7 +2349,7 @@ export function useAIChat() {
             : buildQuickDraftWeeklyPlan(weekContext, {
                 allowClarificationFirst: false,
                 compactUncertainty: true,
-                maxRecommendations: 5,
+                maxRecommendations: 3,
               })
         )
         if (validationErrors.length && finalPlan.source === 'quick_draft') {

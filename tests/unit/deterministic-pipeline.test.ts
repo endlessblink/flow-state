@@ -223,6 +223,8 @@ describe('intentRouter — routeIntentByKeywords()', () => {
       'תכנן את השבוע',
       'תעזור לי לתכנן את השבוע',
       'תעזור לי לתכנן את שארית השבוע',
+      'תעזור לי לארגן את שארית השבוע',
+      'ארגן לי את שארית השבוע',
       'תעזור לי לתכנן עד סוף השבוע',
       'סדר לי את המשך השבוע',
       'plan לי את השבוע',
@@ -243,6 +245,8 @@ describe('intentRouter — routeIntentByKeywords()', () => {
       'plan the rest of my week',
       'organize the rest of my week',
       'תעזור לי לתכנן את שארית השבוע',
+      'תעזור לי לארגן את שארית השבוע',
+      'ארגן לי את שארית השבוע',
       'סדר לי את המשך השבוע',
     ])('async router preserves flexible weekly planning route before generic task listing: "%s"', async (input) => {
       const result = await routeIntent(input, mockTasks, entityMemory)

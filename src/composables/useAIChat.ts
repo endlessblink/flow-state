@@ -613,8 +613,9 @@ export function useAIChat() {
       label,
       message,
       metadata: {
-        phase: label,
+        ...(existing?.metadata ?? {}),
         startedAt,
+        phase: label,
         elapsedMs: Date.now() - startedAt,
       },
     })
@@ -628,8 +629,9 @@ export function useAIChat() {
       label,
       message,
       metadata: {
-        phase: label,
+        ...(existing?.metadata ?? {}),
         startedAt,
+        phase: label,
         elapsedMs: Date.now() - startedAt,
       },
     })
@@ -643,8 +645,9 @@ export function useAIChat() {
       label,
       message,
       metadata: {
-        phase: label,
+        ...(existing?.metadata ?? {}),
         startedAt,
+        phase: label,
         elapsedMs: Date.now() - startedAt,
       },
     })
@@ -2153,6 +2156,16 @@ export function useAIChat() {
           weekMemory = retrieval.memory
           clarificationEvents = retrieval.clarificationEvents
           memoryDiagnostics = retrieval.diagnostics
+          console.info('[AIChat:WeeklyPlanDecision]', {
+            stage: 'memory_retrieved',
+            source: memoryDiagnostics.source,
+            entityKeyCount: memoryDiagnostics.entityKeyCount,
+            eventCount: clarificationEvents.length,
+            projectContextCount: memoryDiagnostics.projectContextCount,
+            taskContextCount: memoryDiagnostics.taskContextCount,
+            feedbackCount: memoryDiagnostics.feedbackCount,
+            timedOut: memoryDiagnostics.timedOut,
+          })
           persistAIContextEdges(db, retrieval.edges)
           persistAIMemorySnapshotSuggestions(db, retrieval.diagnostics.snapshotSuggestions)
         } catch (memoryErr) {
@@ -2185,6 +2198,16 @@ export function useAIChat() {
             ? 'memory retrieval timed out; ask-before-plan prevents fake certainty'
             : 'coverage score says a missing context dimension would materially change ranking',
           candidateCount: cardTasks.length,
+        })
+        console.info('[AIChat:WeeklyPlanDecision]', {
+          stage: clarification ? 'ask' : shouldForceCurrentDraft ? 'forced_compact_draft' : 'proceed',
+          reason: clarification?.debug?.reason ?? (shouldForceCurrentDraft ? 'user chose generate/current-info continuation' : 'coverage sufficient or no high-EVPI question'),
+          coverageScore: clarification?.coverage?.score ?? null,
+          missing: clarification?.coverage?.missing ?? [],
+          questionId: clarification?.question?.id ?? null,
+          eventCount: clarificationEvents.length,
+          memorySource: memoryDiagnostics.source,
+          timedOut: memoryDiagnostics.timedOut,
         })
         if (clarification) {
           const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
@@ -2355,6 +2378,14 @@ export function useAIChat() {
         if (validationErrors.length && finalPlan.source === 'quick_draft') {
           finalPlan.quality.caveats = [...finalPlan.quality.caveats, ...validationErrors.slice(0, 3)]
         }
+        console.info('[AIChat:WeeklyPlanDecision]', {
+          stage: 'plan_ready',
+          source: finalPlan.source,
+          recommendationCount: finalPlan.recommendations.length,
+          openQuestionCount: finalPlan.openQuestions.length,
+          compact: finalPlan.presentation?.density === 'compact_after_clarification',
+          reason: validationErrors[0] ?? 'structured weekly planning completed',
+        })
         const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
         const startedAt = existingPhase?.metadata?.startedAt ?? Date.now()
         store.updateActivityEvent(phaseActivityId, {

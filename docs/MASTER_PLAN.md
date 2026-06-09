@@ -8,7 +8,7 @@
 
 **Why this lane overrides the broader memory lane for now**: The live user flow still produced a generic task-card dump for a Hebrew "plan the rest of the week" request. That means the product-visible planner is not ready, regardless of memory-schema progress. Resume here until the browser flow proves the assistant can clarify, learn, and produce a compact plan without embarrassing output.
 
-**Current cursor**: ✅ Headed localhost proof now covers stuck follow-up click, compact continuation output, and no duplicate inline follow-up question after the user answers it.
+**Current cursor**: ✅ Localhost proof now covers prompt-class routing, stuck follow-up click, compact continuation output, and no duplicate inline follow-up question after the user answers it.
 
 **Hard rules for this focused lane**:
 - Do not add more broad memory architecture work until this lane passes real localhost browser proof.
@@ -35,6 +35,9 @@
 **Proof**:
 - `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts tests/unit/weekly-memory-retrieval.test.ts tests/unit/week-plan-request.test.ts tests/unit/deterministic-pipeline.test.ts` → 215/215 passed.
 - `npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts` → 13/13 passed, including Hebrew `תעזור לי לתכנן את שארית השבוע` routing to weekly planning without a generic task dump.
+- 2026-06-09: Added prompt-class regression proof for `תעזור לי לארגן את שארית השבוע`, `תעזור לי לתכנן את שארית השבוע`, `ארגן לי את שארית השבוע`, and `organize the rest of my week`. The browser assertions require weekly planning or a clarification card, forbid `Found N tasks` / `נמצאו N משימות`, forbid asking `What kind of project is "Work"`, require compact plans to stay at 1-3 sections, and require `[AIChat:WeeklyPlanDecision]` logs.
+- 2026-06-09 verification: `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly planning prompt variants|weekly bridge stream hang|weekly inline follow-up|old answered weekly inline|too-much feedback"` → 8/8 passed.
+- 2026-06-09 headed spot checks: isolated headed runs passed for `תעזור לי לתכנן את שארית השבוע` and `organize the rest of my week`; the focused suite also passed the exact user phrase `תעזור לי לארגן את שארית השבוע` in localhost Chromium.
 
 ### TASK-1845: Iterative weekly clarification ladder with stop/generate controls (✅ DONE)
 
@@ -123,6 +126,7 @@
 - `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --headed --grep "old answered weekly inline"` → 1/1 passed.
 - `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly bridge stream hang|weekly inline follow-up|old answered weekly inline|too-much feedback"` → 4/4 passed.
 - `npm run type-check` → passed.
+- 2026-06-09: The focused 8-test localhost suite includes old answered-card hydration and prompt-variant routing together, so answered follow-up memory and flexible weekly intent are verified in the same browser regression lane.
 
 **Focused proof gate before user testing**:
 - Unit tests for flexible weekly intent, iterative clarification continuation, no blocking memory persistence, and no repeated questions.

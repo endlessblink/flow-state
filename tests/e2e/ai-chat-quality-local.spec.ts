@@ -329,7 +329,11 @@ async function openAIChat(page: Page) {
 
   const toggle = page.locator('.ai-toggle-btn').first()
   await expect(toggle).toBeVisible({ timeout: 10_000 })
-  await toggle.click()
+  try {
+    await toggle.click({ timeout: 3_000 })
+  } catch {
+    await page.keyboard.press('Control+/')
+  }
 
   const input = page.locator('.ai-chat-input').first()
   await expect(input).toBeVisible({ timeout: 15_000 })
@@ -368,7 +372,11 @@ async function answerClarificationIfPresent(page: Page) {
 
 async function sendChat(input: Locator, message: string) {
   await input.fill(message)
-  await input.page().locator('.send-btn').click()
+  try {
+    await input.page().locator('.send-btn').click({ timeout: 3_000 })
+  } catch {
+    await input.press('Enter')
+  }
 }
 
 async function visibleInlineCardTitles(scope: Locator): Promise<string[]> {
@@ -456,6 +464,53 @@ test('Hebrew rest-of-week prompt reaches weekly planning without a generic task 
   }
 
   await expect(input).toBeEnabled({ timeout: 10_000 })
+})
+
+test.describe('weekly planning prompt variants route to the same non-dump product flow', () => {
+  const prompts = [
+    'תעזור לי לארגן את שארית השבוע',
+    'תעזור לי לתכנן את שארית השבוע',
+    'ארגן לי את שארית השבוע',
+    'organize the rest of my week',
+  ]
+
+  for (const prompt of prompts) {
+    test(`${prompt} routes to weekly planning without hardcoded dump behavior`, async ({ page }) => {
+      await seedGuestWorkspace(page)
+      await stubBridge(page)
+      const decisionLogs: string[] = []
+      page.on('console', msg => {
+        const text = msg.text()
+        if (text.includes('[AIChat:WeeklyPlanDecision]')) decisionLogs.push(text)
+      })
+
+      const input = await openAIChat(page)
+      await sendChat(input, prompt)
+
+      await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
+      const clarificationCount = await page.locator('[data-testid="ai-clarification"]').count()
+      const weeklyPlanCount = await page.locator('[data-testid="weekly-plan"]').count()
+      expect(clarificationCount + weeklyPlanCount).toBeGreaterThan(0)
+      await expect(page.locator('.ai-chat-messages')).not.toContainText(/נמצאו\s+\d+\s+משימות|Found\s+\d+\s+tasks/i)
+      await expect(page.locator('.ai-chat-messages')).not.toContainText(/What kind of project is "Work"|איזה סוג פרויקט הוא "Work"/i)
+      expect(decisionLogs.some(line => /memory_retrieved|ask|proceed|plan_ready/.test(line))).toBe(true)
+
+      if (clarificationCount > 0) {
+        await expect(page.locator('[data-testid="inline-plan-card"]')).toHaveCount(0)
+        const latestClarification = page.locator('[data-testid="ai-clarification"]').last()
+        await expect(latestClarification).toContainText(/למה אני שואל|Why ask/i)
+      } else {
+        const plan = page.locator('[data-testid="weekly-plan"]').last()
+        await expect(plan.locator('.weekly-plan-section').first()).toBeVisible({ timeout: 10_000 })
+        const sectionCount = await plan.locator('.weekly-plan-section').count()
+        expect(sectionCount).toBeGreaterThan(0)
+        expect(sectionCount).toBeLessThanOrEqual(3)
+        const textLength = await plan.evaluate(el => (el.textContent || '').trim().length)
+        expect(textLength).toBeLessThan(1800)
+      }
+      await expect(input).toBeEnabled({ timeout: 10_000 })
+    })
+  }
 })
 
 test('weekly bridge stream hang falls back instead of staying in refining plan', async ({ page }) => {

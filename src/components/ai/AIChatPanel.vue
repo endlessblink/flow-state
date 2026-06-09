@@ -25,8 +25,9 @@ import { onClickOutside } from '@vueuse/core'
 import { X, Send, Sparkles, Loader2, Trash2, Settings, RotateCcw, AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2, Zap, History, Plus, PanelRight } from 'lucide-vue-next'
 import { useAIChat } from '@/composables/useAIChat'
 import { useAIChatStore } from '@/stores/aiChat'
+import { useSettingsStore } from '@/stores/settings'
 import { useTimerStore } from '@/stores/timer'
-import { createAIRouter } from '@/services/ai/router'
+import { createAIRouter, type RouterProviderType } from '@/services/ai/router'
 import ChatMessage from './ChatMessage.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import { GROQ_MODELS, OPENROUTER_MODELS, asValueLabel, getDisplayName, filterFreeModels } from '@/config/aiModels'
@@ -89,6 +90,7 @@ function openFullScreenChat() {
 const isGridHandler = computed(() => aiPersonality.value === 'grid_handler')
 
 const store = useAIChatStore()
+const settingsStore = useSettingsStore()
 const timerStore = useTimerStore()
 
 // ============================================================================
@@ -113,6 +115,11 @@ function cyclePanelMode() {
   if (panelMode.value === 'compact') panelMode.value = 'expanded'
   else if (panelMode.value === 'expanded') panelMode.value = 'fullscreen'
   else panelMode.value = 'compact'
+}
+
+function requestWidePanel() {
+  if (panelMode.value === 'compact') panelMode.value = 'expanded'
+  else if (panelMode.value === 'expanded') panelMode.value = 'fullscreen'
 }
 
 const panelStyle = computed(() => {
@@ -326,6 +333,12 @@ watch(isGenerating, (generating) => {
 const quickActions = computed(() => {
   const actions: { label: string; message: string; directTool?: { tool: string; parameters: Record<string, unknown> } | null }[] = []
 
+  actions.push({
+    label: chatText('Plan rest of week', 'תכנן את שארית השבוע'),
+    message: 'תעזור לי לתכנן את שארית השבוע',
+    directTool: null,
+  })
+
   // Always available — these have direct tool mappings for Ollama compatibility
   actions.push({
     label: chatText(t('ai_chat.suggestion_plan'), 'תכנן לי את היום'),
@@ -471,7 +484,16 @@ function revealActivityOnCanvas(item: { taskIds?: string[]; visualKind?: 'spotli
 
 async function refreshProviderHealth() {
   try {
-    const router = createAIRouter({ debug: false })
+    const providers: RouterProviderType[] = settingsStore.aiUseSubscription !== false
+      ? ['bridge']
+      : selectedProvider.value === 'ollama'
+        ? ['groq', 'openrouter', 'ollama']
+        : ['groq', 'openrouter']
+    const router = createAIRouter({
+      providers,
+      debug: false,
+      bridgeBrain: settingsStore.aiBrain === 'codex' ? 'codex' : 'claude',
+    })
     await router.initialize()
     providerHealth.value = router.getProviderHealthStatus()
     router.dispose()
@@ -503,7 +525,7 @@ async function testGroqKey() {
     // Note: This tests the server-side API key (from Doppler/env vars),
     // not the key entered in the UI. The UI inputs are legacy - the proxy
     // handles keys server-side. TASK-1250 will remove these UI inputs.
-    const router = createAIRouter({ debug: false })
+    const router = createAIRouter({ providers: ['groq'], debug: false })
     await router.initialize()
     const available = await router.isProviderAvailable('groq')
     groqKeyStatus.value = available ? 'success' : 'error'
@@ -523,7 +545,7 @@ async function testOpenrouterKey() {
     // Note: This tests the server-side API key (from Doppler/env vars),
     // not the key entered in the UI. The UI inputs are legacy - the proxy
     // handles keys server-side. TASK-1250 will remove these UI inputs.
-    const router = createAIRouter({ debug: false })
+    const router = createAIRouter({ providers: ['openrouter'], debug: false })
     await router.initialize()
     const available = await router.isProviderAvailable('openrouter')
     openrouterKeyStatus.value = available ? 'success' : 'error'
@@ -1118,6 +1140,7 @@ onUnmounted(() => {
           :direction="effectiveChatDirection"
           @select-task="handleSelectTask"
           @continue-chat="handleContinueChat"
+          @request-wide="requestWidePanel"
         />
 
         <!-- Contextual Error -->

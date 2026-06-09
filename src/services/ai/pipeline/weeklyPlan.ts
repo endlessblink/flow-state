@@ -334,6 +334,9 @@ const WORK_SIGNAL_RE = /(work|client|customer|proposal|outreach|sales|lead|relea
 const HOME_ERRAND_RE = /(buy|gift|present|cook|food|grocer|laundry|clean|water|trash|home|house|pet|cat|dog|מתנה|לקנות|לבשל|אוכל|מקרר|כביסה|לנקות|מים|בית|חול|חתול|כלב)/i
 const HEALTH_FAMILY_RE = /(health|doctor|medicine|dad|mom|family|clinic|blood test|בריאות|רופא|תרופה|אבא|אמא|משפחה|בדיקת דם|מרפאה)/i
 const ADMIN_RE = /(tax|legal|bank|insurance|passport|license|form|admin|מס|משפט|בנק|ביטוח|דרכון|רישיון|טופס|אדמין|מנהלתי)/i
+const CLIENT_MONEY_LANE_RE = /(client|customer|renewal|invoice|payment|billing|proposal|sales|lead|outreach|contract|לקוח|לקוחות|חידוש|חשבונית|תשלום|גבייה|הצעה|מכירות|לידים|חוזה)/i
+const FLOWSTATE_AI_LANE_RE = /(flowstate|flow state|ai|assistant|chat|memory|weekly|planner|planning|mastra|claude|codex|ollama|bug|fallback|clarification|פלו.?סטייט|בינה מלאכותית|עוזר|צ'אט|זיכרון|שבוע|תכנון|באג|הבהרה)/i
+const PUBLISHING_CONTENT_LANE_RE = /(publish|posting|content|article|blog|portfolio|arthouse|course|lesson|video|marketing|campaign|לפרסם|פרסום|תוכן|מאמר|בלוג|פורטפוליו|קורס|שיעור|וידאו|שיווק|קמפיין)/i
 const REAL_CONSEQUENCE_RE = /(decision|meeting|client|customer|stakeholder|promise|commitment|renewal|proposal|budget|revenue|money|invoice|payment|cash|risk|blocked|blocks|unblock|release|qa|signoff|rework|context|postponed|avoidance|mental load|family|health|doctor|admin|legal|tax|relief|momentum|החלטה|פגישה|לקוח|התחייבות|הבטחה|תקציב|כסף|תשלום|חשבונית|סיכון|חוסם|לשחרר|שחרור|בדיקה|משפחה|בריאות|רופא|מס|מנהלתי|עומס|דחייה|מומנטום)/i
 const GENERIC_FOCUS_RE = /^(due tasks?|top tasks?|weekly tasks?|priority tasks?|work|admin|personal|focused task|משימות|משימות השבוע|עבודה|אישי|משימה ממוקדת)$/i
 const SELF_DESCRIBING_BUCKET_RE = /^(work|עבודה|personal|אישי|home|בית|admin|אדמין|maintenance|תחזוקה|inbox|uncategorized|uncategorised|ללא קטגוריה|my projects|projects|הפרויקטים שלי|פרויקטים)$/i
@@ -689,9 +692,10 @@ export function buildQuickDraftWeeklyPlan(
   const recommendations = selected.slice(0, maxRecommendations).map((task, index): WeeklyPlanRecommendation => {
     const evidence = quickDraftEvidence(task, { compactUncertainty })
     const stream = workstreamByTaskId.get(task.id)
-    const relatedTaskIds = compactUncertainty
-      ? []
-      : (stream?.taskIds.filter(id => id !== task.id).slice(0, 2) ?? [])
+    const relatedTaskIds = getRelatedWorkstreamTaskIds(task.id, context.workstreams, compactUncertainty ? 3 : 2)
+    const summaryStream = stream
+      ? { ...stream, taskIds: [task.id, ...relatedTaskIds] }
+      : undefined
     const focusArea = stream?.label ?? (task.project?.name || task.tags?.[0] || (locale === 'he' ? 'הקשר מוגבל' : 'Limited task context'))
     return {
       sectionId: `quick_${index + 1}_${task.id}`,
@@ -702,7 +706,9 @@ export function buildQuickDraftWeeklyPlan(
       recommendationType: quickDraftType(task),
       title: task.title,
       whyThisMatters: quickDraftWhyThisMatters(task, stream, locale, { compactUncertainty }),
-      whyThisWeek: quickDraftWhyThisWeek(task, evidence, locale, { compactUncertainty }),
+      whyThisWeek: compactUncertainty && stream
+        ? quickDraftLaneSummary(task, summaryStream ?? stream, evidence, locale)
+        : quickDraftWhyThisWeek(task, evidence, locale, { compactUncertainty }),
       riskIfIgnored: quickDraftRisk(task, locale, { compactUncertainty }),
       nextAction: quickDraftNextAction(task, locale, { compactUncertainty }),
       evidence,
@@ -716,15 +722,15 @@ export function buildQuickDraftWeeklyPlan(
     locale,
     direction: context.direction,
     headline: compactUncertainty
-      ? (locale === 'he' ? 'תשובה קצרה אחרי ההקשר ששמרת' : 'Short plan after your clarification')
+      ? (locale === 'he' ? 'שלושה נתיבי עבודה לשאר השבוע' : 'Three work lanes for the rest of the week')
       : (locale === 'he' ? 'התוכנית הטובה ביותר מנתוני המשימות' : 'Best plan from task evidence'),
     weekRead: {
       summary: locale === 'he'
         ? compactUncertainty
-            ? `בחרתי ${recommendations.length} מוקדים בלבד מתוך ${context.tasks.length} מועמדים.`
+            ? `בחרתי ${recommendations.length} נתיבי עבודה מתוך ${context.tasks.length} מועמדים, עם כרטיסים קשורים מתחת לכל נתיב.`
             : `נבדקו ${context.tasks.length} מועמדים מתוך ${context.workload.openTaskCount} משימות פתוחות.`
         : compactUncertainty
-            ? `Selected only ${recommendations.length} focus items from ${context.tasks.length} candidates.`
+            ? `Selected ${recommendations.length} work lanes from ${context.tasks.length} candidates, with related cards under each lane.`
             : `Reviewed ${context.tasks.length} candidates from ${context.workload.openTaskCount} open tasks.`,
       workloadReality: locale === 'he'
         ? compactUncertainty
@@ -778,52 +784,16 @@ export function buildQuickDraftWeeklyPlan(
 }
 
 export function buildWeeklyPlanReliabilityFallback(context: WeekContext, caveats: string[] = []): WeeklyPlanOutput {
-  const locale = context.locale
-  const selected = selectQuickDraftTasks(context.tasks)
-  let openQuestions = buildQuickDraftQuestions(context, selected).slice(0, 1)
-  if (!openQuestions.length) {
-    openQuestions = [{
-      id: `week_importance_${context.weekStartIso}`,
-      entityType: 'week',
-      entityId: context.weekStartIso,
-      reason: 'missing_week_priorities',
-      question: locale === 'he' ? 'מה הכי חשוב להגן עליו השבוע?' : 'What matters most to protect this week?',
-      options: [
-        weekOption(context.weekStartIso, 'work_commitment', locale === 'he' ? 'התחייבות עבודה' : 'Work commitment', 'thisWeekImportance', 'work_commitment'),
-        weekOption(context.weekStartIso, 'money_client', locale === 'he' ? 'לקוח/כסף' : 'Client or money', 'thisWeekImportance', 'money_client'),
-        weekOption(context.weekStartIso, 'family_admin', locale === 'he' ? 'משפחה/אדמין' : 'Family or admin', 'thisWeekImportance', 'family_admin'),
-        weekOption(context.weekStartIso, 'reduce_load', locale === 'he' ? 'להוריד עומס' : 'Reduce load', 'thisWeekImportance', 'reduce_load'),
-        weekOption(context.weekStartIso, 'not_sure', locale === 'he' ? 'לא בטוח' : 'Not sure', 'thisWeekImportance', 'unknown'),
-      ],
-      allowFreeText: true,
-      freeTextPatch: { field: 'whyItMatters', operation: 'set' },
-      freeTextPlaceholder: locale === 'he' ? 'אופציונלי: מה ייחשב שבוע טוב?' : 'Optional: what would make this a good week?',
-      relatedTaskIds: selected.slice(0, 5).map(task => task.id),
-    }]
-  }
-  return {
-    schemaVersion: 'weekly-plan.v2',
-    requestId: context.requestId,
-    locale,
-    direction: context.direction,
-    headline: locale === 'he' ? 'צריך תשובה אחת לפני דירוג' : 'One answer before ranking',
-    weekRead: {
-      summary: locale === 'he'
-        ? 'לא אציג דירוג רחב בלי הקשר אמין.'
-        : 'I will not show a broad ranking without reliable context.',
-      workloadReality: '',
-      mainTradeoff: '',
-    },
-    recommendations: [],
-    deferrals: [],
-    openQuestions,
-    quality: {
-      selectedTaskCount: 0,
-      confidence: 'low',
-      caveats: caveats.slice(0, 4),
-    },
-    source: 'quick_draft',
-  }
+  const draft = buildQuickDraftWeeklyPlan(context, {
+    allowClarificationFirst: false,
+    compactUncertainty: true,
+    maxRecommendations: 3,
+  })
+  draft.quality.caveats = [
+    ...draft.quality.caveats,
+    ...caveats.slice(0, 3),
+  ]
+  return draft
 }
 
 export function buildWeeklyPlanningInterview(
@@ -1085,14 +1055,15 @@ function selectClarificationQuestion(
   const missingProjectContextCount = context.tasks
     .filter(task => task.project?.id && !hasUsableProjectContext(task) && !isSelfDescribingPlanningBucket(task.project?.name))
     .length
-  if (unknownContextCount >= 2 || missingProjectContextCount >= 2) {
+  const shallowGenericLaneRisk = hasShallowGenericWorkLaneRisk(selected.length ? selected : context.tasks.slice(0, 5))
+  if (unknownContextCount >= 2 || missingProjectContextCount >= 2 || shallowGenericLaneRisk) {
     const questionId = `week_importance_${context.weekStartIso}`
     const locale = context.locale
     candidates.push({
       id: questionId,
       entityType: 'week',
       entityId: context.weekStartIso,
-      reason: 'missing_week_priorities',
+      reason: shallowGenericLaneRisk ? 'generic_lane_context' : 'missing_week_priorities',
       question: locale === 'he' ? 'מה הכי חשוב להגן עליו השבוע?' : 'What matters most to protect this week?',
       options: [
         weekOption(context.weekStartIso, 'work_commitment', locale === 'he' ? 'התחייבות עבודה' : 'Work commitment', 'thisWeekImportance', 'work_commitment'),
@@ -1301,6 +1272,7 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
       Boolean(task.dependencies?.blocksTaskIds.length)
     )
   )
+  const shallowGenericLaneRisk = hasShallowGenericWorkLaneRisk(relevant)
   const dimensions: AIClarificationCoverage['dimensions'] = {
     impact: Math.max(impact, strongestBelief([...projectBeliefs, ...taskBeliefs, ...weekAndPreferenceBeliefs], ['impact', 'currentStakes', 'thisWeekImportance', 'stakeholders'])),
     energy_fit: Math.max(energyFit, strongestBelief([...taskBeliefs, ...weekAndPreferenceBeliefs], ['energy_fit', 'energy', 'workload', 'effort'])),
@@ -1330,13 +1302,21 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
     .filter(([key, value]) => Number(value ?? 0) < (key === 'preferences' ? 0.2 : key === 'stale_context' ? 1 : 0.45))
     .map(([key]) => key as AIClarificationCoverage['missing'][number])
   if (highValueProjectContextGap && !missing.includes('project_meaning')) missing.push('project_meaning')
+  if (shallowGenericLaneRisk) {
+    if (!missing.includes('task_context')) missing.push('task_context')
+    if (!missing.includes('preferences')) missing.push('preferences')
+  }
   const materiality: AIClarificationCoverage['materiality'] = context.tasks.length >= 3 ? 'high' : 'medium'
   const policy = decideClarificationPath({
     score: rawScore,
     materiality,
     missing,
     candidateCount: relevant.length,
-    forceAskDimensions: highValueProjectContextGap ? ['project_meaning', 'stale_context'] : ['stale_context'],
+    forceAskDimensions: highValueProjectContextGap
+      ? ['project_meaning', 'stale_context']
+      : shallowGenericLaneRisk
+        ? ['task_context', 'preferences', 'stale_context']
+        : ['stale_context'],
   })
   return {
     score: policy.score,
@@ -1345,6 +1325,19 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
     missing,
     decision: policy.decision,
   }
+}
+
+function hasShallowGenericWorkLaneRisk(tasks: PlannerTaskSnapshot[]): boolean {
+  const genericLaneTasks = tasks.filter(task => {
+    const laneId = semanticWorkLaneForTask(task).id
+    return (laneId === 'semantic:work-delivery' || laneId === 'semantic:limited-context') &&
+      !hasUsableProjectContext(task) &&
+      !hasTaskLevelPlanningContext(task) &&
+      !task.derived.hasMoneyClientHealthFamilyLegalSignal &&
+      !task.dependencies?.blocksTaskIds.length &&
+      !task.dependencies?.blockedByTaskIds.length
+  })
+  return tasks.length >= 3 && genericLaneTasks.length >= 1
 }
 
 function strongestBelief(beliefs: AIParameterBelief[], keys: string[]): number {
@@ -1359,7 +1352,7 @@ function recentClarificationResolved(events: AIClarificationEvent[], entityKey: 
   return events.some(event =>
     event.entityKey === entityKey &&
     event.questionId === questionId &&
-    ['answered', 'dismissed', 'generated_with_uncertainty', 'showed_candidates'].includes(event.eventType) &&
+    ['asked', 'answered', 'dismissed', 'generated_with_uncertainty', 'showed_candidates'].includes(event.eventType) &&
     event.createdAt &&
     new Date(event.createdAt).getTime() >= cutoff
   )
@@ -1367,7 +1360,7 @@ function recentClarificationResolved(events: AIClarificationEvent[], entityKey: 
 
 function weeklyClarificationStep(events: AIClarificationEvent[]): number {
   const answeredQuestionIds = new Set(events
-    .filter(event => ['answered', 'generated_with_uncertainty', 'showed_candidates', 'dismissed'].includes(event.eventType))
+    .filter(event => ['asked', 'answered', 'generated_with_uncertainty', 'showed_candidates', 'dismissed'].includes(event.eventType))
     .map(event => event.questionId)
     .filter(Boolean))
   return Math.min(3, Math.max(1, answeredQuestionIds.size + 1))
@@ -2093,7 +2086,9 @@ function buildWorkstreams(tasks: PlannerTaskSnapshot[]): PlannerWorkstream[] {
   }
 
   for (const task of tasks) {
-    if (task.project?.name) {
+    const semanticLane = semanticWorkLaneForTask(task)
+    add(semanticLane.id, semanticLane.label, task, semanticLane.reason, semanticLane.signals)
+    if (task.project?.name && !isGenericWorkstreamLabel(task.project.name)) {
       add(`project:${task.project.id}`, task.project.name, task, 'Several candidate tasks share this project/aspect.', ['project_with_multiple_active_tasks'])
     }
     if (task.derived.hasHumanOrExternalStakeholder) {
@@ -2114,19 +2109,143 @@ function buildWorkstreams(tasks: PlannerTaskSnapshot[]): PlannerWorkstream[] {
   }
 
   return [...streams.values()]
-    .filter(stream => stream.taskIds.length > 1 || stream.id.startsWith('signal:'))
+    .filter(stream => stream.taskIds.length > 1 || stream.id.startsWith('signal:') || stream.id.startsWith('semantic:'))
     .sort((a, b) => b.taskIds.length - a.taskIds.length)
     .slice(0, 8)
+}
+
+function semanticWorkLaneForTask(task: PlannerTaskSnapshot): {
+  id: string
+  label: string
+  reason: string
+  signals: CandidateReason[]
+} {
+  const text = taskSemanticText(task)
+  const isHebrew = /[\u0590-\u05ff]/.test(text)
+  if (CLIENT_MONEY_LANE_RE.test(text)) {
+    return {
+      id: 'semantic:client-money',
+      label: isHebrew ? 'לקוחות וכסף' : 'Client and money',
+      reason: 'Tasks tied to client commitments, revenue, renewals, outreach, or payments.',
+      signals: ['notes_have_external_stakeholder', 'notes_have_money_client_health_family_legal_signal'],
+    }
+  }
+  if (FLOWSTATE_AI_LANE_RE.test(text)) {
+    return {
+      id: 'semantic:flowstate-ai',
+      label: isHebrew ? 'אמינות FlowState וה-AI' : 'FlowState AI reliability',
+      reason: 'Tasks tied to assistant quality, planning reliability, memory, or product bugs.',
+      signals: ['project_with_multiple_active_tasks', 'substantial_work'],
+    }
+  }
+  if (PUBLISHING_CONTENT_LANE_RE.test(text)) {
+    return {
+      id: 'semantic:publishing-content',
+      label: isHebrew ? 'פרסום ותוכן' : 'Publishing and content',
+      reason: 'Tasks tied to publishing, marketing, course, portfolio, or content delivery.',
+      signals: ['project_with_multiple_active_tasks', 'substantial_work'],
+    }
+  }
+  if (task.derived.domain === 'health_family') {
+    return {
+      id: 'semantic:health-family',
+      label: isHebrew ? 'בריאות ומשפחה' : 'Health and family',
+      reason: 'Tasks tied to health or family commitments.',
+      signals: ['notes_have_money_client_health_family_legal_signal'],
+    }
+  }
+  if (task.derived.domain === 'admin') {
+    return {
+      id: 'semantic:life-admin',
+      label: isHebrew ? 'אדמין וחיים' : 'Life admin',
+      reason: 'Tasks tied to personal administration and obligations.',
+      signals: ['notes_have_money_client_health_family_legal_signal'],
+    }
+  }
+  if (task.derived.domain === 'home' || task.derived.quickErrandScore >= 0.55) {
+    return {
+      id: 'semantic:home-errands',
+      label: isHebrew ? 'סידורי בית' : 'Home errands',
+      reason: 'Small home or errand tasks that can be batched together.',
+      signals: ['home_or_weekend_errand'],
+    }
+  }
+  const projectName = task.project?.name?.trim()
+  if (projectName && !isGenericWorkstreamLabel(projectName)) {
+    return {
+      id: `semantic:project:${task.project?.id ?? projectName.toLowerCase()}`,
+      label: isHebrew ? `מסירת ${projectName}` : `${projectName} delivery`,
+      reason: 'Tasks share a specific named project and should be planned as delivery work.',
+      signals: ['project_with_multiple_active_tasks'],
+    }
+  }
+  if (task.derived.domain === 'work') {
+    return {
+      id: 'semantic:work-delivery',
+      label: isHebrew ? 'מסירת עבודה' : 'Work delivery',
+      reason: 'Work tasks with limited project context still belong in a delivery lane.',
+      signals: ['substantial_work'],
+    }
+  }
+  return {
+    id: 'semantic:limited-context',
+    label: isHebrew ? 'הקשר חסר' : 'Limited-context work',
+    reason: 'Tasks without enough saved context are grouped separately so uncertainty stays visible.',
+    signals: ['substantial_work'],
+  }
+}
+
+function taskSemanticText(task: PlannerTaskSnapshot): string {
+  return [
+    task.title,
+    task.notes,
+    task.project?.name,
+    task.tags?.join(' '),
+    task.projectContext?.summary,
+    task.projectContext?.whyItMatters,
+    task.taskContext?.summary,
+    task.taskContext?.whyItMatters,
+  ].filter(Boolean).join(' ')
+}
+
+function isGenericWorkstreamLabel(label: string): boolean {
+  return SELF_DESCRIBING_BUCKET_RE.test(label.trim())
 }
 
 function buildWorkstreamLookup(workstreams: PlannerWorkstream[]): Map<string, PlannerWorkstream> {
   const out = new Map<string, PlannerWorkstream>()
   for (const stream of workstreams) {
     for (const id of stream.taskIds) {
-      if (!out.has(id)) out.set(id, stream)
+      const current = out.get(id)
+      if (!current || workstreamPriority(stream) > workstreamPriority(current)) out.set(id, stream)
     }
   }
   return out
+}
+
+function workstreamPriority(stream: PlannerWorkstream): number {
+  if (stream.id.startsWith('semantic:') && !stream.id.includes('limited-context')) return 5
+  if (stream.id.startsWith('signal:')) return 4
+  if (!isGenericWorkstreamLabel(stream.label)) return 3
+  if (stream.id.startsWith('semantic:')) return 2
+  return 1
+}
+
+function getRelatedWorkstreamTaskIds(taskId: string, workstreams: PlannerWorkstream[], limit: number): string[] {
+  const related = new Set<string>()
+  const ranked = workstreams
+    .filter(stream => stream.taskIds.includes(taskId) && stream.taskIds.length > 1)
+    .sort((a, b) => {
+      const widthDiff = b.taskIds.length - a.taskIds.length
+      return widthDiff || workstreamPriority(b) - workstreamPriority(a)
+    })
+  for (const stream of ranked) {
+    for (const id of stream.taskIds) {
+      if (id !== taskId) related.add(id)
+      if (related.size >= limit) return [...related]
+    }
+  }
+  return [...related]
 }
 
 function summarizeRecommendationFeedbackForPrompt(context: WeekContext): Array<{
@@ -2311,16 +2430,6 @@ function quickDraftWhyThisMatters(
       ? `לפי ההקשר השמור לפרויקט: ${context}`
       : `Saved project context says this matters because: ${context}`
   }
-  if (task.derived.substantialWorkScore >= 0.55) {
-    if (options.compactUncertainty) {
-      return locale === 'he'
-        ? 'בחירה זמנית לפי אותות משימה בלבד.'
-        : 'Tentative pick from task signals only.'
-    }
-    return locale === 'he'
-      ? 'אין לי עדיין הקשר שמסביר למה זה חשוב. אני משאיר את זה כמועמד בגלל אותות משימה בלבד, לא כדירוג חשיבות ודאי.'
-      : 'I do not have saved context explaining why this matters yet. I am treating it as a candidate from task signals only, not as proven importance.'
-  }
   if (task.dependencies?.blocksTaskIds.length) {
     if (options.compactUncertainty) {
       return locale === 'he'
@@ -2391,9 +2500,79 @@ function quickDraftWhyThisMatters(
       ? `המשימה יושבת בתוך "${stream.label}", יחד עם ${stream.taskIds.length} משימות קשורות, אז כדאי לראות אותה כחלק מאותו היבט עבודה.`
       : `This sits inside "${stream.label}" with ${stream.taskIds.length} related tasks, so treat it as part of that work aspect.`
   }
+  if (task.derived.substantialWorkScore >= 0.55) {
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? 'כרטיס עבודה משמעותי בלי הקשר שמור; בחירה זמנית.'
+        : 'Substantial work with no saved context; tentative pick.'
+    }
+    return locale === 'he'
+      ? 'אין לי עדיין הקשר שמסביר למה זה חשוב. אני משאיר את זה כמועמד בגלל נתוני הכרטיס בלבד, לא כדירוג חשיבות ודאי.'
+      : 'I do not have saved context explaining why this matters yet. I am treating it as a candidate from card data only, not as proven importance.'
+  }
   return locale === 'he'
-    ? (options.compactUncertainty ? 'הקשר מוגבל; בחירה זמנית.' : 'אין מספיק הקשר עמוק, אבל האותות הזמינים עדיין מצדיקים לשקול את זה לפני חלופות חלשות יותר.')
-    : (options.compactUncertainty ? 'Limited context; tentative pick.' : 'There is limited deeper context, but the available signals still justify considering this before weaker alternatives.')
+    ? (options.compactUncertainty ? 'הקשר מוגבל; בחירה זמנית.' : 'אין מספיק הקשר עמוק, אבל נתוני הכרטיס עדיין מצדיקים לשקול את זה לפני חלופות חלשות יותר.')
+    : (options.compactUncertainty ? 'Limited context; tentative pick.' : 'There is limited deeper context, but the card data still justifies considering this before weaker alternatives.')
+}
+
+function compactEvidencePhrase(
+  task: PlannerTaskSnapshot,
+  evidence: WeeklyPlanRecommendation['evidence'],
+  locale: PlannerLocale,
+): string {
+  const openSubtasks = task.subtasks?.filter(subtask => !subtask.isCompleted) ?? []
+  if (task.derived.isOverdue) return locale === 'he' ? 'באיחור עכשיו.' : 'Already overdue.'
+  if (task.dependencies?.blocksTaskIds.length) {
+    return locale === 'he'
+      ? `משחרר ${task.dependencies.blocksTaskIds.length} משימות תלויות.`
+      : `Unblocks ${task.dependencies.blocksTaskIds.length} dependent task${task.dependencies.blocksTaskIds.length === 1 ? '' : 's'}.`
+  }
+  if (task.history.postponedCount > 0) {
+    return locale === 'he'
+      ? `נדחה ${task.history.postponedCount} פעמים.`
+      : `Postponed ${task.history.postponedCount} time${task.history.postponedCount === 1 ? '' : 's'}.`
+  }
+  if (task.status === 'in_progress' || task.history.timerMinutesLast7Days > 0) {
+    return locale === 'he'
+      ? 'כבר התחלת אותו.'
+      : 'Already started.'
+  }
+  if (openSubtasks.length) {
+    return locale === 'he'
+      ? `יש ${openSubtasks.length} תתי-משימות פתוחות.`
+      : `${openSubtasks.length} open subtask${openSubtasks.length === 1 ? '' : 's'}.`
+  }
+  if (task.derived.hasHumanOrExternalStakeholder) {
+    return locale === 'he' ? 'נראית כמו התחייבות מול אדם אחר.' : 'Looks like an external commitment.'
+  }
+  if (task.derived.hasMoneyClientHealthFamilyLegalSignal) {
+    return locale === 'he' ? 'נוגעת לכסף, לקוח, בריאות, משפחה או אדמין.' : 'Touches money, client, health, family, or admin.'
+  }
+  if (evidence.some(item => item.field === 'notes')) return locale === 'he' ? 'יש הערות שמוסיפות הקשר.' : 'Notes add context.'
+  if (evidence.some(item => item.field === 'projectContext' || item.field === 'taskContext')) return locale === 'he' ? 'יש הקשר שמור.' : 'Saved context exists.'
+  if (typeof task.derived.daysUntilDue === 'number' && task.derived.daysUntilDue <= 7) {
+    return locale === 'he' ? 'בתוך חלון השבוע, אבל חסר הקשר עמוק יותר.' : 'Inside this week’s window, but deeper context is limited.'
+  }
+  if (task.estimateMinutes != null) return locale === 'he' ? `הערכה: ${task.estimateMinutes} דקות.` : `Estimate: ${task.estimateMinutes} min.`
+  return locale === 'he' ? 'הקשר מוגבל; בחירה זמנית.' : 'Limited context; tentative pick.'
+}
+
+function quickDraftLaneSummary(
+  task: PlannerTaskSnapshot,
+  stream: PlannerWorkstream,
+  evidence: WeeklyPlanRecommendation['evidence'],
+  locale: PlannerLocale,
+): string {
+  const evidencePhrase = compactEvidencePhrase(task, evidence, locale)
+  const relatedCount = Math.max(0, stream.taskIds.filter(id => id !== task.id).length)
+  if (locale === 'he') {
+    return relatedCount > 0
+      ? `נתיב: ${stream.label}. ${evidencePhrase} יש ${relatedCount} כרטיסים קשורים לראות יחד.`
+      : `נתיב: ${stream.label}. ${evidencePhrase}`
+  }
+  return relatedCount > 0
+    ? `Lane: ${stream.label}. ${evidencePhrase} ${relatedCount} related card${relatedCount === 1 ? '' : 's'} should be viewed together.`
+    : `Lane: ${stream.label}. ${evidencePhrase}`
 }
 
 function quickDraftWhyThisWeek(
@@ -2402,22 +2581,17 @@ function quickDraftWhyThisWeek(
   locale: PlannerLocale,
   options: { compactUncertainty?: boolean } = {},
 ): string {
+  if (options.compactUncertainty) return compactEvidencePhrase(task, evidence, locale)
   const signalItems = options.compactUncertainty
     ? evidence.filter(item => item.field !== 'missingContext')
     : evidence
   const signals = signalItems.map(item => item.interpretation).join(locale === 'he' ? ' · ' : ' · ')
   const signalText = signals || (locale === 'he' ? 'אותות משימה זמינים' : 'available task signals')
   if (task.derived.substantialWorkScore >= 0.55) {
-    if (options.compactUncertainty) {
-      return locale === 'he'
-        ? signalText
-        : signalText
-    }
     return locale === 'he'
-      ? `השבוע רק לפי אותות המשימה, לא לפי חשיבות פרויקט מוכחת. אותות: ${signals}`
-      : `This week based on task signals only, not proven project importance. Signals: ${signals}`
+      ? `השבוע לפי נתוני הכרטיס בלבד, לא לפי חשיבות פרויקט מוכחת. נתונים: ${signals}`
+      : `This week based on card data only, not proven project importance. Data: ${signals}`
   }
-  if (options.compactUncertainty) return signalText
   if (task.derived.isOverdue) return locale === 'he' ? `השבוע כי היא כבר באיחור. אותות: ${signalText}` : `This week because it is already overdue. Signals: ${signalText}`
   if (typeof task.derived.daysUntilDue === 'number' && task.derived.daysUntilDue <= 7) {
     return locale === 'he'
@@ -2437,7 +2611,8 @@ function quickDraftRisk(
     if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? 'סיכון: חוסם המשך.' : 'Risk: blocks follow-through.'
     if (task.history.postponedCount > 0 || task.derived.isStale) return locale === 'he' ? 'סיכון: יישאר פתוח.' : 'Risk: stays open.'
     if (task.derived.hasHumanOrExternalStakeholder) return locale === 'he' ? 'סיכון: התחייבות נחלשת.' : 'Risk: commitment weakens.'
-    return ''
+    if (task.derived.hasMoneyClientHealthFamilyLegalSignal) return locale === 'he' ? 'סיכון: אדמין/כסף/בריאות ימשיך למשוך קשב.' : 'Risk: admin, money, or health context keeps pulling attention.'
+    return locale === 'he' ? 'סיכון: עוד כרטיס לא מוכרע.' : 'Risk: another unresolved open loop.'
   }
   if (task.dependencies?.blocksTaskIds.length) return locale === 'he' ? 'אם תתעלם, עבודה קשורה עלולה להישאר תקועה.' : 'If ignored, related work may remain blocked.'
   if (task.history.postponedCount > 0 || task.derived.isStale) return locale === 'he' ? 'אם תתעלם, זה כנראה יישאר לולאה פתוחה גם בשבוע הבא.' : 'If ignored, this is likely to remain an open loop into next week.'

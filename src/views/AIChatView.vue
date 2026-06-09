@@ -33,9 +33,10 @@ import {
 } from 'lucide-vue-next'
 import { useAIChat } from '@/composables/useAIChat'
 import { useAIChatStore } from '@/stores/aiChat'
+import { useSettingsStore } from '@/stores/settings'
 import { useAgentChains } from '@/composables/useAgentChains'
 import { useI18n } from 'vue-i18n'
-import { createAIRouter } from '@/services/ai/router'
+import { createAIRouter, type RouterProviderType } from '@/services/ai/router'
 import { formatRelativeDate } from '@/utils/dateUtils'
 import ChatMessage from '@/components/ai/ChatMessage.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -95,6 +96,7 @@ const isGridHandler = computed(() => aiPersonality.value === 'grid_handler')
 const { t } = useI18n()
 const store = useAIChatStore()
 const agentChains = useAgentChains()
+const settingsStore = useSettingsStore()
 
 const effectiveChatDirection = computed(() =>
   chatLanguage.value === 'he' ? 'rtl' : chatLanguage.value === 'en' ? 'ltr' : 'auto'
@@ -180,7 +182,16 @@ const providerHealth = ref<Record<string, 'healthy' | 'degraded' | 'unavailable'
 
 async function refreshProviderHealth() {
   try {
-    const r = createAIRouter({ debug: false })
+    const providers: RouterProviderType[] = settingsStore.aiUseSubscription !== false
+      ? ['bridge']
+      : selectedProvider.value === 'ollama'
+        ? ['groq', 'openrouter', 'ollama']
+        : ['groq', 'openrouter']
+    const r = createAIRouter({
+      providers,
+      debug: false,
+      bridgeBrain: settingsStore.aiBrain === 'codex' ? 'codex' : 'claude',
+    })
     await r.initialize()
     providerHealth.value = r.getProviderHealthStatus()
     r.dispose()
@@ -241,6 +252,10 @@ function autoResize(event: Event) {
 
 function handleSelectTask(taskId: string) {
   window.dispatchEvent(new CustomEvent('open-task-edit', { detail: { taskId } }))
+}
+
+function handleRequestWide() {
+  // The dedicated chat route is already wide; sidebar handles this event.
 }
 
 // ============================================================================
@@ -636,6 +651,7 @@ onUnmounted(() => {
           :message="message"
           :direction="effectiveChatDirection"
           @select-task="handleSelectTask"
+          @request-wide="handleRequestWide"
         />
 
         <!-- Contextual Error -->

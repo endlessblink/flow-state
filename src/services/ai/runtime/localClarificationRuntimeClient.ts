@@ -19,6 +19,11 @@ function electronApi(): ElectronLocalApiRuntime | null {
   return api?.isElectron ? api : null
 }
 
+export function canUseLocalClarificationRuntime(): boolean {
+  const api = electronApi()
+  return Boolean(api?.getLocalApiStatus && api.getLocalApiToken)
+}
+
 function withTimeout<T>(operation: Promise<T>, timeoutMs = RUNTIME_TIMEOUT_MS): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = window.setTimeout(() => reject(new Error(`local AI runtime timed out after ${timeoutMs}ms`)), timeoutMs)
@@ -82,6 +87,7 @@ export function buildClarificationRuntimeInput(card: AIClarificationArtifact): C
 }
 
 export function assignLocalRuntime(card: AIClarificationArtifact, sourceMessageId: string): AIClarificationArtifact {
+  if (!canUseLocalClarificationRuntime()) return card
   const input = buildClarificationRuntimeInput(card)
   const candidate = input.candidates[0]
   const runId = `clarification:${sourceMessageId}:${card.question.id}`

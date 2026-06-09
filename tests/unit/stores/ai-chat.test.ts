@@ -212,6 +212,184 @@ describe('useAIChatStore', () => {
     expect(visible.every(m => m.role !== 'system')).toBe(true)
   })
 
+  it('7b. completed assistant turns suppress obsolete weekly artifacts instead of showing fake recovery prose', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    const store = useAIChatStore()
+
+    store.createConversation()
+    const streaming = store.startStreamingMessage()
+    store.completeStreamingMessage({
+      metadata: {
+        toolResults: [
+          {
+            tool: 'list_tasks',
+            success: true,
+            data: { tasks: [{ id: 'task-1', title: 'Raw task dump' }] },
+          },
+        ],
+        cardGroups: {
+          kind: 'task_list',
+          total: 40,
+          groups: [{ name: 'Raw tasks', tasks: [{ id: 'task-1', title: 'Raw task dump' }] }],
+        },
+        weeklyPlan: {
+          schemaVersion: 'weekly-plan.v2',
+          requestId: 'week-empty',
+          locale: 'en',
+          direction: 'ltr',
+          source: 'quick_draft',
+          headline: 'Weekly plan ready',
+          weekRead: { summary: '', mainTradeoff: '' },
+          recommendations: [],
+          openQuestions: [
+            {
+              id: 'followup_stale',
+              question: 'Add a follow-up task after this?',
+              reason: 'follow_up_task_suggestion',
+              options: [],
+              allowFreeText: true,
+            },
+          ],
+          deferrals: [],
+          quality: { level: 'acceptable', caveats: [] },
+          presentation: { density: 'compact_after_clarification' },
+        } as any,
+      },
+    })
+
+    const suppressed = store.messages.find(message => message.id === streaming.id)
+    expect(suppressed?.content).toBe('')
+    expect(suppressed?.metadata?.weeklyPlan).toBeUndefined()
+    expect((suppressed?.metadata as any)?.toolResults).toBeUndefined()
+    expect((suppressed?.metadata as any)?.cardGroups).toBeUndefined()
+    expect((suppressed?.metadata as any)?.lifecycle).toMatchObject({
+      state: 'suppressed',
+      finalVisibleState: 'suppressed',
+      reason: 'all_weekly_questions_resolved_or_obsolete',
+    })
+  })
+
+  it('7c. initialize() recovers persisted assistant turns whose artifacts hydrate to no visible output', async () => {
+    localStorage.setItem('flowstate-ai-conversations', JSON.stringify({
+      conversations: [
+        {
+          id: 'conv_empty_artifact',
+          title: 'Weekly planning',
+          messages: [
+            {
+              id: 'msg_empty_artifact',
+              role: 'assistant',
+              content: '',
+              timestamp: '2026-06-09T09:00:00.000Z',
+              isStreaming: false,
+              metadata: {
+                weeklyPlan: {
+                  schemaVersion: 'weekly-plan.v2',
+                  requestId: 'week-empty-hydrated',
+                  locale: 'en',
+                  direction: 'ltr',
+                  source: 'quick_draft',
+                  headline: 'Weekly plan ready',
+                  weekRead: { summary: '', mainTradeoff: '' },
+                  recommendations: [],
+                  openQuestions: [
+                    {
+                      id: 'followup_hydrated',
+                      question: 'Add a follow-up task after this?',
+                      reason: 'follow_up_task_suggestion',
+                      options: [],
+                      allowFreeText: true,
+                    },
+                  ],
+                  deferrals: [],
+                  quality: { level: 'acceptable', caveats: [] },
+                  presentation: { density: 'compact_after_clarification' },
+                },
+              },
+            },
+          ],
+          createdAt: '2026-06-09T09:00:00.000Z',
+          updatedAt: '2026-06-09T09:00:00.000Z',
+        },
+      ],
+      activeConversationId: 'conv_empty_artifact',
+    }))
+
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    const store = useAIChatStore()
+    await store.initialize()
+
+    const suppressed = store.messages.find(message => message.id === 'msg_empty_artifact')
+    expect(suppressed?.content).toBe('')
+    expect(suppressed?.metadata?.weeklyPlan).toBeUndefined()
+    expect((suppressed?.metadata as any)?.lifecycle).toMatchObject({
+      state: 'suppressed',
+      generatedQuestionCount: 1,
+      suppressedQuestionCount: 1,
+      visibleQuestionCount: 0,
+      recoveryTriggered: false,
+      finalVisibleState: 'suppressed',
+      reason: 'all_weekly_questions_resolved_or_obsolete',
+    })
+  })
+
+  it('7d. answered weekly questions update the stored message before Activity can point at invisible UI', async () => {
+    const { useAIChatStore } = await import('@/stores/aiChat')
+    const store = useAIChatStore()
+
+    store.createConversation()
+    const streaming = store.startStreamingMessage()
+    store.completeStreamingMessage({
+      metadata: {
+        weeklyPlan: {
+          schemaVersion: 'weekly-plan.v2',
+          requestId: 'week-answered-question',
+          locale: 'he',
+          direction: 'rtl',
+          source: 'quick_draft',
+          headline: 'צריך תשובה אחת לפני דירוג',
+          weekRead: { summary: 'לא אציג דירוג רחב בלי הקשר אמין.', mainTradeoff: '' },
+          recommendations: [],
+          openQuestions: [
+            {
+              id: 'weekly_priority_axis',
+              question: 'מה הכי חשוב לתכנן עליו השבוע?',
+              reason: 'missing_priority_axis',
+              options: [
+                { id: 'work', label: 'התחייבויות עבודה', effect: 'Rank work commitments higher.' },
+              ],
+              allowFreeText: true,
+            },
+          ],
+          deferrals: [],
+          quality: { level: 'acceptable', caveats: [] },
+          presentation: { density: 'compact_after_clarification' },
+        } as any,
+      },
+    })
+
+    expect((store.messages.find(message => message.id === streaming.id)?.metadata as any)?.lifecycle).toMatchObject({
+      state: 'visible',
+      finalVisibleState: 'plan',
+      visibleQuestionCount: 1,
+    })
+
+    store.resolveWeeklyPlanQuestions(streaming.id, ['weekly_priority_axis'], 'answered_memory_hydration')
+
+    const suppressed = store.messages.find(message => message.id === streaming.id)
+    expect(suppressed?.content).toBe('')
+    expect(suppressed?.metadata?.weeklyPlan).toBeUndefined()
+    expect((suppressed?.metadata as any)?.lifecycle).toMatchObject({
+      state: 'suppressed',
+      generatedQuestionCount: 1,
+      suppressedQuestionCount: 1,
+      visibleQuestionCount: 0,
+      recoveryTriggered: false,
+      finalVisibleState: 'suppressed',
+      reason: 'answered_memory_hydration',
+    })
+  })
+
   it('8. conversation is persisted to Supabase (saveConversationToSupabase called)', async () => {
     const { useAIChatStore } = await import('@/stores/aiChat')
     const store = useAIChatStore()

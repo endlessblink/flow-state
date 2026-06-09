@@ -9,7 +9,7 @@ import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
-import { auditWeeklyPlanQuality, buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, buildWeeklyPlanPrompt, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
+import { auditWeeklyPlanQuality, buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, buildWeeklyPlanPrompt, buildWeeklyPlanReliabilityFallback, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
 import { auditChatResponseQuality } from '@/services/ai/pipeline/chatQuality'
 import { formatMemoryEvidence, sanitizeMemoryEvidenceText } from '@/services/ai/pipeline/memoryEvidence'
 
@@ -533,6 +533,122 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.get('[data-section-id="rec-renewal"]').text()).toContain('Amit needs numbers')
   })
 
+  it('renders compact weekly plans as visual lanes instead of stacked related task cards', () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push(
+      {
+        id: 'task-primary',
+        title: 'עבודה עם בינה מעצבת',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'work',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-related-1',
+        title: 'לעדכן את גלית מה צריך לבקש בעבודה',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-12',
+        projectId: 'work',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-related-2',
+        title: 'להכין לפרסם את העדכונים האחרונים של arthouse',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'my-projects',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+    )
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-weekly-plan-lanes',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            weeklyPlan: {
+              schemaVersion: 'weekly-plan.v2',
+              requestId: 'req-week-lanes',
+              locale: 'he',
+              direction: 'rtl',
+              headline: 'שלושה נתיבי עבודה לשאר השבוע',
+              weekRead: {
+                summary: 'בחרתי נתיבים מתוך מועמדים עם הקשר חלקי.',
+                workloadReality: 'מיקוד קצר.',
+                mainTradeoff: 'לא להעמיס.',
+              },
+              presentation: { density: 'compact_after_clarification' },
+              source: 'quick_draft',
+              recommendations: [
+                {
+                  sectionId: 'rec-lane-1',
+                  rank: 1,
+                  focusArea: 'מסירת עבודה',
+                  primaryTaskId: 'task-primary',
+                  relatedTaskIds: ['task-related-1', 'task-related-2'],
+                  recommendationType: 'protect',
+                  title: 'עבודה עם בינה מעצבת',
+                  whyThisMatters: 'אין מספיק הקשר כדי להמציא חשיבות.',
+                  whyThisWeek: 'צריך לבחור נתיב ולא רשימת משימות.',
+                  riskIfIgnored: 'העבודה תישאר עמומה.',
+                  nextAction: 'בחר פתיחה של 10 דקות.',
+                  evidence: [
+                    { taskId: 'task-primary', field: 'dueIso', value: '2026-06-10', interpretation: 'today' },
+                    { taskId: 'task-primary', field: 'status', value: 'todo', interpretation: 'open' },
+                  ],
+                  cardPlacement: 'immediately_after_explanation',
+                },
+              ],
+              deferrals: [],
+              openQuestions: [],
+              quality: { selectedTaskCount: 1, confidence: 'low', caveats: [] },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="weekly-lane-board"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="weekly-visual-lane"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="weekly-lane-track"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="weekly-lane-task"]')).toHaveLength(3)
+    expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="inline-plan-card"]').text()).toContain('עבודה עם בינה מעצבת')
+    expect(wrapper.findAll('[data-testid="weekly-related-chip"]')).toHaveLength(2)
+    expect(wrapper.get('[data-testid="weekly-lane-board"]').text()).toContain('לעדכן את גלית')
+    expect(wrapper.get('[data-testid="weekly-lane-board"]').text()).toContain('arthouse')
+
+    wrapper.get('[data-testid="weekly-open-lane-view"]').trigger('click')
+    expect(wrapper.emitted('requestWide')).toHaveLength(1)
+  })
+
   it('rejects shallow weekly plan JSON and falls back to evidence-only quick drafts', () => {
     const task: Task = {
       id: 'task-renewal',
@@ -655,9 +771,15 @@ describe('AI sidebar-first desktop experience', () => {
       compactUncertainty: true,
       maxRecommendations: 2,
     })
-    expect(compactDraft.headline).toContain('Short plan')
+    expect(compactDraft.headline).toContain('work lanes')
     expect(compactDraft.recommendations).toHaveLength(2)
+    expect(compactDraft.weekRead.summary).toContain('work lanes')
     expect(compactDraft.presentation?.density).toBe('compact_after_clarification')
+    expect(compactDraft.recommendations.map(rec => rec.focusArea)).not.toEqual(expect.arrayContaining(['Work', 'My Projects', 'Personal']))
+    expect(compactDraft.recommendations.map(rec => rec.focusArea)).toEqual(expect.arrayContaining(['Client and money']))
+    expect(compactDraft.recommendations.map(rec => rec.focusArea).join(' ')).toMatch(/reliability|delivery|content|money/i)
+    expect(compactDraft.recommendations.map(rec => rec.whyThisWeek).join(' ')).not.toMatch(/Lane:\s*(Work|My Projects|Personal)\b/i)
+    expect(new Set(compactDraft.recommendations.map(rec => rec.whyThisWeek)).size).toBeGreaterThan(1)
     expect(validateWeeklyPlanOutput(compactDraft, context, { compactAfterClarification: true })).not.toContain('recommendation_count_out_of_range')
     expect(validateWeeklyPlanOutput(compactDraft, context)).toContain('recommendation_count_out_of_range')
 
@@ -668,6 +790,77 @@ describe('AI sidebar-first desktop experience', () => {
     })
     expect(tooBroadContinuation.recommendations.length).toBeGreaterThan(3)
     expect(validateWeeklyPlanOutput(tooBroadContinuation, context, { compactAfterClarification: true })).toContain('recommendation_count_out_of_range')
+
+    const timeoutFallback = buildWeeklyPlanReliabilityFallback(context, ['weekly_plan_structured_timeout'])
+    expect(timeoutFallback.headline).toContain('work lanes')
+    expect(timeoutFallback.openQuestions).toHaveLength(0)
+    expect(timeoutFallback.recommendations.length).toBeGreaterThan(0)
+    expect(timeoutFallback.recommendations.length).toBeLessThanOrEqual(3)
+    expect(timeoutFallback.quality.caveats).toContain('weekly_plan_structured_timeout')
+    expect(timeoutFallback.presentation?.density).toBe('compact_after_clarification')
+  })
+
+  it('asks before turning shallow generic work tasks into a work-delivery weekly lane', () => {
+    const tasks = [
+      {
+        id: 'task-bina-ai',
+        title: 'עבודה עם בינה מעצבת',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        projectId: 'work',
+        projectName: 'Work',
+        dueDate: '2026-06-10',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      },
+      {
+        id: 'task-galit',
+        title: 'לעדכן את גלית מה צריך לבקש בעבודה',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        projectId: 'work',
+        projectName: 'Work',
+        dueDate: '2026-06-12',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      },
+      {
+        id: 'task-arthouse',
+        title: 'להכין לפרסם את העדכונים האחרונים של arthouse',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        projectId: 'my-projects',
+        projectName: 'My Projects',
+        dueDate: '2026-06-10',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      },
+    ] as Task[]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'he',
+      new Date('2026-06-07T09:00:00Z'),
+    )
+
+    const interview = buildWeeklyPlanningInterview(context, [])
+
+    expect(interview).not.toBeNull()
+    expect(interview?.coverage.missing).toEqual(expect.arrayContaining(['task_context', 'preferences']))
+    expect(interview?.question.reason).toMatch(/missing_week_priorities|missing_context|generic_lane_context/)
+    expect(interview?.question.question).toContain('חשוב')
   })
 
   it('rejects weekly recommendations that treat project names as project understanding evidence', () => {
@@ -813,7 +1006,7 @@ describe('AI sidebar-first desktop experience', () => {
     expect(quickDraft.recommendations[0].primaryTaskId).toBe('task-outreach')
     expect(quickDraft.recommendations[0].evidence.some(item => item.field === 'subtasks')).toBe(true)
     expect(quickDraft.recommendations[0].nextAction).toContain('Review the target company list')
-    expect(quickDraft.recommendations[0].whyThisMatters).toContain('task signals only')
+    expect(quickDraft.recommendations[0].whyThisMatters).toContain('external commitment')
     const serializedDraft = JSON.stringify(quickDraft)
     expect(serializedDraft).not.toMatch(/substantial work focus|heavier-weight than small errands|מוקד עבודה משמעותי|משקל מסידורים קטנים/i)
     expect(quickDraft.recommendations.filter(rec => rec.focusArea === 'Home').length).toBeLessThanOrEqual(2)
@@ -2505,8 +2698,9 @@ describe('AI sidebar-first desktop experience', () => {
     })
 
     const generateButton = wrapper.findAll('.weekly-question-escape')
-      .find(button => button.text().includes('Generate with current info'))
+      .find(button => button.text().includes('Generate now'))
     expect(generateButton).toBeTruthy()
+    expect(wrapper.text()).toContain('Stop and save')
 
     await generateButton!.trigger('click')
     await flushPromises()
@@ -3694,7 +3888,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(weeklyPlan).toContain('isSuppressedByRecommendationFeedback')
     expect(weeklyPlan).toContain('feedbackDeferralReason')
     expect(weeklyPlan).toContain("schemaVersion: 'ai-clarification.v1'")
-    expect(weeklyPlan).toContain('One answer before ranking')
+    expect(weeklyPlan).toContain('buildWeeklyPlanReliabilityFallback')
+    expect(weeklyPlan).toContain('Three work lanes for the rest of the week')
     expect(weeklyPlan).toContain('Best plan from task evidence')
     expect(weeklyPlan).not.toContain('Evidence-only draft:')
 
@@ -3840,6 +4035,60 @@ describe('AI sidebar-first desktop experience', () => {
 
     expect(aiChat).toContain("lang === 'he' ? 'תעזור לי לתכנן את השבוע' : 'Help me plan my week'")
     expect(aiChat).not.toContain("executeAgentChain('plan_my_week')")
+  })
+
+  it('does not let chat UI health checks probe Ollama when subscription bridge is active', () => {
+    const panel = src('src/components/ai/AIChatPanel.vue')
+    const fullScreen = src('src/views/AIChatView.vue')
+    const scraper = src('src/services/ai/urlScraper.ts')
+
+    expect(panel).toContain("settingsStore.aiUseSubscription !== false")
+    expect(panel).toContain("? ['bridge']")
+    expect(panel).toContain("selectedProvider.value === 'ollama'")
+    expect(panel).not.toContain('const router = createAIRouter({ debug: false })')
+    expect(panel).toContain("createAIRouter({ providers: ['groq'], debug: false })")
+    expect(panel).toContain("createAIRouter({ providers: ['openrouter'], debug: false })")
+
+    expect(fullScreen).toContain("settingsStore.aiUseSubscription !== false")
+    expect(fullScreen).toContain("? ['bridge']")
+    expect(fullScreen).not.toContain('const r = createAIRouter({ debug: false })')
+
+    expect(scraper).toContain("import('./routerFactory')")
+    expect(scraper).not.toContain('createAIRouter()')
+  })
+
+  it('normalizes stale chat provider settings back to bridge when subscription mode is enabled', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+
+    expect(aiChat).toContain('const subscriptionBridgeEnabled = settingsStore.aiUseSubscription !== false')
+    expect(aiChat).toContain("selectedProvider.value = 'bridge'")
+    expect(aiChat).toContain('selectedModel.value = subscriptionBrain')
+    expect(aiChat).toContain("store.updatePersistedSettings({ provider: 'bridge', model: subscriptionBrain })")
+    expect(aiChat).toContain("if (selectedProvider.value === 'ollama') {\n        availableOllamaModels.value = await fetchOllamaModels()")
+  })
+
+  it('keeps a temporary rest-of-week quick test action in the AI sidebar', () => {
+    const panel = src('src/components/ai/AIChatPanel.vue')
+
+    expect(panel).toContain("label: chatText('Plan rest of week', 'תכנן את שארית השבוע')")
+    expect(panel).toContain("message: 'תעזור לי לתכנן את שארית השבוע'")
+    expect(panel).toContain('directTool: null')
+  })
+
+  it('logs correlated assistant turn lifecycle stages from send through finalization', () => {
+    const aiChat = src('src/composables/useAIChat.ts')
+    const store = src('src/stores/aiChat.ts')
+
+    expect(aiChat).toContain('function traceAssistantTurn')
+    expect(aiChat).toContain("'send_received'")
+    expect(aiChat).toContain("'routed'")
+    expect(aiChat).toContain("'assistant_streaming_started'")
+    expect(aiChat).toContain("'activity_started'")
+    expect(aiChat).toContain("'assistant_turn_completed'")
+    expect(aiChat).toContain("'assistant_turn_failed'")
+    expect(store).toContain("[AIChat:AssistantTurnLifecycle]")
+    expect(store).toContain('renderableCount: outcome.count')
+    expect(store).toContain("finalVisibleState: 'recovery'")
   })
 
   it('keeps a visible New Chat control in the AI sidebar header', async () => {

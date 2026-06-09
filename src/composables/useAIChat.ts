@@ -96,6 +96,8 @@ export interface SendMessageOptions {
   skipHistory?: boolean
   /** Enable multi-step ReAct (Reasoning + Acting) loop for cloud providers */
   useReAct?: boolean
+  /** Internal correlation ID for lifecycle diagnostics across routing, persistence, and rendering. */
+  turnId?: string
 }
 
 type ClarificationContinuationMode = RoutedIntent['responseMode'] | 'general'
@@ -589,6 +591,18 @@ export function useAIChat() {
         window.dispatchEvent(new CustomEvent('task-action-flash', { detail: { taskId } }))
       }
     }
+  }
+
+  function createAssistantTurnTraceId(): string {
+    return `ai-turn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  }
+
+  function traceAssistantTurn(turnId: string, stage: string, details: Record<string, unknown> = {}): void {
+    console.info('[AIChat:TurnLifecycle]', {
+      turnId,
+      stage,
+      ...details,
+    })
   }
 
   function beginChatPhase(label: string, message?: string): string {
@@ -1767,9 +1781,22 @@ export function useAIChat() {
   ): Promise<void> {
     const trimmedContent = content.trim()
     if (!trimmedContent) return
-    if (store.isGenerating) return
+    const turnId = createAssistantTurnTraceId()
+    traceAssistantTurn(turnId, 'send_received', {
+      contentLength: trimmedContent.length,
+      skipHistory: Boolean(options.skipHistory),
+      isGenerating: store.isGenerating,
+      activeConversationId: store.activeConversationId,
+    })
+    if (store.isGenerating) {
+      traceAssistantTurn(turnId, 'send_blocked_already_generating')
+      return
+    }
 
-    if (await handleSlashCommand(trimmedContent)) return
+    if (await handleSlashCommand(trimmedContent)) {
+      traceAssistantTurn(turnId, 'slash_command_handled')
+      return
+    }
 
     // TASK-1814: clear the input synchronously for instant "message sent" feedback
     // (the user message + thinking indicator follow within ms — routing is local
@@ -1789,13 +1816,20 @@ export function useAIChat() {
       : await routeIntent(trimmedContent, taskStore.tasks, entityMemory, {
           skipLLMClassification: isBridgeActive(),
         })
+    traceAssistantTurn(turnId, 'routed', {
+      routedType: routed.type,
+      responseMode: routed.responseMode,
+      language: routed.language,
+      toolCount: routed.tools.length,
+      continuationMode,
+    })
 
     if (routed.type !== 'freeform') {
-      return sendMessageDeterministic(trimmedContent, routed, options)
+      return sendMessageDeterministic(trimmedContent, routed, { ...options, turnId })
     }
 
     // Fallback: freeform → existing ReAct loop (unchanged)
-    return sendMessageWithReAct(trimmedContent, options)
+    return sendMessageWithReAct(trimmedContent, { ...options, turnId })
   }
 
   /**
@@ -1811,6 +1845,13 @@ export function useAIChat() {
     routed: RoutedIntent,
     options: SendMessageOptions = {}
   ): Promise<void> {
+    const turnId = options.turnId || createAssistantTurnTraceId()
+    traceAssistantTurn(turnId, 'deterministic_started', {
+      routedType: routed.type,
+      responseMode: routed.responseMode,
+      toolCount: routed.tools.length,
+      skipHistory: Boolean(options.skipHistory),
+    })
     // TASK-1356: Behavioral event tracking
     const { trackChatMessage, trackChatSessionStart, trackToolCall } = useAIEventTracking()
     const sessionId = store.activeConversation?.id || 'unknown'
@@ -1825,7 +1866,12 @@ export function useAIChat() {
 
     // Add user message
     if (!options.skipHistory) {
-      store.addUserMessage(content)
+      const userMessage = store.addUserMessage(content)
+      traceAssistantTurn(turnId, 'user_message_persisted', {
+        messageId: userMessage.id,
+      })
+    } else {
+      traceAssistantTurn(turnId, 'user_message_skipped_for_continuation')
     }
 
     // Track last detected language for use in confirmation/cancel handlers
@@ -1839,8 +1885,15 @@ export function useAIChat() {
       : ''
 
     // Start streaming response
-    store.startStreamingMessage()
+    const assistantMessage = store.startStreamingMessage()
+    traceAssistantTurn(turnId, 'assistant_streaming_started', {
+      messageId: assistantMessage.id,
+    })
     const phaseActivityId = beginChatPhase('Preparing response', activeProviderRef.value ? `Using ${activeProviderRef.value}` : undefined)
+    traceAssistantTurn(turnId, 'activity_started', {
+      activityId: phaseActivityId,
+      label: 'Preparing response',
+    })
     const toolResults: ToolResult[] = []
 
     try {
@@ -2090,8 +2143,18 @@ export function useAIChat() {
               console.warn('[AIChat:Deterministic] Could not record broad clarification ask:', eventErr)
             }
           })()
+          traceAssistantTurn(turnId, 'clarification_artifact_prepared', {
+            messageId: lastMsg?.id,
+            questionId: broadClarification.question.id,
+            actionCount: broadClarification.actions.length,
+          })
           finishChatPhase(phaseActivityId, 'Clarification ready', 'Waiting for one answer')
           store.completeStreamingMessage()
+          traceAssistantTurn(turnId, 'assistant_turn_completed', {
+            messageId: lastMsg?.id,
+            terminal: 'clarification',
+            activityId: phaseActivityId,
+          })
           return
         }
       }
@@ -2235,7 +2298,7 @@ export function useAIChat() {
               clarification: renderedClarification,
             } as Record<string, unknown>
           }
-          void (async () => {
+          if (renderedClarification.runtime) void (async () => {
             try {
               const startResult = await startLocalClarificationRuntime(renderedClarification)
               if (renderedClarification.runtime) {
@@ -2323,8 +2386,20 @@ export function useAIChat() {
               weeklyPlan: finalPlan,
             } as Record<string, unknown>
           }
+          traceAssistantTurn(turnId, 'weekly_plan_artifact_prepared', {
+            messageId: lastMsg?.id,
+            recommendationCount: finalPlan.recommendations.length,
+            openQuestionCount: finalPlan.openQuestions.length,
+            deferralCount: finalPlan.deferrals.length,
+            source: finalPlan.source,
+          })
           finishChatPhase(phaseActivityId, 'Weekly plan ready', 'Used compact saved-context draft')
           store.completeStreamingMessage()
+          traceAssistantTurn(turnId, 'assistant_turn_completed', {
+            messageId: lastMsg?.id,
+            terminal: 'weekly_plan',
+            activityId: phaseActivityId,
+          })
           return
         }
 
@@ -2439,6 +2514,14 @@ export function useAIChat() {
           } as Record<string, unknown>
         }
 
+        traceAssistantTurn(turnId, 'weekly_plan_artifact_prepared', {
+          messageId: lastMsg?.id,
+          recommendationCount: finalPlan.recommendations.length,
+          openQuestionCount: finalPlan.openQuestions.length,
+          deferralCount: finalPlan.deferrals.length,
+          source: finalPlan.source,
+          validationErrorCount: validationErrors.length,
+        })
         finishChatPhase(phaseActivityId, 'Weekly plan ready', finalPlan.source === 'quick_draft' ? 'Used quick plan' : 'Used structured plan')
         try {
           const currentRouter = await getRouter()
@@ -2447,6 +2530,11 @@ export function useAIChat() {
         } catch { /* ignore */ }
 
         store.completeStreamingMessage()
+        traceAssistantTurn(turnId, 'assistant_turn_completed', {
+          messageId: lastMsg?.id,
+          terminal: 'weekly_plan',
+          activityId: phaseActivityId,
+        })
         return
       }
       const formatterTimeout = isBridgeActive() && isWeekPlan
@@ -2692,6 +2780,10 @@ export function useAIChat() {
 
       finishChatPhase(phaseActivityId)
       store.completeStreamingMessage()
+      traceAssistantTurn(turnId, 'assistant_turn_completed', {
+        terminal: 'formatted_response',
+        activityId: phaseActivityId,
+      })
 
     } catch (err) {
       const rawError = err instanceof Error ? err.message : 'Failed to get response'
@@ -2746,11 +2838,20 @@ export function useAIChat() {
           },
         })
         store.completeStreamingMessage()
+        traceAssistantTurn(turnId, 'assistant_turn_completed', {
+          terminal: 'provider_error_fallback',
+          activityId: phaseActivityId,
+          fallbackTaskCount,
+        })
         console.warn('[AIChat:Deterministic] Provider failed after tool data; used local fallback:', err)
         return
       }
       failChatPhase(phaseActivityId, 'Response failed', errorMessage)
       store.failStreamingMessage(errorMessage)
+      traceAssistantTurn(turnId, 'assistant_turn_failed', {
+        activityId: phaseActivityId,
+        errorMessage,
+      })
       console.error('[AIChat:Deterministic] Error:', err)
     }
   }
@@ -3813,6 +3914,10 @@ export function useAIChat() {
   async function initialize() {
     await store.initialize()
 
+    const settingsStore = useSettingsStore()
+    const subscriptionBridgeEnabled = settingsStore.aiUseSubscription !== false
+    const subscriptionBrain = settingsStore.aiBrain === 'codex' ? 'codex' : 'claude'
+
     // Load persisted settings
     const savedSettings = store.getPersistedSettings()
     if (savedSettings) {
@@ -3837,6 +3942,20 @@ export function useAIChat() {
         } else {
           selectedModel.value = model
         }
+      }
+    }
+
+    // TASK-1822: the subscription bridge is the product runtime for Claude/Codex
+    // CLI auth. Chat-local provider settings can be older than the settings store;
+    // normalize them before initialization so stale "auto" or "ollama" values do
+    // not probe localhost or force a weak provider in real chat usage.
+    if (subscriptionBridgeEnabled) {
+      selectedProvider.value = 'bridge'
+      selectedModel.value = subscriptionBrain
+      providerModelMemory.value['bridge'] = subscriptionBrain
+      activeProviderRef.value = 'bridge'
+      if (savedSettings?.provider !== 'bridge' || savedSettings.model !== subscriptionBrain) {
+        store.updatePersistedSettings({ provider: 'bridge', model: subscriptionBrain })
       }
     }
 

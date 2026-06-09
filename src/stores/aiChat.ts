@@ -132,8 +132,22 @@ export interface ChatMessage {
     weeklyPlan?: WeeklyPlanOutput
     /** One-question clarification artifact. Rendered directly before broad planning. */
     clarification?: AIClarificationArtifact
+    lifecycle?: {
+      state: 'visible' | 'suppressed' | 'recovered' | 'failed'
+      generatedQuestionCount?: number
+      suppressedQuestionCount?: number
+      visibleQuestionCount?: number
+      recoveryTriggered?: boolean
+      finalVisibleState?: 'content' | 'clarification' | 'plan' | 'recovery' | 'failure' | 'suppressed'
+      reason?: string
+    }
+    /** Weekly plan question ids that were resolved after async memory hydration. */
+    resolvedWeeklyQuestionIds?: string[]
   }
 }
+
+type AssistantTurnLifecycle = NonNullable<NonNullable<ChatMessage['metadata']>['lifecycle']>
+type AssistantFinalVisibleState = NonNullable<AssistantTurnLifecycle['finalVisibleState']>
 
 /**
  * A conversation containing a list of chat messages.
@@ -293,10 +307,212 @@ export const useAIChatStore = defineStore('aiChat', () => {
    * Deserialize messages from storage, restoring Date objects.
    */
   function deserializeMessages(data: Array<Record<string, unknown>>): ChatMessage[] {
-    return data.map(m => ({
+    return data.map(m => normalizeAssistantMessage({
       ...m,
       timestamp: new Date(m.timestamp as string),
-    })) as ChatMessage[]
+    } as ChatMessage))
+  }
+
+  function isObsoleteWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][number]): boolean {
+    const text = `${question.id || ''} ${question.reason || ''} ${question.question || ''}`.toLowerCase()
+    return question.reason === 'follow_up_task_suggestion' ||
+      text.includes('followup_') ||
+      text.includes('add a follow-up task after') ||
+      text.includes('להוסיף משימת המשך אחרי')
+  }
+
+  function weeklyQuestionKey(question: WeeklyPlanOutput['openQuestions'][number]): string {
+    return question.id || question.question
+  }
+
+  function weeklyQuestionResolved(message: ChatMessage, question: WeeklyPlanOutput['openQuestions'][number]): boolean {
+    const key = weeklyQuestionKey(question)
+    return Boolean(key && message.metadata?.resolvedWeeklyQuestionIds?.includes(key))
+  }
+
+  function weeklyPlanVisibleQuestionCount(message: ChatMessage, plan: WeeklyPlanOutput): number {
+    return (plan.openQuestions || []).filter(question =>
+      !isObsoleteWeeklyQuestion(question) &&
+      !weeklyQuestionResolved(message, question),
+    ).length
+  }
+
+  function weeklyPlanRenderableCount(message: ChatMessage, plan: WeeklyPlanOutput): number {
+    return weeklyPlanVisibleQuestionCount(message, plan) +
+      (plan.recommendations?.length || 0) +
+      (plan.deferrals?.length || 0)
+  }
+
+  function computeAssistantRenderableOutcome(message: ChatMessage): {
+    count: number
+    finalVisibleState?: AssistantFinalVisibleState
+    generatedQuestionCount?: number
+    suppressedQuestionCount?: number
+    visibleQuestionCount?: number
+  } {
+    if (message.role !== 'assistant') return { count: 1, finalVisibleState: 'content' }
+    if (message.error) return { count: 1, finalVisibleState: 'failure' }
+    if (message.content.trim().length > 0) return { count: 1, finalVisibleState: 'content' }
+    if (message.actions?.length) return { count: message.actions.length, finalVisibleState: 'content' }
+
+    const metadata = message.metadata
+    const clarification = metadata?.clarification
+    if (
+      clarification?.schemaVersion === 'ai-clarification.v1' &&
+      clarification.question?.question?.trim()
+    ) {
+      return {
+        count: 1,
+        finalVisibleState: 'clarification',
+        generatedQuestionCount: 1,
+        visibleQuestionCount: 1,
+      }
+    }
+
+    const weeklyPlan = metadata?.weeklyPlan
+    if (weeklyPlan?.schemaVersion === 'weekly-plan.v2') {
+      const generatedQuestionCount = weeklyPlan.openQuestions?.length || 0
+      const visibleQuestionCount = weeklyPlanVisibleQuestionCount(message, weeklyPlan)
+      const count = weeklyPlanRenderableCount(message, weeklyPlan)
+      return {
+        count,
+        finalVisibleState: count > 0 ? 'plan' : undefined,
+        generatedQuestionCount,
+        suppressedQuestionCount: generatedQuestionCount - visibleQuestionCount,
+        visibleQuestionCount,
+      }
+    }
+
+    if (metadata?.scheduleQuestion) return { count: 1, finalVisibleState: 'content' }
+    if (Array.isArray(metadata?.toolResults) && metadata.toolResults.length > 0) {
+      return { count: metadata.toolResults.length, finalVisibleState: 'content' }
+    }
+
+    return { count: 0 }
+  }
+
+  function buildRecoveryContent(message: ChatMessage, outcome: ReturnType<typeof computeAssistantRenderableOutcome>): string {
+    const locale = message.metadata?.weeklyPlan?.locale || message.metadata?.clarification?.locale
+    if (locale === 'he') {
+      return 'כבר יש לי מספיק מידע מהתשובות וההקשר הקיימים, אז דילגתי על שאלות שכבר אינן רלוונטיות.\n\nאני ממשיך עם המידע האחרון במקום להשאיר תשובת עוזר ריקה.'
+    }
+    if ((outcome.generatedQuestionCount || 0) > 0 && outcome.generatedQuestionCount === outcome.suppressedQuestionCount) {
+      return 'Thanks — I already have enough information from previous answers.\n\nThose clarification questions are no longer relevant, so I continued using your latest project context instead of leaving an empty assistant turn.'
+    }
+    return 'I had enough information to continue without additional clarification.\n\nThe previous assistant turn had no visible output, so I recovered it into this visible status instead of marking the workflow done invisibly.'
+  }
+
+  function recoverAssistantMessage(message: ChatMessage, outcome: ReturnType<typeof computeAssistantRenderableOutcome>, reason: string): ChatMessage {
+    console.info('[AIChat:AssistantTurnLifecycle]', {
+      messageId: message.id,
+      generatedQuestionCount: outcome.generatedQuestionCount || 0,
+      suppressedQuestionCount: outcome.suppressedQuestionCount || 0,
+      visibleQuestionCount: outcome.visibleQuestionCount || 0,
+      recoveryTriggered: true,
+      finalVisibleState: 'recovery',
+      reason,
+    })
+    const {
+      weeklyPlan: _weeklyPlan,
+      clarification: _clarification,
+      toolResults: _toolResults,
+      scheduleQuestion: _scheduleQuestion,
+      cardGroups: _cardGroups,
+      chatQuality: _chatQuality,
+      ...metadataWithoutInvisibleArtifacts
+    } = (message.metadata || {}) as Record<string, unknown>
+    return {
+      ...message,
+      content: buildRecoveryContent(message, outcome),
+      metadata: {
+        ...metadataWithoutInvisibleArtifacts,
+        lifecycle: {
+          state: 'recovered',
+          generatedQuestionCount: outcome.generatedQuestionCount || 0,
+          suppressedQuestionCount: outcome.suppressedQuestionCount || 0,
+          visibleQuestionCount: outcome.visibleQuestionCount || 0,
+          recoveryTriggered: true,
+          finalVisibleState: 'recovery',
+          reason,
+        },
+      },
+    }
+  }
+
+  function suppressAssistantMessage(message: ChatMessage, outcome: ReturnType<typeof computeAssistantRenderableOutcome>, reason: string): ChatMessage {
+    console.info('[AIChat:AssistantTurnLifecycle]', {
+      messageId: message.id,
+      generatedQuestionCount: outcome.generatedQuestionCount || 0,
+      suppressedQuestionCount: outcome.suppressedQuestionCount || 0,
+      visibleQuestionCount: outcome.visibleQuestionCount || 0,
+      recoveryTriggered: false,
+      finalVisibleState: 'suppressed',
+      reason,
+    })
+    const {
+      weeklyPlan: _weeklyPlan,
+      clarification: _clarification,
+      toolResults: _toolResults,
+      scheduleQuestion: _scheduleQuestion,
+      cardGroups: _cardGroups,
+      chatQuality: _chatQuality,
+      ...metadataWithoutInvisibleArtifacts
+    } = (message.metadata || {}) as Record<string, unknown>
+    return {
+      ...message,
+      content: '',
+      metadata: {
+        ...metadataWithoutInvisibleArtifacts,
+        lifecycle: {
+          state: 'suppressed',
+          generatedQuestionCount: outcome.generatedQuestionCount || 0,
+          suppressedQuestionCount: outcome.suppressedQuestionCount || 0,
+          visibleQuestionCount: outcome.visibleQuestionCount || 0,
+          recoveryTriggered: false,
+          finalVisibleState: 'suppressed',
+          reason,
+        },
+      },
+    }
+  }
+
+  function normalizeAssistantMessage(message: ChatMessage): ChatMessage {
+    if (message.role !== 'assistant') return message
+    if (message.metadata?.lifecycle?.state === 'suppressed') return message
+    const outcome = computeAssistantRenderableOutcome(message)
+    if (outcome.count > 0) {
+      console.info('[AIChat:AssistantTurnLifecycle]', {
+        messageId: message.id,
+        generatedQuestionCount: outcome.generatedQuestionCount || 0,
+        suppressedQuestionCount: outcome.suppressedQuestionCount || 0,
+        visibleQuestionCount: outcome.visibleQuestionCount || 0,
+        renderableCount: outcome.count,
+        recoveryTriggered: false,
+        finalVisibleState: outcome.finalVisibleState,
+      })
+      return {
+        ...message,
+        metadata: {
+          ...message.metadata,
+          lifecycle: {
+            ...message.metadata?.lifecycle,
+            state: message.error ? 'failed' : 'visible',
+            generatedQuestionCount: outcome.generatedQuestionCount,
+            suppressedQuestionCount: outcome.suppressedQuestionCount,
+            visibleQuestionCount: outcome.visibleQuestionCount,
+            recoveryTriggered: false,
+            finalVisibleState: outcome.finalVisibleState,
+          },
+        },
+      }
+    }
+    if (
+      (outcome.generatedQuestionCount || 0) > 0 &&
+      outcome.generatedQuestionCount === outcome.suppressedQuestionCount
+    ) {
+      return suppressAssistantMessage(message, outcome, 'all_weekly_questions_resolved_or_obsolete')
+    }
+    return recoverAssistantMessage(message, outcome, 'no_renderable_assistant_output')
   }
 
   /**
@@ -340,12 +556,12 @@ export const useAIChatStore = defineStore('aiChat', () => {
   }
 
   function cloneMessage(message: ChatMessage): ChatMessage {
-    return {
+    return normalizeAssistantMessage({
       ...message,
       timestamp: message.timestamp instanceof Date ? new Date(message.timestamp) : new Date(message.timestamp),
       actions: message.actions,
       metadata: message.metadata ? { ...message.metadata } : undefined,
-    }
+    })
   }
 
   function cloneConversation(conversation: Conversation): Conversation {
@@ -984,9 +1200,31 @@ export const useAIChatStore = defineStore('aiChat', () => {
       if (options?.metadata) {
         lastMsg.metadata = { ...lastMsg.metadata, ...options.metadata }
       }
+      Object.assign(lastMsg, normalizeAssistantMessage(lastMsg))
     }
     isGenerating.value = false
     streamingContent.value = ''
+    touchActiveConversation()
+    flushConversationSync().catch(() => {})
+  }
+
+  function resolveWeeklyPlanQuestions(messageId: string, questionIds: string[], reason = 'answered_memory_hydration'): void {
+    if (!questionIds.length) return
+    const activeMsgs = getActiveMessages()
+    const message = activeMsgs?.find(item => item.id === messageId)
+    if (!message || message.role !== 'assistant') return
+    const previous = new Set(message.metadata?.resolvedWeeklyQuestionIds || [])
+    for (const id of questionIds) {
+      if (id) previous.add(id)
+    }
+    message.metadata = {
+      ...message.metadata,
+      resolvedWeeklyQuestionIds: [...previous],
+    }
+    Object.assign(message, normalizeAssistantMessage(message))
+    if (message.metadata?.lifecycle?.state === 'recovered' || message.metadata?.lifecycle?.state === 'suppressed') {
+      message.metadata.lifecycle.reason = reason
+    }
     touchActiveConversation()
     flushConversationSync().catch(() => {})
   }
@@ -1515,6 +1753,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
     startStreamingMessage,
     appendStreamingContent,
     completeStreamingMessage,
+    resolveWeeklyPlanQuestions,
     failStreamingMessage,
     updateAction,
     updateContext,

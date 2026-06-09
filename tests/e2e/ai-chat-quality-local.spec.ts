@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type ConsoleMessage, type Locator, type Page } from '@playwright/test'
 
 const todayIso = () => new Date().toISOString()
 const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
@@ -29,6 +29,31 @@ type SeedTask = {
   updatedAt: string
   isInInbox: boolean
   canvasDismissed: boolean
+}
+
+type CapturedConsolePayload = Record<string, unknown> | string
+
+function captureStructuredConsole(page: Page, label: string): CapturedConsolePayload[] {
+  const payloads: CapturedConsolePayload[] = []
+  page.on('console', (msg: ConsoleMessage) => {
+    if (!msg.text().includes(label)) return
+    void (async () => {
+      try {
+        const values = await Promise.all(msg.args().map(async arg => {
+          try {
+            return await arg.jsonValue()
+          } catch {
+            return undefined
+          }
+        }))
+        const payload = values.find(value => value && typeof value === 'object' && !Array.isArray(value))
+        payloads.push((payload as Record<string, unknown> | undefined) ?? msg.text())
+      } catch {
+        payloads.push(msg.text())
+      }
+    })()
+  })
+  return payloads
 }
 
 function task(id: string, title: string, overrides: Partial<SeedTask> = {}): SeedTask {
@@ -100,9 +125,13 @@ async function seedGuestWorkspace(page: Page) {
     localStorage.clear()
     localStorage.setItem('flowstate-onboarding-v2', 'true')
     localStorage.setItem('flowstate-welcome-seen', 'true')
-    localStorage.setItem('flowstate-settings-v2', JSON.stringify({ aiSetupComplete: true }))
+    localStorage.setItem('flowstate-settings-v2', JSON.stringify({
+      aiSetupComplete: true,
+      aiUseSubscription: true,
+      aiBrain: 'claude',
+    }))
     localStorage.setItem('flowstate-ai-settings', JSON.stringify({
-      provider: 'claude',
+      provider: 'bridge',
       model: 'claude',
       chatDirection: 'ltr',
       chatLanguage: 'en',
@@ -547,9 +576,14 @@ test('weekly planning asks first, does not dump recommendations, and does not ge
 test('Hebrew rest-of-week prompt reaches weekly planning without a generic task dump', async ({ page }) => {
   await seedGuestWorkspace(page)
   await stubBridge(page)
+  const ollamaLogs: string[] = []
+  page.on('console', msg => {
+    const text = msg.text()
+    if (/\[Ollama\]|Ollama/.test(text)) ollamaLogs.push(text)
+  })
 
   const input = await openAIChat(page)
-  await sendChat(input, 'תעזור לי לתכנן את שארית השבוע')
+  await sendChat(input, 'תעזור לי לארגן את שארית השבוע')
 
   await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 45_000 })
   const clarificationCount = await page.locator('[data-testid="ai-clarification"]').count()
@@ -569,6 +603,16 @@ test('Hebrew rest-of-week prompt reaches weekly planning without a generic task 
     await expect(page.locator('[data-testid="weekly-plan"]').last()).toBeVisible({ timeout: 30_000 })
   }
 
+  const plan = page.locator('[data-testid="weekly-plan"]').last()
+  await expect(plan).toContainText(/נתיב|Lane|נתיבי עבודה|work lanes/i)
+  const sections = plan.locator('.weekly-plan-section')
+  const sectionCount = await sections.count()
+  expect(sectionCount).toBeGreaterThan(0)
+  expect(sectionCount).toBeLessThanOrEqual(3)
+  await expect(sections.first().locator('[data-testid="inline-plan-card"]').first()).toBeVisible({ timeout: 10_000 })
+  const firstSectionCardCount = await sections.first().locator('[data-testid="inline-plan-card"]').count()
+  expect(firstSectionCardCount).toBeGreaterThanOrEqual(1)
+  expect(ollamaLogs).toEqual([])
   await expect(input).toBeEnabled({ timeout: 10_000 })
 })
 
@@ -585,9 +629,11 @@ test.describe('weekly planning prompt variants route to the same non-dump produc
       await seedGuestWorkspace(page)
       await stubBridge(page)
       const decisionLogs: string[] = []
+      const ollamaLogs: string[] = []
       page.on('console', msg => {
         const text = msg.text()
         if (text.includes('[AIChat:WeeklyPlanDecision]')) decisionLogs.push(text)
+        if (/\[Ollama\]|Ollama/.test(text)) ollamaLogs.push(text)
       })
 
       const input = await openAIChat(page)
@@ -600,6 +646,7 @@ test.describe('weekly planning prompt variants route to the same non-dump produc
       await expect(page.locator('.ai-chat-messages')).not.toContainText(/נמצאו\s+\d+\s+משימות|Found\s+\d+\s+tasks/i)
       await expect(page.locator('.ai-chat-messages')).not.toContainText(/What kind of project is "Work"|איזה סוג פרויקט הוא "Work"/i)
       await expect(page.locator('.ai-chat-messages')).not.toContainText(/להוסיף משימת המשך אחרי|Add a follow-up task after/i)
+      expect(ollamaLogs).toEqual([])
       expect(decisionLogs.some(line => /memory_retrieved|ask|proceed|plan_ready/.test(line))).toBe(true)
 
       if (clarificationCount > 0) {
@@ -695,6 +742,8 @@ test('answered weekly priority question disappears and continues to compact plan
   const seededPlan = page.locator('[data-testid="weekly-plan"]').first()
   await expect(seededPlan).toBeVisible({ timeout: 10_000 })
   await expect(seededPlan).toContainText('מה הכי חשוב להגן עליו השבוע?', { timeout: 5_000 })
+  await expect(seededPlan.getByRole('button', { name: 'צור תוכנית עכשיו' })).toBeVisible()
+  await expect(seededPlan.getByRole('button', { name: 'עצור ושמור' })).toBeVisible()
   const assistantCountBefore = await page.locator('.message-assistant').count()
 
   await seededPlan.getByRole('button', { name: 'לקוח/כסף' }).click()
@@ -707,9 +756,45 @@ test('answered weekly priority question disappears and continues to compact plan
   }).toBeGreaterThan(assistantCountBefore)
 
   const compactPlan = page.locator('[data-testid="weekly-plan"]').last()
-  await expect(compactPlan).toContainText(/תשובה קצרה מההקשר ששמרת|Short plan after your clarification/, { timeout: 10_000 })
+  await expect(compactPlan).toContainText(/נתיבי עבודה|work lanes|נתיב|Lane/, { timeout: 10_000 })
   await expect(compactPlan.locator('[data-testid="weekly-plan-questions"]')).toHaveCount(0)
   await expect(page.locator('.ai-chat-messages')).not.toContainText(/מה הכי חשוב להגן עליו השבוע\?.*מה הכי חשוב להגן עליו השבוע\?/s)
+  await expect(page.locator('.ai-chat-input-container textarea')).toBeEnabled({ timeout: 5_000 })
+})
+
+test('weekly priority question can generate now without answering and does not stay stuck', async ({ page }) => {
+  const inlineQuestionLogs = captureStructuredConsole(page, '[AIChat:WeeklyInlineQuestion]')
+  const decisionLogs = captureStructuredConsole(page, '[AIChat:WeeklyPlanDecision]')
+  await seedGuestWorkspace(page)
+  await seedWeeklyPriorityQuestionConversation(page)
+  await stubBridge(page)
+
+  await openAIChat(page)
+  const seededPlan = page.locator('[data-testid="weekly-plan"]').first()
+  await expect(seededPlan).toBeVisible({ timeout: 10_000 })
+  await expect(seededPlan).toContainText('מה הכי חשוב להגן עליו השבוע?', { timeout: 5_000 })
+
+  const assistantCountBefore = await page.locator('.message-assistant').count()
+  await seededPlan.getByRole('button', { name: 'צור תוכנית עכשיו' }).click()
+  await expect(seededPlan).not.toContainText('מה הכי חשוב להגן עליו השבוע?', { timeout: 5_000 })
+  await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 30_000 })
+  await expect.poll(async () => page.locator('.message-assistant').count(), {
+    timeout: 15_000,
+  }).toBeGreaterThan(assistantCountBefore)
+
+  const compactPlan = page.locator('[data-testid="weekly-plan"]').last()
+  await expect(compactPlan).toContainText(/נתיבי עבודה|work lanes|נתיב|Lane/, { timeout: 10_000 })
+  await expect(compactPlan.locator('[data-testid="weekly-plan-questions"]')).toHaveCount(0)
+  await expect.poll(() => inlineQuestionLogs.some(log =>
+    typeof log === 'object' &&
+    log.stage === 'escape_started' &&
+    log.action === 'generate_current'
+  ), { timeout: 5_000 }).toBe(true)
+  await expect.poll(() => decisionLogs.some(log =>
+    typeof log === 'object' &&
+    log.stage === 'forced_compact_draft' &&
+    /generate\/current-info/.test(String(log.reason ?? ''))
+  ), { timeout: 10_000 }).toBe(true)
   await expect(page.locator('.ai-chat-input-container textarea')).toBeEnabled({ timeout: 5_000 })
 })
 

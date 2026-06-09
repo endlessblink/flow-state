@@ -229,9 +229,8 @@ async function generateAiSummary(
   url: string,
 ): Promise<string | null> {
   try {
-    const { createAIRouter } = await import('./router')
-    const router = createAIRouter()
-    await router.initialize()
+    const { getSharedRouter } = await import('./routerFactory')
+    const router = await getSharedRouter()
 
     const prompt = `Summarize this web page in 1-2 sentences for a task management app. Be concise and action-oriented.
 
@@ -245,6 +244,7 @@ Summary:`
       taskType: 'task_parsing',
       temperature: 0.3,
       maxTokens: 100,
+      contextFeature: 'chat',
     })
 
     return response.content?.trim() || null

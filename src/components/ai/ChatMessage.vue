@@ -20,12 +20,12 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock, Plus } from 'lucide-vue-next'
+import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock, Plus, Maximize2 } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type Token from 'markdown-it/lib/token.mjs'
 import type Renderer from 'markdown-it/lib/renderer.mjs'
 import type { Options as MarkdownItOptions } from 'markdown-it'
-import type { ChatMessage, ChatAction } from '@/stores/aiChat'
+import { useAIChatStore, type ChatMessage, type ChatAction } from '@/stores/aiChat'
 import { formatRelativeDate } from '@/utils/dateUtils'
 import TaskQuickEditPopover from './TaskQuickEditPopover.vue'
 import { executeTool } from '@/services/ai/tools'
@@ -54,6 +54,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'selectTask': [taskId: string]
   'continueChat': [message: string]
+  'requestWide': []
 }>()
 
 // ============================================================================
@@ -123,6 +124,7 @@ const scheduleSaved = ref(false)
 
 // Live task data from Pinia store (reactive — updates when user edits tasks)
 const taskStore = useTaskStore()
+const aiChatStore = useAIChatStore()
 const canvasStore = useCanvasStore()
 const laneStore = useLaneStore()
 const aiMemoryDb = useSupabaseDatabase()
@@ -318,6 +320,16 @@ function weeklyPlanTaskIds(rec: WeeklyPlanRecommendation): string[] {
     .filter(taskId => !dismissedCardTaskIds.value.has(taskId))
 }
 
+function weeklyPlanPrimaryTaskIds(rec: WeeklyPlanRecommendation): string[] {
+  return rec.primaryTaskId && !dismissedCardTaskIds.value.has(rec.primaryTaskId) ? [rec.primaryTaskId] : []
+}
+
+function weeklyPlanRelatedChipIds(rec: WeeklyPlanRecommendation): string[] {
+  return [...new Set(rec.relatedTaskIds ?? [])]
+    .filter(taskId => taskId !== rec.primaryTaskId && !dismissedCardTaskIds.value.has(taskId))
+    .slice(0, 4)
+}
+
 function weeklyPlanRecommendationForTask(taskId: string): WeeklyPlanRecommendation | undefined {
   return weeklyPlan.value?.recommendations.find(rec => rec.primaryTaskId === taskId || rec.relatedTaskIds?.includes(taskId))
 }
@@ -503,14 +515,23 @@ async function hydrateAnsweredWeeklyQuestions(): Promise<void> {
       .filter(event => ['answered', 'dismissed', 'generated_with_uncertainty', 'showed_candidates'].includes(event.eventType))
       .map(event => `${event.entityKey}::${event.questionId}`))
     const nextApplied = { ...weeklyQuestionApplied.value }
+    const newlyResolvedQuestionIds: string[] = []
     for (const item of identities) {
       if (resolved.has(`${item.identity.entityKey}::${item.key}`)) {
         nextApplied[item.key] = weeklyQuestionAnsweredLabel()
+        newlyResolvedQuestionIds.push(item.key)
       }
     }
     weeklyQuestionApplied.value = nextApplied
+    if (newlyResolvedQuestionIds.length) {
+      aiChatStore.resolveWeeklyPlanQuestions(
+        props.message.id,
+        newlyResolvedQuestionIds,
+        'answered_memory_hydration',
+      )
+    }
     traceWeeklyQuestion('answered_hydration_finished', {
-      matchedCount: Object.keys(nextApplied).filter(key => identities.some(item => item.key === key)).length,
+      matchedCount: newlyResolvedQuestionIds.length,
     })
   } catch (err) {
     console.error('[AIChat:WeeklyInlineQuestion]', {
@@ -554,6 +575,74 @@ function continueAfterWeeklyQuestion(
   emit('continueChat', locale === 'he'
     ? `המשך לתכנן את השבוע עם ההקשר שעניתי עכשיו. תן תשובה קצרה ומעשית, בלי רשימה ארוכה.${evidenceBlock}${continuationMarker}`
     : `Continue planning the week using the context I just answered. Keep it short and actionable, not a long list.${evidenceBlock}${continuationMarker}`)
+}
+
+async function recordWeeklyQuestionEscape(
+  question: WeeklyPlanOutput['openQuestions'][number],
+  action: 'generate_current' | 'pause_save',
+  event: MouseEvent,
+): Promise<void> {
+  event.stopPropagation()
+  const key = weeklyQuestionKey(question)
+  if (weeklyQuestionApplying.value[key]) return
+
+  const locale = weeklyPlan.value?.locale ?? 'en'
+  const parentTask = weeklyQuestionTask(question)
+  const identity = weeklyQuestionMemoryIdentity(question, parentTask)
+  weeklyQuestionApplying.value = { ...weeklyQuestionApplying.value, [key]: true }
+  weeklyQuestionApplied.value = {
+    ...weeklyQuestionApplied.value,
+    [key]: action === 'generate_current'
+      ? (locale === 'he' ? 'ממשיך עכשיו עם אי-ודאות גלויה...' : 'Generating now with visible uncertainty...')
+      : (locale === 'he' ? 'נעצר ונשמר לתוכנית הזו' : 'Stopped and saved for this plan'),
+  }
+  traceWeeklyQuestion('escape_started', {
+    key,
+    questionId: question.id,
+    action,
+    entityKey: identity.entityKey,
+  })
+
+  try {
+    await aiMemoryDb.recordAIClarificationEvent({
+      entityKey: identity.entityKey,
+      entityType: identity.entityType,
+      displayName: identity.displayName,
+      questionId: key,
+      eventType: action === 'generate_current' ? 'generated_with_uncertainty' : 'dismissed',
+      question: question.question,
+      sourceMessageId: props.message.id,
+      uncertaintyDimensions: weeklyQuestionUncertaintyDimension(question),
+      pathType: action === 'generate_current' ? 'generated_with_uncertainty' : 'pause_save',
+      contextSnapshot: {
+        weeklyPlanRequestId: weeklyPlan.value?.requestId,
+        weeklyPlanSource: weeklyPlan.value?.source,
+        relatedTaskIds: question.relatedTaskIds,
+        reason: question.reason,
+      },
+    })
+    traceWeeklyQuestion('escape_record_succeeded', {
+      key,
+      action,
+      entityKey: identity.entityKey,
+    })
+  } catch (err) {
+    console.error('[AIChat:WeeklyInlineQuestion]', {
+      stage: 'escape_record_failed',
+      key,
+      action,
+      error: err,
+    })
+  } finally {
+    const { [key]: _done, ...rest } = weeklyQuestionApplying.value
+    weeklyQuestionApplying.value = rest
+  }
+
+  if (action === 'generate_current') {
+    emit('continueChat', locale === 'he'
+      ? `צור תוכנית שבועית עכשיו לפי נתוני המשימות הקיימים בלבד. סמן הקשר חסר כלא ידוע, אל תסיק חשיבות משמות בלבד, ותן עד 3 נתיבי עבודה קצרים.\n\n[FLOWSTATE_CLARIFICATION_CONTINUATION mode=week_plan]`
+      : `Generate the weekly plan now from current task data only. Mark missing context as unknown, do not infer importance from names alone, and return up to 3 short work lanes.\n\n[FLOWSTATE_CLARIFICATION_CONTINUATION mode=week_plan]`)
+  }
 }
 
 function traceWeeklyQuestion(stage: string, details: Record<string, unknown> = {}): void {
@@ -707,9 +796,9 @@ function clarificationKey(card: AIClarificationArtifact): string {
 }
 
 function clarificationActionLabel(action: AIClarificationArtifact['actions'][number], locale: 'he' | 'en'): string {
-  if (action === 'generate_current') return locale === 'he' ? 'להמשיך עם אי-ודאות' : 'Generate with current info'
+  if (action === 'generate_current') return locale === 'he' ? 'צור תוכנית עכשיו' : 'Generate now'
   if (action === 'show_candidates') return locale === 'he' ? 'להראות מועמדים בלבד' : 'Show candidates only'
-  return locale === 'he' ? 'להשהות ולשמור' : 'Pause and save'
+  return locale === 'he' ? 'עצור ושמור' : 'Stop and save'
 }
 
 function clarificationActionEvent(action: AIClarificationArtifact['actions'][number]) {
@@ -2157,7 +2246,7 @@ async function saveSchedule() {
                   @click="recordClarificationEscape(clarification, action, $event)"
                 >
                   <X :size="13" aria-hidden="true" />
-                  <span class="sr-only">{{ clarificationActionLabel(action, clarification.locale) }}</span>
+                  <span>{{ clarificationActionLabel(action, clarification.locale) }}</span>
                 </button>
                 <span v-if="clarificationStatus" class="weekly-question-status">
                   {{ clarificationStatus }}
@@ -2348,6 +2437,24 @@ async function saveSchedule() {
                     {{ weeklyQuestionApplyLabel(question) }}
                   </span>
                 </button>
+                <button
+                  type="button"
+                  class="weekly-question-escape"
+                  :disabled="weeklyQuestionApplying[weeklyQuestionKey(question)]"
+                  @click="recordWeeklyQuestionEscape(question, 'generate_current', $event)"
+                >
+                  <X :size="13" aria-hidden="true" />
+                  <span>{{ weeklyPlan.locale === 'he' ? 'צור תוכנית עכשיו' : 'Generate now' }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="weekly-question-escape"
+                  :disabled="weeklyQuestionApplying[weeklyQuestionKey(question)]"
+                  @click="recordWeeklyQuestionEscape(question, 'pause_save', $event)"
+                >
+                  <X :size="13" aria-hidden="true" />
+                  <span>{{ weeklyPlan.locale === 'he' ? 'עצור ושמור' : 'Stop and save' }}</span>
+                </button>
               </div>
             </template>
             <div v-else class="weekly-question-action-row">
@@ -2358,16 +2465,135 @@ async function saveSchedule() {
           </div>
         </section>
 
+        <div
+          v-if="isCompactWeeklyPlan"
+          class="weekly-lane-board"
+          data-testid="weekly-lane-board"
+        >
+          <section
+            v-for="rec in weeklyPlan.recommendations"
+            v-show="!suppressedRecommendationIds[rec.sectionId]"
+            :key="rec.sectionId"
+            class="weekly-plan-section weekly-plan-section-compact weekly-visual-lane"
+            data-testid="weekly-visual-lane"
+            :data-section-id="rec.sectionId"
+            :data-primary-task-id="rec.primaryTaskId"
+          >
+            <div class="weekly-lane-header">
+              <div class="weekly-plan-focus" dir="auto">
+                {{ weeklyPlan.locale === 'he' ? 'נתיב' : 'Lane' }}: {{ rec.focusArea }}
+              </div>
+              <span class="weekly-lane-rank">{{ rec.rank }}</span>
+            </div>
+            <h3>{{ rec.title }}</h3>
+            <p>{{ rec.whyThisWeek }}</p>
+            <p class="weekly-next-action">
+              <strong>{{ weeklyPlan.locale === 'he' ? 'הצעד הבא' : 'Next action' }}:</strong>
+              {{ rec.nextAction }}
+            </p>
+            <div class="weekly-lane-actions">
+              <button
+                type="button"
+                class="weekly-open-lane-view"
+                data-testid="weekly-open-lane-view"
+                @click.stop="emit('requestWide')"
+              >
+                <Maximize2 :size="13" />
+                <span>{{ weeklyPlan.locale === 'he' ? 'פתח נתיב רחב' : 'Open lane view' }}</span>
+              </button>
+            </div>
+            <div
+              class="weekly-lane-track"
+              data-testid="weekly-lane-track"
+            >
+              <template v-for="taskId in weeklyPlanTaskIds(rec)" :key="`${rec.sectionId}:lane:${taskId}`">
+                <button
+                  v-if="taskCardFromId(taskId)"
+                  class="weekly-lane-task"
+                  :class="{
+                    'weekly-lane-task-primary': taskId === rec.primaryTaskId,
+                    'task-completed': completedTaskIds.has(taskId) || taskCardFromId(taskId)?.status === 'done',
+                  }"
+                  :data-testid="taskId === rec.primaryTaskId ? 'inline-plan-card' : undefined"
+                  @click="!isPlanSnapshotCard(taskCardFromId(taskId)) && openQuickEdit(taskCardFromId(taskId)!, $event)"
+                >
+                  <span class="task-priority-dot" :style="{ background: priorityColor(taskCardFromId(taskId)?.priority ?? undefined) }" />
+                  <span class="weekly-lane-task-body">
+                    <span
+                      class="weekly-lane-task-title"
+                      :data-testid="taskId === rec.primaryTaskId ? undefined : 'weekly-related-chip'"
+                      dir="auto"
+                    >
+                      {{ taskCardFromId(taskId)?.title || '(untitled)' }}
+                    </span>
+                    <span class="sr-only" data-testid="weekly-lane-task">{{ taskCardFromId(taskId)?.title || taskId }}</span>
+                    <span v-if="weeklyPlanTaskStaleLabel(taskCardFromId(taskId))" class="grouped-card-reason" dir="auto">
+                      {{ weeklyPlanTaskStaleLabel(taskCardFromId(taskId)) }}
+                    </span>
+                    <span class="task-meta-row">
+                      <span v-if="taskCardFromId(taskId)?.daysOverdue" class="task-overdue-badge">{{ taskCardFromId(taskId)?.daysOverdue }}d overdue</span>
+                      <span v-else-if="taskCardFromId(taskId)?.dueDate" class="task-due-date">{{ formatRelativeDate(taskCardFromId(taskId)?.dueDate ?? '') }}</span>
+                      <span v-if="taskCardFromId(taskId)?.status" class="task-status-badge" :class="'status-' + taskCardFromId(taskId)?.status">{{ taskCardFromId(taskId)?.status }}</span>
+                    </span>
+                  </span>
+                </button>
+                <div v-else class="weekly-missing-task" data-testid="inline-plan-card-missing">
+                  {{ weeklyPlan.locale === 'he' ? 'המשימה כבר לא קיימת' : 'Task no longer exists' }}
+                </div>
+              </template>
+            </div>
+            <div class="weekly-feedback-row" @click.stop>
+              <button
+                type="button"
+                class="weekly-feedback-btn"
+                :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:accept`])"
+                @click="recordRecommendationFeedback(rec, 'accept', undefined, true)"
+              >
+                {{ weeklyPlan.locale === 'he' ? 'קבל' : 'Accept' }}
+              </button>
+              <button
+                type="button"
+                class="weekly-feedback-btn"
+                :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:postpone`])"
+                @click="openRecommendationFeedbackChoice(rec, 'postpone')"
+              >
+                {{ weeklyPlan.locale === 'he' ? 'דחה' : 'Postpone' }}
+              </button>
+              <button
+                type="button"
+                class="weekly-feedback-btn"
+                :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:dismiss`])"
+                @click="openRecommendationFeedbackChoice(rec, 'dismiss')"
+              >
+                {{ weeklyPlan.locale === 'he' ? 'לא חשוב' : 'Not important' }}
+              </button>
+              <button
+                type="button"
+                class="weekly-feedback-btn"
+                :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:simplify`])"
+                @click="openRecommendationFeedbackChoice(rec, 'simplify')"
+              >
+                {{ weeklyPlan.locale === 'he' ? 'יותר מדי' : 'Too much' }}
+              </button>
+              <span v-if="recommendationFeedbackStatus[rec.sectionId]" class="weekly-question-status">
+                {{ recommendationFeedbackStatus[rec.sectionId] }}
+              </span>
+            </div>
+          </section>
+        </div>
+
         <section
-          v-for="rec in weeklyPlan.recommendations"
+          v-for="rec in isCompactWeeklyPlan ? [] : weeklyPlan.recommendations"
           v-show="!suppressedRecommendationIds[rec.sectionId]"
           :key="rec.sectionId"
           class="weekly-plan-section"
-          :class="{ 'weekly-plan-section-compact': isCompactWeeklyPlan }"
           :data-section-id="rec.sectionId"
           :data-primary-task-id="rec.primaryTaskId"
         >
-          <div v-if="!isCompactWeeklyPlan" class="weekly-plan-focus" dir="auto">{{ rec.focusArea }}</div>
+          <div class="weekly-plan-focus" dir="auto">
+            {{ isCompactWeeklyPlan && weeklyPlan.locale === 'he' ? 'נתיב' : isCompactWeeklyPlan ? 'Lane' : rec.focusArea }}
+            <template v-if="isCompactWeeklyPlan">: {{ rec.focusArea }}</template>
+          </div>
           <h3>{{ rec.rank }}. {{ rec.title }}</h3>
           <p v-if="!isCompactWeeklyPlan">{{ rec.whyThisMatters }}</p>
           <p>{{ rec.whyThisWeek }}</p>
@@ -4088,6 +4314,126 @@ async function saveSchedule() {
   margin-block-start: var(--space-1);
 }
 
+.weekly-lane-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.weekly-visual-lane {
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-subtle);
+}
+
+.weekly-lane-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.weekly-lane-rank {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+.weekly-lane-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.weekly-open-lane-view {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 1.75rem;
+  padding-block: 2px;
+  padding-inline: var(--space-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-soft);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.weekly-open-lane-view:hover {
+  border-color: var(--glass-border-strong);
+  color: var(--text-primary);
+}
+
+.weekly-lane-track {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-block: var(--space-1);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+
+.weekly-lane-task {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: clamp(11rem, 42vw, 15rem);
+  min-height: 5.25rem;
+  flex: 0 0 auto;
+  padding: var(--space-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-soft);
+  color: var(--text-primary);
+  text-align: start;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+
+.weekly-lane-task-primary {
+  border-color: var(--accent-primary);
+  background: var(--accent-bg);
+}
+
+.weekly-lane-task:hover {
+  border-color: var(--glass-border-strong);
+}
+
+.weekly-lane-task-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.weekly-lane-task-title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.panel-fullscreen .weekly-lane-task {
+  width: clamp(13rem, 18vw, 17rem);
+}
+
 .weekly-plan-questions {
   display: flex;
   flex-direction: column;
@@ -4299,12 +4645,17 @@ async function saveSchedule() {
   padding-inline: var(--space-3);
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-sm);
-  background: var(--brand-primary);
-  color: var(--bg-primary);
+  background: var(--glass-bg-soft);
+  color: var(--brand-primary);
+  backdrop-filter: blur(8px);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   line-height: 1.3;
   cursor: pointer;
+}
+
+.weekly-question-apply:hover:not(:disabled) {
+  background: var(--brand-primary-alpha-10);
 }
 
 .weekly-question-apply:disabled {

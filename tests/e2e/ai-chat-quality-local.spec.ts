@@ -482,6 +482,13 @@ test('weekly inline follow-up click advances the chat instead of staying on the 
     timeout: 15_000,
   }).toBeGreaterThan(assistantCountBefore)
   await expect(page.locator('.message-assistant').last()).toContainText(/Short plan after your clarification|תוכנית/, { timeout: 15_000 })
+  const compactPlan = page.locator('[data-testid="weekly-plan"]').last()
+  await expect(compactPlan).toContainText(/Compact answer from saved context|תשובה קצרה מההקשר ששמרת/, { timeout: 5_000 })
+  await expect(compactPlan.locator('.weekly-plan-section')).toHaveCount(2, { timeout: 5_000 })
+  await expect(compactPlan.locator('.weekly-plan-footer')).toHaveCount(0)
+  await expect(compactPlan).not.toContainText(/Intentional deferrals|Grounded task-evidence plan|Risk:/i)
+  const compactTextLength = await compactPlan.evaluate(el => (el.textContent || '').trim().length)
+  expect(compactTextLength).toBeLessThan(1400)
   await expect(page.locator('[data-testid="ai-activity-running"]')).toHaveCount(0, { timeout: 15_000 })
   await expect(page.locator('.ai-chat-input-container textarea')).toBeEnabled({ timeout: 5_000 })
 })

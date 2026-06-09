@@ -237,6 +237,20 @@ const weeklyPlan = computed(() => {
   return plan?.schemaVersion === 'weekly-plan.v2' ? plan : null
 })
 
+const isCompactWeeklyPlan = computed(() =>
+  weeklyPlan.value?.presentation?.density === 'compact_after_clarification'
+)
+
+function weeklyPlanSourceLabel(): string {
+  const locale = weeklyPlan.value?.locale ?? 'en'
+  if (isCompactWeeklyPlan.value) {
+    return locale === 'he' ? 'תשובה קצרה מההקשר ששמרת' : 'Compact answer from saved context'
+  }
+  return hasVisibleWeeklyRecommendations()
+    ? (locale === 'he' ? 'תוכנית מקורקעת מנתוני המשימות' : 'Grounded task-evidence plan')
+    : (locale === 'he' ? 'ממתין להקשר אמין' : 'Waiting for reliable context')
+}
+
 const clarification = computed(() => {
   const meta = props.message.metadata as Record<string, unknown> | undefined
   const card = meta?.clarification as AIClarificationArtifact | undefined
@@ -2063,15 +2077,11 @@ async function saveSchedule() {
       >
         <header class="weekly-plan-header">
           <div v-if="weeklyPlan.source === 'quick_draft'" class="weekly-plan-source">
-            {{
-              hasVisibleWeeklyRecommendations()
-                ? (weeklyPlan.locale === 'he' ? 'תוכנית מקורקעת מנתוני המשימות' : 'Grounded task-evidence plan')
-                : (weeklyPlan.locale === 'he' ? 'ממתין להקשר אמין' : 'Waiting for reliable context')
-            }}
+            {{ weeklyPlanSourceLabel() }}
           </div>
           <h2>{{ weeklyPlan.headline }}</h2>
           <p>{{ weeklyPlan.weekRead.summary }}</p>
-          <p v-if="weeklyPlan.weekRead.mainTradeoff" class="weekly-plan-muted">{{ weeklyPlan.weekRead.mainTradeoff }}</p>
+          <p v-if="weeklyPlan.weekRead.mainTradeoff && !isCompactWeeklyPlan" class="weekly-plan-muted">{{ weeklyPlan.weekRead.mainTradeoff }}</p>
         </header>
 
         <section
@@ -2135,14 +2145,15 @@ async function saveSchedule() {
           v-show="!suppressedRecommendationIds[rec.sectionId]"
           :key="rec.sectionId"
           class="weekly-plan-section"
+          :class="{ 'weekly-plan-section-compact': isCompactWeeklyPlan }"
           :data-section-id="rec.sectionId"
           :data-primary-task-id="rec.primaryTaskId"
         >
-          <div class="weekly-plan-focus" dir="auto">{{ rec.focusArea }}</div>
+          <div v-if="!isCompactWeeklyPlan" class="weekly-plan-focus" dir="auto">{{ rec.focusArea }}</div>
           <h3>{{ rec.rank }}. {{ rec.title }}</h3>
-          <p>{{ rec.whyThisMatters }}</p>
+          <p v-if="!isCompactWeeklyPlan">{{ rec.whyThisMatters }}</p>
           <p>{{ rec.whyThisWeek }}</p>
-          <p v-if="rec.riskIfIgnored" class="weekly-plan-muted">{{ rec.riskIfIgnored }}</p>
+          <p v-if="rec.riskIfIgnored && !isCompactWeeklyPlan" class="weekly-plan-muted">{{ rec.riskIfIgnored }}</p>
           <p class="weekly-next-action">
             <strong>{{ weeklyPlan.locale === 'he' ? 'הצעד הבא' : 'Next action' }}:</strong>
             {{ rec.nextAction }}
@@ -2312,7 +2323,7 @@ async function saveSchedule() {
           </div>
         </section>
 
-        <footer v-if="weeklyPlan.deferrals.length" class="weekly-plan-footer">
+        <footer v-if="weeklyPlan.deferrals.length && !isCompactWeeklyPlan" class="weekly-plan-footer">
           <div v-if="weeklyPlan.deferrals.length">
             <strong>{{ weeklyPlan.locale === 'he' ? 'לדחות בכוונה' : 'Intentional deferrals' }}</strong>
             <p v-for="defer in weeklyPlan.deferrals" :key="defer.taskId">{{ defer.reason }}</p>
@@ -3844,6 +3855,19 @@ async function saveSchedule() {
   gap: var(--space-2_5);
   padding-block-start: var(--space-4);
   border-block-start: 1px solid var(--glass-border-faint);
+}
+
+.weekly-plan-section-compact {
+  gap: var(--space-1_5);
+  padding-block-start: var(--space-3);
+}
+
+.weekly-plan-section-compact h3 {
+  font-size: var(--text-sm);
+}
+
+.weekly-plan-section-compact .weekly-plan-cards {
+  margin-block-start: var(--space-1);
 }
 
 .weekly-plan-questions {

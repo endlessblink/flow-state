@@ -2247,7 +2247,7 @@ export function useAIChat() {
           const finalPlan = buildQuickDraftWeeklyPlan(weekContext, {
             allowClarificationFirst: false,
             compactUncertainty: true,
-            maxRecommendations: 3,
+            maxRecommendations: 2,
           })
           const existingPhase = store.activityEvents.find(event => event.id === phaseActivityId)
           const startedAt = existingPhase?.metadata?.startedAt ?? Date.now()
@@ -2344,7 +2344,7 @@ export function useAIChat() {
             ? buildQuickDraftWeeklyPlan(weekContext, {
                 allowClarificationFirst: false,
                 compactUncertainty: true,
-                maxRecommendations: 3,
+                maxRecommendations: 2,
               })
             : buildQuickDraftWeeklyPlan(weekContext, {
                 allowClarificationFirst: false,

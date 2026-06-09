@@ -654,6 +654,7 @@ describe('AI sidebar-first desktop experience', () => {
     })
     expect(compactDraft.headline).toContain('Short plan')
     expect(compactDraft.recommendations).toHaveLength(2)
+    expect(compactDraft.presentation?.density).toBe('compact_after_clarification')
     expect(validateWeeklyPlanOutput(compactDraft, context, { compactAfterClarification: true })).not.toContain('recommendation_count_out_of_range')
     expect(validateWeeklyPlanOutput(compactDraft, context)).toContain('recommendation_count_out_of_range')
 

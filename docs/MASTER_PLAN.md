@@ -8,7 +8,7 @@
 
 **Why this lane overrides the broader memory lane for now**: The live user flow still produced a generic task-card dump for a Hebrew "plan the rest of the week" request. That means the product-visible planner is not ready, regardless of memory-schema progress. Resume here until the browser flow proves the assistant can clarify, learn, and produce a compact plan without embarrassing output.
 
-**Current cursor**: ✅ Headed localhost follow-up-click proof passed on 2026-06-09 after the user reported the inline follow-up card stayed stuck. Next work should attack the remaining low-overwhelm output-quality issue: post-continuation answers can still be too verbose even when the click/continuation path works.
+**Current cursor**: ✅ Headed localhost follow-up-click and compact-output proof passed on 2026-06-09 after the user reported the inline follow-up card stayed stuck and the continuation answer was too verbose.
 
 **Hard rules for this focused lane**:
 - Do not add more broad memory architecture work until this lane passes real localhost browser proof.
@@ -85,6 +85,24 @@
 - `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts -t "continues weekly planning immediately|lets weekly-plan question buttons create"` → 2/2 focused tests passed.
 - `npm run type-check` → passed.
 
+### TASK-1848: Compact post-continuation weekly answer rendering (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed/proved 2026-06-09) | **Depends on**: TASK-1847
+
+**Why**: After the follow-up click advanced, the next answer could still render like a mini weekly report: source label, multiple prose paragraphs per task, risks, and deferral footer. That made a working continuation still feel useless.
+
+**Acceptance**:
+- Post-clarification weekly plans carry an explicit compact presentation mode.
+- The compact continuation path returns at most 2 recommendations.
+- Compact rendering shows title, one grounded reason, next action, controls, and task card only.
+- Compact rendering hides full-plan tradeoff prose, focus labels, risk paragraphs, and deferral footers.
+- Headed browser proof must check rendered content length and visible section count.
+
+**Proof**:
+- `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly inline follow-up click" --headed` → 1/1 passed with compact-output assertions.
+- `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts -t "structured artifact|weekly plan quality gate|continues weekly planning immediately|lets weekly-plan question buttons create"` → 3/3 focused tests passed.
+- `npm run type-check` → passed.
+
 **Focused proof gate before user testing**:
 - Unit tests for flexible weekly intent, iterative clarification continuation, no blocking memory persistence, and no repeated questions.
 - Playwright localhost user flow with seeded tasks:
@@ -95,7 +113,7 @@
   5. Choose generate/current-info escape and receive a compact 3-5 item weekly plan.
   6. Repeat with an English flexible prompt and verify it routes to weekly planning.
 
-**Gate status**: ✅ Follow-up stuck-click path passed in headed localhost on 2026-06-09. Earlier broad smoke remains useful, but the next gate should explicitly fail overlong post-continuation answers before asking the user to test again.
+**Gate status**: ✅ Follow-up stuck-click and compact post-continuation output passed in headed localhost on 2026-06-09. The next gate is broader real-flow compactness beyond this seeded follow-up scenario.
 
 ---
 

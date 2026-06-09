@@ -276,6 +276,9 @@ export type WeeklyPlanOutput = {
     confidence: 'low' | 'medium' | 'high'
     caveats: string[]
   }
+  presentation?: {
+    density?: 'standard' | 'compact_after_clarification'
+  }
   source?: 'model' | 'quick_draft'
 }
 
@@ -464,7 +467,16 @@ export function parseWeeklyPlanOutput(raw: string, context: WeekContext, options
   }
   const errors = validateWeeklyPlanOutput(value, context, options)
   if (errors.length) return { ok: false, errors }
-  return { ok: true, value: { ...(value as WeeklyPlanOutput), source: 'model' } }
+  return {
+    ok: true,
+    value: {
+      ...(value as WeeklyPlanOutput),
+      presentation: options.compactAfterClarification
+        ? { ...(value as WeeklyPlanOutput).presentation, density: 'compact_after_clarification' }
+        : (value as WeeklyPlanOutput).presentation,
+      source: 'model',
+    },
+  }
 }
 
 export function validateWeeklyPlanOutput(value: unknown, context: WeekContext, options: WeeklyPlanResponseOptions = {}): string[] {
@@ -760,6 +772,7 @@ export function buildQuickDraftWeeklyPlan(
               : 'The model answer was rejected or unavailable; showing a grounded plan from task evidence.'),
       ],
     },
+    presentation: compactUncertainty ? { density: 'compact_after_clarification' } : { density: 'standard' },
     source: 'quick_draft',
   }
 }

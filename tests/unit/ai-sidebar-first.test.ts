@@ -3040,6 +3040,75 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('Why now:')
   })
 
+  it('suppresses a persisted weekly clarification card when recent memory already answered it', async () => {
+    supabaseDbMocks.fetchAIClarificationEvents.mockResolvedValueOnce([{
+      entityKey: 'week:2026-05-30',
+      entityType: 'week',
+      questionId: 'week_importance_2026-05-30',
+      eventType: 'answered',
+      selectedLabel: 'התחייבות עבודה',
+      createdAt: '2026-06-10T08:00:00.000Z',
+    }])
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-stale-week-clarification',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            clarification: {
+              schemaVersion: 'ai-clarification.v1',
+              kind: 'weekly_planning',
+              locale: 'he',
+              direction: 'rtl',
+              progressLabel: 'מבהיר סדרי עדיפויות • שלב 3/3',
+              summary: 'חסר לי פרט אחד שישנה את הדירוג.',
+              memoryKey: 'week:2026-06-06',
+              pathType: 'clarify_first',
+              candidateTaskIds: [],
+              actions: ['generate_current', 'show_candidates', 'pause_save'],
+              coverage: {
+                score: 0.25,
+                materiality: 'high',
+                dimensions: { impact: 0, preferences: 0 },
+                missing: ['impact', 'preferences'],
+                decision: 'ask',
+              },
+              question: {
+                id: 'week_importance_2026-06-06',
+                entityType: 'week',
+                entityId: '2026-06-06',
+                reason: 'missing_week_priorities',
+                question: 'מה הכי חשוב להגן עליו השבוע?',
+                options: [],
+                allowFreeText: true,
+                relatedTaskIds: [],
+              },
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="ai-clarification"]').exists()).toBe(true)
+
+    await flushPromises()
+    await nextTick()
+
+    expect(supabaseDbMocks.fetchAIClarificationEvents).toHaveBeenCalledWith(expect.arrayContaining([
+      'week:2026-06-06',
+      'week:2026-05-30',
+    ]), 50)
+    expect(wrapper.find('[data-testid="ai-clarification"]').exists()).toBe(false)
+  })
+
   it('keeps clarification escape actions text-sized instead of icon-only buttons', () => {
     const chatMessage = src('src/components/ai/ChatMessage.vue')
 

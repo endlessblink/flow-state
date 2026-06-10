@@ -92,6 +92,7 @@ const clarificationFreeText = ref<Record<string, string>>({})
 const clarificationApplying = ref(false)
 const clarificationStatus = ref('')
 const clarificationSavedLocal = ref<Record<string, boolean>>({})
+const clarificationResolvedLocal = ref<Record<string, boolean>>({})
 const clarificationFollowUpAnswers = ref<Record<string, string>>({})
 const clarificationFollowUpFreeText = ref<Record<string, string>>({})
 const clarificationFollowUpSavedLocal = ref<Record<string, boolean>>({})
@@ -301,7 +302,8 @@ function weeklyPlanSourceLabel(): string {
 const clarification = computed(() => {
   const meta = props.message.metadata as Record<string, unknown> | undefined
   const card = meta?.clarification as AIClarificationArtifact | undefined
-  return card?.schemaVersion === 'ai-clarification.v1' ? card : null
+  if (card?.schemaVersion !== 'ai-clarification.v1') return null
+  return clarificationResolvedLocal.value[clarificationKey(card)] ? null : card
 })
 
 const weeklyPlanSnapshotDueByTaskId = computed(() => {
@@ -592,14 +594,85 @@ async function hydrateAnsweredWeeklyQuestions(): Promise<void> {
   }
 }
 
+function isWeekImportanceClarification(questionId: string | undefined | null): boolean {
+  return Boolean(questionId && /^week_importance_/.test(questionId))
+}
+
+function isWeekEntityKey(entityKey: string | undefined | null): boolean {
+  return Boolean(entityKey && /^week:\d{4}-\d{2}-\d{2}/.test(entityKey))
+}
+
+function recentWeekKeysFromMemoryKey(memoryKey: string): string[] {
+  const match = memoryKey.match(/^week:(\d{4}-\d{2}-\d{2})/)
+  if (!match) return [memoryKey]
+  const date = new Date(match[1])
+  if (Number.isNaN(date.getTime())) return [memoryKey]
+  return Array.from({ length: 8 }, (_, index) => {
+    const week = new Date(date)
+    week.setDate(date.getDate() - (index * 7))
+    return `week:${week.toISOString().slice(0, 10)}`
+  })
+}
+
+function clarificationEventResolvesCard(card: AIClarificationArtifact, event: {
+  entityKey?: string | null
+  questionId?: string | null
+  eventType?: string | null
+}): boolean {
+  const resolvedTypes = ['answered', 'dismissed', 'generated_with_uncertainty', 'showed_candidates']
+  if (!event.eventType || !resolvedTypes.includes(event.eventType)) return false
+  if (event.entityKey === card.memoryKey && event.questionId === card.question.id) return true
+  if (!isWeekImportanceClarification(card.question.id)) return false
+  return isWeekEntityKey(event.entityKey) && isWeekImportanceClarification(event.questionId)
+}
+
+async function hydrateAnsweredClarification(): Promise<void> {
+  const card = clarification.value
+  if (!card) return
+  const entityKeys = isWeekImportanceClarification(card.question.id)
+    ? recentWeekKeysFromMemoryKey(card.memoryKey)
+    : [card.memoryKey]
+  try {
+    const events = await aiMemoryDb.fetchAIClarificationEvents(entityKeys, 50)
+    if (!events.some(event => clarificationEventResolvesCard(card, event))) return
+    clarificationResolvedLocal.value = {
+      ...clarificationResolvedLocal.value,
+      [clarificationKey(card)]: true,
+    }
+    console.info('[AIChat:ClarificationRender]', {
+      stage: 'answered_clarification_suppressed',
+      messageId: props.message.id,
+      questionId: card.question.id,
+      entityKeys,
+    })
+  } catch (err) {
+    console.error('[AIChat:ClarificationRender]', {
+      stage: 'answered_clarification_hydration_failed',
+      messageId: props.message.id,
+      error: err,
+    })
+  }
+}
+
 onMounted(() => {
   void hydrateAnsweredWeeklyQuestions()
+  void hydrateAnsweredClarification()
 })
 
 watch(
   () => weeklyPlan.value?.requestId,
   () => {
     void hydrateAnsweredWeeklyQuestions()
+  },
+)
+
+watch(
+  () => {
+    const card = clarification.value
+    return card ? `${card.memoryKey}::${card.question.id}` : ''
+  },
+  () => {
+    void hydrateAnsweredClarification()
   },
 )
 
@@ -4401,8 +4474,8 @@ async function saveSchedule() {
 
 .weekly-visual-lane {
   display: grid;
-  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
-  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2_5);
   min-width: 0;
   padding-block: var(--space-3);
   border-block-start: 1px solid var(--glass-border-faint);
@@ -4410,23 +4483,24 @@ async function saveSchedule() {
 }
 
 [dir="rtl"] .weekly-visual-lane {
-  grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .weekly-lane-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
   min-width: 0;
-  flex-direction: column;
   gap: var(--space-2);
 }
 
 [dir="rtl"] .weekly-lane-header {
-  grid-column: 2;
+  grid-column: auto;
 }
 
 [dir="rtl"] .weekly-lane-content {
-  grid-column: 1;
-  grid-row: 1;
+  grid-column: auto;
+  grid-row: auto;
 }
 
 .weekly-lane-heading {
@@ -4469,21 +4543,21 @@ async function saveSchedule() {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--space-2);
-  align-items: center;
+  align-items: stretch;
   min-width: 0;
 }
 
 .weekly-lane-summary {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(8rem, auto);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
   align-items: baseline;
   min-width: 0;
 }
 
 [dir="rtl"] .weekly-lane-summary {
-  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .weekly-open-lane-view {
@@ -4510,7 +4584,7 @@ async function saveSchedule() {
   display: inline-grid;
   place-items: center;
   width: 1.875rem;
-  height: 100%;
+  height: auto;
   min-height: 4.75rem;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
@@ -4544,7 +4618,7 @@ async function saveSchedule() {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  width: clamp(10.5rem, 32vw, 14rem);
+  width: clamp(11.5rem, 46vw, 15rem);
   min-height: 4.75rem;
   flex: 0 0 auto;
   padding: var(--space-2);
@@ -4586,16 +4660,16 @@ async function saveSchedule() {
 }
 
 .panel-fullscreen .weekly-lane-task {
-  width: clamp(12rem, 17vw, 16rem);
+  width: clamp(13rem, 22vw, 17rem);
 }
 
 .panel-fullscreen .weekly-visual-lane {
-  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .panel-fullscreen[dir="rtl"] .weekly-visual-lane,
 [dir="rtl"] .panel-fullscreen .weekly-visual-lane {
-  grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 @media (max-width: 720px) {

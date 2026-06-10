@@ -518,6 +518,76 @@ async function visibleInlineCardTitles(scope: Locator): Promise<string[]> {
   return (await scope.locator('[data-testid="inline-ai-task-card"] .task-title').allTextContents()).map(title => title.trim())
 }
 
+async function expectCompactWeeklyLaneLayoutStable(plan: Locator) {
+  const lanes = plan.locator('[data-testid="weekly-visual-lane"]')
+  await expect(lanes.first()).toBeVisible({ timeout: 10_000 })
+  const laneCount = await lanes.count()
+  expect(laneCount).toBeGreaterThan(0)
+
+  for (let index = 0; index < laneCount; index += 1) {
+    const lane = lanes.nth(index)
+    await expect(lane.locator('[data-testid="weekly-lane-track"]')).toBeVisible({ timeout: 10_000 })
+    await lane.scrollIntoViewIfNeeded()
+
+    const geometry = await lane.evaluate((el) => {
+      const rectFor = (selector: string) => {
+        const node = el.querySelector(selector)
+        if (!node) return null
+        const rect = node.getBoundingClientRect()
+        return {
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        }
+      }
+      const intersects = (
+        a: ReturnType<typeof rectFor>,
+        b: ReturnType<typeof rectFor>,
+      ) => Boolean(a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top)
+
+      const laneRect = el.getBoundingClientRect()
+      const laneBox = {
+        left: laneRect.left,
+        right: laneRect.right,
+        top: laneRect.top,
+        bottom: laneRect.bottom,
+        width: laneRect.width,
+        height: laneRect.height,
+      }
+      const header = rectFor('.weekly-lane-header')
+      const summary = rectFor('.weekly-lane-summary')
+      const track = rectFor('[data-testid="weekly-lane-track"]')
+      const firstCard = rectFor('.weekly-lane-task')
+
+      return {
+        lane: laneBox,
+        header,
+        summary,
+        track,
+        firstCard,
+        headerOverlapsTrack: intersects(header, track),
+        summaryOverlapsTrack: intersects(summary, track),
+        trackInsideLane: Boolean(track && track.left >= laneBox.left - 2 && track.right <= laneBox.right + 2),
+        firstCardInsideTrack: Boolean(firstCard && track && firstCard.left >= track.left - 2 && firstCard.right <= track.right + 2),
+        firstCardStartsInTrack: Boolean(firstCard && track && firstCard.top >= track.top - 2 && firstCard.bottom <= track.bottom + 2),
+      }
+    })
+
+    expect(geometry.header).toBeTruthy()
+    expect(geometry.summary).toBeTruthy()
+    expect(geometry.track).toBeTruthy()
+    expect(geometry.firstCard).toBeTruthy()
+    expect(geometry.headerOverlapsTrack).toBe(false)
+    expect(geometry.summaryOverlapsTrack).toBe(false)
+    expect(geometry.trackInsideLane).toBe(true)
+    expect(geometry.firstCardInsideTrack).toBe(true)
+    expect(geometry.firstCardStartsInTrack).toBe(true)
+  }
+}
+
 test('weekly planning asks first, does not dump recommendations, and does not get stuck after answers', async ({ page }) => {
   await seedGuestWorkspace(page)
   await stubBridge(page)
@@ -758,6 +828,11 @@ test('answered weekly priority question disappears and continues to compact plan
   const compactPlan = page.locator('[data-testid="weekly-plan"]').last()
   await expect(compactPlan).toContainText(/נתיבי עבודה|work lanes|נתיב|Lane/, { timeout: 10_000 })
   await expect(compactPlan.locator('[data-testid="weekly-plan-questions"]')).toHaveCount(0)
+  await expectCompactWeeklyLaneLayoutStable(compactPlan)
+  await page.screenshot({ path: '/tmp/flowstate-weekly-lanes-user-flow.png', fullPage: false })
+  await compactPlan.locator('[data-testid="weekly-open-lane-view"]').first().click()
+  await expectCompactWeeklyLaneLayoutStable(compactPlan)
+  await page.screenshot({ path: '/tmp/flowstate-weekly-lanes-wide-user-flow.png', fullPage: false })
   await expect(page.locator('.ai-chat-messages')).not.toContainText(/מה הכי חשוב להגן עליו השבוע\?.*מה הכי חשוב להגן עליו השבוע\?/s)
   await expect(page.locator('.ai-chat-input-container textarea')).toBeEnabled({ timeout: 5_000 })
 })

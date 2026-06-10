@@ -2974,6 +2974,17 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('Why now:')
   })
 
+  it('keeps clarification escape actions text-sized instead of icon-only buttons', () => {
+    const chatMessage = src('src/components/ai/ChatMessage.vue')
+
+    expect(chatMessage).toContain('.ai-clarification-message .weekly-question-escape')
+    expect(chatMessage).toContain('.ai-clarification-message .weekly-question-escape svg')
+    expect(chatMessage).toContain('width: auto;')
+    expect(chatMessage).toContain('height: auto;')
+    expect(chatMessage).toContain('white-space: normal;')
+    expect(chatMessage).toContain('overflow-wrap: anywhere;')
+  })
+
   it('does not ask the why-now follow-up again when the first clarification already includes free text', async () => {
     const wrapper = mount(ChatMessage, {
       props: {

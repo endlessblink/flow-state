@@ -4879,6 +4879,48 @@ async function saveSchedule() {
   opacity: 0.55;
 }
 
+.ai-clarification-message .weekly-question-action-row {
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.ai-clarification-message .weekly-question-apply {
+  flex: 0 0 auto;
+  min-width: 8.5rem;
+}
+
+.ai-clarification-message .weekly-question-escape {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  min-height: 32px;
+  flex: 0 1 auto;
+  padding-block: var(--space-1_5);
+  padding-inline: var(--space-2_5);
+  white-space: normal;
+  text-align: center;
+}
+
+.ai-clarification-message .weekly-question-escape svg {
+  display: none;
+}
+
+.ai-clarification-message .weekly-question-escape span {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .ai-clarification-message .weekly-question-action-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .ai-clarification-message .weekly-question-apply,
+  .ai-clarification-message .weekly-question-escape {
+    width: 100%;
+  }
+}
+
 .weekly-question-status {
   flex-basis: 100%;
   color: var(--text-secondary);

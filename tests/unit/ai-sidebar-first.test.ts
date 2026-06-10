@@ -1357,6 +1357,72 @@ describe('AI sidebar-first desktop experience', () => {
     ]))
   })
 
+  it('does not repeat the weekly priority question after a recent equivalent answer', () => {
+    const tasks = [
+      {
+        id: 'task-weekly-generic-a',
+        title: 'Review open weekly notes',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-09T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-weekly-generic-b',
+        title: 'Sort planning backlog',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-11',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-09T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-weekly-generic-c',
+        title: 'Clean up loose tasks',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-12',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-09T08:00:00Z'),
+      } as Task,
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'he',
+      new Date('2026-06-10T09:00:00Z'),
+    )
+    const firstInterview = buildWeeklyPlanningInterview(context, [])
+    const firstQuestionId = firstInterview?.question.id
+
+    expect(firstQuestionId).toMatch(/^week_importance_/)
+
+    const previousWeekAnswer = {
+      entityKey: 'week:2026-05-30',
+      entityType: 'week',
+      questionId: 'week_importance_2026-05-30',
+      eventType: 'answered',
+      selectedLabel: 'התחייבות עבודה',
+      createdAt: new Date().toISOString(),
+    } as const
+    const dedupedInterview = buildWeeklyPlanningInterview(context, [previousWeekAnswer])
+
+    expect(dedupedInterview).toBeNull()
+  })
+
   it('does not ask for project meaning when task notes already lower the question value', () => {
     const tasks = [
       {

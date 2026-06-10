@@ -1350,12 +1350,25 @@ function recentClarificationResolved(events: AIClarificationEvent[], entityKey: 
   const cooldownMs = 14 * MS_PER_DAY
   const cutoff = Date.now() - cooldownMs
   return events.some(event =>
-    event.entityKey === entityKey &&
-    event.questionId === questionId &&
+    clarificationEventMatchesQuestion(event, entityKey, questionId) &&
     ['asked', 'answered', 'dismissed', 'generated_with_uncertainty', 'showed_candidates'].includes(event.eventType) &&
     event.createdAt &&
     new Date(event.createdAt).getTime() >= cutoff
   )
+}
+
+function clarificationEventMatchesQuestion(event: AIClarificationEvent, entityKey: string, questionId: string): boolean {
+  if (event.entityKey === entityKey && event.questionId === questionId) return true
+  if (!isWeekImportanceQuestion(questionId)) return false
+  return isWeekEntityKey(event.entityKey) && isWeekImportanceQuestion(event.questionId)
+}
+
+function isWeekImportanceQuestion(questionId: string | undefined | null): boolean {
+  return Boolean(questionId && /^week_importance_/.test(questionId))
+}
+
+function isWeekEntityKey(entityKey: string | undefined | null): boolean {
+  return Boolean(entityKey && /^week:\d{4}-\d{2}-\d{2}$/.test(entityKey))
 }
 
 function weeklyClarificationStep(events: AIClarificationEvent[]): number {

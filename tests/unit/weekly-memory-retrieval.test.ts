@@ -193,6 +193,13 @@ describe('retrieveWeeklyAIMemory', () => {
       `task:${taskId}`,
       'task:local-temp-task',
       'week:2026-06-08',
+      'week:2026-06-01',
+      'week:2026-05-25',
+      'week:2026-05-18',
+      'week:2026-05-11',
+      'week:2026-05-04',
+      'week:2026-04-27',
+      'week:2026-04-20',
       'preference:ranking_focus',
       'preference:energy_fit',
       'preference:follow_through',
@@ -243,6 +250,24 @@ describe('retrieveWeeklyAIMemory', () => {
     expect(JSON.stringify(result.memory)).not.toContain('User said uncategorized')
     expect(JSON.stringify(result.memory)).not.toContain('Synthetic bucket context')
     expect(JSON.stringify(result.diagnostics)).not.toContain('User said uncategorized')
+  })
+
+  it('retrieves recent weekly clarification history so repeated priority questions are visible', async () => {
+    const db = dbStub()
+
+    await retrieveWeeklyAIMemory({
+      db,
+      now: new Date('2026-06-10T10:00:00.000Z'),
+      timeoutMs: 200,
+      cardTasks: [{ id: taskId, projectId, title: 'Known task' }],
+    })
+
+    expect(db.fetchAIClarificationEvents).toHaveBeenCalledWith(expect.arrayContaining([
+      'week:2026-06-08',
+      'week:2026-06-01',
+      'week:2026-05-25',
+      'week:2026-05-18',
+    ]), 40)
   })
 
   it('filters stale memory snapshots out of weekly planning evidence while keeping lifecycle diagnostics', async () => {

@@ -9,6 +9,7 @@ const WEEKLY_GLOBAL_MEMORY_ENTITY_KEYS = [
   'preference:follow_through',
   'preference:brevity',
 ]
+const WEEKLY_CLARIFICATION_HISTORY_WEEKS = 8
 
 export type WeeklyMemoryRetrievalSource = 'hybrid_sql' | 'fallback'
 export type WeeklyMemoryRetrievalStage =
@@ -84,8 +85,9 @@ export async function retrieveWeeklyAIMemory(input: WeeklyMemoryRetrievalInput):
   const projectIds = uniqueSupabaseIds(rawProjectIds)
   const projectEntityKeys = rawProjectIds.map(projectEntityKey)
   const weekEntityKey = `week:${weekStartKey(input.now)}`
+  const recentWeekEntityKeys = recentWeekEntityKeysFor(input.now, WEEKLY_CLARIFICATION_HISTORY_WEEKS)
   const entityKeys = uniqueStrings([...projectEntityKeys, ...taskEntityKeys, weekEntityKey])
-  const beliefEntityKeys = uniqueStrings([...entityKeys, ...WEEKLY_GLOBAL_MEMORY_ENTITY_KEYS])
+  const beliefEntityKeys = uniqueStrings([...entityKeys, ...recentWeekEntityKeys, ...WEEKLY_GLOBAL_MEMORY_ENTITY_KEYS])
   const fallbackDiagnostics = (timedOut: boolean): WeeklyMemoryRetrievalDiagnostics => ({
     source: 'fallback',
     entityKeyCount: entityKeys.length,
@@ -379,6 +381,15 @@ function weekStartKey(now: Date): string {
   const diff = date.getDate() - day + (day === 0 ? -6 : 1)
   date.setDate(diff)
   return date.toISOString().slice(0, 10)
+}
+
+function recentWeekEntityKeysFor(now: Date, weekCount: number): string[] {
+  const weekStart = new Date(weekStartKey(now))
+  return Array.from({ length: Math.max(1, weekCount) }, (_, index) => {
+    const date = new Date(weekStart)
+    date.setDate(weekStart.getDate() - (index * 7))
+    return `week:${date.toISOString().slice(0, 10)}`
+  })
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {

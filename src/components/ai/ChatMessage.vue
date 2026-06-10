@@ -341,11 +341,10 @@ function scrollWeeklyLane(rec: WeeklyPlanRecommendation, direction: 'previous' |
   event.stopPropagation()
   const el = weeklyLaneTrackRefs.value[rec.sectionId]
   if (!el) return
-  const amount = Math.max(180, Math.round(el.clientWidth * 0.72))
-  const isRtl = (weeklyPlan.value?.direction ?? 'ltr') === 'rtl'
+  const amount = Math.max(180, Math.round(el.clientWidth * 0.78))
   const signed = direction === 'next' ? 1 : -1
   el.scrollBy({
-    left: signed * amount * (isRtl ? -1 : 1),
+    left: signed * amount,
     behavior: 'smooth',
   })
 }
@@ -375,11 +374,11 @@ function weeklyLaneSubtitle(rec: WeeklyPlanRecommendation): string {
   const focus = rec.focusArea.trim()
   const isGeneric = /^(work|work delivery|מסירת עבודה)$/i.test(focus)
   if (locale === 'he') {
-    const source = isGeneric ? 'מקור: Work, לא משמעות מוכחת' : `מקור: ${focus}`
-    return `${source} · ${count} כרטיסים בנתיב`
+    const source = isGeneric ? 'Work ללא משמעות מוכחת' : focus
+    return `${source} · ${count} משימות מחוברות`
   }
-  const source = isGeneric ? 'Source: Work, not proven meaning' : `Source: ${focus}`
-  return `${source} · ${count} cards in lane`
+  const source = isGeneric ? 'Work label, meaning unproven' : focus
+  return `${source} · ${count} connected tasks`
 }
 
 function weeklyPlanRecommendationForTask(taskId: string): WeeklyPlanRecommendation | undefined {
@@ -2629,16 +2628,16 @@ async function saveSchedule() {
                   {{ rec.nextAction }}
                 </p>
               </div>
+              <div class="weekly-lane-rail" :class="{ 'has-arrows': shouldShowLaneArrows(rec) }">
               <button
                 v-if="shouldShowLaneArrows(rec)"
                 type="button"
                 class="weekly-lane-arrow weekly-lane-arrow-prev"
                 data-testid="weekly-lane-arrow-prev"
-                :aria-label="weeklyPlan.locale === 'he' ? 'גלול לנתיב הקודם' : 'Scroll lane backward'"
+                :aria-label="weeklyPlan.locale === 'he' ? 'גלול אחורה בנתיב' : 'Scroll lane backward'"
                 @click="scrollWeeklyLane(rec, 'previous', $event)"
               >
-                <ChevronRight v-if="weeklyPlan.direction === 'rtl'" :size="16" />
-                <ChevronLeft v-else :size="16" />
+                <ChevronLeft :size="15" />
               </button>
               <div
                 :ref="el => setWeeklyLaneTrackRef(rec.sectionId, el)"
@@ -2686,12 +2685,12 @@ async function saveSchedule() {
                 type="button"
                 class="weekly-lane-arrow weekly-lane-arrow-next"
                 data-testid="weekly-lane-arrow-next"
-                :aria-label="weeklyPlan.locale === 'he' ? 'גלול לנתיב הבא' : 'Scroll lane forward'"
+                :aria-label="weeklyPlan.locale === 'he' ? 'גלול קדימה בנתיב' : 'Scroll lane forward'"
                 @click="scrollWeeklyLane(rec, 'next', $event)"
               >
-                <ChevronLeft v-if="weeklyPlan.direction === 'rtl'" :size="16" />
-                <ChevronRight v-else :size="16" />
+                <ChevronRight :size="15" />
               </button>
+              </div>
             </div>
             <div class="weekly-feedback-row" @click.stop>
               <button
@@ -4540,10 +4539,9 @@ async function saveSchedule() {
 }
 
 .weekly-lane-content {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
-  align-items: stretch;
   min-width: 0;
 }
 
@@ -4558,6 +4556,19 @@ async function saveSchedule() {
 
 [dir="rtl"] .weekly-lane-summary {
   grid-template-columns: minmax(0, 1fr);
+}
+
+.weekly-lane-rail {
+  position: relative;
+  min-width: 0;
+  overflow: visible;
+  border: 1px solid var(--glass-border-faint);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--glass-bg-subtle) 72%, transparent);
+}
+
+.weekly-lane-rail.has-arrows {
+  padding-inline: 0;
 }
 
 .weekly-open-lane-view {
@@ -4581,16 +4592,26 @@ async function saveSchedule() {
 }
 
 .weekly-lane-arrow {
-  display: inline-grid;
+  position: absolute;
+  top: var(--space-1);
+  bottom: var(--space-1);
+  z-index: 1;
+  display: none;
   place-items: center;
   width: 1.875rem;
-  height: auto;
-  min-height: 4.75rem;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   background: var(--glass-bg-subtle);
   color: var(--text-secondary);
   cursor: pointer;
+}
+
+.weekly-lane-arrow-prev {
+  left: var(--space-1);
+}
+
+.weekly-lane-arrow-next {
+  right: var(--space-1);
 }
 
 .weekly-lane-arrow:hover {
@@ -4600,28 +4621,45 @@ async function saveSchedule() {
 }
 
 .weekly-lane-track {
+  position: relative;
   display: flex;
   flex-direction: row;
-  gap: var(--space-2);
-  direction: inherit;
+  flex-wrap: nowrap;
+  gap: var(--space-1_5);
+  direction: ltr;
   min-width: 0;
-  padding: var(--space-1);
-  overflow-x: auto;
-  overflow-y: hidden;
+  width: 100%;
+  padding: var(--space-2);
+  overflow: visible;
   overscroll-behavior-x: contain;
-  scroll-snap-type: x proximity;
-  scrollbar-width: thin;
-  border-inline: 1px solid var(--glass-border-faint);
+  scrollbar-width: none;
+}
+
+.weekly-lane-track::before {
+  position: absolute;
+  inset-inline: var(--space-4);
+  top: 50%;
+  height: 1px;
+  background: var(--glass-border);
+  content: '';
+  transform: translateY(-50%);
+}
+
+.weekly-lane-track::-webkit-scrollbar {
+  display: none;
 }
 
 .weekly-lane-task {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: flex-start;
-  gap: var(--space-2);
-  width: clamp(11.5rem, 46vw, 15rem);
-  min-height: 4.75rem;
-  flex: 0 0 auto;
-  padding: var(--space-2);
+  gap: var(--space-1_5);
+  width: auto;
+  min-width: 0;
+  min-height: 4rem;
+  flex: 1 1 0;
+  padding: var(--space-2) var(--space-1_5);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   background: var(--glass-bg-soft);
@@ -4652,23 +4690,28 @@ async function saveSchedule() {
   display: -webkit-box;
   overflow: hidden;
   color: var(--text-primary);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--font-medium);
-  line-height: 1.3;
+  line-height: 1.25;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
-.panel-fullscreen .weekly-lane-task {
-  width: clamp(13rem, 22vw, 17rem);
+:global(.panel-fullscreen) .weekly-lane-task {
+  width: clamp(13.5rem, 30%, 18rem);
 }
 
-.panel-fullscreen .weekly-visual-lane {
+:global(.panel-fullscreen) .weekly-visual-lane {
   grid-template-columns: minmax(0, 1fr);
+  padding-inline: var(--space-3);
 }
 
-.panel-fullscreen[dir="rtl"] .weekly-visual-lane,
-[dir="rtl"] .panel-fullscreen .weekly-visual-lane {
+:global(.panel-fullscreen) .weekly-lane-rail.has-arrows {
+  padding-inline: 2.625rem;
+}
+
+:global(.panel-fullscreen[dir="rtl"]) .weekly-visual-lane,
+[dir="rtl"] :global(.panel-fullscreen) .weekly-visual-lane {
   grid-template-columns: minmax(0, 1fr);
 }
 

@@ -29,15 +29,33 @@ App calls: supabase.from('tasks').delete().eq('id', taskId)
 
 The `trg_task_tombstone` trigger handles tombstone creation automatically. **The app code must NOT call `recordTombstone()` separately** — doing so is redundant and was the source of BUG-1477.
 
+Exception: if `.delete().select('id')` returns zero rows, first run a fallback
+`select('id').eq('id', taskId).maybeSingle()`. If that fallback returns a visible
+row, surface a DELETE-policy/RLS failure. If it returns no row and no error, the
+task is already absent or inaccessible to this session; treat the delete as
+idempotently complete and upsert a permanent task tombstone to stop local-cache
+resurrection. Do not create this fallback tombstone when the fallback select
+itself errors.
+
 ### Code Path
 
 **File:** `src/composables/supabase/useTasksDatabase.ts` → `permanentlyDeleteTask()`
 
 ```typescript
-// CORRECT: Just delete. DB trigger handles tombstone.
-await supabase.from('tasks').delete().eq('id', taskId)
+const { data, error } = await supabase.from('tasks').delete().eq('id', taskId).select('id')
+if (error) throw error
+if (data?.length) return // DB trigger handled tombstone
 
-// WRONG: Don't also call recordTombstone — causes conflict with DB trigger
+const { data: stillThere, error: visibilityError } = await supabase
+  .from('tasks')
+  .select('id')
+  .eq('id', taskId)
+  .maybeSingle()
+if (visibilityError) throw visibilityError
+if (stillThere) throw new Error('visible task row was not deleted')
+
+// Only the already-absent zero-row path writes this manual anti-resurrection tombstone.
+await supabase.from('tombstones').upsert({ user_id, entity_type: 'task', entity_id: taskId })
 ```
 
 ## Bug History
@@ -57,10 +75,11 @@ await supabase.from('tasks').delete().eq('id', taskId)
 
 ## Rules
 
-1. **Never call `recordTombstone('task', ...)` when permanently deleting** — the DB trigger does it
+1. **Never call `recordTombstone('task', ...)` after a successful task delete** — the DB trigger does it
 2. **Never add triggers on `tombstones` that modify `tasks`** — causes circular trigger conflict
 3. **`recordTombstone()` is still valid for non-task entities** (groups, projects) that don't have BEFORE DELETE triggers
 4. **Soft-delete (`is_deleted: true`) and permanent delete (`.delete()`) are separate operations** — soft-delete goes to trash, permanent delete removes the row
+5. **Zero-row task deletes are idempotent only after fallback visibility check** — visible rows still fail; fallback select errors still fail; absent rows get a permanent tombstone
 
 ## Diagnostic
 

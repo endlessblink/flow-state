@@ -293,17 +293,42 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             // (BEFORE DELETE on tasks) auto-creates the tombstone in the same
             // transaction. No need for a separate recordTombstone() call.
             await withRetry(async () => {
-                // BUG-1850: Request the deleted rows so a silent 0-row delete (RLS filtered the
-                // row, or the row no longer exists) surfaces as an error instead of a fake success
-                // that lets the optimistic local removal get resurrected on the next sync.
-                const { data, error } = await getSupabase()
+                // BUG-1850: Request the deleted rows so a silent 0-row delete is detected instead
+                // of a fake success that lets the optimistic local removal get resurrected.
+                const sb = getSupabase()
+                const { data, error } = await sb
                     .from('tasks')
                     .delete()
                     .eq('id', taskId)
                     .select('id')
                 if (error) throw error
-                if (!data || data.length === 0) {
-                    throw new Error(`permanentlyDeleteTask deleted 0 rows for ${taskId} (RLS or already gone)`)
+                if (data && data.length > 0) return // normal path — row hard-deleted, trigger wrote tombstone
+
+                // BUG-1850b: 0 rows deleted. Two very different causes — distinguish them:
+                //  (a) the row genuinely isn't on the server / not visible to this session
+                //      (the mass "not found on server / 406" case) → there is nothing to delete,
+                //      so the delete has effectively succeeded. Record a tombstone so the local
+                //      copy can't be resurrected, and let the local removal stand (no throw).
+                //  (b) the row IS visible (SELECT/UPDATE see it) but DELETE was blocked → a real
+                //      RLS DELETE-policy failure we must surface, or the task would silently persist.
+                const { data: stillThere, error: visibilityError } = await sb
+                    .from('tasks')
+                    .select('id')
+                    .eq('id', taskId)
+                    .maybeSingle()
+                if (visibilityError) throw visibilityError
+                if (stillThere) {
+                    throw new Error(`permanentlyDeleteTask: row ${taskId} is visible but DELETE affected 0 rows — RLS delete policy is blocking it`)
+                }
+                // (a) absent/inaccessible — treat as already deleted. Best-effort tombstone.
+                console.warn(`[BUG-1850] permanentlyDeleteTask: ${taskId} not present on server — treating as already deleted, recording tombstone`)
+                const userId = getUserIdSafe()
+                if (userId) {
+                    const { error: tombErr } = await sb.from('tombstones').upsert({
+                        user_id: userId, entity_type: 'task', entity_id: taskId,
+                        deleted_at: new Date().toISOString(), expires_at: null
+                    }, { onConflict: 'entity_type,entity_id,user_id' })
+                    if (tombErr) console.warn(`[BUG-1850] tombstone upsert failed for ${taskId} (non-fatal):`, tombErr.message)
                 }
             }, 'permanentlyDeleteTask')
             lastSyncError.value = null

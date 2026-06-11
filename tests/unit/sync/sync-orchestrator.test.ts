@@ -93,6 +93,14 @@ const writeQueueMocks = vi.hoisted(() => ({
   purgeStaleOperations: vi.fn()
 }))
 
+const coalescerMocks = vi.hoisted(() => ({
+  coalesceOperationsForEntity: vi.fn().mockResolvedValue({
+    operation: null,
+    mergedOperationIds: [],
+    description: 'No coalescing needed'
+  })
+}))
+
 const authStoreMock = vi.hoisted(() => ({
   user: { id: 'user-001' }
 }))
@@ -139,12 +147,7 @@ vi.mock('@/services/auth/supabase', () => {
 
 vi.mock('@/services/offline/writeQueueDB', () => writeQueueMocks)
 
-vi.mock('@/services/offline/operationCoalescer', () => ({
-  coalesceOperationsForEntity: vi.fn().mockImplementation(async (_type: string, _id: string) => {
-    // By default return the first pending operation unchanged
-    return { operation: null, mergedOperationIds: [], description: 'No coalescing needed' }
-  })
-}))
+vi.mock('@/services/offline/operationCoalescer', () => coalescerMocks)
 
 vi.mock('@/services/offline/operationSorter', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/offline/operationSorter')>()
@@ -279,6 +282,11 @@ beforeEach(async () => {
   writeQueueMocks.purgeStaleOperations.mockResolvedValue(undefined)
   writeQueueMocks.enqueueOperation.mockResolvedValue(makeOp())
   writeQueueMocks.getOperationsForEntity.mockResolvedValue([])
+  coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+    operation: null,
+    mergedOperationIds: [],
+    description: 'No coalescing needed'
+  })
 
   // Reset singleton state by re-importing
   vi.resetModules()
@@ -307,11 +315,7 @@ beforeEach(async () => {
     }
   })
   vi.doMock('@/services/offline/writeQueueDB', () => writeQueueMocks)
-  vi.doMock('@/services/offline/operationCoalescer', () => ({
-    coalesceOperationsForEntity: vi.fn().mockResolvedValue({
-      operation: null, mergedOperationIds: [], description: 'No coalescing needed'
-    })
-  }))
+  vi.doMock('@/services/offline/operationCoalescer', () => coalescerMocks)
   vi.doMock('@/services/offline/operationSorter', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@/services/offline/operationSorter')>()
     return {
@@ -563,25 +567,55 @@ describe('Conflict resolution (LWW)', () => {
     expect(localTs >= serverTs).toBe(true)
   })
 
-  it('entity not found (PGRST116) on UPDATE → discards update, returns success (BUG-1211)', async () => {
-    // When the server returns PGRST116 (not found), the update should be discarded
-    // but marked as success (to clear it from the queue)
-    const chain = mockSupabaseChain({
-      selectData: [] // 0 rows triggers conflict resolution
+  it.each([
+    ['task', 1850],
+    ['group', 1851]
+  ] as const)('entity not found (PGRST116) on %s UPDATE → discards update, returns success (BUG-1211)', async (entityType, operationId) => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const op = makeOp({
+      id: operationId,
+      operation: 'update',
+      entityType,
+      entityId: `${entityType}-missing-on-server`,
+      payload: { title: 'local cached update', updated_at: '2026-06-11T12:00:00.000Z' },
+      baseVersion: 7
     })
 
-    // Override single() for server fetch to return PGRST116
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'Single operation'
+    })
+
+    const chain: Record<string, any> = {}
+    chain.update = vi.fn().mockReturnValue(chain)
+    chain.eq = vi.fn().mockReturnValue(chain)
+    chain.select = vi.fn().mockReturnValue(chain)
     chain.single = vi.fn().mockResolvedValue({
       data: null,
       error: { code: 'PGRST116', message: 'Not found' }
     })
-
+    chain.then = (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
+      Promise.resolve({ data: [], error: null }).then(resolve)
     supabaseMock.fromMock.mockReturnValue(chain)
 
-    // The code at line 376: if (serverState.error.code === 'PGRST116')
-    //   return { success: true, operation }
-    // This means the operation is discarded (logged as warning) but queue moves on
-    expect(true).toBe(true) // Verified by source code reading
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(chain.update).toHaveBeenCalledWith(op.payload)
+    expect(chain.eq).toHaveBeenCalledWith('id', `${entityType}-missing-on-server`)
+    expect(chain.eq).toHaveBeenCalledWith('position_version', 7)
+    expect(chain.single).toHaveBeenCalledTimes(1)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(operationId)
+    expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markConflict).not.toHaveBeenCalled()
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not found on server'))
+
+    warnSpy.mockRestore()
   })
 
   it('LWW writeback skips when task has pending write (echo prevention)', async () => {

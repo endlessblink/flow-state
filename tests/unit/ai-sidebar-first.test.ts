@@ -1723,7 +1723,7 @@ describe('AI sidebar-first desktop experience', () => {
       new Date('2026-06-07T09:00:00Z'),
       {
         parameterBeliefs: [{
-          entityKey: 'week:2026-06-02',
+          entityKey: 'week:2026-06-06',
           entityType: 'week',
           parameterKey: 'thisWeekImportance',
           beliefJson: { value: 'client_money', selectedLabel: 'Client or money' },
@@ -1740,6 +1740,91 @@ describe('AI sidebar-first desktop experience', () => {
     expect(interview).toBeNull()
     expect(prompt).toContain('"parameterBeliefs"')
     expect(prompt).toContain('"parameterKey": "thisWeekImportance"')
+  })
+
+  it('uses an answered weekly priority to rank and explain the quick fallback plan', () => {
+    const tasks = [
+      {
+        id: 'task-generic-work',
+        title: 'עבודה עם בינה מעצבת',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        projectId: 'work',
+        projectName: 'Work',
+        dueDate: '2026-06-10',
+        estimatedDuration: 90,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task & { projectName: string },
+      {
+        id: 'task-client-payment',
+        title: 'לשלוח חשבונית ותזכורת תשלום ללקוח',
+        description: 'Client payment can get stuck if this slips.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        projectId: 'client-renewals',
+        projectName: 'Client Renewals',
+        dueDate: '2026-06-12',
+        estimatedDuration: 30,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task & { projectName: string },
+      {
+        id: 'task-arthouse',
+        title: 'לפרסם את העדכונים האחרונים של arthouse',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        projectId: 'my-projects',
+        projectName: 'My Projects',
+        dueDate: '2026-06-10',
+        estimatedDuration: 60,
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task & { projectName: string },
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'he',
+      new Date('2026-06-07T09:00:00Z'),
+      {
+        parameterBeliefs: [{
+          entityKey: 'week:2026-06-06',
+          entityType: 'week',
+          parameterKey: 'thisWeekImportance',
+          beliefJson: { value: 'client_money', selectedLabel: 'לקוח/כסף' },
+          confidence: 0.92,
+          impactWeight: 0.85,
+          updatedAt: '2026-06-07T08:30:00.000Z',
+        }],
+      },
+    )
+
+    const interview = buildWeeklyPlanningInterview(context, [])
+    const quickDraft = buildQuickDraftWeeklyPlan(context, {
+      allowClarificationFirst: false,
+      compactUncertainty: true,
+      maxRecommendations: 3,
+    })
+
+    expect(interview).toBeNull()
+    expect(quickDraft.openQuestions).toHaveLength(0)
+    expect(quickDraft.recommendations[0].primaryTaskId).toBe('task-client-payment')
+    expect(quickDraft.recommendations[0].focusArea).toBe('לקוחות וכסף')
+    expect(quickDraft.recommendations[0].whyThisMatters).toContain('תשובת העדיפות שלך')
+    expect(quickDraft.recommendations[0].whyThisMatters).toContain('לקוח/כסף')
+    expect(quickDraft.recommendations[0].whyThisWeek).toMatch(/כסף|לקוח|אדמין|תשלום/)
   })
 
   it('does not ask a weak weekly clarification when the only available question is below EVPI threshold', () => {

@@ -661,7 +661,8 @@ export function buildQuickDraftWeeklyPlan(
   context: WeekContext,
   options: QuickDraftOptions = {},
 ): WeeklyPlanOutput {
-  const selected = selectQuickDraftTasks(context.tasks)
+  const savedPriority = savedWeeklyPriority(context)
+  const selected = selectQuickDraftTasks(context, savedPriority)
   const openQuestions = buildQuickDraftQuestions(context, selected)
   const allowClarificationFirst = options.allowClarificationFirst ?? true
   const compactUncertainty = options.compactUncertainty ?? false
@@ -705,7 +706,7 @@ export function buildQuickDraftWeeklyPlan(
       relatedTaskIds,
       recommendationType: quickDraftType(task),
       title: task.title,
-      whyThisMatters: quickDraftWhyThisMatters(task, stream, locale, { compactUncertainty }),
+      whyThisMatters: quickDraftWhyThisMatters(task, stream, locale, { compactUncertainty, savedPriority }),
       whyThisWeek: compactUncertainty && stream
         ? quickDraftLaneSummary(task, summaryStream ?? stream, evidence, locale)
         : quickDraftWhyThisWeek(task, evidence, locale, { compactUncertainty }),
@@ -801,7 +802,7 @@ export function buildWeeklyPlanningInterview(
   recentEvents: AIClarificationEvent[] = [],
   debug?: AIClarificationArtifact['debug'],
 ): AIClarificationArtifact | null {
-  const selected = selectQuickDraftTasks(context.tasks)
+  const selected = selectQuickDraftTasks(context, savedWeeklyPriority(context))
   const coverage = computeWeeklyPlanningCoverage(context, selected)
   const staleBeliefInterview = buildWeeklyStaleBeliefRefreshInterview(context, selected, recentEvents, coverage, debug)
   if (staleBeliefInterview) return staleBeliefInterview
@@ -1223,6 +1224,7 @@ function targetParametersForQuestion(question: AIClarificationQuestion, preferre
 
 function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTaskSnapshot[]): AIClarificationCoverage {
   const relevant = selected.length ? selected : context.tasks.slice(0, 5)
+  const savedPriority = savedWeeklyPriority(context)
   const denominator = Math.max(1, relevant.length)
   const projectEntityKeys = new Set(relevant.map(task => task.project?.id ? `project:${task.project.id}` : '').filter(Boolean))
   const taskEntityKeys = new Set(relevant.map(task => `task:${task.id}`))
@@ -1265,6 +1267,7 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
     task.project?.id &&
     !hasUsableProjectContext(task) &&
     !isSelfDescribingPlanningBucket(task.project?.name) &&
+    !savedPriorityMakesTaskSelfExplanatory(task, savedPriority) &&
     (
       task.derived.hasMoneyClientHealthFamilyLegalSignal ||
       task.derived.hasHumanOrExternalStakeholder ||
@@ -1302,7 +1305,7 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
     .filter(([key, value]) => Number(value ?? 0) < (key === 'preferences' ? 0.2 : key === 'stale_context' ? 1 : 0.45))
     .map(([key]) => key as AIClarificationCoverage['missing'][number])
   if (highValueProjectContextGap && !missing.includes('project_meaning')) missing.push('project_meaning')
-  if (shallowGenericLaneRisk) {
+  if (shallowGenericLaneRisk && !savedPriority) {
     if (!missing.includes('task_context')) missing.push('task_context')
     if (!missing.includes('preferences')) missing.push('preferences')
   }
@@ -1314,7 +1317,7 @@ function computeWeeklyPlanningCoverage(context: WeekContext, selected: PlannerTa
     candidateCount: relevant.length,
     forceAskDimensions: highValueProjectContextGap
       ? ['project_meaning', 'stale_context']
-      : shallowGenericLaneRisk
+      : shallowGenericLaneRisk && !savedPriority
         ? ['task_context', 'preferences', 'stale_context']
         : ['stale_context'],
   })
@@ -1410,9 +1413,117 @@ function weekOption(
   }
 }
 
-function selectQuickDraftTasks(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapshot[] {
+type SavedWeeklyPriority = {
+  value: string
+  label?: string
+  confidence: number
+} | null
+
+function savedWeeklyPriority(context: WeekContext): SavedWeeklyPriority {
+  const weekBeliefs = context.parameterBeliefs
+    .filter(belief =>
+      belief.parameterKey === 'thisWeekImportance' &&
+      isWeekEntityKey(belief.entityKey) &&
+      String(belief.entityKey).endsWith(context.weekStartIso)
+    )
+    .sort((a, b) => {
+      const confidenceDelta = (b.confidence ?? 0) - (a.confidence ?? 0)
+      if (Math.abs(confidenceDelta) > 0.001) return confidenceDelta
+      return new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime()
+    })
+  const strongest = weekBeliefs[0]
+  if (!strongest || strongest.confidence < 0.65) return null
+  const raw = strongest.beliefJson as { value?: unknown; selectedLabel?: unknown } | undefined
+  const value = String(raw?.value ?? '').trim()
+  if (!value) return null
+  return {
+    value,
+    label: typeof raw?.selectedLabel === 'string' ? raw.selectedLabel : undefined,
+    confidence: strongest.confidence,
+  }
+}
+
+function savedPriorityScore(task: PlannerTaskSnapshot, priority: SavedWeeklyPriority): number {
+  if (!priority) return 0
+  const value = priority.value
+  const text = taskSemanticText(task)
+  if (value === 'client_money') {
+    return (
+      3.5 * Number(task.derived.hasMoneyClientHealthFamilyLegalSignal || CLIENT_MONEY_LANE_RE.test(text)) +
+      1.2 * Number(task.derived.hasHumanOrExternalStakeholder) +
+      0.6 * Number((task.dependencies?.blocksTaskIds.length ?? 0) > 0)
+    )
+  }
+  if (value === 'work_commitment') {
+    return (
+      2.2 * Number(task.derived.hasHumanOrExternalStakeholder) +
+      1.4 * Number((task.dependencies?.blocksTaskIds.length ?? 0) > 0) +
+      1.0 * Number(task.status === 'in_progress') +
+      0.8 * Number(task.derived.domain === 'work')
+    )
+  }
+  if (value === 'creative_momentum') {
+    return 2.4 * Number(PUBLISHING_CONTENT_LANE_RE.test(text)) + 0.8 * Number(task.status === 'in_progress')
+  }
+  if (value === 'reduce_load' || value === 'reduce_chaos') {
+    return (
+      1.8 * Number(task.derived.isOverdue || task.history.postponedCount > 0) +
+      1.4 * Number(task.derived.quickErrandScore >= 0.55) +
+      0.7 * Number((task.estimateMinutes ?? 999) <= 30)
+    )
+  }
+  if (value === 'family_admin') {
+    return 2.4 * Number(task.derived.domain === 'health_family' || task.derived.domain === 'admin')
+  }
+  return 0
+}
+
+function compareBySavedPriority(priority: SavedWeeklyPriority) {
+  return (a: PlannerTaskSnapshot, b: PlannerTaskSnapshot): number => {
+    const priorityDelta = savedPriorityScore(b, priority) - savedPriorityScore(a, priority)
+    if (Math.abs(priorityDelta) > 0.001) return priorityDelta
+    const consequenceDelta = Number(hasPlanningConsequence(b)) - Number(hasPlanningConsequence(a))
+    if (consequenceDelta) return consequenceDelta
+    const urgencyDelta = Number(b.derived.isOverdue) - Number(a.derived.isOverdue)
+    if (urgencyDelta) return urgencyDelta
+    return b.derived.substantialWorkScore - a.derived.substantialWorkScore
+  }
+}
+
+function hasPlanningConsequence(task: PlannerTaskSnapshot): boolean {
+  return Boolean(
+    task.dependencies?.blocksTaskIds.length ||
+    task.derived.hasHumanOrExternalStakeholder ||
+    task.derived.hasMoneyClientHealthFamilyLegalSignal ||
+    task.history.postponedCount >= 2 ||
+    task.status === 'in_progress' ||
+    hasUsableProjectContext(task) ||
+    hasTaskLevelPlanningContext(task),
+  )
+}
+
+function savedPriorityMakesTaskSelfExplanatory(task: PlannerTaskSnapshot, priority: SavedWeeklyPriority): boolean {
+  if (!priority || priority.confidence < 0.85) return false
+  if (priority.value === 'client_money') {
+    return Boolean(task.derived.hasMoneyClientHealthFamilyLegalSignal || CLIENT_MONEY_LANE_RE.test(taskSemanticText(task)))
+  }
+  if (priority.value === 'work_commitment') {
+    return Boolean(task.derived.hasHumanOrExternalStakeholder || task.dependencies?.blocksTaskIds.length)
+  }
+  if (priority.value === 'creative_momentum') {
+    return PUBLISHING_CONTENT_LANE_RE.test(taskSemanticText(task))
+  }
+  if (priority.value === 'family_admin') {
+    return task.derived.domain === 'health_family' || task.derived.domain === 'admin'
+  }
+  return false
+}
+
+function selectQuickDraftTasks(context: WeekContext, savedPriority: SavedWeeklyPriority = null): PlannerTaskSnapshot[] {
+  const tasks = context.tasks
   const target = Math.min(5, Math.max(3, tasks.length))
   const selected: PlannerTaskSnapshot[] = []
+  const prioritySort = compareBySavedPriority(savedPriority)
 
   function addFrom(candidates: PlannerTaskSnapshot[], limit: number) {
     for (const task of candidates) {
@@ -1424,7 +1535,7 @@ function selectQuickDraftTasks(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapsho
   const substantial = tasks
     .filter(task => !isSuppressedByRecommendationFeedback(task))
     .filter(task => task.derived.substantialWorkScore >= 0.55)
-    .sort((a, b) => b.derived.substantialWorkScore - a.derived.substantialWorkScore)
+    .sort(prioritySort)
   const commitments = tasks.filter(task =>
     !isSuppressedByRecommendationFeedback(task) && (
       Boolean(task.dependencies?.blocksTaskIds.length) ||
@@ -1433,12 +1544,14 @@ function selectQuickDraftTasks(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapsho
       task.history.postponedCount >= 2 ||
       task.status === 'in_progress'
     ),
-  )
+  ).sort(prioritySort)
   const quickErrands = tasks.filter(task =>
     (task.derived.quickErrandScore >= 0.55 || task.derived.weekendEligible) &&
     (!isSuppressedByRecommendationFeedback(task) || hasFeedbackUrgencyOverride(task)),
   )
-  const fallback = tasks.filter(task => !quickErrands.includes(task) && !isSuppressedByRecommendationFeedback(task))
+  const fallback = tasks
+    .filter(task => !quickErrands.includes(task) && !isSuppressedByRecommendationFeedback(task))
+    .sort(prioritySort)
   const suppressedUrgent = tasks.filter(task =>
     task.derived.recommendationFeedback.penalty >= 0.72 &&
     hasFeedbackUrgencyOverride(task),
@@ -2428,9 +2541,20 @@ function quickDraftWhyThisMatters(
   task: PlannerTaskSnapshot,
   stream: PlannerWorkstream | undefined,
   locale: PlannerLocale,
-  options: { compactUncertainty?: boolean } = {},
+  options: { compactUncertainty?: boolean; savedPriority?: SavedWeeklyPriority } = {},
 ): string {
   const openSubtaskCount = task.subtasks?.filter(subtask => !subtask.isCompleted).length ?? 0
+  if (options.savedPriority && savedPriorityScore(task, options.savedPriority) > 0) {
+    const label = options.savedPriority.label || options.savedPriority.value
+    if (options.compactUncertainty) {
+      return locale === 'he'
+        ? `תואם לתשובת העדיפות שלך: ${label}.`
+        : `Matches your saved priority: ${label}.`
+    }
+    return locale === 'he'
+      ? `בחרתי בזה כי תשובת העדיפות השמורה שלך לשבוע היא "${label}", והכרטיס נושא אותות שתואמים לזה.`
+      : `I picked this because your saved weekly priority is "${label}", and this card has matching signals.`
+  }
   if (task.taskContext?.whyItMatters || task.taskContext?.summary) {
     const context = task.taskContext.whyItMatters || task.taskContext.summary
     return locale === 'he'

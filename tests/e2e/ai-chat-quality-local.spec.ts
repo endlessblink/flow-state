@@ -925,7 +925,7 @@ test('weekly bridge stream hang falls back instead of staying in refining plan',
   await expect(input).toBeEnabled({ timeout: 5_000 })
 })
 
-test('weekly inline follow-up card is suppressed instead of advancing obsolete action-only flow', async ({ page }) => {
+test('weekly inline follow-up card is suppressed without advancing obsolete action-only flow', async ({ page }) => {
   await seedGuestWorkspace(page)
   await seedWeeklyInlineFollowUpConversation(page)
   await stubBridge(page)
@@ -938,14 +938,13 @@ test('weekly inline follow-up card is suppressed instead of advancing obsolete a
   })
 
   await openAIChat(page)
-  const seededPlan = page.locator('[data-testid="weekly-plan"]').first()
-  await expect(seededPlan).toBeVisible({ timeout: 10_000 })
   const assistantCountBefore = await page.locator('.message-assistant').count()
 
-  await expect(seededPlan).not.toContainText(/להוסיף משימת המשך אחרי|Add a follow-up task after/i)
-  await expect(seededPlan.locator('[data-testid="weekly-plan-questions"]')).toHaveCount(0)
-  await expect(seededPlan.getByRole('button', { name: 'כן, להוסיף' })).toHaveCount(0)
-  await expect(seededPlan.getByRole('button', { name: 'הוסף משימת מעקב' })).toHaveCount(0)
+  await expect(page.locator('[data-testid="weekly-plan"]')).toHaveCount(0)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/צריך תשובה אחת לפני דירוג|One answer before ranking/i)
+  await expect(page.locator('.ai-chat-messages')).not.toContainText(/להוסיף משימת המשך אחרי|Add a follow-up task after/i)
+  await expect(page.getByRole('button', { name: 'כן, להוסיף' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'הוסף משימת מעקב' })).toHaveCount(0)
   await expect.poll(async () => page.locator('.message-assistant').count(), {
     timeout: 5_000,
   }).toBe(assistantCountBefore)

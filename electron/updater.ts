@@ -79,9 +79,15 @@ export function registerUpdater() {
         console.error('[Updater] quitAndInstall did not terminate the app within 8s; forcing quit fallback')
         emitUpdaterError('The updater could not restart automatically. FlowState will close; reopen it manually to complete the update.')
         app.quit()
+        setTimeout(() => {
+          console.error('[Updater] Graceful quit fallback did not terminate the app; forcing process exit')
+          app.exit(0)
+        }, 2000)
       }, 8000)
 
-      app.once('before-quit', () => clearTimeout(fallbackTimer))
+      const clearFallback = () => clearTimeout(fallbackTimer)
+      app.once('will-quit', clearFallback)
+      app.once('quit', clearFallback)
 
       try {
         // Force quit: isSilent=false (show installer), isForceRunAfter=true (relaunch after)

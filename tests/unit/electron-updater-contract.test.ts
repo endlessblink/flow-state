@@ -83,7 +83,16 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('autoUpdater.quitAndInstall(false, true)')
     expect(updaterSource).toContain('quitAndInstall did not terminate the app within 8s')
     expect(updaterSource).toContain('app.quit()')
+    expect(updaterSource).toContain('app.exit(0)')
     expect(updaterSource).toContain('return true')
+  })
+
+  it('keeps the restart fallback armed until the app is actually quitting', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain("app.once('will-quit', clearFallback)")
+    expect(updaterSource).toContain("app.once('quit', clearFallback)")
+    expect(updaterSource).not.toContain("app.once('before-quit', () => clearTimeout(fallbackTimer))")
   })
 
   it('surfaces a renderer error when restart does not complete', () => {

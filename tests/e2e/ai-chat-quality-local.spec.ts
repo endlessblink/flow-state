@@ -560,7 +560,24 @@ async function expectCompactWeeklyLaneLayoutStable(plan: Locator) {
       const header = rectFor('.weekly-lane-header')
       const summary = rectFor('.weekly-lane-summary')
       const track = rectFor('[data-testid="weekly-lane-track"]')
-      const firstCard = rectFor('.weekly-lane-task')
+      const cardBoxes = Array.from(el.querySelectorAll('.weekly-lane-task')).map((node) => {
+        const rect = node.getBoundingClientRect()
+        const style = window.getComputedStyle(node)
+        return {
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+          flex: style.flex,
+        }
+      })
+      const firstCard = cardBoxes[0] ?? null
+      const trackStyle = track ? window.getComputedStyle(el.querySelector('[data-testid="weekly-lane-track"]')!) : null
+      const arrowDisplays = Array.from(el.querySelectorAll('.weekly-lane-arrow')).map(node => window.getComputedStyle(node).display)
+      const cardTops = cardBoxes.map(card => Math.round(card.top))
+      const uniqueCardRows = [...new Set(cardTops)]
 
       return {
         lane: laneBox,
@@ -568,11 +585,27 @@ async function expectCompactWeeklyLaneLayoutStable(plan: Locator) {
         summary,
         track,
         firstCard,
+        cardBoxes,
+        trackStyle: trackStyle
+          ? {
+              flexWrap: trackStyle.flexWrap,
+              overflowX: trackStyle.overflowX,
+              overflowY: trackStyle.overflowY,
+            }
+          : null,
+        arrowDisplays,
+        uniqueCardRowCount: uniqueCardRows.length,
         headerOverlapsTrack: intersects(header, track),
         summaryOverlapsTrack: intersects(summary, track),
         trackInsideLane: Boolean(track && track.left >= laneBox.left - 2 && track.right <= laneBox.right + 2),
         firstCardInsideTrack: Boolean(firstCard && track && firstCard.left >= track.left - 2 && firstCard.right <= track.right + 2),
         firstCardStartsInTrack: Boolean(firstCard && track && firstCard.top >= track.top - 2 && firstCard.bottom <= track.bottom + 2),
+        allCardsInsideTrack: Boolean(track && cardBoxes.length > 0 && cardBoxes.every(card =>
+          card.left >= track.left - 2 &&
+          card.right <= track.right + 2 &&
+          card.top >= track.top - 2 &&
+          card.bottom <= track.bottom + 2,
+        )),
       }
     })
 
@@ -580,11 +613,20 @@ async function expectCompactWeeklyLaneLayoutStable(plan: Locator) {
     expect(geometry.summary).toBeTruthy()
     expect(geometry.track).toBeTruthy()
     expect(geometry.firstCard).toBeTruthy()
+    expect(geometry.cardBoxes.length).toBeGreaterThan(0)
     expect(geometry.headerOverlapsTrack).toBe(false)
     expect(geometry.summaryOverlapsTrack).toBe(false)
     expect(geometry.trackInsideLane).toBe(true)
     expect(geometry.firstCardInsideTrack).toBe(true)
     expect(geometry.firstCardStartsInTrack).toBe(true)
+    expect(geometry.allCardsInsideTrack).toBe(true)
+    expect(geometry.trackStyle).toMatchObject({
+      flexWrap: 'nowrap',
+      overflowX: 'visible',
+      overflowY: 'visible',
+    })
+    expect(geometry.arrowDisplays.every(display => display === 'none')).toBe(true)
+    expect(geometry.uniqueCardRowCount).toBe(1)
   }
 }
 

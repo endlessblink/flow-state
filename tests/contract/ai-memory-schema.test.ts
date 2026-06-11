@@ -23,8 +23,10 @@ describe('AI memory database schema contract', () => {
     expect(clarificationMigration).toContain('create table if not exists public.ai_clarification_events')
     expect(clarificationMigration).toMatch(/user_id uuid references auth\.users\(id\) on delete cascade not null/)
     expect(clarificationMigration).toContain('unique(user_id, entity_key)')
-    expect(clarificationMigration).toContain('canonical_project_id uuid references public.projects(id) on delete set null')
-    expect(clarificationMigration).toContain('canonical_task_id uuid references public.tasks(id) on delete set null')
+    expect(clarificationMigration).toContain('canonical_project_id text')
+    expect(clarificationMigration).toContain('canonical_task_id text')
+    expect(clarificationMigration).not.toContain('canonical_project_id text references public.projects(id)')
+    expect(clarificationMigration).not.toContain('canonical_task_id text references public.tasks(id)')
   })
 
   it('supports real entities, synthetic buckets, workflows, and clarification event history', () => {

@@ -356,6 +356,31 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }
   })
 
+  it('keeps a soft delete removed when saving remaining cached tasks fails', async () => {
+    const taskStore = useTaskStore()
+    const task = createMockTask({
+      id: 'task-soft-delete-save-fails',
+      title: 'Soft delete should stay gone'
+    })
+    const remainingCachedTask = createMockTask({
+      id: 'task-soft-delete-remaining-inaccessible',
+      title: 'Remaining cached task'
+    })
+    taskStore._rawTasks.push(task, remainingCachedTask)
+
+    mockSaveTasks.mockRejectedValueOnce(new Error('remaining cached tasks are inaccessible on server'))
+
+    await expect(taskStore.deleteTask(task.id, 'regression-test')).resolves.toBeUndefined()
+
+    expect(taskStore._rawTasks.some(candidate => candidate.id === task.id)).toBe(false)
+    expect(taskStore._rawTasks.some(candidate => candidate.id === remainingCachedTask.id)).toBe(true)
+    expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'task',
+      operation: 'delete',
+      entityId: task.id
+    }))
+  })
+
   it('undoes and redoes permanent task deletion three consecutive times locally', async () => {
     const taskStore = useTaskStore()
     const undoSystem = getUndoSystem()
@@ -380,6 +405,30 @@ describe('task operation undo/redo three-cycle invariants', () => {
 
       expect(taskStore._rawTasks.some(candidate => candidate.id === task.id)).toBe(false)
     }
+  })
+
+  it('keeps a permanent delete removed when the post-delete bulk save of remaining tasks fails', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const task = createMockTask({
+      id: 'task-permanent-delete-save-fails',
+      title: 'Delete should stay gone'
+    })
+    const remainingCachedTask = createMockTask({
+      id: 'task-still-cached-but-server-inaccessible',
+      title: 'Remaining cached task'
+    })
+    taskStore._rawTasks.push(task)
+    taskStore._rawTasks.push(remainingCachedTask)
+
+    mockPermanentDeleteTask.mockResolvedValueOnce(undefined)
+    mockSaveTasks.mockRejectedValueOnce(new Error('remaining cached tasks are inaccessible on server'))
+
+    await expect(undoSystem.permanentlyDeleteTaskWithUndo(task.id)).resolves.toBeUndefined()
+
+    expect(mockPermanentDeleteTask).toHaveBeenCalledWith(task.id)
+    expect(taskStore._rawTasks.some(candidate => candidate.id === task.id)).toBe(false)
+    expect(taskStore._rawTasks.some(candidate => candidate.id === remainingCachedTask.id)).toBe(true)
   })
 
   // BUG-1850 regression: canvas permanent delete (Shift+Delete / context-menu Permanent Delete)
@@ -439,5 +488,34 @@ describe('task operation undo/redo three-cycle invariants', () => {
       expect(taskStore._rawTasks.some(candidate => candidate.id === taskA.id)).toBe(false)
       expect(taskStore._rawTasks.some(candidate => candidate.id === taskB.id)).toBe(false)
     }
+  })
+
+  it('keeps a bulk delete removed when saving remaining cached tasks fails', async () => {
+    const taskStore = useTaskStore()
+    const taskA = createMockTask({ id: 'task-bulk-delete-save-fails-a', title: 'Bulk delete A' })
+    const taskB = createMockTask({ id: 'task-bulk-delete-save-fails-b', title: 'Bulk delete B' })
+    const remainingCachedTask = createMockTask({
+      id: 'task-bulk-delete-remaining-inaccessible',
+      title: 'Remaining cached task'
+    })
+    taskStore._rawTasks.push(taskA, taskB, remainingCachedTask)
+
+    mockSaveTasks.mockRejectedValueOnce(new Error('remaining cached tasks are inaccessible on server'))
+
+    await expect(taskStore.bulkDeleteTasks([taskA.id, taskB.id])).resolves.toBeUndefined()
+
+    expect(taskStore._rawTasks.some(candidate => candidate.id === taskA.id)).toBe(false)
+    expect(taskStore._rawTasks.some(candidate => candidate.id === taskB.id)).toBe(false)
+    expect(taskStore._rawTasks.some(candidate => candidate.id === remainingCachedTask.id)).toBe(true)
+    expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'task',
+      operation: 'delete',
+      entityId: taskA.id
+    }))
+    expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'task',
+      operation: 'delete',
+      entityId: taskB.id
+    }))
   })
 })

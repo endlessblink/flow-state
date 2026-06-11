@@ -31,4 +31,14 @@ describe('electron-builder dependency parser patch', () => {
     expect(deployScript).toContain('npm run electron:build')
     expect(deployScript).not.toContain('npx electron-builder --config electron-builder.yml')
   })
+
+  it('validates the final deb payload when linux-unpacked no longer contains app.asar', () => {
+    const validator = readSource('scripts/validate-electron-package.cjs')
+
+    expect(validator).toContain("const latestLinuxManifest = path.join(root, 'release', 'latest-linux.yml')")
+    expect(validator).toContain('function appAsarFromLatestDeb()')
+    expect(validator).toContain("execFileSync('dpkg-deb', ['-x', debPath, tempDir]")
+    expect(validator).toContain("path.join(tempDir, 'opt', 'FlowState', 'resources', 'app.asar')")
+    expect(validator).toContain('validateAppAsar(extractedPackage.appAsar)')
+  })
 })

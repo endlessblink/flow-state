@@ -99,8 +99,8 @@ describe('broad task clarification policy', () => {
   it('suppresses repeat questions after recent answers or recent proceed-with-uncertainty decisions', () => {
     expect(hasRecentClarificationDecision([event('answered', 6)], now)).toBe(true)
     expect(hasRecentClarificationDecision([event('generated_with_uncertainty', 6)], now)).toBe(true)
-    expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [event('answered', 6)])).toBeNull()
-    expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [event('generated_with_uncertainty', 6)])).toBeNull()
+    expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [relativeEvent('answered', 6)])).toBeNull()
+    expect(buildBroadTaskClarification(routed('day_plan'), taskResult(5), 'en', [relativeEvent('generated_with_uncertainty', 6)])).toBeNull()
   })
 
   it('dedupes the same broad clarification wording across workflow buckets without blocking mode-specific questions', () => {

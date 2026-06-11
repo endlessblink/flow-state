@@ -437,6 +437,30 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     expect(store._rawTasks[0].title).toBe('Important Task')
   })
 
+  it('drops stale cached local-only tasks after an old authenticated empty server load', async () => {
+    const store = useTaskStore()
+    const staleCachedTask = makeTask({
+      id: 'task-stale-cache-empty-server',
+      title: 'Stale cache only',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      updatedAt: new Date('2026-01-01T00:00:00Z'),
+    })
+    store._rawTasks.push(staleCachedTask)
+
+    const win = globalThis.window as any
+    if (win) {
+      win.FlowStateSessionStart = Date.now() - 120000
+    }
+
+    mockFetchTasks.mockResolvedValue([])
+    mockFetchDeletedTaskIds.mockResolvedValue([])
+    mockFetchTombstones.mockResolvedValue([])
+
+    await store.loadFromDatabase()
+
+    expect(store._rawTasks.some(task => task.id === staleCachedTask.id)).toBe(false)
+  })
+
   it('allows empty overwrite during workspace switch', async () => {
     const store = useTaskStore()
     const existingTask = makeTask({ title: 'Old Workspace Task' })

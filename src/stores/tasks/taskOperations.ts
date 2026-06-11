@@ -1028,18 +1028,15 @@ export function useTaskOperations(
         }
         _rawTasks.value.splice(index, 1)
 
-        // Save to localStorage immediately (for guest mode persistence)
+        // Save/cache the local snapshot, but do not let a Supabase bulk-save
+        // failure for unrelated remaining cached rows undo the user's delete.
         try {
             await saveTasksToStorage(_rawTasks.value, 'deleteTask')
-            // TASK-1428: Update IndexedDB read cache so offline reloads reflect the deletion
-            cacheTasks([..._rawTasks.value])
-        } catch (localSaveError) {
-            // localStorage save failed — rollback immediately
-            console.error(`❌ [DELETE] localStorage save failed, rolling back:`, localSaveError)
-            _rawTasks.value.splice(index, 0, deletedTask)
-            manualOperationInProgress.value = false
-            throw localSaveError
+        } catch (persistError) {
+            console.warn(`⚠️ [DELETE] Task ${taskId.slice(0, 8)} was removed locally, but persisting remaining cached tasks failed (non-fatal):`, persistError)
         }
+        // TASK-1428: Update IndexedDB read cache so offline reloads reflect the deletion.
+        cacheTasks([..._rawTasks.value])
 
         // BUG-1737: Single-write path — sync queue is the SOLE path to Supabase for deletes.
         // Previously also called deleteTaskFromStorage() directly, creating a dual-write race
@@ -1077,6 +1074,7 @@ export function useTaskOperations(
         const deletedTask = _rawTasks.value[index]
         manualOperationInProgress.value = true
         addPendingWrite(taskId)
+        let hardDeleteCompleted = false
         try {
             // 1. Remove from local state immediately (Optimistic UI)
             _rawTasks.value.splice(index, 1)
@@ -1084,12 +1082,23 @@ export function useTaskOperations(
             // 2. Call TrashService for DB removal (Hard Delete)
             const { trashService } = await import('@/services/trash/TrashService')
             await trashService.permanentlyDeleteTask(taskId)
+            hardDeleteCompleted = true
 
             // 3. Persist updated local state (guest/local fallback, Tauri reliability)
-            await saveTasksToStorage(_rawTasks.value, 'permanentlyDeleteTask')
+            try {
+                await saveTasksToStorage(_rawTasks.value, 'permanentlyDeleteTask')
+            } catch (persistError) {
+                // BUG-1850c: Once the hard delete has succeeded, a follow-up bulk save of
+                // remaining cached tasks must not roll back the deleted task. This can fail
+                // when production is missing/hiding other local cached rows.
+                console.warn(`⚠️ [PERMANENT-DELETE] Task ${taskId.slice(0, 8)} was deleted, but persisting remaining cached tasks failed (non-fatal):`, persistError)
+            }
+            cacheTasks([..._rawTasks.value])
         } catch (error) {
             console.error(`❌ Failed to permanently delete ${taskId}:`, error)
-            _rawTasks.value.splice(index, 0, deletedTask)
+            if (!hardDeleteCompleted) {
+                _rawTasks.value.splice(index, 0, deletedTask)
+            }
             throw error
         } finally {
             manualOperationInProgress.value = false
@@ -1189,18 +1198,14 @@ export function useTaskOperations(
         const deletedIndices = deletedTasks.map(t => _rawTasks.value.indexOf(t))
         _rawTasks.value = _rawTasks.value.filter(t => !taskIds.includes(t.id))
 
-        // Save to localStorage immediately (for guest mode persistence)
+        // Save/cache the local snapshot, but do not let a Supabase bulk-save
+        // failure for unrelated remaining cached rows undo the user's deletes.
         try {
             await saveTasksToStorage(_rawTasks.value, 'bulkDeleteTasks')
-        } catch (localSaveError) {
-            // localStorage save failed — rollback: re-insert tasks at original indices
-            console.error(`❌ [BULK-DELETE] localStorage save failed, rolling back:`, localSaveError)
-            deletedTasks.forEach((task, i) => {
-                _rawTasks.value.splice(deletedIndices[i], 0, task)
-            })
-            manualOperationInProgress.value = false
-            throw localSaveError
+        } catch (persistError) {
+            console.warn(`⚠️ [BULK-DELETE] Removed ${deletedTasks.length} task(s) locally, but persisting remaining cached tasks failed (non-fatal):`, persistError)
         }
+        cacheTasks([..._rawTasks.value])
 
         // Enqueue DELETE for each task so offline bulk deletes can retry via sync queue
         const syncOrchestrator = useSyncOrchestrator()

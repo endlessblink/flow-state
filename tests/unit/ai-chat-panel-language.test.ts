@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 import { computed, ref } from 'vue'
 
 const mocks = vi.hoisted(() => ({
@@ -90,6 +91,7 @@ vi.mock('@/config/aiModels', () => ({
 
 describe('AIChatPanel message language setting', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     mocks.chatLanguage.value = 'auto'
     vi.clearAllMocks()
   })
@@ -98,6 +100,7 @@ describe('AIChatPanel message language setting', () => {
     const { default: AIChatPanel } = await import('@/components/ai/AIChatPanel.vue')
     const wrapper = mount(AIChatPanel, {
       global: {
+        plugins: [createPinia()],
         stubs: {
           OverflowTooltip: { template: '<span><slot /></span>' },
           ChatMessage: true,
@@ -129,6 +132,7 @@ describe('AIChatPanel message language setting', () => {
     const { default: AIChatPanel } = await import('@/components/ai/AIChatPanel.vue')
     const wrapper = mount(AIChatPanel, {
       global: {
+        plugins: [createPinia()],
         stubs: {
           OverflowTooltip: { template: '<span><slot /></span>' },
           ChatMessage: true,

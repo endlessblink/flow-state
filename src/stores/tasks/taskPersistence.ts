@@ -369,6 +369,7 @@ export function useTaskPersistence(
             // This prevents data loss from race conditions during auth propagation
             // TASK-1177: Extended from 10 seconds to 60 seconds for better protection
             // Exception: workspace switches to an empty workspace are legitimate
+            let emptyRemoteLoadIsProtected = false
             if (geometryMergedLoadedTasks.length === 0 && _rawTasks.value.length > 0) {
                 const hasKnownRemoteDeletes = _rawTasks.value.some(task => remotelyDeletedTaskIds.has(task.id))
                 if (wsStore.isSwitchingWorkspace) {
@@ -381,6 +382,7 @@ export function useTaskPersistence(
                     // This gives plenty of time for network issues to resolve
                     if (timeSinceSessionStart < 60000) {
                         console.warn(`🛡️ [TASK-LOAD] BLOCKED empty overwrite - ${_rawTasks.value.length} existing tasks would be lost (session ${timeSinceSessionStart}ms old)`)
+                        emptyRemoteLoadIsProtected = true
                         return
                     }
 
@@ -407,6 +409,7 @@ export function useTaskPersistence(
             // 1. Index remote tasks
             const remoteMap = new Map(geometryMergedLoadedTasks.map(t => [t.id, t]))
             const mergedTasks: Task[] = []
+            const authenticatedEmptyRemoteLoad = geometryMergedLoadedTasks.length === 0 && !emptyRemoteLoadIsProtected
 
             // 2. Process existing local tasks (Preserve optimistic, Handle Remote Deletes)
             const localTasksMap = new Map(_rawTasks.value.map(t => [t.id, t]))
@@ -532,7 +535,10 @@ export function useTaskPersistence(
                     const RECENT_CREATE_WINDOW_MS = 30_000
                     const localCreatedAt = localTask.createdAt ? new Date(localTask.createdAt).getTime() : 0
                     const isRecentlyCreated = (Date.now() - localCreatedAt) < RECENT_CREATE_WINDOW_MS
-                    if (geometryMergedLoadedTasks.length > 0 && !isRecentlyCreated) {
+                    const shouldDropStaleLocalOnly = (geometryMergedLoadedTasks.length > 0 || authenticatedEmptyRemoteLoad)
+                        && !isRecentlyCreated
+                        && !isPendingWrite(localTask.id)
+                    if (shouldDropStaleLocalOnly) {
                         if (import.meta.env.DEV) {
                             console.log(`🗑️ [SMART-MERGE] Dropping stale local-only task "${localTask.title?.slice(0, 15)}" - not in DB and not recently created`)
                         }

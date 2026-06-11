@@ -17,6 +17,7 @@ import { toDbStatus, toSupabaseTask } from '@/utils/supabaseMappers'
 import { useToast } from '@/composables/useToast'
 // TASK-1428: Keep IndexedDB read cache warm after offline mutations
 import { cacheTasks } from '@/services/offline/readCacheDB'
+import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 import { sanitizeTaskTitle } from '@/utils/taskValidation'
 import {
     beginCanvasDoneTrace,
@@ -1064,44 +1065,86 @@ export function useTaskOperations(
 
     // [DEEP-DIVE FIX] Added permanent delete operation
     const permanentlyDeleteTask = async (taskId: string) => {
+        beginPermanentDeleteTrace(taskId, 'taskStore.permanentlyDeleteTask')
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
-        if (index === -1) return
+        logPermanentDeleteTrace(taskId, 'store.lookup', {
+            found: index !== -1,
+            rawTaskCount: _rawTasks.value.length,
+        })
+        if (index === -1) {
+            logPermanentDeleteTrace(taskId, 'store.not-found')
+            return
+        }
 
         // BUG-1508: Clear recurrenceRule on all chain members BEFORE hard-deleting
         // so the recurrence scheduler cannot find a done ancestor and recreate this task.
+        logPermanentDeleteTrace(taskId, 'store.before-clear-recurrence')
         await clearRecurrenceChain(taskId)
+        logPermanentDeleteTrace(taskId, 'store.after-clear-recurrence')
 
         const deletedTask = _rawTasks.value[index]
         manualOperationInProgress.value = true
         addPendingWrite(taskId)
+        logPermanentDeleteTrace(taskId, 'store.pending-write-added', {
+            title: deletedTask.title,
+            index,
+        })
         let hardDeleteCompleted = false
         try {
             // 1. Remove from local state immediately (Optimistic UI)
             _rawTasks.value.splice(index, 1)
+            logPermanentDeleteTrace(taskId, 'store.local-splice-complete', {
+                rawTaskCount: _rawTasks.value.length,
+                stillInRawTasks: _rawTasks.value.some(t => t.id === taskId),
+            })
 
             // 2. Call TrashService for DB removal (Hard Delete)
             const { trashService } = await import('@/services/trash/TrashService')
+            logPermanentDeleteTrace(taskId, 'store.before-trash-service')
             await trashService.permanentlyDeleteTask(taskId)
             hardDeleteCompleted = true
+            logPermanentDeleteTrace(taskId, 'store.after-trash-service')
 
             // 3. Persist updated local state (guest/local fallback, Tauri reliability)
             try {
+                logPermanentDeleteTrace(taskId, 'store.before-save-remaining', {
+                    remainingTaskCount: _rawTasks.value.length,
+                })
                 await saveTasksToStorage(_rawTasks.value, 'permanentlyDeleteTask')
+                logPermanentDeleteTrace(taskId, 'store.after-save-remaining')
             } catch (persistError) {
                 // BUG-1850c: Once the hard delete has succeeded, a follow-up bulk save of
                 // remaining cached tasks must not roll back the deleted task. This can fail
                 // when production is missing/hiding other local cached rows.
+                logPermanentDeleteTrace(taskId, 'store.save-remaining-error-nonfatal', {
+                    error: persistError instanceof Error ? persistError.message : String(persistError),
+                })
                 console.warn(`⚠️ [PERMANENT-DELETE] Task ${taskId.slice(0, 8)} was deleted, but persisting remaining cached tasks failed (non-fatal):`, persistError)
             }
-            cacheTasks([..._rawTasks.value])
+            await cacheTasks([..._rawTasks.value])
+            logPermanentDeleteTrace(taskId, 'store.cache-updated', {
+                cachedTaskCount: _rawTasks.value.length,
+            })
         } catch (error) {
+            logPermanentDeleteTrace(taskId, 'store.error', {
+                hardDeleteCompleted,
+                error: error instanceof Error ? error.message : String(error),
+            })
             console.error(`❌ Failed to permanently delete ${taskId}:`, error)
             if (!hardDeleteCompleted) {
                 _rawTasks.value.splice(index, 0, deletedTask)
+                logPermanentDeleteTrace(taskId, 'store.rollback-local-splice', {
+                    rawTaskCount: _rawTasks.value.length,
+                })
             }
             throw error
         } finally {
             manualOperationInProgress.value = false
+            logPermanentDeleteTrace(taskId, 'store.finally', {
+                hardDeleteCompleted,
+                stillInRawTasks: _rawTasks.value.some(t => t.id === taskId),
+                rawTaskCount: _rawTasks.value.length,
+            })
         }
     }
 

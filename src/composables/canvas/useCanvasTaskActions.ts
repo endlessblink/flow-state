@@ -18,6 +18,7 @@ import { findMatchingGroupForDueDate, calculatePositionInGroup } from './useSmar
 import { pushImageDeleteUndo } from '@/composables/undoSingleton'
 import { useVueFlow } from '@vue-flow/core'
 import { snapPositionToGrid } from '@/utils/canvas/coordinates'
+import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 
 
 
@@ -463,7 +464,19 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             // bulkPermanentlyDeleteTasksWithUndo). The DB trigger writes a tombstone so the task
             // is gone for good and the sync layer cannot resurrect it.
             if (taskIdsToDelete.length > 0) {
+                for (const taskId of taskIdsToDelete) {
+                    beginPermanentDeleteTrace(taskId, 'useCanvasTaskActions.confirmBulkDelete', {
+                        batchSize: taskIdsToDelete.length,
+                    })
+                    logPermanentDeleteTrace(taskId, 'canvas.bulk-before-permanent-delete')
+                }
                 await undoHistory.bulkPermanentlyDeleteTasksWithUndo(taskIdsToDelete)
+                for (const taskId of taskIdsToDelete) {
+                    logPermanentDeleteTrace(taskId, 'canvas.bulk-after-permanent-delete', {
+                        stillInStore: taskStore.rawTasks.some(t => t.id === taskId),
+                        rawTaskCount: taskStore.rawTasks.length,
+                    })
+                }
             }
 
             canvasStore.setSelectedNodes([])

@@ -4,6 +4,7 @@ import { getLogger } from '@/utils/productionLogger'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useTaskStore } from '@/stores/tasks'
 import { deleteOperationsForEntity } from '@/services/offline/writeQueueDB'
+import { logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 
 export class TrashService {
     private logger = getLogger()
@@ -66,9 +67,14 @@ export class TrashService {
      */
     public async permanentlyDeleteTask(taskId: string): Promise<void> {
         try {
+            logPermanentDeleteTrace(taskId, 'trash-service.before-db-delete')
             await this.db.permanentlyDeleteTask(taskId)
+            logPermanentDeleteTrace(taskId, 'trash-service.after-db-delete')
             console.log(`🔥 [TRASH] Task ${taskId} permanently deleted from Supabase`)
         } catch (error) {
+            logPermanentDeleteTrace(taskId, 'trash-service.error', {
+                error: error instanceof Error ? error.message : String(error),
+            })
             console.error(`❌ [TRASH] Failed to permanently delete task ${taskId}:`, error)
             throw error
         }

@@ -20,6 +20,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import type { Task } from '@/types/tasks'
 import { getCachedTasksWithPendingWrites } from '@/services/offline/readCacheDB'
+import { beginPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 
 // ── Module-level mocks ──────────────────────────────────────────────
 
@@ -143,6 +144,9 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    if (typeof window !== 'undefined') {
+      delete window.__FlowStatePermanentDeleteTraces
+    }
   })
 
   // ── Branch 1: Pending-write preservation (BUG-1206) ──
@@ -517,6 +521,24 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     const found = store._rawTasks.find(t => t.id === remoteOnly.id)
     expect(found).toBeDefined()
     expect(found?.title).toBe('New From Server')
+  })
+
+  it('logs when sync re-adds a task with an active permanent-delete trace', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const store = useTaskStore()
+    const remoteTask = makeTask({
+      id: 'task-sync-readd-after-delete',
+      title: 'Remote Readd',
+    })
+
+    beginPermanentDeleteTrace(remoteTask.id, 'unit-test')
+    store.updateTaskFromSync(remoteTask.id, remoteTask, false)
+
+    expect(store._rawTasks.some(t => t.id === remoteTask.id)).toBe(true)
+    expect(warnSpy).toHaveBeenCalledWith('[PERMA-DELETE-TRACE]', expect.objectContaining({
+      taskId: remoteTask.id,
+      stage: 'task-store.update-from-sync.added-new',
+    }))
   })
 
   it('preserves newer cached canvas geometry on cold reload after updater restart', async () => {

@@ -10,6 +10,7 @@ import { canvasSyncTrigger, sharedTasksRef } from './canvasTaskBridge'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
 import { sanitizeTaskTitle } from '@/utils/taskValidation'
 import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
+import { logPermanentDeleteTraceIfActive } from '@/utils/permanentDeleteTrace'
 // TASK-129: Removed transactionManager (PouchDB WAL stub no longer needed)
 // TASK-089: Updated to use unified canvas state lock system
 // useCanvasOptimisticSync removed
@@ -198,6 +199,15 @@ export const useTaskStore = defineStore('tasks', () => {
   // SAFETY: Uses _rawTasks for mutations
   const updateTaskFromSync = (taskId: string, taskDoc: Task | null, isDeleted = false) => {
     syncInProgress.value = true
+    const existingBefore = _rawTasks.value.find(t => t.id === taskId)
+    logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.enter', {
+      isDeleted,
+      hasTaskDoc: Boolean(taskDoc),
+      existingBefore: Boolean(existingBefore),
+      rawTaskCount: _rawTasks.value.length,
+      incomingSoftDeleted: Boolean(taskDoc?._soft_deleted),
+      incomingTitle: taskDoc?.title,
+    })
 
     // DUPLICATE DETECTION - Realtime Sync Entry Point
     // This tracks what's coming in from realtime and whether the task exists
@@ -213,10 +223,15 @@ export const useTaskStore = defineStore('tasks', () => {
         if (idx !== -1) {
           _rawTasks.value.splice(idx, 1)
         }
+        logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.deleted-branch', {
+          removed: idx !== -1,
+          rawTaskCount: _rawTasks.value.length,
+        })
       } else {
         // BUG-061 FIX: Validate task before adding/updating
         if (!taskDoc || !taskDoc.id) {
           console.warn('[TASKS:SYNC] Ignoring invalid task from sync (missing id):', taskId)
+          logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.invalid-doc')
           return
         }
         // BUG-1777: Sanitize blank/whitespace/non-string titles at sync ingress.
@@ -261,6 +276,7 @@ export const useTaskStore = defineStore('tasks', () => {
             if (import.meta.env.DEV) {
               console.warn(`[BUG-1451] updateTaskFromSync BLOCKED by manualOperationInProgress for ${taskId.slice(0, 8)}`)
             }
+            logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.blocked-manual-operation')
             return
           }
 
@@ -271,6 +287,7 @@ export const useTaskStore = defineStore('tasks', () => {
             if (import.meta.env.DEV) {
               console.log(`[TASKS:SYNC] Skipping sync for "${taskId.slice(0, 8)}" - pending local write`)
             }
+            logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.blocked-pending-write')
             return
           }
 
@@ -284,6 +301,10 @@ export const useTaskStore = defineStore('tasks', () => {
                 remoteUpdatedAt: normalizedTask.updatedAt
               })
             }
+            logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.blocked-local-newer', {
+              localUpdatedAt: currentTask.updatedAt,
+              remoteUpdatedAt: normalizedTask.updatedAt,
+            })
             return
           }
 
@@ -393,6 +414,9 @@ export const useTaskStore = defineStore('tasks', () => {
           if (normalizedTask._soft_deleted) {
             // If it's now deleted, remove it instead of updating
             _rawTasks.value.splice(idx, 1)
+            logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.removed-soft-deleted', {
+              rawTaskCount: _rawTasks.value.length,
+            })
           } else {
             // TASK-272 FIX: Only trigger canvas sync if task actually changed
             // This prevents reactive loops where unchanged data causes re-renders
@@ -409,6 +433,11 @@ export const useTaskStore = defineStore('tasks', () => {
             }
 
             _rawTasks.value[idx] = normalizedTask
+            logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.updated-existing', {
+              hasRelevantChange,
+              rawTaskCount: _rawTasks.value.length,
+              incomingUpdatedAt: normalizedTask.updatedAt,
+            })
 
             // Only trigger canvas sync if there was an actual visual change
             // TASK-1158: Use shared bridge ref (no circular dependency)
@@ -429,8 +458,15 @@ export const useTaskStore = defineStore('tasks', () => {
             if (existingIdx !== -1) {
               // Task appeared between our earlier check and now — update instead
               _rawTasks.value[existingIdx] = normalizedTask
+              logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.race-updated-existing', {
+                rawTaskCount: _rawTasks.value.length,
+              })
             } else {
               _rawTasks.value.push(normalizedTask)
+              logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.added-new', {
+                rawTaskCount: _rawTasks.value.length,
+                incomingUpdatedAt: normalizedTask.updatedAt,
+              })
 
               // BUG-1329: Defense-in-depth — remove any duplicates that slipped through
               const countAfterPush = _rawTasks.value.filter(t => t.id === normalizedTask.id).length
@@ -447,10 +483,20 @@ export const useTaskStore = defineStore('tasks', () => {
                 }
               }
             }
+          } else {
+            logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.skipped-add', {
+              incomingSoftDeleted: Boolean(normalizedTask._soft_deleted),
+              pendingWrite: isPendingWrite(taskId),
+              rawTaskCount: _rawTasks.value.length,
+            })
           }
         }
       }
     } finally {
+      logPermanentDeleteTraceIfActive(taskId, 'task-store.update-from-sync.finally', {
+        rawTaskCount: _rawTasks.value.length,
+        existsAfter: _rawTasks.value.some(t => t.id === taskId),
+      })
       syncInProgress.value = false
     }
   }

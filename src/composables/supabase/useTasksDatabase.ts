@@ -8,6 +8,7 @@ import {
     getSupabase, swrCache, invalidateCache,
     type DatabaseContext, type SafeCreateTaskResult, type TaskIdAvailability
 } from './_infrastructure'
+import { logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 export function useTasksDatabase(ctx: DatabaseContext) {
     const { authStore, isSyncing, lastSyncError, getUserIdSafe, withRetry, handleError } = ctx
 
@@ -288,6 +289,10 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
     const permanentlyDeleteTask = async (taskId: string): Promise<void> => {
         try {
+            logPermanentDeleteTrace(taskId, 'supabase-db.start', {
+                userId: getUserIdSafe(),
+                isAuthenticated: authStore.isAuthenticated,
+            })
             isSyncing.value = true
             // BUG-1477: Just hard-delete. The DB trigger `trg_task_tombstone`
             // (BEFORE DELETE on tasks) auto-creates the tombstone in the same
@@ -301,8 +306,16 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     .delete()
                     .eq('id', taskId)
                     .select('id')
+                logPermanentDeleteTrace(taskId, 'supabase-db.delete-result', {
+                    rowCount: data?.length ?? 0,
+                    errorCode: error?.code,
+                    errorMessage: error?.message,
+                })
                 if (error) throw error
-                if (data && data.length > 0) return // normal path — row hard-deleted, trigger wrote tombstone
+                if (data && data.length > 0) {
+                    logPermanentDeleteTrace(taskId, 'supabase-db.delete-affected-row')
+                    return // normal path — row hard-deleted, trigger wrote tombstone
+                }
 
                 // BUG-1850b: 0 rows deleted. Two very different causes — distinguish them:
                 //  (a) the row genuinely isn't on the server / not visible to this session
@@ -316,8 +329,14 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     .select('id')
                     .eq('id', taskId)
                     .maybeSingle()
+                logPermanentDeleteTrace(taskId, 'supabase-db.visibility-check', {
+                    stillVisible: Boolean(stillThere),
+                    errorCode: visibilityError?.code,
+                    errorMessage: visibilityError?.message,
+                })
                 if (visibilityError) throw visibilityError
                 if (stillThere) {
+                    logPermanentDeleteTrace(taskId, 'supabase-db.visible-but-delete-zero')
                     throw new Error(`permanentlyDeleteTask: row ${taskId} is visible but DELETE affected 0 rows — RLS delete policy is blocking it`)
                 }
                 // (a) absent/inaccessible — treat as already deleted. Best-effort tombstone.
@@ -328,15 +347,27 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                         user_id: userId, entity_type: 'task', entity_id: taskId,
                         deleted_at: new Date().toISOString(), expires_at: null
                     }, { onConflict: 'entity_type,entity_id,user_id' })
+                    logPermanentDeleteTrace(taskId, 'supabase-db.tombstone-upsert', {
+                        userId,
+                        errorCode: tombErr?.code,
+                        errorMessage: tombErr?.message,
+                    })
                     if (tombErr) console.warn(`[BUG-1850] tombstone upsert failed for ${taskId} (non-fatal):`, tombErr.message)
+                } else {
+                    logPermanentDeleteTrace(taskId, 'supabase-db.no-user-for-tombstone')
                 }
             }, 'permanentlyDeleteTask')
             lastSyncError.value = null
+            logPermanentDeleteTrace(taskId, 'supabase-db.done')
         } catch (e: unknown) {
+            logPermanentDeleteTrace(taskId, 'supabase-db.error', {
+                error: e instanceof Error ? e.message : String(e),
+            })
             handleError(e, 'permanentlyDeleteTask')
             throw e
         } finally {
             isSyncing.value = false
+            logPermanentDeleteTrace(taskId, 'supabase-db.finally')
         }
     }
 

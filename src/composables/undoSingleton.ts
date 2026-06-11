@@ -11,6 +11,7 @@ import type { CanvasGroup } from '@/types/canvas'
 import { guardTaskCreation } from '../utils/demoContentGuard'
 import { useToast } from './useToast'
 import { supabase } from '@/services/auth/supabase'
+import { beginPermanentDeleteTrace, endPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 
 interface UndoSystemState {
   canUndo: ComputedRef<boolean> | null
@@ -945,14 +946,22 @@ const deleteTaskWithUndo = async (taskId: string) => {
  * Uses the same undo mechanism as soft delete - undo will recreate the task from snapshot
  */
 const permanentlyDeleteTaskWithUndo = async (taskId: string) => {
+  beginPermanentDeleteTrace(taskId, 'undoSingleton.permanentlyDeleteTaskWithUndo')
   // Dynamic import
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
 
   const taskSource = Array.isArray(taskStore.rawTasks) ? taskStore.rawTasks : taskStore.tasks
   const taskToDelete = taskSource.find(t => t.id === taskId)
+  logPermanentDeleteTrace(taskId, 'undo.lookup', {
+    found: Boolean(taskToDelete),
+    rawTaskCount: taskStore.rawTasks?.length,
+    visibleTaskCount: taskStore.tasks?.length,
+    title: taskToDelete?.title,
+  })
   if (!taskToDelete) {
     console.warn('⚠️ Task not found for permanent deletion:', taskId)
+    endPermanentDeleteTrace(taskId, 'undo.not-found')
     return
   }
 
@@ -963,11 +972,20 @@ const permanentlyDeleteTaskWithUndo = async (taskId: string) => {
   })
 
   try {
+    logPermanentDeleteTrace(taskId, 'undo.before-store-delete')
     await taskStore.permanentlyDeleteTask(taskId)
+    logPermanentDeleteTrace(taskId, 'undo.after-store-delete', {
+      stillInRawTasks: taskStore.rawTasks.some(t => t.id === taskId),
+      rawTaskCount: taskStore.rawTasks.length,
+    })
 
     await nextTick()
     await commitOperation(handle)
+    endPermanentDeleteTrace(taskId, 'undo.committed')
   } catch (error) {
+    logPermanentDeleteTrace(taskId, 'undo.error', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     console.error('❌ permanentlyDeleteTaskWithUndo failed:', error)
     throw error
   }
@@ -1284,6 +1302,11 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
 // Undo restores via the 'task-bulk-delete' case, which clears each tombstone first (TASK-1722).
 const bulkPermanentlyDeleteTasksWithUndo = async (taskIds: string[]) => {
   if (!taskIds.length) return
+  for (const id of taskIds) {
+    beginPermanentDeleteTrace(id, 'undoSingleton.bulkPermanentlyDeleteTasksWithUndo', {
+      batchSize: taskIds.length,
+    })
+  }
 
   const { useTaskStore } = await import('../stores/tasks')
   const taskStore = useTaskStore()
@@ -1296,11 +1319,26 @@ const bulkPermanentlyDeleteTasksWithUndo = async (taskIds: string[]) => {
 
   try {
     for (const id of taskIds) {
+      logPermanentDeleteTrace(id, 'bulk.before-store-delete', {
+        batchSize: taskIds.length,
+      })
       await taskStore.permanentlyDeleteTask(id)
+      logPermanentDeleteTrace(id, 'bulk.after-store-delete', {
+        stillInRawTasks: taskStore.rawTasks.some(t => t.id === id),
+        rawTaskCount: taskStore.rawTasks.length,
+      })
     }
     await nextTick()
     await commitOperation(handle)
+    for (const id of taskIds) {
+      endPermanentDeleteTrace(id, 'bulk.committed')
+    }
   } catch (error) {
+    for (const id of taskIds) {
+      logPermanentDeleteTrace(id, 'bulk.error', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
     console.error('❌ bulkPermanentlyDeleteTasksWithUndo failed:', error)
     throw error
   }

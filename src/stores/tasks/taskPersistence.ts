@@ -6,6 +6,7 @@ import { cacheTasks, getCachedTasks, getCachedTasksWithPendingWrites } from '@/s
 import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats, repairTaskTitles, sanitizeLoadedTasks } from '@/utils/taskValidation'
 import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
+import { logPermanentDeleteTraceIfActive } from '@/utils/permanentDeleteTrace'
 // TASK-1215: Tauri dual-write for filter persistence
 import { getTauriStore, isTauriEnv } from '@/composables/usePersistentRef'
 import type { SmartView } from '@/composables/tasks/useTaskFiltering'
@@ -424,6 +425,10 @@ export function useTaskPersistence(
                     if (import.meta.env.DEV) {
                         console.log(`🛡️ [SMART-MERGE] Preserving pending-write task "${localTask.title?.slice(0, 15)}" (BUG-1206)`)
                     }
+                    logPermanentDeleteTraceIfActive(localTask.id, 'task-load.smart-merge.preserve-pending-write', {
+                        localTaskCount: _rawTasks.value.length,
+                        remoteTaskCount: geometryMergedLoadedTasks.length,
+                    })
                     mergedTasks.push(shouldPreserveRemoteTitle(localTask, remoteTask)
                         ? { ...localTask, title: remoteTask.title }
                         : localTask)
@@ -477,6 +482,13 @@ export function useTaskPersistence(
                         if (import.meta.env.DEV) {
                             console.log(`🛡️ [SMART-MERGE] Field-merging local task "${localTask.title?.slice(0, 15)}" onto remote base (Local v${localVer} > Remote v${remoteVer} || Local newer)`)
                         }
+                        logPermanentDeleteTraceIfActive(localTask.id, 'task-load.smart-merge.preserve-local-over-remote', {
+                            localVer,
+                            remoteVer,
+                            localTime,
+                            remoteTime,
+                            isVeryRecent,
+                        })
                         mergedTasks.push(merged)
                     } else {
                         // Remote is newer or equal -> Accept remote
@@ -495,6 +507,11 @@ export function useTaskPersistence(
                                 })
                             }
                         }
+                        logPermanentDeleteTraceIfActive(localTask.id, 'task-load.smart-merge.accept-remote', {
+                            localTime,
+                            remoteTime,
+                            isVeryRecent,
+                        })
                         mergedTasks.push(remoteTask)
                     }
 
@@ -508,6 +525,10 @@ export function useTaskPersistence(
                         if (import.meta.env.DEV) {
                             console.log(`🪦 [SMART-MERGE] Dropping deleted local-only task "${localTask.title?.slice(0, 15)}" - server has deletion marker`)
                         }
+                        logPermanentDeleteTraceIfActive(localTask.id, 'task-load.smart-merge.drop-deleted-local-only', {
+                            remoteTaskCount: geometryMergedLoadedTasks.length,
+                            tombstoneOrSoftDelete: true,
+                        })
                         continue
                     }
 
@@ -525,6 +546,9 @@ export function useTaskPersistence(
                         if (import.meta.env.DEV) {
                             console.log(`🗑️ [SMART-MERGE] Dropping soft-deleted local-only task "${localTask.title?.slice(0, 15)}" - already deleted`)
                         }
+                        logPermanentDeleteTraceIfActive(localTask.id, 'task-load.smart-merge.drop-soft-deleted-local-only', {
+                            remoteTaskCount: geometryMergedLoadedTasks.length,
+                        })
                         continue
                     }
 
@@ -542,12 +566,24 @@ export function useTaskPersistence(
                         if (import.meta.env.DEV) {
                             console.log(`🗑️ [SMART-MERGE] Dropping stale local-only task "${localTask.title?.slice(0, 15)}" - not in DB and not recently created`)
                         }
+                        logPermanentDeleteTraceIfActive(localTask.id, 'task-load.smart-merge.drop-stale-local-only', {
+                            remoteTaskCount: geometryMergedLoadedTasks.length,
+                            authenticatedEmptyRemoteLoad,
+                            isRecentlyCreated,
+                            pendingWrite: isPendingWrite(localTask.id),
+                        })
                         continue
                     }
 
                     if (import.meta.env.DEV) {
                         console.log(`🛡️ [SMART-MERGE] Preserving local-only task "${localTask.title?.slice(0, 15)}" - will sync when online`)
                     }
+                    logPermanentDeleteTraceIfActive(localTask.id, 'task-load.smart-merge.preserve-local-only', {
+                        remoteTaskCount: geometryMergedLoadedTasks.length,
+                        authenticatedEmptyRemoteLoad,
+                        isRecentlyCreated,
+                        pendingWrite: isPendingWrite(localTask.id),
+                    })
                     mergedTasks.push(localTask)
 
                     // Queue the task for sync retry via the offline sync system
@@ -605,9 +641,15 @@ export function useTaskPersistence(
                     if (existing !== merged) {
                         _rawTasks.value[i] = merged
                     }
+                    logPermanentDeleteTraceIfActive(existing.id, 'task-load.apply-kept-existing', {
+                        rawTaskCount: _rawTasks.value.length,
+                    })
                     mergedMap.delete(existing.id)
                 } else {
                     // Task not in merged result - remove it
+                    logPermanentDeleteTraceIfActive(existing.id, 'task-load.apply-removed-existing', {
+                        rawTaskCountBefore: _rawTasks.value.length,
+                    })
                     _rawTasks.value.splice(i, 1)
                 }
             }
@@ -633,6 +675,11 @@ export function useTaskPersistence(
 
             // BUG-1411: Cache merged tasks to IndexedDB for offline loading
             cacheTasks(mergedTasks)
+            for (const task of mergedTasks) {
+                logPermanentDeleteTraceIfActive(task.id, 'task-load.cache-merged-includes-task', {
+                    mergedTaskCount: mergedTasks.length,
+                })
+            }
 
             // If local cache had fresher geometry than the remote load, queue a
             // writeback so Supabase catches up after restart instead of leaving

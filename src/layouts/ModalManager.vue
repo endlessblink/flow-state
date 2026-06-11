@@ -133,6 +133,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import { createLazyModal } from '@/composables/useLazyComponent'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
+import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 import { Edit, Palette, Copy, Trash2 } from 'lucide-vue-next'
 import { useMessage } from 'naive-ui'
 
@@ -266,12 +267,24 @@ const closeTaskContextMenu = () => {
 
 const canvasSafeDeleteTaskWithUndo = async (taskId: string) => {
   try {
+    beginPermanentDeleteTrace(taskId, 'ModalManager.canvasSafeDeleteTaskWithUndo', {
+      context: 'canvas',
+      rawTaskCount: taskStore.rawTasks?.length,
+    })
+    logPermanentDeleteTrace(taskId, 'modal-manager.canvas-before-undo-delete')
     // BUG-1850: Real hard delete (writes tombstone) so the task is permanently removed and the
     // sync layer cannot resurrect it. Undo clears the tombstone and restores from snapshot.
     const { getUndoSystem } = await import('@/composables/undoSingleton')
     await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
+    logPermanentDeleteTrace(taskId, 'modal-manager.canvas-after-undo-delete', {
+      stillInRawTasks: taskStore.rawTasks?.some(t => t.id === taskId),
+      rawTaskCount: taskStore.rawTasks?.length,
+    })
     showTaskContextMenu.value = false
   } catch (error) {
+    logPermanentDeleteTrace(taskId, 'modal-manager.canvas-delete-error', {
+      message: error instanceof Error ? error.message : String(error),
+    })
     console.error('[ModalManager] Canvas permanent delete failed:', error)
     message.error('Failed to delete task from canvas')
     throw error
@@ -324,8 +337,17 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
   const allTasks = taskStore.rawTasks || taskStore.tasks
   const task = allTasks.find(t => t.id === taskId)
   if (!task) {
+    logPermanentDeleteTrace(taskId, 'modal-manager.permanent-delete-task-not-found', {
+      rawTaskCount: taskStore.rawTasks?.length,
+      filteredTaskCount: taskStore.tasks?.length,
+    })
     return
   }
+  beginPermanentDeleteTrace(taskId, 'ModalManager.handleContextMenuPermanentDelete', {
+    context: contextMenuContext.value,
+    title: task.title,
+    isRecurring: Boolean(task.recurrenceRule),
+  })
 
   if (task.recurrenceRule) {
     // TASK-1520: Show recurrence-aware delete dialog for permanent delete too
@@ -345,6 +367,9 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
     'Use this only when you do not want the task recoverable from trash.'
   ]
   confirmAction.value = async () => {
+    logPermanentDeleteTrace(task.id, 'modal-manager.confirm-action-start', {
+      context: contextMenuContext.value,
+    })
     if (contextMenuContext.value === 'canvas') {
       await canvasSafeDeleteTaskWithUndo(task.id)
       return
@@ -352,6 +377,10 @@ const handleContextMenuPermanentDelete = (taskId: string) => {
 
     const { getUndoSystem } = await import('@/composables/undoSingleton')
     await getUndoSystem().permanentlyDeleteTaskWithUndo(task.id)
+    logPermanentDeleteTrace(task.id, 'modal-manager.confirm-action-complete', {
+      stillInRawTasks: taskStore.rawTasks?.some(t => t.id === task.id),
+      rawTaskCount: taskStore.rawTasks?.length,
+    })
     showTaskContextMenu.value = false
   }
   showConfirmModal.value = true

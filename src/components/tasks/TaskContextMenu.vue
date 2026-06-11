@@ -274,6 +274,7 @@ import { useCanvasModalsStore } from '@/stores/canvas/modals'
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { useQuickTasks } from '@/composables/useQuickTasks'
 import { useToast } from '@/composables/useToast'
+import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 import DueDateSubmenu from './context-menu/DueDateSubmenu.vue'
 import PrioritySubmenu from './context-menu/PrioritySubmenu.vue'
 import DurationSubmenu from './context-menu/DurationSubmenu.vue'
@@ -1122,6 +1123,11 @@ const enterFocus = () => {
 
 const permanentlyDeleteTask = () => {
   if (!isBatchOperation.value && currentTask.value) {
+    beginPermanentDeleteTrace(currentTask.value.id, 'TaskContextMenu.permanentlyDeleteTask', {
+      context: props.context,
+      title: currentTask.value.title,
+    })
+    logPermanentDeleteTrace(currentTask.value.id, 'context-menu.emit-confirm-permanent-delete')
     emit('confirmPermanentDelete', currentTask.value.id)
   }
   emit('close')

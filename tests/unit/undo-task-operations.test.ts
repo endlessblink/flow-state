@@ -382,6 +382,40 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }
   })
 
+  // BUG-1850 regression: canvas permanent delete (Shift+Delete / context-menu Permanent Delete)
+  // must take the REAL hard-delete path so the DB trigger writes a tombstone — otherwise the sync
+  // layer resurrects the task and the delete appears to do nothing. The previous coverage was a
+  // logic-simulation + source grep that asserted the BUGGY soft-delete routing, so it never failed.
+  // This drives the real undo singleton and asserts the DB hard delete is invoked, not the soft one.
+  it('BUG-1850: bulkPermanentlyDeleteTasksWithUndo hard-deletes (tombstone), never soft-deletes', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const taskA = createMockTask({ id: 'bug1850-a', title: 'Permanent A' })
+    const taskB = createMockTask({ id: 'bug1850-b', title: 'Permanent B' })
+    taskStore._rawTasks.push(taskA, taskB)
+
+    mockPermanentDeleteTask.mockClear()
+    mockBulkDeleteTasks.mockClear()
+
+    await undoSystem.bulkPermanentlyDeleteTasksWithUndo([taskA.id, taskB.id])
+
+    // Real hard delete per id → trg_task_tombstone writes the tombstone that blocks resurrection.
+    expect(mockPermanentDeleteTask).toHaveBeenCalledTimes(2)
+    expect(mockPermanentDeleteTask).toHaveBeenCalledWith(taskA.id)
+    expect(mockPermanentDeleteTask).toHaveBeenCalledWith(taskB.id)
+    // The soft-delete routing that caused BUG-1850 must NOT be used.
+    expect(mockBulkDeleteTasks).not.toHaveBeenCalled()
+
+    // Removed locally...
+    expect(taskStore._rawTasks.some(c => c.id === taskA.id)).toBe(false)
+    expect(taskStore._rawTasks.some(c => c.id === taskB.id)).toBe(false)
+
+    // ...and single-press undo restores both (one combined operation).
+    await undoSystem.undo()
+    expect(taskStore._rawTasks.find(c => c.id === taskA.id)?.title).toBe('Permanent A')
+    expect(taskStore._rawTasks.find(c => c.id === taskB.id)?.title).toBe('Permanent B')
+  })
+
   it('undoes and redoes bulk task deletion three consecutive times with all original ids', async () => {
     const taskStore = useTaskStore()
     const undoSystem = getUndoSystem()

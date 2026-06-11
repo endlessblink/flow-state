@@ -717,7 +717,7 @@ describe('AI sidebar-first desktop experience', () => {
       recommendations: context.tasks.slice(0, 3).map((candidate, index) => ({
         sectionId: `bad-${index}`,
         rank: index + 1,
-        focusArea: 'Due tasks',
+        focusArea: index === 2 ? 'עבודה לא מסווגת' : 'Due tasks',
         primaryTaskId: candidate.id,
         relatedTaskIds: [],
         recommendationType: 'protect',
@@ -743,11 +743,13 @@ describe('AI sidebar-first desktop experience', () => {
     expect(validateWeeklyPlanOutput(badPlan, context)).toEqual(expect.arrayContaining([
       'generic_reasoning:bad-0',
       'generic_focus_area:bad-0',
+      'generic_focus_area:bad-2',
       'date_priority_only_reasoning:bad-0',
-      'missing_real_consequence:bad-2',
+      'generic_reasoning:bad-2',
+      'date_priority_only_reasoning:bad-2',
+      'missing_project_understanding_evidence:bad-2',
       'unsupported_evidence_value:bad-1:task-bug:notes',
       'missing_related_workstream_binding',
-      'insufficient_real_consequence_coverage',
     ]))
     const audit = auditWeeklyPlanQuality({
       ...badPlan,

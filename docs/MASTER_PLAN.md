@@ -128,6 +128,37 @@
 - `npm run type-check` → passed.
 - 2026-06-09: The focused 8-test localhost suite includes old answered-card hydration and prompt-variant routing together, so answered follow-up memory and flexible weekly intent are verified in the same browser regression lane.
 
+### TASK-1850: Weekly planner rejects generic Hebrew unclassified lanes (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed/proved 2026-06-12) | **Depends on**: TASK-1846, TASK-1849
+
+**Why**: The real signed-in Electron flow still accepted a structured weekly plan with the Hebrew generic lane `עבודה לא מסווגת`, producing shallow reasoning instead of asking for useful context or falling back to a better grounded draft.
+
+**Acceptance**:
+- Weekly plan validation rejects Hebrew/English unclassified-work focus labels as generic.
+- The regression uses the same validator path that accepts/rejects structured model weekly-plan output, not only rendered demo content.
+- Desktop delivery includes a newer Electron updater version so the fix is available to the app under test.
+
+**Proof**:
+- Real signed-in Electron smoke on 2026-06-12 reproduced the failure before the fix: prompt `תעזור לי לתכנן את שארית השבוע` rendered a weekly plan containing `עבודה לא מסווגת`.
+- `npm test -- tests/unit/ai-sidebar-first.test.ts -t "rejects shallow weekly plan JSON"` → 1/1 focused test passed.
+- `npm test -- tests/unit/ai-sidebar-first.test.ts` → 77/77 passed.
+- `npm run type-check` → passed.
+- `npm run electron:build` → passed and validated package metadata.
+- Public updater manifest verified at `https://in-theflow.com/updates/electron/latest-linux.yml` with `version: 1.4.155`; AppImage and deb URLs returned HTTP 200.
+
+### TASK-1851: Expanded weekly plan visual lane board (📋 PLANNED)
+
+**Priority**: P0-HIGH | **Status**: 📋 PLANNED (filed 2026-06-12) | **Depends on**: TASK-1850
+
+**Why**: The compact card carousel can still feel like a squeezed stack instead of a visual lane board, especially in the widened AI chat panel. The next product slice should make the lane relationship visible left-to-right rather than relying on semantic labels and clipped task cards.
+
+**Acceptance**:
+- Expanded/wide chat mode renders weekly recommendations as real horizontal lanes with all related task cards visible or intentionally paged without clipping.
+- Compact mode does not collapse into a broken carousel or cut off task-card text.
+- Lane titles explain the actual workstream, not generic buckets like `Work` or `עבודה לא מסווגת`.
+- Headed verification uses the signed-in app/browser flow with the user's real task data, plus regression tests guarding against clipped carousel lanes.
+
 **Focused proof gate before user testing**:
 - Unit tests for flexible weekly intent, iterative clarification continuation, no blocking memory persistence, and no repeated questions.
 - Playwright localhost user flow with seeded tasks:

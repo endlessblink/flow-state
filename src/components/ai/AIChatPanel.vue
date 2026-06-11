@@ -118,12 +118,13 @@ function cyclePanelMode() {
 }
 
 function requestWidePanel() {
-  if (panelMode.value === 'compact') panelMode.value = 'expanded'
-  else if (panelMode.value === 'expanded') panelMode.value = 'fullscreen'
+  panelMode.value = 'fullscreen'
 }
 
 const panelStyle = computed(() => {
-  if (panelMode.value === 'fullscreen') return {}
+  if (panelMode.value === 'fullscreen') {
+    return { width: '100vw', maxWidth: '100vw' }
+  }
   if (panelMode.value === 'expanded') return { width: '800px' }
   return { width: '600px' }
 })
@@ -1138,6 +1139,7 @@ onUnmounted(() => {
           :key="message.id"
           :message="message"
           :direction="effectiveChatDirection"
+          :wide-mode="panelMode === 'fullscreen'"
           @select-task="handleSelectTask"
           @continue-chat="handleContinueChat"
           @request-wide="requestWidePanel"

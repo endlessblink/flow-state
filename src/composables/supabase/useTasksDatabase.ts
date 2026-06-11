@@ -293,11 +293,18 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             // (BEFORE DELETE on tasks) auto-creates the tombstone in the same
             // transaction. No need for a separate recordTombstone() call.
             await withRetry(async () => {
-                const { error } = await getSupabase()
+                // BUG-1850: Request the deleted rows so a silent 0-row delete (RLS filtered the
+                // row, or the row no longer exists) surfaces as an error instead of a fake success
+                // that lets the optimistic local removal get resurrected on the next sync.
+                const { data, error } = await getSupabase()
                     .from('tasks')
                     .delete()
                     .eq('id', taskId)
+                    .select('id')
                 if (error) throw error
+                if (!data || data.length === 0) {
+                    throw new Error(`permanentlyDeleteTask deleted 0 rows for ${taskId} (RLS or already gone)`)
+                }
             }, 'permanentlyDeleteTask')
             lastSyncError.value = null
         } catch (e: unknown) {

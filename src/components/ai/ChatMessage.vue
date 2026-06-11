@@ -20,7 +20,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
-import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock, Plus, Maximize2, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock, Plus, Maximize2 } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type Token from 'markdown-it/lib/token.mjs'
 import type Renderer from 'markdown-it/lib/renderer.mjs'
@@ -49,6 +49,7 @@ import { resumeLocalClarificationRuntime } from '@/services/ai/runtime/localClar
 const props = defineProps<{
   message: ChatMessage
   direction?: 'auto' | 'ltr' | 'rtl'
+  wideMode?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -117,7 +118,6 @@ const dayPlanError = ref('')
 const smartLaneApplying = ref(false)
 const smartLaneApplied = ref(false)
 const smartLaneError = ref('')
-const weeklyLaneTrackRefs = ref<Record<string, HTMLElement | null>>({})
 
 // Schedule onboarding
 const selectedDays = ref<Set<string>>(new Set())
@@ -331,26 +331,6 @@ function weeklyPlanRelatedChipIds(rec: WeeklyPlanRecommendation): string[] {
   return [...new Set(rec.relatedTaskIds ?? [])]
     .filter(taskId => taskId !== rec.primaryTaskId && !dismissedCardTaskIds.value.has(taskId))
     .slice(0, 4)
-}
-
-function setWeeklyLaneTrackRef(sectionId: string, el: unknown): void {
-  weeklyLaneTrackRefs.value[sectionId] = el instanceof HTMLElement ? el : null
-}
-
-function scrollWeeklyLane(rec: WeeklyPlanRecommendation, direction: 'previous' | 'next', event: MouseEvent): void {
-  event.stopPropagation()
-  const el = weeklyLaneTrackRefs.value[rec.sectionId]
-  if (!el) return
-  const amount = Math.max(180, Math.round(el.clientWidth * 0.78))
-  const signed = direction === 'next' ? 1 : -1
-  el.scrollBy({
-    left: signed * amount,
-    behavior: 'smooth',
-  })
-}
-
-function shouldShowLaneArrows(rec: WeeklyPlanRecommendation): boolean {
-  return weeklyPlanTaskIds(rec).length > 1
 }
 
 function weeklyLaneTitle(rec: WeeklyPlanRecommendation): string {
@@ -2281,7 +2261,9 @@ async function saveSchedule() {
       'message-user': isUser,
       'message-assistant': isAssistant,
       'message-streaming': isStreaming,
-      'message-error': hasError
+      'message-error': hasError,
+      'message-weekly-plan': Boolean(weeklyPlan && hasVisibleWeeklyPlanContent),
+      'message-weekly-plan-wide': props.wideMode && Boolean(weeklyPlan && hasVisibleWeeklyPlanContent)
     }"
   >
     <!-- Avatar -->
@@ -2628,68 +2610,47 @@ async function saveSchedule() {
                   {{ rec.nextAction }}
                 </p>
               </div>
-              <div class="weekly-lane-rail" :class="{ 'has-arrows': shouldShowLaneArrows(rec) }">
-              <button
-                v-if="shouldShowLaneArrows(rec)"
-                type="button"
-                class="weekly-lane-arrow weekly-lane-arrow-prev"
-                data-testid="weekly-lane-arrow-prev"
-                :aria-label="weeklyPlan.locale === 'he' ? 'גלול אחורה בנתיב' : 'Scroll lane backward'"
-                @click="scrollWeeklyLane(rec, 'previous', $event)"
-              >
-                <ChevronLeft :size="15" />
-              </button>
-              <div
-                :ref="el => setWeeklyLaneTrackRef(rec.sectionId, el)"
-                class="weekly-lane-track"
-                data-testid="weekly-lane-track"
-              >
-                <template v-for="taskId in weeklyPlanTaskIds(rec)" :key="`${rec.sectionId}:lane:${taskId}`">
-                  <button
-                    v-if="taskCardFromId(taskId)"
-                    class="weekly-lane-task"
-                    :class="{
-                      'weekly-lane-task-primary': taskId === rec.primaryTaskId,
-                      'task-completed': completedTaskIds.has(taskId) || taskCardFromId(taskId)?.status === 'done',
-                    }"
-                    :data-testid="taskId === rec.primaryTaskId ? 'inline-plan-card' : undefined"
-                    @click="!isPlanSnapshotCard(taskCardFromId(taskId)) && openQuickEdit(taskCardFromId(taskId)!, $event)"
-                  >
-                    <span class="task-priority-dot" :style="{ background: priorityColor(taskCardFromId(taskId)?.priority ?? undefined) }" />
-                    <span class="weekly-lane-task-body">
-                      <span
-                        class="weekly-lane-task-title"
-                        :data-testid="taskId === rec.primaryTaskId ? undefined : 'weekly-related-chip'"
-                        dir="auto"
-                      >
-                        {{ taskCardFromId(taskId)?.title || '(untitled)' }}
+              <div class="weekly-lane-rail">
+                <div
+                  class="weekly-lane-track"
+                  data-testid="weekly-lane-track"
+                >
+                  <template v-for="taskId in weeklyPlanTaskIds(rec)" :key="`${rec.sectionId}:lane:${taskId}`">
+                    <button
+                      v-if="taskCardFromId(taskId)"
+                      class="weekly-lane-task"
+                      :class="{
+                        'weekly-lane-task-primary': taskId === rec.primaryTaskId,
+                        'task-completed': completedTaskIds.has(taskId) || taskCardFromId(taskId)?.status === 'done',
+                      }"
+                      :data-testid="taskId === rec.primaryTaskId ? 'inline-plan-card' : undefined"
+                      @click="!isPlanSnapshotCard(taskCardFromId(taskId)) && openQuickEdit(taskCardFromId(taskId)!, $event)"
+                    >
+                      <span class="task-priority-dot" :style="{ background: priorityColor(taskCardFromId(taskId)?.priority ?? undefined) }" />
+                      <span class="weekly-lane-task-body">
+                        <span
+                          class="weekly-lane-task-title"
+                          :data-testid="taskId === rec.primaryTaskId ? undefined : 'weekly-related-chip'"
+                          dir="auto"
+                        >
+                          {{ taskCardFromId(taskId)?.title || '(untitled)' }}
+                        </span>
+                        <span class="sr-only" data-testid="weekly-lane-task" />
+                        <span v-if="weeklyPlanTaskStaleLabel(taskCardFromId(taskId))" class="grouped-card-reason" dir="auto">
+                          {{ weeklyPlanTaskStaleLabel(taskCardFromId(taskId)) }}
+                        </span>
+                        <span class="task-meta-row">
+                          <span v-if="taskCardFromId(taskId)?.daysOverdue" class="task-overdue-badge">{{ taskCardFromId(taskId)?.daysOverdue }}d overdue</span>
+                          <span v-else-if="taskCardFromId(taskId)?.dueDate" class="task-due-date">{{ formatRelativeDate(taskCardFromId(taskId)?.dueDate ?? '') }}</span>
+                          <span v-if="taskCardFromId(taskId)?.status" class="task-status-badge" :class="'status-' + taskCardFromId(taskId)?.status">{{ taskCardFromId(taskId)?.status }}</span>
+                        </span>
                       </span>
-                      <span class="sr-only" data-testid="weekly-lane-task">{{ taskCardFromId(taskId)?.title || taskId }}</span>
-                      <span v-if="weeklyPlanTaskStaleLabel(taskCardFromId(taskId))" class="grouped-card-reason" dir="auto">
-                        {{ weeklyPlanTaskStaleLabel(taskCardFromId(taskId)) }}
-                      </span>
-                      <span class="task-meta-row">
-                        <span v-if="taskCardFromId(taskId)?.daysOverdue" class="task-overdue-badge">{{ taskCardFromId(taskId)?.daysOverdue }}d overdue</span>
-                        <span v-else-if="taskCardFromId(taskId)?.dueDate" class="task-due-date">{{ formatRelativeDate(taskCardFromId(taskId)?.dueDate ?? '') }}</span>
-                        <span v-if="taskCardFromId(taskId)?.status" class="task-status-badge" :class="'status-' + taskCardFromId(taskId)?.status">{{ taskCardFromId(taskId)?.status }}</span>
-                      </span>
-                    </span>
-                  </button>
-                  <div v-else class="weekly-missing-task" data-testid="inline-plan-card-missing">
-                    {{ weeklyPlan.locale === 'he' ? 'המשימה כבר לא קיימת' : 'Task no longer exists' }}
-                  </div>
-                </template>
-              </div>
-              <button
-                v-if="shouldShowLaneArrows(rec)"
-                type="button"
-                class="weekly-lane-arrow weekly-lane-arrow-next"
-                data-testid="weekly-lane-arrow-next"
-                :aria-label="weeklyPlan.locale === 'he' ? 'גלול קדימה בנתיב' : 'Scroll lane forward'"
-                @click="scrollWeeklyLane(rec, 'next', $event)"
-              >
-                <ChevronRight :size="15" />
-              </button>
+                    </button>
+                    <div v-else class="weekly-missing-task" data-testid="inline-plan-card-missing">
+                      {{ weeklyPlan.locale === 'he' ? 'המשימה כבר לא קיימת' : 'Task no longer exists' }}
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
             <div class="weekly-feedback-row" @click.stop>
@@ -2728,6 +2689,64 @@ async function saveSchedule() {
               <span v-if="recommendationFeedbackStatus[rec.sectionId]" class="weekly-question-status">
                 {{ recommendationFeedbackStatus[rec.sectionId] }}
               </span>
+            </div>
+            <div
+              v-if="recommendationFeedbackChoiceOpen[rec.sectionId]"
+              class="weekly-feedback-detail"
+              data-testid="weekly-feedback-detail"
+              @click.stop
+            >
+              <span class="weekly-feedback-detail-label">
+                {{ weeklyPlan.locale === 'he' ? 'למה?' : 'Why?' }}
+              </span>
+              <div class="weekly-feedback-choice-row">
+                <button
+                  v-for="reason in feedbackReasonOptions(recommendationFeedbackAction(rec), weeklyPlan.locale)"
+                  :key="`${rec.sectionId}:compact:reason:${reason.value}`"
+                  type="button"
+                  class="weekly-feedback-btn"
+                  :class="{ selected: recommendationFeedbackReasons[rec.sectionId] === reason.value }"
+                  @click="recommendationFeedbackReasons[rec.sectionId] = reason.value"
+                >
+                  {{ reason.label }}
+                </button>
+              </div>
+              <template v-if="recommendationFeedbackChoiceOpen[rec.sectionId] === 'postpone'">
+                <span class="weekly-feedback-detail-label">
+                  {{ weeklyPlan.locale === 'he' ? 'להחזיר מתי?' : 'Revisit when?' }}
+                </span>
+                <div class="weekly-feedback-choice-row">
+                  <button
+                    v-for="option in feedbackRevisitOptions(weeklyPlan.locale)"
+                    :key="`${rec.sectionId}:compact:revisit:${option.value}`"
+                    type="button"
+                    class="weekly-feedback-btn"
+                    :class="{ selected: recommendationFeedbackRevisit[rec.sectionId] === option.value }"
+                    @click="recommendationFeedbackRevisit[rec.sectionId] = option.value"
+                  >
+                    {{ option.label }}
+                  </button>
+                </div>
+              </template>
+              <div class="weekly-feedback-detail-actions">
+                <button
+                  type="button"
+                  class="weekly-question-apply"
+                  :disabled="Boolean(recommendationFeedbackLoading[`${rec.sectionId}:${recommendationFeedbackChoiceOpen[rec.sectionId]}`])"
+                  @click="saveRecommendationFeedbackChoice(rec)"
+                >
+                  <Loader2 v-if="recommendationFeedbackLoading[`${rec.sectionId}:${recommendationFeedbackChoiceOpen[rec.sectionId]}`]" :size="13" class="spin" />
+                  <CheckCircle2 v-else :size="13" />
+                  {{ weeklyPlan.locale === 'he' ? 'שמור משוב' : 'Save feedback' }}
+                </button>
+                <button
+                  type="button"
+                  class="weekly-feedback-btn"
+                  @click="cancelRecommendationFeedbackChoice(rec)"
+                >
+                  {{ weeklyPlan.locale === 'he' ? 'בטל' : 'Cancel' }}
+                </button>
+              </div>
             </div>
           </section>
         </div>
@@ -3525,6 +3544,24 @@ async function saveSchedule() {
 .message-assistant {
   background: var(--glass-bg-weak);
   margin-inline-end: var(--space-4);
+}
+
+:global(.panel-fullscreen .message-weekly-plan),
+.message-weekly-plan-wide {
+  align-self: center;
+  width: min(100%, 1240px);
+  margin-inline: 0;
+}
+
+:global(.panel-fullscreen .message-weekly-plan) .message-content,
+.message-weekly-plan-wide .message-content {
+  width: 100%;
+}
+
+:global(.panel-fullscreen .message-weekly-plan) .weekly-plan-message,
+.message-weekly-plan-wide .weekly-plan-message {
+  width: min(calc(100vw - 8rem), 1180px);
+  max-width: 100%;
 }
 
 .message-assistant .message-avatar {
@@ -4476,9 +4513,10 @@ async function saveSchedule() {
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2_5);
   min-width: 0;
-  padding-block: var(--space-3);
-  border-block-start: 1px solid var(--glass-border-faint);
-  background: transparent;
+  padding: var(--space-3);
+  border: 1px solid var(--glass-border-faint);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--glass-bg-subtle) 62%, transparent);
 }
 
 [dir="rtl"] .weekly-visual-lane {
@@ -4541,7 +4579,7 @@ async function saveSchedule() {
 .weekly-lane-content {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-2_5);
   min-width: 0;
 }
 
@@ -4563,12 +4601,10 @@ async function saveSchedule() {
   min-width: 0;
   overflow: visible;
   border: 1px solid var(--glass-border-faint);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--glass-bg-subtle) 72%, transparent);
-}
-
-.weekly-lane-rail.has-arrows {
-  padding-inline: 0;
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--glass-border) 48%, transparent), transparent) 0 50% / 100% 1px no-repeat,
+    color-mix(in srgb, var(--glass-bg-subtle) 72%, transparent);
 }
 
 .weekly-open-lane-view {
@@ -4591,35 +4627,6 @@ async function saveSchedule() {
   color: var(--text-primary);
 }
 
-.weekly-lane-arrow {
-  position: absolute;
-  top: var(--space-1);
-  bottom: var(--space-1);
-  z-index: 1;
-  display: none;
-  place-items: center;
-  width: 1.875rem;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: var(--glass-bg-subtle);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.weekly-lane-arrow-prev {
-  left: var(--space-1);
-}
-
-.weekly-lane-arrow-next {
-  right: var(--space-1);
-}
-
-.weekly-lane-arrow:hover {
-  border-color: var(--glass-border-strong);
-  color: var(--text-primary);
-  background: var(--glass-bg-soft);
-}
-
 .weekly-lane-track {
   position: relative;
   display: flex;
@@ -4633,16 +4640,6 @@ async function saveSchedule() {
   overflow: visible;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-}
-
-.weekly-lane-track::before {
-  position: absolute;
-  inset-inline: var(--space-4);
-  top: 50%;
-  height: 1px;
-  background: var(--glass-border);
-  content: '';
-  transform: translateY(-50%);
 }
 
 .weekly-lane-track::-webkit-scrollbar {
@@ -4697,22 +4694,88 @@ async function saveSchedule() {
   -webkit-line-clamp: 2;
 }
 
-:global(.panel-fullscreen) .weekly-lane-task {
-  width: clamp(13.5rem, 30%, 18rem);
+:global(.panel-fullscreen .weekly-lane-board),
+.message-weekly-plan-wide .weekly-lane-board {
+  gap: var(--space-4);
+  width: min(100%, 1180px);
+  margin-inline: auto;
 }
 
-:global(.panel-fullscreen) .weekly-visual-lane {
+:global(.panel-fullscreen .weekly-visual-lane),
+.message-weekly-plan-wide .weekly-visual-lane {
   grid-template-columns: minmax(0, 1fr);
-  padding-inline: var(--space-3);
+  grid-template-areas:
+    "header"
+    "summary"
+    "rail"
+    "feedback";
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-color: var(--glass-border);
+  background: color-mix(in srgb, var(--glass-bg-subtle) 78%, transparent);
 }
 
-:global(.panel-fullscreen) .weekly-lane-rail.has-arrows {
-  padding-inline: 2.625rem;
+:global(.panel-fullscreen .weekly-lane-header),
+.message-weekly-plan-wide .weekly-lane-header {
+  grid-area: header;
 }
 
-:global(.panel-fullscreen[dir="rtl"]) .weekly-visual-lane,
-[dir="rtl"] :global(.panel-fullscreen) .weekly-visual-lane {
+:global(.panel-fullscreen .weekly-open-lane-view),
+.message-weekly-plan-wide .weekly-open-lane-view {
+  display: none;
+}
+
+:global(.panel-fullscreen .weekly-lane-content),
+.message-weekly-plan-wide .weekly-lane-content {
+  display: contents;
+}
+
+:global(.panel-fullscreen .weekly-lane-summary),
+.message-weekly-plan-wide .weekly-lane-summary {
+  grid-area: summary;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.86fr);
+  align-items: start;
+  padding-block-start: 0;
+}
+
+:global(.panel-fullscreen .weekly-lane-rail),
+.message-weekly-plan-wide .weekly-lane-rail {
+  grid-area: rail;
+}
+
+:global(.panel-fullscreen .weekly-feedback-row),
+.message-weekly-plan-wide .weekly-feedback-row {
+  grid-area: feedback;
+}
+
+:global(.panel-fullscreen .weekly-lane-track),
+.message-weekly-plan-wide .weekly-lane-track {
+  gap: var(--space-2);
+  padding: var(--space-2_5);
+}
+
+:global(.panel-fullscreen .weekly-lane-task),
+.message-weekly-plan-wide .weekly-lane-task {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 4.75rem;
+  padding: var(--space-2_5) var(--space-3);
+}
+
+:global(.panel-fullscreen .weekly-lane-task-title),
+.message-weekly-plan-wide .weekly-lane-task-title {
+  font-size: var(--text-sm);
+}
+
+:global(.panel-fullscreen[dir="rtl"] .weekly-visual-lane),
+[dir="rtl"] :global(.panel-fullscreen .weekly-visual-lane),
+[dir="rtl"] .message-weekly-plan-wide .weekly-visual-lane {
   grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "header"
+    "summary"
+    "rail"
+    "feedback";
 }
 
 @media (max-width: 720px) {

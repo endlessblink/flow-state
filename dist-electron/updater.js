@@ -3,51 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerUpdater = registerUpdater;
 const electron_updater_1 = require("electron-updater");
 const electron_1 = require("electron");
-const node_fs_1 = require("node:fs");
-const node_os_1 = require("node:os");
-const node_path_1 = require("node:path");
+const updater_pending_1 = require("./updater-pending");
 function hasValidAppVersion(version) {
     return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version);
-}
-function compareVersions(a, b) {
-    const aParts = a.split(/[.+-]/)[0].split('.').map(Number);
-    const bParts = b.split(/[.+-]/)[0].split('.').map(Number);
-    for (let i = 0; i < 3; i += 1) {
-        const diff = (aParts[i] || 0) - (bParts[i] || 0);
-        if (diff !== 0)
-            return diff;
-    }
-    return 0;
-}
-function versionFromUpdateFileName(fileName) {
-    if (typeof fileName !== 'string')
-        return null;
-    const match = fileName.match(/(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)/);
-    return match?.[1] ?? null;
-}
-function pendingUpdateInfoPath() {
-    const cacheHome = process.env.XDG_CACHE_HOME || (0, node_path_1.join)((0, node_os_1.homedir)(), '.cache');
-    return (0, node_path_1.join)(cacheHome, 'flow-state-updater', 'pending', 'update-info.json');
-}
-function clearStalePendingUpdate(appVersion) {
-    const updateInfoPath = pendingUpdateInfoPath();
-    if (!(0, node_fs_1.existsSync)(updateInfoPath))
-        return;
-    try {
-        const info = JSON.parse((0, node_fs_1.readFileSync)(updateInfoPath, 'utf8'));
-        const pendingVersion = versionFromUpdateFileName(info.fileName);
-        if (!pendingVersion || compareVersions(pendingVersion, appVersion) <= 0) {
-            (0, node_fs_1.rmSync)(updateInfoPath, { force: true });
-            console.warn('[Updater] Cleared stale pending update marker', {
-                pendingVersion: pendingVersion ?? 'unknown',
-                appVersion,
-                updateInfoPath,
-            });
-        }
-    }
-    catch (err) {
-        console.warn('[Updater] Failed to inspect pending update marker:', err.message);
-    }
 }
 function emitUpdaterError(message) {
     const win = electron_1.BrowserWindow.getAllWindows()[0];
@@ -64,7 +22,19 @@ function registerUpdater() {
     const appVersion = electron_1.app.getVersion();
     const canUseUpdater = !isDev && hasValidAppVersion(appVersion);
     if (!isDev && hasValidAppVersion(appVersion)) {
-        clearStalePendingUpdate(appVersion);
+        try {
+            const stalePendingUpdate = (0, updater_pending_1.clearStalePendingUpdate)(appVersion);
+            if (stalePendingUpdate.cleared) {
+                console.warn('[Updater] Cleared stale pending update marker', {
+                    pendingVersion: stalePendingUpdate.pendingVersion ?? 'unknown',
+                    appVersion,
+                    updateInfoPath: stalePendingUpdate.updateInfoPath,
+                });
+            }
+        }
+        catch (err) {
+            console.warn('[Updater] Failed to inspect pending update marker:', err.message);
+        }
     }
     electron_1.app.on('before-quit', () => {
         console.log('[Updater] before-quit received');

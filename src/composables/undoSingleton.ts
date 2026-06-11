@@ -1277,6 +1277,35 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
   }
 }
 
+// BUG-1850: Batch HARD delete with a single undo operation (canvas Shift+Delete / permanent delete).
+// Mirrors bulkDeleteTasksWithUndo but calls permanentlyDeleteTask, so the DB trigger
+// trg_task_tombstone writes a tombstone and the sync layer cannot resurrect the task.
+// Uses the same handle-based begin/commit API (the old "corrupts pendingOperation" hazard is gone).
+// Undo restores via the 'task-bulk-delete' case, which clears each tombstone first (TASK-1722).
+const bulkPermanentlyDeleteTasksWithUndo = async (taskIds: string[]) => {
+  if (!taskIds.length) return
+
+  const { useTaskStore } = await import('../stores/tasks')
+  const taskStore = useTaskStore()
+
+  const handle = await beginOperation({
+    type: 'task-bulk-delete',
+    affectedIds: [...taskIds],
+    description: `Permanently delete ${taskIds.length} task${taskIds.length > 1 ? 's' : ''}`
+  })
+
+  try {
+    for (const id of taskIds) {
+      await taskStore.permanentlyDeleteTask(id)
+    }
+    await nextTick()
+    await commitOperation(handle)
+  } catch (error) {
+    console.error('❌ bulkPermanentlyDeleteTasksWithUndo failed:', error)
+    throw error
+  }
+}
+
 // BUG-1739: Batch move-to-inbox with a single undo operation.
 // Bypasses global beginOperation/commitOperation to avoid race condition
 // with drag-settling's stale commitOperation stealing pendingOperation.
@@ -1442,6 +1471,7 @@ export function getUndoSystem() {
     deleteTaskWithUndo,
     permanentlyDeleteTaskWithUndo,
     bulkDeleteTasksWithUndo,
+    bulkPermanentlyDeleteTasksWithUndo,
     bulkMoveToInboxWithUndo,
     rippleShiftWithUndo,
     updateTaskWithUndo,

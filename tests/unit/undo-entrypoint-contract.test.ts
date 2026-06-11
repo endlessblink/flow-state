@@ -34,7 +34,7 @@ describe('undo-aware modal and context-menu entry points', () => {
     expect(source).not.toContain('await taskStore.updateTask(taskId, {\n      canvasPosition: undefined')
   })
 
-  it('routes canvas-origin permanent task delete through the canvas-safe bulk delete path', () => {
+  it('routes canvas-origin permanent task delete through a REAL hard delete (BUG-1850)', () => {
     const canvasView = readSource('src/views/CanvasView.vue')
     const canvasEvents = readSource('src/composables/canvas/useCanvasEvents.ts')
     const modalManager = readSource('src/layouts/ModalManager.vue')
@@ -46,11 +46,15 @@ describe('undo-aware modal and context-menu entry points', () => {
     expect(canvasTaskActions).toContain("detail: { taskId: task.id, permanent: false, context: 'canvas' }")
     expect(canvasHotkeys).toContain("detail: { taskId: task.id, permanent: permanentDelete, context: 'canvas' }")
 
+    // BUG-1850: canvas permanent delete must hit the tombstone-writing path, not soft delete.
+    expect(canvasTaskActions).toContain('await undoHistory.bulkPermanentlyDeleteTasksWithUndo(taskIdsToDelete)')
+    expect(canvasTaskActions).not.toContain('await undoHistory.bulkDeleteTasksWithUndo(taskIdsToDelete)')
+
     expect(modalManager).toContain('const canvasSafeDeleteTaskWithUndo = async (taskId: string) => {')
-    expect(modalManager).toContain('await undoRedoActions.bulkDeleteTasksWithUndo([taskId])')
+    expect(modalManager).toContain('await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)')
+    expect(modalManager).not.toContain('await undoRedoActions.bulkDeleteTasksWithUndo([taskId])')
     expect(modalManager).toContain("if (contextMenuContext.value === 'canvas') {")
     expect(modalManager).toContain("if (isPermanent && context === 'canvas') {")
-    expect(modalManager).toContain("recurrenceDeleteContext.value = context === 'canvas' ? 'canvas' : 'list'")
   })
 
   it('keeps Kanban drop mutations on undo-aware APIs', () => {

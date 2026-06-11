@@ -1096,154 +1096,166 @@ export function useCanvasInteractions(deps?: {
 
     const onSectionResizeEnd = async ({ sectionId: rawSectionId, event }: { sectionId: string; event: unknown }) => {
         const { id: sectionId } = CanvasIds.parseNodeId(rawSectionId)
-        const vueFlowNode = findNode(CanvasIds.groupNodeId(sectionId))
-        if (!vueFlowNode) return
-
-        const typedEvent = event as { params?: { width?: number; height?: number } }
-        const width = typedEvent?.params?.width
-        const height = typedEvent?.params?.height
-        if (!width || !height) return
-
-        const section = canvasStore.groups.find(s => s.id === sectionId)
-        if (!section) return
-
-        isResizeSettling.value = true
-        resizeState.value.isResizing = false
-        endResize(sectionId)
-
-        const { width: validatedWidth, height: validatedHeight } = validateDimensions(width, height)
-        const newX = vueFlowNode.position.x
-        const newY = vueFlowNode.position.y
-        const deltaX = newX - resizeState.value.startX
-        const deltaY = newY - resizeState.value.startY
-
-        const absPos = { x: newX, y: newY }
-        const resizeAffectedIds = new Set<string>([sectionId])
-        const descendantGroupsBeforeResize = collectDescendantGroups(sectionId, canvasStore.groups)
-        descendantGroupsBeforeResize.forEach(group => resizeAffectedIds.add(group.id))
-        const resizeGroupIds = new Set([sectionId, ...descendantGroupsBeforeResize.map(group => group.id)])
-        taskStore.tasks
-            .filter(task => task.parentId && resizeGroupIds.has(task.parentId))
-            .forEach(task => resizeAffectedIds.add(task.id))
-        const undoSystem = getUndoSystem()
-        const resizeUndoHandle = await undoSystem.beginOperation({
-            type: 'canvas-geometry',
-            affectedIds: [...resizeAffectedIds],
-            description: `Resize canvas group: ${section.name}`
-        })
-        let persistedResizeGeometry = false
-
-        // 1. Optimistic Store Update (Absolute)
-        canvasStore.updateGroup(sectionId, {
-            position: {
-                ...absPos,
-                width: validatedWidth,
-                height: validatedHeight
-            },
-            positionFormat: 'absolute'
-        })
-        persistedResizeGeometry = true
-
-        // 2. Optimistic DB Sync
-        // We find the Vue Flow node to pass to key logic
-        if (vueFlowNode) {
-            // Ensure width/height are set for sync
-            vueFlowNode.data = { ...vueFlowNode.data, width: validatedWidth, height: validatedHeight }
-
-            setNodeState(sectionId, NodeState.SYNCING)
-            await syncNodePosition(sectionId, vueFlowNode, canvasStore.groups, 'groups')
-            setNodeState(sectionId, NodeState.IDLE)
+        const releaseResizeLocks = () => {
+            lockManager.release(sectionId, 'user-resize')
+            Object.keys(resizeState.value.childStartPositions).forEach(childId => {
+                lockManager.release(childId, 'user-resize')
+            })
         }
 
-        // ================================================================
-        // BUG #4 FIX: Sync descendants when resize changes origin
-        // ================================================================
-        // If resize changed the group's origin (e.g., resizing from top-left),
-        // we must sync all descendant positions to DB. When resizing from
-        // bottom-right only, deltaX/deltaY will be 0 and no sync is needed.
-        if (deltaX !== 0 || deltaY !== 0) {
-            if (import.meta.env.DEV) {
-                console.log(`[CANVAS:INTERACT] Resize origin changed by (${deltaX}, ${deltaY}), syncing descendants...`)
-            }
+        try {
+            isResizeSettling.value = true
+            resizeState.value.isResizing = false
+            endResize(sectionId)
 
-            // Sync ALL Descendant Tasks (reuse helpers from BUG #1 fix)
-            const descendantTasks = collectDescendantTasks(sectionId, taskStore.tasks, canvasStore.groups)
-            for (const descendantTask of descendantTasks) {
-                const childNode = findNode(descendantTask.id)
-                if (childNode) {
-                    setNodeState(descendantTask.id, NodeState.SYNCING)
-                    syncNodePosition(descendantTask.id, childNode, canvasStore.groups, 'tasks')
-                        .finally(() => setNodeState(descendantTask.id, NodeState.IDLE))
+            const vueFlowNode = findNode(CanvasIds.groupNodeId(sectionId))
+            if (!vueFlowNode) return
+
+            const typedEvent = event as { params?: { width?: number; height?: number } }
+            const width = typedEvent?.params?.width
+            const height = typedEvent?.params?.height
+            if (!width || !height) return
+
+            const section = canvasStore.groups.find(s => s.id === sectionId)
+            if (!section) return
+
+            const { width: validatedWidth, height: validatedHeight } = validateDimensions(width, height)
+            const newX = vueFlowNode.position.x
+            const newY = vueFlowNode.position.y
+            const deltaX = newX - resizeState.value.startX
+            const deltaY = newY - resizeState.value.startY
+
+            const absPos = { x: newX, y: newY }
+            const resizeAffectedIds = new Set<string>([sectionId])
+            const descendantGroupsBeforeResize = collectDescendantGroups(sectionId, canvasStore.groups)
+            descendantGroupsBeforeResize.forEach(group => resizeAffectedIds.add(group.id))
+            const resizeGroupIds = new Set([sectionId, ...descendantGroupsBeforeResize.map(group => group.id)])
+            taskStore.tasks
+                .filter(task => task.parentId && resizeGroupIds.has(task.parentId))
+                .forEach(task => resizeAffectedIds.add(task.id))
+            const undoSystem = getUndoSystem()
+            const resizeUndoHandle = await undoSystem.beginOperation({
+                type: 'canvas-geometry',
+                affectedIds: [...resizeAffectedIds],
+                description: `Resize canvas group: ${section.name}`
+            })
+            let persistedResizeGeometry = false
+
+            // 1. Optimistic Store Update (Absolute)
+            canvasStore.updateGroup(sectionId, {
+                position: {
+                    ...absPos,
+                    width: validatedWidth,
+                    height: validatedHeight
+                },
+                positionFormat: 'absolute'
+            })
+            persistedResizeGeometry = true
+
+            // The user interaction is visually complete after the local geometry write.
+            // Do not hold resize locks while the network sync may take up to 20 seconds.
+            releaseResizeLocks()
+
+            // 2. Optimistic DB Sync
+            // We find the Vue Flow node to pass to key logic
+            if (vueFlowNode) {
+                // Ensure width/height are set for sync
+                vueFlowNode.data = { ...vueFlowNode.data, width: validatedWidth, height: validatedHeight }
+
+                setNodeState(sectionId, NodeState.SYNCING)
+                try {
+                    await syncNodePosition(sectionId, vueFlowNode, canvasStore.groups, 'groups')
+                } finally {
+                    setNodeState(sectionId, NodeState.IDLE)
                 }
             }
 
-            // Sync ALL Descendant Groups
-            const descendantGroups = collectDescendantGroups(sectionId, canvasStore.groups)
-            for (const descendantGroup of descendantGroups) {
-                const childNodeId = CanvasIds.groupNodeId(descendantGroup.id)
-                const childNode = findNode(childNodeId)
-                if (childNode) {
-                    setNodeState(descendantGroup.id, NodeState.SYNCING)
-                    syncNodePosition(descendantGroup.id, childNode, canvasStore.groups, 'groups')
-                        .finally(() => setNodeState(descendantGroup.id, NodeState.IDLE))
+            // ================================================================
+            // BUG #4 FIX: Sync descendants when resize changes origin
+            // ================================================================
+            // If resize changed the group's origin (e.g., resizing from top-left),
+            // we must sync all descendant positions to DB. When resizing from
+            // bottom-right only, deltaX/deltaY will be 0 and no sync is needed.
+            if (deltaX !== 0 || deltaY !== 0) {
+                if (import.meta.env.DEV) {
+                    console.log(`[CANVAS:INTERACT] Resize origin changed by (${deltaX}, ${deltaY}), syncing descendants...`)
                 }
-            }
-        }
-        // NOTE: When deltaX === 0 && deltaY === 0 (bottom-right resize only),
-        // no child sync is needed because child absolute positions don't change.
 
-        // ================================================================
-        // BUG-1191 FIX: Reconcile parentId after resize
-        // ================================================================
-        // When a group is resized smaller, tasks that were inside may now
-        // be outside the new bounds. Clear their parentId to prevent them
-        // from being dragged with the group.
-        const allTasks = taskStore.tasks
-        const resizedGroup = canvasStore.groups.find(g => g.id === sectionId)
-        if (resizedGroup) {
-            const groupAbsPos = getGroupAbsolutePosition(sectionId, canvasStore.groups)
-            const tasksInGroup = allTasks.filter(t => t.parentId === sectionId)
-            for (const task of tasksInGroup) {
-                if (!task.canvasPosition) continue
-                const taskCenterX = task.canvasPosition.x + DEFAULT_TASK_WIDTH / 2
-                const taskCenterY = task.canvasPosition.y + DEFAULT_TASK_HEIGHT / 2
-                const isInside = (
-                    taskCenterX >= groupAbsPos.x &&
-                    taskCenterX <= groupAbsPos.x + validatedWidth &&
-                    taskCenterY >= groupAbsPos.y &&
-                    taskCenterY <= groupAbsPos.y + validatedHeight
-                )
-                if (!isInside) {
-                    if (import.meta.env.DEV) {
-                        console.log(`[BUG-1191] Task "${task.title?.slice(0, 25)}" outside resized group "${resizedGroup.name}". Clearing parentId.`)
+                // Sync ALL Descendant Tasks (reuse helpers from BUG #1 fix)
+                const descendantTasks = collectDescendantTasks(sectionId, taskStore.tasks, canvasStore.groups)
+                for (const descendantTask of descendantTasks) {
+                    const childNode = findNode(descendantTask.id)
+                    if (childNode) {
+                        setNodeState(descendantTask.id, NodeState.SYNCING)
+                        syncNodePosition(descendantTask.id, childNode, canvasStore.groups, 'tasks')
+                            .finally(() => setNodeState(descendantTask.id, NodeState.IDLE))
                     }
-                    // Clear parentId in store and DB
-                    await taskStore.updateTask(task.id, { parentId: undefined, positionFormat: 'absolute' }, 'DRAG' as Parameters<typeof taskStore.updateTask>[2])
-                    persistedResizeGeometry = true
-                    // Fix Vue Flow node
-                    const taskNode = findNode(task.id)
-                    if (taskNode) {
-                        taskNode.parentNode = undefined
-                        // Convert to absolute position (already stored as absolute)
-                        if (task.canvasPosition) {
-                            taskNode.position = { x: task.canvasPosition.x, y: task.canvasPosition.y }
+                }
+
+                // Sync ALL Descendant Groups
+                const descendantGroups = collectDescendantGroups(sectionId, canvasStore.groups)
+                for (const descendantGroup of descendantGroups) {
+                    const childNodeId = CanvasIds.groupNodeId(descendantGroup.id)
+                    const childNode = findNode(childNodeId)
+                    if (childNode) {
+                        setNodeState(descendantGroup.id, NodeState.SYNCING)
+                        syncNodePosition(descendantGroup.id, childNode, canvasStore.groups, 'groups')
+                            .finally(() => setNodeState(descendantGroup.id, NodeState.IDLE))
+                    }
+                }
+            }
+            // NOTE: When deltaX === 0 && deltaY === 0 (bottom-right resize only),
+            // no child sync is needed because child absolute positions don't change.
+
+            // ================================================================
+            // BUG-1191 FIX: Reconcile parentId after resize
+            // ================================================================
+            // When a group is resized smaller, tasks that were inside may now
+            // be outside the new bounds. Clear their parentId to prevent them
+            // from being dragged with the group.
+            const allTasks = taskStore.tasks
+            const resizedGroup = canvasStore.groups.find(g => g.id === sectionId)
+            if (resizedGroup) {
+                const groupAbsPos = getGroupAbsolutePosition(sectionId, canvasStore.groups)
+                const tasksInGroup = allTasks.filter(t => t.parentId === sectionId)
+                for (const task of tasksInGroup) {
+                    if (!task.canvasPosition) continue
+                    const taskCenterX = task.canvasPosition.x + DEFAULT_TASK_WIDTH / 2
+                    const taskCenterY = task.canvasPosition.y + DEFAULT_TASK_HEIGHT / 2
+                    const isInside = (
+                        taskCenterX >= groupAbsPos.x &&
+                        taskCenterX <= groupAbsPos.x + validatedWidth &&
+                        taskCenterY >= groupAbsPos.y &&
+                        taskCenterY <= groupAbsPos.y + validatedHeight
+                    )
+                    if (!isInside) {
+                        if (import.meta.env.DEV) {
+                            console.log(`[BUG-1191] Task "${task.title?.slice(0, 25)}" outside resized group "${resizedGroup.name}". Clearing parentId.`)
+                        }
+                        // Clear parentId in store and DB
+                        await taskStore.updateTask(task.id, { parentId: undefined, positionFormat: 'absolute' }, 'DRAG' as Parameters<typeof taskStore.updateTask>[2])
+                        persistedResizeGeometry = true
+                        // Fix Vue Flow node
+                        const taskNode = findNode(task.id)
+                        if (taskNode) {
+                            taskNode.parentNode = undefined
+                            // Convert to absolute position (already stored as absolute)
+                            if (task.canvasPosition) {
+                                taskNode.position = { x: task.canvasPosition.x, y: task.canvasPosition.y }
+                            }
                         }
                     }
                 }
             }
+
+            if (persistedResizeGeometry) {
+                await undoSystem.commitOperation(resizeUndoHandle)
+            }
+        } finally {
+            resizeState.value.isResizing = false
+            releaseResizeLocks()
+            setTimeout(() => isResizeSettling.value = false, RESIZE_SETTLE_TIMEOUT_MS)
         }
-
-        // TASK-213: Release Locks
-        lockManager.release(sectionId, 'user-resize')
-        Object.keys(resizeState.value.childStartPositions).forEach(childId => {
-            lockManager.release(childId, 'user-resize')
-        })
-
-        if (persistedResizeGeometry) {
-            await undoSystem.commitOperation(resizeUndoHandle)
-        }
-
-        setTimeout(() => isResizeSettling.value = false, RESIZE_SETTLE_TIMEOUT_MS)
     }
 
     return {

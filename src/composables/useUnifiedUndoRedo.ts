@@ -38,6 +38,11 @@ export const useUnifiedUndoRedo = () => {
     return await singletonUndo.bulkDeleteTasksWithUndo(taskIds)
   }
 
+  // BUG-1850: Canvas permanent delete — real hard delete (writes tombstone), single-press undo.
+  const bulkPermanentlyDeleteTasksWithUndo = async (taskIds: string[]) => {
+    return await singletonUndo.bulkPermanentlyDeleteTasksWithUndo(taskIds)
+  }
+
   const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
     return await singletonUndo.updateTaskWithUndo(taskId, updates)
   }
@@ -84,6 +89,7 @@ export const useUnifiedUndoRedo = () => {
     // Task operations with undo support
     deleteTaskWithUndo,
     bulkDeleteTasksWithUndo,
+    bulkPermanentlyDeleteTasksWithUndo,
     updateTaskWithUndo,
     bulkUpdateTasksWithUndo,
     createTaskWithUndo,

@@ -247,6 +247,18 @@ describe('getSectionProperties() — parent chain inheritance', () => {
     expect(props.dueDate).toBe(TOMORROW_KEY)
   })
 
+  it('day-of-week group dueDate matches the visible group suffix target for today', () => {
+    vi.setSystemTime(new Date(2026, 5, 9, 12, 0, 0, 0))
+    const tuesday = makeGroup({ id: 'tuesday-grp', name: 'Tuesday', parentGroupId: null })
+    const today = makeGroup({ id: 'today-grp', name: 'Today', parentGroupId: null })
+    const tomorrow = makeGroup({ id: 'tomorrow-grp', name: 'Tomorrow', parentGroupId: null })
+    const { getSectionProperties } = useCanvasSectionProperties(makeDeps())
+
+    const props = getSectionProperties(tuesday as CanvasSection, [today, tomorrow, tuesday])
+
+    expect(props.dueDate).toBe('2026-06-09')
+  })
+
   it('three levels: grandparent="Today", parent="High Priority", child="Done" → all three inherited', () => {
     // "Done" is a canonical status keyword that maps to status='done'
     // ("In Progress" maps to 'todo' in the power keyword table, so use "Done" for clarity)

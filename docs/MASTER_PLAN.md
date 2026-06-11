@@ -2866,6 +2866,20 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
+### BUG-1850: Canvas permanent-delete does nothing (soft-delete + resurrection) (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-11) | **Opened**: 2026-06-11
+
+**Problem**: On the Canvas (Electron), permanently deleting a task did nothing — the task stayed put. Root cause: both canvas delete paths (`useCanvasTaskActions.confirmBulkDelete` and `ModalManager.canvasSafeDeleteTaskWithUndo`) were rerouted to a **soft delete** (`bulkDeleteTasksWithUndo`) by a now-stale workaround ("permanentlyDeleteTaskWithUndo corrupts shared pendingOperation state"). Soft delete writes `is_deleted=true` but **no tombstone**, so the sync layer's CREATE-upsert (BUG-1509 force-clears `is_deleted:false`; BUG-1534 guard only blocks when a tombstone exists) resurrected the task immediately → net "nothing happens."
+
+**Fix**:
+- Added `bulkPermanentlyDeleteTasksWithUndo` to `src/composables/undoSingleton.ts` (mirrors `bulkDeleteTasksWithUndo` but calls `permanentlyDeleteTask`, type `task-bulk-delete` → single-press undo; exported via `useUnifiedUndoRedo`). The old `pendingOperation` hazard is gone — `beginOperation`/`commitOperation` is now handle-based.
+- Canvas Shift+Delete (`useCanvasTaskActions.ts`) now calls `bulkPermanentlyDeleteTasksWithUndo`; context-menu Permanent Delete (`ModalManager.canvasSafeDeleteTaskWithUndo`) now calls `permanentlyDeleteTaskWithUndo`. Both write a real tombstone (DB trigger `trg_task_tombstone`), so the deletion can't be resurrected and propagates across views/devices. Undo restores via `clearTombstoneForUndo` (already in place).
+- Hardened `useTasksDatabase.permanentlyDeleteTask` to `.select('id')` and throw on a 0-row delete (RLS/already-gone) instead of a silent fake success.
+- Flipped `canvasDeleteUndo.test.ts` and `undo-entrypoint-contract.test.ts` which previously asserted the buggy soft-delete routing.
+
+**Files**: `src/composables/undoSingleton.ts`, `src/composables/useUnifiedUndoRedo.ts`, `src/composables/canvas/useCanvasTaskActions.ts`, `src/layouts/ModalManager.vue`, `src/composables/supabase/useTasksDatabase.ts`, `src/composables/canvas/__tests__/canvasDeleteUndo.test.ts`, `tests/unit/undo-entrypoint-contract.test.ts`
+
 ### ~~TASK-1788~~: Extract canvas rotation handlers from CanvasView.vue into useCanvasRotationLayout composable (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-05-18) | **Opened**: 2026-05-18

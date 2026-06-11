@@ -1,9 +1,11 @@
 /**
- * TASK-1722 regression tests — canvas delete and undo behavior.
+ * TASK-1722 / BUG-1850 regression tests — canvas delete and undo behavior.
  *
  * Covers:
  * 1. Shift+Delete (isPermanent=true) collects task IDs into taskIdsToDelete and calls
- *    bulkDeleteTasksWithUndo — never calls permanentlyDeleteTaskWithUndo.
+ *    bulkPermanentlyDeleteTasksWithUndo (a REAL hard delete that writes a tombstone) —
+ *    NOT the soft-delete bulkDeleteTasksWithUndo. BUG-1850: the soft-delete routing let the
+ *    sync layer resurrect the task, so canvas permanent-delete appeared to do nothing.
  * 2. Regular Delete (isPermanent=false) collects task IDs into taskIdsToMoveToInbox and calls
  *    bulkMoveToInboxWithUndo.
  * 3. Image delete always calls pushImageDeleteUndo regardless of isPermanent flag.
@@ -18,12 +20,14 @@ import { ref } from 'vue'
 
 const mockBulkMoveToInboxWithUndo = vi.fn().mockResolvedValue(undefined)
 const mockBulkDeleteTasksWithUndo = vi.fn().mockResolvedValue(undefined)
+const mockBulkPermanentlyDeleteTasksWithUndo = vi.fn().mockResolvedValue(undefined)
 const mockUpdateTaskWithUndo = vi.fn().mockResolvedValue(undefined)
 const mockPermanentlyDeleteTaskWithUndo = vi.fn().mockResolvedValue(undefined)
 
 const mockUndoHistory = {
     bulkMoveToInboxWithUndo: mockBulkMoveToInboxWithUndo,
     bulkDeleteTasksWithUndo: mockBulkDeleteTasksWithUndo,
+    bulkPermanentlyDeleteTasksWithUndo: mockBulkPermanentlyDeleteTasksWithUndo,
     updateTaskWithUndo: mockUpdateTaskWithUndo,
     permanentlyDeleteTaskWithUndo: mockPermanentlyDeleteTaskWithUndo,
 }
@@ -151,7 +155,7 @@ describe('TASK-1722 — confirmBulkDelete', () => {
         canvasImagesValue = []
     })
 
-    it('Shift+Delete (isPermanent=true) calls bulkDeleteTasksWithUndo, NOT permanentlyDeleteTaskWithUndo', async () => {
+    it('Shift+Delete (isPermanent=true) calls bulkPermanentlyDeleteTasksWithUndo (real hard delete), NOT soft bulkDeleteTasksWithUndo', async () => {
         const { useCanvasTaskActions } = await import('../useCanvasTaskActions')
 
         // Arrange: two tasks, permanent delete
@@ -206,16 +210,17 @@ describe('TASK-1722 — confirmBulkDelete', () => {
         expect(taskIdsToDelete).toEqual(['task-1', 'task-2'])
         expect(taskIdsToMoveToInbox).toHaveLength(0)
 
-        // Simulate what confirmBulkDelete does after collecting IDs
+        // Simulate what confirmBulkDelete does after collecting IDs (BUG-1850: permanent → hard delete)
         if (taskIdsToDelete.length > 0) {
-            await mockUndoHistory.bulkDeleteTasksWithUndo(taskIdsToDelete)
+            await mockUndoHistory.bulkPermanentlyDeleteTasksWithUndo(taskIdsToDelete)
         }
         if (taskIdsToMoveToInbox.length > 0) {
             await mockUndoHistory.bulkMoveToInboxWithUndo(taskIdsToMoveToInbox)
         }
 
-        expect(mockBulkDeleteTasksWithUndo).toHaveBeenCalledOnce()
-        expect(mockBulkDeleteTasksWithUndo).toHaveBeenCalledWith(['task-1', 'task-2'])
+        expect(mockBulkPermanentlyDeleteTasksWithUndo).toHaveBeenCalledOnce()
+        expect(mockBulkPermanentlyDeleteTasksWithUndo).toHaveBeenCalledWith(['task-1', 'task-2'])
+        expect(mockBulkDeleteTasksWithUndo).not.toHaveBeenCalled()
         expect(mockBulkMoveToInboxWithUndo).not.toHaveBeenCalled()
         expect(mockPermanentlyDeleteTaskWithUndo).not.toHaveBeenCalled()
     })
@@ -329,14 +334,15 @@ describe('TASK-1722 — confirmBulkDelete', () => {
         }
 
         if (taskIdsToDelete.length > 0) {
-            await mockUndoHistory.bulkDeleteTasksWithUndo(taskIdsToDelete)
+            await mockUndoHistory.bulkPermanentlyDeleteTasksWithUndo(taskIdsToDelete)
         }
 
         expect(taskIdsToDelete).toEqual(['task-x', 'task-y'])
         expect(taskIdsToMoveToInbox).toHaveLength(0)
         expect(imageUndoPushed).toBe(1)
         expect(mockPushImageDeleteUndo).toHaveBeenCalledOnce()
-        expect(mockBulkDeleteTasksWithUndo).toHaveBeenCalledWith(['task-x', 'task-y'])
+        expect(mockBulkPermanentlyDeleteTasksWithUndo).toHaveBeenCalledWith(['task-x', 'task-y'])
+        expect(mockBulkDeleteTasksWithUndo).not.toHaveBeenCalled()
         expect(mockBulkMoveToInboxWithUndo).not.toHaveBeenCalled()
         expect(mockPermanentlyDeleteTaskWithUndo).not.toHaveBeenCalled()
     })

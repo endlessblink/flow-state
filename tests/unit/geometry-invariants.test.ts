@@ -16,6 +16,8 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   changedTaskGeometryFields,
   changedGroupGeometryFields,
@@ -481,6 +483,21 @@ describe('Geometry Invariants', () => {
       expect(changed).toContain('position')
       expect(group.position.width).toBe(500)
       expect(group.position.height).toBe(400)
+    })
+
+    it('onSectionResizeEnd releases resize locks from a finally block', () => {
+      const source = readFileSync(
+        resolve(process.cwd(), 'src/composables/canvas/useCanvasInteractions.ts'),
+        'utf8'
+      )
+      const resizeEndStart = source.indexOf('const onSectionResizeEnd = async')
+      const resizeEndReturn = source.indexOf('    return {', resizeEndStart)
+      const resizeEndSource = source.slice(resizeEndStart, resizeEndReturn)
+
+      expect(resizeEndSource).toContain('const releaseResizeLocks = () =>')
+      expect(resizeEndSource).toMatch(/finally\s*{[\s\S]*releaseResizeLocks\(\)/)
+      expect(resizeEndSource).toMatch(/releaseResizeLocks[\s\S]*lockManager\.release\(sectionId, 'user-resize'\)/)
+      expect(resizeEndSource).toMatch(/releaseResizeLocks[\s\S]*childStartPositions[\s\S]*lockManager\.release\(childId, 'user-resize'\)/)
     })
   })
 

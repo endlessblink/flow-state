@@ -39,7 +39,8 @@ const STATE_TRANSITIONS: Record<NodeState, NodeState[]> = {
         NodeState.IDLE,
         NodeState.CONFLICT,
         NodeState.ERROR,
-        NodeState.DRAGGING_LOCAL  // User drag takes priority over sync
+        NodeState.DRAGGING_LOCAL,  // User drag takes priority over sync
+        NodeState.RESIZING         // User resize takes priority over sync
     ],
     [NodeState.CONFLICT]: [
         NodeState.DRAGGING_LOCAL,

@@ -266,12 +266,13 @@ const closeTaskContextMenu = () => {
 
 const canvasSafeDeleteTaskWithUndo = async (taskId: string) => {
   try {
-    const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
-    const undoRedoActions = useUnifiedUndoRedo()
-    await undoRedoActions.bulkDeleteTasksWithUndo([taskId])
+    // BUG-1850: Real hard delete (writes tombstone) so the task is permanently removed and the
+    // sync layer cannot resurrect it. Undo clears the tombstone and restores from snapshot.
+    const { getUndoSystem } = await import('@/composables/undoSingleton')
+    await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
     showTaskContextMenu.value = false
   } catch (error) {
-    console.error('[ModalManager] Canvas-safe task delete failed:', error)
+    console.error('[ModalManager] Canvas permanent delete failed:', error)
     message.error('Failed to delete task from canvas')
     throw error
   }

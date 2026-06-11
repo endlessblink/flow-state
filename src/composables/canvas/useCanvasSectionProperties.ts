@@ -7,6 +7,7 @@ import { resolveDueDate } from '../useGroupSettings'
 import { formatDateKey } from '@/utils/dateUtils'
 import { DURATION_DEFAULTS, type DurationCategory } from '@/utils/durationCategories'
 import { getParentChain } from '@/utils/canvas/storeHelpers'
+import { getDayGroupDate, toDateString } from '@/utils/dayGroupDate'
 
 interface SectionPropertiesDeps {
     taskStore: ReturnType<typeof useTaskStore>
@@ -20,7 +21,7 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
     // Helper: Get properties from a SINGLE section based on its name/settings
     // TASK-283 FIX: Always detect from section name FIRST, then let assignOnDrop override
     // ================================================================
-    const getSingleSectionProperties = (section: CanvasSection): Partial<Task> => {
+    const getSingleSectionProperties = (section: CanvasSection, allGroups: CanvasGroup[] = []): Partial<Task> => {
         const updates: Partial<Task> = {}
         const today = new Date()
         const lowerName = section.name.toLowerCase().trim()
@@ -51,10 +52,11 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
             }
         }
         if (matchedDay !== undefined) {
-            const daysUntilTarget = ((7 + matchedDay - today.getDay()) % 7) || 7
-            const resultDate = new Date(today)
-            resultDate.setDate(today.getDate() + daysUntilTarget)
-            updates.dueDate = formatDateKey(resultDate)
+            const hasTodayOrTomorrow = allGroups.some((group) => {
+                const keyword = detectPowerKeyword(group.name)
+                return keyword?.category === 'date' && (keyword.keyword === 'today' || keyword.keyword === 'tomorrow')
+            })
+            updates.dueDate = toDateString(getDayGroupDate(matchedDay, today, hasTodayOrTomorrow))
         }
 
         // 1b. Power Keywords (Today, Tomorrow, High Priority, etc.)
@@ -173,7 +175,7 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
         for (let i = chain.length - 1; i >= 0; i--) {
             const group = chain[i]
             if (!group || !group.name) continue // Safety: skip invalid groups
-            const props = getSingleSectionProperties(group as CanvasSection)
+            const props = getSingleSectionProperties(group as CanvasSection, allGroups)
             Object.assign(mergedUpdates, props)
         }
 

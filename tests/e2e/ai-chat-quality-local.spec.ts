@@ -630,6 +630,131 @@ async function expectCompactWeeklyLaneLayoutStable(plan: Locator) {
   }
 }
 
+async function expectWideWeeklyLaneBoardStable(page: Page, plan: Locator) {
+  await expect(page.locator('.ai-chat-panel.panel-fullscreen')).toBeVisible({ timeout: 5_000 })
+  const lanes = plan.locator('[data-testid="weekly-visual-lane"]')
+  await expect(lanes.first()).toBeVisible({ timeout: 10_000 })
+  const laneCount = await lanes.count()
+  expect(laneCount).toBeGreaterThan(0)
+
+  const board = plan.locator('[data-testid="weekly-lane-board"]')
+  await expect.poll(
+    async () => board.evaluate((node) => node.getBoundingClientRect().width),
+    { timeout: 5_000 }
+  ).toBeGreaterThan(640)
+
+  const boardGeometry = await board.evaluate((node) => {
+    const boardRect = node.getBoundingClientRect()
+    const boardStyle = window.getComputedStyle(node)
+    return {
+      width: boardRect.width,
+      display: boardStyle.display,
+      gridTemplateColumns: boardStyle.gridTemplateColumns,
+    }
+  })
+  expect(boardGeometry.width).toBeGreaterThan(640)
+  expect(boardGeometry.display).toBe('flex')
+  expect(boardGeometry.gridTemplateColumns).toBe('none')
+
+  for (let index = 0; index < laneCount; index += 1) {
+    const lane = lanes.nth(index)
+    await lane.scrollIntoViewIfNeeded()
+    const geometry = await lane.evaluate((el) => {
+      const rectFor = (selector: string) => {
+        const node = el.querySelector(selector)
+        if (!node) return null
+        const rect = node.getBoundingClientRect()
+        return {
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        }
+      }
+      const laneRect = el.getBoundingClientRect()
+      const header = rectFor('.weekly-lane-header')
+      const summary = rectFor('.weekly-lane-summary')
+      const rail = rectFor('.weekly-lane-rail')
+      const track = rectFor('[data-testid="weekly-lane-track"]')
+      const taskCards = Array.from(el.querySelectorAll('.weekly-lane-task')).map((node) => {
+        const rect = node.getBoundingClientRect()
+        return {
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        }
+      })
+      const taskRows = [...new Set(taskCards.map(card => Math.round(card.top)))]
+      const laneStyle = window.getComputedStyle(el)
+      const trackStyle = track ? window.getComputedStyle(el.querySelector('[data-testid="weekly-lane-track"]')!) : null
+      return {
+        lane: {
+          left: laneRect.left,
+          right: laneRect.right,
+          top: laneRect.top,
+          bottom: laneRect.bottom,
+          width: laneRect.width,
+          height: laneRect.height,
+        },
+        header,
+        summary,
+        rail,
+        track,
+        taskCards,
+        taskRowCount: taskRows.length,
+        laneStyle: {
+          display: laneStyle.display,
+          gridTemplateColumns: laneStyle.gridTemplateColumns,
+        },
+        trackStyle: trackStyle
+          ? {
+              display: trackStyle.display,
+              flexWrap: trackStyle.flexWrap,
+              overflowX: trackStyle.overflowX,
+              overflowY: trackStyle.overflowY,
+            }
+          : null,
+        arrowCount: el.querySelectorAll('.weekly-lane-arrow').length,
+        hasHorizontalScrollbar: Boolean(track && track.scrollWidth > track.clientWidth + 2),
+        summaryBeforeRail: Boolean(summary && rail && summary.bottom <= rail.top - 8),
+        railInsideLane: Boolean(rail && rail.left >= laneRect.left - 2 && rail.right <= laneRect.right + 2),
+        cardsInsideRail: Boolean(rail && taskCards.length > 0 && taskCards.every(card =>
+          card.left >= rail.left - 2 &&
+          card.right <= rail.right + 2 &&
+          card.top >= rail.top - 2 &&
+          card.bottom <= rail.bottom + 2,
+        )),
+      }
+    })
+
+    expect(geometry.header).toBeTruthy()
+    expect(geometry.summary).toBeTruthy()
+    expect(geometry.rail).toBeTruthy()
+    expect(geometry.track).toBeTruthy()
+    expect(geometry.taskCards.length).toBeGreaterThan(0)
+    expect(geometry.lane.width).toBeGreaterThan(560)
+    expect(geometry.laneStyle.display).toBe('grid')
+    expect(geometry.laneStyle.gridTemplateColumns).not.toBe('none')
+    expect(geometry.trackStyle).toMatchObject({
+      display: 'flex',
+      flexWrap: 'nowrap',
+      overflowX: 'visible',
+      overflowY: 'visible',
+    })
+    expect(geometry.arrowCount).toBe(0)
+    expect(geometry.hasHorizontalScrollbar).toBe(false)
+    expect(geometry.summaryBeforeRail).toBe(true)
+    expect(geometry.railInsideLane).toBe(true)
+    expect(geometry.cardsInsideRail).toBe(true)
+    expect(geometry.taskRowCount).toBe(1)
+  }
+}
+
 test('weekly planning asks first, does not dump recommendations, and does not get stuck after answers', async ({ page }) => {
   await seedGuestWorkspace(page)
   await stubBridge(page)
@@ -873,7 +998,7 @@ test('answered weekly priority question disappears and continues to compact plan
   await expectCompactWeeklyLaneLayoutStable(compactPlan)
   await page.screenshot({ path: '/tmp/flowstate-weekly-lanes-user-flow.png', fullPage: false })
   await compactPlan.locator('[data-testid="weekly-open-lane-view"]').first().click()
-  await expectCompactWeeklyLaneLayoutStable(compactPlan)
+  await expectWideWeeklyLaneBoardStable(page, compactPlan)
   await page.screenshot({ path: '/tmp/flowstate-weekly-lanes-wide-user-flow.png', fullPage: false })
   await expect(page.locator('.ai-chat-messages')).not.toContainText(/מה הכי חשוב להגן עליו השבוע\?.*מה הכי חשוב להגן עליו השבוע\?/s)
   await expect(page.locator('.ai-chat-input-container textarea')).toBeEnabled({ timeout: 5_000 })

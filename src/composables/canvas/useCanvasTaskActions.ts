@@ -442,9 +442,10 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                     // Remove from store (fire-and-forget)
                     imgStore.removeCanvasImage(item.id)
                 } else {
-                    // TASK-1722: Both Delete and Shift+Delete collect task IDs for batch operation.
-                    // permanentlyDeleteTaskWithUndo is broken (corrupts shared pendingOperation state).
-                    // Using soft delete (bulkDeleteTasksWithUndo) for permanent, move-to-inbox for non-permanent.
+                    // BUG-1850: Shift+Delete = real hard delete (writes tombstone so it can't be
+                    // resurrected by sync); Delete = move-to-inbox. The old soft-delete workaround
+                    // (and its "permanentlyDelete is broken" note) is obsolete — the undo singleton
+                    // now uses the safe handle-based begin/commit API.
                     if (isPermanent) {
                         taskIdsToDelete.push(item.id)
                     } else {
@@ -458,10 +459,11 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 await undoHistory.bulkMoveToInboxWithUndo(taskIdsToMoveToInbox)
             }
 
-            // TASK-1722: Shift+Delete uses soft delete with undo (same as regular delete).
-            // permanentlyDeleteTaskWithUndo was broken (corrupts shared pendingOperation state).
+            // BUG-1850: Shift+Delete performs a real hard delete (single-press undo via
+            // bulkPermanentlyDeleteTasksWithUndo). The DB trigger writes a tombstone so the task
+            // is gone for good and the sync layer cannot resurrect it.
             if (taskIdsToDelete.length > 0) {
-                await undoHistory.bulkDeleteTasksWithUndo(taskIdsToDelete)
+                await undoHistory.bulkPermanentlyDeleteTasksWithUndo(taskIdsToDelete)
             }
 
             canvasStore.setSelectedNodes([])

@@ -1,52 +1,9 @@
 import { autoUpdater } from 'electron-updater'
 import { app, ipcMain, BrowserWindow } from 'electron'
-import { existsSync, readFileSync, rmSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { clearStalePendingUpdate } from './updater-pending'
 
 function hasValidAppVersion(version: string): boolean {
   return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)
-}
-
-function compareVersions(a: string, b: string): number {
-  const aParts = a.split(/[.+-]/)[0].split('.').map(Number)
-  const bParts = b.split(/[.+-]/)[0].split('.').map(Number)
-  for (let i = 0; i < 3; i += 1) {
-    const diff = (aParts[i] || 0) - (bParts[i] || 0)
-    if (diff !== 0) return diff
-  }
-  return 0
-}
-
-function versionFromUpdateFileName(fileName: unknown): string | null {
-  if (typeof fileName !== 'string') return null
-  const match = fileName.match(/(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)/)
-  return match?.[1] ?? null
-}
-
-function pendingUpdateInfoPath(): string {
-  const cacheHome = process.env.XDG_CACHE_HOME || join(homedir(), '.cache')
-  return join(cacheHome, 'flow-state-updater', 'pending', 'update-info.json')
-}
-
-function clearStalePendingUpdate(appVersion: string) {
-  const updateInfoPath = pendingUpdateInfoPath()
-  if (!existsSync(updateInfoPath)) return
-
-  try {
-    const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string }
-    const pendingVersion = versionFromUpdateFileName(info.fileName)
-    if (!pendingVersion || compareVersions(pendingVersion, appVersion) <= 0) {
-      rmSync(updateInfoPath, { force: true })
-      console.warn('[Updater] Cleared stale pending update marker', {
-        pendingVersion: pendingVersion ?? 'unknown',
-        appVersion,
-        updateInfoPath,
-      })
-    }
-  } catch (err) {
-    console.warn('[Updater] Failed to inspect pending update marker:', (err as Error).message)
-  }
 }
 
 function emitUpdaterError(message: string) {
@@ -65,7 +22,18 @@ export function registerUpdater() {
   const appVersion = app.getVersion()
   const canUseUpdater = !isDev && hasValidAppVersion(appVersion)
   if (!isDev && hasValidAppVersion(appVersion)) {
-    clearStalePendingUpdate(appVersion)
+    try {
+      const stalePendingUpdate = clearStalePendingUpdate(appVersion)
+      if (stalePendingUpdate.cleared) {
+        console.warn('[Updater] Cleared stale pending update marker', {
+          pendingVersion: stalePendingUpdate.pendingVersion ?? 'unknown',
+          appVersion,
+          updateInfoPath: stalePendingUpdate.updateInfoPath,
+        })
+      }
+    } catch (err) {
+      console.warn('[Updater] Failed to inspect pending update marker:', (err as Error).message)
+    }
   }
 
   app.on('before-quit', () => {

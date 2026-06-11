@@ -23,6 +23,7 @@ vi.stubGlobal('import.meta', { env: { DEV: false } })
 vi.mock('@/services/auth/supabase', () => ({ supabase: null }))
 
 import { useCanvasOperationState } from '@/composables/canvas/useCanvasOperationState'
+import { NodeState, useNodeStateMachine } from '@/composables/canvas/state-machine'
 import { useCanvasFilteredState } from '@/composables/canvas/useCanvasFilteredState'
 import { useCanvasGroups } from '@/stores/canvas/canvasGroups'
 import { CanvasIds } from '@/utils/canvas/canvasIds'
@@ -124,6 +125,13 @@ describe('useCanvasOperationState — state machine', () => {
     vi.advanceTimersByTime(3200)
     // If the stale update had not been cleared, it would have thrown before this point
     expect(opState.isIdle.value).toBe(true)
+  })
+
+  it('allows user resize to override an in-flight sync', () => {
+    const nodeState = useNodeStateMachine(NodeState.SYNCING)
+
+    expect(nodeState.setState(NodeState.RESIZING, 'user resize takes priority')).toBe(true)
+    expect(nodeState.currentState.value).toBe(NodeState.RESIZING)
   })
 })
 

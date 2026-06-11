@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   clearStalePendingUpdate,
   compareVersions,
+  pendingAppImagePath,
   pendingUpdateInfoPath,
   versionFromUpdateFileName,
 } from '../../electron/updater-pending'
@@ -62,6 +63,18 @@ describe('Electron updater restart contract', () => {
     expect(existsSync(updateInfoPath)).toBe(true)
   })
 
+  it('resolves the pending AppImage path from updater metadata', () => {
+    const cacheHome = resolve(projectRoot, 'test-results/electron-updater-cache-pending-appimage')
+    const updateInfoPath = pendingUpdateInfoPath(cacheHome)
+    mkdirSync(resolve(cacheHome, 'flow-state-updater/pending'), { recursive: true })
+    writeFileSync(updateInfoPath, JSON.stringify({ fileName: 'FlowState-1.4.150-x86_64.AppImage' }))
+    writeFileSync(resolve(cacheHome, 'flow-state-updater/pending/FlowState-1.4.150-x86_64.AppImage'), 'appimage')
+
+    expect(pendingAppImagePath(cacheHome)).toBe(
+      resolve(cacheHome, 'flow-state-updater/pending/FlowState-1.4.150-x86_64.AppImage'),
+    )
+  })
+
   it('does not leave stale pending AppImage update metadata unhandled', () => {
     const updaterSource = readSource('electron/updater.ts')
     const pendingSource = readSource('electron/updater-pending.ts')
@@ -85,6 +98,19 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('app.quit()')
     expect(updaterSource).toContain('app.exit(0)')
     expect(updaterSource).toContain('return true')
+  })
+
+  it('uses a detached AppImage installer before falling back to quitAndInstall', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain('function launchDetachedAppImageInstaller()')
+    expect(updaterSource).toContain('pendingAppImagePath()')
+    expect(updaterSource).toContain("spawn(\n    '/bin/sh'")
+    expect(updaterSource).toContain('Started detached AppImage installer handoff')
+    expect(updaterSource).toContain('launchDetachedAppImageInstaller()')
+    expect(updaterSource.indexOf('launchDetachedAppImageInstaller()')).toBeLessThan(
+      updaterSource.indexOf('autoUpdater.quitAndInstall(false, true)'),
+    )
   })
 
   it('keeps the restart fallback armed until the app is actually quitting', () => {

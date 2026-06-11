@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 export interface PendingUpdateClearResult {
   cleared: boolean
@@ -32,6 +32,17 @@ export function versionFromUpdateFileName(fileName: unknown): string | null {
 
 export function pendingUpdateInfoPath(cacheHome = process.env.XDG_CACHE_HOME || join(homedir(), '.cache')): string {
   return join(cacheHome, 'flow-state-updater', 'pending', 'update-info.json')
+}
+
+export function pendingAppImagePath(cacheHome?: string): string | null {
+  const updateInfoPath = pendingUpdateInfoPath(cacheHome)
+  if (!existsSync(updateInfoPath)) return null
+
+  const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string }
+  if (typeof info.fileName !== 'string' || !info.fileName.endsWith('.AppImage')) return null
+
+  const updateFilePath = join(dirname(updateInfoPath), info.fileName)
+  return existsSync(updateFilePath) ? updateFilePath : null
 }
 
 export function clearStalePendingUpdate(

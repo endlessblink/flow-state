@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerUpdater = registerUpdater;
 const electron_updater_1 = require("electron-updater");
 const electron_1 = require("electron");
+const node_child_process_1 = require("node:child_process");
 const updater_pending_1 = require("./updater-pending");
 function hasValidAppVersion(version) {
     return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version);
@@ -11,6 +12,43 @@ function emitUpdaterError(message) {
     const win = electron_1.BrowserWindow.getAllWindows()[0];
     if (win)
         win.webContents.send('updater:error', message);
+}
+function launchDetachedAppImageInstaller() {
+    if (process.platform !== 'linux')
+        return false;
+    const targetAppImage = process.env.APPIMAGE;
+    const pendingAppImage = (0, updater_pending_1.pendingAppImagePath)();
+    if (!targetAppImage || !pendingAppImage)
+        return false;
+    const updateInfoPath = (0, updater_pending_1.pendingUpdateInfoPath)();
+    const script = `
+target="$1"
+pending="$2"
+info="$3"
+parent="$4"
+tmp="$target.flowstate-update-tmp"
+i=0
+while kill -0 "$parent" 2>/dev/null && [ "$i" -lt 100 ]; do
+  i=$((i + 1))
+  sleep 0.1
+done
+chmod 755 "$pending"
+cp -f "$pending" "$tmp"
+chmod 755 "$tmp"
+mv -f "$tmp" "$target"
+rm -f "$info"
+exec "$target" --no-sandbox --class=flow-state
+`;
+    const child = (0, node_child_process_1.spawn)('/bin/sh', ['-c', script, 'flowstate-appimage-install', targetAppImage, pendingAppImage, updateInfoPath, String(process.pid)], {
+        detached: true,
+        stdio: 'ignore',
+        env: {
+            ...process.env,
+            APPIMAGE_SILENT_INSTALL: 'true',
+        },
+    });
+    child.unref();
+    return true;
 }
 /**
  * Electron auto-updater setup.
@@ -72,6 +110,11 @@ function registerUpdater() {
         // renderer stuck in a half-dead state while the app is trying to exit.
         setImmediate(() => {
             console.log('[Updater] Starting quitAndInstall handoff');
+            if (launchDetachedAppImageInstaller()) {
+                console.log('[Updater] Started detached AppImage installer handoff');
+                electron_1.app.exit(0);
+                return;
+            }
             const fallbackTimer = setTimeout(() => {
                 console.error('[Updater] quitAndInstall did not terminate the app within 8s; forcing quit fallback');
                 emitUpdaterError('The updater could not restart automatically. FlowState will close; reopen it manually to complete the update.');

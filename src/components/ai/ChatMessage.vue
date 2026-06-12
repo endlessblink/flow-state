@@ -289,6 +289,10 @@ const isCompactWeeklyPlan = computed(() =>
   weeklyPlan.value?.presentation?.density === 'compact_after_clarification'
 )
 
+const showWeeklyLaneBoard = computed(() =>
+  Boolean(weeklyPlan.value?.recommendations.length && (isCompactWeeklyPlan.value || props.wideMode))
+)
+
 function weeklyPlanSourceLabel(): string {
   const locale = weeklyPlan.value?.locale ?? 'en'
   if (isCompactWeeklyPlan.value) {
@@ -336,14 +340,15 @@ function weeklyPlanRelatedChipIds(rec: WeeklyPlanRecommendation): string[] {
 function weeklyLaneTitle(rec: WeeklyPlanRecommendation): string {
   const locale = weeklyPlan.value?.locale ?? 'en'
   const focus = rec.focusArea.trim()
+  const primaryTitle = taskMap.value.get(rec.primaryTaskId)?.title?.trim()
   const genericWork = /^(work|work delivery|מסירת עבודה)$/i.test(focus)
   const limited = /^(limited-context work|limited task context|הקשר חסר|הקשר מוגבל)$/i.test(focus)
   if (locale === 'he') {
-    if (genericWork) return 'עבודה לא מסווגת'
+    if (genericWork) return primaryTitle || 'נתיב עבודה ממוקד'
     if (limited) return 'נתיב עם הקשר חסר'
     return focus
   }
-  if (genericWork) return 'Unclassified work'
+  if (genericWork) return primaryTitle || 'Focused work lane'
   if (limited) return 'Limited-context lane'
   return focus
 }
@@ -353,11 +358,12 @@ function weeklyLaneSubtitle(rec: WeeklyPlanRecommendation): string {
   const count = weeklyPlanTaskIds(rec).length
   const focus = rec.focusArea.trim()
   const isGeneric = /^(work|work delivery|מסירת עבודה)$/i.test(focus)
+  const projectLabel = taskMap.value.get(rec.primaryTaskId)?.projectId || focus
   if (locale === 'he') {
-    const source = isGeneric ? 'Work ללא משמעות מוכחת' : focus
+    const source = isGeneric ? `מבוסס על ${projectLabel}` : focus
     return `${source} · ${count} משימות מחוברות`
   }
-  const source = isGeneric ? 'Work label, meaning unproven' : focus
+  const source = isGeneric ? `Based on ${projectLabel}` : focus
   return `${source} · ${count} connected tasks`
 }
 
@@ -2570,7 +2576,7 @@ async function saveSchedule() {
         </section>
 
         <div
-          v-if="isCompactWeeklyPlan"
+          v-if="showWeeklyLaneBoard"
           class="weekly-lane-board"
           data-testid="weekly-lane-board"
         >
@@ -2593,6 +2599,7 @@ async function saveSchedule() {
                 <p dir="auto">{{ weeklyLaneSubtitle(rec) }}</p>
               </div>
               <button
+                v-if="!props.wideMode"
                 type="button"
                 class="weekly-open-lane-view"
                 data-testid="weekly-open-lane-view"
@@ -2752,7 +2759,7 @@ async function saveSchedule() {
         </div>
 
         <section
-          v-for="rec in isCompactWeeklyPlan ? [] : weeklyPlan.recommendations"
+          v-for="rec in showWeeklyLaneBoard ? [] : weeklyPlan.recommendations"
           v-show="!suppressedRecommendationIds[rec.sectionId]"
           :key="rec.sectionId"
           class="weekly-plan-section"
@@ -4629,21 +4636,13 @@ async function saveSchedule() {
 
 .weekly-lane-track {
   position: relative;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
   gap: var(--space-1_5);
-  direction: ltr;
   min-width: 0;
   width: 100%;
   padding: var(--space-2);
   overflow: visible;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-
-.weekly-lane-track::-webkit-scrollbar {
-  display: none;
 }
 
 .weekly-lane-task {
@@ -4652,10 +4651,9 @@ async function saveSchedule() {
   display: flex;
   align-items: flex-start;
   gap: var(--space-1_5);
-  width: auto;
+  width: 100%;
   min-width: 0;
   min-height: 4rem;
-  flex: 1 1 0;
   padding: var(--space-2) var(--space-1_5);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
@@ -4663,7 +4661,6 @@ async function saveSchedule() {
   color: var(--text-primary);
   text-align: start;
   cursor: pointer;
-  scroll-snap-align: start;
 }
 
 .weekly-lane-task-primary {
@@ -4696,8 +4693,11 @@ async function saveSchedule() {
 
 :global(.panel-fullscreen .weekly-lane-board),
 .message-weekly-plan-wide .weekly-lane-board {
-  gap: var(--space-4);
-  width: min(100%, 1180px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  align-items: stretch;
+  gap: var(--space-3);
+  width: min(100%, 1240px);
   margin-inline: auto;
 }
 
@@ -4709,7 +4709,9 @@ async function saveSchedule() {
     "summary"
     "rail"
     "feedback";
-  gap: var(--space-3);
+  align-content: start;
+  gap: var(--space-2_5);
+  min-height: 100%;
   padding: var(--space-4);
   border-color: var(--glass-border);
   background: color-mix(in srgb, var(--glass-bg-subtle) 78%, transparent);
@@ -4733,7 +4735,7 @@ async function saveSchedule() {
 :global(.panel-fullscreen .weekly-lane-summary),
 .message-weekly-plan-wide .weekly-lane-summary {
   grid-area: summary;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.86fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   padding-block-start: 0;
 }
@@ -4741,24 +4743,26 @@ async function saveSchedule() {
 :global(.panel-fullscreen .weekly-lane-rail),
 .message-weekly-plan-wide .weekly-lane-rail {
   grid-area: rail;
+  min-height: 100%;
 }
 
 :global(.panel-fullscreen .weekly-feedback-row),
 .message-weekly-plan-wide .weekly-feedback-row {
   grid-area: feedback;
+  align-self: end;
 }
 
 :global(.panel-fullscreen .weekly-lane-track),
 .message-weekly-plan-wide .weekly-lane-track {
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
   padding: var(--space-2_5);
 }
 
 :global(.panel-fullscreen .weekly-lane-task),
 .message-weekly-plan-wide .weekly-lane-task {
-  flex: 1 1 0;
   min-width: 0;
-  min-height: 4.75rem;
+  min-height: 5.25rem;
   padding: var(--space-2_5) var(--space-3);
 }
 
@@ -4776,6 +4780,21 @@ async function saveSchedule() {
     "summary"
     "rail"
     "feedback";
+}
+
+@media (max-width: 860px) {
+  :global(.panel-fullscreen .weekly-visual-lane),
+  .message-weekly-plan-wide .weekly-visual-lane,
+  :global(.panel-fullscreen[dir="rtl"] .weekly-visual-lane),
+  [dir="rtl"] :global(.panel-fullscreen .weekly-visual-lane),
+  [dir="rtl"] .message-weekly-plan-wide .weekly-visual-lane {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "header"
+      "summary"
+      "rail"
+      "feedback";
+  }
 }
 
 @media (max-width: 720px) {

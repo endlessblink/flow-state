@@ -642,8 +642,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.findAll('[data-testid="weekly-lane-task"]')).toHaveLength(3)
     expect(wrapper.findAll('[data-testid="weekly-lane-arrow-prev"]')).toHaveLength(0)
     expect(wrapper.findAll('[data-testid="weekly-lane-arrow-next"]')).toHaveLength(0)
-    expect(wrapper.get('.weekly-lane-heading h3').text()).toBe('עבודה לא מסווגת')
-    expect(wrapper.get('.weekly-lane-heading').text()).toContain('Work ללא משמעות מוכחת')
+    expect(wrapper.get('.weekly-lane-heading h3').text()).toBe('עבודה עם בינה מעצבת')
+    expect(wrapper.get('.weekly-lane-heading').text()).not.toContain('עבודה לא מסווגת')
+    expect(wrapper.get('.weekly-lane-heading').text()).toContain('מבוסס על work')
     expect(wrapper.get('.weekly-lane-heading').text()).toContain('3 משימות מחוברות')
     expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(1)
     expect(wrapper.get('[data-testid="inline-plan-card"]').text()).toContain('עבודה עם בינה מעצבת')
@@ -653,6 +654,26 @@ describe('AI sidebar-first desktop experience', () => {
 
     await wrapper.get('[data-testid="weekly-open-lane-view"]').trigger('click')
     expect(wrapper.emitted('requestWide')).toHaveLength(1)
+
+    const wideWrapper = mount(ChatMessage, {
+      props: {
+        wideMode: true,
+        message: wrapper.props('message'),
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    expect(wideWrapper.find('[data-testid="weekly-lane-board"]').exists()).toBe(true)
+    expect(wideWrapper.findAll('[data-testid="weekly-visual-lane"]')).toHaveLength(1)
+    expect(wideWrapper.findAll('[data-testid="weekly-lane-track"]')).toHaveLength(1)
+    expect(wideWrapper.find('[data-testid="weekly-open-lane-view"]').exists()).toBe(false)
+    expect(wideWrapper.find('.weekly-plan-cards').exists()).toBe(false)
+    expect(wideWrapper.get('[data-testid="weekly-lane-board"]').text()).toContain('לעדכן את גלית')
+    expect(wideWrapper.get('[data-testid="weekly-lane-board"]').text()).toContain('arthouse')
   })
 
   it('rejects shallow weekly plan JSON and falls back to evidence-only quick drafts', () => {

@@ -147,9 +147,9 @@
 - `npm run electron:build` → passed and validated package metadata.
 - Public updater manifest verified at `https://in-theflow.com/updates/electron/latest-linux.yml` with `version: 1.4.155`; AppImage and deb URLs returned HTTP 200.
 
-### TASK-1851: Expanded weekly plan visual lane board (📋 PLANNED)
+### TASK-1851: Expanded weekly plan visual lane board (🔄 IN PROGRESS)
 
-**Priority**: P0-HIGH | **Status**: 📋 PLANNED (filed 2026-06-12) | **Depends on**: TASK-1850
+**Priority**: P0-HIGH | **Status**: 🔄 IN PROGRESS (filed 2026-06-12) | **Depends on**: TASK-1850
 
 **Why**: The compact card carousel can still feel like a squeezed stack instead of a visual lane board, especially in the widened AI chat panel. The next product slice should make the lane relationship visible left-to-right rather than relying on semantic labels and clipped task cards.
 
@@ -168,6 +168,18 @@
   4. If more context is needed, see the next question with stop/generate controls.
   5. Choose generate/current-info escape and receive a compact 3-5 item weekly plan.
   6. Repeat with an English flexible prompt and verify it routes to weekly planning.
+
+**Current implementation proof (2026-06-12)**:
+- `ChatMessage` now keeps compact weekly-plan artifacts in the visual lane renderer when the chat is widened, instead of falling back to the legacy vertical recommendation-card renderer.
+- Expanded weekly lane board renders as a CSS grid of lane columns; compact mode remains a small preview with a visible wide-open control.
+- Storybook fixture `AI/ChatMessage/Weekly Lane Board` covers Hebrew RTL compact and wide layouts with related task cards.
+- Headed Storybook visual check captured `/tmp/flowstate-weekly-lane-story.png`: wide board measured `display: grid`, 2 visible lane columns, no generic `עבודה לא מסווגת`/`Unclassified work`, no legacy `.weekly-plan-cards`, no horizontal scrollbar, and all cards inside their tracks.
+- `npm test -- tests/unit/ai-sidebar-first.test.ts` → 77/77 passed.
+- `npm run type-check` → passed.
+
+**Remaining proof before DONE**:
+- Run a headed signed-in app flow against real user task data, not only the Storybook fixture.
+- Electron build/deploy once the worktree is clean enough to ship without unrelated generated/auth/cache changes.
 
 **Gate status**: ✅ Follow-up stuck-click, compact post-continuation output, duplicate inline follow-up suppression, and old-card answered-memory hydration passed in headed localhost on 2026-06-09. The next gate is broader real-flow compactness beyond this seeded follow-up scenario.
 

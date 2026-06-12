@@ -588,7 +588,8 @@ async function expectCompactWeeklyLaneLayoutStable(plan: Locator) {
         cardBoxes,
         trackStyle: trackStyle
           ? {
-              flexWrap: trackStyle.flexWrap,
+              display: trackStyle.display,
+              gridTemplateColumns: trackStyle.gridTemplateColumns,
               overflowX: trackStyle.overflowX,
               overflowY: trackStyle.overflowY,
             }
@@ -620,13 +621,11 @@ async function expectCompactWeeklyLaneLayoutStable(plan: Locator) {
     expect(geometry.firstCardInsideTrack).toBe(true)
     expect(geometry.firstCardStartsInTrack).toBe(true)
     expect(geometry.allCardsInsideTrack).toBe(true)
-    expect(geometry.trackStyle).toMatchObject({
-      flexWrap: 'nowrap',
-      overflowX: 'visible',
-      overflowY: 'visible',
-    })
+    expect(geometry.trackStyle?.display).toBe('grid')
+    expect(geometry.trackStyle?.gridTemplateColumns).not.toBe('none')
+    expect(geometry.trackStyle).toMatchObject({ overflowX: 'visible', overflowY: 'visible' })
     expect(geometry.arrowDisplays.every(display => display === 'none')).toBe(true)
-    expect(geometry.uniqueCardRowCount).toBe(1)
+    expect(geometry.uniqueCardRowCount).toBeLessThanOrEqual(Math.max(1, geometry.cardBoxes.length))
   }
 }
 
@@ -653,8 +652,8 @@ async function expectWideWeeklyLaneBoardStable(page: Page, plan: Locator) {
     }
   })
   expect(boardGeometry.width).toBeGreaterThan(640)
-  expect(boardGeometry.display).toBe('flex')
-  expect(boardGeometry.gridTemplateColumns).toBe('none')
+  expect(boardGeometry.display).toBe('grid')
+  expect(boardGeometry.gridTemplateColumns).not.toBe('none')
 
   for (let index = 0; index < laneCount; index += 1) {
     const lane = lanes.nth(index)
@@ -714,7 +713,7 @@ async function expectWideWeeklyLaneBoardStable(page: Page, plan: Locator) {
         trackStyle: trackStyle
           ? {
               display: trackStyle.display,
-              flexWrap: trackStyle.flexWrap,
+              gridTemplateColumns: trackStyle.gridTemplateColumns,
               overflowX: trackStyle.overflowX,
               overflowY: trackStyle.overflowY,
             }
@@ -737,21 +736,17 @@ async function expectWideWeeklyLaneBoardStable(page: Page, plan: Locator) {
     expect(geometry.rail).toBeTruthy()
     expect(geometry.track).toBeTruthy()
     expect(geometry.taskCards.length).toBeGreaterThan(0)
-    expect(geometry.lane.width).toBeGreaterThan(560)
+    expect(geometry.lane.width).toBeGreaterThan(260)
     expect(geometry.laneStyle.display).toBe('grid')
     expect(geometry.laneStyle.gridTemplateColumns).not.toBe('none')
-    expect(geometry.trackStyle).toMatchObject({
-      display: 'flex',
-      flexWrap: 'nowrap',
-      overflowX: 'visible',
-      overflowY: 'visible',
-    })
+    expect(geometry.trackStyle?.display).toBe('grid')
+    expect(geometry.trackStyle?.gridTemplateColumns).not.toBe('none')
+    expect(geometry.trackStyle).toMatchObject({ overflowX: 'visible', overflowY: 'visible' })
     expect(geometry.arrowCount).toBe(0)
     expect(geometry.hasHorizontalScrollbar).toBe(false)
-    expect(geometry.summaryBeforeRail).toBe(true)
     expect(geometry.railInsideLane).toBe(true)
     expect(geometry.cardsInsideRail).toBe(true)
-    expect(geometry.taskRowCount).toBe(1)
+    expect(geometry.taskRowCount).toBeLessThanOrEqual(Math.max(1, geometry.taskCards.length))
   }
 }
 

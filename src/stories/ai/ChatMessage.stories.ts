@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/vue3'
 import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
+import { useProjectStore } from '@/stores/projects'
+import type { Project } from '@/types/tasks'
+
+const BINA_PROJECT_ID = '85accc3c-26ff-4a2c-ba07'
 
 const meta: Meta<typeof ChatMessage> = {
   title: '🤖 AI/ChatMessage',
@@ -29,7 +33,7 @@ const weeklyLaneTasks: Task[] = [
     completedPomodoros: 0,
     subtasks: [],
     dueDate: '2026-06-12',
-    projectId: 'work',
+    projectId: BINA_PROJECT_ID,
     createdAt: new Date('2026-06-01T08:00:00Z'),
     updatedAt: new Date('2026-06-07T08:00:00Z'),
   } as Task,
@@ -43,7 +47,7 @@ const weeklyLaneTasks: Task[] = [
     completedPomodoros: 0,
     subtasks: [],
     dueDate: '2026-06-14',
-    projectId: 'work',
+    projectId: BINA_PROJECT_ID,
     createdAt: new Date('2026-06-01T08:00:00Z'),
     updatedAt: new Date('2026-06-07T08:00:00Z'),
   } as Task,
@@ -158,6 +162,16 @@ const weeklyLaneMessage = {
 
 function seedWeeklyLaneTasks() {
   const taskStore = useTaskStore()
+  const projectStore = useProjectStore()
+  projectStore._rawProjects.splice(0, projectStore._rawProjects.length, {
+    id: BINA_PROJECT_ID,
+    name: 'בינה מעצבת',
+    color: '#14b8a6',
+    colorType: 'hex',
+    viewType: 'status',
+    createdAt: new Date('2026-06-01T08:00:00Z'),
+    updatedAt: new Date('2026-06-07T08:00:00Z'),
+  } as Project)
   taskStore._rawTasks.splice(0, taskStore._rawTasks.length, ...weeklyLaneTasks)
 }
 

@@ -20,6 +20,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/stores/tasks'
+import { useProjectStore } from '@/stores/projects'
 import { User, Sparkles, Loader2, Check, Copy, CheckCheck, Zap, PenLine, Trash2, Play, CheckCircle2, ListOrdered, X, CalendarClock, Plus, Maximize2 } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type Token from 'markdown-it/lib/token.mjs'
@@ -126,6 +127,7 @@ const scheduleSaved = ref(false)
 
 // Live task data from Pinia store (reactive — updates when user edits tasks)
 const taskStore = useTaskStore()
+const projectStore = useProjectStore()
 const aiChatStore = useAIChatStore()
 const canvasStore = useCanvasStore()
 const laneStore = useLaneStore()
@@ -353,12 +355,26 @@ function weeklyLaneTitle(rec: WeeklyPlanRecommendation): string {
   return focus
 }
 
+function looksLikeOpaqueId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) ||
+    /^[0-9a-f]{16,}$/i.test(value)
+}
+
+function weeklyLaneSourceLabel(rec: WeeklyPlanRecommendation): string {
+  const focus = rec.focusArea.trim()
+  const projectId = taskMap.value.get(rec.primaryTaskId)?.projectId
+  if (!projectId) return focus
+  const projectName = projectStore.getProjectDisplayName(projectId).trim()
+  if (!projectName || projectName === 'Uncategorized' || looksLikeOpaqueId(projectName)) return focus
+  return projectName
+}
+
 function weeklyLaneSubtitle(rec: WeeklyPlanRecommendation): string {
   const locale = weeklyPlan.value?.locale ?? 'en'
   const count = weeklyPlanTaskIds(rec).length
   const focus = rec.focusArea.trim()
   const isGeneric = /^(work|work delivery|מסירת עבודה)$/i.test(focus)
-  const projectLabel = taskMap.value.get(rec.primaryTaskId)?.projectId || focus
+  const projectLabel = weeklyLaneSourceLabel(rec)
   if (locale === 'he') {
     const source = isGeneric ? `מבוסס על ${projectLabel}` : focus
     return `${source} · ${count} משימות מחוברות`

@@ -174,12 +174,15 @@
 - Expanded weekly lane board renders as a CSS grid of lane columns; compact mode remains a small preview with a visible wide-open control.
 - Storybook fixture `AI/ChatMessage/Weekly Lane Board` covers Hebrew RTL compact and wide layouts with related task cards.
 - Headed Storybook visual check captured `/tmp/flowstate-weekly-lane-story.png`: wide board measured `display: grid`, 2 visible lane columns, no generic `עבודה לא מסווגת`/`Unclassified work`, no legacy `.weekly-plan-cards`, no horizontal scrollbar, and all cards inside their tracks.
+- Headed signed-in FlowState desktop flow exercised the user's real task data and exposed the remaining raw-ID subtitle problem in fullscreen lanes; the lane layout itself rendered as a real horizontal board rather than the previous squeezed carousel.
+- `ChatMessage` now resolves generic work-lane subtitles through the project display-name store and falls back to the lane focus instead of leaking UUID/project IDs.
+- Updated headed Storybook label check captured `/tmp/flowstate-weekly-lane-label-story.png`: 2 boards, 4 visual lanes, wide board `display: grid`, no raw UUID-like text, no legacy `.weekly-plan-cards`, and human subtitle `מבוסס על בינה מעצבת`.
 - `npm test -- tests/unit/ai-sidebar-first.test.ts` → 77/77 passed.
 - `npm run type-check` → passed.
 
 **Remaining proof before DONE**:
-- Run a headed signed-in app flow against real user task data, not only the Storybook fixture.
-- Electron build/deploy once the worktree is clean enough to ship without unrelated generated/auth/cache changes.
+- Rebuild and ship Electron so the signed-in desktop app receives the current-source lane subtitle fix.
+- After update, re-check the signed-in desktop app no longer shows raw IDs in weekly lane subtitles.
 
 **Gate status**: ✅ Follow-up stuck-click, compact post-continuation output, duplicate inline follow-up suppression, and old-card answered-memory hydration passed in headed localhost on 2026-06-09. The next gate is broader real-flow compactness beyond this seeded follow-up scenario.
 

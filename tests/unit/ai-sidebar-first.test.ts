@@ -8,7 +8,8 @@ import AIChatPanel from '@/components/ai/AIChatPanel.vue'
 import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
-import type { Task } from '@/types/tasks'
+import { useProjectStore } from '@/stores/projects'
+import type { Project, Task } from '@/types/tasks'
 import { auditWeeklyPlanQuality, buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, buildWeeklyPlanPrompt, buildWeeklyPlanReliabilityFallback, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
 import { auditChatResponseQuality } from '@/services/ai/pipeline/chatQuality'
 import { formatMemoryEvidence, sanitizeMemoryEvidenceText } from '@/services/ai/pipeline/memoryEvidence'
@@ -535,6 +536,16 @@ describe('AI sidebar-first desktop experience', () => {
 
   it('renders compact weekly plans as visual lanes instead of stacked related task cards', async () => {
     const taskStore = useTaskStore()
+    const projectStore = useProjectStore()
+    projectStore._rawProjects.push({
+      id: '85accc3c-26ff-4a2c-ba07',
+      name: 'בינה מעצבת',
+      color: '#14b8a6',
+      colorType: 'hex',
+      viewType: 'status',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Project)
     taskStore._rawTasks.push(
       {
         id: 'task-primary',
@@ -546,7 +557,7 @@ describe('AI sidebar-first desktop experience', () => {
         completedPomodoros: 0,
         subtasks: [],
         dueDate: '2026-06-10',
-        projectId: 'work',
+        projectId: '85accc3c-26ff-4a2c-ba07',
         createdAt: new Date('2026-06-01T08:00:00Z'),
         updatedAt: new Date('2026-06-07T08:00:00Z'),
       } as Task,
@@ -644,7 +655,8 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.findAll('[data-testid="weekly-lane-arrow-next"]')).toHaveLength(0)
     expect(wrapper.get('.weekly-lane-heading h3').text()).toBe('עבודה עם בינה מעצבת')
     expect(wrapper.get('.weekly-lane-heading').text()).not.toContain('עבודה לא מסווגת')
-    expect(wrapper.get('.weekly-lane-heading').text()).toContain('מבוסס על work')
+    expect(wrapper.get('.weekly-lane-heading').text()).toContain('מבוסס על בינה מעצבת')
+    expect(wrapper.get('.weekly-lane-heading').text()).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/i)
     expect(wrapper.get('.weekly-lane-heading').text()).toContain('3 משימות מחוברות')
     expect(wrapper.findAll('[data-testid="inline-plan-card"]')).toHaveLength(1)
     expect(wrapper.get('[data-testid="inline-plan-card"]').text()).toContain('עבודה עם בינה מעצבת')

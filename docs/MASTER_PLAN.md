@@ -2,6 +2,45 @@
 
 ## 🔜 Next Up — AI Chat Quality System (start here after restart)
 
+### TASK-1852: Post-restart updater proof and AI chat quality continuation (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (filed 2026-06-12) | **Depends on**: TASK-1851
+
+**Why**: TASK-1851 is shipped and proved in a signed-in packaged Electron debug session, but the next instance must resume from the same real-app verification path after restart. Do not lose the lesson from this session: demo fixtures and unit tests were insufficient; the decisive proof came from a headed, signed-in app flow with real task data.
+
+**Resume snapshot**:
+- Last completed commit: `15da970e Keep weekly lane subtitles from leaking buckets`.
+- Shipped Electron updater version: `1.4.158`.
+- Updater manifest proof: `https://in-theflow.com/updates/electron/latest-linux.yml` reports `version: 1.4.158`; AppImage and deb returned HTTP 200.
+- Real signed-in packaged Electron proof screenshot: `/tmp/flowstate-1.4.158-electron-weekly-lanes.png`.
+- Known local dirty file before restart: `stats.html` only; generated noise, do not commit unless intentionally regenerated.
+
+**Required first actions after restart**:
+1. Pull/rebase to `origin/master` and confirm the working tree contains no unexpected product-code drift.
+2. Verify the updater manifest still serves `1.4.158`.
+3. Verify the user-installed Electron app updates to, or is already running, `1.4.158`; do not rely only on the local build artifact if the user is checking the installed app.
+4. Re-run a headed signed-in user flow against real tasks, not demo content.
+
+**Headed real-app verification method to preserve**:
+- If the normal installed app is hard to inspect, launch the packaged AppImage with Chromium remote debugging:
+  `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs ./release/FlowState-1.4.158-x86_64.AppImage --no-sandbox --remote-debugging-port=9333 --class=flow-state`
+- Attach Playwright over CDP to `http://127.0.0.1:9333`.
+- Use DOM clicks where window-coordinate clicks are unreliable:
+  `button[title^="AI Assistant"]` to open chat, `.header-btn.resize-btn` to widen/fullscreen.
+- Inspect the real rendered DOM for:
+  `[data-testid="weekly-lane-board"]`, `[data-testid="weekly-visual-lane"]`, `[data-testid="weekly-related-chip"]`, and absence of `.weekly-plan-cards`.
+
+**Acceptance before moving on**:
+- The prompt `תעזור לי לתכנן את שארית השבוע` in the signed-in app produces either a useful clarification card or a real visual weekly lane board.
+- Wide/expanded chat shows horizontal lanes with readable cards, not a clipped carousel or stacked task list.
+- There are no raw UUIDs, no `מבוסס על Work`, no `עבודה לא מסווגת`, and no generic `Work`/`My Projects` subtitle leaks.
+- If the user already answered a prioritization clarification, the app does not ask the exact same question again without a new reason.
+- Evidence is a screenshot plus DOM counts for lane boards, visual lanes, legacy weekly cards, generic labels, and lane widths.
+
+**Next product slice after this proof**:
+- Continue the AI chat quality lane from the first still-red proof gate below. The likely next work is memory/answer-quality continuity: repeated clarification suppression, stronger reasoning from saved context, and better "why this lane/task" explanations across real data.
+- Do not start unrelated architecture work, broad Electron work, or cosmetic redesign until the signed-in weekly-planning flow is visually and behaviorally stable.
+
 ## Current Focused Lane — Localhost Weekly Planning Must Become Useful
 
 **Goal**: Make the localhost AI chat weekly-planning flow reliably useful before any more architecture work.

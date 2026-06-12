@@ -21,7 +21,7 @@
               </template>
             </p>
           </div>
-          <button class="close-btn" @click="$emit('close')">
+          <button :aria-label="$t('close')" class="close-btn" @click="$emit('close')">
             <X :size="16" />
           </button>
         </div>

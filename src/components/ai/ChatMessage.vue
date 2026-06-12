@@ -360,12 +360,18 @@ function looksLikeOpaqueId(value: string): boolean {
     /^[0-9a-f]{16,}$/i.test(value)
 }
 
-function weeklyLaneSourceLabel(rec: WeeklyPlanRecommendation): string {
+function isGenericWeeklyLaneLabel(value: string): boolean {
+  return /^(work|work delivery|my projects|personal|uncategorized|general|inbox|עבודה|מסירת עבודה|פרויקטים|אישי|כללי|ללא פרויקט|עבודה לא מסווגת)$/i.test(value.trim())
+}
+
+function weeklyLaneSourceLabel(rec: WeeklyPlanRecommendation): string | null {
   const focus = rec.focusArea.trim()
   const projectId = taskMap.value.get(rec.primaryTaskId)?.projectId
-  if (!projectId) return focus
+  if (!projectId) return isGenericWeeklyLaneLabel(focus) || looksLikeOpaqueId(focus) ? null : focus
   const projectName = projectStore.getProjectDisplayName(projectId).trim()
-  if (!projectName || projectName === 'Uncategorized' || looksLikeOpaqueId(projectName)) return focus
+  if (!projectName || isGenericWeeklyLaneLabel(projectName) || looksLikeOpaqueId(projectName)) {
+    return isGenericWeeklyLaneLabel(focus) || looksLikeOpaqueId(focus) ? null : focus
+  }
   return projectName
 }
 
@@ -376,10 +382,14 @@ function weeklyLaneSubtitle(rec: WeeklyPlanRecommendation): string {
   const isGeneric = /^(work|work delivery|מסירת עבודה)$/i.test(focus)
   const projectLabel = weeklyLaneSourceLabel(rec)
   if (locale === 'he') {
-    const source = isGeneric ? `מבוסס על ${projectLabel}` : focus
+    const source = isGeneric
+      ? projectLabel ? `מבוסס על ${projectLabel}` : 'נתיב משימות קשורות'
+      : focus
     return `${source} · ${count} משימות מחוברות`
   }
-  const source = isGeneric ? `Based on ${projectLabel}` : focus
+  const source = isGeneric
+    ? projectLabel ? `Based on ${projectLabel}` : 'Connected task lane'
+    : focus
   return `${source} · ${count} connected tasks`
 }
 

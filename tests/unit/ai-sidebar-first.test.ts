@@ -686,6 +686,24 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wideWrapper.find('.weekly-plan-cards').exists()).toBe(false)
     expect(wideWrapper.get('[data-testid="weekly-lane-board"]').text()).toContain('לעדכן את גלית')
     expect(wideWrapper.get('[data-testid="weekly-lane-board"]').text()).toContain('arthouse')
+
+    taskStore._rawTasks[0].projectId = 'work'
+    const genericProjectWrapper = mount(ChatMessage, {
+      props: {
+        message: wrapper.props('message'),
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    const genericHeading = genericProjectWrapper.get('.weekly-lane-heading').text()
+    expect(genericHeading).toContain('נתיב משימות קשורות')
+    expect(genericHeading).toContain('3 משימות מחוברות')
+    expect(genericHeading).not.toContain('מבוסס על Work')
+    expect(genericHeading).not.toContain('Work')
   })
 
   it('rejects shallow weekly plan JSON and falls back to evidence-only quick drafts', () => {

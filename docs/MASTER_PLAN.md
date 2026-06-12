@@ -147,9 +147,9 @@
 - `npm run electron:build` → passed and validated package metadata.
 - Public updater manifest verified at `https://in-theflow.com/updates/electron/latest-linux.yml` with `version: 1.4.155`; AppImage and deb URLs returned HTTP 200.
 
-### TASK-1851: Expanded weekly plan visual lane board (🔄 IN PROGRESS)
+### ~~TASK-1851: Expanded weekly plan visual lane board~~ ✅ DONE
 
-**Priority**: P0-HIGH | **Status**: 🔄 IN PROGRESS (filed 2026-06-12) | **Depends on**: TASK-1850
+**Priority**: P0-HIGH | **Status**: ✅ DONE (filed 2026-06-12, completed 2026-06-12) | **Depends on**: TASK-1850
 
 **Why**: The compact card carousel can still feel like a squeezed stack instead of a visual lane board, especially in the widened AI chat panel. The next product slice should make the lane relationship visible left-to-right rather than relying on semantic labels and clipped task cards.
 
@@ -177,14 +177,15 @@
 - Headed signed-in FlowState desktop flow exercised the user's real task data and exposed the remaining raw-ID subtitle problem in fullscreen lanes; the lane layout itself rendered as a real horizontal board rather than the previous squeezed carousel.
 - `ChatMessage` now resolves generic work-lane subtitles through the project display-name store and falls back to the lane focus instead of leaking UUID/project IDs.
 - Updated headed Storybook label check captured `/tmp/flowstate-weekly-lane-label-story.png`: 2 boards, 4 visual lanes, wide board `display: grid`, no raw UUID-like text, no legacy `.weekly-plan-cards`, and human subtitle `מבוסס על בינה מעצבת`.
+- Headed signed-in packaged Electron 1.4.157 check exposed one remaining generic subtitle (`מבוסס על Work`), so `ChatMessage` now treats generic bucket labels (`Work`, `My Projects`, `Personal`, `Uncategorized`, `מסירת עבודה`, `עבודה לא מסווגת`) as non-labels and renders `נתיב משימות קשורות` instead of leaking the bucket.
+- Headed signed-in packaged Electron 1.4.158 check via Chromium remote debugging captured `/tmp/flowstate-1.4.158-electron-weekly-lanes.png`: 1 weekly lane board, 3 visual lanes, no legacy `.weekly-plan-cards`, no UUID-like text, no `מבוסס על Work`, no `עבודה לא מסווגת`, and lane widths of 349px each.
+- Electron updater deployment verified at `https://in-theflow.com/updates/electron/latest-linux.yml` with `version: 1.4.158`; both `FlowState-1.4.158-x86_64.AppImage` and `FlowState_1.4.158_amd64.deb` returned HTTP 200.
 - `npm test -- tests/unit/ai-sidebar-first.test.ts` → 77/77 passed.
 - `npm run type-check` → passed.
+- `npm run electron:build` → passed and validated package metadata.
+- `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "TASK-1851: weekly lane board generic labels"` → deployed 1.4.158.
 
-**Remaining proof before DONE**:
-- Rebuild and ship Electron so the signed-in desktop app receives the current-source lane subtitle fix.
-- After update, re-check the signed-in desktop app no longer shows raw IDs in weekly lane subtitles.
-
-**Gate status**: ✅ Follow-up stuck-click, compact post-continuation output, duplicate inline follow-up suppression, and old-card answered-memory hydration passed in headed localhost on 2026-06-09. The next gate is broader real-flow compactness beyond this seeded follow-up scenario.
+**Gate status**: ✅ Follow-up stuck-click, compact post-continuation output, duplicate inline follow-up suppression, old-card answered-memory hydration, visual lane regression coverage, and signed-in packaged Electron lane proof are complete.
 
 ---
 

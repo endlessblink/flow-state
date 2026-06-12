@@ -1,5 +1,6 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js'
 import { isTauri as isTauriRuntime } from '@/utils/platform'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
 
 // These will be provided by your Supabase project settings
 // For now, we'll use empty strings or env vars if available
@@ -155,6 +156,66 @@ const electronStorage = isElectronRuntime ? {
     },
 } : null
 
+const authStorage = isElectronRuntime
+    ? electronStorage!
+    : (typeof window !== 'undefined' ? localStorage : null)
+
+export const AUTH_SESSION_BACKUP_KEY = `${STORAGE_KEYS.SUPABASE_AUTH}-backup-v1`
+
+async function authStorageGet(key: string): Promise<string | null> {
+    if (!authStorage) return null
+    const value = await authStorage.getItem(key)
+    return typeof value === 'string' ? value : null
+}
+
+async function authStorageSet(key: string, value: string): Promise<void> {
+    if (!authStorage) return
+    await authStorage.setItem(key, value)
+}
+
+async function authStorageRemove(key: string): Promise<void> {
+    if (!authStorage) return
+    await authStorage.removeItem(key)
+}
+
+export async function persistAuthSessionBackup(session: Session | null | undefined): Promise<void> {
+    if (!session?.refresh_token || !session.user?.id) return
+    try {
+        await authStorageSet(AUTH_SESSION_BACKUP_KEY, JSON.stringify({
+            savedAt: Date.now(),
+            session,
+        }))
+    } catch (e) {
+        console.warn('[Supabase] Failed to persist auth session backup:', e)
+    }
+}
+
+export async function restoreAuthSessionFromBackup(): Promise<boolean> {
+    try {
+        const raw = await authStorageGet(AUTH_SESSION_BACKUP_KEY)
+        if (!raw) return false
+
+        const parsed = JSON.parse(raw) as { session?: Session }
+        const session = parsed?.session
+        if (!session?.refresh_token || !session.user?.id) return false
+
+        await authStorageSet(STORAGE_KEYS.SUPABASE_AUTH, JSON.stringify(session))
+        console.warn('[Supabase] Restored missing auth session from Electron-safe backup')
+        return true
+    } catch (e) {
+        console.warn('[Supabase] Failed to restore auth session backup:', e)
+        return false
+    }
+}
+
+export async function clearAuthSessionBackup(): Promise<void> {
+    try {
+        await authStorageRemove(AUTH_SESSION_BACKUP_KEY)
+    } catch (e) {
+        console.warn('[Supabase] Failed to clear auth session backup:', e)
+    }
+}
+
 let supabaseClient;
 try {
     supabaseClient = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey, {
@@ -177,9 +238,7 @@ try {
             // BUG-339: Use localStorage (reliable in Tauri 2.x, not reliable in Electron file://)
             // Electron uses disk-backed IPC store instead (see electronStorage adapter above).
             // Combined with proactive token refresh in auth.ts for session persistence.
-            storage: isElectronRuntime
-                ? electronStorage!
-                : (typeof window !== 'undefined' ? localStorage : undefined),
+            storage: authStorage ?? undefined,
         },
         // BUG-1179: Configure Realtime to prevent connection drops
         // Cloudflare has 100-second idle timeout, so we send heartbeats more frequently

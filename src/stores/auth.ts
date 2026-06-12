@@ -1,6 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { supabase, consumePendingProviderTokens, type User, type Session, type AuthError } from '@/services/auth/supabase'
+import {
+  supabase,
+  consumePendingProviderTokens,
+  persistAuthSessionBackup,
+  restoreAuthSessionFromBackup,
+  clearAuthSessionBackup,
+  type User,
+  type Session,
+  type AuthError
+} from '@/services/auth/supabase'
 import { syncLocalApiSession } from '@/composables/useLocalApiBridge'
 import { clearGuestData, clearGuestSessionId } from '@/utils/guestModeStorage'
 import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection'
@@ -202,10 +211,23 @@ export const useAuthStore = defineStore('auth', () => {
 
         // Check for existing session
         console.log(`[AUTH:${tabId}] Fetching session from localStorage...`)
-        const { data, error: sessionError } = await supabase.auth.getSession()
+        let { data, error: sessionError } = await supabase.auth.getSession()
         if (sessionError) {
           console.error(`[AUTH:${tabId}] getSession error:`, sessionError)
           throw sessionError
+        }
+
+        if (!data.session) {
+          const restored = await restoreAuthSessionFromBackup()
+          if (restored) {
+            const retry = await supabase.auth.getSession()
+            data = retry.data
+            sessionError = retry.error
+            if (sessionError) {
+              console.error(`[AUTH:${tabId}] getSession after backup restore error:`, sessionError)
+              throw sessionError
+            }
+          }
         }
         console.log(`[AUTH:${tabId}] Session found:`, !!data.session, data.session?.user?.email)
 
@@ -237,6 +259,7 @@ export const useAuthStore = defineStore('auth', () => {
                 console.log('[AUTH] Session expired but offline — keeping auth for local operations (grace period)')
                 session.value = data.session  // keep expired session; user.id stays accessible
                 user.value = data.session.user
+                persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup offline grace session:', e))
                 isOfflineGracePeriod.value = true
                 window.addEventListener('online', async () => {
                   console.log('[AUTH] Back online — attempting session refresh after offline grace period')
@@ -259,6 +282,7 @@ export const useAuthStore = defineStore('auth', () => {
                       console.log(`[AUTH] Session refreshed successfully after coming online (attempt ${attempt})`)
                       session.value = onlineData.session
                       user.value = onlineData.session.user
+                      persistAuthSessionBackup(onlineData.session).catch(e => console.warn('[AUTH] Failed to backup refreshed session:', e))
                       isOfflineGracePeriod.value = false
                       if (onlineData.session.expires_at) {
                         scheduleTokenRefresh(onlineData.session.expires_at)
@@ -296,6 +320,7 @@ export const useAuthStore = defineStore('auth', () => {
                 console.log('[AUTH] BUG-1743: Refresh failed but IndexedDB has cached data — keeping session for offline access')
                 session.value = data.session  // keep expired session for user.id access
                 user.value = data.session.user
+                persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup cached-data grace session:', e))
                 isOfflineGracePeriod.value = true
                 // Register online listener like the navigator.onLine === false path
                 window.addEventListener('online', async () => {
@@ -313,6 +338,7 @@ export const useAuthStore = defineStore('auth', () => {
                     if (!onlineError && onlineData.session) {
                       session.value = onlineData.session
                       user.value = onlineData.session.user
+                      persistAuthSessionBackup(onlineData.session).catch(e => console.warn('[AUTH] Failed to backup refreshed session:', e))
                       isOfflineGracePeriod.value = false
                       if (onlineData.session.expires_at) {
                         scheduleTokenRefresh(onlineData.session.expires_at)
@@ -347,6 +373,7 @@ export const useAuthStore = defineStore('auth', () => {
               console.log('[AUTH] Session refreshed successfully')
               session.value = refreshData.session
               user.value = refreshData.session.user
+              persistAuthSessionBackup(refreshData.session).catch(e => console.warn('[AUTH] Failed to backup refreshed session:', e))
               // BUG-339: Schedule next refresh
               if (refreshData.session.expires_at) {
                 scheduleTokenRefresh(refreshData.session.expires_at)
@@ -355,12 +382,14 @@ export const useAuthStore = defineStore('auth', () => {
           } else {
             session.value = data.session
             user.value = data.session?.user || null
+            persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup valid session:', e))
             // BUG-339: Schedule proactive refresh for valid session
             scheduleTokenRefresh(data.session.expires_at)
           }
         } else {
           session.value = data.session
           user.value = data.session?.user || null
+          persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup session:', e))
         }
 
         // BUG-339 FIX: If we have a session on init (e.g., after OAuth/Magic Link redirect),
@@ -454,6 +483,9 @@ export const useAuthStore = defineStore('auth', () => {
           // Update local state
           session.value = newSession
           user.value = newSession?.user || null
+          if (newSession) {
+            persistAuthSessionBackup(newSession).catch(e => console.warn('[AUTH] Failed to backup auth event session:', e))
+          }
 
           // FEATURE-1202: Write session to shared file for KDE widget (Tauri only)
           // ~/.config/flowstate/session.json — KDE widget reads this for authenticated API calls
@@ -851,6 +883,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (data.session) {
         session.value = data.session
         user.value = data.user
+        persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup password sign-in session:', e))
         // BUG-339: Schedule proactive refresh
         if (data.session.expires_at) {
           scheduleTokenRefresh(data.session.expires_at)
@@ -935,6 +968,7 @@ export const useAuthStore = defineStore('auth', () => {
       // Fix: Force-remove the session from localStorage BEFORE calling signOut,
       // so even if signOut fails, the session can't be restored.
       try {
+        await clearAuthSessionBackup()
         localStorage.removeItem('flowstate-supabase-auth')
         localStorage.removeItem('flowstate-supabase-auth-code-verifier')
       } catch (_e) {

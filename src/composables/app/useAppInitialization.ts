@@ -23,7 +23,7 @@ import { getInitialOnlineState } from '@/utils/platform'
 // BUG-1411: Cache stats for offline mode detection
 // TASK-1425: Full cache read functions for fast offline startup
 // TASK-1427: Merged versions include pending write queue operations
-import { getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPendingWrites, getCachedProjects } from '@/services/offline/readCacheDB'
+import { clearReadCache, getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPendingWrites, getCachedProjects } from '@/services/offline/readCacheDB'
 // TASK-1219: Time block progress notifications
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
 
@@ -185,6 +185,14 @@ export function useAppInitialization() {
         await authStore.initialize()
 
         if (!authStore.isAuthenticated) {
+            if (hasCache) {
+                console.warn('[AUTH] No restored session; clearing authenticated read cache from signed-out view')
+                taskStore.clearAll()
+                projectStore._rawProjects = []
+                canvasStore.clearAll()
+                workspaceStore.clearAll()
+                await clearReadCache()
+            }
             // Guest mode: clear transient data only (TASK-1339: tasks/groups/filters persist)
             clearGuestData()
             // BUG-1137: Ensure guest session ID exists for future migration tracking

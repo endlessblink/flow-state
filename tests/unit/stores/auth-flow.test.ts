@@ -24,6 +24,9 @@ const {
   mockRealtimeSetAuth,
   mockRealtimeDisconnect,
   mockFromTable,
+  mockPersistAuthSessionBackup,
+  mockRestoreAuthSessionFromBackup,
+  mockClearAuthSessionBackup,
 } = vi.hoisted(() => {
   type AuthCallback = (event: string, session: unknown) => void
   let _listeners: AuthCallback[] = []
@@ -49,6 +52,9 @@ const {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ data: [], error: null }),
     })),
+    mockPersistAuthSessionBackup: vi.fn(),
+    mockRestoreAuthSessionFromBackup: vi.fn(),
+    mockClearAuthSessionBackup: vi.fn(),
   }
 })
 
@@ -72,6 +78,9 @@ vi.mock('@/services/auth/supabase', () => ({
     from: mockFromTable,
   },
   consumePendingProviderTokens: vi.fn().mockReturnValue(null),
+  persistAuthSessionBackup: mockPersistAuthSessionBackup,
+  restoreAuthSessionFromBackup: mockRestoreAuthSessionFromBackup,
+  clearAuthSessionBackup: mockClearAuthSessionBackup,
 }))
 
 vi.mock('@/utils/guestModeStorage', () => ({
@@ -219,6 +228,9 @@ describe('Auth Flow — Initial State', () => {
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
     mockSignOut.mockResolvedValue({ error: null })
     mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockPersistAuthSessionBackup.mockResolvedValue(undefined)
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
+    mockClearAuthSessionBackup.mockResolvedValue(undefined)
   })
 
   it('1. isAuthenticated is false before initialize()', () => {
@@ -248,6 +260,9 @@ describe('Auth Flow — initialize()', () => {
     vi.clearAllMocks()
     mockSignOut.mockResolvedValue({ error: null })
     mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockPersistAuthSessionBackup.mockResolvedValue(undefined)
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
+    mockClearAuthSessionBackup.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -306,6 +321,32 @@ describe('Auth Flow — initialize()', () => {
     expect(store.isAuthenticated).toBe(false)
     expect(store.isInitialized).toBe(true)
   })
+
+  it('8b. initialize() restores a missing primary Electron auth session from backup', async () => {
+    const session = buildMockSession()
+    mockGetSession
+      .mockResolvedValueOnce({ data: { session: null }, error: null })
+      .mockResolvedValueOnce({ data: { session }, error: null })
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(true)
+
+    const store = useAuthStore()
+    await store.initialize()
+
+    expect(mockRestoreAuthSessionFromBackup).toHaveBeenCalledOnce()
+    expect(mockGetSession).toHaveBeenCalledTimes(2)
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.user?.id).toBe('user-test-001')
+  })
+
+  it('8c. initialize() persists a backup when a valid session is found', async () => {
+    const session = buildMockSession()
+    mockGetSession.mockResolvedValue({ data: { session }, error: null })
+
+    const store = useAuthStore()
+    await store.initialize()
+
+    expect(mockPersistAuthSessionBackup).toHaveBeenCalledWith(session)
+  })
 })
 
 // ============================================================================
@@ -322,6 +363,9 @@ describe('Auth Flow — signInWithPassword', () => {
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
     mockSignOut.mockResolvedValue({ error: null })
     mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockPersistAuthSessionBackup.mockResolvedValue(undefined)
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
+    mockClearAuthSessionBackup.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -404,6 +448,9 @@ describe('Auth Flow — signOut', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockPersistAuthSessionBackup.mockResolvedValue(undefined)
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
+    mockClearAuthSessionBackup.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -441,6 +488,7 @@ describe('Auth Flow — signOut', () => {
     await flushPromises()
 
     expect(localStorage.getItem('flowstate-supabase-auth')).toBeNull()
+    expect(mockClearAuthSessionBackup).toHaveBeenCalledOnce()
   })
 })
 
@@ -456,6 +504,9 @@ describe('Auth Flow — Token Refresh', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     mockSignOut.mockResolvedValue({ error: null })
+    mockPersistAuthSessionBackup.mockResolvedValue(undefined)
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
+    mockClearAuthSessionBackup.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -509,6 +560,9 @@ describe('Auth Flow — Computed Properties', () => {
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
     mockSignOut.mockResolvedValue({ error: null })
     mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockPersistAuthSessionBackup.mockResolvedValue(undefined)
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
+    mockClearAuthSessionBackup.mockResolvedValue(undefined)
   })
 
   it('17. isAdmin is false for regular users', async () => {
@@ -560,6 +614,9 @@ describe('Auth Flow — Guest Mode', () => {
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
     mockSignOut.mockResolvedValue({ error: null })
     mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockPersistAuthSessionBackup.mockResolvedValue(undefined)
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
+    mockClearAuthSessionBackup.mockResolvedValue(undefined)
   })
 
   it('21. before initialize(), user is null and isAuthenticated is false', () => {

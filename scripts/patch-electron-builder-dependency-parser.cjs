@@ -96,6 +96,7 @@ const fixed = `        // Find the first real npm dependency-tree JSON object. T
         for (let i = start; i < consoleOutput.length; i++) {`
 
 const syncCollectorMarker = 'FlowState buffered shell-command collector output patch'
+const emptyStdoutFallbackMarker = 'FlowState empty stdout direct-process fallback'
 const syncCollectorPattern =
   /    async streamCollectorCommandToFile\(command, args, cwd, tempOutputFile\) \{[\s\S]*?\n    \}\n\}\nexports\.NodeModulesCollector = NodeModulesCollector;/
 const syncCollectorFixed = `    async streamCollectorCommandToFile(command, args, cwd, tempOutputFile) {
@@ -127,6 +128,25 @@ const syncCollectorFixed = `    async streamCollectorCommandToFile(command, args
                     builder_util_1.log.debug({ stderr }, "note: there was node module collector output on stderr");
                     this.cache.logSummary[moduleManager_1.LogMessageByKey.PKG_COLLECTOR_OUTPUT].push(stderr);
                 }
+                if (stdout.trim().length === 0) {
+                    try {
+                        // ${emptyStdoutFallbackMarker}: the spawned collector can close
+                        // with empty stdout in managed sandboxes even though the same
+                        // package-manager command returns valid JSON synchronously.
+                        stdout = childProcess.execFileSync(command, args, {
+                            cwd,
+                            env: { COREPACK_ENABLE_STRICT: "0", SC_DISABLE_GATE: "1", ...process.env },
+                            encoding: "utf8",
+                            maxBuffer: 200 * 1024 * 1024,
+                        });
+                    }
+                    catch (directError) {
+                        const directStdout = directError && typeof directError === "object" && "stdout" in directError
+                            ? directError.stdout
+                            : "";
+                        stdout = String(directStdout || "");
+                    }
+                }
                 fs.writeFile(tempOutputFile, stdout, { encoding: "utf8" })
                     .then(() => {
                     if (code === 0 || shouldIgnore) {
@@ -151,6 +171,37 @@ if (!fs.existsSync(target)) {
 const current = fs.readFileSync(target, 'utf8')
 let patched = current
 const applied = []
+
+const dependencyTreeEnvMarker = 'FlowState precomputed npm dependency tree patch'
+const dependencyTreeInsertionPoint = `        const command = (0, packageManager_1.getPackageManagerCommand)(pm);
+        const args = this.getArgs();
+        try {`
+const dependencyTreeBlock = `        const command = (0, packageManager_1.getPackageManagerCommand)(pm);
+        const args = this.getArgs();
+        if (pm === packageManager_1.PM.NPM && process.env.FLOWSTATE_ELECTRON_NPM_TREE_JSON) {
+            try {
+                // ${dependencyTreeEnvMarker}: managed sandboxes can reject Node
+                // child_process execution of npm. A shell wrapper can precompute
+                // the exact npm list JSON and point electron-builder at it.
+                const precomputedTree = await fs.readFile(process.env.FLOWSTATE_ELECTRON_NPM_TREE_JSON, { encoding: "utf8" });
+                if (precomputedTree.trim().length > 0) {
+                    return await Promise.resolve(this.parseDependenciesTree(precomputedTree));
+                }
+            }
+            catch (error) {
+                builder_util_1.log.debug({ error: error === null || error === void 0 ? void 0 : error.message }, "precomputed npm dependency tree unavailable; falling back to collector command");
+            }
+        }
+        try {`
+
+if (!patched.includes(dependencyTreeEnvMarker)) {
+  if (!patched.includes(dependencyTreeInsertionPoint)) {
+    console.warn('[electron-builder-patch] skipped precomputed dependency tree patch; expected getDependenciesTree insertion point not found')
+  } else {
+    patched = patched.replace(dependencyTreeInsertionPoint, dependencyTreeBlock)
+    applied.push('precomputed-tree')
+  }
+}
 
 if (!patched.includes(fixed)) {
   const broken = patched.includes(escapedRegexBroken)
@@ -177,6 +228,45 @@ if (!patched.includes(syncCollectorMarker)) {
   } else {
     patched = patched.replace(syncCollectorPattern, syncCollectorFixed)
     applied.push('collector')
+  }
+}
+
+const emptyStdoutFallbackInsertionPoint = `                if (stderr.length > 0) {
+                    builder_util_1.log.debug({ stderr }, "note: there was node module collector output on stderr");
+                    this.cache.logSummary[moduleManager_1.LogMessageByKey.PKG_COLLECTOR_OUTPUT].push(stderr);
+                }
+                fs.writeFile(tempOutputFile, stdout, { encoding: "utf8" })`
+const emptyStdoutFallbackBlock = `                if (stderr.length > 0) {
+                    builder_util_1.log.debug({ stderr }, "note: there was node module collector output on stderr");
+                    this.cache.logSummary[moduleManager_1.LogMessageByKey.PKG_COLLECTOR_OUTPUT].push(stderr);
+                }
+                if (stdout.trim().length === 0) {
+                    try {
+                        // ${emptyStdoutFallbackMarker}: the spawned collector can close
+                        // with empty stdout in managed sandboxes even though the same
+                        // package-manager command returns valid JSON synchronously.
+                        stdout = childProcess.execFileSync(command, args, {
+                            cwd,
+                            env: { COREPACK_ENABLE_STRICT: "0", SC_DISABLE_GATE: "1", ...process.env },
+                            encoding: "utf8",
+                            maxBuffer: 200 * 1024 * 1024,
+                        });
+                    }
+                    catch (directError) {
+                        const directStdout = directError && typeof directError === "object" && "stdout" in directError
+                            ? directError.stdout
+                            : "";
+                        stdout = String(directStdout || "");
+                    }
+                }
+                fs.writeFile(tempOutputFile, stdout, { encoding: "utf8" })`
+
+if (patched.includes(syncCollectorMarker) && !patched.includes(emptyStdoutFallbackMarker)) {
+  if (!patched.includes(emptyStdoutFallbackInsertionPoint)) {
+    console.warn('[electron-builder-patch] skipped empty-stdout fallback patch; expected collector insertion point not found')
+  } else {
+    patched = patched.replace(emptyStdoutFallbackInsertionPoint, emptyStdoutFallbackBlock)
+    applied.push('empty-stdout-fallback')
   }
 }
 

@@ -43,6 +43,8 @@ import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { AIClarificationArtifact, AIClarificationQuestion, AIContextEntityType, AIMemoryPatch, AIRecommendationFeedbackInput, AIUncertaintyDimension } from '@/types/aiMemory'
 import { resumeLocalClarificationRuntime } from '@/services/ai/runtime/localClarificationRuntimeClient'
 import { decideAITaskCreate } from '@/services/ai/actionGuardrails'
+import * as aiActionCommands from '@/services/ai/actionCommands'
+import type { AICommandMemoryStore } from '@/services/ai/actionCommands'
 
 // ============================================================================
 // Props
@@ -2087,6 +2089,37 @@ function feedbackRevisitIso(choice: 'tomorrow' | 'next_week' | 'later' | 'none' 
   return date.toISOString()
 }
 
+async function applyRecommendationFeedbackCommand(
+  feedback: AIRecommendationFeedbackInput,
+  sourcePrompt: string,
+) {
+  const commandId = `memory-feedback:${feedback.recommendationId}:${feedback.action}`
+  const batch = aiActionCommands.buildAICommandBatchPreview({
+    sourcePrompt,
+    sourceRunId: props.message.id,
+    sourceMessageId: props.message.id,
+    dataUsed: {
+      messageId: props.message.id,
+      recommendationId: feedback.recommendationId,
+      taskId: feedback.taskId,
+      entityKey: feedback.entityKey,
+    },
+    commands: [{
+      id: commandId,
+      kind: 'memory.feedback.record',
+      feedback,
+      confidence: 0.95,
+      impact: 'low',
+    }],
+    tasks: taskStore.tasks,
+  })
+  await aiActionCommands.applyAICommandBatch(batch, {
+    selectedCommandIds: [commandId],
+    taskStore,
+    memoryStore: aiMemoryDb as AICommandMemoryStore,
+  })
+}
+
 async function recordRecommendationFeedback(
   rec: WeeklyPlanRecommendation,
   action: AIRecommendationFeedbackInput['action'],
@@ -2103,7 +2136,7 @@ async function recordRecommendationFeedback(
     suppressedRecommendationIds.value[rec.sectionId] = true
   }
   try {
-    await aiMemoryDb.recordAIRecommendationFeedback({
+    await applyRecommendationFeedbackCommand({
       generatedPlanId: weeklyPlan.value?.requestId,
       recommendationId: rec.sectionId,
       taskId: rec.primaryTaskId,
@@ -2120,7 +2153,7 @@ async function recordRecommendationFeedback(
       },
       implicitPositive,
       sourceMessageId: props.message.id,
-    })
+    }, 'weekly recommendation feedback card')
     recommendationFeedbackChoiceOpen.value[rec.sectionId] = ''
     recommendationFeedbackStatus.value[rec.sectionId] = feedbackStatusLabel(action, weeklyPlan.value?.locale ?? 'en')
   } catch (err) {
@@ -2216,7 +2249,7 @@ async function recordInlineTaskFeedback(
   const entityKey = task?.projectId ? `project:${task.projectId}` : `task:${taskId}`
   const locale = effectiveDirection.value === 'rtl' ? 'he' : 'en'
   try {
-    await aiMemoryDb.recordAIRecommendationFeedback({
+    await applyRecommendationFeedbackCommand({
       recommendationId: `inline_${cardKind}_${taskId}`,
       taskId,
       entityKey,
@@ -2230,7 +2263,7 @@ async function recordInlineTaskFeedback(
         cardKind,
         inlineCard: true,
       },
-    })
+    }, 'inline recommendation feedback card')
     inlineFeedbackStatus.value = feedbackStatusLabel(action, locale)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

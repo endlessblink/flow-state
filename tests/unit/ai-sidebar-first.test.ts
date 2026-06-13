@@ -13,6 +13,7 @@ import type { Project, Task } from '@/types/tasks'
 import { auditWeeklyPlanQuality, buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, buildWeeklyPlanPrompt, buildWeeklyPlanReliabilityFallback, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
 import { auditChatResponseQuality } from '@/services/ai/pipeline/chatQuality'
 import { formatMemoryEvidence, sanitizeMemoryEvidenceText } from '@/services/ai/pipeline/memoryEvidence'
+import * as actionCommands from '@/services/ai/actionCommands'
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -4008,6 +4009,8 @@ describe('AI sidebar-first desktop experience', () => {
 
   it('persists broad inline card postponement feedback outside weekly plans', async () => {
     const taskStore = useTaskStore()
+    const buildPreviewSpy = vi.spyOn(actionCommands, 'buildAICommandBatchPreview')
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
     taskStore._rawTasks.push({
       id: 'task-broad-alpha',
       title: 'Task Broad Alpha',
@@ -4060,6 +4063,36 @@ describe('AI sidebar-first desktop experience', () => {
     await flushPromises()
 
     expect(wrapper.findAll('[data-testid="inline-ai-task-card"]')).toHaveLength(0)
+    expect(buildPreviewSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-broad-inline-feedback',
+      commands: expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'memory.feedback.record',
+          feedback: expect.objectContaining({
+            recommendationId: 'inline_day_plan_task-broad-alpha',
+            taskId: 'task-broad-alpha',
+            entityKey: 'project:ai-planner',
+            action: 'postpone',
+            reasonCategory: 'low_energy',
+            sourceMessageId: 'msg-broad-inline-feedback',
+            outcomeSignals: expect.objectContaining({
+              cardKind: 'day_plan',
+              inlineCard: true,
+            }),
+          }),
+        }),
+      ]),
+    }))
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      commands: expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'memory.feedback.record',
+        }),
+      ]),
+    }), expect.objectContaining({
+      memoryStore: supabaseDbMocks,
+      selectedCommandIds: expect.any(Array),
+    }))
     expect(supabaseDbMocks.recordAIRecommendationFeedback).toHaveBeenCalledWith(expect.objectContaining({
       recommendationId: 'inline_day_plan_task-broad-alpha',
       taskId: 'task-broad-alpha',

@@ -18,8 +18,19 @@ describe('electron-builder dependency parser patch', () => {
     expect(patchScript).toContain('const legacyFixedWithoutDirectParse')
     expect(patchScript).toContain('const escapedRegexBroken')
     expect(patchScript).toContain('FlowState buffered shell-command collector output patch')
-    expect(patchScript).toContain('childProcess.spawn([command, ...args].join(" ")')
     expect(patchScript).not.toContain('PM.TRAVERSAL')
+  })
+
+  it('keeps dependency collection off shell-gated npm paths', () => {
+    const patchScript = readSource('scripts/patch-electron-builder-dependency-parser.cjs')
+
+    expect(patchScript).toContain('childProcess.spawn(command, args')
+    expect(patchScript).toContain('childProcess.execFileSync(command, args')
+    expect(patchScript).toContain('shell: false')
+    expect(patchScript).toContain('SC_DISABLE_GATE: "1"')
+    expect(patchScript).toContain("patched.includes(shellSpawnCollector)")
+    expect(patchScript).toContain("patched.includes(syncShellCollector)")
+    expect(patchScript).toContain('collectorEnvWithoutShimBypass')
   })
 
   it('runs the patch before every tracked Electron packaging path', () => {

@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie'
+import type { CanvasGroup } from '@/types/canvas'
 import type { Lane, Task } from '@/types/tasks'
 import type { AICommandAuditEntry } from './actionCommands'
 
@@ -21,6 +22,7 @@ export type AICommandRollbackSnapshot = {
   createdAt: string
   tasksBefore: Task[]
   lanesBefore?: Lane[]
+  canvasGroupsBefore?: CanvasGroup[]
   appliedEntityIds: string[]
 }
 
@@ -62,6 +64,10 @@ function writeJsonArray<T>(key: string, value: T[]): void {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
+function toStructuredStorageValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 function sortNewestFirst(entries: AICommandAuditEntry[]): AICommandAuditEntry[] {
   return [...entries].sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 }
@@ -95,7 +101,7 @@ function persistLocalRollbackSnapshot(snapshot: AICommandRollbackSnapshot): void
 export async function persistAICommandAuditEntry(entry: AICommandAuditEntry): Promise<void> {
   persistLocalAuditEntry(entry)
   try {
-    await getDB().auditEntries.put(entry)
+    await getDB().auditEntries.put(toStructuredStorageValue(entry))
   } catch (error) {
     console.warn('[AI-COMMAND-AUDIT] Failed to persist audit entry to IndexedDB:', error)
   }
@@ -104,7 +110,7 @@ export async function persistAICommandAuditEntry(entry: AICommandAuditEntry): Pr
 export async function persistAICommandRollbackSnapshot(snapshot: AICommandRollbackSnapshot): Promise<void> {
   persistLocalRollbackSnapshot(snapshot)
   try {
-    await getDB().rollbackSnapshots.put(snapshot)
+    await getDB().rollbackSnapshots.put(toStructuredStorageValue(snapshot))
   } catch (error) {
     console.warn('[AI-COMMAND-AUDIT] Failed to persist rollback snapshot to IndexedDB:', error)
   }

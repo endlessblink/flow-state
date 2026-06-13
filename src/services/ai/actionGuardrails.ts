@@ -1,3 +1,4 @@
+import type { CanvasGroup } from '@/types/canvas'
 import type { Lane, Subtask, Task, TaskInstance } from '@/types/tasks'
 
 export type AIActionDuplicateDecision =
@@ -6,7 +7,7 @@ export type AIActionDuplicateDecision =
   | 'create_anyway_requires_explicit_user_intent'
 
 export interface AIActionIdentity {
-  kind: 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task'
+  kind: 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create'
   sourceMessageId: string | null
   targetEntityId: string | null
   scope: string
@@ -45,6 +46,11 @@ function isActiveSubtask(subtask: Subtask): boolean {
 function isActiveLane(lane: Lane): boolean {
   const laneRecord = lane as Lane & { is_deleted?: boolean; isDeleted?: boolean }
   return laneRecord.is_deleted !== true && laneRecord.isDeleted !== true
+}
+
+function isActiveCanvasGroup(group: CanvasGroup): boolean {
+  const groupRecord = group as CanvasGroup & { is_deleted?: boolean; isDeleted?: boolean }
+  return groupRecord.is_deleted !== true && groupRecord.isDeleted !== true && group.isVisible !== false
 }
 
 export function buildAITaskCreateIdentity(input: {
@@ -254,6 +260,53 @@ export function decideAICalendarScheduleTask(input: {
     instance.status !== 'completed' &&
     instance.status !== 'skipped'
   ) ?? null
+
+  return {
+    decision: existing ? 'reuse_existing' : 'create',
+    identity,
+    existing,
+  }
+}
+
+export function buildAICanvasGroupCreateIdentity(input: {
+  sourceMessageId?: unknown
+  name: string
+  workspaceId?: unknown
+  scope?: string
+}): AIActionIdentity {
+  const workspaceId = typeof input.workspaceId === 'string' ? input.workspaceId : ''
+  const scope = input.scope || (workspaceId ? `workspace:${workspaceId}:canvas:groups` : 'canvas:groups')
+  return {
+    kind: 'canvas.group.create',
+    sourceMessageId: typeof input.sourceMessageId === 'string' ? input.sourceMessageId : null,
+    targetEntityId: workspaceId || null,
+    scope,
+    fingerprint: stableFingerprint({
+      kind: 'canvas.group.create',
+      scope,
+      name: normalizeAIActionText(input.name),
+      workspaceId,
+    }),
+  }
+}
+
+export function decideAICanvasGroupCreate(input: {
+  canvasGroups: CanvasGroup[]
+  name: string
+  workspaceId?: unknown
+  sourceMessageId?: unknown
+  scope?: string
+}): AIActionDuplicateResult<CanvasGroup> {
+  const identity = buildAICanvasGroupCreateIdentity(input)
+  const normalizedName = normalizeAIActionText(input.name)
+  const workspaceId = typeof input.workspaceId === 'string' ? input.workspaceId : null
+  const existing = input.canvasGroups.find(group => {
+    if (!isActiveCanvasGroup(group)) return false
+    if (normalizeAIActionText(group.name) !== normalizedName) return false
+    const groupWorkspaceId = (group as CanvasGroup & { workspaceId?: string | null }).workspaceId
+    if (workspaceId && groupWorkspaceId !== workspaceId) return false
+    return true
+  }) ?? null
 
   return {
     decision: existing ? 'reuse_existing' : 'create',

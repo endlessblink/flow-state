@@ -1,7 +1,10 @@
+import type { CanvasGroup } from '@/types/canvas'
 import type { Lane, Subtask, Task } from '@/types/tasks'
+import type { useCanvasStore } from '@/stores/canvas'
 import type { useLaneStore } from '@/stores/lanes'
 import type { useTaskStore } from '@/stores/tasks'
 import {
+  decideAICanvasGroupCreate,
   decideAICalendarScheduleTask,
   decideAILaneCreate,
   decideAISubtaskCreate,
@@ -19,7 +22,7 @@ import {
   type AICommandRollbackSnapshot,
 } from './actionCommandAuditStore'
 
-export type AICommandKind = 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task'
+export type AICommandKind = 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create'
 export type AICommandImpact = 'low' | 'medium' | 'high'
 
 export type AITaskCreateCommand = {
@@ -66,10 +69,23 @@ export type AICalendarScheduleTaskCommand = {
   impact?: AICommandImpact
 }
 
-export type AICommand = AITaskCreateCommand | AISubtaskCreateCommand | AILaneCreateCommand | AICalendarScheduleTaskCommand
+export type AICanvasGroupCreateCommand = {
+  id: string
+  kind: 'canvas.group.create'
+  name: string
+  groupType?: CanvasGroup['type']
+  position?: CanvasGroup['position']
+  color?: string
+  layout?: CanvasGroup['layout']
+  workspaceId?: string | null
+  confidence?: number
+  impact?: AICommandImpact
+}
+
+export type AICommand = AITaskCreateCommand | AISubtaskCreateCommand | AILaneCreateCommand | AICalendarScheduleTaskCommand | AICanvasGroupCreateCommand
 
 export type AICommandDiff = {
-  entityType: 'task' | 'subtask' | 'lane' | 'calendar'
+  entityType: 'task' | 'subtask' | 'lane' | 'calendar' | 'canvas_group'
   before: Record<string, unknown> | null
   after: Record<string, unknown>
 }
@@ -125,6 +141,7 @@ export type AICommandApplyResult = AICommandAuditEntry & {
 
 type TaskStore = ReturnType<typeof useTaskStore>
 type LaneStore = ReturnType<typeof useLaneStore>
+type CanvasStore = ReturnType<typeof useCanvasStore>
 
 export {
   clearAICommandAuditStoreForTests,
@@ -149,6 +166,14 @@ function cloneLanes(lanes: Lane[]): Lane[] {
   return lanes.map(cloneLane)
 }
 
+function cloneCanvasGroup(group: CanvasGroup): CanvasGroup {
+  return JSON.parse(JSON.stringify(group)) as CanvasGroup
+}
+
+function cloneCanvasGroups(groups: CanvasGroup[]): CanvasGroup[] {
+  return groups.map(cloneCanvasGroup)
+}
+
 function commandRequiresApproval(command: AICommand): boolean {
   return (command.confidence !== undefined && command.confidence < 0.5) || command.impact === 'high'
 }
@@ -160,9 +185,10 @@ function generateBatchId(sourceRunId: string, sourceMessageId: string): string {
 function previewCommand(command: AICommand, input: {
   tasks: Task[]
   lanes: Lane[]
+  canvasGroups: CanvasGroup[]
   sourceMessageId: string
 }): AICommandPreviewItem {
-  const { tasks, lanes, sourceMessageId } = input
+  const { tasks, lanes, canvasGroups, sourceMessageId } = input
   const requiresExplicitApproval = commandRequiresApproval(command)
   if (command.kind === 'task.create') {
     const decision = decideAITaskCreate({
@@ -267,6 +293,43 @@ function previewCommand(command: AICommand, input: {
     }
   }
 
+  if (command.kind === 'canvas.group.create') {
+    const decision = decideAICanvasGroupCreate({
+      canvasGroups,
+      name: command.name,
+      workspaceId: command.workspaceId,
+      sourceMessageId,
+    })
+    return {
+      id: command.id,
+      kind: command.kind,
+      status: requiresExplicitApproval
+        ? 'blocked_requires_approval'
+        : decision.existing ? 'will_reuse_existing' : 'will_create',
+      identity: decision.identity,
+      duplicateOf: decision.existing?.id,
+      requiresExplicitApproval,
+      diff: {
+        entityType: 'canvas_group',
+        before: decision.existing
+          ? {
+            id: decision.existing.id,
+            name: decision.existing.name,
+            position: decision.existing.position,
+          }
+          : null,
+        after: {
+          name: command.name,
+          type: command.groupType || 'custom',
+          position: command.position || { x: 0, y: 0, width: 400, height: 300 },
+          color: command.color || '#4ECDC4',
+          layout: command.layout || 'vertical',
+          workspaceId: command.workspaceId ?? null,
+        },
+      },
+    }
+  }
+
   const parentTask = tasks.find(task => task.id === command.parentTaskId)
   const decision = parentTask
     ? decideAISubtaskCreate({
@@ -314,6 +377,7 @@ export function buildAICommandBatchPreview(input: {
   commands: AICommand[]
   tasks: Task[]
   lanes?: Lane[]
+  canvasGroups?: CanvasGroup[]
 }): AICommandBatch {
   return {
     id: generateBatchId(input.sourceRunId, input.sourceMessageId),
@@ -326,6 +390,7 @@ export function buildAICommandBatchPreview(input: {
       commands: input.commands.map(command => previewCommand(command, {
         tasks: input.tasks,
         lanes: input.lanes || [],
+        canvasGroups: input.canvasGroups || [],
         sourceMessageId: input.sourceMessageId,
       })),
     },
@@ -351,6 +416,7 @@ async function applyTaskCreate(command: AITaskCreateCommand, taskStore: TaskStor
   const preview = previewCommand(command, {
     tasks: taskStore.tasks,
     lanes: [],
+    canvasGroups: [],
     sourceMessageId,
   })
   if (decision.existing) {
@@ -388,6 +454,7 @@ async function applySubtaskCreate(command: AISubtaskCreateCommand, taskStore: Ta
   const preview = previewCommand(command, {
     tasks: taskStore.tasks,
     lanes: [],
+    canvasGroups: [],
     sourceMessageId,
   })
   if (decision.existing) {
@@ -421,6 +488,7 @@ async function applyLaneCreate(command: AILaneCreateCommand, laneStore: LaneStor
   const preview = previewCommand(command, {
     tasks: [],
     lanes: laneStore.lanes,
+    canvasGroups: [],
     sourceMessageId,
   })
   if (decision.existing) {
@@ -458,6 +526,7 @@ async function applyCalendarScheduleTask(command: AICalendarScheduleTaskCommand,
   const preview = previewCommand(command, {
     tasks: taskStore.tasks,
     lanes: [],
+    canvasGroups: [],
     sourceMessageId,
   })
   if (decision.existing) {
@@ -487,15 +556,56 @@ async function applyCalendarScheduleTask(command: AICalendarScheduleTaskCommand,
   }
 }
 
+async function applyCanvasGroupCreate(command: AICanvasGroupCreateCommand, canvasStore: CanvasStore, sourceMessageId: string): Promise<AppliedAICommand> {
+  const decision = decideAICanvasGroupCreate({
+    canvasGroups: canvasStore.groups,
+    name: command.name,
+    workspaceId: command.workspaceId,
+    sourceMessageId,
+  })
+  const preview = previewCommand(command, {
+    tasks: [],
+    lanes: [],
+    canvasGroups: canvasStore.groups,
+    sourceMessageId,
+  })
+  if (decision.existing) {
+    return {
+      ...preview,
+      result: 'reused_existing',
+      entityId: decision.existing.id,
+      duplicateOf: decision.existing.id,
+    }
+  }
+
+  const created = await canvasStore.createGroup({
+    name: command.name,
+    type: command.groupType || 'custom',
+    position: command.position || { x: 0, y: 0, width: 400, height: 300 },
+    color: command.color || '#4ECDC4',
+    layout: command.layout || 'vertical',
+    isVisible: true,
+    isCollapsed: false,
+    ...(command.workspaceId ? { workspaceId: command.workspaceId } : {}),
+  } as Omit<CanvasGroup, 'id'>)
+  return {
+    ...preview,
+    result: 'created',
+    entityId: created.id,
+  }
+}
+
 export async function applyAICommandBatch(batch: AICommandBatch, options: {
   selectedCommandIds: string[]
   taskStore: TaskStore
   laneStore?: LaneStore
+  canvasStore?: CanvasStore
   explicitApproval?: boolean
 }): Promise<AICommandApplyResult> {
   const selected = new Set(options.selectedCommandIds)
   const tasksBefore = cloneTasks(options.taskStore.tasks)
   const lanesBefore = options.laneStore ? cloneLanes(options.laneStore.lanes) : undefined
+  const canvasGroupsBefore = options.canvasStore ? cloneCanvasGroups(options.canvasStore.groups) : undefined
   const appliedCommands: AppliedAICommand[] = []
   const rejectedCommands: RejectedAICommand[] = []
 
@@ -520,7 +630,13 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
             options.laneStore ?? missingLaneStore(),
             batch.sourceMessageId,
           )
-          : await applyCalendarScheduleTask(command, options.taskStore, batch.sourceMessageId)
+          : command.kind === 'calendar.schedule_task'
+            ? await applyCalendarScheduleTask(command, options.taskStore, batch.sourceMessageId)
+            : await applyCanvasGroupCreate(
+              command,
+              options.canvasStore ?? missingCanvasStore(),
+              batch.sourceMessageId,
+            )
     appliedCommands.push(applied)
   }
 
@@ -531,6 +647,7 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
     createdAt: new Date().toISOString(),
     tasksBefore,
     lanesBefore,
+    canvasGroupsBefore,
     appliedEntityIds: appliedCommands.map(command => command.entityId),
   })
 
@@ -560,6 +677,7 @@ export function getAICommandAuditTrail(): AICommandAuditEntry[] {
 export async function rollbackAICommandBatch(rollbackPointer: string, options: {
   taskStore: TaskStore
   laneStore?: LaneStore
+  canvasStore?: CanvasStore
 }): Promise<void> {
   const snapshot = await loadAICommandRollbackSnapshot(rollbackPointer)
   if (!snapshot) throw new Error(`Rollback snapshot ${rollbackPointer} not found`)
@@ -597,8 +715,30 @@ export async function rollbackAICommandBatch(rollbackPointer: string, options: {
       }
     }
   }
+
+  if (options.canvasStore && snapshot.canvasGroupsBefore) {
+    const beforeGroupIds = new Set(snapshot.canvasGroupsBefore.map(group => group.id))
+    for (const group of [...options.canvasStore.groups]) {
+      if (!beforeGroupIds.has(group.id)) {
+        await options.canvasStore.deleteGroup(group.id)
+      }
+    }
+
+    for (const beforeGroup of snapshot.canvasGroupsBefore) {
+      const existing = options.canvasStore.groups.find(group => group.id === beforeGroup.id)
+      if (existing) {
+        await options.canvasStore.updateGroup(beforeGroup.id, cloneCanvasGroup(beforeGroup))
+      } else {
+        await options.canvasStore.createGroup(cloneCanvasGroup(beforeGroup))
+      }
+    }
+  }
 }
 
 function missingLaneStore(): LaneStore {
   throw new Error('laneStore is required to apply AI lane commands')
+}
+
+function missingCanvasStore(): CanvasStore {
+  throw new Error('canvasStore is required to apply AI canvas commands')
 }

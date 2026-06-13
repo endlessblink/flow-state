@@ -4,6 +4,8 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const mockEnqueue = vi.fn().mockResolvedValue({ id: 1, status: 'pending' })
 const mockDeleteTask = vi.fn().mockResolvedValue(undefined)
+const mockSaveGroup = vi.fn().mockResolvedValue(undefined)
+const mockDeleteGroup = vi.fn().mockResolvedValue(undefined)
 const mockSaveLane = vi.fn().mockResolvedValue(undefined)
 const mockDeleteLane = vi.fn().mockResolvedValue(undefined)
 
@@ -46,8 +48,8 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
     deleteTask: mockDeleteTask,
     fetchTasks: vi.fn().mockResolvedValue([]),
     fetchGroups: vi.fn().mockResolvedValue([]),
-    saveGroup: vi.fn().mockResolvedValue(undefined),
-    deleteGroup: vi.fn().mockResolvedValue(undefined),
+    saveGroup: mockSaveGroup,
+    deleteGroup: mockDeleteGroup,
     fetchLanes: vi.fn().mockResolvedValue([]),
     saveLane: mockSaveLane,
     deleteLane: mockDeleteLane,
@@ -88,6 +90,7 @@ import {
   rollbackAICommandBatch,
 } from '@/services/ai/actionCommands'
 import { useLaneStore } from '@/stores/lanes'
+import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 
 describe('AI action command substrate', () => {
@@ -96,6 +99,8 @@ describe('AI action command substrate', () => {
     vi.clearAllMocks()
     mockEnqueue.mockResolvedValue({ id: 1, status: 'pending' })
     mockDeleteTask.mockResolvedValue(undefined)
+    mockSaveGroup.mockResolvedValue(undefined)
+    mockDeleteGroup.mockResolvedValue(undefined)
     mockSaveLane.mockResolvedValue(undefined)
     mockDeleteLane.mockResolvedValue(undefined)
     localStorage.clear()
@@ -446,6 +451,132 @@ describe('AI action command substrate', () => {
 
     expect(laneStore.lanes.map(lane => lane.name)).toEqual(['Existing Lane'])
     expect(mockDeleteLane).toHaveBeenCalledWith(expect.stringMatching(/.+/))
+  })
+
+  it('previews AI canvas group creation without mutating canvas groups', async () => {
+    const taskStore = useTaskStore()
+    const canvasStore = useCanvasStore()
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Create canvas focus group',
+      sourceRunId: 'run-canvas-preview',
+      sourceMessageId: 'msg-canvas-preview',
+      dataUsed: { visibleGroupCount: 0 },
+      commands: [{
+        id: 'cmd-canvas-preview',
+        kind: 'canvas.group.create',
+        name: 'Deep Work',
+        position: { x: 120, y: 240, width: 520, height: 360 },
+        color: '#2563EB',
+      }],
+      tasks: taskStore.tasks,
+      canvasGroups: canvasStore.groups,
+    })
+
+    expect(canvasStore.groups).toHaveLength(0)
+    expect(batch.preview.commands).toEqual([
+      expect.objectContaining({
+        id: 'cmd-canvas-preview',
+        kind: 'canvas.group.create',
+        status: 'will_create',
+        identity: expect.objectContaining({
+          kind: 'canvas.group.create',
+          scope: 'canvas:groups',
+        }),
+        diff: {
+          entityType: 'canvas_group',
+          before: null,
+          after: expect.objectContaining({
+            name: 'Deep Work',
+            color: '#2563EB',
+            layout: 'vertical',
+            position: { x: 120, y: 240, width: 520, height: 360 },
+          }),
+        },
+      }),
+    ])
+  })
+
+  it('applies AI canvas group creation through the canvas store and reuses semantic duplicates on replay', async () => {
+    const taskStore = useTaskStore()
+    const canvasStore = useCanvasStore()
+    const createGroupSpy = vi.spyOn(canvasStore, 'createGroup')
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Create one canvas group',
+      sourceRunId: 'run-canvas-create',
+      sourceMessageId: 'msg-canvas-create',
+      dataUsed: {},
+      commands: [{
+        id: 'cmd-canvas-create',
+        kind: 'canvas.group.create',
+        name: 'Revenue Follow-up',
+        position: { x: 80, y: 140, width: 480, height: 320 },
+      }],
+      tasks: taskStore.tasks,
+      canvasGroups: canvasStore.groups,
+    })
+
+    const first = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-canvas-create'],
+      taskStore,
+      canvasStore,
+    })
+    const replay = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-canvas-create'],
+      taskStore,
+      canvasStore,
+    })
+
+    expect(canvasStore.groups.map(group => group.name)).toEqual(['Revenue Follow-up'])
+    expect(createGroupSpy).toHaveBeenCalledTimes(1)
+    expect(mockSaveGroup).toHaveBeenCalledTimes(1)
+    expect(first.appliedCommands[0]).toMatchObject({ kind: 'canvas.group.create', result: 'created' })
+    expect(replay.appliedCommands[0]).toMatchObject({ kind: 'canvas.group.create', result: 'reused_existing' })
+  })
+
+  it('rolls back AI-created canvas groups to the pre-AI canvas group state', async () => {
+    const taskStore = useTaskStore()
+    const canvasStore = useCanvasStore()
+    await canvasStore.createGroup({
+      name: 'Existing Group',
+      type: 'custom',
+      position: { x: 0, y: 0, width: 400, height: 300 },
+      color: '#0EA5E9',
+      layout: 'vertical',
+      isVisible: true,
+      isCollapsed: false,
+    })
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Create temporary canvas group',
+      sourceRunId: 'run-canvas-rollback',
+      sourceMessageId: 'msg-canvas-rollback',
+      dataUsed: {},
+      commands: [{
+        id: 'cmd-canvas-rollback',
+        kind: 'canvas.group.create',
+        name: 'Temporary AI Group',
+        position: { x: 500, y: 0, width: 400, height: 300 },
+      }],
+      tasks: taskStore.tasks,
+      canvasGroups: canvasStore.groups,
+    })
+
+    const result = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-canvas-rollback'],
+      taskStore,
+      canvasStore,
+    })
+    expect(canvasStore.groups.map(group => group.name)).toEqual(['Existing Group', 'Temporary AI Group'])
+
+    await rollbackAICommandBatch(result.rollbackPointer, {
+      taskStore,
+      canvasStore,
+    })
+
+    expect(canvasStore.groups.map(group => group.name)).toEqual(['Existing Group'])
+    expect(mockDeleteGroup).toHaveBeenCalledWith(expect.stringMatching(/.+/))
   })
 
   it('previews AI calendar scheduling without mutating task instances', async () => {

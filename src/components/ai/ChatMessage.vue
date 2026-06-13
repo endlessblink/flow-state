@@ -89,6 +89,14 @@ const weeklyQuestionAnswers = ref<Record<string, string>>({})
 const weeklyQuestionFreeText = ref<Record<string, string>>({})
 const weeklyQuestionApplying = ref<Record<string, boolean>>({})
 const weeklyQuestionApplied = ref<Record<string, string>>({})
+const weeklyFollowUpDuplicates = ref<Record<string, {
+  existingTaskId: string
+  existingTitle: string
+  title: string
+  question: WeeklyPlanOutput['openQuestions'][number]
+  selectedOption?: NonNullable<WeeklyPlanOutput['openQuestions'][number]['options']>[number]
+  note: string
+}>>({})
 const clarificationAnswers = ref<Record<string, string>>({})
 const clarificationFreeText = ref<Record<string, string>>({})
 const clarificationApplying = ref(false)
@@ -257,7 +265,7 @@ const visibleWeeklyQuestions = computed(() => {
   if (!questions.length) return []
   const visible = questions.filter(question =>
     !isObsoleteWeeklyQuestion(question) &&
-    !showWeeklyQuestionStatus(question)
+    (!showWeeklyQuestionStatus(question) || Boolean(weeklyFollowUpDuplicates.value[weeklyQuestionKey(question)]))
   )
   const removed = questions.length - visible.length
   if (removed > 0) {
@@ -501,6 +509,7 @@ async function recordWeeklyQuestionAnswer(
   parentTask: Task | null,
   option: NonNullable<WeeklyPlanOutput['openQuestions'][number]['options']>[number] | undefined,
   note: string,
+  followUpOutcome?: 'created' | 'existing_found' | 'duplicate_created',
 ): Promise<void> {
   const identity = weeklyQuestionMemoryIdentity(question, parentTask)
   traceWeeklyQuestion('clarification_event_record_started', {
@@ -528,6 +537,7 @@ async function recordWeeklyQuestionAnswer(
       weeklyPlanSource: weeklyPlan.value?.source,
       relatedTaskIds: question.relatedTaskIds,
       reason: question.reason,
+      ...(followUpOutcome ? { followUpOutcome } : {}),
     },
   })
 
@@ -546,6 +556,74 @@ function weeklyQuestionApplyLabel(question: WeeklyPlanOutput['openQuestions'][nu
     return weeklyPlan.value?.locale === 'he' ? 'הוסף משימת מעקב' : 'Add follow-up task'
   }
   return weeklyPlan.value?.locale === 'he' ? 'שמור תשובה' : 'Save answer'
+}
+
+function normalizeFollowUpTitle(title: string): string {
+  return title.trim().replace(/\s+/g, ' ').toLocaleLowerCase()
+}
+
+function defaultWeeklyFollowUpTitle(parentTask: Task | null, locale: 'he' | 'en'): string {
+  return locale === 'he'
+    ? `מעקב: ${parentTask?.title || 'משימה'}`
+    : `Follow up: ${parentTask?.title || 'task'}`
+}
+
+function findExistingWeeklyFollowUp(parentTask: Task | null, title: string): Task | null {
+  if (!parentTask?.id) return null
+  const normalizedTitle = normalizeFollowUpTitle(title)
+  return taskStore.tasks.find(task =>
+    task.parentTaskId === parentTask.id &&
+    !task._soft_deleted &&
+    task.status !== 'done' &&
+    normalizeFollowUpTitle(task.title || '') === normalizedTitle
+  ) ?? null
+}
+
+function revealExistingWeeklyFollowUp(question: WeeklyPlanOutput['openQuestions'][number], event: MouseEvent): void {
+  event.stopPropagation()
+  const key = weeklyQuestionKey(question)
+  const duplicate = weeklyFollowUpDuplicates.value[key]
+  if (!duplicate) return
+
+  window.dispatchEvent(new CustomEvent('open-task-edit', { detail: { taskId: duplicate.existingTaskId } }))
+  window.dispatchEvent(new CustomEvent('task-action-flash', { detail: { taskId: duplicate.existingTaskId } }))
+  const locale = weeklyPlan.value?.locale ?? 'en'
+  weeklyQuestionApplied.value = {
+    ...weeklyQuestionApplied.value,
+    [key]: locale === 'he' ? 'משתמש במשימת המעקב הקיימת' : 'Using the existing follow-up task',
+  }
+  const { [key]: _done, ...rest } = weeklyFollowUpDuplicates.value
+  weeklyFollowUpDuplicates.value = rest
+  emit('continueChat', locale === 'he'
+    ? `המשך לתכנן את השבוע. כבר קיימת משימת מעקב בשם "${duplicate.existingTitle}", אז אל תיצור כפילות.\n\n[FLOWSTATE_CLARIFICATION_CONTINUATION mode=week_plan]`
+    : `Continue planning the week. A follow-up task named "${duplicate.existingTitle}" already exists, so do not create a duplicate.\n\n[FLOWSTATE_CLARIFICATION_CONTINUATION mode=week_plan]`)
+}
+
+async function createDuplicateWeeklyFollowUp(question: WeeklyPlanOutput['openQuestions'][number], event: MouseEvent): Promise<void> {
+  event.stopPropagation()
+  const key = weeklyQuestionKey(question)
+  const duplicate = weeklyFollowUpDuplicates.value[key]
+  if (!duplicate || weeklyQuestionApplying.value[key]) return
+
+  weeklyQuestionApplying.value = { ...weeklyQuestionApplying.value, [key]: true }
+  const locale = weeklyPlan.value?.locale ?? 'en'
+  const parentTask = weeklyQuestionTask(question)
+  try {
+    await recordWeeklyQuestionAnswer(question, parentTask, duplicate.selectedOption, duplicate.note, 'duplicate_created')
+    await createWeeklyFollowUpTask({
+      key,
+      question,
+      parentTask,
+      title: duplicate.title,
+      locale,
+      startedAt: Date.now(),
+    })
+    const { [key]: _done, ...rest } = weeklyFollowUpDuplicates.value
+    weeklyFollowUpDuplicates.value = rest
+  } finally {
+    const { [key]: _doneApplying, ...restApplying } = weeklyQuestionApplying.value
+    weeklyQuestionApplying.value = restApplying
+  }
 }
 
 function showWeeklyQuestionStatus(question: WeeklyPlanOutput['openQuestions'][number]): boolean {
@@ -885,13 +963,40 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
       await aiMemoryDb.applyAIMemoryPatch(patch)
       traceWeeklyQuestion('free_text_patch_succeeded', { key })
     }
-    await recordWeeklyQuestionAnswer(question, parentTask, option, note || '')
     if (selected === 'add_followup') {
-      const title = note || (locale === 'he'
-        ? `מעקב: ${parentTask?.title || 'משימה'}`
-        : `Follow up: ${parentTask?.title || 'task'}`)
+      const title = note || defaultWeeklyFollowUpTitle(parentTask, locale)
+      const existingFollowUp = findExistingWeeklyFollowUp(parentTask, title)
+      if (existingFollowUp) {
+        await recordWeeklyQuestionAnswer(question, parentTask, option, note || '', 'existing_found')
+        weeklyFollowUpDuplicates.value = {
+          ...weeklyFollowUpDuplicates.value,
+          [key]: {
+            existingTaskId: existingFollowUp.id,
+            existingTitle: existingFollowUp.title,
+            title,
+            question,
+            selectedOption: option,
+            note: note || '',
+          },
+        }
+        weeklyQuestionApplied.value = {
+          ...weeklyQuestionApplied.value,
+          [key]: locale === 'he'
+            ? `כבר קיימת משימת מעקב: ${existingFollowUp.title}`
+            : `A follow-up already exists: ${existingFollowUp.title}`,
+        }
+        traceWeeklyQuestion('followup_duplicate_found', {
+          key,
+          questionId: question.id,
+          parentTaskId: parentTask?.id ?? null,
+          existingTaskId: existingFollowUp.id,
+        })
+        return
+      }
+      await recordWeeklyQuestionAnswer(question, parentTask, option, note || '', 'created')
       void createWeeklyFollowUpTask({ key, question, parentTask, title, locale, startedAt })
     } else {
+      await recordWeeklyQuestionAnswer(question, parentTask, option, note || '')
       weeklyQuestionApplied.value = {
         ...weeklyQuestionApplied.value,
         [key]: locale === 'he' ? 'התשובה נשמרה לתוכנית הזו' : 'Answer saved for this plan',
@@ -2597,6 +2702,28 @@ async function saveSchedule() {
               <span v-if="showWeeklyQuestionStatus(question)" class="weekly-question-status">
                 {{ weeklyQuestionApplied[weeklyQuestionKey(question)] }}
               </span>
+              <template v-if="weeklyFollowUpDuplicates[weeklyQuestionKey(question)]">
+                <button
+                  type="button"
+                  class="weekly-question-escape"
+                  data-testid="weekly-followup-use-existing"
+                  :disabled="weeklyQuestionApplying[weeklyQuestionKey(question)]"
+                  @click="revealExistingWeeklyFollowUp(question, $event)"
+                >
+                  <CheckCircle2 :size="13" aria-hidden="true" />
+                  <span>{{ weeklyPlan.locale === 'he' ? 'השתמש בקיימת' : 'Use existing' }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="weekly-question-escape"
+                  data-testid="weekly-followup-create-another"
+                  :disabled="weeklyQuestionApplying[weeklyQuestionKey(question)]"
+                  @click="createDuplicateWeeklyFollowUp(question, $event)"
+                >
+                  <Plus :size="13" aria-hidden="true" />
+                  <span>{{ weeklyPlan.locale === 'he' ? 'צור עוד אחת' : 'Create another' }}</span>
+                </button>
+              </template>
             </div>
           </div>
         </section>

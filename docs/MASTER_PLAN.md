@@ -57,6 +57,9 @@
 - Treat "reuse existing" as the default duplicate behavior. Creating another anyway must require explicit secondary user intent.
 - Regression coverage should prove preview-only proposals do not mutate state, apply mutates only selected commands, repeated apply is idempotent, stale cards do not duplicate work, semantic duplicates are reused/skipped, manual duplicate creation still works, and rollback restores state.
 
+**Progress**:
+- 2026-06-13: Shipped the first duplicate-aware weekly-plan `add_followup` consumer. `ChatMessage` now detects an existing active same-title follow-up under the same parent task, tells the user it already exists, opens/reuses that task by default, and creates another only after explicit duplicate override. Regression coverage added for default duplicate blocking and explicit duplicate creation. Released via Electron updater `1.4.164`; public `latest-linux.yml`, AppImage, and deb artifact checks passed.
+
 ### TASK-1856: AI command center and agent progress UI (📋 PLANNED)
 
 **Priority**: P0-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1855

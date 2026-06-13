@@ -2873,6 +2873,205 @@ describe('AI sidebar-first desktop experience', () => {
     expect(createTaskSpy).not.toHaveBeenCalled()
   })
 
+  it('asks before creating a duplicate weekly follow-up task for the same parent', async () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push(
+      {
+        id: 'task-renewal',
+        title: 'Send renewal proposal to Amit',
+        description: 'Amit asked for numbers before Wednesday budget meeting.',
+        status: 'todo',
+        priority: 'high',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-10',
+        projectId: 'client-renewals',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-renewal-followup',
+        title: 'Follow up: Send renewal proposal to Amit',
+        description: 'Existing follow-up.',
+        status: 'todo',
+        priority: 'high',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '',
+        projectId: 'client-renewals',
+        parentTaskId: 'task-renewal',
+        createdAt: new Date('2026-06-08T08:00:00Z'),
+        updatedAt: new Date('2026-06-08T08:00:00Z'),
+      } as Task,
+    )
+    const createTaskSpy = vi.spyOn(taskStore, 'createTask')
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-weekly-followup-duplicate',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            weeklyPlan: {
+              schemaVersion: 'weekly-plan.v2',
+              requestId: 'req-week',
+              locale: 'en',
+              direction: 'ltr',
+              source: 'quick_draft',
+              headline: 'One answer before ranking',
+              weekRead: { summary: 'Need one answer.', workloadReality: '', mainTradeoff: '' },
+              recommendations: [{
+                sectionId: 'rec-renewal',
+                rank: 1,
+                focusArea: 'Client renewals',
+                primaryTaskId: 'task-renewal',
+                relatedTaskIds: [],
+                recommendationType: 'protect',
+                title: 'Send renewal proposal to Amit',
+                whyThisMatters: 'Amit needs numbers.',
+                whyThisWeek: 'This is the current blocker.',
+                riskIfIgnored: 'The decision may slip.',
+                nextAction: 'Draft the numbers table.',
+                evidence: [],
+                cardPlacement: 'immediately_after_explanation',
+              }],
+              deferrals: [],
+              openQuestions: [
+                {
+                  id: 'weekly_next_task-renewal',
+                  entityType: 'task',
+                  entityId: 'task-renewal',
+                  reason: 'next_action_capture',
+                  question: 'Create a tracking task for "Send renewal proposal to Amit"?',
+                  options: [{ id: 'add_followup', label: 'Yes, add it', effect: 'Create a follow-up task linked to this recommendation.' }],
+                  allowFreeText: true,
+                  relatedTaskIds: ['task-renewal'],
+                },
+              ],
+              quality: { selectedTaskCount: 1, confidence: 'medium', caveats: [] },
+            },
+          },
+        },
+      },
+      global: { stubs: { TaskQuickEditPopover: true } },
+    })
+
+    await wrapper.get('.weekly-question-option').trigger('click')
+    await wrapper.get('.weekly-question-apply').trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(createTaskSpy).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('A follow-up already exists')
+    expect(wrapper.find('[data-testid="weekly-followup-use-existing"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="weekly-followup-create-another"]').exists()).toBe(true)
+    expect(supabaseDbMocks.recordAIClarificationEvent).toHaveBeenCalledWith(expect.objectContaining({
+      selectedOptionId: 'add_followup',
+      contextSnapshot: expect.objectContaining({ followUpOutcome: 'existing_found' }),
+    }))
+  })
+
+  it('creates another weekly follow-up only after the explicit duplicate override', async () => {
+    const taskStore = useTaskStore()
+    taskStore._rawTasks.push(
+      {
+        id: 'task-renewal',
+        title: 'Send renewal proposal to Amit',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '',
+        projectId: 'client-renewals',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-renewal-followup',
+        title: 'Follow up: Send renewal proposal to Amit',
+        description: 'Existing follow-up.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '',
+        projectId: 'client-renewals',
+        parentTaskId: 'task-renewal',
+        createdAt: new Date('2026-06-08T08:00:00Z'),
+        updatedAt: new Date('2026-06-08T08:00:00Z'),
+      } as Task,
+    )
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-weekly-followup-duplicate-override',
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          metadata: {
+            weeklyPlan: {
+              schemaVersion: 'weekly-plan.v2',
+              requestId: 'req-week',
+              locale: 'en',
+              direction: 'ltr',
+              source: 'quick_draft',
+              headline: 'One answer before ranking',
+              weekRead: { summary: 'Need one answer.', workloadReality: '', mainTradeoff: '' },
+              recommendations: [{
+                sectionId: 'rec-renewal',
+                rank: 1,
+                focusArea: 'Client renewals',
+                primaryTaskId: 'task-renewal',
+                relatedTaskIds: [],
+                recommendationType: 'protect',
+                title: 'Send renewal proposal to Amit',
+                whyThisMatters: 'Amit needs numbers.',
+                whyThisWeek: 'This is the current blocker.',
+                riskIfIgnored: 'The decision may slip.',
+                nextAction: 'Draft the numbers table.',
+                evidence: [],
+                cardPlacement: 'immediately_after_explanation',
+              }],
+              deferrals: [],
+              openQuestions: [
+                {
+                  id: 'weekly_next_task-renewal',
+                  entityType: 'task',
+                  entityId: 'task-renewal',
+                  reason: 'next_action_capture',
+                  question: 'Create a tracking task for "Send renewal proposal to Amit"?',
+                  options: [{ id: 'add_followup', label: 'Yes, add it', effect: 'Create a follow-up task linked to this recommendation.' }],
+                  allowFreeText: true,
+                  relatedTaskIds: ['task-renewal'],
+                },
+              ],
+              quality: { selectedTaskCount: 1, confidence: 'medium', caveats: [] },
+            },
+          },
+        },
+      },
+      global: { stubs: { TaskQuickEditPopover: true } },
+    })
+
+    await wrapper.get('.weekly-question-option').trigger('click')
+    await wrapper.get('.weekly-question-apply').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="weekly-followup-create-another"]').trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(taskStore.tasks.filter(task => task.parentTaskId === 'task-renewal' && task.title === 'Follow up: Send renewal proposal to Amit')).toHaveLength(2)
+    expect(wrapper.find('[data-testid="weekly-followup-create-another"]').exists()).toBe(false)
+  })
+
   it('shows local candidate cards immediately when clarification is skipped for candidates', async () => {
     const taskStore = useTaskStore()
     taskStore._rawTasks.push({

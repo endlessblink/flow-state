@@ -1,3 +1,4 @@
+import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
@@ -76,18 +77,21 @@ vi.mock('@/utils/demoContentGuard', () => ({
 import {
   applyAICommandBatch,
   buildAICommandBatchPreview,
+  clearAICommandAuditStoreForTests,
   getAICommandAuditTrail,
+  loadAICommandAuditTrail,
   rollbackAICommandBatch,
 } from '@/services/ai/actionCommands'
 import { useTaskStore } from '@/stores/tasks'
 
 describe('AI action command substrate', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     mockEnqueue.mockResolvedValue({ id: 1, status: 'pending' })
     mockDeleteTask.mockResolvedValue(undefined)
     localStorage.clear()
+    await clearAICommandAuditStoreForTests()
   })
 
   it('renders a preview without mutating task state', async () => {
@@ -250,6 +254,76 @@ describe('AI action command substrate', () => {
     await rollbackAICommandBatch(result.rollbackPointer, { taskStore })
 
     expect(taskStore.tasks.map(task => task.title)).toEqual(['Parent task'])
+    expect(taskStore.tasks.find(task => task.id === parent.id)?.subtasks).toEqual([])
+  })
+
+  it('loads durable audit entries by source run after localStorage is cleared', async () => {
+    const taskStore = useTaskStore()
+
+    const firstBatch = buildAICommandBatchPreview({
+      sourcePrompt: 'Create first durable task',
+      sourceRunId: 'run-durable-a',
+      sourceMessageId: 'msg-durable-a',
+      dataUsed: { card: 'first' },
+      commands: [{ id: 'cmd-durable-a', kind: 'task.create', title: 'First durable AI task' }],
+      tasks: taskStore.tasks,
+    })
+    const secondBatch = buildAICommandBatchPreview({
+      sourcePrompt: 'Create second durable task',
+      sourceRunId: 'run-durable-b',
+      sourceMessageId: 'msg-durable-b',
+      dataUsed: { card: 'second' },
+      commands: [{ id: 'cmd-durable-b', kind: 'task.create', title: 'Second durable AI task' }],
+      tasks: taskStore.tasks,
+    })
+
+    await applyAICommandBatch(firstBatch, {
+      selectedCommandIds: ['cmd-durable-a'],
+      taskStore,
+    })
+    await applyAICommandBatch(secondBatch, {
+      selectedCommandIds: ['cmd-durable-b'],
+      taskStore,
+    })
+
+    localStorage.clear()
+
+    const durableAudit = await loadAICommandAuditTrail({ sourceRunId: 'run-durable-a' })
+
+    expect(durableAudit).toHaveLength(1)
+    expect(durableAudit[0]).toMatchObject({
+      batchId: firstBatch.id,
+      sourceRunId: 'run-durable-a',
+      sourceMessageId: 'msg-durable-a',
+      commandsApplied: [expect.objectContaining({ id: 'cmd-durable-a' })],
+    })
+  })
+
+  it('rolls back from a durable rollback snapshot after localStorage is cleared', async () => {
+    const taskStore = useTaskStore()
+    const parent = await taskStore.createTask({ title: 'Durable rollback parent' })
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Create durable rollback subtask',
+      sourceRunId: 'run-durable-rollback',
+      sourceMessageId: 'msg-durable-rollback',
+      dataUsed: { parentTaskId: parent.id },
+      commands: [
+        { id: 'cmd-durable-task', kind: 'task.create', title: 'Durable rollback AI task' },
+        { id: 'cmd-durable-subtask', kind: 'task.subtask.create', parentTaskId: parent.id, title: 'Durable rollback AI subtask' },
+      ],
+      tasks: taskStore.tasks,
+    })
+
+    const result = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-durable-task', 'cmd-durable-subtask'],
+      taskStore,
+    })
+    localStorage.clear()
+
+    await rollbackAICommandBatch(result.rollbackPointer, { taskStore })
+
+    expect(taskStore.tasks.map(task => task.title)).toEqual(['Durable rollback parent'])
     expect(taskStore.tasks.find(task => task.id === parent.id)?.subtasks).toEqual([])
   })
 })

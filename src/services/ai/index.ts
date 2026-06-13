@@ -104,12 +104,14 @@ export {
   applyAICommandBatch,
   buildAICommandBatchPreview,
   getAICommandAuditTrail,
+  loadAICommandAuditTrail,
   rollbackAICommandBatch,
 } from './actionCommands'
 
 export type {
   AICommand,
   AICommandApplyResult,
+  AICommandAuditQuery,
   AICommandAuditEntry,
   AICommandBatch,
   AICommandDiff,

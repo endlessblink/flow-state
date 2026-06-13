@@ -5,9 +5,16 @@ import {
   decideAITaskCreate,
   type AIActionIdentity,
 } from './actionGuardrails'
-
-const AI_COMMAND_AUDIT_KEY = 'flowstate-ai-command-audit-trail'
-const AI_COMMAND_ROLLBACK_KEY = 'flowstate-ai-command-rollback-snapshots'
+import {
+  clearAICommandAuditStoreForTests,
+  getLocalAICommandAuditTrail,
+  loadAICommandAuditTrail,
+  loadAICommandRollbackSnapshot,
+  persistAICommandAuditEntry,
+  persistAICommandRollbackSnapshot,
+  type AICommandAuditQuery,
+  type AICommandRollbackSnapshot,
+} from './actionCommandAuditStore'
 
 export type AICommandKind = 'task.create' | 'task.subtask.create'
 export type AICommandImpact = 'low' | 'medium' | 'high'
@@ -94,25 +101,11 @@ export type AICommandApplyResult = AICommandAuditEntry & {
 
 type TaskStore = ReturnType<typeof useTaskStore>
 
-type RollbackSnapshot = {
-  rollbackPointer: string
-  tasksBefore: Task[]
-  appliedEntityIds: string[]
-}
-
-function readJsonArray<T>(key: string): T[] {
-  if (typeof localStorage === 'undefined') return []
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) as T[] : []
-  } catch {
-    return []
-  }
-}
-
-function writeJsonArray<T>(key: string, value: T[]): void {
-  if (typeof localStorage === 'undefined') return
-  localStorage.setItem(key, JSON.stringify(value))
+export {
+  clearAICommandAuditStoreForTests,
+  loadAICommandAuditTrail,
+  type AICommandAuditQuery,
+  type AICommandRollbackSnapshot,
 }
 
 function cloneTask(task: Task): Task {
@@ -297,18 +290,6 @@ async function applySubtaskCreate(command: AISubtaskCreateCommand, taskStore: Ta
   }
 }
 
-function persistAudit(entry: AICommandAuditEntry): void {
-  const entries = readJsonArray<AICommandAuditEntry>(AI_COMMAND_AUDIT_KEY)
-  entries.unshift(entry)
-  writeJsonArray(AI_COMMAND_AUDIT_KEY, entries.slice(0, 50))
-}
-
-function persistRollback(snapshot: RollbackSnapshot): void {
-  const snapshots = readJsonArray<RollbackSnapshot>(AI_COMMAND_ROLLBACK_KEY)
-  snapshots.unshift(snapshot)
-  writeJsonArray(AI_COMMAND_ROLLBACK_KEY, snapshots.slice(0, 20))
-}
-
 export async function applyAICommandBatch(batch: AICommandBatch, options: {
   selectedCommandIds: string[]
   taskStore: TaskStore
@@ -337,8 +318,10 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
   }
 
   const rollbackPointer = `ai-rollback:${batch.id}:${Date.now()}`
-  persistRollback({
+  await persistAICommandRollbackSnapshot({
     rollbackPointer,
+    batchId: batch.id,
+    createdAt: new Date().toISOString(),
     tasksBefore,
     appliedEntityIds: appliedCommands.map(command => command.entityId),
   })
@@ -354,7 +337,7 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
     timestamp: new Date().toISOString(),
     rollbackPointer,
   }
-  persistAudit(auditEntry)
+  await persistAICommandAuditEntry(auditEntry)
   return {
     ...auditEntry,
     appliedCommands,
@@ -363,14 +346,13 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
 }
 
 export function getAICommandAuditTrail(): AICommandAuditEntry[] {
-  return readJsonArray<AICommandAuditEntry>(AI_COMMAND_AUDIT_KEY)
+  return getLocalAICommandAuditTrail()
 }
 
 export async function rollbackAICommandBatch(rollbackPointer: string, options: {
   taskStore: TaskStore
 }): Promise<void> {
-  const snapshots = readJsonArray<RollbackSnapshot>(AI_COMMAND_ROLLBACK_KEY)
-  const snapshot = snapshots.find(item => item.rollbackPointer === rollbackPointer)
+  const snapshot = await loadAICommandRollbackSnapshot(rollbackPointer)
   if (!snapshot) throw new Error(`Rollback snapshot ${rollbackPointer} not found`)
 
   const beforeIds = new Set(snapshot.tasksBefore.map(task => task.id))

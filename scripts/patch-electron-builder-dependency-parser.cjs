@@ -10,7 +10,8 @@
  * run directly. Either case can throw "No JSON content found in output" during
  * release packaging.
  *
- * Remove this patch once app-builder-lib ships the same start-index fix.
+ * Remove this patch once app-builder-lib ships the same start-index and
+ * direct-process collection fixes.
  */
 
 const fs = require('fs')
@@ -102,11 +103,12 @@ const syncCollectorFixed = `    async streamCollectorCommandToFile(command, args
         await new Promise((resolve, reject) => {
             // ${syncCollectorMarker}: avoid piping stdout directly to a file.
             // The piped path can close with an empty file before npm's large JSON
-            // dependency tree is fully flushed.
-            const child = childProcess.spawn([command, ...args].join(" "), {
+            // dependency tree is fully flushed. Avoid shell execution because
+            // managed Linux sandboxes can reject /bin/sh with EPERM.
+            const child = childProcess.spawn(command, args, {
                 cwd,
-                env: { COREPACK_ENABLE_STRICT: "0", ...process.env },
-                shell: true,
+                env: { COREPACK_ENABLE_STRICT: "0", SC_DISABLE_GATE: "1", ...process.env },
+                shell: false,
             });
             let stdout = "";
             let stderr = "";
@@ -176,6 +178,48 @@ if (!patched.includes(syncCollectorMarker)) {
     patched = patched.replace(syncCollectorPattern, syncCollectorFixed)
     applied.push('collector')
   }
+}
+
+const shellSpawnCollector = `            const child = childProcess.spawn([command, ...args].join(" "), {
+                cwd,
+                env: { COREPACK_ENABLE_STRICT: "0", SC_DISABLE_GATE: "1", ...process.env },
+                shell: true,
+            });`
+const directSpawnCollector = `            const child = childProcess.spawn(command, args, {
+                cwd,
+                env: { COREPACK_ENABLE_STRICT: "0", SC_DISABLE_GATE: "1", ...process.env },
+                shell: false,
+            });`
+
+if (patched.includes(shellSpawnCollector)) {
+  patched = patched.replace(shellSpawnCollector, directSpawnCollector)
+  applied.push('direct-spawn')
+}
+
+const syncShellCollector = `            const shellOutput = childProcess.execSync([command, ...args].join(" "), {
+                cwd: this.rootDir,
+                env: { COREPACK_ENABLE_STRICT: "0", SC_DISABLE_GATE: "1", ...process.env },
+                encoding: "utf8",
+                maxBuffer: 200 * 1024 * 1024,
+            });`
+const directCollector = `            const shellOutput = childProcess.execFileSync(command, args, {
+                cwd: this.rootDir,
+                env: { COREPACK_ENABLE_STRICT: "0", SC_DISABLE_GATE: "1", ...process.env },
+                encoding: "utf8",
+                maxBuffer: 200 * 1024 * 1024,
+            });`
+
+if (patched.includes(syncShellCollector)) {
+  patched = patched.replace(syncShellCollector, directCollector)
+  applied.push('direct-process')
+}
+
+const collectorEnvWithoutShimBypass = 'env: { COREPACK_ENABLE_STRICT: "0", ...process.env }'
+const collectorEnvWithShimBypass = 'env: { COREPACK_ENABLE_STRICT: "0", SC_DISABLE_GATE: "1", ...process.env }'
+
+if (patched.includes(collectorEnvWithoutShimBypass)) {
+  patched = patched.replaceAll(collectorEnvWithoutShimBypass, collectorEnvWithShimBypass)
+  applied.push('shim-bypass')
 }
 
 if (patched === current) {

@@ -16,6 +16,15 @@ export function useTaskRowActions(
 ) {
     const { startDrag, endDrag, dragData: activeDragData } = useDragAndDrop()
 
+    const isEditableKeyboardTarget = (target: EventTarget | null) => {
+        if (!(target instanceof HTMLElement)) return false
+        const tagName = target.tagName
+        return tagName === 'INPUT' ||
+            tagName === 'TEXTAREA' ||
+            tagName === 'SELECT' ||
+            target.isContentEditable
+    }
+
     // --- Drag and Drop ---
 
     const handleDragStart = (event: DragEvent) => {
@@ -119,6 +128,8 @@ export function useTaskRowActions(
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+        if (isEditableKeyboardTarget(event.target)) return
+
         switch (event.key) {
             case 'Enter':
             case ' ':

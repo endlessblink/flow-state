@@ -14,7 +14,7 @@
 
 | Order | Lane | Task | Depends on | Outcome |
 | --- | --- | --- | --- | --- |
-| 1 | Safety and command substrate | TASK-1855 | TASK-1854 | Bot actions become previewable, auditable, undoable commands instead of direct hidden mutations. |
+| 1 | Safety and command substrate | TASK-1855 | TASK-1854 | Bot actions become previewable, idempotent, duplicate-aware, auditable, and undoable instead of direct hidden mutations. |
 | 2 | AI command center | TASK-1856 | TASK-1855 | The chat/sidebar becomes an action surface with suggestions, diffs, apply/edit/reject, and visible agent progress. |
 | 3 | Intake and organization | TASK-1857 | TASK-1856 | Messy captures, inbox tasks, and canvas notes can be clustered, deduped, decomposed, and turned into tasks/lanes. |
 | 4 | Daily/weekly planning agent | TASK-1858 | TASK-1856, TASK-1857 | Bot proposes day/week plans using tasks, lanes, calendar, focus capacity, memory, and goals. |
@@ -36,20 +36,26 @@
 
 **Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1854
 
-**Why**: Every useful bot feature eventually wants to change tasks, lanes, calendar blocks, canvas layout, or memory. Before adding more agentic features, FlowState needs a shared safety layer so AI actions are staged, inspectable, reversible, and observable.
+**Why**: Every useful bot feature eventually wants to change tasks, lanes, calendar blocks, canvas layout, or memory. Before adding more agentic features, FlowState needs a shared safety layer so AI actions are staged, inspectable, reversible, idempotent, duplicate-aware, and observable. The immediate motivating failure is the weekly-plan follow-up path creating repeated real child tasks like `מעקב: <source task title>`, but the fix must cover the wider class of repeated applies, stale persisted cards, background retries, and future planner/organizer/canvas/calendar agent writes.
 
 **Acceptance**:
 - Define a typed AI command/diff model for task, lane, calendar, canvas, focus, and memory proposals.
+- Define an AI action identity/fingerprint model using action kind, source message/run, target entity, normalized payload, and scope.
 - AI-generated changes can be rendered as a preview before mutation.
+- Repeated applies of the same AI action are idempotent: double-clicks, retries, stale cards, and hydration replays reuse or skip existing effects instead of creating another entity.
+- Semantic duplicate checks exist for AI-created tasks, subtasks/follow-ups, lanes/groups, calendar/focus blocks, and memory/feedback events.
+- Weekly-plan `add_followup` is the first consumer: if an active follow-up already exists for the same parent/source task, the UI reports/reuses that task by default instead of creating another `מעקב:` / `Follow up:` child.
 - Applying a proposal routes through existing store/service APIs, not direct hidden writes.
 - Applied proposals create an audit entry with source prompt, data used, commands applied, rejected commands, timestamp, and rollback pointer.
 - Undo/rollback restores the pre-AI state for the applied command batch.
 - Low-confidence or high-impact proposals are blocked from auto-apply and require explicit approval.
+- Manual task/project/lane/calendar/canvas creation remains unchanged; duplicate prevention is scoped to AI/proposal/tool writes.
 
 **Relevant context**:
 - Reuse existing task/lane/project stores and undo patterns where possible.
 - This lane is the foundation for every later lane; do not build one-off apply buttons that bypass it.
-- Regression coverage should prove preview-only proposals do not mutate state, apply mutates only selected commands, and rollback restores state.
+- Treat "reuse existing" as the default duplicate behavior. Creating another anyway must require explicit secondary user intent.
+- Regression coverage should prove preview-only proposals do not mutate state, apply mutates only selected commands, repeated apply is idempotent, stale cards do not duplicate work, semantic duplicates are reused/skipped, manual duplicate creation still works, and rollback restores state.
 
 ### TASK-1856: AI command center and agent progress UI (📋 PLANNED)
 

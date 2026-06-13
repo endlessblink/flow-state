@@ -1,4 +1,4 @@
-import type { Lane, Subtask, Task } from '@/types/tasks'
+import type { Lane, Subtask, Task, TaskInstance } from '@/types/tasks'
 
 export type AIActionDuplicateDecision =
   | 'create'
@@ -6,7 +6,7 @@ export type AIActionDuplicateDecision =
   | 'create_anyway_requires_explicit_user_intent'
 
 export interface AIActionIdentity {
-  kind: 'task.create' | 'task.subtask.create' | 'lane.create'
+  kind: 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task'
   sourceMessageId: string | null
   targetEntityId: string | null
   scope: string
@@ -191,6 +191,69 @@ export function decideAILaneCreate(input: {
     if (workspaceId && lane.workspaceId !== workspaceId) return false
     return true
   }) ?? null
+
+  return {
+    decision: existing ? 'reuse_existing' : 'create',
+    identity,
+    existing,
+  }
+}
+
+function normalizeTime(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  return value.trim().slice(0, 5)
+}
+
+export function buildAICalendarScheduleTaskIdentity(input: {
+  sourceMessageId?: unknown
+  taskId: string
+  scheduledDate: string
+  scheduledTime: string
+  duration?: unknown
+  scope?: string
+}): AIActionIdentity {
+  const scope = input.scope || `task:${input.taskId}:calendar`
+  return {
+    kind: 'calendar.schedule_task',
+    sourceMessageId: typeof input.sourceMessageId === 'string' ? input.sourceMessageId : null,
+    targetEntityId: input.taskId,
+    scope,
+    fingerprint: stableFingerprint({
+      kind: 'calendar.schedule_task',
+      scope,
+      targetEntityId: input.taskId,
+      scheduledDate: normalizeDate(input.scheduledDate),
+      scheduledTime: normalizeTime(input.scheduledTime),
+      duration: typeof input.duration === 'number' ? input.duration : 60,
+    }),
+  }
+}
+
+export function decideAICalendarScheduleTask(input: {
+  task: Task | null
+  taskId: string
+  scheduledDate: string
+  scheduledTime: string
+  duration?: unknown
+  sourceMessageId?: unknown
+  scope?: string
+}): AIActionDuplicateResult<TaskInstance> {
+  const duration = typeof input.duration === 'number'
+    ? input.duration
+    : input.task?.estimatedDuration || 60
+  const identity = buildAICalendarScheduleTaskIdentity({
+    ...input,
+    duration,
+  })
+  const normalizedDate = normalizeDate(input.scheduledDate)
+  const normalizedTime = normalizeTime(input.scheduledTime)
+  const existing = input.task?.instances?.find(instance =>
+    normalizeDate(instance.scheduledDate) === normalizedDate &&
+    normalizeTime(instance.scheduledTime) === normalizedTime &&
+    (instance.duration || 60) === duration &&
+    instance.status !== 'completed' &&
+    instance.status !== 'skipped'
+  ) ?? null
 
   return {
     decision: existing ? 'reuse_existing' : 'create',

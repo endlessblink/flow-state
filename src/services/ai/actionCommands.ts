@@ -2,6 +2,7 @@ import type { Lane, Subtask, Task } from '@/types/tasks'
 import type { useLaneStore } from '@/stores/lanes'
 import type { useTaskStore } from '@/stores/tasks'
 import {
+  decideAICalendarScheduleTask,
   decideAILaneCreate,
   decideAISubtaskCreate,
   decideAITaskCreate,
@@ -18,7 +19,7 @@ import {
   type AICommandRollbackSnapshot,
 } from './actionCommandAuditStore'
 
-export type AICommandKind = 'task.create' | 'task.subtask.create' | 'lane.create'
+export type AICommandKind = 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task'
 export type AICommandImpact = 'low' | 'medium' | 'high'
 
 export type AITaskCreateCommand = {
@@ -54,10 +55,21 @@ export type AILaneCreateCommand = {
   impact?: AICommandImpact
 }
 
-export type AICommand = AITaskCreateCommand | AISubtaskCreateCommand | AILaneCreateCommand
+export type AICalendarScheduleTaskCommand = {
+  id: string
+  kind: 'calendar.schedule_task'
+  taskId: string
+  scheduledDate: string
+  scheduledTime: string
+  duration?: number
+  confidence?: number
+  impact?: AICommandImpact
+}
+
+export type AICommand = AITaskCreateCommand | AISubtaskCreateCommand | AILaneCreateCommand | AICalendarScheduleTaskCommand
 
 export type AICommandDiff = {
-  entityType: 'task' | 'subtask' | 'lane'
+  entityType: 'task' | 'subtask' | 'lane' | 'calendar'
   before: Record<string, unknown> | null
   after: Record<string, unknown>
 }
@@ -208,6 +220,48 @@ function previewCommand(command: AICommand, input: {
           name: command.name,
           color: command.color || '#4ECDC4',
           workspaceId: command.workspaceId ?? null,
+        },
+      },
+    }
+  }
+
+  if (command.kind === 'calendar.schedule_task') {
+    const task = tasks.find(task => task.id === command.taskId) ?? null
+    const effectiveDuration = command.duration || task?.estimatedDuration || 60
+    const decision = decideAICalendarScheduleTask({
+      task,
+      taskId: command.taskId,
+      scheduledDate: command.scheduledDate,
+      scheduledTime: command.scheduledTime,
+      duration: command.duration,
+      sourceMessageId,
+    })
+    return {
+      id: command.id,
+      kind: command.kind,
+      status: requiresExplicitApproval
+        ? 'blocked_requires_approval'
+        : decision.existing ? 'will_reuse_existing' : 'will_create',
+      identity: decision.identity,
+      duplicateOf: decision.existing?.id,
+      requiresExplicitApproval,
+      diff: {
+        entityType: 'calendar',
+        before: decision.existing
+          ? {
+            id: decision.existing.id,
+            taskId: command.taskId,
+            scheduledDate: decision.existing.scheduledDate,
+            scheduledTime: decision.existing.scheduledTime,
+            duration: decision.existing.duration,
+          }
+          : null,
+        after: {
+          taskId: command.taskId,
+          scheduledDate: command.scheduledDate,
+          scheduledTime: command.scheduledTime,
+          duration: effectiveDuration,
+          status: 'scheduled',
         },
       },
     }
@@ -390,6 +444,49 @@ async function applyLaneCreate(command: AILaneCreateCommand, laneStore: LaneStor
   }
 }
 
+async function applyCalendarScheduleTask(command: AICalendarScheduleTaskCommand, taskStore: TaskStore, sourceMessageId: string): Promise<AppliedAICommand> {
+  const task = taskStore.tasks.find(task => task.id === command.taskId) ?? null
+  if (!task) throw new Error(`Task ${command.taskId} not found`)
+  const decision = decideAICalendarScheduleTask({
+    task,
+    taskId: command.taskId,
+    scheduledDate: command.scheduledDate,
+    scheduledTime: command.scheduledTime,
+    duration: command.duration,
+    sourceMessageId,
+  })
+  const preview = previewCommand(command, {
+    tasks: taskStore.tasks,
+    lanes: [],
+    sourceMessageId,
+  })
+  if (decision.existing) {
+    return {
+      ...preview,
+      result: 'reused_existing',
+      entityId: decision.existing.id || `${command.taskId}:${command.scheduledDate}:${command.scheduledTime}`,
+      duplicateOf: decision.existing.id,
+    }
+  }
+
+  const created = await taskStore.createTaskInstance(command.taskId, {
+    taskId: command.taskId,
+    scheduledDate: command.scheduledDate,
+    scheduledTime: command.scheduledTime,
+    duration: command.duration || task.estimatedDuration || 60,
+    status: 'scheduled',
+    isRecurring: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+  if (!created) throw new Error(`Failed to schedule task ${command.taskId}`)
+  return {
+    ...preview,
+    result: 'created',
+    entityId: created.id || `${command.taskId}:${command.scheduledDate}:${command.scheduledTime}`,
+  }
+}
+
 export async function applyAICommandBatch(batch: AICommandBatch, options: {
   selectedCommandIds: string[]
   taskStore: TaskStore
@@ -417,11 +514,13 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
       ? await applyTaskCreate(command, options.taskStore, batch.sourceMessageId)
       : command.kind === 'task.subtask.create'
         ? await applySubtaskCreate(command, options.taskStore, batch.sourceMessageId)
-        : await applyLaneCreate(
-          command,
-          options.laneStore ?? missingLaneStore(),
-          batch.sourceMessageId,
-        )
+        : command.kind === 'lane.create'
+          ? await applyLaneCreate(
+            command,
+            options.laneStore ?? missingLaneStore(),
+            batch.sourceMessageId,
+          )
+          : await applyCalendarScheduleTask(command, options.taskStore, batch.sourceMessageId)
     appliedCommands.push(applied)
   }
 

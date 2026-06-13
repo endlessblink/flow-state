@@ -447,4 +447,127 @@ describe('AI action command substrate', () => {
     expect(laneStore.lanes.map(lane => lane.name)).toEqual(['Existing Lane'])
     expect(mockDeleteLane).toHaveBeenCalledWith(expect.stringMatching(/.+/))
   })
+
+  it('previews AI calendar scheduling without mutating task instances', async () => {
+    const taskStore = useTaskStore()
+    const task = await taskStore.createTask({ title: 'Write launch follow-up' })
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Protect a focus block',
+      sourceRunId: 'run-calendar-preview',
+      sourceMessageId: 'msg-calendar-preview',
+      dataUsed: { taskId: task.id },
+      commands: [{
+        id: 'cmd-calendar-preview',
+        kind: 'calendar.schedule_task',
+        taskId: task.id,
+        scheduledDate: '2026-06-16',
+        scheduledTime: '10:30',
+        duration: 90,
+      }],
+      tasks: taskStore.tasks,
+    })
+
+    expect(taskStore.tasks.find(item => item.id === task.id)?.instances).toEqual([])
+    expect(batch.preview.commands).toEqual([
+      expect.objectContaining({
+        id: 'cmd-calendar-preview',
+        kind: 'calendar.schedule_task',
+        status: 'will_create',
+        identity: expect.objectContaining({
+          kind: 'calendar.schedule_task',
+          targetEntityId: task.id,
+          scope: `task:${task.id}:calendar`,
+        }),
+        diff: {
+          entityType: 'calendar',
+          before: null,
+          after: expect.objectContaining({
+            taskId: task.id,
+            scheduledDate: '2026-06-16',
+            scheduledTime: '10:30',
+            duration: 90,
+          }),
+        },
+      }),
+    ])
+  })
+
+  it('applies AI calendar scheduling through task instances and reuses replay duplicates', async () => {
+    const taskStore = useTaskStore()
+    const task = await taskStore.createTask({
+      title: 'Schedule launch work',
+      estimatedDuration: 75,
+    })
+    const createInstanceSpy = vi.spyOn(taskStore, 'createTaskInstance')
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Schedule launch work',
+      sourceRunId: 'run-calendar-create',
+      sourceMessageId: 'msg-calendar-create',
+      dataUsed: { taskId: task.id },
+      commands: [{
+        id: 'cmd-calendar-create',
+        kind: 'calendar.schedule_task',
+        taskId: task.id,
+        scheduledDate: '2026-06-16',
+        scheduledTime: '11:00',
+      }],
+      tasks: taskStore.tasks,
+    })
+
+    const first = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-calendar-create'],
+      taskStore,
+    })
+    const replay = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-calendar-create'],
+      taskStore,
+    })
+
+    const scheduledTask = taskStore.tasks.find(item => item.id === task.id)
+    expect(scheduledTask?.instances).toEqual([
+      expect.objectContaining({
+        taskId: task.id,
+        scheduledDate: '2026-06-16',
+        scheduledTime: '11:00',
+        duration: 75,
+        status: 'scheduled',
+      }),
+    ])
+    expect(createInstanceSpy).toHaveBeenCalledTimes(1)
+    expect(first.appliedCommands[0]).toMatchObject({ kind: 'calendar.schedule_task', result: 'created' })
+    expect(replay.appliedCommands[0]).toMatchObject({ kind: 'calendar.schedule_task', result: 'reused_existing' })
+  })
+
+  it('rolls back AI calendar scheduling to the pre-AI task instance state', async () => {
+    const taskStore = useTaskStore()
+    const task = await taskStore.createTask({ title: 'Temporary calendar block' })
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Schedule temporary block',
+      sourceRunId: 'run-calendar-rollback',
+      sourceMessageId: 'msg-calendar-rollback',
+      dataUsed: { taskId: task.id },
+      commands: [{
+        id: 'cmd-calendar-rollback',
+        kind: 'calendar.schedule_task',
+        taskId: task.id,
+        scheduledDate: '2026-06-16',
+        scheduledTime: '14:00',
+        duration: 45,
+      }],
+      tasks: taskStore.tasks,
+    })
+
+    const result = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-calendar-rollback'],
+      taskStore,
+    })
+    expect(taskStore.tasks.find(item => item.id === task.id)?.instances).toHaveLength(1)
+
+    await rollbackAICommandBatch(result.rollbackPointer, { taskStore })
+
+    expect(taskStore.tasks.find(item => item.id === task.id)?.instances).toEqual([])
+  })
 })

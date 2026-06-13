@@ -17,6 +17,7 @@ import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import type { Task } from '@/types/tasks'
 import type { OpenAITool } from './types'
 import { resolveTask } from './entityResolver'
+import { decideAISubtaskCreate, decideAITaskCreate } from './actionGuardrails'
 
 // ============================================================================
 // Constants
@@ -510,12 +511,45 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           return { success: false, message: tm(language, `Invalid date format "${dueDate}". Use YYYY-MM-DD.`, `פורמט תאריך לא תקין "${dueDate}". השתמש ב-YYYY-MM-DD.`) }
         }
 
+        const duplicateDecision = decideAITaskCreate({
+          tasks: taskStore.tasks,
+          title,
+          dueDate,
+          projectId: call.parameters.projectId,
+          parentTaskId: call.parameters.parentTaskId,
+          sourceMessageId: call.parameters.sourceMessageId,
+        })
+        if (duplicateDecision.existing) {
+          return {
+            success: true,
+            message: tm(language, `Task "${duplicateDecision.existing.title}" already exists; reused it instead of creating a duplicate.`, `המשימה "${duplicateDecision.existing.title}" כבר קיימת; השתמשתי בה במקום ליצור כפילות.`),
+            data: {
+              id: duplicateDecision.existing.id,
+              title: duplicateDecision.existing.title,
+              priority: duplicateDecision.existing.priority,
+              aiAction: {
+                decision: duplicateDecision.decision,
+                duplicateOf: duplicateDecision.existing.id,
+                identity: duplicateDecision.identity,
+              },
+            },
+          }
+        }
+
         const task = await taskStore.createTask({ title, priority, description, dueDate })
 
         return {
           success: true,
           message: tm(language, `Created task "${title}"`, `נוצרה משימה "${title}"`),
-          data: { id: task.id, title: task.title, priority: task.priority },
+          data: {
+            id: task.id,
+            title: task.title,
+            priority: task.priority,
+            aiAction: {
+              decision: duplicateDecision.decision,
+              identity: duplicateDecision.identity,
+            },
+          },
         }
       }
 
@@ -1139,8 +1173,26 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         }
 
         const created: Array<{ id: string; title: string }> = []
+        const skippedExisting: Array<{ id: string; title: string }> = []
+        let reusedAny = false
+        let lastIdentity = null as ReturnType<typeof decideAISubtaskCreate>['identity'] | null
         for (const sub of subtaskDefs) {
           if (!sub.title || typeof sub.title !== 'string') continue
+          const currentParent = validateTaskExists(taskStore, parentTaskId) || parentTask
+          const duplicateDecision = decideAISubtaskCreate({
+            parentTask: currentParent,
+            title: sub.title,
+            sourceMessageId: call.parameters.sourceMessageId,
+          })
+          lastIdentity = duplicateDecision.identity
+          if (duplicateDecision.existing) {
+            reusedAny = true
+            skippedExisting.push({
+              id: duplicateDecision.existing.id,
+              title: duplicateDecision.existing.title,
+            })
+            continue
+          }
           const result = await taskStore.createSubtask(parentTaskId, { title: sub.title })
           if (result) {
             created.push({ id: result.id, title: result.title })
@@ -1149,8 +1201,16 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
 
         return {
           success: true,
-          message: tm(language, `Created ${created.length} subtasks under "${parentTask.title}"`, `נוצרו ${created.length} תת-משימות תחת "${parentTask.title}"`),
-          data: { parentTaskId, subtasks: created },
+          message: tm(language, `Created ${created.length} subtasks under "${parentTask.title}"${skippedExisting.length ? `; reused ${skippedExisting.length} existing` : ''}`, `נוצרו ${created.length} תת-משימות תחת "${parentTask.title}"${skippedExisting.length ? `; נעשה שימוש ב-${skippedExisting.length} קיימות` : ''}`),
+          data: {
+            parentTaskId,
+            subtasks: created,
+            skippedExisting,
+            aiAction: {
+              decision: reusedAny && created.length === 0 ? 'reuse_existing' : 'create',
+              identity: lastIdentity,
+            },
+          },
         }
       }
 

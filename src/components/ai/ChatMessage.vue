@@ -42,6 +42,7 @@ import type { WeeklyPlanOutput, WeeklyPlanRecommendation } from '@/services/ai/p
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { AIClarificationArtifact, AIClarificationQuestion, AIContextEntityType, AIMemoryPatch, AIRecommendationFeedbackInput, AIUncertaintyDimension } from '@/types/aiMemory'
 import { resumeLocalClarificationRuntime } from '@/services/ai/runtime/localClarificationRuntimeClient'
+import { decideAITaskCreate } from '@/services/ai/actionGuardrails'
 
 // ============================================================================
 // Props
@@ -558,10 +559,6 @@ function weeklyQuestionApplyLabel(question: WeeklyPlanOutput['openQuestions'][nu
   return weeklyPlan.value?.locale === 'he' ? 'שמור תשובה' : 'Save answer'
 }
 
-function normalizeFollowUpTitle(title: string): string {
-  return title.trim().replace(/\s+/g, ' ').toLocaleLowerCase()
-}
-
 function defaultWeeklyFollowUpTitle(parentTask: Task | null, locale: 'he' | 'en'): string {
   return locale === 'he'
     ? `מעקב: ${parentTask?.title || 'משימה'}`
@@ -570,13 +567,14 @@ function defaultWeeklyFollowUpTitle(parentTask: Task | null, locale: 'he' | 'en'
 
 function findExistingWeeklyFollowUp(parentTask: Task | null, title: string): Task | null {
   if (!parentTask?.id) return null
-  const normalizedTitle = normalizeFollowUpTitle(title)
-  return taskStore.tasks.find(task =>
-    task.parentTaskId === parentTask.id &&
-    !task._soft_deleted &&
-    task.status !== 'done' &&
-    normalizeFollowUpTitle(task.title || '') === normalizedTitle
-  ) ?? null
+  return decideAITaskCreate({
+    tasks: taskStore.tasks,
+    title,
+    parentTaskId: parentTask.id,
+    projectId: parentTask.projectId,
+    scope: `weekly-followup:${parentTask.id}`,
+    sourceMessageId: props.message.id,
+  }).existing
 }
 
 function revealExistingWeeklyFollowUp(question: WeeklyPlanOutput['openQuestions'][number], event: MouseEvent): void {

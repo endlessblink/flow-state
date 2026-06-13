@@ -166,6 +166,80 @@ describe('AI tool execution regressions', () => {
     })
   })
 
+  it('reuses an existing active task for repeated AI create_task applies', async () => {
+    const taskStore = useTaskStore()
+
+    const first = await executeTool({
+      tool: 'create_task',
+      parameters: {
+        title: 'Send invoice follow-up',
+        priority: 'high',
+        dueDate: '2026-06-15',
+        sourceMessageId: 'msg-ai-card-1',
+      },
+    })
+    const replay = await executeTool({
+      tool: 'create_task',
+      parameters: {
+        title: '  Send   invoice follow-up ',
+        priority: 'high',
+        dueDate: '2026-06-15',
+        sourceMessageId: 'msg-ai-card-1',
+      },
+    })
+
+    expect(first.success).toBe(true)
+    expect(replay.success).toBe(true)
+    expect(replay.message).toContain('already exists')
+    expect(taskStore._rawTasks.filter(task => task.title === 'Send invoice follow-up')).toHaveLength(1)
+    expect(replay.data).toMatchObject({
+      id: first.data?.id,
+      aiAction: expect.objectContaining({
+        decision: 'reuse_existing',
+        duplicateOf: first.data?.id,
+      }),
+    })
+  })
+
+  it('reuses a stale-card semantic duplicate even when the AI action source changes', async () => {
+    const taskStore = useTaskStore()
+    const existing = await taskStore.createTask({
+      title: 'Follow up: Send renewal proposal',
+      priority: 'medium',
+      dueDate: '2026-06-16',
+    })
+
+    const result = await executeTool({
+      tool: 'create_task',
+      parameters: {
+        title: 'follow up: send renewal proposal',
+        priority: 'low',
+        dueDate: '2026-06-16',
+        sourceMessageId: 'hydrated-old-card',
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.message).toContain('already exists')
+    expect(result.data).toMatchObject({
+      id: existing.id,
+      aiAction: expect.objectContaining({
+        decision: 'reuse_existing',
+        duplicateOf: existing.id,
+      }),
+    })
+    expect(taskStore._rawTasks.filter(task => task.dueDate === '2026-06-16')).toHaveLength(1)
+  })
+
+  it('leaves manual duplicate task creation unchanged', async () => {
+    const taskStore = useTaskStore()
+
+    await taskStore.createTask({ title: 'Manual same-title task', dueDate: '2026-06-17' })
+    await taskStore.createTask({ title: 'Manual same-title task', dueDate: '2026-06-17' })
+
+    expect(taskStore._rawTasks.filter(task => task.title === 'Manual same-title task')).toHaveLength(2)
+  })
+
   it('marks a task done by title fragment and hides it from default task listings', async () => {
     const taskStore = useTaskStore()
     await taskStore.createTask({ title: 'Review Work bucket priorities', priority: 'high' })
@@ -215,6 +289,50 @@ describe('AI tool execution regressions', () => {
       'Outline scope',
       'List regression tests',
     ])
+  })
+
+  it('skips existing active subtasks when an AI create_subtasks command is replayed', async () => {
+    const taskStore = useTaskStore()
+    const parent = await taskStore.createTask({ title: 'Launch command substrate' })
+    await taskStore.createSubtask(parent.id, { title: 'Write acceptance tests' })
+
+    const first = await executeTool({
+      tool: 'create_subtasks',
+      parameters: {
+        parentTaskId: parent.id,
+        sourceMessageId: 'msg-subtask-card',
+        subtasks: [
+          { title: 'Write acceptance tests' },
+          { title: 'Wire duplicate guardrail' },
+        ],
+      },
+    })
+    const replay = await executeTool({
+      tool: 'create_subtasks',
+      parameters: {
+        parentTaskId: parent.id,
+        sourceMessageId: 'msg-subtask-card',
+        subtasks: [
+          { title: 'write   acceptance tests' },
+          { title: 'Wire duplicate guardrail' },
+        ],
+      },
+    })
+
+    const parentAfter = taskStore._rawTasks.find(task => task.id === parent.id)
+    expect(first.success).toBe(true)
+    expect(replay.success).toBe(true)
+    expect(parentAfter?.subtasks.map(subtask => subtask.title)).toEqual([
+      'Write acceptance tests',
+      'Wire duplicate guardrail',
+    ])
+    expect(replay.data).toMatchObject({
+      aiAction: expect.objectContaining({ decision: 'reuse_existing' }),
+      skippedExisting: expect.arrayContaining([
+        expect.objectContaining({ title: 'Write acceptance tests' }),
+        expect.objectContaining({ title: 'Wire duplicate guardrail' }),
+      ]),
+    })
   })
 
   it('requires explicit confirmation before destructive task deletion', async () => {

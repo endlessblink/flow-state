@@ -78,13 +78,13 @@
 
 **Progress**:
 - 2026-06-13: Shipped the first duplicate-aware weekly-plan `add_followup` consumer. `ChatMessage` now detects an existing active same-title follow-up under the same parent task, tells the user it already exists, opens/reuses that task by default, and creates another only after explicit duplicate override. Regression coverage added for default duplicate blocking and explicit duplicate creation. Released via Electron updater `1.4.164`; public `latest-linux.yml`, AppImage, and deb artifact checks passed.
+- 2026-06-13: Extracted the first shared AI action guardrail in `src/services/ai/actionGuardrails.ts` for task/subtask create identity fingerprints and semantic duplicate decisions. `create_task` now reuses an existing active same-title/due-date AI-created target instead of duplicating on double-click/retry/stale-card replay; `create_subtasks` skips existing active same-title subtasks under the parent. Weekly-plan follow-up duplicate detection now calls the shared helper while preserving the explicit "create another" override. Regression proof: `npm run test -- tests/unit/ai-tools-execution.test.ts`, `npm run test -- tests/unit/ai-sidebar-first.test.ts -t "weekly follow-up"`, `npm run type-check`, `npm run lint`, Electron build/package validation, and updater deployment `1.4.167` verified via `https://in-theflow.com/updates/electron/latest-linux.yml`.
 
 **Next implementation cursor**:
-- Start here in the next AI lane session before moving to TASK-1856. The weekly follow-up fix proves the shape, but it is still component-local; the next slice is to extract a shared AI side-effect guardrail used by all AI write paths.
-- First target: create a small AI action identity/semantic duplicate helper for tasks/subtasks that computes normalized action fingerprints and returns `create`, `reuse_existing`, or `create_anyway_requires_explicit_user_intent`.
-- Wire the helper into `src/services/ai/tools.ts` for AI `create_task` and `create_subtasks`, keeping manual `taskStore.createTask` behavior unchanged.
-- Then backfill the weekly `add_followup` path in `src/components/ai/ChatMessage.vue` to consume the shared helper instead of carrying its own one-off duplicate logic.
-- Add regressions for AI `create_task` duplicate reuse, AI `create_subtasks` duplicate skipping, repeated apply idempotency, stale-card reuse, and manual duplicate creation remaining allowed.
+- Start here in the next AI lane session before moving to TASK-1856. The task/subtask guardrail is shared now, but it is not yet the full proposal/audit/rollback substrate.
+- Next target: extend the AI action substrate from duplicate decision metadata into a preview/apply batch model with selected-command apply, audit entry persistence, and rollback pointer.
+- Add regressions proving preview-only proposals do not mutate state, apply mutates only selected commands, audit entries record applied/rejected commands and source prompt/data, and rollback restores the pre-AI state.
+- Then extend semantic duplicate decisions beyond tasks/subtasks to lanes/groups, calendar/focus blocks, canvas layout proposals, and memory/feedback events.
 - Do not begin TASK-1856 command-center UI until this shared guardrail has tests and localhost proof.
 
 ### TASK-1856: AI command center and agent progress UI (📋 PLANNED)

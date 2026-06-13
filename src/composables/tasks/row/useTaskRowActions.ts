@@ -22,7 +22,9 @@ export function useTaskRowActions(
         return tagName === 'INPUT' ||
             tagName === 'TEXTAREA' ||
             tagName === 'SELECT' ||
-            target.isContentEditable
+            target.isContentEditable ||
+            target.getAttribute('contenteditable') === 'true' ||
+            !!target.closest('[contenteditable="true"]')
     }
 
     // --- Drag and Drop ---

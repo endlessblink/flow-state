@@ -39,15 +39,36 @@ const keyboardEventFor = (target: EventTarget, key: string) => {
 }
 
 describe('useTaskRowActions keyboard handling', () => {
-  it('does not consume Space while inline editing a task title', () => {
+  it('does not consume Space or Enter while inline editing a task title', () => {
     const { actions, emit } = createActions()
     const input = document.createElement('input')
-    const event = keyboardEventFor(input, ' ')
+    const spaceEvent = keyboardEventFor(input, ' ')
+    const enterEvent = keyboardEventFor(input, 'Enter')
 
-    actions.handleKeyDown(event)
+    actions.handleKeyDown(spaceEvent)
+    actions.handleKeyDown(enterEvent)
 
-    expect(event.defaultPrevented).toBe(false)
+    expect(spaceEvent.defaultPrevented).toBe(false)
+    expect(enterEvent.defaultPrevented).toBe(false)
     expect(emit).not.toHaveBeenCalledWith('select', task.id)
+  })
+
+  it('does not consume keyboard shortcuts from editable row controls', () => {
+    const { actions, emit } = createActions()
+    const editableTargets: Array<[string, HTMLElement]> = [
+      ['textarea', document.createElement('textarea')],
+      ['select', document.createElement('select')],
+      ['contenteditable', document.createElement('div')]
+    ]
+    editableTargets[2][1].setAttribute('contenteditable', 'true')
+
+    for (const [label, target] of editableTargets) {
+      const event = keyboardEventFor(target, ' ')
+      actions.handleKeyDown(event)
+      expect(event.defaultPrevented, label).toBe(false)
+    }
+
+    expect(emit).not.toHaveBeenCalled()
   })
 
   it('still treats Space as row activation outside editable controls', () => {

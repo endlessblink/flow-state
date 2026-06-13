@@ -94,6 +94,7 @@ import { useLaneStore } from '@/stores/lanes'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import type { AIContextEntity, AIMemoryPatch, AIRecommendationFeedback, AIRecommendationFeedbackInput } from '@/types/aiMemory'
+import type { PomodoroSession } from '@/stores/timer'
 
 function createMemoryCommandStore(): AICommandMemoryStore & {
   entities: AIContextEntity[]
@@ -1136,5 +1137,159 @@ describe('AI action command substrate', () => {
     await rollbackAICommandBatch(result.rollbackPointer, { taskStore })
 
     expect(taskStore.tasks.find(item => item.id === task.id)?.instances).toEqual([])
+  })
+
+  it('previews and applies AI focus timer starts through the command substrate', async () => {
+    const taskStore = useTaskStore()
+    const task = await taskStore.createTask({ title: 'Focus on command safety' })
+    const timerStore = {
+      currentSession: null as PomodoroSession | null,
+      isTimerActive: false,
+      currentTaskName: null as string | null,
+      startTimer: vi.fn(async (taskId: string, duration: number, isBreak: boolean = false) => {
+        timerStore.currentSession = {
+          id: 'session-command-focus',
+          taskId,
+          startTime: new Date('2026-06-14T09:00:00Z'),
+          duration,
+          remainingTime: duration,
+          isActive: true,
+          isPaused: false,
+          isBreak,
+        }
+        timerStore.isTimerActive = true
+        timerStore.currentTaskName = 'Focus on command safety'
+      }),
+      stopTimer: vi.fn(async () => {
+        timerStore.currentSession = null
+        timerStore.isTimerActive = false
+        timerStore.currentTaskName = null
+      }),
+    }
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Start protected focus timer',
+      sourceRunId: 'run-focus-preview',
+      sourceMessageId: 'msg-focus-preview',
+      dataUsed: { taskId: task.id },
+      commands: [{
+        id: 'cmd-focus-start',
+        kind: 'focus.timer.start',
+        taskId: task.id,
+        durationMinutes: 25,
+      }],
+      tasks: taskStore.tasks,
+    })
+
+    expect(timerStore.currentSession).toBeNull()
+    expect(batch.preview.commands).toEqual([
+      expect.objectContaining({
+        id: 'cmd-focus-start',
+        kind: 'focus.timer.start',
+        status: 'will_create',
+        diff: {
+          entityType: 'focus',
+          before: null,
+          after: expect.objectContaining({
+            taskId: task.id,
+            durationMinutes: 25,
+          }),
+        },
+      }),
+    ])
+
+    const result = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-focus-start'],
+      taskStore,
+      timerStore,
+    })
+
+    expect(timerStore.startTimer).toHaveBeenCalledWith(task.id, 25 * 60, false)
+    expect(result.appliedCommands[0]).toMatchObject({
+      kind: 'focus.timer.start',
+      result: 'created',
+      entityId: 'focus:session-command-focus',
+    })
+    expect(result.rollbackPointer).toContain('ai-rollback:')
+
+    await rollbackAICommandBatch(result.rollbackPointer, { taskStore, timerStore })
+    expect(timerStore.stopTimer).toHaveBeenCalled()
+    expect(timerStore.currentSession).toBeNull()
+  })
+
+  it('applies and rolls back AI focus timer stops through the command substrate', async () => {
+    const taskStore = useTaskStore()
+    const task = await taskStore.createTask({ title: 'Stop focus through commands' })
+    const activeSession: PomodoroSession = {
+      id: 'session-stop-command',
+      taskId: task.id,
+      startTime: new Date('2026-06-14T09:00:00Z'),
+      duration: 1500,
+      remainingTime: 900,
+      isActive: true,
+      isPaused: false,
+      isBreak: false,
+    }
+    const timerStore = {
+      currentSession: activeSession as PomodoroSession | null,
+      isTimerActive: true,
+      currentTaskName: 'Stop focus through commands',
+      startTimer: vi.fn(async (taskId: string, duration: number, isBreak: boolean = false) => {
+        timerStore.currentSession = {
+          ...activeSession,
+          id: 'session-restored-command',
+          taskId,
+          duration,
+          remainingTime: duration,
+          isBreak,
+        }
+        timerStore.isTimerActive = true
+      }),
+      stopTimer: vi.fn(async () => {
+        timerStore.currentSession = null
+        timerStore.isTimerActive = false
+      }),
+    }
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Stop protected focus timer',
+      sourceRunId: 'run-focus-stop',
+      sourceMessageId: 'msg-focus-stop',
+      dataUsed: { taskId: task.id },
+      commands: [{
+        id: 'cmd-focus-stop',
+        kind: 'focus.timer.stop',
+      }],
+      tasks: taskStore.tasks,
+      timerSession: timerStore.currentSession,
+    })
+
+    expect(batch.preview.commands[0]).toMatchObject({
+      kind: 'focus.timer.stop',
+      status: 'will_create',
+      diff: {
+        entityType: 'focus',
+        before: expect.objectContaining({ id: 'session-stop-command', taskId: task.id }),
+        after: { stopped: true },
+      },
+    })
+
+    const result = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-focus-stop'],
+      taskStore,
+      timerStore,
+    })
+
+    expect(timerStore.stopTimer).toHaveBeenCalledTimes(1)
+    expect(timerStore.currentSession).toBeNull()
+    expect(result.appliedCommands[0]).toMatchObject({
+      kind: 'focus.timer.stop',
+      result: 'created',
+      entityId: 'focus:session-stop-command',
+    })
+
+    await rollbackAICommandBatch(result.rollbackPointer, { taskStore, timerStore })
+    expect(timerStore.startTimer).toHaveBeenCalledWith(task.id, 900, false)
+    expect(timerStore.currentSession?.taskId).toBe(task.id)
   })
 })

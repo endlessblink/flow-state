@@ -4,12 +4,15 @@ import type { Lane, Subtask, Task } from '@/types/tasks'
 import type { useCanvasStore } from '@/stores/canvas'
 import type { useLaneStore } from '@/stores/lanes'
 import type { useTaskStore } from '@/stores/tasks'
+import type { PomodoroSession, useTimerStore } from '@/stores/timer'
 import {
   buildAITaskDeleteIdentity,
   buildAIMemoryEntityKey,
   decideAICanvasGroupCreate,
   decideAICanvasNodeMove,
   decideAICalendarScheduleTask,
+  decideAIFocusTimerStart,
+  decideAIFocusTimerStop,
   decideAIMemoryPatch,
   decideAIRecommendationFeedback,
   decideAILaneCreate,
@@ -30,7 +33,7 @@ import {
   type AICommandRollbackSnapshot,
 } from './actionCommandAuditStore'
 
-export type AICommandKind = 'task.create' | 'task.update' | 'task.delete' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
+export type AICommandKind = 'task.create' | 'task.update' | 'task.delete' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'focus.timer.start' | 'focus.timer.stop' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
 export type AICommandImpact = 'low' | 'medium' | 'high'
 
 export type AITaskCreateCommand = {
@@ -96,6 +99,22 @@ export type AICalendarScheduleTaskCommand = {
   impact?: AICommandImpact
 }
 
+export type AIFocusTimerStartCommand = {
+  id: string
+  kind: 'focus.timer.start'
+  taskId: string
+  durationMinutes: number
+  confidence?: number
+  impact?: AICommandImpact
+}
+
+export type AIFocusTimerStopCommand = {
+  id: string
+  kind: 'focus.timer.stop'
+  confidence?: number
+  impact?: AICommandImpact
+}
+
 export type AICanvasGroupCreateCommand = {
   id: string
   kind: 'canvas.group.create'
@@ -149,13 +168,15 @@ export type AICommand =
   | AISubtaskCreateCommand
   | AILaneCreateCommand
   | AICalendarScheduleTaskCommand
+  | AIFocusTimerStartCommand
+  | AIFocusTimerStopCommand
   | AICanvasGroupCreateCommand
   | AICanvasNodeMoveCommand
   | AIMemoryPatchCommand
   | AIRecommendationFeedbackCommand
 
 export type AICommandDiff = {
-  entityType: 'task' | 'subtask' | 'lane' | 'calendar' | 'canvas_group' | 'canvas_layout' | 'memory' | 'memory_feedback'
+  entityType: 'task' | 'subtask' | 'lane' | 'calendar' | 'focus' | 'canvas_group' | 'canvas_layout' | 'memory' | 'memory_feedback'
   before: Record<string, unknown> | null
   after: Record<string, unknown>
 }
@@ -212,6 +233,7 @@ export type AICommandApplyResult = AICommandAuditEntry & {
 type TaskStore = ReturnType<typeof useTaskStore>
 type LaneStore = ReturnType<typeof useLaneStore>
 type CanvasStore = ReturnType<typeof useCanvasStore>
+type TimerStore = Pick<ReturnType<typeof useTimerStore>, 'currentSession' | 'isTimerActive' | 'currentTaskName' | 'startTimer' | 'stopTimer'>
 export type AICommandMemoryRollbackSnapshot = {
   contextEntities?: AIContextEntity[]
   recommendationFeedback?: AIRecommendationFeedback[]
@@ -263,6 +285,10 @@ function cloneCanvasGroups(groups: CanvasGroup[]): CanvasGroup[] {
   return groups.map(cloneCanvasGroup)
 }
 
+function cloneTimerSession(session: PomodoroSession | null): PomodoroSession | null {
+  return session ? JSON.parse(JSON.stringify(session)) as PomodoroSession : null
+}
+
 function cloneMemorySnapshot(snapshot: AICommandMemoryRollbackSnapshot): AICommandMemoryRollbackSnapshot {
   return JSON.parse(JSON.stringify(snapshot)) as AICommandMemoryRollbackSnapshot
 }
@@ -279,11 +305,13 @@ function previewCommand(command: AICommand, input: {
   tasks: Task[]
   lanes: Lane[]
   canvasGroups: CanvasGroup[]
+  timerSession?: PomodoroSession | null
   memoryEntities: AIContextEntity[]
   recommendationFeedback: AIRecommendationFeedback[]
   sourceMessageId: string
 }): AICommandPreviewItem {
   const { tasks, lanes, canvasGroups, memoryEntities, recommendationFeedback, sourceMessageId } = input
+  const timerSession = input.timerSession ?? null
   const requiresExplicitApproval = commandRequiresApproval(command)
   if (command.kind === 'task.create') {
     const decision = command.allowDuplicate
@@ -461,6 +489,80 @@ function previewCommand(command: AICommand, input: {
           duration: effectiveDuration,
           status: 'scheduled',
         },
+      },
+    }
+  }
+
+  if (command.kind === 'focus.timer.start') {
+    const task = tasks.find(task => task.id === command.taskId) ?? null
+    const durationMinutes = Math.max(1, Math.round(command.durationMinutes || 25))
+    const decision = decideAIFocusTimerStart({
+      currentSession: timerSession,
+      taskId: command.taskId,
+      durationMinutes,
+      sourceMessageId,
+    })
+    return {
+      id: command.id,
+      kind: command.kind,
+      status: requiresExplicitApproval
+        ? 'blocked_requires_approval'
+        : decision.existing ? 'will_reuse_existing' : 'will_create',
+      identity: decision.identity,
+      duplicateOf: decision.existing?.id,
+      requiresExplicitApproval,
+      diff: {
+        entityType: 'focus',
+        before: timerSession
+          ? {
+            id: timerSession.id,
+            taskId: timerSession.taskId,
+            duration: timerSession.duration,
+            remainingTime: timerSession.remainingTime,
+            isActive: timerSession.isActive,
+            isPaused: timerSession.isPaused,
+            isBreak: timerSession.isBreak,
+          }
+          : null,
+        after: {
+          taskId: command.taskId,
+          taskTitle: task?.title ?? null,
+          durationMinutes,
+          durationSeconds: durationMinutes * 60,
+          status: 'active',
+        },
+      },
+    }
+  }
+
+  if (command.kind === 'focus.timer.stop') {
+    const decision = decideAIFocusTimerStop({
+      currentSession: timerSession,
+      sourceMessageId,
+    })
+    return {
+      id: command.id,
+      kind: command.kind,
+      status: requiresExplicitApproval
+        ? 'blocked_requires_approval'
+        : timerSession?.isActive ? 'will_create' : 'will_reuse_existing',
+      identity: decision.identity,
+      duplicateOf: timerSession?.isActive ? undefined : (timerSession?.id ?? 'focus:inactive'),
+      requiresExplicitApproval,
+      diff: {
+        entityType: 'focus',
+        before: timerSession
+          ? {
+            id: timerSession.id,
+            taskId: timerSession.taskId,
+            duration: timerSession.duration,
+            remainingTime: timerSession.remainingTime,
+            isActive: timerSession.isActive,
+            isPaused: timerSession.isPaused,
+            isBreak: timerSession.isBreak,
+          }
+          : null,
+        after: { stopped: true },
       },
     }
   }
@@ -690,6 +792,7 @@ export function buildAICommandBatchPreview(input: {
   tasks: Task[]
   lanes?: Lane[]
   canvasGroups?: CanvasGroup[]
+  timerSession?: PomodoroSession | null
   memoryEntities?: AIContextEntity[]
   recommendationFeedback?: AIRecommendationFeedback[]
 }): AICommandBatch {
@@ -705,6 +808,7 @@ export function buildAICommandBatchPreview(input: {
         tasks: input.tasks,
         lanes: input.lanes || [],
         canvasGroups: input.canvasGroups || [],
+        timerSession: input.timerSession ?? null,
         memoryEntities: input.memoryEntities || [],
         recommendationFeedback: input.recommendationFeedback || [],
         sourceMessageId: input.sourceMessageId,
@@ -944,6 +1048,79 @@ async function applyCalendarScheduleTask(command: AICalendarScheduleTaskCommand,
   }
 }
 
+async function applyFocusTimerStart(command: AIFocusTimerStartCommand, input: {
+  taskStore: TaskStore
+  timerStore: TimerStore
+  sourceMessageId: string
+}): Promise<AppliedAICommand> {
+  const task = input.taskStore.tasks.find(task => task.id === command.taskId) ?? null
+  if (!task && command.taskId !== 'general') throw new Error(`Task ${command.taskId} not found`)
+  const durationMinutes = Math.max(1, Math.round(command.durationMinutes || 25))
+  const decision = decideAIFocusTimerStart({
+    currentSession: input.timerStore.currentSession,
+    taskId: command.taskId,
+    durationMinutes,
+    sourceMessageId: input.sourceMessageId,
+  })
+  const preview = previewCommand(command, {
+    tasks: input.taskStore.tasks,
+    lanes: [],
+    canvasGroups: [],
+    timerSession: input.timerStore.currentSession,
+    memoryEntities: [],
+    recommendationFeedback: [],
+    sourceMessageId: input.sourceMessageId,
+  })
+  if (decision.existing) {
+    return {
+      ...preview,
+      result: 'reused_existing',
+      entityId: `focus:${decision.existing.id}`,
+      duplicateOf: decision.existing.id,
+    }
+  }
+
+  await input.timerStore.startTimer(command.taskId, durationMinutes * 60, false)
+  const sessionId = input.timerStore.currentSession?.id ?? `${command.taskId}:${durationMinutes}`
+  return {
+    ...preview,
+    result: 'created',
+    entityId: `focus:${sessionId}`,
+  }
+}
+
+async function applyFocusTimerStop(command: AIFocusTimerStopCommand, input: {
+  taskStore: TaskStore
+  timerStore: TimerStore
+  sourceMessageId: string
+}): Promise<AppliedAICommand> {
+  const session = input.timerStore.currentSession
+  const preview = previewCommand(command, {
+    tasks: input.taskStore.tasks,
+    lanes: [],
+    canvasGroups: [],
+    timerSession: session,
+    memoryEntities: [],
+    recommendationFeedback: [],
+    sourceMessageId: input.sourceMessageId,
+  })
+  if (!session?.isActive) {
+    return {
+      ...preview,
+      result: 'reused_existing',
+      entityId: session?.id ? `focus:${session.id}` : 'focus:inactive',
+      duplicateOf: session?.id ?? 'focus:inactive',
+    }
+  }
+
+  await input.timerStore.stopTimer()
+  return {
+    ...preview,
+    result: 'created',
+    entityId: `focus:${session.id}`,
+  }
+}
+
 async function applyCanvasGroupCreate(command: AICanvasGroupCreateCommand, canvasStore: CanvasStore, sourceMessageId: string): Promise<AppliedAICommand> {
   const decision = decideAICanvasGroupCreate({
     canvasGroups: canvasStore.groups,
@@ -1164,6 +1341,7 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
   taskStore: TaskStore
   laneStore?: LaneStore
   canvasStore?: CanvasStore
+  timerStore?: TimerStore
   memoryStore?: AICommandMemoryStore
   explicitApproval?: boolean
 }): Promise<AICommandApplyResult> {
@@ -1171,6 +1349,7 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
   const tasksBefore = cloneTasks(options.taskStore.tasks)
   const lanesBefore = options.laneStore ? cloneLanes(options.laneStore.lanes) : undefined
   const canvasGroupsBefore = options.canvasStore ? cloneCanvasGroups(options.canvasStore.groups) : undefined
+  const timerBefore = options.timerStore ? cloneTimerSession(options.timerStore.currentSession) : undefined
   const memoryBefore = options.memoryStore?.createAICommandMemorySnapshot
     ? cloneMemorySnapshot(await options.memoryStore.createAICommandMemorySnapshot())
     : undefined
@@ -1204,29 +1383,41 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
               )
               : command.kind === 'calendar.schedule_task'
                 ? await applyCalendarScheduleTask(command, options.taskStore, batch.sourceMessageId)
-                : command.kind === 'canvas.group.create'
-                  ? await applyCanvasGroupCreate(
-                    command,
-                    options.canvasStore ?? missingCanvasStore(),
-                    batch.sourceMessageId,
-                  )
-                  : command.kind === 'canvas.node.move'
-                    ? await applyCanvasNodeMove(command, {
+                : command.kind === 'focus.timer.start'
+                  ? await applyFocusTimerStart(command, {
+                    taskStore: options.taskStore,
+                    timerStore: options.timerStore ?? missingTimerStore(),
+                    sourceMessageId: batch.sourceMessageId,
+                  })
+                  : command.kind === 'focus.timer.stop'
+                    ? await applyFocusTimerStop(command, {
                       taskStore: options.taskStore,
-                      canvasStore: options.canvasStore,
+                      timerStore: options.timerStore ?? missingTimerStore(),
                       sourceMessageId: batch.sourceMessageId,
                     })
-                    : command.kind === 'memory.patch'
-                      ? await applyMemoryPatch(
+                    : command.kind === 'canvas.group.create'
+                      ? await applyCanvasGroupCreate(
                         command,
-                        options.memoryStore ?? missingMemoryStore(),
+                        options.canvasStore ?? missingCanvasStore(),
                         batch.sourceMessageId,
                       )
-                      : await applyRecommendationFeedback(
-                        command,
-                        options.memoryStore ?? missingMemoryStore(),
-                        batch.sourceMessageId,
-                      )
+                      : command.kind === 'canvas.node.move'
+                        ? await applyCanvasNodeMove(command, {
+                          taskStore: options.taskStore,
+                          canvasStore: options.canvasStore,
+                          sourceMessageId: batch.sourceMessageId,
+                        })
+                        : command.kind === 'memory.patch'
+                          ? await applyMemoryPatch(
+                            command,
+                            options.memoryStore ?? missingMemoryStore(),
+                            batch.sourceMessageId,
+                          )
+                          : await applyRecommendationFeedback(
+                            command,
+                            options.memoryStore ?? missingMemoryStore(),
+                            batch.sourceMessageId,
+                          )
     appliedCommands.push(applied)
   }
 
@@ -1238,6 +1429,7 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
     tasksBefore,
     lanesBefore,
     canvasGroupsBefore,
+    timerBefore,
     memoryBefore,
     appliedEntityIds: appliedCommands.map(command => command.entityId),
   })
@@ -1269,6 +1461,7 @@ export async function rollbackAICommandBatch(rollbackPointer: string, options: {
   taskStore: TaskStore
   laneStore?: LaneStore
   canvasStore?: CanvasStore
+  timerStore?: TimerStore
   memoryStore?: AICommandMemoryStore
 }): Promise<void> {
   const snapshot = await loadAICommandRollbackSnapshot(rollbackPointer)
@@ -1326,6 +1519,26 @@ export async function rollbackAICommandBatch(rollbackPointer: string, options: {
     }
   }
 
+  if (options.timerStore && snapshot.timerBefore !== undefined) {
+    const currentSession = options.timerStore.currentSession
+    if (!snapshot.timerBefore) {
+      if (currentSession?.isActive) {
+        await options.timerStore.stopTimer()
+      }
+    } else {
+      if (currentSession?.isActive) {
+        await options.timerStore.stopTimer()
+      }
+      if (snapshot.timerBefore.isActive) {
+        await options.timerStore.startTimer(
+          snapshot.timerBefore.taskId,
+          snapshot.timerBefore.remainingTime || snapshot.timerBefore.duration,
+          snapshot.timerBefore.isBreak,
+        )
+      }
+    }
+  }
+
   if (snapshot.memoryBefore) {
     if (!options.memoryStore?.restoreAICommandMemorySnapshot) {
       throw new Error('memoryStore with restoreAICommandMemorySnapshot is required to roll back AI memory commands')
@@ -1340,6 +1553,10 @@ function missingLaneStore(): LaneStore {
 
 function missingCanvasStore(): CanvasStore {
   throw new Error('canvasStore is required to apply AI canvas commands')
+}
+
+function missingTimerStore(): TimerStore {
+  throw new Error('timerStore is required to apply AI focus commands')
 }
 
 function missingMemoryStore(): AICommandMemoryStore {

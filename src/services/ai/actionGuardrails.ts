@@ -1,5 +1,6 @@
 import type { CanvasGroup } from '@/types/canvas'
 import type { AIContextEntity, AIMemoryPatch, AIRecommendationFeedback, AIRecommendationFeedbackInput } from '@/types/aiMemory'
+import type { PomodoroSession } from '@/stores/timer'
 import type { Lane, Subtask, Task, TaskInstance } from '@/types/tasks'
 
 export type AIActionDuplicateDecision =
@@ -8,7 +9,7 @@ export type AIActionDuplicateDecision =
   | 'create_anyway_requires_explicit_user_intent'
 
 export interface AIActionIdentity {
-  kind: 'task.create' | 'task.update' | 'task.delete' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
+  kind: 'task.create' | 'task.update' | 'task.delete' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'focus.timer.start' | 'focus.timer.stop' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
   sourceMessageId: string | null
   targetEntityId: string | null
   scope: string
@@ -348,6 +349,83 @@ export function decideAICalendarScheduleTask(input: {
     decision: existing ? 'reuse_existing' : 'create',
     identity,
     existing,
+  }
+}
+
+export function buildAIFocusTimerStartIdentity(input: {
+  sourceMessageId?: unknown
+  taskId: string
+  durationMinutes: number
+  scope?: string
+}): AIActionIdentity {
+  const durationSeconds = Math.max(1, Math.round(input.durationMinutes * 60))
+  const scope = input.scope || 'focus:timer'
+  return {
+    kind: 'focus.timer.start',
+    sourceMessageId: typeof input.sourceMessageId === 'string' ? input.sourceMessageId : null,
+    targetEntityId: input.taskId,
+    scope,
+    fingerprint: stableFingerprint({
+      kind: 'focus.timer.start',
+      scope,
+      taskId: input.taskId,
+      durationSeconds,
+    }),
+  }
+}
+
+export function decideAIFocusTimerStart(input: {
+  currentSession: PomodoroSession | null
+  taskId: string
+  durationMinutes: number
+  sourceMessageId?: unknown
+  scope?: string
+}): AIActionDuplicateResult<PomodoroSession> {
+  const durationSeconds = Math.max(1, Math.round(input.durationMinutes * 60))
+  const identity = buildAIFocusTimerStartIdentity(input)
+  const existing = input.currentSession?.isActive &&
+    !input.currentSession.isBreak &&
+    input.currentSession.taskId === input.taskId &&
+    input.currentSession.duration === durationSeconds
+    ? input.currentSession
+    : null
+
+  return {
+    decision: existing ? 'reuse_existing' : 'create',
+    identity,
+    existing,
+  }
+}
+
+export function buildAIFocusTimerStopIdentity(input: {
+  sourceMessageId?: unknown
+  currentSession: PomodoroSession | null
+  scope?: string
+}): AIActionIdentity {
+  const scope = input.scope || 'focus:timer'
+  return {
+    kind: 'focus.timer.stop',
+    sourceMessageId: typeof input.sourceMessageId === 'string' ? input.sourceMessageId : null,
+    targetEntityId: input.currentSession?.id ?? null,
+    scope,
+    fingerprint: stableFingerprint({
+      kind: 'focus.timer.stop',
+      scope,
+      sessionId: input.currentSession?.id ?? 'none',
+      taskId: input.currentSession?.taskId ?? 'none',
+    }),
+  }
+}
+
+export function decideAIFocusTimerStop(input: {
+  currentSession: PomodoroSession | null
+  sourceMessageId?: unknown
+  scope?: string
+}): AIActionDuplicateResult<PomodoroSession> {
+  return {
+    decision: input.currentSession?.isActive ? 'create' : 'reuse_existing',
+    identity: buildAIFocusTimerStopIdentity(input),
+    existing: input.currentSession?.isActive ? null : input.currentSession,
   }
 }
 

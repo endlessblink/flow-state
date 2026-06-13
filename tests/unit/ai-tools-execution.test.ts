@@ -13,6 +13,17 @@ const mockCreateGroup = vi.fn(async (input: Record<string, unknown>) => ({
   isVisible: input.isVisible,
   isCollapsed: input.isCollapsed,
 }))
+const mockStartTimer = vi.fn().mockResolvedValue(undefined)
+const mockStopTimer = vi.fn().mockResolvedValue(undefined)
+let mockTimerCurrentSession: null | {
+  id: string
+  taskId: string
+  duration: number
+  remainingTime: number
+  isActive: boolean
+  isPaused: boolean
+  isBreak: boolean
+}
 
 vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
   useSyncOrchestrator: () => ({
@@ -92,11 +103,11 @@ vi.mock('@/stores/timer', () => ({
   useTimerStore: () => ({
     currentTaskId: null,
     currentTaskName: '',
-    isTimerActive: false,
-    currentSession: null,
+    isTimerActive: Boolean(mockTimerCurrentSession?.isActive),
+    currentSession: mockTimerCurrentSession,
     completedSessions: [],
-    startTimer: vi.fn().mockResolvedValue(undefined),
-    stopTimer: vi.fn().mockResolvedValue(undefined),
+    startTimer: mockStartTimer,
+    stopTimer: mockStopTimer,
   }),
 }))
 
@@ -148,6 +159,9 @@ describe('AI tool execution regressions', () => {
     vi.clearAllMocks()
     mockEnqueue.mockResolvedValue({ id: 1, status: 'pending' })
     mockDeleteTask.mockResolvedValue(undefined)
+    mockTimerCurrentSession = null
+    mockStartTimer.mockResolvedValue(undefined)
+    mockStopTimer.mockResolvedValue(undefined)
     mockCreateGroup.mockResolvedValue({
       id: 'group-command-substrate',
       name: 'Command Group',
@@ -547,5 +561,62 @@ describe('AI tool execution regressions', () => {
       })],
     }), expect.objectContaining({ taskStore }))
     expect(taskStore._rawTasks.find(candidate => candidate.id === task.id)).toBeUndefined()
+  })
+
+  it('routes focus timer starts through AI command batches', async () => {
+    const taskStore = useTaskStore()
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
+    const task = await taskStore.createTask({ title: 'Start focus through commands' })
+
+    const result = await executeTool({
+      tool: 'start_timer',
+      parameters: {
+        taskId: task.id,
+        duration: 25,
+        sourceMessageId: 'msg-tool-focus-start',
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-tool-focus-start',
+      commands: [expect.objectContaining({
+        kind: 'focus.timer.start',
+        taskId: task.id,
+        durationMinutes: 25,
+      })],
+    }), expect.objectContaining({ taskStore }))
+    expect(mockStartTimer).toHaveBeenCalledWith(task.id, 25 * 60, false)
+  })
+
+  it('routes focus timer stops through AI command batches', async () => {
+    const taskStore = useTaskStore()
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
+    const task = await taskStore.createTask({ title: 'Stop focus through commands' })
+    mockTimerCurrentSession = {
+      id: 'session-tool-stop',
+      taskId: task.id,
+      duration: 1500,
+      remainingTime: 600,
+      isActive: true,
+      isPaused: false,
+      isBreak: false,
+    }
+
+    const result = await executeTool({
+      tool: 'stop_timer',
+      parameters: {
+        sourceMessageId: 'msg-tool-focus-stop',
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-tool-focus-stop',
+      commands: [expect.objectContaining({
+        kind: 'focus.timer.stop',
+      })],
+    }), expect.objectContaining({ taskStore }))
+    expect(mockStopTimer).toHaveBeenCalled()
   })
 })

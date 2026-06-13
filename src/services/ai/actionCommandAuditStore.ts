@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie'
 import type { CanvasGroup } from '@/types/canvas'
 import type { AIContextEntity, AIMemorySnapshot, AIParameterBelief, AIRecommendationFeedback } from '@/types/aiMemory'
 import type { Lane, Task } from '@/types/tasks'
+import type { PomodoroSession } from '@/stores/timer'
 import type { AICommandAuditEntry } from './actionCommands'
 
 export const AI_COMMAND_AUDIT_KEY = 'flowstate-ai-command-audit-trail'
@@ -24,6 +25,7 @@ export type AICommandRollbackSnapshot = {
   tasksBefore: Task[]
   lanesBefore?: Lane[]
   canvasGroupsBefore?: CanvasGroup[]
+  timerBefore?: PomodoroSession | null
   memoryBefore?: {
     contextEntities?: AIContextEntity[]
     recommendationFeedback?: AIRecommendationFeedback[]

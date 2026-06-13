@@ -17,7 +17,7 @@ import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import type { Task } from '@/types/tasks'
 import type { OpenAITool } from './types'
 import { resolveTask } from './entityResolver'
-import { decideAISubtaskCreate, decideAITaskCreate, type AITaskUpdateFields } from './actionGuardrails'
+import { decideAISubtaskCreate, decideAITaskCreate, normalizeAIActionText, type AITaskUpdateFields } from './actionGuardrails'
 import * as aiActionCommands from './actionCommands'
 
 // ============================================================================
@@ -597,6 +597,74 @@ async function applyAICanvasGroupCreateToolCommand(input: {
   return result.appliedCommands[0]
 }
 
+async function applyAIFocusTimerStartToolCommand(input: {
+  call: ToolCall
+  taskStore: ReturnType<typeof useTaskStore>
+  timerStore: ReturnType<typeof useTimerStore>
+  taskId: string
+  durationMinutes: number
+}) {
+  const sourceMessageId = getToolSourceMessageId(input.call)
+  const command: aiActionCommands.AICommand = {
+    id: `${input.call.tool}:${input.taskId}:focus-timer-start`,
+    kind: 'focus.timer.start',
+    taskId: input.taskId,
+    durationMinutes: input.durationMinutes,
+    impact: 'low',
+  }
+  const batch = aiActionCommands.buildAICommandBatchPreview({
+    sourcePrompt: `AI tool ${input.call.tool}`,
+    sourceRunId: `tool:${input.call.tool}`,
+    sourceMessageId,
+    dataUsed: {
+      tool: input.call.tool,
+      taskId: input.taskId,
+      durationMinutes: input.durationMinutes,
+    },
+    commands: [command],
+    tasks: input.taskStore.tasks,
+    timerSession: input.timerStore.currentSession,
+  })
+  const result = await aiActionCommands.applyAICommandBatch(batch, {
+    selectedCommandIds: [command.id],
+    taskStore: input.taskStore,
+    timerStore: input.timerStore,
+  })
+  return result.appliedCommands[0]
+}
+
+async function applyAIFocusTimerStopToolCommand(input: {
+  call: ToolCall
+  taskStore: ReturnType<typeof useTaskStore>
+  timerStore: ReturnType<typeof useTimerStore>
+}) {
+  const sourceMessageId = getToolSourceMessageId(input.call)
+  const command: aiActionCommands.AICommand = {
+    id: `${input.call.tool}:focus-timer-stop`,
+    kind: 'focus.timer.stop',
+    impact: 'low',
+  }
+  const batch = aiActionCommands.buildAICommandBatchPreview({
+    sourcePrompt: `AI tool ${input.call.tool}`,
+    sourceRunId: `tool:${input.call.tool}`,
+    sourceMessageId,
+    dataUsed: {
+      tool: input.call.tool,
+      currentTaskId: input.timerStore.currentSession?.taskId ?? null,
+      currentSessionId: input.timerStore.currentSession?.id ?? null,
+    },
+    commands: [command],
+    tasks: input.taskStore.tasks,
+    timerSession: input.timerStore.currentSession,
+  })
+  const result = await aiActionCommands.applyAICommandBatch(batch, {
+    selectedCommandIds: [command.id],
+    taskStore: input.taskStore,
+    timerStore: input.timerStore,
+  })
+  return result.appliedCommands[0]
+}
+
 // ============================================================================
 // Tool Execution
 // ============================================================================
@@ -1114,7 +1182,13 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           return { success: false, message: tm(language, 'A timer is already running. Stop it first with stop_timer.', 'יש כבר טיימר פעיל. עצור אותו קודם.') }
         }
 
-        await timerStore.startTimer(taskId, durationSeconds)
+        await applyAIFocusTimerStartToolCommand({
+          call,
+          taskStore,
+          timerStore,
+          taskId,
+          durationMinutes,
+        })
 
         const taskName = taskId === 'general' ? 'Focus Session' : (validateTaskExists(taskStore, taskId)?.title || taskId)
         return {
@@ -1137,7 +1211,11 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
 
         const taskName = timerStore.currentTaskName || 'Unknown'
         const remaining = timerStore.currentSession?.remainingTime || 0
-        await timerStore.stopTimer()
+        await applyAIFocusTimerStopToolCommand({
+          call,
+          taskStore,
+          timerStore,
+        })
 
         return {
           success: true,
@@ -1404,10 +1482,13 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           if (applied.identity) lastIdentity = applied.identity
           if (applied.result === 'reused_existing') {
             reusedAny = true
-            const existing = currentParent.subtasks?.find(subtask => subtask.id === applied.entityId)
+            const commandTitle = command && 'title' in command ? command.title : applied.entityId
+            const existing = currentParent.subtasks?.find(subtask =>
+              normalizeAIActionText(subtask.title) === normalizeAIActionText(commandTitle),
+            ) ?? currentParent.subtasks?.find(subtask => subtask.id === applied.entityId)
             skippedExisting.push({
               id: applied.entityId,
-              title: existing?.title || (command && 'title' in command ? command.title : applied.entityId),
+              title: existing?.title || commandTitle,
             })
             continue
           }

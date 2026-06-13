@@ -44,7 +44,7 @@ import type { AIClarificationArtifact, AIClarificationQuestion, AIContextEntityT
 import { resumeLocalClarificationRuntime } from '@/services/ai/runtime/localClarificationRuntimeClient'
 import { decideAITaskCreate } from '@/services/ai/actionGuardrails'
 import * as aiActionCommands from '@/services/ai/actionCommands'
-import type { AICommandMemoryStore } from '@/services/ai/actionCommands'
+import type { AICommand, AICommandMemoryStore } from '@/services/ai/actionCommands'
 
 // ============================================================================
 // Props
@@ -2356,35 +2356,87 @@ async function applySmartLanes(event: MouseEvent) {
   smartLaneApplying.value = true
   smartLaneError.value = ''
   try {
-    const undo = getUndoSystem()
-    const updates: Array<{ id: string; updates: Partial<Task> }> = []
     const laneColors = ['#4ECDC4', '#7C3AED', '#F59E0B', '#10B981', '#EF4444']
+    const laneCommands: AICommand[] = visibleGroups.map((group, index) => ({
+      id: `smart-lane:${index}:lane`,
+      kind: 'lane.create',
+      name: group.name?.trim() || `AI Lane ${index + 1}`,
+      color: laneColors[index % laneColors.length],
+      impact: 'low',
+    }))
+    const laneBatch = aiActionCommands.buildAICommandBatchPreview({
+      sourcePrompt: 'smart lanes lane creation',
+      sourceRunId: props.message.id,
+      sourceMessageId: props.message.id,
+      dataUsed: {
+        messageId: props.message.id,
+        groupCount: visibleGroups.length,
+        groups: visibleGroups.map(group => ({
+          name: group.name,
+          taskIds: group.tasks.map(task => task.id).filter(Boolean),
+          newTaskCount: group.newTasks?.length ?? 0,
+        })),
+      },
+      commands: laneCommands,
+      tasks: taskStore.tasks,
+      lanes: laneStore.lanes,
+    })
+    const laneResult = await aiActionCommands.applyAICommandBatch(laneBatch, {
+      selectedCommandIds: laneCommands.map(command => command.id),
+      taskStore,
+      laneStore,
+    })
+    const laneIdsByCommandId = new Map(laneResult.appliedCommands.map(command => [command.id, command.entityId]))
+    const taskCommands: AICommand[] = []
 
     for (const [index, group] of visibleGroups.entries()) {
-      const laneName = group.name?.trim() || `AI Lane ${index + 1}`
-      const lane = await laneStore.createLane({
-        name: laneName,
-        color: laneColors[index % laneColors.length],
-      })
+      const laneId = laneIdsByCommandId.get(`smart-lane:${index}:lane`)
+      if (!laneId) throw new Error(`Smart lane ${index + 1} was not applied`)
       const parentTaskId = group.tasks.length === 1 ? group.tasks[0].id : null
 
       for (const task of group.tasks) {
-        if (task.id) updates.push({ id: task.id, updates: { laneId: lane.id } })
+        if (!task.id) continue
+        taskCommands.push({
+          id: `smart-lane:${index}:task-update:${task.id}`,
+          kind: 'task.update',
+          taskId: task.id,
+          updates: { laneId },
+          impact: 'low',
+        })
       }
 
-      for (const newTask of group.newTasks ?? []) {
-        await undo.createTaskWithUndo({
+      for (const [newTaskIndex, newTask] of (group.newTasks ?? []).entries()) {
+        taskCommands.push({
+          id: `smart-lane:${index}:task-create:${newTaskIndex}`,
+          kind: 'task.create',
           title: newTask.title,
-          status: 'todo',
           priority: normalizeTaskPriority(newTask.priority),
-          laneId: lane.id,
+          laneId,
           parentTaskId,
+          impact: 'low',
         })
       }
     }
 
-    if (updates.length > 0) {
-      await undo.bulkUpdateTasksWithUndo(updates, 'Apply AI smart lanes')
+    if (taskCommands.length > 0) {
+      const taskBatch = aiActionCommands.buildAICommandBatchPreview({
+        sourcePrompt: 'smart lanes task assignment',
+        sourceRunId: props.message.id,
+        sourceMessageId: props.message.id,
+        dataUsed: {
+          messageId: props.message.id,
+          laneIds: Array.from(laneIdsByCommandId.values()),
+          taskCommandCount: taskCommands.length,
+        },
+        commands: taskCommands,
+        tasks: taskStore.tasks,
+        lanes: laneStore.lanes,
+      })
+      await aiActionCommands.applyAICommandBatch(taskBatch, {
+        selectedCommandIds: taskCommands.map(command => command.id),
+        taskStore,
+        laneStore,
+      })
     }
     smartLaneApplied.value = true
   } catch (err) {

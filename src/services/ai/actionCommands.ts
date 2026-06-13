@@ -14,6 +14,8 @@ import {
   decideAILaneCreate,
   decideAISubtaskCreate,
   decideAITaskCreate,
+  decideAITaskUpdate,
+  type AITaskUpdateFields,
   type AIActionIdentity,
 } from './actionGuardrails'
 import {
@@ -27,7 +29,7 @@ import {
   type AICommandRollbackSnapshot,
 } from './actionCommandAuditStore'
 
-export type AICommandKind = 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
+export type AICommandKind = 'task.create' | 'task.update' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
 export type AICommandImpact = 'low' | 'medium' | 'high'
 
 export type AITaskCreateCommand = {
@@ -37,8 +39,18 @@ export type AITaskCreateCommand = {
   priority?: Task['priority']
   description?: string
   dueDate?: string
+  laneId?: string | null
   parentTaskId?: string | null
   projectId?: string | null
+  confidence?: number
+  impact?: AICommandImpact
+}
+
+export type AITaskUpdateCommand = {
+  id: string
+  kind: 'task.update'
+  taskId: string
+  updates: Partial<AITaskUpdateFields>
   confidence?: number
   impact?: AICommandImpact
 }
@@ -122,6 +134,7 @@ export type AIRecommendationFeedbackCommand = {
 
 export type AICommand =
   | AITaskCreateCommand
+  | AITaskUpdateCommand
   | AISubtaskCreateCommand
   | AILaneCreateCommand
   | AICalendarScheduleTaskCommand
@@ -287,8 +300,43 @@ function previewCommand(command: AICommand, input: {
           priority: command.priority || 'medium',
           description: command.description || '',
           dueDate: command.dueDate || '',
+          laneId: command.laneId ?? null,
           parentTaskId: command.parentTaskId || null,
           projectId: command.projectId || undefined,
+        },
+      },
+    }
+  }
+
+  if (command.kind === 'task.update') {
+    const task = tasks.find(task => task.id === command.taskId) ?? null
+    const decision = decideAITaskUpdate({
+      task,
+      taskId: command.taskId,
+      updates: command.updates,
+      sourceMessageId,
+    })
+    const before = task
+      ? Object.keys(command.updates).reduce<Record<string, unknown>>((acc, key) => {
+        acc[key] = task[key as keyof Task] ?? null
+        return acc
+      }, { id: task.id, title: task.title })
+      : null
+    return {
+      id: command.id,
+      kind: command.kind,
+      status: requiresExplicitApproval
+        ? 'blocked_requires_approval'
+        : decision.existing ? 'will_reuse_existing' : 'will_create',
+      identity: decision.identity,
+      duplicateOf: decision.existing?.id,
+      requiresExplicitApproval,
+      diff: {
+        entityType: 'task',
+        before,
+        after: {
+          id: command.taskId,
+          ...command.updates,
         },
       },
     }
@@ -650,6 +698,7 @@ async function applyTaskCreate(command: AITaskCreateCommand, taskStore: TaskStor
     priority: command.priority || 'medium',
     description: command.description || '',
     dueDate: command.dueDate || '',
+    laneId: command.laneId ?? undefined,
     parentTaskId: command.parentTaskId || undefined,
     projectId: command.projectId || undefined,
   })
@@ -657,6 +706,40 @@ async function applyTaskCreate(command: AITaskCreateCommand, taskStore: TaskStor
     ...preview,
     result: 'created',
     entityId: created.id,
+  }
+}
+
+async function applyTaskUpdate(command: AITaskUpdateCommand, taskStore: TaskStore, sourceMessageId: string): Promise<AppliedAICommand> {
+  const task = taskStore.tasks.find(task => task.id === command.taskId) ?? null
+  if (!task) throw new Error(`Task ${command.taskId} not found`)
+  const decision = decideAITaskUpdate({
+    task,
+    taskId: command.taskId,
+    updates: command.updates,
+    sourceMessageId,
+  })
+  const preview = previewCommand(command, {
+    tasks: taskStore.tasks,
+    lanes: [],
+    canvasGroups: [],
+    memoryEntities: [],
+    recommendationFeedback: [],
+    sourceMessageId,
+  })
+  if (decision.existing) {
+    return {
+      ...preview,
+      result: 'reused_existing',
+      entityId: decision.existing.id,
+      duplicateOf: decision.existing.id,
+    }
+  }
+
+  await taskStore.updateTask(command.taskId, command.updates)
+  return {
+    ...preview,
+    result: 'created',
+    entityId: command.taskId,
   }
 }
 
@@ -1025,39 +1108,41 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
 
     const applied = command.kind === 'task.create'
       ? await applyTaskCreate(command, options.taskStore, batch.sourceMessageId)
-      : command.kind === 'task.subtask.create'
-        ? await applySubtaskCreate(command, options.taskStore, batch.sourceMessageId)
-        : command.kind === 'lane.create'
-          ? await applyLaneCreate(
-            command,
-            options.laneStore ?? missingLaneStore(),
-            batch.sourceMessageId,
-          )
-          : command.kind === 'calendar.schedule_task'
-            ? await applyCalendarScheduleTask(command, options.taskStore, batch.sourceMessageId)
-            : command.kind === 'canvas.group.create'
-              ? await applyCanvasGroupCreate(
-                command,
-                options.canvasStore ?? missingCanvasStore(),
-                batch.sourceMessageId,
-              )
-              : command.kind === 'canvas.node.move'
-                ? await applyCanvasNodeMove(command, {
-                  taskStore: options.taskStore,
-                  canvasStore: options.canvasStore,
-                  sourceMessageId: batch.sourceMessageId,
-                })
-                : command.kind === 'memory.patch'
-                  ? await applyMemoryPatch(
-                    command,
-                    options.memoryStore ?? missingMemoryStore(),
-                    batch.sourceMessageId,
-                  )
-                  : await applyRecommendationFeedback(
-                    command,
-                    options.memoryStore ?? missingMemoryStore(),
-                    batch.sourceMessageId,
-                  )
+      : command.kind === 'task.update'
+        ? await applyTaskUpdate(command, options.taskStore, batch.sourceMessageId)
+        : command.kind === 'task.subtask.create'
+          ? await applySubtaskCreate(command, options.taskStore, batch.sourceMessageId)
+          : command.kind === 'lane.create'
+            ? await applyLaneCreate(
+              command,
+              options.laneStore ?? missingLaneStore(),
+              batch.sourceMessageId,
+            )
+            : command.kind === 'calendar.schedule_task'
+              ? await applyCalendarScheduleTask(command, options.taskStore, batch.sourceMessageId)
+              : command.kind === 'canvas.group.create'
+                ? await applyCanvasGroupCreate(
+                  command,
+                  options.canvasStore ?? missingCanvasStore(),
+                  batch.sourceMessageId,
+                )
+                : command.kind === 'canvas.node.move'
+                  ? await applyCanvasNodeMove(command, {
+                    taskStore: options.taskStore,
+                    canvasStore: options.canvasStore,
+                    sourceMessageId: batch.sourceMessageId,
+                  })
+                  : command.kind === 'memory.patch'
+                    ? await applyMemoryPatch(
+                      command,
+                      options.memoryStore ?? missingMemoryStore(),
+                      batch.sourceMessageId,
+                    )
+                    : await applyRecommendationFeedback(
+                      command,
+                      options.memoryStore ?? missingMemoryStore(),
+                      batch.sourceMessageId,
+                    )
     appliedCommands.push(applied)
   }
 

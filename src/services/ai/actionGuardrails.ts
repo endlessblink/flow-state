@@ -8,7 +8,7 @@ export type AIActionDuplicateDecision =
   | 'create_anyway_requires_explicit_user_intent'
 
 export interface AIActionIdentity {
-  kind: 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
+  kind: 'task.create' | 'task.update' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
   sourceMessageId: string | null
   targetEntityId: string | null
   scope: string
@@ -111,6 +111,65 @@ export function decideAITaskCreate(input: {
     if (projectId && task.projectId !== projectId) return false
     return true
   }) ?? null
+
+  return {
+    decision: existing ? 'reuse_existing' : 'create',
+    identity,
+    existing,
+  }
+}
+
+export type AITaskUpdateFields = Pick<Task, 'status' | 'priority' | 'dueDate' | 'projectId' | 'laneId' | 'parentTaskId' | 'description' | 'title'>
+
+function normalizeTaskUpdateValue(value: unknown): unknown {
+  if (typeof value === 'string') return value.trim()
+  if (value === undefined) return null
+  return value
+}
+
+function normalizeTaskUpdates(updates: Partial<AITaskUpdateFields>): Partial<AITaskUpdateFields> {
+  return Object.keys(updates).sort().reduce<Partial<AITaskUpdateFields>>((acc, key) => {
+    const typedKey = key as keyof AITaskUpdateFields
+    acc[typedKey] = normalizeTaskUpdateValue(updates[typedKey]) as never
+    return acc
+  }, {})
+}
+
+export function buildAITaskUpdateIdentity(input: {
+  sourceMessageId?: unknown
+  taskId: string
+  updates: Partial<AITaskUpdateFields>
+  scope?: string
+}): AIActionIdentity {
+  const scope = input.scope || `task:${input.taskId}:metadata`
+  return {
+    kind: 'task.update',
+    sourceMessageId: typeof input.sourceMessageId === 'string' ? input.sourceMessageId : null,
+    targetEntityId: input.taskId,
+    scope,
+    fingerprint: stableFingerprint({
+      kind: 'task.update',
+      scope,
+      targetEntityId: input.taskId,
+      updates: normalizeTaskUpdates(input.updates),
+    }),
+  }
+}
+
+export function decideAITaskUpdate(input: {
+  task: Task | null
+  taskId: string
+  updates: Partial<AITaskUpdateFields>
+  sourceMessageId?: unknown
+  scope?: string
+}): AIActionDuplicateResult<Task> {
+  const identity = buildAITaskUpdateIdentity(input)
+  const normalizedUpdates = normalizeTaskUpdates(input.updates)
+  const existing = input.task && Object.entries(normalizedUpdates).every(([key, value]) =>
+    normalizeTaskUpdateValue(input.task?.[key as keyof Task]) === value
+  )
+    ? input.task
+    : null
 
   return {
     decision: existing ? 'reuse_existing' : 'create',

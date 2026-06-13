@@ -9,6 +9,7 @@ import ChatMessage from '@/components/ai/ChatMessage.vue'
 import { useAIChatStore } from '@/stores/aiChat'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
+import { useLaneStore } from '@/stores/lanes'
 import type { Project, Task } from '@/types/tasks'
 import { auditWeeklyPlanQuality, buildQuickDraftWeeklyPlan, buildWeekContextFromToolResults, buildWeeklyPlanningInterview, buildWeeklyPlanPrompt, buildWeeklyPlanReliabilityFallback, validateWeeklyPlanOutput } from '@/services/ai/pipeline/weeklyPlan'
 import { auditChatResponseQuality } from '@/services/ai/pipeline/chatQuality'
@@ -41,6 +42,10 @@ vi.mock('@vueuse/core', async () => {
 })
 
 const supabaseDbMocks = vi.hoisted(() => ({
+  fetchLanes: vi.fn(async () => []),
+  saveLane: vi.fn(async () => undefined),
+  deleteLane: vi.fn(async () => undefined),
+  saveTasks: vi.fn(async () => undefined),
   applyAIMemoryPatch: vi.fn(async () => undefined),
   fetchAIClarificationEvents: vi.fn(async () => []),
   recordAIClarificationEvent: vi.fn(async () => undefined),
@@ -110,6 +115,10 @@ describe('AI sidebar-first desktop experience', () => {
     supabaseDbMocks.fetchAIClarificationEvents.mockResolvedValue([])
     supabaseDbMocks.recordAIClarificationEvent.mockClear()
     supabaseDbMocks.recordAIRecommendationFeedback.mockClear()
+    supabaseDbMocks.fetchLanes.mockClear()
+    supabaseDbMocks.saveLane.mockClear()
+    supabaseDbMocks.deleteLane.mockClear()
+    supabaseDbMocks.saveTasks.mockClear()
     supabaseDbMocks.getPendingAIMemoryWriteCount.mockReset()
     supabaseDbMocks.getPendingAIMemoryWriteCount.mockReturnValue(0)
   })
@@ -4035,6 +4044,122 @@ describe('AI sidebar-first desktop experience', () => {
     expect(remaining).toHaveLength(1)
     expect(remaining[0].text()).toContain('Task Beta')
     expect(wrapper.text()).not.toContain('payment decision risk')
+  })
+
+  it('applies smart-lane cards through command batches instead of direct lane/task creation', async () => {
+    const taskStore = useTaskStore()
+    const laneStore = useLaneStore()
+    const buildPreviewSpy = vi.spyOn(actionCommands, 'buildAICommandBatchPreview')
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
+    const commandLaneCreateSpy = vi.spyOn(laneStore, 'createLane')
+    const commandTaskCreateSpy = vi.spyOn(taskStore, 'createTask')
+    taskStore._rawTasks.push({
+      id: 'task-smart-existing',
+      title: 'Renewal proposal',
+      description: 'Move this existing task into the AI-created lane.',
+      status: 'todo',
+      priority: 'high',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '',
+      projectId: 'client-renewals',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Task)
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-smart-lanes-command',
+          role: 'assistant',
+          content: 'Put Renewal proposal into Client Renewals and add a follow-up task.',
+          timestamp: Date.now(),
+          metadata: {
+            cardGroups: {
+              kind: 'smart_lanes',
+              total: 2,
+              groups: [{
+                name: 'Client Renewals',
+                tasks: [{
+                  id: 'task-smart-existing',
+                  title: 'Renewal proposal',
+                  status: 'todo',
+                  priority: 'high',
+                  reason: 'client revenue risk',
+                }],
+                newTasks: [{
+                  title: 'Draft renewal follow-up',
+                  priority: 'medium',
+                  reason: 'next action after proposal',
+                }],
+              }],
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    await wrapper.get('.day-plan-apply-btn').trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(buildPreviewSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-smart-lanes-command',
+      commands: expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'lane.create',
+          name: 'Client Renewals',
+          color: '#4ECDC4',
+        }),
+      ]),
+    }))
+    expect(buildPreviewSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-smart-lanes-command',
+      commands: expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'task.update',
+          taskId: 'task-smart-existing',
+          updates: expect.objectContaining({ laneId: expect.any(String) }),
+        }),
+        expect.objectContaining({
+          kind: 'task.create',
+          title: 'Draft renewal follow-up',
+          priority: 'medium',
+          parentTaskId: 'task-smart-existing',
+          laneId: expect.any(String),
+        }),
+      ]),
+    }))
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      commands: expect.arrayContaining([
+        expect.objectContaining({ kind: 'lane.create' }),
+      ]),
+    }), expect.objectContaining({
+      laneStore,
+      selectedCommandIds: expect.any(Array),
+      taskStore,
+    }))
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      commands: expect.arrayContaining([
+        expect.objectContaining({ kind: 'task.update' }),
+        expect.objectContaining({ kind: 'task.create' }),
+      ]),
+    }), expect.objectContaining({
+      laneStore,
+      selectedCommandIds: expect.any(Array),
+      taskStore,
+    }))
+    expect(commandLaneCreateSpy).toHaveBeenCalledTimes(1)
+    expect(commandTaskCreateSpy).toHaveBeenCalledTimes(1)
+    expect(taskStore.tasks.find(task => task.id === 'task-smart-existing')?.laneId).toEqual(expect.any(String))
+    expect(taskStore.tasks.some(task => task.title === 'Draft renewal follow-up')).toBe(true)
+    expect(wrapper.text()).toContain('Lanes applied')
   })
 
   it('persists broad inline card postponement feedback outside weekly plans', async () => {

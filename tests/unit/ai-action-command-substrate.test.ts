@@ -531,6 +531,59 @@ describe('AI action command substrate', () => {
     expect(mockDeleteLane).toHaveBeenCalledWith(expect.stringMatching(/.+/))
   })
 
+  it('applies AI task metadata updates through the command substrate and reuses no-op replays', async () => {
+    const taskStore = useTaskStore()
+    const laneStore = useLaneStore()
+    const lane = await laneStore.createLane({ name: 'Revenue Recovery', color: '#16A34A' })
+    const task = await taskStore.createTask({
+      title: 'Send renewal proposal',
+      description: '',
+      priority: 'medium',
+      dueDate: '',
+    })
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Assign renewal work to the revenue lane',
+      sourceRunId: 'run-task-update',
+      sourceMessageId: 'msg-task-update',
+      dataUsed: { taskIds: [task.id], laneId: lane.id },
+      commands: [{
+        id: 'cmd-task-update-lane',
+        kind: 'task.update',
+        taskId: task.id,
+        updates: { laneId: lane.id },
+      }],
+      tasks: taskStore.tasks,
+      lanes: laneStore.lanes,
+    })
+
+    expect(batch.preview.commands[0]).toMatchObject({
+      id: 'cmd-task-update-lane',
+      kind: 'task.update',
+      status: 'will_create',
+      diff: {
+        entityType: 'task',
+        before: expect.objectContaining({ id: task.id, laneId: null }),
+        after: expect.objectContaining({ id: task.id, laneId: lane.id }),
+      },
+    })
+
+    const first = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-task-update-lane'],
+      taskStore,
+      laneStore,
+    })
+    const replay = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-task-update-lane'],
+      taskStore,
+      laneStore,
+    })
+
+    expect(taskStore.tasks.find(item => item.id === task.id)?.laneId).toBe(lane.id)
+    expect(first.appliedCommands[0]).toMatchObject({ kind: 'task.update', result: 'created', entityId: task.id })
+    expect(replay.appliedCommands[0]).toMatchObject({ kind: 'task.update', result: 'reused_existing', entityId: task.id })
+  })
+
   it('previews AI canvas group creation without mutating canvas groups', async () => {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()

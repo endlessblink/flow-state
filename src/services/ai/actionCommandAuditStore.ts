@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import type { CanvasGroup } from '@/types/canvas'
+import type { AIContextEntity, AIMemorySnapshot, AIParameterBelief, AIRecommendationFeedback } from '@/types/aiMemory'
 import type { Lane, Task } from '@/types/tasks'
 import type { AICommandAuditEntry } from './actionCommands'
 
@@ -23,6 +24,12 @@ export type AICommandRollbackSnapshot = {
   tasksBefore: Task[]
   lanesBefore?: Lane[]
   canvasGroupsBefore?: CanvasGroup[]
+  memoryBefore?: {
+    contextEntities?: AIContextEntity[]
+    recommendationFeedback?: AIRecommendationFeedback[]
+    parameterBeliefs?: AIParameterBelief[]
+    memorySnapshots?: AIMemorySnapshot[]
+  }
   appliedEntityIds: string[]
 }
 

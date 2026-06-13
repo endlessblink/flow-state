@@ -88,10 +88,88 @@ import {
   getAICommandAuditTrail,
   loadAICommandAuditTrail,
   rollbackAICommandBatch,
+  type AICommandMemoryStore,
 } from '@/services/ai/actionCommands'
 import { useLaneStore } from '@/stores/lanes'
 import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
+import type { AIContextEntity, AIMemoryPatch, AIRecommendationFeedback, AIRecommendationFeedbackInput } from '@/types/aiMemory'
+
+function createMemoryCommandStore(): AICommandMemoryStore & {
+  entities: AIContextEntity[]
+  feedback: AIRecommendationFeedback[]
+  applyAIMemoryPatch: ReturnType<typeof vi.fn>
+  recordAIRecommendationFeedback: ReturnType<typeof vi.fn>
+} {
+  const entities: AIContextEntity[] = []
+  const feedback: AIRecommendationFeedback[] = []
+  return {
+    entities,
+    feedback,
+    applyAIMemoryPatch: vi.fn(async (patch: AIMemoryPatch) => {
+      const entityKey = `${patch.entityType}:${patch.entityId}`
+      const existing = entities.find(entity => entity.entityKey === entityKey)
+      if (existing) {
+        existing.facts = { ...existing.facts, [patch.field]: patch.value }
+        existing.confidence = Math.max(existing.confidence, patch.confidence)
+        existing.lastAnsweredAt = new Date().toISOString()
+        existing.reinforcementCount = (existing.reinforcementCount ?? 0) + 1
+      } else {
+        entities.push({
+          entityKey,
+          entityType: patch.entityType,
+          displayName: patch.entityId,
+          facts: { [patch.field]: patch.value },
+          corrections: [],
+          confidence: patch.confidence,
+          completenessScore: 0.5,
+          askCount: 0,
+          lastAnsweredAt: new Date().toISOString(),
+          reinforcementCount: 1,
+        })
+      }
+    }),
+    recordAIRecommendationFeedback: vi.fn(async (input: AIRecommendationFeedbackInput) => {
+      feedback.unshift({
+        recommendationId: input.recommendationId,
+        generatedPlanId: input.generatedPlanId ?? null,
+        taskId: input.taskId ?? null,
+        entityKey: input.entityKey ?? null,
+        action: input.action,
+        reasonCategory: input.reasonCategory ?? null,
+        freeText: input.freeText ?? null,
+        revisitAt: input.revisitAt ?? null,
+        outcomeSignals: input.outcomeSignals ?? {},
+        implicitPositive: Boolean(input.implicitPositive),
+        sourceMessageId: input.sourceMessageId ?? null,
+        createdAt: new Date().toISOString(),
+      })
+    }),
+    fetchAIContextEntities: vi.fn(async (entityKeys: string[]) =>
+      entities.filter(entity => entityKeys.includes(entity.entityKey))
+    ),
+    fetchAIRecommendationFeedback: vi.fn(async (query: {
+      recommendationIds?: string[]
+      taskIds?: string[]
+      entityKeys?: string[]
+      limit?: number
+    }) =>
+      feedback.filter(item =>
+        (!query.recommendationIds || query.recommendationIds.includes(item.recommendationId)) &&
+        (!query.taskIds || (item.taskId && query.taskIds.includes(item.taskId))) &&
+        (!query.entityKeys || (item.entityKey && query.entityKeys.includes(item.entityKey)))
+      )
+    ),
+    createAICommandMemorySnapshot: vi.fn(async () => ({
+      contextEntities: JSON.parse(JSON.stringify(entities)),
+      recommendationFeedback: JSON.parse(JSON.stringify(feedback)),
+    })),
+    restoreAICommandMemorySnapshot: vi.fn(async (snapshot) => {
+      entities.splice(0, entities.length, ...JSON.parse(JSON.stringify(snapshot.contextEntities ?? [])))
+      feedback.splice(0, feedback.length, ...JSON.parse(JSON.stringify(snapshot.recommendationFeedback ?? [])))
+    }),
+  }
+}
 
 describe('AI action command substrate', () => {
   beforeEach(async () => {
@@ -726,6 +804,162 @@ describe('AI action command substrate', () => {
     })
 
     expect(canvasStore.groups.find(item => item.id === group.id)?.position).toEqual({ x: 0, y: 0, width: 400, height: 300 })
+  })
+
+  it('previews AI memory patches without mutating memory state', async () => {
+    const taskStore = useTaskStore()
+    const memoryStore = createMemoryCommandStore()
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Remember my planning preference',
+      sourceRunId: 'run-memory-preview',
+      sourceMessageId: 'msg-memory-preview',
+      dataUsed: { preference: 'compact plans' },
+      commands: [{
+        id: 'cmd-memory-preview',
+        kind: 'memory.patch',
+        patch: {
+          entityType: 'preference',
+          entityId: 'planning-style',
+          operation: 'set',
+          field: 'weeklyPlanningStyle',
+          value: 'compact plan first',
+          confidence: 0.86,
+          source: 'model_inference',
+        },
+      }],
+      tasks: taskStore.tasks,
+      memoryEntities: memoryStore.entities,
+    })
+
+    expect(memoryStore.entities).toHaveLength(0)
+    expect(batch.preview.commands).toEqual([
+      expect.objectContaining({
+        id: 'cmd-memory-preview',
+        kind: 'memory.patch',
+        status: 'will_create',
+        identity: expect.objectContaining({
+          kind: 'memory.patch',
+          targetEntityId: 'planning-style',
+          scope: 'memory:preference:planning-style',
+        }),
+        diff: {
+          entityType: 'memory',
+          before: null,
+          after: expect.objectContaining({
+            entityType: 'preference',
+            entityId: 'planning-style',
+            field: 'weeklyPlanningStyle',
+            value: 'compact plan first',
+          }),
+        },
+      }),
+    ])
+  })
+
+  it('applies and rolls back AI memory patches through the memory store', async () => {
+    const taskStore = useTaskStore()
+    const memoryStore = createMemoryCommandStore()
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Remember planning preference',
+      sourceRunId: 'run-memory-apply',
+      sourceMessageId: 'msg-memory-apply',
+      dataUsed: {},
+      commands: [{
+        id: 'cmd-memory-apply',
+        kind: 'memory.patch',
+        patch: {
+          entityType: 'preference',
+          entityId: 'planning-style',
+          operation: 'set',
+          field: 'weeklyPlanningStyle',
+          value: 'compact plan first',
+          confidence: 0.86,
+          source: 'model_inference',
+        },
+      }],
+      tasks: taskStore.tasks,
+      memoryEntities: memoryStore.entities,
+    })
+
+    const first = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-memory-apply'],
+      taskStore,
+      memoryStore,
+    })
+    const replay = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-memory-apply'],
+      taskStore,
+      memoryStore,
+    })
+
+    expect(memoryStore.entities).toHaveLength(1)
+    expect(memoryStore.entities[0]?.facts).toMatchObject({ weeklyPlanningStyle: 'compact plan first' })
+    expect(memoryStore.applyAIMemoryPatch).toHaveBeenCalledTimes(1)
+    expect(first.appliedCommands[0]).toMatchObject({ kind: 'memory.patch', result: 'created' })
+    expect(replay.appliedCommands[0]).toMatchObject({ kind: 'memory.patch', result: 'reused_existing' })
+
+    await rollbackAICommandBatch(first.rollbackPointer, {
+      taskStore,
+      memoryStore,
+    })
+
+    expect(memoryStore.entities).toEqual([])
+  })
+
+  it('applies and rolls back AI recommendation feedback through the memory store', async () => {
+    const taskStore = useTaskStore()
+    const memoryStore = createMemoryCommandStore()
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Learn from rejected suggestion',
+      sourceRunId: 'run-feedback-apply',
+      sourceMessageId: 'msg-feedback-apply',
+      dataUsed: { recommendationId: 'rec-task-1' },
+      commands: [{
+        id: 'cmd-feedback-apply',
+        kind: 'memory.feedback.record',
+        feedback: {
+          recommendationId: 'rec-task-1',
+          taskId: 'task-1',
+          entityKey: 'task:task-1',
+          action: 'dismiss',
+          reasonCategory: 'wrong_context',
+          freeText: 'This is not important this week',
+        },
+      }],
+      tasks: taskStore.tasks,
+      recommendationFeedback: memoryStore.feedback,
+    })
+
+    const first = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-feedback-apply'],
+      taskStore,
+      memoryStore,
+    })
+    const replay = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-feedback-apply'],
+      taskStore,
+      memoryStore,
+    })
+
+    expect(memoryStore.feedback).toHaveLength(1)
+    expect(memoryStore.feedback[0]).toMatchObject({
+      recommendationId: 'rec-task-1',
+      action: 'dismiss',
+      reasonCategory: 'wrong_context',
+    })
+    expect(memoryStore.recordAIRecommendationFeedback).toHaveBeenCalledTimes(1)
+    expect(first.appliedCommands[0]).toMatchObject({ kind: 'memory.feedback.record', result: 'created' })
+    expect(replay.appliedCommands[0]).toMatchObject({ kind: 'memory.feedback.record', result: 'reused_existing' })
+
+    await rollbackAICommandBatch(first.rollbackPointer, {
+      taskStore,
+      memoryStore,
+    })
+
+    expect(memoryStore.feedback).toEqual([])
   })
 
   it('previews AI calendar scheduling without mutating task instances', async () => {

@@ -1,4 +1,5 @@
 import type { CanvasGroup } from '@/types/canvas'
+import type { AIContextEntity, AIMemoryPatch, AIRecommendationFeedback, AIRecommendationFeedbackInput } from '@/types/aiMemory'
 import type { Lane, Subtask, Task, TaskInstance } from '@/types/tasks'
 
 export type AIActionDuplicateDecision =
@@ -7,7 +8,7 @@ export type AIActionDuplicateDecision =
   | 'create_anyway_requires_explicit_user_intent'
 
 export interface AIActionIdentity {
-  kind: 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move'
+  kind: 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
   sourceMessageId: string | null
   targetEntityId: string | null
   scope: string
@@ -410,3 +411,126 @@ export function decideAICanvasNodeMove(input: {
     existing: isAlreadyMoved ? existing ?? null : null,
   }
 }
+
+function aiMemoryEntityKey(patch: AIMemoryPatch): string {
+  if (/^(project|task|week|preference|synthetic|workflow):/.test(patch.entityId)) return patch.entityId
+  if (patch.entityType === 'synthetic_group') return `synthetic:${patch.entityId}`
+  return `${patch.entityType}:${patch.entityId}`
+}
+
+function normalizedMemoryValue(value: unknown): string {
+  return JSON.stringify(value ?? null)
+}
+
+function memoryPatchAlreadyApplied(entity: AIContextEntity | null, patch: AIMemoryPatch): boolean {
+  if (!entity) return false
+  const current = entity.facts?.[patch.field]
+  if (patch.operation === 'confirm') return true
+  if (patch.operation === 'set') return normalizedMemoryValue(current) === normalizedMemoryValue(patch.value)
+  const currentValues = Array.isArray(current) ? current.map(String) : current === undefined ? [] : [String(current)]
+  const patchValues = Array.isArray(patch.value) ? patch.value.map(String) : [String(patch.value)]
+  if (patch.operation === 'append') return patchValues.every(value => currentValues.includes(value))
+  if (patch.operation === 'deprecate') return patchValues.every(value => currentValues.includes(`Deprecated: ${value}`))
+  if (patch.operation === 'reject') return patchValues.every(value => currentValues.includes(`Rejected: ${value}`))
+  return false
+}
+
+export function buildAIMemoryPatchIdentity(input: {
+  sourceMessageId?: unknown
+  patch: AIMemoryPatch
+  scope?: string
+}): AIActionIdentity {
+  const entityKey = aiMemoryEntityKey(input.patch)
+  const scope = input.scope || `memory:${input.patch.entityType}:${input.patch.entityId}`
+  return {
+    kind: 'memory.patch',
+    sourceMessageId: typeof input.sourceMessageId === 'string' ? input.sourceMessageId : null,
+    targetEntityId: input.patch.entityId,
+    scope,
+    fingerprint: stableFingerprint({
+      kind: 'memory.patch',
+      scope,
+      entityKey,
+      entityType: input.patch.entityType,
+      entityId: input.patch.entityId,
+      operation: input.patch.operation,
+      field: input.patch.field,
+      value: normalizedMemoryValue(input.patch.value),
+      source: input.patch.source,
+    }),
+  }
+}
+
+export function decideAIMemoryPatch(input: {
+  memoryEntities: AIContextEntity[]
+  patch: AIMemoryPatch
+  sourceMessageId?: unknown
+  scope?: string
+}): AIActionDuplicateResult<AIContextEntity> {
+  const identity = buildAIMemoryPatchIdentity(input)
+  const entityKey = aiMemoryEntityKey(input.patch)
+  const existingEntity = input.memoryEntities.find(entity => entity.entityKey === entityKey) ?? null
+  const existing = memoryPatchAlreadyApplied(existingEntity, input.patch) ? existingEntity : null
+  return {
+    decision: existing ? 'reuse_existing' : 'create',
+    identity,
+    existing,
+  }
+}
+
+export function buildAIRecommendationFeedbackIdentity(input: {
+  sourceMessageId?: unknown
+  feedback: AIRecommendationFeedbackInput
+  scope?: string
+}): AIActionIdentity {
+  const scope = input.scope || (input.feedback.entityKey
+    ? `memory:feedback:${input.feedback.entityKey}`
+    : input.feedback.taskId
+      ? `memory:feedback:task:${input.feedback.taskId}`
+      : 'memory:feedback')
+  return {
+    kind: 'memory.feedback.record',
+    sourceMessageId: typeof input.sourceMessageId === 'string' ? input.sourceMessageId : null,
+    targetEntityId: input.feedback.taskId ?? input.feedback.entityKey ?? input.feedback.recommendationId,
+    scope,
+    fingerprint: stableFingerprint({
+      kind: 'memory.feedback.record',
+      scope,
+      generatedPlanId: input.feedback.generatedPlanId ?? '',
+      recommendationId: input.feedback.recommendationId,
+      taskId: input.feedback.taskId ?? '',
+      entityKey: input.feedback.entityKey ?? '',
+      action: input.feedback.action,
+      reasonCategory: input.feedback.reasonCategory ?? '',
+      freeText: normalizeAIActionText(input.feedback.freeText),
+      revisitAt: typeof input.feedback.revisitAt === 'string' ? input.feedback.revisitAt : '',
+      implicitPositive: Boolean(input.feedback.implicitPositive),
+    }),
+  }
+}
+
+export function decideAIRecommendationFeedback(input: {
+  recommendationFeedback: AIRecommendationFeedback[]
+  feedback: AIRecommendationFeedbackInput
+  sourceMessageId?: unknown
+  scope?: string
+}): AIActionDuplicateResult<AIRecommendationFeedback> {
+  const identity = buildAIRecommendationFeedbackIdentity(input)
+  const existing = input.recommendationFeedback.find(feedback => {
+    if (feedback.recommendationId !== input.feedback.recommendationId) return false
+    if (feedback.action !== input.feedback.action) return false
+    if ((feedback.taskId ?? null) !== (input.feedback.taskId ?? null)) return false
+    if ((feedback.entityKey ?? null) !== (input.feedback.entityKey ?? null)) return false
+    if ((feedback.reasonCategory ?? null) !== (input.feedback.reasonCategory ?? null)) return false
+    if (normalizeAIActionText(feedback.freeText) !== normalizeAIActionText(input.feedback.freeText)) return false
+    return true
+  }) ?? null
+
+  return {
+    decision: existing ? 'reuse_existing' : 'create',
+    identity,
+    existing,
+  }
+}
+
+export { aiMemoryEntityKey as buildAIMemoryEntityKey }

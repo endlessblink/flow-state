@@ -3475,6 +3475,7 @@ describe('AI sidebar-first desktop experience', () => {
 
     await wrapper.get('.weekly-question-option').trigger('click')
     await wrapper.get('.weekly-question-apply').trigger('click')
+    await flushPromises()
     await nextTick()
 
     expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(false)
@@ -3629,6 +3630,8 @@ describe('AI sidebar-first desktop experience', () => {
   })
 
   it('continues immediately after a button-only response-quality clarification', async () => {
+    const buildPreviewSpy = vi.spyOn(actionCommands, 'buildAICommandBatchPreview')
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
     const wrapper = mount(ChatMessage, {
       props: {
         message: {
@@ -3706,9 +3709,36 @@ describe('AI sidebar-first desktop experience', () => {
     await wrapper.get('.weekly-question-apply').trigger('click')
     await nextTick()
 
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue with the answer using the clarification I just answered')
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Answer: "Real impact"')
-    expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
+    expect(buildPreviewSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-response-quality-clarification',
+      commands: expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'memory.patch',
+          patch: expect.objectContaining({
+            entityType: 'workflow',
+            entityId: 'day_plan',
+            operation: 'set',
+            field: 'rankingFocus',
+            value: 'real impact or consequence',
+            sourceMessageId: 'msg-response-quality-clarification',
+          }),
+        }),
+      ]),
+    }))
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      commands: expect.arrayContaining([
+        expect.objectContaining({ kind: 'memory.patch' }),
+      ]),
+    }), expect.objectContaining({
+      memoryStore: supabaseDbMocks,
+      selectedCommandIds: expect.any(Array),
+    }))
+    await vi.waitFor(() => {
+      expect(wrapper.emitted('continueChat')?.[0]?.[0]).toContain('Continue with the answer using the clarification I just answered')
+    })
+    const continuation = wrapper.emitted('continueChat')?.[0]?.[0] as string
+    expect(continuation).toContain('Answer: "Real impact"')
+    expect(continuation).toContain('[FLOWSTATE_CLARIFICATION_CONTINUATION mode=day_plan]')
     expect(wrapper.emitted('continueChat')?.[0]?.[0]).not.toContain('week')
     expect(wrapper.find('[data-testid="ai-clarification-follow-up"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="ai-clarification-saved"]').exists()).toBe(true)

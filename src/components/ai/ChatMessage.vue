@@ -151,6 +151,38 @@ function pendingAIMemoryWriteCount(): number {
     : 0
 }
 
+async function applyAIMemoryPatchCommand(
+  patch: AIMemoryPatch,
+  sourcePrompt: string,
+) {
+  const commandId = `memory-patch:${patch.entityType}:${patch.entityId}:${patch.field}:${patch.operation}`
+  const batch = aiActionCommands.buildAICommandBatchPreview({
+    sourcePrompt,
+    sourceRunId: props.message.id,
+    sourceMessageId: props.message.id,
+    dataUsed: {
+      messageId: props.message.id,
+      entityType: patch.entityType,
+      entityId: patch.entityId,
+      field: patch.field,
+      operation: patch.operation,
+    },
+    commands: [{
+      id: commandId,
+      kind: 'memory.patch',
+      patch,
+      confidence: patch.confidence,
+      impact: 'low',
+    }],
+    tasks: taskStore.tasks,
+  })
+  await aiActionCommands.applyAICommandBatch(batch, {
+    selectedCommandIds: [commandId],
+    taskStore,
+    memoryStore: aiMemoryDb as AICommandMemoryStore,
+  })
+}
+
 function clarificationPersistedStatus(locale: 'he' | 'en'): string {
   const pending = pendingAIMemoryWriteCount()
   if (pending > 0) {
@@ -942,10 +974,10 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
     const option = question.options?.find(item => item.id === selected)
     if (option?.memoryPatch) {
       traceWeeklyQuestion('memory_patch_started', { key, field: option.memoryPatch.field })
-      await aiMemoryDb.applyAIMemoryPatch({
+      await applyAIMemoryPatchCommand({
         ...option.memoryPatch,
         sourceMessageId: props.message.id,
-      })
+      }, 'weekly question option memory patch')
       traceWeeklyQuestion('memory_patch_succeeded', { key })
     }
     if (note && question.entityType && question.entityId && question.freeTextPatch) {
@@ -960,7 +992,7 @@ async function applyWeeklyQuestion(question: WeeklyPlanOutput['openQuestions'][n
         sourceMessageId: props.message.id,
       }
       traceWeeklyQuestion('free_text_patch_started', { key, field: patch.field })
-      await aiMemoryDb.applyAIMemoryPatch(patch)
+      await applyAIMemoryPatchCommand(patch, 'weekly question free-text memory patch')
       traceWeeklyQuestion('free_text_patch_succeeded', { key })
     }
     if (selected === 'add_followup') {
@@ -1335,10 +1367,10 @@ async function persistClarificationAnswer(
 ) {
   try {
     if (option?.memoryPatch) {
-      await aiMemoryDb.applyAIMemoryPatch({
+      await applyAIMemoryPatchCommand({
         ...option.memoryPatch,
         sourceMessageId: props.message.id,
-      })
+      }, 'clarification answer memory patch')
     }
     await aiMemoryDb.recordAIClarificationEvent({
       entityKey: card.memoryKey,

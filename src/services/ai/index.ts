@@ -98,3 +98,26 @@ export type {
   ToolCall,
   ToolResult,
 } from './tools'
+
+// TASK-1855: Preview/apply AI command substrate
+export {
+  applyAICommandBatch,
+  buildAICommandBatchPreview,
+  getAICommandAuditTrail,
+  rollbackAICommandBatch,
+} from './actionCommands'
+
+export type {
+  AICommand,
+  AICommandApplyResult,
+  AICommandAuditEntry,
+  AICommandBatch,
+  AICommandDiff,
+  AICommandImpact,
+  AICommandKind,
+  AICommandPreviewItem,
+  AISubtaskCreateCommand,
+  AITaskCreateCommand,
+  AppliedAICommand,
+  RejectedAICommand,
+} from './actionCommands'

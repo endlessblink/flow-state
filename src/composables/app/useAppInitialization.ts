@@ -197,6 +197,12 @@ export function useAppInitialization() {
             clearGuestData()
             // BUG-1137: Ensure guest session ID exists for future migration tracking
             getOrCreateGuestSessionId()
+            console.log('[AUTH] Reloading guest-local data after signed-out cache cleanup')
+            await Promise.all([
+                taskStore.loadFromDatabase(),
+                projectStore.loadProjectsFromDatabase(),
+                canvasStore.loadFromDatabase()
+            ])
         } else {
             // BUG-339: Clear ALL stale guest localStorage (including legacy keys)
             // This fixes race condition and historical key naming issues

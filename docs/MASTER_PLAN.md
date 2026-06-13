@@ -856,9 +856,9 @@
 
 ---
 
-### TASK-1842: Localhost end-to-end QA lane for AI chat quality (📋 PLANNED)
+### TASK-1842: Localhost end-to-end QA lane for AI chat quality (✅ DONE)
 
-**Priority**: P0 | **Status**: 📋 PLANNED (filed 2026-06-08) | **Depends on**: TASK-1830, TASK-1831, TASK-1832, TASK-1833, TASK-1838
+**Priority**: P0 | **Status**: ✅ DONE (filed 2026-06-08, completed 2026-06-13) | **Depends on**: TASK-1830, TASK-1831, TASK-1832, TASK-1833, TASK-1838
 
 **Why**: The user should not be asked to test half-built behavior. Localhost must prove the full chat loop before Electron or user validation: context retrieval, one-question clarification, saved answer continuation, concise output, feedback controls, and slow-phase debug.
 
@@ -893,6 +893,10 @@
 - 2026-06-08: Re-ran the real localhost smoke after adding confidence/omission answer-quality gates. The first full run exposed a real regression where the "too much" compact path fell through to the candidate-only quality floor; after updating deterministic fallback wording, the targeted compact-path smoke passed and the full self-starting Playwright smoke passed 10/10 again.
 - 2026-06-08: Re-ran the real localhost smoke after requiring structured recommendation-evidence audits for broad card answers. `npx playwright test --config tests/e2e/playwright.ai-chat-quality-local.config.ts` passed 10/10, including weekly ask-first, post-answer continuation, no stuck activity rows, compact "too much" feedback behavior, broad postpone suppression, no-repeat memory, and mechanical overdue-list bypass.
 - 2026-06-08: Extended the self-starting localhost AI quality smoke to open the real Settings modal and verify AI memory debug shows local-only fallback truthfully in guest mode. `npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts` now passes 11/11, covering the original chat loop plus Settings > AI memory debug not claiming server-backed context before the VPS schema gate is green.
+- 2026-06-13: Re-ran the self-starting localhost QA lane and exposed a shared startup regression: all 22 AI chat paths failed before opening chat because `/#/tasks` rendered zero seeded tasks. Root cause: cache-first startup loaded the seeded `FlowStateReadCache`, auth resolved signed-out, then the signed-out cache cleanup cleared the task store/read cache and never reloaded guest `flowstate-guest-tasks`.
+- 2026-06-13: Fixed signed-out startup to reload guest-local task/project/canvas data after authenticated read-cache cleanup, preserving the cache privacy boundary without dropping guest data. Added `tests/unit/ai-chat-startup-sync.test.ts` coverage for that startup contract.
+- 2026-06-13: Verification: `npm test -- tests/unit/ai-chat-startup-sync.test.ts` → 2/2 passed; `npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts` → 22/22 passed. The suite now covers weekly ask-first, Hebrew rest-of-week routing, weekly prompt variants, bridge stream timeout fallback, obsolete weekly follow-up suppression, answered priority continuation, generate-now escape, broad compact feedback, weekly accept feedback, broad postpone suppression, mechanical overdue bypass, Settings AI memory debug, and six broad clarification/no-repeat paths.
+- 2026-06-13: Release verification: `npm run type-check` → passed; `npm run electron:build` → passed and validated package metadata. Electron updater deployment verified at `https://in-theflow.com/updates/electron/latest-linux.yml` with `version: 1.4.161`; both `FlowState-1.4.161-x86_64.AppImage` and `FlowState_1.4.161_amd64.deb` returned HTTP 200.
 
 ---
 

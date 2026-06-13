@@ -32,6 +32,25 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### BUG-1865: Preserve cached authenticated tasks on transient startup auth restore miss (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-13, shipped 2026-06-13) | **Depends on**: none
+
+**Why**: A severe desktop regression showed FlowState appearing signed out and rendering an empty Canvas/All Active view even though the Electron profile still had a valid persisted Supabase session and IndexedDB task/cache state. Startup was treating a passive auth restore miss like an explicit sign-out, clearing authenticated task/project/canvas/workspace state and the read cache before auth could recover.
+
+**Acceptance**:
+- Passive startup auth misses preserve already-loaded authenticated IndexedDB task, project, and canvas cache instead of clearing stores or read cache.
+- Explicit user sign-out remains the only destructive auth path that clears authenticated stores and IndexedDB read cache.
+- Cacheless unauthenticated startup still loads guest-local data normally.
+- Regression coverage rejects the old startup contract that cleared authenticated read cache on passive auth miss.
+- Electron-facing verification includes focused tests and an Electron build before release.
+
+**Progress**:
+- 2026-06-13: Reproduced the bad contract with `tests/unit/ai-chat-startup-sync.test.ts`; the RED test failed because app initialization still expected `[AUTH] No restored session; clearing authenticated read cache from signed-out view`.
+- 2026-06-13: Fixed app initialization so a passive auth restore miss preserves usable authenticated IndexedDB task/project/canvas cache while explicit sign-out remains destructive.
+- 2026-06-13: Verified focused regressions with `npm run test -- tests/unit/ai-chat-startup-sync.test.ts tests/unit/stores/auth-flow.test.ts` (30/30 passed), `npm run type-check`, `npm run lint`, and Electron package validation.
+- 2026-06-13: Shipped desktop updater `1.4.166`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.166` with `FlowState-1.4.166-x86_64.AppImage` and `FlowState_1.4.166_amd64.deb`.
+
 ### TASK-1855: AI action command substrate with preview, apply, undo, and audit trail (📋 PLANNED)
 
 **Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1854

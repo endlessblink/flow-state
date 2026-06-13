@@ -23,7 +23,7 @@ import { getInitialOnlineState } from '@/utils/platform'
 // BUG-1411: Cache stats for offline mode detection
 // TASK-1425: Full cache read functions for fast offline startup
 // TASK-1427: Merged versions include pending write queue operations
-import { clearReadCache, getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPendingWrites, getCachedProjects } from '@/services/offline/readCacheDB'
+import { getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPendingWrites, getCachedProjects } from '@/services/offline/readCacheDB'
 // TASK-1219: Time block progress notifications
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
 
@@ -99,6 +99,7 @@ export function useAppInitialization() {
 
         // Phase A (blocking): Load from IndexedDB cache (~10-50ms)
         let hasCache = false
+        let hasUsableCache = false
         try {
             const [cachedTasks, cachedGroups, cachedProjects] = await Promise.all([
                 getCachedTasksWithPendingWrites(),
@@ -135,15 +136,18 @@ export function useAppInitialization() {
                         console.error(`🔴 [CACHE-CORRUPTION] Even after dedup, ${dedupedCache.length} tasks remain — skipping cache`)
                     } else {
                         taskStore._rawTasks = dedupedCache
+                        hasUsableCache = true
                         console.log(`📦 [CACHE-FIRST] Loaded ${cachedTasks.length} tasks from IndexedDB cache`)
                     }
                 }
                 if (cachedGroups && cachedGroups.length > 0) {
                     canvasStore.setGroups(cachedGroups)
+                    hasUsableCache = true
                     console.log(`📦 [CACHE-FIRST] Loaded ${cachedGroups.length} groups from IndexedDB cache`)
                 }
                 if (cachedProjects && cachedProjects.length > 0) {
                     projectStore._rawProjects = cachedProjects
+                    hasUsableCache = true
                     console.log(`📦 [CACHE-FIRST] Loaded ${cachedProjects.length} projects from IndexedDB cache`)
                 }
 
@@ -185,24 +189,20 @@ export function useAppInitialization() {
         await authStore.initialize()
 
         if (!authStore.isAuthenticated) {
-            if (hasCache) {
-                console.warn('[AUTH] No restored session; clearing authenticated read cache from signed-out view')
-                taskStore.clearAll()
-                projectStore._rawProjects = []
-                canvasStore.clearAll()
-                workspaceStore.clearAll()
-                await clearReadCache()
+            if (hasUsableCache) {
+                console.warn('[AUTH] No restored session, but cached authenticated data exists; preserving cache while auth recovers')
+            } else {
+                // Guest mode: clear transient data only (TASK-1339: tasks/groups/filters persist)
+                clearGuestData()
+                // BUG-1137: Ensure guest session ID exists for future migration tracking
+                getOrCreateGuestSessionId()
+                console.log('[AUTH] No restored session and no authenticated cache; loading guest-local data')
+                await Promise.all([
+                    taskStore.loadFromDatabase(),
+                    projectStore.loadProjectsFromDatabase(),
+                    canvasStore.loadFromDatabase()
+                ])
             }
-            // Guest mode: clear transient data only (TASK-1339: tasks/groups/filters persist)
-            clearGuestData()
-            // BUG-1137: Ensure guest session ID exists for future migration tracking
-            getOrCreateGuestSessionId()
-            console.log('[AUTH] Reloading guest-local data after signed-out cache cleanup')
-            await Promise.all([
-                taskStore.loadFromDatabase(),
-                projectStore.loadProjectsFromDatabase(),
-                canvasStore.loadFromDatabase()
-            ])
         } else {
             // BUG-339: Clear ALL stale guest localStorage (including legacy keys)
             // This fixes race condition and historical key naming issues

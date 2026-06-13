@@ -8,7 +8,7 @@ export type AIActionDuplicateDecision =
   | 'create_anyway_requires_explicit_user_intent'
 
 export interface AIActionIdentity {
-  kind: 'task.create' | 'task.update' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
+  kind: 'task.create' | 'task.update' | 'task.delete' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move' | 'memory.patch' | 'memory.feedback.record'
   sourceMessageId: string | null
   targetEntityId: string | null
   scope: string
@@ -119,7 +119,7 @@ export function decideAITaskCreate(input: {
   }
 }
 
-export type AITaskUpdateFields = Pick<Task, 'status' | 'priority' | 'dueDate' | 'projectId' | 'laneId' | 'parentTaskId' | 'description' | 'title'>
+export type AITaskUpdateFields = Pick<Task, 'status' | 'priority' | 'dueDate' | 'dueTime' | 'projectId' | 'laneId' | 'parentTaskId' | 'description' | 'title' | 'estimatedDuration'>
 
 function normalizeTaskUpdateValue(value: unknown): unknown {
   if (typeof value === 'string') return value.trim()
@@ -175,6 +175,25 @@ export function decideAITaskUpdate(input: {
     decision: existing ? 'reuse_existing' : 'create',
     identity,
     existing,
+  }
+}
+
+export function buildAITaskDeleteIdentity(input: {
+  sourceMessageId?: unknown
+  taskId: string
+  scope?: string
+}): AIActionIdentity {
+  const scope = input.scope || `task:${input.taskId}:delete`
+  return {
+    kind: 'task.delete',
+    sourceMessageId: typeof input.sourceMessageId === 'string' ? input.sourceMessageId : null,
+    targetEntityId: input.taskId,
+    scope,
+    fingerprint: stableFingerprint({
+      kind: 'task.delete',
+      scope,
+      targetEntityId: input.taskId,
+    }),
   }
 }
 

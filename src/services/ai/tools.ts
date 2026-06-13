@@ -17,7 +17,8 @@ import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import type { Task } from '@/types/tasks'
 import type { OpenAITool } from './types'
 import { resolveTask } from './entityResolver'
-import { decideAISubtaskCreate, decideAITaskCreate } from './actionGuardrails'
+import { decideAISubtaskCreate, decideAITaskCreate, type AITaskUpdateFields } from './actionGuardrails'
+import * as aiActionCommands from './actionCommands'
 
 // ============================================================================
 // Constants
@@ -440,6 +441,162 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+function getToolSourceMessageId(call: ToolCall): string {
+  const sourceMessageId = call.parameters.sourceMessageId
+  return typeof sourceMessageId === 'string' && sourceMessageId.trim()
+    ? sourceMessageId.trim()
+    : `tool:${call.tool}`
+}
+
+async function applyAITaskUpdateToolCommand(input: {
+  call: ToolCall
+  taskStore: ReturnType<typeof useTaskStore>
+  taskId: string
+  updates: Partial<AITaskUpdateFields>
+  dataUsed?: Record<string, unknown>
+}) {
+  const sourceMessageId = getToolSourceMessageId(input.call)
+  const command: aiActionCommands.AICommand = {
+    id: `${input.call.tool}:${input.taskId}:task-update`,
+    kind: 'task.update',
+    taskId: input.taskId,
+    updates: input.updates,
+    impact: 'low',
+  }
+  const batch = aiActionCommands.buildAICommandBatchPreview({
+    sourcePrompt: `AI tool ${input.call.tool}`,
+    sourceRunId: `tool:${input.call.tool}`,
+    sourceMessageId,
+    dataUsed: {
+      tool: input.call.tool,
+      taskId: input.taskId,
+      ...input.dataUsed,
+    },
+    commands: [command],
+    tasks: input.taskStore.tasks,
+  })
+  const result = await aiActionCommands.applyAICommandBatch(batch, {
+    selectedCommandIds: [command.id],
+    taskStore: input.taskStore,
+  })
+  return result.appliedCommands[0]
+}
+
+async function applyAITaskDeleteToolCommand(input: {
+  call: ToolCall
+  taskStore: ReturnType<typeof useTaskStore>
+  taskId: string
+}) {
+  const sourceMessageId = getToolSourceMessageId(input.call)
+  const command: aiActionCommands.AICommand = {
+    id: `${input.call.tool}:${input.taskId}:task-delete`,
+    kind: 'task.delete',
+    taskId: input.taskId,
+    impact: 'medium',
+  }
+  const batch = aiActionCommands.buildAICommandBatchPreview({
+    sourcePrompt: `AI tool ${input.call.tool}`,
+    sourceRunId: `tool:${input.call.tool}`,
+    sourceMessageId,
+    dataUsed: {
+      tool: input.call.tool,
+      taskId: input.taskId,
+      confirmed: true,
+    },
+    commands: [command],
+    tasks: input.taskStore.tasks,
+  })
+  const result = await aiActionCommands.applyAICommandBatch(batch, {
+    selectedCommandIds: [command.id],
+    taskStore: input.taskStore,
+  })
+  return result.appliedCommands[0]
+}
+
+async function applyAITaskCreateToolCommand(input: {
+  call: ToolCall
+  taskStore: ReturnType<typeof useTaskStore>
+  title: string
+  priority?: Task['priority']
+  description?: string
+  dueDate?: string
+  projectId?: string | null
+  parentTaskId?: string | null
+}) {
+  const sourceMessageId = getToolSourceMessageId(input.call)
+  const command: aiActionCommands.AICommand = {
+    id: `${input.call.tool}:task-create`,
+    kind: 'task.create',
+    title: input.title,
+    priority: input.priority,
+    description: input.description,
+    dueDate: input.dueDate,
+    projectId: input.projectId,
+    parentTaskId: input.parentTaskId,
+    impact: 'low',
+  }
+  const batch = aiActionCommands.buildAICommandBatchPreview({
+    sourcePrompt: `AI tool ${input.call.tool}`,
+    sourceRunId: `tool:${input.call.tool}`,
+    sourceMessageId,
+    dataUsed: {
+      tool: input.call.tool,
+      title: input.title,
+      dueDate: input.dueDate || null,
+      projectId: input.projectId || null,
+      parentTaskId: input.parentTaskId || null,
+    },
+    commands: [command],
+    tasks: input.taskStore.tasks,
+  })
+  const result = await aiActionCommands.applyAICommandBatch(batch, {
+    selectedCommandIds: [command.id],
+    taskStore: input.taskStore,
+  })
+  return result.appliedCommands[0]
+}
+
+async function applyAICanvasGroupCreateToolCommand(input: {
+  call: ToolCall
+  taskStore: ReturnType<typeof useTaskStore>
+  canvasStore: ReturnType<typeof useCanvasStore>
+  name: string
+  color: string
+  position: { x: number; y: number; width: number; height: number }
+}) {
+  const sourceMessageId = getToolSourceMessageId(input.call)
+  const command: aiActionCommands.AICommand = {
+    id: `${input.call.tool}:canvas-group-create`,
+    kind: 'canvas.group.create',
+    name: input.name,
+    groupType: 'custom',
+    position: input.position,
+    color: input.color,
+    layout: 'freeform',
+    impact: 'low',
+  }
+  const batch = aiActionCommands.buildAICommandBatchPreview({
+    sourcePrompt: `AI tool ${input.call.tool}`,
+    sourceRunId: `tool:${input.call.tool}`,
+    sourceMessageId,
+    dataUsed: {
+      tool: input.call.tool,
+      name: input.name,
+      color: input.color,
+      position: input.position,
+    },
+    commands: [command],
+    tasks: input.taskStore.tasks,
+    canvasGroups: input.canvasStore.groups,
+  })
+  const result = await aiActionCommands.applyAICommandBatch(batch, {
+    selectedCommandIds: [command.id],
+    taskStore: input.taskStore,
+    canvasStore: input.canvasStore,
+  })
+  return result.appliedCommands[0]
+}
+
 // ============================================================================
 // Tool Execution
 // ============================================================================
@@ -483,21 +640,21 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           xPos = maxX + 50
         }
 
-        const group = await canvasStore.createGroup({
+        const position = { x: xPos, y: yPos, width: 400, height: 300 }
+        const applied = await applyAICanvasGroupCreateToolCommand({
+          call,
+          taskStore,
+          canvasStore,
           name,
-          type: 'custom',
-          position: { x: xPos, y: yPos, width: 400, height: 300 },
           color,
-          layout: 'freeform',
-          isVisible: true,
-          isCollapsed: false,
+          position,
         })
 
         return {
           success: true,
           message: tm(language, `Created group "${name}"`, `נוצרה קבוצה "${name}"`),
-          data: { id: group.id, name: group.name },
-          undoAction: { toolName: 'delete_group', params: { groupId: group.id, confirmed: true } },
+          data: { id: applied.entityId, name },
+          undoAction: { toolName: 'delete_group', params: { groupId: applied.entityId, confirmed: true } },
         }
       }
 
@@ -506,6 +663,8 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         const priority = (call.parameters.priority as Task['priority']) || 'medium'
         const description = call.parameters.description as string | undefined
         const dueDate = call.parameters.dueDate as string | undefined
+        const projectId = call.parameters.projectId as string | undefined
+        const parentTaskId = call.parameters.parentTaskId as string | undefined
 
         if (dueDate && !isValidISODate(dueDate)) {
           return { success: false, message: tm(language, `Invalid date format "${dueDate}". Use YYYY-MM-DD.`, `פורמט תאריך לא תקין "${dueDate}". השתמש ב-YYYY-MM-DD.`) }
@@ -515,8 +674,8 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           tasks: taskStore.tasks,
           title,
           dueDate,
-          projectId: call.parameters.projectId,
-          parentTaskId: call.parameters.parentTaskId,
+          projectId,
+          parentTaskId,
           sourceMessageId: call.parameters.sourceMessageId,
         })
         if (duplicateDecision.existing) {
@@ -536,7 +695,21 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           }
         }
 
-        const task = await taskStore.createTask({ title, priority, description, dueDate })
+        const applied = await applyAITaskCreateToolCommand({
+          call,
+          taskStore,
+          title,
+          priority,
+          description,
+          dueDate,
+          projectId,
+          parentTaskId,
+        })
+        const task = taskStore.tasks.find(task => task.id === applied.entityId) ?? {
+          id: applied.entityId,
+          title,
+          priority,
+        }
 
         return {
           success: true,
@@ -704,7 +877,13 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         }
 
         const previousStatus = task.status
-        await taskStore.updateTask(taskId, { status })
+        await applyAITaskUpdateToolCommand({
+          call,
+          taskStore,
+          taskId,
+          updates: { status },
+          dataUsed: { status },
+        })
 
         return {
           success: true,
@@ -722,7 +901,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           return { success: false, message: tm(language, `Task with ID "${taskId}" not found`, `משימה עם מזהה "${taskId}" לא נמצאה`) }
         }
 
-        const updates: Partial<Task> = {}
+        const updates: Partial<AITaskUpdateFields> = {}
         const updatedFields: string[] = []
         // Capture previous values for undo
         const previousValues: Record<string, unknown> = {}
@@ -774,7 +953,13 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           return { success: false, message: tm(language, 'No valid fields to update. Provide at least one of: title, description, priority, dueDate, status, estimatedDuration.', 'אין שדות תקינים לעדכון. ספק לפחות אחד מ: title, description, priority, dueDate, status, estimatedDuration.') }
         }
 
-        await taskStore.updateTask(taskId, updates)
+        await applyAITaskUpdateToolCommand({
+          call,
+          taskStore,
+          taskId,
+          updates,
+          dataUsed: { updatedFields },
+        })
 
         return {
           success: true,
@@ -1010,7 +1195,11 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           }
         }
 
-        await taskStore.deleteTask(taskId, 'ai-tools')
+        await applyAITaskDeleteToolCommand({
+          call,
+          taskStore,
+          taskId,
+        })
 
         return {
           success: true,
@@ -1097,7 +1286,13 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         }
 
         const previousProjectId = task.projectId
-        await taskStore.updateTask(taskId, { projectId })
+        await applyAITaskUpdateToolCommand({
+          call,
+          taskStore,
+          taskId,
+          updates: { projectId },
+          dataUsed: { projectId, projectName: project.name },
+        })
 
         return {
           success: true,
@@ -1172,31 +1367,54 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           return { success: false, message: tm(language, 'subtasks must be a non-empty array of objects with title.', 'תת-משימות חייבות להיות מערך לא ריק של אובייקטים עם כותרת.') }
         }
 
+        const sourceMessageId = getToolSourceMessageId(call)
+        const commands: aiActionCommands.AICommand[] = subtaskDefs
+          .filter((sub): sub is { title: string } => Boolean(sub.title && typeof sub.title === 'string'))
+          .map((sub, index) => ({
+            id: `${call.tool}:${parentTaskId}:subtask-create:${index}`,
+            kind: 'task.subtask.create',
+            parentTaskId,
+            title: sub.title,
+            impact: 'low',
+          }))
+        const batch = aiActionCommands.buildAICommandBatchPreview({
+          sourcePrompt: `AI tool ${call.tool}`,
+          sourceRunId: `tool:${call.tool}`,
+          sourceMessageId,
+          dataUsed: {
+            tool: call.tool,
+            parentTaskId,
+            subtaskCount: commands.length,
+          },
+          commands,
+          tasks: taskStore.tasks,
+        })
+        const result = await aiActionCommands.applyAICommandBatch(batch, {
+          selectedCommandIds: commands.map(command => command.id),
+          taskStore,
+        })
+        const commandsById = new Map(commands.map(command => [command.id, command]))
+        const currentParent = validateTaskExists(taskStore, parentTaskId) || parentTask
         const created: Array<{ id: string; title: string }> = []
         const skippedExisting: Array<{ id: string; title: string }> = []
         let reusedAny = false
         let lastIdentity = null as ReturnType<typeof decideAISubtaskCreate>['identity'] | null
-        for (const sub of subtaskDefs) {
-          if (!sub.title || typeof sub.title !== 'string') continue
-          const currentParent = validateTaskExists(taskStore, parentTaskId) || parentTask
-          const duplicateDecision = decideAISubtaskCreate({
-            parentTask: currentParent,
-            title: sub.title,
-            sourceMessageId: call.parameters.sourceMessageId,
-          })
-          lastIdentity = duplicateDecision.identity
-          if (duplicateDecision.existing) {
+        for (const applied of result.appliedCommands) {
+          const command = commandsById.get(applied.id)
+          if (applied.identity) lastIdentity = applied.identity
+          if (applied.result === 'reused_existing') {
             reusedAny = true
+            const existing = currentParent.subtasks?.find(subtask => subtask.id === applied.entityId)
             skippedExisting.push({
-              id: duplicateDecision.existing.id,
-              title: duplicateDecision.existing.title,
+              id: applied.entityId,
+              title: existing?.title || (command && 'title' in command ? command.title : applied.entityId),
             })
             continue
           }
-          const result = await taskStore.createSubtask(parentTaskId, { title: sub.title })
-          if (result) {
-            created.push({ id: result.id, title: result.title })
-          }
+          created.push({
+            id: applied.entityId,
+            title: command && 'title' in command ? command.title : applied.entityId,
+          })
         }
 
         return {
@@ -1232,11 +1450,17 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           return { success: false, message: tm(language, `Invalid time format "${dueTime}". Use HH:MM.`, `פורמט שעה לא תקין "${dueTime}". השתמש ב-HH:MM.`) }
         }
 
-        const updates: Partial<Task> = { dueDate }
+        const updates: Partial<AITaskUpdateFields> = { dueDate }
         if (dueTime) updates.dueTime = dueTime
 
         const previousDueDate = task.dueDate
-        await taskStore.updateTask(taskId, updates)
+        await applyAITaskUpdateToolCommand({
+          call,
+          taskStore,
+          taskId,
+          updates,
+          dataUsed: { dueDate, dueTime: dueTime || null },
+        })
 
         return {
           success: true,
@@ -1301,7 +1525,13 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           const task = validateTaskExists(taskStore, id)
           if (task) {
             try {
-              await taskStore.updateTask(id, { status })
+              await applyAITaskUpdateToolCommand({
+                call,
+                taskStore,
+                taskId: id,
+                updates: { status },
+                dataUsed: { bulk: true, status },
+              })
               results.push({ id, title: task.title, success: true })
             } catch {
               results.push({ id, title: task.title, success: false })
@@ -1549,7 +1779,13 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           return { success: true, message: tm(language, `"${task.title}" is already marked as done.`, `"${task.title}" כבר מסומנת כהושלמה.`) }
         }
 
-        await taskStore.updateTask(task.id, { status: 'done' })
+        await applyAITaskUpdateToolCommand({
+          call,
+          taskStore,
+          taskId: task.id,
+          updates: { status: 'done' },
+          dataUsed: { taskRef },
+        })
         return {
           success: true,
           message: tm(language, `Marked "${task.title}" as done!`, `"${task.title}" סומנה כהושלמה!`),

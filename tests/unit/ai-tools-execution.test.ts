@@ -3,6 +3,16 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const mockEnqueue = vi.fn().mockResolvedValue({ id: 1, status: 'pending' })
 const mockDeleteTask = vi.fn().mockResolvedValue(undefined)
+const mockCreateGroup = vi.fn(async (input: Record<string, unknown>) => ({
+  id: 'group-command-substrate',
+  name: input.name,
+  type: input.type,
+  position: input.position,
+  color: input.color,
+  layout: input.layout,
+  isVisible: input.isVisible,
+  isCollapsed: input.isCollapsed,
+}))
 
 vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
   useSyncOrchestrator: () => ({
@@ -73,7 +83,7 @@ vi.mock('@/stores/canvas', () => ({
   useCanvasStore: () => ({
     groups: [],
     _rawGroups: [],
-    createGroup: vi.fn(),
+    createGroup: mockCreateGroup,
     getAggregatedTaskCountForGroup: vi.fn(() => 0),
   }),
 }))
@@ -92,7 +102,12 @@ vi.mock('@/stores/timer', () => ({
 
 vi.mock('@/stores/projects', () => ({
   useProjectStore: () => ({
-    projects: [],
+    projects: [{ id: 'project-command-substrate', name: 'Command Substrate', color: '#2563eb' }],
+    getProjectById: vi.fn((projectId: string) => (
+      projectId === 'project-command-substrate'
+        ? { id: 'project-command-substrate', name: 'Command Substrate', color: '#2563eb' }
+        : null
+    )),
   }),
 }))
 
@@ -124,6 +139,7 @@ vi.mock('@/utils/demoContentGuard', () => ({
 }))
 
 import { executeTool } from '@/services/ai/tools'
+import * as actionCommands from '@/services/ai/actionCommands'
 import { useTaskStore } from '@/stores/tasks'
 
 describe('AI tool execution regressions', () => {
@@ -132,6 +148,16 @@ describe('AI tool execution regressions', () => {
     vi.clearAllMocks()
     mockEnqueue.mockResolvedValue({ id: 1, status: 'pending' })
     mockDeleteTask.mockResolvedValue(undefined)
+    mockCreateGroup.mockResolvedValue({
+      id: 'group-command-substrate',
+      name: 'Command Group',
+      type: 'custom',
+      position: { x: 100, y: 100, width: 400, height: 300 },
+      color: '#3b82f6',
+      layout: 'freeform',
+      isVisible: true,
+      isCollapsed: false,
+    })
   })
 
   it('creates a real task with supplied fields and rejects invalid due dates', async () => {
@@ -164,6 +190,57 @@ describe('AI tool execution regressions', () => {
       dueDate: '2026-06-15',
       status: 'todo',
     })
+  })
+
+  it('routes create task and create group tools through AI command batches', async () => {
+    const taskStore = useTaskStore()
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
+
+    const taskResult = await executeTool({
+      tool: 'create_task',
+      parameters: {
+        title: 'Create task through commands',
+        priority: 'high',
+        description: 'Created by the AI tool command path',
+        dueDate: '2026-06-21',
+        sourceMessageId: 'msg-tool-create-task',
+      },
+    })
+    const groupResult = await executeTool({
+      tool: 'create_group',
+      parameters: {
+        name: 'Command Group',
+        color: '#3b82f6',
+        sourceMessageId: 'msg-tool-create-group',
+      },
+    })
+
+    expect(taskResult.success).toBe(true)
+    expect(groupResult.success).toBe(true)
+    expect(applyBatchSpy).toHaveBeenCalledTimes(2)
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-tool-create-task',
+      commands: [expect.objectContaining({
+        kind: 'task.create',
+        title: 'Create task through commands',
+        priority: 'high',
+        description: 'Created by the AI tool command path',
+        dueDate: '2026-06-21',
+      })],
+    }), expect.objectContaining({ taskStore }))
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-tool-create-group',
+      commands: [expect.objectContaining({
+        kind: 'canvas.group.create',
+        name: 'Command Group',
+        color: '#3b82f6',
+      })],
+    }), expect.objectContaining({ taskStore }))
+    expect(taskStore._rawTasks.find(task => task.title === 'Create task through commands')).toBeDefined()
+    expect(mockCreateGroup).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Command Group',
+      color: '#3b82f6',
+    }))
   })
 
   it('reuses an existing active task for repeated AI create_task applies', async () => {
@@ -262,6 +339,74 @@ describe('AI tool execution regressions', () => {
     expect(JSON.stringify(doneList.data)).toContain('Review Work bucket priorities')
   })
 
+  it('routes task mutation tools through AI command batches', async () => {
+    const taskStore = useTaskStore()
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
+    const statusTask = await taskStore.createTask({ title: 'Move status through commands', priority: 'medium' })
+    const projectTask = await taskStore.createTask({ title: 'Assign project through commands', priority: 'medium' })
+    const dueTask = await taskStore.createTask({ title: 'Set due date through commands', priority: 'medium' })
+    const doneTask = await taskStore.createTask({ title: 'Finish through commands', priority: 'medium' })
+
+    const statusResult = await executeTool({
+      tool: 'update_task_status',
+      parameters: { taskId: statusTask.id, status: 'done', sourceMessageId: 'msg-tool-status' },
+    })
+    const projectResult = await executeTool({
+      tool: 'assign_task_to_project',
+      parameters: { taskId: projectTask.id, projectId: 'project-command-substrate', sourceMessageId: 'msg-tool-project' },
+    })
+    const dueDateResult = await executeTool({
+      tool: 'set_task_due_date',
+      parameters: { taskId: dueTask.id, dueDate: '2026-06-20', sourceMessageId: 'msg-tool-due-date' },
+    })
+    const doneResult = await executeTool({
+      tool: 'mark_task_done',
+      parameters: { task: 'Finish through', sourceMessageId: 'msg-tool-done' },
+    })
+
+    expect(statusResult.success).toBe(true)
+    expect(projectResult.success).toBe(true)
+    expect(dueDateResult.success).toBe(true)
+    expect(doneResult.success).toBe(true)
+    expect(applyBatchSpy).toHaveBeenCalledTimes(4)
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-tool-status',
+      commands: [expect.objectContaining({
+        kind: 'task.update',
+        taskId: statusTask.id,
+        updates: { status: 'done' },
+      })],
+    }), expect.objectContaining({ taskStore }))
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-tool-project',
+      commands: [expect.objectContaining({
+        kind: 'task.update',
+        taskId: projectTask.id,
+        updates: { projectId: 'project-command-substrate' },
+      })],
+    }), expect.objectContaining({ taskStore }))
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-tool-due-date',
+      commands: [expect.objectContaining({
+        kind: 'task.update',
+        taskId: dueTask.id,
+        updates: { dueDate: '2026-06-20' },
+      })],
+    }), expect.objectContaining({ taskStore }))
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-tool-done',
+      commands: [expect.objectContaining({
+        kind: 'task.update',
+        taskId: doneTask.id,
+        updates: { status: 'done' },
+      })],
+    }), expect.objectContaining({ taskStore }))
+    expect(taskStore._rawTasks.find(task => task.id === statusTask.id)?.status).toBe('done')
+    expect(taskStore._rawTasks.find(task => task.id === projectTask.id)?.projectId).toBe('project-command-substrate')
+    expect(taskStore._rawTasks.find(task => task.id === dueTask.id)?.dueDate).toBe('2026-06-20')
+    expect(taskStore._rawTasks.find(task => task.id === doneTask.id)?.status).toBe('done')
+  })
+
   it('creates subtasks under an existing parent and rejects empty subtask payloads', async () => {
     const taskStore = useTaskStore()
     const parent = await taskStore.createTask({ title: 'Draft feature proposal' })
@@ -288,6 +433,45 @@ describe('AI tool execution regressions', () => {
     expect(taskStore._rawTasks.find(task => task.id === parent.id)?.subtasks.map(subtask => subtask.title)).toEqual([
       'Outline scope',
       'List regression tests',
+    ])
+  })
+
+  it('routes create_subtasks through an AI command batch', async () => {
+    const taskStore = useTaskStore()
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
+    const parent = await taskStore.createTask({ title: 'Route subtask creation' })
+
+    const created = await executeTool({
+      tool: 'create_subtasks',
+      parameters: {
+        parentTaskId: parent.id,
+        sourceMessageId: 'msg-tool-subtasks',
+        subtasks: [
+          { title: 'Preview subtask command' },
+          { title: 'Apply subtask command' },
+        ],
+      },
+    })
+
+    expect(created.success).toBe(true)
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-tool-subtasks',
+      commands: [
+        expect.objectContaining({
+          kind: 'task.subtask.create',
+          parentTaskId: parent.id,
+          title: 'Preview subtask command',
+        }),
+        expect.objectContaining({
+          kind: 'task.subtask.create',
+          parentTaskId: parent.id,
+          title: 'Apply subtask command',
+        }),
+      ],
+    }), expect.objectContaining({ taskStore }))
+    expect(taskStore._rawTasks.find(task => task.id === parent.id)?.subtasks.map(subtask => subtask.title)).toEqual([
+      'Preview subtask command',
+      'Apply subtask command',
     ])
   })
 
@@ -337,6 +521,7 @@ describe('AI tool execution regressions', () => {
 
   it('requires explicit confirmation before destructive task deletion', async () => {
     const taskStore = useTaskStore()
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
     const task = await taskStore.createTask({ title: 'Delete only after confirmation' })
 
     const unconfirmed = await executeTool({
@@ -346,13 +531,21 @@ describe('AI tool execution regressions', () => {
     expect(unconfirmed.success).toBe(false)
     expect(unconfirmed.message).toContain('requires confirmation')
     expect(taskStore._rawTasks.find(candidate => candidate.id === task.id)).toBeDefined()
+    expect(applyBatchSpy).not.toHaveBeenCalled()
 
     const confirmed = await executeTool({
       tool: 'delete_task',
-      parameters: { taskId: task.id, confirmed: true },
+      parameters: { taskId: task.id, confirmed: true, sourceMessageId: 'msg-tool-delete' },
     })
     expect(confirmed.success).toBe(true)
     expect(confirmed.message).toContain('Deleted task "Delete only after confirmation"')
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-tool-delete',
+      commands: [expect.objectContaining({
+        kind: 'task.delete',
+        taskId: task.id,
+      })],
+    }), expect.objectContaining({ taskStore }))
     expect(taskStore._rawTasks.find(candidate => candidate.id === task.id)).toBeUndefined()
   })
 })

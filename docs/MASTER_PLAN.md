@@ -1,6 +1,202 @@
 # FlowState MASTER_PLAN.md
 
-## 🔜 Next Up — AI Chat Quality System (start here after restart)
+## 🔜 Next Up — AI Co-Pilot Product Lanes (start here after restart)
+
+**Goal**: Evolve FlowState AI from a helpful chat panel into a safe, layered, observable productivity co-pilot across tasks, lanes, calendar, canvas, focus sessions, and long-term memory.
+
+**Research context (2026-06-13)**:
+- The useful 2026 pattern is agentic autonomy with long-term memory, proactive intelligence, and human-in-the-loop control, not just better chat prose.
+- Relevant product references include Motion-style auto-scheduling/replanning, Reclaim-style focus and habit defense, Notion AI workspace agents, Sunsama planning rituals, and emerging persistent-memory agent systems.
+- FlowState's differentiator is the combination of spatial canvas, task/lane/project state, calendar/focus context, and personal memory. The roadmap should exploit that full surface.
+- Safety is not a later polish step. All write-capable AI features must use preview, explicit apply, undo/rollback, audit logs, confidence/uncertainty display, and scoped commands.
+
+**Execution order**:
+
+| Order | Lane | Task | Depends on | Outcome |
+| --- | --- | --- | --- | --- |
+| 1 | Safety and command substrate | TASK-1855 | TASK-1854 | Bot actions become previewable, auditable, undoable commands instead of direct hidden mutations. |
+| 2 | AI command center | TASK-1856 | TASK-1855 | The chat/sidebar becomes an action surface with suggestions, diffs, apply/edit/reject, and visible agent progress. |
+| 3 | Intake and organization | TASK-1857 | TASK-1856 | Messy captures, inbox tasks, and canvas notes can be clustered, deduped, decomposed, and turned into tasks/lanes. |
+| 4 | Daily/weekly planning agent | TASK-1858 | TASK-1856, TASK-1857 | Bot proposes day/week plans using tasks, lanes, calendar, focus capacity, memory, and goals. |
+| 5 | Next-best-action engine | TASK-1859 | TASK-1858 | "What should I do now?" becomes context-aware and personalized instead of a static priority list. |
+| 6 | Calendar and focus defense | TASK-1860 | TASK-1858, TASK-1859 | Bot protects focus blocks, detects overcommitment, and proposes reschedules without silent calendar changes. |
+| 7 | Canvas intelligence | TASK-1861 | TASK-1857, TASK-1858 | Bot can organize selected canvas regions spatially and explain visual grouping decisions. |
+| 8 | Review and risk radar | TASK-1862 | TASK-1858, TASK-1859 | Bot detects blockers, neglected goals, overload, slipping work, and end-of-day/week learning. |
+| 9 | Memory and personalization | TASK-1863 | TASK-1855, TASK-1862 | Bot learns preferences, chronotype, recurring traps, accepted/rejected advice, and project patterns. |
+| 10 | User-defined automations | TASK-1864 | TASK-1855, TASK-1860, TASK-1863 | User can create safe recurring agents/workflows with autonomy levels and circuit breakers. |
+
+**Non-negotiable constraints across all lanes**:
+- AI proposes/enables; the user owns decisions.
+- No non-trivial writes without preview + explicit apply until the command substrate proves low-risk auto-apply policies.
+- Every applied AI change must be reversible and traceable.
+- Manual task/project/lane/calendar/canvas flows must keep working without AI.
+- Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
+
+### TASK-1855: AI action command substrate with preview, apply, undo, and audit trail (📋 PLANNED)
+
+**Priority**: P0-CRITICAL | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1854
+
+**Why**: Every useful bot feature eventually wants to change tasks, lanes, calendar blocks, canvas layout, or memory. Before adding more agentic features, FlowState needs a shared safety layer so AI actions are staged, inspectable, reversible, and observable.
+
+**Acceptance**:
+- Define a typed AI command/diff model for task, lane, calendar, canvas, focus, and memory proposals.
+- AI-generated changes can be rendered as a preview before mutation.
+- Applying a proposal routes through existing store/service APIs, not direct hidden writes.
+- Applied proposals create an audit entry with source prompt, data used, commands applied, rejected commands, timestamp, and rollback pointer.
+- Undo/rollback restores the pre-AI state for the applied command batch.
+- Low-confidence or high-impact proposals are blocked from auto-apply and require explicit approval.
+
+**Relevant context**:
+- Reuse existing task/lane/project stores and undo patterns where possible.
+- This lane is the foundation for every later lane; do not build one-off apply buttons that bypass it.
+- Regression coverage should prove preview-only proposals do not mutate state, apply mutates only selected commands, and rollback restores state.
+
+### TASK-1856: AI command center and agent progress UI (📋 PLANNED)
+
+**Priority**: P0-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1855
+
+**Why**: The bot needs a consistent visible surface for suggestions, command previews, step progress, confidence, "why", apply/edit/reject controls, and failure recovery. Otherwise each feature becomes a different ad hoc card.
+
+**Acceptance**:
+- Chat/sidebar can render AI proposal cards backed by the shared command substrate.
+- Multi-step agent runs show visible progress: reading context, building proposal, validating, waiting for approval, applying, verifying.
+- Users can edit/reject individual proposed commands before apply.
+- Every suggestion exposes "why this" with concrete sources such as task metadata, calendar slots, memory facts, focus history, or explicit uncertainty.
+- Failed agent steps show a recoverable status, not a stuck spinner.
+
+**Relevant context**:
+- This should replace single-purpose bot cards over time, not add another parallel UI system.
+- The surface should support later proactive cards like "3 risks detected" or "recommended focus block" without requiring a new component family.
+
+### TASK-1857: Intake and messy-work organizer agent (📋 PLANNED)
+
+**Priority**: P0-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1856
+
+**Why**: A high-value bot can reduce task chaos: messy captures, vague tasks, duplicate tasks, canvas scraps, and unstructured notes should become clean projects, lanes, subtasks, or clarified next actions.
+
+**Acceptance**:
+- Bot can analyze selected inbox tasks, selected canvas nodes, or a pasted brain dump.
+- It proposes clusters by theme, project, energy, deadline, risk, or workflow stage.
+- It can propose deduplication, task decomposition, title cleanup, missing next actions, project/lane assignment, and archive/delete candidates.
+- User can apply only selected clusters/changes.
+- New task/lane creation uses the command substrate from TASK-1855.
+
+**Relevant context**:
+- This is broader than "smart lanes". Smart lanes become one mode inside the organizer: a clustering/apply workflow, not the whole product direction.
+- Regression coverage should include apply-selected-only behavior, no mutation on preview, duplicate protection, and vague-task clarification fallback.
+
+### TASK-1858: Daily and weekly planning agent (📋 PLANNED)
+
+**Priority**: P0-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1856, TASK-1857
+
+**Why**: FlowState already has weekly planning quality work, but the broader co-pilot should generate and revise practical plans from tasks, lanes, projects, calendar availability, focus capacity, memory, and user goals.
+
+**Acceptance**:
+- Bot can create a day plan or week plan with proposed task order, focus blocks, lane priorities, tradeoffs, and explicit dropped/deferred work.
+- Plans show load/capacity warnings before apply.
+- User can ask for variants: aggressive, conservative, energy-aware, deadline-first, deep-work-first, admin-batch.
+- Plan apply can assign lanes, reorder tasks, create focus sessions/calendar blocks where supported, and record a decision journal entry.
+- Replanning after a change explains what moved and why.
+
+**Relevant context**:
+- Build on the existing weekly planner reliability work rather than starting from scratch.
+- Avoid generic "found N tasks" summaries; each plan needs concrete reasoning and bounded output.
+
+### TASK-1859: Context-aware next-best-action engine (📋 PLANNED)
+
+**Priority**: P0-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1858
+
+**Why**: "What should I work on right now?" should be FlowState's sharpest bot feature. The answer should account for time, energy, deadline risk, calendar, task size, recent focus behavior, active lane, and user preferences.
+
+**Acceptance**:
+- Bot ranks a small set of next actions with concrete reasons and uncertainty.
+- Recommendations include "do now", "if low energy", "if blocked", and "safe to ignore" options.
+- User feedback such as accept, skip, too much, not now, or wrong reason updates future recommendations.
+- The engine avoids repeated stale recommendations and explains when it lacks enough context.
+
+**Relevant context**:
+- This lane depends on plan quality but should remain usable outside formal daily/weekly planning.
+- It should integrate with focus mode: starting a recommendation can begin a focused work session or create a short next action.
+
+### TASK-1860: Calendar negotiation and focus-defense agent (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1858, TASK-1859
+
+**Why**: Tools like Motion and Reclaim are valuable because they defend time, not because they chat. FlowState should propose calendar/focus changes while keeping the user in control.
+
+**Acceptance**:
+- Bot detects overcommitment, missing focus blocks, double-booking risks, and plan/calendar mismatch.
+- Bot proposes reschedules and protected focus blocks with preview.
+- User can set autonomy level: suggest only, auto-apply low-risk focus blocks, or require approval for all calendar changes.
+- Existing calendar/manual planning flows remain unaffected if AI is disabled.
+
+**Relevant context**:
+- High-impact scheduling changes must stay human-approved until the command substrate proves rollback and conflict validation.
+- This lane should feed signals back into next-best-action and planning.
+
+### TASK-1861: Spatial canvas copilot (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1857, TASK-1858
+
+**Why**: FlowState has a unique spatial surface. The bot should be able to "see" selected canvas regions and propose organization, links, clusters, dependencies, and visual layouts.
+
+**Acceptance**:
+- User can select a canvas region and ask the bot to organize, summarize, cluster, sequence, or extract tasks.
+- Bot previews visual layout changes before applying.
+- Suggestions can include grouping, lane creation, task decomposition, dependency links, archive candidates, and memory links.
+- Visual explanations identify why nodes belong together.
+
+**Relevant context**:
+- Keep canvas layout changes reversible and scoped to selected regions.
+- Avoid global canvas rewrites until selected-region flows are reliable.
+
+### TASK-1862: Review, blocker, and risk radar agent (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1858, TASK-1859
+
+**Why**: A personal chief of staff should notice slipping work, repeated deferrals, overloaded lanes, neglected goals, blocked projects, and mismatches between plan and execution.
+
+**Acceptance**:
+- Bot can generate end-of-day, weekly, and project-level reviews.
+- Risk cards cite evidence: overdue tasks, repeated postponements, calendar density, missing next actions, stale lanes, or focus-session mismatch.
+- Bot proposes mitigations such as defer, split, schedule, ask a blocker question, archive, or change lane priority.
+- User can dismiss/snooze risks and the bot remembers that feedback.
+
+**Relevant context**:
+- This lane should not become nagging. Sensitivity, snooze, and explanation quality are part of acceptance.
+- The review output should create learning signals for TASK-1863.
+
+### TASK-1863: Personal memory and recommendation learning layer (📋 PLANNED)
+
+**Priority**: P0-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1855, TASK-1862
+
+**Why**: The bot becomes genuinely useful when it learns the user's chronotype, working preferences, recurring traps, rejected advice, successful planning patterns, project semantics, and decision history.
+
+**Acceptance**:
+- Memory stores preference facts, decision journal entries, repeated behavior patterns, accepted/rejected recommendations, and project-specific heuristics.
+- User can inspect, correct, delete, or disable memory facts.
+- Recommendations cite memory when used and show uncertainty when memory is stale or weak.
+- Memory retrieval is bounded, prompt-injection-safe, and fail-open.
+
+**Relevant context**:
+- Build on existing AI memory work, but aim at product-visible personalization rather than schema completeness alone.
+- Correction and deletion are core UX, not admin-only tooling.
+
+### TASK-1864: User-defined safe automation agents (📋 PLANNED)
+
+**Priority**: P1-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1855, TASK-1860, TASK-1863
+
+**Why**: Once command safety, planning, calendar/focus, and memory are reliable, users should be able to define recurring agents: weekly review, client follow-up, invoice workflow, content publishing, bug triage, or cleanup routines.
+
+**Acceptance**:
+- User can create a named automation with trigger, scope, allowed actions, autonomy level, review cadence, and circuit breakers.
+- Automations can run in suggest-only mode before any auto-apply mode.
+- Each run produces an audit log, applied command batch, skipped actions, and rollback path.
+- "Pause all agents" is available globally.
+
+**Relevant context**:
+- This is intentionally last. Do not add background autonomous mutation before preview/apply/undo, calendar safety, and memory correction are proven.
+- Start with templates before custom freeform automations.
 
 ### TASK-1854: Non-weekly AI bot action regression coverage and memory-substrate cursor correction (✅ DONE)
 

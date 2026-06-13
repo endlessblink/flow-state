@@ -2,9 +2,9 @@
 
 ## 🔜 Next Up — AI Chat Quality System (start here after restart)
 
-### TASK-1852: Post-restart updater proof and AI chat quality continuation (🔄 IN PROGRESS)
+### TASK-1852: Post-restart updater proof and AI chat quality continuation (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (filed 2026-06-12) | **Depends on**: TASK-1851
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-12, completed 2026-06-13) | **Depends on**: TASK-1851
 
 **Why**: TASK-1851 is shipped and proved in a signed-in packaged Electron debug session, but the next instance must resume from the same real-app verification path after restart. Do not lose the lesson from this session: demo fixtures and unit tests were insufficient; the decisive proof came from a headed, signed-in app flow with real task data.
 
@@ -36,6 +36,16 @@
 - There are no raw UUIDs, no `מבוסס על Work`, no `עבודה לא מסווגת`, and no generic `Work`/`My Projects` subtitle leaks.
 - If the user already answered a prioritization clarification, the app does not ask the exact same question again without a new reason.
 - Evidence is a screenshot plus DOM counts for lane boards, visual lanes, legacy weekly cards, generic labels, and lane widths.
+
+**Completion proof (2026-06-13)**:
+- Rebased from `origin/master`; only pre-existing dirty file was generated `stats.html`, stashed before rebase and kept out of the release commit.
+- Live updater pre-check confirmed `https://in-theflow.com/updates/electron/latest-linux.yml` served `version: 1.4.158`; both `FlowState-1.4.158-x86_64.AppImage` and `FlowState_1.4.158_amd64.deb` returned HTTP 200.
+- Installed `~/.local/bin/FlowState.AppImage` was byte-identical to `release/FlowState-1.4.158-x86_64.AppImage` before the fix.
+- Fresh signed-in packaged Electron proof reproduced the next quality issue: the weekly lane board rendered, but the visible activity timeline still exposed raw `נמצאו 40 משימות`, and bare `ai` wording could over-trigger the FlowState reliability lane.
+- Fix narrowed FlowState-AI semantic lane matching so generic AI-credit work no longer becomes `אמינות FlowState וה-AI`, and weekly-plan read activity now shows `נטענו מועמדים לתכנון השבוע` instead of raw `Found/Nמצאו N tasks` counts.
+- Packaged Electron `1.4.159` proof screenshot: `/tmp/flowstate-1.4.159-electron-weekly-lanes.png`; DOM evidence showed 1 weekly lane board, 3 visual lanes, 6 related chips, 0 legacy `.weekly-plan-cards`, 0 raw UUIDs, no `מבוסס על Work` / `עבודה לא מסווגת`, and no raw task-count dump in chat or activity.
+- Verification: `npm test -- tests/unit/ai-sidebar-first.test.ts` → 78/78 passed; `npm run type-check` → passed; `npm run electron:build` → passed and validated package metadata.
+- Electron updater deployment verified at `https://in-theflow.com/updates/electron/latest-linux.yml` with `version: 1.4.159`; both `FlowState-1.4.159-x86_64.AppImage` and `FlowState_1.4.159_amd64.deb` returned HTTP 200.
 
 **Next product slice after this proof**:
 - Continue the AI chat quality lane from the first still-red proof gate below. The likely next work is memory/answer-quality continuity: repeated clarification suppression, stronger reasoning from saved context, and better "why this lane/task" explanations across real data.

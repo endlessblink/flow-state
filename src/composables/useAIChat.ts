@@ -706,13 +706,26 @@ export function useAIChat() {
     })
   }
 
-  function finishToolActivity(activityId: string, call: ToolCall, result: ToolResult): void {
+  function scrubToolActivityMessage(call: ToolCall, result: ToolResult, responseMode?: string): string | undefined {
+    if (
+      responseMode === 'week_plan' &&
+      activityTypeForTool(call.tool) === 'read' &&
+      /^(Found\s+\d+\s+tasks|נמצאו\s+\d+\s+משימות)/i.test(result.message)
+    ) {
+      return /[\u0590-\u05ff]/.test(result.message)
+        ? 'נטענו מועמדים לתכנון השבוע'
+        : 'Loaded weekly planning candidates'
+    }
+    return result.message
+  }
+
+  function finishToolActivity(activityId: string, call: ToolCall, result: ToolResult, responseMode?: string): void {
     const taskIds = extractAffectedTaskIds(call, result)
     const visualKind = result.success ? visualKindForTool(call, result) : undefined
     store.updateActivityEvent(activityId, {
       status: result.success ? 'success' : 'failed',
       label: activityLabelForTool(call.tool, result.success ? 'success' : 'failed'),
-      message: result.message,
+      message: scrubToolActivityMessage(call, result, responseMode),
       taskIds,
       visualKind,
       shouldReveal: taskIds.length > 0 && result.success && visualKind !== 'removed',
@@ -1918,7 +1931,7 @@ export function useAIChat() {
         trackToolCall(sessionId, call.tool)
         const activityId = beginToolActivity(call)
         const result = await executeTool(call, outputLanguage)
-        finishToolActivity(activityId, call, result)
+        finishToolActivity(activityId, call, result, routed.responseMode)
         toolResults.push(result)
         console.log(`[AIChat:Deterministic] Tool result:`, result.success, result.message)
 

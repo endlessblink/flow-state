@@ -859,6 +859,69 @@ describe('AI sidebar-first desktop experience', () => {
     expect(timeoutFallback.presentation?.density).toBe('compact_after_clarification')
   })
 
+  it('does not label generic AI-credit work as FlowState reliability', () => {
+    const tasks = [
+      {
+        id: 'task-ai-credits',
+        title: 'לפנות לספקי ai בשביל קרדיטים חינם לבינה מעצבת',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-14',
+        projectId: 'bina-design',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-bina-edit',
+        title: 'לערוך סרטון herdr',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-12',
+        projectId: 'bina-design',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-flowstate',
+        title: 'Fix weekly planner memory',
+        description: 'Blocks assistant trust because ranking feels generic.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-16',
+        projectId: 'flow-state',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'he',
+      new Date('2026-06-13T09:00:00Z'),
+    )
+    const draft = buildQuickDraftWeeklyPlan(context, {
+      allowClarificationFirst: false,
+      compactUncertainty: true,
+      maxRecommendations: 3,
+    })
+    const aiCreditRec = draft.recommendations.find(rec => rec.primaryTaskId === 'task-ai-credits')
+
+    expect(aiCreditRec).toBeTruthy()
+    expect(aiCreditRec?.focusArea).not.toBe('אמינות FlowState וה-AI')
+    expect(`${aiCreditRec?.focusArea} ${aiCreditRec?.whyThisWeek}`).not.toContain('אמינות FlowState')
+  })
+
   it('asks before turning shallow generic work tasks into a work-delivery weekly lane', () => {
     const tasks = [
       {
@@ -3502,6 +3565,11 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('pathType: \'post_clarification_quick_draft\'')
     expect(aiChat).toContain('maxRecommendations: 3')
     expect(aiChat).toContain('finishChatPhase(phaseActivityId, \'Weekly plan ready\', \'Used compact saved-context draft\')')
+    expect(aiChat).toContain('function scrubToolActivityMessage(call: ToolCall, result: ToolResult, responseMode?: string): string | undefined {')
+    expect(aiChat).toContain("responseMode === 'week_plan'")
+    expect(aiChat).toContain('Loaded weekly planning candidates')
+    expect(aiChat).toContain('נטענו מועמדים לתכנון השבוע')
+    expect(aiChat).toContain('finishToolActivity(activityId, call, result, routed.responseMode)')
   })
 
   it('records weekly recommendation feedback against the exact task, not the whole project', () => {

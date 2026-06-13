@@ -579,6 +579,155 @@ describe('AI action command substrate', () => {
     expect(mockDeleteGroup).toHaveBeenCalledWith(expect.stringMatching(/.+/))
   })
 
+  it('previews AI canvas task moves without mutating task geometry', async () => {
+    const taskStore = useTaskStore()
+    const task = await taskStore.createTask({
+      title: 'Move me on canvas',
+      canvasPosition: { x: 10, y: 20 },
+      parentId: 'old-group',
+    })
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Move task into focus group',
+      sourceRunId: 'run-canvas-move-preview',
+      sourceMessageId: 'msg-canvas-move-preview',
+      dataUsed: { taskId: task.id },
+      commands: [{
+        id: 'cmd-canvas-move-preview',
+        kind: 'canvas.node.move',
+        nodeType: 'task',
+        nodeId: task.id,
+        position: { x: 240, y: 360 },
+        parentId: 'focus-group',
+      }],
+      tasks: taskStore.tasks,
+    })
+
+    expect(taskStore.tasks.find(item => item.id === task.id)?.canvasPosition).toEqual({ x: 10, y: 20 })
+    expect(taskStore.tasks.find(item => item.id === task.id)?.parentId).toBe('old-group')
+    expect(batch.preview.commands).toEqual([
+      expect.objectContaining({
+        id: 'cmd-canvas-move-preview',
+        kind: 'canvas.node.move',
+        status: 'will_create',
+        identity: expect.objectContaining({
+          kind: 'canvas.node.move',
+          targetEntityId: task.id,
+          scope: `canvas:task:${task.id}`,
+        }),
+        diff: {
+          entityType: 'canvas_layout',
+          before: expect.objectContaining({
+            id: task.id,
+            position: { x: 10, y: 20 },
+            parentId: 'old-group',
+          }),
+          after: expect.objectContaining({
+            id: task.id,
+            nodeType: 'task',
+            position: { x: 240, y: 360 },
+            parentId: 'focus-group',
+          }),
+        },
+      }),
+    ])
+  })
+
+  it('applies AI canvas task moves through the task store and reuses replay duplicates', async () => {
+    const taskStore = useTaskStore()
+    const task = await taskStore.createTask({
+      title: 'Move task once',
+      canvasPosition: { x: 0, y: 0 },
+    })
+    const updateTaskSpy = vi.spyOn(taskStore, 'updateTask')
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Move task once',
+      sourceRunId: 'run-canvas-task-move',
+      sourceMessageId: 'msg-canvas-task-move',
+      dataUsed: { taskId: task.id },
+      commands: [{
+        id: 'cmd-canvas-task-move',
+        kind: 'canvas.node.move',
+        nodeType: 'task',
+        nodeId: task.id,
+        position: { x: 144, y: 288 },
+        parentId: 'group-target',
+      }],
+      tasks: taskStore.tasks,
+    })
+
+    const first = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-canvas-task-move'],
+      taskStore,
+    })
+    const replay = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-canvas-task-move'],
+      taskStore,
+    })
+
+    const movedTask = taskStore.tasks.find(item => item.id === task.id)
+    expect(movedTask?.canvasPosition).toEqual({ x: 144, y: 288 })
+    expect(movedTask?.parentId).toBe('group-target')
+    expect(updateTaskSpy).toHaveBeenCalledTimes(1)
+    expect(first.appliedCommands[0]).toMatchObject({ kind: 'canvas.node.move', result: 'created' })
+    expect(replay.appliedCommands[0]).toMatchObject({ kind: 'canvas.node.move', result: 'reused_existing' })
+  })
+
+  it('applies and rolls back AI canvas group moves through the canvas store', async () => {
+    const taskStore = useTaskStore()
+    const canvasStore = useCanvasStore()
+    const group = await canvasStore.createGroup({
+      name: 'Moveable Group',
+      type: 'custom',
+      position: { x: 0, y: 0, width: 400, height: 300 },
+      color: '#0EA5E9',
+      layout: 'vertical',
+      isVisible: true,
+      isCollapsed: false,
+    })
+    const updateGroupSpy = vi.spyOn(canvasStore, 'updateGroup')
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Move canvas group',
+      sourceRunId: 'run-canvas-group-move',
+      sourceMessageId: 'msg-canvas-group-move',
+      dataUsed: { groupId: group.id },
+      commands: [{
+        id: 'cmd-canvas-group-move',
+        kind: 'canvas.node.move',
+        nodeType: 'group',
+        nodeId: group.id,
+        position: { x: 640, y: 120, width: 520, height: 360 },
+      }],
+      tasks: taskStore.tasks,
+      canvasGroups: canvasStore.groups,
+    })
+
+    const first = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-canvas-group-move'],
+      taskStore,
+      canvasStore,
+    })
+    const replay = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-canvas-group-move'],
+      taskStore,
+      canvasStore,
+    })
+
+    expect(canvasStore.groups.find(item => item.id === group.id)?.position).toEqual({ x: 640, y: 120, width: 520, height: 360 })
+    expect(updateGroupSpy).toHaveBeenCalledTimes(1)
+    expect(first.appliedCommands[0]).toMatchObject({ kind: 'canvas.node.move', result: 'created' })
+    expect(replay.appliedCommands[0]).toMatchObject({ kind: 'canvas.node.move', result: 'reused_existing' })
+
+    await rollbackAICommandBatch(first.rollbackPointer, {
+      taskStore,
+      canvasStore,
+    })
+
+    expect(canvasStore.groups.find(item => item.id === group.id)?.position).toEqual({ x: 0, y: 0, width: 400, height: 300 })
+  })
+
   it('previews AI calendar scheduling without mutating task instances', async () => {
     const taskStore = useTaskStore()
     const task = await taskStore.createTask({ title: 'Write launch follow-up' })

@@ -5,6 +5,7 @@ import type { useLaneStore } from '@/stores/lanes'
 import type { useTaskStore } from '@/stores/tasks'
 import {
   decideAICanvasGroupCreate,
+  decideAICanvasNodeMove,
   decideAICalendarScheduleTask,
   decideAILaneCreate,
   decideAISubtaskCreate,
@@ -22,7 +23,7 @@ import {
   type AICommandRollbackSnapshot,
 } from './actionCommandAuditStore'
 
-export type AICommandKind = 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create'
+export type AICommandKind = 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move'
 export type AICommandImpact = 'low' | 'medium' | 'high'
 
 export type AITaskCreateCommand = {
@@ -82,10 +83,33 @@ export type AICanvasGroupCreateCommand = {
   impact?: AICommandImpact
 }
 
-export type AICommand = AITaskCreateCommand | AISubtaskCreateCommand | AILaneCreateCommand | AICalendarScheduleTaskCommand | AICanvasGroupCreateCommand
+export type AICanvasNodeMoveCommand = {
+  id: string
+  kind: 'canvas.node.move'
+  nodeType: 'task' | 'group'
+  nodeId: string
+  position: {
+    x: number
+    y: number
+    width?: number
+    height?: number
+  }
+  parentId?: string | null
+  parentGroupId?: string | null
+  confidence?: number
+  impact?: AICommandImpact
+}
+
+export type AICommand =
+  | AITaskCreateCommand
+  | AISubtaskCreateCommand
+  | AILaneCreateCommand
+  | AICalendarScheduleTaskCommand
+  | AICanvasGroupCreateCommand
+  | AICanvasNodeMoveCommand
 
 export type AICommandDiff = {
-  entityType: 'task' | 'subtask' | 'lane' | 'calendar' | 'canvas_group'
+  entityType: 'task' | 'subtask' | 'lane' | 'calendar' | 'canvas_group' | 'canvas_layout'
   before: Record<string, unknown> | null
   after: Record<string, unknown>
 }
@@ -326,6 +350,68 @@ function previewCommand(command: AICommand, input: {
           layout: command.layout || 'vertical',
           workspaceId: command.workspaceId ?? null,
         },
+      },
+    }
+  }
+
+  if (command.kind === 'canvas.node.move') {
+    const task = command.nodeType === 'task'
+      ? tasks.find(task => task.id === command.nodeId) ?? null
+      : null
+    const group = command.nodeType === 'group'
+      ? canvasGroups.find(group => group.id === command.nodeId) ?? null
+      : null
+    const decision = decideAICanvasNodeMove({
+      task,
+      group,
+      nodeType: command.nodeType,
+      nodeId: command.nodeId,
+      position: command.position,
+      parentId: command.parentId,
+      parentGroupId: command.parentGroupId,
+      sourceMessageId,
+    })
+    return {
+      id: command.id,
+      kind: command.kind,
+      status: requiresExplicitApproval
+        ? 'blocked_requires_approval'
+        : decision.existing ? 'will_reuse_existing' : 'will_create',
+      identity: decision.identity,
+      duplicateOf: decision.existing?.id,
+      requiresExplicitApproval,
+      diff: {
+        entityType: 'canvas_layout',
+        before: command.nodeType === 'task'
+          ? task
+            ? {
+              id: task.id,
+              nodeType: 'task',
+              position: task.canvasPosition ?? null,
+              parentId: task.parentId ?? null,
+            }
+            : null
+          : group
+            ? {
+              id: group.id,
+              nodeType: 'group',
+              position: group.position,
+              parentGroupId: group.parentGroupId ?? null,
+            }
+            : null,
+        after: command.nodeType === 'task'
+          ? {
+            id: command.nodeId,
+            nodeType: command.nodeType,
+            position: command.position,
+            parentId: command.parentId ?? null,
+          }
+          : {
+            id: command.nodeId,
+            nodeType: command.nodeType,
+            position: command.position,
+            parentGroupId: command.parentGroupId ?? null,
+          },
       },
     }
   }
@@ -595,6 +681,88 @@ async function applyCanvasGroupCreate(command: AICanvasGroupCreateCommand, canva
   }
 }
 
+async function applyCanvasNodeMove(command: AICanvasNodeMoveCommand, options: {
+  taskStore: TaskStore
+  canvasStore?: CanvasStore
+  sourceMessageId: string
+}): Promise<AppliedAICommand> {
+  if (command.nodeType === 'task') {
+    const task = options.taskStore.tasks.find(task => task.id === command.nodeId) ?? null
+    if (!task) throw new Error(`Task ${command.nodeId} not found`)
+
+    const decision = decideAICanvasNodeMove({
+      task,
+      nodeType: command.nodeType,
+      nodeId: command.nodeId,
+      position: command.position,
+      parentId: command.parentId,
+      sourceMessageId: options.sourceMessageId,
+    })
+    const preview = previewCommand(command, {
+      tasks: options.taskStore.tasks,
+      lanes: [],
+      canvasGroups: [],
+      sourceMessageId: options.sourceMessageId,
+    })
+    if (decision.existing) {
+      return {
+        ...preview,
+        result: 'reused_existing',
+        entityId: decision.existing.id,
+        duplicateOf: decision.existing.id,
+      }
+    }
+
+    await options.taskStore.updateTask(command.nodeId, {
+      canvasPosition: { x: command.position.x, y: command.position.y },
+      positionFormat: 'absolute',
+      ...('parentId' in command ? { parentId: command.parentId ?? undefined } : {}),
+    })
+    return {
+      ...preview,
+      result: 'created',
+      entityId: command.nodeId,
+    }
+  }
+
+  const canvasStore = options.canvasStore ?? missingCanvasStore()
+  const group = canvasStore.groups.find(group => group.id === command.nodeId) ?? null
+  if (!group) throw new Error(`Canvas group ${command.nodeId} not found`)
+
+  const decision = decideAICanvasNodeMove({
+    group,
+    nodeType: command.nodeType,
+    nodeId: command.nodeId,
+    position: command.position,
+    parentGroupId: command.parentGroupId,
+    sourceMessageId: options.sourceMessageId,
+  })
+  const preview = previewCommand(command, {
+    tasks: options.taskStore.tasks,
+    lanes: [],
+    canvasGroups: canvasStore.groups,
+    sourceMessageId: options.sourceMessageId,
+  })
+  if (decision.existing) {
+    return {
+      ...preview,
+      result: 'reused_existing',
+      entityId: decision.existing.id,
+      duplicateOf: decision.existing.id,
+    }
+  }
+
+  await canvasStore.updateGroup(command.nodeId, {
+    position: { ...group.position, ...command.position },
+    ...('parentGroupId' in command ? { parentGroupId: command.parentGroupId ?? null } : {}),
+  })
+  return {
+    ...preview,
+    result: 'created',
+    entityId: command.nodeId,
+  }
+}
+
 export async function applyAICommandBatch(batch: AICommandBatch, options: {
   selectedCommandIds: string[]
   taskStore: TaskStore
@@ -632,11 +800,17 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
           )
           : command.kind === 'calendar.schedule_task'
             ? await applyCalendarScheduleTask(command, options.taskStore, batch.sourceMessageId)
-            : await applyCanvasGroupCreate(
-              command,
-              options.canvasStore ?? missingCanvasStore(),
-              batch.sourceMessageId,
-            )
+            : command.kind === 'canvas.group.create'
+              ? await applyCanvasGroupCreate(
+                command,
+                options.canvasStore ?? missingCanvasStore(),
+                batch.sourceMessageId,
+              )
+              : await applyCanvasNodeMove(command, {
+                taskStore: options.taskStore,
+                canvasStore: options.canvasStore,
+                sourceMessageId: batch.sourceMessageId,
+              })
     appliedCommands.push(applied)
   }
 

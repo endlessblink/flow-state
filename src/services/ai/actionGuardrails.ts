@@ -7,7 +7,7 @@ export type AIActionDuplicateDecision =
   | 'create_anyway_requires_explicit_user_intent'
 
 export interface AIActionIdentity {
-  kind: 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create'
+  kind: 'task.create' | 'task.subtask.create' | 'lane.create' | 'calendar.schedule_task' | 'canvas.group.create' | 'canvas.node.move'
   sourceMessageId: string | null
   targetEntityId: string | null
   scope: string
@@ -33,6 +33,10 @@ function stableFingerprint(parts: Record<string, unknown>): string {
     acc[key] = parts[key]
     return acc
   }, {}))
+}
+
+function normalizeNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
 function isActiveTask(task: Task): boolean {
@@ -312,5 +316,97 @@ export function decideAICanvasGroupCreate(input: {
     decision: existing ? 'reuse_existing' : 'create',
     identity,
     existing,
+  }
+}
+
+type AICanvasNodeMovePosition = {
+  x: number
+  y: number
+  width?: number
+  height?: number
+}
+
+type AICanvasNodeMoveTarget = Task | CanvasGroup
+
+function normalizeCanvasMovePosition(position: AICanvasNodeMovePosition): Record<string, number | null> {
+  return {
+    x: normalizeNumber(position.x),
+    y: normalizeNumber(position.y),
+    width: normalizeNumber(position.width),
+    height: normalizeNumber(position.height),
+  }
+}
+
+function positionMatches(current: {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+} | null | undefined, target: AICanvasNodeMovePosition): boolean {
+  if (!current) return false
+  if (current.x !== target.x || current.y !== target.y) return false
+  if (target.width !== undefined && current.width !== target.width) return false
+  if (target.height !== undefined && current.height !== target.height) return false
+  return true
+}
+
+export function buildAICanvasNodeMoveIdentity(input: {
+  sourceMessageId?: unknown
+  nodeType: 'task' | 'group'
+  nodeId: string
+  position: AICanvasNodeMovePosition
+  parentId?: unknown
+  parentGroupId?: unknown
+  scope?: string
+}): AIActionIdentity {
+  const scope = input.scope || `canvas:${input.nodeType}:${input.nodeId}`
+  return {
+    kind: 'canvas.node.move',
+    sourceMessageId: typeof input.sourceMessageId === 'string' ? input.sourceMessageId : null,
+    targetEntityId: input.nodeId,
+    scope,
+    fingerprint: stableFingerprint({
+      kind: 'canvas.node.move',
+      scope,
+      nodeType: input.nodeType,
+      targetEntityId: input.nodeId,
+      parentId: typeof input.parentId === 'string' ? input.parentId : input.parentId === null ? null : '',
+      parentGroupId: typeof input.parentGroupId === 'string' ? input.parentGroupId : input.parentGroupId === null ? null : '',
+      ...normalizeCanvasMovePosition(input.position),
+    }),
+  }
+}
+
+export function decideAICanvasNodeMove(input: {
+  task?: Task | null
+  group?: CanvasGroup | null
+  nodeType: 'task' | 'group'
+  nodeId: string
+  position: AICanvasNodeMovePosition
+  parentId?: unknown
+  parentGroupId?: unknown
+  sourceMessageId?: unknown
+  scope?: string
+}): AIActionDuplicateResult<AICanvasNodeMoveTarget> {
+  const identity = buildAICanvasNodeMoveIdentity(input)
+  const existing = input.nodeType === 'task'
+    ? input.task
+    : input.group
+  const isAlreadyMoved = input.nodeType === 'task'
+    ? Boolean(
+      input.task &&
+      positionMatches(input.task.canvasPosition, input.position) &&
+      (!('parentId' in input) || input.task.parentId === (input.parentId ?? undefined))
+    )
+    : Boolean(
+      input.group &&
+      positionMatches(input.group.position, input.position) &&
+      (!('parentGroupId' in input) || input.group.parentGroupId === (input.parentGroupId ?? null))
+    )
+
+  return {
+    decision: isAlreadyMoved ? 'reuse_existing' : 'create',
+    identity,
+    existing: isAlreadyMoved ? existing ?? null : null,
   }
 }

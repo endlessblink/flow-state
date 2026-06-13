@@ -155,6 +155,25 @@ describe('TASK-1722 — confirmBulkDelete', () => {
         canvasImagesValue = []
     })
 
+    it('Regular Delete removes all selected task nodes from Vue Flow in one synchronous update', async () => {
+        const { removeTaskNodesFromCanvas } = await import('../useCanvasTaskActions')
+
+        mockGetNodes.value = [
+            { id: 'task-a', type: 'taskNode', position: { x: 0, y: 0 }, data: {} },
+            { id: 'task-b', type: 'taskNode', position: { x: 100, y: 0 }, data: {} },
+            { id: 'task-c', type: 'taskNode', position: { x: 200, y: 0 }, data: {} },
+            { id: 'group-1', type: 'sectionNode', position: { x: 0, y: 200 }, data: {} },
+        ] as any
+
+        removeTaskNodesFromCanvas(['task-a', 'task-b'])
+
+        expect(mockSetNodes).toHaveBeenCalledOnce()
+        expect(mockSetNodes).toHaveBeenCalledWith([
+            { id: 'task-c', type: 'taskNode', position: { x: 200, y: 0 }, data: {} },
+            { id: 'group-1', type: 'sectionNode', position: { x: 0, y: 200 }, data: {} },
+        ])
+    })
+
     it('Shift+Delete (isPermanent=true) calls bulkPermanentlyDeleteTasksWithUndo (real hard delete), NOT soft bulkDeleteTasksWithUndo', async () => {
         const { useCanvasTaskActions } = await import('../useCanvasTaskActions')
 

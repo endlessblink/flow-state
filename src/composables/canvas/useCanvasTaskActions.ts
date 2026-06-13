@@ -33,6 +33,14 @@ export interface TaskActionsDeps {
     fitView?: (options?: { padding?: number; duration?: number; nodes?: string[] }) => void
 }
 
+export const removeTaskNodesFromCanvas = (taskIds: string[]) => {
+    if (taskIds.length === 0) return
+
+    const idsToRemove = new Set(taskIds)
+    const { getNodes, setNodes } = useVueFlow()
+    setNodes(getNodes.value.filter(node => !idsToRemove.has(node.id)))
+}
+
 export function useCanvasTaskActions(deps: TaskActionsDeps) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
@@ -457,6 +465,8 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
             // BUG-1739: Batch move-to-inbox with single undo operation (avoids N×snapshot overhead)
             if (taskIdsToMoveToInbox.length > 0) {
+                removeTaskNodesFromCanvas(taskIdsToMoveToInbox)
+                canvasStore.setSelectedNodes([])
                 await undoHistory.bulkMoveToInboxWithUndo(taskIdsToMoveToInbox)
             }
 
@@ -488,6 +498,8 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             if (deps.syncEdges) deps.syncEdges({ force: true })
         } catch (error) {
             console.error('[ASYNC-ERROR] confirmBulkDelete failed', error)
+            deps.syncNodes(undefined, { force: true })
+            if (deps.syncEdges) deps.syncEdges({ force: true })
         }
     }
 

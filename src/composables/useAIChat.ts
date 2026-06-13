@@ -122,6 +122,26 @@ type FormatterFallbackOptions = {
   compactPreference?: boolean
 }
 
+const WEEKLY_PLAN_TASK_COUNT_ACTIVITY_RE = /^(?:Found\s+\d+\s+(?:overdue\s+)?tasks(?:\b|$)|נמצאו\s+\d+\s+משימות(?:\s+(?:התואמות|באיחור)\b)?)/i
+
+export function scrubToolActivityMessage(
+  call: ToolCall,
+  result: ToolResult,
+  responseMode?: string,
+  activityType: AIActivityEvent['type'] = 'read',
+): string | undefined {
+  if (
+    responseMode === 'week_plan' &&
+    activityType === 'read' &&
+    WEEKLY_PLAN_TASK_COUNT_ACTIVITY_RE.test(result.message)
+  ) {
+    return /[\u0590-\u05ff]/.test(result.message)
+      ? 'נטענו מועמדים לתכנון השבוע'
+      : 'Loaded weekly planning candidates'
+  }
+  return result.message
+}
+
 type AIMemorySummaryResult = {
   summary: string
   recommendationFeedback: AIRecommendationFeedback[]
@@ -706,26 +726,14 @@ export function useAIChat() {
     })
   }
 
-  function scrubToolActivityMessage(call: ToolCall, result: ToolResult, responseMode?: string): string | undefined {
-    if (
-      responseMode === 'week_plan' &&
-      activityTypeForTool(call.tool) === 'read' &&
-      /^(Found\s+\d+\s+tasks|נמצאו\s+\d+\s+משימות)/i.test(result.message)
-    ) {
-      return /[\u0590-\u05ff]/.test(result.message)
-        ? 'נטענו מועמדים לתכנון השבוע'
-        : 'Loaded weekly planning candidates'
-    }
-    return result.message
-  }
-
   function finishToolActivity(activityId: string, call: ToolCall, result: ToolResult, responseMode?: string): void {
+    const activityType = activityTypeForTool(call.tool)
     const taskIds = extractAffectedTaskIds(call, result)
     const visualKind = result.success ? visualKindForTool(call, result) : undefined
     store.updateActivityEvent(activityId, {
       status: result.success ? 'success' : 'failed',
       label: activityLabelForTool(call.tool, result.success ? 'success' : 'failed'),
-      message: scrubToolActivityMessage(call, result, responseMode),
+      message: scrubToolActivityMessage(call, result, responseMode, activityType),
       taskIds,
       visualKind,
       shouldReveal: taskIds.length > 0 && result.success && visualKind !== 'removed',

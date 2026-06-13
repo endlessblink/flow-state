@@ -2,6 +2,21 @@
 
 ## 🔜 Next Up — AI Chat Quality System (start here after restart)
 
+### TASK-1853: Weekly planner regression coverage for activity and lane semantics (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-13, completed 2026-06-13) | **Depends on**: TASK-1852
+
+**Why**: TASK-1852 shipped the real Electron fix, but two important guards were still too weak: weekly-plan activity scrubbing was protected mostly by source-shape assertions, and the narrowed FlowState semantic lane needed an explicit positive guard so real FlowState assistant reliability work still keeps its product lane.
+
+**Completion proof (2026-06-13)**:
+- Added behavior-level regression coverage for weekly-plan activity messages: English `Found N tasks`, English `Found N tasks matching ...`, English `Found N overdue tasks`, Hebrew `נמצאו N משימות`, Hebrew matching-task counts, and Hebrew overdue-task counts are scrubbed only for `week_plan` read activity.
+- Added negative coverage that task-count messages remain unchanged outside weekly planning and for write activity.
+- Exported the scrub helper as a pure tested display function and kept the live tool-activity path scoped by `activityTypeForTool(call.tool)`.
+- Added a positive weekly-lane semantic regression proving real FlowState assistant reliability work still becomes `FlowState AI reliability` after removing bare generic `ai` matching.
+- Verification: `npm test -- tests/unit/ai-chat-activity-message.test.ts tests/unit/ai-sidebar-first.test.ts` → 82/82 passed.
+- Verification: `npm run type-check` → passed; `npm run electron:build` → passed and validated package metadata.
+- Electron updater deployment verified at `https://in-theflow.com/updates/electron/latest-linux.yml` with `version: 1.4.160`; both `FlowState-1.4.160-x86_64.AppImage` and `FlowState_1.4.160_amd64.deb` returned HTTP 200.
+
 ### TASK-1852: Post-restart updater proof and AI chat quality continuation (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-12, completed 2026-06-13) | **Depends on**: TASK-1851

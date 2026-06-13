@@ -922,6 +922,55 @@ describe('AI sidebar-first desktop experience', () => {
     expect(`${aiCreditRec?.focusArea} ${aiCreditRec?.whyThisWeek}`).not.toContain('אמינות FlowState')
   })
 
+  it('still labels real FlowState assistant reliability work as FlowState reliability', () => {
+    const tasks = [
+      {
+        id: 'task-flowstate-memory',
+        title: 'Fix FlowState weekly planner memory fallback',
+        description: 'Assistant trust drops when weekly planning forgets saved context.',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-14',
+        projectId: 'flow-state',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+      {
+        id: 'task-client-invoice',
+        title: 'Send client invoice follow-up',
+        description: '',
+        status: 'todo',
+        priority: 'medium',
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: '2026-06-15',
+        projectId: 'client-work',
+        createdAt: new Date('2026-06-01T08:00:00Z'),
+        updatedAt: new Date('2026-06-07T08:00:00Z'),
+      } as Task,
+    ]
+    const context = buildWeekContextFromToolResults(
+      [{ success: true, data: tasks }],
+      tasks,
+      'en',
+      new Date('2026-06-13T09:00:00Z'),
+    )
+    const draft = buildQuickDraftWeeklyPlan(context, {
+      allowClarificationFirst: false,
+      compactUncertainty: true,
+      maxRecommendations: 2,
+    })
+    const flowStateRec = draft.recommendations.find(rec => rec.primaryTaskId === 'task-flowstate-memory')
+
+    expect(flowStateRec).toBeTruthy()
+    expect(flowStateRec?.focusArea).toBe('FlowState AI reliability')
+    expect(flowStateRec?.whyThisWeek).toMatch(/assistant|planning|memory|reliability/i)
+  })
+
   it('asks before turning shallow generic work tasks into a work-delivery weekly lane', () => {
     const tasks = [
       {
@@ -3565,8 +3614,10 @@ describe('AI sidebar-first desktop experience', () => {
     expect(aiChat).toContain('pathType: \'post_clarification_quick_draft\'')
     expect(aiChat).toContain('maxRecommendations: 3')
     expect(aiChat).toContain('finishChatPhase(phaseActivityId, \'Weekly plan ready\', \'Used compact saved-context draft\')')
-    expect(aiChat).toContain('function scrubToolActivityMessage(call: ToolCall, result: ToolResult, responseMode?: string): string | undefined {')
+    expect(aiChat).toContain('export function scrubToolActivityMessage(')
     expect(aiChat).toContain("responseMode === 'week_plan'")
+    expect(aiChat).toContain("activityType === 'read'")
+    expect(aiChat).toContain('WEEKLY_PLAN_TASK_COUNT_ACTIVITY_RE')
     expect(aiChat).toContain('Loaded weekly planning candidates')
     expect(aiChat).toContain('נטענו מועמדים לתכנון השבוע')
     expect(aiChat).toContain('finishToolActivity(activityId, call, result, routed.responseMode)')

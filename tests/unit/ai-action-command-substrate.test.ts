@@ -4,6 +4,8 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const mockEnqueue = vi.fn().mockResolvedValue({ id: 1, status: 'pending' })
 const mockDeleteTask = vi.fn().mockResolvedValue(undefined)
+const mockSaveLane = vi.fn().mockResolvedValue(undefined)
+const mockDeleteLane = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
   useSyncOrchestrator: () => ({
@@ -46,6 +48,9 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
     fetchGroups: vi.fn().mockResolvedValue([]),
     saveGroup: vi.fn().mockResolvedValue(undefined),
     deleteGroup: vi.fn().mockResolvedValue(undefined),
+    fetchLanes: vi.fn().mockResolvedValue([]),
+    saveLane: mockSaveLane,
+    deleteLane: mockDeleteLane,
     fetchProjects: vi.fn().mockResolvedValue([]),
     saveProject: vi.fn().mockResolvedValue(undefined),
     saveProjects: vi.fn().mockResolvedValue(undefined),
@@ -82,6 +87,7 @@ import {
   loadAICommandAuditTrail,
   rollbackAICommandBatch,
 } from '@/services/ai/actionCommands'
+import { useLaneStore } from '@/stores/lanes'
 import { useTaskStore } from '@/stores/tasks'
 
 describe('AI action command substrate', () => {
@@ -90,6 +96,8 @@ describe('AI action command substrate', () => {
     vi.clearAllMocks()
     mockEnqueue.mockResolvedValue({ id: 1, status: 'pending' })
     mockDeleteTask.mockResolvedValue(undefined)
+    mockSaveLane.mockResolvedValue(undefined)
+    mockDeleteLane.mockResolvedValue(undefined)
     localStorage.clear()
     await clearAICommandAuditStoreForTests()
   })
@@ -325,5 +333,118 @@ describe('AI action command substrate', () => {
 
     expect(taskStore.tasks.map(task => task.title)).toEqual(['Durable rollback parent'])
     expect(taskStore.tasks.find(task => task.id === parent.id)?.subtasks).toEqual([])
+  })
+
+  it('previews AI lane creation without mutating lane state', async () => {
+    const taskStore = useTaskStore()
+    const laneStore = useLaneStore()
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Create a lane for launch follow-up',
+      sourceRunId: 'run-lane-preview',
+      sourceMessageId: 'msg-lane-preview',
+      dataUsed: { currentLaneCount: 0 },
+      commands: [{
+        id: 'cmd-lane-preview',
+        kind: 'lane.create',
+        name: 'Launch Follow-up',
+        color: '#7C3AED',
+      }],
+      tasks: taskStore.tasks,
+      lanes: laneStore.lanes,
+    })
+
+    expect(laneStore.lanes).toHaveLength(0)
+    expect(batch.preview.commands).toEqual([
+      expect.objectContaining({
+        id: 'cmd-lane-preview',
+        kind: 'lane.create',
+        status: 'will_create',
+        identity: expect.objectContaining({
+          kind: 'lane.create',
+          scope: 'lanes',
+        }),
+        diff: {
+          entityType: 'lane',
+          before: null,
+          after: expect.objectContaining({
+            name: 'Launch Follow-up',
+            color: '#7C3AED',
+          }),
+        },
+      }),
+    ])
+  })
+
+  it('applies AI lane creation through the lane store and reuses semantic duplicates on replay', async () => {
+    const taskStore = useTaskStore()
+    const laneStore = useLaneStore()
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Create one durable lane',
+      sourceRunId: 'run-lane-create',
+      sourceMessageId: 'msg-lane-create',
+      dataUsed: {},
+      commands: [{
+        id: 'cmd-lane-create',
+        kind: 'lane.create',
+        name: 'Revenue Recovery',
+        color: '#16A34A',
+      }],
+      tasks: taskStore.tasks,
+      lanes: laneStore.lanes,
+    })
+
+    const first = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-lane-create'],
+      taskStore,
+      laneStore,
+    })
+    const replay = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-lane-create'],
+      taskStore,
+      laneStore,
+    })
+
+    expect(laneStore.lanes.map(lane => lane.name)).toEqual(['Revenue Recovery'])
+    expect(mockSaveLane).toHaveBeenCalledTimes(1)
+    expect(first.appliedCommands[0]).toMatchObject({ kind: 'lane.create', result: 'created' })
+    expect(replay.appliedCommands[0]).toMatchObject({ kind: 'lane.create', result: 'reused_existing' })
+  })
+
+  it('rolls back AI-created lanes to the pre-AI lane state', async () => {
+    const taskStore = useTaskStore()
+    const laneStore = useLaneStore()
+    await laneStore.createLane({ name: 'Existing Lane', color: '#0EA5E9' })
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Create temporary lane',
+      sourceRunId: 'run-lane-rollback',
+      sourceMessageId: 'msg-lane-rollback',
+      dataUsed: {},
+      commands: [{
+        id: 'cmd-lane-rollback',
+        kind: 'lane.create',
+        name: 'Temporary AI Lane',
+        color: '#F97316',
+      }],
+      tasks: taskStore.tasks,
+      lanes: laneStore.lanes,
+    })
+
+    const result = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-lane-rollback'],
+      taskStore,
+      laneStore,
+    })
+    expect(laneStore.lanes.map(lane => lane.name)).toEqual(['Existing Lane', 'Temporary AI Lane'])
+
+    await rollbackAICommandBatch(result.rollbackPointer, {
+      taskStore,
+      laneStore,
+    })
+
+    expect(laneStore.lanes.map(lane => lane.name)).toEqual(['Existing Lane'])
+    expect(mockDeleteLane).toHaveBeenCalledWith(expect.stringMatching(/.+/))
   })
 })

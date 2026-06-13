@@ -1,4 +1,4 @@
-import type { Subtask, Task } from '@/types/tasks'
+import type { Lane, Subtask, Task } from '@/types/tasks'
 
 export type AIActionDuplicateDecision =
   | 'create'
@@ -6,7 +6,7 @@ export type AIActionDuplicateDecision =
   | 'create_anyway_requires_explicit_user_intent'
 
 export interface AIActionIdentity {
-  kind: 'task.create' | 'task.subtask.create'
+  kind: 'task.create' | 'task.subtask.create' | 'lane.create'
   sourceMessageId: string | null
   targetEntityId: string | null
   scope: string
@@ -40,6 +40,11 @@ function isActiveTask(task: Task): boolean {
 
 function isActiveSubtask(subtask: Subtask): boolean {
   return !subtask.isCompleted
+}
+
+function isActiveLane(lane: Lane): boolean {
+  const laneRecord = lane as Lane & { is_deleted?: boolean; isDeleted?: boolean }
+  return laneRecord.is_deleted !== true && laneRecord.isDeleted !== true
 }
 
 export function buildAITaskCreateIdentity(input: {
@@ -140,6 +145,52 @@ export function decideAISubtaskCreate(input: {
   const existing = (input.parentTask.subtasks || []).find(subtask =>
     isActiveSubtask(subtask) && normalizeAIActionText(subtask.title) === normalizedTitle
   ) ?? null
+
+  return {
+    decision: existing ? 'reuse_existing' : 'create',
+    identity,
+    existing,
+  }
+}
+
+export function buildAILaneCreateIdentity(input: {
+  sourceMessageId?: unknown
+  name: string
+  workspaceId?: unknown
+  scope?: string
+}): AIActionIdentity {
+  const workspaceId = typeof input.workspaceId === 'string' ? input.workspaceId : ''
+  const scope = input.scope || (workspaceId ? `workspace:${workspaceId}:lanes` : 'lanes')
+  return {
+    kind: 'lane.create',
+    sourceMessageId: typeof input.sourceMessageId === 'string' ? input.sourceMessageId : null,
+    targetEntityId: workspaceId || null,
+    scope,
+    fingerprint: stableFingerprint({
+      kind: 'lane.create',
+      scope,
+      name: normalizeAIActionText(input.name),
+      workspaceId,
+    }),
+  }
+}
+
+export function decideAILaneCreate(input: {
+  lanes: Lane[]
+  name: string
+  workspaceId?: unknown
+  sourceMessageId?: unknown
+  scope?: string
+}): AIActionDuplicateResult<Lane> {
+  const identity = buildAILaneCreateIdentity(input)
+  const normalizedName = normalizeAIActionText(input.name)
+  const workspaceId = typeof input.workspaceId === 'string' ? input.workspaceId : null
+  const existing = input.lanes.find(lane => {
+    if (!isActiveLane(lane)) return false
+    if (normalizeAIActionText(lane.name) !== normalizedName) return false
+    if (workspaceId && lane.workspaceId !== workspaceId) return false
+    return true
+  }) ?? null
 
   return {
     decision: existing ? 'reuse_existing' : 'create',

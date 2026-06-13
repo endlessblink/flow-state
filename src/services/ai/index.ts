@@ -117,6 +117,7 @@ export type {
   AICommandDiff,
   AICommandImpact,
   AICommandKind,
+  AILaneCreateCommand,
   AICommandPreviewItem,
   AISubtaskCreateCommand,
   AITaskCreateCommand,

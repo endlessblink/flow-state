@@ -1,6 +1,8 @@
-import type { Subtask, Task } from '@/types/tasks'
+import type { Lane, Subtask, Task } from '@/types/tasks'
+import type { useLaneStore } from '@/stores/lanes'
 import type { useTaskStore } from '@/stores/tasks'
 import {
+  decideAILaneCreate,
   decideAISubtaskCreate,
   decideAITaskCreate,
   type AIActionIdentity,
@@ -16,7 +18,7 @@ import {
   type AICommandRollbackSnapshot,
 } from './actionCommandAuditStore'
 
-export type AICommandKind = 'task.create' | 'task.subtask.create'
+export type AICommandKind = 'task.create' | 'task.subtask.create' | 'lane.create'
 export type AICommandImpact = 'low' | 'medium' | 'high'
 
 export type AITaskCreateCommand = {
@@ -42,10 +44,20 @@ export type AISubtaskCreateCommand = {
   impact?: AICommandImpact
 }
 
-export type AICommand = AITaskCreateCommand | AISubtaskCreateCommand
+export type AILaneCreateCommand = {
+  id: string
+  kind: 'lane.create'
+  name: string
+  color?: string
+  workspaceId?: string | null
+  confidence?: number
+  impact?: AICommandImpact
+}
+
+export type AICommand = AITaskCreateCommand | AISubtaskCreateCommand | AILaneCreateCommand
 
 export type AICommandDiff = {
-  entityType: 'task' | 'subtask'
+  entityType: 'task' | 'subtask' | 'lane'
   before: Record<string, unknown> | null
   after: Record<string, unknown>
 }
@@ -100,6 +112,7 @@ export type AICommandApplyResult = AICommandAuditEntry & {
 }
 
 type TaskStore = ReturnType<typeof useTaskStore>
+type LaneStore = ReturnType<typeof useLaneStore>
 
 export {
   clearAICommandAuditStoreForTests,
@@ -116,6 +129,14 @@ function cloneTasks(tasks: Task[]): Task[] {
   return tasks.map(cloneTask)
 }
 
+function cloneLane(lane: Lane): Lane {
+  return JSON.parse(JSON.stringify(lane)) as Lane
+}
+
+function cloneLanes(lanes: Lane[]): Lane[] {
+  return lanes.map(cloneLane)
+}
+
 function commandRequiresApproval(command: AICommand): boolean {
   return (command.confidence !== undefined && command.confidence < 0.5) || command.impact === 'high'
 }
@@ -124,7 +145,12 @@ function generateBatchId(sourceRunId: string, sourceMessageId: string): string {
   return `ai-batch:${sourceRunId}:${sourceMessageId}:${Date.now()}`
 }
 
-function previewCommand(command: AICommand, tasks: Task[], sourceMessageId: string): AICommandPreviewItem {
+function previewCommand(command: AICommand, input: {
+  tasks: Task[]
+  lanes: Lane[]
+  sourceMessageId: string
+}): AICommandPreviewItem {
+  const { tasks, lanes, sourceMessageId } = input
   const requiresExplicitApproval = commandRequiresApproval(command)
   if (command.kind === 'task.create') {
     const decision = decideAITaskCreate({
@@ -154,6 +180,34 @@ function previewCommand(command: AICommand, tasks: Task[], sourceMessageId: stri
           dueDate: command.dueDate || '',
           parentTaskId: command.parentTaskId || null,
           projectId: command.projectId || undefined,
+        },
+      },
+    }
+  }
+
+  if (command.kind === 'lane.create') {
+    const decision = decideAILaneCreate({
+      lanes,
+      name: command.name,
+      workspaceId: command.workspaceId,
+      sourceMessageId,
+    })
+    return {
+      id: command.id,
+      kind: command.kind,
+      status: requiresExplicitApproval
+        ? 'blocked_requires_approval'
+        : decision.existing ? 'will_reuse_existing' : 'will_create',
+      identity: decision.identity,
+      duplicateOf: decision.existing?.id,
+      requiresExplicitApproval,
+      diff: {
+        entityType: 'lane',
+        before: decision.existing ? { id: decision.existing.id, name: decision.existing.name } : null,
+        after: {
+          name: command.name,
+          color: command.color || '#4ECDC4',
+          workspaceId: command.workspaceId ?? null,
         },
       },
     }
@@ -205,6 +259,7 @@ export function buildAICommandBatchPreview(input: {
   dataUsed: Record<string, unknown>
   commands: AICommand[]
   tasks: Task[]
+  lanes?: Lane[]
 }): AICommandBatch {
   return {
     id: generateBatchId(input.sourceRunId, input.sourceMessageId),
@@ -214,7 +269,11 @@ export function buildAICommandBatchPreview(input: {
     dataUsed: input.dataUsed,
     commands: input.commands,
     preview: {
-      commands: input.commands.map(command => previewCommand(command, input.tasks, input.sourceMessageId)),
+      commands: input.commands.map(command => previewCommand(command, {
+        tasks: input.tasks,
+        lanes: input.lanes || [],
+        sourceMessageId: input.sourceMessageId,
+      })),
     },
     createdAt: new Date().toISOString(),
   }
@@ -235,7 +294,11 @@ async function applyTaskCreate(command: AITaskCreateCommand, taskStore: TaskStor
     projectId: command.projectId,
     sourceMessageId,
   })
-  const preview = previewCommand(command, taskStore.tasks, sourceMessageId)
+  const preview = previewCommand(command, {
+    tasks: taskStore.tasks,
+    lanes: [],
+    sourceMessageId,
+  })
   if (decision.existing) {
     return {
       ...preview,
@@ -268,7 +331,11 @@ async function applySubtaskCreate(command: AISubtaskCreateCommand, taskStore: Ta
     title: command.title,
     sourceMessageId,
   })
-  const preview = previewCommand(command, taskStore.tasks, sourceMessageId)
+  const preview = previewCommand(command, {
+    tasks: taskStore.tasks,
+    lanes: [],
+    sourceMessageId,
+  })
   if (decision.existing) {
     return {
       ...preview,
@@ -290,13 +357,48 @@ async function applySubtaskCreate(command: AISubtaskCreateCommand, taskStore: Ta
   }
 }
 
+async function applyLaneCreate(command: AILaneCreateCommand, laneStore: LaneStore, sourceMessageId: string): Promise<AppliedAICommand> {
+  const decision = decideAILaneCreate({
+    lanes: laneStore.lanes,
+    name: command.name,
+    workspaceId: command.workspaceId,
+    sourceMessageId,
+  })
+  const preview = previewCommand(command, {
+    tasks: [],
+    lanes: laneStore.lanes,
+    sourceMessageId,
+  })
+  if (decision.existing) {
+    return {
+      ...preview,
+      result: 'reused_existing',
+      entityId: decision.existing.id,
+      duplicateOf: decision.existing.id,
+    }
+  }
+
+  const created = await laneStore.createLane({
+    name: command.name,
+    color: command.color || '#4ECDC4',
+    workspaceId: command.workspaceId ?? undefined,
+  })
+  return {
+    ...preview,
+    result: 'created',
+    entityId: created.id,
+  }
+}
+
 export async function applyAICommandBatch(batch: AICommandBatch, options: {
   selectedCommandIds: string[]
   taskStore: TaskStore
+  laneStore?: LaneStore
   explicitApproval?: boolean
 }): Promise<AICommandApplyResult> {
   const selected = new Set(options.selectedCommandIds)
   const tasksBefore = cloneTasks(options.taskStore.tasks)
+  const lanesBefore = options.laneStore ? cloneLanes(options.laneStore.lanes) : undefined
   const appliedCommands: AppliedAICommand[] = []
   const rejectedCommands: RejectedAICommand[] = []
 
@@ -313,7 +415,13 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
 
     const applied = command.kind === 'task.create'
       ? await applyTaskCreate(command, options.taskStore, batch.sourceMessageId)
-      : await applySubtaskCreate(command, options.taskStore, batch.sourceMessageId)
+      : command.kind === 'task.subtask.create'
+        ? await applySubtaskCreate(command, options.taskStore, batch.sourceMessageId)
+        : await applyLaneCreate(
+          command,
+          options.laneStore ?? missingLaneStore(),
+          batch.sourceMessageId,
+        )
     appliedCommands.push(applied)
   }
 
@@ -323,6 +431,7 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
     batchId: batch.id,
     createdAt: new Date().toISOString(),
     tasksBefore,
+    lanesBefore,
     appliedEntityIds: appliedCommands.map(command => command.entityId),
   })
 
@@ -351,6 +460,7 @@ export function getAICommandAuditTrail(): AICommandAuditEntry[] {
 
 export async function rollbackAICommandBatch(rollbackPointer: string, options: {
   taskStore: TaskStore
+  laneStore?: LaneStore
 }): Promise<void> {
   const snapshot = await loadAICommandRollbackSnapshot(rollbackPointer)
   if (!snapshot) throw new Error(`Rollback snapshot ${rollbackPointer} not found`)
@@ -370,4 +480,26 @@ export async function rollbackAICommandBatch(rollbackPointer: string, options: {
       await options.taskStore.createTask(cloneTask(beforeTask))
     }
   }
+
+  if (options.laneStore && snapshot.lanesBefore) {
+    const beforeLaneIds = new Set(snapshot.lanesBefore.map(lane => lane.id))
+    for (const lane of [...options.laneStore.lanes]) {
+      if (!beforeLaneIds.has(lane.id)) {
+        await options.laneStore.deleteLane(lane.id)
+      }
+    }
+
+    for (const beforeLane of snapshot.lanesBefore) {
+      const existing = options.laneStore.lanes.find(lane => lane.id === beforeLane.id)
+      if (existing) {
+        await options.laneStore.updateLane(beforeLane.id, cloneLane(beforeLane))
+      } else {
+        await options.laneStore.createLane(cloneLane(beforeLane))
+      }
+    }
+  }
+}
+
+function missingLaneStore(): LaneStore {
+  throw new Error('laneStore is required to apply AI lane commands')
 }

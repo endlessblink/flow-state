@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { Task } from '@/types/tasks'
+import type { Lane, Task } from '@/types/tasks'
 import type { AICommandAuditEntry } from './actionCommands'
 
 export const AI_COMMAND_AUDIT_KEY = 'flowstate-ai-command-audit-trail'
@@ -20,6 +20,7 @@ export type AICommandRollbackSnapshot = {
   batchId: string
   createdAt: string
   tasksBefore: Task[]
+  lanesBefore?: Lane[]
   appliedEntityIds: string[]
 }
 

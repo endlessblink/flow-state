@@ -115,6 +115,14 @@ const workspaceStoreMock = vi.hoisted(() => ({
   isSwitchingWorkspace: false
 }))
 
+const invalidateCacheMock = vi.hoisted(() => ({
+  tasks: vi.fn(),
+  projects: vi.fn(),
+  groups: vi.fn(),
+  lanes: vi.fn(),
+  all: vi.fn()
+}))
+
 // ---------------------------------------------------------------------------
 // vi.mock() calls
 // ---------------------------------------------------------------------------
@@ -167,6 +175,10 @@ vi.mock('@/stores/tasks', () => ({
 
 vi.mock('@/stores/workspace', () => ({
   useWorkspaceStore: () => workspaceStoreMock
+}))
+
+vi.mock('@/composables/useSupabaseDatabase', () => ({
+  invalidateCache: invalidateCacheMock
 }))
 
 vi.mock('@/utils/supabaseMappers', () => ({
@@ -327,6 +339,9 @@ beforeEach(async () => {
   vi.doMock('@/stores/tasks', () => ({ useTaskStore: () => taskStoreMock }))
   vi.doMock('@/stores/workspace', () => ({
     useWorkspaceStore: () => workspaceStoreMock
+  }))
+  vi.doMock('@/composables/useSupabaseDatabase', () => ({
+    invalidateCache: invalidateCacheMock
   }))
   vi.doMock('@/utils/supabaseMappers', () => ({
     toSupabaseTask: vi.fn().mockImplementation((task: any) => ({
@@ -525,6 +540,44 @@ describe('Field name mapping (BUG-1211 regression prevention)', () => {
 // 3. CONFLICT RESOLUTION — LWW
 // ===========================================================================
 describe('Conflict resolution (LWW)', () => {
+  it('invalidates task read cache after a queued task update succeeds', async () => {
+    const op = makeOp({
+      id: 510,
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'task-description-cache-reset',
+      payload: {
+        description: 'fresh local description',
+        updated_at: '2026-06-13T10:00:00.000Z'
+      }
+    })
+
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'Single operation'
+    })
+
+    const chain: Record<string, any> = {}
+    chain.update = vi.fn().mockReturnValue(chain)
+    chain.eq = vi.fn().mockReturnValue(chain)
+    chain.select = vi.fn().mockReturnValue({
+      data: [{ id: op.entityId, ...op.payload }],
+      error: null
+    })
+    supabaseMock.fromMock.mockReturnValue(chain)
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id)
+    expect(invalidateCacheMock.tasks).toHaveBeenCalledTimes(1)
+  })
+
   it('LWW: local timestamp > server → local wins (force update)', async () => {
     // Setup: update returns 0 rows (version conflict), then server fetch returns older timestamp
     const now = Date.now()

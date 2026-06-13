@@ -50,6 +50,30 @@ async function getWriteQueueModule() {
   return writeQueueModule
 }
 
+async function invalidateSyncedEntityCache(entityType: SyncEntityType): Promise<void> {
+  try {
+    const { invalidateCache } = await import('@/composables/useSupabaseDatabase')
+    switch (entityType) {
+      case 'task':
+        invalidateCache.tasks()
+        break
+      case 'project':
+        invalidateCache.projects()
+        break
+      case 'group':
+        invalidateCache.groups()
+        break
+      case 'lane':
+        invalidateCache.lanes()
+        break
+    }
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn('[SYNC] Failed to invalidate read cache after sync:', error)
+    }
+  }
+}
+
 // Re-export types and stub functions for when IndexedDB is unavailable
 import type {
   enqueueOperation as _enqueueOperation,
@@ -528,6 +552,7 @@ async function processOperation(operation: WriteOperation): Promise<void> {
   if (result.success) {
     // Success - mark completed
     await markCompleted(operation.id)
+    await invalidateSyncedEntityCache(operation.entityType)
     state.value.lastSyncAt = Date.now()
     consecutiveTransientFailures = 0  // BUG-P1: reset on any success
 

@@ -43,6 +43,7 @@ export type AITaskCreateCommand = {
   laneId?: string | null
   parentTaskId?: string | null
   projectId?: string | null
+  allowDuplicate?: boolean
   confidence?: number
   impact?: AICommandImpact
 }
@@ -285,26 +286,34 @@ function previewCommand(command: AICommand, input: {
   const { tasks, lanes, canvasGroups, memoryEntities, recommendationFeedback, sourceMessageId } = input
   const requiresExplicitApproval = commandRequiresApproval(command)
   if (command.kind === 'task.create') {
-    const decision = decideAITaskCreate({
-      tasks,
-      title: command.title,
-      dueDate: command.dueDate,
-      parentTaskId: command.parentTaskId,
-      projectId: command.projectId,
-      sourceMessageId,
-    })
+    const decision = command.allowDuplicate
+      ? null
+      : decideAITaskCreate({
+        tasks,
+        title: command.title,
+        dueDate: command.dueDate,
+        parentTaskId: command.parentTaskId,
+        projectId: command.projectId,
+        sourceMessageId,
+      })
     return {
       id: command.id,
       kind: command.kind,
       status: requiresExplicitApproval
         ? 'blocked_requires_approval'
-        : decision.existing ? 'will_reuse_existing' : 'will_create',
-      identity: decision.identity,
-      duplicateOf: decision.existing?.id,
+        : decision?.existing ? 'will_reuse_existing' : 'will_create',
+      identity: decision?.identity ?? {
+        kind: 'task.create',
+        sourceMessageId,
+        targetEntityId: null,
+        scope: command.parentTaskId ? `task:${command.parentTaskId}:subtasks` : 'tasks:root',
+        fingerprint: `manual-duplicate:${command.id}`,
+      },
+      duplicateOf: decision?.existing?.id,
       requiresExplicitApproval,
       diff: {
         entityType: 'task',
-        before: decision.existing ? { id: decision.existing.id, title: decision.existing.title } : null,
+        before: decision?.existing ? { id: decision.existing.id, title: decision.existing.title } : null,
         after: {
           title: command.title,
           priority: command.priority || 'medium',
@@ -712,14 +721,16 @@ function getPreview(batch: AICommandBatch, commandId: string): AICommandPreviewI
 }
 
 async function applyTaskCreate(command: AITaskCreateCommand, taskStore: TaskStore, sourceMessageId: string): Promise<AppliedAICommand> {
-  const decision = decideAITaskCreate({
-    tasks: taskStore.tasks,
-    title: command.title,
-    dueDate: command.dueDate,
-    parentTaskId: command.parentTaskId,
-    projectId: command.projectId,
-    sourceMessageId,
-  })
+  const decision = command.allowDuplicate
+    ? null
+    : decideAITaskCreate({
+      tasks: taskStore.tasks,
+      title: command.title,
+      dueDate: command.dueDate,
+      parentTaskId: command.parentTaskId,
+      projectId: command.projectId,
+      sourceMessageId,
+    })
   const preview = previewCommand(command, {
     tasks: taskStore.tasks,
     lanes: [],
@@ -728,7 +739,7 @@ async function applyTaskCreate(command: AITaskCreateCommand, taskStore: TaskStor
     recommendationFeedback: [],
     sourceMessageId,
   })
-  if (decision.existing) {
+  if (decision?.existing) {
     return {
       ...preview,
       result: 'reused_existing',

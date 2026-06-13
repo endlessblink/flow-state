@@ -119,7 +119,7 @@ export function decideAITaskCreate(input: {
   }
 }
 
-export type AITaskUpdateFields = Pick<Task, 'status' | 'priority' | 'dueDate' | 'dueTime' | 'projectId' | 'laneId' | 'parentTaskId' | 'description' | 'title' | 'estimatedDuration'>
+export type AITaskUpdateFields = Pick<Task, 'status' | 'priority' | 'dueDate' | 'dueTime' | 'projectId' | 'laneId' | 'parentTaskId' | 'parentId' | 'description' | 'title' | 'estimatedDuration' | 'canvasPosition' | 'positionFormat' | 'isInInbox' | 'canvasDismissed'>
 
 function normalizeTaskUpdateValue(value: unknown): unknown {
   if (typeof value === 'string') return value.trim()

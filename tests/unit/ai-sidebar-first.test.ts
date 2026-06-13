@@ -2987,6 +2987,9 @@ describe('AI sidebar-first desktop experience', () => {
 
   it('creates another weekly follow-up only after the explicit duplicate override', async () => {
     const taskStore = useTaskStore()
+    const buildPreviewSpy = vi.spyOn(actionCommands, 'buildAICommandBatchPreview')
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
+    const commandTaskCreateSpy = vi.spyOn(taskStore, 'createTask')
     taskStore._rawTasks.push(
       {
         id: 'task-renewal',
@@ -3079,6 +3082,23 @@ describe('AI sidebar-first desktop experience', () => {
     await nextTick()
 
     expect(taskStore.tasks.filter(task => task.parentTaskId === 'task-renewal' && task.title === 'Follow up: Send renewal proposal to Amit')).toHaveLength(2)
+    expect(buildPreviewSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-weekly-followup-duplicate-override',
+      commands: [expect.objectContaining({
+        kind: 'task.create',
+        title: 'Follow up: Send renewal proposal to Amit',
+        parentTaskId: 'task-renewal',
+        projectId: 'client-renewals',
+        allowDuplicate: true,
+      })],
+    }))
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      commands: [expect.objectContaining({ kind: 'task.create', allowDuplicate: true })],
+    }), expect.objectContaining({
+      selectedCommandIds: expect.any(Array),
+      taskStore,
+    }))
+    expect(commandTaskCreateSpy).toHaveBeenCalledTimes(1)
     expect(wrapper.find('[data-testid="weekly-followup-create-another"]').exists()).toBe(false)
   })
 
@@ -4162,6 +4182,83 @@ describe('AI sidebar-first desktop experience', () => {
     expect(wrapper.text()).toContain('Lanes applied')
   })
 
+  it('applies day-plan cards through command batches instead of undo bulk updates', async () => {
+    const taskStore = useTaskStore()
+    const buildPreviewSpy = vi.spyOn(actionCommands, 'buildAICommandBatchPreview')
+    const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')
+    const commandTaskUpdateSpy = vi.spyOn(taskStore, 'updateTask')
+    taskStore._rawTasks.push({
+      id: 'task-day-plan-command',
+      title: 'Stabilize command substrate',
+      description: 'Move this task into today via the AI day plan.',
+      status: 'todo',
+      priority: 'high',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '',
+      projectId: 'ai-planner',
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+      updatedAt: new Date('2026-06-07T08:00:00Z'),
+    } as Task)
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: 'msg-day-plan-command',
+          role: 'assistant',
+          content: 'Apply this order for today.',
+          timestamp: Date.now(),
+          metadata: {
+            cardGroups: {
+              kind: 'day_plan',
+              total: 1,
+              groups: [{
+                name: 'Now',
+                tasks: [{
+                  id: 'task-day-plan-command',
+                  title: 'Stabilize command substrate',
+                  status: 'todo',
+                  priority: 'high',
+                  reason: 'unblocks command safety',
+                }],
+              }],
+            },
+          },
+        },
+      },
+      global: {
+        stubs: {
+          TaskQuickEditPopover: true,
+        },
+      },
+    })
+
+    await wrapper.get('.day-plan-apply-btn').trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(buildPreviewSpy).toHaveBeenCalledWith(expect.objectContaining({
+      sourceMessageId: 'msg-day-plan-command',
+      commands: [expect.objectContaining({
+        kind: 'task.update',
+        taskId: 'task-day-plan-command',
+        updates: expect.objectContaining({ dueDate: expect.any(String) }),
+      })],
+    }))
+    expect(applyBatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      commands: [expect.objectContaining({ kind: 'task.update' })],
+    }), expect.objectContaining({
+      selectedCommandIds: expect.any(Array),
+      taskStore,
+    }))
+    expect(commandTaskUpdateSpy).toHaveBeenCalledWith('task-day-plan-command', expect.objectContaining({
+      dueDate: expect.any(String),
+    }))
+    expect(taskStore.tasks.find(task => task.id === 'task-day-plan-command')?.dueDate).toEqual(expect.any(String))
+    expect(wrapper.text()).toContain('Plan applied')
+  })
+
   it('persists broad inline card postponement feedback outside weekly plans', async () => {
     const taskStore = useTaskStore()
     const buildPreviewSpy = vi.spyOn(actionCommands, 'buildAICommandBatchPreview')
@@ -4722,7 +4819,9 @@ describe('AI sidebar-first desktop experience', () => {
     expect(src('src/components/ai/AIChatPanel.vue')).toContain('@continue-chat="handleContinueChat"')
     expect(chatMessage).toContain('Why ask?')
     expect(chatMessage).toContain('clarificationDebugLines')
-    expect(chatMessage).toContain('createTaskWithUndo')
+    expect(chatMessage).toContain('buildAICommandBatchPreview')
+    expect(chatMessage).toContain('allowDuplicate: true')
+    expect(chatMessage).toContain('applyAICommandBatch')
     expect(src('src/services/ai/chatPersistence.ts')).toContain('weeklyPlan: m.metadata.weeklyPlan')
     expect(src('src/services/ai/chatPersistence.ts')).toContain('clarification: m.metadata.clarification')
     expect(src('src/services/ai/pipeline/weeklyMemoryRetrieval.ts')).toContain('fetchProjectContexts(projectIds)')

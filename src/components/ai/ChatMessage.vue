@@ -37,7 +37,6 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useLaneStore } from '@/stores/lanes'
 import { useAuthStore } from '@/stores/auth'
 import { buildDayPlanTaskUpdates } from '@/services/ai/pipeline/dayPlan'
-import { getUndoSystem } from '@/composables/undoSingleton'
 import type { WeeklyPlanOutput, WeeklyPlanRecommendation } from '@/services/ai/pipeline/weeklyPlan'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { AIClarificationArtifact, AIClarificationQuestion, AIContextEntityType, AIMemoryPatch, AIRecommendationFeedbackInput, AIUncertaintyDimension } from '@/types/aiMemory'
@@ -912,17 +911,38 @@ async function createWeeklyFollowUpTask(input: {
     title: input.title,
   })
   try {
-    await getUndoSystem().createTaskWithUndo({
-      title: input.title,
-      description: [
+    const commandId = `weekly-followup:${input.key}:task-create`
+    const description = [
         input.locale === 'he' ? 'נוצר מתשובת מעקב בתוכנית השבועית.' : 'Created from a weekly-plan follow-up answer.',
         input.parentTask ? `${input.locale === 'he' ? 'משימת מקור' : 'Source task'}: ${input.parentTask.title}` : '',
         input.question.question,
-      ].filter(Boolean).join('\n'),
-      status: 'todo',
-      priority: input.parentTask?.priority ?? 'medium',
-      projectId: input.parentTask?.projectId || 'uncategorized',
-      parentTaskId: input.parentTask?.id ?? null,
+      ].filter(Boolean).join('\n')
+    const batch = aiActionCommands.buildAICommandBatchPreview({
+      sourcePrompt: 'weekly follow-up task',
+      sourceRunId: props.message.id,
+      sourceMessageId: props.message.id,
+      dataUsed: {
+        messageId: props.message.id,
+        questionId: input.question.id,
+        parentTaskId: input.parentTask?.id ?? null,
+        duplicateOverride: true,
+      },
+      commands: [{
+        id: commandId,
+        kind: 'task.create',
+        title: input.title,
+        description,
+        priority: input.parentTask?.priority ?? 'medium',
+        projectId: input.parentTask?.projectId || 'uncategorized',
+        parentTaskId: input.parentTask?.id ?? null,
+        allowDuplicate: true,
+        impact: 'low',
+      }],
+      tasks: taskStore.tasks,
+    })
+    await aiActionCommands.applyAICommandBatch(batch, {
+      selectedCommandIds: [commandId],
+      taskStore,
     })
     weeklyQuestionApplied.value = {
       ...weeklyQuestionApplied.value,
@@ -2327,12 +2347,33 @@ async function applyDayPlan(event: MouseEvent) {
       return
     }
 
-    await getUndoSystem().bulkUpdateTasksWithUndo(
-      result.taskUpdates,
-      result.targetGroupName
+    const commands: AICommand[] = result.taskUpdates.map((taskUpdate, index) => ({
+      id: `day-plan:${props.message.id}:task-update:${index}:${taskUpdate.id}`,
+      kind: 'task.update',
+      taskId: taskUpdate.id,
+      updates: taskUpdate.updates,
+      impact: 'low',
+    }))
+    const batch = aiActionCommands.buildAICommandBatchPreview({
+      sourcePrompt: result.targetGroupName
         ? `Apply AI day plan to ${result.targetGroupName}`
         : 'Apply AI day plan',
-    )
+      sourceRunId: props.message.id,
+      sourceMessageId: props.message.id,
+      dataUsed: {
+        messageId: props.message.id,
+        targetGroupName: result.targetGroupName,
+        plannedCount: result.plannedCount,
+      },
+      commands,
+      tasks: taskStore.tasks,
+      canvasGroups: canvasStore.groups,
+    })
+    await aiActionCommands.applyAICommandBatch(batch, {
+      selectedCommandIds: commands.map(command => command.id),
+      taskStore,
+      canvasStore,
+    })
     dayPlanApplied.value = true
   } catch (err) {
     console.error('[ChatMessage] Apply day plan failed:', err)

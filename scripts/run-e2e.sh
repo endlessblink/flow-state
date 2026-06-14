@@ -6,21 +6,23 @@
 set -euo pipefail
 
 # Auto-fetch keys from local Supabase if not already set
+SUPABASE_STATUS_ENV="${SUPABASE_STATUS_ENV:-$(supabase status -o env 2>&1 || true)}"
+
 if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
   # Try new-format secret key first (Supabase v2.x uses sb_secret_* instead of HS256 JWT)
-  SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o env 2>/dev/null | grep '^SECRET_KEY=' | sed 's/^SECRET_KEY="//' | sed 's/"$//')
+  SUPABASE_SERVICE_ROLE_KEY=$(printf '%s\n' "$SUPABASE_STATUS_ENV" | grep '^SECRET_KEY=' | sed 's/^SECRET_KEY="//' | sed 's/"$//')
   # Fall back to classic JWT SERVICE_ROLE_KEY if secret key not present
   if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-    SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o env 2>/dev/null | grep '^SERVICE_ROLE_KEY=' | sed 's/^SERVICE_ROLE_KEY="//' | sed 's/"$//')
+    SUPABASE_SERVICE_ROLE_KEY=$(printf '%s\n' "$SUPABASE_STATUS_ENV" | grep '^SERVICE_ROLE_KEY=' | sed 's/^SERVICE_ROLE_KEY="//' | sed 's/"$//')
   fi
 fi
 
 if [ -z "${VITE_SUPABASE_ANON_KEY:-}" ]; then
   # Try new-format publishable key first (Supabase v2.x)
-  VITE_SUPABASE_ANON_KEY=$(supabase status -o env 2>/dev/null | grep '^PUBLISHABLE_KEY=' | sed 's/^PUBLISHABLE_KEY="//' | sed 's/"$//')
+  VITE_SUPABASE_ANON_KEY=$(printf '%s\n' "$SUPABASE_STATUS_ENV" | grep '^PUBLISHABLE_KEY=' | sed 's/^PUBLISHABLE_KEY="//' | sed 's/"$//')
   # Fall back to classic ANON_KEY if publishable key not present
   if [ -z "${VITE_SUPABASE_ANON_KEY:-}" ]; then
-    VITE_SUPABASE_ANON_KEY=$(supabase status -o env 2>/dev/null | grep '^ANON_KEY=' | sed 's/^ANON_KEY="//' | sed 's/"$//')
+    VITE_SUPABASE_ANON_KEY=$(printf '%s\n' "$SUPABASE_STATUS_ENV" | grep '^ANON_KEY=' | sed 's/^ANON_KEY="//' | sed 's/"$//')
   fi
 fi
 

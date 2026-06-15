@@ -70,9 +70,9 @@
 - 2026-06-15: Shipped desktop updater `1.4.181`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.181`. `FlowState-1.4.181-x86_64.AppImage` returns HTTP 200 with `content-length: 180167072`, and `FlowState_1.4.181_amd64.deb` returns HTTP 200 with `content-length: 131220680`.
 - 2026-06-15: Expanded the component regression to reject impossible date-shaped values (`2026-99-99`, `2026-02-30`, and invalid ISO prefixes) while preserving valid local-date and legacy ISO behavior. Focused component/timezone verification passes 22/22 tests; commit `942624d4` is pushed to `origin/master`.
 
-### BUG-1867: Canvas geometry drifts across Electron and localhost while idle (🔄 IN PROGRESS)
+### ~~BUG-1867~~: Canvas geometry drifts across Electron and localhost while idle (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (filed 2026-06-15) | **Depends on**: none
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed and shipped 2026-06-15) | **Depends on**: none
 
 **Why**: Electron and localhost use the same Supabase backend, but each runtime has its own IndexedDB read cache and pending-write queue. Startup and background refresh replayed field-level pending updates through full-row Supabase mappers, so a title/status/reminder update could inject mapper defaults such as missing `canvasPosition`, `parentId`, group `position`, or reset `positionVersion`. Separately, group moves queued the post-move position version as their optimistic-lock base, causing immediate conflicts and last-write-wins fallback. Together these paths made layouts diverge or appear to move without the Canvas being open.
 
@@ -88,7 +88,7 @@
 - 2026-06-15: Added RED/green cache regressions proving partial task/group updates previously erased geometry during pending-write replay.
 - 2026-06-15: Added RED/green group move regression proving the queue previously sent post-move `baseVersion: 5` when the server expected pre-move version `4`.
 - 2026-06-15: Introduced selective Supabase-payload patch helpers and reused them in both IndexedDB startup merge and background refresh replay. Wider canvas/sync verification passes 179/179 tests; `npm run type-check`, `npm run lint`, and `git diff --check` pass.
-- 2026-06-15: Canonical Electron build/package validation passes for `1.4.182`; local AppImage size is `180171132` bytes and deb size is `131221400` bytes. Source commits `00babc68` and `942624d4` are pushed to `origin/master`. The user explicitly authorized production deployment, but the managed execution gate rejected the deploy because the Codex usage limit was reached; upload and live manifest verification remain pending.
+- 2026-06-15: Canonical Electron build/package validation passes for `1.4.182`. Shipped the updater after explicit authorization; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.182` with matching local/public hashes and sizes. `FlowState-1.4.182-x86_64.AppImage` returns HTTP 200 with `content-length: 180171129`, and `FlowState_1.4.182_amd64.deb` returns HTTP 200 with `content-length: 131221332`.
 
 ### TASK-1855: AI action command substrate with preview, apply, undo, and audit trail (✅ DONE)
 
@@ -5079,7 +5079,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
-| **BUG-1867** | **P0** | 🔄 **Canvas geometry drifts across Electron and localhost while idle** |
+| ~~**BUG-1867**~~ | **P0** | ✅ **Canvas geometry drifts across Electron and localhost while idle** (✅ DONE 2026-06-15, shipped v1.4.182) |
 | ~~**BUG-1866**~~ | **P0** | ✅ **Malformed due date crashes Calendar view in Electron** (✅ DONE 2026-06-15, shipped v1.4.181) |
 | ~~**TASK-1289**~~ | **P0** | ✅ **Investigate severe task position drift episode** |
 | ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |

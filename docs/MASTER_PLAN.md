@@ -68,6 +68,7 @@
 - 2026-06-15: Added RED/green component regression `tests/unit/components/calendar-task-card-invalid-due-date.test.ts`. The RED run reproduced `RangeError: Invalid time value`; the green run passes after normalizing the value with the existing `normalizeDueDate()` utility and omitting the badge when normalization fails.
 - 2026-06-15: Focused calendar tests pass (19/19), `npm run type-check`, `npm run lint`, `git diff --check`, and the canonical Electron build/package validation pass.
 - 2026-06-15: Shipped desktop updater `1.4.181`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.181`. `FlowState-1.4.181-x86_64.AppImage` returns HTTP 200 with `content-length: 180167072`, and `FlowState_1.4.181_amd64.deb` returns HTTP 200 with `content-length: 131220680`.
+- 2026-06-15: Expanded the component regression to reject impossible date-shaped values (`2026-99-99`, `2026-02-30`, and invalid ISO prefixes) while preserving valid local-date and legacy ISO behavior. Focused component/timezone verification passes 22/22 tests; commit `942624d4` is pushed to `origin/master`.
 
 ### BUG-1867: Canvas geometry drifts across Electron and localhost while idle (🔄 IN PROGRESS)
 
@@ -87,7 +88,7 @@
 - 2026-06-15: Added RED/green cache regressions proving partial task/group updates previously erased geometry during pending-write replay.
 - 2026-06-15: Added RED/green group move regression proving the queue previously sent post-move `baseVersion: 5` when the server expected pre-move version `4`.
 - 2026-06-15: Introduced selective Supabase-payload patch helpers and reused them in both IndexedDB startup merge and background refresh replay. Wider canvas/sync verification passes 179/179 tests; `npm run type-check`, `npm run lint`, and `git diff --check` pass.
-- 2026-06-15: Canonical Electron build/package validation passes for `1.4.182`; local AppImage size is `180171135` bytes and deb size is `131221436` bytes. Source commit `00babc68` is pushed to `origin/master`. The user explicitly authorized production deployment, but the managed execution gate rejected the deploy because the Codex usage limit was reached; upload and live manifest verification remain pending.
+- 2026-06-15: Canonical Electron build/package validation passes for `1.4.182`; local AppImage size is `180171135` bytes and deb size is `131221436` bytes. Source commits `00babc68` and `942624d4` are pushed to `origin/master`. The user explicitly authorized production deployment, but the managed execution gate rejected the deploy because the Codex usage limit was reached; upload and live manifest verification remain pending.
 
 ### TASK-1855: AI action command substrate with preview, apply, undo, and audit trail (✅ DONE)
 

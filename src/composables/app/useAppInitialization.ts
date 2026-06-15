@@ -58,6 +58,13 @@ export function useAppInitialization() {
         ])
     }
 
+    const recoverSkippedTaskChange = () => {
+        invalidateCache.all()
+        window.setTimeout(() => {
+            void reloadCoreData()
+        }, 0)
+    }
+
     // TASK-1812: Lane realtime handler. Lane is pure metadata (no geometry),
     // so it has no drag/resize lock.
     const onLaneChange = (payload: RealtimePayload) => {
@@ -688,10 +695,7 @@ export function useAppInitialization() {
 
             if (isLocked) {
                 console.log('🔒 [HANDLER] TASK change blocked - lock active')
-                if (taskId && isDeleteEvent) {
-                    invalidateCache.all()
-                    void reloadCoreData()
-                }
+                if (taskId) recoverSkippedTaskChange()
                 return
             }
 
@@ -703,6 +707,7 @@ export function useAppInitialization() {
             // High Severity Issue #7: Skip if task is pending local write (drag in progress)
             if (tasks.isPendingWrite(taskId)) {
                 console.log(`🔒 [HANDLER] TASK ${taskId.slice(0,8)} skipped - pending local write`)
+                recoverSkippedTaskChange()
                 return
             }
 
@@ -711,12 +716,7 @@ export function useAppInitialization() {
             // simultaneously risks duplicates from parallel add paths.
             if (tasks.isLoadingFromDatabase) {
                 console.log(`⏳ [HANDLER] TASK ${taskId.slice(0,8)} skipped - database load in progress`)
-                if (isDeleteEvent) {
-                    invalidateCache.all()
-                    window.setTimeout(() => {
-                        void reloadCoreData()
-                    }, 0)
-                }
+                recoverSkippedTaskChange()
                 return
             }
 
@@ -854,12 +854,18 @@ export function useAppInitialization() {
                     window.__FlowStateIsResizing ||
                     window.__FlowStateIsSettling
                 ))
-                if (isLocked) return
 
                 const { eventType, new: newDoc, old: oldDoc } = payload
                 const taskId = newDoc?.id || oldDoc?.id
                 if (!taskId) return
-                if (tasks.isPendingWrite(taskId)) return
+                if (isLocked) {
+                    recoverSkippedTaskChange()
+                    return
+                }
+                if (tasks.isPendingWrite(taskId)) {
+                    recoverSkippedTaskChange()
+                    return
+                }
 
                 const isHardDelete = eventType === 'DELETE'
                 const isSoftDelete = newDoc && newDoc.is_deleted === true
@@ -957,11 +963,17 @@ export function useAppInitialization() {
                 window.__FlowStateIsResizing ||
                 window.__FlowStateIsSettling
             ))
-            if (isLocked) return
             const { eventType, new: newDoc, old: oldDoc } = payload
             const taskId = newDoc?.id || oldDoc?.id
             if (!taskId) return
-            if (tasks.isPendingWrite(taskId)) return
+            if (isLocked) {
+                recoverSkippedTaskChange()
+                return
+            }
+            if (tasks.isPendingWrite(taskId)) {
+                recoverSkippedTaskChange()
+                return
+            }
             const isHardDelete = eventType === 'DELETE'
             const isSoftDelete = newDoc && newDoc.is_deleted === true
             if (isHardDelete || isSoftDelete) {

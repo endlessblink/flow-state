@@ -556,6 +556,15 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     state.value.lastSyncAt = Date.now()
     consecutiveTransientFailures = 0  // BUG-P1: reset on any success
 
+    if (operation.entityType === 'task') {
+      try {
+        const { useTaskStore } = await import('@/stores/tasks')
+        useTaskStore().removePendingWrite(operation.entityId)
+      } catch (e) {
+        console.warn(`[SYNC] Failed to clear pending-write guard for ${operation.entityId.slice(0, 8)}:`, e)
+      }
+    }
+
     // BUG-1321: When LWW "server wins", apply serverData back to Pinia store.
     // Without this, the local store silently diverges from VPS truth.
     if (result.serverData && operation.entityType === 'task') {

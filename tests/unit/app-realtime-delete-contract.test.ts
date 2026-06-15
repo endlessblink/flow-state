@@ -18,9 +18,20 @@ describe('app realtime task delete contract', () => {
   it('recovers when delete events arrive while task load or interaction locks are active', () => {
     const src = readAppInitialization()
 
-    expect(src).toContain('if (taskId && isDeleteEvent) {')
     expect(src).toContain('invalidateCache.all()')
     expect(src).toContain('void reloadCoreData()')
-    expect(src).toContain('if (isDeleteEvent) {\n                    invalidateCache.all()\n                    window.setTimeout(() => {')
+    expect(src).toContain('if (taskId) recoverSkippedTaskChange()')
+    expect(src).toContain('if (isDeleteEvent) {')
+  })
+
+  it('recovers skipped non-delete task events instead of dropping cross-runtime updates', () => {
+    const src = readAppInitialization()
+
+    expect(src).toContain('const recoverSkippedTaskChange = () => {')
+    expect(src).toContain('recoverSkippedTaskChange()')
+    expect(src).toContain('if (tasks.isPendingWrite(taskId)) {')
+    expect(src).toContain('if (tasks.isLoadingFromDatabase) {')
+    expect(src).toContain('window.setTimeout(() => {')
+    expect(src).toContain('void reloadCoreData()')
   })
 })

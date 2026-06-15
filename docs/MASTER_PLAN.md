@@ -32,6 +32,24 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### ~~BUG-1869~~: Skipped realtime task updates can leave Electron, localhost, and KDE out of sync (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed and shipped 2026-06-15) | **Depends on**: none
+
+**Why**: The previous timer-specific fix did not cover the larger sync class. Task edits add a pending-write guard to block stale realtime echoes, but the sync queue was not clearing that guard after successful task writes. Realtime task updates skipped during pending writes, interaction locks, or database loads also had no replay path for non-delete events. That could leave one runtime stuck on local state while the shared Supabase state, localhost, and KDE moved ahead.
+
+**Acceptance**:
+- Successful queued task sync clears the task pending-write guard instead of waiting for the five-minute safety timeout.
+- Realtime task events skipped because of pending writes, interaction locks, or database loading invalidate cache and schedule a recovery reload.
+- Delete recovery still works through the same recovery path.
+- Desktop fix ships through the versioned Electron updater flow.
+
+**Progress**:
+- 2026-06-15: Added RED regressions for successful queued task sync clearing the pending-write guard and skipped non-delete realtime task events scheduling recovery reload instead of being dropped.
+- 2026-06-15: Cleared task pending-write guards on successful sync queue completion and routed skipped task realtime events through a shared cache invalidation/reload helper across the primary, post-login, and workspace-switch realtime handlers.
+- 2026-06-15: Verified widened sync/timer/KDE regression suite passes 178/178 tests, plus type-check and lint.
+- 2026-06-15: Shipped desktop updater `1.4.184`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.184`. `FlowState-1.4.184-x86_64.AppImage` returns HTTP 200 with `content-length: 180171158`, and `FlowState_1.4.184_amd64.deb` returns HTTP 200 with `content-length: 131222324`.
+
 ### ~~BUG-1868~~: Timer start can look active locally while Electron, localhost, and KDE see no synced session (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed and shipped 2026-06-15) | **Depends on**: none
@@ -5096,6 +5114,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
+| ~~**BUG-1869**~~ | **P0** | ✅ **Skipped realtime task updates can leave Electron, localhost, and KDE out of sync** (✅ DONE 2026-06-15, shipped v1.4.184) |
 | ~~**BUG-1868**~~ | **P0** | ✅ **Timer start can look active locally while Electron, localhost, and KDE see no synced session** (✅ DONE 2026-06-15, shipped v1.4.183) |
 | ~~**BUG-1867**~~ | **P0** | ✅ **Canvas geometry drifts across Electron and localhost while idle** (✅ DONE 2026-06-15, shipped v1.4.182) |
 | ~~**BUG-1866**~~ | **P0** | ✅ **Malformed due date crashes Calendar view in Electron** (✅ DONE 2026-06-15, shipped v1.4.181) |

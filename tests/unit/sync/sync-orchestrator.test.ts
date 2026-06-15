@@ -107,6 +107,7 @@ const authStoreMock = vi.hoisted(() => ({
 
 const taskStoreMock = vi.hoisted(() => ({
   isPendingWrite: vi.fn().mockReturnValue(false),
+  removePendingWrite: vi.fn(),
   updateTaskFromSync: vi.fn()
 }))
 
@@ -678,6 +679,31 @@ describe('Conflict resolution (LWW)', () => {
 
     // With isPendingWrite = true, updateTaskFromSync should NOT be called
     expect(taskStoreMock.isPendingWrite('entity-001')).toBe(true)
+  })
+
+  it('clears task pending-write guard after a queued task operation syncs successfully', async () => {
+    const op = makeOp({
+      id: 404,
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'task-pending-cleared',
+      payload: { title: 'Synced title', updated_at: new Date().toISOString() },
+    })
+
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'Single operation'
+    })
+    mockSupabaseChain()
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(404)
+    expect(taskStoreMock.removePendingWrite).toHaveBeenCalledWith('task-pending-cleared')
   })
 
   it('LWW writeback applies serverData to store when no pending write', async () => {

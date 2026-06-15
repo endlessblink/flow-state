@@ -1,0 +1,3 @@
+## 2024-05-14 - Add ARIA labels to Calendar Header Navigation
+**Learning:** In the `CalendarHeader.vue` component, icon-only buttons for navigation ("Previous Day", "Next Day", "View Options") used `title` attributes for tooltips but lacked `aria-label`s. Relying solely on `title` is insufficient for screen readers. Using the existing localization strings via Vue binding (`:aria-label="$t('...')"` ensures accessibility remains consistent with localized tooltips.
+**Action:** When adding ARIA labels to components that support internationalization, always reuse the existing translation keys from `title` or textual content instead of hardcoding English strings.

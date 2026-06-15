@@ -51,6 +51,24 @@
 - 2026-06-13: Verified focused regressions with `npm run test -- tests/unit/ai-chat-startup-sync.test.ts tests/unit/stores/auth-flow.test.ts` (30/30 passed), `npm run type-check`, `npm run lint`, and Electron package validation.
 - 2026-06-13: Shipped desktop updater `1.4.166`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.166` with `FlowState-1.4.166-x86_64.AppImage` and `FlowState_1.4.166_amd64.deb`.
 
+### ~~BUG-1866~~: Malformed due date crashes Calendar view in Electron (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed and shipped 2026-06-15) | **Depends on**: none
+
+**Why**: Opening Calendar could throw `RangeError: Invalid time value` from the packaged `CalendarView` chunk. The exact minified offset mapped to `CalendarTaskCard.formatDueDateLabel()`, where a malformed or legacy `task.dueDate` reached `Intl.DateTimeFormat.format(new Date(value))` without validation and crashed the full view.
+
+**Acceptance**:
+- Calendar inbox cards tolerate malformed due-date values without throwing.
+- Invalid due dates do not render a misleading date badge.
+- Valid local `YYYY-MM-DD` and legacy ISO due dates retain the existing overdue/today/future behavior.
+- A component-level regression reproduces the packaged render crash before the fix.
+- The desktop fix ships through a versioned Electron updater release.
+
+**Progress**:
+- 2026-06-15: Added RED/green component regression `tests/unit/components/calendar-task-card-invalid-due-date.test.ts`. The RED run reproduced `RangeError: Invalid time value`; the green run passes after normalizing the value with the existing `normalizeDueDate()` utility and omitting the badge when normalization fails.
+- 2026-06-15: Focused calendar tests pass (19/19), `npm run type-check`, `npm run lint`, `git diff --check`, and the canonical Electron build/package validation pass.
+- 2026-06-15: Shipped desktop updater `1.4.181`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.181`. `FlowState-1.4.181-x86_64.AppImage` returns HTTP 200 with `content-length: 180167072`, and `FlowState_1.4.181_amd64.deb` returns HTTP 200 with `content-length: 131220680`.
+
 ### TASK-1855: AI action command substrate with preview, apply, undo, and audit trail (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-13, completed 2026-06-14) | **Depends on**: TASK-1854
@@ -5040,6 +5058,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
+| ~~**BUG-1866**~~ | **P0** | ✅ **Malformed due date crashes Calendar view in Electron** (✅ DONE 2026-06-15, shipped v1.4.181) |
 | ~~**TASK-1289**~~ | **P0** | ✅ **Investigate severe task position drift episode** |
 | ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |
 | ~~**FEATURE-1293**~~ | **P2** | ✅ **Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |

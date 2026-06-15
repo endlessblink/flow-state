@@ -54,12 +54,12 @@
 
         <!-- Due Date Badge -->
         <span
-          v-if="task.dueDate"
+          v-if="normalizedDueDate"
           class="metadata-badge due-date-badge"
-          :class="getDueBadgeClass(task.dueDate)"
+          :class="getDueBadgeClass(normalizedDueDate)"
         >
           <Calendar :size="12" />
-          {{ formatDueDateLabel(task.dueDate) }}
+          {{ formatDueDateLabel(normalizedDueDate) }}
         </span>
 
         <!-- Duration Badge -->
@@ -127,6 +127,7 @@ import { Play, Edit2, Timer, Calendar, Clock, ListChecks, ClipboardList, PlayCir
 import ProjectEmojiIcon from '@/components/base/ProjectEmojiIcon.vue'
 import { useTaskStore } from '@/stores/tasks'
 import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
+import { normalizeDueDate } from '@/utils/dateUtils'
 import { truncateUrlsInText } from '@/utils/urlTruncate'
 
 const props = defineProps<{
@@ -164,6 +165,7 @@ const completedSubtasks = computed(() =>
 const totalSubtasks = computed(() => props.task.subtasks?.length || 0)
 
 const priorityLabel = computed(() => props.task.priority?.toUpperCase() ?? '')
+const normalizedDueDate = computed(() => normalizeDueDate(props.task.dueDate))
 
 const statusBadge = computed(() => {
   const badges: Record<string, { icon: unknown; label: string }> = {

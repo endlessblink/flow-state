@@ -77,12 +77,26 @@ export const getTodayDateKey = (): string => {
 export const normalizeDueDate = (value: string | Date | null | undefined): string => {
     if (!value) return ''
     if (value instanceof Date) return formatDateKey(value)
+
+    const isValidDateKey = (dateKey: string): boolean => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return false
+        const [year, month, day] = dateKey.split('-').map(Number)
+        const parsed = new Date(Date.UTC(year, month - 1, day))
+        return parsed.getUTCFullYear() === year
+            && parsed.getUTCMonth() === month - 1
+            && parsed.getUTCDate() === day
+    }
+
     // Already correct YYYY-MM-DD format
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return isValidDateKey(value) ? value : ''
+    }
     // ISO 8601 or other parseable string — extract local date
     if (value.includes('T')) {
         const [datePart] = value.split('T')
-        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+            return isValidDateKey(datePart) ? datePart : ''
+        }
     }
     // Try to parse as date
     const d = new Date(value)

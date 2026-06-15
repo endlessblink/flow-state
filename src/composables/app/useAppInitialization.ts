@@ -24,6 +24,7 @@ import { getInitialOnlineState } from '@/utils/platform'
 // TASK-1425: Full cache read functions for fast offline startup
 // TASK-1427: Merged versions include pending write queue operations
 import { getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPendingWrites, getCachedProjects } from '@/services/offline/readCacheDB'
+import { applyPendingGroupPatch, applyPendingTaskPatch } from '@/services/offline/pendingWritePatch'
 // TASK-1219: Time block progress notifications
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
 
@@ -296,8 +297,7 @@ export function useAppInitialization() {
                         const idx = taskStore._rawTasks.findIndex(t => t.id === op.entityId)
                         if (idx !== -1) {
                             try {
-                                const mapped = fromSupabaseTask({ ...op.payload, id: op.entityId } as unknown as SupabaseTask)
-                                taskStore._rawTasks[idx] = { ...taskStore._rawTasks[idx], ...mapped }
+                                taskStore._rawTasks[idx] = applyPendingTaskPatch(taskStore._rawTasks[idx], op.payload)
                                 applied++
                             } catch (e) {
                                 console.error('[CACHE-FIRST] Mapper failed for pending op:', op.entityId, op.operation, e)
@@ -365,8 +365,7 @@ export function useAppInitialization() {
                         const idx = rawGroups.findIndex(g => g.id === op.entityId)
                         if (idx !== -1) {
                             try {
-                                const mapped = fromSupabaseGroup({ ...op.payload, id: op.entityId } as unknown as SupabaseGroup)
-                                rawGroups[idx] = { ...rawGroups[idx], ...mapped }
+                                rawGroups[idx] = applyPendingGroupPatch(rawGroups[idx], op.payload)
                                 applied++
                             } catch (e) {
                                 console.error('[CACHE-FIRST] Mapper failed for pending op:', op.entityId, op.operation, e)

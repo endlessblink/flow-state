@@ -15,6 +15,7 @@ import {
   getCachedTasksWithPendingWrites,
   cacheGroups,
   getCachedGroups,
+  getCachedGroupsWithPendingWrites,
   cacheProjects,
   getCachedProjects,
   getCacheAge,
@@ -184,6 +185,39 @@ describe('cacheTasks / getCachedTasks', () => {
     expect(task?.positionVersion).toBe(3)
     expect(task?.updatedAt).toEqual(new Date('2026-06-01T10:01:00Z'))
   })
+
+  it('preserves task geometry when replaying a non-geometry pending update', async () => {
+    const cachedTask = makeTask({
+      id: 'task-pending-title',
+      title: 'Original title',
+      canvasPosition: { x: 310, y: 420 },
+      parentId: 'stable-group',
+      positionVersion: 7,
+      updatedAt: new Date('2026-06-01T10:00:00Z'),
+    })
+
+    await cacheTasks([cachedTask])
+    await getWriteQueueDB().operations.add({
+      status: 'pending',
+      retryCount: 0,
+      createdAt: Date.now(),
+      entityType: 'task',
+      operation: 'update',
+      entityId: cachedTask.id,
+      payload: {
+        title: 'Renamed while offline',
+        updated_at: '2026-06-01T10:01:00Z',
+      },
+    })
+
+    const merged = await getCachedTasksWithPendingWrites()
+    const task = merged?.find(t => t.id === cachedTask.id)
+
+    expect(task?.title).toBe('Renamed while offline')
+    expect(task?.canvasPosition).toEqual({ x: 310, y: 420 })
+    expect(task?.parentId).toBe('stable-group')
+    expect(task?.positionVersion).toBe(7)
+  })
 })
 
 // ── Group cache tests ──────────────────────────────────────────────────────
@@ -215,6 +249,39 @@ describe('cacheGroups / getCachedGroups', () => {
     await cacheGroups([])
     const result = await getCachedGroups()
     expect(result).toBeNull()
+  })
+
+  it('preserves group geometry when replaying a non-geometry pending update', async () => {
+    const cachedGroup = makeGroup({
+      id: 'group-pending-name',
+      name: 'Original group',
+      position: { x: 500, y: 600, width: 700, height: 800 },
+      parentGroupId: 'stable-parent',
+      positionVersion: 9,
+      updatedAt: '2026-06-01T10:00:00Z',
+    })
+
+    await cacheGroups([cachedGroup])
+    await getWriteQueueDB().operations.add({
+      status: 'pending',
+      retryCount: 0,
+      createdAt: Date.now(),
+      entityType: 'group',
+      operation: 'update',
+      entityId: cachedGroup.id,
+      payload: {
+        name: 'Renamed group while offline',
+        updated_at: '2026-06-01T10:01:00Z',
+      },
+    })
+
+    const merged = await getCachedGroupsWithPendingWrites()
+    const group = merged?.find(g => g.id === cachedGroup.id)
+
+    expect(group?.name).toBe('Renamed group while offline')
+    expect(group?.position).toEqual({ x: 500, y: 600, width: 700, height: 800 })
+    expect(group?.parentGroupId).toBe('stable-parent')
+    expect(group?.positionVersion).toBe(9)
   })
 })
 

@@ -22,6 +22,7 @@ import { toRaw } from 'vue'
 import Dexie, { type Table } from 'dexie'
 import type { Task, Project } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
+import { applyPendingGroupPatch, applyPendingTaskPatch } from './pendingWritePatch'
 
 /** Metadata entry for tracking cache freshness */
 interface CacheMeta {
@@ -268,10 +269,8 @@ export async function getCachedTasksWithPendingWrites(): Promise<Task[] | null> 
     }
   }
 
-  // TASK-1428: Import mapper to convert write queue payloads (snake_case DB format)
-  // to app format (camelCase). Write queue stores payloads in Supabase column format
-  // (e.g., created_at, is_in_inbox, status: "planned") but the app expects
-  // camelCase fields (createdAt, isInInbox, status: "todo").
+  // Creates contain full rows and use the full mapper. Updates are field-level
+  // patches and must only touch columns present in the queued payload.
   let mapPayloadToTask: ((payload: Record<string, unknown>) => Task) | null = null
   try {
     const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
@@ -296,13 +295,7 @@ export async function getCachedTasksWithPendingWrites(): Promise<Task[] | null> 
       case 'update': {
         const existing = taskMap.get(op.entityId)
         if (existing) {
-          // For updates, merge mapped payload on top of existing task
-          if (mapPayloadToTask) {
-            const mapped = mapPayloadToTask({ ...op.payload, id: op.entityId })
-            taskMap.set(op.entityId, { ...existing, ...mapped })
-          } else {
-            taskMap.set(op.entityId, { ...existing, ...op.payload } as Task)
-          }
+          taskMap.set(op.entityId, applyPendingTaskPatch(existing, op.payload))
         }
         break
       }
@@ -381,12 +374,7 @@ export async function getCachedGroupsWithPendingWrites(): Promise<CanvasGroup[] 
       case 'update': {
         const existing = groupMap.get(op.entityId)
         if (existing) {
-          if (mapPayloadToGroup) {
-            const mapped = mapPayloadToGroup({ ...op.payload, id: op.entityId })
-            groupMap.set(op.entityId, { ...existing, ...mapped })
-          } else {
-            groupMap.set(op.entityId, { ...existing, ...op.payload } as CanvasGroup)
-          }
+          groupMap.set(op.entityId, applyPendingGroupPatch(existing, op.payload))
         }
         break
       }

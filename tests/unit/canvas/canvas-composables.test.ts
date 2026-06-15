@@ -22,6 +22,18 @@ vi.stubGlobal('import.meta', { env: { DEV: false } })
 
 vi.mock('@/services/auth/supabase', () => ({ supabase: null }))
 
+const canvasGroupSyncMocks = vi.hoisted(() => ({
+  enqueue: vi.fn(async () => undefined)
+}))
+
+vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
+  useSyncOrchestrator: () => ({ enqueue: canvasGroupSyncMocks.enqueue })
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({ user: { id: '00000000-0000-4000-8000-000000000001' } })
+}))
+
 import { useCanvasOperationState } from '@/composables/canvas/useCanvasOperationState'
 import { NodeState, useNodeStateMachine } from '@/composables/canvas/state-machine'
 import { useCanvasFilteredState } from '@/composables/canvas/useCanvasFilteredState'
@@ -484,5 +496,28 @@ describe('useCanvasGroups — task count badges', () => {
     groups.setGroups([makeGroup({ id: 'group-today' })])
 
     expect(groups.taskCountByGroupId.value.get('group-today')).toBe(1)
+  })
+
+  it('33: queues a moved group against its pre-move position version', async () => {
+    canvasGroupSyncMocks.enqueue.mockClear()
+    const taskStoreRef = ref<{ tasks: Task[] } | null>({ tasks: [] })
+    const groups = useCanvasGroups(persistence, taskStoreRef)
+    const groupId = '00000000-0000-4000-8000-000000000002'
+    groups.setGroups([makeGroup({
+      id: groupId,
+      position: { x: 10, y: 20, width: 400, height: 300 },
+      positionVersion: 4
+    })])
+
+    await groups.updateGroup(groupId, {
+      position: { x: 110, y: 220, width: 400, height: 300 }
+    })
+
+    expect(canvasGroupSyncMocks.enqueue).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'group',
+      operation: 'update',
+      entityId: groupId,
+      baseVersion: 4
+    }))
   })
 })

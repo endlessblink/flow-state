@@ -69,6 +69,26 @@
 - 2026-06-15: Focused calendar tests pass (19/19), `npm run type-check`, `npm run lint`, `git diff --check`, and the canonical Electron build/package validation pass.
 - 2026-06-15: Shipped desktop updater `1.4.181`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.181`. `FlowState-1.4.181-x86_64.AppImage` returns HTTP 200 with `content-length: 180167072`, and `FlowState_1.4.181_amd64.deb` returns HTTP 200 with `content-length: 131220680`.
 
+### BUG-1867: Canvas geometry drifts across Electron and localhost while idle (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (filed 2026-06-15) | **Depends on**: none
+
+**Why**: Electron and localhost use the same Supabase backend, but each runtime has its own IndexedDB read cache and pending-write queue. Startup and background refresh replayed field-level pending updates through full-row Supabase mappers, so a title/status/reminder update could inject mapper defaults such as missing `canvasPosition`, `parentId`, group `position`, or reset `positionVersion`. Separately, group moves queued the post-move position version as their optimistic-lock base, causing immediate conflicts and last-write-wins fallback. Together these paths made layouts diverge or appear to move without the Canvas being open.
+
+**Acceptance**:
+- Replaying a non-geometry pending task update preserves cached task position, parent, and position version.
+- Replaying a non-geometry pending group update preserves cached group position, parent, and position version.
+- Startup/background pending-write replay uses the same selective patch contract as cache-first startup.
+- Group moves enqueue the server's pre-move position version as `baseVersion`.
+- Existing canvas geometry, sync orchestrator, conflict-resolution, and smart-merge regression suites pass.
+- The fix ships through a versioned Electron updater release.
+
+**Progress**:
+- 2026-06-15: Added RED/green cache regressions proving partial task/group updates previously erased geometry during pending-write replay.
+- 2026-06-15: Added RED/green group move regression proving the queue previously sent post-move `baseVersion: 5` when the server expected pre-move version `4`.
+- 2026-06-15: Introduced selective Supabase-payload patch helpers and reused them in both IndexedDB startup merge and background refresh replay. Wider canvas/sync verification passes 179/179 tests; `npm run type-check`, `npm run lint`, and `git diff --check` pass.
+- 2026-06-15: Canonical Electron build/package validation passes for `1.4.182`; local AppImage size is `180171135` bytes and deb size is `131221436` bytes. Production upload/live manifest verification is pending explicit deployment authorization; source commit and push remain pending.
+
 ### TASK-1855: AI action command substrate with preview, apply, undo, and audit trail (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-13, completed 2026-06-14) | **Depends on**: TASK-1854
@@ -5058,6 +5078,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
+| **BUG-1867** | **P0** | 🔄 **Canvas geometry drifts across Electron and localhost while idle** |
 | ~~**BUG-1866**~~ | **P0** | ✅ **Malformed due date crashes Calendar view in Electron** (✅ DONE 2026-06-15, shipped v1.4.181) |
 | ~~**TASK-1289**~~ | **P0** | ✅ **Investigate severe task position drift episode** |
 | ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |

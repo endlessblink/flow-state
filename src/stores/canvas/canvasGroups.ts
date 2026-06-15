@@ -146,7 +146,7 @@ export const useCanvasGroups = (
                             operation: 'update',
                             entityId: id,
                             payload: JSON.parse(JSON.stringify(payload)),
-                            baseVersion: _rawGroups.value[index].positionVersion || 0
+                            baseVersion: currentVersion
                         })
                         queued = true
                     }

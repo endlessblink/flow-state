@@ -336,6 +336,16 @@ export const useTimerStore = defineStore('timer', () => {
       audio.playStartSound()
       sync.resumeCountdown()
       await requestWakeLock() // Keep screen on - ROAD-004
+    } catch (error) {
+      sync.pauseCountdown()
+      sync.pauseHeartbeat()
+      isDeviceLeader.value = false
+      isLeader.value = false
+      currentSession.value = null
+      sync.broadcastSession()
+      sync.resumeFollowerPoll()
+      releaseWakeLock()
+      throw error
     } finally {
       sync.setStartingGuard(false)
     }

@@ -32,6 +32,23 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### ~~BUG-1868~~: Timer start can look active locally while Electron, localhost, and KDE see no synced session (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed and shipped 2026-06-15) | **Depends on**: none
+
+**Why**: Starting a task timer must create an active `timer_sessions` row before the local Electron UI claims the timer is running. If the initial Supabase write fails because the auth token/session is stale or the network rejects the write, the previous path could leave `currentSession` active locally while the Electron sidecar and KDE widget still return no active timer. That creates the exact cross-runtime split the user reported: Electron appears to start a task, but localhost and KDE have nothing to sync.
+
+**Acceptance**:
+- `startTimer()` rolls back local active/leader state when the initial timer-session persistence write fails.
+- Timer persistence failures propagate to callers after the sync error is recorded; they are not swallowed as false success.
+- Existing timer state-machine, realtime backstop, Electron local API, and KDE widget wire-contract regressions pass.
+- Desktop fix ships through the versioned Electron updater flow.
+
+**Progress**:
+- 2026-06-15: Reproduced the code-level false-success contract with `tests/unit/stores/timer-state-machine.test.ts -t "7b"`; RED showed `currentSession` stayed active after the write threw.
+- 2026-06-15: Propagated `saveActiveTimerSession` failures and rolled back countdown, heartbeat, leadership, wake lock, and `currentSession` when `startTimer()` cannot persist the initial active session. Focused cross-runtime timer verification passes 65/65 tests.
+- 2026-06-15: Shipped desktop updater `1.4.183`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.183`. `FlowState-1.4.183-x86_64.AppImage` returns HTTP 200 with `content-length: 180171239`, and `FlowState_1.4.183_amd64.deb` returns HTTP 200 with `content-length: 131222188`.
+
 ### BUG-1865: Preserve cached authenticated tasks on transient startup auth restore miss (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-13, shipped 2026-06-13) | **Depends on**: none
@@ -5079,6 +5096,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
+| ~~**BUG-1868**~~ | **P0** | ✅ **Timer start can look active locally while Electron, localhost, and KDE see no synced session** (✅ DONE 2026-06-15, shipped v1.4.183) |
 | ~~**BUG-1867**~~ | **P0** | ✅ **Canvas geometry drifts across Electron and localhost while idle** (✅ DONE 2026-06-15, shipped v1.4.182) |
 | ~~**BUG-1866**~~ | **P0** | ✅ **Malformed due date crashes Calendar view in Electron** (✅ DONE 2026-06-15, shipped v1.4.181) |
 | ~~**TASK-1289**~~ | **P0** | ✅ **Investigate severe task position drift episode** |

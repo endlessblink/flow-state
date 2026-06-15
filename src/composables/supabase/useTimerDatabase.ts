@@ -93,6 +93,7 @@ export function useTimerDatabase(ctx: DatabaseContext) {
             if (import.meta.env.DEV) console.log('🍅 [DB] saveActiveTimerSession success')
         } catch (e: unknown) {
             handleError(e, 'saveActiveTimerSession')
+            throw e
         }
     }
 

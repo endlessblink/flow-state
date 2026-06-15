@@ -230,6 +230,19 @@ describe('Timer State Machine — startTimer', () => {
     expect(store.currentTaskId).toBe('task-abc')
   })
 
+  it('7b. startTimer rolls back local state when the initial timer session write fails', async () => {
+    mockSaveActiveTimerSession.mockRejectedValueOnce(new Error('stale auth token'))
+    const store = useTimerStore()
+    await flushPromises()
+
+    await expect(store.startTimer('task-unsynced', 1500, false)).rejects.toThrow('stale auth token')
+    await flushPromises()
+
+    expect(store.currentSession).toBeNull()
+    expect(store.isTimerActive).toBe(false)
+    expect(store.isDeviceLeader).toBe(false)
+  })
+
   it('8. countdown advances: remainingTime decrements each second', async () => {
     const store = useTimerStore()
     await flushPromises()

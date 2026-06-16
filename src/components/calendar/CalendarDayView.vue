@@ -248,6 +248,7 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
                 <div class="task-actions">
                   <button
                     class="play-timer-btn"
+                    aria-label="Start timer for this task"
                     title="Start timer for this task"
                     @click.stop="$emit('startTimer', calEvent)"
                   >
@@ -255,6 +256,7 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
                   </button>
                   <button
                     class="remove-from-calendar-btn"
+                    aria-label="Remove from calendar (move to inbox)"
                     title="Remove from calendar (move to inbox)"
                     @click.stop="$emit('removeFromCalendar', calEvent)"
                   >

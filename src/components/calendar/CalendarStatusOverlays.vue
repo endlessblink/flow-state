@@ -41,6 +41,7 @@
           </button>
           <button
             class="dismiss-btn"
+            aria-label="Dismiss error"
             title="Dismiss error"
             @click="$emit('clearOperationError')"
           >

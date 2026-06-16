@@ -190,21 +190,21 @@ export async function persistAuthSessionBackup(session: Session | null | undefin
     }
 }
 
-export async function restoreAuthSessionFromBackup(): Promise<boolean> {
+export async function restoreAuthSessionFromBackup(): Promise<Session | null> {
     try {
         const raw = await authStorageGet(AUTH_SESSION_BACKUP_KEY)
-        if (!raw) return false
+        if (!raw) return null
 
         const parsed = JSON.parse(raw) as { session?: Session }
         const session = parsed?.session
-        if (!session?.refresh_token || !session.user?.id) return false
+        if (!session?.refresh_token || !session.user?.id) return null
 
         await authStorageSet(STORAGE_KEYS.SUPABASE_AUTH, JSON.stringify(session))
         console.warn('[Supabase] Restored missing auth session from Electron-safe backup')
-        return true
+        return session
     } catch (e) {
         console.warn('[Supabase] Failed to restore auth session backup:', e)
-        return false
+        return null
     }
 }
 

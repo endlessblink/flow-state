@@ -29,7 +29,9 @@ export function syncLocalApiSession(session: Session | null): void {
   const api = getElectronApi()
   if (!api) return
   try {
-    if (session?.access_token && session.user?.id) {
+    const expiresAtMs = session?.expires_at ? session.expires_at * 1000 : null
+    const isFresh = !expiresAtMs || Date.now() < expiresAtMs - 30_000
+    if (session?.access_token && session.user?.id && isFresh) {
       void api.setLocalApiSession?.({
         supabaseUrl: supabaseConfig.url,
         anonKey: supabaseConfig.anonKey,

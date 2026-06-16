@@ -58,6 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // BUG-339: Proactive token refresh timer
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
+  let reconnectRefreshTimer: ReturnType<typeof setTimeout> | null = null
 
   /**
    * BUG-339: Schedule proactive token refresh before expiry
@@ -118,6 +119,9 @@ export const useAuthStore = defineStore('auth', () => {
         console.log('[AUTH] Proactive token refresh successful')
         session.value = data.session
         user.value = data.session.user
+        isOfflineGracePeriod.value = false
+        error.value = null
+        persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup refreshed session:', e))
 
         // Schedule next refresh
         if (data.session.expires_at) {
@@ -182,6 +186,26 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   // Actions
+  const startReconnectRefreshRecovery = () => {
+    if (reconnectRefreshTimer) return
+    reconnectRefreshTimer = setTimeout(() => {
+      reconnectRefreshTimer = null
+      performTokenRefresh().catch(e => console.warn('[AUTH] Reconnect refresh retry failed:', e))
+    }, 1000)
+  }
+
+  const keepSessionForReconnect = (recoverableSession: Session, logMessage: string, authError?: AuthError | null) => {
+    console.warn(logMessage)
+    session.value = recoverableSession
+    user.value = recoverableSession.user
+    isOfflineGracePeriod.value = true
+    if (authError) {
+      error.value = authError
+    }
+    persistAuthSessionBackup(recoverableSession).catch(e => console.warn('[AUTH] Failed to backup reconnect-grace session:', e))
+    startReconnectRefreshRecovery()
+  }
+
   const initialize = async (): Promise<void> => {
     // BUG-1086: Return existing promise if already initializing (prevents race condition)
     // Multiple callers will await the same promise instead of starting parallel init attempts
@@ -217,15 +241,23 @@ export const useAuthStore = defineStore('auth', () => {
           throw sessionError
         }
 
+        let restoredBackupSession: Session | null = null
         if (!data.session) {
-          const restored = await restoreAuthSessionFromBackup()
-          if (restored) {
+          restoredBackupSession = await restoreAuthSessionFromBackup()
+          if (restoredBackupSession) {
             const retry = await supabase.auth.getSession()
             data = retry.data
             sessionError = retry.error
             if (sessionError) {
               console.error(`[AUTH:${tabId}] getSession after backup restore error:`, sessionError)
               throw sessionError
+            }
+            if (!data.session) {
+              keepSessionForReconnect(
+                restoredBackupSession,
+                '[AUTH] Electron backup restored but Supabase has not rehydrated yet — keeping signed-in shell for reconnect',
+              )
+              return
             }
           }
         }
@@ -360,13 +392,11 @@ export const useAuthStore = defineStore('auth', () => {
                 return
               }
 
-              console.error('[AUTH] Failed to refresh session:', refreshError)
-              // TASK-1060: Mark initialization as failed so UI can show error state
-              error.value = refreshError
-              initializationFailed.value = true
-              // Clear stale session - user needs to sign in again
-              session.value = null
-              user.value = null
+              keepSessionForReconnect(
+                data.session,
+                '[AUTH] Session refresh failed during startup — keeping signed-in shell for reconnect',
+                refreshError,
+              )
               return
             }
             if (refreshData.session) {

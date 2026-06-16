@@ -27,6 +27,7 @@ const {
   mockPersistAuthSessionBackup,
   mockRestoreAuthSessionFromBackup,
   mockClearAuthSessionBackup,
+  mockSyncLocalApiSession,
 } = vi.hoisted(() => {
   type AuthCallback = (event: string, session: unknown) => void
   let _listeners: AuthCallback[] = []
@@ -55,6 +56,7 @@ const {
     mockPersistAuthSessionBackup: vi.fn(),
     mockRestoreAuthSessionFromBackup: vi.fn(),
     mockClearAuthSessionBackup: vi.fn(),
+    mockSyncLocalApiSession: vi.fn(),
   }
 })
 
@@ -104,6 +106,10 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
     onAuthChange: vi.fn(),
     all: vi.fn(),
   },
+}))
+
+vi.mock('@/composables/useLocalApiBridge', () => ({
+  syncLocalApiSession: mockSyncLocalApiSession,
 }))
 
 vi.mock('@/constants/dbTables', () => ({
@@ -327,7 +333,7 @@ describe('Auth Flow — initialize()', () => {
     mockGetSession
       .mockResolvedValueOnce({ data: { session: null }, error: null })
       .mockResolvedValueOnce({ data: { session }, error: null })
-    mockRestoreAuthSessionFromBackup.mockResolvedValue(true)
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(session)
 
     const store = useAuthStore()
     await store.initialize()
@@ -336,6 +342,84 @@ describe('Auth Flow — initialize()', () => {
     expect(mockGetSession).toHaveBeenCalledTimes(2)
     expect(store.isAuthenticated).toBe(true)
     expect(store.user?.id).toBe('user-test-001')
+  })
+
+  it('8d. initialize() keeps the signed-in shell when Electron backup restore succeeds but Supabase still reports no session', async () => {
+    const session = buildMockSession()
+    mockGetSession
+      .mockResolvedValueOnce({ data: { session: null }, error: null })
+      .mockResolvedValueOnce({ data: { session: null }, error: null })
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(session)
+
+    const store = useAuthStore()
+    await store.initialize()
+
+    expect(mockRestoreAuthSessionFromBackup).toHaveBeenCalledOnce()
+    expect(mockGetSession).toHaveBeenCalledTimes(2)
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.user?.id).toBe('user-test-001')
+    expect(store.isOfflineGracePeriod).toBe(true)
+  })
+
+  it('8e. initialize() keeps the signed-in shell when an expired Electron session cannot refresh immediately', async () => {
+    const expiredSession = buildMockSession({
+      expires_at: Math.floor(Date.now() / 1000) - 60,
+    })
+    mockGetSession.mockResolvedValue({ data: { session: expiredSession }, error: null })
+    mockRefreshSession.mockResolvedValue({
+      data: { session: null },
+      error: { name: 'AuthError', message: 'Refresh failed during update restart', status: 408 },
+    })
+
+    const store = useAuthStore()
+    await store.initialize()
+
+    expect(mockRefreshSession).toHaveBeenCalledOnce()
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.user?.id).toBe('user-test-001')
+    expect(store.isOfflineGracePeriod).toBe(true)
+  })
+
+  it('8f. reconnect grace retries refresh and republishes a fresh session to the Electron Local API bridge', async () => {
+    vi.useFakeTimers()
+    try {
+      const expiredSession = buildMockSession({
+        access_token: 'expired-access-token',
+        expires_at: Math.floor(Date.now() / 1000) - 60,
+      })
+      const freshSession = buildMockSession({
+        access_token: 'fresh-recovered-access-token',
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+      })
+      mockGetSession.mockResolvedValue({ data: { session: expiredSession }, error: null })
+      mockRefreshSession
+        .mockResolvedValueOnce({
+          data: { session: null },
+          error: { name: 'AuthError', message: 'Refresh failed during update restart', status: 408 },
+        })
+        .mockResolvedValueOnce({
+          data: { session: freshSession },
+          error: null,
+        })
+
+      const store = useAuthStore()
+      await store.initialize()
+
+      expect(store.session?.access_token).toBe('expired-access-token')
+      expect(store.isOfflineGracePeriod).toBe(true)
+
+      await vi.advanceTimersByTimeAsync(1000)
+      await flushPromises()
+
+      expect(mockRefreshSession).toHaveBeenCalledTimes(2)
+      expect(store.session?.access_token).toBe('fresh-recovered-access-token')
+      expect(store.isOfflineGracePeriod).toBe(false)
+      expect(mockSyncLocalApiSession).toHaveBeenCalledWith(expect.objectContaining({
+        access_token: 'fresh-recovered-access-token',
+      }))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('8c. initialize() persists a backup when a valid session is found', async () => {

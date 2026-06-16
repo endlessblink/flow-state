@@ -32,6 +32,26 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### BUG-1870: Electron update/restart can show Sign In while authenticated cache still exists (🔄 IN PROGRESS)
+
+**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (filed 2026-06-16) | **Depends on**: none
+
+**Why**: After an Electron update/restart, FlowState can render cached authenticated tasks and canvas state while the sidebar auth state falls back to `Sign In`. The earlier BUG-1865 fix preserved cached data when auth restore missed, but it did not preserve the signed-in shell itself when Electron's disk-backed auth backup restored yet Supabase still reported no session, or when an expired session could not refresh immediately during restart.
+
+**Acceptance**:
+- Electron startup restores a signed-in shell from the disk-backed auth backup even if Supabase has not rehydrated the primary session yet.
+- Expired startup sessions that fail to refresh immediately enter reconnect/offline grace instead of clearing `user`/`session`.
+- Explicit user sign-out remains the only destructive path that clears auth backups and private local stores.
+- The Electron Local Task API/KDE bridge does not receive expired reconnect-grace JWTs; it clears the stale sidecar token, retries refresh, and republishes the fresh session when recovery succeeds.
+- Desktop fix ships through the versioned Electron updater flow.
+
+**Progress**:
+- 2026-06-16: Added RED regressions for Electron backup restore returning a recoverable session while Supabase still reports null, and expired-session startup refresh failure keeping the signed-in shell.
+- 2026-06-16: Changed the auth backup restore contract to return the recovered session snapshot and keep reconnect-grace auth state instead of showing `Sign In`; guarded the Local API bridge from forwarding expired JWTs.
+- 2026-06-16: Added the missing Electron/KDE recovery regression: reconnect grace retries session refresh and republishes the fresh token to the Electron Local API bridge. Verification: `npm run test -- tests/unit/electron/local-api-lifecycle.test.ts tests/unit/local-api/server-contract.test.ts tests/unit/kde/timer-sync.test.ts tests/unit/kde/auth-flow.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/composables/useLocalApiBridge.test.ts` passed 105/105.
+- 2026-06-16: Local quality gates passed: `npm run type-check`, `npm run lint`, and `npm run electron:build`. Built local updater artifacts for `1.4.185`: `FlowState-1.4.185-x86_64.AppImage` 180171005 bytes, `FlowState_1.4.185_amd64.deb` 131222200 bytes, `latest-linux.yml` 548 bytes.
+- 2026-06-16: Updater VPS directory creation succeeded, but artifact upload/deploy is blocked in this Codex session by the sandbox escalation usage limit. The fix is committed-ready but not yet public on `https://in-theflow.com/updates/electron/latest-linux.yml`.
+
 ### ~~BUG-1869~~: Skipped realtime task updates can leave Electron, localhost, and KDE out of sync (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed and shipped 2026-06-15) | **Depends on**: none

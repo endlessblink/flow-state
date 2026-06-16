@@ -10,7 +10,7 @@ import {
 const hasOwn = (value: Record<string, unknown>, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key)
 
-const TASK_PATCH_FIELDS: Array<[keyof SupabaseTask, keyof Task]> = [
+export const TASK_PATCH_FIELDS: Array<[keyof SupabaseTask, keyof Task]> = [
   ['title', 'title'],
   ['description', 'description'],
   ['status', 'status'],
@@ -57,7 +57,7 @@ const TASK_PATCH_FIELDS: Array<[keyof SupabaseTask, keyof Task]> = [
   ['workspace_id', 'workspaceId'],
 ]
 
-const GROUP_PATCH_FIELDS: Array<[keyof SupabaseGroup, keyof CanvasGroup]> = [
+export const GROUP_PATCH_FIELDS: Array<[keyof SupabaseGroup, keyof CanvasGroup]> = [
   ['name', 'name'],
   ['type', 'type'],
   ['color', 'color'],

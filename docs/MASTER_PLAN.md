@@ -124,6 +124,7 @@
 - 2026-06-15: Added RED/green group move regression proving the queue previously sent post-move `baseVersion: 5` when the server expected pre-move version `4`.
 - 2026-06-15: Introduced selective Supabase-payload patch helpers and reused them in both IndexedDB startup merge and background refresh replay. Wider canvas/sync verification passes 179/179 tests; `npm run type-check`, `npm run lint`, and `git diff --check` pass.
 - 2026-06-15: Canonical Electron build/package validation passes for `1.4.182`. Shipped the updater after explicit authorization; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.182` with matching local/public hashes and sizes. `FlowState-1.4.182-x86_64.AppImage` returns HTTP 200 with `content-length: 180171129`, and `FlowState_1.4.182_amd64.deb` returns HTTP 200 with `content-length: 131221332`.
+- 2026-06-16: Added generated patch-invariant coverage over the actual task/group pending-write allowlists. The new guard iterates every non-geometry patch field and proves it cannot mutate canvas geometry/topology/version; focused verification passes 133/133 tests plus `npm run type-check`.
 
 ### TASK-1855: AI action command substrate with preview, apply, undo, and audit trail (✅ DONE)
 

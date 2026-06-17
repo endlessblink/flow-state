@@ -39,7 +39,12 @@ onUnmounted(() => {
     <div class="nanny-reminder">
       <div class="reminder-card">
         <!-- Dismiss X -->
-        <button class="dismiss-btn" @click="emit('dismiss')" title="Dismiss">
+        <button
+          class="dismiss-btn"
+          aria-label="Dismiss"
+          title="Dismiss"
+          @click="emit('dismiss')"
+        >
           <X :size="14" />
         </button>
 

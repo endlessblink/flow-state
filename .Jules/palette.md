@@ -1,0 +1,3 @@
+## 2024-06-17 - Add ARIA label to missing icon-only buttons
+**Learning:** All icon-only buttons (such as `.close-btn` wrappers containing an `<X />` icon) must include a descriptive `aria-label` attribute (e.g., `:aria-label="$t('close')"` or `:aria-label="$t('dismiss')"`) to ensure screen reader accessibility, even if a `title` attribute is present, as `title` is not reliably exposed. When adding labels dynamically in Vue, use the correct Vue binding syntax with a colon and the application's existing i18n translation keys.
+**Action:** Always add proper `:aria-label` tags using translation keys (or `aria-label` if translation is unavailable) to icon-only buttons to improve accessibility.

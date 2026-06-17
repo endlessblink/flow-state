@@ -33,6 +33,8 @@ check-*.mjs
 
 # Debug screenshots (Claude Code + Playwright debug captures)
 .dev/screenshots/
+# Local prod data snapshots (e.g. dedup/migration backups) — NEVER commit user data
+.dev/prod-backups/
 
 # Backup files
 *-backup-*.md

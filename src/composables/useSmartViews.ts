@@ -89,22 +89,24 @@ export const useSmartViews = () => {
       }
     }
 
+    // Check legacy scheduled date for today.
+    // Today must include tasks explicitly scheduled for the day even when stale
+    // calendar instances exist; otherwise tasks set to today can disappear from
+    // the PWA Today filter.
+    if (task.scheduledDate) {
+      const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
+      if (normalizedScheduledDate === todayStr) {
+        return true
+      }
+    }
+
     // Check if task has instances scheduled for today
-    // BUG-1188: If instances exist, ONLY check instance dates (instances are authoritative)
     if (task.instances && task.instances.length > 0) {
       return task.instances.some(inst => {
         if (!inst || !inst.scheduledDate) return false
         const normalizedInstDate = normalizeDateString(inst.scheduledDate)
         return normalizedInstDate === todayStr
       })
-    }
-
-    // Check legacy scheduled date for today (only when NO instances exist)
-    if (task.scheduledDate) {
-      const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
-      if (normalizedScheduledDate === todayStr) {
-        return true
-      }
     }
 
     // Only include tasks created today if they have NO date information at all

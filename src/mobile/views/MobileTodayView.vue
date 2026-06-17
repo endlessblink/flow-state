@@ -432,11 +432,11 @@ const groupedTasks = computed((): TaskGroup[] => {
       return getTaskHour(t) === null
     })
 
-    if (overdueFiltered.length > 0) groups.push({ key: 'overdue', title: 'Overdue', icon: AlertCircle, tasks: overdueFiltered })
+    if (untimedFiltered.length > 0) groups.push({ key: 'today', title: 'Today', icon: Calendar, tasks: untimedFiltered })
     if (morningFiltered.length > 0) groups.push({ key: 'morning', title: 'Morning', icon: Sunrise, tasks: morningFiltered })
     if (afternoonFiltered.length > 0) groups.push({ key: 'afternoon', title: 'Afternoon', icon: Sun, tasks: afternoonFiltered })
     if (eveningFiltered.length > 0) groups.push({ key: 'evening', title: 'Evening', icon: Moon, tasks: eveningFiltered })
-    if (untimedFiltered.length > 0) groups.push({ key: 'anytime', title: 'Anytime Today', icon: Calendar, tasks: untimedFiltered })
+    if (overdueFiltered.length > 0) groups.push({ key: 'overdue', title: 'Overdue', icon: AlertCircle, tasks: overdueFiltered })
   } else if (groupBy.value === 'project') {
     // Group by project
     const projectMap = new Map<string, Task[]>()

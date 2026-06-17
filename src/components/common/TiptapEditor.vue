@@ -279,7 +279,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount, nextTick } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import { Extension } from '@tiptap/core'
@@ -325,8 +325,10 @@ import {
   Palette,
   ChevronDown
 } from 'lucide-vue-next'
-// BUG-013/BUG-014 FIX: Import markdown utilities for HTML<->Markdown conversion and URL sanitization
-import { parseMarkdown, htmlToMarkdown, sanitizeUrl } from '@/utils/markdown'
+// TASK-1873: a real, idempotent markdown serializer replaces the lossy regex converter.
+import { Markdown } from 'tiptap-markdown'
+// sanitizeUrl is still used for link validation (BUG-014)
+import { sanitizeUrl } from '@/utils/markdown'
 
 interface Props {
   modelValue: string
@@ -354,38 +356,24 @@ const textColors = [
   { name: 'Gray', value: '#6b7280' },
 ]
 
-// BUG-276 FIX: Track internal updates to prevent watcher from re-setting content during typing
-const isInternalUpdate = ref(false)
+// TASK-1873: the markdown serializer is byte-stable, so the editor needs exactly ONE guard
+// against the emit→watch echo loop: ignore an incoming value that already equals the editor's
+// current markdown. No isInternalUpdate flag, no lastEmittedMarkdown bookkeeping, no HTML diff —
+// that whole pile (BUG-013/276) existed only because the old regex converter was not idempotent.
+// tiptap-markdown ships no types; narrow the storage shape we rely on.
+type MarkdownStorage = { markdown?: { getMarkdown(): string } }
+const currentMarkdown = (): string =>
+  (editor.value?.storage as MarkdownStorage | undefined)?.markdown?.getMarkdown() ?? ''
 
-// FIX: Track the last markdown TipTap emitted, so the modelValue watcher can compare
-// markdown-to-markdown instead of HTML-to-HTML. The HTML comparison was unreliable because
-// parseMarkdown() (marked.js) and editor.getHTML() (TipTap serializer) produce structurally
-// different HTML for the same content, causing setContent to fire on every prop update.
-const lastEmittedMarkdown = ref(props.modelValue)
-
-// BUG-276 FIX: Debounced emit to prevent rapid-fire conversions during typing
+// Debounced emit to avoid rapid-fire serialization during typing (perf, not a correctness guard).
 const debouncedEmit = useDebounceFn((markdown: string) => {
-  isInternalUpdate.value = true
-  lastEmittedMarkdown.value = markdown
   emit('update:modelValue', markdown)
-  nextTick(() => {
-    isInternalUpdate.value = false
-  })
-  }, 150)
+}, 150)
 
 const flushContent = () => {
   if (!editor.value) return
-
-  const html = editor.value.getHTML()
-  const markdown = htmlToMarkdown(html)
-  if (markdown !== lastEmittedMarkdown.value) {
-    isInternalUpdate.value = true
-    lastEmittedMarkdown.value = markdown
-    emit('update:modelValue', markdown)
-    nextTick(() => {
-      isInternalUpdate.value = false
-    })
-  }
+  // Emit the latest serialized value; the parent (MarkdownEditor) ignores no-op updates.
+  emit('update:modelValue', currentMarkdown())
 }
 
 // BUG-1506: Shift+Enter exits list → plain paragraph. Only acts inside lists.
@@ -419,9 +407,11 @@ const ShiftEnterExitList = Extension.create({
 // StarterKit includes input rules by default, so we disable them
 // BUG-013 FIX: Convert markdown to HTML for Tiptap, then HTML back to markdown on emit
 const editor = useEditor({
-  // Convert incoming markdown to HTML for Tiptap display
-  content: parseMarkdown(props.modelValue),
+  // TASK-1873: the Markdown extension parses a markdown string directly — no pre-conversion.
+  content: props.modelValue,
   extensions: [
+    // Real markdown serializer/parser (idempotent). html:true preserves underline/highlight.
+    Markdown.configure({ html: true, tightLists: true, linkify: false, breaks: false }),
     StarterKit.configure({
       // Disable automatic input rules (no auto-conversion when typing)
       bulletList: {
@@ -474,32 +464,19 @@ const editor = useEditor({
   // Keep paste rules for pasting formatted content
   enablePasteRules: true,
   onUpdate: ({ editor }) => {
-    // BUG-013 FIX: Convert HTML output to markdown before emitting
-    // The app stores task descriptions as markdown, not HTML
-    // BUG-276 FIX: Use debounced emit to prevent rapid-fire conversions
-    const html = editor.getHTML()
-    const markdown = htmlToMarkdown(html)
+    // TASK-1873: serialize via the markdown extension (idempotent) and emit (debounced).
+    const markdown = (editor.storage as MarkdownStorage).markdown?.getMarkdown() ?? ''
     debouncedEmit(markdown)
   },
 })
 
-// Watch for external changes to modelValue
-// BUG-013 FIX: Convert incoming markdown to HTML for comparison and setting
-// BUG-276 FIX: Skip if this is an internal update from typing to prevent race conditions
+// TASK-1873: the single fallback guard. Ignore an incoming value that already equals the
+// editor's current markdown (the echo of our own emit); otherwise it's a genuine external
+// load (new task / restored draft) and we apply it. Idempotent serializer ⇒ no cursor churn.
 watch(() => props.modelValue, (newValue) => {
-  if (!editor.value || isInternalUpdate.value) return
-  // FIX: Compare markdown-to-markdown instead of HTML-to-HTML.
-  // parseMarkdown() and editor.getHTML() produce structurally different HTML for the
-  // same content (marked.js vs TipTap serializer), so the old HTML comparison always
-  // triggered setContent, resetting the editor and destroying user's in-progress edits.
-  if (newValue === lastEmittedMarkdown.value) return
-  const newHtml = parseMarkdown(newValue)
-  const currentHtml = editor.value.getHTML()
-  // Only update if content actually changed (prevents cursor jump)
-  if (currentHtml !== newHtml) {
-    lastEmittedMarkdown.value = newValue
-    editor.value.commands.setContent(newHtml, { emitUpdate: false })
-  }
+  if (!editor.value) return
+  if (newValue === currentMarkdown()) return
+  editor.value.commands.setContent(newValue, { emitUpdate: false })
 })
 
 // Cleanup

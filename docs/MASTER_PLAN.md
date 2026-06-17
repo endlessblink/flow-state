@@ -32,6 +32,47 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### ~~BUG-1872~~: Task description "keeps resetting" while editing (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-17) — fixed at state layer + regression test (branch task-1871-canvas-sync-stability). **Data loss confirmed**: the user's typed description for task `ad1ea052…` was wiped client-side before autosave ever persisted it — every prod backup (10:00 & 17:00 UTC) shows the description already empty (row untouched since 2026-06-16), so it was unrecoverable.
+
+**Why**: The TipTap editor stores markdown but renders HTML, round-tripping `htmlToMarkdown(parseMarkdown(md))` on every autosave echo. That hand-rolled regex converter (`src/utils/markdown.ts`) is **not byte-stable** (proven: `- a\n\n- b` → `- a\n\n\n- b` grows a newline each pass). Chain: autosave → `markCurrentTaskSaved()` clears `isFormDirty` → the `props.task` watcher's dirty-guard (`useTaskEditState.ts`) no longer blocks → an echo of our own save (description differing only by normalization) overwrites `editedTask.description` → `MarkdownEditor` modelValue changes → TipTap `setContent` wipes in-progress typing. Re-surfaced on this branch because the canvas-sync work re-enabled realtime echoes that ride the `props.task` update path.
+
+**Fix**: While the modal owns this task (`props.isOpen && editedTask.id === newTask.id`), the in-editor description is authoritative — the incoming `props.task` description is pinned to the editor's value so echoes/autosave round-trips can never reset it (`useTaskEditState.ts`). Other fields still update from echoes. Root-cause (lossy converter) tracked separately as TASK-1873.
+
+**Tests**: `src/composables/tasks/__tests__/useTaskEditState.descriptionReset.test.ts` (RED→GREEN verified: fails without the guard, passes with it). `src/utils/__tests__/markdownRoundtrip.test.ts` documents converter stability contract + the known list-drift skip for TASK-1873.
+
+### ~~TASK-1873~~: Replace lossy regex markdown converter with a real serializer (✅ DONE)
+
+**Priority**: P2 | **Status**: ✅ DONE (2026-06-17) — editor moved onto `tiptap-markdown@0.9.0`; guard pile collapsed to one fallback; single local-draft durability fallback added; backup coverage asserted. Typecheck clean; 19 unit/integration + 1 e2e green. | **Depends on**: BUG-1872 (state-layer guard already shipped)
+
+**Shipped**:
+- `TiptapEditor.vue` now parses/serializes through the real `tiptap-markdown` extension (`editor.storage.markdown.getMarkdown()`); removed `parseMarkdown`/`htmlToMarkdown` from the edit path. The guard pile (`isInternalUpdate`, `lastEmittedMarkdown`, HTML-diff) collapsed to **one** guard: ignore an incoming value equal to the editor's current markdown.
+- **Single durability fallback** (`useTaskEditState.ts`): in-progress description persisted to `localStorage` (`flowstate:desc-draft:<id>`) the instant it changes, restored on reopen if the app died pre-save (read as dirty so autosave re-persists), cleared on confirmed save. Exactly one fallback, no second path.
+- **Backup coverage**: `backupPreservesDescription.test.ts` asserts the local-backup task transform keeps `description`. VPS pg_dump already includes it (confirmed).
+- Tests: `tiptapMarkdownRoundtrip.test.ts` (8 idempotency cases incl. lists/Hebrew), `useTaskEditState.descriptionReset.test.ts` (reset guard + draft restore/clear), `markdownRoundtrip.test.ts` (legacy regex documented), `task-description-roundtrip.spec.ts` (real-app e2e).
+
+_Original plan below._
+
+**Priority**: P2 | **Status**: ✅ DONE (filed 2026-06-17) | **Depends on**: BUG-1872 (state-layer guard already shipped)
+
+**Why**: `src/utils/markdown.ts` (`parseMarkdown` via marked + a hand-rolled regex `htmlToMarkdown`) is the root of a class of editor bugs. It is not idempotent, so editor↔store round-trips drift (BUG-1872 list-newline growth is one instance). `TiptapEditor.vue` has accreted guard-on-guard scar tissue to paper over it: `isInternalUpdate`, `lastEmittedMarkdown`, the 150ms debounce, and markdown-vs-markdown comparison (BUG-013, BUG-014, BUG-276). Each guard exists only because the converter is unstable.
+
+**Goal**: Keep markdown as the storage format (board, AI, search depend on it) but replace the regex with a real serializer (`tiptap-markdown@0.9.0`, peer `@tiptap/core ^3.0.1` — compatible; `prosemirror-markdown` already present) so `editor ↔ markdown` is byte-stable and idempotent. Collapse the guard pile in `TiptapEditor.vue` down to **exactly one fallback** path.
+
+**Durability requirements (user, 2026-06-17 — "this can't get lost again"):**
+- **Can't-lose-again**: in-progress description text must survive a reset, failed save, crash, or reload. Persist a local draft (keyed by task id) the moment the user types; restore it on reopen; clear it only after a confirmed successful save.
+- **Exactly one fallback**: ONE durable fallback layer, not the current stack of guards (`isInternalUpdate`, `lastEmittedMarkdown`, debounce-vs-watch juggling) nor multiple competing draft stores. One serializer + one local-draft fallback. If the serializer ever throws, the single fallback is "treat content as plain text" — no second regex path.
+- **Backup reliably captures it**: the description column must be provably present in BOTH (a) the VPS pg_dump (confirmed — full dump includes `description`) and (b) the app's local auto-backup payload. Add a regression test asserting the local-backup task payload includes `description` so a future field-completeness regression can't silently drop it (the BUG-1872 data loss was never-saved; this guards the saved-but-not-backed-up case).
+
+**Acceptance**:
+- `htmlToMarkdown(parseMarkdown(md)) === md` for plain text, Hebrew/RTL, multi-paragraph, **bullet/numbered/task lists**, tables, highlights, links, bold/italic/strike (un-skip the TASK-1873 case in `markdownRoundtrip.test.ts`).
+- Existing stored descriptions (authored by the old regex) render without visible change — verify a sample against prod before/after; migration only if needed.
+- Editor guards collapsed to one fallback; no editor reset, cursor-jump, or RTL regression (Playwright proof on real seeded data).
+- Local-draft fallback restores unsaved text after a forced reload; test covers it.
+- Backup payload test asserts `description` is present.
+- Do under deliberate test coverage, not under bug pressure.
+
 ### BUG-1870: Electron update/restart can show Sign In while authenticated cache still exists (🔄 IN PROGRESS)
 
 **Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS (filed 2026-06-16) | **Depends on**: none

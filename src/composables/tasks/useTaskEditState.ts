@@ -94,9 +94,40 @@ export function useTaskEditState(
         return isFormPristine.value || !isFormValid.value || isSaving.value
     })
 
+    // TASK-1873 — "this can't get lost again", with exactly ONE fallback:
+    // a single local draft of the in-progress description, keyed by task id. It captures
+    // text the instant it's typed, survives a reset/crash/reload, and is cleared the moment a
+    // save confirms the text reached the server (where the 30-min VPS pg_dump + 5-min local
+    // backup take over). There is no second fallback path on purpose.
+    const draftKey = (id: string) => `flowstate:desc-draft:${id}`
+    const saveDescriptionDraft = (id: string, description: string) => {
+        if (!id) return
+        try {
+            if (description && description.trim()) localStorage.setItem(draftKey(id), description)
+            else localStorage.removeItem(draftKey(id))
+        } catch { /* storage unavailable — the single fallback degrades silently, no backup path */ }
+    }
+    const clearDescriptionDraft = (id: string) => {
+        try { localStorage.removeItem(draftKey(id)) } catch { /* ignore */ }
+    }
+    const readDescriptionDraft = (id: string): string | null => {
+        try { return localStorage.getItem(draftKey(id)) } catch { return null }
+    }
+
     const markCurrentTaskSaved = () => {
         originalTaskSnapshot.value = createTaskFingerprint(editedTask.value)
+        // Text is now persisted server-side; the local fallback is no longer needed.
+        clearDescriptionDraft(editedTask.value.id)
     }
+
+    // Persist the draft the instant the description changes (before the 500ms autosave),
+    // so a crash/reset in that window can't lose it. Gated on isFormDirty so simply opening a
+    // task never writes its already-saved server value back as a draft.
+    watch(() => editedTask.value.description, (description) => {
+        if (props.isOpen && editedTask.value.id && isFormDirty.value) {
+            saveDescriptionDraft(editedTask.value.id, description)
+        }
+    })
 
     // Options
     const priorityOptions = [
@@ -138,6 +169,16 @@ export function useTaskEditState(
             dueDate: newTask.dueDate || '',
             scheduledDate: newTask.scheduledDate || '',
             scheduledTime: newTask.scheduledTime || '09:00'
+        }
+
+        // BUG-1872 FIX: While the modal owns THIS task, the in-editor description is the
+        // source of truth. The markdown converter is not byte-stable (tracked by TASK-1873),
+        // so an echo of our own autosave re-injects a normalized copy. Letting it through here
+        // changes MarkdownEditor's modelValue, which fires a TipTap setContent that wipes the
+        // user's in-progress typing — the "description keeps resetting" loop. Other fields may
+        // still update from the echo; only the description is pinned to the editor's value.
+        if (props.isOpen && editedTask.value.id === newTask.id) {
+            newTaskState.description = editedTask.value.description
         }
 
         const newFingerprint = JSON.stringify({
@@ -182,8 +223,20 @@ export function useTaskEditState(
                     scheduledDate: freshTask.scheduledDate || '',
                     scheduledTime: freshTask.scheduledTime || '09:00'
                 }
+                // Snapshot the SERVER value first — a restored draft must read as dirty so
+                // autosave re-persists it (otherwise the recovered text would never be saved).
+                const serverSnapshot = createTaskFingerprint(newTaskState)
+
+                // TASK-1873: restore an unsaved draft if the app died before the last save.
+                // A draft only exists when text was typed but never confirmed-saved, so if it
+                // differs from the loaded value it IS the newer, unsaved content — restore it.
+                const draft = readDescriptionDraft(freshTask.id)
+                if (draft != null && draft !== newTaskState.description) {
+                    newTaskState.description = draft
+                }
+
                 editedTask.value = newTaskState
-                originalTaskSnapshot.value = createTaskFingerprint(newTaskState)
+                originalTaskSnapshot.value = serverSnapshot
 
                 // Auto-expand sections
                 showSubtasks.value = (freshTask.subtasks || []).length > 0

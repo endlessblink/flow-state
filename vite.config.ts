@@ -203,12 +203,15 @@ export default defineConfig(({ mode }) => ({
       'lucide-vue-next',
       'vue-i18n',
       'dompurify',
-      'marked'
-    ],
-    // Force ESM interop for CJS modules
-    needsInterop: [
+      'marked',
+      // TASK-1871: pre-bundle so the legacy-group-id migration's `uuid` import is
+      // optimized at server start, not discovered mid-session.
       'uuid'
     ]
+    // NOTE: `uuid` is NOT in needsInterop. uuid v9 is pure ESM with named exports
+    // (v1/v3/v4/v5) and NO default export; forcing CJS interop made Vite's wrapper
+    // import a non-existent default → "does not provide an export named 'default'",
+    // which crashed app init wherever `uuid` was imported.
   },
   worker: {
     format: 'es' // CRITICAL: production builds require 'es' format

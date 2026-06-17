@@ -295,4 +295,45 @@ describe('WebSocket Resilience — useRealtimeSubscription', () => {
     const taskSub = onCallLog.find(c => c.options?.table === 'tasks')
     expect(taskSub?.options?.filter).toContain('workspace_id=eq.ws-xyz-456')
   })
+
+  // 16. TASK-1871: no auth token yet → reschedule + connect (no silent death).
+  // Without the fix, the no-token branch returned with no retry → realtime never started.
+  it('reschedules setup when no auth token yet, then connects', async () => {
+    vi.useFakeTimers()
+    try {
+      const ctx = buildCtx()
+      ;(mockSupabase.auth.getSession as Mock)
+        .mockResolvedValueOnce({ data: { session: null } })
+        .mockResolvedValue({ data: { session: { access_token: 'mock-token' } } })
+      const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+      initRealtimeSubscription(vi.fn(), vi.fn())
+      await vi.advanceTimersByTimeAsync(50)
+      expect(channelMock).not.toHaveBeenCalled() // first pass had no token
+      await vi.advanceTimersByTimeAsync(2200) // scheduled retry fires, token now present
+      expect(channelMock).toHaveBeenCalledWith(expect.stringContaining('db-changes-'))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // 17. TASK-1871: a throw during setup must NOT wedge isConnecting=true forever.
+  // Without the try/finally, the retry's setupSubscription early-returns on the stuck
+  // single-flight guard and realtime never recovers until a full reload.
+  it('a throw during setup does not wedge — it recovers on retry', async () => {
+    vi.useFakeTimers()
+    try {
+      const ctx = buildCtx()
+      ;(mockSupabase.auth.getSession as Mock)
+        .mockRejectedValueOnce(new Error('network blip'))
+        .mockResolvedValue({ data: { session: { access_token: 'mock-token' } } })
+      const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+      initRealtimeSubscription(vi.fn(), vi.fn())
+      await vi.advanceTimersByTimeAsync(50) // setup throws, schedules retry, finally clears flag
+      expect(channelMock).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(3200) // retry fires and succeeds
+      expect(channelMock).toHaveBeenCalledWith(expect.stringContaining('db-changes-'))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

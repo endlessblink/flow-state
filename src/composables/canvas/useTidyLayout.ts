@@ -227,11 +227,35 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     }
 
     const pendingWrites: Promise<unknown>[] = []
-    const { inputs, groupMoves, taskMoves, adoptedParents } = planTidyDayGroups()
+    const { inputs, groupMoves: allGroupMoves, taskMoves: allTaskMoves, adoptedParents } = planTidyDayGroups()
+
+    // TASK-1871: Drop NO-OP moves (target == current position/parent). The canonical
+    // layout emits a move for EVERY group/task regardless of whether it changed, so
+    // re-running tidy re-wrote identical positions (x=1616 -> 1616) — hundreds of
+    // pointless saves that flooded the API ("API rate limit exceeded") and cascaded
+    // into auth/sync failures. Skipping unchanged moves makes re-runs write nothing.
+    const EPS = 0.5
+    const groupMoves = allGroupMoves.filter((gm) => {
+      const p = canvasStore.groups.find((g) => g.id === gm.groupId)?.position
+      if (!p) return true
+      return Math.abs((p.x ?? 0) - gm.position.x) > EPS
+        || Math.abs((p.y ?? 0) - gm.position.y) > EPS
+        || Math.abs((p.width ?? 0) - gm.size.width) > EPS
+        || Math.abs((p.height ?? 0) - gm.size.height) > EPS
+    })
+    const taskMoves = allTaskMoves.filter((tm) => {
+      const t = taskStore.rawTasks.find((x) => x.id === tm.taskId)
+      const cp = t?.canvasPosition
+      const adopted = adoptedParents.get(tm.taskId)
+      const parentChanged = adopted !== undefined && t?.parentId !== adopted
+      if (parentChanged) return true
+      if (!cp) return true
+      return Math.abs(cp.x - tm.position.x) > EPS || Math.abs(cp.y - tm.position.y) > EPS
+    })
     pendingGroupMoves = groupMoves
     pendingTaskMoves = taskMoves
 
-    if (inputs.length === 0) {
+    if (inputs.length === 0 || (groupMoves.length === 0 && taskMoves.length === 0)) {
       release()
       return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
     }

@@ -9,6 +9,7 @@
 
 import { onMounted, onUnmounted } from 'vue'
 import { useSyncStatusStore } from '@/stores/syncStatus'
+import { isElectron } from '@/utils/platform'
 
 /**
  * Hook into browser's beforeunload event to warn about unsaved changes
@@ -34,6 +35,13 @@ export function useBeforeUnload() {
   }
 
   onMounted(() => {
+    // TASK-1871: NEVER block window close in Electron. This is a web-tab
+    // "unsaved changes" guard, but in the desktop app a blocked close means the
+    // app cannot quit at all (no native browser confirm dialog + no Quit menu
+    // fallback) — a recurring "can't quit FlowState" regression. It's safe to
+    // skip because the offline-first sync queue (TASK-1177) persists pending
+    // writes to IndexedDB across restarts, so quitting never loses data.
+    if (isElectron()) return
     window.addEventListener('beforeunload', handleBeforeUnload)
   })
 

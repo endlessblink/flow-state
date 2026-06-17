@@ -193,6 +193,14 @@ async function globalSetup(config: FullConfig) {
 
   if (lastNavigationError) throw lastNavigationError
 
+  // TASK-1871: Warm the canvas module graph (which imports the `uuid` dep via the
+  // legacy-group migration) so the FIRST e2e test doesn't hit Vite's one-time
+  // cold-start re-optimize ("does not provide an export named 'default'").
+  try {
+    await page.goto(`${baseURL}/#/canvas`, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+    await page.waitForTimeout(5000)
+  } catch { /* warmup is best-effort */ }
+
   // Save authenticated state
   const authDir = 'tests/.auth'
   if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true })

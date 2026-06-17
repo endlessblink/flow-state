@@ -9,6 +9,10 @@ import type { Task } from '@/types/tasks'
 import { getGroupAbsolutePosition } from '@/utils/canvas/coordinates'
 import { type ContainerBounds, isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
 import { cacheGroups } from '@/services/offline/readCacheDB'
+// TASK-1871: legacy non-UUID group ids never sync — migrate them to deterministic UUIDs
+import { isUuidGroupId, deterministicGroupId, isMigratableDayGroup } from '@/utils/canvas/legacyGroupId'
+// TASK-1871: fail-fast guard against write storms (same row hammered)
+import { recordWrite } from '@/utils/sync/writeRateGuard'
 
 export const useCanvasGroups = (
     persistence: {
@@ -94,6 +98,25 @@ export const useCanvasGroups = (
         if (index !== -1) {
             const group = _rawGroups.value[index]
 
+            // TASK-1871: Systemic NO-OP guard. If the only thing this update would change is
+            // the position and it's already at that position (within 0.5px on x/y/w/h), drop
+            // the position from the update. If nothing else changes, skip the write entirely.
+            // This makes write storms from ANY caller (auto-layout, feedback loops) impossible
+            // at the source, not just the two known callers.
+            if ('position' in updates && updates.position && group.position) {
+                const a = group.position, b = updates.position
+                const samePos = Math.abs((a.x ?? 0) - (b.x ?? 0)) <= 0.5
+                    && Math.abs((a.y ?? 0) - (b.y ?? 0)) <= 0.5
+                    && Math.abs((a.width ?? 0) - (b.width ?? 0)) <= 0.5
+                    && Math.abs((a.height ?? 0) - (b.height ?? 0)) <= 0.5
+                if (samePos) {
+                    const rest = { ...updates }
+                    delete rest.position
+                    if (Object.keys(rest).length === 0) return // pure no-op — never write
+                    updates = rest
+                }
+            }
+
             if (import.meta.env.DEV) {
                 if ('parentGroupId' in updates && updates.parentGroupId !== group.parentGroupId) {
                     console.log(`📍[GROUP-PARENT-WRITE] Group ${id.slice(0, 8)}... (${group.name}) parentGroupId: "${group.parentGroupId ?? 'none'}" → "${updates.parentGroupId ?? 'none'}"`)
@@ -116,6 +139,11 @@ export const useCanvasGroups = (
             if (updates.name) {
                 applySmartGroupNormalizations(updates)
             }
+
+            // TASK-1871: storm tripwire — throws in dev if the SAME group is written
+            // many times/sec (a feedback loop), warns in prod. No-ops above are already
+            // filtered, so reaching here repeatedly for one id means a real loop.
+            recordWrite('group', id)
 
             const currentVersion = group.positionVersion || 0
             const newVersion = updates.position ? currentVersion + 1 : currentVersion
@@ -408,6 +436,77 @@ export const useCanvasGroups = (
         }
     }
 
+    // TASK-1871: One-time migration of legacy non-UUID group ids → deterministic UUIDs.
+    // Older day-column groups ("Monday"/"Tomorrow") have legacy ids that toSupabaseGroup
+    // refuses to persist, so they only ever lived in each device's local storage and drifted
+    // apart. We give each a deterministic UUID (same across devices → Supabase upsert folds
+    // duplicates into one row), re-point child tasks/groups, and drop the local legacy copy.
+    const migrateLegacyGroupIds = async (userId: string): Promise<{ migrated: number }> => {
+        if (!userId) return { migrated: 0 }
+        // Only migrate legacy DAY-COLUMN groups. Migrating arbitrary legacy groups
+        // ("Done"/"1"/custom) would mint UUID copies and resurrect junk after cleanup.
+        const legacy = _rawGroups.value.filter(g => !isUuidGroupId(g.id) && isMigratableDayGroup(g.name))
+        if (legacy.length === 0) return { migrated: 0 }
+
+        const { useTaskStore } = await import('@/stores/tasks')
+        const taskStore = useTaskStore()
+
+        // Backup BEFORE mutating: snapshot all groups + each task's (id, parentId).
+        try {
+            const snapshot = {
+                ts: new Date().toISOString(),
+                groups: JSON.parse(JSON.stringify(_rawGroups.value)),
+                taskParents: (taskStore.rawTasks as Task[]).map(t => ({ id: t.id, parentId: t.parentId ?? null }))
+            }
+            localStorage.setItem('flowstate:legacy-group-migration-backup', JSON.stringify(snapshot))
+            console.log(`💾 [LEGACY-MIGRATE] Backed up ${snapshot.groups.length} groups before migrating ${legacy.length} legacy group(s) (localStorage: flowstate:legacy-group-migration-backup)`)
+        } catch (e) {
+            console.error('[LEGACY-MIGRATE] Backup failed — aborting migration to be safe:', e)
+            return { migrated: 0 }
+        }
+
+        // Phase 1: stable old→new id map (so nested parent remaps are consistent).
+        const idMap = new Map<string, string>()
+        for (const g of legacy) idMap.set(g.id, deterministicGroupId(userId, g))
+
+        // Phase 2: create the UUID group for each legacy group (unless it already exists
+        // locally from another device's sync). createGroup upserts by id → idempotent/converges.
+        for (const old of legacy) {
+            const newId = idMap.get(old.id)!
+            if (_rawGroups.value.some(g => g.id === newId)) continue
+            const newParent = old.parentGroupId && idMap.has(old.parentGroupId)
+                ? idMap.get(old.parentGroupId)!
+                : (old.parentGroupId ?? null)
+            await createGroup({ ...old, id: newId, parentGroupId: newParent })
+        }
+
+        // Phase 3: re-point every task whose parentId is a migrated legacy id (now persists, R4 fix).
+        for (const t of (taskStore.rawTasks as Task[])) {
+            if (t.parentId && idMap.has(t.parentId)) {
+                await taskStore.updateTask(t.id, { parentId: idMap.get(t.parentId)! }, 'DRAG')
+            }
+        }
+
+        // Phase 4: re-point any surviving group whose parentGroupId is a migrated legacy id.
+        for (const g of [..._rawGroups.value]) {
+            if (g.parentGroupId && idMap.has(g.parentGroupId) && isUuidGroupId(g.id)) {
+                await updateGroup(g.id, { parentGroupId: idMap.get(g.parentGroupId)! })
+            }
+        }
+
+        // Phase 5: drop the local legacy copies. They were NEVER in Supabase, so no remote
+        // delete / tombstone — that would only risk deleting the freshly-created UUID row.
+        for (const old of legacy) {
+            const idx = _rawGroups.value.findIndex(g => g.id === old.id)
+            if (idx !== -1) _rawGroups.value.splice(idx, 1)
+        }
+
+        persistence.saveGroupsToLocalStorage(_rawGroups.value)
+        cacheGroups([..._rawGroups.value])
+        console.log(`✅ [LEGACY-MIGRATE] Migrated ${legacy.length} legacy group(s) to UUIDs`)
+        return { migrated: legacy.length }
+    }
+
     return {
         _rawGroups,
         activeGroupId,
@@ -428,6 +527,7 @@ export const useCanvasGroups = (
         updateGroupFromSync,
         removeGroupFromSync,
         addPendingGroupWrite,
-        removePendingGroupWrite
+        removePendingGroupWrite,
+        migrateLegacyGroupIds
     }
 }

@@ -95,14 +95,22 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             }
             isConnecting = true
 
-            // connection guard
-            const { data: { session: freshSession } } = await getSupabase().auth.getSession()
-            if (!freshSession?.access_token) {
-                console.warn('📡 [REALTIME] No auth token available, aborting setup')
-                isConnecting = false
-                return
-            }
-            getSupabase().realtime.setAuth(freshSession.access_token)
+            // TASK-1871: Wrap the whole body in try/finally. Previously a throw anywhere between
+            // `isConnecting = true` and the reset at the end (getSession rejecting, removeChannel,
+            // channel.subscribe) left isConnecting=true FOREVER — then every future setupSubscription
+            // early-returned at the single-flight guard and realtime silently never recovered until a
+            // full reload. The finally guarantees the flag is always cleared.
+            try {
+                // connection guard
+                const { data: { session: freshSession } } = await getSupabase().auth.getSession()
+                if (!freshSession?.access_token) {
+                    // TASK-1871: Electron resolves disk-backed auth late; an init landing in this window
+                    // must NOT die silently (no token → no channel → no recovery path). Reschedule.
+                    console.warn('📡 [REALTIME] No auth token available, scheduling retry')
+                    scheduleSetupRetry(2000, 'no-auth-token')
+                    return
+                }
+                getSupabase().realtime.setAuth(freshSession.access_token)
 
             console.debug(`📡 [REALTIME] Connecting to channel: ${channelName} (Attempt ${retryCount + 1})`)
 
@@ -311,7 +319,29 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
 
             // BUG-1799: Setup (binding + subscribe initiation) is complete. Subsequent
             // SUBSCRIBED/error transitions are handled by the callback above and reconnectTimer.
-            isConnecting = false
+            } catch (setupErr) {
+                // TASK-1871: A throw here used to wedge isConnecting=true permanently. Now we
+                // schedule a retry and let finally clear the flag so recovery always resumes.
+                console.warn('📡 [REALTIME] setupSubscription threw — scheduling retry:', setupErr)
+                scheduleSetupRetry(3000, 'setup-threw')
+            } finally {
+                isConnecting = false
+            }
+        }
+
+        // TASK-1871: Single, generation-guarded way to re-attempt setup. Reuses reconnectTimer so
+        // it never stacks with the subscribe-callback reconnect, and aborts if a newer init claimed
+        // the channel (workspace switch / re-init).
+        const scheduleSetupRetry = (delayMs: number, reason: string) => {
+            if (isExplicitlyClosed) return
+            if (reconnectTimer) return // a reconnect is already pending — don't stack timers
+            console.debug(`📡 [REALTIME] Scheduling setup retry in ${delayMs}ms (${reason})`)
+            reconnectTimer = setTimeout(() => {
+                reconnectTimer = null
+                if (isExplicitlyClosed) return
+                if (myGeneration !== subscriptionGeneration) return
+                setupSubscription()
+            }, delayMs)
         }
 
         // Start initial connection

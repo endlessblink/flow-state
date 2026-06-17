@@ -313,7 +313,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       sortedInputs.map((i) => i.group.name)
     )
 
-    const { groupMoves, taskMoves } = computeCanonicalLayout(
+    const { groupMoves: allGroupMoves, taskMoves: allTaskMoves } = computeCanonicalLayout(
       inputs.map((i) => ({ group: i.group, visualPos: i.visualPos, tasks: i.tasks, taskSizes: i.taskSizes, taskPositions: i.taskPositions })),
       orderedIds,
       {
@@ -322,6 +322,22 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
         taskSpacing: 'contentGap',
       }
     )
+    // TASK-1871: skip NO-OP moves (target == current). Without this, rotation re-wrote
+    // identical positions every time it ran, flooding the API ("rate limit exceeded").
+    const EPS = 0.5
+    const groupMoves = allGroupMoves.filter((gm) => {
+      const p = canvasStore.groups.find((g) => g.id === gm.groupId)?.position
+      if (!p) return true
+      return Math.abs((p.x ?? 0) - gm.position.x) > EPS
+        || Math.abs((p.y ?? 0) - gm.position.y) > EPS
+        || Math.abs((p.width ?? 0) - gm.size.width) > EPS
+        || Math.abs((p.height ?? 0) - gm.size.height) > EPS
+    })
+    const taskMoves = allTaskMoves.filter((tm) => {
+      const cp = taskStore.rawTasks.find((x) => x.id === tm.taskId)?.canvasPosition
+      if (!cp) return true
+      return Math.abs(cp.x - tm.position.x) > EPS || Math.abs(cp.y - tm.position.y) > EPS
+    })
     pendingGroupMoves = groupMoves
     pendingTaskMoves = taskMoves
 

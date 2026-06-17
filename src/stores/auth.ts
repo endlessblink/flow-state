@@ -250,6 +250,23 @@ export const useAuthStore = defineStore('auth', () => {
             sessionError = retry.error
             if (sessionError) {
               console.error(`[AUTH:${tabId}] getSession after backup restore error:`, sessionError)
+              // TASK-1871: A stale/already-used refresh token in the Electron-safe backup
+              // (common when multiple instances rotated the single-use token) must NOT
+              // hard-fail auth init. Clear the dead backup so it isn't re-restored, and
+              // keep the signed-in shell on the restored session — the app stays usable on
+              // cached data and recovers on reconnect / next valid refresh, instead of
+              // dropping to a degraded no-auth state.
+              const refreshErr = sessionError as AuthError
+              const m = (refreshErr?.message || '').toLowerCase()
+              if (refreshErr?.status === 400 || m.includes('refresh token') || m.includes('already used')) {
+                await clearAuthSessionBackup()
+                keepSessionForReconnect(
+                  restoredBackupSession,
+                  '[AUTH] Electron backup refresh token already used — cleared stale backup, keeping signed-in shell for reconnect',
+                  refreshErr,
+                )
+                return
+              }
               throw sessionError
             }
             if (!data.session) {

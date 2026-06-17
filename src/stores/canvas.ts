@@ -343,6 +343,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     patchGroups: groupsModule.patchGroups,
     updateGroupFromSync: groupsModule.updateGroupFromSync,
     removeGroupFromSync: groupsModule.removeGroupFromSync,
+    migrateLegacyGroupIds: groupsModule.migrateLegacyGroupIds,
     setViewport, loadSavedViewport,
     taskCountByGroupId: groupsModule.taskCountByGroupId,
     getTaskCountForGroup: (id: string) => groupsModule.taskCountByGroupId.value.get(id) ?? 0,

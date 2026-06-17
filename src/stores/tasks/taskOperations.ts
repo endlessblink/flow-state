@@ -19,6 +19,10 @@ import { useToast } from '@/composables/useToast'
 import { cacheTasks } from '@/services/offline/readCacheDB'
 import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 import { sanitizeTaskTitle } from '@/utils/taskValidation'
+// TASK-1871 Phase 0: observable geometry-write chokepoint instrumentation
+import { logGeometryWrite } from '@/utils/canvas/geometryWriteLog'
+// TASK-1871: fail-fast guard against write storms (same row hammered)
+import { recordWrite } from '@/utils/sync/writeRateGuard'
 import {
     beginCanvasDoneTrace,
     getCanvasDoneTraceTaskIds,
@@ -73,7 +77,23 @@ const sanitizeGeometryUpdates = (
             (task.canvasPosition?.x !== sanitized.canvasPosition?.x ||
                 task.canvasPosition?.y !== sanitized.canvasPosition?.y))
 
-    if (FORBIDDEN_GEOMETRY_SOURCES.has(source) && attemptedGeometryChange) {
+    const blocked = FORBIDDEN_GEOMETRY_SOURCES.has(source) && attemptedGeometryChange
+
+    // TASK-1871 Phase 0: observe every attempted geometry write so tests can
+    // assert WHICH source moved WHICH task (catches the "all nodes shift" /
+    // "tasks repositioned themselves" regressions). Logging only — no behaviour change.
+    if (attemptedGeometryChange) {
+        logGeometryWrite({
+            source,
+            entityType: 'task',
+            entityId: taskId,
+            before: { parentId: task.parentId, x: task.canvasPosition?.x, y: task.canvasPosition?.y },
+            after: { parentId: sanitized.parentId, x: sanitized.canvasPosition?.x, y: sanitized.canvasPosition?.y },
+            blocked,
+        })
+    }
+
+    if (blocked) {
         console.warn(`⚠️ [GEOMETRY-GUARD] Blocked '${source}' geometry update`, {
             taskId: taskId.slice(0, 8),
             taskTitle: task.title?.slice(0, 30),
@@ -384,6 +404,11 @@ export function useTaskOperations(
         const task = _rawTasks.value[index]
         updates = sanitizeGeometryUpdates(updates, source, task, taskId)
         if (Object.keys(updates).length === 0) return
+
+        // TASK-1871: storm tripwire — throws in dev if the SAME task is written many
+        // times/sec (feedback loop / runaway layout), warns in prod. Per-entity keyed,
+        // so bulk distinct-task writes (load/import) never trip it.
+        recordWrite('task', taskId)
 
         const isMarkingDone = updates.status === 'done' && task.status !== 'done'
         if (isMarkingDone) {
@@ -832,7 +857,13 @@ export function useTaskOperations(
                 // During explicit canvas removal, canvasPosition is set to undefined to clear it.
                 // Without 'canvasPosition' in updates check, the sync queue never sends position: null
                 // to the DB, so after refresh the task reappears on canvas with its old position.
-                if (changedKeys.has('canvasPosition')) {
+                //
+                // TASK-1871: ALSO write `position` on a parentId-only change. Canvas group
+                // membership (parentId) lives INSIDE the position JSON, so a parentId-only
+                // update (e.g. group delete clearing children's parentId, BUG-1510) was never
+                // persisted — the DB kept the stale parentId and sync/realtime re-applied it,
+                // leaving a dangling parentId that hides the task. Field-completeness trap.
+                if (changedKeys.has('canvasPosition') || changedKeys.has('parentId')) {
                     // Use 'position' column (not 'canvas_position') - format as DB expects
                     payload.position = updatedTask.canvasPosition
                         ? {

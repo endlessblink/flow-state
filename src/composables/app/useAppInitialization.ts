@@ -406,6 +406,23 @@ export function useAppInitialization() {
 
                     console.log('✅ [CACHE-FIRST] Background refresh complete')
 
+                    // TASK-1871: Migrate legacy non-UUID group ids → deterministic UUIDs so
+                    // day-column groups finally sync. They were silently skipped by
+                    // toSupabaseGroup and stayed device-local, so devices drifted apart. Runs
+                    // after the authoritative Supabase load (sees already-synced UUID groups for
+                    // convergence) and is idempotent: once migrated, no legacy groups remain.
+                    try {
+                        const uid = authStore.user?.id
+                        if (uid) {
+                            const result = await canvasStore.migrateLegacyGroupIds(uid)
+                            if (result.migrated > 0) {
+                                console.log(`✅ [LEGACY-MIGRATE] Synced ${result.migrated} previously local-only group(s) to Supabase`)
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[LEGACY-MIGRATE] Migration failed (non-fatal):', e)
+                    }
+
                     // TASK-1418: Process deferred recurring task clones AFTER fresh data is loaded
                     // Must run here (not outside backgroundRefresh) because the fire-and-forget
                     // pattern means the scheduler would otherwise run on stale cached data.

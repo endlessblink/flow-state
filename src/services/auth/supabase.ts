@@ -190,14 +190,43 @@ export async function persistAuthSessionBackup(session: Session | null | undefin
     }
 }
 
+// ~JWT_EXP (GoTrue default 3600s) + 2min buffer. A backup older than this whose
+// access token is already expired would force a refresh of a single-use token that
+// the live instance has very likely already rotated → "Refresh Token: Already Used".
+const MAX_AUTH_BACKUP_AGE_MS = (60 * 60 + 120) * 1000
+
+/**
+ * TASK-1871: Decide whether an auth-session backup is safe to replay. Its refresh token
+ * is single-use and may already have been rotated (multiple Electron instances, normal
+ * refresh cadence) — replaying a stale one yields a hard "Already Used" auth failure.
+ * Replay only when the token is likely still active: access token not yet expired, OR
+ * the backup is fresh (< ~JWT_EXP old). Pure + exported for testing.
+ */
+export function isAuthBackupReplayable(
+    session: { refresh_token?: string | null; expires_at?: number } | null | undefined,
+    savedAt: number | undefined,
+    now: number = Date.now()
+): boolean {
+    if (!session?.refresh_token) return false
+    const accessStillValid = typeof session.expires_at === 'number' && session.expires_at > now / 1000 + 30
+    const ageMs = now - (typeof savedAt === 'number' ? savedAt : 0)
+    return accessStillValid || ageMs <= MAX_AUTH_BACKUP_AGE_MS
+}
+
 export async function restoreAuthSessionFromBackup(): Promise<Session | null> {
     try {
         const raw = await authStorageGet(AUTH_SESSION_BACKUP_KEY)
         if (!raw) return null
 
-        const parsed = JSON.parse(raw) as { session?: Session }
+        const parsed = JSON.parse(raw) as { savedAt?: number; session?: Session }
         const session = parsed?.session
         if (!session?.refresh_token || !session.user?.id) return null
+
+        if (!isAuthBackupReplayable(session, parsed?.savedAt)) {
+            console.warn('[Supabase] Skipping stale auth backup (refresh token likely already rotated) — clearing it')
+            await clearAuthSessionBackup()
+            return null
+        }
 
         await authStorageSet(STORAGE_KEYS.SUPABASE_AUTH, JSON.stringify(session))
         console.warn('[Supabase] Restored missing auth session from Electron-safe backup')

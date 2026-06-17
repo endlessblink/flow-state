@@ -44,8 +44,27 @@ function toggleMainWindowDevTools() {
         webContents.openDevTools({ mode: 'detach' });
     }
 }
+// TASK-1871: Reliable quit. Force-destroys the window so nothing in the
+// renderer (e.g. a beforeunload guard) can wedge the close — the recurring
+// "can't quit FlowState" regression. Bound to Ctrl/Cmd+Q and the File menu.
+function forceQuit() {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.destroy();
+    }
+    electron_1.app.quit();
+}
 function registerAppMenu() {
     const menu = electron_1.Menu.buildFromTemplate([
+        {
+            label: 'File',
+            submenu: [
+                {
+                    label: 'Quit FlowState',
+                    accelerator: 'CommandOrControl+Q',
+                    click: forceQuit,
+                },
+            ],
+        },
         {
             label: 'Edit',
             submenu: [

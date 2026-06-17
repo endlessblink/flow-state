@@ -56,3 +56,43 @@ jobs:
       - name: Verify restore capability
         run: npm run test:restore
         continue-on-error: false
+
+  # TASK-1871: Behavioral canvas/sync regression gate. Boots a real local Supabase
+  # and runs the two-INDEPENDENT-client Realtime harness (R1–R7) + the canvas/sync
+  # unit suites — the layer that catches the recurring multi-client races
+  # (all-nodes-shift, live-sync, legacy-group migration, dangling parent) that the
+  # static safety tests cannot. This is what turns "fixed" into "stays fixed".
+  canvas-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Canvas/sync UNIT suites (no DB needed) — geometry invariants, sync orchestrator,
+      # realtime resilience, legacy-group migration, write-rate guard, auth-backup replay.
+      - name: Canvas/sync unit tests
+        run: npx vitest run tests/unit/canvas/ tests/unit/sync/ tests/unit/before-unload-electron.test.ts tests/unit/auth-backup-replayable.test.ts
+
+      - name: Install Playwright (chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Boot Supabase + run two-client Realtime e2e (R1–R7)
+        run: |
+          supabase start
+          ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop || true

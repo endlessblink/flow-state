@@ -1580,9 +1580,9 @@ Reuses `computeCanonicalLayout` scoped to one group (`useTidyLayout.reorderColum
 
 **Perf (TASK-1809b — instant paint)**: First version awaited the drag handler's Supabase write (~1–2s on VPS, BUG-1051) *before* painting the restack → 2–4s lag. Fixed by splitting `reorderColumn` into a synchronous part (plan + group geometry + moves) and a deferred `commit()` (task `updateTask` writes + PositionManager + undo). The wrapper now: starts the drag save without awaiting (its sync prefix passes the `canvasSyncInProgress` guard first), runs `reorderColumn` + `applyCanonicalMoves` **synchronously** (instant paint), then `await dragDone` → `commit()` so reorder's writes land last and win LWW (a refresh keeps the reordered slot). Same-column drops use this instant path (detected via `getDeepestContainingGroup`); rare cross-group drops fall back to await-then-reorder. Covered by `tidy-layout.test.ts` reorderColumn tests.
 
-### TASK-1871: Stop recurring canvas/sync regressions — root-cause campaign (🔄 IN PROGRESS)
+### ~~TASK-1871~~: Stop recurring canvas/sync regressions — root-cause campaign (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-06-16)
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-17) — root causes fixed + durable guardrails shipped (v1.4.194) and pushed (branch task-1871-canvas-sync-stability). Optional hardening (formal allowlist geometry guard; payload allowlist→denylist refactor) noted below as future defense-in-depth, not blocking.
 
 **Why**: Canvas/sync bugs (all-nodes-shift, sync "cut", self-repositioning, tasks vanishing) keep getting fixed and resurfacing because invariants are documented-not-enforced, the sync payload silently drops new fields (field-completeness trap), and CI runs zero behavioral canvas/sync tests. Goal: fix root causes AND add permanent guardrails so the class can't return.
 

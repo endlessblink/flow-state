@@ -79,6 +79,7 @@ export function useCanvasOrchestrator() {
         viewport,
         updateNode,
         findNode,
+        getViewport,
         onMoveStart,
         onMoveEnd,
         applyNodeChanges,
@@ -491,6 +492,13 @@ export function useCanvasOrchestrator() {
             const centered = centerOnTodayGroup(true)
             if (!centered && hasRenderedNodes) {
                 fitCanvas()
+            }
+            if (centered || hasRenderedNodes) {
+                setTimeout(() => {
+                    if (!hasVisibleCanvasNode()) return
+                    const recoveredViewport = getViewport()
+                    canvasStore.setViewport(recoveredViewport.x, recoveredViewport.y, recoveredViewport.zoom)
+                }, CANVAS.NAVIGATION_ANIMATION_MS + 100)
             }
 
             if (import.meta.env.DEV) {

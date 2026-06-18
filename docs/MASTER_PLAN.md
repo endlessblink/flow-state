@@ -57,6 +57,16 @@
 
 **Tests**: `tests/unit/canvas/day-group-position-rotation.test.ts` includes `4d: explicit rotate re-homes dated tasks into their matching smart group`, covering a stale Thursday child with today's due date moving into Today.
 
+### ~~BUG-1878~~: Electron canvas reopens to an empty saved viewport after restart (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-06-18) — fixed, regression-proven, and packaged locally as Electron `1.4.201`; public updater still serves `1.4.200` because production upload was not authorized in this turn. | **Depends on**: BUG-1867
+
+**Why**: The canvas could recover visually when a persisted viewport pointed at empty space, but the recovery did not heal the persisted viewport. Electron then reloaded the same stale local/cloud viewport on restart and appeared empty again even though tasks/groups still existed.
+
+**Fix**: Startup viewport recovery now persists the actual recovered Vue Flow viewport after it verifies that at least one canvas node is visible, using the existing `canvasStore.setViewport()` persistence path.
+
+**Tests**: `tests/e2e/canvas-geometry-local.spec.ts` now asserts both visible-node recovery and that `flowstate-canvas-viewport` no longer contains the stale off-canvas coordinates after recovery. Red proof: the new assertion failed with `{"x":-20000,"y":-20000,"zoom":1}` before the fix; green proof passes after the fix. Local package proof: `release/latest-linux.yml` is `version: 1.4.201` with AppImage/deb artifacts built and package-validated.
+
 ### TASK-1875: Encrypt Supabase refresh token at rest with Electron safeStorage (📋 PLANNED)
 
 **Priority**: P2 | **Status**: 📋 PLANNED (filed 2026-06-18) | **Depends on**: BUG-1874

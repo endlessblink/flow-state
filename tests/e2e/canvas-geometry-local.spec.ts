@@ -680,6 +680,16 @@ test.describe('local canvas geometry regressions', () => {
     })
 
     expect(visibility.some((node) => node.visible), JSON.stringify(visibility, null, 2)).toBe(true)
+
+    const persistedViewport = await page.evaluate(() => {
+      const raw = localStorage.getItem('flowstate-canvas-viewport')
+      return raw ? JSON.parse(raw) as { x: number; y: number; zoom: number } : null
+    })
+
+    expect(
+      persistedViewport,
+      'Startup recovery must heal the saved viewport so Electron restarts do not reopen to empty space',
+    ).not.toEqual(expect.objectContaining({ x: -20000, y: -20000 }))
   })
 
   test('moving one grouped canvas task does not shift sibling task geometry', async ({ page }) => {

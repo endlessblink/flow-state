@@ -45,7 +45,7 @@
 
 **Acceptance**: signed-in shell survives update+restart; corrupt-store recovers from `.bak`; concurrent sets don't clobber; ships via versioned updater. NOT adopting the "bump auth_version → clear session" pattern (that causes the sign-out). Plan: `~/.claude/plans/got-it-the-proud-nygaard.md`.
 
-**Shipped**: Electron updater `1.4.200` deployed on 2026-06-18 with the storage/auth updater fixes and the Calendar inbox filter-toolbar design regression fix. Verified `https://in-theflow.com/updates/electron/latest-linux.yml` returns `version: 1.4.200`; `FlowState-1.4.200-x86_64.AppImage` returns HTTP 200 with `content-length: 180302287`; `FlowState_1.4.200_amd64.deb` returns HTTP 200 with `content-length: 131319768`.
+**Shipped**: Electron updater `1.4.200` deployed on 2026-06-18 with the storage/auth updater fixes and the Calendar inbox filter-toolbar design regression fix. Verified `https://in-theflow.com/updates/electron/latest-linux.yml` returns `version: 1.4.200`; `FlowState-1.4.200-x86_64.AppImage` returns HTTP 200 with `content-length: 180302305`; `FlowState_1.4.200_amd64.deb` returns HTTP 200 with `content-length: 131319924`.
 
 ### TASK-1875: Encrypt Supabase refresh token at rest with Electron safeStorage (📋 PLANNED)
 

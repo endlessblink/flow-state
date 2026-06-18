@@ -101,6 +101,8 @@
     "skills:consolidation-execute": "node scripts/skill-consolidation-executor.cjs",
     "skills:sync": "node scripts/sync-skills-config.cjs",
     "skills:staleness": "node scripts/check-skill-staleness.cjs",
+    "verify:superpowers": "FLOWSTATE_SUPERPOWERS_SKIP_CODEX_SMOKE=1 bash scripts/verify-superpowers-routing.sh",
+    "verify:superpowers:smoke": "bash scripts/verify-superpowers-routing.sh",
     "docs:validate": "node scripts/validate-doc-refs.cjs",
     "telemetry:health": "node scripts/verify-telemetry-system.cjs",
     "telemetry:watch": "node scripts/telemetry-watch.cjs",

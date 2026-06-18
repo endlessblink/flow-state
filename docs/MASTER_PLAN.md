@@ -63,6 +63,23 @@
 
 **Why**: Deferred hardening follow-up. The auth session (incl. refresh token) is stored as plaintext JSON in `userData/store.json`. Encrypt at rest with Electron `safeStorage.encryptString` (OS keychain), decrypt on read, with a first-run migration that re-encrypts existing plaintext sessions — **PRESERVE, never clear** (clearing on update is the BUG-1874 sign-out). Depends on the BUG-1874 atomic store landing first.
 
+### ~~TASK-1876~~: Make Superpowers load reliably across local agent harnesses (✅ DONE)
+
+**Priority**: P3 | **Status**: ✅ DONE (filed and verified 2026-06-18) | **Depends on**: TASK-1823, TASK-1825, TASK-1826, TASK-1836
+
+**Why**: The FlowState-safe Superpowers router proved useful, but the original Superpowers plugin model requires each agent harness to install or expose skills separately. Codex already sees the project wrappers, while Claude Code and OpenCode need explicit verification so future sessions do not silently miss the router. Keep the solution context-safe: install/expose per harness, keep the FlowState router as the entrypoint, and prove fresh-session behavior with smoke checks instead of loading long upstream instructions into every prompt.
+
+**Acceptance**:
+- Codex reports `superpowers@openai-curated` installed/enabled and fresh read-only Codex sessions use `superpowers-flowstate-auto-router`.
+- Claude Code has a Superpowers plugin installed or an explicit documented blocker.
+- OpenCode exposes the FlowState Superpowers wrappers through its configured skill paths.
+- Verification is repeatable with a compact repo script and does not add verbose always-on prompt text.
+
+**Progress**:
+- 2026-06-18: Added `scripts/verify-superpowers-routing.sh`, `npm run verify:superpowers` for context-safe static harness checks, and `npm run verify:superpowers:smoke` for fresh Codex routing smokes when model quota is available.
+- 2026-06-18: Installed Claude Code `superpowers@claude-plugins-official` (`6.0.2`), re-added Codex `superpowers@openai-curated` from the local curated snapshot (`015c0dff`), verified OpenCode exposes the FlowState wrapper skill paths, and kept the Claude session-start reminder to two short FlowState-router lines to avoid context bloat.
+- 2026-06-18: Static `npm run verify:superpowers` passed. Earlier full fresh-smoke verification showed Codex planning and bug/fix prompts both reporting `Skills used: superpowers-flowstate-auto-router`; a later rerun of `npm run verify:superpowers:smoke` was blocked by Codex account usage limits before the first smoke completed.
+
 ### ~~BUG-1872~~: Task description "keeps resetting" while editing (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-17) — fixed at state layer + regression test (branch task-1871-canvas-sync-stability). **Data loss confirmed**: the user's typed description for task `ad1ea052…` was wiped client-side before autosave ever persisted it — every prod backup (10:00 & 17:00 UTC) shows the description already empty (row untouched since 2026-06-16), so it was unrecoverable.

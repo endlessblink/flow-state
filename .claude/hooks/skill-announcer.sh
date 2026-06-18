@@ -8,6 +8,10 @@ AVAILABLE SKILLS REMINDER:
 
 This project has 30+ specialized skills. Use the Skill tool to invoke them:
 
+SUPERPOWERS:
+- Use Skill(superpowers-flowstate-auto-router) for bugs, fixes, behavior changes, reviews, planning, and completion checks.
+- Keep FlowState rules authoritative; do not use upstream using-superpowers directly unless explicitly requested.
+
 DEBUGGING & FIXES:
 - Skill(dev-debugging) - General bug fixing, state issues, task store CRUD, keyboard shortcuts
 - Skill(vue-flow-debug) - Canvas/Vue Flow issues

@@ -47,6 +47,16 @@
 
 **Shipped**: Electron updater `1.4.200` deployed on 2026-06-18 with the storage/auth updater fixes and the Calendar inbox filter-toolbar design regression fix. Verified `https://in-theflow.com/updates/electron/latest-linux.yml` returns `version: 1.4.200`; `FlowState-1.4.200-x86_64.AppImage` returns HTTP 200 with `content-length: 180302305`; `FlowState_1.4.200_amd64.deb` returns HTTP 200 with `content-length: 131319924`.
 
+### ~~BUG-1877~~: Rotate day groups re-homes dated tasks into matching smart groups (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-18) — included in Electron updater `1.4.200`; public manifest and artifact URLs verified. | **Depends on**: BUG-1787
+
+**Why**: Explicit rotate/catchup could normalize a task's date to today while leaving the task under its stale day-of-week parent. The visible result was a task that should be in Today still living under yesterday/Thursday after rotate days.
+
+**Fix**: `rotateDayGroupPositions()` now computes the matching smart group for each visible dated task before layout, treats the matched parent as canonical for stacking, and persists `parentId` together with the canonical absolute canvas position when the task needs to move.
+
+**Tests**: `tests/unit/canvas/day-group-position-rotation.test.ts` includes `4d: explicit rotate re-homes dated tasks into their matching smart group`, covering a stale Thursday child with today's due date moving into Today.
+
 ### TASK-1875: Encrypt Supabase refresh token at rest with Electron safeStorage (📋 PLANNED)
 
 **Priority**: P2 | **Status**: 📋 PLANNED (filed 2026-06-18) | **Depends on**: BUG-1874

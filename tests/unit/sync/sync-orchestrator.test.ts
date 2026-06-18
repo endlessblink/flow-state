@@ -752,8 +752,12 @@ describe('Error classification and retry strategy', () => {
     expect(classifyError(new Error('504 Gateway Timeout'))).toBe('transient')
   })
 
-  it('rate limit → classified as transient', () => {
-    expect(classifyError(new Error('Rate limit exceeded'))).toBe('transient')
+  it('rate limit → classified as rate_limit with longer cooldown backoff', () => {
+    const classification = classifyError(new Error('Rate limit exceeded'))
+    expect(classification).toBe('rate_limit')
+    const config = getRetryConfigForError(classification)
+    expect(config).not.toBeNull()
+    expect(config!.initialDelayMs).toBeGreaterThan(1000)
   })
 
   it('409 Conflict → classified as conflict → not permanent', () => {

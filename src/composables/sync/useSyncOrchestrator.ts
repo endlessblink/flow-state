@@ -177,7 +177,8 @@ import {
   calculateNextRetryTime,
   shouldRetry,
   classifyError,
-  getRetryConfigForError
+  getRetryConfigForError,
+  type ErrorClassification
 } from '@/services/offline/retryStrategy'
 import { coalesceOperationsForEntity } from '@/services/offline/operationCoalescer'
 import { sortOperations } from '@/services/offline/operationSorter'
@@ -191,7 +192,9 @@ const state = ref<SyncState>({
   lastSyncAt: undefined,
   lastError: undefined,
   isOnline: getInitialOnlineState(),
-  failedOperations: []
+  failedOperations: [],
+  remoteWriteCooldownUntil: undefined,
+  remoteWriteCooldownReason: undefined
 })
 
 // Processing state
@@ -202,12 +205,45 @@ const PROCESS_INTERVAL_MS = 5000 // Check queue every 5 seconds
 // BUG-P1: Server-unreachable detection — prevent burning retry budget during outages
 let consecutiveTransientFailures = 0
 const TRANSIENT_PAUSE_THRESHOLD = 5
+const MIN_RATE_LIMIT_COOLDOWN_MS = 30_000
 
 // TASK-1177: Permanent failure pub/sub (module-level to match singleton state)
 const permanentFailureCallbacks = new Set<(op: WriteOperation) => void>()
 
 // Online/offline listeners (set up once)
 let listenersSetUp = false
+
+function getRetryAfterCooldown(error: unknown): number | undefined {
+  if (!error || typeof error !== 'object') return undefined
+  const headers = (error as { headers?: { get?: (name: string) => string | null } }).headers
+  const retryAfter = headers?.get?.('retry-after')
+  if (!retryAfter) return undefined
+
+  const seconds = Number(retryAfter)
+  if (Number.isFinite(seconds)) return Math.max(MIN_RATE_LIMIT_COOLDOWN_MS, seconds * 1000)
+
+  const retryAt = new Date(retryAfter).getTime()
+  if (Number.isFinite(retryAt)) return Math.max(MIN_RATE_LIMIT_COOLDOWN_MS, retryAt - Date.now())
+  return undefined
+}
+
+function openRemoteWriteCooldown(until: number, reason: string): void {
+  if (!state.value.remoteWriteCooldownUntil || until > state.value.remoteWriteCooldownUntil) {
+    state.value.remoteWriteCooldownUntil = until
+    state.value.remoteWriteCooldownReason = reason
+  }
+}
+
+function isRemoteWriteCoolingDown(): boolean {
+  const until = state.value.remoteWriteCooldownUntil
+  if (!until) return false
+  if (Date.now() >= until) {
+    state.value.remoteWriteCooldownUntil = undefined
+    state.value.remoteWriteCooldownReason = undefined
+    return false
+  }
+  return true
+}
 
 /**
  * Set up online/offline event listeners
@@ -525,6 +561,8 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
     }
     const classification = classifyError(error)
     const retryConfig = getRetryConfigForError(classification)
+    const retryAfterCooldown = classification === 'rate_limit' ? getRetryAfterCooldown(error) : undefined
+    const cooldownUntil = retryAfterCooldown ? Date.now() + retryAfterCooldown : undefined
 
     return {
       success: false,
@@ -532,7 +570,9 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
       error: errorMessage,
       isConflict: classification === 'conflict',
       isAuthError: classification === 'auth',
-      shouldRetry: retryConfig !== null && shouldRetry(operation.retryCount, retryConfig)
+      shouldRetry: retryConfig !== null && shouldRetry(operation.retryCount, retryConfig),
+      classification,
+      cooldownUntil
     }
   }
 }
@@ -656,9 +696,19 @@ async function processOperation(operation: WriteOperation): Promise<void> {
       console.error(`❌ [SYNC] Auth retries exhausted for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
       permanentFailureCallbacks.forEach(cb => cb(operation))
     }
+  } else if (result.classification === 'rate_limit' && result.shouldRetry) {
+    const retryConfig = getRetryConfigForError(result.classification as ErrorClassification)
+    const nextRetryAt = result.cooldownUntil ?? calculateNextRetryTime(operation.retryCount, retryConfig ?? undefined)
+    openRemoteWriteCooldown(nextRetryAt, result.error || 'Supabase rate limited writes')
+    await markFailed(operation.id, result.error || 'Rate limited', nextRetryAt)
+    state.value.lastError = result.error || 'Rate limited'
+    console.warn(`⏳ [SYNC] Rate limited. Pausing remote writes for ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
   } else if (result.shouldRetry) {
     // Transient error - schedule retry
-    const nextRetryAt = calculateNextRetryTime(operation.retryCount)
+    const retryConfig = result.classification
+      ? getRetryConfigForError(result.classification as ErrorClassification)
+      : undefined
+    const nextRetryAt = calculateNextRetryTime(operation.retryCount, retryConfig ?? undefined)
     await markFailed(operation.id, result.error || 'Unknown error', nextRetryAt)
     if (import.meta.env.DEV) {
       console.warn(`⚠️ [SYNC] Retry scheduled: ${operation.entityType}:${operation.entityId.slice(0, 8)} in ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
@@ -696,6 +746,14 @@ async function processOperation(operation: WriteOperation): Promise<void> {
 async function processQueue(): Promise<void> {
   // Skip if already processing, offline, or no supabase
   if (isProcessing.value || !state.value.isOnline || !supabase) {
+    return
+  }
+
+  if (isRemoteWriteCoolingDown()) {
+    if (import.meta.env.DEV) {
+      const remaining = Math.round(((state.value.remoteWriteCooldownUntil ?? Date.now()) - Date.now()) / 1000)
+      console.debug(`[SYNC] Remote write cooldown active (${remaining}s): ${state.value.remoteWriteCooldownReason ?? 'backpressure'}`)
+    }
     return
   }
 
@@ -942,10 +1000,13 @@ export function useSyncOrchestrator() {
     lastError: computed(() => state.value.lastError),
     isOnline: computed(() => state.value.isOnline),
     isProcessing: computed(() => isProcessing.value),
+    remoteWriteCooldownUntil: computed(() => state.value.remoteWriteCooldownUntil),
+    remoteWriteCooldownReason: computed(() => state.value.remoteWriteCooldownReason),
 
     // Derived
     hasPendingChanges: computed(() => state.value.pendingCount > 0 || state.value.status === 'syncing'),
     hasErrors: computed(() => state.value.failedCount > 0 || state.value.status === 'error'),
+    canAttemptRemoteWrite: computed(() => state.value.isOnline && !isRemoteWriteCoolingDown()),
 
     // Actions
     enqueue,

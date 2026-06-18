@@ -24,6 +24,7 @@ import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { canvasSyncInProgress } from './useCanvasSync'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { getDayGroupDate, toDateString } from '@/utils/dayGroupDate'
+import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import {
   computeCanonicalLayout,
   type DayGroupInput,
@@ -82,6 +83,13 @@ function isOverdue(dueDate?: string | null) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   return due < today
+}
+
+function isRotatableDayGroup(groupName: string): boolean {
+  const keyword = detectPowerKeyword(groupName)
+  if (!keyword) return false
+  if (keyword.category === 'day_of_week') return true
+  return keyword.category === 'date' && (keyword.keyword === 'today' || keyword.keyword === 'tomorrow')
 }
 
 export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
@@ -231,18 +239,30 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
       return options.isTaskVisible?.(task.id) !== false
     })
+    const rotatableGroupIds = new Set(
+      groups
+        .filter((group) => group.position && isRotatableDayGroup(group.name))
+        .map((group) => group.id)
+    )
+    const rehomedParents = new Map<string, string>()
+    for (const task of layoutTasks) {
+      if (!task.dueDate) continue
+      const matchingGroup = findMatchingGroupForDueDate(task.dueDate, groups)
+      if (!matchingGroup || !rotatableGroupIds.has(matchingGroup.id)) continue
+      if (task.parentId !== matchingGroup.id) rehomedParents.set(task.id, matchingGroup.id)
+    }
 
     const inputs: WithKeyword[] = []
     for (const group of groups) {
       const keyword = detectPowerKeyword(group.name)
-      if (!keyword) continue
-      if (keyword.category !== 'day_of_week' && keyword.category !== 'date') continue
-      if (keyword.category === 'date' && keyword.keyword !== 'today' && keyword.keyword !== 'tomorrow') continue
+      if (!keyword || !isRotatableDayGroup(group.name)) continue
       if (!group.position) continue
+      const category: 'date' | 'day_of_week' =
+        keyword.category === 'day_of_week' ? 'day_of_week' : 'date'
 
       const vfPos = options.getNodePosition?.(`section-${group.id}`)
       const visualPos = vfPos ?? { x: group.position.x, y: group.position.y }
-      const tasks = layoutTasks.filter((t) => t.parentId === group.id)
+      const tasks = layoutTasks.filter((t) => (rehomedParents.get(t.id) ?? t.parentId) === group.id)
       const taskSizes = new Map<string, { width: number; height: number }>()
       const taskPositions = new Map<string, { x: number; y: number }>()
       for (const task of tasks) {
@@ -264,7 +284,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
         tasks,
         taskSizes,
         taskPositions,
-        category: keyword.category,
+        category,
         keyword: keyword.keyword,
         dayIndex,
       })
@@ -334,7 +354,10 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
         || Math.abs((p.height ?? 0) - gm.size.height) > EPS
     })
     const taskMoves = allTaskMoves.filter((tm) => {
-      const cp = taskStore.rawTasks.find((x) => x.id === tm.taskId)?.canvasPosition
+      const task = taskStore.rawTasks.find((x) => x.id === tm.taskId)
+      const cp = task?.canvasPosition
+      const rehomedParentId = rehomedParents.get(tm.taskId)
+      if (rehomedParentId !== undefined && task?.parentId !== rehomedParentId) return true
       if (!cp) return true
       return Math.abs(cp.x - tm.position.x) > EPS || Math.abs(cp.y - tm.position.y) > EPS
     })
@@ -371,8 +394,15 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
         )
       }
       for (const tm of taskMoves) {
-        pendingWrites.push(taskStore.updateTask(tm.taskId, { canvasPosition: tm.position, positionFormat: 'absolute' }, 'DRAG'))
-        positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
+        const rehomedParentId = rehomedParents.get(tm.taskId)
+        pendingWrites.push(taskStore.updateTask(
+          tm.taskId,
+          rehomedParentId
+            ? { parentId: rehomedParentId, canvasPosition: tm.position, positionFormat: 'absolute' }
+            : { canvasPosition: tm.position, positionFormat: 'absolute' },
+          'DRAG'
+        ))
+        positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', rehomedParentId ?? tm.parentId)
       }
     } catch (err) {
       release()

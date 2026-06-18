@@ -130,6 +130,12 @@ export interface SyncState {
 
   /** Operations currently in failed state */
   failedOperations: WriteOperation[]
+
+  /** Timestamp when remote writes may resume after central backpressure */
+  remoteWriteCooldownUntil?: number
+
+  /** Last central backpressure reason */
+  remoteWriteCooldownReason?: string
 }
 
 /**
@@ -190,6 +196,12 @@ export interface SyncResult {
   /** Whether we should retry */
   shouldRetry?: boolean
 
+  /** Classified error type used by central backpressure/retry logic */
+  classification?: 'transient' | 'rate_limit' | 'conflict' | 'auth' | 'permanent' | 'unknown'
+
+  /** Optional shared cooldown timestamp for remote write attempts */
+  cooldownUntil?: number
+
   /** Server data (returned when LWW resolves in server's favor) */
   serverData?: Record<string, unknown>
 }
@@ -233,4 +245,3 @@ export interface SyncEvents {
   /** Emitted when online status changes */
   'online-change': (isOnline: boolean) => void
 }
-

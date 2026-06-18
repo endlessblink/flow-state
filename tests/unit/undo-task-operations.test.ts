@@ -212,6 +212,50 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }
   })
 
+  it('advances recurring done-for-now locally even when the completion record direct save hangs', async () => {
+    const taskStore = useTaskStore()
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const dateKey = (date: Date) => {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+    const task = createMockTask({
+      id: 'task-recurring-done-for-now-auth-recovery',
+      title: 'Recurring done for now auth recovery',
+      status: 'todo',
+      dueDate: dateKey(today),
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never'
+      }
+    })
+    taskStore._rawTasks.push(task)
+
+    mockSaveTasks.mockImplementationOnce(() => new Promise(() => {}))
+
+    await expect(taskStore.doneForNow(task.id)).resolves.toBeUndefined()
+
+    const advancedTask = taskStore._rawTasks.find(candidate => candidate.id === task.id)
+    expect(advancedTask).toMatchObject({
+      status: 'todo',
+      dueDate: dateKey(tomorrow),
+      recurrenceCount: 1,
+      isInInbox: true
+    })
+    expect(advancedTask?.completedAt).toBeUndefined()
+    expect(taskStore._rawTasks.some(candidate =>
+      candidate.id !== task.id &&
+      candidate.isCompletionRecord === true &&
+      candidate.status === 'done' &&
+      candidate.recurrenceParentId === task.id
+    )).toBe(true)
+  })
+
   it('undoes and redoes the public moveTaskToProjectWithUndo wrapper three consecutive times', async () => {
     const taskStore = useTaskStore()
     const undoSystem = getUndoSystem()
@@ -429,6 +473,54 @@ describe('task operation undo/redo three-cycle invariants', () => {
     expect(mockPermanentDeleteTask).toHaveBeenCalledWith(task.id)
     expect(taskStore._rawTasks.some(candidate => candidate.id === task.id)).toBe(false)
     expect(taskStore._rawTasks.some(candidate => candidate.id === remainingCachedTask.id)).toBe(true)
+  })
+
+  it('keeps a permanent delete removed and queues fallback sync when remote hard delete fails during auth recovery', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const task = createMockTask({
+      id: 'task-permanent-delete-auth-recovery',
+      title: 'Auth recovery permanent delete'
+    })
+    taskStore._rawTasks.push(task)
+
+    mockPermanentDeleteTask.mockRejectedValueOnce({
+      message: 'Invalid Refresh Token: Already Used',
+      status: 400
+    })
+    mockEnqueue.mockClear()
+
+    await expect(undoSystem.permanentlyDeleteTaskWithUndo(task.id)).resolves.toBeUndefined()
+
+    expect(taskStore._rawTasks.some(candidate => candidate.id === task.id)).toBe(false)
+    expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'task',
+      operation: 'delete',
+      entityId: task.id
+    }))
+  })
+
+  it('still rolls back permanent delete when the server proves RLS blocks visible-row hard delete', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const task = createMockTask({
+      id: 'task-permanent-delete-rls-blocked',
+      title: 'RLS blocked permanent delete'
+    })
+    taskStore._rawTasks.push(task)
+
+    mockPermanentDeleteTask.mockRejectedValueOnce(new Error(
+      `permanentlyDeleteTask: row ${task.id} is visible but DELETE affected 0 rows — RLS delete policy is blocking it`
+    ))
+
+    await expect(undoSystem.permanentlyDeleteTaskWithUndo(task.id)).rejects.toThrow('RLS delete policy is blocking it')
+
+    expect(taskStore._rawTasks.some(candidate => candidate.id === task.id)).toBe(true)
+    expect(mockEnqueue).not.toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'task',
+      operation: 'delete',
+      entityId: task.id
+    }))
   })
 
   // BUG-1850 regression: canvas permanent delete (Shift+Delete / context-menu Permanent Delete)

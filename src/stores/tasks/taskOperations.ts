@@ -51,6 +51,44 @@ const isRealTaskTitle = (title: unknown): title is string =>
 const hasTaskTitle = (title: unknown): title is string =>
     typeof title === 'string' && title.trim().length > 0
 
+const shouldKeepPermanentDeleteLocallyOnRemoteFailure = (error: unknown): boolean => {
+    const status = error && typeof error === 'object' && 'status' in error
+        ? (error as { status?: unknown }).status
+        : undefined
+    const code = error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code ?? '')
+        : ''
+    const message = error instanceof Error
+        ? error.message
+        : error && typeof error === 'object' && 'message' in error
+            ? String((error as { message?: unknown }).message ?? '')
+            : String(error)
+    const lowerMessage = message.toLowerCase()
+
+    if (
+        lowerMessage.includes('visible but delete affected 0 rows') ||
+        lowerMessage.includes('rls delete policy is blocking')
+    ) {
+        return false
+    }
+
+    return (
+        status === 401 ||
+        status === 408 ||
+        code === 'PGRST116' ||
+        lowerMessage.includes('refresh token') ||
+        lowerMessage.includes('already used') ||
+        lowerMessage.includes('jwt') ||
+        lowerMessage.includes('network') ||
+        lowerMessage.includes('timeout') ||
+        lowerMessage.includes('timed out') ||
+        lowerMessage.includes('failed to fetch') ||
+        lowerMessage.includes('not present on server') ||
+        lowerMessage.includes('not found') ||
+        lowerMessage.includes('postgrest unavailable')
+    )
+}
+
 // =============================================================================
 // GEOMETRY WRITE SOURCE (TASK-255 Geometry Invariants)
 // =============================================================================
@@ -132,7 +170,7 @@ export function useTaskOperations(
     saveTasksToStorage: (tasks: Task[], context: string) => Promise<void>,
     saveSpecificTasks: (tasks: Task[], context: string) => Promise<void>,
     deleteTaskFromStorage: (taskId: string) => Promise<void>,
-    bulkDeleteTasksFromStorage: (taskIds: string[]) => Promise<void>,  // BUG-025: Atomic bulk delete
+    _bulkDeleteTasksFromStorage: (taskIds: string[]) => Promise<void>,
     persistFilters: () => void,
     _runAllTaskMigrations: () => void,
     addPendingWrite: (taskId: string) => void
@@ -147,7 +185,10 @@ export function useTaskOperations(
         canvasUiSyncRequest.value++
     }
 
-    const createTask = async (taskData: Partial<Task>) => {
+    const createTask = async (
+        taskData: Partial<Task>,
+        _options: { awaitDirectSave?: boolean } = {}
+    ) => {
         if (!hasTaskTitle(taskData.title)) {
             throw new Error('Task title is required')
         }
@@ -258,11 +299,7 @@ export function useTaskOperations(
                 // authStore exports `user` not `userId` - must use user?.id
                 const userId = authStore.user?.id
                 if (!userId) {
-                    // BUG-1193: Don't throw - task was already added to local store above
-                    // Throwing here would break the entire createTask flow and prevent
-                    // the task from appearing in the UI. Direct save below will handle sync.
-                    console.warn('[SYNC] Skipping sync queue: user not authenticated (direct save will handle sync)')
-                    // Skip enqueueing but still attempt direct save below
+                    console.warn('[SYNC] Skipping sync queue: user not authenticated; task is kept in local store/cache')
                     throw new Error('SKIP_QUEUE_NO_AUTH')
                 }
                 // BUG-1516b: Use toSupabaseTask() to build the full payload so no fields
@@ -291,22 +328,12 @@ export function useTaskOperations(
                     baseVersion: 0
                 })
             } catch (queueError) {
-                console.warn('[SYNC-QUEUE] Failed to queue create, falling back to direct save:', queueError)
+                console.warn('[SYNC-QUEUE] Failed to queue create; task remains local-first and will be retried by cache/session recovery:', queueError)
             }
 
-            // TASK-1428: Update IndexedDB read cache BEFORE the direct save attempt.
-            // If offline, saveSpecificTasks will fail but the cache is already warm.
+            // TASK-1428: Update IndexedDB read cache immediately. The sync queue is the
+            // single remote writer; local cache keeps Electron reload/restart behavior durable.
             cacheTasks([..._rawTasks.value])
-
-            // Also attempt direct save (for immediate sync when online)
-            // Wrapped in try/catch: offline failure must NOT roll back the task —
-            // it's already in _rawTasks + sync queue + read cache.
-            try {
-                await saveSpecificTasks([newTask], `createTask-${newTask.id}`)
-                console.log(`[BUG-1491] Direct save succeeded for task ${taskId.slice(0, 8)} "${newTask.title?.slice(0, 25)}"`)
-            } catch (directSaveError) {
-                console.error(`[BUG-1491] Direct save FAILED for task ${taskId.slice(0, 8)} "${newTask.title?.slice(0, 25)}":`, directSaveError)
-            }
 
             // Trigger canvas sync for Tauri reactivity
             triggerCanvasSync()
@@ -1060,15 +1087,8 @@ export function useTaskOperations(
         }
         _rawTasks.value.splice(index, 1)
 
-        // Save/cache the local snapshot, but do not let a Supabase bulk-save
-        // failure for unrelated remaining cached rows undo the user's delete.
-        try {
-            await saveTasksToStorage(_rawTasks.value, 'deleteTask')
-        } catch (persistError) {
-            console.warn(`⚠️ [DELETE] Task ${taskId.slice(0, 8)} was removed locally, but persisting remaining cached tasks failed (non-fatal):`, persistError)
-        }
         // TASK-1428: Update IndexedDB read cache so offline reloads reflect the deletion.
-        cacheTasks([..._rawTasks.value])
+        await cacheTasks([..._rawTasks.value])
 
         // BUG-1737: Single-write path — sync queue is the SOLE path to Supabase for deletes.
         // Previously also called deleteTaskFromStorage() directly, creating a dual-write race
@@ -1136,22 +1156,6 @@ export function useTaskOperations(
             hardDeleteCompleted = true
             logPermanentDeleteTrace(taskId, 'store.after-trash-service')
 
-            // 3. Persist updated local state (guest/local fallback, Tauri reliability)
-            try {
-                logPermanentDeleteTrace(taskId, 'store.before-save-remaining', {
-                    remainingTaskCount: _rawTasks.value.length,
-                })
-                await saveTasksToStorage(_rawTasks.value, 'permanentlyDeleteTask')
-                logPermanentDeleteTrace(taskId, 'store.after-save-remaining')
-            } catch (persistError) {
-                // BUG-1850c: Once the hard delete has succeeded, a follow-up bulk save of
-                // remaining cached tasks must not roll back the deleted task. This can fail
-                // when production is missing/hiding other local cached rows.
-                logPermanentDeleteTrace(taskId, 'store.save-remaining-error-nonfatal', {
-                    error: persistError instanceof Error ? persistError.message : String(persistError),
-                })
-                console.warn(`⚠️ [PERMANENT-DELETE] Task ${taskId.slice(0, 8)} was deleted, but persisting remaining cached tasks failed (non-fatal):`, persistError)
-            }
             await cacheTasks([..._rawTasks.value])
             logPermanentDeleteTrace(taskId, 'store.cache-updated', {
                 cachedTaskCount: _rawTasks.value.length,
@@ -1162,6 +1166,34 @@ export function useTaskOperations(
                 error: error instanceof Error ? error.message : String(error),
             })
             console.error(`❌ Failed to permanently delete ${taskId}:`, error)
+            if (!hardDeleteCompleted && shouldKeepPermanentDeleteLocallyOnRemoteFailure(error)) {
+                logPermanentDeleteTrace(taskId, 'store.remote-delete-failed-keeping-local', {
+                    rawTaskCount: _rawTasks.value.length,
+                })
+
+                await cacheTasks([..._rawTasks.value])
+
+                try {
+                    const syncOrchestrator = useSyncOrchestrator()
+                    await syncOrchestrator.enqueue({
+                        entityType: 'task',
+                        operation: 'delete',
+                        entityId: taskId,
+                        payload: { id: taskId },
+                        baseVersion: deletedTask.positionVersion || 0
+                    })
+                    logPermanentDeleteTrace(taskId, 'store.remote-failed-soft-delete-queued', {
+                        rawTaskCount: _rawTasks.value.length,
+                    })
+                    return
+                } catch (queueError) {
+                    logPermanentDeleteTrace(taskId, 'store.remote-failed-soft-delete-queue-error', {
+                        error: queueError instanceof Error ? queueError.message : String(queueError),
+                    })
+                    console.warn(`⚠️ [PERMANENT-DELETE] Failed to queue fallback delete for ${taskId.slice(0, 8)}; local cache still keeps it removed:`, queueError)
+                    return
+                }
+            }
             if (!hardDeleteCompleted) {
                 _rawTasks.value.splice(index, 0, deletedTask)
                 logPermanentDeleteTrace(taskId, 'store.rollback-local-splice', {
@@ -1259,7 +1291,7 @@ export function useTaskOperations(
         await deleteTask(taskId, 'stopRecurrence:final')
     }
 
-    // BUG-025 FIX: Atomic bulk delete using Supabase .in() operator
+    // BUG-025 FIX: Atomic local bulk delete; remote sync is queued per task.
     const bulkDeleteTasks = async (taskIds: string[]) => {
         if (!taskIds.length) return
         manualOperationInProgress.value = true
@@ -1269,43 +1301,27 @@ export function useTaskOperations(
 
         // TASK-1159: Capture deleted tasks for rollback, then filter immediately
         const deletedTasks = _rawTasks.value.filter(t => taskIds.includes(t.id))
-        const deletedIndices = deletedTasks.map(t => _rawTasks.value.indexOf(t))
         _rawTasks.value = _rawTasks.value.filter(t => !taskIds.includes(t.id))
 
-        // Save/cache the local snapshot, but do not let a Supabase bulk-save
-        // failure for unrelated remaining cached rows undo the user's deletes.
-        try {
-            await saveTasksToStorage(_rawTasks.value, 'bulkDeleteTasks')
-        } catch (persistError) {
-            console.warn(`⚠️ [BULK-DELETE] Removed ${deletedTasks.length} task(s) locally, but persisting remaining cached tasks failed (non-fatal):`, persistError)
-        }
-        cacheTasks([..._rawTasks.value])
+        await cacheTasks([..._rawTasks.value])
 
         // Enqueue DELETE for each task so offline bulk deletes can retry via sync queue
         const syncOrchestrator = useSyncOrchestrator()
-        for (const taskId of taskIds) {
+        for (const deletedTask of deletedTasks) {
             try {
                 await syncOrchestrator.enqueue({
                     entityType: 'task',
                     operation: 'delete',
-                    entityId: taskId,
-                    payload: { id: taskId },
-                    baseVersion: 0
+                    entityId: deletedTask.id,
+                    payload: { id: deletedTask.id },
+                    baseVersion: deletedTask.positionVersion || 0
                 })
-            } catch { /* non-critical, direct save is backup */ }
+            } catch (queueError) {
+                console.warn(`⚠️ [BULK-DELETE] Failed to queue delete for ${deletedTask.id.slice(0, 8)}; local cache still keeps it removed:`, queueError)
+            }
         }
 
-        // TASK-1159: Background sync — don't block UI
-        try {
-            // BUG-025 FIX: Use atomic bulk delete
-            await bulkDeleteTasksFromStorage(taskIds)
-        } catch (bgError) {
-            console.warn(`⚠️ [BULK-DELETE] Background delete failed for ${taskIds.length} tasks, sync will retry:`, bgError)
-            const { showToast } = useToast()
-            showToast('Delete will sync when connection restores', 'warning')
-        } finally {
-            manualOperationInProgress.value = false
-        }
+        manualOperationInProgress.value = false
 
         // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
         // The watcher detects bulk deletions and removes only the affected nodes, preventing position resets
@@ -1383,7 +1399,7 @@ export function useTaskOperations(
             // No canvas position — completion records are calendar-only
             isInInbox: false,
         }
-        await createTask(completionRecord)
+        await createTask(completionRecord, { awaitDirectSave: false })
 
         // 4. Update original task: advance to next occurrence
         const todayInstance = task.instances?.find(inst => inst.scheduledDate === today)

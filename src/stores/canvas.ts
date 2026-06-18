@@ -16,6 +16,9 @@ import { useCanvasGroups } from './canvas/canvasGroups'
 import { useCanvasViewport } from './canvas/canvasViewport'
 import { useCanvasPersistence } from './canvas/canvasPersistence'
 import { cacheGroups, getCachedGroups } from '@/services/offline/readCacheDB'
+import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
+import { useAuthStore } from './auth'
+import { toSupabaseGroup } from '@/utils/supabaseMappers'
 export * from './canvas/types'
 
 export const useCanvasStore = defineStore('canvas', () => {
@@ -32,7 +35,6 @@ export const useCanvasStore = defineStore('canvas', () => {
   // 2. Persistence Layer
   const {
     fetchGroups,
-    saveGroup,
     deleteGroupRemote,
     saveGroupsToLocalStorage,
     loadGroupsFromLocalStorage
@@ -40,10 +42,28 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   const saveGroupToStorage = async (group: CanvasGroup) => {
     saveGroupsToLocalStorage(groupsModule._rawGroups.value)
+    await cacheGroups(groupsModule._rawGroups.value)
+
+    const authStore = useAuthStore()
+    const userId = authStore.user?.id
+    if (!authStore.isAuthenticated || !userId) {
+      if (import.meta.env.DEV) console.debug('[CANVAS:SAVE] Group kept local-only - not authenticated')
+      return
+    }
+
+    const payload = toSupabaseGroup(group, userId)
+    if (!payload) return
+
     try {
-      await saveGroup(group)
-    } catch (_e) {
-      if (import.meta.env.DEV) console.debug('[CANVAS:SAVE] Supabase skipped/failed - localStorage backup saved')
+      await useSyncOrchestrator().enqueue({
+        entityType: 'group',
+        operation: 'create',
+        entityId: group.id,
+        payload: JSON.parse(JSON.stringify(payload)),
+        baseVersion: group.positionVersion || 0,
+      })
+    } catch (error) {
+      console.warn('[CANVAS:SAVE] Failed to queue group save; local cache remains authoritative:', error)
     }
   }
 
@@ -187,7 +207,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Persist fixes
       cleanedGroups.forEach((g: CanvasGroup, i: number) => {
         if (g.parentGroupId !== geometryMergedGroups[i]?.parentGroupId || locallyNewerGroupIds.has(g.id)) {
-          saveGroup(g)
+          void saveGroupToStorage(g)
         }
       })
 

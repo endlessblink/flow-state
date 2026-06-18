@@ -43,6 +43,13 @@ export interface ErrorInfo {
   timestamp: Date
 }
 
+const formatErrorTimestamp = (timestamp: Date | string | number): string => {
+  if (timestamp instanceof Date) return timestamp.toISOString()
+  if (typeof timestamp === 'string') return timestamp
+  const parsed = new Date(timestamp)
+  return Number.isNaN(parsed.getTime()) ? 'unknown' : parsed.toISOString()
+}
+
 export class GlobalErrorHandler {
   private static instance: GlobalErrorHandler
   private errors: ErrorInfo[] = []
@@ -443,6 +450,7 @@ window.showFullError = (encodedError: string) => {
   try {
     const error: ErrorInfo = JSON.parse(atob(encodedError))
     const { copyError: _copyError } = useCopy()
+    const timestamp = formatErrorTimestamp(error.timestamp)
 
     // Create a modal with full error details
     const modal = document.createElement('div')
@@ -469,8 +477,8 @@ window.showFullError = (encodedError: string) => {
     `
 
     const errorText = error.stack
-      ? `Error: ${error.message}\n\nLocation: ${error.source}:${error.line}:${error.column}\n\nTimestamp: ${error.timestamp.toISOString()}\n\nStack Trace:\n${error.stack}`
-      : `Error: ${error.message}\n\nLocation: ${error.source}:${error.line}:${error.column}\n\nTimestamp: ${error.timestamp.toISOString()}`
+      ? `Error: ${error.message}\n\nLocation: ${error.source}:${error.line}:${error.column}\n\nTimestamp: ${timestamp}\n\nStack Trace:\n${error.stack}`
+      : `Error: ${error.message}\n\nLocation: ${error.source}:${error.line}:${error.column}\n\nTimestamp: ${timestamp}`
 
     // Create safe DOM structure instead of innerHTML
     const headerDiv = document.createElement('div')

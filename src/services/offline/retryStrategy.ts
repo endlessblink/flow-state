@@ -128,6 +128,7 @@ export function formatTimeUntilRetry(nextRetryAt: number): string {
  */
 export type ErrorClassification =
   | 'transient'   // Network issues, timeouts - retry with backoff
+  | 'rate_limit'  // Server throttling - retry with a shared cooldown
   | 'conflict'    // Version conflict - needs resolution
   | 'auth'        // JWT expired/invalid - refresh token and retry
   | 'permanent'   // Not found, bad request - don't retry
@@ -159,6 +160,21 @@ export function classifyError(error: unknown): ErrorClassification {
   const httpStatus = (error && typeof error === 'object' && 'status' in error)
     ? (error as { status: unknown }).status
     : undefined
+  const httpCode = (error && typeof error === 'object' && 'code' in error)
+    ? (error as { code: unknown }).code
+    : undefined
+  const statusString = String(httpStatus ?? httpCode ?? '')
+
+  if (
+    httpStatus === 429 ||
+    statusString === '429' ||
+    lowerMessage.includes('too many requests') ||
+    lowerMessage.includes('rate limit') ||
+    lowerMessage.includes('rate limited')
+  ) {
+    return 'rate_limit'
+  }
+
   if (
     httpStatus === 401 ||
     lowerMessage.includes('jwt expired') ||
@@ -181,8 +197,7 @@ export function classifyError(error: unknown): ErrorClassification {
     lowerMessage.includes('enotfound') ||
     lowerMessage.includes('502') ||
     lowerMessage.includes('503') ||
-    lowerMessage.includes('504') ||
-    lowerMessage.includes('rate limit')
+    lowerMessage.includes('504')
   ) {
     return 'transient'
   }
@@ -236,6 +251,15 @@ export function getRetryConfigForError(
     case 'unknown':
       // Standard exponential backoff
       return DEFAULT_RETRY_CONFIG
+
+    case 'rate_limit':
+      return {
+        ...DEFAULT_RETRY_CONFIG,
+        initialDelayMs: 30_000,
+        maxDelayMs: 5 * 60_000,
+        backoffMultiplier: 2,
+        maxRetries: 10,
+      }
 
     case 'conflict':
       // Fewer retries for conflicts (user intervention likely needed)

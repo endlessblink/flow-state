@@ -499,6 +499,23 @@ describe('Geometry Invariants', () => {
       expect(resizeEndSource).toMatch(/releaseResizeLocks[\s\S]*lockManager\.release\(sectionId, 'user-resize'\)/)
       expect(resizeEndSource).toMatch(/releaseResizeLocks[\s\S]*childStartPositions[\s\S]*lockManager\.release\(childId, 'user-resize'\)/)
     })
+
+    it('canvas readiness stays local-first when background sync is stuck', () => {
+      const source = readFileSync(
+        resolve(process.cwd(), 'src/composables/canvas/useCanvasOrchestrator.ts'),
+        'utf8'
+      )
+      const readyStart = source.indexOf('const isCanvasReady = computed')
+      const readyReturn = source.indexOf('    // Alignment', readyStart)
+      const readySource = source.slice(readyStart, readyReturn)
+      const syncNodesStart = source.indexOf('const syncNodes =')
+      const syncNodesReturn = source.indexOf('    // OPTIMIZATION: True batching', syncNodesStart)
+      const syncNodesSource = source.slice(syncNodesStart, syncNodesReturn)
+
+      expect(readySource).toContain('return !operationLoading.value.loading')
+      expect(readySource).not.toContain('operationLoading.value.syncing')
+      expect(syncNodesSource).not.toContain('operationLoading.syncing')
+    })
   })
 
   // ============================================================================

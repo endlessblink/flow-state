@@ -200,11 +200,6 @@ export function useCanvasOrchestrator() {
     // drops (inbox → canvas). Without this, tasks dropped during the 3-second settling
     // window after a canvas node drag would silently fail to render.
     const syncNodes = (tasks?: import('@/stores/tasks').Task[], options?: { force?: boolean }) => {
-        // Prevent sync if explicitly unwanted (e.g. during specific interactions)
-        if (canvasUiStore.operationLoading.syncing) {
-            return
-        }
-
         // TASK-241: State Machine Guard
         // Block READ-PATH syncs if user is interacting (dragging/resizing)
         // unless forced by explicit user action (e.g., inbox drop)
@@ -354,7 +349,10 @@ export function useCanvasOrchestrator() {
 
 
     const isCanvasReady = computed(() => {
-        return !operationLoading.value.loading && !operationLoading.value.syncing
+        // Canvas readiness is about local store -> Vue Flow projection. Remote sync is a
+        // background concern; tying the full-screen loading overlay to sync failures made Electron
+        // appear blank until restart when Supabase/realtime was degraded.
+        return !operationLoading.value.loading
     })
 
     // Alignment

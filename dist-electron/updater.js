@@ -5,6 +5,21 @@ const electron_updater_1 = require("electron-updater");
 const electron_1 = require("electron");
 const node_child_process_1 = require("node:child_process");
 const updater_pending_1 = require("./updater-pending");
+const store_1 = require("./ipc/store");
+// BUG-1874: never let the store flush hang the update handoff. The AppImage installer polls the
+// old PID and the single-instance lock is already released — exit must proceed even if flush is slow.
+const STORE_FLUSH_TIMEOUT_MS = 1500;
+async function flushStoreBeforeExit() {
+    try {
+        await Promise.race([
+            (0, store_1.flushStore)(),
+            new Promise((resolve) => setTimeout(resolve, STORE_FLUSH_TIMEOUT_MS)),
+        ]);
+    }
+    catch (err) {
+        console.warn('[Updater] Store flush before exit failed:', err.message);
+    }
+}
 function hasValidAppVersion(version) {
     return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version);
 }
@@ -80,6 +95,11 @@ function registerUpdater() {
     electron_1.app.on('will-quit', () => {
         console.log('[Updater] will-quit received');
     });
+    electron_1.app
+        .on('before-quit-for-update', () => {
+        console.log('[Updater] before-quit-for-update received');
+        void flushStoreBeforeExit();
+    });
     // Register IPC handlers in all environments so renderer invocations don't
     // fail during local dev. In dev or unpackaged preview mode, updater actions
     // become safe no-ops.
@@ -99,9 +119,13 @@ function registerUpdater() {
             return;
         await electron_updater_1.autoUpdater.downloadUpdate();
     });
-    electron_1.ipcMain.handle('updater:install', () => {
+    electron_1.ipcMain.handle('updater:install', async () => {
         if (!canUseUpdater)
             return true;
+        // BUG-1874: flush any in-flight auth/store writes (a just-rotated refresh token) to disk
+        // BEFORE we tear the process down. The AppImage path exits via app.exit(0), which bypasses
+        // before-quit/will-quit, so this is the only place the flush can happen for that path.
+        await flushStoreBeforeExit();
         // Release single-instance lock before restart, otherwise the new process
         // can't acquire the lock and immediately exits (appears as a crash).
         electron_1.app.releaseSingleInstanceLock();

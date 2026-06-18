@@ -1,49 +1,40 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.flushStore = flushStore;
 exports.registerStoreHandlers = registerStoreHandlers;
 const electron_1 = require("electron");
 const path_1 = require("path");
-const promises_1 = require("fs/promises");
-const fs_1 = require("fs");
+const jsonStore_1 = require("./jsonStore");
 /**
  * Simple JSON key-value store persisted to disk.
  * Replaces @tauri-apps/plugin-store.
+ *
+ * BUG-1874: backed by the atomic, serialized, corruption-safe store in `jsonStore.ts` so a kill
+ * during an update handoff can't truncate `store.json` (which would wipe the auth session), and
+ * concurrent writes (Supabase token + auth backup) can't clobber each other.
  */
-const storePath = () => (0, path_1.join)(electron_1.app.getPath('userData'), 'store.json');
-let storeData = {};
-let loaded = false;
-async function loadStore() {
-    if (loaded)
-        return;
-    const path = storePath();
-    try {
-        if ((0, fs_1.existsSync)(path)) {
-            const raw = await (0, promises_1.readFile)(path, 'utf-8');
-            storeData = JSON.parse(raw);
-        }
+let store = null;
+function getStore() {
+    if (!store) {
+        store = (0, jsonStore_1.createJsonStore)((0, path_1.join)(electron_1.app.getPath('userData'), 'store.json'));
     }
-    catch {
-        storeData = {};
-    }
-    loaded = true;
+    return store;
 }
-async function saveStore() {
-    const path = storePath();
-    const dir = (0, path_1.join)(path, '..');
-    if (!(0, fs_1.existsSync)(dir)) {
-        await (0, promises_1.mkdir)(dir, { recursive: true });
-    }
-    await (0, promises_1.writeFile)(path, JSON.stringify(storeData, null, 2), 'utf-8');
+/**
+ * Flush any pending store writes to disk. Called from the updater before the app exits so the
+ * latest (possibly just-rotated) refresh token is durably persisted across the restart.
+ */
+async function flushStore() {
+    if (!store)
+        return;
+    await store.flush();
 }
 function registerStoreHandlers() {
     electron_1.ipcMain.handle('store:get', async (_event, key) => {
-        await loadStore();
-        return storeData[key] ?? null;
+        return getStore().get(key);
     });
     electron_1.ipcMain.handle('store:set', async (_event, key, value) => {
-        await loadStore();
-        storeData[key] = value;
-        await saveStore();
+        await getStore().set(key, value);
     });
 }
 //# sourceMappingURL=store.js.map

@@ -32,9 +32,9 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
-### BUG-1874: "Signed out after Electron update + restart" — fix at main/preload/storage layer (🔄 IN PROGRESS)
+### ~~BUG-1874~~: "Signed out after Electron update + restart" — fix at main/preload/storage layer (✅ DONE)
 
-**Priority**: P0-CRITICAL | **Status**: 🔄 IN PROGRESS — all 3 fixes implemented + tested (47 tests green, typecheck clean, electron main builds); pending deploy via versioned updater (held: shared tree had another session's WIP at commit time) (filed 2026-06-18) | **Depends on**: none | **Related**: BUG-1870, BUG-1865
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-06-18) — shipped through Electron updater `1.4.200`; public manifest and artifact URLs verified. | **Depends on**: none | **Related**: BUG-1870, BUG-1865
 
 **Why**: Recurring sign-out after auto-update+restart. BUG-1870/1865 hardened the renderer grace logic (`src/stores/auth.ts`), but the recurrence lives in the Electron main/preload/storage layer those fixes never touched. Root causes (Perplexity review + two code explorations): (1) **module-eval runtime detection race** — `isElectronRuntime` evaluated at import in `supabase.ts:17`; if the preload bridge isn't present yet, auth storage falls back to volatile localStorage → detection flip between runs loses the session; (2) **no quit-flush during update** — AppImage path `app.exit(0)` (`updater.ts:124`) bypasses before-quit/will-quit and there's no `before-quit-for-update`, so an in-flight `store:set` (just-rotated refresh token) is lost → next launch replays a stale token → "Already Used" → Sign In; (3) **non-atomic write + read-modify-write race** in `electron/ipc/store.ts` (direct `writeFile`, no temp+rename, no mutex) → corruption wipes all auth / concurrent sets clobber. `appId`/`userData` are stable (ruled out).
 
@@ -44,6 +44,8 @@
 - Fix 3: flush auth before update exit — `before-quit-for-update` + bounded renderer flush handshake before `app.exit(0)`/`quitAndInstall`.
 
 **Acceptance**: signed-in shell survives update+restart; corrupt-store recovers from `.bak`; concurrent sets don't clobber; ships via versioned updater. NOT adopting the "bump auth_version → clear session" pattern (that causes the sign-out). Plan: `~/.claude/plans/got-it-the-proud-nygaard.md`.
+
+**Shipped**: Electron updater `1.4.200` deployed on 2026-06-18 with the storage/auth updater fixes and the Calendar inbox filter-toolbar design regression fix. Verified `https://in-theflow.com/updates/electron/latest-linux.yml` returns `version: 1.4.200`; `FlowState-1.4.200-x86_64.AppImage` returns HTTP 200 with `content-length: 180302287`; `FlowState_1.4.200_amd64.deb` returns HTTP 200 with `content-length: 131319768`.
 
 ### TASK-1875: Encrypt Supabase refresh token at rest with Electron safeStorage (📋 PLANNED)
 

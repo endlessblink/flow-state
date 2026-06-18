@@ -123,6 +123,7 @@ _Original plan below._
 - 2026-06-16: Added the missing Electron/KDE recovery regression: reconnect grace retries session refresh and republishes the fresh token to the Electron Local API bridge. Verification: `npm run test -- tests/unit/electron/local-api-lifecycle.test.ts tests/unit/local-api/server-contract.test.ts tests/unit/kde/timer-sync.test.ts tests/unit/kde/auth-flow.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/composables/useLocalApiBridge.test.ts` passed 105/105.
 - 2026-06-16: Local quality gates passed: `npm run type-check`, `npm run lint`, and `npm run electron:build`. Built local updater artifacts for `1.4.185`: `FlowState-1.4.185-x86_64.AppImage` 180171005 bytes, `FlowState_1.4.185_amd64.deb` 131222200 bytes, `latest-linux.yml` 548 bytes.
 - 2026-06-16: Updater VPS directory creation succeeded, but artifact upload/deploy is blocked in this Codex session by the sandbox escalation usage limit. The fix is committed-ready but not yet public on `https://in-theflow.com/updates/electron/latest-linux.yml`.
+- 2026-06-18: Added the Electron sync regression sentinel `npm run guard:electron-sync` and wired `scripts/deploy-electron-update.sh` to run it before `npm run electron:build`/upload unless explicitly skipped. Guard coverage includes auth restart recovery, sync orchestrator backpressure, queue-authoritative task/group writes, delete/undo resurrection, Supabase delete contracts, and canvas local-first readiness.
 
 ### ~~BUG-1869~~: Skipped realtime task updates can leave Electron, localhost, and KDE out of sync (✅ DONE)
 

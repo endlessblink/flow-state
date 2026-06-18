@@ -2,15 +2,16 @@
 # deploy-electron-update.sh — Build Electron app and deploy to VPS auto-updater
 #
 # Usage:
-#   ./scripts/deploy-electron-update.sh [--notes "Release notes"] [--skip-deploy] [--dry-run]
+#   ./scripts/deploy-electron-update.sh [--notes "Release notes"] [--skip-deploy] [--skip-guard] [--dry-run]
 #
 # Prerequisites:
 #   1. SSH key at ~/.ssh/id_ed25519 with access to VPS
 #   2. electron-builder installed (npm dep)
 #
 # What it does:
-#   1. Runs the canonical Electron build (frontend, main process, patch, package, validate)
-#   2. Uploads artifacts + latest-linux.yml to VPS via SCP
+#   1. Runs the Electron sync/auth/canvas regression guard
+#   2. Runs the canonical Electron build (frontend, main process, patch, package, validate)
+#   3. Uploads artifacts + latest-linux.yml to VPS via SCP
 #
 set -euo pipefail
 
@@ -32,12 +33,14 @@ NC='\033[0m'
 # Parse arguments
 NOTES=""
 SKIP_DEPLOY=false
+SKIP_GUARD="${SKIP_GUARD:-false}"
 DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --notes) NOTES="$2"; shift 2 ;;
     --skip-deploy) SKIP_DEPLOY=true; shift ;;
+    --skip-guard) SKIP_GUARD=true; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
     *) echo -e "${RED}Unknown option: $1${NC}"; exit 1 ;;
   esac
@@ -50,8 +53,18 @@ echo -e "Notes: ${NOTES:-'(none)'}"
 
 node "$PROJECT_DIR/scripts/validate-electron-vite-env.cjs"
 
-# Step 1: Build and package Electron app through the canonical release command
-echo -e "\n${YELLOW}[1/2] Building and packaging Electron app...${NC}"
+# Step 1: Run the Electron sync/auth/canvas regression sentinel before packaging.
+echo -e "\n${YELLOW}[1/3] Electron sync regression guard...${NC}"
+if [ "$SKIP_GUARD" = true ]; then
+  echo -e "${YELLOW}  Skipping guard (--skip-guard / SKIP_GUARD=true)${NC}"
+elif [ "$DRY_RUN" = true ]; then
+  echo -e "${CYAN}  [DRY RUN] Would run: npm run guard:electron-sync${NC}"
+else
+  npm run guard:electron-sync
+fi
+
+# Step 2: Build and package Electron app through the canonical release command
+echo -e "\n${YELLOW}[2/3] Building and packaging Electron app...${NC}"
 if [ "$DRY_RUN" = true ]; then
   echo -e "${CYAN}  [DRY RUN] Would run: npm run electron:build${NC}"
 else
@@ -74,14 +87,14 @@ if [ "$DRY_RUN" = false ]; then
   [ -n "$YML" ] && echo -e "${GREEN}  Manifest: $(basename "$YML")${NC}"
 fi
 
-# Step 4: Deploy to VPS
+# Step 3: Deploy to VPS
 if [ "$SKIP_DEPLOY" = true ]; then
-  echo -e "\n${YELLOW}[2/2] Skipping deploy (--skip-deploy)${NC}"
+  echo -e "\n${YELLOW}[3/3] Skipping deploy (--skip-deploy)${NC}"
 elif [ "$DRY_RUN" = true ]; then
-  echo -e "\n${YELLOW}[2/2] Deploy (DRY RUN)${NC}"
+  echo -e "\n${YELLOW}[3/3] Deploy (DRY RUN)${NC}"
   echo -e "${CYAN}  Would upload to ${VPS_USER}@${VPS_HOST}:${VPS_PATH}/${NC}"
 else
-  echo -e "\n${YELLOW}[2/2] Deploying to VPS...${NC}"
+  echo -e "\n${YELLOW}[3/3] Deploying to VPS...${NC}"
 
   # Create remote directory
   ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mkdir -p ${VPS_PATH}"

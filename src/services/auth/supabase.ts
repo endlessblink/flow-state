@@ -1,6 +1,7 @@
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js'
 import { isTauri as isTauriRuntime } from '@/utils/platform'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
+import { createLazyAuthStorage } from './authStorage'
 
 // These will be provided by your Supabase project settings
 // For now, we'll use empty strings or env vars if available
@@ -143,22 +144,9 @@ if (typeof window !== 'undefined' && !isTauri && !isElectronRuntime && !isCapaci
  * NOTE on removeItem: we store null via storeSet(key, null). getItem checks
  * `typeof value === 'string'` so a null stored value correctly returns null (absent key).
  */
-const electronStorage = isElectronRuntime ? {
-    getItem: async (key: string): Promise<string | null> => {
-        const value = await (window as any).electronAPI!.storeGet(key)
-        return typeof value === 'string' ? value : null
-    },
-    setItem: async (key: string, value: string): Promise<void> => {
-        await (window as any).electronAPI!.storeSet(key, value)
-    },
-    removeItem: async (key: string): Promise<void> => {
-        await (window as any).electronAPI!.storeSet(key, null)
-    },
-} : null
-
-const authStorage = isElectronRuntime
-    ? electronStorage!
-    : (typeof window !== 'undefined' ? localStorage : null)
+// BUG-1874: lazy, call-time backend resolution (Electron IPC store vs localStorage).
+// See src/services/auth/authStorage.ts for why this is no longer frozen at module-eval.
+const authStorage = createLazyAuthStorage()
 
 export const AUTH_SESSION_BACKUP_KEY = `${STORAGE_KEYS.SUPABASE_AUTH}-backup-v1`
 
@@ -245,7 +233,7 @@ export async function clearAuthSessionBackup(): Promise<void> {
     }
 }
 
-let supabaseClient;
+let supabaseClient: ReturnType<typeof createClient> | null;
 try {
     supabaseClient = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
@@ -333,6 +321,25 @@ export function consumePendingProviderTokens(): { provider_token: string; provid
     const tokens = _pendingProviderTokens
     _pendingProviderTokens = null
     return tokens
+}
+
+/**
+ * BUG-1874: Force the current session to durable storage right before an Electron update restart.
+ * Writes both the primary auth key and the replayable backup, awaited, so the just-rotated
+ * refresh token can't be left in-flight when the app exits. The main process additionally
+ * flushes the IPC store write queue (see electron/ipc/store.ts flushStore) before exiting.
+ */
+export async function flushAuthForUpdate(): Promise<void> {
+    try {
+        if (!supabaseClient) return
+        const { data } = await supabaseClient.auth.getSession()
+        const session = data?.session
+        if (!session) return
+        await persistAuthSessionBackup(session)
+        await authStorageSet(STORAGE_KEYS.SUPABASE_AUTH, JSON.stringify(session))
+    } catch (e) {
+        console.warn('[Supabase] flushAuthForUpdate failed:', e)
+    }
 }
 
 // Re-export types for convenience

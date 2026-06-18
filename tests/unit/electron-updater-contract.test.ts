@@ -90,7 +90,13 @@ describe('Electron updater restart contract', () => {
   it('returns from IPC before install handoff and has a bounded quit fallback', () => {
     const updaterSource = readSource('electron/updater.ts')
 
-    expect(updaterSource).toContain("ipcMain.handle('updater:install', () => {")
+    expect(updaterSource).toContain("ipcMain.handle('updater:install', async () => {")
+    // BUG-1874: in-flight auth/store writes are flushed to disk BEFORE the handoff/exit,
+    // and that flush happens before the single-instance lock is released.
+    expect(updaterSource).toContain('await flushStoreBeforeExit()')
+    expect(updaterSource.indexOf('await flushStoreBeforeExit()')).toBeLessThan(
+      updaterSource.indexOf('app.releaseSingleInstanceLock()'),
+    )
     expect(updaterSource).toContain('app.releaseSingleInstanceLock()')
     expect(updaterSource).toContain('setImmediate(() => {')
     expect(updaterSource).toContain('autoUpdater.quitAndInstall(false, true)')

@@ -129,6 +129,16 @@ export function useElectronUpdater() {
     error.value = null
 
     try {
+      // BUG-1874: persist the live session to the durable IPC store (awaited) BEFORE handing off
+      // to the updater, so the post-restart app stays signed in. The main process also flushes the
+      // store write queue before exiting.
+      try {
+        const { flushAuthForUpdate } = await import('@/services/auth/supabase')
+        await flushAuthForUpdate()
+      } catch (e) {
+        console.warn('[ElectronUpdater] Auth flush before install failed (continuing):', e)
+      }
+
       await api.installUpdate()
       window.setTimeout(() => {
         if (status.value === 'installing') {

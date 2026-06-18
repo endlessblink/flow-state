@@ -2,6 +2,22 @@ import { autoUpdater } from 'electron-updater'
 import { app, ipcMain, BrowserWindow } from 'electron'
 import { spawn } from 'node:child_process'
 import { pendingUpdateInfoPath, clearStalePendingUpdate, pendingAppImagePath } from './updater-pending'
+import { flushStore } from './ipc/store'
+
+// BUG-1874: never let the store flush hang the update handoff. The AppImage installer polls the
+// old PID and the single-instance lock is already released — exit must proceed even if flush is slow.
+const STORE_FLUSH_TIMEOUT_MS = 1500
+
+async function flushStoreBeforeExit(): Promise<void> {
+  try {
+    await Promise.race([
+      flushStore(),
+      new Promise<void>((resolve) => setTimeout(resolve, STORE_FLUSH_TIMEOUT_MS)),
+    ])
+  } catch (err) {
+    console.warn('[Updater] Store flush before exit failed:', (err as Error).message)
+  }
+}
 
 function hasValidAppVersion(version: string): boolean {
   return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)
@@ -88,6 +104,15 @@ export function registerUpdater() {
     console.log('[Updater] will-quit received')
   })
 
+  // BUG-1874: Electron's `app` emits this (instead of before-quit) when quitAndInstall tears the
+  // app down. The authoritative flush is awaited in the updater:install handler before we reach
+  // here; this is a synchronous best-effort backstop for any other quit-for-update path.
+  ;(app as unknown as { on(event: 'before-quit-for-update', listener: () => void): void })
+    .on('before-quit-for-update', () => {
+      console.log('[Updater] before-quit-for-update received')
+      void flushStoreBeforeExit()
+    })
+
   // Register IPC handlers in all environments so renderer invocations don't
   // fail during local dev. In dev or unpackaged preview mode, updater actions
   // become safe no-ops.
@@ -108,8 +133,13 @@ export function registerUpdater() {
     await autoUpdater.downloadUpdate()
   })
 
-  ipcMain.handle('updater:install', () => {
+  ipcMain.handle('updater:install', async () => {
     if (!canUseUpdater) return true
+
+    // BUG-1874: flush any in-flight auth/store writes (a just-rotated refresh token) to disk
+    // BEFORE we tear the process down. The AppImage path exits via app.exit(0), which bypasses
+    // before-quit/will-quit, so this is the only place the flush can happen for that path.
+    await flushStoreBeforeExit()
 
     // Release single-instance lock before restart, otherwise the new process
     // can't acquire the lock and immediately exits (appears as a crash).

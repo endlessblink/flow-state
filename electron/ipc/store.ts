@@ -1,49 +1,40 @@
 import { ipcMain, app } from 'electron'
 import { join } from 'path'
-import { readFile, writeFile, mkdir } from 'fs/promises'
-import { existsSync } from 'fs'
+import { createJsonStore } from './jsonStore'
 
 /**
  * Simple JSON key-value store persisted to disk.
  * Replaces @tauri-apps/plugin-store.
+ *
+ * BUG-1874: backed by the atomic, serialized, corruption-safe store in `jsonStore.ts` so a kill
+ * during an update handoff can't truncate `store.json` (which would wipe the auth session), and
+ * concurrent writes (Supabase token + auth backup) can't clobber each other.
  */
 
-const storePath = () => join(app.getPath('userData'), 'store.json')
-let storeData: Record<string, unknown> = {}
-let loaded = false
+let store: ReturnType<typeof createJsonStore> | null = null
 
-async function loadStore() {
-  if (loaded) return
-  const path = storePath()
-  try {
-    if (existsSync(path)) {
-      const raw = await readFile(path, 'utf-8')
-      storeData = JSON.parse(raw)
-    }
-  } catch {
-    storeData = {}
+function getStore() {
+  if (!store) {
+    store = createJsonStore(join(app.getPath('userData'), 'store.json'))
   }
-  loaded = true
+  return store
 }
 
-async function saveStore() {
-  const path = storePath()
-  const dir = join(path, '..')
-  if (!existsSync(dir)) {
-    await mkdir(dir, { recursive: true })
-  }
-  await writeFile(path, JSON.stringify(storeData, null, 2), 'utf-8')
+/**
+ * Flush any pending store writes to disk. Called from the updater before the app exits so the
+ * latest (possibly just-rotated) refresh token is durably persisted across the restart.
+ */
+export async function flushStore(): Promise<void> {
+  if (!store) return
+  await store.flush()
 }
 
 export function registerStoreHandlers() {
   ipcMain.handle('store:get', async (_event, key: string) => {
-    await loadStore()
-    return storeData[key] ?? null
+    return getStore().get(key)
   })
 
   ipcMain.handle('store:set', async (_event, key: string, value: unknown) => {
-    await loadStore()
-    storeData[key] = value
-    await saveStore()
+    await getStore().set(key, value)
   })
 }

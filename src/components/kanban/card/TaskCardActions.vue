@@ -6,7 +6,7 @@
           class="action-btn focus-btn"
           aria-label="Enter focus mode for this task"
           type="button"
-          tabindex="-1"
+
           @click.stop="$emit('focusMode')"
         >
           <Eye :size="14" aria-hidden="true" />
@@ -20,7 +20,7 @@
           class="action-btn timer-btn"
           aria-label="Start Pomodoro timer for this task"
           type="button"
-          tabindex="-1"
+
           @click.stop="$emit('startTimer')"
         >
           <Play :size="14" aria-hidden="true" />

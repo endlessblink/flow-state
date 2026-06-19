@@ -307,7 +307,8 @@ body.kanban-dragging * {
     transition: opacity 0.15s ease !important;
 }
 
-.task-card:hover .compact-actions {
+.task-card:hover .compact-actions,
+.task-card:focus-within .compact-actions {
     opacity: 1 !important;
     pointer-events: auto !important;
 }

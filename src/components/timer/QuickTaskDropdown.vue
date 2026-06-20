@@ -2,6 +2,7 @@
   <div ref="wrapperRef" class="quick-task-wrapper">
     <button
       class="quick-task-trigger"
+      aria-label="Quick Tasks"
       title="Quick Tasks"
       @click="toggleDropdown"
     >
@@ -33,6 +34,7 @@
             <button
               v-if="newTaskTitle.trim() && !isSearching"
               class="quick-add-btn"
+              aria-label="Add pin"
               title="Add pin"
               @click="addQuickPin"
             >
@@ -67,6 +69,7 @@
               <span class="quick-item-title" dir="auto">{{ item.title }}</span>
               <button
                 class="quick-item-action"
+                aria-label="Pin this task"
                 title="Pin this task"
                 @click.stop="handlePinFromSearch(item)"
               >
@@ -74,6 +77,7 @@
               </button>
               <button
                 class="quick-item-play"
+                aria-label="Start Timer"
                 title="Start Timer"
                 @click.stop="handleSearchSelect(item)"
               >
@@ -129,6 +133,7 @@
               <span class="quick-item-title" dir="auto">{{ item.title }}</span>
               <button
                 class="quick-item-action"
+                aria-label="Unpin"
                 title="Unpin"
                 @click.stop="handleUnpin(item.sourceId)"
               >
@@ -136,6 +141,7 @@
               </button>
               <button
                 class="quick-item-play"
+                aria-label="Start Timer"
                 title="Start Timer"
                 @click.stop="handleSelect(item)"
               >
@@ -168,6 +174,7 @@
               <span class="pomodoro-badge">{{ item.frequency }}</span>
               <button
                 class="quick-item-action"
+                aria-label="Hide from Frequent"
                 title="Hide from Frequent"
                 @click.stop="handleHideFrequent(item.sourceId)"
               >
@@ -176,6 +183,7 @@
               <button
                 v-if="!item.isPinned"
                 class="quick-item-action"
+                aria-label="Pin as Quick Task"
                 title="Pin as Quick Task"
                 @click.stop="handlePin(item)"
               >
@@ -183,6 +191,7 @@
               </button>
               <button
                 class="quick-item-play"
+                aria-label="Start Timer"
                 title="Start Timer"
                 @click.stop="handleSelect(item)"
               >

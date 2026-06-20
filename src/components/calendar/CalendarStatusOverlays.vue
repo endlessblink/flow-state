@@ -11,6 +11,7 @@
         <span class="health-message">{{ systemHealthMessage }}</span>
         <button
           class="health-retry-btn"
+          aria-label="Retry store initialization"
           title="Retry store initialization"
           @click="$emit('validateStores')"
         >
@@ -41,6 +42,7 @@
           </button>
           <button
             class="dismiss-btn"
+            aria-label="Dismiss error"
             title="Dismiss error"
             @click="$emit('clearOperationError')"
           >

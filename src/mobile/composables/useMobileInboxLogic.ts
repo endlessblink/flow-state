@@ -6,13 +6,15 @@ import { useOfflineVoiceQueue } from '@/composables/useOfflineVoiceQueue'
 import { useHaptics } from '@/composables/useHaptics'
 import { useCanvasStore } from '@/stores/canvas'
 import { useDirection } from '@/i18n/useDirection'
-import { supabase } from '@/composables/supabase/_infrastructure'
+import { useSettingsStore } from '@/stores/settings'
+import { createTranscriptionService } from '@/services/transcription/provider'
 
 export type ViewMode = 'tasks' | 'today'
 export type TimeFilterType = 'all' | 'today' | 'week' | 'overdue'
 
 export function useMobileInboxLogic() {
     const taskStore = useTaskStore()
+    const settingsStore = useSettingsStore()
     const canvasStore = useCanvasStore()
     const { triggerHaptic } = useHaptics()
     const { isRTL } = useDirection()
@@ -76,38 +78,20 @@ export function useMobileInboxLogic() {
         return date < getToday()
     }
 
-    // --- Voice / Offline Queue (Whisper Only) ---
+    // --- Voice / Offline Queue ---
     const finalVoiceTranscript = ref('')
-
-    const getWhisperEndpoint = () => {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-        if (supabaseUrl.startsWith('/')) {
-            return `${window.location.origin}${supabaseUrl}/functions/v1/whisper-transcribe`
-        }
-        return `${supabaseUrl}/functions/v1/whisper-transcribe`
-    }
+    const transcriptionService = createTranscriptionService({
+        provider: settingsStore.voiceTranscriptionProvider,
+        model: 'whisper-large-v3-turbo'
+    })
 
     const transcribeAudioForQueue = async (blob: Blob, mimeType: string): Promise<{ text: string; language: string }> => {
-        const formData = new FormData()
-        const extension = mimeType.includes('webm') ? 'webm'
-            : mimeType.includes('mp4') ? 'mp4'
-                : mimeType.includes('wav') ? 'wav'
-                    : 'webm'
-        formData.append('file', blob, `audio.${extension}`)
-        formData.append('model', 'whisper-large-v3-turbo')
-        // BUG-1142: Include auth token for edge function authentication
-        const headers: Record<string, string> = {}
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.access_token) {
-            headers['Authorization'] = `Bearer ${session.access_token}`
-        }
-        const response = await fetch(getWhisperEndpoint(), { method: 'POST', headers, body: formData })
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.error?.message || `API error: ${response.status}`)
-        }
-        const data = await response.json()
-        return { text: data.text || '', language: data.language || 'unknown' }
+        const result = await transcriptionService.transcribe({
+            audioBlob: blob,
+            mimeType,
+            preferredProvider: settingsStore.voiceTranscriptionProvider
+        })
+        return { text: result.transcript, language: result.language }
     }
 
     const {
@@ -141,6 +125,7 @@ export function useMobileInboxLogic() {
         stop: stopWhisper,
         cancel: cancelWhisper
     } = useWhisperSpeech({
+        provider: settingsStore.voiceTranscriptionProvider,
         onResult: (result) => {
             console.log('[Whisper] Result:', result)
             if (result.transcript.trim()) {

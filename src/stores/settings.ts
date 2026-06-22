@@ -9,6 +9,7 @@ import type { PushNotificationPreferences } from '@/types/pushNotifications'
 import { DEFAULT_PUSH_NOTIFICATION_PREFERENCES } from '@/types/pushNotifications'
 // FEATURE-1162: Saved Views / Smart Filters
 import type { SavedView } from '@/types/savedViews'
+import type { TranscriptionProviderId } from '@/services/transcription/types'
 
 // TASK-1317: External calendar (iCal) sync config
 export interface ExternalCalendarConfig {
@@ -101,6 +102,9 @@ export interface AppSettings {
     // TASK-1814: Subscription brain via VPS bridge (Claude/Codex CLIs)
     aiUseSubscription: boolean
     aiBrain: 'claude' | 'codex'
+
+    // Android/mobile voice transcription
+    voiceTranscriptionProvider: TranscriptionProviderId
 
     // FEATURE-1162: Saved Views / Smart Filters
     savedViews: SavedView[]
@@ -295,6 +299,7 @@ export const useSettingsStore = defineStore('settings', {
         // TASK-1814: subscription brain on by default; Claude is the default brain
         aiUseSubscription: _persisted?.aiUseSubscription ?? true,
         aiBrain: (_persisted?.aiBrain ?? 'claude') as 'claude' | 'codex',
+        voiceTranscriptionProvider: (_persisted?.voiceTranscriptionProvider ?? 'auto') as TranscriptionProviderId,
 
         // FEATURE-1162: Saved Views defaults
         savedViews: [],
@@ -466,6 +471,9 @@ export const useSettingsStore = defineStore('settings', {
                     }
                     if (this.$state.aiBrain === undefined) {
                         this.$state.aiBrain = 'claude'
+                    }
+                    if (this.$state.voiceTranscriptionProvider === undefined) {
+                        this.$state.voiceTranscriptionProvider = 'auto'
                     }
                     // Backfill day group position rotation
                     if (this.$state.enableDayGroupPositionRotation === undefined) {

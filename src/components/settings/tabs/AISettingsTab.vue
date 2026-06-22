@@ -14,6 +14,7 @@ import { resetSharedRouter } from '@/services/ai/routerFactory'
 import { isBridgeAvailable } from '@/services/ai/proxy/bridgeClient'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { AIMemoryDebugSnapshot } from '@/types/aiMemory'
+import type { TranscriptionProviderId } from '@/services/transcription/types'
 
 const { usageSummary, weekUsage, monthUsage, hasUsageData, pricingCatalog, clearUsageData } = useAIUsageTracking()
 const settingsStore = useSettingsStore()
@@ -40,6 +41,16 @@ function onToggleSubscription(v: boolean) {
 }
 void checkBridge()
 const { profile, loadProfile, savePreferences, computeCapacityMetrics, resetLearnedData } = useWorkProfile()
+
+const VOICE_TRANSCRIPTION_OPTIONS: Array<{ key: TranscriptionProviderId; label: string; desc: string }> = [
+  { key: 'auto', label: 'Auto', desc: 'Android Gemma when ready, otherwise Whisper' },
+  { key: 'whisper-cloud', label: 'Whisper', desc: 'Current Groq Whisper cloud path' },
+  { key: 'android-gemma-local', label: 'Android Gemma', desc: 'Local-only Android bridge' },
+]
+
+function setVoiceTranscriptionProvider(provider: TranscriptionProviderId) {
+  settingsStore.updateSetting('voiceTranscriptionProvider', provider)
+}
 
 // ── TASK-1356: Memory Health Assessment ──
 const {
@@ -426,6 +437,26 @@ async function onClearMemories() {
           </button>
         </div>
       </template>
+    </SettingsSection>
+
+    <SettingsSection title="Voice Transcription">
+      <p class="section-desc">
+        Choose how mobile voice capture is transcribed. Android Gemma requires the native FlowState
+        bridge and a FlowState-accessible model copy; Edge Gallery's private app storage is not used.
+      </p>
+
+      <div class="provider-chips">
+        <button
+          v-for="opt in VOICE_TRANSCRIPTION_OPTIONS"
+          :key="opt.key"
+          class="provider-chip"
+          :class="{ active: settingsStore.voiceTranscriptionProvider === opt.key }"
+          @click="setVoiceTranscriptionProvider(opt.key)"
+        >
+          <span class="provider-chip-label">{{ opt.label }}</span>
+          <span class="provider-chip-desc">{{ opt.desc }}</span>
+        </button>
+      </div>
     </SettingsSection>
 
     <!-- Default Provider & Model -->

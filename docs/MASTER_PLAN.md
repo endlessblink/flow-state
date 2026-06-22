@@ -32,6 +32,29 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### ~~TASK-1882~~: Add Android Gemma transcription provider contract and safe Whisper fallback (DONE)
+
+**Priority**: P1 | **Status**: DONE (2026-06-23) — provider abstraction, Android bridge stub, settings selector, fallback tests, typecheck, and PWA build verified. | **Depends on**: TASK-1131
+
+**Why**: `gemma-3n-e4b-it` was downloaded through Google AI Edge Gallery on Android, but Edge Gallery is a separate app/sample UI and does not expose its private model runtime to the FlowState PWA. FlowState needs its own Android-native transcription bridge before it can reliably use local Gemma.
+
+**Fix**: Added a transcription provider layer with `auto`, `whisper-cloud`, and `android-gemma-local`. Mobile voice capture and queued offline audio now go through the shared provider service. Android has a registered Capacitor plugin contract for Gemma status/import/transcribe and explicit microphone permission; until native MediaPipe/Gemma inference is bundled, local-only mode fails clearly and `auto` falls back to Whisper.
+
+**Tests**: `npm run test -- tests/unit/voice/transcription-provider.test.ts` passed; `npm run type-check` passed; `npm run build` passed and generated the PWA service worker precache. Android compile is environment-blocked in this shell because no JDK is installed or on `PATH` (`JAVA_HOME` unset, no `java` command).
+
+### TASK-1883: Bundle real Android MediaPipe/Gemma inference for local voice transcription
+
+**Priority**: P1 | **Status**: PLANNED (filed 2026-06-23) | **Depends on**: TASK-1882
+
+**Why**: TASK-1882 makes FlowState choose and call an Android Gemma provider safely, but the native plugin intentionally does not claim local transcription works until FlowState owns a model import/copy path and bundles the MediaPipe/Gemma runtime. Edge Gallery private app storage must not be treated as FlowState-readable.
+
+**Acceptance**:
+- FlowState Android can import or bundle a Gemma 3n-compatible model into app-accessible storage.
+- `AndroidGemmaTranscriptionPlugin.getStatus()` returns available only when the runtime and model are loaded.
+- `transcribe()` returns a real Hebrew/English transcript without calling `whisper-transcribe`.
+- `auto` still falls back to Whisper on model/runtime failure, while `android-gemma-local` reports a clear local-only error.
+- Android build proof runs with a configured JDK.
+
 ### ~~BUG-1880~~: PWA Today task view shows stale overdue tasks before rescheduled today tasks (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-22) — fixed with regression coverage and deployed to the production PWA. | **Depends on**: BUG-1877, BUG-1867

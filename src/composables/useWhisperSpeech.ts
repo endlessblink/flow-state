@@ -11,7 +11,8 @@
 
 import { ref, computed, readonly, onUnmounted } from 'vue'
 import { useOnline } from '@vueuse/core'
-import { supabase } from '@/composables/supabase/_infrastructure'
+import { createTranscriptionService } from '@/services/transcription/provider'
+import type { TranscriptionProviderId } from '@/services/transcription/types'
 
 export type WhisperStatus = 'idle' | 'recording' | 'processing' | 'error' | 'queued'
 
@@ -25,6 +26,8 @@ export interface WhisperResult {
 export interface UseWhisperSpeechOptions {
   /** Whisper model to use (default: 'whisper-large-v3-turbo' - best value) */
   model?: 'whisper-large-v3' | 'whisper-large-v3-turbo' | 'distil-whisper-large-v3-en'
+  /** Transcription route: auto tries Android Gemma first, then cloud Whisper */
+  provider?: TranscriptionProviderId
   /** Max recording duration in seconds (default: 30) */
   maxDuration?: number
   /** Callback when transcription is complete */
@@ -35,29 +38,22 @@ export interface UseWhisperSpeechOptions {
   onOfflineRecord?: (audioBlob: Blob, mimeType: string) => void
 }
 
-const DEFAULT_OPTIONS = {
+const DEFAULT_OPTIONS: Required<Pick<UseWhisperSpeechOptions, 'model' | 'maxDuration'>> = {
   model: 'whisper-large-v3', // Best Hebrew accuracy: $0.111/hour (vs $0.04 for turbo)
   maxDuration: 30
-}
-
-// Edge function endpoint (API key is server-side, synced from Doppler)
-const getWhisperEndpoint = () => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-  // Handle both relative and absolute URLs
-  if (supabaseUrl.startsWith('/')) {
-    return `${window.location.origin}${supabaseUrl}/functions/v1/whisper-transcribe`
-  }
-  return `${supabaseUrl}/functions/v1/whisper-transcribe`
 }
 
 export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   const {
     model = DEFAULT_OPTIONS.model,
+    provider = 'auto',
     maxDuration = DEFAULT_OPTIONS.maxDuration,
     onResult,
     onError,
     onOfflineRecord
   } = options
+
+  const transcriptionService = createTranscriptionService({ model, provider })
 
   // Online status for offline queue support (TASK-1131)
   const isOnline = useOnline()
@@ -272,8 +268,13 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
         return
       }
 
-      // TASK-1131: Check if offline and queue audio for later
-      if (!isOnline.value && onOfflineRecord) {
+      const localStatus = !isOnline.value
+        ? (await transcriptionService.getStatus()).androidGemma
+        : null
+
+      // TASK-1131: Check if offline and queue audio for later unless local Android
+      // Gemma is actually ready to handle the recording without network access.
+      if (!isOnline.value && onOfflineRecord && provider !== 'android-gemma-local' && !localStatus?.available) {
         if (import.meta.env.DEV) {
           console.log('[VOICE] Offline - queuing audio for later transcription')
         }
@@ -288,73 +289,25 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
         return
       }
 
-      // Prepare form data for Edge Function
-      const formData = new FormData()
-
-      // Whisper API expects specific file extensions
-      const extension = audioBlob.type.includes('webm') ? 'webm'
-        : audioBlob.type.includes('ogg') ? 'ogg'
-        : audioBlob.type.includes('mp4') ? 'm4a'
-        : audioBlob.type.includes('wav') ? 'wav'
-        : 'webm'
-
-      formData.append('file', audioBlob, `audio.${extension}`)
-      formData.append('model', model)
-      // Hebrew as primary language — Whisper preserves English proper nouns listed in the prompt
-      formData.append('language', 'he')
-      formData.append('prompt', 'שלום, זהו תמלול של משימות יומיות בעברית. מונחים באנגלית שיש לשמור כפי שהם: '
-        + 'email, meeting, Zoom, GitHub, Slack, FlowState, Supabase, deadline, update, review, deploy, '
-        + 'PR, bug, feature, sprint, backlog, standup, sync, TODO, ASAP, FYI.')
-      formData.append('temperature', '0')
-
       // BUG-1350: Log model for production diagnostics (Whisper model verification)
-      console.log('[VOICE] Sending to Whisper:', { model, language: 'he', audioSize: audioBlob.size, mimeType: audioBlob.type })
+      console.log('[VOICE] Sending to transcription provider:', { provider, model, language: 'he', audioSize: audioBlob.size, mimeType: audioBlob.type })
 
-      // Call Edge Function (API key is server-side, synced from Doppler)
-      // BUG-1142: Include auth token for edge function authentication
-      const headers: Record<string, string> = {}
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`
-      }
-
-      const response = await fetch(getWhisperEndpoint(), {
-        method: 'POST',
-        headers,
-        body: formData
+      const result = await transcriptionService.transcribe({
+        audioBlob,
+        mimeType,
+        duration: recordingDuration.value,
+        preferredProvider: provider
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error?.message || `API error: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      // Filter out hallucinated segments using confidence thresholds
-      // Segments with high no_speech_prob are likely silence/noise hallucinations
-      if (data.segments && data.segments.length > 0) {
-        const filtered = data.segments
-          .filter((seg: { no_speech_prob?: number; avg_logprob?: number; text?: string }) => {
-            const noSpeechProb = seg.no_speech_prob ?? 0
-            const avgLogprob = seg.avg_logprob ?? 0
-            // Keep segments where speech is likely detected and confidence is reasonable
-            return noSpeechProb < 0.6 && avgLogprob > -1.0
-          })
-          .map((seg: { text?: string }) => seg.text?.trim() || '')
-          .filter(Boolean)
-
-        transcript.value = filtered.length > 0 ? filtered.join(' ') : (data.text || '')
-      } else {
-        transcript.value = data.text || ''
-      }
-      detectedLanguage.value = data.language || null
+      transcript.value = result.transcript
+      detectedLanguage.value = result.language || null
 
       if (import.meta.env.DEV) {
         console.log('[VOICE] Transcription complete:', {
           text: transcript.value,
           language: detectedLanguage.value,
-          duration: data.duration
+          duration: result.duration,
+          provider: result.provider
         })
       }
 
@@ -364,8 +317,8 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
         onResult({
           transcript: transcript.value,
           language: detectedLanguage.value || 'unknown',
-          duration: data.duration || recordingDuration.value,
-          segments: data.segments
+          duration: result.duration || recordingDuration.value,
+          segments: result.segments
         })
       }
 

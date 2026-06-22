@@ -34,7 +34,7 @@
 
 ### ~~BUG-1880~~: PWA Today task view shows stale overdue tasks before rescheduled today tasks (✅ DONE)
 
-**Priority**: P1 | **Status**: ✅ DONE (2026-06-22) — fixed with regression coverage and production PWA build. | **Depends on**: BUG-1877, BUG-1867
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-22) — fixed with regression coverage and deployed to the production PWA. | **Depends on**: BUG-1877, BUG-1867
 
 **Why**: Phone/PWA Today mode can feel out of sync with Electron after desktop reschedules because the mobile task view still lets overdue rows win visible ordering in Today mode. The standalone Today route already had a narrow Today-before-Overdue unit guard, but the main PWA task view (`MobileInboxView` / `MobileInboxTaskList`) rendered the ungrouped Today mode as Overdue first, and the composable kept canvas/project/priority ordering inside Today mode instead of pinning tasks due today before overdue tasks.
 
@@ -46,6 +46,8 @@
 **Fix**: `MobileInboxTaskList.vue` now renders the Today section before Overdue in the normal PWA task view. `useMobileInboxLogic.ts` also applies a Today-mode ordering pass so tasks due today stay above overdue tasks even when canvas/project/priority grouping would otherwise preserve stale overdue-first order.
 
 **Tests**: RED proof: `tests/unit/mobile-inbox-today-order.test.ts` failed on old behavior with `['Overdue', 'Today']` and stale canvas order before the fix. Green proof: `npm run test -- tests/unit/mobile-inbox-today-order.test.ts tests/unit/mobile-today-order.test.ts tests/unit/pwa-offline-regression.test.ts` passed 21/21; `npm run type-check` passed; `npm run build` passed and generated the PWA service worker precache; `npm run lint` exited 0 under the repo wrapper.
+
+**Production PWA proof**: Deployed `dist/` to `root@84.46.253.137:/var/www/flowstate/` with `rsync -avz --delete --exclude='updates/'`, reloaded Caddy, and verified `https://in-theflow.com/` serves the new `index-DE18XqFj.js` bundle. `DOMAIN=https://in-theflow.com ./scripts/validate-chunks.sh` passed with 164/164 chunks verified; live `sw.js` and VPS `/var/www/flowstate/sw.js` both contain the 36,443-byte current service worker.
 
 ### ~~BUG-1879~~: Catalogue context-menu date picker closes when clicking calendar controls (✅ DONE)
 

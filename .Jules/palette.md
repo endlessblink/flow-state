@@ -1,0 +1,3 @@
+## 2024-05-18 - Task Card Action Buttons Keyboard Accessibility
+**Learning:** Hidden hover actions (like Kanban card "focus" and "timer" buttons) that rely solely on `opacity: 0` and `:hover` transitions are inaccessible to keyboard users unless `.parent:focus-within` is also applied and `tabindex="-1"` is removed from the target elements.
+**Action:** Ensure all hover-revealed utility buttons use natively focusable elements without `tabindex="-1"`, and configure parent containers to reveal them using both `:hover` and `:focus-within` selectors. Add explicit `:focus-visible` styling for clear visual feedback.

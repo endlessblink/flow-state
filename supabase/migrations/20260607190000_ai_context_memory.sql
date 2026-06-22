@@ -4,7 +4,8 @@
 create extension if not exists pg_trgm;
 
 create table if not exists public.project_contexts (
-  project_id uuid primary key references public.projects(id) on delete cascade,
+  -- text, not uuid: projects.id is text (fix_id_types). A uuid FK fails on fresh DB boot.
+  project_id text primary key references public.projects(id) on delete cascade,
   user_id uuid references auth.users(id) on delete cascade not null,
   summary text,
   domain text not null default 'unknown'
@@ -32,8 +33,9 @@ create table if not exists public.project_contexts (
 );
 
 create table if not exists public.task_contexts (
-  task_id uuid primary key references public.tasks(id) on delete cascade,
-  project_id uuid references public.projects(id) on delete set null,
+  -- text, not uuid: tasks.id/projects.id are text (fix_id_types).
+  task_id text primary key references public.tasks(id) on delete cascade,
+  project_id text references public.projects(id) on delete set null,
   user_id uuid references auth.users(id) on delete cascade not null,
   summary text,
   why_it_matters text,
@@ -55,8 +57,9 @@ create table if not exists public.task_contexts (
 );
 
 create table if not exists public.project_task_links (
-  project_id uuid references public.projects(id) on delete cascade,
-  task_id uuid references public.tasks(id) on delete cascade,
+  -- text, not uuid: projects.id/tasks.id are text (fix_id_types).
+  project_id text references public.projects(id) on delete cascade,
+  task_id text references public.tasks(id) on delete cascade,
   user_id uuid references auth.users(id) on delete cascade not null,
   link_type text not null
     check (link_type in ('belongs_to','maybe_belongs_to','follow_up','blocked_by')),

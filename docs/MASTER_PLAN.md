@@ -1,5 +1,17 @@
 # FlowState MASTER_PLAN.md
 
+## 🔁 Restart Cursor — Android Gemma Voice E2E WIP (2026-06-23)
+
+**Task**: TASK-1883 remains IN PROGRESS. Do not mark complete until Android Gemma is proven on device with a readable Gemma 3n `.task`/`.litertlm` model, real microphone capture, native MediaPipe inference, and a transcript returned without `whisper-transcribe`.
+
+**Current WIP commit context**: The interrupted run converted the placeholder Android Gemma route into a real implementation attempt: added `com.google.mediapipe:tasks-genai:0.10.27`, rewrote `AndroidGemmaTranscriptionPlugin` to persist/import a FlowState-owned model path, validate WAV audio, expose `setModelPath`, and call MediaPipe LLM inference; added a browser WAV recorder so Gemma gets mono 16 kHz WAV while Whisper keeps MediaRecorder; default non-mobile transcription now stays on Whisper unless a caller explicitly selects `auto`; the mobile voice pill now shows Auto/Whisper/Gemma instead of a generic AI badge; settings gained an Android Gemma model-path field.
+
+**Verified before save**: RED/green `npm run test -- tests/unit/voice/transcription-provider.test.ts` now passes 4/4 and proves default callers do not silently probe Android Gemma. `npm run type-check` passes.
+
+**Blocked proof**: Android build/device proof is not complete. A local JDK was found at `/home/endlessblink/.antigravity/extensions/redhat.java-1.54.0-linux-x64/jre/21.0.10-linux-x86_64`, but `JAVA_HOME=... ./gradlew assembleDebug` is blocked by missing Android SDK configuration: no `ANDROID_HOME` and no `android/local.properties` `sdk.dir`. No `adb`/`sdkmanager` was found in the searched local paths. Resume by installing or locating Android SDK, setting `ANDROID_HOME` or `android/local.properties`, then compile to catch any exact MediaPipe audio API mismatches. After compile, install/run on the Android device, set/import a FlowState-readable model path, select Android Gemma/local or Auto, and confirm the native route returns a transcript without Whisper.
+
+**Research anchor**: Use official Google/MediaPipe sources only for the next patch. The Android LLM Inference docs say `tasks-genai:0.10.27` is the dependency, models should be hosted/downloaded/imported rather than bundled, and Gemma 3n audio input requires mono WAV via MediaPipe LLM Inference. The official `google-ai-edge/gallery` repo exists at `google-ai-edge/gallery`; inspect its Android model manager and LLM helper code before changing native API calls further.
+
 ## 🔜 Next Up — AI Co-Pilot Product Lanes (start here after restart)
 
 **Goal**: Evolve FlowState AI from a helpful chat panel into a safe, layered, observable productivity co-pilot across tasks, lanes, calendar, canvas, focus sessions, and long-term memory.

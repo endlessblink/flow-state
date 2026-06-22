@@ -5,7 +5,7 @@
       v-if="isListening || isProcessingVoice || isVoiceQueued"
       class="voice-feedback-pill"
     >
-      <span class="voice-mode-badge whisper">🤖 AI</span>
+      <span class="voice-mode-badge" :class="voiceProviderLabel.toLowerCase()">{{ voiceProviderLabel }}</span>
       <div class="voice-waveform" :class="{ paused: isVoiceQueued }">
         <span class="wave-bar" />
         <span class="wave-bar" />
@@ -51,6 +51,7 @@ defineProps<{
   isVoiceQueued: boolean
   recordingDuration: number
   voiceError: string | null
+  voiceProviderLabel: string
 }>()
 
 defineEmits<{
@@ -138,10 +139,17 @@ defineEmits<{
   white-space: nowrap;
 }
 
-.voice-mode-badge.whisper {
+.voice-mode-badge.whisper,
+.voice-mode-badge.auto {
   background: var(--brand-primary-subtle);
   color: var(--brand-primary);
   border: 1px solid rgba(var(--brand-primary-rgb), 0.2);
+}
+
+.voice-mode-badge.gemma {
+  background: rgba(var(--color-success-rgb, 52, 211, 153), 0.14);
+  color: var(--color-success);
+  border: 1px solid rgba(var(--color-success-rgb, 52, 211, 153), 0.28);
 }
 
 .voice-waveform {

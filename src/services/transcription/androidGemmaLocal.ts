@@ -34,7 +34,9 @@ export function createAndroidGemmaLocalProvider(): TranscriptionProvider {
           id: 'android-gemma-local',
           available: status.available,
           modelConfigured: status.modelConfigured,
-          reason: status.reason
+          reason: status.reason,
+          modelPath: status.modelPath,
+          requiresWavAudio: true
         }
       } catch (error) {
         return {
@@ -49,6 +51,9 @@ export function createAndroidGemmaLocalProvider(): TranscriptionProvider {
       const status = await this.status()
       if (!status.available) {
         throw new Error(status.reason || 'Android Gemma transcription is unavailable.')
+      }
+      if (!request.mimeType.toLowerCase().includes('wav')) {
+        throw new Error(`Android Gemma requires mono WAV audio. Received ${request.mimeType || 'unknown audio type'}.`)
       }
 
       const result = await AndroidGemmaNative.transcribe({

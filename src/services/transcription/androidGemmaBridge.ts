@@ -3,6 +3,7 @@ import { registerPlugin } from '@capacitor/core'
 export interface AndroidGemmaStatus {
   available: boolean
   modelConfigured: boolean
+  modelPath?: string
   reason?: string
 }
 
@@ -22,6 +23,7 @@ export interface AndroidGemmaNativePlugin {
   getStatus(): Promise<AndroidGemmaStatus>
   transcribe(options: AndroidGemmaTranscribeOptions): Promise<AndroidGemmaTranscribeResult>
   importModel(options: { uri: string }): Promise<AndroidGemmaStatus>
+  setModelPath(options: { path: string }): Promise<AndroidGemmaStatus>
 }
 
 export const AndroidGemmaNative = registerPlugin<AndroidGemmaNativePlugin>('AndroidGemmaTranscription')

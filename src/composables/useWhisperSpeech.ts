@@ -11,6 +11,7 @@
 
 import { ref, computed, readonly, onUnmounted } from 'vue'
 import { useOnline } from '@vueuse/core'
+import { WavRecorder } from '@/services/audio/wavRecorder'
 import { createTranscriptionService } from '@/services/transcription/provider'
 import type { TranscriptionProviderId } from '@/services/transcription/types'
 
@@ -21,6 +22,7 @@ export interface WhisperResult {
   language: string // Detected language code (e.g., 'he', 'en')
   duration: number // Audio duration in seconds
   segments?: Array<{ text: string; start: number; end: number; no_speech_prob: number; avg_logprob: number }>
+  provider?: Exclude<TranscriptionProviderId, 'auto'>
 }
 
 export interface UseWhisperSpeechOptions {
@@ -46,7 +48,7 @@ const DEFAULT_OPTIONS: Required<Pick<UseWhisperSpeechOptions, 'model' | 'maxDura
 export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   const {
     model = DEFAULT_OPTIONS.model,
-    provider = 'auto',
+    provider = 'whisper-cloud',
     maxDuration = DEFAULT_OPTIONS.maxDuration,
     onResult,
     onError,
@@ -65,9 +67,11 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   const isSupported = ref(false)
   const detectedLanguage = ref<string | null>(null)
   const recordingDuration = ref(0)
+  const lastProvider = ref<Exclude<TranscriptionProviderId, 'auto'> | null>(null)
 
   // Internal refs
   let mediaRecorder: MediaRecorder | null = null
+  let wavRecorder: WavRecorder | null = null
   let audioChunks: Blob[] = []
   let recordingTimer: ReturnType<typeof setInterval> | null = null
   let maxDurationTimer: ReturnType<typeof setTimeout> | null = null
@@ -131,52 +135,52 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
       audioChunks = []
       recordingDuration.value = 0
 
-      // Create MediaRecorder
-      // Prefer webm/opus for smaller file size, fallback to other formats
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
-            ? 'audio/ogg;codecs=opus'
-            : MediaRecorder.isTypeSupported('audio/mp4')
-              ? 'audio/mp4'
-              : 'audio/wav'
+      if (await shouldRecordWavForGemma()) {
+        wavRecorder = new WavRecorder({ sampleRate: 16000 })
+        await wavRecorder.start(stream)
+      } else {
+        // Prefer webm/opus for smaller file size, fallback to other formats.
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : MediaRecorder.isTypeSupported('audio/webm')
+            ? 'audio/webm'
+            : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+              ? 'audio/ogg;codecs=opus'
+              : MediaRecorder.isTypeSupported('audio/mp4')
+                ? 'audio/mp4'
+                : 'audio/wav'
 
-      mediaRecorder = new MediaRecorder(stream, { mimeType })
+        mediaRecorder = new MediaRecorder(stream, { mimeType })
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunks.push(event.data)
-        }
-      }
-
-      mediaRecorder.onstop = async () => {
-        clearTimers()
-
-        // Stop all tracks
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop())
-          stream = null
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunks.push(event.data)
+          }
         }
 
-        // Process the audio
-        if (audioChunks.length > 0) {
-          await processAudio()
-        } else {
-          status.value = 'idle'
-        }
-      }
+        mediaRecorder.onstop = async () => {
+          clearTimers()
+          stopStream()
 
-      mediaRecorder.onerror = (event) => {
-        console.error('[VOICE] MediaRecorder error:', event)
-        error.value = 'Recording failed'
-        status.value = 'error'
-        if (onError) onError(error.value)
+          if (audioChunks.length > 0) {
+            await processAudio()
+          } else {
+            status.value = 'idle'
+          }
+        }
+
+        mediaRecorder.onerror = (event) => {
+          console.error('[VOICE] MediaRecorder error:', event)
+          error.value = 'Recording failed'
+          status.value = 'error'
+          if (onError) onError(error.value)
+        }
       }
 
       // Start recording
-      mediaRecorder.start(1000) // Collect data every second
+      if (mediaRecorder) {
+        mediaRecorder.start(1000) // Collect data every second
+      }
       status.value = 'recording'
 
       // Duration tracking
@@ -213,6 +217,14 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
    * Stop recording and process audio
    */
   const stop = (): void => {
+    if (wavRecorder && status.value === 'recording') {
+      if (import.meta.env.DEV) {
+        console.log('[VOICE] Stopping WAV recording')
+      }
+      void stopWavRecording()
+      return
+    }
+
     if (mediaRecorder && status.value === 'recording') {
       if (import.meta.env.DEV) {
         console.log('[VOICE] Stopping recording')
@@ -227,14 +239,17 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   const cancel = (): void => {
     clearTimers()
 
+    if (wavRecorder) {
+      wavRecorder.cancel()
+      wavRecorder = null
+    }
+
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop()
     }
+    mediaRecorder = null
 
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop())
-      stream = null
-    }
+    stopStream()
 
     audioChunks = []
     transcript.value = ''
@@ -301,6 +316,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
 
       transcript.value = result.transcript
       detectedLanguage.value = result.language || null
+      lastProvider.value = result.provider
 
       if (import.meta.env.DEV) {
         console.log('[VOICE] Transcription complete:', {
@@ -318,7 +334,8 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
           transcript: transcript.value,
           language: detectedLanguage.value || 'unknown',
           duration: result.duration || recordingDuration.value,
-          segments: result.segments
+          segments: result.segments,
+          provider: result.provider
         })
       }
 
@@ -345,6 +362,45 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
     }
   }
 
+  const stopStream = (): void => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+      stream = null
+    }
+  }
+
+  const stopWavRecording = async (): Promise<void> => {
+    if (!wavRecorder) return
+
+    clearTimers()
+    try {
+      const audioBlob = await wavRecorder.stop()
+      wavRecorder = null
+      stopStream()
+      audioChunks = [audioBlob]
+      await processAudio()
+    } catch (err) {
+      stopStream()
+      const msg = err instanceof Error ? err.message : 'Failed to stop recording'
+      error.value = msg
+      status.value = 'error'
+      if (onError) onError(msg)
+    }
+  }
+
+  const shouldRecordWavForGemma = async (): Promise<boolean> => {
+    if (provider === 'android-gemma-local') return true
+    if (provider !== 'auto') return false
+
+    try {
+      const localStatus = (await transcriptionService.getStatus()).androidGemma
+      return localStatus.available && localStatus.requiresWavAudio !== false
+    } catch (err) {
+      console.warn('[VOICE] Unable to check Android Gemma status before recording:', err)
+      return false
+    }
+  }
+
   /**
    * Reset all state
    */
@@ -368,6 +424,7 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
     isSupported: readonly(isSupported),
     detectedLanguage: readonly(detectedLanguage),
     recordingDuration: readonly(recordingDuration),
+    lastProvider: readonly(lastProvider),
     isOnline: readonly(isOnline), // TASK-1131: expose online status
 
     // Computed

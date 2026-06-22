@@ -20,6 +20,8 @@ export interface TranscriptionProviderStatus {
   available: boolean
   reason?: string
   modelConfigured?: boolean
+  modelPath?: string
+  requiresWavAudio?: boolean
 }
 
 export interface TranscriptionProvider {

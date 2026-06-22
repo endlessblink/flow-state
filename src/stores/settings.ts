@@ -105,6 +105,7 @@ export interface AppSettings {
 
     // Android/mobile voice transcription
     voiceTranscriptionProvider: TranscriptionProviderId
+    androidGemmaModelPath: string
 
     // FEATURE-1162: Saved Views / Smart Filters
     savedViews: SavedView[]
@@ -300,6 +301,7 @@ export const useSettingsStore = defineStore('settings', {
         aiUseSubscription: _persisted?.aiUseSubscription ?? true,
         aiBrain: (_persisted?.aiBrain ?? 'claude') as 'claude' | 'codex',
         voiceTranscriptionProvider: (_persisted?.voiceTranscriptionProvider ?? 'auto') as TranscriptionProviderId,
+        androidGemmaModelPath: _persisted?.androidGemmaModelPath ?? '',
 
         // FEATURE-1162: Saved Views defaults
         savedViews: [],
@@ -474,6 +476,9 @@ export const useSettingsStore = defineStore('settings', {
                     }
                     if (this.$state.voiceTranscriptionProvider === undefined) {
                         this.$state.voiceTranscriptionProvider = 'auto'
+                    }
+                    if (this.$state.androidGemmaModelPath === undefined) {
+                        this.$state.androidGemmaModelPath = ''
                     }
                     // Backfill day group position rotation
                     if (this.$state.enableDayGroupPositionRotation === undefined) {

@@ -9,7 +9,7 @@ export interface TranscriptionServiceOptions extends WhisperCloudOptions {
 }
 
 export function createTranscriptionService(options: TranscriptionServiceOptions = {}) {
-  const preferredProvider = options.provider || 'auto'
+  const preferredProvider = options.provider || 'whisper-cloud'
   const androidGemma = options.androidGemmaProvider || createAndroidGemmaLocalProvider()
   const whisperCloud = options.whisperProvider || createWhisperCloudProvider(options)
 

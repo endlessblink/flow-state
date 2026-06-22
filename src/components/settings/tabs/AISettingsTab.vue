@@ -12,6 +12,7 @@ import { PROVIDER_OPTIONS, GROQ_MODELS, OPENROUTER_MODELS, asIdLabel, filterFree
 import { tauriFetch } from '@/services/ai/utils/tauriHttp'
 import { resetSharedRouter } from '@/services/ai/routerFactory'
 import { isBridgeAvailable } from '@/services/ai/proxy/bridgeClient'
+import { AndroidGemmaNative } from '@/services/transcription/androidGemmaBridge'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import type { AIMemoryDebugSnapshot } from '@/types/aiMemory'
 import type { TranscriptionProviderId } from '@/services/transcription/types'
@@ -50,6 +51,21 @@ const VOICE_TRANSCRIPTION_OPTIONS: Array<{ key: TranscriptionProviderId; label: 
 
 function setVoiceTranscriptionProvider(provider: TranscriptionProviderId) {
   settingsStore.updateSetting('voiceTranscriptionProvider', provider)
+}
+
+const androidGemmaStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
+
+async function saveAndroidGemmaModelPath() {
+  const path = settingsStore.androidGemmaModelPath.trim()
+  if (!path) return
+  androidGemmaStatus.value = 'saving'
+  try {
+    const status = await AndroidGemmaNative.setModelPath({ path })
+    androidGemmaStatus.value = status.available ? 'saved' : 'error'
+  } catch (error) {
+    console.warn('[AndroidGemma] Failed to set model path:', error)
+    androidGemmaStatus.value = 'error'
+  }
 }
 
 // ── TASK-1356: Memory Health Assessment ──
@@ -456,6 +472,25 @@ async function onClearMemories() {
           <span class="provider-chip-label">{{ opt.label }}</span>
           <span class="provider-chip-desc">{{ opt.desc }}</span>
         </button>
+      </div>
+
+      <div class="model-selector">
+        <label class="model-selector-label">Android Gemma model path</label>
+        <div class="model-select-wrapper">
+          <input
+            class="api-key-input"
+            type="text"
+            :value="settingsStore.androidGemmaModelPath"
+            placeholder="/data/local/tmp/llm/model_version.task"
+            @input="settingsStore.updateSetting('androidGemmaModelPath', ($event.target as HTMLInputElement).value)"
+          >
+          <button class="refresh-models-btn" title="Save Android Gemma path" @click="saveAndroidGemmaModelPath">
+            <Loader2 v-if="androidGemmaStatus === 'saving'" :size="13" class="spin" />
+            <CheckCircle2 v-else-if="androidGemmaStatus === 'saved'" :size="13" />
+            <AlertCircle v-else-if="androidGemmaStatus === 'error'" :size="13" />
+            <RefreshCw v-else :size="13" />
+          </button>
+        </div>
       </div>
     </SettingsSection>
 

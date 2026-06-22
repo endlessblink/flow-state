@@ -120,6 +120,7 @@ export function useMobileInboxLogic() {
         transcript: whisperTranscript,
         error: whisperError,
         recordingDuration,
+        lastProvider: voiceLastProvider,
         isOnline: isVoiceOnline,
         start: startWhisper,
         stop: stopWhisper,
@@ -148,6 +149,12 @@ export function useMobileInboxLogic() {
     const isVoiceSupported = computed(() => isWhisperSupported.value && hasWhisperApiKey.value)
     const voiceError = computed(() => whisperError.value)
     const voiceSessionActive = computed(() => isListening.value || isProcessingVoice.value || isWhisperQueued.value)
+    const voiceProviderLabel = computed(() => {
+        const provider = voiceLastProvider.value || settingsStore.voiceTranscriptionProvider
+        if (provider === 'android-gemma-local') return 'Gemma'
+        if (provider === 'auto') return 'Auto'
+        return 'Whisper'
+    })
 
     const startVoice = async () => await startWhisper()
     const stopVoice = () => stopWhisper()
@@ -494,6 +501,7 @@ export function useMobileInboxLogic() {
         isVoiceSupported,
         voiceError,
         voiceSessionActive,
+        voiceProviderLabel,
         voicePendingCount,
         hasVoicePending,
         isVoiceOnline,

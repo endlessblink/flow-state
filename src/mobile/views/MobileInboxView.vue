@@ -83,6 +83,7 @@
       :is-voice-queued="isVoiceQueued"
       :recording-duration="recordingDuration"
       :voice-error="voiceError"
+      :voice-provider-label="voiceProviderLabel"
       @open-task-create-sheet="openTaskCreateSheet"
       @toggle-voice-input="toggleVoiceInput"
       @cancel-voice="cancelVoice"
@@ -158,6 +159,7 @@ const {
   voicePendingCount,
   hasVoicePending,
   isVoiceOnline,
+  voiceProviderLabel,
   whisperTranscript,
   recordingDuration,
 

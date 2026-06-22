@@ -27,10 +27,28 @@ function provider(
 }
 
 describe('transcription provider routing', () => {
-  it('uses Android Gemma first in auto mode when available', async () => {
+  it('uses Whisper by default so non-mobile callers do not silently probe Android Gemma', async () => {
     const androidGemma = provider('android-gemma-local', true, 'local transcript')
     const whisper = provider('whisper-cloud', true, 'cloud transcript')
     const service = createTranscriptionService({ androidGemmaProvider: androidGemma, whisperProvider: whisper })
+
+    const result = await service.transcribe({ audioBlob, mimeType: audioBlob.type })
+
+    expect(result.provider).toBe('whisper-cloud')
+    expect(result.transcript).toBe('cloud transcript')
+    expect(androidGemma.status).not.toHaveBeenCalled()
+    expect(androidGemma.transcribe).not.toHaveBeenCalled()
+    expect(whisper.transcribe).toHaveBeenCalledOnce()
+  })
+
+  it('uses Android Gemma first in auto mode when available', async () => {
+    const androidGemma = provider('android-gemma-local', true, 'local transcript')
+    const whisper = provider('whisper-cloud', true, 'cloud transcript')
+    const service = createTranscriptionService({
+      provider: 'auto',
+      androidGemmaProvider: androidGemma,
+      whisperProvider: whisper
+    })
 
     const result = await service.transcribe({ audioBlob, mimeType: audioBlob.type })
 
@@ -43,7 +61,11 @@ describe('transcription provider routing', () => {
   it('falls back to Whisper in auto mode when Android Gemma is unavailable', async () => {
     const androidGemma = provider('android-gemma-local', false, 'local transcript')
     const whisper = provider('whisper-cloud', true, 'cloud transcript')
-    const service = createTranscriptionService({ androidGemmaProvider: androidGemma, whisperProvider: whisper })
+    const service = createTranscriptionService({
+      provider: 'auto',
+      androidGemmaProvider: androidGemma,
+      whisperProvider: whisper
+    })
 
     const result = await service.transcribe({ audioBlob, mimeType: audioBlob.type })
 

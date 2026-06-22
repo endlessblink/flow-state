@@ -32,6 +32,16 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### ~~BUG-1879~~: Catalogue context-menu date picker closes when clicking calendar controls (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-22) — fixed with regression coverage and packaged locally as Electron `1.4.202`; public updater deploy requires explicit release approval. | **Depends on**: none | **Related**: TASK-1518, BUG-1519
+
+**Why**: In catalogue/list context menus, the due-date picker panel is teleported outside the menu. The outside-dismiss guard already allowed teleported date-picker DOM, but it only accepted `HTMLElement` targets. Clicking Naive UI calendar arrows can dispatch from an SVG element inside `.n-date-panel`, so the guard misclassified the click as outside the menu and closed the panel.
+
+**Fix**: `TaskContextMenu.vue` now treats any DOM `Element` as eligible for owned-surface matching before checking `.closest('.submenu, .n-date-picker, .n-date-panel, .n-popover, .ai-assist-popover')`.
+
+**Tests**: `tests/unit/task-context-menu-dismiss-contract.test.ts` covers SVG controls inside `.n-date-panel` and keeps the menu open. Local package proof: `release/latest-linux.yml` is `version: 1.4.202` with AppImage/deb artifacts built and package-validated.
+
 ### ~~BUG-1874~~: "Signed out after Electron update + restart" — fix at main/preload/storage layer (✅ DONE)
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-06-18) — shipped through Electron updater `1.4.200`; public manifest and artifact URLs verified. | **Depends on**: none | **Related**: BUG-1870, BUG-1865

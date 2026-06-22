@@ -1144,7 +1144,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
 }
 
 const isOwnedMenuTarget = (target: EventTarget | null): boolean => {
-  if (!(target instanceof HTMLElement)) return false
+  if (!(target instanceof Element)) return false
   if (menuRef.value?.contains(target)) return true
 
   // Submenus and library popovers are teleported to body, so they must count as

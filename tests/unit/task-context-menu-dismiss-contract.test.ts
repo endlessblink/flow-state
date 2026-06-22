@@ -112,6 +112,23 @@ describe('TaskContextMenu outside dismissal contract', () => {
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 
+  it('keeps the menu open when date picker SVG controls are clicked', async () => {
+    const wrapper = mountMenu()
+    wrappers.push(wrapper)
+    await waitForOutsideListeners()
+
+    const datePanel = document.createElement('div')
+    datePanel.className = 'n-date-panel'
+    const button = document.createElement('button')
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    button.appendChild(icon)
+    datePanel.appendChild(button)
+    document.body.appendChild(datePanel)
+
+    icon.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }))
+    expect(wrapper.emitted('close')).toBeUndefined()
+  })
+
   it('reattaches outside listeners after visible false-to-true reopen transitions', async () => {
     const wrapper = mountMenu()
     wrappers.push(wrapper)

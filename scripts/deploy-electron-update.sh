@@ -60,7 +60,11 @@ if [ "$SKIP_GUARD" = true ]; then
 elif [ "$DRY_RUN" = true ]; then
   echo -e "${CYAN}  [DRY RUN] Would run: npm run guard:electron-sync${NC}"
 else
-  npm run guard:electron-sync
+  # Run the guard in test mode. Doppler injects NODE_ENV=production, under which vite
+  # mis-externalizes node builtins (await import('node:fs') → readFileSync undefined,
+  # path.resolve undefined), spuriously failing source-integrity guards. A test step must
+  # not inherit the production build env. The build step below still runs in production.
+  NODE_ENV=test npm run guard:electron-sync
 fi
 
 # Step 2: Build and package Electron app through the canonical release command

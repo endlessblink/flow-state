@@ -94,6 +94,26 @@
 
 **Tests**: `tests/e2e/canvas-geometry-local.spec.ts` now asserts both visible-node recovery and that `flowstate-canvas-viewport` no longer contains the stale off-canvas coordinates after recovery. Red proof: the new assertion failed with `{"x":-20000,"y":-20000,"zoom":1}` before the fix; green proof passes after the fix. Local package proof: `release/latest-linux.yml` is `version: 1.4.201` with AppImage/deb artifacts built and package-validated.
 
+### ~~BUG-1881~~: Electron signs user out after update + random restart (✅ DONE)
+
+**Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-06-22) — fixed + unit-proven; version bumped to `1.4.204`, awaiting deploy authorization. | **Depends on**: BUG-1874, TASK-1871
+
+**Why**: Recurring Electron sign-out, confirmed pattern: after auto-update and randomly on restart (not while using). Telltale: after sign-out a refresh shows tasks (local IndexedDB cache) but the UI stays signed-out — i.e. the auth-session *rehydration* failed while data rendered from cache.
+
+**Root causes (confirmed by reading code)**:
+1. The ~62-min stale-backup guard in `restoreAuthSessionFromBackup` (`src/services/auth/supabase.ts`) *refused AND deleted* a recoverable session on restart. GoTrue refresh tokens live far longer server-side, so refusing locally guaranteed the sign-out and erased the only recovery source.
+2. `isElectronRuntime` was frozen at module-eval (only the storage adapter was de-frozen in BUG-1874). A momentary bridge absence could flip to the web branch → relative Supabase URL resolved against a `file://` origin → broken client.
+3. Updater store-flush timeout (1500 ms) was too tight before `app.exit(0)`, risking loss of a just-rotated refresh token after auto-update.
+
+**Fix**:
+1. Always restore the backup and let the SERVER validate the refresh token; the genuine "Already Used" case is already handled in `auth.ts` (clears dead backup, keeps signed-in shell). No local refuse/delete.
+2. `detectElectronRuntime()` now also checks the Electron user-agent / `process.type`; `resolveSupabaseUrl()` refuses to resolve a relative URL against a non-http(s) origin.
+3. Raised `STORE_FLUSH_TIMEOUT_MS` 1500 → 5000 ms in `electron/updater.ts`.
+
+**Not a cause (verified)**: KDE widget. `~/.config/flowstate/session.json` exists but is 3 months stale with a dead token; Electron never writes it (Tauri-only), so the widget cannot rotate the app's live token. Recommend deleting the stale file as hygiene.
+
+**Tests**: `tests/unit/restore-auth-backup.test.ts` (red→green: stale backup is restored, not deleted), `tests/unit/electron-runtime-detection.test.ts`. 13 auth/electron tests pass; changed files typecheck clean.
+
 ### TASK-1875: Encrypt Supabase refresh token at rest with Electron safeStorage (📋 PLANNED)
 
 **Priority**: P2 | **Status**: 📋 PLANNED (filed 2026-06-18) | **Depends on**: BUG-1874

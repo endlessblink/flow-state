@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.4.203",
+  "version": "1.4.204",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://github.com/endlessblink/flow-state",
   "repository": {

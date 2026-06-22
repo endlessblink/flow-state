@@ -14,8 +14,20 @@ const isCapacitorRuntime = typeof window !== 'undefined' &&
   !!window.Capacitor?.isNativePlatform?.()
 
 // Electron: file:// protocol does not reliably persist localStorage across restarts.
-// Detect Electron runtime via the IPC bridge injected by the preload script.
-const isElectronRuntime = typeof window !== 'undefined' && !!(window as any).electronAPI?.isElectron
+// TASK-1881: Detect the Electron runtime robustly. The preload contextBridge normally injects
+// `window.electronAPI.isElectron` before renderer scripts run, but relying on that single signal
+// at module-eval is fragile (a momentary absence permanently mis-detected the runtime for the
+// whole session). Fall back to the Electron user-agent / process tag so detection can't silently
+// flip to the web branch (which would resolve a relative Supabase URL against a file:// origin).
+export function detectElectronRuntime(): boolean {
+    if (typeof window === 'undefined') return false
+    const w = window as any
+    if (w.electronAPI?.isElectron) return true
+    if (w.process?.type === 'renderer') return true
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
+    return / Electron\//i.test(ua) || /electron/i.test(ua)
+}
+const isElectronRuntime = detectElectronRuntime()
 
 // FIX-MOBILE-PWA & TAURI COMPATIBILITY:
 // - Browser/PWA: Use relative path '/supabase' (from .env) to work via Tunnel/Caddy
@@ -50,11 +62,19 @@ function resolveSupabaseUrl(): string {
         return envUrl
     }
 
-    // Web/PWA: Resolve relative path (e.g. '/supabase' → 'https://host/supabase')
+    // Web/PWA: Resolve relative path (e.g. '/supabase' → 'https://host/supabase').
+    // TASK-1881: ONLY resolve against an http(s) origin. If runtime detection ever misfired in a
+    // desktop build, the origin would be file:// and `${origin}${envUrl}` → a broken URL that
+    // silently kills getSession/refreshSession (signed-out while local cache still renders).
     if (envUrl.startsWith('/') && typeof window !== 'undefined') {
-        const resolved = `${window.location.origin}${envUrl}`
-        if (import.meta.env.DEV) console.log('[Supabase] Web/PWA:', resolved)
-        return resolved
+        const protocol = window.location.protocol
+        if (protocol === 'http:' || protocol === 'https:') {
+            const resolved = `${window.location.origin}${envUrl}`
+            if (import.meta.env.DEV) console.log('[Supabase] Web/PWA:', resolved)
+            return resolved
+        }
+        console.warn(`[Supabase] Relative URL "${envUrl}" cannot be resolved against ${protocol} origin — using as-is. A desktop build needs a full VITE_SUPABASE_URL.`)
+        return envUrl
     }
 
     // Default: use env URL as-is
@@ -210,10 +230,16 @@ export async function restoreAuthSessionFromBackup(): Promise<Session | null> {
         const session = parsed?.session
         if (!session?.refresh_token || !session.user?.id) return null
 
+        // TASK-1881 (fix for recurring Electron "signed out on restart"):
+        // Do NOT locally refuse + delete the backup based on a ~62min age heuristic.
+        // GoTrue refresh tokens live far longer than the access-token TTL, so a backup
+        // whose access token has expired is almost always still refreshable. Always
+        // restore it and let the SERVER decide on the next refresh — the genuine
+        // "Invalid Refresh Token: Already Used" case is handled in auth.ts (it clears
+        // the dead backup there and keeps a signed-in shell for reconnect). Refusing
+        // here erased the only recovery source and guaranteed the sign-out.
         if (!isAuthBackupReplayable(session, parsed?.savedAt)) {
-            console.warn('[Supabase] Skipping stale auth backup (refresh token likely already rotated) — clearing it')
-            await clearAuthSessionBackup()
-            return null
+            console.warn('[Supabase] Auth backup looks old (access token expired); attempting restore anyway — server will validate the refresh token')
         }
 
         await authStorageSet(STORAGE_KEYS.SUPABASE_AUTH, JSON.stringify(session))

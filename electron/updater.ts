@@ -6,7 +6,10 @@ import { flushStore } from './ipc/store'
 
 // BUG-1874: never let the store flush hang the update handoff. The AppImage installer polls the
 // old PID and the single-instance lock is already released — exit must proceed even if flush is slow.
-const STORE_FLUSH_TIMEOUT_MS = 1500
+// TASK-1881: raised 1500 → 5000ms. The just-rotated refresh token is written here right before
+// app.exit(0) (which bypasses before-quit); 1.5s was too tight on a slow disk and could drop the
+// token, signing the user out after an auto-update. 5s still bounds the handoff.
+const STORE_FLUSH_TIMEOUT_MS = 5000
 
 async function flushStoreBeforeExit(): Promise<void> {
   try {

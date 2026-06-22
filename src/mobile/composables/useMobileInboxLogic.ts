@@ -308,6 +308,15 @@ export function useMobileInboxLogic() {
             }
         }
 
+        if (viewMode.value === 'today') {
+            tasks.sort((a, b) => {
+                const aOverdue = isTaskOverdue(a.dueDate)
+                const bOverdue = isTaskOverdue(b.dueDate)
+                if (aOverdue !== bOverdue) return aOverdue ? 1 : -1
+                return 0
+            })
+        }
+
         return tasks
     })
 
@@ -379,11 +388,11 @@ export function useMobileInboxLogic() {
             const overdueTasks = tasks.filter(t => isTaskOverdue(t.dueDate))
             const todayTasks = tasks.filter(t => !isTaskOverdue(t.dueDate))
 
-            if (overdueTasks.length > 0) {
-                groups.set('overdue', { key: 'overdue', title: 'Overdue', color: 'var(--color-priority-high)', tasks: overdueTasks })
-            }
             if (todayTasks.length > 0) {
                 groups.set('today', { key: 'today', title: 'Today', color: 'var(--color-success)', tasks: todayTasks })
+            }
+            if (overdueTasks.length > 0) {
+                groups.set('overdue', { key: 'overdue', title: 'Overdue', color: 'var(--color-priority-high)', tasks: overdueTasks })
             }
             return Array.from(groups.values())
         }

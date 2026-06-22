@@ -32,6 +32,21 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### ~~BUG-1880~~: PWA Today task view shows stale overdue tasks before rescheduled today tasks (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-22) — fixed with regression coverage and production PWA build. | **Depends on**: BUG-1877, BUG-1867
+
+**Why**: Phone/PWA Today mode can feel out of sync with Electron after desktop reschedules because the mobile task view still lets overdue rows win visible ordering in Today mode. The standalone Today route already had a narrow Today-before-Overdue unit guard, but the main PWA task view (`MobileInboxView` / `MobileInboxTaskList`) rendered the ungrouped Today mode as Overdue first, and the composable kept canvas/project/priority ordering inside Today mode instead of pinning tasks due today before overdue tasks.
+
+**Acceptance**:
+- In PWA/mobile Today mode, tasks due today appear at the top and overdue tasks appear afterwards.
+- The rule holds for the normal task view and grouped task modes, not only the standalone `/today` route.
+- Regression coverage fails on the old Overdue-first behavior and passes after the fix.
+
+**Fix**: `MobileInboxTaskList.vue` now renders the Today section before Overdue in the normal PWA task view. `useMobileInboxLogic.ts` also applies a Today-mode ordering pass so tasks due today stay above overdue tasks even when canvas/project/priority grouping would otherwise preserve stale overdue-first order.
+
+**Tests**: RED proof: `tests/unit/mobile-inbox-today-order.test.ts` failed on old behavior with `['Overdue', 'Today']` and stale canvas order before the fix. Green proof: `npm run test -- tests/unit/mobile-inbox-today-order.test.ts tests/unit/mobile-today-order.test.ts tests/unit/pwa-offline-regression.test.ts` passed 21/21; `npm run type-check` passed; `npm run build` passed and generated the PWA service worker precache; `npm run lint` exited 0 under the repo wrapper.
+
 ### ~~BUG-1879~~: Catalogue context-menu date picker closes when clicking calendar controls (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-22) — fixed with regression coverage and shipped through Electron updater `1.4.202`; public manifest and artifact URLs verified. | **Depends on**: none | **Related**: TASK-1518, BUG-1519

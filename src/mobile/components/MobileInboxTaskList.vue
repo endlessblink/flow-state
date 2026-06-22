@@ -15,6 +15,50 @@
 
     <!-- BUG-1483: Today mode with overdue/today separation -->
     <template v-if="viewMode === 'today' && groupBy === 'none' && filteredTasks.length > 0">
+      <!-- Today Section -->
+      <div v-if="todayOnlyTasks.length > 0" class="task-group">
+        <div class="group-header today-header">
+          <CalendarCheck :size="14" class="today-icon" />
+          <span class="group-title">Today</span>
+          <span class="group-count">{{ todayOnlyTasks.length }}</span>
+        </div>
+        <SwipeableTaskItem
+          v-for="task in todayOnlyTasks"
+          :key="task.id"
+          :task-id="task.id"
+          @edit="$emit('editTask', task)"
+          @delete="$emit('deleteTask', task)"
+        >
+          <div
+            class="mobile-task-item"
+            :class="[{ 'timer-active': isTimerActive(task.id) }]"
+            @click="$emit('clickTask', task)"
+          >
+            <div class="task-checkbox" @click.stop="$emit('toggleTask', task)">
+              <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
+                <Check v-if="task.status === 'done'" :size="14" />
+              </div>
+            </div>
+            <div class="task-content">
+              <div class="task-title-row">
+                <span class="task-title" dir="auto" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
+                <span v-if="task.priority" class="priority-badge-inline" :class="[task.priority]">
+                  {{ priorityLabel(task.priority || 'none') }}
+                </span>
+              </div>
+              <div class="task-meta">
+                <span v-if="getProjectName(task.projectId)" class="project-badge">
+                  {{ getProjectName(task.projectId) }}
+                </span>
+              </div>
+            </div>
+            <button class="timer-btn" @click.stop="$emit('startTimer', task)">
+              <Play :size="16" />
+            </button>
+          </div>
+        </SwipeableTaskItem>
+      </div>
+
       <!-- Overdue Section -->
       <div v-if="overdueTasks.length > 0" class="task-group">
         <div class="group-header overdue-header">
@@ -51,50 +95,6 @@
                   <Calendar :size="12" />
                   {{ formatDueDate(task.dueDate) }}
                 </span>
-                <span v-if="getProjectName(task.projectId)" class="project-badge">
-                  {{ getProjectName(task.projectId) }}
-                </span>
-              </div>
-            </div>
-            <button class="timer-btn" @click.stop="$emit('startTimer', task)">
-              <Play :size="16" />
-            </button>
-          </div>
-        </SwipeableTaskItem>
-      </div>
-
-      <!-- Today Section -->
-      <div v-if="todayOnlyTasks.length > 0" class="task-group">
-        <div class="group-header today-header">
-          <CalendarCheck :size="14" class="today-icon" />
-          <span class="group-title">Today</span>
-          <span class="group-count">{{ todayOnlyTasks.length }}</span>
-        </div>
-        <SwipeableTaskItem
-          v-for="task in todayOnlyTasks"
-          :key="task.id"
-          :task-id="task.id"
-          @edit="$emit('editTask', task)"
-          @delete="$emit('deleteTask', task)"
-        >
-          <div
-            class="mobile-task-item"
-            :class="[{ 'timer-active': isTimerActive(task.id) }]"
-            @click="$emit('clickTask', task)"
-          >
-            <div class="task-checkbox" @click.stop="$emit('toggleTask', task)">
-              <div class="checkbox-circle" :class="[{ checked: task.status === 'done' }]">
-                <Check v-if="task.status === 'done'" :size="14" />
-              </div>
-            </div>
-            <div class="task-content">
-              <div class="task-title-row">
-                <span class="task-title" dir="auto" :class="[{ done: task.status === 'done' }]">{{ task.title }}</span>
-                <span v-if="task.priority" class="priority-badge-inline" :class="[task.priority]">
-                  {{ priorityLabel(task.priority || 'none') }}
-                </span>
-              </div>
-              <div class="task-meta">
                 <span v-if="getProjectName(task.projectId)" class="project-badge">
                   {{ getProjectName(task.projectId) }}
                 </span>

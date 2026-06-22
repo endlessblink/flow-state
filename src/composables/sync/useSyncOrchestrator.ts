@@ -497,6 +497,36 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
       }
 
       case 'delete': {
+        const isQueuedPermanentTaskDelete = entityType === 'task' && payload.permanentDelete === true
+
+        if (isQueuedPermanentTaskDelete) {
+          result = await supabase!
+            .from(tableName)
+            .delete()
+            .eq('id', entityId)
+            .select()
+
+          if (!result.error) {
+            const userId = operation.userId || (payload.user_id as string | undefined)
+            if (userId) {
+              const tombstoneResult = await supabase!
+                .from(DB_TABLES.TOMBSTONES)
+                .upsert({
+                  user_id: userId,
+                  entity_type: 'task',
+                  entity_id: entityId,
+                  deleted_at: new Date().toISOString(),
+                  expires_at: null
+                }, { onConflict: 'entity_type,entity_id,user_id' })
+
+              if (tombstoneResult.error) {
+                throw tombstoneResult.error
+              }
+            }
+          }
+          break
+        }
+
         // BUG-1211 FIX: Use correct DB column name `is_deleted` (not app-side `_soft_deleted`).
         // The sync orchestrator bypasses supabaseMappers, so we must use DB column names directly.
         // Previously used `_soft_deleted` which ALWAYS failed, causing fallback to hard DELETE

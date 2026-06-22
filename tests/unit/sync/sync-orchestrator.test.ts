@@ -512,14 +512,63 @@ describe('Field name mapping (BUG-1211 regression prevention)', () => {
       'utf-8'
     )
 
-    // Extract the full delete case block
     const deleteCaseStart = sourceCode.indexOf("case 'delete':")
-    const deleteCaseEnd = sourceCode.indexOf('break', deleteCaseStart + 200)
+    const deleteCaseEnd = sourceCode.indexOf('    if (result.error)', deleteCaseStart)
     const deleteCase = sourceCode.slice(deleteCaseStart, deleteCaseEnd + 10)
 
-    // Should NOT contain a fallback hard delete pattern
-    expect(deleteCase).not.toMatch(/\.delete\(\)[\s\S]*?\.delete\(\)/)
+    // Regular queued deletes must stay soft-delete only; the explicit
+    // permanentDelete branch above is not a BUG-1211 fallback.
+    const softDeleteBlock = deleteCase.slice(deleteCase.indexOf('// BUG-1211 FIX'))
+    expect(softDeleteBlock).not.toMatch(/if\s*\([^)]*error[^)]*\)[\s\S]*?\.delete\(\)/)
     expect(deleteCase).toContain('Removed hard-delete fallback')
+  })
+
+  it('queued permanent task delete retries hard-delete semantics instead of soft-delete resurrection path', async () => {
+    const op = makeOp({
+      id: 1852,
+      operation: 'delete',
+      entityType: 'task',
+      entityId: 'task-permanent-retry',
+      payload: { id: 'task-permanent-retry', permanentDelete: true },
+      userId: 'user-001'
+    })
+
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'Single operation'
+    })
+
+    const tasksChain: Record<string, any> = {}
+    tasksChain.delete = vi.fn().mockReturnValue(tasksChain)
+    tasksChain.eq = vi.fn().mockReturnValue(tasksChain)
+    tasksChain.select = vi.fn().mockReturnValue({ data: [{ id: op.entityId }], error: null })
+    tasksChain.update = vi.fn().mockReturnValue(tasksChain)
+
+    const tombstoneChain: Record<string, any> = {}
+    tombstoneChain.upsert = vi.fn().mockReturnValue({ data: [{ id: 1 }], error: null })
+
+    supabaseMock.fromMock.mockImplementation((table: string) => {
+      if (table === 'tombstones') return tombstoneChain
+      return tasksChain
+    })
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(tasksChain.delete).toHaveBeenCalledTimes(1)
+    expect(tasksChain.update).not.toHaveBeenCalledWith(expect.objectContaining({ is_deleted: true }))
+    expect(tombstoneChain.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: 'user-001',
+      entity_type: 'task',
+      entity_id: op.entityId,
+      expires_at: null
+    }), { onConflict: 'entity_type,entity_id,user_id' })
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id)
   })
 
   it('camelCase field sanitization converts _soft_deleted to is_deleted (BUG-1533b)', async () => {
@@ -1385,7 +1434,7 @@ describe('Source code integrity (regression guards)', () => {
   it('uses is_deleted not _soft_deleted in delete case (BUG-1211)', () => {
     // Extract the full delete case block (between "case 'delete':" and the next "break")
     const deleteCaseStart = sourceCode.indexOf("case 'delete':")
-    const deleteCaseEnd = sourceCode.indexOf('break', deleteCaseStart + 200)
+    const deleteCaseEnd = sourceCode.indexOf('    if (result.error)', deleteCaseStart)
     const deleteCase = sourceCode.slice(deleteCaseStart, deleteCaseEnd + 10)
 
     expect(deleteCase).toContain('is_deleted: true')

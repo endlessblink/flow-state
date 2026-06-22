@@ -1179,15 +1179,15 @@ export function useTaskOperations(
                         entityType: 'task',
                         operation: 'delete',
                         entityId: taskId,
-                        payload: { id: taskId },
+                        payload: { id: taskId, permanentDelete: true },
                         baseVersion: deletedTask.positionVersion || 0
                     })
-                    logPermanentDeleteTrace(taskId, 'store.remote-failed-soft-delete-queued', {
+                    logPermanentDeleteTrace(taskId, 'store.remote-failed-permanent-delete-queued', {
                         rawTaskCount: _rawTasks.value.length,
                     })
                     return
                 } catch (queueError) {
-                    logPermanentDeleteTrace(taskId, 'store.remote-failed-soft-delete-queue-error', {
+                    logPermanentDeleteTrace(taskId, 'store.remote-failed-permanent-delete-queue-error', {
                         error: queueError instanceof Error ? queueError.message : String(queueError),
                     })
                     console.warn(`⚠️ [PERMANENT-DELETE] Failed to queue fallback delete for ${taskId.slice(0, 8)}; local cache still keeps it removed:`, queueError)

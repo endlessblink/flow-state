@@ -496,7 +496,10 @@ describe('task operation undo/redo three-cycle invariants', () => {
     expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({
       entityType: 'task',
       operation: 'delete',
-      entityId: task.id
+      entityId: task.id,
+      payload: expect.objectContaining({
+        permanentDelete: true
+      })
     }))
   })
 

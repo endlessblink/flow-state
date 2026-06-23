@@ -69,13 +69,13 @@
 
 ### ~~BUG-1884~~: Task context-menu project/category changes can revert or appear to do nothing (✅ DONE)
 
-**Priority**: P1 | **Status**: ✅ DONE (2026-06-23) — fixed with regression coverage and packaged locally as Electron `1.4.205`; production updater deploy needs explicit approval. | **Depends on**: TASK-1871
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-23) — fixed with regression coverage and shipped via Electron updater `1.4.205`. | **Depends on**: TASK-1871
 
 **Why**: The task context-menu project picker updated local task state, but the selective sync payload skipped `project_id` whenever the updated local `projectId` became `undefined` for Uncategorized. That field-completeness gap meant clearing a category never sent `project_id: null`, so realtime/refresh could restore the old project and make the menu action look like it did nothing.
 
 **Fix**: `updateTask()` now emits `project_id` for every explicit `projectId` change. Valid UUID project IDs sync as the UUID; Uncategorized/empty/legacy placeholder values sync as `null`.
 
-**Tests**: RED/green `npm run test -- tests/unit/sync/task-sync-payload-completeness.test.ts` covers the missing `project_id: null` path. Related proof: `npm run test -- tests/unit/components/task-row-project.test.ts tests/unit/task-context-menu-dismiss-contract.test.ts`; `npm run test -- src/stores/__tests__/tasks.test.ts`; `npm run type-check`; `npm run lint`; `npm run electron:build` for `1.4.205`. Live updater deployment was attempted after verifying `https://in-theflow.com/updates/electron/latest-linux.yml` already served `1.4.204`, but root SSH/SCP production deploy was blocked by approval policy until the user explicitly authorizes it.
+**Tests**: RED/green `npm run test -- tests/unit/sync/task-sync-payload-completeness.test.ts` covers the missing `project_id: null` path. Related proof: `npm run test -- tests/unit/components/task-row-project.test.ts tests/unit/task-context-menu-dismiss-contract.test.ts`; `npm run test -- src/stores/__tests__/tasks.test.ts`; `npm run type-check`; `npm run lint`; `npm run electron:build` for `1.4.205`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.205`; AppImage and deb endpoints both return HTTP 200 with sizes `180306014` and `131322040`.
 
 ### ~~BUG-1880~~: PWA Today task view shows stale overdue tasks before rescheduled today tasks (✅ DONE)
 

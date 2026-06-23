@@ -4,6 +4,13 @@ import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { type Project, type ProjectTreeNode, UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
 import { cacheProjects, getCachedProjects } from '@/services/offline/readCacheDB'
 
+export function filterProjectsForWorkspaceSync(projects: Project[], activeWorkspaceId: string | null): Project[] {
+    return projects.filter(project => {
+        const projectWorkspaceId = (project as Project & { workspaceId?: string | null }).workspaceId ?? null
+        return projectWorkspaceId === activeWorkspaceId
+    })
+}
+
 export const useProjectStore = defineStore('projects', () => {
 
     // State
@@ -128,9 +135,15 @@ export const useProjectStore = defineStore('projects', () => {
             return
         }
 
-        // Authenticated: save to Supabase
+        // Authenticated: save only the current workspace slice. Cached/realtime
+        // state can temporarily contain projects from another workspace; a bulk
+        // upsert with one inaccessible row makes Postgres reject the full batch
+        // under the projects RLS policy.
         try {
-            await saveProjects(projectsToSave)
+            const { useWorkspaceStore } = await import('@/stores/workspace')
+            const scopedProjects = filterProjectsForWorkspaceSync(projectsToSave, useWorkspaceStore().activeWorkspaceId ?? null)
+            if (scopedProjects.length === 0) return
+            await saveProjects(scopedProjects)
             // console.debug(`✅ [SUPABASE] Saved ${projectsToSave.length} projects (${context})`)
         } catch (e) {
             console.error(`❌ [SUPABASE] Project save failed (${context}):`, e)

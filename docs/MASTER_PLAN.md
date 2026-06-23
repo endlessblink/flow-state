@@ -67,6 +67,16 @@
 - `auto` still falls back to Whisper on model/runtime failure, while `android-gemma-local` reports a clear local-only error.
 - Android build proof runs with a configured JDK.
 
+### ~~BUG-1886~~: Project bulk sync can hit RLS when stale workspace rows are cached (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-23) — fixed with regression coverage and locally packaged as Electron `1.4.206`; public updater deploy was not run because production upload requires explicit approval. | **Depends on**: TASK-1537, TASK-1547
+
+**Why**: `Sync Error(saveProjects): new row violates row-level security policy for table "projects"` can happen when the project store bulk-saves every visible/cached project after a small project edit. Cached/realtime state can temporarily contain personal rows plus shared-workspace rows from a different workspace; one inaccessible `workspace_id` in the bulk upsert makes Postgres reject the whole batch under the workspace-aware projects RLS policy.
+
+**Fix**: `saveProjectsToStorage()` now scopes authenticated bulk project saves to the active workspace before calling `saveProjects`. Personal sync includes only `workspaceId` missing/null projects; shared sync includes only rows whose `workspaceId` equals the active workspace.
+
+**Tests**: `npm run test -- tests/unit/stores/project-workspace-sync-scope.test.ts`; `npm run test -- tests/unit/utils/supabaseMappers.test.ts tests/contract/rls-enforcement.test.ts`; `npm run test -- tests/unit/stores/all-stores.test.ts`; `npm run type-check`; `npm run lint`; `VPS_HOST=84.46.253.137 ./scripts/deploy-electron-update.sh --notes "BUG-1886: scope project bulk sync to active workspace" --skip-deploy`. Local updater manifest `release/latest-linux.yml` is `version: 1.4.206` with AppImage `180339468` bytes and deb `131333404` bytes.
+
 ### ~~BUG-1884~~: Task context-menu project/category changes can revert or appear to do nothing (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-23) — fixed with regression coverage and shipped via Electron updater `1.4.205`. | **Depends on**: TASK-1871

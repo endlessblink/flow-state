@@ -65,4 +65,12 @@ describe('task sync payload completeness (TASK-1871)', () => {
       `Wire them into the updateTask payload builder, or add to CREATE_ONLY with a reason:\n  ${uncovered.join(', ')}`
     ).toEqual([])
   })
+
+  it('project changes always emit project_id, including clearing to Uncategorized', () => {
+    const src = read('src/stores/tasks/taskOperations.ts')
+    const projectPayloadLine = 'payload.project_id = isValidUUID(updatedTask.projectId) ? updatedTask.projectId : null'
+
+    expect(src).toContain(projectPayloadLine)
+    expect(src).not.toContain("if (changedKeys.has('projectId') && updatedTask.projectId !== undefined)")
+  })
 })

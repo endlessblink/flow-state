@@ -870,8 +870,10 @@ export function useTaskOperations(
                     const dueDate = updatedTask.dueDate
                     payload.due_date = (!dueDate || dueDate === 'null' || dueDate === 'undefined') ? null : dueDate
                 }
-                // BUG-1184: Only set project_id for valid UUIDs - 'uncategorized' is NOT a valid UUID
-                if (changedKeys.has('projectId') && updatedTask.projectId !== undefined) {
+                // BUG-1184: Only set project_id for valid UUIDs - 'uncategorized' is NOT a valid UUID.
+                // Clearing a project sets projectId to undefined locally, but the DB still needs
+                // an explicit null or realtime/refresh will restore the old project.
+                if (changedKeys.has('projectId')) {
                     payload.project_id = isValidUUID(updatedTask.projectId) ? updatedTask.projectId : null
                 }
                 // TASK-1812: Lane membership — selective payload must carry lane_id or

@@ -95,7 +95,9 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
     const { data: users } = await admin.auth.admin.listUsers()
-    const userId = users!.users!.find(u => u.email === 'playwright@test.flowstate')!.id
+    const user = users?.users?.find(u => u.email === 'playwright@test.flowstate')
+    if (!user) throw new Error('User playwright@test.flowstate not found in listUsers output')
+    const userId = user.id
 
     // Seed an EMPTY lane and ensure the two target tasks aren't in it
     await admin.from('lanes').upsert({ id: LANE_ID, user_id: userId, name: LANE_NAME, color: '#4ECDC4' })

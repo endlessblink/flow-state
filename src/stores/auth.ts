@@ -194,7 +194,12 @@ export const useAuthStore = defineStore('auth', () => {
     }, 1000)
   }
 
-  const keepSessionForReconnect = (recoverableSession: Session, logMessage: string, authError?: AuthError | null) => {
+  const keepSessionForReconnect = (
+    recoverableSession: Session,
+    logMessage: string,
+    authError?: AuthError | null,
+    options: { persistBackup?: boolean } = {},
+  ) => {
     console.warn(logMessage)
     session.value = recoverableSession
     user.value = recoverableSession.user
@@ -202,7 +207,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (authError) {
       error.value = authError
     }
-    persistAuthSessionBackup(recoverableSession).catch(e => console.warn('[AUTH] Failed to backup reconnect-grace session:', e))
+    if (options.persistBackup !== false) {
+      persistAuthSessionBackup(recoverableSession).catch(e => console.warn('[AUTH] Failed to backup reconnect-grace session:', e))
+    }
     startReconnectRefreshRecovery()
   }
 
@@ -264,6 +271,7 @@ export const useAuthStore = defineStore('auth', () => {
                   restoredBackupSession,
                   '[AUTH] Electron backup refresh token already used — cleared stale backup, keeping signed-in shell for reconnect',
                   refreshErr,
+                  { persistBackup: false },
                 )
                 return
               }

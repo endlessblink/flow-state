@@ -361,6 +361,29 @@ describe('Auth Flow — initialize()', () => {
     expect(store.isOfflineGracePeriod).toBe(true)
   })
 
+  it('8d2. initialize() does not re-save a dead Electron backup refresh token', async () => {
+    const restoredSession = buildMockSession({
+      access_token: 'expired-restored-access-token',
+      expires_at: Math.floor(Date.now() / 1000) - 60,
+    })
+    mockGetSession
+      .mockResolvedValueOnce({ data: { session: null }, error: null })
+      .mockResolvedValueOnce({
+        data: { session: null },
+        error: { name: 'AuthError', message: 'Invalid Refresh Token: Already Used', status: 400 },
+      })
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(restoredSession)
+
+    const store = useAuthStore()
+    await store.initialize()
+
+    expect(mockClearAuthSessionBackup).toHaveBeenCalledOnce()
+    expect(mockPersistAuthSessionBackup).not.toHaveBeenCalled()
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.user?.id).toBe('user-test-001')
+    expect(store.isOfflineGracePeriod).toBe(true)
+  })
+
   it('8e. initialize() keeps the signed-in shell when an expired Electron session cannot refresh immediately', async () => {
     const expiredSession = buildMockSession({
       expires_at: Math.floor(Date.now() / 1000) - 60,

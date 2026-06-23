@@ -64,8 +64,22 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const { data } = await admin.auth.admin.listUsers()
-    userId = data.users.find((u) => u.email === 'playwright@test.flowstate')!.id
+    let userId: string
+    {
+      const { data } = await admin.auth.admin.listUsers()
+      const user = data.users.find((u) => u.email === 'playwright@test.flowstate')
+      if (!user) {
+        console.warn('User playwright@test.flowstate not found in listUsers output')
+        // Try again after short delay
+        await new Promise(r => setTimeout(r, 2000))
+        const { data: retryData } = await admin.auth.admin.listUsers()
+        const retryUser = retryData.users.find((u) => u.email === 'playwright@test.flowstate')
+        if (!retryUser) throw new Error('User playwright@test.flowstate missing after retry')
+        userId = retryUser.id
+      } else {
+        userId = user.id
+      }
+    }
 
     await admin.from('tasks').delete().in('id', ALL_IDS)
     await admin.from('groups').delete().eq('id', GROUP_ID)

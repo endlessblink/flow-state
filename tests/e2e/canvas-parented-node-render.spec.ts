@@ -37,10 +37,22 @@ test.describe('canvas renders a task placed inside a group (BUG-1796)', () => {
     admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const { data } = await admin.auth.admin.listUsers()
-    const user = data.users.find((u) => u.email === 'playwright@test.flowstate')
-    if (!user) throw new Error('User playwright@test.flowstate not found')
-    userId = user.id
+    let userId: string
+    {
+      const { data } = await admin.auth.admin.listUsers()
+      const user = data.users.find((u) => u.email === 'playwright@test.flowstate')
+      if (!user) {
+        console.warn('User playwright@test.flowstate not found in listUsers output')
+        // Try again after short delay
+        await new Promise(r => setTimeout(r, 2000))
+        const { data: retryData } = await admin.auth.admin.listUsers()
+        const retryUser = retryData.users.find((u) => u.email === 'playwright@test.flowstate')
+        if (!retryUser) throw new Error('User playwright@test.flowstate missing after retry')
+        userId = retryUser.id
+      } else {
+        userId = user.id
+      }
+    }
 
     // Clean any prior run + tombstones that would make sync skip our CREATE.
     await admin.from('tasks').delete().eq('id', TASK_ID)

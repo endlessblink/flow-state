@@ -94,10 +94,21 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
     const admin = createClient(SUPABASE_URL, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const { data: users } = await admin.auth.admin.listUsers()
-    const user = users?.users?.find(u => u.email === 'playwright@test.flowstate')
-    if (!user) throw new Error('User playwright@test.flowstate not found in listUsers output')
-    const userId = user.id
+    let userId: string
+    {
+      const { data: users } = await admin.auth.admin.listUsers()
+      const user = users?.users?.find(u => u.email === 'playwright@test.flowstate')
+      if (!user) {
+        console.warn('User playwright@test.flowstate not found in listUsers output')
+        await new Promise(r => setTimeout(r, 2000))
+        const { data: retryData } = await admin.auth.admin.listUsers()
+        const retryUser = retryData.users.find((u) => u.email === 'playwright@test.flowstate')
+        if (!retryUser) throw new Error('User missing after retry')
+        userId = retryUser.id
+      } else {
+        userId = user.id
+      }
+    }
 
     // Seed an EMPTY lane and ensure the two target tasks aren't in it
     await admin.from('lanes').upsert({ id: LANE_ID, user_id: userId, name: LANE_NAME, color: '#4ECDC4' })

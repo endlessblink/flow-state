@@ -2496,6 +2496,8 @@ PlasmoidItem {
                             if (quickAddInput.text.trim()) {
                                 root.createTask(quickAddInput.text, true)
                                 quickAddInput.text = ""
+                            } else {
+                                root.startNewSession(false)
                             }
                         }
                     }

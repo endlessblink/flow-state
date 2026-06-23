@@ -186,6 +186,15 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(MAIN_QML).toContain('applyFetchedSession(result.session, "local-control")')
     })
 
+    it('2c. quick-add play starts a general timer when the input is empty', () => {
+      const quickPlayStart = MAIN_QML.indexOf('// Play button (create + start timer)')
+      expect(quickPlayStart, 'quick-add play button not found').toBeGreaterThan(-1)
+      const body = MAIN_QML.slice(quickPlayStart, quickPlayStart + 1500)
+
+      expect(body).toContain('root.createTask(quickAddInput.text, true)')
+      expect(body).toContain('root.startNewSession(false)')
+    })
+
     it('2. applies active localhost timer payloads and falls back to Supabase on local misses', () => {
       const localFnStart = MAIN_QML.indexOf('function fetchLocalCurrentSession(')
       expect(localFnStart, 'fetchLocalCurrentSession not found').toBeGreaterThan(-1)

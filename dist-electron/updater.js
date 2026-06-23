@@ -114,7 +114,7 @@ function registerUpdater() {
         }
         catch (err) {
             console.error('[Updater] Check failed:', err.message);
-            return null;
+            throw err;
         }
     });
     electron_1.ipcMain.handle('updater:download', async () => {

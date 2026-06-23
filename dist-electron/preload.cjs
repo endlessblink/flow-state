@@ -44,6 +44,12 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     onUpdateDownloaded: (callback) => {
         electron_1.ipcRenderer.on('updater:downloaded', () => callback());
     },
+    onUpdateNotAvailable: (callback) => {
+        electron_1.ipcRenderer.on('updater:not-available', () => callback());
+    },
+    onUpdateError: (callback) => {
+        electron_1.ipcRenderer.on('updater:error', (_event, message) => callback(String(message)));
+    },
     checkForUpdates: () => electron_1.ipcRenderer.invoke('updater:check'),
     downloadUpdate: () => electron_1.ipcRenderer.invoke('updater:download'),
     installUpdate: () => electron_1.ipcRenderer.invoke('updater:install'),

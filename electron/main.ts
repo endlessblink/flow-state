@@ -11,6 +11,34 @@ import { registerUpdater } from './updater'
 import { registerOAuthHandlers } from './ipc/oauth'
 import { registerLocalApiHandlers, shutdownLocalApi } from './ipc/localApi'
 
+function installBrokenPipeConsoleGuard() {
+  const isBrokenPipe = (err: unknown) =>
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: unknown }).code === 'EPIPE'
+
+  for (const stream of [process.stdout, process.stderr]) {
+    stream.on('error', (err) => {
+      if (isBrokenPipe(err)) return
+      throw err
+    })
+  }
+
+  for (const method of ['log', 'info', 'warn', 'error'] as const) {
+    const original = console[method].bind(console)
+    console[method] = (...args: unknown[]) => {
+      try {
+        original(...args)
+      } catch (err) {
+        if (!isBrokenPipe(err)) throw err
+      }
+    }
+  }
+}
+
+installBrokenPipeConsoleGuard()
+
 // Set WM_CLASS to match .desktop file's StartupWMClass (must be before any window creation)
 app.setName('flow-state')
 

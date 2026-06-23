@@ -12,6 +12,32 @@ const window_1 = require("./ipc/window");
 const updater_1 = require("./updater");
 const oauth_1 = require("./ipc/oauth");
 const localApi_1 = require("./ipc/localApi");
+function installBrokenPipeConsoleGuard() {
+    const isBrokenPipe = (err) => typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        err.code === 'EPIPE';
+    for (const stream of [process.stdout, process.stderr]) {
+        stream.on('error', (err) => {
+            if (isBrokenPipe(err))
+                return;
+            throw err;
+        });
+    }
+    for (const method of ['log', 'info', 'warn', 'error']) {
+        const original = console[method].bind(console);
+        console[method] = (...args) => {
+            try {
+                original(...args);
+            }
+            catch (err) {
+                if (!isBrokenPipe(err))
+                    throw err;
+            }
+        };
+    }
+}
+installBrokenPipeConsoleGuard();
 // Set WM_CLASS to match .desktop file's StartupWMClass (must be before any window creation)
 electron_1.app.setName('flow-state');
 // Prevent multiple instances

@@ -126,7 +126,7 @@ export function registerUpdater() {
       return await autoUpdater.checkForUpdates()
     } catch (err) {
       console.error('[Updater] Check failed:', (err as Error).message)
-      return null
+      throw err
     }
   })
 

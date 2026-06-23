@@ -27,8 +27,19 @@ export type UpdateStatus =
   | 'up-to-date'
 
 // Access electronAPI safely without global type augmentation
-function getElectronAPI(): any | null {
-  return (window as any).electronAPI ?? null
+interface ElectronUpdaterApi {
+  onUpdateAvailable?: (callback: (info: unknown) => void) => void
+  onUpdateDownloadProgress?: (callback: (progress: unknown) => void) => void
+  onUpdateDownloaded?: (callback: () => void) => void
+  onUpdateNotAvailable?: (callback: () => void) => void
+  onUpdateError?: (callback: (message: string) => void) => void
+  checkForUpdates?: () => Promise<unknown>
+  downloadUpdate?: () => Promise<void>
+  installUpdate?: () => Promise<void>
+}
+
+function getElectronAPI(): ElectronUpdaterApi | null {
+  return ((window as unknown as { electronAPI?: ElectronUpdaterApi }).electronAPI) ?? null
 }
 
 export function useElectronUpdater() {
@@ -46,7 +57,7 @@ export function useElectronUpdater() {
     const api = getElectronAPI()
     if (!isElectron() || !api) return
 
-    api.onUpdateAvailable((info: any) => {
+    api.onUpdateAvailable?.((info: any) => {
       console.log('[ElectronUpdater] Update available:', info)
       status.value = 'available'
       updateInfo.value = {
@@ -57,15 +68,26 @@ export function useElectronUpdater() {
       }
     })
 
-    api.onUpdateDownloadProgress((progress: any) => {
+    api.onUpdateDownloadProgress?.((progress: any) => {
       status.value = 'downloading'
       downloadProgress.value = Math.round(progress?.percent || 0)
     })
 
-    api.onUpdateDownloaded(() => {
+    api.onUpdateDownloaded?.(() => {
       console.log('[ElectronUpdater] Update downloaded, ready to install')
       status.value = 'ready'
       downloadProgress.value = 100
+    })
+
+    api.onUpdateNotAvailable?.(() => {
+      if (status.value === 'checking') {
+        status.value = 'up-to-date'
+      }
+    })
+
+    api.onUpdateError?.((message: string) => {
+      status.value = 'error'
+      error.value = message || 'Failed to check for updates'
     })
   }
 
@@ -73,7 +95,7 @@ export function useElectronUpdater() {
 
   async function checkForUpdates(): Promise<boolean> {
     const api = getElectronAPI()
-    if (!isElectron() || !api) {
+    if (!isElectron() || !api?.checkForUpdates) {
       console.log('[ElectronUpdater] Not in Electron environment')
       return false
     }
@@ -101,7 +123,7 @@ export function useElectronUpdater() {
 
   async function downloadAndInstall(): Promise<boolean> {
     const api = getElectronAPI()
-    if (!isElectron() || !api || status.value !== 'available') {
+    if (!isElectron() || !api?.downloadUpdate || status.value !== 'available') {
       return false
     }
 
@@ -123,7 +145,7 @@ export function useElectronUpdater() {
 
   async function restart(): Promise<void> {
     const api = getElectronAPI()
-    if (!isElectron() || !api) return
+    if (!isElectron() || !api?.installUpdate) return
 
     status.value = 'installing'
     error.value = null

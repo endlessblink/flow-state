@@ -74,6 +74,15 @@ async function invalidateSyncedEntityCache(entityType: SyncEntityType): Promise<
   }
 }
 
+async function getCurrentAuthUserId(): Promise<string | undefined> {
+  try {
+    const { useAuthStore } = await import('@/stores/auth')
+    return useAuthStore().user?.id
+  } catch {
+    return undefined
+  }
+}
+
 // Re-export types and stub functions for when IndexedDB is unavailable
 import type {
   enqueueOperation as _enqueueOperation,
@@ -149,6 +158,45 @@ const getFailedOperations: typeof _getFailedOperations = async () => {
 const recoverStaleSyncing = async (): Promise<number> => {
   const mod = await getWriteQueueModule()
   return mod ? mod.recoverStaleSyncing() : 0
+}
+
+const recoverRlsPolicyFailures = async (): Promise<number> => {
+  const mod = await getWriteQueueModule()
+  if (!mod) return 0
+
+  const currentUserId = await getCurrentAuthUserId()
+  const failedOps = await mod.getFailedOperations()
+  const userOwnedEntities: SyncEntityType[] = ['task', 'group', 'project', 'lane', 'timer_session', 'quick_sort_session']
+  const rlsFailures = failedOps.filter(op =>
+    op.id &&
+    userOwnedEntities.includes(op.entityType) &&
+    op.lastError?.toLowerCase().includes('row-level security policy')
+  )
+
+  for (const op of rlsFailures) {
+    if (!op.id) continue
+    if (currentUserId) {
+      await mod.updateOperation(op.id, {
+        status: 'pending',
+        retryCount: 0,
+        nextRetryAt: undefined,
+        lastError: undefined,
+        userId: currentUserId,
+        payload: {
+          ...op.payload,
+          user_id: currentUserId
+        }
+      })
+    } else {
+      await mod.markCompleted(op.id)
+    }
+  }
+
+  if (rlsFailures.length > 0) {
+    console.warn(`[SYNC] Recovered ${rlsFailures.length} RLS-failed queued operation(s)`)
+  }
+
+  return rlsFailures.length
 }
 
 const clearFailedOperations = async (): Promise<number> => {
@@ -340,6 +388,19 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
   // Workspace collaboration: inject workspace_id into payload if missing from legacy operations
   if (!payload.workspace_id && operation.workspaceId) {
     payload = { ...payload, workspace_id: operation.workspaceId as string }
+  }
+
+  // User-owned tables must never replay stale guest/old-user payloads against RLS.
+  // If a current user exists, adopt that user_id for legacy queued writes. If not,
+  // this is local-only/guest state and there is no valid remote write to perform.
+  const userOwnedEntities: SyncEntityType[] = ['task', 'group', 'project', 'lane', 'timer_session', 'quick_sort_session']
+  if (userOwnedEntities.includes(entityType)) {
+    const currentUserId = await getCurrentAuthUserId()
+    if (!currentUserId) {
+      console.warn(`[SYNC] Dropping remote ${entityType}:${operation.operation} ${entityId.slice(0, 8)} — no authenticated user for RLS`)
+      return { success: true, operation, serverData: undefined }
+    }
+    payload = { ...payload, user_id: currentUserId }
   }
 
   // Map entity type to Supabase table name
@@ -807,6 +868,7 @@ async function processQueue(): Promise<void> {
     // so they can be retried. Without this, they're stuck forever because
     // getPendingOperations() only returns 'pending' and 'failed'.
     await recoverStaleSyncing()
+    await recoverRlsPolicyFailures()
 
     // BUG-6: Purge pending operations older than 24h to prevent stale queue replay
     // from resurrecting tasks that were deleted days ago on another device.

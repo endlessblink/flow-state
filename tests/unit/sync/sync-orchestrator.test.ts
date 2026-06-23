@@ -222,6 +222,9 @@ function makeOp(partial: Partial<WriteOperation> = {}): WriteOperation {
     status: partial.status ?? 'pending',
     retryCount: partial.retryCount ?? 0,
     createdAt: partial.createdAt ?? Date.now(),
+    nextRetryAt: partial.nextRetryAt,
+    lastError: partial.lastError,
+    lastAttemptAt: partial.lastAttemptAt,
     userId: partial.userId ?? 'user-001',
     workspaceId: partial.workspaceId ?? null
   }
@@ -295,6 +298,9 @@ beforeEach(async () => {
   writeQueueMocks.purgeStaleOperations.mockResolvedValue(undefined)
   writeQueueMocks.enqueueOperation.mockResolvedValue(makeOp())
   writeQueueMocks.getOperationsForEntity.mockResolvedValue([])
+  authStoreMock.user = { id: 'user-001' } as any
+  workspaceStoreMock.activeWorkspaceId = null
+  workspaceStoreMock.isSwitchingWorkspace = false
   coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
     operation: null,
     mergedOperationIds: [],
@@ -462,6 +468,92 @@ describe('executeOperation: CREATE', () => {
     // The executeOperation should return success:true with serverData:null
     // when tombstone is found, without calling upsert
     expect(supabaseMock.fromMock).toBeDefined()
+  })
+
+  it('rewrites stale queued task user_id to the current auth user before upsert', async () => {
+    authStoreMock.user = { id: 'current-user' } as any
+    const op = makeOp({
+      id: 412,
+      operation: 'create',
+      entityType: 'task',
+      entityId: 'task-stale-user',
+      payload: {
+        id: 'task-stale-user',
+        title: 'Created while auth was stale',
+        user_id: 'stale-user'
+      },
+      userId: 'stale-user'
+    })
+
+    const taskChain = mockSupabaseChain()
+    supabaseMock.fromMock.mockImplementation((table: string) => {
+      if (table === 'tombstones') {
+        const tombChain: Record<string, any> = {}
+        tombChain.select = vi.fn().mockReturnValue(tombChain)
+        tombChain.eq = vi.fn().mockReturnValue(tombChain)
+        tombChain.limit = vi.fn().mockReturnValue(tombChain)
+        tombChain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
+        return tombChain
+      }
+      return taskChain
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed'
+    })
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(taskChain.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'current-user' }),
+      { onConflict: 'id' }
+    )
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(412)
+    expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
+  })
+
+  it('drops queued task create instead of hitting RLS when no user is signed in', async () => {
+    authStoreMock.user = null as any
+    const op = makeOp({
+      id: 413,
+      operation: 'create',
+      entityType: 'task',
+      entityId: 'task-no-user',
+      payload: {
+        id: 'task-no-user',
+        title: 'Local guest task'
+      },
+      userId: undefined
+    })
+
+    const taskChain = mockSupabaseChain()
+    supabaseMock.fromMock.mockImplementation((table: string) => {
+      if (table === 'tombstones') {
+        const tombChain: Record<string, any> = {}
+        tombChain.select = vi.fn().mockReturnValue(tombChain)
+        tombChain.eq = vi.fn().mockReturnValue(tombChain)
+        tombChain.limit = vi.fn().mockReturnValue(tombChain)
+        tombChain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
+        return tombChain
+      }
+      return taskChain
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed'
+    })
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(taskChain.upsert).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(413)
+    expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
   })
 })
 
@@ -711,7 +803,10 @@ describe('Conflict resolution (LWW)', () => {
     await vi.advanceTimersByTimeAsync(0)
     await sync.forceSync()
 
-    expect(chain.update).toHaveBeenCalledWith(op.payload)
+    expect(chain.update).toHaveBeenCalledWith({
+      ...op.payload,
+      user_id: 'user-001'
+    })
     expect(chain.eq).toHaveBeenCalledWith('id', `${entityType}-missing-on-server`)
     expect(chain.eq).toHaveBeenCalledWith('position_version', 7)
     expect(chain.single).toHaveBeenCalledTimes(1)
@@ -1416,6 +1511,66 @@ describe('processQueue guards', () => {
     // (The guard returns early before reaching getPendingOperations)
     // Reset
     workspaceStoreMock.isSwitchingWorkspace = false as any
+  })
+
+  it('resets RLS-failed queued task operations to pending with the current auth user', async () => {
+    authStoreMock.user = { id: 'current-user' } as any
+    const failedOp = makeOp({
+      id: 701,
+      entityType: 'task',
+      operation: 'create',
+      entityId: 'task-rls-failed',
+      status: 'failed',
+      retryCount: 4,
+      nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      lastError: 'new row violates row-level security policy for table "tasks"',
+      userId: 'stale-user',
+      payload: { title: 'RLS failed task', user_id: 'stale-user' }
+    })
+    writeQueueMocks.getFailedOperations.mockResolvedValue([failedOp])
+    writeQueueMocks.getPendingOperations.mockResolvedValue([])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(writeQueueMocks.getFailedOperations).toHaveBeenCalled()
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(701, expect.objectContaining({
+      status: 'pending',
+      retryCount: 0,
+      nextRetryAt: undefined,
+      lastError: undefined,
+      userId: 'current-user',
+      payload: expect.objectContaining({ user_id: 'current-user' })
+    }))
+  })
+
+  it('completes RLS-failed queued task operations when no user is signed in', async () => {
+    authStoreMock.user = null as any
+    const failedOp = makeOp({
+      id: 702,
+      entityType: 'task',
+      operation: 'create',
+      entityId: 'task-guest-rls',
+      status: 'failed',
+      retryCount: 4,
+      nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      lastError: 'new row violates row-level security policy for table "tasks"',
+      userId: undefined,
+      payload: { title: 'Guest local task' }
+    })
+    writeQueueMocks.getFailedOperations.mockResolvedValue([failedOp])
+    writeQueueMocks.getPendingOperations.mockResolvedValue([])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(writeQueueMocks.getFailedOperations).toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(702)
+    expect(writeQueueMocks.updateOperation).not.toHaveBeenCalledWith(702, expect.anything())
   })
 })
 

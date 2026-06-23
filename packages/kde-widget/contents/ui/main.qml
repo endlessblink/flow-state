@@ -4462,17 +4462,19 @@ PlasmoidItem {
     }
 
     function toggleTimer() {
-        if (!root.isAuthenticated) return
-
         if (root.hasActiveSession) {
-            // Pause/resume existing session - widget becomes leader
-            patchSession({
-                is_paused: root.isRunning,
-                device_leader_id: "kde-widget",
-                device_leader_last_seen: new Date().toISOString()
+            postLocalTimerControl({ action: "toggle" }, function(ok) {
+                if (ok) return
+                if (!root.isAuthenticated) return
+                // Pause/resume existing session - widget becomes leader
+                patchSession({
+                    is_paused: root.isRunning,
+                    device_leader_id: "kde-widget",
+                    device_leader_last_seen: new Date().toISOString()
+                })
+                root.isRunning = !root.isRunning
+                root.isDeviceLeader = true  // Widget takes control
             })
-            root.isRunning = !root.isRunning
-            root.isDeviceLeader = true  // Widget takes control
         } else {
             // Start new work session
             startNewSession(false)
@@ -4480,6 +4482,21 @@ PlasmoidItem {
     }
 
     function startNewSession(isBreak) {
+        var duration = isBreak
+            ? plasmoid.configuration.breakDuration * 60
+            : plasmoid.configuration.workDuration * 60
+
+        postLocalTimerControl({
+            action: "start",
+            taskId: "general",
+            isBreak: isBreak,
+            duration: duration
+        }, function(ok) {
+            if (!ok) startNewSessionSupabase(isBreak)
+        })
+    }
+
+    function startNewSessionSupabase(isBreak) {
         if (!root.isAuthenticated) return
 
         // Reset pre-end warning for new session
@@ -4555,6 +4572,18 @@ PlasmoidItem {
     }
 
     function startSessionForTask(taskId) {
+        var duration = plasmoid.configuration.workDuration * 60
+        postLocalTimerControl({
+            action: "start",
+            taskId: taskId,
+            isBreak: false,
+            duration: duration
+        }, function(ok) {
+            if (!ok) startSessionForTaskSupabase(taskId)
+        })
+    }
+
+    function startSessionForTaskSupabase(taskId) {
         if (!root.isAuthenticated) return
 
         // Clear session complete state
@@ -4820,6 +4849,32 @@ PlasmoidItem {
         xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
         xhr.setRequestHeader("Content-Type", "application/json")
         xhr.send(JSON.stringify(data))
+    }
+
+    function postLocalTimerControl(payload, callback) {
+        var xhr = new XMLHttpRequest()
+        xhr.open("POST", root.localApiUrl + "/api/timer/control", true)
+        xhr.setRequestHeader("Content-Type", "application/json")
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.DONE) return
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    var result = JSON.parse(xhr.responseText)
+                    if (result && result.session) {
+                        applyFetchedSession(result.session, "local-control")
+                        root.isDeviceLeader = true
+                    }
+                    callback(true)
+                    return
+                } catch (e) {
+                    console.log("[TIMER] Local control parse failed:", e)
+                }
+            } else {
+                console.log("[TIMER] Local control failed:", xhr.status, xhr.responseText)
+            }
+            callback(false)
+        }
+        xhr.send(JSON.stringify(payload))
     }
 
     function sendHeartbeat() {

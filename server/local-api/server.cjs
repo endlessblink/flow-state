@@ -378,6 +378,86 @@ async function handleGetCurrentTimer(res) {
   send(res, 200, { active: true, session: data })
 }
 
+async function handlePostTimerControl(req, res) {
+  const { supabase, userId } = ctx
+  const body = await readJsonBody(req)
+  const action = typeof body.action === 'string' ? body.action : ''
+
+  if (action === 'toggle') {
+    const { data: session, error: findErr } = await supabase
+      .from('timer_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (findErr) return send(res, 500, { error: findErr.message })
+    if (!session) return send(res, 404, { error: 'no active timer' })
+
+    const update = {
+      is_paused: !session.is_paused,
+      device_leader_id: 'kde-widget',
+      device_leader_last_seen: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    const { data, error } = await supabase
+      .from('timer_sessions')
+      .update(update)
+      .eq('id', session.id)
+      .eq('user_id', userId)
+      .select('*')
+      .single()
+    if (error) return send(res, 500, { error: error.message })
+    return send(res, 200, { ok: true, active: true, session: data })
+  }
+
+  if (action === 'start') {
+    const duration = Number(body.duration)
+    if (!Number.isFinite(duration) || duration <= 0 || duration > 24 * 60 * 60) {
+      return send(res, 400, { error: 'duration must be a positive number of seconds' })
+    }
+
+    const taskId = typeof body.taskId === 'string' && body.taskId.trim()
+      ? body.taskId.trim()
+      : 'general'
+    const isBreak = body.isBreak === true
+    const now = new Date().toISOString()
+    const id = crypto.randomUUID()
+
+    const { error: clearErr } = await supabase
+      .from('timer_sessions')
+      .update({ is_active: false, completed_at: now, updated_at: now })
+      .eq('user_id', userId)
+      .eq('is_active', true)
+    if (clearErr) return send(res, 500, { error: clearErr.message })
+
+    const row = {
+      id,
+      user_id: userId,
+      task_id: taskId,
+      start_time: now,
+      duration,
+      remaining_time: duration,
+      is_active: true,
+      is_paused: false,
+      is_break: isBreak,
+      device_leader_id: 'kde-widget',
+      device_leader_last_seen: now,
+    }
+
+    const { data, error } = await supabase
+      .from('timer_sessions')
+      .insert(row)
+      .select('*')
+      .single()
+    if (error) return send(res, 500, { error: error.message })
+    return send(res, 200, { ok: true, active: true, session: data })
+  }
+
+  send(res, 400, { error: 'action must be toggle|start' })
+}
+
 async function handleAIClarificationStart(req, res) {
   const body = await readJsonBody(req)
   const runId = typeof body.runId === 'string' && body.runId.trim()
@@ -415,6 +495,9 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && path === '/api/timer/current') {
       return await handleGetCurrentTimer(res)
+    }
+    if (req.method === 'POST' && path === '/api/timer/control') {
+      return await handlePostTimerControl(req, res)
     }
 
     if (TOKEN) {

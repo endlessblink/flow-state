@@ -177,6 +177,15 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(MAIN_QML).toContain('root.localApiUrl + "/api/timer/current"')
     })
 
+    it('2b. sends play/start controls through the Electron localhost timer bridge before Supabase fallback', () => {
+      expect(MAIN_QML).toContain('function postLocalTimerControl(')
+      expect(MAIN_QML).toContain('root.localApiUrl + "/api/timer/control"')
+      expect(MAIN_QML).toContain('postLocalTimerControl({ action: "toggle" }')
+      expect(MAIN_QML).toContain('if (!ok) startNewSessionSupabase(isBreak)')
+      expect(MAIN_QML).toContain('if (!ok) startSessionForTaskSupabase(taskId)')
+      expect(MAIN_QML).toContain('applyFetchedSession(result.session, "local-control")')
+    })
+
     it('2. applies active localhost timer payloads and falls back to Supabase on local misses', () => {
       const localFnStart = MAIN_QML.indexOf('function fetchLocalCurrentSession(')
       expect(localFnStart, 'fetchLocalCurrentSession not found').toBeGreaterThan(-1)

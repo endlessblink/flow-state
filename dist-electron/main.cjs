@@ -24,6 +24,11 @@ function installBrokenPipeConsoleGuard() {
             throw err;
         });
     }
+    process.on('uncaughtException', (err) => {
+        if (isBrokenPipe(err))
+            return;
+        throw err;
+    });
     for (const method of ['log', 'info', 'warn', 'error']) {
         const original = console[method].bind(console);
         console[method] = (...args) => {

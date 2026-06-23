@@ -195,6 +195,7 @@ export function registerUpdater() {
 
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = false
+  autoUpdater.logger = null
 
   // Forward events to renderer via IPC
   autoUpdater.on('update-available', (info) => {

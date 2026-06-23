@@ -25,6 +25,11 @@ function installBrokenPipeConsoleGuard() {
     })
   }
 
+  process.on('uncaughtException', (err) => {
+    if (isBrokenPipe(err)) return
+    throw err
+  })
+
   for (const method of ['log', 'info', 'warn', 'error'] as const) {
     const original = console[method].bind(console)
     console[method] = (...args: unknown[]) => {

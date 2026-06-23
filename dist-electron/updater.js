@@ -175,6 +175,7 @@ function registerUpdater() {
     }
     electron_updater_1.autoUpdater.autoDownload = false;
     electron_updater_1.autoUpdater.autoInstallOnAppQuit = false;
+    electron_updater_1.autoUpdater.logger = null;
     // Forward events to renderer via IPC
     electron_updater_1.autoUpdater.on('update-available', (info) => {
         const win = electron_1.BrowserWindow.getAllWindows()[0];

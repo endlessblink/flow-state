@@ -39,6 +39,7 @@ describe('Electron updater guest-mode contract', () => {
 
     expect(main).toContain('installBrokenPipeConsoleGuard')
     expect(main).toContain("code === 'EPIPE'")
+    expect(main).toContain("process.on('uncaughtException'")
     expect(main).toContain("for (const method of ['log', 'info', 'warn', 'error']")
   })
 
@@ -52,5 +53,6 @@ describe('Electron updater guest-mode contract', () => {
     expect(checkHandler).toContain('autoUpdater.checkForUpdates()')
     expect(checkHandler).toContain('throw err')
     expect(checkHandler).not.toContain('return null\n    }')
+    expect(updater).toContain('autoUpdater.logger = null')
   })
 })

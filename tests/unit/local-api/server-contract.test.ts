@@ -52,6 +52,22 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).toContain('send(res, 200, { active: true, session: data })')
   })
 
+  it('exposes signed-in local timer controls before the external-app bearer token boundary', () => {
+    const controlRoute = SERVER_CJS.indexOf("path === '/api/timer/control'")
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+
+    expect(controlRoute, 'timer control route not found').toBeGreaterThan(-1)
+    expect(controlRoute).toBeLessThan(tokenCheck)
+
+    const body = functionBody('handlePostTimerControl')
+    expect(body).toContain("action === 'toggle'")
+    expect(body).toContain("action === 'start'")
+    expect(body).toContain(".from('timer_sessions')")
+    expect(body).toContain(".eq('user_id', userId)")
+    expect(body).toContain("device_leader_id: 'kde-widget'")
+    expect(body).toContain("send(res, 400, { error: 'action must be toggle|start' })")
+  })
+
   it('keeps task endpoints behind the bearer token used by external local apps', () => {
     const tokenBlockStart = SERVER_CJS.indexOf('if (TOKEN)')
     const tokenBlock = SERVER_CJS.slice(tokenBlockStart, tokenBlockStart + 220)

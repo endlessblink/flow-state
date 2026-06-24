@@ -12,10 +12,15 @@ vi.mock('@supabase/supabase-js', () => ({
 
 describe('detectElectronRuntime (TASK-1881)', () => {
   const realUA = navigator.userAgent
+  const realWindowProcess = (window as any).process
 
   afterEach(() => {
     delete (window as any).electronAPI
-    delete (window as any).process
+    if (realWindowProcess === undefined) {
+      delete (window as any).process
+    } else {
+      ;(window as any).process = realWindowProcess
+    }
     Object.defineProperty(navigator, 'userAgent', { value: realUA, configurable: true })
   })
 

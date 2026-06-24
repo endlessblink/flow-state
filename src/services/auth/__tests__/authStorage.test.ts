@@ -7,10 +7,20 @@ import { createLazyAuthStorage } from '../authStorage'
  * lost on the next launch ("signed out after update").
  */
 describe('createLazyAuthStorage — call-time backend resolution (BUG-1874)', () => {
+  const realUA = navigator.userAgent
+  const realWindowProcess = (window as any).process
+
   afterEach(() => {
     delete (window as any).electronAPI
+    if (realWindowProcess === undefined) {
+      delete (window as any).process
+    } else {
+      ;(window as any).process = realWindowProcess
+    }
+    Object.defineProperty(navigator, 'userAgent', { value: realUA, configurable: true })
     localStorage.clear()
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   it('uses localStorage when there is no Electron bridge (web/PWA)', async () => {
@@ -37,6 +47,44 @@ describe('createLazyAuthStorage — call-time backend resolution (BUG-1874)', ()
     expect((window as any).electronAPI.storeSet).toHaveBeenCalledWith('flowstate-supabase-auth', 'electron-token')
     expect(localStorage.getItem('flowstate-supabase-auth')).toBeNull()
     expect(await storage.getItem('flowstate-supabase-auth')).toBe('electron-token')
+  })
+
+  it('waits for a late Electron preload bridge instead of falling back to file:// localStorage', async () => {
+    vi.useFakeTimers()
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 FlowState/1.4.215 Chrome/120 Electron/28.0.0 Safari/537.36',
+      configurable: true,
+    })
+    localStorage.setItem('flowstate-supabase-auth', 'wrong-web-token')
+    const store: Record<string, unknown> = { 'flowstate-supabase-auth': 'durable-electron-token' }
+    const storage = createLazyAuthStorage()!
+
+    const read = storage.getItem('flowstate-supabase-auth')
+    await vi.advanceTimersByTimeAsync(50)
+    ;(window as any).electronAPI = {
+      isElectron: true,
+      storeGet: vi.fn(async (k: string) => store[k] ?? null),
+      storeSet: vi.fn(async (k: string, v: unknown) => { store[k] = v }),
+    }
+    await vi.advanceTimersByTimeAsync(25)
+
+    expect(await read).toBe('durable-electron-token')
+    expect((window as any).electronAPI.storeGet).toHaveBeenCalledWith('flowstate-supabase-auth')
+  })
+
+  it('does not persist Electron auth tokens to localStorage when the preload bridge never appears', async () => {
+    vi.useFakeTimers()
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 FlowState/1.4.215 Chrome/120 Electron/28.0.0 Safari/537.36',
+      configurable: true,
+    })
+    const storage = createLazyAuthStorage()!
+    const write = storage.setItem('flowstate-supabase-auth', 'token-that-must-not-enter-localStorage')
+
+    await vi.advanceTimersByTimeAsync(1100)
+    await write
+
+    expect(localStorage.getItem('flowstate-supabase-auth')).toBeNull()
   })
 
   it('removeItem stores null via the Electron bridge (absent-key semantics)', async () => {

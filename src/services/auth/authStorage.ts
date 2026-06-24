@@ -29,6 +29,28 @@ function electronBridge(): ElectronStoreBridge | null {
     return api?.isElectron ? api : null
 }
 
+function hasElectronRuntimeHint(): boolean {
+    if (typeof window === 'undefined') return false
+    const w = window as unknown as { process?: { type?: string } }
+    if (electronBridge()) return true
+    if (w.process?.type === 'renderer') return true
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
+    return / Electron\//i.test(ua) || /electron/i.test(ua)
+}
+
+async function waitForElectronBridge(timeoutMs = 1000): Promise<ElectronStoreBridge | null> {
+    if (!hasElectronRuntimeHint()) return null
+
+    const startedAt = Date.now()
+    while (Date.now() - startedAt < timeoutMs) {
+        const api = electronBridge()
+        if (api) return api
+        await new Promise(resolve => setTimeout(resolve, 25))
+    }
+
+    return electronBridge()
+}
+
 /**
  * Returns the lazy auth storage adapter, or null when there is no `window` (SSR/tests without DOM).
  */
@@ -36,17 +58,24 @@ export function createLazyAuthStorage(): AsyncAuthStorage | null {
     if (typeof window === 'undefined') return null
     return {
         getItem: async (key: string): Promise<string | null> => {
-            const api = electronBridge()
+            const electronRuntime = hasElectronRuntimeHint()
+            const api = electronBridge() || await waitForElectronBridge()
             if (api) {
                 const value = await api.storeGet(key)
                 return typeof value === 'string' ? value : null
             }
+            if (electronRuntime) return null
             return window.localStorage.getItem(key)
         },
         setItem: async (key: string, value: string): Promise<void> => {
-            const api = electronBridge()
+            const electronRuntime = hasElectronRuntimeHint()
+            const api = electronBridge() || await waitForElectronBridge()
             if (api) {
                 await api.storeSet(key, value)
+                return
+            }
+            if (electronRuntime) {
+                console.warn('[AuthStorage] Electron preload bridge unavailable; refusing to persist auth in file:// localStorage')
                 return
             }
             window.localStorage.setItem(key, value)
@@ -54,11 +83,13 @@ export function createLazyAuthStorage(): AsyncAuthStorage | null {
         // removeItem on Electron stores null (storeSet(key, null)); getItem's `typeof === 'string'`
         // guard then returns null for the absent key.
         removeItem: async (key: string): Promise<void> => {
-            const api = electronBridge()
+            const electronRuntime = hasElectronRuntimeHint()
+            const api = electronBridge() || await waitForElectronBridge()
             if (api) {
                 await api.storeSet(key, null)
                 return
             }
+            if (electronRuntime) return
             window.localStorage.removeItem(key)
         },
     }

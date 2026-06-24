@@ -165,6 +165,56 @@ PlasmoidItem {
     property bool preEndWarningShown: false
     property bool checkingCompletion: false
 
+    // ===== STUCK-POPUP SAFETY NET (dock-freeze fix) =====
+    // Each always-on-top Window can cover the dock if a dismiss path is missed.
+    // Track when each became visible (ms epoch; 0 = hidden) so a watchdog can
+    // force-hide any popup that overstays its max lifetime. See hideAllPopups()
+    // and popupWatchdog Timer below. fullScreenOverlay is the prime risk: it is
+    // fullscreen + BypassWindowManagerHint and previously had NO auto-dismiss.
+    property real overlayShownAt: 0
+    property real nannyShownAt: 0
+    property real nudgeShownAt: 0
+    property real preEndShownAt: 0
+    // Max time (ms) a popup may stay open before the watchdog force-hides it.
+    readonly property int overlayMaxMs: 5 * 60 * 1000   // fullscreen break overlay
+    readonly property int nannyMaxMs: 90 * 1000         // nanny auto-close is 60s
+    readonly property int nudgeMaxMs: 60 * 1000         // nudge auto-close is 30s
+    readonly property int preEndMaxMs: 45 * 1000        // pre-end auto-close is 15s
+
+    // Force-hide any popup that has overstayed its max lifetime. Idempotent and
+    // safe to call repeatedly; only acts on popups that are actually stuck.
+    function hideAllPopups(force) {
+        var now = Date.now()
+        if (fullScreenOverlay.visible && (force || (root.overlayShownAt > 0 && now - root.overlayShownAt > root.overlayMaxMs))) {
+            console.log("[POPUP] watchdog force-hiding fullScreenOverlay (open", now - root.overlayShownAt, "ms)")
+            fullScreenOverlay.visible = false
+            root.sessionJustCompleted = false
+            root.dismissSystemNotification()
+        }
+        if (nannyPopup.visible && (force || (root.nannyShownAt > 0 && now - root.nannyShownAt > root.nannyMaxMs))) {
+            console.log("[POPUP] watchdog force-hiding nannyPopup (open", now - root.nannyShownAt, "ms)")
+            nannyPopup.visible = false
+        }
+        if (nudgePopup.visible && (force || (root.nudgeShownAt > 0 && now - root.nudgeShownAt > root.nudgeMaxMs))) {
+            console.log("[POPUP] watchdog force-hiding nudgePopup (open", now - root.nudgeShownAt, "ms)")
+            nudgePopup.visible = false
+        }
+        if (preEndWarningPopup.visible && (force || (root.preEndShownAt > 0 && now - root.preEndShownAt > root.preEndMaxMs))) {
+            console.log("[POPUP] watchdog force-hiding preEndWarningPopup (open", now - root.preEndShownAt, "ms)")
+            preEndWarningPopup.visible = false
+        }
+    }
+
+    // Always-running watchdog: clears any stuck always-on-top popup so it can
+    // never sit over the dock indefinitely (root cause of the "stuck dock").
+    Timer {
+        id: popupWatchdog
+        interval: 5000
+        running: true
+        repeat: true
+        onTriggered: root.hideAllPopups(false)
+    }
+
     // ===== SUPABASE CONFIG (hardcoded for PomoFlow) =====
     readonly property string supabaseUrl: plasmoid.configuration.supabaseUrl || "http://127.0.0.1:54321"
     readonly property string supabaseKey: plasmoid.configuration.supabaseAnonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODMzMzkxMjR9.quujL-cYcPusBhirDQFq9p-iTN0hRwjY2GLx6XUtYDg"
@@ -496,6 +546,10 @@ PlasmoidItem {
         flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.BypassWindowManagerHint
         color: "transparent"
         visible: false
+        onVisibleChanged: {
+            root.overlayShownAt = visible ? Date.now() : 0
+            console.log("[POPUP] fullScreenOverlay visible=" + visible + " ts=" + Date.now())
+        }
 
         // x/y/width/height set programmatically in showFullScreenOverlay() to target widget's screen
 
@@ -700,6 +754,10 @@ PlasmoidItem {
         flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
         color: "transparent"
         visible: false
+        onVisibleChanged: {
+            root.nannyShownAt = visible ? Date.now() : 0
+            console.log("[POPUP] nannyPopup visible=" + visible + " ts=" + Date.now())
+        }
 
         width: 500
         // Dynamic height: base (title+subtitle+buttons+dismiss+margins=180) + task/header rows
@@ -1120,6 +1178,10 @@ PlasmoidItem {
         flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
         color: "transparent"
         visible: false
+        onVisibleChanged: {
+            root.nudgeShownAt = visible ? Date.now() : 0
+            console.log("[POPUP] nudgePopup visible=" + visible + " ts=" + Date.now())
+        }
         width: 420
         height: 220
 
@@ -1349,6 +1411,10 @@ PlasmoidItem {
         flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
         color: "transparent"
         visible: false
+        onVisibleChanged: {
+            root.preEndShownAt = visible ? Date.now() : 0
+            console.log("[POPUP] preEndWarningPopup visible=" + visible + " ts=" + Date.now())
+        }
 
         width: 360
         height: 160

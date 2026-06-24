@@ -201,7 +201,7 @@ const openAndFocusFirst = () => {
 
   // Ensure focus remains on trigger for aria-activedescendant to work properly
   nextTick(() => {
-    triggerElement.value?.querySelector('.dropdown-trigger')?.focus()
+    (triggerElement.value?.querySelector('.dropdown-trigger') as HTMLElement)?.focus()
   })
 }
 
@@ -213,7 +213,7 @@ const openAndFocusLast = () => {
 
   // Ensure focus remains on trigger for aria-activedescendant to work properly
   nextTick(() => {
-    triggerElement.value?.querySelector('.dropdown-trigger')?.focus()
+    (triggerElement.value?.querySelector('.dropdown-trigger') as HTMLElement)?.focus()
   })
 }
 

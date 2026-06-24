@@ -332,11 +332,7 @@ export const useTimerStore = defineStore('timer', () => {
 
       sync.resumeHeartbeat()
       sync.broadcastSession()
-      try {
-        await sync.saveTimerSessionWithLeadership()
-      } catch (saveError) {
-        console.warn('🍅 [TIMER] Initial timer sync failed; keeping local timer running:', saveError)
-      }
+      await sync.saveTimerSessionWithLeadership()
       audio.playStartSound()
       sync.resumeCountdown()
       await requestWakeLock() // Keep screen on - ROAD-004

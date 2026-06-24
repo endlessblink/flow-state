@@ -230,19 +230,24 @@ describe('Timer State Machine — startTimer', () => {
     expect(store.currentTaskId).toBe('task-abc')
   })
 
-  it('7b. startTimer keeps the local timer running when the initial timer session write fails', async () => {
-    mockSaveActiveTimerSession.mockRejectedValueOnce(new Error('stale auth token'))
+  it('7b. startTimer rolls back local active state when the initial timer session write fails', async () => {
+    const persistenceError = new Error('stale auth token')
+    mockSaveActiveTimerSession.mockRejectedValueOnce(persistenceError)
     const store = useTimerStore()
     await flushPromises()
+    mockEnqueue.mockClear()
+    mockReleaseWakeLock.mockClear()
 
-    await expect(store.startTimer('task-unsynced', 1500, false)).resolves.toBeUndefined()
+    await expect(store.startTimer('task-unsynced', 1500, false)).rejects.toThrow('stale auth token')
     await flushPromises()
 
-    expect(store.currentSession?.taskId).toBe('task-unsynced')
-    expect(store.currentSession?.isActive).toBe(true)
-    expect(store.currentSession?.isPaused).toBe(false)
-    expect(store.isTimerActive).toBe(true)
-    expect(store.isDeviceLeader).toBe(true)
+    expect(store.currentSession).toBeNull()
+    expect(store.currentTaskId).toBeNull()
+    expect(store.isTimerActive).toBe(false)
+    expect(store.isDeviceLeader).toBe(false)
+    expect(store.isLeader).toBe(false)
+    expect(mockReleaseWakeLock).toHaveBeenCalled()
+    expect(mockEnqueue).not.toHaveBeenCalled()
   })
 
   it('8. countdown advances: remainingTime decrements each second', async () => {

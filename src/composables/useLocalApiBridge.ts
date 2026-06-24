@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
+import type { PomodoroSession } from '@/stores/timer'
 import { supabaseConfig } from '@/services/auth/supabase'
 
 /**
@@ -17,6 +18,7 @@ interface ElectronLocalApi {
   isElectron?: boolean
   setLocalApiSession?: (session: unknown) => Promise<unknown>
   clearLocalApiSession?: () => Promise<unknown>
+  setLocalApiTimerSnapshot?: (snapshot: unknown) => Promise<unknown>
 }
 
 function getElectronApi(): ElectronLocalApi | null {
@@ -44,5 +46,40 @@ export function syncLocalApiSession(session: Session | null): void {
     }
   } catch {
     /* best-effort; never break the auth flow */
+  }
+}
+
+function toIso(value: Date | string | number | null | undefined): string | null {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
+export function syncLocalApiTimerSnapshot(session: PomodoroSession | null, deviceId?: string): void {
+  const api = getElectronApi()
+  if (!api) return
+  try {
+    const now = Date.now()
+    void api.setLocalApiTimerSnapshot?.({
+      active: !!session?.isActive,
+      updatedAt: now,
+      session: session
+        ? {
+            id: session.id,
+            task_id: session.taskId,
+            start_time: toIso(session.startTime) || new Date(now).toISOString(),
+            duration: session.duration,
+            remaining_time: Math.max(0, Math.floor(session.remainingTime)),
+            is_active: session.isActive,
+            is_paused: session.isPaused,
+            is_break: session.isBreak,
+            completed_at: toIso(session.completedAt),
+            device_leader_id: session.deviceLeaderId || deviceId || 'electron-app',
+            device_leader_last_seen: new Date(session.deviceLeaderLastSeen || now).toISOString(),
+          }
+        : null,
+    })
+  } catch {
+    /* best-effort; never break timer control */
   }
 }

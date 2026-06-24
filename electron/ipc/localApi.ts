@@ -26,6 +26,12 @@ interface SessionMessage {
   userId: string
 }
 
+interface TimerSnapshotMessage {
+  active: boolean
+  updatedAt: number
+  session: Record<string, unknown> | null
+}
+
 interface LocalApiConfig {
   enabled: boolean
   token: string
@@ -65,6 +71,7 @@ let child: UtilityProcess | null = null
 let listening = false
 // Latest session pushed from the renderer; re-sent whenever the child (re)starts.
 let latestSession: SessionMessage | null = null
+let latestTimerSnapshot: TimerSnapshotMessage | null = null
 
 function sidecarPath() {
   // localApi.cjs lives in dist-electron/ipc/, while the bundled sidecar is
@@ -98,6 +105,7 @@ function startChild() {
       listening = true
       // Forward the current session once the server is up.
       if (latestSession) child?.postMessage({ type: 'session', ...latestSession })
+      if (latestTimerSnapshot) child?.postMessage({ type: 'timerSnapshot', snapshot: latestTimerSnapshot })
     }
   })
 
@@ -125,6 +133,11 @@ function pushSession() {
   if (listening) child.postMessage({ type: 'session', ...latestSession })
 }
 
+function pushTimerSnapshot() {
+  if (!child || !latestTimerSnapshot) return
+  if (listening) child.postMessage({ type: 'timerSnapshot', snapshot: latestTimerSnapshot })
+}
+
 export function registerLocalApiHandlers() {
   config = loadConfig()
   // Persist (ensures a token exists on first run).
@@ -141,7 +154,15 @@ export function registerLocalApiHandlers() {
   ipcMain.handle('localApi:clearSession', () => {
     latestSession = null
     if (child && listening) child.postMessage({ type: 'clear' })
-    if (!config.enabled) stopChild()
+    if (!config.enabled && !latestTimerSnapshot) stopChild()
+    return { ok: true }
+  })
+
+  ipcMain.handle('localApi:setTimerSnapshot', (_e, snapshot: TimerSnapshotMessage) => {
+    if (!snapshot || typeof snapshot.active !== 'boolean') return { ok: false }
+    latestTimerSnapshot = snapshot
+    startChild()
+    pushTimerSnapshot()
     return { ok: true }
   })
 
@@ -151,7 +172,7 @@ export function registerLocalApiHandlers() {
     if (config.enabled) {
       startChild()
       pushSession()
-    } else if (!latestSession) {
+    } else if (!latestSession && !latestTimerSnapshot) {
       stopChild()
     }
     return { ok: true, enabled: config.enabled }

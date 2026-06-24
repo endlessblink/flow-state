@@ -63,6 +63,7 @@ mkdirSync(DATA_DIR, { recursive: true })
 // session, and cleared on sign-out.
 let ctx = null
 let aiRuntime = null
+let localTimerSnapshot = null
 
 function getAIRuntime() {
   if (!aiRuntime) {
@@ -378,6 +379,22 @@ async function handleGetCurrentTimer(res) {
   send(res, 200, { active: true, session: data })
 }
 
+function getLocalTimerResponse() {
+  if (!localTimerSnapshot || typeof localTimerSnapshot !== 'object') return null
+  if (!localTimerSnapshot.active || !localTimerSnapshot.session) {
+    return { active: false, session: null, source: 'local-snapshot' }
+  }
+
+  const session = { ...localTimerSnapshot.session }
+  const updatedAt = Number(localTimerSnapshot.updatedAt) || Date.now()
+  if (session.is_active && !session.is_paused) {
+    const driftSeconds = Math.max(0, Math.floor((Date.now() - updatedAt) / 1000))
+    session.remaining_time = Math.max(0, Number(session.remaining_time || 0) - driftSeconds)
+  }
+  session.device_leader_last_seen = new Date().toISOString()
+  return { active: true, session, source: 'local-snapshot' }
+}
+
 async function handlePostTimerControl(req, res) {
   const { supabase, userId } = ctx
   const body = await readJsonBody(req)
@@ -490,12 +507,16 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true })
     }
 
+    if (req.method === 'GET' && path === '/api/timer/current') {
+      const localTimer = getLocalTimerResponse()
+      if (localTimer) return send(res, 200, localTimer)
+      if (!ctx) return send(res, 503, { error: 'not signed in' })
+      return await handleGetCurrentTimer(res)
+    }
+
     // Data routes require an auth context (token mode: until the app signs in).
     if (!ctx) return send(res, 503, { error: 'not signed in' })
 
-    if (req.method === 'GET' && path === '/api/timer/current') {
-      return await handleGetCurrentTimer(res)
-    }
     if (req.method === 'POST' && path === '/api/timer/control') {
       return await handlePostTimerControl(req, res)
     }
@@ -543,6 +564,7 @@ if (TOKEN_MODE) {
       if (!msg || typeof msg !== 'object') return
       if (msg.type === 'session') applySession(msg)
       else if (msg.type === 'clear') ctx = null
+      else if (msg.type === 'timerSnapshot') localTimerSnapshot = msg.snapshot || null
     })
   }
 } else {

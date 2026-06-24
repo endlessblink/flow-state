@@ -90,6 +90,16 @@
 
 **Tests**: `npx eslint src/components/sync/SyncErrorPopover.vue src/stories/layout/SyncErrorPopover.stories.ts`; `npm run type-check`; Storybook Playwright proof for `🏢-layout-syncerrorpopover--permanent-error` captured `/tmp/sync-error-popover-opaque.png` and confirmed popover/action backgrounds resolve to solid `rgb(...)` colors with `backdrop-filter: none`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1887: make Sync Errors popover opaque"`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.213`; AppImage and deb endpoints both return HTTP 200 with sizes `180343544` and `131335688`.
 
+### ~~BUG-1888~~: KDE widget misses Electron timer during auth recovery and sync queue hammers RLS (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-24) — fixed with Electron local timer snapshots, auth-session-gated sync replay, regression coverage, and shipped via Electron updater `1.4.214`. | **Depends on**: TASK-1797, BUG-1301
+
+**Why**: During Electron auth recovery, FlowState can preserve cached authenticated data and keep the timer usable locally while Supabase has no fresh access token. The KDE widget depended on the Electron local API sidecar having a Supabase session, so `/api/timer/current` could go unavailable even though the Electron timer was running. At the same time, recovered RLS-failed queue entries were replayed with only cached user state, causing repeated 401/RLS failures.
+
+**Fix**: The renderer now publishes the active timer as a local snapshot to Electron main, Electron keeps the sidecar alive for that snapshot, and the sidecar serves `/api/timer/current` from loopback-local state before requiring Supabase auth. Sync queue RLS recovery and queue processing now require a fresh Supabase session access token; cache-only auth recovery waits instead of replaying writes into RLS failures.
+
+**Tests**: RED/green `npm test -- tests/unit/electron/local-api-lifecycle.test.ts tests/unit/local-api/server-contract.test.ts`; `npm test -- tests/unit/sync/sync-orchestrator.test.ts`; combined focused pack `npm test -- tests/unit/electron/local-api-lifecycle.test.ts tests/unit/local-api/server-contract.test.ts tests/unit/sync/sync-orchestrator.test.ts`; `npm run guard:electron-sync`; `npm run type-check`; `npm run electron:build`. `npm run lint` was retried with an explicit timeout and produced no diagnostics before timing out. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.214`; AppImage and deb endpoints both return HTTP 200 with sizes `180339492` and `131335912`.
+
 ### ~~BUG-1886~~: Project bulk sync can hit RLS when stale workspace rows are cached (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-23) — fixed with regression coverage and locally packaged as Electron `1.4.206`; public updater deploy was not run because production upload requires explicit approval. | **Depends on**: TASK-1537, TASK-1547

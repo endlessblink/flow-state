@@ -55,7 +55,7 @@ describe('Electron local API lifecycle regression contract', () => {
     expect(body).toContain('if (config.enabled)')
     expect(body).toContain('startChild()')
     expect(body).toContain('pushSession()')
-    expect(body).toContain('} else if (!latestSession) {')
+    expect(body).toContain('} else if (!latestSession && !latestTimerSnapshot) {')
     expect(body).toContain('stopChild()')
   })
 
@@ -64,7 +64,16 @@ describe('Electron local API lifecycle regression contract', () => {
 
     expect(body).toContain('latestSession = null')
     expect(body).toContain("child.postMessage({ type: 'clear' })")
-    expect(body).toContain('if (!config.enabled) stopChild()')
+    expect(body).toContain('if (!config.enabled && !latestTimerSnapshot) stopChild()')
+  })
+
+  it('starts and updates the sidecar from a local timer snapshot without requiring auth', () => {
+    const body = handlerBody('localApi:setTimerSnapshot')
+
+    expect(body).toContain('latestTimerSnapshot = snapshot')
+    expect(body).toContain('startChild()')
+    expect(body).toContain('pushTimerSnapshot()')
+    expect(body).not.toContain('latestSession')
   })
 
   it('does not report KDE-only background sidecar activity as an enabled task API', () => {

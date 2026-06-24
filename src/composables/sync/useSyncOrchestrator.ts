@@ -76,8 +76,10 @@ async function invalidateSyncedEntityCache(entityType: SyncEntityType): Promise<
 
 async function getCurrentAuthUserId(): Promise<string | undefined> {
   try {
-    const { useAuthStore } = await import('@/stores/auth')
-    return useAuthStore().user?.id
+    const { supabase } = await import('@/services/auth/supabase')
+    const { data } = await supabase.auth.getSession()
+    const session = data?.session
+    return session?.access_token && session.user?.id ? session.user.id : undefined
   } catch {
     return undefined
   }
@@ -173,23 +175,21 @@ const recoverRlsPolicyFailures = async (): Promise<number> => {
     op.lastError?.toLowerCase().includes('row-level security policy')
   )
 
+  if (!currentUserId) return 0
+
   for (const op of rlsFailures) {
     if (!op.id) continue
-    if (currentUserId) {
-      await mod.updateOperation(op.id, {
-        status: 'pending',
-        retryCount: 0,
-        nextRetryAt: undefined,
-        lastError: undefined,
-        userId: currentUserId,
-        payload: {
-          ...op.payload,
-          user_id: currentUserId
-        }
-      })
-    } else {
-      await mod.markCompleted(op.id)
-    }
+    await mod.updateOperation(op.id, {
+      status: 'pending',
+      retryCount: 0,
+      nextRetryAt: undefined,
+      lastError: undefined,
+      userId: currentUserId,
+      payload: {
+        ...op.payload,
+        user_id: currentUserId
+      }
+    })
   }
 
   if (rlsFailures.length > 0) {
@@ -859,6 +859,13 @@ async function processQueue(): Promise<void> {
       return
     }
   } catch { /* workspace store not available */ }
+
+  if (!(await getCurrentAuthUserId())) {
+    if (import.meta.env.DEV) {
+      console.debug('[SYNC] Skipping queue — no fresh auth session for RLS writes')
+    }
+    return
+  }
 
   isProcessing.value = true
 

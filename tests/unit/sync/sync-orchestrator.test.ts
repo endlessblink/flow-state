@@ -147,6 +147,10 @@ vi.mock('@/services/auth/supabase', () => {
   const supabase = {
     from: supabaseMock.fromMock.mockImplementation(() => buildQueryChain()),
     auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { access_token: 'fresh-token', user: { id: 'user-001' } } },
+        error: null
+      }),
       refreshSession: vi.fn().mockResolvedValue({ error: null })
     }
   }
@@ -329,7 +333,13 @@ beforeEach(async () => {
     return {
       supabase: {
         from: supabaseMock.fromMock.mockImplementation(() => buildQueryChain()),
-        auth: { refreshSession: vi.fn().mockResolvedValue({ error: null }) }
+        auth: {
+          getSession: vi.fn().mockResolvedValue({
+            data: { session: { access_token: 'fresh-token', user: { id: 'user-001' } } },
+            error: null
+          }),
+          refreshSession: vi.fn().mockResolvedValue({ error: null })
+        }
       }
     }
   })
@@ -472,6 +482,11 @@ describe('executeOperation: CREATE', () => {
 
   it('rewrites stale queued task user_id to the current auth user before upsert', async () => {
     authStoreMock.user = { id: 'current-user' } as any
+    const { supabase } = await import('@/services/auth/supabase')
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'fresh-token', user: { id: 'current-user' } } },
+      error: null
+    } as any)
     const op = makeOp({
       id: 412,
       operation: 'create',
@@ -515,8 +530,13 @@ describe('executeOperation: CREATE', () => {
     expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
   })
 
-  it('drops queued task create instead of hitting RLS when no user is signed in', async () => {
-    authStoreMock.user = null as any
+  it('waits instead of hitting RLS when no fresh auth session is available', async () => {
+    authStoreMock.user = { id: 'cached-user' } as any
+    const { supabase } = await import('@/services/auth/supabase')
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: null },
+      error: null
+    } as any)
     const op = makeOp({
       id: 413,
       operation: 'create',
@@ -552,7 +572,7 @@ describe('executeOperation: CREATE', () => {
     await sync.forceSync()
 
     expect(taskChain.upsert).not.toHaveBeenCalled()
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(413)
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(413)
     expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
   })
 })
@@ -1515,6 +1535,11 @@ describe('processQueue guards', () => {
 
   it('resets RLS-failed queued task operations to pending with the current auth user', async () => {
     authStoreMock.user = { id: 'current-user' } as any
+    const { supabase } = await import('@/services/auth/supabase')
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'fresh-token', user: { id: 'current-user' } } },
+      error: null
+    } as any)
     const failedOp = makeOp({
       id: 701,
       entityType: 'task',
@@ -1546,8 +1571,13 @@ describe('processQueue guards', () => {
     }))
   })
 
-  it('completes RLS-failed queued task operations when no user is signed in', async () => {
-    authStoreMock.user = null as any
+  it('leaves RLS-failed queued task operations untouched while no fresh auth session exists', async () => {
+    authStoreMock.user = { id: 'cached-user' } as any
+    const { supabase } = await import('@/services/auth/supabase')
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: null },
+      error: null
+    } as any)
     const failedOp = makeOp({
       id: 702,
       entityType: 'task',
@@ -1568,8 +1598,8 @@ describe('processQueue guards', () => {
     await sync.forceSync()
     await vi.advanceTimersByTimeAsync(0)
 
-    expect(writeQueueMocks.getFailedOperations).toHaveBeenCalled()
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(702)
+    expect(writeQueueMocks.getFailedOperations).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(702)
     expect(writeQueueMocks.updateOperation).not.toHaveBeenCalledWith(702, expect.anything())
   })
 })

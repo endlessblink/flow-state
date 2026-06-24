@@ -30,13 +30,17 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(tasksRoute).toBeGreaterThan(tokenCheck)
   })
 
-  it('still requires a signed-in auth context before serving the KDE timer snapshot', () => {
+  it('serves a renderer-owned KDE timer snapshot before requiring Supabase auth context', () => {
     const ctxCheck = SERVER_CJS.indexOf("if (!ctx) return send(res, 503, { error: 'not signed in' })")
     const timerRoute = SERVER_CJS.indexOf("path === '/api/timer/current'")
+    const localSnapshotCheck = SERVER_CJS.indexOf('const localTimer = getLocalTimerResponse()')
 
     expect(ctxCheck, 'auth context check not found').toBeGreaterThan(-1)
     expect(timerRoute, 'timer route not found').toBeGreaterThan(-1)
-    expect(ctxCheck).toBeLessThan(timerRoute)
+    expect(localSnapshotCheck, 'local timer snapshot check not found').toBeGreaterThan(-1)
+    expect(timerRoute).toBeLessThan(ctxCheck)
+    expect(localSnapshotCheck).toBeGreaterThan(timerRoute)
+    expect(localSnapshotCheck).toBeLessThan(ctxCheck)
   })
 
   it('queries only the current user active timer session and returns an inactive payload when absent', () => {

@@ -70,6 +70,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Local Task API (Life OS) — TASK-1797
   setLocalApiSession: (session: unknown) => ipcRenderer.invoke('localApi:setSession', session),
   clearLocalApiSession: () => ipcRenderer.invoke('localApi:clearSession'),
+  setLocalApiTimerSnapshot: (snapshot: unknown) => ipcRenderer.invoke('localApi:setTimerSnapshot', snapshot),
   setLocalApiEnabled: (enabled: boolean) => ipcRenderer.invoke('localApi:setEnabled', enabled),
   getLocalApiToken: () => ipcRenderer.invoke('localApi:getToken'),
   getLocalApiStatus: () => ipcRenderer.invoke('localApi:status'),
@@ -109,6 +110,7 @@ declare global {
       close: () => Promise<void>
       setLocalApiSession: (session: unknown) => Promise<{ ok: boolean }>
       clearLocalApiSession: () => Promise<{ ok: boolean }>
+      setLocalApiTimerSnapshot: (snapshot: unknown) => Promise<{ ok: boolean }>
       setLocalApiEnabled: (enabled: boolean) => Promise<{ ok: boolean; enabled: boolean }>
       getLocalApiToken: () => Promise<string>
       getLocalApiStatus: () => Promise<{ enabled: boolean; running: boolean; listening: boolean; port: number }>

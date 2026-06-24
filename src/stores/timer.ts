@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, reactive, onUnmounted, onScopeDispose } from 'vue'
+import { ref, computed, reactive, watch, onUnmounted, onScopeDispose } from 'vue'
 import { useTaskStore } from './tasks'
 import { useAuthStore } from './auth'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
@@ -14,6 +14,7 @@ import { useTimerAudio } from '@/composables/timer/useTimerAudio'
 import { useTimerNotifications } from '@/composables/timer/useTimerNotifications'
 import { useTimerSync, DEVICE_LEADER_TIMEOUT_MS } from '@/composables/timer/useTimerSync'
 import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
+import { syncLocalApiTimerSnapshot } from '@/composables/useLocalApiBridge'
 
 const getT = () => (i18n.global as unknown as { t: (key: string) => string }).t
 
@@ -112,6 +113,12 @@ export const useTimerStore = defineStore('timer', () => {
     authStore,
     onCountdownComplete: () => completeSession()
   })
+
+  watch(
+    currentSession,
+    (session) => syncLocalApiTimerSnapshot(session, deviceId),
+    { deep: true, flush: 'post' },
+  )
 
   // ── Computed ─────────────────────────────────────────────────────
 

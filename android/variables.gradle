@@ -7,6 +7,9 @@ ext {
     androidxCoordinatorLayoutVersion = '1.2.0'
     androidxCoreVersion = '1.15.0'
     androidxFragmentVersion = '1.8.4'
+    // TASK-1883: pin androidx.browser to a compileSdk-35-compatible version.
+    // @capacitor/browser defaults to 1.9.0, which requires compileSdk 36 + AGP 8.9.1.
+    androidxBrowserVersion = '1.8.0'
     coreSplashScreenVersion = '1.0.1'
     androidxWebkitVersion = '1.12.1'
     junitVersion = '4.13.2'

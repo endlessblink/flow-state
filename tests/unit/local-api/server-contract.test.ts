@@ -43,6 +43,28 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(localSnapshotCheck).toBeLessThan(ctxCheck)
   })
 
+  it('keeps renderer-owned local snapshots fresh enough for the KDE widget clock', () => {
+    const body = functionBody('getLocalTimerResponse')
+
+    expect(body).toContain("source: 'local-snapshot'")
+    expect(body).toContain('Date.now() - updatedAt')
+    expect(body).toContain('Math.floor')
+    expect(body).toContain('session.is_active && !session.is_paused')
+    expect(body).toContain('Math.max(0')
+    expect(body).toContain('remaining_time:')
+  })
+
+  it('accepts parent-process timerSnapshot messages independently of auth session messages', () => {
+    const messageHandlerStart = SERVER_CJS.indexOf("PARENT_PORT.on('message'")
+    expect(messageHandlerStart, 'process message handler not found').toBeGreaterThan(-1)
+    const body = SERVER_CJS.slice(messageHandlerStart, messageHandlerStart + 1600)
+
+    expect(body).toContain("msg.type === 'timerSnapshot'")
+    expect(body).toContain('localTimerSnapshot = msg.snapshot || null')
+    expect(body).toContain("msg.type === 'session'")
+    expect(body).toContain("msg.type === 'clear'")
+  })
+
   it('queries only the current user active timer session and returns an inactive payload when absent', () => {
     const body = functionBody('handleGetCurrentTimer')
 

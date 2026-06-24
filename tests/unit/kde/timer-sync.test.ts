@@ -206,6 +206,19 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(body).toContain('fallback()')
     })
 
+    it('2. accepts Electron renderer-owned local-snapshot responses without requiring Supabase auth', () => {
+      const localFnStart = MAIN_QML.indexOf('function fetchLocalCurrentSession(')
+      expect(localFnStart, 'fetchLocalCurrentSession not found').toBeGreaterThan(-1)
+      const localBody = MAIN_QML.slice(localFnStart, localFnStart + 2500)
+      const supabaseFnStart = MAIN_QML.indexOf('function fetchSupabaseCurrentSession(')
+      expect(supabaseFnStart, 'fetchSupabaseCurrentSession not found').toBeGreaterThan(-1)
+
+      expect(localBody).toContain('body.active && body.session')
+      expect(localBody).toContain('applyFetchedSession(body.session, "local-api")')
+      expect(localBody).not.toContain('body.source')
+      expect(localFnStart).toBeLessThan(supabaseFnStart)
+    })
+
     it('2. fetchCurrentSession queries timer_sessions with is_active=eq.true', () => {
       const supabaseUrl = 'http://127.0.0.1:54321'
       const userId = '717f5209-42d8-4bb9-8781-740107a384e5'

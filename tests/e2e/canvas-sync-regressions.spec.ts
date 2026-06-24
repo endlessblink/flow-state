@@ -64,9 +64,23 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const { data } = await admin.auth.admin.listUsers()
+    const { data, error } = await admin.auth.admin.listUsers()
+    if (error) {
+      console.error('Failed to list users', error)
+      throw error
+    }
     const user = data.users.find((u) => u.email === 'playwright@test.flowstate') || data.users[0]
-    userId = user.id
+    if (!user) {
+      console.warn('No user found! Tests will likely fail. Creating dummy user for playwright')
+      const { data: newUser } = await admin.auth.admin.createUser({
+        email: 'playwright@test.flowstate',
+        password: 'password123',
+        email_confirm: true
+      })
+      userId = newUser.user!.id
+    } else {
+      userId = user.id
+    }
 
     await admin.from('tasks').delete().in('id', ALL_IDS)
     await admin.from('groups').delete().eq('id', GROUP_ID)

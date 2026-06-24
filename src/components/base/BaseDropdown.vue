@@ -5,10 +5,15 @@
       class="dropdown-trigger"
       :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
       :disabled="disabled"
+      role="combobox"
+      aria-haspopup="listbox"
+      :aria-expanded="isOpen"
+      :aria-controls="isOpen ? listboxId : undefined"
+      :aria-activedescendant="isOpen && focusedIndex >= 0 ? `${listboxId}-option-${focusedIndex}` : undefined"
       @click="toggleDropdown"
-      @keydown.down.prevent="openAndFocusFirst"
-      @keydown.up.prevent="openAndFocusLast"
-      @keydown.enter.prevent="toggleDropdown"
+      @keydown.down.prevent="handleKeyDown"
+      @keydown.up.prevent="handleKeyUp"
+      @keydown.enter.prevent="handleKeyEnter"
       @keydown.space.prevent="toggleDropdown"
       @keydown.esc="closeDropdown"
     >
@@ -28,15 +33,13 @@
       @close="closeDropdown"
     >
       <ul
+        :id="listboxId"
         class="dropdown-list"
         role="listbox"
-        @keydown.down.prevent="focusNext"
-        @keydown.up.prevent="focusPrevious"
-        @keydown.enter.prevent="selectFocused"
-        @keydown.esc="closeDropdown"
       >
         <li
           v-for="(option, index) in options"
+          :id="`${listboxId}-option-${index}`"
           :key="getOptionValue(option)"
           class="dropdown-option"
           :class="{
@@ -68,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useId, nextTick } from 'vue'
 import { ChevronDown, Check } from 'lucide-vue-next'
 import BasePopover from './BasePopover.vue'
 import type { Component } from 'vue'
@@ -105,6 +108,34 @@ const isOpen = ref(false)
 const focusedIndex = ref(0)
 const popoverX = ref(0)
 const popoverY = ref(0)
+
+const listboxId = useId()
+
+const handleKeyDown = () => {
+  if (props.disabled) return
+  if (isOpen.value) {
+    focusNext()
+  } else {
+    openAndFocusFirst()
+  }
+}
+
+const handleKeyUp = () => {
+  if (props.disabled) return
+  if (isOpen.value) {
+    focusPrevious()
+  } else {
+    openAndFocusLast()
+  }
+}
+
+const handleKeyEnter = () => {
+  if (isOpen.value) {
+    selectFocused()
+  } else {
+    toggleDropdown()
+  }
+}
 
 const selectedOption = computed(() => {
   if (props.multiple) {
@@ -167,6 +198,11 @@ const openAndFocusFirst = () => {
   isOpen.value = true
   calculatePopoverPosition()
   focusedIndex.value = 0
+
+  // Ensure focus remains on trigger for aria-activedescendant to work properly
+  nextTick(() => {
+    (triggerElement.value?.querySelector('.dropdown-trigger') as HTMLElement)?.focus()
+  })
 }
 
 const openAndFocusLast = () => {
@@ -174,6 +210,11 @@ const openAndFocusLast = () => {
   isOpen.value = true
   calculatePopoverPosition()
   focusedIndex.value = props.options.length - 1
+
+  // Ensure focus remains on trigger for aria-activedescendant to work properly
+  nextTick(() => {
+    (triggerElement.value?.querySelector('.dropdown-trigger') as HTMLElement)?.focus()
+  })
 }
 
 const closeDropdown = () => {

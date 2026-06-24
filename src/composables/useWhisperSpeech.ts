@@ -14,6 +14,7 @@ import { useOnline } from '@vueuse/core'
 import { WavRecorder } from '@/services/audio/wavRecorder'
 import { createTranscriptionService } from '@/services/transcription/provider'
 import type { TranscriptionProviderId } from '@/services/transcription/types'
+import type { WhisperLanguage } from '@/services/transcription/whisperCloud'
 
 export type WhisperStatus = 'idle' | 'recording' | 'processing' | 'error' | 'queued'
 
@@ -30,6 +31,11 @@ export interface UseWhisperSpeechOptions {
   model?: 'whisper-large-v3' | 'whisper-large-v3-turbo' | 'distil-whisper-large-v3-en'
   /** Transcription route: auto tries Android Gemma first, then cloud Whisper */
   provider?: TranscriptionProviderId
+  /**
+   * Spoken-language hint for cloud Whisper (BUG-1885). 'auto' (default) lets Whisper
+   * detect the language — required for mixed Hebrew+English dictation.
+   */
+  language?: WhisperLanguage
   /** Max recording duration in seconds (default: 30) */
   maxDuration?: number
   /** Callback when transcription is complete */
@@ -49,13 +55,14 @@ export function useWhisperSpeech(options: UseWhisperSpeechOptions = {}) {
   const {
     model = DEFAULT_OPTIONS.model,
     provider = 'whisper-cloud',
+    language = 'auto',
     maxDuration = DEFAULT_OPTIONS.maxDuration,
     onResult,
     onError,
     onOfflineRecord
   } = options
 
-  const transcriptionService = createTranscriptionService({ model, provider })
+  const transcriptionService = createTranscriptionService({ model, provider, language })
 
   // Online status for offline queue support (TASK-1131)
   const isOnline = useOnline()

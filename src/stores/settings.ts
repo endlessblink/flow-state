@@ -105,6 +105,8 @@ export interface AppSettings {
 
     // Android/mobile voice transcription
     voiceTranscriptionProvider: TranscriptionProviderId
+    // BUG-1885: spoken-language hint for cloud Whisper ('auto' = detect, for mixed Hebrew+English)
+    voiceTranscriptionLanguage: 'auto' | 'he' | 'en'
     androidGemmaModelPath: string
 
     // FEATURE-1162: Saved Views / Smart Filters
@@ -301,6 +303,7 @@ export const useSettingsStore = defineStore('settings', {
         aiUseSubscription: _persisted?.aiUseSubscription ?? true,
         aiBrain: (_persisted?.aiBrain ?? 'claude') as 'claude' | 'codex',
         voiceTranscriptionProvider: (_persisted?.voiceTranscriptionProvider ?? 'auto') as TranscriptionProviderId,
+        voiceTranscriptionLanguage: (_persisted?.voiceTranscriptionLanguage ?? 'auto') as 'auto' | 'he' | 'en',
         androidGemmaModelPath: _persisted?.androidGemmaModelPath ?? '',
 
         // FEATURE-1162: Saved Views defaults
@@ -476,6 +479,9 @@ export const useSettingsStore = defineStore('settings', {
                     }
                     if (this.$state.voiceTranscriptionProvider === undefined) {
                         this.$state.voiceTranscriptionProvider = 'auto'
+                    }
+                    if (this.$state.voiceTranscriptionLanguage === undefined) {
+                        this.$state.voiceTranscriptionLanguage = 'auto'
                     }
                     if (this.$state.androidGemmaModelPath === undefined) {
                         this.$state.androidGemmaModelPath = ''

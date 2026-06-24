@@ -67,6 +67,19 @@
 - `auto` still falls back to Whisper on model/runtime failure, while `android-gemma-local` reports a clear local-only error.
 - Android build proof runs with a configured JDK.
 
+### BUG-1885: Cloud Whisper forces Hebrew, mangling mixed Hebrew/English dictation (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (filed 2026-06-23) | **Depends on**: TASK-1882
+
+**Why**: User dictates voice tasks in mixed Hebrew + English. `whisperCloud.ts` hardcoded `language: 'he'` and always injected an all-Hebrew prompt, so English speech came back as Hebrew-script gibberish ("failed horribly"). Root cause is purely client-side — the Supabase edge function only forwards `language`/`prompt` when present.
+
+**Fix**: Default cloud Whisper to language auto-detect (omit `language` unless explicitly set) and drop the forced Hebrew prompt for auto mode via an optional `language?: 'auto' | 'he' | 'en'` on `WhisperCloudOptions`. Add regression coverage that auto mode sends no `language=he` / no forced Hebrew prompt, and explicit `he`/`en` still sets it.
+
+**Acceptance**:
+- `auto` (default) transcription request sends no `language` field and no Hebrew-only prompt.
+- Explicit `he`/`en` selection still forwards the language.
+- Mixed Hebrew/English voice capture no longer transliterates English into Hebrew script (user-verified real capture).
+
 ### ~~BUG-1886~~: Project bulk sync can hit RLS when stale workspace rows are cached (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-23) — fixed with regression coverage and locally packaged as Electron `1.4.206`; public updater deploy was not run because production upload requires explicit approval. | **Depends on**: TASK-1537, TASK-1547

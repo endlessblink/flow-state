@@ -53,6 +53,18 @@ function setVoiceTranscriptionProvider(provider: TranscriptionProviderId) {
   settingsStore.updateSetting('voiceTranscriptionProvider', provider)
 }
 
+// BUG-1885: spoken-language hint for cloud Whisper. 'auto' fixes mixed Hebrew+English
+// dictation that previously transliterated English into Hebrew gibberish.
+const VOICE_LANGUAGE_OPTIONS: Array<{ key: 'auto' | 'he' | 'en'; label: string; desc: string }> = [
+  { key: 'auto', label: 'Auto-detect', desc: 'Best for mixed Hebrew + English' },
+  { key: 'he', label: 'Hebrew', desc: 'Force Hebrew' },
+  { key: 'en', label: 'English', desc: 'Force English' },
+]
+
+function setVoiceTranscriptionLanguage(language: 'auto' | 'he' | 'en') {
+  settingsStore.updateSetting('voiceTranscriptionLanguage', language)
+}
+
 const androidGemmaStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
 async function saveAndroidGemmaModelPath() {
@@ -468,6 +480,20 @@ async function onClearMemories() {
           class="provider-chip"
           :class="{ active: settingsStore.voiceTranscriptionProvider === opt.key }"
           @click="setVoiceTranscriptionProvider(opt.key)"
+        >
+          <span class="provider-chip-label">{{ opt.label }}</span>
+          <span class="provider-chip-desc">{{ opt.desc }}</span>
+        </button>
+      </div>
+
+      <label class="model-selector-label" style="margin-top: 12px">Spoken language</label>
+      <div class="provider-chips">
+        <button
+          v-for="opt in VOICE_LANGUAGE_OPTIONS"
+          :key="opt.key"
+          class="provider-chip"
+          :class="{ active: settingsStore.voiceTranscriptionLanguage === opt.key }"
+          @click="setVoiceTranscriptionLanguage(opt.key)"
         >
           <span class="provider-chip-label">{{ opt.label }}</span>
           <span class="provider-chip-desc">{{ opt.desc }}</span>

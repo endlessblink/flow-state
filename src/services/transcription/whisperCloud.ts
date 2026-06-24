@@ -17,12 +17,30 @@ const getAudioExtension = (mimeType: string) => {
   return 'webm'
 }
 
+export type WhisperLanguage = 'auto' | 'he' | 'en'
+
 export interface WhisperCloudOptions {
   model?: 'whisper-large-v3' | 'whisper-large-v3-turbo' | 'distil-whisper-large-v3-en'
+  /**
+   * BUG-1885: Spoken language hint.
+   * - 'auto' (default): omit `language` so Whisper auto-detects. Required for mixed
+   *   Hebrew+English dictation — forcing a single language transliterates the other
+   *   into gibberish.
+   * - 'he' | 'en': forward the language for users who dictate in one language only.
+   */
+  language?: WhisperLanguage
 }
+
+// Neutral, language-agnostic hint preserving English tech terms verbatim. A prior
+// all-Hebrew prompt forced Hebrew-script output for English speech (BUG-1885), so it
+// is only used when the user explicitly forces a language; auto mode sends no prompt.
+const TECH_TERM_PROMPT = 'Preserve these terms as-is: email, meeting, Zoom, GitHub, Slack, '
+  + 'FlowState, Supabase, deadline, update, review, deploy, PR, bug, feature, sprint, '
+  + 'backlog, standup, sync, TODO, ASAP, FYI.'
 
 export function createWhisperCloudProvider(options: WhisperCloudOptions = {}): TranscriptionProvider {
   const model = options.model || 'whisper-large-v3'
+  const language: WhisperLanguage = options.language || 'auto'
 
   return {
     id: 'whisper-cloud',
@@ -33,10 +51,13 @@ export function createWhisperCloudProvider(options: WhisperCloudOptions = {}): T
       const formData = new FormData()
       formData.append('file', request.audioBlob, `audio.${getAudioExtension(request.mimeType)}`)
       formData.append('model', model)
-      formData.append('language', 'he')
-      formData.append('prompt', 'שלום, זהו תמלול של משימות יומיות בעברית. מונחים באנגלית שיש לשמור כפי שהם: '
-        + 'email, meeting, Zoom, GitHub, Slack, FlowState, Supabase, deadline, update, review, deploy, '
-        + 'PR, bug, feature, sprint, backlog, standup, sync, TODO, ASAP, FYI.')
+      // BUG-1885: only force a language when the user explicitly picked one. In 'auto'
+      // mode we omit both `language` and the prompt so Whisper detects the dominant
+      // language instead of transliterating English dictation into Hebrew script.
+      if (language !== 'auto') {
+        formData.append('language', language)
+        formData.append('prompt', TECH_TERM_PROMPT)
+      }
       formData.append('temperature', '0')
 
       const headers: Record<string, string> = {}

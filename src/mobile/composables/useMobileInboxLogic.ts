@@ -82,6 +82,7 @@ export function useMobileInboxLogic() {
     const finalVoiceTranscript = ref('')
     const transcriptionService = createTranscriptionService({
         provider: settingsStore.voiceTranscriptionProvider,
+        language: settingsStore.voiceTranscriptionLanguage,
         model: 'whisper-large-v3-turbo'
     })
 
@@ -127,6 +128,7 @@ export function useMobileInboxLogic() {
         cancel: cancelWhisper
     } = useWhisperSpeech({
         provider: settingsStore.voiceTranscriptionProvider,
+        language: settingsStore.voiceTranscriptionLanguage,
         onResult: (result) => {
             console.log('[Whisper] Result:', result)
             if (result.transcript.trim()) {

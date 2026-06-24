@@ -1,6 +1,15 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTranscriptionService } from '@/services/transcription/provider'
+import { createWhisperCloudProvider } from '@/services/transcription/whisperCloud'
 import type { TranscriptionProvider } from '@/services/transcription/types'
+
+vi.mock('@/composables/supabase/_infrastructure', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } })
+    }
+  }
+}))
 
 const audioBlob = new Blob(['audio'], { type: 'audio/webm' })
 
@@ -86,5 +95,48 @@ describe('transcription provider routing', () => {
 
     await expect(service.transcribe({ audioBlob, mimeType: audioBlob.type })).rejects.toThrow('android-gemma-local unavailable')
     expect(whisper.transcribe).not.toHaveBeenCalled()
+  })
+})
+
+describe('whisper-cloud language handling (BUG-1885)', () => {
+  let lastFormData: FormData | null = null
+
+  beforeEach(() => {
+    lastFormData = null
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+      lastFormData = init?.body as FormData
+      return {
+        ok: true,
+        json: async () => ({ text: 'hello שלום', language: 'en', duration: 1, segments: [] })
+      } as Response
+    }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('auto mode (default) sends no forced language and no Hebrew prompt', async () => {
+    const whisper = createWhisperCloudProvider()
+    await whisper.transcribe({ audioBlob, mimeType: audioBlob.type, duration: 1 })
+
+    expect(lastFormData).not.toBeNull()
+    expect(lastFormData!.get('language')).toBeNull()
+    expect(lastFormData!.get('prompt')).toBeNull()
+  })
+
+  it('explicit Hebrew forwards language=he', async () => {
+    const whisper = createWhisperCloudProvider({ language: 'he' })
+    await whisper.transcribe({ audioBlob, mimeType: audioBlob.type, duration: 1 })
+
+    expect(lastFormData!.get('language')).toBe('he')
+    expect(lastFormData!.get('prompt')).toBeTruthy()
+  })
+
+  it('explicit English forwards language=en', async () => {
+    const whisper = createWhisperCloudProvider({ language: 'en' })
+    await whisper.transcribe({ audioBlob, mimeType: audioBlob.type, duration: 1 })
+
+    expect(lastFormData!.get('language')).toBe('en')
   })
 })

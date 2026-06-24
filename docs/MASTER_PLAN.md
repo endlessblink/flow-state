@@ -80,6 +80,16 @@
 - Explicit `he`/`en` selection still forwards the language.
 - Mixed Hebrew/English voice capture no longer transliterates English into Hebrew script (user-verified real capture).
 
+### ~~BUG-1887~~: Sync Errors popover is translucent over canvas content (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-06-24) — fixed the Sync Errors popover and Storybook mirror to render opaque surfaces instead of inheriting glass/translucent tokens. | **Depends on**: TASK-1183
+
+**Why**: Permanent sync/RLS errors opened a Sync Errors popover where the canvas and task nodes showed through the panel, rows, badges, and buttons. The popover used global glass tokens (`--glass-bg-medium`, `--surface-subtle`, `--danger-bg-subtle`) that are intentionally translucent in the current desktop theme.
+
+**Fix**: `SyncErrorPopover.vue` now defines local opaque popover, row, danger-row, and control backgrounds. Red danger surfaces keep their tint by layering translucent red over an opaque base, and popover/button backdrop filters are disabled. The Storybook layout story uses the same opaque treatment for visual regression review.
+
+**Tests**: `npx eslint src/components/sync/SyncErrorPopover.vue src/stories/layout/SyncErrorPopover.stories.ts`; `npm run type-check`; Storybook Playwright proof for `🏢-layout-syncerrorpopover--permanent-error` captured `/tmp/sync-error-popover-opaque.png` and confirmed popover/action backgrounds resolve to solid `rgb(...)` colors with `backdrop-filter: none`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1887: make Sync Errors popover opaque"`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.213`; AppImage and deb endpoints both return HTTP 200 with sizes `180343544` and `131335688`.
+
 ### ~~BUG-1886~~: Project bulk sync can hit RLS when stale workspace rows are cached (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-23) — fixed with regression coverage and locally packaged as Electron `1.4.206`; public updater deploy was not run because production upload requires explicit approval. | **Depends on**: TASK-1537, TASK-1547

@@ -7,7 +7,7 @@ import { AlertTriangle, X, RefreshCw, Trash2, CheckSquare, FolderKanban, Ban } f
 
 const containerStyle = `position: relative; width: 100%; min-height: 500px; background: var(--overlay-backdrop-bg); display: flex; align-items: flex-start; justify-content: flex-end; padding: var(--space-6); border-radius: var(--radius-xl);`
 
-const popoverStyle = `width: 360px; background: var(--glass-bg-medium); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); overflow: hidden; display: flex; flex-direction: column;`
+const popoverStyle = `width: 360px; background: var(--glass-bg-solid, var(--surface-primary)); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); overflow: hidden; display: flex; flex-direction: column;`
 
 const headerStyle = `display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--border-subtle);`
 
@@ -21,11 +21,11 @@ const closeBtnStyle = `display: flex; align-items: center; justify-content: cent
 
 const bodyStyle = `flex: 1; overflow-y: auto; padding: var(--space-4);`
 
-const errorSummaryStyle = `padding: var(--space-3); background: var(--danger-bg-subtle); border-radius: var(--radius-md); margin-bottom: var(--space-4); font-size: var(--text-sm); color: var(--color-danger); line-height: 1.5;`
+const errorSummaryStyle = `padding: var(--space-3); background: linear-gradient(rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.12)), var(--surface-primary); border-radius: var(--radius-md); margin-bottom: var(--space-4); font-size: var(--text-sm); color: var(--color-danger); line-height: 1.5;`
 
-const errorItemStyle = `padding: var(--space-3); background: var(--surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: var(--space-3);`
+const errorItemStyle = `padding: var(--space-3); background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: var(--space-3);`
 
-const errorItemPermanentStyle = `padding: var(--space-3); background: var(--surface-subtle); border: 1px dashed var(--color-danger); border-radius: var(--radius-md); margin-bottom: var(--space-3);`
+const errorItemPermanentStyle = `padding: var(--space-3); background: var(--surface-primary); border: 1px dashed var(--color-danger); border-radius: var(--radius-md); margin-bottom: var(--space-3);`
 
 const errorEntityStyle = `display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); color: var(--text-secondary); font-size: var(--text-sm);`
 
@@ -33,21 +33,21 @@ const entityTypeStyle = `font-weight: var(--font-medium);`
 
 const entityIdStyle = `font-family: monospace; font-size: var(--text-xs); color: var(--text-muted);`
 
-const permanentBadgeStyle = `display: inline-flex; align-items: center; gap: var(--space-0_5); padding: var(--space-0_5) var(--space-1_5); background: var(--danger-bg-subtle); color: var(--color-danger); font-size: var(--text-xs); font-weight: var(--font-medium); border-radius: var(--radius-sm); margin-left: auto;`
+const permanentBadgeStyle = `display: inline-flex; align-items: center; gap: var(--space-0_5); padding: var(--space-0_5) var(--space-1_5); background: linear-gradient(rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.12)), var(--surface-primary); color: var(--color-danger); font-size: var(--text-xs); font-weight: var(--font-medium); border-radius: var(--radius-sm); margin-left: auto;`
 
 const errorOperationStyle = `font-size: var(--text-sm); color: var(--text-muted); margin-bottom: var(--space-1);`
 
-const errorDetailStyle = `font-size: var(--text-xs); color: var(--color-danger); background: var(--danger-bg-subtle); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); margin-bottom: var(--space-2);`
+const errorDetailStyle = `font-size: var(--text-xs); color: var(--color-danger); background: linear-gradient(rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.12)), var(--surface-primary); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); margin-bottom: var(--space-2);`
 
 const errorMetaStyle = `display: flex; gap: var(--space-3); font-size: var(--text-xs); color: var(--text-muted);`
 
 const footerStyle = `display: flex; gap: var(--space-3); padding: var(--space-4); border-top: 1px solid var(--border-subtle);`
 
-const retryBtnStyle = `flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-2_5) var(--space-4); background: var(--glass-bg-soft); border: 1px solid var(--brand-primary); border-radius: var(--radius-md); color: var(--brand-primary); font-weight: var(--font-medium); cursor: pointer; backdrop-filter: blur(8px);`
+const retryBtnStyle = `flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-2_5) var(--space-4); background: var(--surface-secondary); border: 1px solid var(--brand-primary); border-radius: var(--radius-md); color: var(--brand-primary); font-weight: var(--font-medium); cursor: pointer;`
 
-const clearBtnStyle = `display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-2_5) var(--space-4); background: var(--glass-bg-soft); border: 1px solid var(--color-danger); border-radius: var(--radius-md); color: var(--color-danger); font-weight: var(--font-medium); cursor: pointer; backdrop-filter: blur(8px);`
+const clearBtnStyle = `display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-2_5) var(--space-4); background: var(--surface-secondary); border: 1px solid var(--color-danger); border-radius: var(--radius-md); color: var(--color-danger); font-weight: var(--font-medium); cursor: pointer;`
 
-const dismissBtnStyle = `padding: var(--space-2_5) var(--space-4); background: var(--glass-bg-soft); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); color: var(--text-secondary); font-weight: var(--font-medium); cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);`
+const dismissBtnStyle = `padding: var(--space-2_5) var(--space-4); background: var(--surface-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); color: var(--text-secondary); font-weight: var(--font-medium); cursor: pointer;`
 
 const noRetryHintStyle = `color: var(--color-danger); font-style: italic;`
 

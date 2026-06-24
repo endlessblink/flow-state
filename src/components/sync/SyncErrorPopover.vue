@@ -247,13 +247,19 @@ const formatTime = (timestamp: number): string => {
 }
 
 .sync-error-popover {
+  --sync-popover-bg: var(--glass-bg-solid, var(--surface-primary));
+  --sync-popover-row-bg: var(--surface-primary);
+  --sync-popover-row-bg-danger: linear-gradient(rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.12)), var(--surface-primary);
+  --sync-popover-control-bg: var(--surface-secondary);
+
   width: 360px;
   max-height: calc(100vh - var(--space-25));
-  background: var(--glass-bg-medium);
+  background: var(--sync-popover-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  backdrop-filter: blur(var(--blur-lg));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -265,6 +271,7 @@ const formatTime = (timestamp: number): string => {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4);
+  background: var(--sync-popover-bg);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -320,11 +327,12 @@ const formatTime = (timestamp: number): string => {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-4);
+  background: var(--sync-popover-bg);
 }
 
 .error-summary {
   padding: var(--space-3);
-  background: var(--danger-bg-subtle);
+  background: var(--sync-popover-row-bg-danger);
   border-radius: var(--radius-md);
   margin-bottom: var(--space-4);
 }
@@ -344,7 +352,7 @@ const formatTime = (timestamp: number): string => {
 
 .error-item {
   padding: var(--space-3);
-  background: var(--surface-subtle);
+  background: var(--sync-popover-row-bg);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
 }
@@ -373,7 +381,7 @@ const formatTime = (timestamp: number): string => {
   align-items: center;
   gap: var(--space-0_5);
   padding: var(--space-0_5) var(--space-1_5);
-  background: var(--danger-bg-subtle);
+  background: var(--sync-popover-row-bg-danger);
   color: var(--color-danger);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
@@ -400,7 +408,7 @@ const formatTime = (timestamp: number): string => {
 .error-detail {
   font-size: var(--text-xs);
   color: var(--color-danger);
-  background: var(--danger-bg-subtle);
+  background: var(--sync-popover-row-bg-danger);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   margin-bottom: var(--space-2);
@@ -446,6 +454,7 @@ const formatTime = (timestamp: number): string => {
   display: flex;
   gap: var(--space-3);
   padding: var(--space-4);
+  background: var(--sync-popover-bg);
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -456,18 +465,19 @@ const formatTime = (timestamp: number): string => {
   justify-content: center;
   gap: var(--space-2);
   padding: var(--space-2_5) var(--space-4);
-  background: var(--glass-bg-soft);
+  background: var(--sync-popover-control-bg);
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-md);
   color: var(--brand-primary);
   font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-fast);
-  backdrop-filter: blur(8px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .retry-btn:hover {
-  background: var(--glass-bg-medium);
+  background: var(--surface-tertiary);
   border-color: var(--brand-primary-hover);
   color: var(--brand-primary-hover);
 }
@@ -478,25 +488,26 @@ const formatTime = (timestamp: number): string => {
   justify-content: center;
   gap: var(--space-2);
   padding: var(--space-2_5) var(--space-4);
-  background: var(--glass-bg-soft);
+  background: var(--sync-popover-control-bg);
   border: 1px solid var(--color-danger);
   border-radius: var(--radius-md);
   color: var(--color-danger);
   font-weight: var(--font-medium);
   cursor: pointer;
   transition: all var(--duration-fast);
-  backdrop-filter: blur(8px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .clear-btn:hover {
-  background: var(--glass-bg-medium);
+  background: var(--surface-tertiary);
   border-color: var(--color-danger-hover);
   color: var(--color-danger-hover);
 }
 
 .dismiss-btn {
   padding: var(--space-2_5) var(--space-4);
-  background: transparent;
+  background: var(--sync-popover-control-bg);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
@@ -506,7 +517,7 @@ const formatTime = (timestamp: number): string => {
 }
 
 .dismiss-btn:hover {
-  background: var(--state-hover-bg);
+  background: var(--surface-tertiary);
   border-color: var(--border-hover);
 }
 </style>

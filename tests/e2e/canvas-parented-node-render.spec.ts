@@ -38,7 +38,7 @@ test.describe('canvas renders a task placed inside a group (BUG-1796)', () => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
     const { data } = await admin.auth.admin.listUsers()
-    userId = data.users.find((u) => u.email === 'playwright@test.flowstate')!.id
+    const user = data.users.find((u) => u.email === 'playwright@test.flowstate'); if (!user) throw new Error('Test user not found'); userId = user.id
 
     // Clean any prior run + tombstones that would make sync skip our CREATE.
     await admin.from('tasks').delete().eq('id', TASK_ID)

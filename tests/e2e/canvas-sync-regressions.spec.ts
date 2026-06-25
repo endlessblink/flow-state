@@ -65,7 +65,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
     const { data } = await admin.auth.admin.listUsers()
-    userId = data.users.find((u) => u.email === 'playwright@test.flowstate')!.id
+    const user = data.users.find((u) => u.email === 'playwright@test.flowstate'); if (!user) throw new Error('Test user not found'); userId = user.id
 
     await admin.from('tasks').delete().in('id', ALL_IDS)
     await admin.from('groups').delete().eq('id', GROUP_ID)

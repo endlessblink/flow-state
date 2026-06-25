@@ -27,6 +27,7 @@ import { beginPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 const mockFetchTasks = vi.fn().mockResolvedValue([])
 const mockFetchDeletedTaskIds = vi.fn().mockResolvedValue([])
 const mockFetchTombstones = vi.fn().mockResolvedValue([])
+const mockEnqueue = vi.fn().mockResolvedValue({ id: 1 })
 let mockIsSwitchingWorkspace = false
 
 vi.mock('@/composables/useSupabaseDatabase', () => ({
@@ -69,7 +70,7 @@ vi.mock('@/composables/useDatabase', () => ({
 
 vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
   useSyncOrchestrator: () => ({
-    enqueue: vi.fn().mockResolvedValue({ id: 1 }),
+    enqueue: mockEnqueue,
     status: { value: 'idle' },
     pendingCount: { value: 0 },
     failedCount: { value: 0 },
@@ -417,6 +418,67 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
 
     expect(store._rawTasks.some(t => t.id === softDeletedTask.id)).toBe(false)
     expect(store._rawTasks.some(t => t.id === remoteTask.id)).toBe(true)
+  })
+
+  // ── BUG-1891: fail-closed when deletion markers don't load reliably ──
+
+  it('BUG-1891: does NOT re-enqueue a CREATE for an ambiguous local-only task when the tombstone fetch fails', async () => {
+    const store = useTaskStore()
+    // A stale local-only task (not recently created, no pending write). Without reliable
+    // deletion markers we cannot tell whether it was deleted on the server, so the old
+    // fail-OPEN behavior re-CREATEd it (resurrection). Fail closed: do not enqueue.
+    const ambiguousTask = makeTask({
+      id: 'task-ambiguous-deletion-unknown',
+      title: 'Maybe deleted elsewhere',
+      createdAt: new Date('2026-01-01T00:00:00Z'), // long ago → not "recently created"
+    })
+    const remoteTask = makeTask({ title: 'Remote survivor' })
+
+    store._rawTasks.push(ambiguousTask)
+    mockFetchTasks.mockResolvedValue([remoteTask]) // online
+    // Simulate the tombstone fetch erroring: it invokes onError and returns [] (fail-open input).
+    mockFetchTombstones.mockImplementation(async (opts?: { onError?: () => void }) => {
+      opts?.onError?.()
+      return []
+    })
+
+    await store.loadFromDatabase()
+    // The re-enqueue path is fire-and-forget (async dynamic import); flush microtasks/timers
+    // so that any CREATE that WOULD be enqueued has actually been recorded before asserting.
+    await new Promise(r => setTimeout(r, 20))
+
+    // The ambiguous task must NOT be pushed to the server as a CREATE (no resurrection).
+    const createForAmbiguous = mockEnqueue.mock.calls.find(
+      ([op]) => op?.operation === 'create' && op?.entityId === ambiguousTask.id
+    )
+    expect(createForAmbiguous).toBeUndefined()
+  })
+
+  it('BUG-1891: STILL re-enqueues a CREATE for a recently-created local-only task even when deletion markers are unreliable', async () => {
+    const store = useTaskStore()
+    // Genuinely-new local work must still sync — fail-closed only suppresses AMBIGUOUS tasks.
+    const freshTask = makeTask({
+      id: 'task-fresh-local-new-work',
+      title: 'Brand new local task',
+      createdAt: new Date(), // just now → unambiguously new
+    })
+    const remoteTask = makeTask({ title: 'Remote survivor' })
+
+    store._rawTasks.push(freshTask)
+    mockFetchTasks.mockResolvedValue([remoteTask])
+    mockFetchTombstones.mockImplementation(async (opts?: { onError?: () => void }) => {
+      opts?.onError?.()
+      return []
+    })
+
+    await store.loadFromDatabase()
+    await new Promise(r => setTimeout(r, 20)) // flush fire-and-forget enqueue
+
+    expect(store._rawTasks.some(t => t.id === freshTask.id)).toBe(true)
+    const createForFresh = mockEnqueue.mock.calls.find(
+      ([op]) => op?.operation === 'create' && op?.entityId === freshTask.id
+    )
+    expect(createForFresh).toBeDefined()
   })
 
   // ── Empty overwrite guard ──

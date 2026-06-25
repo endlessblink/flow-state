@@ -289,11 +289,21 @@ export function useTaskPersistence(
             const wsStore = useWorkspaceStore()
             // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq), undefined = legacy (no filter)
             const workspaceId = wsStore.activeWorkspaceId
+            // BUG-1891: Track whether deletion markers loaded reliably. If either the soft-deleted-id
+            // or tombstone fetch errors (network blip), both silently return [] — which previously made
+            // the smart merge believe NOTHING was deleted and re-CREATE every in-memory deleted task
+            // (resurrection vector #1). When unreliable we fail CLOSED: do not re-enqueue ambiguous
+            // local-only tasks as CREATE.
+            let deletionInfoReliable = true
+            const markDeletionInfoUnreliable = () => { deletionInfoReliable = false }
             const [fetchedTasks, softDeletedTaskIds, tombstones] = await Promise.all([
                 fetchTasks(workspaceId),
-                fetchDeletedTaskIds(),
-                fetchTombstones()
+                fetchDeletedTaskIds({ onError: markDeletionInfoUnreliable }),
+                fetchTombstones({ onError: markDeletionInfoUnreliable })
             ])
+            if (!deletionInfoReliable) {
+                console.warn('[BUG-1891] Deletion markers (soft-deleted ids / tombstones) failed to load — failing closed: ambiguous local-only tasks will NOT be re-created this load.')
+            }
             const repairedLoaded = repairTaskTitles(sanitizeLoadedTasks(fetchedTasks))
             const loadedTasks = repairedLoaded.repairedTasks
             const remotelyDeletedTaskIds = new Set<string>([
@@ -585,6 +595,20 @@ export function useTaskPersistence(
                         pendingWrite: isPendingWrite(localTask.id),
                     })
                     mergedTasks.push(localTask)
+
+                    // BUG-1891: Fail closed. When deletion markers didn't load reliably we cannot tell a
+                    // genuinely-new local task from one the server already deleted. Preserve it in memory
+                    // (no data loss) but do NOT push a CREATE that could resurrect a deleted task — UNLESS
+                    // it's unambiguously local new work (recently created or has a pending write).
+                    if (!deletionInfoReliable && !isRecentlyCreated && !isPendingWrite(localTask.id)) {
+                        if (import.meta.env.DEV) {
+                            console.warn(`[BUG-1891] Skipping CREATE re-enqueue for ambiguous local-only task "${localTask.title?.slice(0, 15)}" - deletion markers unreliable this load`)
+                        }
+                        logPermanentDeleteTraceIfActive(localTask.id, 'task-load.smart-merge.skip-requeue-unreliable-deletion-info', {
+                            remoteTaskCount: geometryMergedLoadedTasks.length,
+                        })
+                        continue
+                    }
 
                     // Queue the task for sync retry via the offline sync system
                     // This is async and non-blocking - the task stays in memory regardless

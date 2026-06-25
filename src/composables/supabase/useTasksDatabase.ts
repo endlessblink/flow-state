@@ -277,6 +277,20 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 if (error) throw error
                 if (data) restoredTask = fromSupabaseTask(data as SupabaseTask)
             }, 'restoreTask')
+            // BUG-1891: Defense-in-depth. On a migrated DB the BEFORE UPDATE trigger already drops the
+            // tombstone when is_deleted flips true->false, but clear it explicitly so restore also works
+            // on a DB that hasn't applied the migration yet and the local client never races a stale
+            // tombstone read (which would make the sync CREATE guard silently drop the restored task).
+            const restoreUserId = getUserIdSafe()
+            if (restoreUserId) {
+                const { error: tombErr } = await getSupabase()
+                    .from('tombstones')
+                    .delete()
+                    .eq('entity_type', 'task')
+                    .eq('entity_id', taskId)
+                    .eq('user_id', restoreUserId)
+                if (tombErr) console.warn(`[BUG-1891] restoreTask: tombstone cleanup failed for ${taskId}:`, tombErr.message)
+            }
             lastSyncError.value = null
             return restoredTask
         } catch (e: unknown) {
@@ -372,7 +386,9 @@ export function useTasksDatabase(ctx: DatabaseContext) {
     }
 
     // TASK-153: Fetch IDs of deleted tasks (for golden backup validation)
-    const fetchDeletedTaskIds = async (): Promise<string[]> => {
+    // BUG-1891: optional onError lets the load path detect failure (vs an empty-but-successful
+    // result) so it can fail CLOSED — never resurrect deleted tasks when deletion info is unreliable.
+    const fetchDeletedTaskIds = async (opts?: { onError?: () => void }): Promise<string[]> => {
         try {
             const userId = getUserIdSafe()
             if (!userId) return []
@@ -390,6 +406,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             }, 'fetchDeletedTaskIds')
         } catch (e: unknown) {
             console.error('[TASK-153] Failed to fetch deleted task IDs:', e)
+            opts?.onError?.()
             return []
         }
     }

@@ -40,7 +40,9 @@ export function useTombstoneDatabase(ctx: DatabaseContext) {
     }
 
     // TASK-317: Fetch tombstones for restore filtering
-    const fetchTombstones = async (): Promise<{ entityType: string; entityId: string }[]> => {
+    // BUG-1891: optional onError lets the load path detect failure (vs an empty-but-successful
+    // result) so it can fail CLOSED — never resurrect deleted tasks when deletion info is unreliable.
+    const fetchTombstones = async (opts?: { onError?: () => void }): Promise<{ entityType: string; entityId: string }[]> => {
         const userId = getUserIdSafe()
         if (!userId) return []
         try {
@@ -55,6 +57,7 @@ export function useTombstoneDatabase(ctx: DatabaseContext) {
             }, 'fetchTombstones')
         } catch (e: unknown) {
             console.error('[TASK-317] Failed to fetch tombstones:', e)
+            opts?.onError?.()
             return []
         }
     }

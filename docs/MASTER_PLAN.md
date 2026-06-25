@@ -3624,6 +3624,22 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
+### ~~BUG-1891~~: Deleted tasks keep resurfacing — unify deletion truth on tombstones (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-06-25) | **Opened**: 2026-06-25
+
+**Root cause (proven by 3 code traces + live DB diagnostics):** Two sources of "deleted" truth. A SOFT delete (normal delete) only set `is_deleted=true` and **never wrote a tombstone**, while every resurrection guard (sync CREATE guard, `safe_create_task`, load-merge) keys off the tombstones table. Local DB showed **153/153 soft-deleted tasks had zero tombstone protection** and 8 live rows already carried a tombstone (resurrection captured in data). Two vectors: (1) load-merge fail-open — `fetchTombstones`/`fetchDeletedTaskIds` silently return `[]` on error → merge re-CREATEs every in-memory deleted task with `is_deleted:false`; (2) stale queued CREATE passes the tombstone-only guard and flips `is_deleted` back.
+
+**Fix:** Enforce the invariant server-side + harden app:
+- Migration `20260625000000_unify_soft_delete_tombstones.sql`: BEFORE UPDATE trigger on `tasks` — `is_deleted` false→true writes a permanent tombstone, true→false removes it (makes Trash-restore safe automatically); backfills tombstones for existing soft-deleted rows; reports (does not auto-resolve) existing zombies.
+- `taskPersistence.ts`: fail CLOSED — when deletion markers don't load reliably, do not re-enqueue ambiguous local-only tasks as CREATE.
+- `useTasksDatabase.restoreTask`: explicit tombstone clear (defense-in-depth for un-migrated DBs).
+- Dropped the "block CREATE when live is_deleted=true" idea — it would break undo (undo re-creates a soft-deleted row via CREATE, clearing only the tombstone first).
+
+**Verified:** DB trigger test (RED→GREEN) `scripts/db/test-soft-delete-tombstone.sql`; local asymmetry 153→0; typecheck clean; `canvasDeleteUndo` 8/8; e2e resurrection + undo-delete pass against migrated local DB.
+
+**Shipped:** migration applied to VPS prod (319→0 unprotected soft-deletes; trigger smoke test passed); 7 prod zombies healed (stale tombstones removed from live rows — 0 zombies remain); Electron v1.4.217 built + deployed (auto-updater manifest shows 1.4.217); web JS (fail-closed merge) committed + pushed to master for CI/CD PWA deploy. DB trigger is server-side so it protects web/Electron/KDE immediately.
+
 ### BUG-1850: Canvas permanent-delete does nothing (soft-delete + resurrection) (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-11) | **Opened**: 2026-06-11
@@ -5424,6 +5440,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
+| ~~**BUG-1891**~~ | **P0** | ✅ **Deleted tasks keep resurfacing — unify deletion truth on tombstones (soft-delete writes/removes tombstone via DB trigger + fail-closed load merge)** (✅ DONE 2026-06-25 — DB trigger live on prod 319→0, 7 zombies healed, Electron v1.4.217 shipped, web JS pushed) |
 | ~~**BUG-1869**~~ | **P0** | ✅ **Skipped realtime task updates can leave Electron, localhost, and KDE out of sync** (✅ DONE 2026-06-15, shipped v1.4.184) |
 | ~~**BUG-1868**~~ | **P0** | ✅ **Timer start can look active locally while Electron, localhost, and KDE see no synced session** (✅ DONE 2026-06-15, shipped v1.4.183) |
 | ~~**BUG-1867**~~ | **P0** | ✅ **Canvas geometry drifts across Electron and localhost while idle** (✅ DONE 2026-06-15, shipped v1.4.182) |

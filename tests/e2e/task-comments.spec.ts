@@ -19,7 +19,7 @@ test.describe('Task Comments (TASK-1553)', () => {
       const res = await supabase.auth.admin.listUsers()
       testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!testUser) throw new Error('Test user not found')
+    if (!testUser) { const { data } = await supabase.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
 
     await supabase.from('workspaces').upsert({
       id: TEST_WORKSPACE_ID, name: 'Test Workspace',

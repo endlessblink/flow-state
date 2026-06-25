@@ -3624,9 +3624,9 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
-### BUG-1892: "Time for a break" popup loops endlessly until the app is closed (🔄 IN PROGRESS)
+### ~~BUG-1892~~: "Time for a break" popup loops endlessly until the app is closed (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-06-25
+**Priority**: P0 | **Status**: ✅ DONE (2026-06-25, shipped Electron v1.4.218 + web) | **Opened**: 2026-06-25
 
 **Root cause (3-agent trace + live DB):** The break notification is a fire-and-forget side effect of `completeSession()` (`src/stores/timer.ts:560`). `completeSession` is NOT idempotent per session id — its only top guard is the concurrency lock `isCompleting` (`:469`); it never checks `completedSessionIds`, and that set self-deleted after 2 min (`:484`, `PENDING_WRITE_TIMEOUT_MS`). When the 15s follower poll / resync (`useTimerSync.ts:139,235-244,570-588`) re-adopts an expired-but-still-`is_active=true` session row (completion DB write failed/offline, or a remote leader/KDE widget keeps heart-beating it), `onCountdownComplete → completeSession` runs again for the SAME session and re-fires the OS notification — looping until the poll stops (app closed). The KDE widget had the same class of bug: its only guard is a single boolean `sessionJustCompleted` that `applyFetchedSession` resets whenever a poll sees an active row (`packages/kde-widget/contents/ui/main.qml:4371,4777`).
 
@@ -5452,7 +5452,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
-| **BUG-1892** | **P0** | 🔄 **"Time for a break" popup loops endlessly until app close — make completion idempotent per session id (durable guard) + KDE per-session-id guard** (🔄 IN PROGRESS — fix + tests done, pending deploy) |
+| ~~**BUG-1892**~~ | **P0** | ✅ **"Time for a break" popup loops endlessly until app close — make completion idempotent per session id (durable guard) + KDE per-session-id guard** (✅ DONE 2026-06-25 — shipped Electron v1.4.218 + web; KDE guard needs widget-reinstall verify) |
 | ~~**BUG-1891**~~ | **P0** | ✅ **Deleted tasks keep resurfacing — unify deletion truth on tombstones (soft-delete writes/removes tombstone via DB trigger + fail-closed load merge)** (✅ DONE 2026-06-25 — DB trigger live on prod 319→0, 7 zombies healed, Electron v1.4.217 shipped, web JS pushed) |
 | ~~**BUG-1869**~~ | **P0** | ✅ **Skipped realtime task updates can leave Electron, localhost, and KDE out of sync** (✅ DONE 2026-06-15, shipped v1.4.184) |
 | ~~**BUG-1868**~~ | **P0** | ✅ **Timer start can look active locally while Electron, localhost, and KDE see no synced session** (✅ DONE 2026-06-15, shipped v1.4.183) |

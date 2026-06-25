@@ -13,15 +13,29 @@ import { createPinia, setActivePinia } from 'pinia'
 // Module-level mocks — must be hoisted before store import
 // ============================================================================
 
-const mockFetchActiveTimerSession = vi.fn()
-const mockSaveActiveTimerSession = vi.fn().mockResolvedValue(undefined)
-const mockClaimLeadership = vi.fn().mockResolvedValue(true)
-const mockClaimTimerLeadership = vi.fn(() => true)
-const mockBroadcastTimerSession = vi.fn()
-const mockSetTimerCallbacks = vi.fn()
-const mockRequestWakeLock = vi.fn().mockResolvedValue(undefined)
-const mockReleaseWakeLock = vi.fn()
-const mockEnqueue = vi.fn().mockResolvedValue({ id: 1, status: 'pending' })
+const {
+  mockFetchActiveTimerSession,
+  mockSaveActiveTimerSession,
+  mockClaimLeadership,
+  mockClaimTimerLeadership,
+  mockBroadcastTimerSession,
+  mockSetTimerCallbacks,
+  mockRequestWakeLock,
+  mockReleaseWakeLock,
+  mockEnqueue,
+  mockSyncLocalApiTimerSnapshot,
+} = vi.hoisted(() => ({
+  mockFetchActiveTimerSession: vi.fn(),
+  mockSaveActiveTimerSession: vi.fn().mockResolvedValue(undefined),
+  mockClaimLeadership: vi.fn().mockResolvedValue(true),
+  mockClaimTimerLeadership: vi.fn(() => true),
+  mockBroadcastTimerSession: vi.fn(),
+  mockSetTimerCallbacks: vi.fn(),
+  mockRequestWakeLock: vi.fn().mockResolvedValue(undefined),
+  mockReleaseWakeLock: vi.fn(),
+  mockEnqueue: vi.fn().mockResolvedValue({ id: 1, status: 'pending' }),
+  mockSyncLocalApiTimerSnapshot: vi.fn(),
+}))
 
 vi.mock('@/composables/useSupabaseDatabase', () => ({
   useSupabaseDatabase: () => ({
@@ -105,6 +119,10 @@ vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
   }),
 }))
 
+vi.mock('@/composables/useLocalApiBridge', () => ({
+  syncLocalApiTimerSnapshot: mockSyncLocalApiTimerSnapshot,
+}))
+
 vi.mock('@/utils/supabaseMappers', () => ({
   toSupabaseTimerSession: vi.fn((session: unknown) => session),
 }))
@@ -148,6 +166,7 @@ describe('Timer State Machine — Initial State', () => {
     mockFetchActiveTimerSession.mockResolvedValue(null)
     mockSaveActiveTimerSession.mockResolvedValue(undefined)
     mockClaimLeadership.mockResolvedValue(true)
+    mockSyncLocalApiTimerSnapshot.mockClear()
   })
 
   afterEach(() => {
@@ -557,6 +576,31 @@ describe('Timer State Machine — Session Completion', () => {
       (call) => call[0]?.isActive === false
     )
     expect(stopSave).toBeDefined()
+  })
+
+  it('25. completeSession clears the local active timer before completion persistence can hang', async () => {
+    const store = useTimerStore()
+    await flushPromises()
+    const hangingSave = new Promise<void>(() => {})
+    mockSaveActiveTimerSession.mockReturnValueOnce(hangingSave)
+
+    store.currentSession = {
+      id: 'session-completion-hang',
+      taskId: 'general',
+      startTime: new Date('2026-03-21T10:00:00.000Z'),
+      duration: 2,
+      remainingTime: 0,
+      isActive: true,
+      isPaused: false,
+      isBreak: false,
+    }
+
+    void store.completeSession()
+    await flushPromises()
+
+    expect(mockSaveActiveTimerSession).toHaveBeenCalled()
+    expect(store.currentSession).toBeNull()
+    expect(mockSyncLocalApiTimerSnapshot).toHaveBeenCalledWith(null, expect.any(String))
   })
 })
 

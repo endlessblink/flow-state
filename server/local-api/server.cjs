@@ -390,6 +390,9 @@ function getLocalTimerResponse() {
   if (session.is_active && !session.is_paused) {
     const driftSeconds = Math.max(0, Math.floor((Date.now() - updatedAt) / 1000))
     session.remaining_time = Math.max(0, Number(session.remaining_time || 0) - driftSeconds)
+    if (session.remaining_time <= 0) {
+      return { active: false, session: null, source: 'local-snapshot' }
+    }
   }
   session.device_leader_last_seen = new Date().toISOString()
   return { active: true, session, source: 'local-snapshot' }

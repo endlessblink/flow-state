@@ -474,7 +474,10 @@ export const useTimerStore = defineStore('timer', () => {
     // now durable (the 2-minute self-delete below was removed), so this guard holds for the
     // life of the store. addExtraTime() intentionally clears the id to allow re-completion.
     if (completedSessionIds.has(session.id)) {
-      if (currentSession.value?.id === session.id) currentSession.value = null
+      if (currentSession.value?.id === session.id) {
+        currentSession.value = null
+        syncLocalApiTimerSnapshot(null, deviceId)
+      }
       return
     }
     isCompleting = true
@@ -487,6 +490,8 @@ export const useTimerStore = defineStore('timer', () => {
       sync.pauseHeartbeat()
 
       const completedSession = { ...session, isActive: false, completedAt: new Date() }
+      const wasBreak = session.isBreak
+      const lastTaskId = session.taskId
       completedSessions.value.push(completedSession)
       // BUG-1318: Track this session as completed to prevent stale Realtime resurrection.
       // BUG-1892: Keep the id DURABLY (no 2-minute self-delete). A completed session id is a
@@ -495,6 +500,13 @@ export const useTimerStore = defineStore('timer', () => {
       // re-adopts an expired-active row after the old 2-minute window elapsed. addExtraTime()
       // explicitly removes the id when the user extends a session.
       completedSessionIds.add(session.id)
+      // Clear the local/Electron/KDE-facing timer before any remote completion work.
+      // If Supabase, sync queueing, or notifications stall, the visible timer must not
+      // remain active at 00:00 in both the app and the localhost KDE endpoint.
+      currentSession.value = null
+      syncLocalApiTimerSnapshot(null, deviceId)
+      audio.playEndSound()
+      releaseWakeLock() // Allow sleep - ROAD-004
 
       // BUG-1185: Save completed state to DB - prevents sync from picking up stale active session
       // Previously only stopTimer() saved to DB, causing completeSession to leave is_active=true in Supabase
@@ -545,9 +557,6 @@ export const useTimerStore = defineStore('timer', () => {
         }).catch(err => console.warn('[Timer] Failed to write pomodoro history:', err))
       }
 
-      const wasBreak = session.isBreak
-      const lastTaskId = session.taskId
-
       if (session.taskId && session.taskId !== 'general' && !session.isBreak) {
         // BUG-1354: Use _rawTasks to find task regardless of smart view filters.
         // taskStore.tasks is filtered — if a smart view is active, the task won't be
@@ -563,10 +572,7 @@ export const useTimerStore = defineStore('timer', () => {
         }
       }
 
-      currentSession.value = null
       sync.broadcastSession()
-      audio.playEndSound()
-      releaseWakeLock() // Allow sleep - ROAD-004
 
       // TASK-1009: Send notification via Service Worker for action buttons
       // Browser Notification API doesn't support action buttons - only SW notifications do

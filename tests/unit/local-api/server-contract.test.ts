@@ -52,6 +52,8 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).toContain('session.is_active && !session.is_paused')
     expect(body).toContain('Math.max(0')
     expect(body).toContain('remaining_time:')
+    expect(body).toContain('session.remaining_time <= 0')
+    expect(body).toContain("active: false, session: null, source: 'local-snapshot'")
   })
 
   it('accepts parent-process timerSnapshot messages independently of auth session messages', () => {

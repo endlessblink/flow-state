@@ -35,7 +35,12 @@ test.describe('TASK-1455: Catalog — Uncategorized tasks group', () => {
 
     // Find the test user to get their user_id
     const { data: users } = await adminClient.auth.admin.listUsers()
-    const testUser = users?.users?.find(u => u.email === 'playwright@test.flowstate')
+    let testUser = users?.users?.find(u => u.email === 'playwright@test.flowstate')
+    for (let i = 0; i < 10 && !testUser; i++) {
+      await new Promise(r => setTimeout(r, 1000))
+      const res = await adminClient.auth.admin.listUsers()
+      testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+    }
     expect(testUser, 'Test user must exist (global-setup should have created it)').toBeTruthy()
 
     // Upsert an uncategorized task (project_id = null)

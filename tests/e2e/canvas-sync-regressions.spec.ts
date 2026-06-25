@@ -65,7 +65,14 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
     const { data } = await admin.auth.admin.listUsers()
-    const user = data.users.find((u) => u.email === 'playwright@test.flowstate'); if (!user) throw new Error('Test user not found'); userId = user.id
+    let user = data.users.find((u) => u.email === 'playwright@test.flowstate')
+    for (let i = 0; i < 10 && !user; i++) {
+      await new Promise(r => setTimeout(r, 1000))
+      const res = await admin.auth.admin.listUsers()
+      user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+    }
+    if (!user) throw new Error('Test user not found')
+    userId = user.id
 
     await admin.from('tasks').delete().in('id', ALL_IDS)
     await admin.from('groups').delete().eq('id', GROUP_ID)

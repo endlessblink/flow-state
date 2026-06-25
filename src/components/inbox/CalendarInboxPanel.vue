@@ -25,10 +25,12 @@
       :base-count="baseInboxTasks.length"
       :canvas-group-options="canvasGroupOptions"
       :hide-done-tasks="hideCalendarDoneTasks"
+      :hide-subtasks="hideSubtasks"
       :base-tasks="baseInboxTasks"
       :root-projects="taskStore.rootProjects"
       :search-query="searchQuery"
       @toggle-hide-done-tasks="toggleHideDoneTasks"
+      @update:hide-subtasks="hideSubtasks = $event"
       @clear-all-filters="clearAllFilters"
       @update:search-query="searchQuery = $event"
     />
@@ -100,6 +102,7 @@ const {
   sortBy, // TASK-1303
   sortDirection, // TASK-1412
   hideCalendarDoneTasks,
+  hideSubtasks,
   canvasGroupOptions,
   baseInboxTasks,
   inboxTasks,

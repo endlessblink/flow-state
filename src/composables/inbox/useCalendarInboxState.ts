@@ -26,6 +26,7 @@ export function useCalendarInboxState() {
     const _selectedPriorities = usePersistentRef<string[]>('flowstate:cal-inbox-priority-filters', [])
     const _selectedProjects = usePersistentRef<string[]>('flowstate:cal-inbox-project-filters', [])
     const _selectedDurations = usePersistentRef<string[]>('flowstate:cal-inbox-duration-filters', [])
+    const hideSubtasks = usePersistentRef<boolean>('flowstate:cal-inbox-hide-subtasks', false)
 
     const selectedPriorities = computed({
         get: () => new Set(_selectedPriorities.value),
@@ -154,6 +155,7 @@ export function useCalendarInboxState() {
     const hasActiveFilters = computed(() => {
         return showTodayOnly.value ||
             unscheduledOnly.value ||
+            hideSubtasks.value ||
             selectedPriorities.value.size > 0 ||
             selectedProjects.value.size > 0 ||
             selectedDurations.value.size > 0 ||
@@ -180,6 +182,10 @@ export function useCalendarInboxState() {
         // 3. Advanced Filters
         if (unscheduledOnly.value) {
             tasks = tasks.filter(task => !isScheduledOnCalendar(task))
+        }
+
+        if (hideSubtasks.value) {
+            tasks = tasks.filter(task => !task.parentTaskId)
         }
 
         // TASK-1246: Multi-select filters (OR within each)
@@ -322,6 +328,7 @@ export function useCalendarInboxState() {
 
     const clearAllFilters = () => {
         unscheduledOnly.value = false
+        hideSubtasks.value = false
         selectedPriorities.value = new Set()
         selectedProjects.value = new Set()
         selectedDurations.value = new Set()
@@ -339,6 +346,7 @@ export function useCalendarInboxState() {
         selectedProjects,
         selectedDurations,
         selectedCanvasGroups,
+        hideSubtasks,
         searchQuery, // TASK-1075
         sortBy, // TASK-1303
         sortDirection, // TASK-1412

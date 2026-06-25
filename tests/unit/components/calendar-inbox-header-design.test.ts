@@ -30,6 +30,7 @@ vi.mock('lucide-vue-next', () => {
     LayoutGrid: icon,
     List: icon,
     ListFilter: icon,
+    ListTree: icon,
     Search: icon,
     X: icon,
   }
@@ -126,6 +127,7 @@ function mountHeader(overrides = {}) {
       selectedProjects: new Set(),
       selectedDurations: new Set(),
       hideDoneTasks: true,
+      hideSubtasks: false,
       baseTasks: [],
       rootProjects: [],
       searchQuery: '',

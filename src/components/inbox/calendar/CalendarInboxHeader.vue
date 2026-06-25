@@ -27,7 +27,6 @@
       <span>{{ $t('calendar.today') }}</span>
       <span v-if="todayCount > 0" class="count-badge">{{ todayCount }}</span>
     </button>
-
   </div>
 
   <div v-if="!isCollapsed" class="calendar-filter-toolbar">
@@ -136,6 +135,15 @@
             <span>{{ hideDoneTasks ? $t('filters.hiding_done') : $t('filters.show_done') }}</span>
             <Check v-if="hideDoneTasks" :size="13" />
           </button>
+          <button
+            class="filter-row-option"
+            :class="{ active: hideSubtasks }"
+            @click="$emit('update:hideSubtasks', !hideSubtasks)"
+          >
+            <ListTree :size="14" />
+            <span>{{ hideSubtasks ? 'Hiding subtasks' : 'Show subtasks' }}</span>
+            <Check v-if="hideSubtasks" :size="13" />
+          </button>
         </div>
 
         <div class="filter-panel-section">
@@ -224,7 +232,6 @@
       </BaseBadge>
     </div>
   </div>
-
 </template>
 
 <script setup lang="ts">
@@ -243,6 +250,7 @@ import {
   Clock,
   Flag,
   FolderOpen,
+  ListTree,
   ListFilter,
   Search,
   X,
@@ -270,6 +278,7 @@ const props = defineProps<{
   selectedProjects: Set<string>
   selectedDurations: Set<DurationCategory>
   hideDoneTasks: boolean
+  hideSubtasks: boolean
   baseTasks: Task[]
   rootProjects: Project[]
   searchQuery: string // TASK-1075
@@ -286,6 +295,7 @@ const emit = defineEmits<{
   (e: 'update:selectedPriorities', value: Set<string>): void
   (e: 'update:selectedProjects', value: Set<string>): void
   (e: 'update:selectedDurations', value: Set<DurationCategory>): void
+  (e: 'update:hideSubtasks', value: boolean): void
   (e: 'update:searchQuery', value: string): void // TASK-1075
   (e: 'update:sortBy', value: SortByType): void // TASK-1303
   (e: 'update:sortDirection', value: SortDirection): void // TASK-1412
@@ -315,6 +325,7 @@ const durationOptions = computed(() =>
 const secondaryFilterCount = computed(() =>
   Number(props.unscheduledOnly) +
   Number(props.hideDoneTasks) +
+  Number(props.hideSubtasks) +
   props.selectedPriorities.size +
   props.selectedProjects.size +
   props.selectedDurations.size,
@@ -340,6 +351,15 @@ const activeFilterTokens = computed(() => {
       label: t('filters.hiding_done'),
       icon: CheckCircle2,
       clear: () => emit('toggleHideDoneTasks'),
+    })
+  }
+
+  if (props.hideSubtasks) {
+    tokens.push({
+      key: 'hide-subtasks',
+      label: 'Hiding subtasks',
+      icon: ListTree,
+      clear: () => emit('update:hideSubtasks', false),
     })
   }
 

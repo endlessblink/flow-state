@@ -34,7 +34,12 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
     })
 
     const { data: users } = await admin.auth.admin.listUsers()
-    const testUser = users?.users?.find(u => u.email === 'playwright@test.flowstate')
+    let testUser = users?.users?.find(u => u.email === 'playwright@test.flowstate')
+    for (let i = 0; i < 10 && !testUser; i++) {
+      await new Promise(r => setTimeout(r, 1000))
+      const res = await admin.auth.admin.listUsers()
+      testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+    }
     expect(testUser, 'Test user must exist').toBeTruthy()
     const userId = testUser!.id
 
@@ -95,7 +100,14 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
     const { data: users } = await admin.auth.admin.listUsers()
-    const userId = users!.users!.find(u => u.email === 'playwright@test.flowstate')!.id
+    let user = users!.users!.find((u) => u.email === 'playwright@test.flowstate')
+    for (let i = 0; i < 10 && !user; i++) {
+      await new Promise(r => setTimeout(r, 1000))
+      const res = await admin.auth.admin.listUsers()
+      user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+    }
+    if (!user) { const { data } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); user = data.user; }
+    const userId = user.id
 
     // Seed an EMPTY lane and ensure the two target tasks aren't in it
     await admin.from('lanes').upsert({ id: LANE_ID, user_id: userId, name: LANE_NAME, color: '#4ECDC4' })

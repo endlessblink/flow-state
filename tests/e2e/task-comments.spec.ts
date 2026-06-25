@@ -13,8 +13,13 @@ test.describe('Task Comments (TASK-1553)', () => {
     })
 
     const { data: users } = await supabase.auth.admin.listUsers()
-    const testUser = users?.users?.find(u => u.email === 'playwright@test.flowstate')
-    if (!testUser) throw new Error('Test user not found')
+    let testUser = users?.users?.find(u => u.email === 'playwright@test.flowstate')
+    for (let i = 0; i < 10 && !testUser; i++) {
+      await new Promise(r => setTimeout(r, 1000))
+      const res = await supabase.auth.admin.listUsers()
+      testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+    }
+    if (!testUser) { const { data } = await supabase.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
 
     await supabase.from('workspaces').upsert({
       id: TEST_WORKSPACE_ID, name: 'Test Workspace',

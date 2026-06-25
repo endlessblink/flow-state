@@ -76,4 +76,36 @@ describe('useCalendarInboxState subtask filtering', () => {
       'Standalone task',
     ])
   })
+
+  it('hides top-level calendar cards that are backed by embedded subtasks', () => {
+    mockTaskStore.calendarFilteredTasks = [
+      task({
+        id: 'parent',
+        title: 'פרויקט בינה מעצבת',
+        subtasks: [
+          {
+            id: 'embedded-subtask',
+            parentTaskId: 'parent',
+            title: 'לבדוק משימות בגושן',
+            description: '',
+            completedPomodoros: 0,
+            isCompleted: false,
+            createdAt: new Date('2026-06-01T08:00:00.000Z'),
+            updatedAt: new Date('2026-06-01T08:00:00.000Z'),
+          },
+        ],
+      }),
+      task({ id: 'embedded-subtask', title: 'לבדוק משימות בגושן' }),
+      task({ id: 'standalone', title: 'Standalone task' }),
+    ]
+
+    const state = useCalendarInboxState()
+
+    state.hideSubtasks.value = true
+
+    expect(state.inboxTasks.value.map(item => item.title)).toEqual([
+      'פרויקט בינה מעצבת',
+      'Standalone task',
+    ])
+  })
 })

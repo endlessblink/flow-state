@@ -102,6 +102,19 @@ export function useCalendarInboxState() {
         return true
     }
 
+    const embeddedSubtaskIds = computed(() => {
+        const ids = new Set<string>()
+        for (const task of taskStore.calendarFilteredTasks) {
+            for (const subtask of task.subtasks || []) {
+                ids.add(subtask.id)
+            }
+        }
+        return ids
+    })
+
+    const isSubtaskCard = (task: Task): boolean =>
+        Boolean(task.parentTaskId) || embeddedSubtaskIds.value.has(task.id)
+
     // Helper: Check if task is due today (status-agnostic, with proper date normalization)
     // Uses isTodayTask from useSmartViews but also handles done tasks (isTodayTask excludes them)
     const isTaskDueToday = (task: Task): boolean => {
@@ -185,7 +198,7 @@ export function useCalendarInboxState() {
         }
 
         if (hideSubtasks.value) {
-            tasks = tasks.filter(task => !task.parentTaskId)
+            tasks = tasks.filter(task => !isSubtaskCard(task))
         }
 
         // TASK-1246: Multi-select filters (OR within each)

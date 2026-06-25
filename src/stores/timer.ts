@@ -467,6 +467,16 @@ export const useTimerStore = defineStore('timer', () => {
     const session = currentSession.value
     // BUG-1318: Merged null-check with completion lock to prevent concurrent calls
     if (!session || isCompleting) return
+    // BUG-1892: Idempotency per session id — never complete/notify the same session twice.
+    // The follower poll / resync (useTimerSync) can re-adopt an expired-but-still-active
+    // session row; without this guard completeSession re-fires the "Time for a break"
+    // notification on every tick, looping until the app is closed. completedSessionIds is
+    // now durable (the 2-minute self-delete below was removed), so this guard holds for the
+    // life of the store. addExtraTime() intentionally clears the id to allow re-completion.
+    if (completedSessionIds.has(session.id)) {
+      if (currentSession.value?.id === session.id) currentSession.value = null
+      return
+    }
     isCompleting = true
 
     try {
@@ -478,10 +488,13 @@ export const useTimerStore = defineStore('timer', () => {
 
       const completedSession = { ...session, isActive: false, completedAt: new Date() }
       completedSessions.value.push(completedSession)
-      // BUG-1318: Track this session as completed to prevent stale Realtime resurrection
+      // BUG-1318: Track this session as completed to prevent stale Realtime resurrection.
+      // BUG-1892: Keep the id DURABLY (no 2-minute self-delete). A completed session id is a
+      // UUID that is never reused, so suppressing it for the store's lifetime is correct and
+      // is what stops completeSession from re-firing the break notification when the poll/resync
+      // re-adopts an expired-active row after the old 2-minute window elapsed. addExtraTime()
+      // explicitly removes the id when the user extends a session.
       completedSessionIds.add(session.id)
-      // Clean up old entries after 2 minutes (they won't arrive later than that)
-      setTimeout(() => completedSessionIds.delete(session.id), PENDING_WRITE_TIMEOUT_MS)
 
       // BUG-1185: Save completed state to DB - prevents sync from picking up stale active session
       // Previously only stopTimer() saved to DB, causing completeSession to leave is_active=true in Supabase

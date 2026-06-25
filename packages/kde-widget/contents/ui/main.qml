@@ -4778,6 +4778,16 @@ PlasmoidItem {
             console.log("[TIMER] Duplicate onSessionComplete call - ignoring")
             return
         }
+        // BUG-1892: per-session-id idempotency. sessionJustCompleted is a single boolean that
+        // applyFetchedSession() resets to false whenever a poll sees an active row — so a stale
+        // active snapshot can let the SAME completed session re-enter here and re-fire notify-send
+        // (the "Time for a break" loop). A completed session id (UUID) is never reused, so once
+        // we have notified for it we must never notify again. A session's first completion always
+        // has a different lastCompletedSessionId, so this never blocks a legitimate completion.
+        if (root.currentSessionId && root.currentSessionId === root.lastCompletedSessionId) {
+            console.log("[TIMER] Session " + root.currentSessionId + " already completed - ignoring re-fire")
+            return
+        }
         root.isRunning = false
         root.completedSessions++
         // Reset pre-end warning so next session can show it

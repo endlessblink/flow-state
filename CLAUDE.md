@@ -13,6 +13,20 @@ The FlowState router is the project-specific entrypoint. If upstream `using-supe
 
 **Auto-routing**: at the start of bugs, fixes, behavior changes, reviews, planning, and completion checks, use `.claude/skills/superpowers-flowstate-auto-router/SKILL.md` to choose the relevant `superpowers-*` support skill. Keep the router subordinate to FlowState rules and skip it for trivial chat or when a higher-priority workflow already clearly applies.
 
+# Recurring Issue Closeout Model
+
+When a user reports that a FlowState issue was "already fixed" or keeps recurring, do not assume the previous fix regressed. Treat it as a failure-class investigation.
+
+Before claiming the issue is fixed:
+
+1. Name the exact failure mode fixed and explicitly state what remains outside that fix.
+2. Map the symptom across likely failure classes: data shape, renderer state, Electron main/preload, localhost sidecar, KDE polling/control, Supabase persistence, updater/runtime version, and stale live process state.
+3. Add a regression for the user's actual repro shape, not only helper or source-contract coverage.
+4. Probe the real boundary involved: Electron app, `http://127.0.0.1:5577/api/timer/current`, KDE behavior, live updater manifest, public route, or production data as applicable.
+5. For broad symptoms like "KDE timer broken" or "subtasks still visible", run the existing related pack plus one adverse-state test for the newly discovered mode.
+6. Avoid broad DONE wording unless the whole failure class is covered. Prefer precise labels such as "fixed: auth-recovery snapshot path", "fixed: completion-at-zero path", or "fixed: embedded subtask card shape".
+7. If an Electron fix shipped, final proof must include live `latest-linux.yml` and artifact reachability, while noting that a currently running old Electron/sidecar process can still expose stale state until update/restart.
+
 # MANDATORY Pre-Read for Major Work
 
 **Before ANY major feature, refactoring, architecture decision, or multi-file change**, read these documents first:

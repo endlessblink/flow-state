@@ -1,7 +1,9 @@
 import { ipcMain } from 'electron'
 import { createServer, type Server } from 'http'
 
-const OAUTH_PORTS = [24895, 24896, 24897]
+// Must match the documented Google/Supabase allow-listed loopback redirects.
+// See docs/GOOGLE-CLOUD-SETUP.md and src/composables/useTauriOAuth.ts.
+const OAUTH_PORTS = [24892, 24893, 24894]
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 
 let activeServer: Server | null = null

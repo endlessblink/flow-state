@@ -1149,7 +1149,12 @@ export const useAuthStore = defineStore('auth', () => {
         }
 
         // 3. Open OAuth in system browser
-        await electronAPI.openExternal(oauthData.url)
+        try {
+          await electronAPI.openExternal(oauthData.url)
+        } catch (e: unknown) {
+          await electronAPI.oauthCancel()
+          throw new Error(`Failed to open browser for authentication: ${e instanceof Error ? e.message : e}`)
+        }
         console.log('[AUTH] Opened system browser for Electron OAuth')
 
         // 4. Wait for callback

@@ -3,7 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerOAuthHandlers = registerOAuthHandlers;
 const electron_1 = require("electron");
 const http_1 = require("http");
-const OAUTH_PORTS = [24895, 24896, 24897];
+// Must match the documented Google/Supabase allow-listed loopback redirects.
+// See docs/GOOGLE-CLOUD-SETUP.md and src/composables/useTauriOAuth.ts.
+const OAUTH_PORTS = [24892, 24893, 24894];
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 let activeServer = null;
 const SUCCESS_HTML = `<!DOCTYPE html>

@@ -53,6 +53,18 @@ if echo "$PROMPT_LOWER" | grep -qE "is it done|are you done|is it ready|finished
 fi
 
 # ============================================
+# LAYER 5: Recurring issue / already-fixed symptoms
+# ============================================
+if echo "$PROMPT_LOWER" | grep -qE "already (fixed|solved)|keeps? happening|again|persists?|recurring|same (bug|issue|symptom)|failure class|failure-class"; then
+    MATRIX_MSG="[LAYER 5] Recurring issue detected - build a failure-class matrix before coding or claiming fixed. Use docs/process/failure-class-matrix.md."
+    if [ -z "$OUTPUT" ]; then
+        OUTPUT="$MATRIX_MSG"
+    else
+        OUTPUT="$OUTPUT | $MATRIX_MSG"
+    fi
+fi
+
+# ============================================
 # SKILL SUGGESTIONS
 # ============================================
 SKILL=""

@@ -73,6 +73,11 @@ if git diff --cached | grep -E 'console\.log|debugger' >/dev/null 2>&1; then
     echo "WARNING: Debug statements found in staged changes"
 fi
 
+# 6. Require a failure-class matrix when closing recurring/broad issues
+if [ -f scripts/verify-recurring-issue-matrix.cjs ]; then
+    node scripts/verify-recurring-issue-matrix.cjs || exit 1
+fi
+
 echo "Pre-commit checks complete"
 exit 0
 EOF

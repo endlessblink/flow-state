@@ -71,3 +71,14 @@ Important boundaries:
 - The upstream Superpowers plugin is allowed for automatic discovery, but the FlowState router is the project-specific entrypoint. If upstream `using-superpowers` conflicts with FlowState rules, follow FlowState.
 - Skip the router only for trivial chat or when a higher-priority workflow already clearly applies.
 - If a chosen Superpowers skill conflicts with FlowState rules, follow FlowState and treat Superpowers as support-only.
+
+## Recurring Issue Closeout Model
+
+When a FlowState issue keeps recurring, was described as already fixed, or appears under a broad symptom, do not assume the previous fix regressed. Treat it as a failure-class investigation.
+
+Before claiming the issue is fixed:
+- Name the exact failure mode fixed and explicitly state what remains outside that fix.
+- Map the symptom across likely failure classes: data shape, renderer state, Electron main/preload, localhost sidecar, KDE polling/control, Supabase persistence, updater/runtime version, and stale live process state.
+- Add a regression for the user's actual repro shape, not only helper or source-contract coverage.
+- Probe the real boundary involved: Electron app, `http://127.0.0.1:5577/api/timer/current`, KDE behavior, live updater manifest, public route, or production data as applicable.
+- Avoid broad DONE wording unless the whole failure class is covered. Use `docs/process/failure-class-matrix.md` in `docs/MASTER_PLAN.md` for recurring/broad issue closeout.

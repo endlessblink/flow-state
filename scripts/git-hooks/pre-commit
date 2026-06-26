@@ -31,4 +31,12 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "✅ Stress tests passed"
+
+if [ -f scripts/verify-recurring-issue-matrix.cjs ]; then
+    node scripts/verify-recurring-issue-matrix.cjs
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+fi
+
 exit 0

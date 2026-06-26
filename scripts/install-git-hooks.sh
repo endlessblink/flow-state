@@ -74,7 +74,9 @@ if git diff --cached | grep -E 'console\.log|debugger' >/dev/null 2>&1; then
 fi
 
 # 6. Require a failure-class matrix when closing recurring/broad issues
-if [ -f scripts/verify-recurring-issue-matrix.cjs ]; then
+if [ -f scripts/recurring-issue-guard.cjs ]; then
+    node scripts/recurring-issue-guard.cjs --mode precommit || exit 1
+elif [ -f scripts/verify-recurring-issue-matrix.cjs ]; then
     node scripts/verify-recurring-issue-matrix.cjs || exit 1
 fi
 

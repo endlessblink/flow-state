@@ -32,11 +32,13 @@ fi
 
 echo "✅ Stress tests passed"
 
-if [ -f scripts/verify-recurring-issue-matrix.cjs ]; then
-    node scripts/verify-recurring-issue-matrix.cjs
+if [ -f scripts/recurring-issue-guard.cjs ]; then
+    node scripts/recurring-issue-guard.cjs --mode precommit
     if [ $? -ne 0 ]; then
         exit 1
     fi
+elif [ -f scripts/verify-recurring-issue-matrix.cjs ]; then
+    node scripts/verify-recurring-issue-matrix.cjs || exit 1
 fi
 
 exit 0

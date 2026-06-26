@@ -36,3 +36,12 @@ Copy this block into the relevant `docs/MASTER_PLAN.md` bug entry before marking
 
 The matrix is not paperwork. It prevents broad DONE labels after proving only one root cause. If a row is irrelevant, mark it `N/A` and explain why. If a row is not checked, do not use broad wording like "KDE timer fixed"; use a precise label such as "fixed: completion-at-zero path".
 
+## Hook Enforcement
+
+Recurring issue enforcement is intentionally split:
+
+- `prompt`: advisory only. Claude/Codex prompt hooks can warn early, but must not block exploration.
+- `precommit`: blocking. A staged `docs/MASTER_PLAN.md` closeout that marks a recurring/broad issue done must include the matrix fields.
+- `audit`: report-only. Historical DONE entries can be scanned without blocking commits.
+
+Use `node scripts/recurring-issue-guard.cjs --help` for the current CLI.

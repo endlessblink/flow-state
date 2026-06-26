@@ -55,8 +55,13 @@ fi
 # ============================================
 # LAYER 5: Recurring issue / already-fixed symptoms
 # ============================================
-if echo "$PROMPT_LOWER" | grep -qE "already (fixed|solved)|keeps? happening|again|persists?|recurring|same (bug|issue|symptom)|failure class|failure-class"; then
-    MATRIX_MSG="[LAYER 5] Recurring issue detected - build a failure-class matrix before coding or claiming fixed. Use docs/process/failure-class-matrix.md."
+if [ -n "$CLAUDE_PROJECT_DIR" ] && [ -f "$CLAUDE_PROJECT_DIR/scripts/recurring-issue-guard.cjs" ]; then
+    MATRIX_MSG=$(printf '%s' "$USER_PROMPT" | node "$CLAUDE_PROJECT_DIR/scripts/recurring-issue-guard.cjs" --mode prompt 2>/dev/null || true)
+else
+    MATRIX_MSG=""
+fi
+
+if [ -n "$MATRIX_MSG" ]; then
     if [ -z "$OUTPUT" ]; then
         OUTPUT="$MATRIX_MSG"
     else

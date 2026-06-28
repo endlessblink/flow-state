@@ -6,6 +6,9 @@
       class="filter-toggle"
       :class="{ active: showFilters }"
       title="Toggle filters"
+      aria-label="Toggle filters"
+      :aria-expanded="showFilters"
+      aria-controls="filter-bar-content"
       @click="showFilters = !showFilters"
     >
       <SlidersHorizontal :size="20" :stroke-width="1.5" />
@@ -17,6 +20,8 @@
       class="done-toggle"
       :class="{ active: hideDoneTasks }"
       :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+      :aria-label="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+      :aria-pressed="hideDoneTasks"
       @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
     >
       <EyeOff v-if="hideDoneTasks" :size="20" :stroke-width="1.5" />
@@ -26,7 +31,11 @@
 
   <!-- Collapsible Filter Bar -->
   <Transition name="slide-down">
-    <div v-if="showFilters" class="filter-bar">
+    <div
+      v-if="showFilters"
+      id="filter-bar-content"
+      class="filter-bar"
+    >
       <!-- Expand/Collapse Controls -->
       <div v-if="showTreeControls" class="tree-controls">
         <BaseButton variant="secondary" size="sm" @click="$emit('expandAll')">

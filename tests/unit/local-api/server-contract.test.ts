@@ -47,6 +47,7 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     const body = functionBody('getLocalTimerResponse')
 
     expect(body).toContain("source: 'local-snapshot'")
+    expect(SERVER_CJS).toContain('LOCAL_TIMER_INACTIVE_GRACE_MS')
     expect(body).toContain('Date.now() - updatedAt')
     expect(body).toContain('Math.floor')
     expect(body).toContain('session.is_active && !session.is_paused')
@@ -54,6 +55,17 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).toContain('remaining_time:')
     expect(body).toContain('session.remaining_time <= 0')
     expect(body).toContain("active: false, session: null, source: 'local-snapshot'")
+  })
+
+  it('does not let stale inactive local snapshots mask signed-in timer lookup', () => {
+    const body = functionBody('getLocalTimerResponse')
+    const staleCheck = body.indexOf('snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS')
+    const inactiveResponse = body.indexOf("active: false, session: null, source: 'local-snapshot'")
+
+    expect(staleCheck, 'stale inactive snapshot guard not found').toBeGreaterThan(-1)
+    expect(inactiveResponse, 'fresh inactive tombstone response not found').toBeGreaterThan(-1)
+    expect(staleCheck).toBeLessThan(inactiveResponse)
+    expect(body.slice(staleCheck, inactiveResponse)).toContain('return null')
   })
 
   it('accepts parent-process timerSnapshot messages independently of auth session messages', () => {

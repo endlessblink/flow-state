@@ -219,6 +219,18 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(localFnStart).toBeLessThan(supabaseFnStart)
     })
 
+    it('2. documents inactive local snapshots as sidecar-fresh stop tombstones, not stale authority', () => {
+      const serverPath = resolve(__dirname, '../../../server/local-api/server.cjs')
+      const serverSource = readFileSync(serverPath, 'utf-8')
+      const localFnStart = MAIN_QML.indexOf('function fetchLocalCurrentSession(')
+      expect(localFnStart, 'fetchLocalCurrentSession not found').toBeGreaterThan(-1)
+      const localBody = MAIN_QML.slice(localFnStart, localFnStart + 2500)
+
+      expect(localBody).toContain('handleNoActiveSession()')
+      expect(serverSource).toContain('LOCAL_TIMER_INACTIVE_GRACE_MS')
+      expect(serverSource).toContain('snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS')
+    })
+
     it('2. fetchCurrentSession queries timer_sessions with is_active=eq.true', () => {
       const supabaseUrl = 'http://127.0.0.1:54321'
       const userId = '717f5209-42d8-4bb9-8781-740107a384e5'

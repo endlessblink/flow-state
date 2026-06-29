@@ -50,6 +50,7 @@ if (!TOKEN_MODE) {
 const PORT = Number(process.env.FLOW_STATE_API_PORT) || 5577
 const TOKEN = process.env.FLOW_STATE_API_TOKEN || ''
 const DATA_DIR = process.env.FLOW_STATE_API_DATA_DIR || join(process.cwd(), '.flowstate-local-api')
+const LOCAL_TIMER_INACTIVE_GRACE_MS = 15_000
 
 function logErr(msg) {
   console.error(`[local-api] ${msg}`)
@@ -381,14 +382,16 @@ async function handleGetCurrentTimer(res) {
 
 function getLocalTimerResponse() {
   if (!localTimerSnapshot || typeof localTimerSnapshot !== 'object') return null
+  const updatedAt = Number(localTimerSnapshot.updatedAt) || Date.now()
+  const snapshotAgeMs = Math.max(0, Date.now() - updatedAt)
   if (!localTimerSnapshot.active || !localTimerSnapshot.session) {
+    if (snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS) return null
     return { active: false, session: null, source: 'local-snapshot' }
   }
 
   const session = { ...localTimerSnapshot.session }
-  const updatedAt = Number(localTimerSnapshot.updatedAt) || Date.now()
   if (session.is_active && !session.is_paused) {
-    const driftSeconds = Math.max(0, Math.floor((Date.now() - updatedAt) / 1000))
+    const driftSeconds = Math.max(0, Math.floor(snapshotAgeMs / 1000))
     session.remaining_time = Math.max(0, Number(session.remaining_time || 0) - driftSeconds)
     if (session.remaining_time <= 0) {
       return { active: false, session: null, source: 'local-snapshot' }

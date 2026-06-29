@@ -106,7 +106,12 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
       const res = await admin.auth.admin.listUsers()
       user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!user) { const { data } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); user = data.user; }
+    if (!user) {
+      const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
+      if (error) throw new Error(`Failed to create test user: ${error.message}`)
+      if (!data?.user) throw new Error('Failed to create test user: data.user is null')
+      user = data.user
+    }
     const userId = user.id
 
     // Seed an EMPTY lane and ensure the two target tasks aren't in it

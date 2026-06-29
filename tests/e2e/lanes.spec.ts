@@ -108,9 +108,15 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
     }
     if (!user) {
       const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
-      if (error) throw new Error(`Failed to create test user: ${error.message}`)
-      if (!data?.user) throw new Error('Failed to create test user: data.user is null')
-      user = data.user
+      if (error && error.message.includes('already been registered')) {
+        const res = await admin.auth.admin.listUsers()
+        user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+      } else if (error) {
+        throw new Error(`Failed to create test user: ${error.message}`)
+      } else {
+        user = data?.user
+      }
+      if (!user) throw new Error('Failed to retrieve or create test user: user is null')
     }
     const userId = user.id
 

@@ -120,15 +120,37 @@
 
 **Tests**: `tests/unit/electron/oauth-port-contract.test.ts` locks Electron, Tauri, and `docs/GOOGLE-CLOUD-SETUP.md` to the same allowed loopback ports and rejects the drifted `24895-24897` range. `tests/unit/stores/auth-google-electron.test.ts` now covers 11 Electron Google sign-in regressions: PKCE success, implicit-token fallback, callback-server start failure, Supabase provider failure, missing provider URL, browser-launch failure with server cancel, provider callback errors, PKCE exchange failure, implicit session failure, empty callback, and callback wait failure. Related auth pack passed: `npm test -- tests/unit/stores/auth-google-electron.test.ts tests/unit/stores/auth-google-guest-mode.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/auth-flush-for-update.test.ts tests/unit/electron/oauth-port-contract.test.ts` (47/47); `npm run type-check`; `npm run guard:electron-sync` (178/178); `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --skip-guard --notes "BUG-1890: align Electron Google OAuth loopback ports"`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.216`; AppImage and deb endpoints both return HTTP 200 with sizes `180339560` and `131336080`.
 
-### BUG-1891: KDE widget clears an Electron-running timer from stale inactive local snapshot (🔄 IN PROGRESS)
+### ~~BUG-1891~~: KDE widget clears an Electron-running timer from stale inactive local snapshot (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (fixed locally 2026-06-29, Electron `1.4.222` built; deploy blocked by approval-layer token refresh failure) | **Depends on**: BUG-1888, TASK-1797
+**Priority**: P1 | **Status**: ✅ DONE 2026-06-29 (shipped Electron updater `1.4.222`) | **Depends on**: BUG-1888, TASK-1797
 
 **Why**: The KDE widget could reset to no active timer while Electron still showed an Electron-started timer running. Live probe during the recurrence showed the Local API sidecar was alive on `127.0.0.1:5577`, but `/api/timer/current` returned `200 {"active":false,"session":null,"source":"local-snapshot"}` and KDE's `/tmp/flowstate-active-task.json` had already been cleared. Root cause: inactive renderer-owned local snapshots were authoritative forever, so a stale inactive snapshot masked signed-in Supabase timer lookup and KDE fallback.
 
 **Fix**: `server/local-api/server.cjs` now treats inactive local snapshots as short stop/complete tombstones only. Active local snapshots still win and drift-correct the KDE clock; fresh inactive snapshots can still clear the widget for real stop/complete transitions; stale inactive snapshots return `null` so `/api/timer/current` falls through to signed-in Supabase lookup or KDE's own fallback instead of killing the widget.
 
-**Tests**: RED/green `npm run test -- tests/unit/local-api/server-contract.test.ts tests/unit/kde/timer-sync.test.ts tests/unit/local-api/renderer-bridge.test.ts tests/unit/electron/local-api-lifecycle.test.ts` passed 62/62. Related proof: `npm run type-check`; `npm run guard:electron-sync` passed 178/178; `npm run lint` completed with no diagnostics printed; `npm run electron:build` passed and generated local updater `release/latest-linux.yml` version `1.4.222` with AppImage size `180339759` and deb size `131336504`. Deploy command was attempted with `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1891: stop stale inactive local timer snapshots from clearing KDE"` but the tool approval layer rejected escalation because its access token refresh was revoked. Live public updater verification is still pending.
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | User reported Electron timer still active while KDE widget reset; live probe showed `/api/timer/current` returned inactive local snapshot. | Yes |
+| Data shape / persisted row shape | Partial | Fix falls through to signed-in Supabase lookup when local inactive snapshot is stale. | Not directly |
+| Renderer store/state | Yes | Active renderer snapshots remain authoritative; inactive snapshots now expire after short tombstone window. | Yes |
+| Electron main/preload bridge | Yes | Existing lifecycle bridge regressions passed in focused pack. | Yes |
+| Localhost sidecar endpoint | Yes | `server-contract.test.ts` covers stale inactive local snapshot fallback behavior. | Yes |
+| KDE polling/control path | Yes | `timer-sync.test.ts` documents KDE must not treat stale sidecar inactive state as durable truth. | Yes |
+| Supabase persistence/realtime | Partial | Fallback path is preserved; no Supabase write/realtime behavior changed. | Not directly |
+| Updater/runtime version | Yes | Electron updater `1.4.222` deployed and public manifest verified. | Yes |
+| Stale live process/cache state | Partial | Runtime update is shipped; existing running Electron/KDE processes still need to update/restart to load it. | Not fully |
+
+**Exact failure mode fixed**: stale inactive renderer-owned local timer snapshots could remain authoritative forever and mask a still-running Electron/Supabase timer from the KDE sidecar endpoint.
+
+**Explicitly not covered**: unrelated KDE polling crashes, Supabase auth expiry, realtime lag, and already-running desktop/KDE processes that have not loaded Electron `1.4.222`.
+
+**Regression added for reported repro**: local API and KDE timer-sync tests now cover a stale inactive local snapshot after an Electron-started timer path.
+
+**Live boundary proof**: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.222`; AppImage and deb endpoints return HTTP 200.
+
+**Tests**: RED/green `npm run test -- tests/unit/local-api/server-contract.test.ts tests/unit/kde/timer-sync.test.ts tests/unit/local-api/renderer-bridge.test.ts tests/unit/electron/local-api-lifecycle.test.ts` passed 62/62. Related proof: `npm run type-check`; `npm run guard:electron-sync` passed 178/178; `npm run lint` completed with no diagnostics printed; `npm run electron:build` passed and generated local updater `release/latest-linux.yml` version `1.4.222`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1891: stop stale inactive local timer snapshots from clearing KDE"` completed. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.222`; AppImage and deb endpoints both return HTTP 200 with content lengths `180339780` and `262672728`.
 
 ### ~~BUG-1886~~: Project bulk sync can hit RLS when stale workspace rows are cached (✅ DONE)
 

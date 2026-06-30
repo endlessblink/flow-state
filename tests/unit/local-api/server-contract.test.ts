@@ -43,6 +43,32 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(localSnapshotCheck).toBeLessThan(ctxCheck)
   })
 
+  it('exposes loopback-only timer diagnostics before bearer-token protected routes', () => {
+    const diagnosticsRoute = SERVER_CJS.indexOf("path === '/api/timer/diagnostics'")
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+    const tasksRoute = SERVER_CJS.indexOf("path === '/api/tasks'")
+
+    expect(diagnosticsRoute, 'timer diagnostics route not found').toBeGreaterThan(-1)
+    expect(diagnosticsRoute).toBeLessThan(tokenCheck)
+    expect(diagnosticsRoute).toBeLessThan(tasksRoute)
+  })
+
+  it('diagnoses timer boundary state without exposing secrets or full task rows', () => {
+    const body = functionBody('handleGetTimerDiagnostics')
+
+    expect(body).toContain('appVersion')
+    expect(body).toContain('hasAuthContext')
+    expect(body).toContain('hasLocalTimerSnapshot')
+    expect(body).toContain('localSnapshotActive')
+    expect(body).toContain('localSnapshotAgeMs')
+    expect(body).toContain('currentTimerBranch')
+    expect(body).toContain('supabaseActiveSessionFound')
+    expect(body).not.toContain('accessToken')
+    expect(body).not.toContain('refreshToken')
+    expect(body).not.toContain('anonKey')
+    expect(body).not.toContain('title')
+  })
+
   it('keeps renderer-owned local snapshots fresh enough for the KDE widget clock', () => {
     const body = functionBody('getLocalTimerResponse')
 

@@ -49,6 +49,16 @@ describe('Electron local API lifecycle regression contract', () => {
     expect(startChild).toContain("app.getPath('userData')")
   })
 
+  it('passes the loaded Electron app version to the sidecar diagnostics context', () => {
+    const startChild = LOCAL_API_TS.slice(
+      LOCAL_API_TS.indexOf('function startChild()'),
+      LOCAL_API_TS.indexOf('\nfunction stopChild()', LOCAL_API_TS.indexOf('function startChild()')),
+    )
+
+    expect(startChild).toContain('FLOW_STATE_APP_VERSION')
+    expect(startChild).toContain('app.getVersion()')
+  })
+
   it('keeps the sidecar running when Local Task API is disabled but a session is still available', () => {
     const body = handlerBody('localApi:setEnabled')
 
@@ -82,5 +92,19 @@ describe('Electron local API lifecycle regression contract', () => {
     expect(body).toContain('enabled: config.enabled')
     expect(body).toContain('running: config.enabled && !!child')
     expect(body).toContain('listening: config.enabled && listening')
+  })
+
+  it('reports enough non-secret bridge state to diagnose Electron/KDE timer splits', () => {
+    const body = handlerBody('localApi:status')
+
+    expect(body).toContain('childPid')
+    expect(body).toContain('appVersion')
+    expect(body).toContain('hasLatestSession')
+    expect(body).toContain('hasLatestTimerSnapshot')
+    expect(body).toContain('latestTimerSnapshotActive')
+    expect(body).toContain('latestTimerSnapshotAgeMs')
+    expect(body).not.toContain('token')
+    expect(body).not.toContain('accessToken')
+    expect(body).not.toContain('refreshToken')
   })
 })

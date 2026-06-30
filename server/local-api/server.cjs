@@ -51,6 +51,7 @@ const PORT = Number(process.env.FLOW_STATE_API_PORT) || 5577
 const TOKEN = process.env.FLOW_STATE_API_TOKEN || ''
 const DATA_DIR = process.env.FLOW_STATE_API_DATA_DIR || join(process.cwd(), '.flowstate-local-api')
 const LOCAL_TIMER_INACTIVE_GRACE_MS = 15_000
+const APP_VERSION = process.env.FLOW_STATE_APP_VERSION || 'unknown'
 
 function logErr(msg) {
   console.error(`[local-api] ${msg}`)
@@ -380,6 +381,61 @@ async function handleGetCurrentTimer(res) {
   send(res, 200, { active: true, session: data })
 }
 
+async function handleGetTimerDiagnostics(res) {
+  const hasLocalTimerSnapshot = !!(localTimerSnapshot && typeof localTimerSnapshot === 'object')
+  const localSnapshotUpdatedAt = hasLocalTimerSnapshot
+    ? Number(localTimerSnapshot.updatedAt) || null
+    : null
+  const localSnapshotAgeMs = localSnapshotUpdatedAt
+    ? Math.max(0, Date.now() - localSnapshotUpdatedAt)
+    : null
+  const localSnapshotActive = hasLocalTimerSnapshot
+    ? !!(localTimerSnapshot.active && localTimerSnapshot.session)
+    : false
+
+  let currentTimerBranch = 'no-local-snapshot'
+  if (hasLocalTimerSnapshot && localSnapshotActive) {
+    currentTimerBranch = 'local-snapshot-active'
+  } else if (hasLocalTimerSnapshot && localSnapshotAgeMs !== null) {
+    currentTimerBranch = localSnapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS
+      ? 'local-snapshot-inactive-stale'
+      : 'local-snapshot-inactive-fresh'
+  }
+
+  let supabaseActiveSessionFound = null
+  let supabaseLookupOk = null
+  if (ctx) {
+    const { data, error } = await ctx.supabase
+      .from('timer_sessions')
+      .select('id')
+      .eq('user_id', ctx.userId)
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    supabaseLookupOk = !error
+    supabaseActiveSessionFound = !!data
+    if (!hasLocalTimerSnapshot && !error) {
+      currentTimerBranch = data ? 'supabase-active' : 'supabase-inactive'
+    }
+  } else if (!hasLocalTimerSnapshot) {
+    currentTimerBranch = 'unsigned-no-local-snapshot'
+  }
+
+  send(res, 200, {
+    appVersion: APP_VERSION,
+    mode: TOKEN_MODE ? 'token' : 'service-role',
+    hasAuthContext: !!ctx,
+    hasLocalTimerSnapshot,
+    localSnapshotActive,
+    localSnapshotAgeMs,
+    localInactiveGraceMs: LOCAL_TIMER_INACTIVE_GRACE_MS,
+    currentTimerBranch,
+    supabaseLookupOk,
+    supabaseActiveSessionFound,
+  })
+}
+
 function getLocalTimerResponse() {
   if (!localTimerSnapshot || typeof localTimerSnapshot !== 'object') return null
   const updatedAt = Number(localTimerSnapshot.updatedAt) || Date.now()
@@ -518,6 +574,10 @@ const server = http.createServer(async (req, res) => {
       if (localTimer) return send(res, 200, localTimer)
       if (!ctx) return send(res, 503, { error: 'not signed in' })
       return await handleGetCurrentTimer(res)
+    }
+
+    if (req.method === 'GET' && path === '/api/timer/diagnostics') {
+      return await handleGetTimerDiagnostics(res)
     }
 
     // Data routes require an auth context (token mode: until the app signs in).

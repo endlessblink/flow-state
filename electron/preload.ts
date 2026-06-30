@@ -113,7 +113,19 @@ declare global {
       setLocalApiTimerSnapshot: (snapshot: unknown) => Promise<{ ok: boolean }>
       setLocalApiEnabled: (enabled: boolean) => Promise<{ ok: boolean; enabled: boolean }>
       getLocalApiToken: () => Promise<string>
-      getLocalApiStatus: () => Promise<{ enabled: boolean; running: boolean; listening: boolean; port: number }>
+      getLocalApiStatus: () => Promise<{
+        enabled: boolean
+        running: boolean
+        listening: boolean
+        childRunning: boolean
+        childPid: number | null
+        appVersion: string
+        hasLatestSession: boolean
+        hasLatestTimerSnapshot: boolean
+        latestTimerSnapshotActive: boolean
+        latestTimerSnapshotAgeMs: number | null
+        port: number
+      }>
     }
   }
 }

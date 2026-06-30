@@ -96,6 +96,7 @@ function startChild() {
       FLOW_STATE_API_TOKEN: config.token,
       FLOW_STATE_API_PORT: String(config.port),
       FLOW_STATE_API_DATA_DIR: app.getPath('userData'),
+      FLOW_STATE_APP_VERSION: app.getVersion(),
     },
   })
 
@@ -184,6 +185,15 @@ export function registerLocalApiHandlers() {
     enabled: config.enabled,
     running: config.enabled && !!child,
     listening: config.enabled && listening,
+    childRunning: !!child,
+    childPid: child?.pid ?? null,
+    appVersion: app.getVersion(),
+    hasLatestSession: !!latestSession,
+    hasLatestTimerSnapshot: !!latestTimerSnapshot,
+    latestTimerSnapshotActive: !!(latestTimerSnapshot?.active && latestTimerSnapshot.session),
+    latestTimerSnapshotAgeMs: latestTimerSnapshot?.updatedAt
+      ? Math.max(0, Date.now() - latestTimerSnapshot.updatedAt)
+      : null,
     port: config.port,
   }))
 }

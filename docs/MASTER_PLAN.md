@@ -120,6 +120,38 @@
 
 **Tests**: `tests/unit/electron/oauth-port-contract.test.ts` locks Electron, Tauri, and `docs/GOOGLE-CLOUD-SETUP.md` to the same allowed loopback ports and rejects the drifted `24895-24897` range. `tests/unit/stores/auth-google-electron.test.ts` now covers 11 Electron Google sign-in regressions: PKCE success, implicit-token fallback, callback-server start failure, Supabase provider failure, missing provider URL, browser-launch failure with server cancel, provider callback errors, PKCE exchange failure, implicit session failure, empty callback, and callback wait failure. Related auth pack passed: `npm test -- tests/unit/stores/auth-google-electron.test.ts tests/unit/stores/auth-google-guest-mode.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/auth-flush-for-update.test.ts tests/unit/electron/oauth-port-contract.test.ts` (47/47); `npm run type-check`; `npm run guard:electron-sync` (178/178); `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --skip-guard --notes "BUG-1890: align Electron Google OAuth loopback ports"`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.216`; AppImage and deb endpoints both return HTTP 200 with sizes `180339560` and `131336080`.
 
+### ~~BUG-1893~~: Recurring Electron/KDE timer failures lack a complete live boundary diagnostic (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE 2026-06-30 (shipped Electron updater `1.4.223`) | **Depends on**: BUG-1891, BUG-1888, TASK-1797
+
+**Why**: The timer/KDE path has broken repeatedly across renderer state, Electron main/preload forwarding, localhost sidecar state, Supabase timer rows, KDE polling, updater/runtime version, and stale live processes. The latest recurrence could not be safely fixed from symptoms alone: the live sidecar was running, `/api/timer/current` returned inactive without `source:"local-snapshot"`, and the existing tests were green. Root cause for this slice: the app had no non-secret diagnostic surface that correlated the hidden timer boundary state, so agents could not prove which class failed before patching.
+
+**Fix**: The Local API sidecar now exposes loopback-only `GET /api/timer/diagnostics` with non-secret timer boundary state: app version, auth context, local snapshot presence/age/active flag, current branch, and Supabase active-row lookup status. Electron main now forwards the loaded app version into the sidecar and reports non-secret bridge state through `localApi:status` including child PID, latest session presence, latest timer snapshot presence/activity, and snapshot age. `scripts/diagnose-timer-boundary.cjs` captures the sidecar diagnostics, `/api/timer/current`, KDE active-task bridge file, local/public updater manifests, package version, and matching FlowState processes in one report.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Partial | User reported the timer broke again; current live probe showed inactive localhost/KDE state but not a visible active Electron timer at the same moment. | Not directly |
+| Data shape / persisted row shape | Yes | Diagnostics reports only Supabase active-row presence, not row contents. | Yes |
+| Renderer store/state | Yes | Existing watcher still publishes `currentSession`; diagnostics distinguishes missing forwarded snapshot from sidecar/Supabase state. | Yes |
+| Electron main/preload bridge | Yes | `localApi:status` now reports child PID, app version, latest session, latest timer snapshot, active flag, and snapshot age. | Yes |
+| Localhost sidecar endpoint | Yes | `/api/timer/diagnostics` reports branch state beside `/api/timer/current`; routes stay loopback-only and non-secret. | Yes |
+| KDE polling/control path | Partial | Script captures `/tmp/flowstate-active-task.json`; no QML behavior changed in this slice. | Observability only |
+| Supabase persistence/realtime | Partial | Diagnostics checks whether signed-in lookup finds an active row without exposing row contents; no persistence behavior changed. | Observability only |
+| Updater/runtime version | Yes | Script compares package, local release, public updater, and running process evidence. | Yes |
+| Stale live process/cache state | Yes | Script captures matching FlowState/AppImage processes and showed the pre-update runtime returned `401` for the new diagnostics route. | Yes |
+
+**Exact failure mode fixed**: recurring timer/KDE investigations could not prove whether the renderer snapshot, Electron bridge, sidecar branch, Supabase active row, KDE bridge file, updater version, or stale runtime was failing before code changes were attempted.
+
+**Explicitly not covered**: a specific timer behavior regression is not claimed fixed here; KDE clearing semantics, Supabase writes/realtime, and renderer timer state machine behavior are unchanged.
+
+**Regression added for reported repro**: local API, Electron lifecycle, and diagnostics-script tests now require the non-secret boundary evidence needed before the next timer behavior fix.
+
+**Live boundary proof**: before shipping `1.4.223`, `node scripts/diagnose-timer-boundary.cjs` showed the old live sidecar returned `401` for `/api/timer/diagnostics`, `/api/timer/current` returned inactive, KDE active-task file was inactive, and public updater was still `1.4.222`. After shipping, the public updater manifest served `version: 1.4.223`, and both AppImage/deb artifact URLs returned HTTP 200 with content lengths `180343605` and `131337648`. The same diagnostic script then showed package/local/public release versions all at `1.4.223`, while the already-running desktop process still returned `401` for `/api/timer/diagnostics`; the endpoint becomes live after that process updates/restarts into `1.4.223`.
+
+**Tests**: RED/green `npm run test -- tests/unit/local-api/server-contract.test.ts tests/unit/electron/local-api-lifecycle.test.ts tests/unit/scripts/timer-boundary-diagnostics-script.test.ts` passed 22/22. Focused timer pack `npm run test -- tests/unit/local-api/server-contract.test.ts tests/unit/kde/timer-sync.test.ts tests/unit/local-api/renderer-bridge.test.ts tests/unit/electron/local-api-lifecycle.test.ts tests/unit/stores/timer-state-machine.test.ts tests/unit/composables/timer-realtime-backstop.test.ts tests/unit/scripts/timer-boundary-diagnostics-script.test.ts` passed 116/116. Related proof: `npm run type-check`; `npm run guard:electron-sync` passed 178/178; `npm run lint` exited with no diagnostics; `git diff --check` passed; `npm run electron:build` passed; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1893: add timer boundary diagnostics for recurring KDE/Electron failures" --skip-guard` completed.
+
 ### ~~BUG-1891~~: KDE widget clears an Electron-running timer from stale inactive local snapshot (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE 2026-06-29 (shipped Electron updater `1.4.222`) | **Depends on**: BUG-1888, TASK-1797

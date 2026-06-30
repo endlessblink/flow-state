@@ -218,6 +218,15 @@ export const useAuthStore = defineStore('auth', () => {
     startReconnectRefreshRecovery()
   }
 
+  const preserveReconnectShellAfterFailedRefresh = (
+    recoverableSession: Session,
+    logMessage: string,
+    authError?: AuthError | null,
+  ) => {
+    keepSessionForReconnect(recoverableSession, logMessage, authError, { persistBackup: false })
+    initializationFailed.value = false
+  }
+
   const initialize = async (): Promise<void> => {
     // BUG-1086: Return existing promise if already initializing (prevents race condition)
     // Multiple callers will await the same promise instead of starting parallel init attempts
@@ -356,13 +365,12 @@ export const useAuthStore = defineStore('auth', () => {
                     lastError = onlineError
                   }
                   if (!refreshed) {
-                    console.error('[AUTH] BUG-1514: Session refresh failed after all retries — user must re-authenticate. Pending sync writes are at risk.', lastError)
-                    // Server is reachable but refresh still failed after all retries — real failure
-                    error.value = lastError as AuthError
-                    initializationFailed.value = true
-                    session.value = null
-                    user.value = null
-                    isOfflineGracePeriod.value = false
+                    console.error('[AUTH] BUG-1514: Session refresh failed after all retries — preserving signed-in shell for reconnect.', lastError)
+                    preserveReconnectShellAfterFailedRefresh(
+                      data.session,
+                      '[AUTH] Offline-grace refresh failed after retries — keeping signed-in shell for reconnect',
+                      lastError,
+                    )
                   }
                 }, { once: true })
                 return
@@ -411,12 +419,12 @@ export const useAuthStore = defineStore('auth', () => {
                     lastError = onlineError
                   }
                   if (!refreshed) {
-                    console.error('[AUTH] BUG-1743: Post-grace refresh failed — user must re-authenticate')
-                    error.value = lastError as AuthError
-                    initializationFailed.value = true
-                    session.value = null
-                    user.value = null
-                    isOfflineGracePeriod.value = false
+                    console.error('[AUTH] BUG-1743: Post-grace refresh failed — preserving signed-in shell for reconnect')
+                    preserveReconnectShellAfterFailedRefresh(
+                      data.session,
+                      '[AUTH] Cached-data grace refresh failed after retries — keeping signed-in shell for reconnect',
+                      lastError,
+                    )
                   }
                 }, { once: true })
                 return
@@ -516,6 +524,10 @@ export const useAuthStore = defineStore('auth', () => {
             // synchronously — defer it behind a short grace period. A valid session re-appearing
             // cancels this timer (see the newSession check above), so no login-screen flash.
             if (user.value && !pendingSignOutTimer) {
+              if (isOfflineGracePeriod.value) {
+                console.log(`👤 [AUTH:${currentTabId}] SIGNED_OUT during reconnect grace — keeping signed-in shell`)
+                return
+              }
               console.log(`👤 [AUTH:${currentTabId}] Transient SIGNED_OUT — deferring clear for 2s grace period`)
               pendingSignOutTimer = setTimeout(async () => {
                 pendingSignOutTimer = null
@@ -528,6 +540,10 @@ export const useAuthStore = defineStore('auth', () => {
                   if (recheck.session.expires_at) {
                     scheduleTokenRefresh(recheck.session.expires_at)
                   }
+                  return
+                }
+                if (isOfflineGracePeriod.value) {
+                  console.log(`👤 [AUTH:${currentTabId}] Grace period elapsed during reconnect grace — keeping signed-in shell`)
                   return
                 }
                 console.log(`👤 [AUTH:${currentTabId}] Grace period elapsed with no session — clearing auth state`)

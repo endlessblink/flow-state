@@ -120,6 +120,24 @@
 
 **Tests**: `tests/unit/electron/oauth-port-contract.test.ts` locks Electron, Tauri, and `docs/GOOGLE-CLOUD-SETUP.md` to the same allowed loopback ports and rejects the drifted `24895-24897` range. `tests/unit/stores/auth-google-electron.test.ts` now covers 11 Electron Google sign-in regressions: PKCE success, implicit-token fallback, callback-server start failure, Supabase provider failure, missing provider URL, browser-launch failure with server cancel, provider callback errors, PKCE exchange failure, implicit session failure, empty callback, and callback wait failure. Related auth pack passed: `npm test -- tests/unit/stores/auth-google-electron.test.ts tests/unit/stores/auth-google-guest-mode.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/auth-flush-for-update.test.ts tests/unit/electron/oauth-port-contract.test.ts` (47/47); `npm run type-check`; `npm run guard:electron-sync` (178/178); `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --skip-guard --notes "BUG-1890: align Electron Google OAuth loopback ports"`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.216`; AppImage and deb endpoints both return HTTP 200 with sizes `180339560` and `131336080`.
 
+### ~~BUG-1895~~: Electron update reconnect grace can still collapse into visible sign-out (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE 2026-06-30 (shipped Electron updater `1.4.225`) | **Depends on**: BUG-1894, BUG-1881, BUG-1871
+
+**User evidence**: after updating to the auth-write guard build, the app still signed the user out after update. This was a different failure from the timer/project 401/RLS cascade: the app lost the visible signed-in shell.
+
+**Root cause**: reconnect/offline grace preserved `user` and blocked remote writes, but later auth recovery paths still cleared the shell. Specifically, online retry exhaustion after an expired session and the non-explicit `SIGNED_OUT` grace timer could still set `session.value = null` and `user.value = null` when Supabase storage had no refreshed session. In reconnect grace, missing Supabase storage is expected, so clearing the cached shell was the regression.
+
+**Fix**: failed online/post-grace refresh exhaustion now re-enters reconnect shell instead of clearing auth state. Non-explicit `SIGNED_OUT` events during reconnect grace are ignored, and the delayed 2s clear also re-checks reconnect grace before clearing. Explicit sign-out remains unchanged.
+
+**Exact failure mode fixed**: update/restart with an expired or already-used refresh token can no longer turn the preserved reconnect shell into a visible sign-out merely because retries exhausted without a fresh Supabase session.
+
+**Explicitly not covered**: this still does not create a valid Supabase token from a dead refresh token. Remote sync remains disabled through `canSyncRemotely === false` until a valid session is restored or the user signs in again.
+
+**Regression added for reported repro**: auth-flow now covers expired-session update startup, offline/reconnect grace, online retry exhaustion with `Invalid Refresh Token: Already Used`, and verifies the user remains signed in locally with `canSyncRemotely === false` and `initializationFailed === false`.
+
+**Tests**: `npm run test -- tests/unit/stores/auth-flow.test.ts` passed 33/33. Broader pack `npm run test -- tests/unit/stores/auth-flow.test.ts tests/unit/stores/timer-state-machine.test.ts tests/unit/composables/useLocalApiBridge.test.ts tests/unit/composables/timer-realtime-backstop.test.ts` passed 85/85. Related proof: `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1895: preserve signed-in shell after Electron update reconnect retry exhaustion" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.225`; AppImage and deb endpoints both return HTTP 200 with sizes `180343701` and `131337312`.
+
 ### ~~BUG-1894~~: Reconnect-grace auth shell sends unauthorized timer/project writes after stale Electron backup (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE 2026-06-30 (shipped Electron updater `1.4.224`) | **Depends on**: BUG-1881, BUG-1871, BUG-1893

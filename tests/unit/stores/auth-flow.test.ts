@@ -405,6 +405,45 @@ describe('Auth Flow — initialize()', () => {
     expect(store.isOfflineGracePeriod).toBe(true)
   })
 
+  it('8e2. online retry exhaustion after update keeps the signed-in shell instead of signing out', async () => {
+    vi.useFakeTimers()
+    const originalOnline = navigator.onLine
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+    try {
+      const expiredSession = buildMockSession({
+        expires_at: Math.floor(Date.now() / 1000) - 60,
+      })
+      mockGetSession.mockResolvedValue({ data: { session: expiredSession }, error: null })
+      mockRefreshSession.mockResolvedValue({
+        data: { session: null },
+        error: { name: 'AuthError', message: 'Invalid Refresh Token: Already Used', status: 400 },
+      })
+
+      const store = useAuthStore()
+      await store.initialize()
+
+      expect(store.isAuthenticated).toBe(true)
+      expect(store.canSyncRemotely).toBe(false)
+      expect(store.isOfflineGracePeriod).toBe(true)
+
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+      window.dispatchEvent(new Event('online'))
+      await flushPromises()
+      await vi.advanceTimersByTimeAsync(13_000)
+      await flushPromises()
+
+      expect(mockRefreshSession.mock.calls.length).toBeGreaterThanOrEqual(4)
+      expect(store.isAuthenticated).toBe(true)
+      expect(store.user?.id).toBe('user-test-001')
+      expect(store.canSyncRemotely).toBe(false)
+      expect(store.isOfflineGracePeriod).toBe(true)
+      expect(store.initializationFailed).toBe(false)
+    } finally {
+      Object.defineProperty(navigator, 'onLine', { value: originalOnline, configurable: true })
+      vi.useRealTimers()
+    }
+  })
+
   it('8f. reconnect grace retries refresh and republishes a fresh session to the Electron Local API bridge', async () => {
     vi.useFakeTimers()
     try {

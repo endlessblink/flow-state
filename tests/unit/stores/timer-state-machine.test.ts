@@ -24,6 +24,7 @@ const {
   mockReleaseWakeLock,
   mockEnqueue,
   mockSyncLocalApiTimerSnapshot,
+  mockAuthState,
 } = vi.hoisted(() => ({
   mockFetchActiveTimerSession: vi.fn(),
   mockSaveActiveTimerSession: vi.fn().mockResolvedValue(undefined),
@@ -35,6 +36,11 @@ const {
   mockReleaseWakeLock: vi.fn(),
   mockEnqueue: vi.fn().mockResolvedValue({ id: 1, status: 'pending' }),
   mockSyncLocalApiTimerSnapshot: vi.fn(),
+  mockAuthState: {
+    isAuthenticated: true,
+    canSyncRemotely: true,
+    user: { id: 'test-user-id' },
+  },
 }))
 
 vi.mock('@/composables/useSupabaseDatabase', () => ({
@@ -61,8 +67,9 @@ vi.mock('@/composables/useCrossTabSync', () => ({
 
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({
-    isAuthenticated: true,
-    user: { id: 'test-user-id' },
+    get isAuthenticated() { return mockAuthState.isAuthenticated },
+    get canSyncRemotely() { return mockAuthState.canSyncRemotely },
+    get user() { return mockAuthState.user },
     $subscribe: vi.fn(() => vi.fn()),
   }),
 }))
@@ -153,6 +160,12 @@ const flushPromises = async () => {
   await Promise.resolve()
   await Promise.resolve()
 }
+
+beforeEach(() => {
+  mockAuthState.isAuthenticated = true
+  mockAuthState.canSyncRemotely = true
+  mockAuthState.user = { id: 'test-user-id' }
+})
 
 // ============================================================================
 // Group 1: Initial State
@@ -266,6 +279,31 @@ describe('Timer State Machine — startTimer', () => {
     expect(store.isDeviceLeader).toBe(false)
     expect(store.isLeader).toBe(false)
     expect(mockReleaseWakeLock).toHaveBeenCalled()
+    expect(mockEnqueue).not.toHaveBeenCalled()
+  })
+
+  it('7c. startTimer stays local during reconnect grace instead of writing an unauthorized timer session', async () => {
+    mockAuthState.isAuthenticated = true
+    mockAuthState.canSyncRemotely = false
+    mockAuthState.user = { id: 'test-user-id' }
+    const store = useTimerStore()
+    await flushPromises()
+    mockFetchActiveTimerSession.mockClear()
+    mockSaveActiveTimerSession.mockClear()
+    mockClaimLeadership.mockClear()
+    mockEnqueue.mockClear()
+
+    await store.startTimer('task-reconnect-grace', 1500, false)
+    await flushPromises()
+
+    expect(store.currentSession).toMatchObject({
+      taskId: 'task-reconnect-grace',
+      isActive: true,
+      isPaused: false,
+    })
+    expect(mockFetchActiveTimerSession).not.toHaveBeenCalled()
+    expect(mockSaveActiveTimerSession).not.toHaveBeenCalled()
+    expect(mockClaimLeadership).not.toHaveBeenCalled()
     expect(mockEnqueue).not.toHaveBeenCalled()
   })
 

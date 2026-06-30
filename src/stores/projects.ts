@@ -11,6 +11,10 @@ export function filterProjectsForWorkspaceSync(projects: Project[], activeWorksp
     })
 }
 
+function canUseRemoteProjectSync(authStore: { isAuthenticated: boolean; canSyncRemotely?: boolean }): boolean {
+    return authStore.canSyncRemotely ?? authStore.isAuthenticated
+}
+
 export const useProjectStore = defineStore('projects', () => {
 
     // State
@@ -130,7 +134,7 @@ export const useProjectStore = defineStore('projects', () => {
         // Guest mode: save to localStorage
         const { useAuthStore } = await import('@/stores/auth')
         const authStore = useAuthStore()
-        if (!authStore.isAuthenticated) {
+        if (!canUseRemoteProjectSync(authStore)) {
             saveProjectsToLocalStorage()
             return
         }
@@ -160,7 +164,7 @@ export const useProjectStore = defineStore('projects', () => {
             // Guest mode: skip Supabase, start with empty projects
             const { useAuthStore } = await import('@/stores/auth')
             const authStore = useAuthStore()
-            if (!authStore.isAuthenticated) {
+            if (!canUseRemoteProjectSync(authStore)) {
                 _rawProjects.value = loadProjectsFromLocalStorage()
                 console.log(`👤 [GUEST-MODE] Loaded ${_rawProjects.value.length} projects from localStorage`)
                 return
@@ -236,7 +240,8 @@ export const useProjectStore = defineStore('projects', () => {
                 const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
                 const syncOrchestrator = useSyncOrchestrator()
                 const { useAuthStore: getAuthForSync } = await import('@/stores/auth')
-                const userId = getAuthForSync().user?.id
+                const authForSync = getAuthForSync()
+                const userId = canUseRemoteProjectSync(authForSync) ? authForSync.user?.id : null
                 if (userId) {
                     const { toSupabaseProject } = await import('@/utils/supabaseMappers')
                     const payload = toSupabaseProject(newProject, userId)
@@ -254,8 +259,10 @@ export const useProjectStore = defineStore('projects', () => {
 
             // Guest mode: persist to localStorage immediately
             const { useAuthStore: getAuth } = await import('@/stores/auth')
-            if (!getAuth().isAuthenticated) {
+            const auth = getAuth()
+            if (!canUseRemoteProjectSync(auth)) {
                 saveProjectsToLocalStorage()
+                return newProject
             }
 
             await saveProject(newProject)
@@ -284,7 +291,8 @@ export const useProjectStore = defineStore('projects', () => {
                     const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
                     const syncOrchestrator = useSyncOrchestrator()
                     const { useAuthStore: getAuthForSync } = await import('@/stores/auth')
-                    const userId = getAuthForSync().user?.id
+                    const authForSync = getAuthForSync()
+                    const userId = canUseRemoteProjectSync(authForSync) ? authForSync.user?.id : null
                     if (userId) {
                         const { toSupabaseProject } = await import('@/utils/supabaseMappers')
                         const payload = toSupabaseProject(_rawProjects.value[projectIndex], userId)
@@ -302,8 +310,10 @@ export const useProjectStore = defineStore('projects', () => {
 
                 // Guest mode: persist to localStorage immediately
                 const { useAuthStore: getAuth } = await import('@/stores/auth')
-                if (!getAuth().isAuthenticated) {
+                const auth = getAuth()
+                if (!canUseRemoteProjectSync(auth)) {
                     saveProjectsToLocalStorage()
+                    return
                 }
 
                 await saveProject(_rawProjects.value[projectIndex])
@@ -391,8 +401,10 @@ export const useProjectStore = defineStore('projects', () => {
 
             // Guest mode: persist to localStorage immediately
             const { useAuthStore: getAuth } = await import('@/stores/auth')
-            if (!getAuth().isAuthenticated) {
+            const auth = getAuth()
+            if (!canUseRemoteProjectSync(auth)) {
                 saveProjectsToLocalStorage()
+                return
             }
 
             // Supabase Soft Delete — throws on failure so the catch below rolls back
@@ -482,8 +494,10 @@ export const useProjectStore = defineStore('projects', () => {
 
             // BUG-P1: Guest mode — persist updated list to localStorage immediately
             const { useAuthStore: getAuth } = await import('@/stores/auth')
-            if (!getAuth().isAuthenticated) {
+            const auth = getAuth()
+            if (!canUseRemoteProjectSync(auth)) {
                 saveProjectsToLocalStorage()
+                return
             }
 
             // BUG-1775: Supabase bulk delete — collect failures, don't swallow them.

@@ -54,7 +54,7 @@ export interface TimerSyncDeps {
   claimLeadership: (sessionId: string, deviceId: string) => Promise<boolean>
   requestWakeLock: () => Promise<void>
   releaseWakeLock: () => void
-  authStore: { isAuthenticated: boolean } // reactive
+  authStore: { isAuthenticated: boolean; canSyncRemotely?: boolean } // reactive
 
   // Callbacks for orchestration actions
   onCountdownComplete: () => void // calls completeSession
@@ -69,6 +69,8 @@ export function useTimerSync(deps: TimerSyncDeps) {
     requestWakeLock, releaseWakeLock, authStore,
     onCountdownComplete
   } = deps
+
+  const canUseRemoteTimerSync = () => authStore.canSyncRemotely ?? authStore.isAuthenticated
 
   // ── Intervals ──────────────────────────────────────────────────────
   // CRITICAL: useIntervalFn calls MUST be at top level of composable for proper
@@ -110,6 +112,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
     try {
       // BUG-1511: Renew leadership lease atomically. If another device has stolen
       // the lease (race condition at startup), the RPC returns false and we demote.
+      if (!canUseRemoteTimerSync()) return
       const stillLeader = await claimLeadership(currentSession.value.id, deviceId)
       if (!stillLeader) {
         if (import.meta.env.DEV) {
@@ -144,6 +147,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
 
     isPolling = true
     try {
+      if (!canUseRemoteTimerSync()) return
       const session = await fetchActiveTimerSession()
       consecutiveFailures = 0 // BUG-1411: Reset failure counter on success
 
@@ -424,6 +428,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
 
   const saveTimerSessionWithLeadership = async () => {
     if (!currentSession.value) return
+    if (!canUseRemoteTimerSync()) return
     if (currentSession.value.id.length < 10) {
       currentSession.value.id = crypto.randomUUID()
     }
@@ -448,6 +453,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
    * User action (clicking Start Timer) takes precedence over any other device.
    */
   const clearExistingSession = async (): Promise<void> => {
+    if (!canUseRemoteTimerSync()) return
     try {
       const existing = await fetchActiveTimerSession()
       if (existing) {
@@ -492,7 +498,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
 
   const initializeSync = async () => {
     // Skip if not authenticated - we'll retry when auth becomes ready
-    if (!authStore.isAuthenticated) {
+    if (!canUseRemoteTimerSync()) {
       if (import.meta.env.DEV) {
         console.log('🍅 [TIMER] initializeStore - waiting for auth...')
       }
@@ -724,7 +730,7 @@ export function useTimerSync(deps: TimerSyncDeps) {
     lastResyncAt = now
 
     if (isStarting) return // BUG-TIMER-RACE: Block resync during async start sequence
-    if (!authStore.isAuthenticated) return
+    if (!canUseRemoteTimerSync()) return
 
     try {
       const session = await fetchActiveTimerSession()
@@ -835,9 +841,9 @@ export function useTimerSync(deps: TimerSyncDeps) {
   // ── Auth watcher ───────────────────────────────────────────────────
   // Watch for auth state changes - initialize when auth becomes ready
   watch(
-    () => authStore.isAuthenticated,
-    (isAuthenticated) => {
-      if (isAuthenticated && !hasLoadedSession.value) {
+    () => canUseRemoteTimerSync(),
+    (canSync) => {
+      if (canSync && !hasLoadedSession.value) {
         if (import.meta.env.DEV) {
           console.log('🍅 [TIMER] Auth became ready, initializing timer store...')
         }

@@ -120,6 +120,24 @@
 
 **Tests**: `tests/unit/electron/oauth-port-contract.test.ts` locks Electron, Tauri, and `docs/GOOGLE-CLOUD-SETUP.md` to the same allowed loopback ports and rejects the drifted `24895-24897` range. `tests/unit/stores/auth-google-electron.test.ts` now covers 11 Electron Google sign-in regressions: PKCE success, implicit-token fallback, callback-server start failure, Supabase provider failure, missing provider URL, browser-launch failure with server cancel, provider callback errors, PKCE exchange failure, implicit session failure, empty callback, and callback wait failure. Related auth pack passed: `npm test -- tests/unit/stores/auth-google-electron.test.ts tests/unit/stores/auth-google-guest-mode.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/auth-flush-for-update.test.ts tests/unit/electron/oauth-port-contract.test.ts` (47/47); `npm run type-check`; `npm run guard:electron-sync` (178/178); `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --skip-guard --notes "BUG-1890: align Electron Google OAuth loopback ports"`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.216`; AppImage and deb endpoints both return HTTP 200 with sizes `180339560` and `131336080`.
 
+### ~~BUG-1894~~: Reconnect-grace auth shell sends unauthorized timer/project writes after stale Electron backup (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE 2026-06-30 (shipped Electron updater `1.4.224`) | **Depends on**: BUG-1881, BUG-1871, BUG-1893
+
+**User evidence**: after updating Electron, the console showed `Invalid Refresh Token: Already Used`, `[AUTH] Electron backup refresh token already used — cleared stale backup, keeping signed-in shell for reconnect`, repeated `No auth token available`, and then unauthorized Supabase writes: `saveProjects` / `saveActiveTimerSession` returned 401/RLS errors.
+
+**Root cause**: FlowState intentionally keeps a signed-in shell during Electron reconnect grace so cached data stays visible after a stale backup token is rejected. That made `isAuthenticated === true` even though Supabase had no usable access token. Timer/project persistence gates treated that shell as a valid remote-sync state, so user actions attempted Supabase writes with no auth token.
+
+**Fix**: auth now exposes `canSyncRemotely`, true only when a usable session access token exists and the app is not in reconnect/offline grace. Timer sync, timer start/stop/complete queueing, pomodoro history writes, project bulk saves, and direct project create/update/delete persistence now use that stricter capability. In reconnect grace, timer starts remain local and still update the Electron/KDE-facing local snapshot, but Supabase writes, leadership claims, and sync-queue enqueues are skipped until a real session is restored.
+
+**Exact failure mode fixed**: stale Electron auth backup replay could leave the UI signed in for cached data while remote timer/project writes still ran and failed as 401/RLS.
+
+**Explicitly not covered**: this does not mint a new Supabase session from an already-used refresh token. If the backup token is dead, the app still needs an interactive sign-in or a later valid refresh source; this fix prevents corrupt/noisy remote writes while in that recovery shell.
+
+**Regression added for reported repro**: auth-flow tests assert reconnect-grace remains visibly signed in but `canSyncRemotely` is false until refresh recovery succeeds. Timer state-machine tests assert `startTimer` during reconnect grace creates a local running timer without calling `fetchActiveTimerSession`, `saveActiveTimerSession`, `claimLeadership`, or sync queue enqueue.
+
+**Tests**: `npm run test -- tests/unit/stores/auth-flow.test.ts tests/unit/stores/timer-state-machine.test.ts` passed 73/73. Broader pack `npm run test -- tests/unit/stores/auth-flow.test.ts tests/unit/stores/timer-state-machine.test.ts tests/unit/composables/timer-realtime-backstop.test.ts tests/unit/composables/useLocalApiBridge.test.ts tests/unit/stores/all-stores.test.ts tests/unit/stores/project-workspace-sync-scope.test.ts` passed 121/121. Related proof: `npm run type-check`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1894: block unauthorized remote writes during Electron reconnect grace" --skip-guard` completed. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.224`; AppImage and deb endpoints both return HTTP 200 with content lengths `180343650` and `131337264`.
+
 ### ~~BUG-1893~~: Recurring Electron/KDE timer failures lack a complete live boundary diagnostic (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE 2026-06-30 (shipped Electron updater `1.4.223`) | **Depends on**: BUG-1891, BUG-1888, TASK-1797

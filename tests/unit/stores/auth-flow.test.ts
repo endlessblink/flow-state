@@ -357,6 +357,7 @@ describe('Auth Flow — initialize()', () => {
     expect(mockRestoreAuthSessionFromBackup).toHaveBeenCalledOnce()
     expect(mockGetSession).toHaveBeenCalledTimes(2)
     expect(store.isAuthenticated).toBe(true)
+    expect(store.canSyncRemotely).toBe(false)
     expect(store.user?.id).toBe('user-test-001')
     expect(store.isOfflineGracePeriod).toBe(true)
   })
@@ -380,6 +381,7 @@ describe('Auth Flow — initialize()', () => {
     expect(mockClearAuthSessionBackup).toHaveBeenCalledOnce()
     expect(mockPersistAuthSessionBackup).not.toHaveBeenCalled()
     expect(store.isAuthenticated).toBe(true)
+    expect(store.canSyncRemotely).toBe(false)
     expect(store.user?.id).toBe('user-test-001')
     expect(store.isOfflineGracePeriod).toBe(true)
   })
@@ -437,6 +439,7 @@ describe('Auth Flow — initialize()', () => {
       expect(mockRefreshSession).toHaveBeenCalledTimes(2)
       expect(store.session?.access_token).toBe('fresh-recovered-access-token')
       expect(store.isOfflineGracePeriod).toBe(false)
+      expect(store.canSyncRemotely).toBe(true)
       expect(mockSyncLocalApiSession).toHaveBeenCalledWith(expect.objectContaining({
         access_token: 'fresh-recovered-access-token',
       }))

@@ -141,6 +141,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Getters
   const isAuthenticated = computed(() => !!user.value)
+  const canSyncRemotely = computed(() =>
+    !!session.value?.access_token &&
+    !!user.value?.id &&
+    !isOfflineGracePeriod.value
+  )
   const errorMessage = computed(() => error.value?.message || null)
 
   // Compatibility getters for Supabase/Firebase differences
@@ -1306,6 +1311,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Getters
     isAuthenticated,
+    canSyncRemotely,
     errorMessage,
     displayName,
     photoURL,

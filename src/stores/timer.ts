@@ -362,7 +362,7 @@ export const useTimerStore = defineStore('timer', () => {
 
     // TASK-1439: Queue for offline-first sync (secondary persistence)
     try {
-      const userId = authStore.user?.id
+      const userId = authStore.canSyncRemotely ? authStore.user?.id : null
       if (userId && currentSession.value) {
         const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
         const { toSupabaseTimerSession } = await import('@/utils/supabaseMappers')
@@ -424,14 +424,18 @@ export const useTimerStore = defineStore('timer', () => {
           deviceId
         })
       }
-      await saveActiveTimerSession(stoppedSession, deviceId)
-      if (import.meta.env.DEV) {
-        console.log('🍅 [TIMER] stopTimer: Session saved to DB successfully')
+      if (authStore.canSyncRemotely) {
+        await saveActiveTimerSession(stoppedSession, deviceId)
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] stopTimer: Session saved to DB successfully')
+        }
+      } else if (import.meta.env.DEV) {
+        console.log('🍅 [TIMER] stopTimer: reconnect/offline grace, skipping remote session save')
       }
 
       // TASK-1439: Queue for offline-first sync
       try {
-        const userId = authStore.user?.id
+        const userId = authStore.canSyncRemotely ? authStore.user?.id : null
         if (userId) {
           const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
           const { toSupabaseTimerSession } = await import('@/utils/supabaseMappers')
@@ -517,14 +521,18 @@ export const useTimerStore = defineStore('timer', () => {
             ? completedSession.startTime
             : new Date(completedSession.startTime),
         }
-        await saveActiveTimerSession(completedForDb, deviceId)
-        if (import.meta.env.DEV) {
-          console.log('🍅 [TIMER] completeSession: Saved completed state to DB', { sessionId: completedSession.id })
+        if (authStore.canSyncRemotely) {
+          await saveActiveTimerSession(completedForDb, deviceId)
+          if (import.meta.env.DEV) {
+            console.log('🍅 [TIMER] completeSession: Saved completed state to DB', { sessionId: completedSession.id })
+          }
+        } else if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] completeSession: reconnect/offline grace, skipping remote session save')
         }
 
         // TASK-1439: Queue for offline-first sync
         try {
-          const userId = authStore.user?.id
+          const userId = authStore.canSyncRemotely ? authStore.user?.id : null
           if (userId) {
             const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
             const { toSupabaseTimerSession } = await import('@/utils/supabaseMappers')
@@ -546,7 +554,7 @@ export const useTimerStore = defineStore('timer', () => {
 
       // FEATURE-1317: Write pomodoro history for AI work profile analysis
       // Fire-and-forget — don't block timer flow
-      if (settingsStore.aiLearningEnabled && !session.isBreak && session.taskId && session.taskId !== 'general') {
+      if (authStore.canSyncRemotely && settingsStore.aiLearningEnabled && !session.isBreak && session.taskId && session.taskId !== 'general') {
         const { insertPomodoroHistory } = useSupabaseDatabase()
         insertPomodoroHistory({
           taskId: session.taskId,

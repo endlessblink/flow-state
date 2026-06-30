@@ -138,6 +138,24 @@
 
 **Tests**: `npm run test -- tests/unit/stores/auth-flow.test.ts` passed 33/33. Broader pack `npm run test -- tests/unit/stores/auth-flow.test.ts tests/unit/stores/timer-state-machine.test.ts tests/unit/composables/useLocalApiBridge.test.ts tests/unit/composables/timer-realtime-backstop.test.ts` passed 85/85. Related proof: `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1895: preserve signed-in shell after Electron update reconnect retry exhaustion" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.225`; AppImage and deb endpoints both return HTTP 200 with sizes `180343701` and `131337312`.
 
+### ~~BUG-1896~~: Electron Stop can stay visibly active while remote timer stop persistence stalls (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE 2026-06-30 (shipped Electron updater `1.4.226`) | **Depends on**: BUG-1895, BUG-1894, BUG-1893
+
+**User evidence**: after updating, Electron showed auth recovery logs (`No restored session, but cached authenticated data exists`), realtime channel drops, and then the timer did not stop and stayed stuck active.
+
+**Root cause**: `stopTimer()` still used the older remote-first stop path: it paused countdown/heartbeat, built a stopped session, then awaited Supabase timer persistence and sync queue work before clearing `currentSession` and updating the Electron/KDE local timer snapshot. If the remote stop write stalled or failed during auth recovery, the visible app and localhost sidecar could remain active even though Stop had been clicked. `completeSession()` already had the correct local-first pattern; `stopTimer()` had drifted behind that hardening.
+
+**Fix**: Stop is now local-first. It pushes the stopped session to local history, marks the session id completed, clears `currentSession`, sends a null Electron/KDE local snapshot, and resumes follower polling before any remote persistence. Remote save failures are logged and kept non-fatal so stale auth cannot turn Stop into a Vue runtime error or leave the timer active.
+
+**Exact failure mode fixed**: a Stop click can no longer keep Electron/KDE visibly active just because `saveActiveTimerSession` or downstream sync work stalls during auth recovery.
+
+**Explicitly not covered**: this does not repair the dead Supabase refresh token or guarantee remote timer stop persistence while offline/reconnect auth is active. It guarantees the local Electron/KDE timer stops immediately and remote persistence becomes best-effort.
+
+**Regression added for reported repro**: timer state-machine test now stalls the remote stop save and verifies `currentSession` is cleared and the Electron/KDE local snapshot receives `null` before that stalled save can resolve.
+
+**Tests**: Red regression first failed because `currentSession` stayed active while a remote stop save stalled. `npm run test -- tests/unit/stores/timer-state-machine.test.ts` passed 42/42 after the fix. Broader pack `npm run test -- tests/unit/stores/timer-state-machine.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/composables/useLocalApiBridge.test.ts tests/unit/composables/timer-realtime-backstop.test.ts` passed 86/86. Related proof: `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1896: stop timer clears Electron/KDE local state before remote persistence" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.226`; AppImage and deb endpoints both return HTTP 200 with sizes `180343469` and `131337464`.
+
 ### ~~BUG-1894~~: Reconnect-grace auth shell sends unauthorized timer/project writes after stale Electron backup (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE 2026-06-30 (shipped Electron updater `1.4.224`) | **Depends on**: BUG-1881, BUG-1871, BUG-1893

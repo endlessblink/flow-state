@@ -424,10 +424,25 @@ export const useTimerStore = defineStore('timer', () => {
           deviceId
         })
       }
+
+      // Clear the local/Electron/KDE-facing timer before remote persistence.
+      // A stopped timer is a user command; stale auth, Supabase, or sync-queue
+      // stalls must not leave the desktop app or localhost widget active.
+      completedSessions.value.push(stoppedSession)
+      completedSessionIds.add(stoppedSession.id)
+      setTimeout(() => completedSessionIds.delete(stoppedSession.id), PENDING_WRITE_TIMEOUT_MS)
+      currentSession.value = null
+      syncLocalApiTimerSnapshot(null, deviceId)
+      sync.resumeFollowerPoll()
+
       if (authStore.canSyncRemotely) {
-        await saveActiveTimerSession(stoppedSession, deviceId)
-        if (import.meta.env.DEV) {
-          console.log('🍅 [TIMER] stopTimer: Session saved to DB successfully')
+        try {
+          await saveActiveTimerSession(stoppedSession, deviceId)
+          if (import.meta.env.DEV) {
+            console.log('🍅 [TIMER] stopTimer: Session saved to DB successfully')
+          }
+        } catch (saveError) {
+          console.warn('🍅 [TIMER] stopTimer: remote session save failed after local stop; keeping timer stopped', saveError)
         }
       } else if (import.meta.env.DEV) {
         console.log('🍅 [TIMER] stopTimer: reconnect/offline grace, skipping remote session save')
@@ -451,19 +466,6 @@ export const useTimerStore = defineStore('timer', () => {
       } catch (queueError) {
         console.warn('[SYNC-QUEUE] Failed to queue timer stop:', queueError)
       }
-
-      // Update local state
-      completedSessions.value.push(stoppedSession)
-      // BUG-1318: Track stopped session to prevent resurrection
-      completedSessionIds.add(stoppedSession.id)
-      setTimeout(() => completedSessionIds.delete(stoppedSession.id), PENDING_WRITE_TIMEOUT_MS)
-      currentSession.value = null
-      sync.broadcastSession() // For same-browser tabs
-      // TASK-1790: Resume follower poll so this device re-enters listening mode after
-      // a local stop. At the new 15s cadence (FOLLOWER_POLL_INTERVAL_MS) the cost is
-      // cheap, and it catches the next session started by another device when
-      // Realtime misses the INSERT.
-      sync.resumeFollowerPoll()
     }
   }
 

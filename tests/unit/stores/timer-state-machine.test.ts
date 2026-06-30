@@ -531,6 +531,28 @@ describe('Timer State Machine — stopTimer', () => {
     expect(store.isTimerActive).toBe(false)
     expect(store.isDeviceLeader).toBe(false)
   })
+
+  it('20b. stopTimer clears Electron/KDE local snapshot before a stalled remote save can keep the timer stuck active', async () => {
+    mockAuthState.canSyncRemotely = true
+    const stalledRemoteSave = new Promise<void>(() => {})
+    const store = useTimerStore()
+    await flushPromises()
+
+    await store.startTimer('task-001', 60, false)
+    await flushPromises()
+    mockSyncLocalApiTimerSnapshot.mockClear()
+    mockSaveActiveTimerSession.mockClear()
+    mockSaveActiveTimerSession.mockImplementationOnce(() => stalledRemoteSave)
+
+    const stopPromise = store.stopTimer()
+    await flushPromises()
+
+    expect(store.currentSession).toBeNull()
+    expect(store.isTimerActive).toBe(false)
+    expect(mockSyncLocalApiTimerSnapshot).toHaveBeenCalledWith(null, expect.any(String))
+
+    void stopPromise
+  })
 })
 
 // ============================================================================

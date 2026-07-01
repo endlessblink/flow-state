@@ -44,7 +44,7 @@ test.describe('TASK-1455: Catalog — Uncategorized tasks group', () => {
     if (!testUser) {
       const { data, error } = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
       if (error) {
-        if (error.message.includes('already registered') || error.message.includes('User already exists')) {
+        if (error.message.includes('already registered') || error.message.includes('User already exists') || error.message.includes('A user with this email address has already been registered')) {
           for (let i = 0; i < 15 && !testUser; i++) {
             await new Promise(r => setTimeout(r, 1000))
             const res = await adminClient.auth.admin.listUsers()

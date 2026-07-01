@@ -74,7 +74,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     if (!user) {
       const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
       if (error) {
-        if (error.message.includes('already registered') || error.message.includes('User already exists')) {
+        if (error.message.includes('already registered') || error.message.includes('User already exists') || error.message.includes('A user with this email address has already been registered')) {
           for (let i = 0; i < 15 && !user; i++) {
             await new Promise(r => setTimeout(r, 1000))
             const res = await admin.auth.admin.listUsers()
@@ -82,8 +82,6 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
           }
         }
         if (!user) {
-          // If we still can't find them via listUsers, maybe listUsers is just deeply cached or broken.
-          // Try to sign in to force it, or just throw.
           console.warn('createUser returned already registered but listUsers cannot find them')
           throw error
         }

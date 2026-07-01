@@ -19,7 +19,26 @@ test.describe('Task Comments (TASK-1553)', () => {
       const res = await supabase.auth.admin.listUsers()
       testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!testUser) { const { data } = await supabase.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
+    if (!testUser) {
+      const { data, error } = await supabase.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
+      if (error) {
+        if (error.message.includes('already registered') || error.message.includes('User already exists')) {
+          for (let i = 0; i < 15 && !testUser; i++) {
+            await new Promise(r => setTimeout(r, 1000))
+            const res = await supabase.auth.admin.listUsers()
+            testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+          }
+        }
+        if (!testUser) {
+          console.warn('createUser returned already registered but listUsers cannot find them')
+          throw error
+        }
+      } else if (!data?.user) {
+        throw new Error('createUser succeeded but returned null user')
+      } else {
+        testUser = data.user
+      }
+    }
 
     await supabase.from('workspaces').upsert({
       id: TEST_WORKSPACE_ID, name: 'Test Workspace',

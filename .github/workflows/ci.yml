@@ -90,4 +90,4 @@ jobs:
 
       - name: Stop Supabase
         if: always()
-        run: supabase stop || true
+        run: npx supabase stop || true

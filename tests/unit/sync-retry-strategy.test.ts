@@ -62,7 +62,7 @@ describe('classifyError — existing classifications remain correct', () => {
   })
 
   it('classifies rate limiting as transient', () => {
-    expect(classifyError('rate limit exceeded')).toBe('transient')
+    expect(classifyError('rate limit exceeded')).toBe('rate_limit')
   })
 
   it('classifies auth errors as permanent', () => {

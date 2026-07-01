@@ -1,9 +1,3 @@
-/**
- * BUG-1874: before an Electron update restart, the live session must be flushed to durable
- * storage so the post-restart app stays signed in. flushAuthForUpdate() writes BOTH the primary
- * auth key and the replayable backup. (No window.electronAPI here → the lazy adapter uses
- * localStorage, which is what we assert against.)
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { getSession } = vi.hoisted(() => ({
@@ -19,8 +13,9 @@ const { getSession } = vi.hoisted(() => ({
   })),
 }))
 
-vi.stubEnv('VITE_SUPABASE_URL', 'http://localhost:54321')
-vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
+vi.mock('@/utils/platform', () => ({
+  isTauri: () => false,
+}))
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
@@ -30,11 +25,25 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }))
 
-import { flushAuthForUpdate, AUTH_SESSION_BACKUP_KEY } from '@/services/auth/supabase'
-import { STORAGE_KEYS } from '@/constants/storageKeys'
-
 describe('flushAuthForUpdate (BUG-1874)', () => {
-  beforeEach(() => {
+  let flushAuthForUpdate: any
+  let AUTH_SESSION_BACKUP_KEY: any
+  let STORAGE_KEYS: any
+
+  beforeEach(async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'http://localhost:54321')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
+
+    // reset modules to re-evaluate supabase.ts
+    vi.resetModules()
+
+    const mod = await import('@/services/auth/supabase')
+    flushAuthForUpdate = mod.flushAuthForUpdate
+    AUTH_SESSION_BACKUP_KEY = mod.AUTH_SESSION_BACKUP_KEY
+
+    const keysMod = await import('@/constants/storageKeys')
+    STORAGE_KEYS = keysMod.STORAGE_KEYS
+
     localStorage.clear()
     getSession.mockClear()
   })

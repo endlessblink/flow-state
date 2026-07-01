@@ -6,7 +6,7 @@
 set -euo pipefail
 
 # Auto-fetch keys from local Supabase if not already set
-SUPABASE_STATUS_ENV="${SUPABASE_STATUS_ENV:-$(supabase status -o env 2>&1 || true)}"
+SUPABASE_STATUS_ENV="${SUPABASE_STATUS_ENV:-$(npx supabase status -o env 2>&1 || true)}"
 
 if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
   # Try new-format secret key first (Supabase v2.x uses sb_secret_* instead of HS256 JWT)

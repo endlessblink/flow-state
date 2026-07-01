@@ -406,7 +406,7 @@ describe('classifyError', () => {
     })
 
     it('for "rate limit" message', () => {
-      expect(classifyError(new Error('rate limit exceeded'))).toBe('transient')
+      expect(classifyError(new Error('rate limit exceeded'))).toBe('rate_limit')
     })
 
     it('accepts a plain string (not an Error object)', () => {

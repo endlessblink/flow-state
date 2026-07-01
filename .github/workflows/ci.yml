@@ -83,14 +83,9 @@ jobs:
       - name: Install Playwright (chromium)
         run: npx playwright install --with-deps chromium
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
       - name: Boot Supabase + run two-client Realtime e2e (R1–R7)
         run: |
-          supabase start
+          npx supabase start
           ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2
 
       - name: Stop Supabase

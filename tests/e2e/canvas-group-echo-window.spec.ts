@@ -13,6 +13,11 @@ import { test, expect } from '../fixtures/auth'
 
 test.describe.configure({ mode: 'serial' })
 
+test.beforeEach(() => {
+  test.skip(test.info().config.workers > 1, 'TASK-1906: shared-test-user interference under parallel workers — run with --workers=1')
+})
+
+
 test('a group move within 2s of creation sticks through the echo window', async ({ page }) => {
   await page.addInitScript(() => {
     if (!localStorage.getItem('flowstate-settings-v2')) {

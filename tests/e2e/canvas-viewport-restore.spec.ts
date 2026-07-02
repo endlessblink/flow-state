@@ -11,6 +11,11 @@
 
 import { test, expect } from '../fixtures/auth'
 
+test.beforeEach(() => {
+  test.skip(test.info().config.workers > 1, 'TASK-1906: shared-test-user interference under parallel workers — run with --workers=1')
+})
+
+
 test('canvas restores the saved viewport on reload (BUG-1902)', async ({ page }) => {
   await page.goto('/#/canvas')
   await page.waitForSelector('.vue-flow__pane', { timeout: 30000 })

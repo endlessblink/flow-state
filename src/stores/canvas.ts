@@ -147,7 +147,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
 
       const locallyNewerGroupIds = new Set<string>()
-      const geometryMergedGroups = loadedGroups.map((remoteGroup) => {
+      const geometryMergedGroupsFromServer = loadedGroups.map((remoteGroup) => {
         const localGroup = localById.get(remoteGroup.id)
         if (!localGroup?.position) return remoteGroup
 
@@ -171,6 +171,17 @@ export const useCanvasStore = defineStore('canvas', () => {
           updatedAt: localGroup.updatedAt ?? remoteGroup.updatedAt,
         }
       })
+
+      // BUG-1899: a group created while this load was in flight is absent from
+      // the server result (create op still queued) — the wholesale replace
+      // below used to wipe it, and it resurfaced at its seed position when the
+      // create echo landed. Preserve recent local-only groups.
+      const { preserveRecentLocalGroups } = await import('@/utils/canvas/mergeGroupLoad')
+      const geometryMergedGroups = preserveRecentLocalGroups(
+        geometryMergedGroupsFromServer,
+        groupsModule._rawGroups.value,
+        Date.now()
+      )
 
       if (import.meta.env.DEV) {
         assertNoDuplicateIds(geometryMergedGroups, 'Supabase groups load')

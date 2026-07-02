@@ -3754,9 +3754,13 @@ Regression from 196b171a: `stopTimer` clears local state first and swallows remo
 
 `timer.ts:453` nulls userId when `canSyncRemotely` is false, so a stop during reconnect-grace is neither saved nor queued — KDE (polls Supabase directly) shows the timer active indefinitely. Independently, the grace period (`auth.ts`) only clears on a successful refresh: refresh exhaustion while online neither reschedules nor surfaces re-auth, so a dead refresh token write-blocks the app until restart. Fix: always enqueue the stop (queue drains after auth recovers) while keeping the direct-write gate from a49cf3f1; bound the grace with an explicit re-auth state.
 
-### BUG-1899: Canvas group echo-stomp + dual-writer LWW discards (📋 PLANNED)
+### BUG-1899: Canvas group echo-stomp + dual-writer LWW discards (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED | **Opened**: 2026-07-02
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (4 failure modes fixed 2026-07-02; residual boot-race documented below) | **Opened**: 2026-07-02
+
+**Fixed (unit-tested, probe-verified)**: (1) version-0/NULL creation echoes bypassed the guard and stomped positions (`canvasGroups.ts` total-order version guard); (2) equal-version echoes with drain-time server timestamps applied stale geometry (geometry version-authority: only strictly newer versions may move a group; metadata still merges); (3) `createGroup` was a DOUBLE remote writer (own enqueue + `saveGroupToStorage`'s second create op) — mirror of updateGroup's `!queued` guard; (4) `loadFromDatabase` wiped freshly-created groups absent from the server result (`preserveRecentLocalGroups`, 10min pending-create grace). Also: `useNodeSync` no longer writes Supabase directly — geometry routes through the store single-writer (`node-sync-single-writer.test.ts`).
+
+**Explicitly NOT covered (architecture question)**: full serialization of boot-time canvas load vs user mutations. Group state still has 5+ writers (`updateGroup`, `updateGroupFromSync`, two internal `setGroups` call sites, `removeGroupFromSync`) and a group-side LWW writeback is absent. Recorder probes show residual Tidy-spec flake (~1 in 4 isolated runs) when Tidy fires while the initial load is mid-flight — groups tidied against a partial store. Fix direction: gate canvas mutations until first load settles, or replace wholesale `setGroups` with a keyed merge. DEV diagnostic added: `[SETGROUPS-DIAG]` logs dropped ids + caller stack.
 
 Two mechanisms in one subsystem (BUG-1799 residue): (a) group realtime applies have no self-echo/version guard — creation/update echoes (~0.2-2s later) stomp store positions written in between; probe-proven as the cause of flaky Tidy "3 rows" (BUG-1782 recurrence) and "group move doesn't stick". (b) `useNodeSync.ts:183-255` writes geometry directly with a private version map that queue writes never update → NODE-SYNC conflict loops + `LWW: Server wins... DISCARDED` (3.5-4.7s deltas) losing user edits/parent changes. Fix: single-writer geometry path or shared version source + echo guards at group apply (task parity).
 

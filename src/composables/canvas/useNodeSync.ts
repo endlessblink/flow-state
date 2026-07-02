@@ -1,5 +1,4 @@
 import { ref, computed, type Ref } from 'vue'
-import { supabase } from '@/services/auth/supabase'
 import type { Node } from '@vue-flow/core'
 import type { CanvasGroup } from '@/types/canvas'
 import {
@@ -121,156 +120,52 @@ export function useNodeSync(
             const absolutePosition = getAbsolutePositionForNodeSync(vueFlowNode, currentParentId, allGroups)
 
             // ================================================================
-            // 3. GET CURRENT VERSION (with fallback to store)
+            // 3. DISPATCH THROUGH THE STORE SINGLE-WRITER (BUG-1899)
             // ================================================================
-            // CRITICAL FIX: If versionMap is out of sync, fall back to task store
-            let currentVersion = versionMap.get(nodeId)
-            if (currentVersion === undefined) {
-                // Try to get version from task store as fallback
-                try {
-                    const { useTaskStore } = await import('@/stores/tasks')
-                    const taskStore = useTaskStore()
-                    const task = taskStore.tasks.find(t => t.id === nodeId)
-                    if (task?.positionVersion !== undefined) {
-                        currentVersion = task.positionVersion
-                        versionMap.set(nodeId, currentVersion) // Sync the map
-                        console.log(`[NODE-SYNC] Recovered version from task store for ${nodeId.slice(0, 8)}: v${currentVersion}`)
-                    }
-                } catch {
-                    // Store not available, use 0
-                }
-                currentVersion = currentVersion ?? 0
-            }
-
-            // ================================================================
-            // 4. PREPARE DB PAYLOAD
-            // ================================================================
-            const positionToSave = absolutePosition
-            const updatePayload: Record<string, unknown> = {
-                position_version: currentVersion + 1,
-                updated_at: new Date().toISOString()
-            }
+            // This composable used to write positions straight to Supabase with
+            // a private optimistic-lock version map. That raced the sync-queue
+            // writes from updateTask/updateGroup on the same rows (the queue
+            // never updated the private map), producing constant
+            // "[NODE-SYNC] Conflict detected" retries and "LWW: Server wins …
+            // DISCARDED" edit loss. Geometry now has exactly one transport:
+            // the store update paths, which persist via the sync queue with
+            // shared positionVersion semantics.
+            const resolvedParentId = currentParentId === 'NONE' ? null : currentParentId
 
             if (tableName === 'tasks') {
-                updatePayload.position = {
-                    x: positionToSave.x,
-                    y: positionToSave.y,
-                    parentId: currentParentId === 'NONE' ? null : currentParentId,
-                    format: 'absolute'
-                }
+                const { useTaskStore } = await import('@/stores/tasks')
+                await useTaskStore().updateTask(nodeId, {
+                    canvasPosition: { x: absolutePosition.x, y: absolutePosition.y },
+                    // Task.parentId is string|undefined — explicit undefined still
+                    // clears the parent through the update merge (legacy direct
+                    // write used null for the same purpose).
+                    parentId: resolvedParentId ?? undefined,
+                    positionFormat: 'absolute'
+                }, 'DRAG')
             } else {
-                updatePayload.position_json = {
-                    x: positionToSave.x,
-                    y: positionToSave.y,
-                    width: vueFlowNode.data?.width || (vueFlowNode as { width?: number; height?: number }).width || CANVAS.DEFAULT_GROUP_WIDTH,
-                    height: vueFlowNode.data?.height || (vueFlowNode as { width?: number; height?: number }).height || CANVAS.DEFAULT_GROUP_HEIGHT
-                }
-                updatePayload.parent_group_id = currentParentId === 'NONE' ? null : currentParentId
+                const { useCanvasStore } = await import('@/stores/canvas')
+                const nodeSize = vueFlowNode as { width?: number; height?: number }
+                await useCanvasStore().updateGroup(nodeId, {
+                    position: {
+                        x: absolutePosition.x,
+                        y: absolutePosition.y,
+                        width: vueFlowNode.data?.width || nodeSize.width || CANVAS.DEFAULT_GROUP_WIDTH,
+                        height: vueFlowNode.data?.height || nodeSize.height || CANVAS.DEFAULT_GROUP_HEIGHT
+                    },
+                    parentGroupId: resolvedParentId,
+                    positionFormat: 'absolute'
+                })
             }
-
-            // ================================================================
-            // 5. EXECUTE OPTIMISTIC LOCK UPDATE (WITH TIMEOUT)
-            // ================================================================
-            // We wrap Supabase call in a timeout to prevent infinite hanging
-            // which causes the "stops syncing after a while" bug.
-            // Increased timeout for production VPS latency (BUG-1116)
-
-            const SYNC_TIMEOUT_MS = 20000 // 20s timeout for VPS latency
-            const timeoutPromise = new Promise<{ timeout: true }>((resolve) =>
-                setTimeout(() => resolve({ timeout: true }), SYNC_TIMEOUT_MS)
-            )
-
-            const dbRequest = supabase!
-                .from(tableName)
-                .update(updatePayload)
-                .eq('id', nodeId)
-                .eq('position_version', currentVersion)
-                .select('position_version')
-
-            // Race: DB Request vs Timeout
-            const result = await Promise.race([dbRequest, timeoutPromise])
-
-            // Handle Timeout
-            if ('timeout' in result) {
-                throw new Error(`Sync timed out after ${SYNC_TIMEOUT_MS}ms`)
-            }
-
-            const { data, error } = result
-
-            if (error) throw error
-
-            // Handle Version Mismatch (Retry Once)
-            if (!data || data.length === 0) {
-                console.warn(`⚠️ [NODE-SYNC] Conflict detected for ${tableName} ${nodeId}, retrying...`)
-
-                // Fetch latest
-                const { data: latest, error: fetchError } = await supabase!
-                    .from(tableName)
-                    .select('position_version')
-                    .eq('id', nodeId)
-                    .single()
-
-                if (fetchError || !latest) {
-                    // BUG-1328: Handle PGRST116 (entity not found) gracefully
-                    // This happens when a canvas node exists locally but not in DB
-                    // (deleted by another device, not yet synced, or RLS-filtered)
-                    console.warn(`⚠️ [NODE-SYNC] Cannot retry ${tableName} ${nodeId.slice(0, 8)} — entity not found or inaccessible`)
-                    return false
-                }
-
-                const newVersion = latest.position_version
-                versionMap.set(nodeId, newVersion)
-                updatePayload.position_version = newVersion + 1
-
-                // Retry Request (With new timeout race)
-                const retryRequest = supabase!
-                    .from(tableName)
-                    .update(updatePayload)
-                    .eq('id', nodeId)
-                    .eq('position_version', newVersion)
-                    .select('position_version')
-
-                const retryResult = await Promise.race([retryRequest, timeoutPromise])
-                if ('timeout' in retryResult) {
-                    throw new Error(`Retry sync timed out after ${SYNC_TIMEOUT_MS}ms`)
-                }
-
-                const { data: retryData, error: retryError } = retryResult
-
-                if (retryError) throw retryError
-
-                if (!retryData || retryData.length === 0) {
-                    console.error(`❌ [NODE-SYNC] Retry failed for ${tableName} ${nodeId}. Position may be stale.`)
-                    syncError.value = `Sync Conflict: Retry failed`
-                    return false
-                }
-
-                console.log(`✅ [NODE-SYNC] Retry succeeded for ${tableName} ${nodeId}`)
-                versionMap.set(nodeId, retryData[0].position_version)
-                return true
-            }
-
-            // Success
-            // console.log(`✅ [NODE-SYNC] Sync success for ${tableName} ${nodeId} v${data[0].position_version}`)
-            versionMap.set(nodeId, data[0].position_version)
             return true
-
         } catch (err: unknown) {
             const error = err as { message?: string; code?: string }
             console.error('❌ [NODE-SYNC] Failed:', err)
             syncError.value = error.message || 'Sync failed'
 
             const { showToast } = useToast()
-
-            // BUG-1328: Suppress toast for PGRST116 (entity not found) —
-            // not actionable by user, happens when node was deleted on another device
             if (error.code === 'PGRST116') {
-                console.warn(`⚠️ [NODE-SYNC] Entity not found (PGRST116) — suppressing toast`)
-            } else if (error.message?.includes('timed out')) {
-                // Show warning toast for timeouts - changes will be retried
-                showToast('Sync timed out - changes will retry automatically', 'warning')
+                console.warn('⚠️ [NODE-SYNC] Entity not found (PGRST116) — suppressing toast')
             } else {
-                // Show error toast for other failures
                 showToast(`Sync Failed: ${syncError.value}`, 'error')
             }
             return false
@@ -278,6 +173,7 @@ export function useNodeSync(
             syncingNodes.value.delete(nodeId)
         }
     }
+
 
     return {
         // Expose boolean for backward compatibility (true if ANY node is syncing)

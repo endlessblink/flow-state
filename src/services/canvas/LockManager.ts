@@ -61,6 +61,25 @@ class LockManager {
     }
 
     /**
+     * BUG-1900: Acquire a lock, optionally adopting a foreign one.
+     *
+     * Resize used to call acquire() and ignore the result — children still
+     * holding a leaked 'user-drag' lock were never locked, their position
+     * updates were rejected mid-resize, and the symmetric release produced
+     * "Unauthorized release attempt" warnings. Callers pass allowAdopt=true
+     * when the foreign lock is known stale (e.g. no drag in progress) and
+     * must SKIP the node when this returns false.
+     */
+    acquireOrAdopt(nodeId: string, source: LockSource, opts: { allowAdopt: boolean; timeoutMs?: number }): boolean {
+        const existing = this.locks.get(nodeId)
+        if (existing && existing.source !== source) {
+            if (!opts.allowAdopt) return false
+            this.release(nodeId, source, true)
+        }
+        return this.acquire(nodeId, source, opts.timeoutMs)
+    }
+
+    /**
      * Release a lock.
      * Only the owner can release their lock (unless force=true)
      */

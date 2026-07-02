@@ -1025,19 +1025,40 @@ export function useCanvasInteractions(deps?: {
             childStartPositions: {}
         }
 
+        // BUG-1900: locks may still be held by 'user-drag' — either legitimately
+        // (drag in progress) or leaked by the BUG-1492 stale-handler skip (auto-
+        // expires after 15s). When no drag is live, adopt the stale lock; when a
+        // drag IS live, EXCLUDE the child from this resize so we never move a
+        // node we don't own and never "release" a lock we never acquired.
+        const allowAdopt = !canvasStore.isDragging
+
         const vueFlowParentId = CanvasIds.groupNodeId(sectionId)
         nodes.value.forEach(node => {
             if (node.parentNode === vueFlowParentId) {
                 // FIX: Use raw ID for consistent locking with PositionManager
                 const { id: childRawId } = CanvasIds.parseNodeId(node.id)
-                resizeState.value.childStartPositions[childRawId] = { ...node.position }
                 // TASK-213: Lock Children
-                lockManager.acquire(childRawId, 'user-resize')
+                if (lockManager.acquireOrAdopt(childRawId, 'user-resize', { allowAdopt })) {
+                    resizeState.value.childStartPositions[childRawId] = { ...node.position }
+                } else if (import.meta.env.DEV) {
+                    console.log(`[BUG-1900] Resize skipping child ${childRawId.slice(0, 8)} — locked by ${lockManager.getLockOwner(childRawId)}`)
+                }
             }
         })
 
         // TASK-213: Lock Group
-        lockManager.acquire(sectionId, 'user-resize')
+        if (!lockManager.acquireOrAdopt(sectionId, 'user-resize', { allowAdopt })) {
+            // Group itself is actively locked — abort this resize session so we
+            // don't fight a live drag over the same geometry.
+            Object.keys(resizeState.value.childStartPositions).forEach(childId => {
+                lockManager.release(childId, 'user-resize')
+            })
+            resizeState.value.isResizing = false
+            resizeState.value.childStartPositions = {}
+            if (import.meta.env.DEV) {
+                console.log(`[BUG-1900] Resize aborted — group ${sectionId.slice(0, 8)} locked by ${lockManager.getLockOwner(sectionId)}`)
+            }
+        }
     }
 
     const onSectionResize = ({ sectionId: _rawSectionId, event }: { sectionId: string; event: unknown }) => {

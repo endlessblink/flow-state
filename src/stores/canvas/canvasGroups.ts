@@ -46,6 +46,13 @@ export const useCanvasGroups = (
             console.error('❌ [CANVAS] Refusing to overwrite existing groups with empty array')
             return
         }
+        if (import.meta.env.DEV) {
+            const incoming = new Set(newGroups.map(g => g.id))
+            const removed = _rawGroups.value.filter(g => !incoming.has(g.id))
+            if (removed.length > 0) {
+                console.log(`[SETGROUPS-DIAG] replacing drops ${removed.length} group(s): ${removed.map(g => `${g.name}/${g.id.slice(0, 8)}`).join(', ')}`, new Error().stack?.split('\n').slice(2, 5).join(' <- '))
+            }
+        }
         _rawGroups.value = [...newGroups]
     }
 
@@ -67,6 +74,7 @@ export const useCanvasGroups = (
         cacheGroups([..._rawGroups.value])
 
         // TASK-1428: Queue for offline-first sync (secondary persistence)
+        let queued = false
         try {
             const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
             const syncOrchestrator = useSyncOrchestrator()
@@ -83,13 +91,24 @@ export const useCanvasGroups = (
                         payload: JSON.parse(JSON.stringify(payload)),
                         baseVersion: 0
                     })
+                    queued = true
                 }
             }
         } catch (queueError) {
             console.warn('[SYNC-QUEUE] Failed to queue group create:', queueError)
         }
 
-        await persistence.saveGroupToStorage(newGroup)
+        // BUG-1899: saveGroupToStorage ALSO enqueues a remote create op. Calling
+        // it unconditionally made every createGroup a DOUBLE remote writer whose
+        // stale seed-position snapshot could drain after later edits and
+        // out-version them (spy-proven Tidy revert / group move ping-pong).
+        // Mirror updateGroup: direct-save only when the queue didn't take it,
+        // and keep the local persistence side-effects otherwise.
+        if (!queued) {
+            await persistence.saveGroupToStorage(newGroup)
+        } else {
+            persistence.saveGroupsToLocalStorage(_rawGroups.value)
+        }
         return newGroup
     }
 
@@ -366,7 +385,13 @@ export const useCanvasGroups = (
                 const incomingVersion = data.positionVersion ?? 0
                 const localVersion = existing.positionVersion ?? 0
 
-                if (incomingVersion > 0 && localVersion > incomingVersion) {
+                // BUG-1899: total-order version guard. A strictly-older incoming
+                // version is stale — INCLUDING version-0/NULL creation echoes.
+                // The previous `incomingVersion > 0 &&` precondition let the
+                // INSERT echo of a just-created group (position_version NULL)
+                // bypass both guards and stomp positions written in between
+                // (probe-proven cause of Tidy "3 rows" / group moves reverting).
+                if (localVersion > incomingVersion) {
                     if (import.meta.env.DEV) {
                         console.log(`[GROUP-SYNC] Skipping older version for group ${groupId.slice(0, 8)}... (local v${localVersion} > incoming v${incomingVersion})`)
                     }
@@ -385,12 +410,38 @@ export const useCanvasGroups = (
                     }
                 }
 
+                // BUG-1899: geometry version-authority. positionVersion bumps on
+                // every local position write, so the author of version N owns
+                // version N's geometry — an EQUAL-version echo can never carry
+                // better geometry than what we already have. Without this, a
+                // queue op draining late gets a server updated_at at DRAIN time
+                // (newer than the local edit stamp) and the equal-version
+                // timestamp rule above applies STALE geometry (spy-proven cause
+                // of Tidy/group moves reverting seconds later). Only a strictly
+                // newer version may move the group; metadata still merges.
+                let applicable = data
+                if (
+                    incomingVersion === localVersion &&
+                    data.position &&
+                    existing.position &&
+                    (data.position.x !== existing.position.x ||
+                        data.position.y !== existing.position.y ||
+                        data.position.width !== existing.position.width ||
+                        data.position.height !== existing.position.height)
+                ) {
+                    if (import.meta.env.DEV) {
+                        console.log(`[GROUP-SYNC] Dropping equal-version geometry for group ${groupId.slice(0, 8)}... (local v${localVersion} owns its geometry)`)
+                    }
+                    const { position: _droppedPosition, ...rest } = data
+                    applicable = rest
+                }
+
                 // Update existing group (don't trigger saveGroupToStorage)
                 _rawGroups.value[index] = {
                     ...existing,
-                    ...data,
+                    ...applicable,
                     id: groupId, // Ensure ID is preserved
-                    updatedAt: data.updatedAt || new Date().toISOString()
+                    updatedAt: applicable.updatedAt || new Date().toISOString()
                 }
             } else {
                 // Add new group from remote - use defaults matching createGroup

@@ -75,10 +75,11 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true });
       if (error || !data?.user) {
         if (error?.message?.includes('already been registered') || error?.message?.includes('already registered')) {
-          for (let i = 0; i < 10 && !user; i++) {
+          for (let i = 0; i < 30 && !user; i++) {
             await new Promise(r => setTimeout(r, 1000))
             const res = await admin.auth.admin.listUsers()
             user = res.data.users.find((u: any) => u.email === 'playwright@test.flowstate')
+            if (user) break
           }
           if (!user) {
             throw new Error('Failed to fetch user after catching "already registered" error.')

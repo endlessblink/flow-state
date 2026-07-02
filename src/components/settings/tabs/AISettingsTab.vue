@@ -460,7 +460,7 @@ async function onClearMemories() {
             <template v-else-if="bridgeStatus === 'offline'">Bridge unreachable — falling back to the free provider.</template>
             <template v-else>Checking connection…</template>
           </span>
-          <button class="refresh-models-btn" title="Re-check" @click="checkBridge()">
+          <button class="refresh-models-btn" title="Re-check" aria-label="Re-check" @click="checkBridge()">
             <RefreshCw :size="13" />
           </button>
         </div>
@@ -510,7 +510,7 @@ async function onClearMemories() {
             placeholder="/data/local/tmp/llm/model_version.task"
             @input="settingsStore.updateSetting('androidGemmaModelPath', ($event.target as HTMLInputElement).value)"
           >
-          <button class="refresh-models-btn" title="Save Android Gemma path" @click="saveAndroidGemmaModelPath">
+          <button class="refresh-models-btn" title="Save Android Gemma path" aria-label="Save Android Gemma path" @click="saveAndroidGemmaModelPath">
             <Loader2 v-if="androidGemmaStatus === 'saving'" :size="13" class="spin" />
             <CheckCircle2 v-else-if="androidGemmaStatus === 'saved'" :size="13" />
             <AlertCircle v-else-if="androidGemmaStatus === 'error'" :size="13" />
@@ -564,7 +564,7 @@ async function onClearMemories() {
         <button
           v-if="selectedProvider === 'ollama'"
           class="refresh-models-btn"
-          title="Refresh local models"
+          title="Refresh local models" aria-label="Refresh local models"
           @click="refreshOllamaModels()"
         >
           <RefreshCw :size="14" />
@@ -594,7 +594,7 @@ async function onClearMemories() {
             spellcheck="false"
             autocomplete="off"
           />
-          <button class="key-toggle-btn" @click="showGroqKey = !showGroqKey" :title="showGroqKey ? 'Hide' : 'Show'">
+          <button class="key-toggle-btn" @click="showGroqKey = !showGroqKey" :title="showGroqKey ? 'Hide' : 'Show'" :aria-label="showGroqKey ? 'Hide' : 'Show'">
             <EyeOff v-if="showGroqKey" :size="14" />
             <Eye v-else :size="14" />
           </button>
@@ -693,7 +693,7 @@ async function onClearMemories() {
         <button
           v-if="settingsStore.weeklyPlanProvider === 'ollama'"
           class="refresh-models-btn"
-          title="Refresh local models"
+          title="Refresh local models" aria-label="Refresh local models"
           @click="refreshOllamaModels()"
         >
           <RefreshCw :size="14" />

@@ -1,0 +1,3 @@
+## 2024-07-02 - Add ARIA Labels to Title-Only Icon Buttons
+**Learning:** Found a specific pattern in the app's components where icon-only buttons relied solely on the `title` attribute for accessibility/tooltip purposes. Screen readers handle `title` attributes inconsistently, making this an unreliable method for providing accessible names compared to `aria-label`.
+**Action:** Implemented a regex-based patch script to systematically convert title-only icon buttons across the codebase to use `aria-label` matching their `title` values. Future implementations of icon-only buttons should explicitly include `aria-label` even if a `title` is provided for visual tooltips.

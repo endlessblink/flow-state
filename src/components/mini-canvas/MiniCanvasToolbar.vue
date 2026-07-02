@@ -1,7 +1,7 @@
 <template>
   <div class="mini-canvas-toolbar">
     <div class="toolbar-left">
-      <button class="toolbar-btn back-btn" title="Back to canvas (Esc)" @click="$emit('close')">
+      <button class="toolbar-btn back-btn" title="Back to canvas (Esc)" aria-label="Back to canvas (Esc)" @click="$emit('close')">
         <ArrowLeft :size="18" />
       </button>
 
@@ -13,26 +13,26 @@
     </div>
 
     <div class="toolbar-right">
-      <button class="toolbar-btn add-btn" title="Add Subtask" @click="$emit('add-subtask')">
+      <button class="toolbar-btn add-btn" title="Add Subtask" aria-label="Add Subtask" @click="$emit('add-subtask')">
         <CheckSquare :size="16" />
         <span>Subtask</span>
       </button>
 
-      <button class="toolbar-btn add-btn" title="Add Note" @click="$emit('add-note')">
+      <button class="toolbar-btn add-btn" title="Add Note" aria-label="Add Note" @click="$emit('add-note')">
         <StickyNote :size="16" />
         <span>Note</span>
       </button>
 
       <div class="toolbar-divider" />
 
-      <button class="toolbar-btn" title="Fit View" @click="$emit('fit-view')">
+      <button class="toolbar-btn" title="Fit View" aria-label="Fit View" @click="$emit('fit-view')">
         <Maximize2 :size="16" />
       </button>
 
       <button
         class="toolbar-btn toggle-btn"
         :class="{ active: hideCompleted }"
-        title="Toggle completed subtasks"
+        title="Toggle completed subtasks" aria-label="Toggle completed subtasks"
         @click="$emit('toggle-completed')"
       >
         <EyeOff v-if="hideCompleted" :size="16" />
@@ -41,7 +41,7 @@
 
       <div class="toolbar-divider" />
 
-      <button class="toolbar-btn" title="Edit Task Details" @click="$emit('edit-task')">
+      <button class="toolbar-btn" title="Edit Task Details" aria-label="Edit Task Details" @click="$emit('edit-task')">
         <Pencil :size="16" />
         <span>Edit Task</span>
       </button>

@@ -206,7 +206,7 @@ function close() {
   >
     <div v-if="task" class="quick-edit-popover">
       <!-- Close Button -->
-      <button class="close-btn" title="Close" @click="close">
+      <button class="close-btn" title="Close" aria-label="Close" @click="close">
         <X :size="14" />
       </button>
 
@@ -234,7 +234,7 @@ function close() {
             :key="String(opt.value)"
             class="priority-dot-btn"
             :class="{ active: localPriority === opt.value }"
-            :title="opt.label"
+            :title="opt.label" :aria-label="opt.label"
             @click="setPriority(opt.value as string | null)"
           >
             <span class="priority-dot" :style="{ background: opt.color }" />

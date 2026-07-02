@@ -21,15 +21,15 @@
         <!-- Bulk action bar when tasks selected -->
         <div class="bulk-actions-bar">
           <span class="selection-count">{{ selectedTaskIds.length }} selected</span>
-          <button class="bulk-action-btn bulk-action-btn--edit" title="Batch edit selected tasks" @click="emit('batchEdit', [...selectedTaskIds])">
+          <button class="bulk-action-btn bulk-action-btn--edit" title="Batch edit selected tasks" aria-label="Batch edit selected tasks" @click="emit('batchEdit', [...selectedTaskIds])">
             <Pencil :size="14" />
             Edit
           </button>
-          <button class="bulk-action-btn bulk-action-btn--delete" title="Delete selected tasks" @click="emit('deleteSelected', [...selectedTaskIds])">
+          <button class="bulk-action-btn bulk-action-btn--delete" title="Delete selected tasks" aria-label="Delete selected tasks" @click="emit('deleteSelected', [...selectedTaskIds])">
             <Trash2 :size="14" />
             Delete
           </button>
-          <button class="bulk-action-btn bulk-action-btn--clear" title="Clear selection" @click="clearSelection">
+          <button class="bulk-action-btn bulk-action-btn--clear" title="Clear selection" aria-label="Clear selection" @click="clearSelection">
             <X :size="14" />
             Clear
           </button>
@@ -109,14 +109,14 @@
         <span class="group-task-count">{{ group.tasks.length }}</span>
         <button
           class="group-add-btn"
-          title="Add task to this group"
+          title="Add task to this group" aria-label="Add task to this group"
           @click.stop="emit('addTaskToGroup', group.key, props.groupBy)"
         >
           <Plus :size="14" />
         </button>
         <button
           class="group-ai-btn"
-          title="Smart Suggest all tasks in group (AI)"
+          title="Smart Suggest all tasks in group (AI)" aria-label="Smart Suggest all tasks in group (AI)"
           @click.stop="handleGroupAISuggest($event, group)"
         >
           <Zap :size="14" />

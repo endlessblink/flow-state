@@ -499,7 +499,7 @@ const handleChangePassword = async () => {
             class="form-input"
             @focus="(e) => (e.target as HTMLInputElement).select()"
           >
-          <button class="toggle-visibility" :title="localApiCopied ? 'Copied!' : 'Copy'" @click="copyLocalApiToken">
+          <button class="toggle-visibility" :title="localApiCopied ? 'Copied!' : 'Copy'" :aria-label="localApiCopied ? 'Copied!' : 'Copy'" @click="copyLocalApiToken">
             <Check v-if="localApiCopied" :size="16" />
             <Copy v-else :size="16" />
           </button>
@@ -607,7 +607,7 @@ const handleChangePassword = async () => {
               <RefreshCw v-else :size="14" />
               {{ googleCalendarLoading ? $t('google_calendar.syncing') : $t('google_calendar.sync_now') }}
             </button>
-            <button class="add-btn danger" :title="$t('google_calendar.disconnect')" @click="handleDisconnectGoogle">
+            <button class="add-btn danger" :title="$t('google_calendar.disconnect')" :aria-label="$t('google_calendar.disconnect')" @click="handleDisconnectGoogle">
               <Trash2 :size="14" />
               {{ $t('google_calendar.disconnect') }}
             </button>
@@ -719,7 +719,7 @@ const handleChangePassword = async () => {
               class="color-preset"
               :class="{ active: newCalColor === preset.value }"
               :style="{ backgroundColor: preset.value }"
-              :title="preset.label"
+              :title="preset.label" :aria-label="preset.label"
               @click="newCalColor = preset.value"
             />
             <input

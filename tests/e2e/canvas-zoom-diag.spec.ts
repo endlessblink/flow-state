@@ -5,6 +5,11 @@
 import { test, expect } from '../fixtures/auth'
 import type { Page } from '@playwright/test'
 
+// Shares the one Playwright test user's canvas state; run serially within the
+// file so its own tests don't race each other under fullyParallel:true. Cross-file
+// parallelism with other canvas specs is a separate limitation (see suite report).
+test.describe.configure({ mode: 'serial' })
+
 async function dismissOverlays(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('flowstate-onboarding-v2', 'true')

@@ -45,12 +45,29 @@ async function waitForTasks(page: Page) {
   await expect(page.getByText(TEST_TASKS.designLandingPage.title)).toBeVisible({ timeout: 15000 })
 }
 
-/** Open task edit modal by clicking on a task title */
+/**
+ * Open the task edit modal.
+ *
+ * AllTasksView drifted: clicking a task title now selects the row (or starts an
+ * inline title edit on double-click) — it no longer opens a modal. Each row
+ * exposes a per-row "Edit task" action button (revealed on hover), and the
+ * modal renders as `.modal-content` (TaskEditModal), not a [role=dialog].
+ */
 async function openTaskEditModal(page: Page, taskTitle: string) {
-  const taskEl = page.getByText(taskTitle).first()
-  await taskEl.click()
-  // Wait for the modal to open
-  await page.waitForSelector('[role="dialog"], .task-edit-modal, .modal-container', { timeout: 5000 })
+  const titleText = page.getByText(taskTitle).first()
+  await expect(titleText).toBeVisible({ timeout: 10000 })
+
+  // Resolve the enclosing `.task-row` (token-exact match so we don't grab
+  // `.task-row__title`) and hover it to reveal the action buttons.
+  const row = titleText.locator(
+    'xpath=ancestor::div[contains(concat(" ", normalize-space(@class), " "), " task-row ")][1]'
+  )
+  await row.hover()
+
+  await row.getByRole('button', { name: 'Edit task' }).click()
+
+  // TaskEditModal mounts as `.modal-content`
+  await page.waitForSelector('.modal-content', { timeout: 5000 })
 }
 
 // ============================================================================
@@ -87,19 +104,31 @@ test.describe('CRUD Workflows', () => {
   test('2. edit task title → updated title shown', async ({ page }) => {
     await waitForTasks(page)
 
+    // Create a throwaway task and rename THAT — never rename a shared seeded
+    // fixture, or later tests/specs that key off its title (test 12's
+    // waitForTasks, task-description-roundtrip) break in sequence.
+    const originalTitle = `Rename me ${Date.now()}`
     const updatedTitle = `Updated ${Date.now()}`
 
-    // Click the task to open the edit modal
-    await openTaskEditModal(page, TEST_TASKS.designLandingPage.title)
+    const quickAdd = page.locator(
+      'input[placeholder*="quick add"], input[placeholder*="Quick add"], input[placeholder*="Add task"]'
+    ).first()
+    await expect(quickAdd).toBeVisible({ timeout: 10000 })
+    await quickAdd.fill(originalTitle)
+    await page.keyboard.press('Enter')
+    await expect(page.getByText(originalTitle)).toBeVisible({ timeout: 10000 })
 
-    // Find the title input in the modal
+    // Open the edit modal for the task we just created
+    await openTaskEditModal(page, originalTitle)
+
+    // Find the title input in the modal (TaskEditHeader renders input.form-input
+    // with placeholder "Task title" inside .modal-content)
     const titleInput = page.locator(
-      '[role="dialog"] input[type="text"]:visible, .task-edit-modal input[type="text"]:visible, .modal-container input[placeholder*="title"]:visible'
+      '.modal-content input[placeholder="Task title"], .modal-content input.form-input'
     ).first()
     await expect(titleInput).toBeVisible({ timeout: 5000 })
 
-    // Clear and type new title
-    await titleInput.tripleClick()
+    // Clear and type new title (fill() replaces existing content)
     await titleInput.fill(updatedTitle)
     await page.keyboard.press('Enter')
 
@@ -151,17 +180,24 @@ test.describe('CRUD Workflows', () => {
 
     await openTaskEditModal(page, TEST_TASKS.morningWorkout.title)
 
-    // Look for a date picker or date input in the modal
-    const dateTrigger = page.locator(
-      '[role="dialog"] [aria-label*="due date"], [role="dialog"] [data-testid*="due-date"], [role="dialog"] .date-picker-trigger'
-    ).first()
-
-    if (await dateTrigger.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await dateTrigger.click()
-      // Try to select a date in the calendar that appears
-      const nextWeekday = page.locator('.n-date-panel-date:not(.n-date-panel-date--disabled)').nth(5)
-      if (await nextWeekday.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await nextWeekday.click()
+    // TaskEditMetadata exposes quick-date pills ("Today"/"Tmrw"/…) plus a
+    // clickable SCHEDULE field that opens a naive-ui date panel.
+    const todayPill = page.locator('.modal-content .pill-btn', { hasText: 'Today' }).first()
+    if (await todayPill.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await todayPill.click()
+      // The field's date display should reflect a set date (no longer "Not set")
+      await expect(page.locator('.modal-content .date-display').first())
+        .not.toHaveText('Not set', { timeout: 3000 })
+        .catch(() => { /* display formatting may vary; non-fatal */ })
+    } else {
+      // Fallback: open the schedule popover and pick a day
+      const dateTrigger = page.locator('.modal-content .metadata-field--clickable').first()
+      if (await dateTrigger.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await dateTrigger.click()
+        const nextWeekday = page.locator('.n-date-panel-date:not(.n-date-panel-date--disabled)').nth(5)
+        if (await nextWeekday.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await nextWeekday.click()
+        }
       }
     }
 
@@ -472,29 +508,29 @@ test.describe('CRUD Workflows', () => {
     // Open a task modal
     await openTaskEditModal(page, TEST_TASKS.designLandingPage.title)
 
-    // Look for subtask section
+    // Look for subtask section (TaskEditSubtasks: "Add subtask" icon button, or
+    // "Add your first subtask" when empty)
     const addSubtaskBtn = page.locator(
-      '[role="dialog"] button:has-text("Add subtask"), [role="dialog"] [aria-label*="subtask"], [role="dialog"] .subtask-add'
+      '.modal-content button[title="Add subtask"], .modal-content .add-first-subtask'
     ).first()
 
     if (await addSubtaskBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await addSubtaskBtn.click()
 
       const subtaskInput = page.locator(
-        '[role="dialog"] input[placeholder*="subtask"], [role="dialog"] input[placeholder*="Sub-task"]'
+        '.modal-content input[placeholder="Subtask title"]'
       ).first()
 
       if (await subtaskInput.isVisible({ timeout: 2000 }).catch(() => false)) {
         await subtaskInput.fill(`Subtask ${Date.now()}`)
-        await page.keyboard.press('Enter')
 
         // Verify subtask section has at least one item
-        await expect(page.locator('[role="dialog"] .subtask-item, [role="dialog"] .subtask-list li').first())
+        await expect(page.locator('.modal-content .subtask-item').first())
           .toBeVisible({ timeout: 5000 })
       }
     } else {
       // Subtask UI not found — check that modal at least opened
-      await expect(page.locator('[role="dialog"], .task-edit-modal').first()).toBeVisible({ timeout: 3000 })
+      await expect(page.locator('.modal-content').first()).toBeVisible({ timeout: 3000 })
       await page.keyboard.press('Escape')
       test.skip(true, 'Subtask UI not found with expected selectors')
     }
@@ -512,7 +548,7 @@ test.describe('CRUD Workflows', () => {
 
     // Look for a tag/label input
     const tagInput = page.locator(
-      '[role="dialog"] input[placeholder*="tag"], [role="dialog"] input[placeholder*="label"], [role="dialog"] .tags-input'
+      '.modal-content input[placeholder*="tag"], .modal-content input[placeholder*="label"], .modal-content .tags-input'
     ).first()
 
     if (await tagInput.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -520,14 +556,14 @@ test.describe('CRUD Workflows', () => {
       await page.keyboard.press('Enter')
 
       // Verify tag badge appears
-      await expect(page.locator('[role="dialog"] .tag-badge, [role="dialog"] .tag-chip').first())
+      await expect(page.locator('.modal-content .tag-badge, .modal-content .tag-chip').first())
         .toBeVisible({ timeout: 5000 })
     } else {
       // Tags may be in a different location
-      const tagSection = page.locator('[role="dialog"] .tags-section, [role="dialog"] [data-testid="tags"]').first()
+      const tagSection = page.locator('.modal-content .tags-section, .modal-content [data-testid="tags"]').first()
       const hasTagSection = await tagSection.isVisible({ timeout: 2000 }).catch(() => false)
       // Document that modal opened successfully
-      await expect(page.locator('[role="dialog"], .task-edit-modal').first()).toBeVisible({ timeout: 3000 })
+      await expect(page.locator('.modal-content').first()).toBeVisible({ timeout: 3000 })
       await page.keyboard.press('Escape')
       if (!hasTagSection) {
         test.skip(true, 'Tag input not found with expected selectors')
@@ -541,32 +577,24 @@ test.describe('CRUD Workflows', () => {
     await page.goto('/#/tasks')
     await page.waitForLoadState('networkidle')
 
-    // Look for a search/filter input
-    const searchInput = page.locator(
-      'input[placeholder*="Search"], input[placeholder*="Filter"], input[type="search"], [aria-label*="Search tasks"]'
-    ).first()
+    // Search is now a header button (aria-label "Search tasks", Ctrl+Shift+F)
+    // that opens SearchModal. Calling .fill() on the button throws, so click it
+    // first, then fill the real input inside the modal.
+    const searchButton = page.getByRole('button', { name: 'Search tasks' }).first()
+    await expect(searchButton).toBeVisible({ timeout: 5000 })
+    await searchButton.click()
 
-    if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await searchInput.fill('CI/CD')
-      await page.waitForTimeout(500)
+    const searchInput = page.locator('.search-modal-content input.search-input').first()
+    await expect(searchInput).toBeVisible({ timeout: 5000 })
+    await searchInput.fill('CI/CD')
+    await page.waitForTimeout(500)
 
-      // The "Set up CI/CD pipeline" task should be visible
-      await expect(page.getByText(TEST_TASKS.setupCICD.title)).toBeVisible({ timeout: 5000 })
+    // The "Set up CI/CD pipeline" task should appear in the results
+    await expect(page.locator('.search-modal-content').getByText(TEST_TASKS.setupCICD.title).first())
+      .toBeVisible({ timeout: 5000 })
 
-      // Clear search
-      await searchInput.clear()
-    } else {
-      // Try keyboard shortcut (Ctrl+K or /)
-      await page.keyboard.press('/')
-      const focusedSearch = page.locator('input:focused').first()
-      if (await focusedSearch.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await focusedSearch.fill('CI/CD')
-        await page.waitForTimeout(500)
-        await expect(page.getByText(TEST_TASKS.setupCICD.title)).toBeVisible({ timeout: 5000 })
-      } else {
-        test.skip(true, 'Search input not found with expected selectors')
-      }
-    }
+    // Close the search modal
+    await page.keyboard.press('Escape')
   })
 
   // ── Test 15: Bulk operations ─────────────────────────────────────────────

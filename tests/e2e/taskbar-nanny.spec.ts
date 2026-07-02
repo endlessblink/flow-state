@@ -20,6 +20,7 @@ test.describe('Taskbar Nanny', () => {
     // With threshold=0, shouldNudge is true immediately (unchosenMinutes 0 >= 0)
     // NannyReminder renders as .nanny-reminder in MainLayout
     const nanny = page.locator('.nanny-reminder')
-    await expect(nanny.getByText('pick a task')).toBeVisible({ timeout: 10000 })
+    // "pick a task" appears twice (title + body); scope to the title span
+    await expect(nanny.locator('.title')).toContainText('pick a task', { timeout: 10000 })
   })
 })

@@ -44,6 +44,10 @@ function filterCriticalErrors(errors: string[]): string[] {
     // Notification permission prompt requires user gesture — not a real error
     /Notification prompting/i,
     /notification.*user gesture/i,
+    // AI bridge health probe: CORS-blocked from localhost because the bridge only
+    // allows the production origin. Not a view-rendering bug — env-specific.
+    /ai-bridge\/health/i,
+    /in-theflow\.com/i,
   ]
   return errors.filter(err => !ignoredPatterns.some(p => p.test(err)))
 }

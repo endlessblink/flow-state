@@ -8,6 +8,8 @@ import { TEST_TASKS } from '../fixtures/test-ids'
 async function openModal(page: import('@playwright/test').Page, title: string) {
   // The tasks view is a table with row-hover actions; hover the row, then click "Edit task".
   const cell = page.getByText(title, { exact: false }).first()
+  // Task store loads async after auth + DB fetch — wait for the row to render.
+  await expect(cell).toBeVisible({ timeout: 15000 })
   await cell.scrollIntoViewIfNeeded()
   await cell.hover()
   const row = page.locator('tr, [role="row"], [class*="task-row"], [class*="TaskRow"]').filter({ hasText: title }).first()

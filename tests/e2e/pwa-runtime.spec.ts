@@ -70,6 +70,10 @@ const DESKTOP_ROUTES = [
 test.describe('SW Registration & Cache', () => {
 
   test('1 - SW installs and controls page', async ({ page }) => {
+    // environment-gated: a real service worker only registers against a production
+    // build (devOptions.enabled: false on the vite dev server means no SW). Without
+    // one, navigator.serviceWorker.ready never resolves and this test hangs.
+    test.skip(!process.env.TEST_URL, 'environment-gated: service worker requires a production build (set TEST_URL)')
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
@@ -263,6 +267,10 @@ test.describe('SW Registration & Cache', () => {
 test.describe('Offline & Background Sync', () => {
 
   test('9 - Offline: app shell still renders', async ({ page, context }) => {
+    // environment-gated: the offline app shell is served by the service worker's
+    // precache, which only exists in a production build. On the vite dev server the
+    // offline reload just yields the browser's network-error page.
+    test.skip(!process.env.TEST_URL, 'environment-gated: offline app shell requires a production build (set TEST_URL)')
     // First load with network to populate any caches
     await page.goto('/')
     await page.waitForLoadState('networkidle')

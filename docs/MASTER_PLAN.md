@@ -3800,6 +3800,12 @@ All 17 failing unit tests are stale, not product bugs: 7 AI date-bombs (fixed Ju
 
 d0f90130 "Make desktop AI an inspectable sidebar tool" removed the full-page `/#/ai` view (AISidebarFallbackView now opens the panel and redirects home). 19 specs across ai-bridge-chat, ai-react-cards, ai-usage-comprehensive, ai-weekly-plan-quality, ai-chat-quality-local still navigate to `/#/ai` and wait for `.chat-input` — all skip-tagged pending rewrite against the sidebar panel (network stubs are still valid; only navigation/selectors changed).
 
+### TASK-1906: Per-worker E2E test users (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED | **Opened**: 2026-07-02
+
+All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyParallel` with 2 workers, two canvas spec files mutate the same user's data concurrently via Supabase realtime and clobber each other's seed state (proven: files with `test.describe.configure({mode:'serial'})` still failed under the parallel suite — serial mode is per-file only). Fix: key the test user on `TEST_WORKER_INDEX` in `tests/global-setup.ts` + fixtures, or pin canvas specs to a `workers:1` project. Until then, canvas E2E failures under the full parallel suite that pass isolated/serial are suite-interference, not product regressions.
+
 ### ~~BUG-1892~~: "Time for a break" popup loops endlessly until the app is closed (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-06-25, shipped Electron v1.4.218 + web) | **Opened**: 2026-06-25
@@ -5637,6 +5643,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1903** | **P1** | 📋 **Mobile deep-links stomped by /tasks default before router ready** |
 | **TASK-1904** | **P1** | 🔄 **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
+| **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |
 | ~~**BUG-1892**~~ | **P0** | ✅ **"Time for a break" popup loops endlessly until app close — make completion idempotent per session id (durable guard) + KDE per-session-id guard** (✅ DONE 2026-06-25 — shipped Electron v1.4.218 + web; KDE guard needs widget-reinstall verify) |
 | ~~**BUG-1891**~~ | **P0** | ✅ **Deleted tasks keep resurfacing — unify deletion truth on tombstones (soft-delete writes/removes tombstone via DB trigger + fail-closed load merge)** (✅ DONE 2026-06-25 — DB trigger live on prod 319→0, 7 zombies healed, Electron v1.4.217 shipped, web JS pushed) |
 | ~~**BUG-1869**~~ | **P0** | ✅ **Skipped realtime task updates can leave Electron, localhost, and KDE out of sync** (✅ DONE 2026-06-15, shipped v1.4.184) |

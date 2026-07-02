@@ -20,6 +20,13 @@
 import { test, expect } from '../fixtures/auth'
 import { TEST_TASKS } from '../fixtures/test-ids'
 
+// All tests here mutate the one shared Playwright user's canvas data. Under
+// fullyParallel:true, two tests from this file would otherwise run on separate
+// workers and clobber each other's seed state. Force them to run serially within
+// the file. (This does NOT prevent a *different* canvas spec file from running
+// concurrently on another worker — see the cross-file note in the suite report.)
+test.describe.configure({ mode: 'serial' })
+
 // Reuse two pre-seeded tasks to avoid realtime races with newly-inserted rows.
 // The afterEach below restores them to canonical seed shape.
 const OVERDUE_TASK_ID = TEST_TASKS.designLandingPage.id

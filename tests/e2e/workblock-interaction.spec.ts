@@ -17,7 +17,7 @@ const createCanvasTask = async (page: Page, title: string) => {
   await dismissWelcome(page)
   await hideSidebar(page)
 
-  await page.getByRole('button', { name: /Add Task/ }).first().click()
+  await page.getByRole('button', { name: 'Add new task' }).first().click()
   await page.getByRole('textbox', { name: 'Task name' }).fill(title)
   await page.getByRole('button', { name: 'Add task', exact: true }).click()
   await expect(page.getByText(title).first()).toBeVisible({ timeout: 10_000 })
@@ -34,7 +34,9 @@ test('canvas work block picker sets duration', async ({ page }) => {
 
   const option = page.getByRole('button', { name: '30m' }).first()
   await expect(option).toBeVisible()
-  await option.click()
+  // The popover can render outside the viewport on the canvas (like the trigger
+  // above); dispatch the click directly to bypass Playwright's viewport check.
+  await option.dispatchEvent('click')
 
   await expect(page.getByRole('button', { name: 'Change work block length' }).first()).toContainText('Work 30m')
 })

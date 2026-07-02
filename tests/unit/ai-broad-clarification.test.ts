@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   broadTaskClarificationMemoryKey,
   buildBroadTaskClarification,
@@ -66,6 +66,15 @@ function belief(parameterKey = 'rankingFocus', confidence = 0.9, value = 'real i
 
 describe('broad task clarification policy', () => {
   const now = Date.UTC(2026, 5, 8)
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(now))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
 
   it('routes broad non-weekly task answers through clarification while leaving weekly planning separate', () => {
     expect(shouldAskBroadTaskClarification('what should I do next?', routed('general'), true)).toBe(true)

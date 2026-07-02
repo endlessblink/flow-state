@@ -662,7 +662,12 @@ describe('AI action command substrate', () => {
 
     expect(canvasStore.groups.map(group => group.name)).toEqual(['Revenue Follow-up'])
     expect(createGroupSpy).toHaveBeenCalledTimes(1)
-    expect(mockSaveGroup).toHaveBeenCalledTimes(1)
+    // TASK-1871 moved group persistence off the direct Supabase saveGroup onto the
+    // offline-first sync queue (BUG-1899: direct save only runs when the queue does not
+    // take the write). Assert the queued create instead of the retired saveGroup path.
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      expect.objectContaining({ entityType: 'group', operation: 'create' })
+    )
     expect(first.appliedCommands[0]).toMatchObject({ kind: 'canvas.group.create', result: 'created' })
     expect(replay.appliedCommands[0]).toMatchObject({ kind: 'canvas.group.create', result: 'reused_existing' })
   })

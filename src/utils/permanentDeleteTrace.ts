@@ -46,6 +46,10 @@ export function logPermanentDeleteTrace(taskId: string, stage: string, details: 
   const trace = store[taskId] ?? createTrace(taskId, 'unknown')
   store[taskId] = trace
 
+  // TASK-1904: dev-only. This tracer shipped at console.warn (~12 lines per
+  // permanent delete) and buried real warnings in production consoles.
+  if (!import.meta.env.DEV) return
+
   console.warn('[PERMA-DELETE-TRACE]', {
     traceId: trace.traceId,
     taskId,

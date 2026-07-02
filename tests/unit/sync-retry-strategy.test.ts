@@ -61,8 +61,9 @@ describe('classifyError — existing classifications remain correct', () => {
     expect(classifyError('timeout exceeded')).toBe('transient')
   })
 
-  it('classifies rate limiting as transient', () => {
-    expect(classifyError('rate limit exceeded')).toBe('transient')
+  it('classifies rate limiting as rate_limit (dedicated cooldown class since 9a2de86e)', () => {
+    expect(classifyError('rate limit exceeded')).toBe('rate_limit')
+    expect(classifyError('Too Many Requests')).toBe('rate_limit')
   })
 
   it('classifies auth errors as permanent', () => {

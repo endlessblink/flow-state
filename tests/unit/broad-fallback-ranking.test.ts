@@ -39,6 +39,7 @@ const feedback = (input: Partial<AIRecommendationFeedback> & Pick<AIRecommendati
 
 describe('broad fallback ranking feedback memory', () => {
   it('suppresses a dismissed local task so broad answers do not repeat it next turn', () => {
+    vi.setSystemTime(new Date(now))
     const dismissed = task('local-task-a', 'Pay invoice before billing closes', 'project-a', {
       priority: 'high',
       description: 'Payment and billing risk would normally rank first.',
@@ -63,9 +64,11 @@ describe('broad fallback ranking feedback memory', () => {
       action: 'dismiss',
     })], now)).toMatchObject({ suppressed: true, penalty: 0.9 })
     expect(ranked.map(item => item.id)).toEqual(['local-task-b'])
+    vi.useRealTimers()
   })
 
   it('keeps postponed tasks hidden until their revisit window has passed', () => {
+    vi.setSystemTime(new Date(now))
     const postponed = task('task-postponed', 'Review launch notes', 'project-a', {
       priority: 'high',
       description: 'Send final launch notes to stakeholders.',
@@ -84,6 +87,7 @@ describe('broad fallback ranking feedback memory', () => {
 
     expect(broadFeedbackSignal(postponed, [memory], now)).toMatchObject({ suppressed: true, penalty: 0.85 })
     expect(rankBroadFallbackTasks([postponed, competing], [memory]).map(item => item.id)).toEqual(['task-next'])
+    vi.useRealTimers()
   })
 
   it('does not let inline project feedback suppress every task in the same project', () => {

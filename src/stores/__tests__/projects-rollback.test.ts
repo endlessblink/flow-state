@@ -35,6 +35,23 @@ vi.mock('@/services/offline/readCacheDB', () => ({
   getCachedTasks: vi.fn().mockResolvedValue([]),
 }))
 
+// TASK-1904: a49cf3f1 added a `return` to the guest-mode guard, so an
+// unauthenticated store never reaches deleteProjectRemote — these rollback
+// tests silently exercised nothing. Mock a sync-capable auth store so the
+// remote path (and its rollback contract) actually runs.
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({
+    isAuthenticated: true,
+    canSyncRemotely: true,
+    user: { id: 'test-user-id' },
+    $subscribe: vi.fn(() => vi.fn()),
+  }),
+}))
+
+vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
+  useSyncOrchestrator: () => ({ enqueue: vi.fn().mockResolvedValue({ id: 1 }) }),
+}))
+
 import { useProjectStore } from '../projects'
 
 describe('BUG-1775 — project delete rollback on remote failure', () => {

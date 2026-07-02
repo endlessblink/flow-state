@@ -48,7 +48,15 @@ vi.mock('@/services/auth/supabase', () => ({
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
     }),
     auth: {
-      refreshSession: vi.fn().mockResolvedValue({ error: null })
+      refreshSession: vi.fn().mockResolvedValue({ error: null }),
+      // TASK-1904: 459fdfb6 added an auth-freshness gate to processQueue that
+      // calls getSession() BEFORE getPendingOperations — without this mock the
+      // gate threw, the queue bailed early, and the drain tests asserted nothing.
+      // Plain async fn (not vi.fn) so beforeEach's clearAllMocks can't wipe it.
+      getSession: async () => ({
+        data: { session: { access_token: 'test-token', user: { id: 'test-user-id' } } },
+        error: null,
+      }),
     }
   }
 }))
@@ -87,6 +95,7 @@ vi.mock('@/services/offline/writeQueueDB', () => ({
   cleanupCompleted: () => mockCleanupCompleted(),
   getFailedOperations: () => mockGetFailed(),
   recoverStaleSyncing: () => mockRecoverStale(),
+  recoverRlsPolicyFailures: async () => 0,
   clearFailedOperations: () => mockClearFailed(),
   purgeStaleOperations: () => mockPurgeStale(),
   getOperationsForEntity: (...args: any[]) => mockGetOperationsForEntity(...args),

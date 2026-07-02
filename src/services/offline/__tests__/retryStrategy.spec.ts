@@ -405,8 +405,10 @@ describe('classifyError', () => {
       expect(classifyError(new Error('504 Gateway Timeout'))).toBe('transient')
     })
 
-    it('for "rate limit" message', () => {
-      expect(classifyError(new Error('rate limit exceeded'))).toBe('transient')
+    it('for "rate limit" message → dedicated rate_limit class (shared cooldown, not plain transient)', () => {
+      // 9a2de86e introduced 'rate_limit' with its own backoff (30s→5min) and a
+      // shared orchestrator cooldown — asserting 'transient' pinned the old contract.
+      expect(classifyError(new Error('rate limit exceeded'))).toBe('rate_limit')
     })
 
     it('accepts a plain string (not an Error object)', () => {

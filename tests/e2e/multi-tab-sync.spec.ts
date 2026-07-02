@@ -161,13 +161,15 @@ test.describe('Multi-Tab Sync', () => {
     await taskEl.click({ button: 'right' })
     await pageA.waitForTimeout(500)
 
-    const deleteBtn = pageA.locator('[class*="context-menu"] >> text=/delete/i, [role="menuitem"]:has-text("Delete")').first()
-    if (await deleteBtn.isVisible().catch(() => false)) {
-      await deleteBtn.click()
-      await pageA.waitForTimeout(500)
-      const confirm = pageA.locator('button:has-text("Delete"), button:has-text("Confirm")').first()
-      if (await confirm.isVisible().catch(() => false)) await confirm.click()
-    }
+    // Context menu is a teleported `div.context-menu` with `button.menu-item.danger`.
+    // Match ONLY the exact "Delete" button — NOT the "Permanently Delete" one.
+    const deleteBtn = pageA.locator('.context-menu button.menu-item.danger', { hasText: /^\s*Delete\s*$/ }).first()
+    await deleteBtn.click()
+    await pageA.waitForTimeout(500)
+
+    // Confirmation dialog
+    const confirm = pageA.locator('[role="dialog"] button, .modal-container button').filter({ hasText: /delete|confirm/i }).first()
+    await confirm.click()
 
     await pageA.waitForTimeout(3000)
 

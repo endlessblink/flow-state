@@ -1,5 +1,10 @@
 import { expect, test, type ConsoleMessage, type Locator, type Page } from '@playwright/test'
 
+// TASK-1905: rewrite for AI sidebar UX — /#/ai full page removed in d0f90130
+test.beforeEach(() => {
+  test.skip(true, 'TASK-1905: rewrite for AI sidebar UX — /#/ai full page removed in d0f90130')
+})
+
 const todayIso = () => new Date().toISOString()
 const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
 

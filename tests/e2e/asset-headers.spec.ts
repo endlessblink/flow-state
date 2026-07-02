@@ -14,6 +14,8 @@ const PRODUCTION_URL = process.env.TEST_URL || 'https://api.example.com'
 const IS_PRODUCTION = !!process.env.TEST_URL
 
 test.describe('Asset Headers (Cloudflare Cache Prevention)', () => {
+  // environment-gated: probes production Cloudflare headers. Set TEST_URL to run against production.
+  test.skip(!process.env.TEST_URL, 'environment-gated: set TEST_URL to run against production')
   test.describe.configure({ mode: 'parallel' })
 
   test('CSS assets have correct headers', async ({ request }) => {
@@ -168,6 +170,8 @@ test.describe('Asset Headers (Cloudflare Cache Prevention)', () => {
 })
 
 test.describe('CORS Headers (API)', () => {
+  // environment-gated: probes production API CORS. Set TEST_URL to run against production.
+  test.skip(!process.env.TEST_URL, 'environment-gated: set TEST_URL to run against production')
   const API_URL = process.env.API_URL || 'https://api.example.com'
 
   test('OPTIONS preflight returns correct CORS headers', async ({ request }) => {

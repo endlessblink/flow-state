@@ -3794,6 +3794,12 @@ Probe-proven: no code ever calls Vue Flow `setViewport` — the saved viewport i
 
 All 17 failing unit tests are stale, not product bugs: 7 AI date-bombs (fixed June-2026 fixtures vs real `Date.now()` 7/14-day windows — need fake clocks/injectable now), 4 rollback/offline tests asserting pre-hardening boundaries (update mocks: auth store, `getSession`, leaked `mockResolvedValueOnce`), 2 rate_limit assertions (flip to new classification, add cooldown regression), 2 mobile-Today tests missing Pinia (ordering currently untested), canvas-substrate (assert `syncOrchestrator.enqueue`), electron-builder (match wrapper script). E2E: fix invalid multi-tab delete selector (comma-in-regex swallowed by `.catch(()=>false)` — never clicked Delete; product verified healthy), delete dead specs (morning-dashboard ×16, debug-workspace, tauri-simulation project), rewrite or pend 19 AI specs targeting removed `/#/ai` full-page view (d0f90130 sidebar), fix sync-system hardcoded port 5546. Gate `PERMA-DELETE-TRACE` (`permanentDeleteTrace.ts:49`) behind DEV.
 
+### TASK-1905: Rewrite AI-chat E2E specs for the sidebar UX (📋 PLANNED)
+
+**Priority**: P2 | **Status**: 📋 PLANNED | **Opened**: 2026-07-02
+
+d0f90130 "Make desktop AI an inspectable sidebar tool" removed the full-page `/#/ai` view (AISidebarFallbackView now opens the panel and redirects home). 19 specs across ai-bridge-chat, ai-react-cards, ai-usage-comprehensive, ai-weekly-plan-quality, ai-chat-quality-local still navigate to `/#/ai` and wait for `.chat-input` — all skip-tagged pending rewrite against the sidebar panel (network stubs are still valid; only navigation/selectors changed).
+
 ### ~~BUG-1892~~: "Time for a break" popup loops endlessly until the app is closed (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-06-25, shipped Electron v1.4.218 + web) | **Opened**: 2026-06-25
@@ -5629,7 +5635,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1901** | **P1** | 📋 **Due-date edit leaves stale calendar instance; +1mo anchors on today** |
 | **BUG-1902** | **P1** | 📋 **Saved canvas viewport never applied at startup (no setViewport after load)** |
 | **BUG-1903** | **P1** | 📋 **Mobile deep-links stomped by /tasks default before router ready** |
-| **TASK-1904** | **P1** | 📋 **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** |
+| **TASK-1904** | **P1** | 🔄 **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** |
+| **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | ~~**BUG-1892**~~ | **P0** | ✅ **"Time for a break" popup loops endlessly until app close — make completion idempotent per session id (durable guard) + KDE per-session-id guard** (✅ DONE 2026-06-25 — shipped Electron v1.4.218 + web; KDE guard needs widget-reinstall verify) |
 | ~~**BUG-1891**~~ | **P0** | ✅ **Deleted tasks keep resurfacing — unify deletion truth on tombstones (soft-delete writes/removes tombstone via DB trigger + fail-closed load merge)** (✅ DONE 2026-06-25 — DB trigger live on prod 319→0, 7 zombies healed, Electron v1.4.217 shipped, web JS pushed) |
 | ~~**BUG-1869**~~ | **P0** | ✅ **Skipped realtime task updates can leave Electron, localhost, and KDE out of sync** (✅ DONE 2026-06-15, shipped v1.4.184) |

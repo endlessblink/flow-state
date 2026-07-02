@@ -109,6 +109,7 @@ function src(path: string) {
 
 describe('AI sidebar-first desktop experience', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     setActivePinia(createPinia())
     supabaseDbMocks.applyAIMemoryPatch.mockClear()
     supabaseDbMocks.fetchAIClarificationEvents.mockReset()
@@ -1394,6 +1395,8 @@ describe('AI sidebar-first desktop experience', () => {
   })
 
   it('does not infer project importance from name alone and asks for saved project understanding', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-07T12:00:00Z'))
     const tasks = [
       {
         id: 'task-launch',
@@ -1527,6 +1530,7 @@ describe('AI sidebar-first desktop experience', () => {
         skippedReason: 'recently_resolved',
       }),
     ]))
+    vi.useRealTimers()
   })
 
   it('does not repeat the weekly priority question after a recent equivalent answer', () => {
@@ -2537,6 +2541,8 @@ describe('AI sidebar-first desktop experience', () => {
   })
 
   it('asks to refresh stale weekly parameter beliefs before ranking from old saved answers', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-08T12:00:00Z'))
     const tasks = [
       {
         id: 'task-week-belief-a',
@@ -2643,6 +2649,7 @@ describe('AI sidebar-first desktop experience', () => {
       },
     })
     expect(deduped?.question.id).not.toBe('memory_refresh_week_2026_06_08_thisWeekImportance')
+    vi.useRealTimers()
   })
 
   it('does not render obsolete action-only weekly follow-up questions', async () => {

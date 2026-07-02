@@ -64,15 +64,6 @@ export default defineConfig({
     },
 
     {
-      name: 'tauri-simulation',
-      use: {
-        ...devices['Desktop Safari'],
-        ...(hasAuth ? { storageState: authFile } : {}),
-      },
-      testMatch: '**/tauri-*.spec.ts',
-    },
-
-    {
       name: 'mobile-chrome',
       use: {
         ...devices['Pixel 7'],

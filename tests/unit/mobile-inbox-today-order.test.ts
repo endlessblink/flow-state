@@ -38,6 +38,13 @@ vi.mock('@/stores/canvas', () => ({
   }),
 }))
 
+vi.mock('@/stores/settings', () => ({
+  useSettingsStore: () => ({
+    voiceTranscriptionProvider: 'openai',
+    voiceTranscriptionLanguage: 'auto',
+  }),
+}))
+
 vi.mock('@/composables/mobile/useMobileFilters', () => ({
   useMobileFilters: () => ({
     groupBy,

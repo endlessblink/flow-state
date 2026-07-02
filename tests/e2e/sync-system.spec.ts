@@ -7,7 +7,7 @@ import { test, expect } from '../fixtures/auth'
 test.describe('Sync System E2E', () => {
   test('app loads and sync indicator is visible in header', async ({ page }) => {
     // Navigate to app
-    await page.goto('http://localhost:5546')
+    await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for Vue app to hydrate
@@ -26,7 +26,7 @@ test.describe('Sync System E2E', () => {
   })
 
   test('sync indicator shows correct initial state', async ({ page }) => {
-    await page.goto('http://localhost:5546')
+    await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(3000)
 
@@ -51,7 +51,7 @@ test.describe('Sync System E2E', () => {
   })
 
   test('beforeunload is registered (page close protection)', async ({ page }) => {
-    await page.goto('http://localhost:5546')
+    await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(3000)
 
@@ -90,7 +90,7 @@ test.describe('Sync System E2E', () => {
       }
     })
 
-    await page.goto('http://localhost:5546')
+    await page.goto('/')
     await page.waitForLoadState('networkidle')
     await page.waitForTimeout(3000)
 

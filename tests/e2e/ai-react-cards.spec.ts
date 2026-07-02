@@ -6,6 +6,11 @@
  */
 import { test, expect, type Page } from '../fixtures/auth'
 
+// TASK-1905: rewrite for AI sidebar UX — /#/ai full page removed in d0f90130
+test.beforeEach(() => {
+  test.skip(true, 'TASK-1905: rewrite for AI sidebar UX — /#/ai full page removed in d0f90130')
+})
+
 function sse(...events: object[]): string {
   return events.map(e => `data: ${JSON.stringify(e)}\n\n`).join('')
 }

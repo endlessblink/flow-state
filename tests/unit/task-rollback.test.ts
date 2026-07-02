@@ -122,9 +122,10 @@ describe('updateTask rollback (TASK-1177)', () => {
   it('reverts optimistic update when all persistence paths fail', async () => {
     const store = useTaskStore()
 
-    // Create a task (sync queue failure in createTask is swallowed — direct save also fails but createTask doesn't rollback)
-    // Make saveTasks succeed during createTask so the task lands in store
-    mockSaveTasks.mockResolvedValueOnce(undefined) // createTask direct save succeeds
+    // TASK-1904: createTask is enqueue-only since 9a2de86e (BUG-1799 single
+    // writer) — it never calls saveTasks. The old mockResolvedValueOnce queued
+    // for a "createTask direct save" LEAKED into updateTask's fallback save,
+    // making the fallback succeed and skipping the rollback under test.
     const task = await store.createTask({ title: 'Original' })
     expect(task.title).toBe('Original')
     expect(store.tasks.find(t => t.id === task.id)?.title).toBe('Original')

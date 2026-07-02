@@ -19,6 +19,15 @@ import { isTauri as isTauriRuntime } from '@/utils/platform'
 import type { Task } from '@/types/tasks'
 export type { User, Session, AuthError }
 
+// BUG-1898: Upper bound on the auth reconnect grace period. Past this, with
+// the token refresh still failing, the store surfaces `reauthRequired` so the
+// UI can prompt a re-login instead of staying silently write-blocked forever.
+export const GRACE_MAX_MS = 10 * 60 * 1000
+// BUG-1898: While in grace, retry the token refresh on this cadence. Some
+// grace entry points (e.g. Electron backup restore) previously registered no
+// recovery path at all — grace could only end via an unrelated refresh.
+export const GRACE_RETRY_MS = 60 * 1000
+
 export const useAuthStore = defineStore('auth', () => {
   // State
   const user = ref<User | null>(null)
@@ -33,6 +42,12 @@ export const useAuthStore = defineStore('auth', () => {
   const initializationFailed = ref(false)
   // TASK-1426: True when the JWT expired while offline — session kept for local ops (user.id valid)
   const isOfflineGracePeriod = ref(false)
+  // BUG-1898: True once the reconnect grace has exceeded GRACE_MAX_MS with the
+  // refresh still failing — the UI should prompt an explicit re-login instead
+  // of staying silently write-blocked. Cleared by any successful refresh.
+  const reauthRequired = ref(false)
+  let graceDeadlineTimer: ReturnType<typeof setTimeout> | null = null
+  let graceRetryTimer: ReturnType<typeof setInterval> | null = null
 
   // BUG-1086: Promise lock to prevent concurrent initialization attempts
   // Multiple callers (router guard, useAppInitialization) may call initialize() simultaneously
@@ -109,7 +124,7 @@ export const useAuthStore = defineStore('auth', () => {
           // the app know the session is expired but being kept for local operations only
           if (!navigator.onLine) {
             console.log('[AUTH] Proactive refresh exhausted retries while offline — entering grace period')
-            isOfflineGracePeriod.value = true
+            enterOfflineGrace()
           }
         }
         return
@@ -119,7 +134,7 @@ export const useAuthStore = defineStore('auth', () => {
         console.log('[AUTH] Proactive token refresh successful')
         session.value = data.session
         user.value = data.session.user
-        isOfflineGracePeriod.value = false
+        clearOfflineGrace()
         error.value = null
         persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup refreshed session:', e))
 
@@ -136,6 +151,47 @@ export const useAuthStore = defineStore('auth', () => {
       } else {
         console.error('[AUTH] Token refresh error after all retries:', e)
       }
+    }
+  }
+
+  // BUG-1898: Centralized grace transitions. Entering grace arms a bounded
+  // deadline; leaving it (any successful refresh) disarms the deadline and
+  // clears the re-auth flag. All isOfflineGracePeriod writes go through these.
+  const enterOfflineGrace = () => {
+    isOfflineGracePeriod.value = true
+    // Periodic recovery: some grace entry points had no retry/online listener
+    // at all, so grace could never end on its own. A successful refresh runs
+    // clearOfflineGrace() via performTokenRefresh's success path.
+    if (!graceRetryTimer) {
+      graceRetryTimer = setInterval(() => {
+        performTokenRefresh().catch(e => console.warn('[AUTH] Grace retry refresh failed:', e))
+      }, GRACE_RETRY_MS)
+    }
+    if (graceDeadlineTimer) return
+    graceDeadlineTimer = setTimeout(async () => {
+      graceDeadlineTimer = null
+      if (!isOfflineGracePeriod.value) return
+      // Last-chance refresh before surfacing re-auth
+      try {
+        await performTokenRefresh()
+      } catch { /* refresh failure keeps grace active */ }
+      if (isOfflineGracePeriod.value) {
+        console.warn(`[AUTH] Reconnect grace exceeded ${GRACE_MAX_MS}ms with refresh still failing — re-authentication required`)
+        reauthRequired.value = true
+      }
+    }, GRACE_MAX_MS)
+  }
+
+  const clearOfflineGrace = () => {
+    isOfflineGracePeriod.value = false
+    reauthRequired.value = false
+    if (graceDeadlineTimer) {
+      clearTimeout(graceDeadlineTimer)
+      graceDeadlineTimer = null
+    }
+    if (graceRetryTimer) {
+      clearInterval(graceRetryTimer)
+      graceRetryTimer = null
     }
   }
 
@@ -208,7 +264,7 @@ export const useAuthStore = defineStore('auth', () => {
     console.warn(logMessage)
     session.value = recoverableSession
     user.value = recoverableSession.user
-    isOfflineGracePeriod.value = true
+    enterOfflineGrace()
     if (authError) {
       error.value = authError
     }
@@ -331,7 +387,7 @@ export const useAuthStore = defineStore('auth', () => {
                 session.value = data.session  // keep expired session; user.id stays accessible
                 user.value = data.session.user
                 persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup offline grace session:', e))
-                isOfflineGracePeriod.value = true
+                enterOfflineGrace()
                 window.addEventListener('online', async () => {
                   console.log('[AUTH] Back online — attempting session refresh after offline grace period')
                   if (!supabase) return
@@ -354,7 +410,7 @@ export const useAuthStore = defineStore('auth', () => {
                       session.value = onlineData.session
                       user.value = onlineData.session.user
                       persistAuthSessionBackup(onlineData.session).catch(e => console.warn('[AUTH] Failed to backup refreshed session:', e))
-                      isOfflineGracePeriod.value = false
+                      clearOfflineGrace()
                       if (onlineData.session.expires_at) {
                         scheduleTokenRefresh(onlineData.session.expires_at)
                       }
@@ -391,7 +447,7 @@ export const useAuthStore = defineStore('auth', () => {
                 session.value = data.session  // keep expired session for user.id access
                 user.value = data.session.user
                 persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup cached-data grace session:', e))
-                isOfflineGracePeriod.value = true
+                enterOfflineGrace()
                 // Register online listener like the navigator.onLine === false path
                 window.addEventListener('online', async () => {
                   console.log('[AUTH] Back online — attempting session refresh after failed-refresh grace period')
@@ -409,7 +465,7 @@ export const useAuthStore = defineStore('auth', () => {
                       session.value = onlineData.session
                       user.value = onlineData.session.user
                       persistAuthSessionBackup(onlineData.session).catch(e => console.warn('[AUTH] Failed to backup refreshed session:', e))
-                      isOfflineGracePeriod.value = false
+                      clearOfflineGrace()
                       if (onlineData.session.expires_at) {
                         scheduleTokenRefresh(onlineData.session.expires_at)
                       }
@@ -1324,6 +1380,8 @@ export const useAuthStore = defineStore('auth', () => {
     initializationFailed,
     // TASK-1426: True when JWT expired while offline — user.id still valid for local ops
     isOfflineGracePeriod,
+    // BUG-1898: True when the grace period exceeded GRACE_MAX_MS with refresh still failing
+    reauthRequired,
 
     // Getters
     isAuthenticated,

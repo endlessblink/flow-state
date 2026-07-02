@@ -168,6 +168,18 @@ export function useTimerSync(deps: TimerSyncDeps) {
         return
       }
 
+      // BUG-1897: never re-adopt a session this device already stopped or
+      // completed. stopTimer clears local state BEFORE the remote save; if that
+      // save fails the row stays is_active=true and this poll (which stopTimer
+      // resumes) would resurrect the timer within one cycle. The Realtime path
+      // has this guard (BUG-1318 below) — the poll paths must mirror it.
+      if (completedSessionIds.has(session.id)) {
+        if (import.meta.env.DEV) {
+          console.log('🍅 [TIMER] Follower poll: Ignoring already-stopped session:', session.id)
+        }
+        return
+      }
+
       // BUG-1122: Check for stale leadership and take over
       const lastSeen = session.deviceLeaderLastSeen || 0
       const timeSinceLeaderSeen = Date.now() - lastSeen

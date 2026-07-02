@@ -448,9 +448,14 @@ export const useTimerStore = defineStore('timer', () => {
         console.log('🍅 [TIMER] stopTimer: reconnect/offline grace, skipping remote session save')
       }
 
-      // TASK-1439: Queue for offline-first sync
+      // TASK-1439: Queue for offline-first sync.
+      // BUG-1898: enqueue whenever a user exists, even during the auth
+      // reconnect grace (canSyncRemotely=false). The queue only drains with a
+      // fresh session (processQueue auth gate), so this is safe — while
+      // dropping the op here left the server row is_active=true forever and
+      // KDE kept counting.
       try {
-        const userId = authStore.canSyncRemotely ? authStore.user?.id : null
+        const userId = authStore.user?.id ?? null
         if (userId) {
           const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
           const { toSupabaseTimerSession } = await import('@/utils/supabaseMappers')

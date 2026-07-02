@@ -71,8 +71,26 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       const res = await admin.auth.admin.listUsers()
       user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!user) { const { data } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); user = data.user; }
-    userId = user.id
+    if (!user) {
+      const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true });
+      if (error || !data?.user) {
+        if (error?.message?.includes('already registered')) {
+          for (let i = 0; i < 10 && !user; i++) {
+            await new Promise(r => setTimeout(r, 1000))
+            const res = await admin.auth.admin.listUsers()
+            user = res.data.users.find((u: any) => u.email === 'playwright@test.flowstate')
+          }
+          if (!user) {
+            throw new Error('Failed to fetch user after catching "already registered" error.')
+          }
+        } else {
+          throw new Error('Failed to create user: ' + (error?.message || 'unknown error'))
+        }
+      } else {
+        user = data.user;
+      }
+    }
+    userId = user!.id
 
     await admin.from('tasks').delete().in('id', ALL_IDS)
     await admin.from('groups').delete().eq('id', GROUP_ID)

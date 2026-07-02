@@ -3742,15 +3742,53 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
-### BUG-1897: Stopped timer resurrects on app + KDE when remote save fails (🔄 IN PROGRESS)
+### ~~BUG-1897~~: Stopped timer resurrects on app + KDE when remote save fails (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-07-02
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 3f94f8d5) | **Opened**: 2026-07-02
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | ✅ | stop → failed save → poll re-adopts within 15s | ✅ regression: timer-stop-durability.test.ts (a) |
+| Data shape / persisted row shape | ✅ | timer_sessions row stays is_active=true on failed save | ✅ correction op enqueued (is_active=false) |
+| Renderer store/state | ✅ | completedSessionIds guard added to poll adoption + stale-leader claim (useTimerSync.ts) | ✅ |
+| Electron main/preload bridge | ✅ | unchanged; snapshot push unchanged | N/A (no bridge change needed) |
+| Localhost sidecar endpoint | ✅ | 15s inactive grace then Supabase fallback | ✅ indirectly — server row now corrected via queue |
+| KDE polling/control path | ✅ | KDE re-adopted via sidecar Supabase fallback | ✅ indirectly (server correction); KDE code unchanged |
+| Supabase persistence/realtime | ✅ | Realtime path already had BUG-1318 guard | ✅ poll now mirrors it |
+| Updater/runtime version | ✅ | fix ships v1.4.227 | pending user update/restart |
+| Stale live process state | ✅ | running v1.4.226 keeps old behavior until restart | noted |
+
+**Exact failure mode fixed**: follower-poll re-adoption (normal + stale-leader-claim branches) of a session this device already stopped, and the missing durable is_active=false correction when the direct save fails.
+**Explicitly not covered**: another device legitimately re-starting the same task (new session id — unaffected by design); sidecar restart mid-window (falls back to corrected server row once queue drains).
+**Regression added for reported repro**: tests/unit/stores/timer-stop-durability.test.ts (5 tests).
+**Live boundary proof**: post-deploy — sidecar http://127.0.0.1:5577/api/timer/current must show inactive after stop with network blackholed (requires updated app restart).
 
 Regression from 196b171a: `stopTimer` clears local state first and swallows remote-save failure (`timer.ts:444-446`), leaving `timer_sessions.is_active=true`. The follower poll adoption path (`useTimerSync.ts:215-248`) has no `completedSessionIds` guard (only the Realtime path does, `:378`) and `stopTimer` resumes that poll — a stopped timer re-adopts within ~15s on the Vue app, and KDE re-shows it after the sidecar's 15s inactive grace falls back to Supabase. BUG-1892 class via the stop path. Fix: guard poll adoption (normal + stale-leader-claim branches) with `completedSessionIds`, and enqueue a durable `is_active=false` correction when the direct save fails.
 
-### BUG-1898: Timer stop lost during auth reconnect-grace; grace unbounded (🔄 IN PROGRESS)
+### ~~BUG-1898~~: Timer stop lost during auth reconnect-grace; grace unbounded (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-07-02
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 3f94f8d5) | **Opened**: 2026-07-02
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | ✅ | stop during grace → neither saved nor queued | ✅ regression: timer-stop-durability (grace test) |
+| Data shape / persisted row shape | ✅ | server row stays is_active=true through grace | ✅ stop enqueued whenever user exists; queue's auth gate defers drain |
+| Renderer store/state | ✅ | grace lifecycle centralized (enter/clearOfflineGrace); reauthRequired exposed | ✅ auth-grace-bound.test.ts (4 tests) |
+| Electron main/preload bridge | ✅ | unchanged | N/A |
+| Localhost sidecar endpoint | ✅ | KDE polls Supabase past 15s grace | ✅ via queued correction after auth recovery |
+| KDE polling/control path | ✅ | same as above | ✅ indirectly |
+| Supabase persistence/realtime | ✅ | a49cf3f1's direct-write gate PRESERVED (no RLS-failing writes) | ✅ |
+| Updater/runtime version | ✅ | ships v1.4.227 | pending restart |
+| Stale live process state | ✅ | old build unbounded-grace until update | noted |
+
+**Exact failure mode fixed**: stop-op dropped during reconnect-grace (userId gated on canSyncRemotely) + grace period with NO recovery on some entry paths and NO upper bound (dead refresh token = silent permanent write-block).
+**Explicitly not covered**: UI surface for `reauthRequired` (flag is exposed and set; a banner/prompt wiring is follow-up UX).
+**Regression added for reported repro**: tests/unit/stores/auth-grace-bound.test.ts + grace test in timer-stop-durability.test.ts.
+**Live boundary proof**: post-deploy verification with updated build.
 
 `timer.ts:453` nulls userId when `canSyncRemotely` is false, so a stop during reconnect-grace is neither saved nor queued — KDE (polls Supabase directly) shows the timer active indefinitely. Independently, the grace period (`auth.ts`) only clears on a successful refresh: refresh exhaustion while online neither reschedules nor surfaces re-auth, so a dead refresh token write-blocks the app until restart. Fix: always enqueue the stop (queue drains after auth recovers) while keeping the direct-write gate from a49cf3f1; bound the grace with an explicit re-auth state.
 
@@ -3764,33 +3802,33 @@ Regression from 196b171a: `stopTimer` clears local state first and swallows remo
 
 Two mechanisms in one subsystem (BUG-1799 residue): (a) group realtime applies have no self-echo/version guard — creation/update echoes (~0.2-2s later) stomp store positions written in between; probe-proven as the cause of flaky Tidy "3 rows" (BUG-1782 recurrence) and "group move doesn't stick". (b) `useNodeSync.ts:183-255` writes geometry directly with a private version map that queue writes never update → NODE-SYNC conflict loops + `LWW: Server wins... DISCARDED` (3.5-4.7s deltas) losing user edits/parent changes. Fix: single-writer geometry path or shared version source + echo guards at group apply (task parity).
 
-### BUG-1900: Group resize silently ignores lock acquire failures (📋 PLANNED)
+### ~~BUG-1900~~: Group resize silently ignores lock acquire failures (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Opened**: 2026-07-02
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 8652b581) — fixed: resize acquires via LockManager.acquireOrAdopt (adopts stale user-drag locks when no drag live; excludes actively-locked children; aborts on locked group). Regression: tests/unit/canvas/lock-manager-resize-adopt.test.ts. Kills the live `[LockManager] Unauthorized release attempt` wall + resize snap-backs. | **Opened**: 2026-07-02
 
 `onSectionResizeStart` ignores `lockManager.acquire()` returning false (`useCanvasInteractions.ts:1035,1040`); children still holding 15s `user-drag` locks (incl. leaks via the BUG-1492 stale-handler skip at `:966-988`) reject resize position updates in PositionManager, diverge visually, and snap back on next sync. Produces the live `[LockManager] Unauthorized release attempt` console wall. Fix: force-adopt stale drag locks when no drag is active, else exclude the child from the resize set so release stays symmetric.
 
-### BUG-1901: Due-date edit leaves stale calendar instance; +1mo anchors on today (📋 PLANNED)
+### ~~BUG-1901~~: Due-date edit leaves stale calendar instance; +1mo anchors on today (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Opened**: 2026-07-02
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 616ad4e5) — fixed: (a) non-recurring tasks with dueDate newer than a stale PAST instance show the dueDate (recurring keep BUG-1810 instance authority); (b) +Nmo anchors on current due date; (c) TZ-safe currentDueDateLabel. Regressions: dueStatus.spec.ts (user repro as test), due-date-submenu-month-offset.test.ts. Precise label: fixed badge/anchor/format paths — the edit still does not MOVE the stored instance (calendar view placement unchanged by design). | **Opened**: 2026-07-02
 
 User repro (2026-07-02 screenshot): card badge shows "Overdue Jul 1" forever while context menu shows the updated date. Badge derives from calendar `instances[]` (`dueStatus.ts:29-63`, authoritative per BUG-1810); menu reads `task.dueDate`; the due-date edit (`TaskContextMenu.vue:473-477`) only moves `dueDate` for non-calendar tasks, never reconciling the stale instance. Also `+1mo` (`DueDateSubmenu.vue:175-180`) does `setMonth(+1)` from today (Jul 2 → Aug 2, not Aug 1), and `currentDueDateLabel` (`TaskContextMenu.vue:419,429`) is the only TZ-sensitive due-date formatter. Fix: reconcile/clear the stale representative instance on due-date edit, anchor +1mo on the current due date, harden the formatter.
 
-### BUG-1902: Saved canvas viewport never applied at startup (📋 PLANNED)
+### ~~BUG-1902~~: Saved canvas viewport never applied at startup (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Opened**: 2026-07-02
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 616ad4e5) — fixed: saved viewport applied via setViewport once load+paneReady settle; recovery waits for the apply (without consuming render attempts); heal persists unconditionally post-pan; chosen viewport reconciled to localStorage+cloud. Heal E2E 3/3 (was 0/N). Gotcha recorded: consoleFilter.ts suppresses [NAV]/[ORCHESTRATOR] logs — masked this for weeks. | **Opened**: 2026-07-02
 
 Probe-proven: no code ever calls Vue Flow `setViewport` — the saved viewport is only wired via one-shot `:default-viewport`, which initializes before async `loadSavedViewport()` resolves. Canvas always opens at origin; the d78dfa54 heal-persist step is unreachable (recovery early-returns when origin shows content). Fix: apply the loaded viewport via `setViewport` on pane-ready, then run recovery; heal test goes green as a side effect. Note: `consoleFilter.ts` suppresses `[NAV]`/`[ORCHESTRATOR]` logs — masked this for weeks.
 
-### BUG-1903: Mobile deep-links stomped by /tasks default on mount (📋 PLANNED)
+### ~~BUG-1903~~: Mobile deep-links stomped by /tasks default on mount (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Opened**: 2026-07-02
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 616ad4e5) — fixed: MobileLayout awaits router.isReady() before the /tasks default (main.ts mounts before initial route resolution; beforeEach awaits auth init). mobile-timer E2E 7/7 (was 0/7); mobile-today 7/7 serial. Affects real PWA reload/deep-link, not just tests. | **Opened**: 2026-07-02
 
 `MobileLayout.vue:343-347` replaces to `/tasks` when the route is `/` at mount — but `main.ts` never awaits `router.isReady()` and the router `beforeEach` awaits auth init, so the layout always mounts while the initial route is still unresolved `/`. Every mobile reload/deep-link (`/#/timer`, etc.) lands on Tasks. Root cause of all 7 mobile-timer E2E failures + mobile-core-flows. Fix: await `router.isReady()` before the default redirect (or move the default into the router config).
 
-### TASK-1904: Test-suite truthfulness sweep after July 2 regression hunt (📋 PLANNED)
+### ~~TASK-1904~~: Test-suite truthfulness sweep after July 2 regression hunt (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED | **Opened**: 2026-07-02
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-02, commits a0111a60 + 9d37edc2) — unit suite 3113/3113 green (was 17 failing); chromium E2E 22 failures → 5, all five verified worker/order interference on the shared test user (pass isolated/serial; tracked TASK-1906). AI-chat specs pending rewrite = TASK-1905. PERMA-DELETE-TRACE gated behind DEV. | **Opened**: 2026-07-02
 
 All 17 failing unit tests are stale, not product bugs: 7 AI date-bombs (fixed June-2026 fixtures vs real `Date.now()` 7/14-day windows — need fake clocks/injectable now), 4 rollback/offline tests asserting pre-hardening boundaries (update mocks: auth store, `getSession`, leaked `mockResolvedValueOnce`), 2 rate_limit assertions (flip to new classification, add cooldown regression), 2 mobile-Today tests missing Pinia (ordering currently untested), canvas-substrate (assert `syncOrchestrator.enqueue`), electron-builder (match wrapper script). E2E: fix invalid multi-tab delete selector (comma-in-regex swallowed by `.catch(()=>false)` — never clicked Delete; product verified healthy), delete dead specs (morning-dashboard ×16, debug-workspace, tauri-simulation project), rewrite or pend 19 AI specs targeting removed `/#/ai` full-page view (d0f90130 sidebar), fix sync-system hardcoded port 5546. Gate `PERMA-DELETE-TRACE` (`permanentDeleteTrace.ts:49`) behind DEV.
 
@@ -5634,14 +5672,14 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 | Task | Priority | Description |
 |------|----------|-------------|
-| **BUG-1897** | **P0** | 🔄 **Stopped timer resurrects on app + KDE when remote save fails (poll re-adoption unguarded)** |
-| **BUG-1898** | **P0** | 🔄 **Timer stop lost during auth reconnect-grace; grace period unbounded** |
-| **BUG-1899** | **P0** | 📋 **Canvas group echo-stomp + dual-writer LWW discards (BUG-1799 residue, Tidy 3-rows)** |
-| **BUG-1900** | **P1** | 📋 **Group resize silently ignores lock acquire failures (children snap back)** |
-| **BUG-1901** | **P1** | 📋 **Due-date edit leaves stale calendar instance; +1mo anchors on today** |
-| **BUG-1902** | **P1** | 📋 **Saved canvas viewport never applied at startup (no setViewport after load)** |
-| **BUG-1903** | **P1** | 📋 **Mobile deep-links stomped by /tasks default before router ready** |
-| **TASK-1904** | **P1** | 🔄 **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** |
+| ~~**BUG-1897**~~ | **P0** | ✅ **Stopped timer resurrects on app + KDE when remote save fails (poll re-adoption unguarded)** (✅ DONE 2026-07-02, v1.4.227) |
+| ~~**BUG-1898**~~ | **P0** | ✅ **Timer stop lost during auth reconnect-grace; grace period unbounded** (✅ DONE 2026-07-02, v1.4.227) |
+| **BUG-1899** | **P0** | 🔄 **Canvas group echo-stomp + dual-writer LWW discards (BUG-1799 residue, Tidy 3-rows)** (4 modes fixed v1.4.227; boot-load serialization residual) |
+| ~~**BUG-1900**~~ | **P1** | ✅ **Group resize silently ignores lock acquire failures (children snap back)** (✅ DONE 2026-07-02, v1.4.227) |
+| ~~**BUG-1901**~~ | **P1** | ✅ **Due-date edit leaves stale calendar instance; +1mo anchors on today** (✅ DONE 2026-07-02, v1.4.227) |
+| ~~**BUG-1902**~~ | **P1** | ✅ **Saved canvas viewport never applied at startup (no setViewport after load)** (✅ DONE 2026-07-02, v1.4.227) |
+| ~~**BUG-1903**~~ | **P1** | ✅ **Mobile deep-links stomped by /tasks default before router ready** (✅ DONE 2026-07-02, v1.4.227) |
+| ~~**TASK-1904**~~ | **P1** | ✅ **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** (✅ DONE 2026-07-02 — unit 3113/3113; chromium E2E residual = TASK-1906 interference) |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |
 | ~~**BUG-1892**~~ | **P0** | ✅ **"Time for a break" popup loops endlessly until app close — make completion idempotent per session id (durable guard) + KDE per-session-id guard** (✅ DONE 2026-06-25 — shipped Electron v1.4.218 + web; KDE guard needs widget-reinstall verify) |

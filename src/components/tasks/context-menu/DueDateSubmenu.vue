@@ -173,7 +173,11 @@ const onMouseleave = () => {
 }
 
 const emitMonthOffset = (months: number) => {
-  const date = new Date()
+  // BUG-1901: anchor on the task's CURRENT due date, not on today. "+1mo" on a
+  // task due Jul 1 must yield Aug 1 — anchoring on today produced Aug 2.
+  // Fall back to today only when the task has no due date yet.
+  const anchor = currentDueDateTimestamp.value
+  const date = anchor !== null ? new Date(anchor) : new Date()
   date.setMonth(date.getMonth() + months)
   showDatePicker.value = false
   emit('pickDate', date.getTime())

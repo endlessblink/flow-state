@@ -416,17 +416,21 @@ const showCalendarDoneKeepTask = computed(() =>
 const currentDueDateLabel = computed(() => {
   const dueDate = currentTask.value?.dueDate
   if (!dueDate) return ''
-  const due = new Date(dueDate)
-  if (isNaN(due.getTime())) return ''
-  const today = new Date()
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-  if (isSameDay(due, today)) return 'Today'
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  if (isSameDay(due, tomorrow)) return 'Tomorrow'
-  // Format as "Mar 15" style
-  return due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  // BUG-1901: compare the DATE PART as a string — this was the only due-date
+  // formatter that parsed via `new Date(dueDate)`, so a dueDate carrying a
+  // late-UTC time (e.g. 21:00Z) rendered +1 day in UTC+ timezones while every
+  // other surface (dueStatus.ts, normalizeDueDate) string-slices the date.
+  const dueDateOnly = dueDate.split('T')[0]
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDateOnly)) return ''
+  const local = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const now = new Date()
+  if (dueDateOnly === local(now)) return 'Today'
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  if (dueDateOnly === local(tomorrow)) return 'Tomorrow'
+  // Format as "Mar 15" style — parse date-only as local midnight
+  const [y, m, d] = dueDateOnly.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 })
 
 const currentPriorityLabel = computed(() => {

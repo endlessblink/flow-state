@@ -80,6 +80,7 @@ export function useCanvasOrchestrator() {
         updateNode,
         findNode,
         getViewport,
+        setViewport: vueFlowSetViewport,
         onMoveStart,
         onMoveEnd,
         applyNodeChanges,
@@ -278,6 +279,29 @@ export function useCanvasOrchestrator() {
     const isVueFlowReady = ref(false)
     const isVueFlowMounted = ref(false)
 
+    // BUG-1902: apply the saved viewport exactly once, as soon as BOTH the
+    // async loadSavedViewport() has resolved AND the Vue Flow pane exists.
+    // :default-viewport alone never worked — it is captured before the load
+    // resolves, and no code ever called setViewport, so the canvas always
+    // opened at the origin (and the viewport heal-persist was unreachable).
+    let savedViewportLoaded = false
+    let savedViewportApplied = false
+    const applySavedViewportOnce = () => {
+        if (savedViewportApplied || !savedViewportLoaded || !isVueFlowReady.value) return
+        savedViewportApplied = true
+        const vp = canvasStore.viewport
+        if (!vp || !Number.isFinite(vp.x) || !Number.isFinite(vp.y) || !Number.isFinite(vp.zoom) || vp.zoom <= 0) return
+        vueFlowSetViewport({ x: vp.x, y: vp.y, zoom: vp.zoom })
+        // Reconcile persisted copies: loadSavedViewport prefers the cloud value,
+        // so a stale/broken localStorage viewport would otherwise survive
+        // forever (an offline/Electron start would then use it and reopen to
+        // empty space). Persisting the CHOSEN value converges both stores.
+        canvasStore.setViewport(vp.x, vp.y, vp.zoom)
+        if (import.meta.env.DEV) {
+            console.log('[VIEWPORT-RESTORE] Applied saved viewport', { x: vp.x, y: vp.y, zoom: vp.zoom })
+        }
+    }
+
     const syncNodesCompat = (tasks?: unknown[], options?: { force?: boolean }) => syncNodes(tasks as import('@/stores/tasks').Task[] | undefined, options)
     const events = useCanvasEvents(syncNodesCompat)
 
@@ -471,10 +495,26 @@ export function useCanvasOrchestrator() {
         })
     }
 
+    let viewportApplyWaits = 0
     const scheduleInitialViewportRecovery = (attempt = 0) => {
         const maxAttempts = 12
         setTimeout(async () => {
             await nextTick()
+
+            // BUG-1902: recovery must judge visibility AFTER the saved viewport
+            // has been applied. Before this gate, the stores-init watcher could
+            // fire recovery while the pane was still at the origin default —
+            // nodes looked visible, recovery early-returned, and the saved
+            // (possibly broken) viewport then jumped in with recovery spent.
+            // Waiting for the apply must NOT consume node-render attempts:
+            // paneReady can lag stores-init by several seconds on cold boots.
+            if (!savedViewportApplied) {
+                viewportApplyWaits++
+                if (viewportApplyWaits < 120) { // hard cap ~30s @250ms
+                    scheduleInitialViewportRecovery(attempt)
+                }
+                return
+            }
 
             if (hasVisibleCanvasNode()) {
                 if (import.meta.env.DEV) {
@@ -494,8 +534,13 @@ export function useCanvasOrchestrator() {
                 fitCanvas()
             }
             if (centered || hasRenderedNodes) {
+                // BUG-1902: persist the healed viewport so the next launch does
+                // not reopen to empty space. Persist the post-pan transform
+                // unconditionally once the animation completes — the previous
+                // visibility-gated one-shot silently skipped the heal whenever
+                // rendering lagged the 400ms check, leaving the broken viewport
+                // in storage.
                 setTimeout(() => {
-                    if (!hasVisibleCanvasNode()) return
                     const recoveredViewport = getViewport()
                     canvasStore.setViewport(recoveredViewport.x, recoveredViewport.y, recoveredViewport.zoom)
                 }, CANVAS.NAVIGATION_ANIMATION_MS + 100)
@@ -534,6 +579,10 @@ export function useCanvasOrchestrator() {
 
         await canvasStore.loadSavedViewport()
         await nextTick()
+
+        // BUG-1902: actually APPLY the saved viewport (see applySavedViewportOnce).
+        savedViewportLoaded = true
+        applySavedViewportOnce()
 
         // Initialize Realtime
         persistence.initRealtimeSubscription()
@@ -939,6 +988,10 @@ export function useCanvasOrchestrator() {
             isVueFlowMounted.value = true
             setOperationLoading('loading', false)
             setOperationLoading('syncing', false)
+
+            // BUG-1902: the saved viewport may have finished loading before the
+            // pane existed — apply it now that setViewport can take effect.
+            applySavedViewportOnce()
 
             // BUG-1310: Log nodeExtent at VueFlow init for invisible barrier diagnosis
             if (import.meta.env.DEV) {

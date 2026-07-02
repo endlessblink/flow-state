@@ -48,7 +48,23 @@ export const computeDueStatus = (task: Task, now: Date): DueStatus | null => {
   // filter), so derive the badge from the relevant instance instead of the master
   // dueDate — otherwise a recurring task with a far-future dueDate shows that future
   // date while it actually surfaced via a near-term (or overdue) instance.
-  const instanceDate = representativeInstanceDate(task, today)
+  let instanceDate = representativeInstanceDate(task, today)
+
+  // BUG-1901: for NON-recurring tasks, a due-date edit only moves task.dueDate —
+  // it never touches a leftover calendar instance. A stale PAST instance then
+  // pinned the badge to "Overdue <old date>" forever while the context menu
+  // showed the new date. One-off tasks: a strictly newer dueDate supersedes a
+  // stale past instance. Recurring tasks keep instance authority (BUG-1810).
+  const isRecurringTask = !!(task.recurrence || task.recurrenceRule || task.recurrenceParentId)
+  if (
+    instanceDate &&
+    !isRecurringTask &&
+    instanceDate < today &&
+    task.dueDate &&
+    task.dueDate.split('T')[0] > instanceDate
+  ) {
+    instanceDate = null
+  }
 
   if (!instanceDate && task.dueDate) {
     const dueDateOnly = task.dueDate.split('T')[0]

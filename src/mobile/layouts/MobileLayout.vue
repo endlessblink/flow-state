@@ -340,7 +340,13 @@ function onTouchEnd(e: TouchEvent) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // BUG-1903: main.ts mounts without awaiting router.isReady(), and the router
+  // beforeEach awaits auth init — so this layout always mounted while the
+  // initial route was still the unresolved '/', and the replace below stomped
+  // EVERY mobile deep-link/reload (/#/timer, /#/today, …) back to /tasks.
+  // Wait for the initial navigation to resolve before applying the default.
+  await router.isReady()
   if (route.path === '/' || route.name === 'canvas') {
     router.replace('/tasks')
   }

@@ -50,12 +50,43 @@ describe('computeDueStatus', () => {
     expect(computeDueStatus(t2, NOW)).toEqual({ type: 'scheduled-tomorrow', text: 'Tomorrow' })
   })
 
-  it('labels a past representative instance as overdue, not future', () => {
+  it('labels a past representative instance as overdue for RECURRING tasks (BUG-1810)', () => {
+    // BUG-1810's shape is a recurring task surfacing via a missed occurrence —
+    // the instance stays authoritative even though the master dueDate is later.
     const t = task({
+      recurrenceRule: { frequency: 'weekly' } as unknown as Task['recurrenceRule'],
       dueDate: '2026-06-08',
       instances: [{ scheduledDate: '2026-05-29' }] as Task['instances'],
     })
     expect(computeDueStatus(t, NOW)).toEqual({ type: 'overdue', text: 'Overdue May 29' })
+  })
+
+  it('BUG-1901: a NON-recurring task with a due date newer than a stale past instance shows the due date', () => {
+    // User repro (2026-07-02 screenshot): due date edited from Jul 1 → later,
+    // but the card kept showing "Overdue Jul 1" forever because the edit never
+    // touched the leftover calendar instance. For one-off tasks, a newer
+    // dueDate supersedes a stale past instance.
+    const t = task({
+      dueDate: '2026-06-08',
+      instances: [{ scheduledDate: '2026-05-29' }] as Task['instances'],
+    })
+    expect(computeDueStatus(t, NOW)).toEqual({ type: 'future', text: 'Jun 8' })
+  })
+
+  it('BUG-1901: a non-recurring task keeps the overdue instance when the due date is not newer', () => {
+    const t = task({
+      dueDate: '2026-05-29',
+      instances: [{ scheduledDate: '2026-05-29' }] as Task['instances'],
+    })
+    expect(computeDueStatus(t, NOW)).toEqual({ type: 'overdue', text: 'Overdue May 29' })
+  })
+
+  it('BUG-1901: upcoming instances stay authoritative even for non-recurring tasks', () => {
+    const t = task({
+      dueDate: '2026-06-08',
+      instances: [{ scheduledDate: '2026-06-02' }] as Task['instances'],
+    })
+    expect(computeDueStatus(t, NOW)).toEqual({ type: 'scheduled-tomorrow', text: 'Tomorrow' })
   })
 
   it('uses the master dueDate when there are no instances', () => {

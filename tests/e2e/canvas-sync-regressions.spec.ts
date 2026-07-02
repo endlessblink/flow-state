@@ -74,7 +74,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     if (!user) {
       const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true });
       if (error || !data?.user) {
-        if (error?.message?.includes('already registered')) {
+        if (error?.message?.includes('already been registered') || error?.message?.includes('already registered')) {
           for (let i = 0; i < 10 && !user; i++) {
             await new Promise(r => setTimeout(r, 1000))
             const res = await admin.auth.admin.listUsers()

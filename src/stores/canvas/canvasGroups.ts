@@ -66,7 +66,11 @@ export const useCanvasGroups = (
             // BUG-1127 FIX: Preserve parentGroupId for nested groups
             parentGroupId: groupData.parentGroupId || null,
             positionVersion: 1,
-            positionFormat: 'absolute'
+            positionFormat: 'absolute',
+            // BUG-1899: stamp creation time — updateGroupFromSync's timestamp
+            // guard and preserveRecentLocalGroups both key off updatedAt, and an
+            // unstamped fresh group was droppable by the load merge.
+            updatedAt: new Date().toISOString()
         }
         _rawGroups.value.push(newGroup)
 

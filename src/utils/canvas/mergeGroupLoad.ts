@@ -26,7 +26,10 @@ export function preserveRecentLocalGroups(
   const serverIds = new Set(merged.map(g => g.id))
   const preserved = inMemory.filter(g => {
     if (serverIds.has(g.id)) return false
-    if (!g.updatedAt) return false
+    // No updatedAt = never-synced local entity (fresh create / local seed) —
+    // absence of a stamp is not staleness; wiping it destroys user data.
+    // Stale zombies always carry updatedAt from the store op that cached them.
+    if (!g.updatedAt) return true
     const t = new Date(g.updatedAt).getTime()
     return Number.isFinite(t) && nowMs - t < graceMs
   })

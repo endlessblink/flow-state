@@ -595,7 +595,18 @@ function handleRotateDayGroups() {
   }, pendingWrites)
 }
 
-function handleTidyLayout() {
+async function handleTidyLayout() {
+  // BUG-1899: Tidy plans from the CURRENT store — if the initial canvas load is
+  // still in flight, it lays out a partial store (recorder-proven "3 rows" /
+  // groups-skipped flake). Wait briefly for both stores' first load to settle.
+  const tidyWaitStart = Date.now()
+  while (
+    (!taskStore._hasInitializedOnce || !canvasStore._hasInitializedOnce) &&
+    Date.now() - tidyWaitStart < 10_000
+  ) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+
   // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row
   // (user's left-to-right order preserved) and restack tasks inside them.
   const { groupMoves, taskMoves, pendingWrites, release } = tidyLayout.tidyDayGroups()

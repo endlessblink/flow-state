@@ -53,9 +53,13 @@ describe('BUG-1899: preserveRecentLocalGroups', () => {
     expect(out.map(g => g.id)).not.toContain('zombie')
   })
 
-  it('keeps a fresh group with no updatedAt out (conservative: unknown age is not preserved)', () => {
+  it('keeps a local-only group with NO updatedAt (never-synced entity — absence of stamp is not staleness)', () => {
+    // createGroup historically did not stamp updatedAt, and locally-seeded
+    // groups may lack one entirely. A group missing from the server AND
+    // missing a timestamp is a never-synced local entity — wiping it destroys
+    // user data. Stale zombies always carry updatedAt (set by store ops).
     const noStamp = { ...group('nostamp', 0), updatedAt: undefined } as CanvasGroup
     const out = preserveRecentLocalGroups([], [noStamp], NOW)
-    expect(out).toHaveLength(0)
+    expect(out.map(g => g.id)).toContain('nostamp')
   })
 })

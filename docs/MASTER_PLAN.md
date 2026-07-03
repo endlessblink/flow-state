@@ -3956,11 +3956,43 @@ All 17 failing unit tests are stale, not product bugs: 7 AI date-bombs (fixed Ju
 
 User restarted the desktop app (~11:49, verified running genuine v1.4.229 via asar-root package.json — earlier "1.4.226" readings were a probe artifact matching the cosmetic nested `dist-electron/package.json`) and "almost all the groups disappeared again". This is the BUG-1899 boot-load serialization residual class (canvas group state has 5+ writers — open architecture follow-up from the 2026-07-02 hunt). Renderer log (`~/.config/flow-state/logs/renderer.log`) is stale since May 18 — no live evidence; distinguishing renderer-state loss from DB data loss requires read-only prod queries (user approval pending). Recovery options if DB rows lost: Settings > Storage backups, VPS nightly dumps.
 
-### BUG-1911: Deleted calendar events resurrect (2026-07-03, on v1.4.229) (🔄 IN PROGRESS)
+### ~~BUG-1911~~: Deleted calendar events "resurrect" (2026-07-03, on v1.4.229) (✅ RESOLVED AS DUPLICATE → BUG-1913)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (needs prod-data confirmation) | **Opened**: 2026-07-03
+**Priority**: P0 | **Status**: ✅ RESOLVED AS DUPLICATE of BUG-1913 (2026-07-03, prod-data proven) | **Opened**: 2026-07-03
 
-User: "events I deleted are returning for no reason" — reported while running genuine v1.4.229 with (likely) both web and Electron clients open. **Prime suspect: BUG-1909's reconcile write** — `reconcileStaleInstancesForDueDate` adds a frequent full-`instances[]` array write on due-date picks; any full-array write from a client holding a stale in-memory list (cross-client realtime lag, LWW conflicts — BUG-1799 family) resurrects instances deleted meanwhile by the other client. Same exposure as the pre-existing TASK-1362 explicit-instance write, but fires far more often. If confirmed: fix direction is per-instance patch semantics (or instance tombstones) instead of full-array writes — not a revert (the badge fix is correct single-client). Must check `tasks.instances` vs `updated_at` history in prod + whether user's deletions raced a date pick.
+User: "events I deleted are returning for no reason" (both calendar blocks AND whole tasks). **Prod DB forensics (read-only, user-approved) disproved resurrection**: zero alive-with-tombstone rows, zero undelete flips (`is_deleted=false AND deleted_at IS NOT NULL`), only 1 task created today (legit user add), 3 tombstones (11:52 local, persisted fine). Nothing was resurrected server-side — the afternoon **deletions never reached the database** (silent write-drop windows, see BUG-1913). BUG-1909's reconcile write was initially suspected but is exonerated by the same evidence: no writes at all landed during the affected windows.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | "Deleted events return" reproduced as lost-write, not resurrection — prod histogram dead windows align with reports | Reclassified → BUG-1913 |
+| Data shape / persisted row shape | Yes | 0 alive-with-tombstone, 0 undelete flips, 1 created-today, 3 tombstones (morning only) | N/A — no bad data to fix |
+| Renderer store/state | Partial | Client showed deletions applied locally then re-synced server truth | BUG-1913 scope |
+| Electron main/preload bridge | Not checked | — | BUG-1913 scope |
+| Localhost sidecar endpoint | N/A | Task CRUD doesn't use :5577 | — |
+| KDE polling/control path | N/A | Not involved | — |
+| Supabase persistence/realtime | Yes | Server never received the writes; nothing to resurrect | N/A |
+| Updater/runtime version | Yes | Genuine v1.4.229 confirmed via asar-root package.json | N/A |
+| Stale live process/cache state | Partial | Old instance killed/relaunched during window; write silence spans both | BUG-1913 scope |
+
+**Exact failure mode fixed**: none — no product change; report reclassified as duplicate of BUG-1913 (silent write-drop). No "resurrection" fix should be built from this report.
+**Explicitly not covered**: everything in BUG-1913 (the actual write-drop root cause, still open).
+**Regression added for reported repro**: none here — belongs to BUG-1913 once the drop mechanism is isolated.
+**Live boundary proof**: read-only prod queries 2026-07-03 (counts above; write sentinel `max(updated_at)`=11:34:46Z during active use).
+
+### BUG-1913: Silent write-drop windows — task edits/deletions vanish without error, then server truth "resurrects" them (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (root-cause isolation needs live repro) | **Opened**: 2026-07-03
+
+**Prod evidence (read-only queries, user-approved, all times local=UTC+3)**: user's task-write histogram for 2026-07-03 shows activity 10-12h (22 writes incl. 3 persisted deletions at 11:52), a **dead window 12:00-13:00 (0 writes)** matching the "dates not fixed / groups gone" reports, sparse 13-14h (2), burst 14:00-14:34 (34), then **total silence after 14:34:46** while the user was demonstrably interacting (edge-drag attempts at 14:31+, deletions that later "returned"). Nothing the user did in dead windows produced tombstones, soft-deletes, or updates — the client dropped writes silently and later re-synced server truth (perceived as resurrection, BUG-1911).
+
+**Candidate mechanisms (Phase-1 shortlist, not yet isolated)**:
+1. Auth reconnect-grace write-gating — BUG-1898 added GRACE_MAX_MS=10min + reauthRequired prompt, but dead windows exceeded 60min with no re-login prompt reported → either grace re-enters cyclically (each entry resets the deadline), the prompt UI never surfaces, or the gate is entered without the BUG-1898 path.
+2. Task writes failing (401/RLS/network) and being swallowed without enqueue — TASK-1177 offline queue is half-built; hunt 2026-07 item 2 documents skip-both-save-AND-enqueue during grace for the timer stop path; task CRUD path needs the same audit.
+3. Realtime/visibility retry storms (BUG-1799 lineage) starving the write path in Electron.
+
+**Next steps**: reproduce with live client + `max(updated_at)` sentinel probe; audit useSupabaseDatabase error paths for silent catch; verify reauthRequired actually reaches a visible UI in Electron; add a write-outcome toast/telemetry so dropped writes are USER-VISIBLE (defense regardless of root cause).
 
 ### BUG-1912: Canvas edge can't be disconnected; dragging a line glitches the whole screen (📋 PLANNED)
 
@@ -5849,8 +5881,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1904**~~ | **P1** | ✅ **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** (✅ DONE 2026-07-02 — unit 3113/3113; chromium E2E residual = TASK-1906 interference) |
 | ~~**BUG-1908**~~ | **P1** | ✅ **KDE widget Today list hides scheduled-today tasks with stale calendar instances (Vue parity)** (✅ DONE 2026-07-03, v1.4.229 shipped; widget live after plasmashell reload) |
 | ~~**BUG-1909**~~ | **P1** | ✅ **Due-date quick-set looks like no-op when stale past instances pin badge** (✅ DONE 2026-07-03, v1.4.229 shipped, live manifest verified) |
-| **BUG-1910** | **P0** | 🔄 **Canvas groups disappeared after restart into v1.4.229 (BUG-1899 boot-load class)** |
-| **BUG-1911** | **P0** | 🔄 **Deleted calendar events resurrect — full instances[] writes vs cross-client staleness (BUG-1909 reconcile = prime suspect)** |
+| **BUG-1910** | **P0** | 🔄 **Canvas groups disappeared after restart into v1.4.229 (BUG-1899 boot-load class; DB rows intact, display-side)** |
+| ~~**BUG-1911**~~ | **P0** | ✅ **"Deleted events resurrect" — disproven by prod forensics; deletions never persisted → duplicate of BUG-1913** |
+| **BUG-1913** | **P0** | 🔄 **Silent write-drop windows — client drops writes without error; server re-sync looks like resurrection** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

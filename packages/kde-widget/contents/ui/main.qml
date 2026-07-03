@@ -5232,8 +5232,13 @@ PlasmoidItem {
 
         if (normalizeTaskDate(task.due_date) === todayStr) return true
 
-        // Match Vue useSmartViews.isTodayTask(): instances are authoritative
-        // when present, then fall back to legacy scheduled_date.
+        // BUG-1908: Match Vue useSmartViews.isTodayTask() ordering — an explicit
+        // scheduled_date for today wins even when stale calendar instances exist,
+        // THEN instances are authoritative. Checking instances first hid
+        // scheduled-today tasks that carry stale instances (visible in the app,
+        // missing from the widget). Guarded by tests/unit/kde/today-filter-parity.test.ts.
+        if (normalizeTaskDate(task.scheduled_date) === todayStr) return true
+
         if (task.instances && task.instances.length > 0) {
             for (var i = 0; i < task.instances.length; i++) {
                 var inst = task.instances[i]
@@ -5241,8 +5246,6 @@ PlasmoidItem {
             }
             return false
         }
-
-        if (normalizeTaskDate(task.scheduled_date) === todayStr) return true
 
         if (!task.due_date && !task.scheduled_date && task.created_at) {
             var createdAt = new Date(task.created_at)

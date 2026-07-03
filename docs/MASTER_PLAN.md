@@ -3744,7 +3744,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ### ~~BUG-1907~~: Quick Tasks typed pin can look like a no-op (✅ DONE)
 
-**Priority**: P1 | **Status**: ✅ DONE (2026-07-03, this changeset) | **Opened**: 2026-07-03
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-03, prepared for Electron updater v1.4.229; VPS upload pending explicit approval) | **Opened**: 2026-07-03
 
 **Failure-class matrix**:
 
@@ -3757,7 +3757,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 | Localhost sidecar endpoint | ✅ | not involved | N/A |
 | KDE polling/control path | ✅ | not involved | N/A |
 | Supabase persistence/realtime | ✅ | task create/update paths unchanged | ✅ existing store APIs still own writes |
-| Updater/runtime version | ✅ | desktop-facing renderer change | pending release gate |
+| Updater/runtime version | ✅ | desktop-facing renderer change built as v1.4.229; live manifest still 1.4.228 until VPS upload is approved | pending deploy |
 | Stale live process state | ✅ | old build keeps old silent behavior until update | noted |
 
 **Exact failure mode fixed**: the header Quick Tasks create row no longer silently clears/refocuses or appears inert when `pinTask()` hits an existing pinned task, existing unpinned task, unauthenticated state, or create failure. `pinTask()` now returns an explicit result and `QuickTaskDropdown` surfaces no-op/error states with toasts.
@@ -3917,6 +3917,35 @@ Probe-proven: no code ever calls Vue Flow `setViewport` — the saved viewport i
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-02, commits a0111a60 + 9d37edc2) — unit suite 3113/3113 green (was 17 failing); chromium E2E 22 failures → 5, all five verified worker/order interference on the shared test user (pass isolated/serial; tracked TASK-1906). AI-chat specs pending rewrite = TASK-1905. PERMA-DELETE-TRACE gated behind DEV. | **Opened**: 2026-07-02
 
 All 17 failing unit tests are stale, not product bugs: 7 AI date-bombs (fixed June-2026 fixtures vs real `Date.now()` 7/14-day windows — need fake clocks/injectable now), 4 rollback/offline tests asserting pre-hardening boundaries (update mocks: auth store, `getSession`, leaked `mockResolvedValueOnce`), 2 rate_limit assertions (flip to new classification, add cooldown regression), 2 mobile-Today tests missing Pinia (ordering currently untested), canvas-substrate (assert `syncOrchestrator.enqueue`), electron-builder (match wrapper script). E2E: fix invalid multi-tab delete selector (comma-in-regex swallowed by `.catch(()=>false)` — never clicked Delete; product verified healthy), delete dead specs (morning-dashboard ×16, debug-workspace, tauri-simulation project), rewrite or pend 19 AI specs targeting removed `/#/ai` full-page view (d0f90130 sidebar), fix sync-system hardcoded port 5546. Gate `PERMA-DELETE-TRACE` (`permanentDeleteTrace.ts:49`) behind DEV.
+
+### ~~BUG-1908~~: KDE widget Today list hides tasks the app's Today shows (instances-before-scheduled_date) (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-03, prepared for Electron updater v1.4.229; VPS upload pending explicit approval) | **Opened**: 2026-07-03
+
+**User repro**: KDE Plasma widget doesn't show all the tasks that show in the main Electron app. Live widget config (`plasma-org.kde.plasma.desktop-appletsrc`): `todayOnly=true` against production `https://api.in-theflow.com` — so the comparison surface is the widget's Today list vs the app's Today smart view.
+
+**Root cause (code divergence, precise)**: `taskMatchesToday()` in `packages/kde-widget/contents/ui/main.qml` checks calendar `instances[]` BEFORE `scheduled_date` and returns `false` terminally when instances exist but none is today. The Vue side (`useSmartViews.isTodayTask`, `src/composables/useSmartViews.ts:77`) was explicitly fixed to check `scheduledDate` BEFORE instances ("Today must include tasks explicitly scheduled for the day even when stale calendar instances exist"). The widget never got that fix → a task scheduled for today that carries stale calendar instances shows in the app's Today but silently vanishes from the widget. Related data-shape context: date edits don't move stale instances (regression-hunt 2026-07 item 5), so stale-instance rows are a real population.
+
+**Exact failure mode fixed**: today-filter parity — `scheduled_date`/instances ordering in the widget's `taskMatchesToday`.
+**Regression added for reported repro**: `tests/unit/kde/today-filter-parity.test.ts` extracts the live QML date/filter functions and compares them against Vue `useSmartViews().isTodayTask()` for the stale-instance scheduled-today row.
+
+**Explicitly not covered** (other classes that can also make the widget show fewer tasks):
+- Non-today mode fetch cap `limit=100` (`fetchTasks()`), app has no such cap — >100 non-done tasks truncate oldest-first.
+- Today-mode fetch cap `limit=1000`.
+- `status=neq.done` excludes NULL-status rows in PostgREST (schema CHECK permits NULL); app maps/shows them.
+- Widget sync silently stopping (token-refresh class, BUG-1490 lineage) — makes *new* tasks missing until restart.
+
+### ~~BUG-1909~~: Due-date quick-set looks like it does nothing — stale past instances pin the badge (recurring residual of BUG-1901) (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-03, prepared for Electron updater v1.4.229; VPS upload pending explicit approval) | **Opened**: 2026-07-03
+
+**User repro (2 reports, same class)**: (1) clicking "Next Week" in the Due Date submenu "doesn't do anything"; (2) context menu shows Due Date "Tomorrow" while the card badge shows "Overdue May 30". Runtime verified current (running Electron v1.4.228 contains the BUG-1901 read-side fix) — NOT a stale-runtime recurrence.
+
+**Root cause**: the due-date write path never reconciles stale calendar instances. `updateDueDateWithCalendarInstance` (`src/composables/tasks/useTaskContextMenuActions.ts:37`) only moves an instance when the menu was opened ON a calendar event; from a task card it writes `dueDate` alone. BUG-1901 fixed the badge read-side for NON-recurring tasks only — for recurring tasks (`recurrence`/`recurrenceRule`/`recurrenceParentId`), `computeDueStatus` keeps instance authority (BUG-1810), so a stale past instance pins "Overdue <old>" forever and every due-date edit looks like a no-op (the write actually succeeds).
+
+**Fix**: write-side reconciliation — when the user explicitly sets a due date, stale PAST instances (scheduledDate < today, ≠ new date) are rescheduled to the picked date. Read-side stays untouched (BUG-1810 instance authority preserved for genuinely surfaced occurrences). Regression coverage: `src/utils/__tests__/dueDateInstances.spec.ts` and `src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts`.
+
+**Release note**: Local v1.4.229 build/package validation passed. Public updater manifest remains `1.4.228` because the sandbox blocked SSH/SCP upload to the VPS; deploy requires explicit user approval.
 
 ### TASK-1905: Rewrite AI-chat E2E specs for the sidebar UX (📋 PLANNED)
 
@@ -5768,6 +5797,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1902**~~ | **P1** | ✅ **Saved canvas viewport never applied at startup (no setViewport after load)** (✅ DONE 2026-07-02, v1.4.227) |
 | ~~**BUG-1903**~~ | **P1** | ✅ **Mobile deep-links stomped by /tasks default before router ready** (✅ DONE 2026-07-02, v1.4.227) |
 | ~~**TASK-1904**~~ | **P1** | ✅ **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** (✅ DONE 2026-07-02 — unit 3113/3113; chromium E2E residual = TASK-1906 interference) |
+| ~~**BUG-1908**~~ | **P1** | ✅ **KDE widget Today list hides scheduled-today tasks with stale calendar instances (Vue parity)** (✅ DONE 2026-07-03, prepared v1.4.229) |
+| ~~**BUG-1909**~~ | **P1** | ✅ **Due-date quick-set looks like no-op when stale past instances pin badge** (✅ DONE 2026-07-03, prepared v1.4.229) |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |
 | ~~**BUG-1907**~~ | **P1** | ✅ **Quick Tasks typed pin can look like a no-op — explicit result contract + visible feedback** (✅ DONE 2026-07-03) |

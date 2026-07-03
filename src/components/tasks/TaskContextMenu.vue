@@ -275,6 +275,7 @@ import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupM
 import { useQuickTasks } from '@/composables/useQuickTasks'
 import { useToast } from '@/composables/useToast'
 import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
+import { reconcileStaleInstancesForDueDate } from '@/utils/dueDateInstances'
 import DueDateSubmenu from './context-menu/DueDateSubmenu.vue'
 import PrioritySubmenu from './context-menu/PrioritySubmenu.vue'
 import DurationSubmenu from './context-menu/DurationSubmenu.vue'
@@ -474,7 +475,13 @@ const handleDatePickerSelect = async (timestamp: number) => {
 
   // Update the task directly via task store
   try {
-    await taskStore.updateTaskWithUndo(taskId, { dueDate: formattedDate })
+    // BUG-1909: stale PAST instances follow an explicit due-date pick, else the
+    // badge stays pinned to "Overdue <old date>" and the pick looks like a no-op
+    const reconciled = reconcileStaleInstancesForDueDate(taskStore.getTask(taskId), formattedDate)
+    await taskStore.updateTaskWithUndo(taskId, {
+      dueDate: formattedDate,
+      ...(reconciled ? { instances: reconciled } : {})
+    })
     // TASK-1362: Also move calendar instance to selected date
     if (isCalendarEvent && calendarInstanceId) {
       await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: formattedDate })

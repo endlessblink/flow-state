@@ -5,6 +5,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
 import { formatDateKey } from '@/utils/dateUtils'
+import { reconcileStaleInstancesForDueDate } from '@/utils/dueDateInstances'
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import type { Task } from '@/stores/tasks'
@@ -36,13 +37,19 @@ export function useTaskContextMenuActions(
 
     const updateDueDateWithCalendarInstance = async (taskId: string, dueDate: string, calendarInstanceId?: string) => {
         const task = taskStore.getTask(taskId)
-        const instances = calendarInstanceId && task?.instances
-            ? task.instances.map(instance =>
+        // BUG-1909: an explicit due-date pick must pull stale PAST instances with
+        // it — a leftover past instance otherwise pins the card badge to
+        // "Overdue <old date>" (permanently for recurring tasks, where instances
+        // stay authoritative) and the pick looks like a no-op.
+        const reconciled = reconcileStaleInstancesForDueDate(task, dueDate)
+        const base = reconciled ?? task?.instances
+        const instances = calendarInstanceId && base
+            ? base.map(instance =>
                 instance.id === calendarInstanceId
                     ? { ...instance, scheduledDate: dueDate }
                     : instance
             )
-            : undefined
+            : reconciled
 
         await taskStore.updateTaskWithUndo(taskId, {
             dueDate,

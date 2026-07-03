@@ -2,7 +2,7 @@
 # deploy-electron-update.sh — Build Electron app and deploy to VPS auto-updater
 #
 # Usage:
-#   ./scripts/deploy-electron-update.sh [--notes "Release notes"] [--skip-deploy] [--skip-guard] [--dry-run]
+#   ./scripts/deploy-electron-update.sh [--notes "Release notes"] [--skip-deploy] [--skip-guard] [--skip-tests] [--dry-run]
 #
 # Prerequisites:
 #   1. SSH key at ~/.ssh/id_ed25519 with access to VPS
@@ -36,11 +36,14 @@ SKIP_DEPLOY=false
 SKIP_GUARD="${SKIP_GUARD:-false}"
 DRY_RUN=false
 
+SKIP_TESTS=false
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     --notes) NOTES="$2"; shift 2 ;;
     --skip-deploy) SKIP_DEPLOY=true; shift ;;
     --skip-guard) SKIP_GUARD=true; shift ;;
+    --skip-tests) SKIP_TESTS=true; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
     *) echo -e "${RED}Unknown option: $1${NC}"; exit 1 ;;
   esac
@@ -65,6 +68,24 @@ else
   # path.resolve undefined), spuriously failing source-integrity guards. A test step must
   # not inherit the production build env. The build step below still runs in production.
   NODE_ENV=test npm run guard:electron-sync
+fi
+
+# Step 1b (TASK-1904 follow-up): FULL ship gate — type-check + the complete unit
+# suite. The July 2026 regression hunt found 17 broken tests that sat unnoticed
+# because nothing forced them to run before a release; this makes the pipeline
+# physically refuse to ship a regression these tests can see (~3-5 min).
+# Emergency hotfix escape hatch: --skip-tests (loud, on your head).
+echo -e "\n${YELLOW}[1b/3] Full ship gate (type-check + unit suite)...${NC}"
+if [ "$SKIP_TESTS" = true ] || [ "$SKIP_GUARD" = true ]; then
+  echo -e "${RED}  ⚠ SHIP GATE SKIPPED (--skip-tests/--skip-guard). This release is NOT regression-checked.${NC}"
+elif [ "$DRY_RUN" = true ]; then
+  echo -e "${CYAN}  [DRY RUN] Would run: npm run type-check && npm run test${NC}"
+else
+  echo -e "  type-check (vue-tsc)..."
+  NODE_ENV=test npm run type-check
+  echo -e "  full unit suite (vitest)..."
+  NODE_ENV=test npm run test
+  echo -e "${GREEN}  ✓ Ship gate green${NC}"
 fi
 
 # Step 2: Build and package Electron app through the canonical release command

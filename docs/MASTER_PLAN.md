@@ -3994,23 +3994,42 @@ User: "events I deleted are returning for no reason" (both calendar blocks AND w
 
 **Next steps**: reproduce with live client + `max(updated_at)` sentinel probe; audit useSupabaseDatabase error paths for silent catch; verify reauthRequired actually reaches a visible UI in Electron; add a write-outcome toast/telemetry so dropped writes are USER-VISIBLE (defense regardless of root cause).
 
-### TASK-1914: VPS DB write-watchdog — cron invariant checks + alerts (🔄 IN PROGRESS)
+### ~~TASK-1914~~: VPS DB write-watchdog — cron invariant checks + alerts (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-07-03
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-03 — installed on VPS, cron `*/15min`, first run OK: `manifest=1.4.229 last_write_age_min=48`; alerts → ntfy.sh topic `flowstate-watchdog-eb7k2` + `/var/log/flowstate-watchdog.log`; repo copy `scripts/vps/flowstate-db-watchdog.sh`) | **Opened**: 2026-07-03
 
 Production watchdog born from BUG-1913: cron on the VPS runs read-only SQL invariants against supabase-db every 15 min and alerts on anomalies instead of the user discovering them live. Checks: (a) deletions-without-tombstones (BUG-1891 asymmetry), (b) alive-with-tombstone rows (true resurrection), (c) undelete flips (`is_deleted=false AND deleted_at IS NOT NULL`), (d) write-gap heuristic (recent active timer heartbeat but no task writes ≥90 min), (e) updater manifest health (`/updates/electron/latest-linux.yml` reachable + parseable). Alerts: `/var/log/flowstate-watchdog.log` + ntfy.sh push (counts only, no task content).
 
-### TASK-1915: Nightly automated regression hunt (scheduled cloud agent) (🔄 IN PROGRESS)
+### ~~TASK-1915~~: Nightly automated regression hunt (scheduled cloud agent) (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-07-03
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-03 — cloud routine `trig_012JbWAxVNY6PiFa1DvK1Ynb`, cron 00:00 UTC (~03:00 Israel), Sonnet, clones GitHub repo, unit suite + type-check + 24h commit audit (geometry single-writer, full-array overwrites, silent catches, version drift), emails report to endlessblink@gmail.com even when green; manage at claude.ai/code/routines) | **Opened**: 2026-07-03
 
 Nightly scheduled agent (repo is on GitHub → cloud-clonable) that runs the hunt playbook: full unit suite, type-check, targeted invariant greps (canvas geometry single-writer, sync double-write, silent-catch audit), diff review of the day's commits for regression risk, and files a report. DB-side invariants are TASK-1914's job (cloud agent has no VPS access) — the two are complementary.
 
-### TASK-1916: In-app write-failure visibility — no more silent dropped writes (🔄 IN PROGRESS)
+### ~~TASK-1916~~: In-app write-failure visibility — no more silent dropped writes (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-07-03
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-03, shipped Electron v1.4.230 — live manifest verified AND packaged asar-root version verified 1.4.230) | **Opened**: 2026-07-03
 
-BUG-1913's core harm was silence: the app dropped deletions/edits without telling the user. Add a user-visible signal when persistence fails: central write-outcome tracking in the core CRUD funnel (`useSupabaseDatabase.ts`), a rate-limited "Changes aren't saving" toast on failure bursts, and a persistent header indicator while writes are failing. Regression: unit test that failing writes trip the signal exactly once per burst and clear on recovery.
+BUG-1913's core harm was silence: the app dropped deletions/edits without telling the user. **Shipped**: `src/composables/sync/writeHealth.ts` fed by the `withRetry` funnel in `supabase/_infrastructure.ts` (covers ALL direct DB writes; queue writes were already visible) — 2 consecutive write failures turn the header SyncStatusIndicator red ("Changes aren't saving — retrying") + rate-limited toast; any successful write clears it with a recovery toast. `stores/syncStatus.ts` overlays the signal on the existing indicator. Regression: `tests/unit/sync/write-health.test.ts` (6 tests: threshold, toast cooldown, read-context immunity, withRetry wiring both directions). Precise scope: this makes BUG-1913 *visible*, it does not fix the drop root cause (still open under BUG-1913); writes that bypass `withRetry` are not covered.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | BUG-1913 silent hour: direct writes died, indicator stayed green — now 2 consecutive failures turn it red + toast (unit-proven) | Yes (visibility only) |
+| Data shape / persisted row shape | N/A | No data written by this feature | — |
+| Renderer store/state | Yes | syncStatus overlays writeHealth on status/failedCount/lastError/statusText; indicator consumes `status` | Yes |
+| Electron main/preload bridge | N/A | Renderer-only | — |
+| Localhost sidecar endpoint | N/A | Not involved | — |
+| KDE polling/control path | No | Widget has no writeHealth equivalent — widget write failures still silent | No — future work |
+| Supabase persistence/realtime | Yes | Fed from `withRetry`, the funnel all supabase/* modules use; bypassing writes uncovered | Partial |
+| Updater/runtime version | Yes | v1.4.230 live manifest + packaged asar-root version both verified | Yes |
+| Stale live process/cache state | Yes | User's running app needs update/restart to v1.4.230 to gain the signal | Pending user restart |
+
+**Exact failure mode fixed**: invisibility of exhausted direct-write failures (defense for BUG-1913, not its root cause).
+**Explicitly not covered**: the write-drop root cause itself (BUG-1913 open); writes bypassing `withRetry`; grace-gated writes that never *attempt* (no failure event fires — only the VPS watchdog write-gap check catches those); KDE widget write failures.
+**Regression added for reported repro**: `tests/unit/sync/write-health.test.ts` — withRetry failure→red, success→clear, read-context immunity.
+**Live boundary proof**: `https://in-theflow.com/updates/electron/latest-linux.yml` serves 1.4.230; packaged asar-root `package.json` verified 1.4.230 (the BUG-1908-era probe pitfall avoided).
 
 ### BUG-1912: Canvas edge can't be disconnected; dragging a line glitches the whole screen (📋 PLANNED)
 
@@ -5902,9 +5921,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1910** | **P0** | 🔄 **Canvas groups disappeared after restart into v1.4.229 (BUG-1899 boot-load class; DB rows intact, display-side)** |
 | ~~**BUG-1911**~~ | **P0** | ✅ **"Deleted events resurrect" — disproven by prod forensics; deletions never persisted → duplicate of BUG-1913** |
 | **BUG-1913** | **P0** | 🔄 **Silent write-drop windows — client drops writes without error; server re-sync looks like resurrection** |
-| **TASK-1914** | **P0** | 🔄 **VPS DB write-watchdog — cron invariant checks + ntfy alerts (tombstones, resurrection, write-gap, updater health)** |
-| **TASK-1915** | **P1** | 🔄 **Nightly automated regression hunt as scheduled cloud agent (unit+typecheck+invariant sweep+report)** |
-| **TASK-1916** | **P0** | 🔄 **In-app write-failure visibility — toast + header indicator when saves fail (kills the silent-drop class UX-side)** |
+| ~~**TASK-1914**~~ | **P0** | ✅ **VPS DB write-watchdog — cron invariant checks + ntfy alerts** (✅ DONE 2026-07-03, live on VPS) |
+| ~~**TASK-1915**~~ | **P1** | ✅ **Nightly automated regression hunt as scheduled cloud agent** (✅ DONE 2026-07-03, first run tonight) |
+| ~~**TASK-1916**~~ | **P0** | ✅ **In-app write-failure visibility — indicator + toast when saves fail** (✅ DONE 2026-07-03, v1.4.230 shipped) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

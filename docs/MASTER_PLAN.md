@@ -3950,6 +3950,24 @@ All 17 failing unit tests are stale, not product bugs: 7 AI date-bombs (fixed Ju
 - `status=neq.done` excludes NULL-status rows in PostgREST (schema CHECK permits NULL); app maps/shows them.
 - Widget sync silently stopping (token-refresh class, BUG-1490 lineage) — makes *new* tasks missing until restart.
 
+### BUG-1910: Canvas groups disappeared after restart into v1.4.229 (BUG-1899 boot-load class recurrence) (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (needs prod-data confirmation) | **Opened**: 2026-07-03
+
+User restarted the desktop app (~11:49, verified running genuine v1.4.229 via asar-root package.json — earlier "1.4.226" readings were a probe artifact matching the cosmetic nested `dist-electron/package.json`) and "almost all the groups disappeared again". This is the BUG-1899 boot-load serialization residual class (canvas group state has 5+ writers — open architecture follow-up from the 2026-07-02 hunt). Renderer log (`~/.config/flow-state/logs/renderer.log`) is stale since May 18 — no live evidence; distinguishing renderer-state loss from DB data loss requires read-only prod queries (user approval pending). Recovery options if DB rows lost: Settings > Storage backups, VPS nightly dumps.
+
+### BUG-1911: Deleted calendar events resurrect (2026-07-03, on v1.4.229) (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (needs prod-data confirmation) | **Opened**: 2026-07-03
+
+User: "events I deleted are returning for no reason" — reported while running genuine v1.4.229 with (likely) both web and Electron clients open. **Prime suspect: BUG-1909's reconcile write** — `reconcileStaleInstancesForDueDate` adds a frequent full-`instances[]` array write on due-date picks; any full-array write from a client holding a stale in-memory list (cross-client realtime lag, LWW conflicts — BUG-1799 family) resurrects instances deleted meanwhile by the other client. Same exposure as the pre-existing TASK-1362 explicit-instance write, but fires far more often. If confirmed: fix direction is per-instance patch semantics (or instance tombstones) instead of full-array writes — not a revert (the badge fix is correct single-client). Must check `tasks.instances` vs `updated_at` history in prod + whether user's deletions raced a date pick.
+
+### BUG-1912: Canvas edge can't be disconnected; dragging a line glitches the whole screen (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Opened**: 2026-07-03
+
+User screenshot: dragging a connection line makes the entire screen glitch for a couple of seconds (self-recovers), and the edge cannot be disconnected. App runs with `--disable-gpu` (FlowState-launch.sh, TASK-1871) → software compositing; edge-drag causes full-canvas repaint storms. Disconnect path: verify Vue Flow `edges-updatable` endpoint-drag support vs EdgeContextMenu delete affordance — the user found no working way to remove a line.
+
 ### ~~BUG-1909~~: Due-date quick-set looks like it does nothing — stale past instances pin the badge (recurring residual of BUG-1901) (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-03, shipped Electron v1.4.229 — live `updates/electron/latest-linux.yml` verified serving 1.4.229 with reachable AppImage) | **Opened**: 2026-07-03
@@ -5831,6 +5849,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1904**~~ | **P1** | ✅ **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** (✅ DONE 2026-07-02 — unit 3113/3113; chromium E2E residual = TASK-1906 interference) |
 | ~~**BUG-1908**~~ | **P1** | ✅ **KDE widget Today list hides scheduled-today tasks with stale calendar instances (Vue parity)** (✅ DONE 2026-07-03, v1.4.229 shipped; widget live after plasmashell reload) |
 | ~~**BUG-1909**~~ | **P1** | ✅ **Due-date quick-set looks like no-op when stale past instances pin badge** (✅ DONE 2026-07-03, v1.4.229 shipped, live manifest verified) |
+| **BUG-1910** | **P0** | 🔄 **Canvas groups disappeared after restart into v1.4.229 (BUG-1899 boot-load class)** |
+| **BUG-1911** | **P0** | 🔄 **Deleted calendar events resurrect — full instances[] writes vs cross-client staleness (BUG-1909 reconcile = prime suspect)** |
+| **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |
 | ~~**BUG-1907**~~ | **P1** | ✅ **Quick Tasks typed pin can look like a no-op — explicit result contract + visible feedback** (✅ DONE 2026-07-03) |

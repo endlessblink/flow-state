@@ -226,12 +226,14 @@ import { useQuickTasks } from '@/composables/useQuickTasks'
 import { useAuthStore } from '@/stores/auth'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
+import { useToast } from '@/composables/useToast'
 import type { QuickTaskItem } from '@/types/quickTasks'
 
 const { quickTaskItems, unpinTask, pinTask, pinFromTask, selectAndStartTimer, loadPinnedTasks, dismissFromFrequent } = useQuickTasks()
 const authStore = useAuthStore()
 const taskStore = useTaskStore()
 const projectStore = useProjectStore()
+const { showToast } = useToast()
 
 const isOpen = ref(false)
 const focusedIndex = ref(-1)
@@ -318,9 +320,26 @@ const toggleDropdown = () => {
 const addQuickPin = async () => {
     const title = newTaskTitle.value.trim()
     if (!title) return
-    await pinTask(title)
-    newTaskTitle.value = ''
-    nextTick(() => inputRef.value?.focus())
+    try {
+        const result = await pinTask(title)
+        if (result.status === 'created' || result.status === 'pinned-existing') {
+            newTaskTitle.value = ''
+            nextTick(() => inputRef.value?.focus())
+            return
+        }
+        if (result.status === 'already-pinned') {
+            showToast('Already pinned as Quick Task', 'info', { duration: 2000 })
+            newTaskTitle.value = ''
+            nextTick(() => inputRef.value?.focus())
+            return
+        }
+        if (result.status === 'unauthenticated') {
+            showToast('Sign in to pin Quick Tasks', 'error')
+        }
+    } catch (error) {
+        console.error('Error pinning quick task:', error)
+        showToast('Failed to pin Quick Task', 'error')
+    }
 }
 
 const handleInputEnter = () => {

@@ -16,6 +16,13 @@ import { useTimerStore } from '@/stores/timer'
 import type { QuickTaskItem } from '@/types/quickTasks'
 import type { Task } from '@/types/tasks'
 
+export type PinTaskResult =
+    | { status: 'created' }
+    | { status: 'pinned-existing'; taskId: string }
+    | { status: 'already-pinned'; taskId: string }
+    | { status: 'unauthenticated' }
+    | { status: 'empty' }
+
 // FEATURE-1774: per-user dismissals for the Frequent list, localStorage-backed.
 // Display preference only — intentionally not synced across devices.
 const DISMISS_STORAGE_KEY = 'flowstate:dismissed-frequent'
@@ -62,10 +69,10 @@ export function useQuickTasks() {
         )
     )
 
-    const pinTask = async (title: string, opts?: { description?: string; projectId?: string | null; priority?: string | null }) => {
-        if (!authStore.isAuthenticated) return
+    const pinTask = async (title: string, opts?: { description?: string; projectId?: string | null; priority?: string | null }): Promise<PinTaskResult> => {
+        if (!authStore.isAuthenticated) return { status: 'unauthenticated' }
         const trimmed = title.trim()
-        if (!trimmed) return
+        if (!trimmed) return { status: 'empty' }
 
         // If a task with this title already exists, just pin it in place.
         const existing = taskStore.tasks.find(
@@ -76,8 +83,9 @@ export function useQuickTasks() {
         if (existing) {
             if (!existing.isPinned) {
                 await taskStore.updateTaskWithUndo(existing.id, { isPinned: true })
+                return { status: 'pinned-existing', taskId: existing.id }
             }
-            return
+            return { status: 'already-pinned', taskId: existing.id }
         }
 
         await taskStore.createTaskWithUndo({
@@ -88,6 +96,7 @@ export function useQuickTasks() {
             status: 'todo',
             isPinned: true,
         })
+        return { status: 'created' }
     }
 
     const unpinTask = async (taskId: string) => {

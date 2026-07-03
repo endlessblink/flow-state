@@ -3742,6 +3742,28 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
+### ~~BUG-1907~~: Quick Tasks typed pin can look like a no-op (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-03, this changeset) | **Opened**: 2026-07-03
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | ✅ | typed Quick Task pin clicked from the visible create row | ✅ component regression: quick-task-dropdown-pin.test.ts |
+| Data shape / persisted row shape | ✅ | existing task vs new task vs pinned task are distinct outcomes | ✅ `PinTaskResult` contract |
+| Renderer store/state | ✅ | `pinTask()` previously returned `undefined` for no-op branches | ✅ explicit statuses + visible feedback |
+| Electron main/preload bridge | ✅ | renderer-only task action; no bridge change | N/A |
+| Localhost sidecar endpoint | ✅ | not involved | N/A |
+| KDE polling/control path | ✅ | not involved | N/A |
+| Supabase persistence/realtime | ✅ | task create/update paths unchanged | ✅ existing store APIs still own writes |
+| Updater/runtime version | ✅ | desktop-facing renderer change | pending release gate |
+| Stale live process state | ✅ | old build keeps old silent behavior until update | noted |
+
+**Exact failure mode fixed**: the header Quick Tasks create row no longer silently clears/refocuses or appears inert when `pinTask()` hits an existing pinned task, existing unpinned task, unauthenticated state, or create failure. `pinTask()` now returns an explicit result and `QuickTaskDropdown` surfaces no-op/error states with toasts.
+**Explicitly not covered**: KDE widget Quick Task controls and broader pinned-task sync behavior; this fix is limited to the Electron/web header dropdown pin-create path.
+**Regression added for reported repro**: `tests/unit/composables/useQuickTasks-dismiss.test.ts` result-contract cases and `tests/unit/components/quick-task-dropdown-pin.test.ts` visible create-row click path.
+
 ### ~~BUG-1897~~: Stopped timer resurrects on app + KDE when remote save fails (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 3f94f8d5) | **Opened**: 2026-07-02
@@ -5748,6 +5770,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1904**~~ | **P1** | ✅ **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** (✅ DONE 2026-07-02 — unit 3113/3113; chromium E2E residual = TASK-1906 interference) |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |
+| ~~**BUG-1907**~~ | **P1** | ✅ **Quick Tasks typed pin can look like a no-op — explicit result contract + visible feedback** (✅ DONE 2026-07-03) |
 | ~~**BUG-1892**~~ | **P0** | ✅ **"Time for a break" popup loops endlessly until app close — make completion idempotent per session id (durable guard) + KDE per-session-id guard** (✅ DONE 2026-06-25 — shipped Electron v1.4.218 + web; KDE guard needs widget-reinstall verify) |
 | ~~**BUG-1891**~~ | **P0** | ✅ **Deleted tasks keep resurfacing — unify deletion truth on tombstones (soft-delete writes/removes tombstone via DB trigger + fail-closed load merge)** (✅ DONE 2026-06-25 — DB trigger live on prod 319→0, 7 zombies healed, Electron v1.4.217 shipped, web JS pushed) |
 | ~~**BUG-1869**~~ | **P0** | ✅ **Skipped realtime task updates can leave Electron, localhost, and KDE out of sync** (✅ DONE 2026-06-15, shipped v1.4.184) |

@@ -575,6 +575,61 @@ describe('executeOperation: CREATE', () => {
     expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(413)
     expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
   })
+
+  it('BUG-1913: repeated auth-gate skips with pending work surface error state + writeHealth (not silent)', async () => {
+    const { __resetWriteHealthForTests, setWriteHealthNotifier, writesFailing } =
+      await import('@/composables/sync/writeHealth')
+    const { syncState } = await import('@/composables/sync/useSyncOrchestrator')
+    __resetWriteHealthForTests()
+    setWriteHealthNotifier(() => {})
+
+    const { supabase } = await import('@/services/auth/supabase')
+    const sync = useSyncOrchestrator()
+
+    // One healthy pass resets the module-level skip counter (test isolation)
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'fresh-token', user: { id: 'user-001' } } },
+      error: null
+    } as any)
+    writeQueueMocks.getPendingOperations.mockResolvedValue([])
+    await sync.forceSync()
+
+    // Session dies under the signed-in shell, queue holds pending work
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: null },
+      error: null
+    } as any)
+    const op = makeOp({
+      id: 913,
+      operation: 'update',
+      entityType: 'task',
+      entityId: 'task-stuck',
+      payload: { id: 'task-stuck', title: 'stuck edit' }
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+
+    await sync.forceSync() // skip 1 — below surface threshold, stays quiet
+    expect(syncState.value.status).not.toBe('error')
+
+    await sync.forceSync() // skip 2 — surfaces
+    expect(syncState.value.status).toBe('error')
+    expect(syncState.value.lastError).toMatch(/sign in again/i)
+
+    await sync.forceSync() // skip 3 — second writeHealth report → red indicator
+    expect(writesFailing.value).toBe(true)
+
+    // Still never touched RLS and never corrupted queue entries
+    expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
+
+    // Session returns → next pass clears the gate (status recomputed by updateStatus)
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'fresh-token', user: { id: 'user-001' } } },
+      error: null
+    } as any)
+    writeQueueMocks.getPendingOperations.mockResolvedValue([])
+    await sync.forceSync()
+    expect(syncState.value.status).not.toBe('error')
+  })
 })
 
 // ===========================================================================

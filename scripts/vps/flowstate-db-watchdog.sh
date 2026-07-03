@@ -34,9 +34,11 @@ alive_ts=$(q "SELECT count(*) FROM tasks t JOIN tombstones ts ON ts.entity_type=
 flips=$(q "SELECT count(*) FROM tasks WHERE is_deleted=false AND deleted_at IS NOT NULL AND updated_at > now()-interval '24 hours'")
 [ "${flips:-0}" != "0" ] && ANOMALIES+=("undelete-flips-24h=$flips")
 
-# (d) BUG-1913 write-gap: app demonstrably alive (timer heartbeat <30min) but no
-#     task writes for >90min — the silent write-drop signature
-hb_recent=$(q "SELECT count(*) FROM timer_sessions WHERE user_id='$MAIN_USER_ID' AND updated_at > now()-interval '30 minutes'")
+# (d) BUG-1913 write-gap: app demonstrably alive but no task writes for >90min —
+#     the silent write-drop signature. Liveness = timer heartbeat OR auth token
+#     activity (timer-only keying missed the 2026-07-03 window: timer was off).
+hb_recent=$(q "SELECT (SELECT count(*) FROM timer_sessions WHERE user_id='$MAIN_USER_ID' AND updated_at > now()-interval '30 minutes')
+  + (SELECT count(*) FROM auth.refresh_tokens WHERE user_id::text='$MAIN_USER_ID' AND updated_at > now()-interval '30 minutes')")
 last_write_age_min=$(q "SELECT COALESCE(floor(extract(epoch FROM (now()-max(updated_at)))/60)::int, 99999) FROM tasks WHERE user_id='$MAIN_USER_ID'")
 if [ "${hb_recent:-0}" != "0" ] && [ "${last_write_age_min:-0}" -gt 90 ]; then
   ANOMALIES+=("write-gap: heartbeat-active but last task write ${last_write_age_min}min ago")

@@ -3994,6 +3994,11 @@ User: "events I deleted are returning for no reason" (both calendar blocks AND w
 
 **Next steps**: reproduce with live client + `max(updated_at)` sentinel probe; audit useSupabaseDatabase error paths for silent catch; verify reauthRequired actually reaches a visible UI in Electron; add a write-outcome toast/telemetry so dropped writes are USER-VISIBLE (defense regardless of root cause).
 
+**2026-07-03 evening update (v1.4.231)**: mechanism chain isolated in code and two links fixed:
+1. `processQueue` auth-gate (`useSyncOrchestrator.ts`) skipped SILENTLY (debug-only log) whenever `supabase.auth.getSession()` had no session — with a dead session under the BUG-1874 signed-in shell, the queue stranded forever behind a green/amber indicator. **Fixed**: ≥2 consecutive auth-gate skips with pending operations now set queue status `error` + `lastError` ("Sign-in expired — …sign in again") and report into writeHealth (red indicator + toast). Never touches RLS. Regression: `sync-orchestrator.test.ts` "BUG-1913: repeated auth-gate skips…".
+2. `reauthRequired` (BUG-1898's 10-min grace cap) had **zero UI consumers** — the cap fired into the void. **Fixed**: setting it now also fires a direct 15s error toast telling the user to sign out/in.
+Live evidence same evening: user's fresh v1.4.230 session showed amber "2 pending" stuck; prod sentinel `max(updated_at)` frozen at 11:34Z for 3+ hours; upgraded watchdog fired `write-gap … 192min` on first run. **Still open**: WHY the session dies under the shell (suspect: multi-instance refresh-token rotation collisions from today's parallel app instances), and recovery UX (re-login currently manual).
+
 ### ~~TASK-1914~~: VPS DB write-watchdog — cron invariant checks + alerts (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-03 — installed on VPS, cron `*/15min`, first run OK: `manifest=1.4.229 last_write_age_min=48`; alerts → ntfy.sh topic `flowstate-watchdog-eb7k2` + `/var/log/flowstate-watchdog.log`; repo copy `scripts/vps/flowstate-db-watchdog.sh`) | **Opened**: 2026-07-03
@@ -4030,6 +4035,14 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 **Explicitly not covered**: the write-drop root cause itself (BUG-1913 open); writes bypassing `withRetry`; grace-gated writes that never *attempt* (no failure event fires — only the VPS watchdog write-gap check catches those); KDE widget write failures.
 **Regression added for reported repro**: `tests/unit/sync/write-health.test.ts` — withRetry failure→red, success→clear, read-context immunity.
 **Live boundary proof**: `https://in-theflow.com/updates/electron/latest-linux.yml` serves 1.4.230; packaged asar-root `package.json` verified 1.4.230 (the BUG-1908-era probe pitfall avoided).
+
+### BUG-1917: Updater "Restart" quits the app but never swaps the AppImage or relaunches (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (hardening+instrumentation shipped v1.4.231; root cause pending first instrumented run) | **Opened**: 2026-07-03
+
+**User repro**: clicked Restart on the 1.4.230 update toast → app exited, nothing relaunched, AppImage on disk stayed 1.4.229. `~/.cache/flow-state-updater/pending/` is a graveyard (1.4.223/224/226/229/230 all downloaded, none auto-installed) → the detached installer handoff (`launchDetachedAppImageInstaller`, `electron/updater.ts`) has been failing silently for many releases: it ran `stdio:'ignore'` with no log, inherited a cwd inside the FUSE mount, ignored spawn errors (returned true → `app.exit(0)` dead-end), and relaunched WITHOUT the FlowState-launch.sh flags (TASK-1871: bare AppImage launch can die on chrome-sandbox SUID/GPU init = "nothing happens" even after a successful swap).
+
+**Shipped v1.4.231**: installer script logs every step to `$TMPDIR/flowstate-appimage-install.log` and aborts loudly per-step; `cwd:'/'`; missing `child.pid` falls back to electron-updater's own quitAndInstall; relaunch uses `--no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state`. The NEXT update cycle (1.4.231→next) is the instrumented experiment — read the log before closing this bug. User unblocked meanwhile via manual install of checksum-verified pending 1.4.230.
 
 ### BUG-1912: Canvas edge can't be disconnected; dragging a line glitches the whole screen (📋 PLANNED)
 
@@ -5924,6 +5937,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1914**~~ | **P0** | ✅ **VPS DB write-watchdog — cron invariant checks + ntfy alerts** (✅ DONE 2026-07-03, live on VPS) |
 | ~~**TASK-1915**~~ | **P1** | ✅ **Nightly automated regression hunt as scheduled cloud agent** (✅ DONE 2026-07-03, first run tonight) |
 | ~~**TASK-1916**~~ | **P0** | ✅ **In-app write-failure visibility — indicator + toast when saves fail** (✅ DONE 2026-07-03, v1.4.230 shipped) |
+| **BUG-1917** | **P0** | 🔄 **Updater Restart quits but never swaps/relaunches — silent installer handoff (instrumented+hardened v1.4.231)** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

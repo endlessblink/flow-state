@@ -178,6 +178,17 @@ export const useAuthStore = defineStore('auth', () => {
       if (isOfflineGracePeriod.value) {
         console.warn(`[AUTH] Reconnect grace exceeded ${GRACE_MAX_MS}ms with refresh still failing — re-authentication required`)
         reauthRequired.value = true
+        // BUG-1913: this flag previously had ZERO UI consumers — the grace cap
+        // fired into the void while the app stayed silently write-blocked for
+        // hours. Tell the user directly.
+        try {
+          const { useToast } = await import('@/composables/useToast')
+          useToast().showToast(
+            'Your session expired and could not refresh — sign out and back in to resume saving changes.',
+            'error',
+            { duration: 15000 }
+          )
+        } catch { /* headless/test env — flag still set for programmatic consumers */ }
       }
     }, GRACE_MAX_MS)
   }

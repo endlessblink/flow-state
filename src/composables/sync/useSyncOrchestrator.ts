@@ -231,6 +231,7 @@ import {
 import { coalesceOperationsForEntity } from '@/services/offline/operationCoalescer'
 import { sortOperations } from '@/services/offline/operationSorter'
 import { supabase } from '@/services/auth/supabase'
+import { reportWriteFailure } from '@/composables/sync/writeHealth'
 
 // Singleton state (shared across all components using this composable)
 const state = ref<SyncState>({
@@ -252,6 +253,12 @@ const PROCESS_INTERVAL_MS = 5000 // Check queue every 5 seconds
 
 // BUG-P1: Server-unreachable detection — prevent burning retry budget during outages
 let consecutiveTransientFailures = 0
+// BUG-1913: consecutive processQueue skips caused by a missing auth session.
+// Surfaced (error state + writeHealth) once this passes AUTH_GATE_SURFACE_AFTER
+// while pending operations exist — a dead session under a signed-in shell must
+// not silently strand the queue.
+let consecutiveAuthGateSkips = 0
+const AUTH_GATE_SURFACE_AFTER = 2
 const TRANSIENT_PAUSE_THRESHOLD = 5
 const MIN_RATE_LIMIT_COOLDOWN_MS = 30_000
 
@@ -864,8 +871,24 @@ async function processQueue(): Promise<void> {
     if (import.meta.env.DEV) {
       console.debug('[SYNC] Skipping queue — no fresh auth session for RLS writes')
     }
+    // BUG-1913: this gate used to skip SILENTLY forever. With a dead supabase
+    // session under a signed-in UI shell (BUG-1874 recovery path), the queue
+    // never flushed and edits/deletions dropped for hours behind a green
+    // indicator. Still wait (never hit RLS without a session) — but with
+    // pending work stuck behind a repeatedly-absent session, surface it.
+    consecutiveAuthGateSkips++
+    if (consecutiveAuthGateSkips >= AUTH_GATE_SURFACE_AFTER) {
+      const pendingOps = await getPendingOperations().catch(() => [])
+      if (pendingOps.length > 0) {
+        const message = 'Sign-in expired — changes are kept on this device and will sync after you sign in again'
+        state.value.status = 'error'
+        state.value.lastError = message
+        reportWriteFailure('queueFlushAuthGate', message)
+      }
+    }
     return
   }
+  consecutiveAuthGateSkips = 0
 
   isProcessing.value = true
 

@@ -3994,6 +3994,24 @@ User: "events I deleted are returning for no reason" (both calendar blocks AND w
 
 **Next steps**: reproduce with live client + `max(updated_at)` sentinel probe; audit useSupabaseDatabase error paths for silent catch; verify reauthRequired actually reaches a visible UI in Electron; add a write-outcome toast/telemetry so dropped writes are USER-VISIBLE (defense regardless of root cause).
 
+### TASK-1914: VPS DB write-watchdog — cron invariant checks + alerts (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-07-03
+
+Production watchdog born from BUG-1913: cron on the VPS runs read-only SQL invariants against supabase-db every 15 min and alerts on anomalies instead of the user discovering them live. Checks: (a) deletions-without-tombstones (BUG-1891 asymmetry), (b) alive-with-tombstone rows (true resurrection), (c) undelete flips (`is_deleted=false AND deleted_at IS NOT NULL`), (d) write-gap heuristic (recent active timer heartbeat but no task writes ≥90 min), (e) updater manifest health (`/updates/electron/latest-linux.yml` reachable + parseable). Alerts: `/var/log/flowstate-watchdog.log` + ntfy.sh push (counts only, no task content).
+
+### TASK-1915: Nightly automated regression hunt (scheduled cloud agent) (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-07-03
+
+Nightly scheduled agent (repo is on GitHub → cloud-clonable) that runs the hunt playbook: full unit suite, type-check, targeted invariant greps (canvas geometry single-writer, sync double-write, silent-catch audit), diff review of the day's commits for regression risk, and files a report. DB-side invariants are TASK-1914's job (cloud agent has no VPS access) — the two are complementary.
+
+### TASK-1916: In-app write-failure visibility — no more silent dropped writes (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-07-03
+
+BUG-1913's core harm was silence: the app dropped deletions/edits without telling the user. Add a user-visible signal when persistence fails: central write-outcome tracking in the core CRUD funnel (`useSupabaseDatabase.ts`), a rate-limited "Changes aren't saving" toast on failure bursts, and a persistent header indicator while writes are failing. Regression: unit test that failing writes trip the signal exactly once per burst and clear on recovery.
+
 ### BUG-1912: Canvas edge can't be disconnected; dragging a line glitches the whole screen (📋 PLANNED)
 
 **Priority**: P1 | **Status**: 📋 PLANNED | **Opened**: 2026-07-03
@@ -5884,6 +5902,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1910** | **P0** | 🔄 **Canvas groups disappeared after restart into v1.4.229 (BUG-1899 boot-load class; DB rows intact, display-side)** |
 | ~~**BUG-1911**~~ | **P0** | ✅ **"Deleted events resurrect" — disproven by prod forensics; deletions never persisted → duplicate of BUG-1913** |
 | **BUG-1913** | **P0** | 🔄 **Silent write-drop windows — client drops writes without error; server re-sync looks like resurrection** |
+| **TASK-1914** | **P0** | 🔄 **VPS DB write-watchdog — cron invariant checks + ntfy alerts (tombstones, resurrection, write-gap, updater health)** |
+| **TASK-1915** | **P1** | 🔄 **Nightly automated regression hunt as scheduled cloud agent (unit+typecheck+invariant sweep+report)** |
+| **TASK-1916** | **P0** | 🔄 **In-app write-failure visibility — toast + header indicator when saves fail (kills the silent-drop class UX-side)** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

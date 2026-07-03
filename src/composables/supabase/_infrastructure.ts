@@ -3,6 +3,7 @@ import { supabase } from '@/services/auth/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { useAuthStore } from '@/stores/auth'
 import { errorHandler, ErrorSeverity, ErrorCategory } from '@/utils/errorHandler'
+import { reportWriteFailure, reportWriteSuccess } from '@/composables/sync/writeHealth'
 
 // Re-export for domain composables
 export { supabase }
@@ -245,7 +246,10 @@ export function createDatabaseHelpers(
 
         for (let i = 0; i < maxRetries; i++) {
             try {
-                return await operation()
+                const result = await operation()
+                // TASK-1916: any successful write clears the writes-failing signal
+                reportWriteSuccess(context)
+                return result
             } catch (err: unknown) {
                 lastErr = err
                 const errObj = err as Record<string, unknown>
@@ -287,10 +291,18 @@ export function createDatabaseHelpers(
                 }
 
                 // For other errors, don't retry immediately unless they look transient
+                // TASK-1916: surface exhausted/dropped WRITES to the user instead of
+                // failing silently (BUG-1913: hour-long invisible write-dead windows)
+                reportWriteFailure(context, message)
                 throw err
             }
         }
 
+        // TASK-1916: retries exhausted — same visibility guarantee as the throw above
+        {
+            const errObj = lastErr as Record<string, unknown>
+            reportWriteFailure(context, (errObj?.message as string) || String(lastErr))
+        }
         throw lastErr
     }
 

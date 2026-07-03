@@ -11,15 +11,26 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { SyncStatus, WriteOperation } from '@/types/sync'
 import { syncState } from '@/composables/sync/useSyncOrchestrator'
+import { writesFailing, writeFailureMessage } from '@/composables/sync/writeHealth'
 
 export const useSyncStatusStore = defineStore('syncStatus', () => {
   // Mirror the orchestrator state for reactive UI binding
   // We use a watcher to sync from the orchestrator's ref
-  const status = ref<SyncStatus>('synced')
+  const queueStatus = ref<SyncStatus>('synced')
+  // TASK-1916/BUG-1913: the queue only covers queued writes — DIRECT db writes
+  // failing (writeHealth) must also turn the indicator red, otherwise the app
+  // says "All changes saved" while silently dropping edits.
+  const status = computed<SyncStatus>(() =>
+    writesFailing.value && queueStatus.value !== 'syncing' ? 'error' : queueStatus.value
+  )
   const pendingCount = ref(0)
-  const failedCount = ref(0)
+  const queueFailedCount = ref(0)
+  const failedCount = computed(() => queueFailedCount.value + (writesFailing.value ? 1 : 0))
   const lastSyncAt = ref<number | undefined>(undefined)
-  const lastError = ref<string | undefined>(undefined)
+  const queueLastError = ref<string | undefined>(undefined)
+  const lastError = computed(() =>
+    writesFailing.value ? (writeFailureMessage.value || queueLastError.value) : queueLastError.value
+  )
   const isOnline = ref(true)
   const failedOperations = ref<WriteOperation[]>([])
 
@@ -32,11 +43,11 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
   watch(
     () => syncState.value,
     (newState) => {
-      status.value = newState.status
+      queueStatus.value = newState.status
       pendingCount.value = newState.pendingCount
-      failedCount.value = newState.failedCount
+      queueFailedCount.value = newState.failedCount
       lastSyncAt.value = newState.lastSyncAt
-      lastError.value = newState.lastError
+      queueLastError.value = newState.lastError
       isOnline.value = newState.isOnline
       failedOperations.value = newState.failedOperations
     },
@@ -94,6 +105,11 @@ export const useSyncStatusStore = defineStore('syncStatus', () => {
    * Get human-readable status text
    */
   const statusText = computed(() => {
+    // TASK-1916/BUG-1913: direct writes are failing — say so explicitly
+    if (writesFailing.value) {
+      return "Changes aren't saving — retrying"
+    }
+
     // BUG-1411: Show cache mode info when loaded from IndexedDB
     if (loadedFromCache.value) {
       const age = cacheTimestamp.value ? Math.round((Date.now() - cacheTimestamp.value) / 60_000) : undefined

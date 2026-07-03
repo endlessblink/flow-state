@@ -3920,14 +3920,29 @@ All 17 failing unit tests are stale, not product bugs: 7 AI date-bombs (fixed Ju
 
 ### ~~BUG-1908~~: KDE widget Today list hides tasks the app's Today shows (instances-before-scheduled_date) (✅ DONE)
 
-**Priority**: P1 | **Status**: ✅ DONE (2026-07-03, prepared for Electron updater v1.4.229; VPS upload pending explicit approval) | **Opened**: 2026-07-03
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-03, shipped in the v1.4.229 release; QML itself is delivered via the repo→plasmoid symlink + plasmashell reload, NOT the Electron updater) | **Opened**: 2026-07-03
 
 **User repro**: KDE Plasma widget doesn't show all the tasks that show in the main Electron app. Live widget config (`plasma-org.kde.plasma.desktop-appletsrc`): `todayOnly=true` against production `https://api.in-theflow.com` — so the comparison surface is the widget's Today list vs the app's Today smart view.
 
 **Root cause (code divergence, precise)**: `taskMatchesToday()` in `packages/kde-widget/contents/ui/main.qml` checks calendar `instances[]` BEFORE `scheduled_date` and returns `false` terminally when instances exist but none is today. The Vue side (`useSmartViews.isTodayTask`, `src/composables/useSmartViews.ts:77`) was explicitly fixed to check `scheduledDate` BEFORE instances ("Today must include tasks explicitly scheduled for the day even when stale calendar instances exist"). The widget never got that fix → a task scheduled for today that carries stale calendar instances shows in the app's Today but silently vanishes from the widget. Related data-shape context: date edits don't move stale instances (regression-hunt 2026-07 item 5), so stale-instance rows are a real population.
 
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Live widget config `todayOnly=true` (appletsrc) vs app Today; parity test on scheduled-today + stale-instances row RED→GREEN | Yes |
+| Data shape / persisted row shape | Yes | `instances` jsonb camelCase `scheduledDate` verified against mappers + initial schema; stale past instances are a real prod population (BUG-1901/1909 lineage) | Yes (ordering) |
+| Renderer store/state | N/A | Vue `isTodayTask` untouched — it is the reference side of the parity test | — |
+| Electron main/preload bridge | N/A | Widget fetches tasks from Supabase REST directly | — |
+| Localhost sidecar endpoint | N/A | Sidecar serves timer only; task list never touches :5577 | — |
+| KDE polling/control path | Yes | `fetchTasks()` URL audited — limit caps + `neq.done` NULL exclusion found | No — listed below |
+| Supabase persistence/realtime | Partial | REST query semantics audited; no mutation involved | No (NULL-status class) |
+| Updater/runtime version | Yes | Plasmoid dir symlinks to the repo working tree — Electron updater irrelevant for QML | Yes after reload |
+| Stale live process/cache state | Yes | qmlcache can serve stale compiled QML; needs `rm -rf ~/.cache/plasmashell/qmlcache/*` + plasmashell restart (user declined mid-session; command provided) | Pending reload |
+
 **Exact failure mode fixed**: today-filter parity — `scheduled_date`/instances ordering in the widget's `taskMatchesToday`.
 **Regression added for reported repro**: `tests/unit/kde/today-filter-parity.test.ts` extracts the live QML date/filter functions and compares them against Vue `useSmartViews().isTodayTask()` for the stale-instance scheduled-today row.
+**Live boundary proof**: widget runs the repo QML via symlink — live after plasmashell reload (pending user action). Prod REST probe of the exact widget query was prepared but denied by the permission gate (production reads need explicit approval); probe script retained in session scratchpad.
 
 **Explicitly not covered** (other classes that can also make the widget show fewer tasks):
 - Non-today mode fetch cap `limit=100` (`fetchTasks()`), app has no such cap — >100 non-done tasks truncate oldest-first.
@@ -3937,7 +3952,7 @@ All 17 failing unit tests are stale, not product bugs: 7 AI date-bombs (fixed Ju
 
 ### ~~BUG-1909~~: Due-date quick-set looks like it does nothing — stale past instances pin the badge (recurring residual of BUG-1901) (✅ DONE)
 
-**Priority**: P1 | **Status**: ✅ DONE (2026-07-03, prepared for Electron updater v1.4.229; VPS upload pending explicit approval) | **Opened**: 2026-07-03
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-03, shipped Electron v1.4.229 — live `updates/electron/latest-linux.yml` verified serving 1.4.229 with reachable AppImage) | **Opened**: 2026-07-03
 
 **User repro (2 reports, same class)**: (1) clicking "Next Week" in the Due Date submenu "doesn't do anything"; (2) context menu shows Due Date "Tomorrow" while the card badge shows "Overdue May 30". Runtime verified current (running Electron v1.4.228 contains the BUG-1901 read-side fix) — NOT a stale-runtime recurrence.
 
@@ -3945,7 +3960,24 @@ All 17 failing unit tests are stale, not product bugs: 7 AI date-bombs (fixed Ju
 
 **Fix**: write-side reconciliation — when the user explicitly sets a due date, stale PAST instances (scheduledDate < today, ≠ new date) are rescheduled to the picked date. Read-side stays untouched (BUG-1810 instance authority preserved for genuinely surfaced occurrences). Regression coverage: `src/utils/__tests__/dueDateInstances.spec.ts` and `src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts`.
 
-**Release note**: Local v1.4.229 build/package validation passed. Public updater manifest remains `1.4.228` because the sandbox blocked SSH/SCP upload to the VPS; deploy requires explicit user approval.
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Recurring-shaped task, stale May 30 instance, pick Tomorrow/Next Week — end-to-end badge test (`Overdue May 30` → `Tomorrow`) + writer payload regression RED→GREEN | Yes |
+| Data shape / persisted row shape | Yes | `instances` jsonb; reconcile only past ≠ picked date; `instances` omitted from payload when unchanged (BUG-1799 double-write lesson) | Yes |
+| Renderer store/state | Yes | Single `updateTaskWithUndo` write carries dueDate + reconciled instances atomically | Yes |
+| Electron main/preload bridge | N/A | Pure renderer logic | — |
+| Localhost sidecar endpoint | N/A | Not involved | — |
+| KDE polling/control path | Yes | Sibling BUG-1908 covers the widget read side; reconciled instances also unpin widget filters | Via BUG-1908 |
+| Supabase persistence/realtime | Yes | Write goes through the normal updateTask queue path; no new writer introduced | Yes |
+| Updater/runtime version | Yes | User was on v1.4.228 (contains BUG-1901 read fix — confirmed NOT stale-runtime); fix ships v1.4.229, manifest verified live | Yes after app update/restart |
+| Stale live process/cache state | Yes | Running app must auto-update/restart to v1.4.229 to pick up the fix | Pending user restart |
+
+**Exact failure mode fixed**: due-date picks (quick options + date picker) now reschedule stale PAST calendar instances onto the picked date.
+**Explicitly not covered**: "Clear date" (stale instances remain → recurring badge stays pinned after clearing); "Done for now" flows (`handleDoneForNowTomorrow`/`handleDoneForNowPickDate` stamp dueDate/scheduledDate/doneForNowUntil but not instances; recurring path goes through `doneForNow()` with its own occurrence semantics); task edit modal due-date path; batch multi-select path (delegates to parent handler).
+**Regression added for reported repro**: `src/utils/__tests__/dueDateInstances.spec.ts` (incl. end-to-end computeDueStatus badge assertion for a recurring task) + `src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts` (writer payload for quick-set, no-double-write, calendar-event path).
+**Live boundary proof**: deployed via `deploy-electron-update.sh` (full ship gate passed); `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.229` and `FlowState-1.4.229-x86_64.AppImage` answers HTTP 206 range requests. NOTE: earlier "updates 404 incident" was a false alarm — the feed lives under `/updates/electron/`, not `/updates/latest-linux.yml`.
 
 ### TASK-1905: Rewrite AI-chat E2E specs for the sidebar UX (📋 PLANNED)
 
@@ -5797,8 +5829,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1902**~~ | **P1** | ✅ **Saved canvas viewport never applied at startup (no setViewport after load)** (✅ DONE 2026-07-02, v1.4.227) |
 | ~~**BUG-1903**~~ | **P1** | ✅ **Mobile deep-links stomped by /tasks default before router ready** (✅ DONE 2026-07-02, v1.4.227) |
 | ~~**TASK-1904**~~ | **P1** | ✅ **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** (✅ DONE 2026-07-02 — unit 3113/3113; chromium E2E residual = TASK-1906 interference) |
-| ~~**BUG-1908**~~ | **P1** | ✅ **KDE widget Today list hides scheduled-today tasks with stale calendar instances (Vue parity)** (✅ DONE 2026-07-03, prepared v1.4.229) |
-| ~~**BUG-1909**~~ | **P1** | ✅ **Due-date quick-set looks like no-op when stale past instances pin badge** (✅ DONE 2026-07-03, prepared v1.4.229) |
+| ~~**BUG-1908**~~ | **P1** | ✅ **KDE widget Today list hides scheduled-today tasks with stale calendar instances (Vue parity)** (✅ DONE 2026-07-03, v1.4.229 shipped; widget live after plasmashell reload) |
+| ~~**BUG-1909**~~ | **P1** | ✅ **Due-date quick-set looks like no-op when stale past instances pin badge** (✅ DONE 2026-07-03, v1.4.229 shipped, live manifest verified) |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |
 | ~~**BUG-1907**~~ | **P1** | ✅ **Quick Tasks typed pin can look like a no-op — explicit result contract + visible feedback** (✅ DONE 2026-07-03) |

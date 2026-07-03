@@ -3806,11 +3806,43 @@ Two mechanisms in one subsystem (BUG-1799 residue): (a) group realtime applies h
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 8652b581) — fixed: resize acquires via LockManager.acquireOrAdopt (adopts stale user-drag locks when no drag live; excludes actively-locked children; aborts on locked group). Regression: tests/unit/canvas/lock-manager-resize-adopt.test.ts. Kills the live `[LockManager] Unauthorized release attempt` wall + resize snap-backs. | **Opened**: 2026-07-02
 
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | ✅ | live console wall: `Unauthorized release attempt … by user-resize (owned by user-drag)` during group resize | ✅ acquireOrAdopt + child exclusion |
+| Data shape / persisted row shape | ✅ | no row change — lock state is in-memory only | N/A |
+| Renderer store/state | ✅ | BUG-1492 stale-handler skip leaks 15s user-drag locks; resize ignored acquire() result | ✅ adopt-if-no-drag / exclude-if-drag |
+| Electron main/preload bridge | ✅ | not involved | N/A |
+| Localhost sidecar endpoint | ✅ | not involved | N/A |
+| KDE polling/control path | ✅ | not involved | N/A |
+| Supabase persistence/realtime | ✅ | downstream effect only (rejected updates → later sync snap-back) | ✅ children now actually locked during resize |
+| Updater/runtime version | ✅ | shipped v1.4.227/228 | user on 1.4.228 ✅ |
+| Stale live process state | ✅ | pre-update builds keep old behavior | resolved by user's 1.4.228 restart |
+
+**Exact failure mode fixed**: silent acquire() failure at resize-start + asymmetric release. **Explicitly not covered**: the underlying BUG-1492 stale-handler lock leak itself (locks still auto-expire at 15s; adoption papers over it) — belongs to the BUG-1899 write-path architecture follow-up.
+
 `onSectionResizeStart` ignores `lockManager.acquire()` returning false (`useCanvasInteractions.ts:1035,1040`); children still holding 15s `user-drag` locks (incl. leaks via the BUG-1492 stale-handler skip at `:966-988`) reject resize position updates in PositionManager, diverge visually, and snap back on next sync. Produces the live `[LockManager] Unauthorized release attempt` console wall. Fix: force-adopt stale drag locks when no drag is active, else exclude the child from the resize set so release stays symmetric.
 
 ### ~~BUG-1901~~: Due-date edit leaves stale calendar instance; +1mo anchors on today (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 616ad4e5) — fixed: (a) non-recurring tasks with dueDate newer than a stale PAST instance show the dueDate (recurring keep BUG-1810 instance authority); (b) +Nmo anchors on current due date; (c) TZ-safe currentDueDateLabel. Regressions: dueStatus.spec.ts (user repro as test), due-date-submenu-month-offset.test.ts. Precise label: fixed badge/anchor/format paths — the edit still does not MOVE the stored instance (calendar view placement unchanged by design). | **Opened**: 2026-07-02
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | ✅ | screenshot 2026-07-02: card "Overdue Jul 1" while menu shows Aug 2 | ✅ dueStatus.spec.ts encodes it |
+| Data shape / persisted row shape | ✅ | stale `instances[]` entry + newer `dueDate` on same task | ✅ badge rule; instance intentionally NOT moved |
+| Renderer store/state | ✅ | both surfaces read same store — split was field-level, not staleness | ✅ |
+| Electron main/preload bridge | ✅ | not involved | N/A |
+| Localhost sidecar endpoint | ✅ | not involved | N/A |
+| KDE polling/control path | ✅ | not involved | N/A |
+| Supabase persistence/realtime | ✅ | ruled out (LWW logs were a separate issue — BUG-1899) | N/A |
+| Updater/runtime version | ✅ | shipped v1.4.227/228 | ✅ |
+| Stale live process state | ✅ | old build until restart | resolved |
+
+**Exact failure mode fixed**: badge/anchor/format paths for one-off tasks. **Explicitly not covered**: reconciling (moving/clearing) the stored calendar instance on due-date edit — calendar-view placement of the stale instance is unchanged by design; revisit if users report calendar-side confusion.
 
 User repro (2026-07-02 screenshot): card badge shows "Overdue Jul 1" forever while context menu shows the updated date. Badge derives from calendar `instances[]` (`dueStatus.ts:29-63`, authoritative per BUG-1810); menu reads `task.dueDate`; the due-date edit (`TaskContextMenu.vue:473-477`) only moves `dueDate` for non-calendar tasks, never reconciling the stale instance. Also `+1mo` (`DueDateSubmenu.vue:175-180`) does `setMonth(+1)` from today (Jul 2 → Aug 2, not Aug 1), and `currentDueDateLabel` (`TaskContextMenu.vue:419,429`) is the only TZ-sensitive due-date formatter. Fix: reconcile/clear the stale representative instance on due-date edit, anchor +1mo on the current due date, harden the formatter.
 
@@ -3818,11 +3850,43 @@ User repro (2026-07-02 screenshot): card badge shows "Overdue Jul 1" forever whi
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 616ad4e5) — fixed: saved viewport applied via setViewport once load+paneReady settle; recovery waits for the apply (without consuming render attempts); heal persists unconditionally post-pan; chosen viewport reconciled to localStorage+cloud. Heal E2E 3/3 (was 0/N). Gotcha recorded: consoleFilter.ts suppresses [NAV]/[ORCHESTRATOR] logs — masked this for weeks. | **Opened**: 2026-07-02
 
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | ✅ | canvas always reopened at origin regardless of saved viewport (probe: transform stayed translate(0,0)) | ✅ canvas-viewport-restore.spec.ts |
+| Data shape / persisted row shape | ✅ | localStorage vs cloud (user_settings.canvas_viewport) could diverge; cloud wins on load | ✅ chosen value reconciled to both |
+| Renderer store/state | ✅ | :default-viewport captured pre-load; no setViewport call existed anywhere | ✅ applySavedViewportOnce on load+paneReady |
+| Electron main/preload bridge | ✅ | not involved | N/A |
+| Localhost sidecar endpoint | ✅ | not involved | N/A |
+| KDE polling/control path | ✅ | not involved | N/A |
+| Supabase persistence/realtime | ✅ | cloud copy is preferred source on load | ✅ reconcile keeps stores converged |
+| Updater/runtime version | ✅ | shipped v1.4.227/228 | ✅ user-confirmed live (canvas restored zoomed-out after re-login) |
+| Stale live process state | ✅ | old build until restart | resolved |
+
+**Exact failure mode fixed**: apply-never-happens + heal-unreachable + stale-localStorage-divergence. **Explicitly not covered**: transient empty canvas while data hydrates after login (render lag, not viewport — BUG-1899 boot-load residual).
+
 Probe-proven: no code ever calls Vue Flow `setViewport` — the saved viewport is only wired via one-shot `:default-viewport`, which initializes before async `loadSavedViewport()` resolves. Canvas always opens at origin; the d78dfa54 heal-persist step is unreachable (recovery early-returns when origin shows content). Fix: apply the loaded viewport via `setViewport` on pane-ready, then run recovery; heal test goes green as a side effect. Note: `consoleFilter.ts` suppresses `[NAV]`/`[ORCHESTRATOR]` logs — masked this for weeks.
 
 ### ~~BUG-1903~~: Mobile deep-links stomped by /tasks default on mount (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-02, v1.4.227, commit 616ad4e5) — fixed: MobileLayout awaits router.isReady() before the /tasks default (main.ts mounts before initial route resolution; beforeEach awaits auth init). mobile-timer E2E 7/7 (was 0/7); mobile-today 7/7 serial. Affects real PWA reload/deep-link, not just tests. | **Opened**: 2026-07-02
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | ✅ | every mobile deep-link/reload (/#/timer, /#/today) landed on /tasks | ✅ mobile-deeplink-survives.spec.ts (3/3) |
+| Data shape / persisted row shape | ✅ | no data involved — pure routing | N/A |
+| Renderer store/state | ✅ | route was unresolved '/' at MobileLayout mount → replace('/tasks') stomped deep-link | ✅ awaits router.isReady() |
+| Electron main/preload bridge | ✅ | mobile PWA path; Electron unaffected | N/A |
+| Localhost sidecar endpoint | ✅ | not involved | N/A |
+| KDE polling/control path | ✅ | not involved | N/A |
+| Supabase persistence/realtime | ✅ | not involved (auth-init await was the delay source, not a data issue) | N/A |
+| Updater/runtime version | ✅ | web PWA ships with next master deploy; Electron v1.4.227/228 | ✅ |
+| Stale live process state | ✅ | old PWA SW until refresh | standard SW update cycle |
+
+**Exact failure mode fixed**: /tasks default racing initial route resolution. **Explicitly not covered**: none known — all mobile routes go through the same gate.
 
 `MobileLayout.vue:343-347` replaces to `/tasks` when the route is `/` at mount — but `main.ts` never awaits `router.isReady()` and the router `beforeEach` awaits auth init, so the layout always mounts while the initial route is still unresolved `/`. Every mobile reload/deep-link (`/#/timer`, etc.) lands on Tasks. Root cause of all 7 mobile-timer E2E failures + mobile-core-flows. Fix: await `router.isReady()` before the default redirect (or move the default into the router config).
 

@@ -3999,6 +3999,8 @@ User: "events I deleted are returning for no reason" (both calendar blocks AND w
 2. `reauthRequired` (BUG-1898's 10-min grace cap) had **zero UI consumers** — the cap fired into the void. **Fixed**: setting it now also fires a direct 15s error toast telling the user to sign out/in.
 Live evidence same evening: user's fresh v1.4.230 session showed amber "2 pending" stuck; prod sentinel `max(updated_at)` frozen at 11:34Z for 3+ hours; upgraded watchdog fired `write-gap … 192min` on first run. **Still open**: WHY the session dies under the shell (suspect: multi-instance refresh-token rotation collisions from today's parallel app instances), and recovery UX (re-login currently manual).
 
+**2026-07-04 00:19 — recovery confirmed end-to-end**: user signed out/in after a ~9.5h stranded-queue window (watchdog logged the gap up to 565min); 33 queued task writes flushed to prod within seconds of re-auth (sentinel `max(updated_at)` jumped to 21:19:33Z). Mechanism chain fully validated: dead session under signed-in shell → silent queue strand → re-auth → immediate flush. Remaining: session-death root cause + refresh-free recovery UX (BUG-1918).
+
 ### ~~TASK-1914~~: VPS DB write-watchdog — cron invariant checks + alerts (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-03 — installed on VPS, cron `*/15min`, first run OK: `manifest=1.4.229 last_write_age_min=48`; alerts → ntfy.sh topic `flowstate-watchdog-eb7k2` + `/var/log/flowstate-watchdog.log`; repo copy `scripts/vps/flowstate-db-watchdog.sh`) | **Opened**: 2026-07-03
@@ -4043,6 +4045,12 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 **User repro**: clicked Restart on the 1.4.230 update toast → app exited, nothing relaunched, AppImage on disk stayed 1.4.229. `~/.cache/flow-state-updater/pending/` is a graveyard (1.4.223/224/226/229/230 all downloaded, none auto-installed) → the detached installer handoff (`launchDetachedAppImageInstaller`, `electron/updater.ts`) has been failing silently for many releases: it ran `stdio:'ignore'` with no log, inherited a cwd inside the FUSE mount, ignored spawn errors (returned true → `app.exit(0)` dead-end), and relaunched WITHOUT the FlowState-launch.sh flags (TASK-1871: bare AppImage launch can die on chrome-sandbox SUID/GPU init = "nothing happens" even after a successful swap).
 
 **Shipped v1.4.231**: installer script logs every step to `$TMPDIR/flowstate-appimage-install.log` and aborts loudly per-step; `cwd:'/'`; missing `child.pid` falls back to electron-updater's own quitAndInstall; relaunch uses `--no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state`. The NEXT update cycle (1.4.231→next) is the instrumented experiment — read the log before closing this bug. User unblocked meanwhile via manual install of checksum-verified pending 1.4.230.
+
+### BUG-1918: Sign-out/sign-in recovery path UX — broken sign-out view, sign-in needs manual refresh (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED | **Opened**: 2026-07-04
+
+Sign-out/in is now the documented recovery for a stranded sync queue (BUG-1913), but the path is rough (user report 2026-07-04 00:19, v1.4.230 Electron): (1) the signed-out state "doesn't look good" — visual/layout breakage on the logged-out view; (2) after signing back in the app required a manual refresh before becoming usable (auth-state propagation doesn't rehydrate stores/views without reload — SOP-050 auth-aware init class). Recovery WORKED (33 queued writes flushed within seconds of re-auth, prod-verified) — this bug is about making the escape hatch presentable and refresh-free.
 
 ### BUG-1912: Canvas edge can't be disconnected; dragging a line glitches the whole screen (📋 PLANNED)
 
@@ -5938,6 +5946,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1915**~~ | **P1** | ✅ **Nightly automated regression hunt as scheduled cloud agent** (✅ DONE 2026-07-03, first run tonight) |
 | ~~**TASK-1916**~~ | **P0** | ✅ **In-app write-failure visibility — indicator + toast when saves fail** (✅ DONE 2026-07-03, v1.4.230 shipped) |
 | **BUG-1917** | **P0** | 🔄 **Updater Restart quits but never swaps/relaunches — silent installer handoff (instrumented+hardened v1.4.231)** |
+| **BUG-1918** | **P1** | 📋 **Sign-out view broken + sign-in needs manual refresh (BUG-1913 recovery path UX)** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

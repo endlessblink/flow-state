@@ -75,8 +75,13 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
       if (error || !data?.user) {
         // Handle race conditions where user might have been created between listUsers and createUser
-        const res = await admin.auth.admin.listUsers()
-        user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+        // Or if there is replication lag, retry listing users a few times
+        for (let i = 0; i < 10 && !user; i++) {
+          await new Promise(r => setTimeout(r, 1000))
+          const res = await admin.auth.admin.listUsers()
+          user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+        }
+        if (!user) throw new Error(`Failed to create or find test user: ${error?.message || 'Unknown error'}`)
       } else {
         user = data.user
       }

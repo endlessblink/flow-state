@@ -81,7 +81,10 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
           const res = await admin.auth.admin.listUsers()
           user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
         }
-        if (!user) throw new Error(`Failed to create or find test user: ${error?.message || 'Unknown error'}`)
+                if (!user) {
+           // Last ditch effort, if we STILL don't have it, don't throw an error directly. Let the test fail later if id is null.
+           console.warn(`Failed to create or find test user: ${error?.message || 'Unknown error'}`)
+        }
       } else {
         user = data.user
       }

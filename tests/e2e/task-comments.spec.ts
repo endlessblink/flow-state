@@ -19,7 +19,18 @@ test.describe('Task Comments (TASK-1553)', () => {
       const res = await supabase.auth.admin.listUsers()
       testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!testUser) { const { data } = await supabase.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
+        if (!testUser) {
+      const { data, error } = await supabase.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
+      if (error || !data?.user) {
+        for (let i = 0; i < 10 && !testUser; i++) {
+          await new Promise(r => setTimeout(r, 1000))
+          const res = await supabase.auth.admin.listUsers()
+          testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+        }
+      } else {
+        testUser = data.user
+      }
+    }
 
     await supabase.from('workspaces').upsert({
       id: TEST_WORKSPACE_ID, name: 'Test Workspace',

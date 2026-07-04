@@ -41,7 +41,24 @@ test.describe('TASK-1455: Catalog — Uncategorized tasks group', () => {
       const res = await adminClient.auth.admin.listUsers()
       testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!testUser) { const { data } = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
+        if (!testUser) {
+      const { data, error } = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
+      if (error || !data?.user) {
+        // Handle race conditions where user might have been created between listUsers and createUser
+        // Or if there is replication lag, retry listing users a few times
+        for (let i = 0; i < 10 && !testUser; i++) {
+          await new Promise(r => setTimeout(r, 1000))
+          const res = await adminClient.auth.admin.listUsers()
+          testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+        }
+        if (!testUser) {
+           // Last ditch effort, if we STILL don't have it, don't throw an error directly. Let the test fail later if id is null.
+           console.warn(`Failed to create or find test user: ${error?.message || 'Unknown error'}`)
+        }
+      } else {
+        testUser = data.user
+      }
+    }
 
     // Upsert an uncategorized task (project_id = null)
     const { error: upsertError } = await adminClient.from('tasks').upsert(

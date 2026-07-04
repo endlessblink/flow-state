@@ -259,7 +259,8 @@ onUnmounted(() => {
   transition: opacity var(--duration-normal);
 }
 
-.task-row:hover .task-row__checkbox {
+.task-row:hover .task-row__checkbox,
+.task-row:focus-within .task-row__checkbox {
   opacity: 1;
 }
 
@@ -280,7 +281,8 @@ onUnmounted(() => {
   letter-spacing: 0.01em;
 }
 
-.task-row:hover .task-row__title-text {
+.task-row:hover .task-row__title-text,
+.task-row:focus-within .task-row__title-text {
   color: var(--text-primary);
 }
 
@@ -310,7 +312,8 @@ onUnmounted(() => {
   transition: opacity var(--duration-normal);
 }
 
-.task-row:hover .task-row__tags {
+.task-row:hover .task-row__tags,
+.task-row:focus-within .task-row__tags {
   opacity: 1;
 }
 
@@ -339,8 +342,10 @@ onUnmounted(() => {
   transition: all var(--duration-normal) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.task-row:hover .task-row__actions {
+.task-row:hover .task-row__actions,
+.task-row:focus-within .task-row__actions {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .task-row__action-btn {
@@ -357,7 +362,8 @@ onUnmounted(() => {
   transition: all var(--duration-normal);
 }
 
-.task-row__action-btn:hover {
+.task-row__action-btn:hover,
+.task-row__action-btn:focus-visible {
   background: var(--glass-border-hover);
   border-color: var(--glass-handle);
   color: var(--text-primary);

@@ -37,12 +37,26 @@ flips=$(q "SELECT count(*) FROM tasks WHERE is_deleted=false AND deleted_at IS N
 # (d) BUG-1913 write-gap: app demonstrably alive but no task writes for >90min —
 #     the silent write-drop signature. Liveness = timer heartbeat OR auth token
 #     activity (timer-only keying missed the 2026-07-03 window: timer was off).
-hb_recent=$(q "SELECT (SELECT count(*) FROM timer_sessions WHERE user_id='$MAIN_USER_ID' AND updated_at > now()-interval '30 minutes')
-  + (SELECT count(*) FROM auth.refresh_tokens WHERE user_id::text='$MAIN_USER_ID' AND updated_at > now()-interval '30 minutes')")
+# 2026-07-05 tuning: token activity alone is ambient (KDE widget refreshes 24/7)
+# and produced 129 alerts over an idle day; a zombie timer row (BUG-1919) also
+# kept the timer signal warm. Two tiers now:
+#  - STRONG (alert): active NON-expired-looking timer session heart-beaten <10min
+#    AND remaining_time > 0 (a zombie stuck at 0 is BUG-1919's own signature,
+#    reported separately below).
+#  - WEAK (log-only WARN): token activity with a very large gap. No push.
+hb_strong=$(q "SELECT count(*) FROM timer_sessions WHERE user_id='$MAIN_USER_ID' AND is_active=true AND remaining_time > 0 AND updated_at > now()-interval '10 minutes'")
+hb_weak=$(q "SELECT count(*) FROM auth.refresh_tokens WHERE user_id::text='$MAIN_USER_ID' AND updated_at > now()-interval '30 minutes'")
 last_write_age_min=$(q "SELECT COALESCE(floor(extract(epoch FROM (now()-max(updated_at)))/60)::int, 99999) FROM tasks WHERE user_id='$MAIN_USER_ID'")
-if [ "${hb_recent:-0}" != "0" ] && [ "${last_write_age_min:-0}" -gt 90 ]; then
-  ANOMALIES+=("write-gap: heartbeat-active but last task write ${last_write_age_min}min ago")
+if [ "${hb_strong:-0}" != "0" ] && [ "${last_write_age_min:-0}" -gt 90 ]; then
+  ANOMALIES+=("write-gap: active-timer but last task write ${last_write_age_min}min ago")
+elif [ "${hb_weak:-0}" != "0" ] && [ "${last_write_age_min:-0}" -gt 360 ]; then
+  echo "$(date -u +%FT%TZ) WARN weak-liveness write-gap ${last_write_age_min}min (log-only)"
 fi
+
+# (d2) BUG-1919 signature: an active session heart-beaten while remaining_time=0
+# for >15min = a zombie the client failed to complete
+zombies=$(q "SELECT count(*) FROM timer_sessions WHERE user_id='$MAIN_USER_ID' AND is_active=true AND remaining_time=0 AND completed_at IS NULL AND updated_at > now()-interval '10 minutes' AND created_at < now()-interval '15 minutes'")
+[ "${zombies:-0}" != "0" ] && ANOMALIES+=("zombie-timer-sessions=$zombies (active, 0 remaining, still heart-beaten — BUG-1919 class)")
 
 # (e) Updater manifest health
 manifest_version=$(curl -sS --max-time 15 "$UPDATER_URL" | grep -m1 '^version:' | awk '{print $2}')

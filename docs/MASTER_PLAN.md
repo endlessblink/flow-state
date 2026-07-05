@@ -112,6 +112,24 @@
 
 **Tests**: RED/green focused pack `npm test -- tests/unit/stores/smart-merge.test.ts tests/unit/canvas/merge-group-load.test.ts tests/unit/local-api/server-contract.test.ts tests/unit/kde/timer-sync.test.ts` passed 83/83. Related proof: `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1920: restore cached canvas tasks/groups and fix KDE break completion fallback" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.232`; AppImage/deb artifact endpoints return HTTP 200.
 
+### ~~BUG-1923~~: Stale Electron heartbeat can reset KDE and app timer countdown upward (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-05) — killed the live hidden duplicate process, clamped stale same-session remote timer updates, and shipped Electron updater `1.4.234`. | **Depends on**: BUG-1892, BUG-1893, BUG-1896, BUG-1920
+
+**User evidence**: KDE widget timer was looping/resetting, and the regular Electron timer also reset. Live sampling of `http://127.0.0.1:5577/api/timer/current` reproduced the jump: remaining time decreased `1187 → 1185 → 1183`, then jumped upward to `1192`. `wmctrl` showed the visible FlowState window was PID `152961`, while a hidden duplicate AppImage process PID `4019126` was still alive.
+
+**Root cause**: the visible Electron renderer accepted a fresh Realtime heartbeat for the same active session from another device id/process and overwrote its local countdown from that row's stale `remaining_time`. When an old hidden Electron process survived the updater/relaunch path, it could keep writing stale same-session heartbeat state; the visible app and KDE sidecar then reflected the backward jump.
+
+**Fix**: `handleRemoteTimerUpdate()` now clamps active, unpaused, same-session remote updates so they cannot increase the visible countdown unless the remote update represents a real duration increase/extension. The hidden live duplicate was also terminated, and live localhost sampling immediately became monotonic (`1037 → 1035 → 1033 → 1031 → 1029 → 1027`).
+
+**Exact failure mode fixed**: a stale duplicate Electron process or stale same-session remote heartbeat can no longer reset the visible app/KDE countdown upward while the same work session is already running locally.
+
+**Explicitly not covered**: this does not claim duplicate Electron processes can never exist during updater handoff; it prevents stale same-session timer writes from moving a running countdown backward if they do.
+
+**Regression added for reported repro**: `tests/unit/composables/timer-realtime-backstop.test.ts` now reproduces the stale same-session heartbeat shape and asserts that `remainingTime` cannot increase from the local running value.
+
+**Tests**: RED first failed in `npm test -- tests/unit/composables/timer-realtime-backstop.test.ts` with `expected 1191 to be less than or equal to 1183`, then green passed 10/10 after the fix. Related proof: `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1923: prevent stale Electron heartbeat timer resets" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.234`; AppImage/deb artifact endpoints return HTTP 200.
+
 ### ~~BUG-1921~~: Realtime cleanup and duplicate terminal statuses spam console warnings (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-05) — suppressed misleading duplicate/cleanup realtime drop warnings and shipped Electron updater `1.4.233`. | **Depends on**: BUG-1320, BUG-1723, BUG-1799, BUG-1920

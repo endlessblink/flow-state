@@ -426,6 +426,17 @@ export function useTimerSync(deps: TimerSyncDeps) {
       if (session.isActive && !session.isPaused) {
         session.remainingTime = Math.max(0, session.remainingTime - drift)
       }
+      if (
+        currentSession.value?.id === session.id &&
+        currentSession.value.isActive &&
+        !currentSession.value.isPaused &&
+        session.isActive &&
+        !session.isPaused &&
+        session.duration <= currentSession.value.duration &&
+        session.remainingTime > currentSession.value.remainingTime
+      ) {
+        session.remainingTime = currentSession.value.remainingTime
+      }
 
       currentSession.value = session as PomodoroSession
       if (session.isActive && !session.isPaused) {

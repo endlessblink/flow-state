@@ -261,6 +261,44 @@ describe('TASK-1790: follower poll as Realtime backstop', () => {
     })
   })
 
+  describe('Class-of-bug: stale remote heartbeat resets visible countdown', () => {
+    it('does not move a running same-session timer backward from a stale remote remaining_time', async () => {
+      const currentSession = ref<PomodoroSession | null>({
+        id: 'sess-loop-reset-01',
+        taskId: 'task-1',
+        startTime: new Date('2026-07-05T13:12:17.000Z'),
+        duration: 1500,
+        remainingTime: 1183,
+        isActive: true,
+        isPaused: false,
+        isBreak: false,
+      })
+      const sync = useTimerSync(makeDeps({
+        currentSession,
+        isDeviceLeader: ref(false),
+        deviceId: 'visible-electron',
+      }))
+
+      sync.handleRemoteTimerUpdate({
+        new: {
+          id: 'sess-loop-reset-01',
+          task_id: 'task-1',
+          start_time: '2026-07-05T13:12:17.000Z',
+          duration: 1500,
+          remaining_time: 1192,
+          is_active: true,
+          is_paused: false,
+          is_break: false,
+          device_leader_id: 'stale-electron',
+          device_leader_last_seen: new Date(Date.now() - 1000).toISOString(),
+        },
+      })
+      await flushAsync()
+
+      expect(currentSession.value?.remainingTime).toBeLessThanOrEqual(1183)
+    })
+  })
+
   describe('timer.ts idle-transition sites: regression of f616303a', () => {
     it('source-of-truth: stopTimer path resumes follower poll after clearing currentSession', () => {
       // f616303a stripped `sync.resumeFollowerPoll()` here. Without it, a device

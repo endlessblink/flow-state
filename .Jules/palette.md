@@ -1,0 +1,3 @@
+## 2024-07-05 - MiniCanvasToolbar Tooltips Need ARIA Alternatives
+**Learning:** Icon-only action buttons (like those inside the `MiniCanvasToolbar.vue` component, handling layout or context transitions) use standard `title` attributes for tooltips, but lack screen-reader-accessible ARIA labels matching this content. Furthermore, toggle buttons lack `:aria-pressed` states.
+**Action:** When finding new internal toolbars built dynamically (like context menus or sub-task views), always cross-reference `title` against `aria-label` and `aria-pressed` definitions to ensure feature parity for keyboard/reader accessibility.

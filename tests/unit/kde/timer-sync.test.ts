@@ -338,6 +338,18 @@ describe('TASK-1652: KDE Timer Sync', () => {
     })
   })
 
+  describe('Completion active-task bridge', () => {
+    it('clears the active-task file when a session completes at 00:00', () => {
+      const fnStart = MAIN_QML.indexOf('function onSessionComplete()')
+      expect(fnStart, 'onSessionComplete not found').toBeGreaterThan(-1)
+      const fnEnd = MAIN_QML.indexOf('function postponeTimer', fnStart)
+      const body = MAIN_QML.slice(fnStart, fnEnd === -1 ? fnStart + 3000 : fnEnd)
+
+      expect(body).toContain('root.currentTaskId = ""')
+      expect(body).toContain('root.writeActiveTaskFile()')
+    })
+  })
+
   describe('Pause/resume toggle', () => {
     it('5. toggleIsRunning flips false to true', () => {
       expect(toggleIsRunning(false)).toBe(true)

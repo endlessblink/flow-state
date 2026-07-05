@@ -130,6 +130,26 @@
 
 **Tests**: RED first failed in `npm test -- tests/unit/composables/timer-realtime-backstop.test.ts` with `expected 1191 to be less than or equal to 1183`, then green passed 10/10 after the fix. Related proof: `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1923: prevent stale Electron heartbeat timer resets" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.234`; AppImage/deb artifact endpoints return HTTP 200.
 
+### ~~BUG-1924~~: KDE active-task pill can stay stuck at 0 after completion (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-05) — fixed the QML completion cleanup path that left `/tmp/flowstate-active-task.json` active at `00:00` after the real timer was inactive. | **Depends on**: BUG-1893, BUG-1920, BUG-1923
+
+**User evidence**: KDE panel screenshot at 17:05 on 2026-07-05 showed the active-task companion pill stuck on `0` with "משימה לא נבחרה" while the timer was no longer running.
+
+**Live boundary proof**: `node scripts/diagnose-timer-boundary.cjs` showed `/api/timer/current` returning `{"active":false,"session":null}` and diagnostics branch `local-snapshot-inactive-stale`, but `/tmp/flowstate-active-task.json` still contained `{"taskId":"general","isActive":true,"isWork":false,"timeDisplay":"00:00","progress":1,...}`. The live stale file was manually rewritten inactive so the current panel state could clear immediately.
+
+**Root cause**: `onSessionComplete()` cleared `hasActiveSession`, `currentSessionId`, and leadership state, but did not clear `currentTaskId` / cached active-task fields or rewrite the active-task bridge file. If the last bridge write happened at `00:00`, the companion plasmoid kept rendering that stale active task even though the sidecar and Supabase path were inactive.
+
+**Fix**: KDE completion now clears `currentTaskId`, `_cachedActiveTaskId`, `_cachedActiveTaskName`, and calls `writeActiveTaskFile()` after marking the session inactive.
+
+**Exact failure mode fixed**: after a KDE-observed session completes at zero, the active-task companion bridge can no longer remain active solely because the completion handler failed to publish an inactive bridge-file state.
+
+**Explicitly not covered**: this does not change Electron updater handoff behavior or duplicate-process handling from BUG-1923. The QML fix becomes active in the installed plasmoid after Plasma reload; the existing install is a symlink to this repo.
+
+**Regression added for reported repro**: `tests/unit/kde/timer-sync.test.ts` now extracts `onSessionComplete()` from `main.qml` and requires it to clear `currentTaskId` and rewrite the active-task file.
+
+**Tests**: RED first failed in `npm test -- tests/unit/kde/timer-sync.test.ts` because `onSessionComplete()` did not contain `root.currentTaskId = ""`; green passed 44/44 after the fix.
+
 ### ~~BUG-1921~~: Realtime cleanup and duplicate terminal statuses spam console warnings (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-05) — suppressed misleading duplicate/cleanup realtime drop warnings and shipped Electron updater `1.4.233`. | **Depends on**: BUG-1320, BUG-1723, BUG-1799, BUG-1920

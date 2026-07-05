@@ -4828,7 +4828,11 @@ PlasmoidItem {
         // Clear session state - wait for user action
         root.hasActiveSession = false
         root.currentSessionId = ""
+        root.currentTaskId = ""
+        root._cachedActiveTaskId = ""
+        root._cachedActiveTaskName = ""
         root.isDeviceLeader = false
+        root.writeActiveTaskFile()
     }
 
     // TASK-1009: Postpone timer by adding more time

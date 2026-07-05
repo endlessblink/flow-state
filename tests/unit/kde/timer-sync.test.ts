@@ -206,6 +206,16 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(body).toContain('fallback()')
     })
 
+    it('2. local inactive timer payloads fall through to Supabase completion detection instead of clearing ready', () => {
+      const localFnStart = MAIN_QML.indexOf('function fetchLocalCurrentSession(')
+      expect(localFnStart, 'fetchLocalCurrentSession not found').toBeGreaterThan(-1)
+      const body = MAIN_QML.slice(localFnStart, localFnStart + 2500)
+      const inactiveBranch = body.slice(body.indexOf('} else {'), body.indexOf('return', body.indexOf('} else {')))
+
+      expect(inactiveBranch).toContain('fallback()')
+      expect(inactiveBranch).not.toContain('handleNoActiveSession()')
+    })
+
     it('2. accepts Electron renderer-owned local-snapshot responses without requiring Supabase auth', () => {
       const localFnStart = MAIN_QML.indexOf('function fetchLocalCurrentSession(')
       expect(localFnStart, 'fetchLocalCurrentSession not found').toBeGreaterThan(-1)
@@ -226,7 +236,7 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(localFnStart, 'fetchLocalCurrentSession not found').toBeGreaterThan(-1)
       const localBody = MAIN_QML.slice(localFnStart, localFnStart + 2500)
 
-      expect(localBody).toContain('handleNoActiveSession()')
+      expect(localBody).toContain('fallback()')
       expect(serverSource).toContain('LOCAL_TIMER_INACTIVE_GRACE_MS')
       expect(serverSource).toContain('snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS')
     })

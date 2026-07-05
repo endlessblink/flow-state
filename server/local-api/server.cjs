@@ -450,6 +450,7 @@ function getLocalTimerResponse() {
     const driftSeconds = Math.max(0, Math.floor(snapshotAgeMs / 1000))
     session.remaining_time = Math.max(0, Number(session.remaining_time || 0) - driftSeconds)
     if (session.remaining_time <= 0) {
+      if (snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS) return null
       return { active: false, session: null, source: 'local-snapshot' }
     }
   }

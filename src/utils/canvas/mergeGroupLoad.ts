@@ -21,7 +21,8 @@ export function preserveRecentLocalGroups(
   merged: CanvasGroup[],
   inMemory: CanvasGroup[],
   nowMs: number,
-  graceMs: number = PENDING_CREATE_GRACE_MS
+  graceMs: number = PENDING_CREATE_GRACE_MS,
+  recoveryCandidates: CanvasGroup[] = []
 ): CanvasGroup[] {
   const serverIds = new Set(merged.map(g => g.id))
   const preserved = inMemory.filter(g => {
@@ -33,8 +34,15 @@ export function preserveRecentLocalGroups(
     const t = new Date(g.updatedAt).getTime()
     return Number.isFinite(t) && nowMs - t < graceMs
   })
-  if (preserved.length > 0 && import.meta.env.DEV) {
-    console.log(`[CANVAS:LOAD] Preserving ${preserved.length} recent local group(s) missing from server (pending create):`, preserved.map(g => g.id.slice(0, 8)))
+  const preservedIds = new Set([...serverIds, ...preserved.map(g => g.id)])
+  const recoveryPreserved = recoveryCandidates.filter(g => {
+    if (preservedIds.has(g.id)) return false
+    return true
+  })
+  if ((preserved.length > 0 || recoveryPreserved.length > 0) && import.meta.env.DEV) {
+    console.log(`[CANVAS:LOAD] Preserving ${preserved.length + recoveryPreserved.length} local group(s) missing from server:`, [...preserved, ...recoveryPreserved].map(g => g.id.slice(0, 8)))
   }
-  return preserved.length > 0 ? [...merged, ...preserved] : merged
+  return preserved.length > 0 || recoveryPreserved.length > 0
+    ? [...merged, ...preserved, ...recoveryPreserved]
+    : merged
 }

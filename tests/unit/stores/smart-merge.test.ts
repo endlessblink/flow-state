@@ -503,15 +503,16 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     expect(store._rawTasks[0].title).toBe('Important Task')
   })
 
-  it('drops stale cached local-only tasks after an old authenticated empty server load', async () => {
+  it('preserves cache-backed local-only tasks after an authenticated empty server load', async () => {
     const store = useTaskStore()
     const staleCachedTask = makeTask({
       id: 'task-stale-cache-empty-server',
-      title: 'Stale cache only',
+      title: 'Recoverable cache task',
       createdAt: new Date('2026-01-01T00:00:00Z'),
       updatedAt: new Date('2026-01-01T00:00:00Z'),
     })
     store._rawTasks.push(staleCachedTask)
+    vi.mocked(getCachedTasksWithPendingWrites).mockResolvedValue([staleCachedTask])
 
     const win = globalThis.window as any
     if (win) {
@@ -524,7 +525,33 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
 
     await store.loadFromDatabase()
 
-    expect(store._rawTasks.some(task => task.id === staleCachedTask.id)).toBe(false)
+    expect(store._rawTasks.some(task => task.id === staleCachedTask.id)).toBe(true)
+    expect(store._rawTasks.find(task => task.id === staleCachedTask.id)?.title).toBe('Recoverable cache task')
+  })
+
+  it('restores cache-backed tasks into an empty local store after an authenticated empty server load', async () => {
+    const store = useTaskStore()
+    const cachedTask = makeTask({
+      id: 'task-cache-repopulate-empty',
+      title: 'Recovered from cache',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      updatedAt: new Date('2026-01-01T00:00:00Z'),
+    })
+    vi.mocked(getCachedTasksWithPendingWrites).mockResolvedValue([cachedTask])
+
+    const win = globalThis.window as any
+    if (win) {
+      win.FlowStateSessionStart = Date.now() - 120000
+    }
+
+    mockFetchTasks.mockResolvedValue([])
+    mockFetchDeletedTaskIds.mockResolvedValue([])
+    mockFetchTombstones.mockResolvedValue([])
+
+    await store.loadFromDatabase()
+
+    expect(store._rawTasks.map(task => task.id)).toContain('task-cache-repopulate-empty')
+    expect(store._rawTasks.find(task => task.id === cachedTask.id)?.title).toBe('Recovered from cache')
   })
 
   it('allows empty overwrite during workspace switch', async () => {

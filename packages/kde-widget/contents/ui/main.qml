@@ -4467,7 +4467,7 @@ PlasmoidItem {
                 if (body.active && body.session) {
                     applyFetchedSession(body.session, "local-api")
                 } else {
-                    handleNoActiveSession()
+                    fallback()
                 }
                 return
             }

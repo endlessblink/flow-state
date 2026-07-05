@@ -569,9 +569,11 @@ export function useTaskPersistence(
                     const RECENT_CREATE_WINDOW_MS = 30_000
                     const localCreatedAt = localTask.createdAt ? new Date(localTask.createdAt).getTime() : 0
                     const isRecentlyCreated = (Date.now() - localCreatedAt) < RECENT_CREATE_WINDOW_MS
+                    const isCacheBackedLocalOnly = cachedById.has(localTask.id)
                     const shouldDropStaleLocalOnly = (geometryMergedLoadedTasks.length > 0 || authenticatedEmptyRemoteLoad)
                         && !isRecentlyCreated
                         && !isPendingWrite(localTask.id)
+                        && !isCacheBackedLocalOnly
                     if (shouldDropStaleLocalOnly) {
                         if (import.meta.env.DEV) {
                             console.log(`🗑️ [SMART-MERGE] Dropping stale local-only task "${localTask.title?.slice(0, 15)}" - not in DB and not recently created`)
@@ -581,6 +583,7 @@ export function useTaskPersistence(
                             authenticatedEmptyRemoteLoad,
                             isRecentlyCreated,
                             pendingWrite: isPendingWrite(localTask.id),
+                            cacheBacked: isCacheBackedLocalOnly,
                         })
                         continue
                     }
@@ -593,6 +596,7 @@ export function useTaskPersistence(
                         authenticatedEmptyRemoteLoad,
                         isRecentlyCreated,
                         pendingWrite: isPendingWrite(localTask.id),
+                        cacheBacked: isCacheBackedLocalOnly,
                     })
                     mergedTasks.push(localTask)
 
@@ -643,6 +647,49 @@ export function useTaskPersistence(
                         // Sync orchestrator not available - task is still preserved in memory
                     })
                 }
+            }
+
+            // 2b. Recover cache-backed tasks that are absent from both local
+            // memory and the authenticated server response. This is the restore
+            // path for sign-in/auth-recovery loads that briefly render an empty
+            // or partial canvas even though IndexedDB still has the user's data.
+            for (const [cachedTaskId, cachedTask] of cachedById) {
+                if (localTasksMap.has(cachedTaskId) || remoteMap.has(cachedTaskId)) continue
+                if (remotelyDeletedTaskIds.has(cachedTaskId) || cachedTask._soft_deleted) continue
+
+                if (import.meta.env.DEV) {
+                    console.log(`🛟 [SMART-MERGE] Restoring cache-backed task "${cachedTask.title?.slice(0, 15)}" missing from local and remote`)
+                }
+                mergedTasks.push(cachedTask)
+
+                if (!deletionInfoReliable) continue
+
+                Promise.all([
+                    import('@/composables/sync/useSyncOrchestrator'),
+                    import('@/utils/supabaseMappers'),
+                    import('@/stores/auth')
+                ]).then(([{ useSyncOrchestrator }, { toSupabaseTask }, { useAuthStore }]) => {
+                    const sync = useSyncOrchestrator()
+                    const userId = useAuthStore().user?.id
+                    if (!userId) return
+                    const mappedPayload = toSupabaseTask(cachedTask, userId)
+                    const payload: Record<string, unknown> = {
+                        ...mappedPayload,
+                        is_deleted: false,
+                        deleted_at: null
+                    }
+                    delete payload.position_version
+                    sync.enqueue({
+                        entityType: 'task',
+                        operation: 'create',
+                        entityId: cachedTask.id,
+                        payload: JSON.parse(JSON.stringify(payload))
+                    }).catch(e => {
+                        console.warn(`[SMART-MERGE] Failed to queue cached task restore for "${cachedTask.title?.slice(0, 15)}":`, e)
+                    })
+                }).catch(() => {
+                    // Sync orchestrator not available; recovered task remains visible locally.
+                })
             }
 
             // 3. Add remaining remote tasks (New from Remote)

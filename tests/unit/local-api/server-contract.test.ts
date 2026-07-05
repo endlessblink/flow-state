@@ -94,6 +94,19 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body.slice(staleCheck, inactiveResponse)).toContain('return null')
   })
 
+  it('does not let stale active local snapshots stuck at zero mask signed-in completion lookup', () => {
+    const body = functionBody('getLocalTimerResponse')
+    const zeroCheck = body.indexOf('session.remaining_time <= 0')
+    const staleCheckAfterZero = body.indexOf('snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS', zeroCheck)
+    const inactiveResponse = body.indexOf("active: false, session: null, source: 'local-snapshot'", zeroCheck)
+
+    expect(zeroCheck, 'zero remaining-time branch not found').toBeGreaterThan(-1)
+    expect(staleCheckAfterZero, 'stale active-zero snapshot guard not found').toBeGreaterThan(zeroCheck)
+    expect(inactiveResponse, 'active-zero inactive response not found').toBeGreaterThan(zeroCheck)
+    expect(staleCheckAfterZero).toBeLessThan(inactiveResponse)
+    expect(body.slice(staleCheckAfterZero, inactiveResponse)).toContain('return null')
+  })
+
   it('accepts parent-process timerSnapshot messages independently of auth session messages', () => {
     const messageHandlerStart = SERVER_CJS.indexOf("PARENT_PORT.on('message'")
     expect(messageHandlerStart, 'process message handler not found').toBeGreaterThan(-1)

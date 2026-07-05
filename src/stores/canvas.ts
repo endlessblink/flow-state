@@ -15,7 +15,7 @@ import { isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
 import { useCanvasGroups } from './canvas/canvasGroups'
 import { useCanvasViewport } from './canvas/canvasViewport'
 import { useCanvasPersistence } from './canvas/canvasPersistence'
-import { cacheGroups, getCachedGroups } from '@/services/offline/readCacheDB'
+import { cacheGroups, getCachedGroups, getCachedGroupsWithPendingWrites } from '@/services/offline/readCacheDB'
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { useAuthStore } from './auth'
 import { toSupabaseGroup } from '@/utils/supabaseMappers'
@@ -130,9 +130,10 @@ export const useCanvasStore = defineStore('canvas', () => {
       // manual positions and sizes. Prefer newer local geometry, but only for
       // groups that still exist in the remote result to avoid resurrecting
       // deleted groups from cache.
+      const cachedGroupsWithPendingWrites = (await getCachedGroupsWithPendingWrites().catch(() => [])) ?? []
       const localCandidates = [
         ...loadGroupsFromLocalStorage(),
-        ...((await getCachedGroups().catch(() => [])) ?? []),
+        ...cachedGroupsWithPendingWrites,
       ]
       const localById = new Map<string, CanvasGroup>()
       for (const localGroup of localCandidates) {
@@ -180,7 +181,9 @@ export const useCanvasStore = defineStore('canvas', () => {
       const geometryMergedGroups = preserveRecentLocalGroups(
         geometryMergedGroupsFromServer,
         groupsModule._rawGroups.value,
-        Date.now()
+        Date.now(),
+        undefined,
+        cachedGroupsWithPendingWrites
       )
 
       if (import.meta.env.DEV) {

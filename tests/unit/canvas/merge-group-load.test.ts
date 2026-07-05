@@ -62,4 +62,12 @@ describe('BUG-1899: preserveRecentLocalGroups', () => {
     const out = preserveRecentLocalGroups([], [noStamp], NOW)
     expect(out.map(g => g.id)).toContain('nostamp')
   })
+
+  it('keeps cache-backed local-only groups during recovery even outside the fresh-create grace', () => {
+    const cachedOnly = group('cached-recovery', 2 * 60 * 60 * 1000, 'Recovered Section')
+    const out = preserveRecentLocalGroups([], [], NOW, undefined, [cachedOnly])
+
+    expect(out.map(g => g.id)).toEqual(['cached-recovery'])
+    expect(out[0].name).toBe('Recovered Section')
+  })
 })

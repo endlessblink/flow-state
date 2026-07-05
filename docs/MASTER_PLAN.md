@@ -80,6 +80,38 @@
 - Explicit `he`/`en` selection still forwards the language.
 - Mixed Hebrew/English voice capture no longer transliterates English into Hebrew script (user-verified real capture).
 
+### ~~BUG-1920~~: Sign-in can hide cached canvas tasks/groups and KDE misses break prompt after Electron completion (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-05) — restored cache-backed tasks/groups during authenticated reload, fixed KDE local-inactive completion fallback, added stale active-zero Local API fallback, and shipped Electron updater `1.4.232`. | **Depends on**: BUG-1891, BUG-1893, BUG-1896, BUG-1919
+
+**User evidence**: after signing in, many tasks and groups disappeared from the canvas, and the KDE widget got stuck/returned to ready while Electron showed `Session Complete! Great work! Time for a break.` KDE did not offer the break transition.
+
+**Root cause**: authenticated reload treated server absence too aggressively: task smart-merge only preserved cache-backed tasks that already existed in memory, and canvas group load used plain cache data instead of pending-write-aware recovery candidates. Separately, KDE treated a Local API `{ active:false }` response as final and cleared to ready before falling through to Supabase/completion detection, while stale active local snapshots that drifted to zero could still mask signed-in lookup.
+
+**Fix**: task smart-merge now restores cache-backed tasks even when the local store is already empty and queues a create to repopulate Supabase unless deletion markers prove deletion. Canvas group load now uses `getCachedGroupsWithPendingWrites()` and preserves cache-backed groups missing from the server result. The Local API now returns `null` for stale active snapshots whose drift-corrected remaining time reaches zero, allowing signed-in lookup to run. KDE now falls through to Supabase completion detection when the localhost sidecar returns inactive instead of silently clearing to ready.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | User reported sign-in data loss and provided screenshot showing Electron completion notification while KDE stayed ready. | Yes |
+| Data shape / persisted row shape | Yes | Cache-backed tasks/groups are restored only when not tombstoned/soft-deleted; task IDs and group IDs are preserved. | Yes |
+| Renderer store/state | Yes | `taskPersistence.ts` now repopulates empty local task state from pending-aware cache; `canvas.ts` preserves cached groups. | Yes |
+| Electron main/preload bridge | Partial | Existing local snapshot bridge remains unchanged; Local API server behavior is hardened. | Boundary only |
+| Localhost sidecar endpoint | Yes | `server/local-api/server.cjs` no longer lets stale active-zero snapshots mask signed-in timer lookup. | Yes |
+| KDE polling/control path | Yes | `main.qml` local inactive path now falls through to Supabase/completion handling. | Yes |
+| Supabase persistence/realtime | Partial | Recovered cached tasks are enqueued for create; group pending-write cache is applied. Remote writes still depend on auth/session availability. | Partly |
+| Updater/runtime version | Yes | Electron updater `1.4.232` built/deployed and public manifest verified. | Yes |
+| Stale live process/cache state | Partial | Existing running Electron/KDE processes must update/restart to load the fix. | Not fully |
+
+**Exact failure modes fixed**: cache-backed tasks/groups can no longer vanish permanently from the visible canvas solely because sign-in/auth recovery returns an empty or partial remote load; KDE no longer treats an inactive localhost timer response as final when a prior active work session still needs completion/break detection; stale active local snapshots at zero no longer block signed-in fallback.
+
+**Explicitly not covered**: this does not restore items that were intentionally soft-deleted or tombstoned, and it does not guarantee remote restore while no valid Supabase session exists. It restores visible local state from durable cache/pending writes and queues safe remote create when deletion is not proven.
+
+**Regression added for reported repro**: smart-merge tests cover preserving cache-backed local-only tasks and repopulating an empty local store from cache after authenticated empty loads. Canvas merge tests cover cache-backed local-only group recovery outside the fresh-create grace. Local API tests cover stale active-zero snapshot fallback. KDE tests cover local inactive falling through to Supabase completion detection instead of clearing to ready.
+
+**Tests**: RED/green focused pack `npm test -- tests/unit/stores/smart-merge.test.ts tests/unit/canvas/merge-group-load.test.ts tests/unit/local-api/server-contract.test.ts tests/unit/kde/timer-sync.test.ts` passed 83/83. Related proof: `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1920: restore cached canvas tasks/groups and fix KDE break completion fallback" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.232`; AppImage/deb artifact endpoints return HTTP 200.
+
 ### ~~BUG-1887~~: Sync Errors popover is translucent over canvas content (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-24) — fixed the Sync Errors popover and Storybook mirror to render opaque surfaces instead of inheriting glass/translucent tokens. | **Depends on**: TASK-1183

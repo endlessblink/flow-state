@@ -109,15 +109,18 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
     if (!user) {
       const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true });
       if (error) {
-        for (let i = 0; i < 5 && !user; i++) {
+        console.warn('Failed to create test user, falling back to listUsers retry...', error.message);
+        for (let i = 0; i < 10 && !user; i++) {
           await new Promise(r => setTimeout(r, 1000));
           const res = await admin.auth.admin.listUsers();
-          user = res.data.users.find((u) => u.email === 'playwright@test.flowstate');
+          if (res.data && res.data.users) {
+            user = res.data.users.find((u) => u.email === 'playwright@test.flowstate');
+          }
         }
       } else {
         user = data?.user;
       }
-      if (!user) throw new Error('Failed to create or fetch test user');
+      if (!user) throw new Error(`Failed to create or fetch test user. Last error: ${error?.message}`);
     }
     const userId = user.id
 

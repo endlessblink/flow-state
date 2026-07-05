@@ -42,10 +42,12 @@ async function ensureTestUser() {
     let createdUser = data?.user
     if (error) {
       console.error(`[global-setup] Failed to create test user: ${error.message}. Retrying via listUsers...`)
-      for (let i = 0; i < 5 && !createdUser; i++) {
+      for (let i = 0; i < 10 && !createdUser; i++) {
         await new Promise(r => setTimeout(r, 1000))
         const res = await supabase.auth.admin.listUsers()
-        createdUser = res.data.users.find(u => u.email === TEST_USER_EMAIL)
+        if (res.data && res.data.users) {
+          createdUser = res.data.users.find(u => u.email === TEST_USER_EMAIL)
+        }
       }
     }
 

@@ -44,15 +44,18 @@ test.describe('TASK-1455: Catalog — Uncategorized tasks group', () => {
     if (!testUser) {
       const { data, error } = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true });
       if (error) {
-        for (let i = 0; i < 5 && !testUser; i++) {
+        console.warn('Failed to create testUser, falling back to listUsers retry...', error.message);
+        for (let i = 0; i < 10 && !testUser; i++) {
           await new Promise(r => setTimeout(r, 1000));
           const res = await adminClient.auth.admin.listUsers();
-          testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate');
+          if (res.data && res.data.users) {
+            testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate');
+          }
         }
       } else {
         testUser = data?.user;
       }
-      if (!testUser) throw new Error('Failed to create or fetch test user');
+      if (!testUser) throw new Error(`Failed to create or fetch test user. Last error: ${error?.message}`);
     }
 
     // Upsert an uncategorized task (project_id = null)

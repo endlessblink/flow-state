@@ -39,13 +39,23 @@ async function ensureTestUser() {
       user_metadata: { name: 'Playwright Test User' },
     })
 
+    let createdUser = data?.user
     if (error) {
-      console.error('[global-setup] Failed to create test user:', error.message)
+      console.error(`[global-setup] Failed to create test user: ${error.message}. Retrying via listUsers...`)
+      for (let i = 0; i < 5 && !createdUser; i++) {
+        await new Promise(r => setTimeout(r, 1000))
+        const res = await supabase.auth.admin.listUsers()
+        createdUser = res.data.users.find(u => u.email === TEST_USER_EMAIL)
+      }
+    }
+
+    if (!createdUser) {
+      console.error('[global-setup] Final timeout waiting for user creation.')
       process.exit(1)
     }
 
-    userId = data.user.id
-    console.log('[global-setup] Created test user:', userId)
+    userId = createdUser.id
+    console.log('[global-setup] Created/Fetched test user:', userId)
   }
 
   // Clean slate: delete all existing data for this user (FK-safe order)

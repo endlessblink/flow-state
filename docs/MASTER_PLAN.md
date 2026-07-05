@@ -4046,6 +4046,35 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 
 **Shipped v1.4.231**: installer script logs every step to `$TMPDIR/flowstate-appimage-install.log` and aborts loudly per-step; `cwd:'/'`; missing `child.pid` falls back to electron-updater's own quitAndInstall; relaunch uses `--no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state`. The NEXT update cycle (1.4.231→next) is the instrumented experiment — read the log before closing this bug. User unblocked meanwhile via manual install of checksum-verified pending 1.4.230.
 
+### ~~BUG-1919~~: KDE timer zombie after "+5 min" — BUG-1892 guard swallows the extended session's completion (✅ DONE — awaiting plasmashell reload)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-04 fix; NOT live until plasmashell reload — running shell predates the fix, zombie row heart-beaten through 2026-07-05 05:40) | **Opened**: 2026-07-04
+
+**User repro**: "the timer in kde broke again" (2026-07-04), re-reported 2026-07-05 — second report was the same zombie: the fixed QML was never loaded (plasmashell up since Jul 3 13:48, fix written Jul 4 14:41). Live prod row 52e15e1c: duration 1800 (25min + 300s extension), `remaining_time=0`, `is_active=true`, `completed_at=null`, `device_leader_id=kde-widget`.
+
+**Root cause (precise)**: `postponeTimer`'s extension success handler (main.qml ~:4904) resumes with `currentSessionId = lastCompletedSessionId` but never clears the BUG-1892 per-session-id idempotency guard. When the extended session hits zero, `onSessionComplete` matches `currentSessionId === lastCompletedSessionId` → treated as duplicate re-fire → completion PATCH never sent, leadership never released → heartbeat keeps the zombie row active forever. Vue's BUG-1892 fix cleared its guard in `addExtraTime`; the QML side didn't — fix-asymmetry regression.
+
+**Fix**: clear `lastCompletedSessionId` + `sessionJustCompleted` in the extension success handler.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Live zombie row matches extension arithmetic exactly (1500+300, 0 remaining, active, widget-leader heartbeats) | Yes |
+| Data shape / persisted row shape | Yes | Fixed widget re-adopts the expired-active row and completes it — self-heal, no manual DB write | Yes after reload |
+| Renderer store/state | Yes | Vue `addExtraTime` already clears its guard (BUG-1892) — Vue unaffected | N/A |
+| Electron main/preload bridge | N/A | Widget-side state machine | — |
+| Localhost sidecar endpoint | Yes | Sidecar faithfully reported the zombie (active, 0 remaining) — transport healthy | N/A |
+| KDE polling/control path | Yes | Guard interplay traced: applyFetchedSession clears the boolean guard (:4371); only the id-guard blocked | Yes |
+| Supabase persistence/realtime | Yes | Heartbeats succeeded throughout (token fine) — completion PATCH was never attempted, not failing | Yes |
+| Updater/runtime version | Yes | QML ships via repo symlink; needs qmlcache clear + plasmashell restart | Pending reload |
+| Stale live process/cache state | Yes | CONFIRMED live: running shell predates fix; second user report was stale-process, not regression | Pending reload |
+
+**Exact failure mode fixed**: extension-path guard leak — legitimate re-completion after "+5 min" swallowed.
+**Explicitly not covered**: any future path resuming a completed session id (none exist in QML today).
+**Regression added for reported repro**: `tests/unit/kde/timer-extension-completion.test.ts` — complete→extend→zero→must-complete-again, BUG-1892 non-regression, and a mirror-drift check grepping main.qml's extend handler for the guard-clear lines (RED before fix). KDE pack 173/173.
+**Live boundary proof**: pending user's plasmashell reload — then verify row 52e15e1c flips `is_active=false`.
+
 ### BUG-1918: Sign-out/sign-in recovery path UX — broken sign-out view, sign-in needs manual refresh (📋 PLANNED)
 
 **Priority**: P1 | **Status**: 📋 PLANNED | **Opened**: 2026-07-04
@@ -5946,6 +5975,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1915**~~ | **P1** | ✅ **Nightly automated regression hunt as scheduled cloud agent** (✅ DONE 2026-07-03, first run tonight) |
 | ~~**TASK-1916**~~ | **P0** | ✅ **In-app write-failure visibility — indicator + toast when saves fail** (✅ DONE 2026-07-03, v1.4.230 shipped) |
 | **BUG-1917** | **P0** | 🔄 **Updater Restart quits but never swaps/relaunches — silent installer handoff (instrumented+hardened v1.4.231)** |
+| ~~**BUG-1919**~~ | **P0** | ✅ **KDE timer zombie after +5min extension — BUG-1892 guard swallowed re-completion** (✅ DONE 2026-07-04, widget reload pending) |
 | **BUG-1918** | **P1** | 📋 **Sign-out view broken + sign-in needs manual refresh (BUG-1913 recovery path UX)** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |

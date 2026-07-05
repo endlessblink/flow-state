@@ -4907,8 +4907,15 @@ PlasmoidItem {
                     root.isRunning = true
                     root.hasActiveSession = true
                     root.isDeviceLeader = true
-                    // Keep the same session type
                     console.log("[TIMER] Session extended:", root.lastCompletedSessionId, "new duration:", newDuration)
+                    // BUG-1919: clear the BUG-1892 idempotency guard — the extension
+                    // resumes the SAME session id, so without this the extended
+                    // session's completion matches lastCompletedSessionId, gets
+                    // swallowed as a "re-fire", and the row stays is_active=true
+                    // with remaining_time=0, heart-beaten forever (zombie timer).
+                    // The Vue-side BUG-1892 fix does the same in addExtraTime.
+                    root.lastCompletedSessionId = ""
+                    root.sessionJustCompleted = false
                 } else {
                     console.error("[TIMER] Failed to extend session:", xhr2.status)
                 }

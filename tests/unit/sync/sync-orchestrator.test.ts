@@ -576,6 +576,43 @@ describe('executeOperation: CREATE', () => {
     expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
   })
 
+  it('refreshes an empty auth session before surfacing the auth gate with pending writes', async () => {
+    authStoreMock.user = { id: 'user-001' } as any
+    const { supabase } = await import('@/services/auth/supabase')
+    vi.mocked(supabase.auth.getSession)
+      .mockResolvedValueOnce({ data: { session: null }, error: null } as any)
+      .mockResolvedValue({ data: { session: { access_token: 'fresh-token', user: { id: 'user-001' } } }, error: null } as any)
+    vi.mocked(supabase.auth.refreshSession).mockResolvedValue({
+      data: { session: { access_token: 'fresh-token', user: { id: 'user-001' } } },
+      error: null
+    } as any)
+
+    const op = makeOp({
+      id: 914,
+      operation: 'update',
+      entityType: 'task',
+      entityId: 'task-refreshable-auth',
+      payload: { title: 'refreshable edit', updated_at: new Date().toISOString() }
+    })
+    const taskChain = mockSupabaseChain({ selectData: [{ id: 'task-refreshable-auth', position_version: 3 }] })
+    supabaseMock.fromMock.mockReturnValue(taskChain)
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed'
+    })
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(supabase.auth.refreshSession).toHaveBeenCalled()
+    expect(taskChain.update).toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(914)
+    expect(sync.status.value).not.toBe('error')
+    expect(sync.lastError.value ?? '').not.toMatch(/sign in again/i)
+  })
+
   it('BUG-1913: repeated auth-gate skips with pending work surface error state + writeHealth (not silent)', async () => {
     const { __resetWriteHealthForTests, setWriteHealthNotifier, writesFailing } =
       await import('@/composables/sync/writeHealth')

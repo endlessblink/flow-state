@@ -79,7 +79,17 @@ async function getCurrentAuthUserId(): Promise<string | undefined> {
     const { supabase } = await import('@/services/auth/supabase')
     const { data } = await supabase.auth.getSession()
     const session = data?.session
-    return session?.access_token && session.user?.id ? session.user.id : undefined
+    if (session?.access_token && session.user?.id) return session.user.id
+
+    // BUG-1922: The sync queue is the last line of defense for local edits. If
+    // Supabase storage briefly has no session but the refresh token is still
+    // valid, recover here before surfacing the auth-gate write error.
+    const { data: refreshed, error } = await supabase.auth.refreshSession()
+    if (error) return undefined
+    const refreshedSession = refreshed?.session
+    return refreshedSession?.access_token && refreshedSession.user?.id
+      ? refreshedSession.user.id
+      : undefined
   } catch {
     return undefined
   }

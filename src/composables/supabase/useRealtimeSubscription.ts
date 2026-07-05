@@ -224,11 +224,6 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                 }
 
                 else if (status === 'CLOSED' || status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
-                    // BUG-1320: Downgrade log when tab is hidden — browsers kill WebSockets
-                    // in background tabs, this is expected behavior, not an error
-                    const logFn = document.visibilityState === 'hidden' ? console.debug : console.warn
-                    logFn(`📡 [REALTIME] Connection dropped (${status}):`, err || 'unknown reason')
-
                     if (isExplicitlyClosed) return
 
                     // BUG-1799: Both terminal statuses (CHANNEL_ERROR then CLOSED) fire per failure.
@@ -244,6 +239,13 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                         console.debug('📡 [REALTIME] Skipping duplicate removeChannel (recursion guard)')
                         return
                     }
+
+                    // BUG-1921: Only warn for terminal statuses that will actually drive recovery.
+                    // Supabase emits CLOSED during explicit cleanup and often emits CLOSED after a
+                    // CHANNEL_ERROR from the same drop. Logging before the guards made normal
+                    // cleanup and duplicate terminal statuses look like repeated failures.
+                    const logFn = document.visibilityState === 'hidden' ? console.debug : console.warn
+                    logFn(`📡 [REALTIME] Connection dropped (${status}):`, err || 'unknown reason')
 
                     // PREVENT STALE CHANNELS:
                     // Supabase docs recommend removing the channel before reconnecting

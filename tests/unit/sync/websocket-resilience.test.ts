@@ -234,6 +234,54 @@ describe('WebSocket Resilience — useRealtimeSubscription', () => {
     expect(removeChannelMock).toHaveBeenCalled()
   })
 
+  it('logs only the first terminal status from one realtime drop', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    try {
+      const ctx = buildCtx()
+      const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+      const subscription = initRealtimeSubscription(vi.fn(), vi.fn())
+      await flushAll()
+      const cb = getSubscribeCallback()
+      expect(cb).toBeDefined()
+
+      cb?.('CHANNEL_ERROR', new Error('Connection failed'))
+      await flushAll()
+      cb?.('CLOSED', null)
+      await flushAll()
+
+      const dropWarnings = warnSpy.mock.calls.filter(([message]) =>
+        String(message).includes('📡 [REALTIME] Connection dropped')
+      )
+      expect(dropWarnings).toHaveLength(1)
+
+      await subscription?.unsubscribe()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('does not warn when explicit cleanup triggers a CLOSED callback', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    try {
+      const ctx = buildCtx()
+      const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+      const subscription = initRealtimeSubscription(vi.fn(), vi.fn())
+      await flushAll()
+      const cb = getSubscribeCallback()
+      expect(cb).toBeDefined()
+
+      await subscription?.unsubscribe()
+      cb?.('CLOSED', null)
+      await flushAll()
+
+      expect(warnSpy.mock.calls.some(([message]) =>
+        String(message).includes('📡 [REALTIME] Connection dropped')
+      )).toBe(false)
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
   // 11. On CLOSED status, reconnects (channel created again after delay)
   it('schedules reconnection attempt on CLOSED status', async () => {
     // Use real timers — fake timers interfere with the async mock chain

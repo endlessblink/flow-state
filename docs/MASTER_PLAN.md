@@ -112,6 +112,42 @@
 
 **Tests**: RED/green focused pack `npm test -- tests/unit/stores/smart-merge.test.ts tests/unit/canvas/merge-group-load.test.ts tests/unit/local-api/server-contract.test.ts tests/unit/kde/timer-sync.test.ts` passed 83/83. Related proof: `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1920: restore cached canvas tasks/groups and fix KDE break completion fallback" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.232`; AppImage/deb artifact endpoints return HTTP 200.
 
+### ~~BUG-1921~~: Realtime cleanup and duplicate terminal statuses spam console warnings (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-05) — suppressed misleading duplicate/cleanup realtime drop warnings and shipped Electron updater `1.4.233`. | **Depends on**: BUG-1320, BUG-1723, BUG-1799, BUG-1920
+
+**User evidence**: production console showed repeated `📡 [REALTIME] Connection dropped (CHANNEL_ERROR): unknown reason` and `📡 [REALTIME] Connection dropped (CLOSED): unknown reason` warnings from the bundled `index-BdUkLseU.js`.
+
+**Root cause**: `useRealtimeSubscription.ts` logged every terminal Supabase realtime status before checking existing guards. Supabase can emit `CLOSED` after `CHANNEL_ERROR` for the same drop, and `removeChannel()` during explicit cleanup can also trigger `CLOSED`. Because logging happened before `isExplicitlyClosed` and `reconnectTimer` checks, normal cleanup and duplicate terminal statuses looked like repeated runtime failures even though reconnect backoff was already deduped.
+
+**Fix**: moved the explicit-close, duplicate-reconnect, and remove recursion guards ahead of the warning. The first real terminal status still logs and drives recovery; duplicate terminal statuses and explicit cleanup callbacks return quietly.
+
+**Exact failure mode fixed**: one realtime drop no longer produces both `CHANNEL_ERROR` and follow-up `CLOSED` warnings, and explicit unsubscribe/cleanup no longer logs `Connection dropped` warnings.
+
+**Explicitly not covered**: this does not claim Supabase websocket transport will never drop. Real first drops still log once and still use the existing reconnect/backoff path.
+
+**Regression added for reported repro**: `tests/unit/sync/websocket-resilience.test.ts` now asserts that a `CHANNEL_ERROR` followed by `CLOSED` logs only one drop warning, and that an explicit cleanup-triggered `CLOSED` logs no drop warning.
+
+**Tests**: RED first failed in `npm test -- tests/unit/sync/websocket-resilience.test.ts` with 2 failing warnings regressions, then green passed 19/19 after the fix. Related proof: `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1921: suppress duplicate realtime drop warnings" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.233`; AppImage/deb artifact endpoints return HTTP 200.
+
+### ~~BUG-1922~~: Sync Errors popover repeats “Sign-in expired” before trying recoverable refresh (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-05) — sync queue now refreshes an empty Supabase session before surfacing the auth gate, included in Electron updater `1.4.233`. | **Depends on**: BUG-1898, BUG-1913, BUG-1921
+
+**User evidence**: Sync Errors popover kept appearing with `Sign-in expired — changes are kept on this device and will sync after you sign in again`, while the app shell was still open and edits were being retained locally.
+
+**Root cause**: the sync queue auth gate called `supabase.auth.getSession()` and, when it returned no usable session, immediately skipped queue processing. After repeated skips it surfaced the auth-gate error via `writeHealth`. That was correct for a truly dead session, but too early for a recoverable storage/refresh gap: it did not call `refreshSession()` before declaring pending writes blocked.
+
+**Fix**: `getCurrentAuthUserId()` now attempts `supabase.auth.refreshSession()` when `getSession()` has no usable access token. If refresh succeeds, the queue processes the pending operation in the same pass and avoids the misleading expired-session popover. If refresh fails, the existing bounded auth-gate warning remains.
+
+**Exact failure mode fixed**: queued local edits no longer surface the “Sign-in expired” sync error solely because `getSession()` was briefly empty while `refreshSession()` could still return a valid session.
+
+**Explicitly not covered**: if the refresh token is truly invalid/expired and `refreshSession()` fails, FlowState still shows the sync error and keeps changes local until re-authentication.
+
+**Regression added for reported repro**: `tests/unit/sync/sync-orchestrator.test.ts` now covers empty `getSession()` plus successful `refreshSession()` flushing a pending write without setting the auth-gate error.
+
+**Tests**: RED first failed because `refreshSession()` was not called; green `npm test -- tests/unit/sync/sync-orchestrator.test.ts` passed 89/89. Related proof: `npm test -- tests/unit/sync/websocket-resilience.test.ts tests/unit/sync/sync-orchestrator.test.ts`; `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1921/1922: suppress duplicate realtime warnings and recover sync auth gate" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.233`; AppImage/deb artifact endpoints return HTTP 200.
+
 ### ~~BUG-1887~~: Sync Errors popover is translucent over canvas content (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-24) — fixed the Sync Errors popover and Storybook mirror to render opaque surfaces instead of inheriting glass/translucent tokens. | **Depends on**: TASK-1183

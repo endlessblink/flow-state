@@ -25,12 +25,13 @@ const emit = defineEmits<{
       </p>
     </div>
     
-    <div class="option-picker">
+    <div class="option-picker" role="group" :aria-label="label">
       <button
         v-for="option in options"
         :key="option.value"
         class="option-btn"
         :class="{ active: value === option.value }"
+        :aria-pressed="value === option.value"
         @click="emit('update', option.value)"
       >
         {{ option.label }}

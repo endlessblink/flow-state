@@ -102,7 +102,8 @@ const coalescerMocks = vi.hoisted(() => ({
 }))
 
 const authStoreMock = vi.hoisted(() => ({
-  user: { id: 'user-001' }
+  user: { id: 'user-001' },
+  canSyncRemotely: true
 }))
 
 const taskStoreMock = vi.hoisted(() => ({
@@ -666,6 +667,44 @@ describe('executeOperation: CREATE', () => {
     writeQueueMocks.getPendingOperations.mockResolvedValue([])
     await sync.forceSync()
     expect(syncState.value.status).not.toBe('error')
+  })
+
+  it('BUG-1926: auth reconnect grace after an Electron update keeps pending writes quiet until remote auth is ready', async () => {
+    const { __resetWriteHealthForTests, setWriteHealthNotifier, writesFailing } =
+      await import('@/composables/sync/writeHealth')
+    const { syncState } = await import('@/composables/sync/useSyncOrchestrator')
+    __resetWriteHealthForTests()
+    setWriteHealthNotifier(() => {})
+
+    const { supabase } = await import('@/services/auth/supabase')
+    const sync = useSyncOrchestrator()
+
+    authStoreMock.user = { id: 'user-001' } as any
+    authStoreMock.canSyncRemotely = false
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: null },
+      error: null
+    } as any)
+    const op = makeOp({
+      id: 916,
+      operation: 'update',
+      entityType: 'task',
+      entityId: 'task-update-reconnect',
+      payload: { id: 'task-update-reconnect', title: 'local edit during updater restart' }
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+
+    await sync.forceSync()
+    await sync.forceSync()
+    await sync.forceSync()
+
+    expect(syncState.value.status).not.toBe('error')
+    expect(syncState.value.lastError ?? '').not.toMatch(/sign in again/i)
+    expect(writesFailing.value).toBe(false)
+    expect(supabase.auth.refreshSession).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
+
+    authStoreMock.canSyncRemotely = true
   })
 })
 

@@ -877,6 +877,30 @@ async function processQueue(): Promise<void> {
     }
   } catch { /* workspace store not available */ }
 
+  // BUG-1926: After an Electron update/restart the auth store can intentionally
+  // keep a signed-in shell while refresh recovery is still in progress
+  // (`canSyncRemotely === false`). Do not convert that bounded reconnect grace
+  // into the scarier "Sign-in expired" write-health error; leave queued writes
+  // pending until auth is actually allowed to hit RLS again.
+  try {
+    const { useAuthStore } = await import('@/stores/auth')
+    const authStore = useAuthStore()
+    if (authStore.user?.id && authStore.canSyncRemotely === false) {
+      consecutiveAuthGateSkips = 0
+      const stats = await getStats().catch(() => null)
+      if (stats) {
+        state.value.pendingCount = stats.pendingCount + stats.syncingCount
+        state.value.failedCount = stats.failedCount + stats.conflictCount
+      }
+      state.value.status = state.value.pendingCount > 0 ? 'pending' : 'synced'
+      state.value.lastError = undefined
+      if (import.meta.env.DEV) {
+        console.debug('[SYNC] Holding queue — auth reconnect grace is active')
+      }
+      return
+    }
+  } catch { /* auth store not available */ }
+
   if (!(await getCurrentAuthUserId())) {
     if (import.meta.env.DEV) {
       console.debug('[SYNC] Skipping queue — no fresh auth session for RLS writes')

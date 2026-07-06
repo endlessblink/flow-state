@@ -150,6 +150,24 @@
 
 **Tests**: RED first failed in `npm test -- tests/unit/kde/timer-sync.test.ts` because `onSessionComplete()` did not contain `root.currentTaskId = ""`; green passed 44/44 after the fix.
 
+### ~~BUG-1926~~: Sync Errors popover reports sign-in expired during Electron update auth grace (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-06) — sync queue now respects bounded auth reconnect grace after Electron updates instead of surfacing a misleading sign-in-expired write error. | **Depends on**: BUG-1898, BUG-1913, BUG-1922
+
+**User evidence**: after updating, the desktop app kept showing the Sync Errors popover with `Sign-in expired — changes are kept on this device and will sync after you sign in again`; the user pointed at the close and Dismiss controls and reported it happens after every update.
+
+**Root cause**: `auth.ts` intentionally keeps a signed-in shell during post-update reconnect grace (`canSyncRemotely === false`) while token refresh is still recovering. The sync queue ignored that boundary and fell through to the generic no-session auth gate, so pending writes plus a transient updater/auth gap became a persistent "Sign-in expired" write-health error.
+
+**Fix**: `processQueue()` now checks `authStore.user` + `authStore.canSyncRemotely === false` before calling the Supabase session gate. In that bounded reconnect-grace state it keeps queued writes pending, clears the stale auth-gate last error, and waits until remote auth is actually allowed to hit RLS again.
+
+**Exact failure mode fixed**: an Electron update/restart auth-grace window can no longer produce the Sync Errors popover solely because Supabase storage has not rehydrated while the app is deliberately preserving the signed-in shell.
+
+**Explicitly not covered**: if the grace deadline expires and the refresh token is truly dead, FlowState still requires re-authentication and queued writes remain local until sign-in recovers.
+
+**Regression added for reported repro**: `tests/unit/sync/sync-orchestrator.test.ts` now covers pending writes + signed-in user + `canSyncRemotely=false`, requiring no "sign in again" error, no `writesFailing`, no RLS write, and no failed-queue mutation.
+
+**Tests**: RED first failed in `npm test -- tests/unit/sync/sync-orchestrator.test.ts` because `syncState.value.status` became `error`; green passed 90/90 after the reconnect-grace guard. Related proof: `npm test -- tests/unit/sync/sync-orchestrator.test.ts tests/unit/sync/write-health.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/stores/auth-grace-bound.test.ts`; `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1926: respect auth reconnect grace after Electron updates" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.236`; AppImage/deb artifact range requests return HTTP 206.
+
 ### ~~BUG-1925~~: Permanent delete and Canvas visibility regress through shared view-state boundaries (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-06) — added boundary guardrails for the two recurring Electron-visible failures: edit-modal permanent delete silently doing nothing on some views, and Canvas disappearing after switching views. | **Depends on**: BUG-1673, BUG-1850, BUG-1891, BUG-1910

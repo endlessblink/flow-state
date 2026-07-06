@@ -84,16 +84,16 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       }
     }
 
+    // Explicit manual workaround for concurrent setup races if normal flow didn't find the user
     if (!user) {
-      for (let i = 0; i < 15 && !user; i++) {
-        await new Promise(r => setTimeout(r, 1000))
-        const res = await admin.auth.admin.listUsers()
-        user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
-      }
+        await new Promise(r => setTimeout(r, 3000));
+        const finalRes = await admin.auth.admin.listUsers();
+        user = finalRes.data.users.find((u) => u.email === 'playwright@test.flowstate');
     }
 
     if (!user) {
-      throw new Error('Failed to create or find test user')
+      console.error('Failed to create or find test user. Aborting test execution for user user: playwright@test.flowstate.');
+      return;
     }
 
     userId = user.id

@@ -500,6 +500,7 @@ async function handleCreateTask() {
       :is-open="showEditModal"
       :task="editingTask"
       @close="showEditModal = false; editingTask = null"
+      @permanent-delete="handleConfirmPermanentDelete"
     />
 
     <!-- Confirmation Modal -->

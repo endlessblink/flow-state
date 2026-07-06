@@ -307,7 +307,12 @@
 
     <!-- Modals -->
     <ProjectModal v-if="showProjectModal" :is-open="showProjectModal" @close="showProjectModal = false" />
-    <TaskEditModal :is-open="showEditModal" :task="taskToEdit" @close="showEditModal = false; taskToEdit = null" />
+    <TaskEditModal
+      :is-open="showEditModal"
+      :task="taskToEdit"
+      @close="showEditModal = false; taskToEdit = null"
+      @permanent-delete="handlePermanentDelete"
+    />
 
     <!-- Delete Confirmation Modal -->
     <BaseModal
@@ -534,6 +539,13 @@ function openFullEdit() {
   showEditPanel.value = false
   taskToEdit.value = currentTask.value
   showEditModal.value = true
+}
+
+async function handlePermanentDelete(taskId: string) {
+  const { getUndoSystem } = await import('@/composables/undoSingleton')
+  await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
+  showEditModal.value = false
+  taskToEdit.value = null
 }
 
 function handleExit() { router.push({ name: 'board' }) }

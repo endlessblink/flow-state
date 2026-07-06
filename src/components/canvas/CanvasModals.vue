@@ -4,6 +4,7 @@
     :is-open="modals.isEditModalOpen"
     :task="modals.selectedTask"
     @close="modals.closeEditModal"
+    @permanent-delete="handlePermanentDelete"
   />
 
   <!-- Quick Task Create Modal -->
@@ -126,6 +127,12 @@ const handleBulkDeleteConfirm = () => {
 const handleDeleteGroupConfirm = () => {
   emit('confirmDeleteGroup')
   modals.closeDeleteGroupModal()
+}
+
+const handlePermanentDelete = async (taskId: string) => {
+  const { getUndoSystem } = await import('@/composables/undoSingleton')
+  await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
+  modals.closeEditModal()
 }
 
 </script>

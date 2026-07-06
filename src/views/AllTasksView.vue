@@ -66,6 +66,7 @@
       :is-open="showEditModal"
       :task="selectedTask"
       @close="closeEditModal"
+      @permanent-delete="handleConfirmPermanentDelete"
     />
 
     <!-- Task Context Menu -->

@@ -66,6 +66,7 @@
       :is-open="showEditModal"
       :task="selectedTask"
       @close="closeEditModal"
+      @permanent-delete="handlePermanentDelete"
     />
   </div>
 </template>
@@ -159,6 +160,12 @@ const handleEditTask = (taskId: string) => {
 const closeEditModal = () => {
   showEditModal.value = false
   selectedTask.value = null
+}
+
+const handlePermanentDelete = async (taskId: string) => {
+  const { getUndoSystem } = await import('@/composables/undoSingleton')
+  await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
+  closeEditModal()
 }
 
 const handleToggleComplete = async (taskId: string) => {

@@ -114,6 +114,26 @@ describe('undo-aware modal and context-menu entry points', () => {
     expect(commandPalette).not.toContain('await taskStore.createTask(newTask)')
   })
 
+  it('wires every TaskEditModal permanent-delete event to a real handler', () => {
+    const files = [
+      'src/layouts/ModalManager.vue',
+      'src/views/BoardView.vue',
+      'src/views/LaneView.vue',
+      'src/views/AllTasksView.vue',
+      'src/views/QuickSortView.vue',
+      'src/views/CalendarView.vue',
+      'src/components/canvas/CanvasModals.vue',
+      'src/components/morning-dashboard/MorningRitualPanel.vue',
+      'src/components/morning-dashboard/BigThreeCard.vue',
+    ]
+
+    for (const file of files) {
+      const source = readSource(file)
+      expect(source, `${file} should render TaskEditModal`).toContain('<TaskEditModal')
+      expect(source, `${file} must handle TaskEditModal permanent-delete`).toContain('@permanent-delete=')
+    }
+  })
+
   it('keeps small inline task edits undo-aware', () => {
     const quickSort = readSource('src/views/QuickSortView.vue')
     const badges = readSource('src/components/kanban/card/TaskCardBadges.vue')

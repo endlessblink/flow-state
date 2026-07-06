@@ -7,6 +7,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { ref } from 'vue'
 
 // ============================================================================
@@ -43,6 +45,10 @@ import { findMatchingGroupForDueDate, calculatePositionInGroup } from '@/composa
 import { getAbsolutePositionForNodeSync } from '@/composables/canvas/useNodeSync'
 import type { Task } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
+
+const projectRoot = resolve(__dirname, '../../..')
+const readSource = (relativePath: string) =>
+  readFileSync(resolve(projectRoot, relativePath), 'utf8')
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -224,6 +230,15 @@ describe('useCanvasFilteredState — dynamicNodeExtent & filtering', () => {
     const { tasksWithCanvasPosition } = useCanvasFilteredState(tasks, store as never)
     expect(tasksWithCanvasPosition.value).toHaveLength(1)
     expect(tasksWithCanvasPosition.value[0].id).toBe(withPos.id)
+  })
+
+  it('11: Canvas orchestrator reads raw canvas-position tasks, not cross-view filteredTasks', () => {
+    const source = readSource('src/composables/canvas/useCanvasOrchestrator.ts')
+
+    expect(source).toContain('const canvasSourceTasks = computed(() => taskStore.tasksWithCanvasPosition)')
+    expect(source).toContain('useCanvasFilteredState(canvasSourceTasks, canvasStoreWithTaskStore)')
+    expect(source).not.toContain('const filteredTasks = computed(() => taskStore.filteredTasks)')
+    expect(source).not.toContain('useCanvasFilteredState(filteredTasks, canvasStoreWithTaskStore)')
   })
 })
 

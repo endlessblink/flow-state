@@ -150,6 +150,24 @@
 
 **Tests**: RED first failed in `npm test -- tests/unit/kde/timer-sync.test.ts` because `onSessionComplete()` did not contain `root.currentTaskId = ""`; green passed 44/44 after the fix.
 
+### ~~BUG-1925~~: Permanent delete and Canvas visibility regress through shared view-state boundaries (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-06) — added boundary guardrails for the two recurring Electron-visible failures: edit-modal permanent delete silently doing nothing on some views, and Canvas disappearing after switching views. | **Depends on**: BUG-1673, BUG-1850, BUG-1891, BUG-1910
+
+**User evidence**: user reported "permanent delete doesnt work on the electron app again", then immediately "after switching views everything suddenly dissapaers from the canvas", followed by "both of these things keep breaking no matter how many times we fix them".
+
+**Root cause**: these were separate symptoms of weak task-boundary contracts. Several `TaskEditModal` mount points rendered the permanent-delete action but did not listen for its `permanent-delete` event, so the modal could close without invoking a hard delete. Separately, `useCanvasOrchestrator()` fed Canvas from `taskStore.filteredTasks`, so Board/List smart/status/project filters could shrink the Canvas source list to zero when switching views.
+
+**Fix**: all `TaskEditModal` mount points now wire `@permanent-delete` to a hard-delete handler or existing permanent-delete confirmation path. Canvas orchestration now reads `taskStore.tasksWithCanvasPosition`, which is raw-task based and only applies workspace/canvas-position selection before Canvas-specific visibility filtering.
+
+**Exact failure modes fixed**: edit-modal permanent delete can no longer be silently unwired on Electron-visible task edit surfaces; Canvas nodes can no longer disappear solely because another view changed global task filters.
+
+**Explicitly not covered**: this does not claim Supabase hard-delete policies can never reject a delete, and it does not resolve the broader multi-writer canvas group boot-load work tracked under BUG-1910. It hardens the client-side UI/data-source contracts that repeatedly let these symptoms reappear.
+
+**Regression added for reported repro**: `tests/unit/undo-entrypoint-contract.test.ts` now requires every `TaskEditModal` usage to handle `@permanent-delete`. `tests/unit/canvas/canvas-composables.test.ts` now requires Canvas orchestration to use raw canvas-position tasks instead of cross-view `filteredTasks`.
+
+**Tests**: RED first failed in `npm test -- tests/unit/undo-entrypoint-contract.test.ts` because `BoardView.vue` lacked `@permanent-delete`; RED first failed in `npm test -- tests/unit/canvas/canvas-composables.test.ts` because `useCanvasOrchestrator.ts` still used `filteredTasks`. Both focused tests passed green after the fix. Related proof: `npm test -- tests/unit/undo-entrypoint-contract.test.ts tests/unit/canvas/canvas-composables.test.ts tests/unit/undo-task-operations.test.ts tests/unit/composables/useSupabaseDatabase-delete.test.ts tests/unit/sync/sync-orchestrator.test.ts`; `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1925: wire edit-modal permanent delete and isolate Canvas from cross-view filters"`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.235`; AppImage/deb artifact endpoints return HTTP 200.
+
 ### ~~BUG-1921~~: Realtime cleanup and duplicate terminal statuses spam console warnings (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-05) — suppressed misleading duplicate/cleanup realtime drop warnings and shipped Electron updater `1.4.233`. | **Depends on**: BUG-1320, BUG-1723, BUG-1799, BUG-1920

@@ -140,7 +140,7 @@ export function useCanvasOrchestrator() {
     // --- END ZOOM PERF INSTRUMENTATION ---
 
     // --- 2. Computed Data ---
-    const filteredTasks = computed(() => taskStore.filteredTasks)
+    const canvasSourceTasks = computed(() => taskStore.tasksWithCanvasPosition)
 
     // Pass the live Pinia taskStore reference (not a plain-object getter wrapper)
     // so consumer computeds get native Pinia tracking on `hideCanvasDoneTasks` /
@@ -157,7 +157,7 @@ export function useCanvasOrchestrator() {
         dynamicNodeExtent,
         hasNoTasks,
         hasInboxTasks
-    } = useCanvasFilteredState(filteredTasks, canvasStoreWithTaskStore)
+    } = useCanvasFilteredState(canvasSourceTasks, canvasStoreWithTaskStore)
 
     // --- 3. Feature Initialization ---
 
@@ -935,7 +935,7 @@ export function useCanvasOrchestrator() {
         vueFlowRef: ref(null), // TODO: Do we need this ref if we use Core? CanvasView binds it.
 
         // Computed
-        filteredTasks,
+        filteredTasks: canvasSourceTasks,
         tasksWithCanvasPosition,
         dynamicNodeExtent,
         hasNoTasks,

@@ -27,6 +27,7 @@
       :is-open="isEditModalOpen"
       :task="selectedTask"
       @close="closeEditModal"
+      @permanent-delete="handlePermanentDelete"
     />
 
     <!-- Quick Task Create Modal -->
@@ -294,6 +295,12 @@ const dragCreate = useCalendarDragCreate()
 
 const handleTaskCreated = () => {
   dragCreate.showQuickCreateModal.value = false
+}
+
+const handlePermanentDelete = async (taskId: string) => {
+  const { getUndoSystem } = await import('@/composables/undoSingleton')
+  await getUndoSystem().permanentlyDeleteTaskWithUndo(taskId)
+  closeEditModal()
 }
 
 // TASK-1434: Handle mousedown on week view cell for drag-to-create

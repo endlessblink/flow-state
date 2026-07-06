@@ -142,6 +142,7 @@
       :is-open="showEditModal"
       :task="selectedTask"
       @close="closeEditModal"
+      @permanent-delete="handleConfirmPermanentDelete"
     />
 
     <!-- QUICK TASK CREATE MODAL -->

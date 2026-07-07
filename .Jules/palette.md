@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility: Hover-revealed action buttons visibility
+**Learning:** Hover-revealed action buttons in Kanban cards and task rows (e.g., .compact-actions, .task-row__actions) that rely solely on `opacity: 0` and `opacity: 1` on hover/focus-within are not keyboard-accessible when a screen reader or keyboard user navigates to them, unless `pointer-events: auto` is also applied. Furthermore, they need to be natively focusable.
+**Action:** Ensure that any element revealed via `:focus-within` or `:hover` visibility overrides includes `pointer-events: auto` along with `opacity: 1` to ensure interactability, as specified in memory.

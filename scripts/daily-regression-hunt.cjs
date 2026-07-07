@@ -127,6 +127,7 @@ function parseArgs(argv) {
     dryRun: false,
     json: false,
     latest: false,
+    notify: false,
     reportDir: DEFAULT_REPORT_DIR,
     only: null,
     date: null,
@@ -143,6 +144,8 @@ function parseArgs(argv) {
       options.json = true
     } else if (arg === '--latest') {
       options.latest = true
+    } else if (arg === '--notify') {
+      options.notify = true
     } else if (arg === '--report-dir') {
       options.reportDir = argv[++i] || options.reportDir
     } else if (arg === '--only') {
@@ -178,6 +181,7 @@ Options:
   --report-dir <dir>   Report output directory. Default: ${DEFAULT_REPORT_DIR}
   --only <ids>         Comma-separated check IDs to run.
   --date YYYY-MM-DD    Override date for rotation tests.
+  --notify            Send a desktop notification when the run fails.
 `)
 }
 
@@ -389,6 +393,26 @@ function printLatest(reportDir) {
   console.log(summaryLine)
 }
 
+function notifyIfNeeded(report, enabled) {
+  if (!enabled || report.summary.fail === 0) {
+    return
+  }
+
+  const failed = report.checks.find((check) => check.status === 'fail')
+  const title = `FlowState regression failed: ${report.summary.fail}/${report.summary.total}`
+  const body = [
+    failed ? `${failed.id}: ${failed.likelyFailureClass}` : 'Open the latest report for details.',
+    report.files.markdown,
+  ].filter(Boolean).join('\n')
+
+  spawnSync('notify-send', ['-u', 'critical', title, body], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    timeout: 10_000,
+    env: process.env,
+  })
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2))
 
@@ -421,6 +445,7 @@ function main() {
   }
 
   writeReports(report, options.reportDir)
+  notifyIfNeeded(report, options.notify)
 
   if (options.json) {
     console.log(JSON.stringify(report, null, 2))

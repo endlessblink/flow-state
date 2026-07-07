@@ -18,6 +18,7 @@ describe('daily regression hunt script', () => {
     const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
     const output = runHunt([
       '--dry-run',
+      '--notify',
       '--json',
       '--date',
       '2026-07-06',
@@ -107,5 +108,12 @@ describe('daily regression hunt script', () => {
     expect(packageJson.scripts['regression:daily']).toBe('node scripts/daily-regression-hunt.cjs --mode daily')
     expect(packageJson.scripts['regression:weekly']).toBe('node scripts/daily-regression-hunt.cjs --mode weekly')
     expect(packageJson.scripts['regression:report']).toBe('node scripts/daily-regression-hunt.cjs --latest')
+  })
+
+  it('installs the user timer with failure notifications enabled', () => {
+    const installer = readFileSync('scripts/install-daily-regression-hunt.sh', 'utf8')
+
+    expect(installer).toContain("ExecStart=/usr/bin/env bash -lc 'npm run regression:daily -- --notify'")
+    expect(installer).toContain('OnCalendar=*-*-* 09:30:00')
   })
 })

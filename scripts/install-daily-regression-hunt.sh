@@ -17,7 +17,7 @@ Documentation=file://$REPO_DIR/docs/MASTER_PLAN.md
 Type=oneshot
 WorkingDirectory=$REPO_DIR
 Environment=TZ=Asia/Jerusalem
-ExecStart=/usr/bin/env bash -lc 'npm run regression:daily'
+ExecStart=/usr/bin/env bash -lc 'npm run regression:daily -- --notify'
 SERVICE
 
 cat > "$TIMER_PATH" <<TIMER

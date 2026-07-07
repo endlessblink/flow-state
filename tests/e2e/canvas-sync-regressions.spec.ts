@@ -71,7 +71,20 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       const res = await admin.auth.admin.listUsers()
       user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!user) { const { data } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); user = data.user; }
+    if (!user) {
+      const { data } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true });
+      user = data?.user;
+      if (!user) {
+        let attempts = 0;
+        while (!user && attempts < 5) {
+          await new Promise(r => setTimeout(r, 1000));
+          const fallback = await admin.auth.admin.listUsers();
+          user = fallback.data.users.find((u) => u.email === 'playwright@test.flowstate');
+          attempts++;
+        }
+      }
+    }
+    if (!user) throw new Error('Failed to create or retrieve user for E2E test');
     userId = user.id
 
     await admin.from('tasks').delete().in('id', ALL_IDS)

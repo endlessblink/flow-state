@@ -1,0 +1,111 @@
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, readdirSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
+
+const scriptPath = 'scripts/daily-regression-hunt.cjs'
+
+function runHunt(args: string[] = []) {
+  return execFileSync('node', [scriptPath, ...args], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  })
+}
+
+describe('daily regression hunt script', () => {
+  it('plans the fixed daily checks plus Monday canvas coverage without mutating state', () => {
+    const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
+    const output = runHunt([
+      '--dry-run',
+      '--json',
+      '--date',
+      '2026-07-06',
+      '--report-dir',
+      reportDir,
+    ])
+
+    const report = JSON.parse(output)
+    const ids = report.checks.map((check: { id: string }) => check.id)
+
+    expect(report.mode).toBe('daily')
+    expect(report.dryRun).toBe(true)
+    expect(ids).toEqual(expect.arrayContaining([
+      'git-status',
+      'electron-sync-guard',
+      'type-check',
+      'focused-recurring-pack',
+      'timer-boundary',
+      'updater-manifest',
+      'canvas-flows',
+    ]))
+    expect(report.summary.failed).toBe(0)
+    expect(report.summary.skipped).toBe(report.checks.length)
+    expect(report.files.json).toContain(reportDir)
+    expect(report.files.markdown).toContain(reportDir)
+    expect(readdirSync(reportDir).some((name) => name.endsWith('.json'))).toBe(true)
+    expect(readdirSync(reportDir).some((name) => name.endsWith('.md'))).toBe(true)
+  })
+
+  it('rotates Tuesday daily coverage to timer flows', () => {
+    const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
+    const output = runHunt([
+      '--dry-run',
+      '--json',
+      '--date',
+      '2026-07-07',
+      '--report-dir',
+      reportDir,
+    ])
+
+    const report = JSON.parse(output)
+    const ids = report.checks.map((check: { id: string }) => check.id)
+
+    expect(ids).toContain('timer-flows')
+    expect(ids).not.toContain('canvas-flows')
+  })
+
+  it('can filter to one boundary for targeted smoke checks', () => {
+    const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
+    const output = runHunt([
+      '--dry-run',
+      '--json',
+      '--only',
+      'timer-boundary',
+      '--report-dir',
+      reportDir,
+    ])
+
+    const report = JSON.parse(output)
+    expect(report.checks.map((check: { id: string }) => check.id)).toEqual(['timer-boundary'])
+  })
+
+  it('classifies recurring FlowState failure signatures', () => {
+    const auth = JSON.parse(runHunt(['--classify', 'Sign-in expired changes are kept on this device']))
+    const canvas = JSON.parse(runHunt(['--classify', 'canvas groups and tasks disappeared after switching views']))
+    const timer = JSON.parse(runHunt(['--classify', 'KDE widget timer stuck at 0 and local api 5577 active task stale']))
+
+    expect(auth.failureClass).toBe('auth/sync')
+    expect(canvas.failureClass).toBe('Canvas data/state')
+    expect(timer.failureClass).toBe('KDE/local sidecar')
+  })
+
+  it('prints the latest markdown report path and summary', () => {
+    const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
+    runHunt(['--dry-run', '--date', '2026-07-06', '--report-dir', reportDir])
+
+    const latest = runHunt(['--latest', '--report-dir', reportDir])
+
+    expect(latest).toContain('Latest FlowState regression hunt report')
+    expect(latest).toContain('.md')
+    expect(readFileSync(latest.trim().split('\n')[1], 'utf8')).toContain('# FlowState Regression Hunt')
+  })
+
+  it('exposes package scripts for daily, weekly, and latest report use', () => {
+    const packageJson = JSON.parse(readFileSync('package.json', 'utf8'))
+
+    expect(packageJson.scripts['regression:daily']).toBe('node scripts/daily-regression-hunt.cjs --mode daily')
+    expect(packageJson.scripts['regression:weekly']).toBe('node scripts/daily-regression-hunt.cjs --mode weekly')
+    expect(packageJson.scripts['regression:report']).toBe('node scripts/daily-regression-hunt.cjs --latest')
+  })
+})

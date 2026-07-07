@@ -44,6 +44,30 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### ~~TASK-1927~~: Daily FlowState regression hunt loop (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-07) — added a non-mutating daily/weekly regression runner, report summaries, npm entry points, and an optional user-level systemd timer installer. | **Depends on**: BUG-1920, BUG-1921, BUG-1923, BUG-1924, BUG-1925, BUG-1926
+
+**Why**: the same failure classes kept recurring after fixes: auth/update grace surfacing false sync errors, canvas tasks/groups disappearing after view changes or sign-in, permanent delete silently doing nothing on some surfaces, KDE/local timer state sticking at zero or resetting, duplicate realtime warnings, and updater/runtime boundary drift. The project needs a daily loop that hunts these classes proactively instead of waiting for screenshots.
+
+**Fix**: `scripts/daily-regression-hunt.cjs` now orchestrates a bounded regression pack and writes JSON/Markdown reports under ignored `reports/regression-hunt/`. The default daily pack checks git dirty state, `guard:electron-sync`, typecheck, a focused recurring unit pack, the Electron/KDE timer boundary diagnostic, the live Electron updater manifest, and one rotating heavier user-flow suite. `--mode weekly` runs the broader rotating set; `--only` targets one boundary; `--dry-run` proves the plan without executing commands; `--latest` prints the newest report. `scripts/install-daily-regression-hunt.sh` installs a user systemd timer for 09:30 Asia/Jerusalem.
+
+**Failure-class coverage**:
+
+| Class | Daily check |
+| --- | --- |
+| Auth/sync and update grace | `npm run guard:electron-sync`, focused sync/auth tests |
+| Supabase/realtime warning regressions | guard pack + classifier on failed output |
+| Canvas data/state | focused canvas composable test + Monday/Thursday canvas flows |
+| Permanent delete/undo | focused undo entrypoint test + Wednesday task flows |
+| KDE/local sidecar | `node scripts/diagnose-timer-boundary.cjs` + Tuesday/Friday timer flows |
+| Electron updater/runtime | live `latest-linux.yml` probe |
+| Stale process/cache | git/process boundary output and timer diagnostic snippets |
+
+**Explicitly not covered**: the runner does not mutate production data, clear sync queues, commit, deploy, update snapshots, or auto-install itself. It reports likely failure class, failed command, output snippet, and next repro command so a fix lane can start with evidence.
+
+**Tests**: RED first failed in `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts` because `scripts/daily-regression-hunt.cjs` and the npm scripts did not exist. Green proof: `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts`; `npm run regression:daily -- --dry-run --date 2026-07-06 --report-dir /tmp/flowstate-regression-hunt-smoke --json`; `npm run regression:report -- --report-dir /tmp/flowstate-regression-hunt-smoke`; `npm test -- tests/unit/sync/sync-orchestrator.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/canvas/canvas-composables.test.ts tests/unit/undo-entrypoint-contract.test.ts tests/unit/kde/timer-sync.test.ts`; `npm run guard:electron-sync`; `npm run type-check`; `npm run lint`; `npm run electron:build`. Live updater manifest probe passed outside sandbox DNS and served `version: 1.4.236`.
+
 ### ~~TASK-1882~~: Add Android Gemma transcription provider contract and safe Whisper fallback (DONE)
 
 **Priority**: P1 | **Status**: DONE (2026-06-23) — provider abstraction, Android bridge stub, settings selector, fallback tests, typecheck, and PWA build verified. | **Depends on**: TASK-1131

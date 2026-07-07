@@ -76,12 +76,19 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true });
       user = data?.user;
       if (!user || error) {
-        console.warn('Failed to create user, attempting fallback listUsers loop', error);
+        console.warn('Failed to create user, attempting fallback auth flow', error);
         let attempts = 0;
         while (!user && attempts < 20) {
           await new Promise(r => setTimeout(r, 2000));
-          const fallback = await admin.auth.admin.listUsers();
-          user = fallback.data.users.find((u) => u.email === 'playwright@test.flowstate');
+          // listUsers might be paginated and miss the user if there are >50 users.
+          // Let's try to sign in directly to get the user object if email_exists.
+          const signRes = await admin.auth.signInWithPassword({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!' });
+          if (signRes.data?.user) {
+             user = signRes.data.user;
+          } else {
+             const fallback = await admin.auth.admin.listUsers();
+             user = fallback.data.users.find((u) => u.email === 'playwright@test.flowstate');
+          }
           attempts++;
         }
       }

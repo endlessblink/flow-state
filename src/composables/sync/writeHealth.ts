@@ -32,6 +32,7 @@ let notifier: Notifier | null = null
 
 /** Contexts that read data — never counted as writes. */
 export function isWriteContext(context: string): boolean {
+  if (context === 'queueFlushAuthGate') return false
   return !/^(fetch|load|get|list|check|count|search)/i.test(context)
 }
 

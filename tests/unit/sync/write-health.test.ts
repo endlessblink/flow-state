@@ -90,6 +90,17 @@ describe('writeHealth core (TASK-1916)', () => {
       expect(isWriteContext(read), read).toBe(false)
     }
   })
+
+  it('does not classify queue auth-gate skips as direct write failures', () => {
+    const t0 = 4_000_000
+    reportWriteFailure('queueFlushAuthGate', 'Sign-in expired — sign in again', t0)
+    reportWriteFailure('queueFlushAuthGate', 'Sign-in expired — sign in again', t0 + 1)
+
+    expect(isWriteContext('queueFlushAuthGate')).toBe(false)
+    expect(writesFailing.value).toBe(false)
+    expect(writeFailureMessage.value).toBe('')
+    expect(toasts).toHaveLength(0)
+  })
 })
 
 describe('withRetry feeds writeHealth (BUG-1913 regression)', () => {

@@ -614,7 +614,7 @@ describe('executeOperation: CREATE', () => {
     expect(sync.lastError.value ?? '').not.toMatch(/sign in again/i)
   })
 
-  it('BUG-1913: repeated auth-gate skips with pending work surface error state + writeHealth (not silent)', async () => {
+  it('BUG-1913: repeated auth-gate skips with pending work surface queue state without poisoning writeHealth', async () => {
     const { __resetWriteHealthForTests, setWriteHealthNotifier, writesFailing } =
       await import('@/composables/sync/writeHealth')
     const { syncState } = await import('@/composables/sync/useSyncOrchestrator')
@@ -653,8 +653,9 @@ describe('executeOperation: CREATE', () => {
     expect(syncState.value.status).toBe('error')
     expect(syncState.value.lastError).toMatch(/sign in again/i)
 
-    await sync.forceSync() // skip 3 — second writeHealth report → red indicator
-    expect(writesFailing.value).toBe(true)
+    await sync.forceSync() // skip 3 — remains a queue auth state, not a direct-write health failure
+    expect(syncState.value.status).toBe('error')
+    expect(writesFailing.value).toBe(false)
 
     // Still never touched RLS and never corrupted queue entries
     expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()

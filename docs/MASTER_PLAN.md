@@ -56,7 +56,7 @@
 
 | Class | Daily check |
 | --- | --- |
-| Auth/sync and update grace | `npm run guard:electron-sync`, focused sync/auth tests |
+| Auth/sync and update grace | `npm run guard:electron-sync`, focused sync/auth tests, zero-error Sync Errors popover watchdog |
 | Supabase/realtime warning regressions | guard pack + classifier on failed output |
 | Canvas data/state | focused canvas composable test + Monday/Thursday canvas flows |
 | Permanent delete/undo | focused undo entrypoint test + Wednesday task flows |
@@ -66,7 +66,7 @@
 
 **Explicitly not covered**: the runner does not mutate production data, clear sync queues, commit, deploy, update snapshots, or auto-install itself. It reports likely failure class, failed command, output snippet, and next repro command so a fix lane can start with evidence.
 
-**Tests**: RED first failed in `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts` because `scripts/daily-regression-hunt.cjs` and the npm scripts did not exist. Follow-up RED failed because `--notify` and installer notification wiring did not exist. Green proof: `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts`; `npm run regression:daily -- --dry-run --date 2026-07-06 --report-dir /tmp/flowstate-regression-hunt-smoke --json`; `npm run regression:daily -- --dry-run --notify --date 2026-07-06 --report-dir /tmp/flowstate-regression-hunt-notify-smoke --json`; `npm run regression:report -- --report-dir /tmp/flowstate-regression-hunt-smoke`; `npm test -- tests/unit/sync/sync-orchestrator.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/canvas/canvas-composables.test.ts tests/unit/undo-entrypoint-contract.test.ts tests/unit/kde/timer-sync.test.ts`; `npm run guard:electron-sync`; `npm run type-check`; `npm run lint`; `npm run electron:build`. Live updater manifest probe passed outside sandbox DNS and served `version: 1.4.236`. Activation proof: `bash scripts/install-daily-regression-hunt.sh`; `systemctl --user status flowstate-daily-regression-hunt.timer --no-pager` showed `active (waiting)` and next trigger `Wed 2026-07-08 09:30:00 IDT`.
+**Tests**: RED first failed in `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts` because `scripts/daily-regression-hunt.cjs` and the npm scripts did not exist. Follow-up RED failed because `--notify` and installer notification wiring did not exist. Green proof: `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts`; `npm run regression:daily -- --dry-run --date 2026-07-06 --report-dir /tmp/flowstate-regression-hunt-smoke --json`; `npm run regression:daily -- --dry-run --notify --date 2026-07-06 --report-dir /tmp/flowstate-regression-hunt-notify-smoke --json`; `npm run regression:report -- --report-dir /tmp/flowstate-regression-hunt-smoke`; `npm test -- tests/unit/sync/sync-orchestrator.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/canvas/canvas-composables.test.ts tests/unit/undo-entrypoint-contract.test.ts tests/unit/kde/timer-sync.test.ts`; `npm run guard:electron-sync`; `npm run type-check`; `npm run lint`; `npm run electron:build`. 2026-07-08 watchdog hardening added `tests/unit/sync/sync-status-popover.test.ts` to the focused recurring pack so `0 errors` plus stale sign-in-expired UI cannot regress silently. Live updater manifest probe passed outside sandbox DNS and served `version: 1.4.236`. Activation proof: `bash scripts/install-daily-regression-hunt.sh`; `systemctl --user status flowstate-daily-regression-hunt.timer --no-pager` showed `active (waiting)` and next trigger `Wed 2026-07-08 09:30:00 IDT`.
 
 ### ~~TASK-1882~~: Add Android Gemma transcription provider contract and safe Whisper fallback (DONE)
 
@@ -191,6 +191,22 @@
 **Regression added for reported repro**: `tests/unit/sync/sync-orchestrator.test.ts` now covers pending writes + signed-in user + `canSyncRemotely=false`, requiring no "sign in again" error, no `writesFailing`, no RLS write, and no failed-queue mutation.
 
 **Tests**: RED first failed in `npm test -- tests/unit/sync/sync-orchestrator.test.ts` because `syncState.value.status` became `error`; green passed 90/90 after the reconnect-grace guard. Related proof: `npm test -- tests/unit/sync/sync-orchestrator.test.ts tests/unit/sync/write-health.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/stores/auth-grace-bound.test.ts`; `npm run type-check`; `npm run lint`; `npm run electron:build`; `VPS_HOST=84.46.253.137 VPS_USER=root ./scripts/deploy-electron-update.sh --notes "BUG-1926: respect auth reconnect grace after Electron updates" --skip-guard`. Live updater proof: `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.236`; AppImage/deb artifact range requests return HTTP 206.
+
+### ~~BUG-1927~~: Sync Errors popover can show stale sign-in-expired banner with 0 errors (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-08) — stopped queue auth-gate skips from poisoning global direct-write health and added daily watchdog coverage for the exact `0 errors` + sign-in-expired popover shape. | **Depends on**: BUG-1913, BUG-1922, BUG-1926, TASK-1927
+
+**User evidence**: desktop screenshot on 2026-07-08 showed the Sync Errors popover header reporting `0 errors` while the body still showed `Sign-in expired — changes are kept on this device and will sync after you sign in again`.
+
+**Root cause**: the queue auth-gate branch used `reportWriteFailure('queueFlushAuthGate', ...)`, which wrote the auth-gate text into global `writeHealth`. That global direct-write health channel is independent from the queue's failed-operation list, so it could outlive the queue state and render a stale banner in a popover that had no concrete failed sync operations.
+
+**Fix**: `writeHealth.isWriteContext()` now treats `queueFlushAuthGate` as non-direct-write context, so auth-gate skips stay in queue state instead of global direct-write health. `SyncErrorPopover` only renders a last-error summary when it has concrete failed operations, shows a neutral empty state for zero errors, and hides Clear All when there is nothing to clear.
+
+**Exact failure mode fixed**: the Sync Errors popover can no longer show the sign-in-expired auth-gate banner while simultaneously reporting `0 errors`.
+
+**Regression added for reported repro**: `tests/unit/sync/sync-status-popover.test.ts` covers both the store aggregation boundary and the rendered popover boundary, requiring no sign-in-expired text for the zero-error shape. `scripts/daily-regression-hunt.cjs` now includes that watchdog in the fixed recurring pack.
+
+**Tests**: RED first failed in `npm test -- tests/unit/sync/sync-status-popover.test.ts` because `failedCount` became `1` from writeHealth and the popover rendered the stale sign-in-expired summary with `0 errors`; green passed after the writeHealth and popover fixes. Related proof: `npm test -- tests/unit/sync/write-health.test.ts tests/unit/sync/sync-orchestrator.test.ts tests/unit/sync/sync-status-popover.test.ts`.
 
 ### ~~BUG-1925~~: Permanent delete and Canvas visibility regress through shared view-state boundaries (✅ DONE)
 

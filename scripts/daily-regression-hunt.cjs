@@ -37,6 +37,7 @@ const FIXED_DAILY_CHECKS = [
       'test',
       '--',
       'tests/unit/sync/sync-orchestrator.test.ts',
+      'tests/unit/sync/sync-status-popover.test.ts',
       'tests/unit/stores/auth-flow.test.ts',
       'tests/unit/canvas/canvas-composables.test.ts',
       'tests/unit/undo-entrypoint-contract.test.ts',

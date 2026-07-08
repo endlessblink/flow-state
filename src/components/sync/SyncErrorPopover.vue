@@ -33,10 +33,14 @@
         <!-- Error Details -->
         <div class="popover-body">
           <!-- Last Error Summary -->
-          <div v-if="lastError" class="error-summary">
+          <div v-if="showErrorSummary" class="error-summary">
             <div class="error-message">
               {{ lastError }}
             </div>
+          </div>
+
+          <div v-else-if="errors.length === 0" class="empty-state">
+            No failed sync operations. The app will keep checking for pending local changes.
           </div>
 
           <!-- Error List -->
@@ -86,7 +90,7 @@
             <RefreshCw :size="16" />
             Retry {{ retryableCount === errors.length ? 'All' : retryableCount }}
           </button>
-          <button class="clear-btn" @click="$emit('clear')">
+          <button v-if="errors.length > 0" class="clear-btn" @click="$emit('clear')">
             <Trash2 :size="16" />
             Clear All
           </button>
@@ -143,6 +147,8 @@ const retryableCount = computed(() => {
 const permanentCount = computed(() => {
   return props.errors.filter(e => isPermanentError(e)).length
 })
+
+const showErrorSummary = computed(() => Boolean(props.lastError) && props.errors.length > 0)
 
 // Hide retry button if ALL errors are permanent
 const showRetryButton = computed(() => retryableCount.value > 0)
@@ -344,6 +350,16 @@ const formatTime = (timestamp: number): string => {
 .error-message {
   font-size: var(--text-sm);
   color: var(--color-danger);
+  line-height: 1.5;
+}
+
+.empty-state {
+  padding: var(--space-3);
+  background: var(--sync-popover-control-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
   line-height: 1.5;
 }
 

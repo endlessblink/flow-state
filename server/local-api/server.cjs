@@ -538,6 +538,153 @@ async function handlePostTimerControl(req, res) {
   send(res, 400, { error: 'action must be toggle|start' })
 }
 
+// --- Assistant context -------------------------------------------------------
+
+async function handleGetAssistantContext(res) {
+  const { supabase, userId } = ctx
+  const today = localDateOnly()
+  const tomorrow = nextDateOnly(today)
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const safeCount = async (query) => {
+    const { count, error } = await query
+    if (error) return { available: false, count: 0 }
+    return { available: true, count: Number(count || 0) }
+  }
+
+  const safeRows = async (query) => {
+    const { data, error } = await query
+    if (error) return { available: false, rows: [] }
+    return { available: true, rows: data || [] }
+  }
+
+  const [
+    openTasks,
+    todayTasks,
+    overdueTasks,
+    noDateTasks,
+    highPriorityTasks,
+    recentDoneTasks,
+    projects,
+    timerSessions,
+    pomodoroHistory,
+    quickSortSessions,
+    gamification,
+    aiConversations,
+    aiUsage,
+    projectContexts,
+    taskContexts,
+    memoryEvents,
+    clarificationEvents,
+    parameterBeliefs,
+    recommendationFeedback,
+  ] = await Promise.all([
+    safeRows(supabase.from('tasks').select('id,title,status,priority,due_date,project_id,updated_at').eq('user_id', userId).eq('is_deleted', false).neq('status', 'done').order('updated_at', { ascending: false }).limit(100)),
+    safeCount(supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_deleted', false).neq('status', 'done').gte('due_date', today).lt('due_date', tomorrow)),
+    safeCount(supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_deleted', false).neq('status', 'done').lt('due_date', today)),
+    safeCount(supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_deleted', false).neq('status', 'done').is('due_date', null)),
+    safeCount(supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_deleted', false).neq('status', 'done').eq('priority', 'high')),
+    safeCount(supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_deleted', false).eq('status', 'done').gte('completed_at', weekAgo)),
+    safeRows(supabase.from('projects').select('id,name,updated_at').eq('user_id', userId).eq('is_deleted', false).limit(100)),
+    safeRows(supabase.from('timer_sessions').select('id,task_id,duration,remaining_time,is_active,is_paused,is_break,created_at,updated_at,completed_at').eq('user_id', userId).gte('created_at', monthAgo).order('updated_at', { ascending: false }).limit(50)),
+    safeCount(supabase.from('pomodoro_history').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', monthAgo)),
+    safeCount(supabase.from('quick_sort_sessions').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', monthAgo)),
+    safeRows(supabase.from('user_gamification').select('level,xp,current_streak,longest_streak,last_activity_date,updated_at').eq('user_id', userId).limit(1)),
+    safeCount(supabase.from('ai_conversations').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('updated_at', monthAgo)),
+    safeRows(supabase.from('ai_usage_log').select('date,provider,model,input_tokens,output_tokens,request_count').eq('user_id', userId).gte('date', monthAgo.slice(0, 10)).order('date', { ascending: false }).limit(30)),
+    safeCount(supabase.from('project_contexts').select('project_id', { count: 'exact', head: true }).eq('user_id', userId)),
+    safeCount(supabase.from('task_contexts').select('task_id', { count: 'exact', head: true }).eq('user_id', userId)),
+    safeCount(supabase.from('memory_events').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', monthAgo)),
+    safeCount(supabase.from('ai_clarification_events').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', monthAgo)),
+    safeCount(supabase.from('ai_parameter_beliefs').select('id', { count: 'exact', head: true }).eq('user_id', userId)),
+    safeCount(supabase.from('ai_recommendation_feedback').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', monthAgo)),
+  ])
+
+  const taskRows = openTasks.rows
+  const projectNames = new Map(projects.rows.map((p) => [p.id, p.name || p.id]))
+  const projectCounts = new Map()
+  for (const task of taskRows) {
+    const key = task.project_id || 'inbox'
+    projectCounts.set(key, (projectCounts.get(key) || 0) + 1)
+  }
+
+  const projectSignals = Array.from(projectCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([projectId, openTaskCount]) => ({
+      projectId: projectId === 'inbox' ? null : projectId,
+      name: projectId === 'inbox' ? 'Inbox / no project' : projectNames.get(projectId) || projectId,
+      openTaskCount,
+    }))
+
+  const timerRows = timerSessions.rows
+  const completedFocusSeconds = timerRows
+    .filter((s) => s.completed_at || (Number(s.duration || 0) > Number(s.remaining_time || 0) && !s.is_active))
+    .reduce((sum, s) => sum + Math.max(0, Number(s.duration || 0) - Number(s.remaining_time || 0)), 0)
+
+  const aiUsageRows = aiUsage.rows
+  const aiUsageTotals = aiUsageRows.reduce(
+    (acc, row) => {
+      acc.inputTokens += Number(row.input_tokens || 0)
+      acc.outputTokens += Number(row.output_tokens || 0)
+      acc.requestCount += Number(row.request_count || 0)
+      return acc
+    },
+    { inputTokens: 0, outputTokens: 0, requestCount: 0 },
+  )
+
+  send(res, 200, {
+    ok: true,
+    generatedAt: new Date().toISOString(),
+    window: { today, since: { weekAgo, monthAgo } },
+    taskPressure: {
+      sampledOpenTasks: taskRows.length,
+      todayCount: todayTasks.count,
+      overdueCount: overdueTasks.count,
+      noDateCount: noDateTasks.count,
+      highPriorityOpenCount: highPriorityTasks.count,
+      doneLast7DaysCount: recentDoneTasks.count,
+      unavailable: [todayTasks, overdueTasks, noDateTasks, highPriorityTasks, recentDoneTasks]
+        .some((r) => !r.available),
+    },
+    focusPatterns: {
+      recentTimerSessionCount: timerRows.length,
+      completedFocusMinutesApprox: Math.round(completedFocusSeconds / 60),
+      pomodoroHistoryCount30d: pomodoroHistory.count,
+      quickSortSessionCount30d: quickSortSessions.count,
+      timerDataAvailable: timerSessions.available,
+      pomodoroHistoryAvailable: pomodoroHistory.available,
+      quickSortAvailable: quickSortSessions.available,
+    },
+    projectSignals,
+    gamification: {
+      available: gamification.available && gamification.rows.length > 0,
+      profile: gamification.rows[0] || null,
+    },
+    assistantMemory: {
+      aiConversationCount30d: aiConversations.count,
+      aiUsageLogAvailable: aiUsage.available,
+      aiUsage30d: aiUsageTotals,
+      projectContextCount: projectContexts.count,
+      taskContextCount: taskContexts.count,
+      memoryEventCount30d: memoryEvents.count,
+      clarificationEventCount30d: clarificationEvents.count,
+      parameterBeliefCount: parameterBeliefs.count,
+      recommendationFeedbackCount30d: recommendationFeedback.count,
+      availability: {
+        aiConversations: aiConversations.available,
+        projectContexts: projectContexts.available,
+        taskContexts: taskContexts.available,
+        memoryEvents: memoryEvents.available,
+        clarificationEvents: clarificationEvents.available,
+        parameterBeliefs: parameterBeliefs.available,
+        recommendationFeedback: recommendationFeedback.available,
+      },
+    },
+  })
+}
+
 async function handleAIClarificationStart(req, res) {
   const body = await readJsonBody(req)
   const runId = typeof body.runId === 'string' && body.runId.trim()
@@ -595,6 +742,9 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && path === '/api/tasks') {
       return await handleGetTasks(url, res)
+    }
+    if (req.method === 'GET' && path === '/api/assistant/context') {
+      return await handleGetAssistantContext(res)
     }
     if (req.method === 'POST' && path === '/api/tasks') {
       return await handleCreateTask(req, res)

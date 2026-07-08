@@ -96,6 +96,45 @@ forwarded a session to the sidecar.
 ] }
 ```
 
+### `GET /api/assistant/context`
+Bearer-protected read-only summary for local personal-assistant clients such as
+Hermes. It is user-scoped through the same Local Task API auth context and
+returns aggregates rather than raw task dumps, full AI chat history, or secrets.
+Optional tables fail soft via `available: false` / zero counts so older local
+schemas can still serve basic task pressure.
+
+```json
+{
+  "ok": true,
+  "taskPressure": {
+    "sampledOpenTasks": 25,
+    "todayCount": 1,
+    "overdueCount": 12,
+    "noDateCount": 4,
+    "highPriorityOpenCount": 3,
+    "doneLast7DaysCount": 8
+  },
+  "focusPatterns": {
+    "recentTimerSessionCount": 10,
+    "completedFocusMinutesApprox": 180,
+    "pomodoroHistoryCount30d": 22,
+    "quickSortSessionCount30d": 3
+  },
+  "projectSignals": [
+    { "projectId": "uuid", "name": "Arthouse", "openTaskCount": 5 }
+  ],
+  "assistantMemory": {
+    "aiConversationCount30d": 4,
+    "projectContextCount": 6,
+    "taskContextCount": 12,
+    "memoryEventCount30d": 9,
+    "clarificationEventCount30d": 2,
+    "parameterBeliefCount": 7,
+    "recommendationFeedbackCount30d": 1
+  }
+}
+```
+
 ### `POST /api/tasks`
 `title` required; `priority` ∈ `low|medium|high|null`; `status` defaults to `todo`.
 ```json

@@ -44,6 +44,21 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### TASK-1928: Local API assistant context endpoint for Hermes personal assistant (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-08) | **Depends on**: TASK-1858, TASK-1859, TASK-1863, TASK-1797
+
+**Why**: Hermes can already read FlowState tasks and timer state through the app-mediated Local Task API, but the personal-assistant workflow needs richer read-only context without dumping raw tables: task pressure, focus/session signals, AI memory/clarification signals, gamification/usage summaries, and project activity. This should let Hermes reason about overload and the next useful block while keeping writes preview-gated.
+
+**Acceptance**:
+- Local Task API exposes a bearer-protected `GET /api/assistant/context` endpoint.
+- Endpoint is read-only, RLS/user-scoped, loopback-only, and uses the existing app-mediated Local API auth boundary.
+- Response summarizes task pressure, project signals, focus/timer history, gamification, AI memory/context counts, and recent AI usage without returning raw secrets or full conversation/task dumps.
+- Missing optional tables fail soft with `available: false` / zero counts rather than breaking the endpoint.
+- Contract tests cover route placement behind bearer auth, user scoping, safe table selection, and no secret/session fields in the assistant context payload.
+
+**2026-07-08 update**: Endpoint implementation, docs, and contract tests are in place. Verified `npm test -- tests/unit/local-api/server-contract.test.ts` (15/15), `node --check server/local-api/server.cjs`, `npm run electron:build-main`, `npm run type-check`, `npm run guard:electron-sync` (182/182), full `npm run test` (3166 passed, 6 skipped), and `npm run electron:build` through the no-upload release script. Built and locally installed FlowState Electron `1.4.238`; `release/latest-linux.yml` is `version: 1.4.238`, and the bundled sidecar contains `/api/assistant/context`, `taskPressure`, and `assistantMemory`. VPS updater upload was blocked by the approval layer, so public updater delivery is not complete. Remaining proof: launch the updated installed app from `/home/endlessblink/.local/bin/FlowState.AppImage`, confirm port 5577 is listening from `/home/endlessblink/.config/flow-state`, and rerun the redacted bearer probe for `GET /api/assistant/context`.
+
 ### ~~TASK-1927~~: Daily FlowState regression hunt loop (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-07) — added a non-mutating daily/weekly regression runner, report summaries, npm entry points, and an optional user-level systemd timer installer. | **Depends on**: BUG-1920, BUG-1921, BUG-1923, BUG-1924, BUG-1925, BUG-1926

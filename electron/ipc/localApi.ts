@@ -32,6 +32,15 @@ interface TimerSnapshotMessage {
   session: Record<string, unknown> | null
 }
 
+interface RendererAuthStateMessage {
+  isAuthenticated: boolean
+  hasUser: boolean
+  canSyncRemotely: boolean
+  reauthRequired: boolean
+  isInitialized: boolean
+  updatedAt: number
+}
+
 interface LocalApiConfig {
   enabled: boolean
   token: string
@@ -72,6 +81,7 @@ let listening = false
 // Latest session pushed from the renderer; re-sent whenever the child (re)starts.
 let latestSession: SessionMessage | null = null
 let latestTimerSnapshot: TimerSnapshotMessage | null = null
+let latestRendererAuthState: RendererAuthStateMessage | null = null
 
 function sidecarPath() {
   // localApi.cjs lives in dist-electron/ipc/, while the bundled sidecar is
@@ -107,6 +117,7 @@ function startChild() {
       // Forward the current session once the server is up.
       if (latestSession) child?.postMessage({ type: 'session', ...latestSession })
       if (latestTimerSnapshot) child?.postMessage({ type: 'timerSnapshot', snapshot: latestTimerSnapshot })
+      if (latestRendererAuthState) child?.postMessage({ type: 'rendererAuthState', state: latestRendererAuthState })
     }
   })
 
@@ -139,6 +150,11 @@ function pushTimerSnapshot() {
   if (listening) child.postMessage({ type: 'timerSnapshot', snapshot: latestTimerSnapshot })
 }
 
+function pushRendererAuthState() {
+  if (!child || !latestRendererAuthState) return
+  if (listening) child.postMessage({ type: 'rendererAuthState', state: latestRendererAuthState })
+}
+
 export function registerLocalApiHandlers() {
   config = loadConfig()
   // Persist (ensures a token exists on first run).
@@ -167,12 +183,32 @@ export function registerLocalApiHandlers() {
     return { ok: true }
   })
 
+  ipcMain.handle('localApi:setRendererAuthState', (_e, state: RendererAuthStateMessage) => {
+    if (!state || typeof state.isAuthenticated !== 'boolean' || typeof state.hasUser !== 'boolean') {
+      return { ok: false }
+    }
+    latestRendererAuthState = {
+      isAuthenticated: !!state.isAuthenticated,
+      hasUser: !!state.hasUser,
+      canSyncRemotely: !!state.canSyncRemotely,
+      reauthRequired: !!state.reauthRequired,
+      isInitialized: !!state.isInitialized,
+      updatedAt: Number(state.updatedAt) || Date.now(),
+    }
+    if (config.enabled || child) {
+      startChild()
+      pushRendererAuthState()
+    }
+    return { ok: true }
+  })
+
   ipcMain.handle('localApi:setEnabled', (_e, enabled: boolean) => {
     config.enabled = !!enabled
     saveConfig(config)
     if (config.enabled) {
       startChild()
       pushSession()
+      pushRendererAuthState()
     } else if (!latestSession && !latestTimerSnapshot) {
       stopChild()
     }
@@ -189,6 +225,16 @@ export function registerLocalApiHandlers() {
     childPid: child?.pid ?? null,
     appVersion: app.getVersion(),
     hasLatestSession: !!latestSession,
+    rendererAuthState: latestRendererAuthState
+      ? {
+          isAuthenticated: latestRendererAuthState.isAuthenticated,
+          hasUser: latestRendererAuthState.hasUser,
+          canSyncRemotely: latestRendererAuthState.canSyncRemotely,
+          reauthRequired: latestRendererAuthState.reauthRequired,
+          isInitialized: latestRendererAuthState.isInitialized,
+          ageMs: Math.max(0, Date.now() - latestRendererAuthState.updatedAt),
+        }
+      : null,
     hasLatestTimerSnapshot: !!latestTimerSnapshot,
     latestTimerSnapshotActive: !!(latestTimerSnapshot?.active && latestTimerSnapshot.session),
     latestTimerSnapshotAgeMs: latestTimerSnapshot?.updatedAt

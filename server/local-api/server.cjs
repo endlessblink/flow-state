@@ -66,12 +66,25 @@ mkdirSync(DATA_DIR, { recursive: true })
 let ctx = null
 let aiRuntime = null
 let localTimerSnapshot = null
+let rendererAuthState = null
 
 function getAIRuntime() {
   if (!aiRuntime) {
     aiRuntime = createAIMastraRuntime({ dataDir: DATA_DIR })
   }
   return aiRuntime
+}
+
+function sanitizeRendererAuthState(state) {
+  if (!state || typeof state !== 'object') return null
+  return {
+    isAuthenticated: !!state.isAuthenticated,
+    hasUser: !!state.hasUser,
+    canSyncRemotely: !!state.canSyncRemotely,
+    reauthRequired: !!state.reauthRequired,
+    isInitialized: !!state.isInitialized,
+    updatedAt: Number(state.updatedAt) || Date.now(),
+  }
 }
 
 function buildServiceRoleContext() {
@@ -426,6 +439,16 @@ async function handleGetTimerDiagnostics(res) {
     appVersion: APP_VERSION,
     mode: TOKEN_MODE ? 'token' : 'service-role',
     hasAuthContext: !!ctx,
+    rendererAuthState: rendererAuthState
+      ? {
+          isAuthenticated: rendererAuthState.isAuthenticated,
+          hasUser: rendererAuthState.hasUser,
+          canSyncRemotely: rendererAuthState.canSyncRemotely,
+          reauthRequired: rendererAuthState.reauthRequired,
+          isInitialized: rendererAuthState.isInitialized,
+          ageMs: Math.max(0, Date.now() - rendererAuthState.updatedAt),
+        }
+      : null,
     hasLocalTimerSnapshot,
     localSnapshotActive,
     localSnapshotAgeMs,
@@ -780,8 +803,19 @@ if (TOKEN_MODE) {
       const msg = e && e.data
       if (!msg || typeof msg !== 'object') return
       if (msg.type === 'session') applySession(msg)
-      else if (msg.type === 'clear') ctx = null
+      else if (msg.type === 'clear') {
+        ctx = null
+        rendererAuthState = {
+          isAuthenticated: false,
+          hasUser: false,
+          canSyncRemotely: false,
+          reauthRequired: false,
+          isInitialized: rendererAuthState ? rendererAuthState.isInitialized : false,
+          updatedAt: Date.now(),
+        }
+      }
       else if (msg.type === 'timerSnapshot') localTimerSnapshot = msg.snapshot || null
+      else if (msg.type === 'rendererAuthState') rendererAuthState = sanitizeRendererAuthState(msg.state)
     })
   }
 } else {

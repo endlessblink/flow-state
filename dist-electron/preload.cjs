@@ -61,6 +61,7 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     setLocalApiSession: (session) => electron_1.ipcRenderer.invoke('localApi:setSession', session),
     clearLocalApiSession: () => electron_1.ipcRenderer.invoke('localApi:clearSession'),
     setLocalApiTimerSnapshot: (snapshot) => electron_1.ipcRenderer.invoke('localApi:setTimerSnapshot', snapshot),
+    setLocalApiRendererAuthState: (state) => electron_1.ipcRenderer.invoke('localApi:setRendererAuthState', state),
     setLocalApiEnabled: (enabled) => electron_1.ipcRenderer.invoke('localApi:setEnabled', enabled),
     getLocalApiToken: () => electron_1.ipcRenderer.invoke('localApi:getToken'),
     getLocalApiStatus: () => electron_1.ipcRenderer.invoke('localApi:status'),

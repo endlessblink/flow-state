@@ -37,6 +37,7 @@ describe('daily regression hunt script', () => {
       'type-check',
       'focused-recurring-pack',
       'timer-boundary',
+      'live-boundary',
       'updater-manifest',
       'canvas-flows',
     ]))
@@ -79,6 +80,21 @@ describe('daily regression hunt script', () => {
 
     const report = JSON.parse(output)
     expect(report.checks.map((check: { id: string }) => check.id)).toEqual(['timer-boundary'])
+  })
+
+  it('can filter to the widened live auth/timer boundary', () => {
+    const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
+    const output = runHunt([
+      '--dry-run',
+      '--json',
+      '--only',
+      'live-boundary',
+      '--report-dir',
+      reportDir,
+    ])
+
+    const report = JSON.parse(output)
+    expect(report.checks.map((check: { id: string }) => check.id)).toEqual(['live-boundary'])
   })
 
   it('classifies recurring FlowState failure signatures', () => {

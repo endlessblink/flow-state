@@ -29,6 +29,7 @@ const {
   mockRestoreAuthSessionFromBackup,
   mockClearAuthSessionBackup,
   mockSyncLocalApiSession,
+  mockSyncLocalApiRendererAuthState,
 } = vi.hoisted(() => {
   type AuthCallback = (event: string, session: unknown) => void
   let _listeners: AuthCallback[] = []
@@ -53,6 +54,7 @@ const {
     mockRestoreAuthSessionFromBackup: vi.fn(),
     mockClearAuthSessionBackup: vi.fn(),
     mockSyncLocalApiSession: vi.fn(),
+    mockSyncLocalApiRendererAuthState: vi.fn(),
   }
 })
 
@@ -87,7 +89,10 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
   }),
   invalidateCache: { onAuthChange: vi.fn(), all: vi.fn() },
 }))
-vi.mock('@/composables/useLocalApiBridge', () => ({ syncLocalApiSession: mockSyncLocalApiSession }))
+vi.mock('@/composables/useLocalApiBridge', () => ({
+  syncLocalApiSession: mockSyncLocalApiSession,
+  syncLocalApiRendererAuthState: mockSyncLocalApiRendererAuthState,
+}))
 vi.mock('@/constants/dbTables', () => ({ DB_TABLES: { TASKS: 'tasks', PROJECTS: 'projects' } }))
 vi.mock('@/utils/platform', () => ({ isTauri: vi.fn().mockReturnValue(false) }))
 vi.mock('@/stores/tasks', () => ({

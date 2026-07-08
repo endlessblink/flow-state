@@ -8,6 +8,7 @@ vi.mock('@/services/auth/supabase', () => ({
 
 vi.mock('@/composables/useLocalApiBridge', () => ({
   syncLocalApiSession: vi.fn(),
+  syncLocalApiRendererAuthState: vi.fn(),
 }))
 
 vi.mock('@/utils/guestModeStorage', () => ({

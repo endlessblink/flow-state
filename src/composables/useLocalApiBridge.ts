@@ -19,6 +19,7 @@ interface ElectronLocalApi {
   setLocalApiSession?: (session: unknown) => Promise<unknown>
   clearLocalApiSession?: () => Promise<unknown>
   setLocalApiTimerSnapshot?: (snapshot: unknown) => Promise<unknown>
+  setLocalApiRendererAuthState?: (state: unknown) => Promise<unknown>
 }
 
 function getElectronApi(): ElectronLocalApi | null {
@@ -44,6 +45,31 @@ export function syncLocalApiSession(session: Session | null): void {
     } else {
       void api.clearLocalApiSession?.()
     }
+  } catch {
+    /* best-effort; never break the auth flow */
+  }
+}
+
+export interface LocalApiRendererAuthState {
+  isAuthenticated: boolean
+  hasUser: boolean
+  canSyncRemotely: boolean
+  reauthRequired: boolean
+  isInitialized: boolean
+}
+
+export function syncLocalApiRendererAuthState(state: LocalApiRendererAuthState): void {
+  const api = getElectronApi()
+  if (!api) return
+  try {
+    void api.setLocalApiRendererAuthState?.({
+      isAuthenticated: !!state.isAuthenticated,
+      hasUser: !!state.hasUser,
+      canSyncRemotely: !!state.canSyncRemotely,
+      reauthRequired: !!state.reauthRequired,
+      isInitialized: !!state.isInitialized,
+      updatedAt: Date.now(),
+    })
   } catch {
     /* best-effort; never break the auth flow */
   }

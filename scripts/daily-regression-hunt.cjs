@@ -54,6 +54,13 @@ const FIXED_DAILY_CHECKS = [
     timeoutMs: 60_000,
   },
   {
+    id: 'live-boundary',
+    title: 'Live desktop auth and KDE timer boundary diagnosis',
+    command: ['node', 'scripts/diagnose-live-boundary.cjs'],
+    failureClass: 'KDE/local sidecar',
+    timeoutMs: 60_000,
+  },
+  {
     id: 'updater-manifest',
     title: 'Live Electron updater manifest probe',
     command: ['curl', '-fsS', '--max-time', '20', MANIFEST_URL],

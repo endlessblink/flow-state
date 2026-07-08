@@ -1,23 +1,26 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { syncLocalApiSession } from '@/composables/useLocalApiBridge'
+import { syncLocalApiRendererAuthState, syncLocalApiSession } from '@/composables/useLocalApiBridge'
 
 function installElectronApi() {
   const setLocalApiSession = vi.fn().mockResolvedValue({ ok: true })
   const clearLocalApiSession = vi.fn().mockResolvedValue({ ok: true })
+  const setLocalApiRendererAuthState = vi.fn().mockResolvedValue({ ok: true })
   Object.defineProperty(window, 'electronAPI', {
     value: {
       isElectron: true,
       setLocalApiSession,
       clearLocalApiSession,
+      setLocalApiRendererAuthState,
     },
     configurable: true,
   })
-  return { setLocalApiSession, clearLocalApiSession }
+  return { setLocalApiSession, clearLocalApiSession, setLocalApiRendererAuthState }
 }
 
 describe('useLocalApiBridge', () => {
   afterEach(() => {
     Reflect.deleteProperty(window, 'electronAPI')
+    vi.restoreAllMocks()
   })
 
   it('forwards a fresh Electron session to the Local API sidecar', () => {
@@ -50,5 +53,28 @@ describe('useLocalApiBridge', () => {
 
     expect(api.setLocalApiSession).not.toHaveBeenCalled()
     expect(api.clearLocalApiSession).toHaveBeenCalledOnce()
+  })
+
+  it('forwards only non-secret renderer auth state to the Local API sidecar', () => {
+    const api = installElectronApi()
+    vi.spyOn(Date, 'now').mockReturnValue(1_777_777)
+
+    syncLocalApiRendererAuthState({
+      isAuthenticated: true,
+      hasUser: true,
+      canSyncRemotely: true,
+      reauthRequired: false,
+      isInitialized: true,
+    })
+
+    expect(api.setLocalApiRendererAuthState).toHaveBeenCalledWith({
+      isAuthenticated: true,
+      hasUser: true,
+      canSyncRemotely: true,
+      reauthRequired: false,
+      isInitialized: true,
+      updatedAt: 1_777_777,
+    })
+    expect(JSON.stringify(api.setLocalApiRendererAuthState.mock.calls)).not.toMatch(/access|refresh|token|anonKey|user-1/i)
   })
 })

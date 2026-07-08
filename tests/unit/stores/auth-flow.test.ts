@@ -28,6 +28,7 @@ const {
   mockRestoreAuthSessionFromBackup,
   mockClearAuthSessionBackup,
   mockSyncLocalApiSession,
+  mockSyncLocalApiRendererAuthState,
 } = vi.hoisted(() => {
   type AuthCallback = (event: string, session: unknown) => void
   let _listeners: AuthCallback[] = []
@@ -57,6 +58,7 @@ const {
     mockRestoreAuthSessionFromBackup: vi.fn(),
     mockClearAuthSessionBackup: vi.fn(),
     mockSyncLocalApiSession: vi.fn(),
+    mockSyncLocalApiRendererAuthState: vi.fn(),
   }
 })
 
@@ -110,6 +112,7 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
 
 vi.mock('@/composables/useLocalApiBridge', () => ({
   syncLocalApiSession: mockSyncLocalApiSession,
+  syncLocalApiRendererAuthState: mockSyncLocalApiRendererAuthState,
 }))
 
 vi.mock('@/constants/dbTables', () => ({

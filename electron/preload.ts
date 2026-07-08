@@ -71,6 +71,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setLocalApiSession: (session: unknown) => ipcRenderer.invoke('localApi:setSession', session),
   clearLocalApiSession: () => ipcRenderer.invoke('localApi:clearSession'),
   setLocalApiTimerSnapshot: (snapshot: unknown) => ipcRenderer.invoke('localApi:setTimerSnapshot', snapshot),
+  setLocalApiRendererAuthState: (state: unknown) => ipcRenderer.invoke('localApi:setRendererAuthState', state),
   setLocalApiEnabled: (enabled: boolean) => ipcRenderer.invoke('localApi:setEnabled', enabled),
   getLocalApiToken: () => ipcRenderer.invoke('localApi:getToken'),
   getLocalApiStatus: () => ipcRenderer.invoke('localApi:status'),
@@ -111,6 +112,7 @@ declare global {
       setLocalApiSession: (session: unknown) => Promise<{ ok: boolean }>
       clearLocalApiSession: () => Promise<{ ok: boolean }>
       setLocalApiTimerSnapshot: (snapshot: unknown) => Promise<{ ok: boolean }>
+      setLocalApiRendererAuthState: (state: unknown) => Promise<{ ok: boolean }>
       setLocalApiEnabled: (enabled: boolean) => Promise<{ ok: boolean; enabled: boolean }>
       getLocalApiToken: () => Promise<string>
       getLocalApiStatus: () => Promise<{
@@ -121,6 +123,14 @@ declare global {
         childPid: number | null
         appVersion: string
         hasLatestSession: boolean
+        rendererAuthState: {
+          isAuthenticated: boolean
+          hasUser: boolean
+          canSyncRemotely: boolean
+          reauthRequired: boolean
+          isInitialized: boolean
+          ageMs: number
+        } | null
         hasLatestTimerSnapshot: boolean
         latestTimerSnapshotActive: boolean
         latestTimerSnapshotAgeMs: number | null

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onScopeDispose } from 'vue'
 import {
   supabase,
   consumePendingProviderTokens,
@@ -27,6 +27,7 @@ export const GRACE_MAX_MS = 10 * 60 * 1000
 // grace entry points (e.g. Electron backup restore) previously registered no
 // recovery path at all — grace could only end via an unrelated refresh.
 export const GRACE_RETRY_MS = 60 * 1000
+export const LOCAL_API_AUTH_HEARTBEAT_MS = 30 * 1000
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -214,17 +215,25 @@ export const useAuthStore = defineStore('auth', () => {
   // ours (no-op outside Electron / when the API is disabled). Fires on sign-in,
   // token refresh, and sign-out.
   watch(session, (s) => syncLocalApiSession(s), { immediate: true })
-  watch(
-    [isAuthenticated, user, canSyncRemotely, reauthRequired, isInitialized],
-    () => syncLocalApiRendererAuthState({
+  const publishLocalApiRendererAuthState = () => {
+    syncLocalApiRendererAuthState({
       isAuthenticated: isAuthenticated.value,
       hasUser: !!user.value?.id,
       canSyncRemotely: canSyncRemotely.value,
       reauthRequired: reauthRequired.value,
       isInitialized: isInitialized.value,
-    }),
+    })
+  }
+  watch(
+    [isAuthenticated, user, canSyncRemotely, reauthRequired, isInitialized],
+    publishLocalApiRendererAuthState,
     { immediate: true },
   )
+  const localApiAuthHeartbeat = setInterval(
+    publishLocalApiRendererAuthState,
+    LOCAL_API_AUTH_HEARTBEAT_MS,
+  )
+  onScopeDispose(() => clearInterval(localApiAuthHeartbeat))
   const errorMessage = computed(() => error.value?.message || null)
 
   // Compatibility getters for Supabase/Firebase differences

@@ -166,7 +166,7 @@ vi.mock('@/stores/settings', () => ({
 }))
 
 // ── Import store AFTER mocks ──────────────────────────────────────────────────
-import { useAuthStore } from '@/stores/auth'
+import { LOCAL_API_AUTH_HEARTBEAT_MS, useAuthStore } from '@/stores/auth'
 
 // ============================================================================
 // Type aliases for test helpers
@@ -485,6 +485,32 @@ describe('Auth Flow — initialize()', () => {
       expect(mockSyncLocalApiSession).toHaveBeenCalledWith(expect.objectContaining({
         access_token: 'fresh-recovered-access-token',
       }))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('8g. refreshes the Electron Local API renderer auth heartbeat before diagnostics marks it stale', async () => {
+    vi.useFakeTimers()
+    try {
+      const session = buildMockSession()
+      mockGetSession.mockResolvedValue({ data: { session }, error: null })
+
+      const store = useAuthStore()
+      await store.initialize()
+      await flushPromises()
+      mockSyncLocalApiRendererAuthState.mockClear()
+
+      await vi.advanceTimersByTimeAsync(LOCAL_API_AUTH_HEARTBEAT_MS)
+      await flushPromises()
+
+      expect(mockSyncLocalApiRendererAuthState).toHaveBeenCalledWith({
+        isAuthenticated: true,
+        hasUser: true,
+        canSyncRemotely: true,
+        reauthRequired: false,
+        isInitialized: true,
+      })
     } finally {
       vi.useRealTimers()
     }

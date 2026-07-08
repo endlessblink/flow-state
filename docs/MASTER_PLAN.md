@@ -83,6 +83,44 @@
 
 **Tests**: RED first failed in `npm test -- tests/unit/electron/local-api-lifecycle.test.ts tests/unit/scripts/live-boundary-diagnostics.test.ts` because status lacked sidecar failure fields and child event diagnostics. Green proof: `npm test -- tests/unit/electron/local-api-lifecycle.test.ts tests/unit/scripts/live-boundary-diagnostics.test.ts`; `npm test -- tests/unit/local-api/server-contract.test.ts`; `node --check server/local-api/server.cjs`; `npm run type-check`; `npm run electron:build-main`; `node scripts/validate-electron-package.cjs`; `npm run electron:build`. Installed `release/FlowState-1.4.239-x86_64.AppImage` to `/home/endlessblink/.local/bin/FlowState.AppImage` and relaunched it. Live sidecar proof passed: health `200`, `127.0.0.1:5577` listening under `flowstate`, assistant context endpoint available. Separate remaining watchdog signal: `node scripts/diagnose-live-boundary.cjs` now correctly detects the running app but fails `missing-renderer-timer-snapshot`, which belongs to the KDE/timer heartbeat failure class rather than the Local API listener startup failure.
 
+### ~~TASK-1931~~: Refresh inactive timer snapshot for KDE/local watchdog (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-08) — fixed the live-boundary `missing-renderer-timer-snapshot`, stale inactive snapshot, and stale renderer auth heartbeat failures when FlowState launches with no active timer. | **Depends on**: TASK-1927, TASK-1930
+
+**Why**: After the Local API listener was fixed, `node scripts/diagnose-live-boundary.cjs` correctly saw the running Electron app but failed `missing-renderer-timer-snapshot`, then `stale-inactive-timer-snapshot` after the initial snapshot fix, then `stale-renderer-auth-heartbeat` after a longer live wait. The sidecar had auth and was listening, but diagnostics could not distinguish "renderer is inactive" from "renderer never published timer state" because the timer store only watched future `currentSession` changes. Vue watchers do not fire for the initial `null` value unless `immediate` is set, and the sidecar treats inactive/auth snapshots older than their grace windows as stale.
+
+**Acceptance**:
+- FlowState renderer publishes an initial inactive Local API timer snapshot on timer store creation.
+- FlowState renderer refreshes inactive snapshots before the sidecar stale cutoff while no timer is active.
+- FlowState renderer refreshes safe renderer auth-state heartbeat before the watchdog stale cutoff.
+- Sidecar diagnostics report `hasLocalTimerSnapshot: true` even when no timer is active.
+- KDE/local watchdog no longer fails `missing-renderer-timer-snapshot`, `stale-inactive-timer-snapshot`, or `stale-renderer-auth-heartbeat` on a healthy signed-in idle launch.
+- No production task/timer rows are mutated by verification.
+
+**Implementation**: `src/stores/timer.ts` now makes the `currentSession` Local API bridge watcher immediate, so startup publishes `syncLocalApiTimerSnapshot(null, deviceId)` before any active timer exists. It also refreshes the inactive snapshot every 10 seconds while no local timer session is active, keeping the sidecar snapshot fresh without touching persisted task/timer data. `src/stores/auth.ts` now republishes the already-sanitized renderer auth-state booleans every 30 seconds so the watchdog has a fresh auth heartbeat without forwarding credentials.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Live boundary diagnostic failed `missing-renderer-timer-snapshot` after listener fix. | Yes |
+| Data shape / persisted row shape | N/A | No persisted task or timer rows changed. | N/A |
+| Renderer store/state | Yes | Timer store now publishes initial inactive snapshot from `currentSession = null` and refreshes it while idle. | Yes |
+| Electron main/preload bridge | Yes | Existing `setLocalApiTimerSnapshot` bridge receives inactive snapshot. | Existing bridge |
+| Localhost sidecar endpoint | Yes | Sidecar diagnostics consumes the renderer timer/auth snapshots and reports presence/age. | Yes |
+| KDE polling/control path | Yes | KDE-local timer boundary now has renderer-owned inactive timer and auth heartbeats on idle launch and during idle runtime. | Yes |
+| Supabase persistence/realtime | N/A | Fix is renderer-to-sidecar heartbeat only. | N/A |
+| Updater/runtime version | Partial | Local Electron package rebuild/install required for live app proof. | Local install only |
+| Stale live process/cache state | Yes | Live verification requires relaunching updated AppImage. | Yes |
+
+**Exact failure mode fixed**: idle Electron launches never sent any Local API timer snapshot because the watcher did not run for the initial `null` session; inactive snapshots could age past the sidecar stale cutoff without a renderer heartbeat; and renderer auth status could age past the diagnostic stale cutoff while the user stayed signed in.
+
+**Explicitly not covered**: stuck-at-zero timer countdown bugs, Supabase active-row cleanup, public updater deploy, or KDE widget UI rendering.
+
+**Regression added for reported repro**: `tests/unit/stores/timer-state-machine.test.ts` now asserts timer store creation publishes an initial inactive Electron/KDE snapshot and refreshes it after 10 seconds of idle runtime. `tests/unit/stores/auth-flow.test.ts` asserts renderer auth-state heartbeat refreshes after 30 seconds.
+
+**Tests**: RED first failed in `npm test -- tests/unit/stores/timer-state-machine.test.ts` because `syncLocalApiTimerSnapshot(null, deviceId)` was never called on store creation. Green proof: `npm test -- tests/unit/stores/auth-flow.test.ts tests/unit/stores/timer-state-machine.test.ts`; `npm test -- tests/unit/stores/timer-state-machine.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/local-api/renderer-bridge.test.ts tests/unit/scripts/live-boundary-diagnostics.test.ts tests/unit/kde/timer-sync.test.ts tests/unit/composables/useLocalApiBridge.test.ts`; `npm run type-check`; `npm run electron:build`. Installed rebuilt `release/FlowState-1.4.239-x86_64.AppImage` locally and verified `node scripts/diagnose-live-boundary.cjs` no longer reports missing/stale renderer timer/auth heartbeat failures.
+
 ### ~~TASK-1929~~: Local API task-instance scheduling for Hermes time blocking (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-08) — added bearer-protected preview/apply Local API task-instance endpoints for Hermes time blocking. | **Depends on**: TASK-1928, TASK-1797

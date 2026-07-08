@@ -193,6 +193,24 @@ describe('Timer State Machine — Initial State', () => {
     expect(store.currentSession).toBeNull()
   })
 
+  it('1b. publishes an initial inactive Electron/KDE timer snapshot on creation', async () => {
+    useTimerStore()
+    await flushPromises()
+
+    expect(mockSyncLocalApiTimerSnapshot).toHaveBeenCalledWith(null, expect.any(String))
+  })
+
+  it('1c. refreshes the inactive Electron/KDE timer snapshot before the sidecar marks it stale', async () => {
+    useTimerStore()
+    await flushPromises()
+    mockSyncLocalApiTimerSnapshot.mockClear()
+
+    vi.advanceTimersByTime(10_000)
+    await flushPromises()
+
+    expect(mockSyncLocalApiTimerSnapshot).toHaveBeenCalledWith(null, expect.any(String))
+  })
+
   it('2. isTimerActive is false on creation', async () => {
     const store = useTimerStore()
     await flushPromises()

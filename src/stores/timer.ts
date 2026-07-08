@@ -16,6 +16,8 @@ import { useTimerSync, DEVICE_LEADER_TIMEOUT_MS } from '@/composables/timer/useT
 import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 import { syncLocalApiTimerSnapshot } from '@/composables/useLocalApiBridge'
 
+const LOCAL_API_TIMER_INACTIVE_HEARTBEAT_MS = 10_000
+
 const getT = () => (i18n.global as unknown as { t: (key: string) => string }).t
 
 /**
@@ -117,8 +119,14 @@ export const useTimerStore = defineStore('timer', () => {
   watch(
     currentSession,
     (session) => syncLocalApiTimerSnapshot(session, deviceId),
-    { deep: true, flush: 'post' },
+    { deep: true, flush: 'post', immediate: true },
   )
+
+  const localApiInactiveHeartbeat = setInterval(() => {
+    if (!currentSession.value) {
+      syncLocalApiTimerSnapshot(null, deviceId)
+    }
+  }, LOCAL_API_TIMER_INACTIVE_HEARTBEAT_MS)
 
   // ── Computed ─────────────────────────────────────────────────────
 
@@ -679,6 +687,7 @@ export const useTimerStore = defineStore('timer', () => {
   const cleanupAllListeners = () => {
     sync.cleanup()
     notifications.cleanupServiceWorkerListener()
+    clearInterval(localApiInactiveHeartbeat)
     unsubscribeAuth() // TASK-1577: Clean up auth watcher
   }
 

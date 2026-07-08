@@ -2,9 +2,21 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Task Management', () => {
     test.beforeEach(async ({ page }) => {
+        await page.addInitScript(() => {
+            localStorage.setItem('flowstate-onboarding-v2', 'true');
+            localStorage.setItem('flowstate-welcome-seen', 'true');
+            localStorage.setItem('flowstate-settings-v2', JSON.stringify({ aiSetupComplete: true }));
+        });
+
         await page.goto('/#/tasks');
 
-        // Explicitly handle welcome modal if present
+        // Explicitly handle welcome/onboarding modals if present
+        const onboarding = page.locator('.onboarding-overlay');
+        if (await onboarding.isVisible({ timeout: 1500 }).catch(() => false)) {
+            await page.locator('.onboarding-modal button').filter({ hasText: /Get Started|Start/i }).first().click();
+            await expect(onboarding).toBeHidden();
+        }
+
         const welcomeModal = page.locator('.modal-overlay').filter({ hasText: 'Welcome to FlowState' });
         // Short timeout for the check to avoid waiting too long if it's not there
         try {

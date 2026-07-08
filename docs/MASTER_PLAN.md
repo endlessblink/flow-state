@@ -44,6 +44,46 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### ~~TASK-1929~~: Local API task-instance scheduling for Hermes time blocking (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-08) — added bearer-protected preview/apply Local API task-instance endpoints for Hermes time blocking. | **Depends on**: TASK-1928, TASK-1797
+
+**Why**: Hermes should act as the chat controller for lightweight scheduling questions, but FlowState must remain the renderer/source of truth for actual time blocks. The Local API can currently read/update simple task fields, but it cannot preview or create calendar task instances with `scheduledDate`, `scheduledTime`, and `duration`.
+
+**Acceptance**:
+- Local Task API exposes bearer-protected `GET /api/tasks/:id/instances` and `POST /api/tasks/:id/instances`.
+- `POST` validates task ownership, non-deleted state, `scheduledDate`, `scheduledTime`, `duration`, and `preview`.
+- `preview=true` returns the exact proposed instance and task identity without mutating.
+- `preview=false` appends a real `instances[]` time block in the same persisted shape used by FlowState calendar surfaces.
+- Endpoint never changes task status/title/priority/due date, never deletes tasks, and never exposes secrets/session tokens/auth headers.
+- Contract tests cover bearer-boundary placement, `.eq('user_id', userId)`, preview non-mutation, apply mutation shape, cross-user 404, validation failures, and safe response fields.
+
+**Implementation**: `GET /api/tasks/:id/instances` returns only task id/title and that task's `instances[]`. `POST /api/tasks/:id/instances` validates `scheduledDate`, `scheduledTime`, `duration`, and optional `preview`; defaults to non-mutating preview mode; and only appends one `{ id, scheduledDate, scheduledTime, duration }` instance to `tasks.instances` when `preview:false`.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Hermes prompt requires chat-controlled preview/apply for FlowState-rendered time blocks. | Yes, API primitive only |
+| Data shape / persisted row shape | Yes | Existing app uses `tasks.instances[]`; `src/stores/__tests__/tasks.test.ts` and AI calendar scheduling tests passed. | Yes |
+| Renderer store/state | Partial | No renderer code changed; existing calendar/store tests passed. | Existing renderer consumes instances |
+| Electron main/preload bridge | N/A | Local API sidecar route only; no preload/main bridge change required. | N/A |
+| Localhost sidecar endpoint | Yes | `server/local-api/server.cjs` exposes bearer-protected GET/POST instance routes. | Yes |
+| KDE polling/control path | N/A | This is calendar scheduling, not KDE timer control. | N/A |
+| Supabase persistence/realtime | Partial | Endpoint updates `tasks.instances` and `updated_at`; live mutation intentionally not run against real tasks. | Code path only |
+| Updater/runtime version | Partial | `npm run electron:build` passed and local AppImage was replaced; updater deploy intentionally skipped. | Local build only |
+| Stale live process/cache state | Partial | Safe live/config probe found FlowState closed; no endpoint mutation attempted. | Not a live mutation proof |
+
+**Exact failure mode fixed**: Hermes had no bearer-protected Local API primitive to preview and apply a FlowState calendar task instance for an approved time block.
+
+**Explicitly not covered**: full day planner, MCP, automatic scheduling decisions, overwrite/reschedule endpoints, deleting instances, task completion/status changes, and live apply against a real production task.
+
+**Regression added for reported repro**: Local API contract tests cover route placement behind bearer auth, user scoping, preview non-mutation, append-only apply shape, validation failures, cross-user 404 behavior, and safe response fields.
+
+**Live boundary proof**: `node scripts/diagnose-live-boundary.cjs` read only safe local config/status fields and skipped endpoint execution because FlowState was closed; no real task mutation was performed.
+
+**Tests**: RED first failed because the route and handlers did not exist. Green proof: `npm test -- tests/unit/local-api/server-contract.test.ts` 20/20; `npm test -- tests/unit/local-api/server-contract.test.ts tests/unit/ai-action-command-substrate.test.ts tests/unit/ai-tools-execution.test.ts` 58/58; `npm test -- src/stores/__tests__/tasks.test.ts` 45/45; `node --check server/local-api/server.cjs`; `npm run type-check`; `npm run electron:build-main`; `npm run electron:build`. Safe live/config probe skipped mutation because FlowState was closed; config existed, enabled=true, port=5577, token present length 48, with no token printed.
+
 ### TASK-1928: Local API assistant context endpoint for Hermes personal assistant (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-08) | **Depends on**: TASK-1858, TASK-1859, TASK-1863, TASK-1797

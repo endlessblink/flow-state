@@ -195,6 +195,7 @@ function readJsonBody(req) {
 const toDateOnly = (ts) => (typeof ts === 'string' ? ts.slice(0, 10) : null)
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
+const TIME_ONLY_RE = /^\d{2}:\d{2}$/
 
 function localDateOnly(date = new Date()) {
   const y = date.getFullYear()
@@ -213,6 +214,52 @@ function isValidDateOnly(dateOnly) {
   const [y, m, d] = dateOnly.split('-').map(Number)
   const date = new Date(y, m - 1, d)
   return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d
+}
+
+function isValidTimeOnly(timeOnly) {
+  if (!TIME_ONLY_RE.test(timeOnly)) return false
+  const [h, m] = timeOnly.split(':').map(Number)
+  return Number.isInteger(h) && Number.isInteger(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59
+}
+
+function normalizeTaskInstances(instances) {
+  return Array.isArray(instances) ? instances.filter((item) => item && typeof item === 'object') : []
+}
+
+function validateTaskInstanceInput(body) {
+  if (!body || typeof body !== 'object') return { ok: false, error: 'body required' }
+  if (!isValidDateOnly(body.scheduledDate)) {
+    return { ok: false, error: 'scheduledDate must be YYYY-MM-DD' }
+  }
+  if (!isValidTimeOnly(body.scheduledTime)) {
+    return { ok: false, error: 'scheduledTime must be HH:mm' }
+  }
+  const duration = Number(body.duration)
+  if (!Number.isInteger(duration) || duration < 1 || duration > 1440) {
+    return { ok: false, error: 'duration must be an integer from 1 to 1440 minutes' }
+  }
+  if (body.preview !== undefined && typeof body.preview !== 'boolean') {
+    return { ok: false, error: 'preview must be a boolean when provided' }
+  }
+  return { ok: true }
+}
+
+function buildTaskInstance(body) {
+  return {
+    id: crypto.randomUUID(),
+    scheduledDate: body.scheduledDate,
+    scheduledTime: body.scheduledTime,
+    duration: Number(body.duration),
+  }
+}
+
+function buildTaskInstanceResponse(task, instance, preview) {
+  return {
+    ok: true,
+    preview,
+    task: { id: task.id, title: task.title },
+    instance,
+  }
 }
 
 // --- Route handlers ---------------------------------------------------------
@@ -351,6 +398,60 @@ async function handlePatchTask(id, req, res) {
   const { error } = await supabase.from('tasks').update(update).eq('id', id).eq('user_id', userId)
   if (error) return send(res, 500, { error: error.message })
   send(res, 200, { ok: true })
+}
+
+async function handleGetTaskInstances(id, res) {
+  const { supabase, userId } = ctx
+  const { data: existing, error } = await supabase
+    .from('tasks')
+    .select('id,title,instances')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .maybeSingle()
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+
+  send(res, 200, {
+    ok: true,
+    task: { id: existing.id, title: existing.title },
+    instances: normalizeTaskInstances(existing.instances),
+  })
+}
+
+async function handlePostTaskInstance(id, req, res) {
+  const { supabase, userId } = ctx
+  const body = await readJsonBody(req)
+  const validation = validateTaskInstanceInput(body)
+  if (!validation.ok) return send(res, 400, { error: validation.error })
+
+  const { data: existing, error: findErr } = await supabase
+    .from('tasks')
+    .select('id,title,status,priority,due_date,instances')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .maybeSingle()
+  if (findErr) return send(res, 500, { error: findErr.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+
+  const preview = body.preview !== false
+  const proposedInstance = buildTaskInstance(body)
+  if (preview) {
+    return send(res, 200, buildTaskInstanceResponse(existing, proposedInstance, true))
+  }
+
+  const updatedInstances = [...normalizeTaskInstances(existing.instances), proposedInstance]
+  const now = new Date().toISOString()
+  const { error: updateErr } = await supabase
+    .from('tasks')
+    .update({ instances: updatedInstances, updated_at: now })
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+  if (updateErr) return send(res, 500, { error: updateErr.message })
+
+  send(res, 200, buildTaskInstanceResponse(existing, proposedInstance, false))
 }
 
 async function handleDeleteTask(id, res) {
@@ -778,6 +879,13 @@ const server = http.createServer(async (req, res) => {
     const clarificationResumeMatch = path.match(/^\/api\/ai\/clarifications\/([^/]+)\/resume$/)
     if (req.method === 'POST' && clarificationResumeMatch) {
       return await handleAIClarificationResume(decodeURIComponent(clarificationResumeMatch[1]), req, res)
+    }
+    const taskInstancesMatch = path.match(/^\/api\/tasks\/([^/]+)\/instances$/)
+    if (req.method === 'GET' && taskInstancesMatch) {
+      return await handleGetTaskInstances(decodeURIComponent(taskInstancesMatch[1]), res)
+    }
+    if (req.method === 'POST' && taskInstancesMatch) {
+      return await handlePostTaskInstance(decodeURIComponent(taskInstancesMatch[1]), req, res)
     }
     const taskMatch = path.match(/^\/api\/tasks\/([^/]+)$/)
     if (req.method === 'PATCH' && taskMatch) {

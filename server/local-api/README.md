@@ -157,6 +157,86 @@ and (unless `progress` is given) `progress: 100`.
 { "error": "not found" }
 ```
 
+### `GET /api/tasks/:id/instances`
+Returns the calendar/time-block instances for one user-owned, non-deleted task.
+This is bearer-protected and never returns the full task body.
+
+```json
+// 200
+{
+  "ok": true,
+  "task": { "id": "task-uuid", "title": "Draft Q3 plan" },
+  "instances": [
+    { "id": "instance-uuid", "scheduledDate": "2026-07-08", "scheduledTime": "10:30", "duration": 25 }
+  ]
+}
+// 404 (unknown, cross-user, or deleted task)
+{ "error": "not found" }
+```
+
+### `POST /api/tasks/:id/instances`
+Creates a FlowState calendar task instance/time block after an explicit preview.
+This is the scheduling primitive for Hermes: chat asks the question, FlowState
+stores/renders the approved block.
+
+Required body:
+
+```json
+{
+  "scheduledDate": "2026-07-08",
+  "scheduledTime": "10:30",
+  "duration": 25,
+  "preview": true
+}
+```
+
+Preview is safe and non-mutating. If `preview` is omitted, the endpoint defaults
+to preview mode.
+
+```json
+// preview response
+{
+  "ok": true,
+  "preview": true,
+  "task": { "id": "task-uuid", "title": "Draft Q3 plan" },
+  "instance": {
+    "id": "new-instance-uuid",
+    "scheduledDate": "2026-07-08",
+    "scheduledTime": "10:30",
+    "duration": 25
+  }
+}
+```
+
+Apply only after user approval:
+
+```json
+// body
+{ "scheduledDate": "2026-07-08", "scheduledTime": "10:30", "duration": 25, "preview": false }
+
+// 200
+{
+  "ok": true,
+  "preview": false,
+  "task": { "id": "task-uuid", "title": "Draft Q3 plan" },
+  "instance": {
+    "id": "new-instance-uuid",
+    "scheduledDate": "2026-07-08",
+    "scheduledTime": "10:30",
+    "duration": 25
+  }
+}
+```
+
+Safety notes:
+
+- Verifies the task exists, belongs to the Local API auth user, and is not deleted.
+- Validates `scheduledDate` as `YYYY-MM-DD`, `scheduledTime` as `HH:mm`, and `duration` as 1-1440 minutes.
+- Appends to `tasks.instances[]`, the same calendar instance shape FlowState renders.
+- Does not change task status, title, priority, due date, or project.
+- Does not overwrite existing instances and does not delete tasks.
+- Response includes only task id/title plus the created/proposed instance; it never includes tokens, auth headers, sessions, subtasks, descriptions, or raw backlog dumps.
+
 ### `DELETE /api/tasks/:id`
 Soft-deletes a task for the current user (`is_deleted=true`, `deleted_at=now`).
 ```json

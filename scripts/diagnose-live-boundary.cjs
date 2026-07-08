@@ -66,11 +66,15 @@ function processList() {
 function processSummary(raw) {
   const lines = String(raw || '')
     .split('\n')
-    .filter((line) => /FlowState|flow-state|flowstate-local-api|local-api-server/i.test(line))
+    .filter((line) => /FlowState|flow-state|\/flowstate(?:\s|$)|flowstate-local-api|local-api-server/i.test(line))
+  const flowStateLines = lines.filter((line) =>
+    !/flowstate-local-api|local-api-server/i.test(line) &&
+    /FlowState|flow-state|\/flowstate(?:\s|$)/i.test(line),
+  )
   return {
-    flowStateProcessCount: lines.filter((line) => /FlowState|flow-state/i.test(line)).length,
+    flowStateProcessCount: flowStateLines.length,
     localApiProcessCount: lines.filter((line) => /flowstate-local-api|local-api-server/i.test(line)).length,
-    usesRealUserData: lines.some((line) => line.includes(USER_DATA_DIR)),
+    usesRealUserData: flowStateLines.some((line) => line.includes(USER_DATA_DIR)),
   }
 }
 

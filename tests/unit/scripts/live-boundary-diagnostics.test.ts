@@ -129,4 +129,29 @@ describe('live boundary diagnostics', () => {
     expect(report.ok).toBe(true)
     expect(report.failures).toEqual([])
   })
+
+  it('counts the packaged lowercase flowstate process as the running Electron app', () => {
+    const diagnostics = {
+      appVersion: '1.4.239',
+      hasAuthContext: true,
+      rendererAuthState: {
+        isAuthenticated: true,
+        hasUser: true,
+        canSyncRemotely: true,
+        reauthRequired: false,
+        isInitialized: true,
+        ageMs: 100,
+      },
+      hasLocalTimerSnapshot: true,
+      localSnapshotActive: true,
+      localSnapshotAgeMs: 100,
+      currentTimerBranch: 'local-snapshot-active',
+      supabaseActiveSessionFound: true,
+    }
+
+    const output = runBoundary(fixtureEnv(diagnostics, '3932158 3931658 /tmp/.mount_fs/flowstate --type=utility'))
+    const report = JSON.parse(output)
+    expect(report.processes.flowStateProcessCount).toBe(1)
+    expect(report.skipped).toBe(false)
+  })
 })

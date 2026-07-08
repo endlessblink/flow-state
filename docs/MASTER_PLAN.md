@@ -44,6 +44,45 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### ~~TASK-1930~~: Local API sidecar startup diagnostics and live-boundary process detection (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-08) — added redacted Electron-main sidecar lifecycle diagnostics and fixed packaged-process detection for the live boundary probe. | **Depends on**: TASK-1797, TASK-1927, TASK-1928
+
+**Why**: Hermes reported the Local Task API toggle enabled while `127.0.0.1:5577` refused connections and no sidecar process appeared. The existing Electron bridge only set `listening` after a sidecar message and did not expose enough non-secret failure state to tell whether `utilityProcess.fork()` was skipped, threw, spawned then exited, or never found the packaged sidecar. The live-boundary script could also misclassify the lowercase packaged `flowstate` process as not running.
+
+**Acceptance**:
+- Electron main records non-secret Local API sidecar lifecycle state for set-enabled, start attempt, resolved sidecar path existence, child pid, spawn, message, error, and exit.
+- `localApi:status` exposes only safe diagnostics: no bearer token, Supabase keys, JWTs, auth headers, refresh tokens, sessions, or request bodies.
+- Live-boundary diagnostics count the packaged lowercase `flowstate` process so a running Electron app is not skipped incorrectly.
+- Regression tests cover sidecar diagnostics fields and packaged-process detection.
+- Fresh Electron package still contains `/dist-electron/local-api-server.cjs`, and the real local AppImage can bind `127.0.0.1:5577`.
+
+**Implementation**: `electron/ipc/localApi.ts` now tracks and logs safe lifecycle events around `localApi:setEnabled` and `utilityProcess.fork()`, including last start timestamp, sidecar path, path existence, child pid, last child message type, child error, and child exit marker. `electron/preload.ts` exposes the expanded safe status type. `scripts/diagnose-live-boundary.cjs` now recognizes `/flowstate` packaged processes without counting `flowstate-local-api` as the main app.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Toggle enabled plus `127.0.0.1:5577` refusing connections and no visible sidecar process. | Yes, diagnostics and live proof |
+| Data shape / persisted row shape | N/A | No task rows or production data mutated. | N/A |
+| Renderer store/state | Partial | Preload status type updated; settings continues to consume existing `enabled/running/port` fields. | Safe status extension only |
+| Electron main/preload bridge | Yes | `localApi:status` now exposes safe startup failure fields and child lifecycle state. | Yes |
+| Localhost sidecar endpoint | Yes | Fresh local AppImage logged startup and `curl http://127.0.0.1:5577/api/health` returned `{"ok":true}`. | Yes |
+| KDE polling/control path | Partial | Same localhost sidecar boundary now has better diagnostics; KDE code unchanged. | Boundary only |
+| Supabase persistence/realtime | N/A | No Supabase writes or task mutations performed. | N/A |
+| Updater/runtime version | Partial | Local AppImage package rebuilt; public updater deploy not part of this fix. | Local install only |
+| Stale live process/cache state | Yes | Freshly launched local AppImage bound `127.0.0.1:5577`; existing stale/closed process state is now distinguishable. | Yes |
+
+**Exact failure mode fixed**: Local API sidecar startup could fail silently from the user's point of view, and live diagnostics could incorrectly skip a running packaged `flowstate` process.
+
+**Explicitly not covered**: public updater deploy, local Supabase/Kong argv secret cleanup, Hermes MCP, task mutations, or rewriting the KDE widget watchdog.
+
+**Regression added for reported repro**: `tests/unit/electron/local-api-lifecycle.test.ts` now requires sidecar lifecycle diagnostics in status and child spawn/error/exit/message handling. `tests/unit/scripts/live-boundary-diagnostics.test.ts` now covers lowercase packaged `flowstate` process detection.
+
+**Live boundary proof**: After launching `/home/endlessblink/.local/bin/FlowState.AppImage --no-sandbox --class=flow-state`, Electron logged the Local API startup, `curl -sS http://127.0.0.1:5577/api/health` returned `{"ok":true}`, and escalated `ss -ltnp` showed `127.0.0.1:5577` listening under `flowstate`.
+
+**Tests**: RED first failed in `npm test -- tests/unit/electron/local-api-lifecycle.test.ts tests/unit/scripts/live-boundary-diagnostics.test.ts` because status lacked sidecar failure fields and child event diagnostics. Green proof: `npm test -- tests/unit/electron/local-api-lifecycle.test.ts tests/unit/scripts/live-boundary-diagnostics.test.ts`; `npm test -- tests/unit/local-api/server-contract.test.ts`; `node --check server/local-api/server.cjs`; `npm run type-check`; `npm run electron:build-main`; `node scripts/validate-electron-package.cjs`; `npm run electron:build`. Installed `release/FlowState-1.4.239-x86_64.AppImage` to `/home/endlessblink/.local/bin/FlowState.AppImage` and relaunched it. Live sidecar proof passed: health `200`, `127.0.0.1:5577` listening under `flowstate`, assistant context endpoint available. Separate remaining watchdog signal: `node scripts/diagnose-live-boundary.cjs` now correctly detects the running app but fails `missing-renderer-timer-snapshot`, which belongs to the KDE/timer heartbeat failure class rather than the Local API listener startup failure.
+
 ### ~~TASK-1929~~: Local API task-instance scheduling for Hermes time blocking (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-08) — added bearer-protected preview/apply Local API task-instance endpoints for Hermes time blocking. | **Depends on**: TASK-1928, TASK-1797

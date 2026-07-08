@@ -82,6 +82,13 @@ let listening = false
 let latestSession: SessionMessage | null = null
 let latestTimerSnapshot: TimerSnapshotMessage | null = null
 let latestRendererAuthState: RendererAuthStateMessage | null = null
+let lastStartAttemptAt: number | null = null
+let lastSidecarPath: string | null = null
+let sidecarPathExists = false
+let lastChildExit: { code: number | null; signal: string | null; at: number } | null = null
+let lastChildError: { message: string; at: number } | null = null
+let lastChildMessageType: string | null = null
+let lastChildMessageAt: number | null = null
 
 function sidecarPath() {
   // localApi.cjs lives in dist-electron/ipc/, while the bundled sidecar is
@@ -89,29 +96,75 @@ function sidecarPath() {
   return join(__dirname, '..', 'local-api-server.cjs')
 }
 
+function safeErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message
+  return String(error || 'unknown error')
+}
+
+function logLifecycle(event: string, details: Record<string, unknown> = {}) {
+  console.info('[local-api]', {
+    event,
+    enabled: config.enabled,
+    port: config.port,
+    listening,
+    childPid: child?.pid ?? null,
+    ...details,
+  })
+}
+
 function startChild() {
-  if (child) return
+  if (child) {
+    logLifecycle('start-skipped-already-running')
+    return
+  }
   const path = sidecarPath()
-  if (!existsSync(path)) {
-    console.error(`[local-api] sidecar bundle missing at ${path} — run electron:build-main`)
+  lastStartAttemptAt = Date.now()
+  lastSidecarPath = path
+  sidecarPathExists = existsSync(path)
+  lastChildExit = null
+  lastChildError = null
+  lastChildMessageType = null
+  lastChildMessageAt = null
+  logLifecycle('start-attempt', { sidecarPath: path, sidecarPathExists })
+  if (!sidecarPathExists) {
+    const message = `sidecar bundle missing at ${path}`
+    lastChildError = { message, at: Date.now() }
+    console.error(`[local-api] ${message} — run electron:build-main`)
     return
   }
   listening = false
-  child = utilityProcess.fork(path, [], {
-    serviceName: 'flowstate-local-api',
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      FLOW_STATE_API_MODE: 'token',
-      FLOW_STATE_API_TOKEN: config.token,
-      FLOW_STATE_API_PORT: String(config.port),
-      FLOW_STATE_API_DATA_DIR: app.getPath('userData'),
-      FLOW_STATE_APP_VERSION: app.getVersion(),
-    },
+  try {
+    child = utilityProcess.fork(path, [], {
+      serviceName: 'flowstate-local-api',
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        FLOW_STATE_API_MODE: 'token',
+        FLOW_STATE_API_TOKEN: config.token,
+        FLOW_STATE_API_PORT: String(config.port),
+        FLOW_STATE_API_DATA_DIR: app.getPath('userData'),
+        FLOW_STATE_APP_VERSION: app.getVersion(),
+      },
+    })
+  } catch (error) {
+    lastChildError = { message: safeErrorMessage(error), at: Date.now() }
+    logLifecycle('fork-threw', { error: lastChildError.message })
+    child = null
+    listening = false
+    return
+  }
+
+  logLifecycle('fork-returned', { childPid: child.pid })
+
+  child.on('spawn', () => {
+    logLifecycle('spawn', { childPid: child?.pid ?? null })
   })
 
   child.on('message', (msg: unknown) => {
     const m = msg as { type?: string; port?: number }
+    lastChildMessageType = typeof m?.type === 'string' ? m.type : 'unknown'
+    lastChildMessageAt = Date.now()
+    logLifecycle('message', { messageType: lastChildMessageType })
     if (m && m.type === 'listening') {
       listening = true
       // Forward the current session once the server is up.
@@ -121,7 +174,18 @@ function startChild() {
     }
   })
 
+  child.on('error', (error) => {
+    lastChildError = { message: safeErrorMessage(error), at: Date.now() }
+    logLifecycle('error', { error: lastChildError.message })
+  })
+
   child.on('exit', () => {
+    lastChildExit = {
+      code: null,
+      signal: null,
+      at: Date.now(),
+    }
+    logLifecycle('exit', lastChildExit)
     child = null
     listening = false
   })
@@ -205,6 +269,7 @@ export function registerLocalApiHandlers() {
   ipcMain.handle('localApi:setEnabled', (_e, enabled: boolean) => {
     config.enabled = !!enabled
     saveConfig(config)
+    logLifecycle('set-enabled', { requestedEnabled: !!enabled })
     if (config.enabled) {
       startChild()
       pushSession()
@@ -224,6 +289,13 @@ export function registerLocalApiHandlers() {
     childRunning: !!child,
     childPid: child?.pid ?? null,
     appVersion: app.getVersion(),
+    lastStartAttemptAt,
+    lastSidecarPath,
+    sidecarPathExists,
+    lastChildExit,
+    lastChildError,
+    lastChildMessageType,
+    lastChildMessageAt,
     hasLatestSession: !!latestSession,
     rendererAuthState: latestRendererAuthState
       ? {

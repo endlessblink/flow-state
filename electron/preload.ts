@@ -122,6 +122,13 @@ declare global {
         childRunning: boolean
         childPid: number | null
         appVersion: string
+        lastStartAttemptAt: number | null
+        lastSidecarPath: string | null
+        sidecarPathExists: boolean
+        lastChildExit: { code: number | null; signal: string | null; at: number } | null
+        lastChildError: { message: string; at: number } | null
+        lastChildMessageType: string | null
+        lastChildMessageAt: number | null
         hasLatestSession: boolean
         rendererAuthState: {
           isAuthenticated: boolean

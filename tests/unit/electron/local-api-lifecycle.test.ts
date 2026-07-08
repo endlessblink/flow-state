@@ -99,6 +99,12 @@ describe('Electron local API lifecycle regression contract', () => {
 
     expect(body).toContain('childPid')
     expect(body).toContain('appVersion')
+    expect(body).toContain('lastStartAttemptAt')
+    expect(body).toContain('lastSidecarPath')
+    expect(body).toContain('sidecarPathExists')
+    expect(body).toContain('lastChildExit')
+    expect(body).toContain('lastChildError')
+    expect(body).toContain('lastChildMessageType')
     expect(body).toContain('hasLatestSession')
     expect(body).toContain('hasLatestTimerSnapshot')
     expect(body).toContain('latestTimerSnapshotActive')
@@ -106,5 +112,20 @@ describe('Electron local API lifecycle regression contract', () => {
     expect(body).not.toContain('token')
     expect(body).not.toContain('accessToken')
     expect(body).not.toContain('refreshToken')
+  })
+
+  it('records child spawn, message, error, and exit events without secret-bearing values', () => {
+    const startChild = LOCAL_API_TS.slice(
+      LOCAL_API_TS.indexOf('function startChild()'),
+      LOCAL_API_TS.indexOf('\nfunction stopChild()', LOCAL_API_TS.indexOf('function startChild()')),
+    )
+
+    expect(startChild).toContain("child.on('spawn'")
+    expect(startChild).toContain("child.on('error'")
+    expect(startChild).toContain("child.on('exit'")
+    expect(startChild).toContain('lastChildError')
+    expect(startChild).toContain('lastChildExit')
+    expect(startChild).toContain('lastChildMessageType')
+    expect(startChild).not.toContain('FLOW_STATE_API_TOKEN: lastChildError')
   })
 })

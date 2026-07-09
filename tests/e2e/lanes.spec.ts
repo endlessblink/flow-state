@@ -106,7 +106,19 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
       const res = await admin.auth.admin.listUsers()
       user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!user) { const { data } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); user = data.user; }
+    if (!user) {
+      const res = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
+      user = res.data?.user
+      if (!user) {
+        // Fallback: it might have been created by another test worker but listUsers was stale
+        for (let j = 0; j < 5 && !user; j++) {
+          await new Promise(r => setTimeout(r, 1000))
+          const check = await admin.auth.admin.listUsers()
+          user = check.data.users.find((u) => u.email === 'playwright@test.flowstate')
+        }
+      }
+      if (!user) throw new Error('Failed to create or find test user')
+    }
     const userId = user.id
 
     // Seed an EMPTY lane and ensure the two target tasks aren't in it

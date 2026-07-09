@@ -49,12 +49,10 @@ test.describe('canvas renders a task placed inside a group (BUG-1796)', () => {
       if (res.error) console.error('createUser error:', res.error.message)
       user = res.data?.user
       if (!user) {
-        // Fallback: it might have been created by another test worker but listUsers was stale
-        for (let j = 0; j < 10 && !user; j++) {
-          await new Promise(r => setTimeout(r, 1000))
-          const check = await admin.auth.admin.listUsers()
-          user = check.data.users.find((u) => u.email === 'playwright@test.flowstate')
-        }
+        // Fallback: it might have been created by another test worker but listUsers was stale/paginated.
+        // Let's just sign in to get the user object!
+        const loginRes = await admin.auth.signInWithPassword({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!' })
+        user = loginRes.data?.user
       }
       if (!user) throw new Error('Failed to create or find test user (rate limited or stale listUsers)')
     }

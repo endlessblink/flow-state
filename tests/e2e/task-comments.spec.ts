@@ -24,11 +24,8 @@ test.describe('Task Comments (TASK-1553)', () => {
       if (res.error) console.error('createUser error:', res.error.message)
       testUser = res.data?.user
       if (!testUser) {
-        for (let j = 0; j < 10 && !testUser; j++) {
-          await new Promise(r => setTimeout(r, 1000))
-          const check = await supabase.auth.admin.listUsers()
-          testUser = check.data.users.find((u) => u.email === 'playwright@test.flowstate')
-        }
+        const loginRes = await supabase.auth.signInWithPassword({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!' })
+        testUser = loginRes.data?.user
       }
       if (!testUser) throw new Error('Failed to create or find test user (rate limited or stale listUsers)')
     }

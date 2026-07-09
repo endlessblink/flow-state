@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -124,6 +124,31 @@ describe('daily regression hunt script', () => {
     expect(packageJson.scripts['regression:daily']).toBe('node scripts/daily-regression-hunt.cjs --mode daily')
     expect(packageJson.scripts['regression:weekly']).toBe('node scripts/daily-regression-hunt.cjs --mode weekly')
     expect(packageJson.scripts['regression:report']).toBe('node scripts/daily-regression-hunt.cjs --latest')
+  })
+
+  it('keeps rotated flow scripts pointed at existing test targets', () => {
+    const packageJson = JSON.parse(readFileSync('package.json', 'utf8'))
+    const rotatedScripts = [
+      'test:canvas-flows',
+      'test:timer-flows',
+      'test:task-flows',
+      'test:user-flows',
+    ]
+
+    for (const scriptName of rotatedScripts) {
+      const command = packageJson.scripts[scriptName]
+      expect(command, `${scriptName} should exist`).toEqual(expect.any(String))
+
+      const referencedPaths = command
+        .split(/\s+/)
+        .map((part: string) => part.replace(/^['"]|['"]$/g, '').replace(/^--[^=]+=*/, ''))
+        .filter((part: string) => part.startsWith('tests/') || part.startsWith('scripts/'))
+
+      expect(referencedPaths, `${scriptName} should reference a concrete test target`).not.toEqual([])
+      for (const target of referencedPaths) {
+        expect(existsSync(target), `${scriptName} references missing path: ${target}`).toBe(true)
+      }
+    }
   })
 
   it('installs the user timer with failure notifications enabled', () => {

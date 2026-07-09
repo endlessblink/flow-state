@@ -73,16 +73,17 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     }
     if (!user) {
       const res = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
+      if (res.error) console.error('createUser error:', res.error.message)
       user = res.data?.user
       if (!user) {
         // Fallback: it might have been created by another test worker but listUsers was stale
-        for (let j = 0; j < 5 && !user; j++) {
+        for (let j = 0; j < 10 && !user; j++) {
           await new Promise(r => setTimeout(r, 1000))
           const check = await admin.auth.admin.listUsers()
           user = check.data.users.find((u) => u.email === 'playwright@test.flowstate')
         }
       }
-      if (!user) throw new Error('Failed to create or find test user')
+      if (!user) throw new Error('Failed to create or find test user (rate limited or stale listUsers)')
     }
     userId = user.id
 

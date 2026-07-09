@@ -19,7 +19,19 @@ test.describe('Task Comments (TASK-1553)', () => {
       const res = await supabase.auth.admin.listUsers()
       testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!testUser) { const { data } = await supabase.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
+        if (!testUser) {
+      const res = await supabase.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
+      if (res.error) console.error('createUser error:', res.error.message)
+      testUser = res.data?.user
+      if (!testUser) {
+        for (let j = 0; j < 10 && !testUser; j++) {
+          await new Promise(r => setTimeout(r, 1000))
+          const check = await supabase.auth.admin.listUsers()
+          testUser = check.data.users.find((u) => u.email === 'playwright@test.flowstate')
+        }
+      }
+      if (!testUser) throw new Error('Failed to create or find test user (rate limited or stale listUsers)')
+    }
 
     await supabase.from('workspaces').upsert({
       id: TEST_WORKSPACE_ID, name: 'Test Workspace',

@@ -41,7 +41,19 @@ test.describe('TASK-1455: Catalog — Uncategorized tasks group', () => {
       const res = await adminClient.auth.admin.listUsers()
       testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!testUser) { const { data } = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
+        if (!testUser) {
+      const res = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
+      if (res.error) console.error('createUser error:', res.error.message)
+      testUser = res.data?.user
+      if (!testUser) {
+        for (let j = 0; j < 10 && !testUser; j++) {
+          await new Promise(r => setTimeout(r, 1000))
+          const check = await adminClient.auth.admin.listUsers()
+          testUser = check.data.users.find((u) => u.email === 'playwright@test.flowstate')
+        }
+      }
+      if (!testUser) throw new Error('Failed to create or find test user (rate limited or stale listUsers)')
+    }
 
     // Upsert an uncategorized task (project_id = null)
     const { error: upsertError } = await adminClient.from('tasks').upsert(

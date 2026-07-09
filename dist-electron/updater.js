@@ -39,7 +39,17 @@ function launchDetachedAppImageInstaller() {
     if (!targetAppImage || !pendingAppImage)
         return false;
     const updateInfoPath = (0, updater_pending_1.pendingUpdateInfoPath)();
+    // BUG-1917: the previous script ran blind (stdio ignored, no log) and clicking
+    // Restart could end with the app exited, the AppImage NOT swapped, and no
+    // relaunch — with zero forensic trail (pending/ kept a graveyard of 1.4.223/
+    // 224/226/229 that never installed). Every step now logs to LOG, each step
+    // aborts loudly on failure, and the relaunch uses the same flags as
+    // FlowState-launch.sh (TASK-1871) — a bare relaunch can die on chrome-sandbox
+    // SUID / GPU init and look exactly like "nothing happened".
     const script = `
+LOG="\${TMPDIR:-/tmp}/flowstate-appimage-install.log"
+exec >> "$LOG" 2>&1
+echo "=== $(date -u +%FT%TZ) installer start target=$1 pending=$2 parent=$4 ==="
 target="$1"
 pending="$2"
 info="$3"
@@ -50,22 +60,35 @@ while kill -0 "$parent" 2>/dev/null && [ "$i" -lt 100 ]; do
   i=$((i + 1))
   sleep 0.1
 done
-chmod 755 "$pending"
-cp -f "$pending" "$tmp"
-chmod 755 "$tmp"
-mv -f "$tmp" "$target"
+echo "parent gone after $i ticks"
+chmod 755 "$pending" || { echo "FAIL chmod pending"; exit 1; }
+cp -f "$pending" "$tmp" || { echo "FAIL cp to tmp"; exit 1; }
+chmod 755 "$tmp" || { echo "FAIL chmod tmp"; exit 1; }
+mv -f "$tmp" "$target" || { echo "FAIL mv into place"; exit 1; }
 rm -f "$info"
-exec "$target" --no-sandbox --class=flow-state
+echo "swap complete, relaunching"
+exec "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state
 `;
     const child = (0, node_child_process_1.spawn)('/bin/sh', ['-c', script, 'flowstate-appimage-install', targetAppImage, pendingAppImage, updateInfoPath, String(process.pid)], {
         detached: true,
         stdio: 'ignore',
+        // BUG-1917: never inherit a cwd inside the soon-to-unmount AppImage FUSE dir
+        cwd: '/',
         env: {
             ...process.env,
             APPIMAGE_SILENT_INSTALL: 'true',
         },
     });
+    child.once('error', (err) => {
+        console.error('[Updater] Detached installer failed to spawn:', err.message);
+    });
     child.unref();
+    // BUG-1917: spawn failures are async, but a missing pid means the process
+    // never started — fall back to electron-updater's own quitAndInstall path.
+    if (!child.pid) {
+        console.error('[Updater] Detached installer has no pid — falling back to quitAndInstall');
+        return false;
+    }
     return true;
 }
 /**

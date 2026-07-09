@@ -1,0 +1,3 @@
+## 2024-05-13 - [Calendar View Control Accessibility]
+**Learning:** Custom UI components functioning as segmented controls or radio groups (like the view selector in the CalendarHeader) lack inherent semantics, causing screen readers to announce them merely as a collection of independent buttons, leaving users unaware of the active state.
+**Action:** Always apply `role="group"` (or `radiogroup`) and an appropriate `aria-label` to the container. Additionally, dynamically bind `:aria-pressed` (or `:aria-checked`/`:aria-selected`) to each option button to correctly expose the active/selected state to assistive technologies instead of relying solely on an active CSS class.

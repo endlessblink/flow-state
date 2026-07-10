@@ -351,10 +351,8 @@ const handleToggleComplete = async (taskId: string) => {
   await taskStore.updateTaskWithUndo(taskId, { status: newStatus })
 }
 
-const handleDeleteSelected = (taskIds: string[]) => {
-  for (const id of taskIds) {
-    doDeleteTask(id)
-  }
+const handleDeleteSelected = async (taskIds: string[]) => {
+  await taskStore.bulkDeleteTasksWithUndo(taskIds)
 }
 
 const handleAddTaskToGroup = (groupKey: string, _groupBy: string) => {

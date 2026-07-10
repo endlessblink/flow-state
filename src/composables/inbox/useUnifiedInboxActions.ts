@@ -23,7 +23,7 @@ export function useUnifiedInboxActions(
 ) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
-    const { createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
+    const { bulkDeleteTasksWithUndo, createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
     const { showToast } = useToast()
     const { startDrag: startGlobalDrag, endDrag: endGlobalDrag } = useDragAndDrop()
     const { filterDefaults } = useFilterDefaults()
@@ -76,13 +76,11 @@ export function useUnifiedInboxActions(
         }
     }
 
-    const deleteSelectedTasks = () => {
+    const deleteSelectedTasks = async () => {
         if (selectedTaskIds.value.size === 0) return
 
         const idsToDelete = Array.from(selectedTaskIds.value)
-        idsToDelete.forEach(id => {
-            taskStore.deleteTaskWithUndo(id)
-        })
+        await bulkDeleteTasksWithUndo(idsToDelete)
         clearSelection()
     }
 

@@ -585,6 +585,82 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }
   })
 
+  it('BUG-1934: removes the complete local batch before queued sync finishes', async () => {
+    const taskStore = useTaskStore()
+    const taskA = createMockTask({
+      id: 'task-bulk-delete-instant-a',
+      title: 'Instant bulk delete A',
+      positionVersion: 4
+    })
+    const taskB = createMockTask({
+      id: 'task-bulk-delete-instant-b',
+      title: 'Instant bulk delete B',
+      positionVersion: 9
+    })
+    const untouchedTask = createMockTask({
+      id: 'task-bulk-delete-untouched',
+      title: 'Untouched task'
+    })
+    taskStore._rawTasks.push(taskA, taskB, untouchedTask)
+
+    let releaseFirstQueueWrite!: (value: { id: number; status: string }) => void
+    const firstQueueWrite = new Promise<{ id: number; status: string }>(resolve => {
+      releaseFirstQueueWrite = resolve
+    })
+    mockEnqueue.mockImplementationOnce(() => firstQueueWrite)
+
+    const deletePromise = taskStore.bulkDeleteTasks([taskA.id, taskB.id])
+
+    expect(taskStore._rawTasks.map(task => task.id)).toEqual([untouchedTask.id])
+    await vi.waitFor(() => expect(mockEnqueue).toHaveBeenCalledTimes(1))
+    expect(taskStore._rawTasks.map(task => task.id)).toEqual([untouchedTask.id])
+    expect(mockEnqueue).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      entityType: 'task',
+      operation: 'delete',
+      entityId: taskA.id,
+      payload: { id: taskA.id },
+      baseVersion: 4
+    }))
+
+    releaseFirstQueueWrite({ id: 1, status: 'pending' })
+    await deletePromise
+
+    expect(mockEnqueue).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      entityType: 'task',
+      operation: 'delete',
+      entityId: taskB.id,
+      payload: { id: taskB.id },
+      baseVersion: 9
+    }))
+  })
+
+  it('BUG-1934: redo removes the complete local batch before queued sync finishes', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const taskA = createMockTask({ id: 'task-bulk-redo-instant-a', title: 'Instant bulk redo A' })
+    const taskB = createMockTask({ id: 'task-bulk-redo-instant-b', title: 'Instant bulk redo B' })
+    taskStore._rawTasks.push(taskA, taskB)
+
+    await undoSystem.bulkDeleteTasksWithUndo([taskA.id, taskB.id])
+    await undoSystem.undo()
+    expect(taskStore._rawTasks.map(task => task.id)).toEqual([taskA.id, taskB.id])
+
+    mockEnqueue.mockClear()
+    let releaseFirstQueueWrite!: (value: { id: number; status: string }) => void
+    const firstQueueWrite = new Promise<{ id: number; status: string }>(resolve => {
+      releaseFirstQueueWrite = resolve
+    })
+    mockEnqueue.mockImplementationOnce(() => firstQueueWrite)
+
+    const redoPromise = undoSystem.redo()
+
+    await vi.waitFor(() => expect(mockEnqueue).toHaveBeenCalledTimes(1))
+    expect(taskStore._rawTasks).toHaveLength(0)
+
+    releaseFirstQueueWrite({ id: 1, status: 'pending' })
+    await redoPromise
+  })
+
   it('keeps a bulk delete removed when saving remaining cached tasks fails', async () => {
     const taskStore = useTaskStore()
     const taskA = createMockTask({ id: 'task-bulk-delete-save-fails-a', title: 'Bulk delete A' })

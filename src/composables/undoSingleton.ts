@@ -477,8 +477,8 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
 
     case 'task-bulk-delete': {
       // Redo bulk deletion = delete all tasks again
+      await taskStore.bulkDeleteTasks(operation.affectedIds)
       for (const taskId of operation.affectedIds) {
-        await taskStore.deleteTask(taskId, 'redo:re-delete')
         // Cancel only pending CREATEs — keep the DELETE we just enqueued
         try {
           const { deleteOperationsByType } = await import('@/services/offline/writeQueueDB')

@@ -4418,6 +4418,31 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 
 **Regression added**: `tests/unit/composables/useLocalApiBridge.test.ts` — the pre-existing "clears on expired session" case was inverted to "neither forwards nor clears" (the anti-forward invariant it really protected is preserved), plus a new sign-out-clears case. And a `persistPrimaryAuthSession` assertion on the reconnect-grace path in `tests/unit/stores/auth-flow.test.ts:8e`.
 
+### ~~BUG-1934~~: Regular multi-delete removes tasks sequentially instead of instantly (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-10, shipped Electron v1.4.241) | **Opened**: 2026-07-10
+
+**User repro**: Regular deletion of multiple selected tasks is visibly slow and removes tasks one at a time. Permanent deletion is explicitly outside this report.
+
+**Root cause**: Board and Unified Inbox bypass the existing `bulkDeleteTasksWithUndo(taskIds)` path and invoke `deleteTaskWithUndo(id)` once per selected task. Each call creates a separate undo operation and performs a separate optimistic splice/cache/queue cycle, so the UI visibly drains instead of applying one local batch.
+
+**Acceptance**:
+- Board, Unified Inbox, and All Tasks route regular multi-delete through one bulk undo operation.
+- All selected tasks leave reactive local state together before remote queue processing completes.
+- One Ctrl/Cmd+Z restores the entire batch; redo removes the entire batch again.
+- Per-task offline queue entries, echo suppression, `positionVersion`, soft-delete resurrection guards, and the direct database batch safety limit remain intact.
+- Canvas regular Delete continues to move tasks to Inbox; Shift+Delete/permanent-delete behavior is unchanged.
+
+**Implementation**: Board and Unified Inbox now call the existing `bulkDeleteTasksWithUndo(taskIds)` entry point once instead of fanning out to `deleteTaskWithUndo(id)`. The store already filters every selected ID from reactive state before awaiting cache or queue persistence, so all cards disappear in one paint while the existing per-task offline queue remains the sole remote writer. Bulk redo now uses the same atomic local batch path instead of replaying sequential single deletes.
+
+**Exact failure mode fixed**: regular multi-select delete and its redo visibly drained task lists one row at a time because Board, Inbox, and redo bypassed the atomic local bulk mutation.
+
+**Explicitly not covered**: single-task delete latency; permanent deletion; Canvas regular Delete semantics (move to Inbox); recurrence-dialog behavior; or changing remote sync from durable per-task queue entries to a direct database batch.
+
+**Regression added for reported repro**: `tests/unit/undo-entrypoint-contract.test.ts` pins Board, Inbox, and All Tasks to one bulk undo call. `tests/unit/undo-task-operations.test.ts` holds the first queue write open and proves the full local batch is already absent for both initial delete and redo, while preserving each delete payload and `positionVersion`.
+
+**Verification**: focused RED/GREEN regressions 32/32; Electron sync guard 185/185; full unit suite, typecheck, lint, package validation, and `git diff --check` passed. Public `latest-linux.yml` serves `1.4.241`; AppImage (`180364145` bytes) and deb (`131350324` bytes) both return HTTP 200.
+
 ### ~~BUG-1918~~: Sign-in needs a manual refresh — empty canvas and zeroed counts until reload (✅ DONE)
 
 **Root cause**: the `SIGNED_IN` handler in `src/stores/auth.ts` loaded tasks/projects/canvas **before** workspaces. Task and canvas fetches are workspace-scoped and read `activeWorkspaceId`, which is only restored inside `loadWorkspaces()` (`stores/workspace.ts:96-102`). They queried a null workspace, returned empty, and nothing reloaded once the workspace arrived. Lanes were never reloaded at all. A page reload works because `useAppInitialization` loads workspaces first (`:219-223`) and includes lanes (`:250`).
@@ -6329,6 +6354,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1919**~~ | **P0** | ✅ **KDE timer zombie after +5min extension — BUG-1892 guard swallowed re-completion** (✅ DONE 2026-07-04, widget reload pending) |
 | ~~**BUG-1932**~~ | **P0** | ✅ **Phantom sign-out when a launcher rewrites HOME — pin Electron userData to passwd home** (✅ DONE 2026-07-10) |
 | ~~**BUG-1933**~~ | **P0** | ✅ **Restored session never re-persisted; stale token blinded Local API sidecar** (✅ DONE 2026-07-10) |
+| ~~**BUG-1934**~~ | **P1** | ✅ **Regular multi-delete is atomic locally across task lists and redo** (✅ DONE 2026-07-10, v1.4.241 shipped) |
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |

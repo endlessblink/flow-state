@@ -278,13 +278,12 @@
           <div class="control-row">
             <span class="control-label control-label-stack">
               <span>Postpone</span>
-              <small>then next</small>
             </span>
             <fieldset class="pill-group pill-scroll" :disabled="isRescheduling" :aria-busy="isRescheduling">
               <button
                 class="pill"
                 :class="{ active: activeDuePreset === 'today' }"
-                title="Postpone to today and show the next task"
+                title="Postpone to today"
                 @click="postponeCurrentTask('today')"
               >
                 Today
@@ -292,7 +291,7 @@
               <button
                 class="pill"
                 :class="{ active: activeDuePreset === 'tomorrow' }"
-                title="Postpone to tomorrow and show the next task"
+                title="Postpone to tomorrow"
                 @click="postponeCurrentTask('tomorrow')"
               >
                 Tomorrow
@@ -300,7 +299,7 @@
               <button
                 class="pill"
                 :class="{ active: activeDuePreset === 'weekend' }"
-                title="Postpone to next Saturday and show the next task"
+                title="Postpone to next Saturday"
                 @click="postponeCurrentTask('weekend')"
               >
                 Next weekend
@@ -308,7 +307,7 @@
               <button
                 class="pill"
                 :class="{ active: activeDuePreset === 'in3days' }"
-                title="Postpone by 3 days and show the next task"
+                title="Postpone by 3 days"
                 @click="postponeCurrentTask('in3days')"
               >
                 In 3 days
@@ -316,7 +315,7 @@
               <button
                 class="pill"
                 :class="{ active: activeDuePreset === 'nextweek' }"
-                title="Postpone by 1 week and show the next task"
+                title="Postpone by 1 week"
                 @click="postponeCurrentTask('nextweek')"
               >
                 In 1 week
@@ -324,7 +323,7 @@
               <button
                 class="pill"
                 :class="{ active: activeDuePreset === 'in2weeks' }"
-                title="Postpone by 2 weeks and show the next task"
+                title="Postpone by 2 weeks"
                 @click="postponeCurrentTask('in2weeks')"
               >
                 In 2 weeks
@@ -332,7 +331,7 @@
               <button
                 class="pill"
                 :class="{ active: activeDuePreset === 'in1month' }"
-                title="Postpone by 1 month and show the next task"
+                title="Postpone by 1 month"
                 @click="postponeCurrentTask('in1month')"
               >
                 In 1 month
@@ -342,7 +341,7 @@
                   <button
                     class="pill date-picker-trigger"
                     :class="{ active: currentTask.dueDate && activeDuePreset === null }"
-                    title="Choose a date, apply it, and show the next task"
+                    title="Choose a postpone date"
                     aria-label="Choose a custom postpone date"
                   >
                     <Calendar :size="14" />
@@ -361,8 +360,8 @@
               <button
                 class="pill clear"
                 :class="{ active: activeDuePreset === 'clear' }"
-                title="Remove the due date and show the next task"
-                aria-label="Remove due date and show the next task"
+                title="Remove the due date"
+                aria-label="Remove due date"
                 @click="postponeCurrentTask('clear')"
               >
                 <X :size="14" />
@@ -1592,13 +1591,14 @@ const currentTaskProject = computed(() => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-6) var(--space-8);
-  background: var(--glass-bg-strong);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--surface-primary);
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-2xl);
   z-index: var(--z-modal);
   pointer-events: none;
+  isolation: isolate;
+  opacity: 1;
+  box-shadow: var(--shadow-2xl), 0 0 0 1px var(--border-subtle);
 }
 
 .feedback-overlay.success { color: var(--brand-primary); border-color: var(--brand-primary); }
@@ -1643,14 +1643,14 @@ const currentTaskProject = computed(() => {
 }
 
 @keyframes celebrateIn {
-  0%   { transform: translate(-50%, -50%) scale(0.4) rotate(-4deg); opacity: 0; }
-  60%  { transform: translate(-50%, -50%) scale(1.08) rotate(2deg); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+  0%   { transform: translate(-50%, -50%) scale(0.92) rotate(-2deg); }
+  60%  { transform: translate(-50%, -50%) scale(1.04) rotate(1deg); }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
 }
 
 @keyframes celebrateOut {
-  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  100% { transform: translate(-50%, -50%) scale(0.96); }
 }
 
 @keyframes ringPulse {

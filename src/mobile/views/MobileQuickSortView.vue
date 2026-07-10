@@ -282,7 +282,7 @@
 
             <!-- Date Section -->
             <div class="edit-section">
-              <span class="edit-label">Postpone to — one tap moves to the next task</span>
+              <span class="edit-label">Postpone to</span>
               <fieldset class="date-pills" :disabled="isRescheduling" :aria-busy="isRescheduling">
                 <button class="pill" @click="setDueDateAndClose('today')">
                   Today
@@ -903,13 +903,14 @@ const {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-6) var(--space-8);
-  background: var(--glass-bg-strong);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--surface-primary);
   border: 1px solid var(--brand-primary);
   border-radius: var(--radius-2xl);
   z-index: var(--z-modal);
   pointer-events: none;
+  isolation: isolate;
+  opacity: 1;
+  box-shadow: var(--shadow-2xl), 0 0 0 1px var(--border-subtle);
   /* Particle dots scattered via box-shadow */
 }
 
@@ -965,14 +966,14 @@ const {
 }
 
 @keyframes miniCelebrate {
-  0%   { transform: translate(-50%, -50%) scale(0.4) rotate(-4deg); opacity: 0; }
-  60%  { transform: translate(-50%, -50%) scale(1.08) rotate(2deg); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+  0%   { transform: translate(-50%, -50%) scale(0.92) rotate(-2deg); }
+  60%  { transform: translate(-50%, -50%) scale(1.04) rotate(1deg); }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
 }
 
 @keyframes miniCelebrateFade {
-  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  100% { transform: translate(-50%, -50%) scale(0.96); }
 }
 
 @keyframes ringPulse {

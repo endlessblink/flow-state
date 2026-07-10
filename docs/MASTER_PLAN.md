@@ -2167,22 +2167,88 @@ _Original plan below._
 
 ## Active Tasks
 
+### ~~BUG-1938~~: Postpone feedback is transparent and the task advances instead of only closing the popup (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.245 deployed and locally verified) | **Opened**: 2026-07-10
+
+**User repro**: In packaged Electron Quick Sort, clicking a postpone destination closes the task and reveals the next task. The centered `Moved to …` confirmation uses a translucent glass background, so the current task title, due date, priority, and card border visibly bleed through the message.
+
+**Required behavior**: Persist the selected due date, close only the quick-edit popup, keep the same task active with unchanged progress, preserve undo/redo, and render the confirmation on a fully opaque surface on desktop and mobile.
+
+**Subtasks**:
+- [x] ~~BUG-1938 — lock the user's exact behavior with a failing current-task/progress regression and opaque-feedback source contract.~~
+- [x] ~~Keep reschedule actions undoable without counting or advancing the task; update desktop/mobile copy to stop promising the next task.~~
+- [x] ~~Replace translucent feedback glass with the opaque primary surface on desktop and mobile.~~
+- [x] ~~Build, deploy, install, relaunch, and verify Electron v1.4.245 against the real packaged window.~~
+
+**Verification**: RED reproduced five queue failures under the new expectation, then exposed same-task and cross-task snapshot ownership variants. GREEN passes 48 focused queue, preset, undo/redo, store, UI-contract, and release-guard tests plus `vue-tsc`; final blocker review found no Critical or Important issues. The full Electron ship gate passed 245 test files with 3,263 tests passing and 6 intentional skips, then built and validated the renderer, main process, sidecar, AppImage, and deb. The locked release path deployed v1.4.245. The public manifest and installed launcher target both report AppImage size `180429705` and SHA-512 `Ni4Qhu4o76F5tl5lMl5NoBlxWNRmmE/EiS4oQTnU3wwZx/p3Qm1b0e+RS0BTXqupgN5MiYRZgC4o1WxmrMFSoA==`.
+
+**Packaged-app proof**: A full v1.4.245 process restart mounted the new AppImage and started its localhost sidecar. On the real Quick Sort card, clicking `Next weekend` closed only the quick-edit popup, kept the same Hebrew task and progress at 31, updated the context date to `Tomorrow` (the next Saturday from Friday), and rendered `Moved to next weekend` on a fully opaque primary-surface card with no task text, date, priority, or border bleeding through it. The action was immediately undone and direct capture confirmed the original `4 days ago` / `Jul 6` due date was restored.
+
+**Failure-class matrix**:
+
+| Failure class | Checked | Evidence | Covered by this fix |
+|---|---:|---|---:|
+| Data shape / persistence | Yes | Awaited task-store due-date update; packaged Undo restored the original live due date | Yes |
+| Renderer state | Yes | Direct v1.4.245 X11 capture shows popup dismissal, same card, unchanged progress, and opaque feedback | Yes |
+| Undo/redo snapshot ownership | Yes | Regressions cover unsaved fields, immediate undo/redo, and returning from another task with distinct project/priority | Yes |
+| Electron main / preload | Yes | Canonical package validation passed for renderer, main, preload, and sidecar | No change required |
+| Localhost sidecar | Yes | Fresh packaged process reported the v1.4.245 sidecar listening on port 5577 | No change required |
+| Updater / runtime version | Yes | Live manifest, local artifact, installed AppImage, and generated Electron metadata all match v1.4.245 | Yes |
+| Stale live process | Yes | v1.4.244 mount and wrapper were terminated before the v1.4.245 launch | Yes |
+
+**Outside this fix**: Authenticated Playwright remains unavailable in this shell because `SUPABASE_SERVICE_ROLE_KEY` is not present. The stronger packaged Electron proof covers the user's actual surface.
+
+---
+
+### ~~BUG-1937~~: Same-version Electron release overwrote the Quick Sort build (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.244 deployed and locally verified) | **Opened**: 2026-07-10
+
+**User repro**: After installing and fully relaunching Electron v1.4.243, Quick Sort still rendered the old `+1 / +3 / Wknd / +7` due-date controls.
+
+**Exact failure mode**: Two independent same-day release lanes published different AppImages as v1.4.243. The correct Quick Sort artifact was live first, then the Board due-date lane overwrote the same manifest/version two minutes later. Electron installed the later checksum correctly, but the version label could not reveal that the renderer contents had changed.
+
+**Subtasks**:
+- [x] ~~BUG-1937 — prove the running executable, installed AppImage, pending updater file, and live manifest all shared the later checksum while differing from the first v1.4.243 artifact.~~
+- [x] ~~Merge the committed Board due-date lane and Quick Sort lane so the recovery release preserves both fixes.~~
+- [x] ~~Add a deploy preflight that rejects downgrades and same-version/different-checksum artifacts before upload.~~
+- [x] ~~Build and deploy combined v1.4.244, atomically install it locally, fully relaunch, and verify the actual visible Quick Sort surface.~~
+
+**Verification**: Nine RED/GREEN collision-guard tests cover new-version, idempotent, downgrade, same-version changes to either artifact or top-level updater target, mandatory manifests, manifest-bound filename/size/SHA-512 validation, cross-version filename reuse, and lock-before-promotion ordering. A blocker review exposed and then verified closure of the original preflight/upload race: artifacts now upload to a unique staging directory, and a remote `flock` serializes the live-manifest recheck plus manifest-last promotion. The hardened remote path accepted a byte-identical v1.4.244 redeploy as `idempotent`. The Electron release gate passed the full test suite, renderer/main/sidecar build, Linux AppImage and deb validation, and deployment. The public manifest reported v1.4.244 with AppImage size `180429523` and SHA-512 `jKLIflrJBWoPakZTQpcHpdhnbcSJQJdspnjs5fBg7vSS6MGmJy+ViUv++XDxybPSyL3VwCZliIxXUuTqffhSAw==`; the installed launcher target matched both exactly. A full process restart mounted the new AppImage, started the localhost sidecar, and direct capture of the real packaged window showed the explicit destinations and combinable `Change pools` surface. BUG-1938 subsequently changed postpone from advance-after-click to keep-the-current-task-open.
+
+**Failure-class matrix**:
+
+| Failure class | Checked | Evidence | Covered by this fix |
+|---|---:|---|---:|
+| Data shape / Supabase persistence | Yes | The symptom reproduced before any task mutation; installed renderer contents, not task data, selected the old controls | No change required |
+| Renderer state | Yes | Direct packaged-window capture after restart shows the explicit destination controls and task-pool picker | Yes |
+| Electron main / preload | Yes | v1.4.244 packaged and validated main, preload, renderer, and sidecar resources | Yes |
+| Localhost sidecar | Yes | Fresh packaged process reported the v1.4.244 sidecar listening on port 5577 | No change required |
+| KDE polling / control | Yes | Not involved in due-date rendering; desktop relaunch and X11 window capture succeeded | No change required |
+| Updater / runtime version | Yes | The live v1.4.243 checksum had been overwritten by another v1.4.243 artifact; v1.4.244 is unique, and locked manifest-last promotion now rejects collisions/downgrades while validating every staged artifact | Yes |
+| Stale live process | Yes | The surviving mounted v1.4.243 process was terminated before the v1.4.244 AppImage launch | Yes |
+
+**Outside this fix**: This guard protects the canonical `deploy-electron-update.sh` path. Direct manual writes to the VPS release directory remain an operational bypass and must not be used.
+
+---
+
 ### ~~BUG-1936~~: Quick Sort postpone shortcuts require a second Save and use ambiguous offsets (✅ DONE)
 
-**Priority**: P1 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.243 deployed) | **Opened**: 2026-07-10
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-10, effective combined release Electron v1.4.244) | **Opened**: 2026-07-10
 
 **User repro**: In the Quick Sort edit panel, clicking a due-date shortcut such as `Wknd` changes the date but leaves the same card open. The user must infer that a separate Save action is still required, while labels such as `+1`, `+3`, and `+7` do not explain the destination or whether the task will advance.
 
 **Exact failure mode**: Date shortcuts were implemented as ordinary field edits instead of Quick Sort decisions. Desktop and mobile duplicated their date math, several presets never rendered an active state, and the compact desktop row hid later actions behind an invisible horizontal scroll.
 
 **Implementation**:
-- [x] ~~BUG-1936 — add a single `rescheduleCurrentTask` action that persists the selected due date, records the Quick Sort undo action, and advances exactly once.~~
+- [x] ~~BUG-1936 — add a single `rescheduleCurrentTask` action that persists the selected due date and records the Quick Sort undo action (initially advancing; BUG-1938 now keeps the task open).~~
 - [x] Share local-date preset resolution across desktop and mobile, including next-Saturday weekend semantics.
-- [x] Replace offset-only copy with explicit destinations, put Next weekend among the first three actions, wrap desktop actions, and state that one tap moves to the next task.
+- [x] Replace offset-only copy with explicit destinations, put Next weekend among the first three actions, and wrap desktop actions. (BUG-1938 removed the later-superseded next-task promise.)
 - [x] Guard rapid double-clicks so the following task cannot be skipped.
 - [x] Complete review, final verification, and Electron updater delivery.
 
-**Verification**: 36 focused Vitest tests pass for preset boundaries, month-end clamping, one-click advance, no-date undo/redo, conflicting clicks, competing card actions, final-task Undo, and mobile reachability. Focused ESLint and `vue-tsc` pass. Authenticated desktop Chromium proof clicks Next weekend and verifies confirmation/advance; the seven-test mobile Chromium pack passes, including a 360px viewport assertion that all action buttons fit. Final review found no Critical or Important issues. The Electron ship gate passed 3,228 tests with 6 intentional skips, built and validated both Linux packages, deployed v1.4.243, and the live manifest plus both artifact endpoints verify successfully.
+**Verification**: 36 focused Vitest tests pass for preset boundaries, month-end clamping, one-click advance, no-date undo/redo, conflicting clicks, competing card actions, final-task Undo, and mobile reachability. Focused ESLint and `vue-tsc` pass. Authenticated desktop Chromium proof clicks Next weekend and verifies confirmation/advance; the seven-test mobile Chromium pack passes, including a 360px viewport assertion that all action buttons fit. Final review found no Critical or Important issues. The original v1.4.243 artifact passed 3,228 tests with 6 intentional skips, but a second same-version release replaced it; BUG-1937 recovered the fix in the verified combined v1.4.244 release.
 
 **Failure-class matrix**:
 
@@ -2195,7 +2261,7 @@ _Original plan below._
 | Localhost sidecar endpoint | N/A | Quick Sort postponement does not use the sidecar | Not applicable |
 | KDE polling/control path | N/A | Quick Sort postponement does not use KDE integration | Not applicable |
 | Supabase persistence/realtime | Yes | Canonical task-store update path is awaited before the Quick Sort action advances | Yes, through existing task persistence |
-| Updater/runtime version | Yes | Public manifest serves v1.4.243; AppImage and deb return HTTP 200 | Yes |
+| Updater/runtime version | Yes | Public manifest serves the effective combined v1.4.244 release; installed AppImage checksum and size match | Yes |
 | Stale live process/cache state | Yes | Captured-queue semantics remain stable and the final action stays undoable until explicit session finalization | Yes, for Quick Sort state |
 
 **Exact failure mode fixed**: Quick Sort date buttons acted like silent field edits, so postponing required a second Save and ambiguous offset labels did not communicate the result. They now perform one atomic, explicit postpone-and-next decision.
@@ -2204,7 +2270,7 @@ _Original plan below._
 
 **Regression added for reported repro**: Shared preset and queue tests cover date semantics, atomic advance, race prevention, undo/redo, and final-task completion; desktop and mobile authenticated E2E cover the actual Next weekend button and narrow viewport.
 
-**Live boundary proof**: Electron v1.4.243 packaged successfully; `latest-linux.yml` reports 1.4.243; both deployed AppImage and deb URLs return HTTP 200 with manifest-matching sizes.
+**Live boundary proof**: Electron v1.4.244 packaged successfully; `latest-linux.yml` reports 1.4.244; the locally installed AppImage matches the manifest checksum and size; direct capture of the packaged Electron window shows the new one-click postpone controls.
 
 ---
 
@@ -6453,7 +6519,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1933**~~ | **P0** | ✅ **Restored session never re-persisted; stale token blinded Local API sidecar** (✅ DONE 2026-07-10) |
 | ~~**BUG-1934**~~ | **P1** | ✅ **Regular multi-delete is atomic locally across task lists and redo** (✅ DONE 2026-07-10, v1.4.241 shipped) |
 | ~~**FEATURE-1935**~~ | **P1** | ✅ **Combinable Quick Sort task pools — overdue, today, next 3/7 days, no date, and Uncategorized** (✅ DONE 2026-07-10, v1.4.242 shipped) |
-| ~~**BUG-1936**~~ | **P1** | ✅ **Quick Sort postpone shortcuts use explicit destinations and advance in one click** (✅ DONE 2026-07-10, v1.4.243 shipped) |
+| ~~**BUG-1936**~~ | **P1** | ✅ **Quick Sort postpone shortcuts use explicit destinations and persist in one click** (✅ DONE 2026-07-10, superseded behavior refined in BUG-1938) |
+| ~~**BUG-1937**~~ | **P0** | ✅ **Same-version Electron release collision replaced the Quick Sort renderer** (✅ DONE 2026-07-10, v1.4.244 deployed and locally verified) |
+| ~~**BUG-1938**~~ | **P0** | ✅ **Postpone keeps the task open and shows feedback on an opaque surface** (✅ DONE 2026-07-10, v1.4.245 deployed and locally verified) |
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
 | ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, v1.4.243 shipped) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |

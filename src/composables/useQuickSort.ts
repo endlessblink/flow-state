@@ -38,6 +38,7 @@ export function useQuickSort() {
 
   // Dirty state tracking for save/undo
   interface TaskSnapshot {
+    taskId: string
     projectId: string | null | undefined
     dueDate: string
     priority: 'low' | 'medium' | 'high' | undefined
@@ -49,6 +50,7 @@ export function useQuickSort() {
     const task = currentTask.value
     if (task) {
       taskSnapshot.value = {
+        taskId: task.id,
         projectId: task.projectId || null,
         dueDate: task.dueDate || '',
         priority: task.priority || undefined
@@ -62,6 +64,7 @@ export function useQuickSort() {
     if (!currentTask.value || !taskSnapshot.value) return false
     const task = currentTask.value
     const snap = taskSnapshot.value
+    if (snap.taskId !== task.id) return false
     return (
       (task.projectId || null) !== (snap.projectId || null) ||
       (task.dueDate || undefined) !== (snap.dueDate || undefined) ||
@@ -249,12 +252,24 @@ export function useQuickSort() {
   async function rescheduleCurrentTask(dueDate: string): Promise<boolean> {
     if (!currentTask.value) return false
     const taskId = currentTask.value.id
+    const oldDueDate = taskSnapshot.value?.dueDate ?? currentTask.value.dueDate ?? ''
     if (reschedulingTaskId.value === taskId) return false
     reschedulingTaskId.value = taskId
     try {
       await taskStore.updateTask(taskId, { dueDate })
       if (currentTaskId.value !== taskId || processedTaskIds.value.has(taskId)) return false
-      await commitCurrentTask()
+      quickSortStore.recordAction({
+        id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'SAVE_TASK',
+        taskId,
+        oldDueDate,
+        newDueDate: dueDate,
+        advancesTask: false,
+        timestamp: Date.now()
+      })
+      if (taskSnapshot.value?.taskId === taskId) taskSnapshot.value.dueDate = dueDate
+      else snapshotCurrentTask()
+      persistSession()
       return true
     } finally {
       if (reschedulingTaskId.value === taskId) reschedulingTaskId.value = null
@@ -373,12 +388,19 @@ export function useQuickSort() {
         await taskStore.updateTask(action.taskId, updates)
       }
 
-      // Remove from processedTaskIds so it reappears
-      processedTaskIds.value.delete(action.taskId)
-      triggerRef(processedTaskIds)
-      // Re-pin to this task
       currentTaskId.value = action.taskId
-      snapshotCurrentTask()
+      if (action.advancesTask !== false) {
+        // Remove from processedTaskIds so it reappears
+        processedTaskIds.value.delete(action.taskId)
+        triggerRef(processedTaskIds)
+        snapshotCurrentTask()
+      } else if (taskSnapshot.value?.taskId === action.taskId) {
+        // Postpone is only a due-date edit. Preserve the baseline for any other
+        // unsaved fields while moving its due-date baseline with undo.
+        taskSnapshot.value.dueDate = action.oldDueDate ?? ''
+      } else {
+        snapshotCurrentTask()
+      }
     } else if (action.type === 'CATEGORIZE_TASK') {
       // Revert project assignment - AWAIT to ensure persistence (BUG-1051)
       await taskStore.updateTask(action.taskId, { projectId: action.oldProjectId || undefined })
@@ -420,8 +442,14 @@ export function useQuickSort() {
       if (Object.keys(updates).length > 0) {
         await taskStore.updateTask(action.taskId, updates)
       }
-      addProcessedId(action.taskId)
-      advanceToNextTask()
+      if (action.advancesTask !== false) {
+        addProcessedId(action.taskId)
+        advanceToNextTask()
+      } else {
+        currentTaskId.value = action.taskId
+        if (taskSnapshot.value?.taskId === action.taskId) taskSnapshot.value.dueDate = action.newDueDate ?? ''
+        else snapshotCurrentTask()
+      }
     } else if (action.type === 'CATEGORIZE_TASK') {
       // Reapply project assignment - AWAIT to ensure persistence (BUG-1051)
       await taskStore.updateTask(action.taskId, { projectId: action.newProjectId })

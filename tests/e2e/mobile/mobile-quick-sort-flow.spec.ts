@@ -50,7 +50,7 @@ test.describe('Mobile Quick Sort Flow', () => {
     await expect(today).toHaveAttribute('aria-pressed', 'true')
   })
 
-  test('postpones to next weekend and advances with one tap', async ({ page }) => {
+  test('postpones to next weekend while keeping the task open', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 800 })
     await navigateToQuickSort(page)
 
@@ -64,12 +64,12 @@ test.describe('Mobile Quick Sort Flow', () => {
     ))
     expect(actionButtonsFitViewport).toBe(true)
     await page.getByRole('button', { name: 'Postpone' }).click()
-    await expect(page.getByText('Postpone to — one tap moves to the next task')).toBeVisible()
+    await expect(page.getByText('Postpone to')).toBeVisible()
     await page.getByRole('button', { name: 'Next weekend' }).click()
 
     await expect(page.getByText('Moved to Next weekend')).toBeVisible()
-    await expect(page.getByText('Postpone to — one tap moves to the next task')).not.toBeVisible()
-    await expect(page.locator('.task-card .task-title')).not.toHaveText(firstTitle ?? '')
+    await expect(page.getByText('Postpone to')).not.toBeVisible()
+    await expect(page.locator('.task-card .task-title')).toHaveText(firstTitle ?? '')
     await expect(page.getByRole('button', { name: 'Undo last Quick Sort action' })).toBeVisible()
   })
 

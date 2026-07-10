@@ -26,6 +26,8 @@ export interface CategoryAction {
   deletedTask?: import('./tasks').Task // Store full task data for undo of deleted tasks
   oldDescription?: string
   newDescription?: string
+  /** False for edits such as postpone that keep the current task open. */
+  advancesTask?: boolean
   timestamp: number
 }
 
@@ -161,7 +163,7 @@ export const useQuickSortStore = defineStore('quickSort', () => {
   function recordAction(action: CategoryAction) {
     undoStack.value.push(action)
     redoStack.value = [] // Clear redo stack on new action
-    tasksSortedInSession.value++
+    if (action.advancesTask !== false) tasksSortedInSession.value++
 
     // Limit undo stack to 50 actions to prevent memory issues
     if (undoStack.value.length > 50) {
@@ -173,7 +175,9 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     const action = undoStack.value.pop()
     if (action) {
       redoStack.value.push(action)
-      tasksSortedInSession.value = Math.max(0, tasksSortedInSession.value - 1)
+      if (action.advancesTask !== false) {
+        tasksSortedInSession.value = Math.max(0, tasksSortedInSession.value - 1)
+      }
       return action
     }
     return null
@@ -183,7 +187,7 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     const action = redoStack.value.pop()
     if (action) {
       undoStack.value.push(action)
-      tasksSortedInSession.value++
+      if (action.advancesTask !== false) tasksSortedInSession.value++
       return action
     }
     return null

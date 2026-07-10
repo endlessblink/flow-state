@@ -4,6 +4,13 @@ import { useQuickSortStore } from '@/stores/quickSort'
 import { useSmartViews } from '@/composables/useSmartViews'
 import type { Task } from '@/types/tasks'
 import type { CategoryAction } from '@/stores/quickSort'
+import {
+  DEFAULT_QUICK_SORT_SOURCES,
+  QUICK_SORT_SOURCES,
+  normalizeQuickSortSources,
+  selectQuickSortTasks,
+  type QuickSortSource
+} from '@/utils/quickSortTaskFilters'
 
 export function useQuickSort() {
   const taskStore = useTaskStore()
@@ -12,6 +19,8 @@ export function useQuickSort() {
 
   // State - pin by ID instead of index
   const currentTaskId = ref<string | null>(null)
+  const selectedSources = ref<QuickSortSource[]>([...quickSortStore.lastSelectedSources])
+  const queuedTaskIds = ref<string[]>([])
 
   // Session-scoped set of processed task IDs (saved/done/deleted)
   // Use shallowRef + triggerRef to ensure Set mutations trigger reactivity
@@ -60,37 +69,45 @@ export function useQuickSort() {
     )
   })
 
-  // Getters
-  // TASK-243: Use raw tasks so Quick Sort sees ALL uncategorized tasks regardless of active smart view
-  // Filter out processedTaskIds so saved/done tasks don't reappear
-  const uncategorizedTasks = computed<Task[]>(() => {
-    return taskStore.rawTasks.filter(task =>
-      !task._soft_deleted &&
-      !task.isPinned &&
-      isUncategorizedTask(task) &&
-      !processedTaskIds.value.has(task.id)
-    )
+  const sourcePreviewTasks = computed<Task[]>(() => {
+    return selectQuickSortTasks(taskStore.rawTasks, selectedSources.value, isUncategorizedTask)
   })
+
+  const sourceCounts = computed<Record<QuickSortSource, number>>(() => {
+    return Object.fromEntries(QUICK_SORT_SOURCES.map(source => [
+      source,
+      selectQuickSortTasks(taskStore.rawTasks, [source], isUncategorizedTask).length
+    ])) as Record<QuickSortSource, number>
+  })
+  const isSessionActive = computed(() => quickSortStore.isActive)
+  const tasksSortedInSession = computed(() => quickSortStore.tasksSortedInSession)
+
+  // A session captures IDs once. Task edits therefore cannot make the current card
+  // disappear, and newly-created matching tasks wait for the next session.
+  const quickSortTasks = computed<Task[]>(() => {
+    return queuedTaskIds.value.flatMap(taskId => {
+      const task = taskStore.rawTasks.find(candidate => candidate.id === taskId)
+      if (!task || task._soft_deleted || task.status === 'done' || processedTaskIds.value.has(task.id)) return []
+      return [task]
+    })
+  })
+
+  // Backward-compatible alias while view consumers migrate to the accurate name.
+  const uncategorizedTasks = quickSortTasks
 
   // Look up current task by ID from rawTasks (reactive to live edits)
   const currentTask = computed<Task | null>(() => {
     if (!currentTaskId.value) return null
     const task = taskStore.rawTasks.find(t => t.id === currentTaskId.value)
     // If task was deleted externally or soft-deleted, return null
-    if (!task || task._soft_deleted) return null
+    if (!task || task._soft_deleted || task.status === 'done') return null
     return task
   })
 
   const progress = computed(() => {
     const processed = processedTaskIds.value.size
-    const remaining = uncategorizedTasks.value.length
-    // If current task was categorized (assigned a project, so no longer in uncategorizedTasks)
-    // but not yet processed (saved/done/deleted), still count it in the total so the
-    // progress bar doesn't jump just from pressing a number key to assign a project
-    const currentCategorizedNotProcessed = currentTaskId.value &&
-      !processedTaskIds.value.has(currentTaskId.value) &&
-      !uncategorizedTasks.value.some(t => t.id === currentTaskId.value) ? 1 : 0
-    const total = processed + remaining + currentCategorizedNotProcessed
+    const remaining = quickSortTasks.value.length
+    const total = processed + remaining
     if (total === 0) return { current: processed, total: 0, percentage: 100 }
 
     return {
@@ -100,7 +117,7 @@ export function useQuickSort() {
     }
   })
 
-  const isComplete = computed(() => uncategorizedTasks.value.length === 0 && currentTask.value === null)
+  const isComplete = computed(() => quickSortStore.isActive && quickSortTasks.value.length === 0 && currentTask.value === null)
 
   const motivationalMessage = computed(() => {
     const percent = progress.value.percentage
@@ -115,13 +132,15 @@ export function useQuickSort() {
   function persistSession() {
     quickSortStore.saveActiveSession({
       currentTaskId: currentTaskId.value,
-      processedTaskIds: processedTaskIds.value
+      processedTaskIds: processedTaskIds.value,
+      sources: selectedSources.value,
+      queuedTaskIds: queuedTaskIds.value
     })
   }
 
   // Navigation helpers
   function advanceToNextTask() {
-    const tasks = uncategorizedTasks.value
+    const tasks = quickSortTasks.value
     if (tasks.length === 0) {
       currentTaskId.value = null
       persistSession()
@@ -134,11 +153,18 @@ export function useQuickSort() {
   }
 
   // Actions
-  function startSession() {
+  function startSession(sources: readonly QuickSortSource[] = DEFAULT_QUICK_SORT_SOURCES) {
+    selectedSources.value = normalizeQuickSortSources(sources)
+    quickSortStore.setLastSelectedSources(selectedSources.value)
+    queuedTaskIds.value = selectQuickSortTasks(
+      taskStore.rawTasks,
+      selectedSources.value,
+      isUncategorizedTask
+    ).map(task => task.id)
     quickSortStore.startSession()
     clearProcessedIds()
     // Pin to first task
-    const tasks = uncategorizedTasks.value
+    const tasks = quickSortTasks.value
     if (tasks.length > 0) {
       currentTaskId.value = tasks[0].id
       snapshotCurrentTask()
@@ -154,12 +180,16 @@ export function useQuickSort() {
     if (!data) return false
 
     processedTaskIds.value = new Set(data.processedTaskIds)
+    selectedSources.value = normalizeQuickSortSources(data.sources)
+    queuedTaskIds.value = Array.isArray(data.queuedTaskIds)
+      ? [...data.queuedTaskIds]
+      : selectQuickSortTasks(taskStore.rawTasks, selectedSources.value, isUncategorizedTask).map(task => task.id)
     currentTaskId.value = data.currentTaskId
 
     // Verify the current task still exists
     if (currentTaskId.value) {
       const task = taskStore.rawTasks.find(t => t.id === currentTaskId.value)
-      if (!task || task._soft_deleted) {
+      if (!task || task._soft_deleted || task.status === 'done') {
         // Task was deleted while offline — advance
         advanceToNextTask()
       } else {
@@ -177,6 +207,7 @@ export function useQuickSort() {
     const summary = quickSortStore.endSession()
     currentTaskId.value = null
     clearProcessedIds()
+    queuedTaskIds.value = []
     taskSnapshot.value = null
     return summary
   }
@@ -231,7 +262,7 @@ export function useQuickSort() {
   }
 
   function skipTask() {
-    const tasks = uncategorizedTasks.value
+    const tasks = quickSortTasks.value
     if (tasks.length === 0) return
 
     // Find current task index in uncategorized list (it may not be there if edited)
@@ -386,6 +417,7 @@ export function useQuickSort() {
     quickSortStore.cancelSession()
     currentTaskId.value = null
     clearProcessedIds()
+    queuedTaskIds.value = []
     taskSnapshot.value = null
   }
 
@@ -399,7 +431,7 @@ export function useQuickSort() {
 
   // Watch for tasks loading after session start (race condition: tasks load async from DB)
   // If session is active but no task is selected yet, pick the first available task
-  watch(uncategorizedTasks, (tasks) => {
+  watch(quickSortTasks, (tasks) => {
     if (!currentTaskId.value && tasks.length > 0 && quickSortStore.isActive) {
       currentTaskId.value = tasks[0].id
       snapshotCurrentTask()
@@ -418,9 +450,16 @@ export function useQuickSort() {
     // State
     currentTaskId,
     processedTaskIds,
+    selectedSources,
+    queuedTaskIds,
+    isSessionActive,
+    tasksSortedInSession,
 
     // Getters
     uncategorizedTasks,
+    quickSortTasks,
+    sourcePreviewTasks,
+    sourceCounts,
     currentTask,
     progress,
     isComplete,

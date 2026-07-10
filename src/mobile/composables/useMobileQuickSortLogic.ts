@@ -1,5 +1,5 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import { useQuickSort } from '@/composables/useQuickSort'
 import { useTaskStore } from '@/stores/tasks'
@@ -7,9 +7,11 @@ import { useProjectStore } from '@/stores/projects'
 import { useHaptics } from '@/composables/useHaptics'
 import type { Task } from '@/types/tasks'
 import type { SessionSummary } from '@/stores/quickSort'
+import type { QuickSortSource } from '@/utils/quickSortTaskFilters'
 
 export function useMobileQuickSortLogic() {
   const router = useRouter()
+  const route = useRoute()
   const taskStore = useTaskStore()
   const projectStore = useProjectStore()
   const { triggerHaptic: baseTriggerHaptic } = useHaptics()
@@ -21,7 +23,7 @@ export function useMobileQuickSortLogic() {
   // Quick Sort composable
   const {
     currentTask,
-    uncategorizedTasks,
+    quickSortTasks,
     progress,
     isComplete,
     isTaskDirty,
@@ -32,7 +34,12 @@ export function useMobileQuickSortLogic() {
     markTaskDone,
     markDoneAndDeleteTask,
     skipTask,
-    tryResumeSession
+    tryResumeSession,
+    cancelSession,
+    selectedSources,
+    sourceCounts,
+    sourcePreviewTasks,
+    isSessionActive
   } = useQuickSort()
 
   // AI Command stubs (QuickSort AI removed in TASK-1465)
@@ -55,6 +62,7 @@ export function useMobileQuickSortLogic() {
   const showEditSheet = ref(false)
   const showAISheet = ref(false)
   const showNothingSetReminder = ref(false)
+  const showChangeSourcesConfirm = ref(false)
   const pendingSaveAfterReminder = ref(false)
 
   // Timer cleanup tracking
@@ -118,11 +126,38 @@ export function useMobileQuickSortLogic() {
     )
   })
 
-  const uncategorizedCount = computed(() => uncategorizedTasks.value.length)
+  const displayTaskCount = computed(() => isSessionActive.value
+    ? quickSortTasks.value.length
+    : sourcePreviewTasks.value.length)
 
   const stackPreview = computed(() => {
-    return uncategorizedTasks.value.slice(1, 3)
+    if (!currentTask.value) return []
+    const currentIndex = quickSortTasks.value.findIndex(task => task.id === currentTask.value!.id)
+    return currentIndex < 0 ? [] : quickSortTasks.value.slice(currentIndex + 1, currentIndex + 3)
   })
+
+  function handleStartSession(sources: QuickSortSource[]) {
+    sessionSummary.value = null
+    startSession(sources)
+  }
+
+  function resetToSourcePicker() {
+    cancelSession()
+    sessionSummary.value = null
+    showChangeSourcesConfirm.value = false
+  }
+
+  function requestSourceChange() {
+    showChangeSourcesConfirm.value = true
+  }
+
+  function confirmSourceChange() {
+    resetToSourcePicker()
+  }
+
+  function handleSortAnotherSet() {
+    sessionSummary.value = null
+  }
 
   // Date detection
   const isToday = computed(() => {
@@ -458,11 +493,11 @@ export function useMobileQuickSortLogic() {
     }
   })
 
-  // TASK-1450: Resume interrupted session or start fresh
+  // TASK-1450: Resume interrupted sessions; fresh sessions wait for pool selection.
   onMounted(() => {
     const resumed = tryResumeSession()
-    if (!resumed) {
-      startSession()
+    if (!resumed && route.query.sources === 'uncategorized') {
+      selectedSources.value = ['uncategorized']
     }
   })
 
@@ -490,7 +525,7 @@ export function useMobileQuickSortLogic() {
     recentProjectIds,
     confettiRef,
     currentTask,
-    uncategorizedTasks,
+    quickSortTasks,
     progress,
     isComplete,
     isTaskDirty,
@@ -504,7 +539,13 @@ export function useMobileQuickSortLogic() {
     projectsWithDepth,
     recentProjects,
     filteredProjects,
-    uncategorizedCount,
+    displayTaskCount,
+    selectedSources,
+    sourceCounts,
+    sourcePreviewTasks,
+    isSessionActive,
+    isLoadingTasks: computed(() => taskStore.isLoadingFromDatabase),
+    showChangeSourcesConfirm,
     stackPreview,
     isToday,
     isTomorrow,
@@ -541,6 +582,11 @@ export function useMobileQuickSortLogic() {
     pendingSaveAfterReminder,
     confirmSaveAnyway,
     cancelSave,
-    celebrationLabel
+    celebrationLabel,
+    handleStartSession,
+    requestSourceChange,
+    confirmSourceChange,
+    resetToSourcePicker,
+    handleSortAnotherSet
   }
 }

@@ -30,16 +30,24 @@ test.describe('Mobile Quick Sort Flow', () => {
     await navigateToQuickSort(page)
   })
 
-  test('shows task card or completion state', async ({ page }) => {
+  test('shows the task pool picker before a new session', async ({ page }) => {
     await navigateToQuickSort(page)
 
-    // Either a task card is shown or the completion/empty state
-    const card = page.locator('.task-card')
-    const complete = page.locator('.completion-phase')
-    const isCardVisible = await card.isVisible({ timeout: 5000 }).catch(() => false)
-    const isCompleteVisible = await complete.isVisible({ timeout: 2000 }).catch(() => false)
+    await expect(page.getByRole('heading', { name: 'Choose what to sort' })).toBeVisible()
+    await expect(page.locator('.source-card')).toHaveCount(6)
+    await expect(page.getByRole('button', { name: /Uncategorized/ })).toHaveAttribute('aria-pressed', 'true')
+  })
 
-    expect(isCardVisible || isCompleteVisible).toBe(true)
+  test('combines task pools before starting', async ({ page }) => {
+    await navigateToQuickSort(page)
+
+    const overdue = page.getByRole('button', { name: /Overdue/ })
+    const today = page.getByRole('button', { name: /^Today/ })
+    await overdue.click()
+    await today.click()
+
+    await expect(overdue).toHaveAttribute('aria-pressed', 'true')
+    await expect(today).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('capture button opens capture input', async ({ page }) => {

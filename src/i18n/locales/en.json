@@ -254,7 +254,27 @@
     "suggest": "Suggest",
     "today": "Today",
     "clear": "Clear",
-    "no_project": "No project"
+    "no_project": "No project",
+    "choose_tasks": "Choose what to sort",
+    "choose_tasks_description": "Combine task pools to build this Quick Sort session.",
+    "selected_count": "tasks selected",
+    "start_sorting": "Start sorting",
+    "no_sources_selected": "Select at least one task pool.",
+    "no_matching_tasks": "No tasks match these pools.",
+    "active_pools": "Sorting",
+    "change_task_pools": "Change pools",
+    "change_task_pools_title": "Change task pools?",
+    "change_task_pools_message": "This restarts the current Quick Sort session. Your task edits stay saved, but this session's progress and undo history will reset.",
+    "change_task_pools_confirm": "Change and restart",
+    "sort_another_set": "Sort another set",
+    "sources": {
+      "uncategorized": { "label": "Uncategorized", "description": "Tasks that still need a project" },
+      "overdue": { "label": "Overdue", "description": "Due before today" },
+      "today": { "label": "Today", "description": "Due today" },
+      "next-3-days": { "label": "Next 3 days", "description": "Due tomorrow through day three" },
+      "next-7-days": { "label": "Next 7 days", "description": "Due during the next seven days" },
+      "no-due-date": { "label": "No due date", "description": "Tasks without a deadline" }
+    }
   },
   "ai_chat": {
     "chat_tab": "Chat",

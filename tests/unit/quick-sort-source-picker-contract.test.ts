@@ -45,6 +45,23 @@ describe('Quick Sort source picker integration', () => {
     expect(mobileLogic).toContain('undoLastCategorization')
   })
 
+  it('renders postpone feedback on an opaque surface and promises only popup dismissal', () => {
+    const desktop = read('src/views/QuickSortView.vue')
+    const mobile = read('src/mobile/views/MobileQuickSortView.vue')
+
+    expect(desktop).toMatch(/\.feedback-overlay\s*\{[\s\S]*?background:\s*var\(--surface-primary\)/)
+    expect(mobile).toMatch(/\.mini-celebration\s*\{[\s\S]*?background:\s*var\(--surface-primary\)/)
+    expect(desktop).not.toContain('then next')
+    expect(mobile).not.toContain('one tap moves to the next task')
+
+    const desktopAnimation = desktop.match(/@keyframes celebrateIn\s*\{[\s\S]*?\n\}/)?.[0] ?? ''
+    const desktopExit = desktop.match(/@keyframes celebrateOut\s*\{[\s\S]*?\n\}/)?.[0] ?? ''
+    const mobileAnimation = mobile.match(/@keyframes miniCelebrate\s*\{[\s\S]*?\n\}/)?.[0] ?? ''
+    const mobileExit = mobile.match(/@keyframes miniCelebrateFade\s*\{[\s\S]*?\n\}/)?.[0] ?? ''
+    expect(`${desktopAnimation}${desktopExit}`).not.toContain('opacity:')
+    expect(`${mobileAnimation}${mobileExit}`).not.toContain('opacity:')
+  })
+
   it('keeps completion undoable until the user finalizes the session', () => {
     const desktop = read('src/views/QuickSortView.vue')
     const mobileLogic = read('src/mobile/composables/useMobileQuickSortLogic.ts')

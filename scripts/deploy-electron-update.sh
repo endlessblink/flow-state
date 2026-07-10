@@ -98,18 +98,27 @@ fi
 
 # Check artifacts exist
 if [ "$DRY_RUN" = false ]; then
-  APPIMAGE=$(find "$RELEASE_DIR" -name "*${VERSION}*.AppImage" -type f 2>/dev/null | head -1)
-  DEB=$(find "$RELEASE_DIR" -name "*${VERSION}*.deb" -type f 2>/dev/null | head -1)
-  YML=$(find "$RELEASE_DIR" -name "latest-linux.yml" -type f 2>/dev/null | head -1)
+  YML="$RELEASE_DIR/latest-linux.yml"
 
-  if [ -z "$APPIMAGE" ]; then
-    echo -e "${RED}ERROR: No AppImage found in $RELEASE_DIR${NC}"
+  if [ ! -s "$YML" ]; then
+    echo -e "${RED}ERROR: Missing or empty updater manifest: $YML${NC}"
     exit 1
   fi
 
-  echo -e "${GREEN}  AppImage: $(basename "$APPIMAGE") ($(du -h "$APPIMAGE" | cut -f1))${NC}"
-  [ -n "$DEB" ] && echo -e "${GREEN}  Deb: $(basename "$DEB") ($(du -h "$DEB" | cut -f1))${NC}"
-  [ -n "$YML" ] && echo -e "${GREEN}  Manifest: $(basename "$YML")${NC}"
+  # Bind deployment to every file named by the manifest. This fails closed on
+  # a missing file, unsafe path, wrong size/checksum, or version mismatch.
+  VALIDATED_FILES=$(node "$PROJECT_DIR/scripts/electron-release-collision-guard.cjs" \
+    --local "$YML" \
+    --artifacts-dir "$RELEASE_DIR" \
+    --expected-version "$VERSION" \
+    --print-files)
+  mapfile -t RELEASE_FILES <<< "$VALIDATED_FILES"
+  LOCAL_ARTIFACTS=()
+  for artifact in "${RELEASE_FILES[@]}"; do
+    LOCAL_ARTIFACTS+=("$RELEASE_DIR/$artifact")
+    echo -e "${GREEN}  Artifact: $artifact ($(du -h "$RELEASE_DIR/$artifact" | cut -f1))${NC}"
+  done
+  echo -e "${GREEN}  Manifest: $(basename "$YML")${NC}"
 fi
 
 # Step 3: Deploy to VPS
@@ -121,13 +130,27 @@ elif [ "$DRY_RUN" = true ]; then
 else
   echo -e "\n${YELLOW}[3/3] Deploying to VPS...${NC}"
 
-  # Create remote directory
+  # Create the release directory and a deploy-unique staging directory. Uploads
+  # can happen concurrently, but promotion is serialized below.
   ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mkdir -p ${VPS_PATH}"
+  REMOTE_STAGE=$(ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mktemp -d '${VPS_PATH}/.staging-${VERSION}-XXXXXX'")
+  cleanup_remote_stage() {
+    ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "rm -rf -- '$REMOTE_STAGE'" >/dev/null 2>&1 || true
+  }
+  trap cleanup_remote_stage EXIT
 
-  # Upload artifacts
-  scp -i "$SSH_KEY" "$APPIMAGE" "${VPS_USER}@${VPS_HOST}:${VPS_PATH}/"
-  [ -n "$DEB" ] && scp -i "$SSH_KEY" "$DEB" "${VPS_USER}@${VPS_HOST}:${VPS_PATH}/"
-  [ -n "$YML" ] && scp -i "$SSH_KEY" "$YML" "${VPS_USER}@${VPS_HOST}:${VPS_PATH}/"
+  # Stage the validated release under unique names. Under the remote flock, the
+  # promotion script re-reads the live manifest, rejects collisions/downgrades,
+  # verifies every staged byte, then publishes the manifest last.
+  scp -i "$SSH_KEY" \
+    "${LOCAL_ARTIFACTS[@]}" \
+    "$YML" \
+    "$PROJECT_DIR/scripts/electron-release-collision-guard.cjs" \
+    "$PROJECT_DIR/scripts/promote-electron-release.sh" \
+    "${VPS_USER}@${VPS_HOST}:${REMOTE_STAGE}/"
+  ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "flock -x '${VPS_PATH}/.deploy.lock' bash '${REMOTE_STAGE}/promote-electron-release.sh' '${VPS_PATH}' '${REMOTE_STAGE}'"
+  cleanup_remote_stage
+  trap - EXIT
 
   echo -e "${GREEN}  Uploaded to ${VPS_HOST}:${VPS_PATH}/${NC}"
 fi

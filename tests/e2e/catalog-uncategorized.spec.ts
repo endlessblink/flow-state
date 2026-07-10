@@ -41,7 +41,19 @@ test.describe('TASK-1455: Catalog — Uncategorized tasks group', () => {
       const res = await adminClient.auth.admin.listUsers()
       testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!testUser) { const { data } = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
+    if (!testUser) {
+      const { data, error } = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true });
+      if (error || !data?.user) {
+        for (let i = 0; i < 10 && !testUser; i++) {
+          await new Promise(r => setTimeout(r, 1000));
+          const res = await adminClient.auth.admin.listUsers();
+          testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate');
+        }
+      } else {
+        testUser = data.user;
+      }
+    }
+    if (!testUser) throw new Error("Could not find or create test user 'playwright@test.flowstate'")
 
     // Upsert an uncategorized task (project_id = null)
     const { error: upsertError } = await adminClient.from('tasks').upsert(

@@ -44,7 +44,19 @@ test.describe('canvas renders a task placed inside a group (BUG-1796)', () => {
       const res = await admin.auth.admin.listUsers()
       user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!user) { const { data } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); user = data.user; }
+    if (!user) {
+      const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true });
+      if (error || !data?.user) {
+        for (let i = 0; i < 10 && !user; i++) {
+          await new Promise(r => setTimeout(r, 1000));
+          const res = await admin.auth.admin.listUsers();
+          user = res.data.users.find((u) => u.email === 'playwright@test.flowstate');
+        }
+      } else {
+        user = data.user;
+      }
+    }
+    if (!user) throw new Error("Could not find or create test user 'playwright@test.flowstate'")
     userId = user.id
 
     // Clean any prior run + tombstones that would make sync skip our CREATE.

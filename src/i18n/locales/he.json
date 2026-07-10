@@ -254,7 +254,27 @@
     "suggest": "הצע",
     "today": "היום",
     "clear": "נקה",
-    "no_project": "ללא פרויקט"
+    "no_project": "ללא פרויקט",
+    "choose_tasks": "מה למיין?",
+    "choose_tasks_description": "אפשר לשלב כמה קבוצות משימות לסשן המיון המהיר.",
+    "selected_count": "משימות נבחרו",
+    "start_sorting": "התחלת מיון",
+    "no_sources_selected": "יש לבחור לפחות קבוצת משימות אחת.",
+    "no_matching_tasks": "אין משימות שמתאימות לקבוצות האלה.",
+    "active_pools": "במיון",
+    "change_task_pools": "שינוי קבוצות",
+    "change_task_pools_title": "לשנות קבוצות משימות?",
+    "change_task_pools_message": "הפעולה תתחיל מחדש את סשן המיון. השינויים במשימות יישמרו, אבל ההתקדמות והיסטוריית הביטול של הסשן יתאפסו.",
+    "change_task_pools_confirm": "שינוי והתחלה מחדש",
+    "sort_another_set": "מיון קבוצה נוספת",
+    "sources": {
+      "uncategorized": { "label": "ללא פרויקט", "description": "משימות שעדיין צריך לשייך לפרויקט" },
+      "overdue": { "label": "באיחור", "description": "תאריך היעד כבר עבר" },
+      "today": { "label": "היום", "description": "תאריך היעד הוא היום" },
+      "next-3-days": { "label": "3 הימים הבאים", "description": "ממחר ועד היום השלישי" },
+      "next-7-days": { "label": "7 הימים הבאים", "description": "תאריך יעד בשבעת הימים הבאים" },
+      "no-due-date": { "label": "ללא תאריך יעד", "description": "משימות ללא דדליין" }
+    }
   },
   "ai_chat": {
     "chat_tab": "צ׳אט",

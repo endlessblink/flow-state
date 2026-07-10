@@ -25,16 +25,23 @@
         </div>
       </div>
 
-      <button class="return-btn" @click="$emit('go-to-inbox')">
-        <ArrowLeft :size="20" />
-        Go to Inbox
-      </button>
+      <div class="completion-actions">
+        <BaseButton variant="primary" size="lg" @click="$emit('sort-another')">
+          <Zap :size="20" />
+          {{ $t('quick_sort.sort_another_set') }}
+        </BaseButton>
+        <BaseButton variant="secondary" size="lg" @click="$emit('go-to-inbox')">
+          <ArrowLeft :size="20" />
+          Go to Inbox
+        </BaseButton>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { PartyPopper, ArrowLeft } from 'lucide-vue-next'
+import { PartyPopper, ArrowLeft, Zap } from 'lucide-vue-next'
+import BaseButton from '@/components/base/BaseButton.vue'
 
 interface SessionSummary {
   tasksProcessed: number
@@ -48,6 +55,7 @@ defineProps<{
 
 defineEmits<{
   (e: 'go-to-inbox'): void
+  (e: 'sort-another'): void
 }>()
 
 const confettiRef = defineModel<HTMLElement | null>('confettiRef', { default: null })
@@ -150,29 +158,7 @@ function formatDuration(ms: number): string {
   letter-spacing: 0.1em;
 }
 
-.return-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-6);
-  background: var(--glass-bg-weak);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  color: var(--text-primary);
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-  cursor: pointer;
-  transition: all var(--duration-normal) ease;
-}
-
-.return-btn:active {
-  transform: scale(0.98);
-  background: var(--glass-bg-light);
-}
-
-[dir="rtl"] .return-btn {
-  flex-direction: row-reverse;
-}
+.completion-actions { display: flex; flex-direction: column; gap: var(--space-3); }
 
 @media (prefers-reduced-motion: reduce) {
   .celebration-icon {

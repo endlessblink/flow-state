@@ -12,12 +12,14 @@
         </h1>
       </div>
       <div class="header-stats">
-        <span class="stat-badge">{{ progress.current }}/{{ progress.total }}</span>
+        <span class="stat-badge">
+          {{ isSessionActive ? `${progress.current}/${progress.total}` : displayTaskCount }}
+        </span>
       </div>
     </header>
 
     <!-- Progress Bar -->
-    <div v-if="!isComplete && activePhase === 'sort'" class="progress-track">
+    <div v-if="isSessionActive && !isComplete && activePhase === 'sort'" class="progress-track">
       <div
         class="progress-fill"
         :style="{ width: `${progress.percentage}%` }"
@@ -34,7 +36,7 @@
       >
         <Zap :size="16" />
         Sort
-        <span v-if="uncategorizedCount > 0" class="count-badge">{{ uncategorizedCount }}</span>
+        <span v-if="displayTaskCount > 0" class="count-badge">{{ displayTaskCount }}</span>
       </button>
       <button
         class="phase-btn"
@@ -46,8 +48,17 @@
       </button>
     </div>
 
+    <QuickSortSourcePicker
+      v-if="activePhase === 'sort' && isSessionActive"
+      v-model="selectedSources"
+      mode="active"
+      :counts="sourceCounts"
+      :combined-count="sourcePreviewTasks.length"
+      @request-change="requestSourceChange"
+    />
+
     <!-- Task Context Bar (visible only in sort phase, reactive to task changes) -->
-    <div v-if="activePhase === 'sort' && !isComplete && currentTask" class="task-context-bar">
+    <div v-if="activePhase === 'sort' && isSessionActive && !isComplete && currentTask" class="task-context-bar">
       <!-- Due Date -->
       <div class="context-item">
         <CalendarDays :size="14" />
@@ -92,8 +103,17 @@
         @quick-add="handleQuickAdd"
       />
 
+      <QuickSortSourcePicker
+        v-else-if="!isSessionActive && !sessionSummary"
+        v-model="selectedSources"
+        :counts="sourceCounts"
+        :combined-count="sourcePreviewTasks.length"
+        :disabled="isLoadingTasks"
+        @start="handleStartSession"
+      />
+
       <!-- SORT PHASE -->
-      <div v-else-if="!isComplete" class="sort-phase">
+      <div v-else-if="isSessionActive && !isComplete" class="sort-phase">
         <!-- Swipe Instructions - 4-direction hints -->
         <div v-if="!hasSwipedOnce" class="swipe-hints">
           <div class="hint hint-up">
@@ -157,9 +177,10 @@
 
       <!-- COMPLETION CELEBRATION -->
       <MobileQuickSortComplete
-        v-else
+        v-else-if="sessionSummary"
         :session-summary="sessionSummary"
         @go-to-inbox="router.push('/tasks')"
+        @sort-another="handleSortAnotherSet"
       />
     </main>
 
@@ -190,6 +211,22 @@
               <button class="delete-btn" @click="confirmDelete">
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showChangeSourcesConfirm" class="confirm-overlay">
+          <div class="confirm-modal">
+            <AlertCircle :size="32" class="confirm-icon" />
+            <h3>{{ $t('quick_sort.change_task_pools_title') }}</h3>
+            <p>{{ $t('quick_sort.change_task_pools_message') }}</p>
+            <div class="confirm-actions">
+              <BaseButton variant="secondary" @click="showChangeSourcesConfirm = false">{{ $t('common.cancel') }}</BaseButton>
+              <BaseButton variant="primary" @click="confirmSourceChange">{{ $t('quick_sort.change_task_pools_confirm') }}</BaseButton>
             </div>
           </div>
         </div>
@@ -322,6 +359,8 @@ import MobileQuickSortFilters from '../components/MobileQuickSortFilters.vue'
 import MobileQuickSortProjectSheet from '../components/MobileQuickSortProjectSheet.vue'
 import MobileQuickSortCapture from '../components/MobileQuickSortCapture.vue'
 import MobileQuickSortComplete from '../components/MobileQuickSortComplete.vue'
+import QuickSortSourcePicker from '@/components/quicksort/QuickSortSourcePicker.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
 import TaskEditBottomSheet from '../components/TaskEditBottomSheet.vue'
 import { useMobileQuickSortLogic } from '../composables/useMobileQuickSortLogic'
 
@@ -345,7 +384,13 @@ const {
   isTaskDirty,
   recentProjects,
   filteredProjects,
-  uncategorizedCount,
+  displayTaskCount,
+  selectedSources,
+  sourceCounts,
+  sourcePreviewTasks,
+  isSessionActive,
+  isLoadingTasks,
+  showChangeSourcesConfirm,
   stackPreview,
   isToday,
   isTomorrow,
@@ -373,7 +418,11 @@ const {
   showNothingSetReminder,
   confirmSaveAnyway,
   cancelSave,
-  celebrationLabel
+  celebrationLabel,
+  handleStartSession,
+  requestSourceChange,
+  confirmSourceChange,
+  handleSortAnotherSet
 } = useMobileQuickSortLogic()
 </script>
 
@@ -1269,4 +1318,3 @@ const {
   flex-direction: row-reverse;
 }
 </style>
-

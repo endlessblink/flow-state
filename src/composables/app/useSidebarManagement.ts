@@ -365,8 +365,7 @@ export function useSidebarManagement() {
 
   // Start Quick Sort from uncategorized view
   const handleStartQuickSort = () => {
-
-    router.push({ name: 'quick-sort' })
+    router.push({ name: 'quick-sort', query: { sources: 'uncategorized' } })
   }
 
   const getProjectTaskCount = (projectId: string) => {

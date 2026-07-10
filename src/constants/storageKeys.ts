@@ -40,6 +40,7 @@ export const STORAGE_KEYS = {
   QUICKSORT_HISTORY: 'flowstate-quicksort-history',
   QUICKSORT_LAST_DATE: 'flowstate-quicksort-last-date',
   QUICKSORT_ACTIVE_SESSION: 'flowstate-quicksort-active-session',
+  QUICKSORT_LAST_SOURCES: 'flowstate-quicksort-last-sources',
 
   // ── Onboarding / Welcome ──────────────────────────────────────────────
   ONBOARDING: 'flowstate-onboarding-v2',

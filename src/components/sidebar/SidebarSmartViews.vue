@@ -127,7 +127,7 @@ const selectSmartView = (view: string) => {
 }
 
 const handleStartQuickSort = () => {
-  router.push('/quick-sort')
+  router.push({ name: 'quick-sort', query: { sources: 'uncategorized' } })
 }
 </script>
 

@@ -4,6 +4,12 @@ import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useAuthStore } from '@/stores/auth'
 import { enqueueOperation } from '@/services/offline/writeQueueDB'
 import { toSupabaseQuickSortSession } from '@/utils/supabaseMappers'
+import { STORAGE_KEYS } from '@/constants/storageKeys'
+import {
+  DEFAULT_QUICK_SORT_SOURCES,
+  normalizeQuickSortSources,
+  type QuickSortSource
+} from '@/utils/quickSortTaskFilters'
 
 export interface CategoryAction {
   id: string
@@ -44,6 +50,8 @@ export interface ActiveSessionData {
   redoStack: CategoryAction[]
   processedTaskIds: string[]
   currentTaskId: string | null
+  sources?: QuickSortSource[]
+  queuedTaskIds?: string[]
 }
 
 export const useQuickSortStore = defineStore('quickSort', () => {
@@ -56,6 +64,7 @@ export const useQuickSortStore = defineStore('quickSort', () => {
   const sessionStartTime = ref<number | null>(null)
   const tasksSortedInSession = ref(0)
   const lastCompletedDate = ref<string | null>(null)
+  const lastSelectedSources = ref<QuickSortSource[]>(loadLastSelectedSources())
 
   // TASK-1450: Interrupted session recovery
   const hasInterruptedSession = ref(false)
@@ -187,6 +196,20 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     clearActiveSession()
   }
 
+  function loadLastSelectedSources(): QuickSortSource[] {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.QUICKSORT_LAST_SOURCES)
+      return stored ? normalizeQuickSortSources(JSON.parse(stored)) : [...DEFAULT_QUICK_SORT_SOURCES]
+    } catch {
+      return [...DEFAULT_QUICK_SORT_SOURCES]
+    }
+  }
+
+  function setLastSelectedSources(sources: readonly QuickSortSource[]) {
+    lastSelectedSources.value = normalizeQuickSortSources(sources)
+    localStorage.setItem(STORAGE_KEYS.QUICKSORT_LAST_SOURCES, JSON.stringify(lastSelectedSources.value))
+  }
+
   // Use Supabase for cross-device sync
   const supabaseDb = useSupabaseDatabase()
   const authStore = useAuthStore()
@@ -289,7 +312,12 @@ export const useQuickSortStore = defineStore('quickSort', () => {
   }
 
   // TASK-1450: Active session persistence for crash recovery
-  function saveActiveSession(composableState: { currentTaskId: string | null, processedTaskIds: Set<string> }) {
+  function saveActiveSession(composableState: {
+    currentTaskId: string | null
+    processedTaskIds: Set<string>
+    sources: QuickSortSource[]
+    queuedTaskIds: string[]
+  }) {
     if (!isActive.value || !currentSessionId.value || !sessionStartTime.value) {
       localStorage.removeItem(ACTIVE_SESSION_KEY)
       return
@@ -302,7 +330,9 @@ export const useQuickSortStore = defineStore('quickSort', () => {
         undoStack: undoStack.value,
         redoStack: redoStack.value,
         processedTaskIds: [...composableState.processedTaskIds],
-        currentTaskId: composableState.currentTaskId
+        currentTaskId: composableState.currentTaskId,
+        sources: composableState.sources,
+        queuedTaskIds: composableState.queuedTaskIds
       }
       localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(data))
     } catch (error) {
@@ -380,6 +410,7 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     sessionHistory,
     sessionStartTime,
     tasksSortedInSession,
+    lastSelectedSources,
 
     // TASK-1450: Session recovery
     hasInterruptedSession,
@@ -397,6 +428,7 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     undo,
     redo,
     cancelSession,
+    setLastSelectedSources,
     saveToLocalStorage,
     loadFromLocalStorage,
 

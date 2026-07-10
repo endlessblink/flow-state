@@ -9,7 +9,7 @@
         </h1>
       </div>
       <div class="header-stats">
-        <span v-if="!isComplete && progress.total > 0" class="stat-badge">
+        <span v-if="isSessionActive && !isComplete && progress.total > 0" class="stat-badge">
           {{ progress.total - progress.current }}
         </span>
         <span v-if="!isComplete && currentStreak > 2" class="streak-badge">{{ currentStreak }}</span>
@@ -20,7 +20,7 @@
     </header>
 
     <!-- Glowing Progress Bar -->
-    <div v-if="!isComplete && progress.total > 0 && activeTab === 'sort'" class="glow-progress-track">
+    <div v-if="isSessionActive && !isComplete && progress.total > 0 && activeTab === 'sort'" class="glow-progress-track">
       <div class="glow-progress-fill" :style="{ width: `${progressPercentage}%` }" />
       <div class="glow-progress-glow" :style="{ insetInlineStart: `${progressPercentage}%` }" />
     </div>
@@ -30,13 +30,22 @@
       <button class="tab-btn" :class="{ active: activeTab === 'sort' }" @click="activeTab = 'sort'">
         <Zap :size="16" />
         Sort
-        <span v-if="uncategorizedCount > 0" class="tab-badge">{{ uncategorizedCount }}</span>
+        <span v-if="displayTaskCount > 0" class="tab-badge">{{ displayTaskCount }}</span>
       </button>
       <button class="tab-btn" :class="{ active: activeTab === 'capture' }" @click="activeTab = 'capture'">
         <Plus :size="16" />
         Capture
       </button>
     </div>
+
+    <QuickSortSourcePicker
+      v-if="activeTab === 'sort' && isSessionActive"
+      v-model="selectedSources"
+      mode="active"
+      :counts="sourceCounts"
+      :combined-count="sourcePreviewTasks.length"
+      @request-change="requestSourceChange"
+    />
 
     <!-- Main Content -->
     <div class="qs-content">
@@ -50,8 +59,17 @@
 
         <!-- SORT TAB -->
         <div v-else key="sort" class="sort-phase">
+          <QuickSortSourcePicker
+            v-if="!isSessionActive && !sessionSummary"
+            v-model="selectedSources"
+            :counts="sourceCounts"
+            :combined-count="sourcePreviewTasks.length"
+            :disabled="taskStore.isLoadingFromDatabase"
+            @start="handleStartSession"
+          />
+
           <!-- Active sort layout -->
-          <div v-if="currentTask && !isComplete" class="sort-center">
+          <div v-else-if="currentTask && isSessionActive && !isComplete" class="sort-center">
             <!-- Task Context Bar -->
             <div class="task-context-bar">
               <div class="ctx-item">
@@ -155,17 +173,17 @@
           </div>
 
           <!-- Empty State -->
-          <div v-else-if="!isComplete && uncategorizedTasks.length === 0" class="empty-state">
+          <div v-else-if="isSessionActive && !isComplete && quickSortTasks.length === 0" class="empty-state">
             <CheckCircle :size="64" />
             <h2>All Caught Up!</h2>
-            <p>You have no uncategorized tasks.</p>
+            <p>{{ $t('quick_sort.no_matching_tasks') }}</p>
             <button class="primary-button" @click="handleExit">
               Return to Tasks
             </button>
           </div>
 
           <!-- Completion State -->
-          <div v-else-if="isComplete" class="completion-state">
+          <div v-else-if="sessionSummary" class="completion-state">
             <div class="celebration-icon">
               &#x1F389;
             </div>
@@ -191,10 +209,16 @@
                 <span class="stat-label">Day Streak</span>
               </div>
             </div>
-            <button class="primary-button" @click="handleExit">
-              <CheckCircle :size="20" />
-              {{ $t('quick_sort.done') }}
-            </button>
+            <div class="completion-actions">
+              <BaseButton variant="primary" size="lg" @click="handleSortAnotherSet">
+                <Zap :size="20" />
+                {{ $t('quick_sort.sort_another_set') }}
+              </BaseButton>
+              <BaseButton variant="secondary" size="lg" @click="handleExit">
+                <CheckCircle :size="20" />
+                {{ $t('quick_sort.done') }}
+              </BaseButton>
+            </div>
           </div>
         </div>
       </Transition>
@@ -343,6 +367,22 @@
         </div>
       </div>
     </BaseModal>
+
+    <BaseModal
+      :is-open="showChangeSourcesConfirm"
+      size="sm"
+      :show-footer="true"
+      :title="$t('quick_sort.change_task_pools_title')"
+      :cancel-text="$t('common.cancel')"
+      :confirm-text="$t('quick_sort.change_task_pools_confirm')"
+      @close="showChangeSourcesConfirm = false"
+      @cancel="showChangeSourcesConfirm = false"
+      @confirm="confirmSourceChange"
+    >
+      <div class="change-sources-confirm">
+        <p>{{ $t('quick_sort.change_task_pools_message') }}</p>
+      </div>
+    </BaseModal>
     <!-- Nothing Set Reminder (positioned inside panel, not viewport) -->
     <Transition name="fade">
       <div v-if="showNothingSetReminder" class="nothing-set-overlay" @click.self="cancelSaveReminder">
@@ -383,12 +423,15 @@ import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import QuickSortCard from '@/components/QuickSortCard.vue'
 import QuickCaptureTab from '@/components/quicksort/QuickCaptureTab.vue'
+import QuickSortSourcePicker from '@/components/quicksort/QuickSortSourcePicker.vue'
 import CategorySelector from '@/components/layout/CategorySelector.vue'
 import ProjectModal from '@/components/projects/ProjectModal.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import BaseModal from '@/components/base/BaseModal.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
 import type { SessionSummary } from '@/stores/quickSort'
 import type { Task } from '@/types/tasks'
+import type { QuickSortSource } from '@/utils/quickSortTaskFilters'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -400,13 +443,16 @@ const quickCapture = useQuickCapture()
 const activeTab = ref<'sort' | 'capture'>('sort')
 const captureTabRef = ref<InstanceType<typeof QuickCaptureTab> | null>(null)
 
-const uncategorizedCount = computed(() => uncategorizedTasks.value.length)
+const displayTaskCount = computed(() => isSessionActive.value
+  ? quickSortTasks.value.length
+  : sourcePreviewTasks.value.length)
 
 const showProjectModal = ref(false)
 const showEditModal = ref(false)
 const showEditPanel = ref(false)
 const showDeleteConfirm = ref(false)
 const showNothingSetReminder = ref(false)
+const showChangeSourcesConfirm = ref(false)
 const actionFeedback = ref<{ text: string; type: 'success' | 'info' | 'danger' | 'warning' } | null>(null)
 const celebrationLabels = ['Sorted!', 'Nice!', 'Got it!', 'Done!', 'Sweet!']
 const celebrationLabel = ref('Sorted!')
@@ -419,9 +465,9 @@ const userTouchedCard = ref(false)
 
 const stackPreview = computed(() => {
   if (!currentTask.value) return []
-  const currentIdx = uncategorizedTasks.value.findIndex(t => t.id === currentTask.value!.id)
+  const currentIdx = quickSortTasks.value.findIndex(t => t.id === currentTask.value!.id)
   if (currentIdx === -1) return []
-  return uncategorizedTasks.value.slice(currentIdx + 1, currentIdx + 4)
+  return quickSortTasks.value.slice(currentIdx + 1, currentIdx + 4)
 })
 
 const progressPercentage = computed(() => {
@@ -444,10 +490,12 @@ watch(() => quickCapture.defaultTabOnOpen.value, (defaultTab) => {
 
 
 const {
-  currentTask, currentTaskId, uncategorizedTasks, progress, isComplete,
+  currentTask, currentTaskId, quickSortTasks, progress, isComplete,
+  selectedSources, sourceCounts, sourcePreviewTasks, isSessionActive,
   isTaskDirty, canUndo, canRedo, currentStreak,
   startSession, endSession, categorizeTask, saveTask,
-  markTaskDone, markDoneAndDeleteTask, skipTask, undoLastCategorization, redoLastCategorization, tryResumeSession
+  markTaskDone, markDoneAndDeleteTask, skipTask, undoLastCategorization, redoLastCategorization,
+  tryResumeSession, cancelSession
 } = useQuickSort()
 
 // Reset touch tracking when task changes
@@ -455,7 +503,9 @@ watch(currentTaskId, () => { userTouchedCard.value = false })
 
 onMounted(() => {
   const resumed = tryResumeSession()
-  if (!resumed) startSession()
+  if (!resumed && route.query.sources === 'uncategorized') {
+    selectedSources.value = ['uncategorized']
+  }
   window.addEventListener('keydown', handleGlobalKeydown)
 })
 
@@ -464,6 +514,29 @@ onUnmounted(() => { window.removeEventListener('keydown', handleGlobalKeydown) }
 watch(isComplete, (completed) => {
   if (completed) sessionSummary.value = endSession() || null
 })
+
+function handleStartSession(sources: QuickSortSource[]) {
+  sessionSummary.value = null
+  startSession(sources)
+}
+
+function resetToSourcePicker() {
+  cancelSession()
+  sessionSummary.value = null
+  showChangeSourcesConfirm.value = false
+}
+
+function requestSourceChange() {
+  showChangeSourcesConfirm.value = true
+}
+
+function confirmSourceChange() {
+  resetToSourcePicker()
+}
+
+function handleSortAnotherSet() {
+  sessionSummary.value = null
+}
 
 function handleCategorize(projectId: string) {
   if (!currentTask.value) return
@@ -1434,6 +1507,21 @@ const currentTaskProject = computed(() => {
 }
 
 .primary-button:hover { background: var(--state-hover-bg); }
+
+.completion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.change-sources-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-2);
+  color: var(--text-secondary);
+}
 
 /* ================================
    FEEDBACK OVERLAY (Celebration)

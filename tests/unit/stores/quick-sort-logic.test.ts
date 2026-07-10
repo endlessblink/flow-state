@@ -280,6 +280,54 @@ describe('TASK-1662: Quick Sort Logic', () => {
     expect(data!.currentTaskId).toBe('t3')
   })
 
+  it('remembers the last selected task pools for the next session', async () => {
+    const { useQuickSortStore } = await import('@/stores/quickSort')
+    const qs = useQuickSortStore()
+
+    expect(qs.lastSelectedSources).toEqual(['uncategorized'])
+
+    qs.setLastSelectedSources(['overdue', 'next-3-days'])
+
+    expect(qs.lastSelectedSources).toEqual(['overdue', 'next-3-days'])
+    expect(JSON.parse(store['flowstate-quicksort-last-sources'])).toEqual(['overdue', 'next-3-days'])
+  })
+
+  it('persists source criteria and captured IDs with an active session', async () => {
+    const { useQuickSortStore } = await import('@/stores/quickSort')
+    const qs = useQuickSortStore()
+    qs.startSession()
+
+    qs.saveActiveSession({
+      currentTaskId: 'overdue-2',
+      processedTaskIds: new Set(['overdue-1']),
+      sources: ['overdue', 'today'],
+      queuedTaskIds: ['overdue-1', 'overdue-2', 'today-1']
+    })
+
+    const saved = JSON.parse(store['flowstate-quicksort-active-session'])
+    expect(saved.sources).toEqual(['overdue', 'today'])
+    expect(saved.queuedTaskIds).toEqual(['overdue-1', 'overdue-2', 'today-1'])
+  })
+
+  it('preserves an explicitly empty captured queue during recovery', async () => {
+    const { useQuickSortStore } = await import('@/stores/quickSort')
+    const qs = useQuickSortStore()
+    qs.hasInterruptedSession = true
+    qs.interruptedSessionData = {
+      currentSessionId: 'session-empty',
+      sessionStartTime: Date.now(),
+      tasksSortedInSession: 1,
+      undoStack: [],
+      redoStack: [],
+      processedTaskIds: ['last-task'],
+      currentTaskId: null,
+      sources: ['overdue'],
+      queuedTaskIds: []
+    }
+
+    expect(qs.resumeSession()?.queuedTaskIds).toEqual([])
+  })
+
   it('11. Undo/redo cycles three consecutive times across all Quick Sort action types', async () => {
     const { useQuickSortStore } = await import('@/stores/quickSort')
     const qs = useQuickSortStore()

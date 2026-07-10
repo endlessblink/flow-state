@@ -217,6 +217,30 @@ describe('Quick Sort source queues', () => {
     expect(quickSort.currentTask.value?.id).toBe('first')
   })
 
+  it('does not persist Quick Sort session state when postponing the current task', async () => {
+    const { useQuickSort } = await import('@/composables/useQuickSort')
+    rawTasks.push(
+      { id: 'first', title: 'First', status: 'todo', dueDate: '2026-07-10' },
+      { id: 'second', title: 'Second', status: 'todo', dueDate: '2026-07-10' }
+    )
+
+    const quickSort = useQuickSort()
+    quickSort.startSession(['today'])
+    const activeSessionBefore = storage['flowstate-quicksort-active-session']
+    localStorageMock.setItem.mockClear()
+
+    await quickSort.rescheduleCurrentTask('2026-07-13')
+
+    expect(taskStore.updateTask).toHaveBeenCalledWith('first', { dueDate: '2026-07-13' })
+    expect(quickSort.currentTask.value?.id).toBe('first')
+    expect(quickSort.progress.value.current).toBe(0)
+    expect(storage['flowstate-quicksort-active-session']).toBe(activeSessionBefore)
+    expect(localStorageMock.setItem).not.toHaveBeenCalledWith(
+      'flowstate-quicksort-active-session',
+      expect.any(String)
+    )
+  })
+
   it('does not absorb an unsaved priority edit into the postpone baseline', async () => {
     const { useQuickSort } = await import('@/composables/useQuickSort')
     rawTasks.push(

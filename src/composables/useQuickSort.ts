@@ -269,7 +269,6 @@ export function useQuickSort() {
       })
       if (taskSnapshot.value?.taskId === taskId) taskSnapshot.value.dueDate = dueDate
       else snapshotCurrentTask()
-      persistSession()
       return true
     } finally {
       if (reschedulingTaskId.value === taskId) reschedulingTaskId.value = null

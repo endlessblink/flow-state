@@ -43,11 +43,17 @@ function readStoreSummary() {
   const data = result.data && typeof result.data === 'object' ? result.data : {}
   const keys = Object.keys(data)
   const authKeys = keys.filter((key) => /auth/i.test(key)).sort()
+  // BUG-1933: a null primary key alongside a populated backup is the "signed in on screen, signed
+  // out on disk" state — the sidecar and the next launch both see nothing.
+  const primaryAuthNull = 'flowstate-supabase-auth' in data && data['flowstate-supabase-auth'] === null
+  const backupPresent = !!data['flowstate-supabase-auth-backup-v1']
   return {
     exists: true,
     readable: true,
     keyCount: keys.length,
     authKeyCount: authKeys.length,
+    primaryAuthNull,
+    backupPresent,
     hasAuthMaterial: JSON.stringify(data).includes('access_token') || JSON.stringify(data).includes('refresh_token'),
     hasUserLikeValue: JSON.stringify(data).includes('"user"') || JSON.stringify(data).includes('user_metadata'),
     authKeys,
@@ -71,10 +77,23 @@ function processSummary(raw) {
     !/flowstate-local-api|local-api-server/i.test(line) &&
     /FlowState|flow-state|\/flowstate(?:\s|$)/i.test(line),
   )
+  // BUG-1932: Electron derives userData from $HOME, so a launcher that rewrites HOME (agent
+  // sandbox, systemd unit, container) runs against a pristine, empty profile — a phantom sign-out —
+  // and binds the Local API port with a token no other client can read. Only some process lines
+  // carry --user-data-dir (the main AppImage line does not), so compare only the ones that do
+  // rather than requiring every line to mention the real profile.
+  const userDataDirs = []
+  for (const line of flowStateLines) {
+    const match = /--user-data-dir=(\S+)/.exec(line)
+    if (match) userDataDirs.push(match[1])
+  }
+  const foreignUserDataDirs = [...new Set(userDataDirs.filter((dir) => dir !== USER_DATA_DIR))]
+
   return {
     flowStateProcessCount: flowStateLines.length,
     localApiProcessCount: lines.filter((line) => /flowstate-local-api|local-api-server/i.test(line)).length,
     usesRealUserData: flowStateLines.some((line) => line.includes(USER_DATA_DIR)),
+    foreignUserDataDirs,
   }
 }
 
@@ -108,12 +127,24 @@ function readResponseFixture() {
   return result.data
 }
 
-function evaluate({ config, processes, health, diagnostics, assistantContext }) {
+function evaluate({ config, processes, health, diagnostics, assistantContext, store }) {
   const failures = []
   const warnings = []
 
   if (processes.flowStateProcessCount === 0) {
     return { skipped: true, failures, warnings: ['FlowState desktop app is not running; live boundary probe skipped.'] }
+  }
+
+  // BUG-1932: a FlowState process pointed at a profile that isn't the real one. It will show a
+  // Sign In screen no matter how healthy auth is, and it fights for port 5577 with a token no
+  // other client can read.
+  if (processes.foreignUserDataDirs && processes.foreignUserDataDirs.length > 0) {
+    failures.push(`foreign-profile-instance:${processes.foreignUserDataDirs.join(',')}`)
+  }
+
+  // BUG-1933: signed in on screen, signed out on disk.
+  if (store && store.readable && store.primaryAuthNull && store.backupPresent) {
+    failures.push('auth-primary-null-with-backup')
   }
 
   if (!config.exists || !config.readable) {
@@ -138,6 +169,11 @@ function evaluate({ config, processes, health, diagnostics, assistantContext }) 
   }
   if (body.hasAuthContext && rendererAuth && rendererAuth.isInitialized && (!rendererAuth.isAuthenticated || !rendererAuth.hasUser)) {
     failures.push('renderer-signed-out-while-sidecar-authenticated')
+  }
+  // BUG-1933, the mirror image: the app is signed in but the sidecar was cleared, so the KDE
+  // widget and every agent tool 401 while the UI looks perfectly healthy.
+  if (!body.hasAuthContext && rendererAuth && rendererAuth.isInitialized && rendererAuth.isAuthenticated && rendererAuth.hasUser) {
+    failures.push('sidecar-blind-while-renderer-signed-in')
   }
   if (rendererAuth && rendererAuth.ageMs > 60_000) {
     failures.push('stale-renderer-auth-heartbeat')
@@ -170,7 +206,7 @@ async function main() {
   const assistantContext = fixture?.assistantContext || await getJson('/api/assistant/context', token)
   delete config.token
 
-  const result = evaluate({ config, processes, health, diagnostics, assistantContext })
+  const result = evaluate({ config, processes, health, diagnostics, assistantContext, store })
   const safeDiagnostics = diagnostics.json
     ? {
         status: diagnostics.status,

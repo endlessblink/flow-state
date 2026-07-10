@@ -14,15 +14,23 @@ function runBoundary(env: Record<string, string>) {
   })
 }
 
-function fixtureEnv(diagnostics: Record<string, unknown>, processList: string) {
+/**
+ * `%DIR%` in processList is replaced with the fixture's real userData dir, so a test only exercises
+ * the BUG-1932 foreign-profile check when it deliberately names some other directory.
+ */
+function fixtureEnv(
+  diagnostics: Record<string, unknown>,
+  processList: string,
+  store?: Record<string, unknown>,
+) {
   const dir = mkdtempSync(join(tmpdir(), 'flowstate-live-boundary-'))
   const processFixture = join(dir, 'processes.txt')
   const responseFixture = join(dir, 'responses.json')
   writeFileSync(join(dir, 'local-api.json'), JSON.stringify({ enabled: true, port: 5577, token: 'redacted-token' }))
-  writeFileSync(join(dir, 'store.json'), JSON.stringify({
+  writeFileSync(join(dir, 'store.json'), JSON.stringify(store ?? {
     'flowstate-supabase-auth': { access_token: 'not-printed', refresh_token: 'not-printed', user: {} },
   }))
-  writeFileSync(processFixture, processList)
+  writeFileSync(processFixture, processList.replaceAll('%DIR%', dir))
   writeFileSync(responseFixture, JSON.stringify({
     health: { ok: true, status: 200, json: { ok: true } },
     diagnostics: { ok: true, status: 200, json: diagnostics },
@@ -67,7 +75,7 @@ describe('live boundary diagnostics', () => {
     }
 
     try {
-      runBoundary(fixtureEnv(diagnostics, '123 1 /home/endlessblink/.local/bin/FlowState.AppImage --user-data-dir=/tmp/foo'))
+      runBoundary(fixtureEnv(diagnostics, '123 1 /home/endlessblink/.local/bin/FlowState.AppImage --user-data-dir=%DIR%'))
       throw new Error('expected command to fail')
     } catch (error) {
       const output = String((error as { stdout?: Buffer | string }).stdout || '')
@@ -128,6 +136,84 @@ describe('live boundary diagnostics', () => {
     const report = JSON.parse(output)
     expect(report.ok).toBe(true)
     expect(report.failures).toEqual([])
+  })
+
+  // ── BUG-1932 / BUG-1933 watchdog coverage ──────────────────────────────────
+
+  const healthyDiagnostics = {
+    appVersion: '1.4.241',
+    hasAuthContext: true,
+    rendererAuthState: {
+      isAuthenticated: true,
+      hasUser: true,
+      canSyncRemotely: true,
+      reauthRequired: false,
+      isInitialized: true,
+      ageMs: 100,
+    },
+    hasLocalTimerSnapshot: true,
+    localSnapshotActive: true,
+    localSnapshotAgeMs: 100,
+    currentTimerBranch: 'local-snapshot-active',
+    supabaseActiveSessionFound: true,
+  }
+
+  it('BUG-1932: fails when a process runs against a foreign profile (HOME hijack)', () => {
+    // The literal shape of the real incident: the Hermes agent sandbox nests its profile inside
+    // the real home, so a naive prefix check would call this legitimate.
+    const hermes = '/home/endlessblink/.hermes/profiles/office-work/home/.config/flow-state'
+    try {
+      runBoundary(fixtureEnv(healthyDiagnostics, `123 1 /tmp/.mount_x/flowstate --type=renderer --user-data-dir=${hermes}`))
+      throw new Error('expected command to fail')
+    } catch (error) {
+      const output = String((error as { stdout?: Buffer | string }).stdout || '')
+      expect(output).toContain('foreign-profile-instance')
+      expect(output).toContain(hermes)
+    }
+  })
+
+  it('BUG-1932: passes when every --user-data-dir names the real profile', () => {
+    const output = runBoundary(
+      fixtureEnv(healthyDiagnostics, '123 1 /tmp/.mount_x/flowstate --type=renderer --user-data-dir=%DIR%')
+    )
+    expect(JSON.parse(output).failures).toEqual([])
+  })
+
+  it('BUG-1933: fails when the primary auth key is null but a backup exists', () => {
+    // Signed in on screen, signed out on disk — the sidecar and the next launch both see nothing.
+    const store = {
+      'flowstate-supabase-auth': null,
+      'flowstate-supabase-auth-backup-v1': JSON.stringify({ savedAt: 1, session: { refresh_token: 'not-printed' } }),
+    }
+    try {
+      runBoundary(fixtureEnv(healthyDiagnostics, '123 1 /tmp/.mount_x/flowstate', store))
+      throw new Error('expected command to fail')
+    } catch (error) {
+      const output = String((error as { stdout?: Buffer | string }).stdout || '')
+      expect(output).toContain('auth-primary-null-with-backup')
+      expect(output).not.toContain('not-printed')
+    }
+  })
+
+  it('BUG-1933: fails when the renderer is signed in but the sidecar has no auth context', () => {
+    const diagnostics = { ...healthyDiagnostics, hasAuthContext: false }
+    try {
+      runBoundary(fixtureEnv(diagnostics, '123 1 /tmp/.mount_x/flowstate'))
+      throw new Error('expected command to fail')
+    } catch (error) {
+      const output = String((error as { stdout?: Buffer | string }).stdout || '')
+      expect(output).toContain('sidecar-blind-while-renderer-signed-in')
+    }
+  })
+
+  it('BUG-1933: a signed-out renderer with no sidecar context is not a failure', () => {
+    const diagnostics = {
+      ...healthyDiagnostics,
+      hasAuthContext: false,
+      rendererAuthState: { ...healthyDiagnostics.rendererAuthState, isAuthenticated: false, hasUser: false, canSyncRemotely: false },
+    }
+    const output = runBoundary(fixtureEnv(diagnostics, '123 1 /tmp/.mount_x/flowstate'))
+    expect(JSON.parse(output).failures).toEqual([])
   })
 
   it('counts the packaged lowercase flowstate process as the running Electron app', () => {

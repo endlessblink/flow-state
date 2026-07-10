@@ -39,7 +39,7 @@ export function useQuickSort() {
   // Dirty state tracking for save/undo
   interface TaskSnapshot {
     projectId: string | null | undefined
-    dueDate: string | undefined
+    dueDate: string
     priority: 'low' | 'medium' | 'high' | undefined
   }
 
@@ -50,7 +50,7 @@ export function useQuickSort() {
     if (task) {
       taskSnapshot.value = {
         projectId: task.projectId || null,
-        dueDate: task.dueDate || undefined,
+        dueDate: task.dueDate || '',
         priority: task.priority || undefined
       }
     } else {
@@ -81,6 +81,10 @@ export function useQuickSort() {
   })
   const isSessionActive = computed(() => quickSortStore.isActive)
   const tasksSortedInSession = computed(() => quickSortStore.tasksSortedInSession)
+  const canUndo = computed(() => quickSortStore.canUndo)
+  const canRedo = computed(() => quickSortStore.canRedo)
+  const reschedulingTaskId = ref<string | null>(null)
+  const isRescheduling = computed(() => reschedulingTaskId.value !== null)
 
   // A session captures IDs once. Task edits therefore cannot make the current card
   // disappear, and newly-created matching tasks wait for the next session.
@@ -212,7 +216,7 @@ export function useQuickSort() {
     return summary
   }
 
-  async function saveTask() {
+  async function commitCurrentTask() {
     if (!currentTask.value) return
 
     const task = currentTask.value
@@ -226,7 +230,7 @@ export function useQuickSort() {
       oldProjectId: snap?.projectId ?? null,
       newProjectId: task.projectId || undefined,
       oldDueDate: snap?.dueDate,
-      newDueDate: task.dueDate || undefined,
+      newDueDate: task.dueDate || '',
       oldPriority: snap?.priority,
       newPriority: task.priority || undefined,
       timestamp: Date.now()
@@ -237,7 +241,28 @@ export function useQuickSort() {
     advanceToNextTask()
   }
 
+  async function saveTask() {
+    if (isRescheduling.value) return
+    await commitCurrentTask()
+  }
+
+  async function rescheduleCurrentTask(dueDate: string): Promise<boolean> {
+    if (!currentTask.value) return false
+    const taskId = currentTask.value.id
+    if (reschedulingTaskId.value === taskId) return false
+    reschedulingTaskId.value = taskId
+    try {
+      await taskStore.updateTask(taskId, { dueDate })
+      if (currentTaskId.value !== taskId || processedTaskIds.value.has(taskId)) return false
+      await commitCurrentTask()
+      return true
+    } finally {
+      if (reschedulingTaskId.value === taskId) reschedulingTaskId.value = null
+    }
+  }
+
   async function categorizeTask(taskId: string, projectId: string) {
+    if (isRescheduling.value) return
     const task = taskStore.rawTasks.find((t) => t.id === taskId)
     if (!task) return
 
@@ -262,6 +287,7 @@ export function useQuickSort() {
   }
 
   function skipTask() {
+    if (isRescheduling.value) return
     const tasks = quickSortTasks.value
     if (tasks.length === 0) return
 
@@ -282,6 +308,7 @@ export function useQuickSort() {
   }
 
   async function markTaskDone(taskId: string) {
+    if (isRescheduling.value) return
     const oldStatus = taskStore.rawTasks.find(task => task.id === taskId)?.status ?? 'todo'
 
     // Mark task as done - AWAIT to ensure persistence (BUG-1051)
@@ -304,6 +331,7 @@ export function useQuickSort() {
   }
 
   async function markDoneAndDeleteTask(taskId: string) {
+    if (isRescheduling.value) return
     // Capture full task data before deletion so undo can recreate it
     const taskToDelete = taskStore._rawTasks.find(t => t.id === taskId)
 
@@ -330,6 +358,7 @@ export function useQuickSort() {
   }
 
   async function undoLastCategorization() {
+    if (isRescheduling.value) return
     const action = quickSortStore.undo()
     if (!action) return
 
@@ -337,7 +366,7 @@ export function useQuickSort() {
       // Restore snapshot fields
       const updates: Record<string, unknown> = {}
       if (action.oldProjectId !== undefined) updates.projectId = action.oldProjectId || undefined
-      if (action.oldDueDate !== undefined) updates.dueDate = action.oldDueDate || ''
+      if (action.oldDueDate !== undefined) updates.dueDate = action.oldDueDate
       if (action.oldPriority !== undefined) updates.priority = action.oldPriority || undefined
 
       if (Object.keys(updates).length > 0) {
@@ -377,6 +406,7 @@ export function useQuickSort() {
   }
 
   async function redoLastCategorization() {
+    if (isRescheduling.value) return
     const action = quickSortStore.redo()
     if (!action) return
 
@@ -384,7 +414,7 @@ export function useQuickSort() {
       // Re-apply changes
       const updates: Record<string, unknown> = {}
       if (action.newProjectId !== undefined) updates.projectId = action.newProjectId
-      if (action.newDueDate !== undefined) updates.dueDate = action.newDueDate || ''
+      if (action.newDueDate !== undefined) updates.dueDate = action.newDueDate
       if (action.newPriority !== undefined) updates.priority = action.newPriority || undefined
 
       if (Object.keys(updates).length > 0) {
@@ -464,16 +494,19 @@ export function useQuickSort() {
     progress,
     isComplete,
     isTaskDirty,
+    isRescheduling,
     motivationalMessage,
-    canUndo: quickSortStore.canUndo,
-    canRedo: quickSortStore.canRedo,
+    canUndo,
+    canRedo,
     currentStreak: quickSortStore.currentStreak,
 
     // Actions
     startSession,
     endSession,
+    previewSessionSummary: quickSortStore.previewSessionSummary,
     categorizeTask,
     saveTask,
+    rescheduleCurrentTask,
     markTaskDone,
     markDoneAndDeleteTask,
     skipTask,

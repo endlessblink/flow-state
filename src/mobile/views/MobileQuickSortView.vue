@@ -12,6 +12,14 @@
         </h1>
       </div>
       <div class="header-stats">
+        <button
+          v-if="canUndo"
+          class="header-undo"
+          aria-label="Undo last Quick Sort action"
+          @click="handleUndo"
+        >
+          <Undo2 :size="17" />
+        </button>
         <span class="stat-badge">
           {{ isSessionActive ? `${progress.current}/${progress.total}` : displayTaskCount }}
         </span>
@@ -169,6 +177,7 @@
           :is-weekend="isWeekend"
           :is-task-dirty="isTaskDirty"
           @mark-done="handleMarkDone"
+          @postpone="showQuickEditPanel = true"
           @save="handleSave"
           @assign="openProjectSheet"
           @delete="showDeleteConfirm = true"
@@ -179,7 +188,7 @@
       <MobileQuickSortComplete
         v-else-if="sessionSummary"
         :session-summary="sessionSummary"
-        @go-to-inbox="router.push('/tasks')"
+        @go-to-inbox="finishAndExit"
         @sort-another="handleSortAnotherSet"
       />
     </main>
@@ -225,8 +234,12 @@
             <h3>{{ $t('quick_sort.change_task_pools_title') }}</h3>
             <p>{{ $t('quick_sort.change_task_pools_message') }}</p>
             <div class="confirm-actions">
-              <BaseButton variant="secondary" @click="showChangeSourcesConfirm = false">{{ $t('common.cancel') }}</BaseButton>
-              <BaseButton variant="primary" @click="confirmSourceChange">{{ $t('quick_sort.change_task_pools_confirm') }}</BaseButton>
+              <BaseButton variant="secondary" @click="showChangeSourcesConfirm = false">
+                {{ $t('common.cancel') }}
+              </BaseButton>
+              <BaseButton variant="primary" @click="confirmSourceChange">
+                {{ $t('quick_sort.change_task_pools_confirm') }}
+              </BaseButton>
             </div>
           </div>
         </div>
@@ -269,24 +282,30 @@
 
             <!-- Date Section -->
             <div class="edit-section">
-              <span class="edit-label">Due Date</span>
-              <div class="date-pills">
+              <span class="edit-label">Postpone to — one tap moves to the next task</span>
+              <fieldset class="date-pills" :disabled="isRescheduling" :aria-busy="isRescheduling">
                 <button class="pill" @click="setDueDateAndClose('today')">
                   Today
                 </button>
                 <button class="pill" @click="setDueDateAndClose('tomorrow')">
-                  Tmrw
-                </button>
-                <button class="pill" @click="setDueDateAndClose('in3days')">
-                  +3d
+                  Tomorrow
                 </button>
                 <button class="pill" @click="setDueDateAndClose('weekend')">
-                  Wknd
+                  Next weekend
+                </button>
+                <button class="pill" @click="setDueDateAndClose('in3days')">
+                  In 3 days
                 </button>
                 <button class="pill" @click="setDueDateAndClose('nextweek')">
-                  +7
+                  In 1 week
                 </button>
-                <button class="pill date-picker-trigger" @click="($refs.mobileDatePicker as HTMLInputElement)?.showPicker()">
+                <button class="pill" @click="setDueDateAndClose('in2weeks')">
+                  In 2 weeks
+                </button>
+                <button class="pill" @click="setDueDateAndClose('in1month')">
+                  In 1 month
+                </button>
+                <button class="pill date-picker-trigger" aria-label="Choose a custom postpone date" @click="($refs.mobileDatePicker as HTMLInputElement)?.showPicker()">
                   <Calendar :size="14" />
                 </button>
                 <input
@@ -295,8 +314,8 @@
                   class="date-picker-hidden"
                   :value="currentTask?.dueDate || ''"
                   @input="setDueDateDirect(($event.target as HTMLInputElement).value)"
-                />
-              </div>
+                >
+              </fieldset>
             </div>
 
             <!-- Assign to Project button -->
@@ -351,7 +370,7 @@
 import {
   Zap, Plus, CheckCircle, CalendarDays, Calendar,
   ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
-  Trash2, FolderOpen, AlertCircle
+  Trash2, FolderOpen, AlertCircle, Undo2
 } from 'lucide-vue-next'
 
 import MobileQuickSortCard from '../components/MobileQuickSortCard.vue'
@@ -365,7 +384,6 @@ import TaskEditBottomSheet from '../components/TaskEditBottomSheet.vue'
 import { useMobileQuickSortLogic } from '../composables/useMobileQuickSortLogic'
 
 const {
-  router,
   activePhase,
   showProjectSheet,
   showCelebration,
@@ -373,6 +391,8 @@ const {
   sessionSummary,
   showDeleteConfirm,
   showQuickEditPanel,
+  isRescheduling,
+  canUndo,
   newTaskTitle,
   newTaskPriority,
   newTaskDue,
@@ -405,6 +425,7 @@ const {
   showEditSheet,
   handleSave,
   handleMarkDone,
+  handleUndo,
   cancelDelete,
   confirmDelete,
   setPriorityAndClose,
@@ -422,7 +443,8 @@ const {
   handleStartSession,
   requestSourceChange,
   confirmSourceChange,
-  handleSortAnotherSet
+  handleSortAnotherSet,
+  finishAndExit
 } = useMobileQuickSortLogic()
 </script>
 
@@ -501,6 +523,18 @@ const {
 .header-stats {
   display: flex;
   align-items: center;
+  gap: var(--space-2);
+}
+
+.header-undo {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg-subtle);
+  color: var(--brand-primary);
 }
 
 .stat-badge {
@@ -1169,6 +1203,18 @@ const {
   gap: var(--space-2);
 }
 
+.edit-section .date-pills {
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.edit-section .date-pills::-webkit-scrollbar {
+  display: none;
+}
+
 .edit-section .pill {
   flex: 1;
   padding: var(--space-3) var(--space-4);
@@ -1180,6 +1226,12 @@ const {
   font-weight: var(--font-semibold);
   cursor: pointer;
   transition: all var(--duration-normal) ease;
+}
+
+.edit-section .date-pills .pill {
+  flex: 0 0 auto;
+  min-height: 44px;
+  white-space: nowrap;
 }
 
 .edit-section .pill.active {

@@ -33,4 +33,25 @@ describe('Quick Sort source picker integration', () => {
     expect(desktop).not.toContain('if (tasksSortedInSession.value > 0)')
     expect(mobileLogic).not.toContain('if (tasksSortedInSession.value > 0)')
   })
+
+  it('makes mobile postpone and undo controls reachable without a swipe gesture', () => {
+    const mobileView = read('src/mobile/views/MobileQuickSortView.vue')
+    const mobileFilters = read('src/mobile/components/MobileQuickSortFilters.vue')
+    const mobileLogic = read('src/mobile/composables/useMobileQuickSortLogic.ts')
+
+    expect(mobileFilters).toContain("$emit('postpone')")
+    expect(mobileView).toContain('@postpone="showQuickEditPanel = true"')
+    expect(mobileView).toContain('v-if="canUndo"')
+    expect(mobileLogic).toContain('undoLastCategorization')
+  })
+
+  it('keeps completion undoable until the user finalizes the session', () => {
+    const desktop = read('src/views/QuickSortView.vue')
+    const mobileLogic = read('src/mobile/composables/useMobileQuickSortLogic.ts')
+
+    expect(desktop).toContain('previewSessionSummary')
+    expect(mobileLogic).toContain('previewSessionSummary')
+    expect(desktop).not.toContain('if (completed) sessionSummary.value = endSession()')
+    expect(mobileLogic).not.toContain('if (completed) sessionSummary.value = endSession()')
+  })
 })

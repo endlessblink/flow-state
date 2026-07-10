@@ -193,4 +193,125 @@ describe('Quick Sort source queues', () => {
     expect(quickSort.tryResumeSession()).toBe(true)
     expect(quickSort.currentTask.value?.id).toBe('overdue-next')
   })
+
+  it('postpones the current task and advances in one action', async () => {
+    const { useQuickSort } = await import('@/composables/useQuickSort')
+    rawTasks.push(
+      { id: 'first', title: 'First', status: 'todo', dueDate: '2026-07-10' },
+      { id: 'second', title: 'Second', status: 'todo', dueDate: '2026-07-10' }
+    )
+
+    const quickSort = useQuickSort()
+    quickSort.startSession(['today'])
+
+    await quickSort.rescheduleCurrentTask('2026-07-11')
+
+    expect(taskStore.updateTask).toHaveBeenCalledWith('first', { dueDate: '2026-07-11' })
+    expect(quickSort.currentTask.value?.id).toBe('second')
+    expect(quickSort.canUndo.value).toBe(true)
+
+    await quickSort.undoLastCategorization()
+    expect(rawTasks.find(task => task.id === 'first')?.dueDate).toBe('2026-07-10')
+    expect(quickSort.currentTask.value?.id).toBe('first')
+  })
+
+  it('does not skip the following task when a postpone button is double-clicked', async () => {
+    const { useQuickSort } = await import('@/composables/useQuickSort')
+    rawTasks.push(
+      { id: 'first', title: 'First', status: 'todo', dueDate: '2026-07-10' },
+      { id: 'second', title: 'Second', status: 'todo', dueDate: '2026-07-10' }
+    )
+
+    const quickSort = useQuickSort()
+    quickSort.startSession(['today'])
+
+    await Promise.all([
+      quickSort.rescheduleCurrentTask('2026-07-11'),
+      quickSort.rescheduleCurrentTask('2026-07-11')
+    ])
+
+    expect(quickSort.currentTask.value?.id).toBe('second')
+    expect(quickSort.progress.value.current).toBe(1)
+  })
+
+  it('allows postponing a no-date task to be undone back to no date', async () => {
+    const { useQuickSort } = await import('@/composables/useQuickSort')
+    rawTasks.push({ id: 'no-date', title: 'No date', status: 'todo', dueDate: '' })
+
+    const quickSort = useQuickSort()
+    quickSort.startSession(['no-due-date'])
+    await quickSort.rescheduleCurrentTask('2026-07-11')
+    await quickSort.undoLastCategorization()
+
+    expect(rawTasks[0].dueDate).toBe('')
+    expect(quickSort.currentTask.value?.id).toBe('no-date')
+  })
+
+  it('redo clears the date again after undoing a clear-date action', async () => {
+    const { useQuickSort } = await import('@/composables/useQuickSort')
+    rawTasks.push({ id: 'dated', title: 'Dated', status: 'todo', dueDate: '2026-07-10' })
+
+    const quickSort = useQuickSort()
+    quickSort.startSession(['today'])
+    await quickSort.rescheduleCurrentTask('')
+    await quickSort.undoLastCategorization()
+    expect(rawTasks[0].dueDate).toBe('2026-07-10')
+
+    await quickSort.redoLastCategorization()
+    expect(rawTasks[0].dueDate).toBe('')
+  })
+
+  it('coalesces conflicting rapid postpone clicks into one recorded write', async () => {
+    const { useQuickSort } = await import('@/composables/useQuickSort')
+    rawTasks.push(
+      { id: 'first', title: 'First', status: 'todo', dueDate: '2026-07-10' },
+      { id: 'second', title: 'Second', status: 'todo', dueDate: '2026-07-10' }
+    )
+
+    const quickSort = useQuickSort()
+    quickSort.startSession(['today'])
+    const results = await Promise.all([
+      quickSort.rescheduleCurrentTask('2026-07-11'),
+      quickSort.rescheduleCurrentTask('2026-07-17')
+    ])
+
+    const firstTaskWrites = taskStore.updateTask.mock.calls.filter(([taskId]) => taskId === 'first')
+    expect(firstTaskWrites).toEqual([['first', { dueDate: '2026-07-11' }]])
+    expect(results).toEqual([true, false])
+    expect(quickSort.currentTask.value?.id).toBe('second')
+  })
+
+  it('blocks competing card actions until an in-flight postpone finishes', async () => {
+    const { useQuickSort } = await import('@/composables/useQuickSort')
+    rawTasks.push(
+      { id: 'first', title: 'First', status: 'todo', dueDate: '2026-07-10' },
+      { id: 'second', title: 'Second', status: 'todo', dueDate: '2026-07-10' }
+    )
+    let resolveWrite!: () => void
+    taskStore.updateTask.mockImplementationOnce((taskId: string, updates: Partial<MockTask>) => (
+      new Promise<void>(resolve => {
+        resolveWrite = () => {
+          const task = rawTasks.find(candidate => candidate.id === taskId)
+          if (task) Object.assign(task, updates)
+          resolve()
+        }
+      })
+    ))
+
+    const quickSort = useQuickSort()
+    quickSort.startSession(['today'])
+    const postpone = quickSort.rescheduleCurrentTask('2026-07-11')
+
+    await quickSort.saveTask()
+    quickSort.skipTask()
+    await quickSort.markTaskDone('first')
+    expect(quickSort.currentTask.value?.id).toBe('first')
+    expect(quickSort.progress.value.current).toBe(0)
+    expect(rawTasks[0].status).toBe('todo')
+
+    resolveWrite()
+    await postpone
+    expect(quickSort.currentTask.value?.id).toBe('second')
+    expect(quickSort.progress.value.current).toBe(1)
+  })
 })

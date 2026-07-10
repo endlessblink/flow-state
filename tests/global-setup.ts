@@ -39,12 +39,24 @@ async function ensureTestUser() {
       user_metadata: { name: 'Playwright Test User' },
     })
 
-    if (error) {
-      console.error('[global-setup] Failed to create test user:', error.message)
-      process.exit(1)
+    let finalUser = data?.user
+
+    if (error || !finalUser) {
+      console.warn('[global-setup] Failed to create test user immediately, polling...', error?.message)
+      // Retry polling
+      for (let i = 0; i < 10 && !finalUser; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        const res = await supabase.auth.admin.listUsers();
+        finalUser = res.data.users.find((u) => u.email === TEST_USER_EMAIL);
+      }
+
+      if (!finalUser) {
+        console.error('[global-setup] Failed to fetch test user after retries')
+        process.exit(1)
+      }
     }
 
-    userId = data.user.id
+    userId = finalUser.id
     console.log('[global-setup] Created test user:', userId)
   }
 

@@ -2167,20 +2167,42 @@ _Original plan below._
 
 ## Active Tasks
 
-### FEATURE-1935: Combinable Quick Sort task pools (🔄 IN PROGRESS)
+### ~~FEATURE-1935~~: Combinable Quick Sort task pools (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-07-10
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.242 deployed) | **Opened**: 2026-07-10
 
 **Goal**: Let users build a Quick Sort session from any combination of Uncategorized, Overdue, Today, Next 3 days, Next 7 days, and No due date tasks on desktop and mobile.
 
 **Implementation**: Added a shared responsive source picker, due-date-only local-date predicates with OR/deduplication semantics, captured session queues, remembered source selection, crash-safe source/queue persistence, legacy session recovery, and explicit restart confirmation before changing active pools. Assigned and uncategorized tasks can coexist in one session; done, pinned, and soft-deleted tasks remain excluded.
 
 **Subtasks**:
-- [x] FEATURE-1935 — lock task-pool boundaries, combinations, captured queues, recovery, and desktop/mobile picker behavior with regressions.
+- [x] ~~FEATURE-1935 — lock task-pool boundaries, combinations, captured queues, recovery, and desktop/mobile picker behavior with regressions.~~
 - [x] Verify responsive rendering and mobile internal scrolling so the Start action remains reachable.
-- [ ] Build, deploy, and verify Electron updater v1.4.242; then close all tracking entries.
+- [x] Build, deploy, and verify Electron updater v1.4.242; then close all tracking entries.
 
-**Verification so far**: 30 focused Vitest tests, `vue-tsc`, ESLint, reviewer re-check, and Playwright desktop/mobile render probes pass. Full-suite Vitest enumerated the complete suite without a test failure but retained an existing open handle after completion; Electron release gate will rerun the repository checks.
+**Verification**: 28 focused Vitest tests, `vue-tsc`, ESLint, reviewer re-check, six mobile Chromium E2E tests, and Playwright desktop/mobile render probes pass. The Electron release gate completed the repository checks, built the AppImage and deb, validated the packaged renderer/main/sidecar/launcher contents, deployed v1.4.242, and the live updater manifest reports v1.4.242 with both artifacts.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Desktop/mobile picker and combination regressions plus rendered viewport probes | Yes |
+| Data shape / persisted row shape | Yes | Source normalization, captured-id queue, remembered-selection, and legacy-session tests | Yes, for Quick Sort local session data |
+| Renderer store/state | Yes | Store/composable tests cover start, resume, external completion, restart, and empty queues | Yes |
+| Electron main/preload bridge | N/A | Quick Sort remains renderer-owned; packaged Electron contents validated | No bridge change required |
+| Localhost sidecar endpoint | N/A | Quick Sort does not use the timer sidecar | Not applicable |
+| KDE polling/control path | N/A | Quick Sort does not use KDE integration | Not applicable |
+| Supabase persistence/realtime | N/A | Source membership is derived from the already-loaded task store; no schema/write change | Not applicable to this feature |
+| Updater/runtime version | Yes | Live `latest-linux.yml` and both artifact URLs report HTTP 200 for v1.4.242 | Yes |
+| Stale live process/cache state | Yes | Persisted selected sources and captured queue resume tests, including completed/missing current tasks | Yes, for Quick Sort session recovery |
+
+**Exact failure mode fixed**: Quick Sort could only auto-load Uncategorized tasks; it now starts from an explicit, combinable, deduplicated selection of six task pools and preserves that captured queue through the session and restart.
+
+**Explicitly not covered**: New matching tasks are intentionally not injected after a session starts; server fetch/realtime transport failures and unrelated Electron, sidecar, KDE, or Supabase failure classes remain outside this renderer feature.
+
+**Regression added for reported repro**: Filter boundary tests cover each pool and OR/deduplication; source-queue tests cover assigned overdue tasks, captured membership, counts, external completion, and resume; picker contract and mobile E2E tests cover desktop/mobile entry and restart confirmation.
+
+**Live boundary proof**: Desktop and mobile Playwright render probes verified the picker and reachable mobile Start action; the Electron gate built and validated both packages; the public updater manifest serves v1.4.242 and both AppImage/deb endpoints return HTTP 200.
 
 ---
 
@@ -6372,7 +6394,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1932**~~ | **P0** | ✅ **Phantom sign-out when a launcher rewrites HOME — pin Electron userData to passwd home** (✅ DONE 2026-07-10) |
 | ~~**BUG-1933**~~ | **P0** | ✅ **Restored session never re-persisted; stale token blinded Local API sidecar** (✅ DONE 2026-07-10) |
 | ~~**BUG-1934**~~ | **P1** | ✅ **Regular multi-delete is atomic locally across task lists and redo** (✅ DONE 2026-07-10, v1.4.241 shipped) |
-| **FEATURE-1935** | **P1** | 🔄 **Combinable Quick Sort task pools — overdue, today, next 3/7 days, no date, and Uncategorized** |
+| ~~**FEATURE-1935**~~ | **P1** | ✅ **Combinable Quick Sort task pools — overdue, today, next 3/7 days, no date, and Uncategorized** (✅ DONE 2026-07-10, v1.4.242 shipped) |
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |

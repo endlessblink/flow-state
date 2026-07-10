@@ -15,6 +15,9 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     isElectron: true,
     // App info
     getVersion: () => electron_1.ipcRenderer.invoke('app:getVersion'),
+    // BUG-1932: `{ home, pinnedTo }` when a launcher rewrote HOME and userData was pinned back to the
+    // real home; null otherwise.
+    getHomeOverride: () => electron_1.ipcRenderer.invoke('app:getHomeOverride'),
     // Shell operations (replaces @tauri-apps/plugin-shell)
     openExternal: (url) => electron_1.ipcRenderer.invoke('shell:openExternal', url),
     // Dialog operations (replaces @tauri-apps/plugin-dialog)

@@ -27,6 +27,7 @@ const {
   mockPersistAuthSessionBackup,
   mockRestoreAuthSessionFromBackup,
   mockClearAuthSessionBackup,
+  mockPersistPrimaryAuthSession,
   mockSyncLocalApiSession,
   mockSyncLocalApiRendererAuthState,
 } = vi.hoisted(() => {
@@ -57,6 +58,7 @@ const {
     mockPersistAuthSessionBackup: vi.fn(),
     mockRestoreAuthSessionFromBackup: vi.fn(),
     mockClearAuthSessionBackup: vi.fn(),
+    mockPersistPrimaryAuthSession: vi.fn(),
     mockSyncLocalApiSession: vi.fn(),
     mockSyncLocalApiRendererAuthState: vi.fn(),
   }
@@ -85,6 +87,7 @@ vi.mock('@/services/auth/supabase', () => ({
   persistAuthSessionBackup: mockPersistAuthSessionBackup,
   restoreAuthSessionFromBackup: mockRestoreAuthSessionFromBackup,
   clearAuthSessionBackup: mockClearAuthSessionBackup,
+  persistPrimaryAuthSession: mockPersistPrimaryAuthSession,
 }))
 
 vi.mock('@/utils/guestModeStorage', () => ({
@@ -240,6 +243,7 @@ describe('Auth Flow — Initial State', () => {
     mockPersistAuthSessionBackup.mockResolvedValue(undefined)
     mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
     mockClearAuthSessionBackup.mockResolvedValue(undefined)
+    mockPersistPrimaryAuthSession.mockResolvedValue(undefined)
   })
 
   it('1. isAuthenticated is false before initialize()', () => {
@@ -406,6 +410,13 @@ describe('Auth Flow — initialize()', () => {
     expect(store.isAuthenticated).toBe(true)
     expect(store.user?.id).toBe('user-test-001')
     expect(store.isOfflineGracePeriod).toBe(true)
+
+    // BUG-1933: supabase-js nulls the primary key when the refresh fails. The reconnect shell must
+    // re-persist it, or store.json keeps `flowstate-supabase-auth: null` while the UI shows
+    // signed-in — the sidecar and the next launch then see no session.
+    expect(mockPersistPrimaryAuthSession).toHaveBeenCalledWith(
+      expect.objectContaining({ user: expect.objectContaining({ id: 'user-test-001' }) })
+    )
   })
 
   it('8e2. online retry exhaustion after update keeps the signed-in shell instead of signing out', async () => {

@@ -4389,7 +4389,44 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 **Regression added for reported repro**: `tests/unit/kde/timer-extension-completion.test.ts` — complete→extend→zero→must-complete-again, BUG-1892 non-regression, and a mirror-drift check grepping main.qml's extend handler for the guard-clear lines (RED before fix). KDE pack 173/173.
 **Live boundary proof**: pending user's plasmashell reload — then verify row 52e15e1c flips `is_active=false`.
 
-### BUG-1918: Sign-out/sign-in recovery path UX — broken sign-out view, sign-in needs manual refresh (📋 PLANNED)
+### ~~BUG-1932~~: Phantom sign-out when a launcher rewrites HOME (✅ DONE)
+
+**Root cause**: Electron derives `userData` from `$XDG_CONFIG_HOME`/`$HOME`. The Hermes agent sandboxes each session by rewriting `HOME` for spawned processes (`HOME=~/.hermes/profiles/<p>/home`, `HERMES_REAL_HOME=/home/endlessblink`). FlowState launched from such a session opened a pristine, empty profile — no `store.json`, no auth, no `local-api.json` — and rendered "Sign In" while the real session sat untouched in `~/.config/flow-state/store.json`. Once the launching session exits, the process reparents to `systemd --user` and is indistinguishable from a normally-started app, so it reads as a random sign-out.
+
+**Second fault, same cause**: `local-api.json` also lives under `userData`. The sandboxed instance bound port 5577 with token `c0d8afa4…` while every client (KDE widget, scripts, Hermes flow-state skill) read `b02dfdd3…` from the canonical path → 401. Two profiles, one port, two secrets.
+
+**Exact failure mode fixed**: auth store + Local API config landing in a launcher-supplied directory. `userData` is now pinned to the home recorded in `/etc/passwd` (`os.userInfo().homedir` — `os.homedir()` is unusable, it prefers `$HOME`), via `resolveUserDataDir()` called before any handler registration.
+
+**Explicitly NOT covered** (separate, intentional — do not touch): single-use refresh-token rotation / "Already Used" handling; `restoreAuthSessionFromBackup` always restoring and letting the server validate (BUG-1881); lazy Electron-runtime detection (`createLazyAuthStorage`, `detectElectronRuntime`); atomic `store.json` writes + flush-before-exit (BUG-1874).
+
+**Key subtlety**: for `HOME`, containment is not enough — agent sandboxes nest their profile *inside* the real home, so a `startsWith` check passes while still yielding an empty profile. Only exact equality means "not hijacked". `XDG_CONFIG_HOME` still uses containment (a legitimate user preference). Linux-only; macOS/Windows use Application Support/APPDATA and are never rewritten.
+
+**Escape hatch**: `FLOWSTATE_ALLOW_HOME_OVERRIDE=1` for deliberate profile isolation. A pin is never silent — main logs it and the renderer shows a warning toast (`app:getHomeOverride`).
+
+**Files**: `electron/userDataPath.ts` (new), `electron/main.ts`, `electron/preload.ts`, `src/App.vue`.
+**Regression added for reported repro**: `tests/unit/user-data-path.test.ts` — 9 cases incl. the literal Hermes path, the nested-sandbox trap, sibling-home (`/home/endlessblink2`), unset HOME, XDG in/out of home, opt-out, non-Linux. The Hermes-path case was RED against the first implementation (caught the containment bug).
+**Live boundary proof**: `HOME=/tmp/fake-home electron dist-electron/main.cjs` → logs `userData pinned to /home/endlessblink/.config/flow-state`, and nothing is written under `/tmp/fake-home`. With `FLOWSTATE_ALLOW_HOME_OVERRIDE=1` the same command creates `/tmp/fake-home/.config/flow-state` instead.
+
+### ~~BUG-1933~~: Restored session never re-persisted; stale access token blinded the Local API sidecar (✅ DONE)
+
+**Two independent faults, one symptom** (UI signed in, but `store.json` auth = null and sidecar `hasAuthContext: false`, so KDE widget + agent tools 401):
+
+1. **Primary key never rewritten.** When a refresh fails, supabase-js calls `removeItem` on the storage adapter, which in Electron writes `flowstate-supabase-auth: null` (`authStorage.ts:85-90`). `keepSessionForReconnect` then kept the session in memory and re-persisted only the *backup* key — never the primary. Fix: new `persistPrimaryAuthSession()` in `src/services/auth/supabase.ts`, called from `keepSessionForReconnect`.
+2. **Sidecar cleared on a stale token.** `syncLocalApiSession` (`useLocalApiBridge.ts`) sent `clear` whenever the access token was within 30s of expiry — including a freshly restored backup session whose refresh was still in flight. Fix: only a real sign-out (no session / no user id) clears; a stale-but-present session holds the last good context and waits for the watcher to re-fire with refreshed tokens.
+
+**Explicitly NOT covered**: the sidecar does not read auth from disk (it receives it over IPC) — fault 1 affects the next launch and any disk reader, fault 2 affects the live sidecar. They were fixed together because one symptom masked the other.
+
+**Regression added**: `tests/unit/composables/useLocalApiBridge.test.ts` — the pre-existing "clears on expired session" case was inverted to "neither forwards nor clears" (the anti-forward invariant it really protected is preserved), plus a new sign-out-clears case. And a `persistPrimaryAuthSession` assertion on the reconnect-grace path in `tests/unit/stores/auth-flow.test.ts:8e`.
+
+### ~~BUG-1918~~: Sign-in needs a manual refresh — empty canvas and zeroed counts until reload (✅ DONE)
+
+**Root cause**: the `SIGNED_IN` handler in `src/stores/auth.ts` loaded tasks/projects/canvas **before** workspaces. Task and canvas fetches are workspace-scoped and read `activeWorkspaceId`, which is only restored inside `loadWorkspaces()` (`stores/workspace.ts:96-102`). They queried a null workspace, returned empty, and nothing reloaded once the workspace arrived. Lanes were never reloaded at all. A page reload works because `useAppInitialization` loads workspaces first (`:219-223`) and includes lanes (`:250`).
+
+**Exact failure mode fixed**: reload ordering + missing lane load on the sign-in path. Extracted to `reloadStoresAfterSignIn()`: invalidate SWR cache → `loadWorkspaces()` → then projects/tasks/canvas/lanes in parallel. A failed reload now resets `handledSignInForUserId` so the next `SIGNED_IN` retries instead of latching.
+
+**Explicitly NOT covered**: the BUG-1207 double-load guard is retained (`appInitLoadComplete` + empty-tasks check) — a normal launch still lets `useAppInitialization` own the load. The "broken sign-out view" half of the original BUG-1918 report is untouched.
+
+**Regression added for reported repro**: `tests/unit/stores/auth-signin-reload.test.ts` — records real call order; RED against the old code on 3 of 4 cases (workspaces-before-tasks, lanes reloaded, all core stores).
 
 **Priority**: P1 | **Status**: 📋 PLANNED | **Opened**: 2026-07-04
 
@@ -6290,7 +6327,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1916**~~ | **P0** | ✅ **In-app write-failure visibility — indicator + toast when saves fail** (✅ DONE 2026-07-03, v1.4.230 shipped) |
 | **BUG-1917** | **P0** | 🔄 **Updater Restart quits but never swaps/relaunches — silent installer handoff (instrumented+hardened v1.4.231)** |
 | ~~**BUG-1919**~~ | **P0** | ✅ **KDE timer zombie after +5min extension — BUG-1892 guard swallowed re-completion** (✅ DONE 2026-07-04, widget reload pending) |
-| **BUG-1918** | **P1** | 📋 **Sign-out view broken + sign-in needs manual refresh (BUG-1913 recovery path UX)** |
+| ~~**BUG-1932**~~ | **P0** | ✅ **Phantom sign-out when a launcher rewrites HOME — pin Electron userData to passwd home** (✅ DONE 2026-07-10) |
+| ~~**BUG-1933**~~ | **P0** | ✅ **Restored session never re-persisted; stale token blinded Local API sidecar** (✅ DONE 2026-07-10) |
+| ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

@@ -90,6 +90,7 @@ const themeOverrides: GlobalThemeOverrides = {
   },
 }
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useToast } from '@/composables/useToast'
 import { useAppInitialization } from '@/composables/app/useAppInitialization'
 import { useAppShortcuts } from '@/composables/app/useAppShortcuts'
 import MainLayout from '@/layouts/MainLayout.vue'
@@ -200,6 +201,25 @@ onMounted(async () => {
   isCapacitorApp.value = isCapacitorFn()
   isElectronApp.value = !!(window as any).electronAPI?.isElectron
   initialized.value = true
+
+  // BUG-1932: a launcher rewrote HOME, so Electron would have opened an empty profile (phantom
+  // sign-out). userData was pinned back to the real home — say so rather than redirect silently.
+  if (isElectronApp.value) {
+    void (async () => {
+      try {
+        const override = await (window as any).electronAPI?.getHomeOverride?.()
+        if (!override) return
+        console.warn('[App] HOME override:', override)
+        useToast().showToast(
+          `Launcher set HOME=${override.home}. Using your real profile at ${override.pinnedTo}.`,
+          'warning',
+          { duration: 10000 }
+        )
+      } catch (err) {
+        console.warn('[App] home-override check failed', err)
+      }
+    })()
+  }
 
   // Log for debugging
   console.log('[App] Platform detected:', { tauri: isTauriApp.value, capacitor: isCapacitorApp.value })

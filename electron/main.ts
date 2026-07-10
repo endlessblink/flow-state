@@ -1,6 +1,8 @@
 import { app, BrowserWindow, shell, ipcMain, Menu, globalShortcut } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
+import { userInfo } from 'os'
+import { resolveUserDataDir } from './userDataPath'
 import { registerShellHandlers } from './ipc/shell'
 import { registerDialogHandlers } from './ipc/dialog'
 import { registerFsHandlers } from './ipc/fs'
@@ -46,6 +48,43 @@ installBrokenPipeConsoleGuard()
 
 // Set WM_CLASS to match .desktop file's StartupWMClass (must be before any window creation)
 app.setName('flow-state')
+
+/**
+ * BUG-1932: pin `userData` to the passwd home before anything reads a path. `store.json` (auth) and
+ * `local-api.json` (sidecar token) both live under `userData`, so a launcher-supplied `HOME` yields
+ * an empty profile — a phantom sign-out — plus a Local API port bound with an unreadable token.
+ * Must run before `registerStoreHandlers()` / `registerLocalApiHandlers()`.
+ */
+let homeOverride: { home: string; pinnedTo: string } | null = null
+
+function pinUserDataToRealHome() {
+  let passwdHome = ''
+  try {
+    passwdHome = userInfo().homedir
+  } catch {
+    return // No passwd entry (unusual container). Leave Electron's default alone.
+  }
+
+  const pinned = resolveUserDataDir({
+    env: process.env,
+    passwdHome,
+    appName: app.getName(),
+    platform: process.platform,
+  })
+
+  if (pinned) {
+    app.setPath('userData', pinned)
+    homeOverride = { home: process.env.HOME ?? '(unset)', pinnedTo: pinned }
+    console.warn(
+      `[flowstate] HOME override detected (HOME=${homeOverride.home}). ` +
+        `userData pinned to ${pinned}. Set FLOWSTATE_ALLOW_HOME_OVERRIDE=1 to opt out.`
+    )
+  }
+
+  console.log(`[flowstate] userData: ${app.getPath('userData')}`)
+}
+
+pinUserDataToRealHome()
 
 // Prevent multiple instances
 const gotLock = app.requestSingleInstanceLock()
@@ -238,6 +277,9 @@ registerWindowHandlers()
 registerOAuthHandlers()
 registerLocalApiHandlers()
 ipcMain.handle('app:getVersion', () => app.getVersion())
+// BUG-1932: null unless a launcher's HOME was overridden. Renderer surfaces it so a deliberate
+// sandbox run is never silently redirected to the real profile.
+ipcMain.handle('app:getHomeOverride', () => homeOverride)
 
 // App lifecycle
 app.whenReady().then(() => {

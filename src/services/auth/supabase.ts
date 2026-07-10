@@ -368,5 +368,22 @@ export async function flushAuthForUpdate(): Promise<void> {
     }
 }
 
+/**
+ * BUG-1933: write a session to the PRIMARY auth key.
+ *
+ * When a refresh fails, supabase-js calls `removeItem` on the storage adapter, which in Electron
+ * writes `flowstate-supabase-auth: null` into store.json. The app then keeps a signed-in shell in
+ * memory (keepSessionForReconnect) but the durable copy stays null, so the next launch has nothing
+ * to rehydrate and only the backup key saves us. Re-persist the recoverable session so disk and
+ * memory agree.
+ */
+export async function persistPrimaryAuthSession(session: Session): Promise<void> {
+    try {
+        await authStorageSet(STORAGE_KEYS.SUPABASE_AUTH, JSON.stringify(session))
+    } catch (e) {
+        console.warn('[Supabase] Failed to persist primary auth session:', e)
+    }
+}
+
 // Re-export types for convenience
 export type { User, Session, AuthError } from '@supabase/supabase-js'

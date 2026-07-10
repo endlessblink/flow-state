@@ -5,6 +5,7 @@ import {
   consumePendingProviderTokens,
   persistAuthSessionBackup,
   restoreAuthSessionFromBackup,
+  persistPrimaryAuthSession,
   clearAuthSessionBackup,
   type User,
   type Session,
@@ -303,7 +304,41 @@ export const useAuthStore = defineStore('auth', () => {
     if (options.persistBackup !== false) {
       persistAuthSessionBackup(recoverableSession).catch(e => console.warn('[AUTH] Failed to backup reconnect-grace session:', e))
     }
+    // BUG-1933: supabase-js nulls the primary key when a refresh fails. Without this the durable
+    // session disappears while the UI still shows signed-in, so the sidecar/KDE widget and the next
+    // launch see nothing.
+    persistPrimaryAuthSession(recoverableSession).catch(e => console.warn('[AUTH] Failed to persist reconnect-grace session:', e))
     startReconnectRefreshRecovery()
+  }
+
+  /**
+   * BUG-1918: repopulate the stores after a sign-in, in the same order a page reload uses.
+   *
+   * Workspaces MUST load first. Task and canvas fetches are workspace-scoped and read
+   * `activeWorkspaceId`, which is only restored inside `loadWorkspaces()`. The previous code
+   * loaded tasks first and workspaces afterwards, so the fetch ran against a null workspace,
+   * returned nothing, and nothing reloaded once the workspace arrived — an empty canvas and zeroed
+   * sidebar counts until the user hit refresh. Lanes were never reloaded at all.
+   */
+  const reloadStoresAfterSignIn = async () => {
+    // BUG-1339: clear SWR cache so a cached empty result isn't replayed.
+    const { invalidateCache } = await import('@/composables/useSupabaseDatabase')
+    invalidateCache.all()
+
+    const { useWorkspaceStore } = await import('@/stores/workspace')
+    await useWorkspaceStore().loadWorkspaces()
+
+    const { useProjectStore } = await import('@/stores/projects')
+    const { useTaskStore } = await import('@/stores/tasks')
+    const { useCanvasStore } = await import('@/stores/canvas')
+    const { useLaneStore } = await import('@/stores/lanes')
+
+    await Promise.all([
+      useProjectStore().loadProjectsFromDatabase(),
+      useTaskStore().loadFromDatabase(),
+      useCanvasStore().loadFromDatabase(),
+      useLaneStore().loadLanesFromDatabase(),
+    ])
   }
 
   const preserveReconnectShellAfterFailedRefresh = (
@@ -730,57 +765,27 @@ export const useAuthStore = defineStore('auth', () => {
             }
             handledSignInForUserId = newSession.user.id
 
+            // BUG-1207 guard retained: on a normal launch useAppInitialization owns the load, so
+            // SIGNED_IN must not double-fetch. It only reloads when that load produced nothing
+            // (stale auth during init, or a sign-out having emptied the stores).
+            let shouldReload = true
             if (appInitLoadComplete) {
-              // BUG-1339: Defense-in-depth — even if appInitLoadComplete is true,
-              // check if tasks actually loaded. If they didn't (e.g., auth was stale
-              // during init), reload now that we have a valid session.
               const { useTaskStore } = await import('@/stores/tasks')
-              const taskStore = useTaskStore()
-              if (taskStore._rawTasks.length === 0) {
-                console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN: appInitLoadComplete but tasks empty — invalidating cache and reloading stores`)
-                // BUG-1339 FIX: Clear SWR cache so retry gets fresh data instead of cached empty result
-                const { invalidateCache } = await import('@/composables/useSupabaseDatabase')
-                invalidateCache.all()
-                const { useProjectStore } = await import('@/stores/projects')
-                const { useCanvasStore } = await import('@/stores/canvas')
-                await Promise.all([
-                  useProjectStore().loadProjectsFromDatabase(),
-                  taskStore.loadFromDatabase(),
-                  useCanvasStore().loadFromDatabase()
-                ])
-                // Load workspaces after stores are ready
-                const { useWorkspaceStore } = await import('@/stores/workspace')
-                await useWorkspaceStore().loadWorkspaces()
-                console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after delayed auth recovery`)
-              } else {
+              shouldReload = useTaskStore()._rawTasks.length === 0
+              if (!shouldReload) {
                 console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN: skipping store reload (useAppInitialization already loaded)`)
               }
-            } else {
-              // Post-init sign-in: user signed in via modal after app loaded in guest mode
-              console.log(`👤 [AUTH:${currentTabId}] User signed in (post-init) - reloading stores...`)
+            }
+
+            if (shouldReload) {
+              console.log(`👤 [AUTH:${currentTabId}] SIGNED_IN — reloading stores (workspaces first)`)
               try {
-                // BUG-1339 FIX: Clear SWR cache so fresh fetch isn't stale
-                const { invalidateCache } = await import('@/composables/useSupabaseDatabase')
-                invalidateCache.all()
-                const { useProjectStore } = await import('@/stores/projects')
-                const { useTaskStore } = await import('@/stores/tasks')
-                const { useCanvasStore } = await import('@/stores/canvas')
-
-                const projectStore = useProjectStore()
-                const taskStore = useTaskStore()
-                const canvasStore = useCanvasStore()
-
-                await Promise.all([
-                  projectStore.loadProjectsFromDatabase(),
-                  taskStore.loadFromDatabase(),
-                  canvasStore.loadFromDatabase()
-                ])
-                // Load workspaces after stores are ready
-                const { useWorkspaceStore } = await import('@/stores/workspace')
-                await useWorkspaceStore().loadWorkspaces()
-                console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after post-init sign-in`)
+                await reloadStoresAfterSignIn()
+                console.log(`✅ [AUTH:${currentTabId}] Stores reloaded after sign-in`)
               } catch (e) {
                 console.error(`❌ [AUTH:${currentTabId}] Failed to reload stores after sign-in:`, e)
+                // Let the next SIGNED_IN retry rather than latching a failed load.
+                handledSignInForUserId = null
               }
             }
           }

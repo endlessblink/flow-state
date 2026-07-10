@@ -34,17 +34,25 @@ export function syncLocalApiSession(session: Session | null): void {
   try {
     const expiresAtMs = session?.expires_at ? session.expires_at * 1000 : null
     const isFresh = !expiresAtMs || Date.now() < expiresAtMs - 30_000
-    if (session?.access_token && session.user?.id && isFresh) {
-      void api.setLocalApiSession?.({
-        supabaseUrl: supabaseConfig.url,
-        anonKey: supabaseConfig.anonKey,
-        accessToken: session.access_token,
-        refreshToken: session.refresh_token || '',
-        userId: session.user.id,
-      })
-    } else {
+
+    // Only a real sign-out clears the sidecar. BUG-1933: a session whose access token has gone
+    // stale (e.g. just restored from backup, refresh still in flight) used to send `clear`, which
+    // blinded the Local API — and with it the KDE widget and agent tools — while the app itself
+    // showed signed-in. Hold the last good context and wait for the refreshed session; this
+    // watcher re-fires with fresh tokens.
+    if (!session?.access_token || !session.user?.id) {
       void api.clearLocalApiSession?.()
+      return
     }
+    if (!isFresh) return
+
+    void api.setLocalApiSession?.({
+      supabaseUrl: supabaseConfig.url,
+      anonKey: supabaseConfig.anonKey,
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token || '',
+      userId: session.user.id,
+    })
   } catch {
     /* best-effort; never break the auth flow */
   }

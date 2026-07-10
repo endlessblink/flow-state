@@ -6373,7 +6373,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1933**~~ | **P0** | ✅ **Restored session never re-persisted; stale token blinded Local API sidecar** (✅ DONE 2026-07-10) |
 | ~~**BUG-1934**~~ | **P1** | ✅ **Regular multi-delete is atomic locally across task lists and redo** (✅ DONE 2026-07-10, v1.4.241 shipped) |
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
-| ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, deploy pending) |
+| ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, v1.4.243 shipped) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

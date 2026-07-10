@@ -29,6 +29,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     createdAt: overrides.createdAt || new Date().toISOString(),
     updatedAt: overrides.updatedAt || new Date().toISOString(),
     instances: overrides.instances || [],
+    recurringInstances: overrides.recurringInstances || [],
     tags: overrides.tags || [],
     order: overrides.order ?? 0,
     projectId: overrides.projectId || '',
@@ -181,10 +182,10 @@ describe('groupTasksByDate', () => {
 
   // ---- INSTANCE-BASED GROUPING ----
 
-  it('groups by instance scheduledDate when instances exist', () => {
+  it('BUG-1935: dueDate wins over instances when both are set', () => {
     mockToday(2026, 3, 6)
     const task = makeTask({
-      dueDate: '2026-03-06',
+      dueDate: '2026-03-06', // today
       instances: [{
         id: 'inst-1',
         scheduledDate: '2026-03-07', // tomorrow
@@ -194,7 +195,53 @@ describe('groupTasksByDate', () => {
       }] as any,
     })
     const result = groupTasksByDate([task])
-    // Instance says tomorrow, so task goes to tomorrow
+    // Was `tomorrow` before BUG-1935. Instances overriding dueDate meant a drop that wrote
+    // only dueDate re-bucketed to its origin column, so the drag silently did nothing.
+    expect(result.today).toHaveLength(1)
+    expect(result.tomorrow).toHaveLength(0)
+  })
+
+  it('BUG-1935: task due today with a past instance stays in today, not overdue', () => {
+    mockToday(2026, 3, 6)
+    const task = makeTask({
+      status: 'pending',
+      dueDate: '2026-03-06', // today — the value a drop onto the Today column writes
+      instances: [{
+        id: 'inst-1',
+        scheduledDate: '2026-03-02', // stale calendar slot, four days ago
+        scheduledTime: '09:00',
+        duration: 60,
+        isLater: false,
+      }] as any,
+    })
+    const result = groupTasksByDate([task])
+    expect(result.today.map(t => t.id)).toEqual([task.id])
+    expect(result.overdue).toHaveLength(0)
+  })
+
+  it('BUG-1935: a task with several instances renders in exactly one bucket', () => {
+    mockToday(2026, 3, 6)
+    const task = makeTask({
+      instances: [
+        { id: 'a', scheduledDate: '2026-03-07', scheduledTime: '09:00', duration: 60, isLater: false },
+        { id: 'b', scheduledDate: '2026-03-10', scheduledTime: '09:00', duration: 60, isLater: false },
+      ] as any,
+    })
+    const result = groupTasksByDate([task])
+    const total = Object.values(result).reduce((n, bucket) => n + bucket.length, 0)
+    // Duplicate ids across columns corrupt vuedraggable's item-key="id" bookkeeping.
+    expect(total).toBe(1)
+    expect(result.tomorrow).toHaveLength(1) // earliest instance governs
+  })
+
+  it('BUG-1935: recurringInstances are honoured when instances[] is empty', () => {
+    mockToday(2026, 3, 6)
+    const task = makeTask({
+      recurringInstances: [
+        { id: 'r1', scheduledDate: '2026-03-07', scheduledTime: '09:00', duration: 60, isLater: false },
+      ] as any,
+    })
+    const result = groupTasksByDate([task])
     expect(result.tomorrow).toHaveLength(1)
   })
 

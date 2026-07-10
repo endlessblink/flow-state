@@ -158,9 +158,14 @@
     transform: translateY(-1px);
 }
 
-/* Task Item Transitions */
+/* Task Item Transitions.
+   BUG-1935: NOT `transition: all`. SortableJS's `animation` option drives the reflow of
+   displaced cards by writing an inline transform + its own transform transition; a second
+   easing curve on the same property makes the shuffle mushy and overshoot. Paint only. */
 .task-item {
-    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: box-shadow 0.2s cubic-bezier(0.25, 0.8, 0.25, 1),
+                border-color 0.2s cubic-bezier(0.25, 0.8, 0.25, 1),
+                background 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 /* BUG-1335: Drag classes - preserve all existing behavior, update radius only */
@@ -171,12 +176,12 @@
     border-radius: var(--radius-lg) !important;
 }
 
+/* BUG-1935: no transform here — SortableJS animates this element's position with one. */
 .chosen-card {
     opacity: 1;
-    transform: scale(1.02);
     z-index: 1000;
     border-radius: var(--radius-lg) !important;
-    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease;
+    transition: box-shadow 0.2s ease;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
@@ -201,11 +206,11 @@
     border: 1px solid var(--brand-primary, #2DD4BF) !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(45, 212, 191, 0.2) !important;
     border-radius: 8px !important;
-    transform: scale(1.02) !important;
+    /* BUG-1935: transform belongs to SortableJS on this element (see global-overrides.css).
+       `scale(1.02) !important` here beat its inline transform and pinned the clone in place. */
+    will-change: transform !important;
     transition: none !important;
 }
-
-/* TASK-1336: Previously hid fallback clone — removed to let card follow cursor */
 
 /* Inbox → Kanban native drop feedback */
 .tasks-container.inbox-drag-over {

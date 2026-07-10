@@ -86,6 +86,7 @@ import TaskCard from './TaskCard.vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
 import { getDateColumnUpdates, isDropTarget } from '@/composables/board/dateColumnUpdates'
+import { dragDiag } from '@/utils/dragDiagnostics'
 import { Plus } from 'lucide-vue-next'
 
 import './KanbanColumn.css'
@@ -209,6 +210,8 @@ watch(() => props.tasks, (newTasks) => {
   // where the wrong task element gets associated with the drag ghost
   if (!isDragActive.value) {
     allTasks.value = [...newTasks]
+    dragDiag.watchResetCount++
+    dragDiag.mark('watch-reset', { column: props.status, n: newTasks.length })
   }
 })
 
@@ -237,6 +240,7 @@ const onDragStart = (evt: SortableDragEvent) => {
   const taskElement = evt.item?.querySelector?.('[data-task-id]') as HTMLElement | null | undefined
   const taskId = evt.item?.dataset?.taskId || taskElement?.dataset?.taskId
   const taskTitle = evt.item?.querySelector?.('.task-title')?.textContent?.trim() || ''
+  dragDiag.start({ from: props.status, columnType: props.columnType, taskId })
   if (taskId) {
     startDrag({
       type: 'task',
@@ -271,6 +275,7 @@ const onDragEnd = async (evt: SortableDragEvent) => {
   }
 
   endGlobalDrag()
+  dragDiag.drop({ from: props.status })
   // Broadcast drag-end so ALL columns resync (not just this source column)
   window.dispatchEvent(new CustomEvent('kanban:drag-end'))
 }
@@ -443,11 +448,16 @@ const handleDragChange = async (event: SortableChangeEvent) => {
 // SortableJS physically moves DOM elements between groups, causing Vue desync.
 // Double-flush (clear → repopulate) forces Vue to re-render with proper bindings.
 const handleDragEndBroadcast = () => {
+  dragDiag.resyncCount++
+  dragDiag.mark('resync', { column: props.status, rendered: allTasks.value.length })
   nextTick(() => {
     const current = [...props.tasks]
     allTasks.value = []
+    dragDiag.emptyFlashCount++
+    dragDiag.mark('empty-flash', { column: props.status })
     nextTick(() => {
       allTasks.value = current
+      dragDiag.mark('repopulate', { column: props.status, n: current.length })
     })
   })
 }

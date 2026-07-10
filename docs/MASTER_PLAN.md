@@ -6530,7 +6530,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1938**~~ | **P0** | ✅ **Postpone keeps the task open and shows feedback on an opaque surface** (✅ DONE 2026-07-10, v1.4.245 deployed and locally verified) |
 | ~~**BUG-1939**~~ | **P0** | ✅ **Postpone changes only the task due date without saving Quick Sort app/session state** (✅ DONE 2026-07-10, v1.4.246 deployed and locally installed) |
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
-| ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, deploy pending) |
+| ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, v1.4.243 shipped) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

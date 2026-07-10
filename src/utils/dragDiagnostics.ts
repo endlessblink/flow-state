@@ -5,9 +5,9 @@
  * Electron app, so this records what happens during a real drag and flushes it to disk
  * (<userData>/drag-diagnostics.log) where it can be read back without a screen recording.
  *
- * ZERO cost unless enabled. Enable in the app's DevTools console with:
- *     localStorage.setItem('flowstate:drag-diag', '1')   // then reload
- * Disable with localStorage.removeItem('flowstate:drag-diag').
+ * ON by default in this diagnostic build — no DevTools/localStorage step needed. Just drag on the
+ * board and the log appears at <userData>/drag-diagnostics.log. Disable with
+ * localStorage.setItem('flowstate:drag-diag', '0').
  *
  * What it captures per drag:
  *  - frame timings during the drag (rAF deltas) → the actual "lag": long frames = jank
@@ -27,9 +27,10 @@ interface ElectronDiag {
 
 const enabled = (): boolean => {
   try {
-    return localStorage.getItem('flowstate:drag-diag') === '1'
+    // ON by default; only an explicit '0' disables it.
+    return localStorage.getItem('flowstate:drag-diag') !== '0'
   } catch {
-    return false
+    return true
   }
 }
 
@@ -52,8 +53,27 @@ class DragDiagnostics {
   watchResetCount = 0
   emptyFlashCount = 0
 
+  private markerWritten = false
+
   private now(): number {
     return typeof performance !== 'undefined' ? performance.now() : 0
+  }
+
+  private version(): string {
+    return typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'unknown'
+  }
+
+  /** Write one line when the board mounts, so the log file exists and proves the build is live. */
+  async sessionMarker(where: string): Promise<void> {
+    if (this.markerWritten || !enabled()) return
+    this.markerWritten = true
+    const line = JSON.stringify({ ts: new Date().toISOString(), version: this.version(), ev: 'board-loaded', where })
+    const api = electron()
+    if (api?.appendDragDiag) {
+      try { await api.appendDragDiag(line) } catch { /* ignore */ }
+    } else {
+      console.info('[drag-diag] (browser, no file)', line)
+    }
   }
 
   /** Called from onDragStart. Begins frame sampling. */
@@ -117,7 +137,7 @@ class DragDiagnostics {
     const dropT = this.dropAt ? Math.round((this.dropAt - this.t0) * 10) / 10 : null
     const record = {
       ts: new Date().toISOString(),
-      version: typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'unknown',
+      version: this.version(),
       dropAtMs: dropT,
       settleAfterDropMs: dropT !== null ? Math.round(lastEventT - dropT) : null,
       cascade: {

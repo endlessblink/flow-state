@@ -28,14 +28,14 @@
         :group="dragGroup"
         item-key="id"
         class="drag-area"
-        :animation="180"
+        :animation="reduceMotion ? 0 : 160"
         ghost-class="ghost-card"
         chosen-class="chosen-card"
         drag-class="drag-card"
         :force-fallback="true"
         :fallback-on-body="true"
         fallback-class="sortable-fallback"
-        :fallback-tolerance="8"
+        :fallback-tolerance="4"
         :scroll-sensitivity="100"
         :scroll-speed="20"
         :bubble-scroll="true"
@@ -85,7 +85,7 @@ import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useDragAndDrop } from '@/composables/useDragAndDrop'
-import { formatDateKey } from '@/utils/dateUtils'
+import { getDateColumnUpdates, isDropTarget } from '@/composables/board/dateColumnUpdates'
 import { Plus } from 'lucide-vue-next'
 
 import './KanbanColumn.css'
@@ -126,26 +126,6 @@ type SortableChangeEvent = {
   moved?: { element: Task }
 }
 
-const getDateColumnUpdates = (dateColumn: string): Partial<Task> => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  if (dateColumn === 'inbox') return { instances: [], dueDate: undefined, isInInbox: true }
-  if (dateColumn === 'noDate') return { instances: [], dueDate: undefined }
-
-  let target: Date | null = null
-  switch (dateColumn) {
-    case 'overdue': target = new Date(today); target.setDate(today.getDate() - 1); break
-    case 'today': target = today; break
-    case 'tomorrow': target = new Date(today); target.setDate(today.getDate() + 1); break
-    case 'thisWeek': target = new Date(today); target.setDate(today.getDate() + (7 - today.getDay())); break
-    case 'nextWeek': target = new Date(today); target.setDate(today.getDate() + ((8 - today.getDay()) % 7 || 7)); break
-    case 'later': target = new Date(today); target.setDate(today.getDate() + 30); break
-  }
-
-  return target ? { dueDate: formatDateKey(target) } : {}
-}
-
 const getSwimlaneUpdates = (task: Task): Partial<Task> => {
   if (
     props.columnType === 'category' ||
@@ -160,7 +140,8 @@ const getSwimlaneUpdates = (task: Task): Partial<Task> => {
   return currentProjectId === props.swimlaneId ? {} : { projectId: props.swimlaneId }
 }
 
-const getColumnDropUpdates = (task: Task): Partial<Task> => {
+/** BUG-1935: `null` means this column refuses the drop — the card must return home. */
+const getColumnDropUpdates = (task: Task): Partial<Task> | null => {
   const swimlaneUpdates = getSwimlaneUpdates(task)
 
   if (props.columnType === 'category') {
@@ -176,8 +157,10 @@ const getColumnDropUpdates = (task: Task): Partial<Task> => {
   }
 
   if (props.columnType === 'date') {
+    const dateUpdates = getDateColumnUpdates(task, props.status)
+    if (!dateUpdates) return null
     return {
-      ...getDateColumnUpdates(props.status),
+      ...dateUpdates,
       ...swimlaneUpdates
     }
   }
@@ -187,6 +170,11 @@ const getColumnDropUpdates = (task: Task): Partial<Task> => {
     ...swimlaneUpdates
   }
 }
+
+// BUG-1935: read once — SortableJS reads `animation` at init, and a reactive value re-inits it.
+const reduceMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+  ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  : false
 
 // BUG-1193: Track drag state to prevent store overwrites during drag
 const isDragActive = ref(false)
@@ -228,8 +216,13 @@ const hasMore = computed(() => !isExpanded.value && allTasks.value.length > COLU
 const hiddenCount = computed(() => Math.max(0, allTasks.value.length - COLUMN_RENDER_LIMIT))
 
 // BUG-1335: Use a shared drag group across all swimlanes so tasks can be dragged
-// between projects. Static string avoids SortableJS re-init on live changes.
-const dragGroup = 'tasks'
+// between projects. Computed ONCE from props, never reactively — a changing group
+// object re-inits SortableJS mid-drag.
+// BUG-1935: `overdue` pulls but never puts. Letting SortableJS refuse the drop makes the
+// card ease home instead of landing and then being yanked back by the store resync.
+const dragGroup = props.columnType === 'date' && !isDropTarget(props.status)
+  ? { name: 'tasks', pull: true, put: false }
+  : 'tasks'
 
 // FEATURE-1336b: Bridge vuedraggable drag to global useDragAndDrop for sidebar drops
 // BUG-1516c: Also expose dragData so handleNativeDrop can read singleton (WebKitGTK/Tauri fix)
@@ -357,8 +350,11 @@ const handleNativeDrop = async (event: DragEvent) => {
       const task = taskStore.rawTasks.find(candidate => candidate.id === taskId)
       if (!task) continue
 
+      const updates = getColumnDropUpdates(task)
+      if (!updates) continue // BUG-1935: column refuses drops (e.g. Overdue)
+
       await taskStore.updateTaskWithUndo(taskId, {
-        ...getColumnDropUpdates(task),
+        ...updates,
         isInInbox: false
       })
     }
@@ -418,7 +414,14 @@ const handleDragChange = async (event: SortableChangeEvent) => {
       const taskId = event.added.element.id
       const task = event.added.element as Task
 
-      await taskStore.updateTaskWithUndo(taskId, getColumnDropUpdates(task))
+      const updates = getColumnDropUpdates(task)
+      if (!updates) {
+        // BUG-1935: refused drop — resync every column so the card returns to its origin
+        window.dispatchEvent(new CustomEvent('kanban:drag-end'))
+        return
+      }
+
+      await taskStore.updateTaskWithUndo(taskId, updates)
 
       // Persist order for all tasks in this column after cross-column move
       await persistOrderForColumn()

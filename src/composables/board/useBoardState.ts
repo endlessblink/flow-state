@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import type { Task, TaskInstance, useTaskStore } from '@/stores/tasks'
-import { parseDateKey, getTaskInstances, formatDateKey } from '@/stores/tasks'
+import { parseDateKey, getTaskInstances } from '@/stores/tasks'
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 
 interface BoardStateDependencies {
@@ -178,14 +178,24 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    // BUG-1093: Use formatDateKey for local timezone (toISOString returns UTC)
-    const todayStr = formatDateKey(today)
     const tomorrow = addDays(today, 1)
     const weekendStart = getUpcomingFriday(today)
     const weekendEnd = addDays(weekendStart, 2)
     const nextWeekStart = getNextMonday(today)
     const nextWeekEnd = addDays(nextWeekStart, 6)
     const afterNextWeekStart = addDays(nextWeekEnd, 1)
+
+    // BUG-1935: One arm for both the dueDate and the instance path, so they cannot drift apart.
+    const bucketForDate = (date: Date): keyof typeof result => {
+        if (isSameDay(date, today)) return 'today'
+        // BUG-1455: Always show tomorrow's tasks in Tomorrow column,
+        // even when tomorrow falls on a weekend day
+        if (isSameDay(date, tomorrow)) return 'tomorrow'
+        if ((date >= weekendStart && date <= weekendEnd) || (date >= nextWeekStart && date <= nextWeekEnd)) return 'thisWeek'
+        if (date >= afterNextWeekStart) return 'later'
+        // Between today and weekend/next week but not matching specific buckets
+        return 'thisWeek'
+    }
 
     tasks.forEach(task => {
         const instances = getTaskInstances(task)
@@ -201,70 +211,41 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
             return
         }
 
-        const isOverdueByDate = dueDateKey && dueDateKey < todayStr
+        // BUG-1935: A task belongs to exactly ONE bucket, keyed on a single effective date.
+        // dueDate wins when set; instances are only a fallback for tasks scheduled on the
+        // calendar without a deadline. Previously instances overrode dueDate, so a drop that
+        // wrote only dueDate re-bucketed straight back to its origin column — the drag
+        // silently did nothing. Instances also each pushed the task into their own bucket,
+        // rendering one task in several columns under a duplicate `item-key="id"`.
+        let effectiveKey: string | null = dueDateKey
 
-        const hasPastInstance = instances.length > 0 && instances.some((instance: TaskInstance) => {
-            const instanceDate = parseDateKey(instance.scheduledDate)
-            return instanceDate && instanceDate < today
-        })
-
-        // Overdue check
-        if (task.status !== 'done' && (isOverdueByDate || hasPastInstance)) {
-            result.overdue.push(task)
-            return
-        }
-
-        if (instances.length === 0) {
-            // TASK-1348: Use dueDate for bucketing when no explicit instances exist
-            if (dueDateKey && dueDateKey >= todayStr) {
-                const dueDate = parseDateKey(dueDateKey)
-                if (dueDate) {
-                    if (isSameDay(dueDate, today)) {
-                        result.today.push(task)
-                    } else if (isSameDay(dueDate, tomorrow)) {
-                        // BUG-1455: Always show tomorrow's tasks in Tomorrow column,
-                        // even when tomorrow falls on a weekend day
-                        result.tomorrow.push(task)
-                    } else if ((dueDate >= weekendStart && dueDate <= weekendEnd) || (dueDate >= nextWeekStart && dueDate <= nextWeekEnd)) {
-                        result.thisWeek.push(task)
-                    } else if (dueDate >= afterNextWeekStart) {
-                        result.later.push(task)
-                    } else {
-                        // Between today and weekend/next week but not matching specific buckets
-                        result.thisWeek.push(task)
-                    }
-                } else {
-                    result.noDate.push(task)
-                }
-            } else {
-                // Edge case fallback (dateless tasks already returned early above)
-                result.noDate.push(task)
-            }
-            return
-        }
-
-        instances.forEach((instance: TaskInstance) => {
-            if (instance.isLater) {
+        if (!effectiveKey) {
+            const scheduled = instances.filter((instance: TaskInstance) => !instance.isLater)
+            if (scheduled.length === 0) {
+                // Only isLater instances → no concrete date to bucket on
                 result.later.push(task)
                 return
             }
+            effectiveKey = scheduled.reduce(
+                (earliest: string, instance: TaskInstance) =>
+                    instance.scheduledDate < earliest ? instance.scheduledDate : earliest,
+                scheduled[0].scheduledDate
+            )
+        }
 
-            const instanceDate = parseDateKey(instance.scheduledDate)
-            if (!instanceDate) return
+        const effectiveDate = parseDateKey(effectiveKey)
+        if (!effectiveDate) {
+            result.noDate.push(task)
+            return
+        }
 
-            if (instanceDate < today) {
-                result.overdue.push(task)
-            } else if (isSameDay(instanceDate, today)) {
-                result.today.push(task)
-            } else if (isSameDay(instanceDate, tomorrow)) {
-                // BUG-1455: Always show tomorrow's tasks in Tomorrow column
-                result.tomorrow.push(task)
-            } else if ((instanceDate >= weekendStart && instanceDate <= weekendEnd) || (instanceDate >= nextWeekStart && instanceDate <= nextWeekEnd)) {
-                result.thisWeek.push(task)
-            } else if (instanceDate >= afterNextWeekStart) {
-                result.later.push(task)
-            }
-        })
+        if (effectiveDate < today) {
+            // Done tasks never surface as overdue; they have no future bucket either.
+            result[task.status === 'done' ? 'noDate' : 'overdue'].push(task)
+            return
+        }
+
+        result[bucketForDate(effectiveDate)].push(task)
     })
 
     for (const key of Object.keys(result)) {

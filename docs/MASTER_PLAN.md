@@ -4541,6 +4541,23 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 **Regression added for reported repro**: `tests/unit/kde/timer-extension-completion.test.ts` — complete→extend→zero→must-complete-again, BUG-1892 non-regression, and a mirror-drift check grepping main.qml's extend handler for the guard-clear lines (RED before fix). KDE pack 173/173.
 **Live boundary proof**: pending user's plasmashell reload — then verify row 52e15e1c flips `is_active=false`.
 
+### ~~BUG-1935~~: Board due-date column drops don't register; drag clone frozen at origin (✅ DONE)
+
+**Two independent faults stack on the same gesture.**
+
+1. **Drop doesn't stick.** `groupTasksByDate` (`useBoardState.ts:212`) forces any task with a past calendar instance into `overdue`, ignoring `dueDate` entirely. The drop handler (`KanbanColumn.vue:146`) writes only `{ dueDate }`; `syncDateFields` never touches instances on a dueDate change. So the write lands, `handleDragEndBroadcast` resyncs from the store, and the card re-buckets to Overdue. Real data shape confirming it: `due_date = 2026-01-24`, `instances[0].scheduledDate = 2026-01-20`.
+2. **Drag clone never follows the cursor.** `.task-card.sortable-fallback` sets `transform: … !important` (`global-overrides.css:235`). With `forceFallback: true`, SortableJS positions the clone by writing an inline, non-important `transform` each frame (`sortable.esm.js:1705-1708`, via `css()` at :273), which the `!important` rule outranks. It then re-reads the computed transform through `matrix(ghostEl, true)` (:1674), so the offset resets every frame and can never accumulate. `_emulateDragOver` (:1623) still hit-tests by pointer coords on a 50ms interval, which is why the drop fires anyway — the two bugs are separable.
+
+**Latent third fault found while reading**: `instances.forEach(… result[bucket].push(task))` renders one task in N columns under a duplicate `item-key="id"`.
+
+**Fix**: `groupTasksByDate` buckets each task exactly once on an effective date (dueDate wins; instances are a fallback for calendar-only tasks). Drop patch extracted to `src/composables/board/dateColumnUpdates.ts` — it now also rebases past instances onto the target day (preserving time), clears `recurringInstances` on the `noDate` drop, and returns `null` for `overdue`, which `dragGroup` mirrors as `put: false`. All `transform: … !important` rules on SortableJS-controlled elements removed (`.sortable-fallback`, `.chosen-card`, `.ghost-card`, and the `:hover`/`:active` rules that match the dragged card for the whole drag), along with the `transform` transition that eased every pointer move and the `transition: all` on `.task-item` that fought SortableJS's reflow. `backdrop-filter` dropped from the moving clone (BUG-1807 class).
+
+**Explicitly not covered**: `dueDate` now overrides a *future* calendar instance for column placement — a task scheduled tomorrow but due today shows in Today. That is the intended semantics of a Due Date grouping; the Calendar is unaffected.
+
+**Regressions added for reported repro**: `tests/e2e/board-date-drag.spec.ts` drives a real pointer drag (Overdue→Today), asserts the clone's computed transform actually translates, that the card lands and survives a reload, and that the DB row's `due_date` and instance both moved. Verified RED on the pre-fix tree — the clone's translation was ~0px, proving it never left its origin. Plus `tests/board-date-grouping.test.ts` (+4), `tests/board-date-column-updates.test.ts` (new, 9), and three CSS invariants in `tests/safety/css-syntax.test.ts` that fail if a `transform`/`!important` or transform-transition is reintroduced on a drag element. That safety test previously *pinned the buggy values* (`transform 120ms`, `tolerance 8`) and was rewritten to assert the invariant.
+
+**Live boundary proof**: pending — `npm run build` clean, Electron deploy not run (`VPS_HOST` unset in this shell).
+
 ### ~~BUG-1932~~: Phantom sign-out when a launcher rewrites HOME (✅ DONE)
 
 **Root cause**: Electron derives `userData` from `$XDG_CONFIG_HOME`/`$HOME`. The Hermes agent sandboxes each session by rewriting `HOME` for spawned processes (`HOME=~/.hermes/profiles/<p>/home`, `HERMES_REAL_HOME=/home/endlessblink`). FlowState launched from such a session opened a pristine, empty profile — no `store.json`, no auth, no `local-api.json` — and rendered "Sign In" while the real session sat untouched in `~/.config/flow-state/store.json`. Once the launching session exits, the process reparents to `systemd --user` and is indistinguishable from a normally-started app, so it reads as a random sign-out.
@@ -6513,6 +6530,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1938**~~ | **P0** | ✅ **Postpone keeps the task open and shows feedback on an opaque surface** (✅ DONE 2026-07-10, v1.4.245 deployed and locally verified) |
 | ~~**BUG-1939**~~ | **P0** | ✅ **Postpone changes only the task due date without saving Quick Sort app/session state** (✅ DONE 2026-07-10, v1.4.246 deployed and locally installed) |
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
+| ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, deploy pending) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

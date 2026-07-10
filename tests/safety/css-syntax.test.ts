@@ -874,14 +874,74 @@ describe('WebKitGTK CSS Safety (Tauri Parity)', () => {
     expect(column).toContain('document.body.classList.add(\'kanban-dragging\')')
     expect(column).toContain('document.body.classList.remove(\'kanban-dragging\')')
     expect(column).toContain('window.getSelection()?.removeAllRanges()')
-    expect(column).toContain(':fallback-tolerance="8"')
-    expect(column).toContain(':animation="180"')
+    expect(column).toContain('fallback-class="sortable-fallback"')
 
     expect(css).toMatch(/body\.kanban-dragging[\s\S]*user-select:\s*none\s*!important/)
     expect(css).toMatch(/body\.kanban-dragging[\s\S]*-webkit-user-select:\s*none\s*!important/)
-    expect(css).toMatch(/\.task-card\.sortable-fallback[\s\S]*opacity:\s*0\.96\s*!important/)
-    expect(css).toMatch(/\.task-card\.sortable-fallback[\s\S]*transition:\s*box-shadow 120ms ease,\s*transform 120ms ease\s*!important/)
     expect(css).toContain('.task-card.sortable-fallback.drag-card')
+  })
+
+  // -------------------------------------------------------------------------
+  // BUG-1935: SortableJS owns `transform` on the drag clone.
+  //
+  // With forceFallback it writes an inline, NON-important `transform: matrix(...)` on every
+  // pointer move (sortable.esm.js `_onTouchMove`), then reads it back via getComputedStyle
+  // on the next frame to accumulate the offset. Any `transform: ... !important` in our CSS
+  // outranks that inline write, so the offset resets each frame and the clone never leaves
+  // its origin — the card simply does not follow the cursor.
+  //
+  // Transitioning `transform` is the softer version of the same mistake: each pointer move
+  // gets eased over the duration, so the card lags behind the cursor and rubber-bands.
+  // -------------------------------------------------------------------------
+  it('BUG-1935: drag clone must not have an !important transform or a transform transition', () => {
+    const cssFiles = [
+      join(srcDir, 'assets', 'global-overrides.css'),
+      join(srcDir, 'components', 'kanban', 'KanbanColumn.css'),
+    ]
+
+    const DRAG_CLASSES = /\.(sortable-fallback|chosen-card|ghost-card)/
+    let checked = 0
+
+    for (const file of cssFiles) {
+      // Comments discuss `transform` at length; only declarations matter.
+      const css = readFileSync(file, 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '')
+
+      for (const [, rawSelector, body] of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+        // Strip :not(...) — a class named there is EXCLUDED from the rule, not targeted by it.
+        const selector = rawSelector.replace(/:not\([^)]*\)/g, '')
+        if (!DRAG_CLASSES.test(selector)) continue
+        checked++
+
+        expect(body, `${file}: !important transform pins the clone in place\n${rawSelector.trim()}`)
+          .not.toMatch(/(^|[\s;])transform:[^;]*!important/)
+        expect(body, `${file}: transitioning transform makes the clone lag the cursor\n${rawSelector.trim()}`)
+          .not.toMatch(/transition:[^;]*(^|[\s,])transform/)
+      }
+    }
+
+    expect(checked).toBeGreaterThan(0)
+  })
+
+  it('BUG-1935: hover/active rules must exempt the dragged card', () => {
+    const css = readFileSync(join(srcDir, 'assets', 'global-overrides.css'), 'utf-8')
+
+    // The dragged element is :hover AND :active for the whole drag, so a
+    // `transform: ... !important` on those states overrides SortableJS's inline transform.
+    const stateRules = css.match(/\.task-card:(?:hover|active)[^{}]*\{[^}]*\}/g) || []
+    expect(stateRules.length).toBeGreaterThan(0)
+
+    for (const rule of stateRules) {
+      if (!/transform:/.test(rule)) continue
+      expect(rule, 'hover/active transform must not apply while dragging')
+        .toMatch(/:not\(\.sortable-fallback\)/)
+    }
+  })
+
+  it('BUG-1935: sibling cards must not transition `all` against SortableJS reflow', () => {
+    const css = readFileSync(join(srcDir, 'components', 'kanban', 'KanbanColumn.css'), 'utf-8')
+    const taskItem = css.match(/\.task-item\s*\{[^}]*\}/)?.[0] || ''
+
+    expect(taskItem).not.toMatch(/transition:\s*all/)
   })
 
   // -------------------------------------------------------------------------

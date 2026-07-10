@@ -12,6 +12,7 @@ import { registerWindowHandlers } from './ipc/window'
 import { registerUpdater } from './updater'
 import { registerOAuthHandlers } from './ipc/oauth'
 import { registerLocalApiHandlers, shutdownLocalApi } from './ipc/localApi'
+import { registerDiagnosticsHandlers } from './ipc/diagnostics'
 
 function installBrokenPipeConsoleGuard() {
   const isBrokenPipe = (err: unknown) =>
@@ -276,6 +277,7 @@ registerHttpHandlers()
 registerWindowHandlers()
 registerOAuthHandlers()
 registerLocalApiHandlers()
+registerDiagnosticsHandlers()
 ipcMain.handle('app:getVersion', () => app.getVersion())
 // BUG-1932: null unless a launcher's HOME was overridden. Renderer surfaces it so a deliberate
 // sandbox run is never silently redirected to the real profile.

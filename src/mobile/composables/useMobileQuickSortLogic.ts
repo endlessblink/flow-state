@@ -8,6 +8,10 @@ import { useHaptics } from '@/composables/useHaptics'
 import type { Task } from '@/types/tasks'
 import type { SessionSummary } from '@/stores/quickSort'
 import type { QuickSortSource } from '@/utils/quickSortTaskFilters'
+import {
+  resolveQuickSortDueDate,
+  type QuickSortDuePreset
+} from '@/utils/quickSortDuePresets'
 
 export function useMobileQuickSortLogic() {
   const router = useRouter()
@@ -27,10 +31,15 @@ export function useMobileQuickSortLogic() {
     progress,
     isComplete,
     isTaskDirty,
+    isRescheduling,
+    canUndo,
     startSession,
     endSession,
+    previewSessionSummary,
     categorizeTask,
     saveTask,
+    rescheduleCurrentTask,
+    undoLastCategorization,
     markTaskDone,
     markDoneAndDeleteTask,
     skipTask,
@@ -131,8 +140,9 @@ export function useMobileQuickSortLogic() {
     : sourcePreviewTasks.value.length)
 
   const stackPreview = computed(() => {
-    if (!currentTask.value) return []
-    const currentIndex = quickSortTasks.value.findIndex(task => task.id === currentTask.value!.id)
+    const taskId = currentTask.value?.id
+    if (!taskId) return []
+    const currentIndex = quickSortTasks.value.findIndex(task => task.id === taskId)
     return currentIndex < 0 ? [] : quickSortTasks.value.slice(currentIndex + 1, currentIndex + 3)
   })
 
@@ -156,7 +166,13 @@ export function useMobileQuickSortLogic() {
   }
 
   function handleSortAnotherSet() {
+    endSession()
     sessionSummary.value = null
+  }
+
+  function finishAndExit() {
+    if (sessionSummary.value) endSession()
+    router.push('/tasks')
   }
 
   // Date detection
@@ -316,53 +332,8 @@ export function useMobileQuickSortLogic() {
   }
 
   async function setPriority(priority: 'low' | 'medium' | 'high') {
-    if (!currentTask.value) return
+    if (!currentTask.value || isRescheduling.value) return
     await taskStore.updateTask(currentTask.value.id, { priority })
-    triggerHaptic('light')
-  }
-
-  async function setDueDate(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' | 'nextweek' | '1month' | 'clear') {
-    if (!currentTask.value) return
-
-    let dueDate: string | undefined
-    const now = new Date()
-
-    if (preset === 'today') {
-      const today = new Date(now)
-      today.setHours(0, 0, 0, 0)
-      dueDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    } else if (preset === 'tomorrow') {
-      const tomorrow = new Date(now)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      tomorrow.setHours(0, 0, 0, 0)
-      dueDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
-    } else if (preset === 'in3days') {
-      const date = new Date(now)
-      date.setDate(date.getDate() + 3)
-      date.setHours(0, 0, 0, 0)
-      dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-    } else if (preset === 'weekend') {
-      const dayOfWeek = now.getDay()
-      const daysUntilSaturday = dayOfWeek === 6 ? 7 : (6 - dayOfWeek + 7) % 7
-      const saturday = new Date(now)
-      saturday.setDate(now.getDate() + (daysUntilSaturday || 7))
-      saturday.setHours(0, 0, 0, 0)
-      dueDate = `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}`
-    } else if (preset === 'nextweek') {
-      const date = new Date(now)
-      date.setDate(date.getDate() + 7)
-      date.setHours(0, 0, 0, 0)
-      dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-    } else if (preset === '1month') {
-      const date = new Date(now)
-      date.setMonth(date.getMonth() + 1)
-      date.setHours(0, 0, 0, 0)
-      dueDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-    } else {
-      dueDate = undefined
-    }
-
-    await taskStore.updateTask(currentTask.value.id, { dueDate: dueDate || '' })
     triggerHaptic('light')
   }
 
@@ -404,21 +375,47 @@ export function useMobileQuickSortLogic() {
     showQuickEditPanel.value = false
   }
 
-  function setDueDateAndClose(preset: 'today' | 'tomorrow' | 'in3days' | 'weekend' | 'nextweek' | '1month' | 'clear') {
-    setDueDate(preset)
+  const postponeLabels: Record<QuickSortDuePreset, string> = {
+    today: 'Today',
+    tomorrow: 'Tomorrow',
+    in3days: 'In 3 days',
+    weekend: 'Next weekend',
+    nextweek: 'In 1 week',
+    in2weeks: 'In 2 weeks',
+    in1month: 'In 1 month',
+    clear: 'No due date'
+  }
+
+  async function setDueDateAndClose(preset: QuickSortDuePreset) {
+    if (!currentTask.value) return
+    const moved = await rescheduleCurrentTask(resolveQuickSortDueDate(preset))
+    if (!moved) return
     showQuickEditPanel.value = false
+    celebrationLabel.value = `Moved to ${postponeLabels[preset]}`
+    showCelebration.value = true
+    celebrationTimers.push(setTimeout(() => { showCelebration.value = false }, 900))
+    triggerHaptic('medium')
   }
 
   async function setDueDateDirect(dateString: string) {
     if (!currentTask.value || !dateString) return
-    await taskStore.updateTask(currentTask.value.id, { dueDate: dateString })
-    triggerHaptic('light')
+    const moved = await rescheduleCurrentTask(dateString)
+    if (!moved) return
     showQuickEditPanel.value = false
+    celebrationLabel.value = 'Moved to selected date'
+    showCelebration.value = true
+    celebrationTimers.push(setTimeout(() => { showCelebration.value = false }, 900))
+    triggerHaptic('medium')
   }
 
   function openProjectSheet() {
     showQuickEditPanel.value = false
     showProjectSheet.value = true
+  }
+
+  async function handleUndo() {
+    await undoLastCategorization()
+    triggerHaptic('medium')
   }
 
   function formatDuration(ms: number): string {
@@ -476,15 +473,13 @@ export function useMobileQuickSortLogic() {
   })
 
   const currentTaskProject = computed(() => {
-    if (!currentTask.value?.projectId) return null
-    return projectStore.projects.find(p => p.id === currentTask.value!.projectId)
+    const projectId = currentTask.value?.projectId
+    if (!projectId) return null
+    return projectStore.projects.find(project => project.id === projectId)
   })
 
   watch(isComplete, (completed) => {
-    if (completed) {
-      const summary = endSession()
-      sessionSummary.value = summary || null
-    }
+    sessionSummary.value = completed ? (previewSessionSummary() || null) : null
   })
 
   watch(aiState, (state) => {
@@ -515,6 +510,8 @@ export function useMobileQuickSortLogic() {
     sessionSummary,
     showDeleteConfirm,
     showQuickEditPanel,
+    isRescheduling,
+    canUndo,
     showAISheet,
     newTaskTitle,
     newTaskPriority,
@@ -562,8 +559,8 @@ export function useMobileQuickSortLogic() {
     handleSkip,
     handleSave,
     handleMarkDone,
+    handleUndo,
     setPriority,
-    setDueDate,
     handleAISuggest,
     closeAISheet,
     handleApplySuggestions,
@@ -587,6 +584,7 @@ export function useMobileQuickSortLogic() {
     requestSourceChange,
     confirmSourceChange,
     resetToSourcePicker,
-    handleSortAnotherSet
+    handleSortAnotherSet,
+    finishAndExit
   }
 }

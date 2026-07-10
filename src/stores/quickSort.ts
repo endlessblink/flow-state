@@ -119,13 +119,13 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     redoStack.value = []
   }
 
-  function endSession() {
+  function previewSessionSummary(): SessionSummary | undefined {
     if (!currentSessionId.value || !sessionStartTime.value) return
 
     const timeSpent = Date.now() - sessionStartTime.value
     const efficiency = tasksSortedInSession.value / (timeSpent / 60000) // tasks per minute
 
-    const summary: SessionSummary = {
+    return {
       id: currentSessionId.value,
       tasksProcessed: tasksSortedInSession.value,
       timeSpent,
@@ -133,6 +133,11 @@ export const useQuickSortStore = defineStore('quickSort', () => {
       streakDays: currentStreak.value + 1, // Include current session
       completedAt: new Date()
     }
+  }
+
+  function endSession() {
+    const summary = previewSessionSummary()
+    if (!summary) return
 
     sessionHistory.value.push(summary)
     lastCompletedDate.value = new Date().toISOString()
@@ -424,6 +429,7 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     // Actions
     startSession,
     endSession,
+    previewSessionSummary,
     recordAction,
     undo,
     redo,

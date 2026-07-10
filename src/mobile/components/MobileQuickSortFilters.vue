@@ -1,8 +1,12 @@
 <template>
   <div class="action-bar">
-    <button class="action-btn done" @click="$emit('mark-done')">
+    <button class="action-btn done" @click="$emit('markDone')">
       <CheckCircle :size="20" />
       <span>Done</span>
+    </button>
+    <button class="action-btn postpone" @click="$emit('postpone')">
+      <CalendarClock :size="20" />
+      <span>Postpone</span>
     </button>
     <button class="action-btn save" @click="$emit('save')">
       <Save :size="20" />
@@ -21,7 +25,7 @@
 
 <script setup lang="ts">
 import {
-  CheckCircle, Save, FolderOpen, Trash2
+  CalendarClock, CheckCircle, Save, FolderOpen, Trash2
 } from 'lucide-vue-next'
 import type { Task } from '@/types/tasks'
 
@@ -34,7 +38,8 @@ defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'mark-done'): void
+  (e: 'markDone'): void
+  (e: 'postpone'): void
   (e: 'save'): void
   (e: 'assign'): void
   (e: 'delete'): void
@@ -44,14 +49,15 @@ defineEmits<{
 <style scoped>
 /* Action buttons — sits right under the card */
 .action-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--space-2);
   padding: var(--space-4) var(--space-5) var(--space-2);
   flex-shrink: 0;
 }
 
 .action-btn {
-  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -68,6 +74,23 @@ defineEmits<{
   -webkit-tap-highlight-color: transparent;
 }
 
+.action-btn.done,
+.action-btn.postpone {
+  grid-column: span 3;
+}
+
+.action-btn.save {
+  grid-column: span 2;
+}
+
+.action-btn.assign {
+  grid-column: span 3;
+}
+
+.action-btn.delete {
+  grid-column: span 1;
+}
+
 .action-btn:active {
   transform: scale(0.95);
 }
@@ -79,6 +102,15 @@ defineEmits<{
 
 .action-btn.done:active {
   background: var(--success-bg-subtle);
+}
+
+.action-btn.postpone {
+  color: var(--color-info);
+  border-color: var(--info-border);
+}
+
+.action-btn.postpone:active {
+  background: var(--info-bg-subtle);
 }
 
 .action-btn.save {
@@ -101,7 +133,6 @@ defineEmits<{
 }
 
 .action-btn.delete {
-  flex: 0 0 auto;
   padding: var(--space-2_5);
   color: var(--color-danger);
   border-color: var(--danger-border-subtle);

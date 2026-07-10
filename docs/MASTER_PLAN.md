@@ -2167,7 +2167,48 @@ _Original plan below._
 
 ## Active Tasks
 
-### FEATURE-1935: Combinable Quick Sort task pools (🔄 IN PROGRESS)
+### ~~BUG-1936~~: Quick Sort postpone shortcuts require a second Save and use ambiguous offsets (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.243 deployed) | **Opened**: 2026-07-10
+
+**User repro**: In the Quick Sort edit panel, clicking a due-date shortcut such as `Wknd` changes the date but leaves the same card open. The user must infer that a separate Save action is still required, while labels such as `+1`, `+3`, and `+7` do not explain the destination or whether the task will advance.
+
+**Exact failure mode**: Date shortcuts were implemented as ordinary field edits instead of Quick Sort decisions. Desktop and mobile duplicated their date math, several presets never rendered an active state, and the compact desktop row hid later actions behind an invisible horizontal scroll.
+
+**Implementation**:
+- [x] ~~BUG-1936 — add a single `rescheduleCurrentTask` action that persists the selected due date, records the Quick Sort undo action, and advances exactly once.~~
+- [x] Share local-date preset resolution across desktop and mobile, including next-Saturday weekend semantics.
+- [x] Replace offset-only copy with explicit destinations, put Next weekend among the first three actions, wrap desktop actions, and state that one tap moves to the next task.
+- [x] Guard rapid double-clicks so the following task cannot be skipped.
+- [x] Complete review, final verification, and Electron updater delivery.
+
+**Verification**: 36 focused Vitest tests pass for preset boundaries, month-end clamping, one-click advance, no-date undo/redo, conflicting clicks, competing card actions, final-task Undo, and mobile reachability. Focused ESLint and `vue-tsc` pass. Authenticated desktop Chromium proof clicks Next weekend and verifies confirmation/advance; the seven-test mobile Chromium pack passes, including a 360px viewport assertion that all action buttons fit. Final review found no Critical or Important issues. The Electron ship gate passed 3,228 tests with 6 intentional skips, built and validated both Linux packages, deployed v1.4.243, and the live manifest plus both artifact endpoints verify successfully.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Authenticated desktop/mobile E2E clicks Next weekend, sees confirmation, and advances | Yes |
+| Data shape / persisted row shape | Yes | Regressions preserve empty-string/no-date transitions through Quick Sort undo/redo | Yes, for due-date actions |
+| Renderer store/state | Yes | Single-flight and competing-action tests cover processed IDs, current card, undo, redo, and completion preview | Yes |
+| Electron main/preload bridge | N/A | Renderer-only interaction; packaged Electron contents validated | No bridge change required |
+| Localhost sidecar endpoint | N/A | Quick Sort postponement does not use the sidecar | Not applicable |
+| KDE polling/control path | N/A | Quick Sort postponement does not use KDE integration | Not applicable |
+| Supabase persistence/realtime | Yes | Canonical task-store update path is awaited before the Quick Sort action advances | Yes, through existing task persistence |
+| Updater/runtime version | Yes | Public manifest serves v1.4.243; AppImage and deb return HTTP 200 | Yes |
+| Stale live process/cache state | Yes | Captured-queue semantics remain stable and the final action stays undoable until explicit session finalization | Yes, for Quick Sort state |
+
+**Exact failure mode fixed**: Quick Sort date buttons acted like silent field edits, so postponing required a second Save and ambiguous offset labels did not communicate the result. They now perform one atomic, explicit postpone-and-next decision.
+
+**Explicitly not covered**: General task-editor due-date behavior, recurring-instance reconciliation outside the existing canonical task update path, and unrelated Electron/KDE/sidecar failures remain outside this Quick Sort interaction fix.
+
+**Regression added for reported repro**: Shared preset and queue tests cover date semantics, atomic advance, race prevention, undo/redo, and final-task completion; desktop and mobile authenticated E2E cover the actual Next weekend button and narrow viewport.
+
+**Live boundary proof**: Electron v1.4.243 packaged successfully; `latest-linux.yml` reports 1.4.243; both deployed AppImage and deb URLs return HTTP 200 with manifest-matching sizes.
+
+---
+
+### ~~FEATURE-1935~~: Combinable Quick Sort task pools (✅ DONE)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS | **Opened**: 2026-07-10
 
@@ -6372,7 +6413,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1932**~~ | **P0** | ✅ **Phantom sign-out when a launcher rewrites HOME — pin Electron userData to passwd home** (✅ DONE 2026-07-10) |
 | ~~**BUG-1933**~~ | **P0** | ✅ **Restored session never re-persisted; stale token blinded Local API sidecar** (✅ DONE 2026-07-10) |
 | ~~**BUG-1934**~~ | **P1** | ✅ **Regular multi-delete is atomic locally across task lists and redo** (✅ DONE 2026-07-10, v1.4.241 shipped) |
-| **FEATURE-1935** | **P1** | 🔄 **Combinable Quick Sort task pools — overdue, today, next 3/7 days, no date, and Uncategorized** |
+| ~~**FEATURE-1935**~~ | **P1** | ✅ **Combinable Quick Sort task pools — overdue, today, next 3/7 days, no date, and Uncategorized** (✅ DONE 2026-07-10, v1.4.242 shipped) |
+| ~~**BUG-1936**~~ | **P1** | ✅ **Quick Sort postpone shortcuts use explicit destinations and advance in one click** (✅ DONE 2026-07-10, v1.4.243 shipped) |
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |

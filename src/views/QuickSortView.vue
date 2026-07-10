@@ -210,6 +210,15 @@
               </div>
             </div>
             <div class="completion-actions">
+              <BaseButton
+                v-if="canUndo"
+                variant="secondary"
+                size="lg"
+                @click="handleUndo"
+              >
+                <Undo2 :size="18" />
+                Undo last move
+              </BaseButton>
               <BaseButton variant="primary" size="lg" @click="handleSortAnotherSet">
                 <Zap :size="20" />
                 {{ $t('quick_sort.sort_another_set') }}
@@ -267,32 +276,75 @@
 
           <!-- Date pills -->
           <div class="control-row">
-            <span class="control-label">Due</span>
-            <div class="pill-group pill-scroll">
-              <button class="pill" :class="{ active: isDueToday }" @click="setQuickDate('today')">
+            <span class="control-label control-label-stack">
+              <span>Postpone</span>
+              <small>then next</small>
+            </span>
+            <fieldset class="pill-group pill-scroll" :disabled="isRescheduling" :aria-busy="isRescheduling">
+              <button
+                class="pill"
+                :class="{ active: activeDuePreset === 'today' }"
+                title="Postpone to today and show the next task"
+                @click="postponeCurrentTask('today')"
+              >
                 Today
               </button>
-              <button class="pill" :class="{ active: isDueTomorrow }" @click="setQuickDate('tomorrow')">
-                +1
+              <button
+                class="pill"
+                :class="{ active: activeDuePreset === 'tomorrow' }"
+                title="Postpone to tomorrow and show the next task"
+                @click="postponeCurrentTask('tomorrow')"
+              >
+                Tomorrow
               </button>
-              <button class="pill" @click="setQuickDate('in3days')">
-                +3
+              <button
+                class="pill"
+                :class="{ active: activeDuePreset === 'weekend' }"
+                title="Postpone to next Saturday and show the next task"
+                @click="postponeCurrentTask('weekend')"
+              >
+                Next weekend
               </button>
-              <button class="pill" :class="{ active: isDueWeekend }" @click="setQuickDate('weekend')">
-                Wknd
+              <button
+                class="pill"
+                :class="{ active: activeDuePreset === 'in3days' }"
+                title="Postpone by 3 days and show the next task"
+                @click="postponeCurrentTask('in3days')"
+              >
+                In 3 days
               </button>
-              <button class="pill" :class="{ active: isDueNextWeek }" @click="setQuickDate('nextweek')">
-                +7
+              <button
+                class="pill"
+                :class="{ active: activeDuePreset === 'nextweek' }"
+                title="Postpone by 1 week and show the next task"
+                @click="postponeCurrentTask('nextweek')"
+              >
+                In 1 week
               </button>
-              <button class="pill" @click="setQuickDate('in2weeks')">
-                +14
+              <button
+                class="pill"
+                :class="{ active: activeDuePreset === 'in2weeks' }"
+                title="Postpone by 2 weeks and show the next task"
+                @click="postponeCurrentTask('in2weeks')"
+              >
+                In 2 weeks
               </button>
-              <button class="pill" @click="setQuickDate('in30days')">
-                +30
+              <button
+                class="pill"
+                :class="{ active: activeDuePreset === 'in1month' }"
+                title="Postpone by 1 month and show the next task"
+                @click="postponeCurrentTask('in1month')"
+              >
+                In 1 month
               </button>
               <NPopover trigger="click" placement="bottom" :show-arrow="false">
                 <template #trigger>
-                  <button class="pill date-picker-trigger" :class="{ active: currentTask.dueDate && !isDueToday && !isDueTomorrow && !isDueWeekend && !isDueNextWeek }">
+                  <button
+                    class="pill date-picker-trigger"
+                    :class="{ active: currentTask.dueDate && activeDuePreset === null }"
+                    title="Choose a date, apply it, and show the next task"
+                    aria-label="Choose a custom postpone date"
+                  >
                     <Calendar :size="14" />
                   </button>
                 </template>
@@ -306,10 +358,16 @@
                   />
                 </div>
               </NPopover>
-              <button class="pill clear" :class="{ active: !currentTask.dueDate }" @click="setQuickDate('clear')">
+              <button
+                class="pill clear"
+                :class="{ active: activeDuePreset === 'clear' }"
+                title="Remove the due date and show the next task"
+                aria-label="Remove due date and show the next task"
+                @click="postponeCurrentTask('clear')"
+              >
                 <X :size="14" />
               </button>
-            </div>
+            </fieldset>
           </div>
 
           <!-- Project Selector -->
@@ -371,7 +429,7 @@
     <BaseModal
       :is-open="showChangeSourcesConfirm"
       size="sm"
-      :show-footer="true"
+      show-footer
       :title="$t('quick_sort.change_task_pools_title')"
       :cancel-text="$t('common.cancel')"
       :confirm-text="$t('quick_sort.change_task_pools_confirm')"
@@ -432,6 +490,11 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import type { SessionSummary } from '@/stores/quickSort'
 import type { Task } from '@/types/tasks'
 import type { QuickSortSource } from '@/utils/quickSortTaskFilters'
+import {
+  getActiveQuickSortDuePreset,
+  resolveQuickSortDueDate,
+  type QuickSortDuePreset
+} from '@/utils/quickSortDuePresets'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -492,8 +555,9 @@ watch(() => quickCapture.defaultTabOnOpen.value, (defaultTab) => {
 const {
   currentTask, currentTaskId, quickSortTasks, progress, isComplete,
   selectedSources, sourceCounts, sourcePreviewTasks, isSessionActive,
-  isTaskDirty, canUndo, canRedo, currentStreak,
-  startSession, endSession, categorizeTask, saveTask,
+  isTaskDirty, isRescheduling, canUndo, canRedo, currentStreak,
+  startSession, endSession, categorizeTask, saveTask, rescheduleCurrentTask,
+  previewSessionSummary,
   markTaskDone, markDoneAndDeleteTask, skipTask, undoLastCategorization, redoLastCategorization,
   tryResumeSession, cancelSession
 } = useQuickSort()
@@ -512,7 +576,7 @@ onMounted(() => {
 onUnmounted(() => { window.removeEventListener('keydown', handleGlobalKeydown) })
 
 watch(isComplete, (completed) => {
-  if (completed) sessionSummary.value = endSession() || null
+  sessionSummary.value = completed ? (previewSessionSummary() || null) : null
 })
 
 function handleStartSession(sources: QuickSortSource[]) {
@@ -535,6 +599,7 @@ function confirmSourceChange() {
 }
 
 function handleSortAnotherSet() {
+  endSession()
   sessionSummary.value = null
 }
 
@@ -570,28 +635,33 @@ function cancelSaveReminder() {
 }
 
 async function handleTaskUpdate(updates: Partial<Task>) {
-  if (!currentTask.value) return
+  if (!currentTask.value || isRescheduling.value) return
   userTouchedCard.value = true
   await taskStore.updateTaskWithUndo(currentTask.value.id, updates)
 }
 
 function handleSkip() {
+  if (isRescheduling.value) return
   showFeedback('Skipped', 'warning')
   skipTask()
 }
 
-function handleUndo() { if (canUndo) undoLastCategorization() }
+async function handleUndo() {
+  if (!canUndo.value) return
+  await undoLastCategorization()
+  sessionSummary.value = null
+}
 
-function handleRedo() { if (canRedo) redoLastCategorization() }
+function handleRedo() { if (canRedo.value) redoLastCategorization() }
 
 function handleMarkDone() {
-  if (!currentTask.value) return
+  if (!currentTask.value || isRescheduling.value) return
   showFeedback('Done!', 'success')
   markTaskDone(currentTask.value.id)
 }
 
 function requestDelete() {
-  if (!currentTask.value) return
+  if (!currentTask.value || isRescheduling.value) return
   showDeleteConfirm.value = true
 }
 
@@ -621,72 +691,41 @@ async function handlePermanentDelete(taskId: string) {
   taskToEdit.value = null
 }
 
-function handleExit() { router.push({ name: 'board' }) }
+function handleExit() {
+  if (sessionSummary.value) endSession()
+  router.push({ name: 'board' })
+}
 
 // Quick date setters
-const isDueToday = computed(() => {
-  if (!currentTask.value?.dueDate) return false
-  const d = new Date(currentTask.value.dueDate)
-  const today = new Date(); today.setHours(0,0,0,0); d.setHours(0,0,0,0)
-  return d.getTime() === today.getTime()
-})
+const activeDuePreset = computed(() => getActiveQuickSortDuePreset(currentTask.value?.dueDate))
 
-const isDueTomorrow = computed(() => {
-  if (!currentTask.value?.dueDate) return false
-  const d = new Date(currentTask.value.dueDate)
-  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
-  tomorrow.setHours(0,0,0,0); d.setHours(0,0,0,0)
-  return d.getTime() === tomorrow.getTime()
-})
-
-const isDueNextWeek = computed(() => {
-  if (!currentTask.value?.dueDate) return false
-  const d = new Date(currentTask.value.dueDate)
-  const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7)
-  nextWeek.setHours(0,0,0,0); d.setHours(0,0,0,0)
-  return d.getTime() === nextWeek.getTime()
-})
-
-const isDueWeekend = computed(() => {
-  if (!currentTask.value?.dueDate) return false
-  const d = new Date(currentTask.value.dueDate)
-  d.setHours(0,0,0,0)
-  const nextSat = getNextSaturday()
-  return d.getTime() === nextSat.getTime()
-})
-
-function getNextSaturday(): Date {
-  const d = new Date()
-  d.setHours(0,0,0,0)
-  const day = d.getDay() // 0=Sun, 6=Sat
-  const daysUntilSat = (6 - day + 7) % 7 || 7  // if today is Saturday, go to next Saturday
-  d.setDate(d.getDate() + daysUntilSat)
-  return d
+const postponeLabels: Record<QuickSortDuePreset, string> = {
+  today: 'today',
+  tomorrow: 'tomorrow',
+  in3days: 'in 3 days',
+  weekend: 'next weekend',
+  nextweek: 'in 1 week',
+  in2weeks: 'in 2 weeks',
+  in1month: 'in 1 month',
+  clear: 'without a due date'
 }
 
-function setQuickDate(preset: string) {
-  const d = new Date(); d.setHours(0,0,0,0)
-  if (preset === 'today') { /* already today */ }
-  else if (preset === 'tomorrow') d.setDate(d.getDate() + 1)
-  else if (preset === 'in3days') d.setDate(d.getDate() + 3)
-  else if (preset === 'weekend') { const sat = getNextSaturday(); d.setTime(sat.getTime()) }
-  else if (preset === 'nextweek') d.setDate(d.getDate() + 7)
-  else if (preset === 'in2weeks') d.setDate(d.getDate() + 14)
-  else if (preset === 'in30days') d.setDate(d.getDate() + 30)
-  else if (preset === 'clear') {
-    handleTaskUpdate({ dueDate: '' })
-    return
-  }
-  handleTaskUpdate({ dueDate: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })
+async function postponeCurrentTask(preset: QuickSortDuePreset) {
+  if (!currentTask.value) return
+  const moved = await rescheduleCurrentTask(resolveQuickSortDueDate(preset))
+  if (!moved) return
+  showEditPanel.value = false
+  showFeedback(`Moved to ${postponeLabels[preset]}`, 'success', 900)
 }
 
-function handleDatePickerUpdate(timestamp: number | null) {
-  if (!timestamp) {
-    handleTaskUpdate({ dueDate: '' })
-    return
-  }
+async function handleDatePickerUpdate(timestamp: number | null) {
+  if (!timestamp) return postponeCurrentTask('clear')
   const d = new Date(timestamp)
-  handleTaskUpdate({ dueDate: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })
+  const dueDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  const moved = await rescheduleCurrentTask(dueDate)
+  if (!moved) return
+  showEditPanel.value = false
+  showFeedback('Moved to selected date', 'success', 900)
 }
 
 // Keyboard shortcuts
@@ -1214,7 +1253,22 @@ const currentTaskProject = computed(() => {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  min-width: 52px;
+  min-width: 70px;
+}
+
+.control-label-stack {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.control-label-stack small {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-medium);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .pill-group {
@@ -1222,19 +1276,21 @@ const currentTaskProject = computed(() => {
   gap: var(--space-2);
   flex: 1;
   min-width: 0; /* Allow shrinking below content width for scroll */
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .pill-scroll {
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  flex-wrap: wrap;
+  overflow-x: visible;
   gap: var(--space-1_5);
   min-width: 0;
 }
-.pill-scroll::-webkit-scrollbar { display: none; }
 
 .pill-scroll .pill {
-  padding: var(--space-1_5) var(--space-2);
+  min-height: 36px;
+  padding: var(--space-1_5) var(--space-3);
   font-size: var(--text-xs);
 }
 

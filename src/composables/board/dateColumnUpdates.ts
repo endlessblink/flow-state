@@ -33,11 +33,11 @@ const targetDateFor = (column: DateColumn, today: Date): Date | null => {
  * Returns `null` when nothing changed, so the caller can omit the key entirely and
  * avoid tripping syncDateFields' instances→dueDate back-sync (taskOperations.ts).
  */
-const rebasePastInstances = (
-    instances: TaskInstance[] | undefined,
+const rebasePastInstances = <T extends Pick<TaskInstance, 'scheduledDate' | 'isLater'>>(
+    instances: T[] | undefined,
     targetKey: string,
     today: Date
-): TaskInstance[] | null => {
+): T[] | null => {
     if (!instances?.length) return null
 
     let changed = false

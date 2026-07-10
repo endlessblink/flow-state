@@ -2167,6 +2167,34 @@ _Original plan below._
 
 ## Active Tasks
 
+### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.246 deployed and locally installed) | **Opened**: 2026-07-10
+
+**User repro**: In packaged Electron Quick Sort, clicking a `Postpone` destination changes the task date as intended but also saves the active Quick Sort application/session snapshot.
+
+**Required behavior**: A postpone click persists only the selected task due date, closes only the quick-edit popup, keeps the same task and progress, and does not write Quick Sort recovery/session state as a side effect. The action remains undoable during the live session.
+
+**Verification**: A RED regression captured the active-session localStorage value before postponing and proved the click rewrote it with a new non-advancing `SAVE_TASK` entry. After removing the stray session-persistence call, the focused Quick Sort queue suite passes 17/17, `vue-tsc` passes, lint exits cleanly, and the full suite passes 245 files with 3,264 tests passing and 6 intentional skips. A focused blocker review found no Critical or Important code issue. Electron v1.4.246 built and passed package validation, the guarded remote promotion reported `new-version`, and the public updater manifest serves v1.4.246 with AppImage size `180429637` and SHA-512 `bvtFNpWakaoBZD4b2ybQlZQ2DwqATkISCBguLZHHVrSVpBX0SJXGhGsGdERNheQAEZA5HznEt3LfjB2uHHWjYg==`. The installed launcher AppImage has the same size and byte-for-byte SHA-512 and was fully relaunched without the temporary verification debugging port.
+
+**Failure-class matrix**:
+
+| Failure class | Checked | Evidence | Covered by this fix |
+|---|---:|---|---:|
+| Task data persistence | Yes | Canonical awaited task-store due-date write remains intact | Yes |
+| Renderer / Quick Sort session state | Yes | Regression proves current task/progress remain unchanged and active-session storage is not rewritten | Yes |
+| Undo/redo | Yes | Non-advancing in-memory action remains available for immediate Undo | Yes |
+| Electron main / preload | Yes | v1.4.246 package validation passed; no bridge change required | No change required |
+| Localhost sidecar / KDE | N/A | Quick Sort postpone does not use these boundaries | Not applicable |
+| Updater / runtime version | Yes | Public manifest, local release artifact, and installed launcher AppImage match v1.4.246 size and SHA-512 | Yes |
+| Stale live process | Yes | v1.4.245 was terminated; the v1.4.246 AppImage is mounted and running normally | Yes |
+
+**Exact failure mode fixed**: `rescheduleCurrentTask()` explicitly called `persistSession()` after the due-date mutation, serializing the Quick Sort undo stack and active application state even though postpone is a task edit that must not commit session state.
+
+**Outside this fix**: The task due-date write itself is intentionally persistent, and an ordinary later Quick Sort lifecycle save may capture the then-current live session for crash recovery.
+
+---
+
 ### ~~BUG-1938~~: Postpone feedback is transparent and the task advances instead of only closing the popup (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.245 deployed and locally verified) | **Opened**: 2026-07-10
@@ -2197,7 +2225,7 @@ _Original plan below._
 | Updater / runtime version | Yes | Live manifest, local artifact, installed AppImage, and generated Electron metadata all match v1.4.245 | Yes |
 | Stale live process | Yes | v1.4.244 mount and wrapper were terminated before the v1.4.245 launch | Yes |
 
-**Outside this fix**: Authenticated Playwright remains unavailable in this shell because `SUPABASE_SERVICE_ROLE_KEY` is not present. The stronger packaged Electron proof covers the user's actual surface.
+**Outside this fix**: Authenticated Playwright remains unavailable in this shell because `SUPABASE_SERVICE_ROLE_KEY` is not present. The stronger packaged Electron proof covers the user's actual surface. BUG-1939 separately removes the active-session persistence side effect from postpone clicks.
 
 ---
 
@@ -6483,6 +6511,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1936**~~ | **P1** | ✅ **Quick Sort postpone shortcuts use explicit destinations and persist in one click** (✅ DONE 2026-07-10, superseded behavior refined in BUG-1938) |
 | ~~**BUG-1937**~~ | **P0** | ✅ **Same-version Electron release collision replaced the Quick Sort renderer** (✅ DONE 2026-07-10, v1.4.244 deployed and locally verified) |
 | ~~**BUG-1938**~~ | **P0** | ✅ **Postpone keeps the task open and shows feedback on an opaque surface** (✅ DONE 2026-07-10, v1.4.245 deployed and locally verified) |
+| ~~**BUG-1939**~~ | **P0** | ✅ **Postpone changes only the task due date without saving Quick Sort app/session state** (✅ DONE 2026-07-10, v1.4.246 deployed and locally installed) |
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |

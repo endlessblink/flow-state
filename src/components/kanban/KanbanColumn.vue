@@ -464,6 +464,8 @@ const handleDragEndBroadcast = () => {
 
 onMounted(() => {
   window.addEventListener('kanban:drag-end', handleDragEndBroadcast)
+  // BUG-1936: prove the diagnostic build is live — writes one line on first board load.
+  void dragDiag.sessionMarker(`board:${props.columnType}`)
 })
 
 onUnmounted(() => {

@@ -31,6 +31,7 @@
             class="ai-assist-btn"
             :disabled="!taskTitle.trim()"
             title="AI Assist"
+            aria-label="AI Assist"
             @click="openAIAssist"
           >
             <Sparkles :size="14" />
@@ -41,7 +42,7 @@
         <div v-if="isScraping" class="url-scraping-feedback">
           <Globe :size="16" class="scraping-icon" />
           <span class="scraping-status">Fetching page info...</span>
-          <button class="scraping-cancel" type="button" @click="cancelScraping">
+          <button class="scraping-cancel" type="button" aria-label="Cancel URL scraping" @click="cancelScraping">
             <X :size="14" />
           </button>
         </div>

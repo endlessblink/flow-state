@@ -82,8 +82,11 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
           user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
         }
       }
+      if (!user) {
+        throw new Error(`Could not create or find playwright@test.flowstate. CreateError: ${error?.message || "Unknown"}`);
+      }
     }
-    if (!user) throw new Error("Could not create or find playwright@test.flowstate");
+    if (!user) throw new Error("Could not create or find playwright@test.flowstate.");
     userId = user.id
 
     await admin.from('tasks').delete().in('id', ALL_IDS)

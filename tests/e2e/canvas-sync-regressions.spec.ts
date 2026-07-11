@@ -76,7 +76,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       user = data?.user
       if (!user || error) {
         // Fallback to retry loop for listUsers in case of replication lag or "already registered" race condition
-        for (let i = 0; i < 5 && !user; i++) {
+        for (let i = 0; i < 15 && !user; i++) {
           await new Promise(r => setTimeout(r, 1000))
           const res = await admin.auth.admin.listUsers()
           user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')

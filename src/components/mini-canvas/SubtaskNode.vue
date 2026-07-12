@@ -26,10 +26,11 @@
         ref="titleInput"
         class="subtask-title"
         :class="{ completed: data.isCompleted }"
-        :value="data.title"
+        :value="titleDraft"
         dir="auto"
         placeholder="New subtask"
         rows="1"
+        @focus="isEditingTitle = true"
         @input="handleTitleInput"
         @blur="handleTitleBlur"
         @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
@@ -77,6 +78,8 @@ const emit = defineEmits<{
 
 const titleInput = ref<HTMLTextAreaElement | null>(null)
 const descInput = ref<HTMLTextAreaElement | null>(null)
+const titleDraft = ref(props.data.title)
+const isEditingTitle = ref(false)
 const AUTOSAVE_DELAY_MS = 250
 const lastSavedTitle = ref(props.data.title)
 const lastSavedDescription = ref(props.data.description)
@@ -119,6 +122,7 @@ watch(() => props.autoFocus, (shouldFocus) => {
 })
 watch(() => props.data.title, value => {
   lastSavedTitle.value = value
+  if (!isEditingTitle.value) titleDraft.value = value
 })
 watch(() => props.data.description, value => {
   lastSavedDescription.value = value
@@ -174,6 +178,7 @@ const scheduleDescriptionAutosave = (value: string) => {
 
 const handleTitleInput = (e: Event) => {
   const el = e.target as HTMLTextAreaElement
+  titleDraft.value = el.value
   autoResize(el)
   scheduleTitleAutosave(el.value)
 }
@@ -186,6 +191,8 @@ const handleDescriptionInput = (e: Event) => {
 
 const handleTitleBlur = (e: FocusEvent) => {
   const value = (e.target as HTMLTextAreaElement).value.trim()
+  isEditingTitle.value = false
+  titleDraft.value = value
   pendingTitle = value
   flushTitleAutosave()
 }
@@ -197,6 +204,7 @@ const handleTitleShiftEnter = (e: KeyboardEvent) => {
   const end = el.selectionEnd ?? el.value.length
   el.value = el.value.slice(0, start) + '\n' + el.value.slice(end)
   el.selectionStart = el.selectionEnd = start + 1
+  titleDraft.value = el.value
   autoResize(el)
   scheduleTitleAutosave(el.value)
 }

@@ -175,7 +175,7 @@ const scheduleDescriptionAutosave = (value: string) => {
 const handleTitleInput = (e: Event) => {
   const el = e.target as HTMLTextAreaElement
   autoResize(el)
-  scheduleTitleAutosave(el.value.trim())
+  scheduleTitleAutosave(el.value)
 }
 
 const handleDescriptionInput = (e: Event) => {
@@ -198,7 +198,7 @@ const handleTitleShiftEnter = (e: KeyboardEvent) => {
   el.value = el.value.slice(0, start) + '\n' + el.value.slice(end)
   el.selectionStart = el.selectionEnd = start + 1
   autoResize(el)
-  scheduleTitleAutosave(el.value.trim())
+  scheduleTitleAutosave(el.value)
 }
 
 const handleDescriptionBlur = (e: FocusEvent) => {

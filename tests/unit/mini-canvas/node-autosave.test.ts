@@ -86,4 +86,32 @@ describe('mini-canvas node autosave', () => {
       ['subtask-1', 'Autosaved details'],
     ])
   })
+
+  it.each([
+    ['subtask', SubtaskNode, '.subtask-title', {
+      subtaskId: 'subtask-1',
+      title: 'Original title',
+      description: '',
+      isCompleted: false,
+    }],
+    ['note', NoteNode, '.note-title', {
+      noteId: 'note-1',
+      title: 'Original title',
+      description: '',
+    }],
+  ])('preserves a trailing space while autosaving a %s title', async (_kind, component, selector, data) => {
+    vi.useFakeTimers()
+
+    const wrapper = mount(component, {
+      global,
+      props: { data },
+    })
+
+    await wrapper.find(selector).setValue('Two words ')
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(wrapper.emitted('update-title')).toEqual([
+      [data.subtaskId ?? data.noteId, 'Two words '],
+    ])
+  })
 })

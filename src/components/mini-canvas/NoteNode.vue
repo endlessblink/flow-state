@@ -156,7 +156,7 @@ const scheduleDescriptionAutosave = (value: string) => {
 }
 
 const handleTitleInput = (e: Event) => {
-  scheduleTitleAutosave((e.target as HTMLInputElement).value.trim())
+  scheduleTitleAutosave((e.target as HTMLInputElement).value)
 }
 
 const handleDescriptionInput = (e: Event) => {

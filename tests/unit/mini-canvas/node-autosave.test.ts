@@ -114,4 +114,40 @@ describe('mini-canvas node autosave', () => {
       [data.subtaskId ?? data.noteId, 'Two words '],
     ])
   })
+
+  it.each([
+    ['subtask', SubtaskNode, '.subtask-title', {
+      subtaskId: 'subtask-1',
+      title: 'Original title',
+      description: '',
+      isCompleted: false,
+    }],
+    ['note', NoteNode, '.note-title', {
+      noteId: 'note-1',
+      title: 'Original title',
+      description: '',
+    }],
+  ])('keeps a continuously typed %s title when stale autosave echoes arrive', async (_kind, component, selector, data) => {
+    vi.useFakeTimers()
+
+    const wrapper = mount(component, {
+      attachTo: document.body,
+      global,
+      props: { data },
+    })
+    const input = wrapper.find<HTMLInputElement | HTMLTextAreaElement>(selector)
+
+    await input.trigger('focus')
+    await input.setValue('Several words typed')
+    await vi.advanceTimersByTimeAsync(250)
+
+    await wrapper.setProps({ data: { ...data, title: 'Several words' } })
+    expect(input.element.value).toBe('Several words typed')
+
+    await input.setValue('Several words typed one after another')
+    await wrapper.setProps({ data: { ...data, title: 'Several words typed' } })
+    expect(input.element.value).toBe('Several words typed one after another')
+
+    wrapper.unmount()
+  })
 })

@@ -22,9 +22,10 @@
     <input
       ref="titleInputRef"
       class="note-title"
-      :value="data.title"
+      :value="titleDraft"
       dir="auto"
       placeholder="Note title..."
+      @focus="isEditingTitle = true"
       @input="handleTitleInput"
       @blur="handleTitleBlur"
       @keydown.enter="($event.target as HTMLInputElement).blur()"
@@ -68,6 +69,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const showLightbox = ref(false)
 const titleInputRef = ref<HTMLInputElement | null>(null)
+const titleDraft = ref(props.data.title)
+const isEditingTitle = ref(false)
 const AUTOSAVE_DELAY_MS = 250
 const lastSavedTitle = ref(props.data.title)
 const lastSavedDescription = ref(props.data.description)
@@ -101,6 +104,7 @@ const colorBarStyle = computed(() => ({
 
 watch(() => props.data.title, value => {
   lastSavedTitle.value = value
+  if (!isEditingTitle.value) titleDraft.value = value
 })
 
 watch(() => props.data.description, value => {
@@ -156,7 +160,9 @@ const scheduleDescriptionAutosave = (value: string) => {
 }
 
 const handleTitleInput = (e: Event) => {
-  scheduleTitleAutosave((e.target as HTMLInputElement).value)
+  const value = (e.target as HTMLInputElement).value
+  titleDraft.value = value
+  scheduleTitleAutosave(value)
 }
 
 const handleDescriptionInput = (e: Event) => {
@@ -165,6 +171,8 @@ const handleDescriptionInput = (e: Event) => {
 
 const handleTitleBlur = (e: FocusEvent) => {
   const value = (e.target as HTMLInputElement).value.trim()
+  isEditingTitle.value = false
+  titleDraft.value = value
   pendingTitle = value
   flushTitleAutosave()
 }

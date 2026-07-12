@@ -173,7 +173,8 @@ export function useTaskOperations(
     _bulkDeleteTasksFromStorage: (taskIds: string[]) => Promise<void>,
     persistFilters: () => void,
     _runAllTaskMigrations: () => void,
-    addPendingWrite: (taskId: string) => void
+    addPendingWrite: (taskId: string) => void,
+    removePendingWrite: (taskId: string) => void
 ) {
     const projectStore = useProjectStore()
 
@@ -1105,9 +1106,15 @@ export function useTaskOperations(
                 baseVersion: deletedTask.positionVersion || 0
             })
         } catch (queueError) {
-            console.warn(`⚠️ [DELETE] Failed to queue delete for ${taskId.slice(0, 8)}, sync will retry:`, queueError)
+            console.warn(`⚠️ [DELETE] Failed to queue delete for ${taskId.slice(0, 8)}, restoring the task:`, queueError)
+            if (!_rawTasks.value.some(task => task.id === taskId)) {
+                _rawTasks.value.splice(Math.min(index, _rawTasks.value.length), 0, deletedTask)
+            }
+            removePendingWrite(taskId)
+            await cacheTasks([..._rawTasks.value])
             const { showToast } = useToast()
-            showToast('Delete will sync when connection restores', 'warning')
+            showToast('Delete was not saved. The task has been restored.', 'error')
+            throw queueError
         } finally {
             manualOperationInProgress.value = false
         }
@@ -1192,8 +1199,15 @@ export function useTaskOperations(
                     logPermanentDeleteTrace(taskId, 'store.remote-failed-permanent-delete-queue-error', {
                         error: queueError instanceof Error ? queueError.message : String(queueError),
                     })
-                    console.warn(`⚠️ [PERMANENT-DELETE] Failed to queue fallback delete for ${taskId.slice(0, 8)}; local cache still keeps it removed:`, queueError)
-                    return
+                    console.warn(`⚠️ [PERMANENT-DELETE] Failed to queue fallback delete for ${taskId.slice(0, 8)}; restoring the task:`, queueError)
+                    if (!_rawTasks.value.some(task => task.id === taskId)) {
+                        _rawTasks.value.splice(Math.min(index, _rawTasks.value.length), 0, deletedTask)
+                    }
+                    removePendingWrite(taskId)
+                    await cacheTasks([..._rawTasks.value])
+                    const { showToast } = useToast()
+                    showToast('Permanent delete was not saved. The task has been restored.', 'error')
+                    throw queueError
                 }
             }
             if (!hardDeleteCompleted) {

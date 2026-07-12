@@ -212,6 +212,22 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }
   })
 
+  it('restores the previous status when a done action cannot queue or save remotely', async () => {
+    const taskStore = useTaskStore()
+    const task = createMockTask({
+      id: 'task-done-no-durable-write',
+      title: 'Done must not disappear only locally',
+      status: 'todo'
+    })
+    taskStore._rawTasks.push(task)
+    mockEnqueue.mockRejectedValueOnce(new Error('IndexedDB queue unavailable'))
+    mockSaveTasks.mockRejectedValueOnce(new Error('Supabase unavailable'))
+
+    await taskStore.updateTask(task.id, { status: 'done' })
+
+    expect(taskStore._rawTasks.find(candidate => candidate.id === task.id)?.status).toBe('todo')
+  })
+
   it('advances recurring done-for-now locally even when the completion record direct save hangs', async () => {
     const taskStore = useTaskStore()
     const today = new Date()
@@ -425,6 +441,20 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }))
   })
 
+  it('rolls back a soft delete when durable queue enrollment fails', async () => {
+    const taskStore = useTaskStore()
+    const task = createMockTask({
+      id: 'task-soft-delete-queue-fails',
+      title: 'Delete must not disappear only locally'
+    })
+    taskStore._rawTasks.push(task)
+    mockEnqueue.mockRejectedValueOnce(new Error('IndexedDB queue unavailable'))
+
+    await expect(taskStore.deleteTask(task.id, 'regression-test')).rejects.toThrow('IndexedDB queue unavailable')
+
+    expect(taskStore._rawTasks.some(candidate => candidate.id === task.id)).toBe(true)
+  })
+
   it('undoes and redoes permanent task deletion three consecutive times locally', async () => {
     const taskStore = useTaskStore()
     const undoSystem = getUndoSystem()
@@ -501,6 +531,26 @@ describe('task operation undo/redo three-cycle invariants', () => {
         permanentDelete: true
       })
     }))
+  })
+
+  it('rolls back a permanent delete when both the remote delete and fallback queue fail', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const task = createMockTask({
+      id: 'task-permanent-delete-no-durable-write',
+      title: 'Permanent delete must remain truthful'
+    })
+    taskStore._rawTasks.push(task)
+
+    mockPermanentDeleteTask.mockRejectedValueOnce({
+      message: 'Invalid Refresh Token: Already Used',
+      status: 400
+    })
+    mockEnqueue.mockRejectedValueOnce(new Error('IndexedDB queue unavailable'))
+
+    await expect(undoSystem.permanentlyDeleteTaskWithUndo(task.id)).rejects.toThrow('IndexedDB queue unavailable')
+
+    expect(taskStore._rawTasks.some(candidate => candidate.id === task.id)).toBe(true)
   })
 
   it('still rolls back permanent delete when the server proves RLS blocks visible-row hard delete', async () => {

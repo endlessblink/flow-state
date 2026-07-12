@@ -4558,7 +4558,21 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 
 **Live boundary proof**: pending — `npm run build` clean, Electron deploy not run (`VPS_HOST` unset in this shell).
 
-### ~~BUG-1937~~: Spaces reset while typing in planning-canvas bubbles (✅ DONE)
+### BUG-1941: Permanent-delete/done actions can vanish before becoming durable (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-12) | **Related**: BUG-1911, BUG-1913, BUG-1891, BUG-1850
+
+**User repro**: Tasks/events that were permanently deleted or marked done later reappear, and FlowState appears to forget decisions over time. A screenshot identified task `71418368-35cb-42fa-ae10-f6cf7c6ff955` (`ליצור סקיל על בסיס המומחה של מרתה`) as a concrete permanent-delete repro.
+
+**Production evidence**: The exact task remains a live `planned` row, `is_deleted=false`, with no `deleted_at` and no tombstone; its server `updated_at` is still 2026-07-10 08:54:04 UTC. The current app is authenticated and its localhost sidecar reports healthy renderer auth, but the last 72-hour production histogram contains done writes and no recent delete for this row. This is a lost lifecycle write, not a successful server delete followed by resurrection. Production also lacks `task_audit_log`, so attempted lifecycle actions have no immutable server-side evidence.
+
+**Release blocker**: Do not ship the recovered Quick Sort integration until the exact UI entrypoint is regression-covered through local optimistic removal, durable delete/done persistence, tombstone creation where applicable, failed-write visibility/rollback, and reload behavior.
+
+**Explicitly not covered yet**: The evidence does not identify whether the lost action originated in Calendar Inbox, Task Edit, context-menu permanent delete, Quick Sort, offline queue replay, or an older packaged runtime. No production row has been mutated during diagnosis.
+
+---
+
+### ~~BUG-1940~~: Spaces reset while typing in planning-canvas bubbles (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-12, shipped Electron v1.4.247) | **Opened**: 2026-07-12
 
@@ -6545,7 +6559,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1939**~~ | **P0** | ✅ **Postpone changes only the task due date without saving Quick Sort app/session state** (✅ DONE 2026-07-10, v1.4.246 deployed and locally installed) |
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
 | ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, v1.4.243 shipped) |
-| ~~**BUG-1937**~~ | **P0** | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.247 shipped) |
+| ~~**BUG-1940**~~ | **P0** | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.247 shipped) |
+| **BUG-1941** | **P0** | 🔄 **Permanent-delete/done actions can disappear locally without durable lifecycle evidence, then older server truth returns** (production repro 2026-07-12) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

@@ -151,7 +151,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const operations = useTaskOperations(
     _rawTasks, states.selectedTaskIds, activeSmartView, activeStatusFilter,
     activeDurationFilter, hideDoneTasks, hideBoardDoneTasks, hideCanvasDoneTasks, hideCalendarDoneTasks, hideCanvasOverdueTasks,
-    manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, persistFilters, runAllTaskMigrations, addPendingWrite
+    manualOperationInProgress, saveTasksToStorage, saveSpecificTasks, deleteTaskFromStorage, bulkDeleteTasksFromStorage, persistFilters, runAllTaskMigrations, addPendingWrite, removePendingWrite
   )
 
   // 4. Initialize History

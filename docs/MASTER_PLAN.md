@@ -4558,6 +4558,20 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 
 **Live boundary proof**: pending — `npm run build` clean, Electron deploy not run (`VPS_HOST` unset in this shell).
 
+### ~~BUG-1937~~: Spaces reset while typing in planning-canvas bubbles (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-12, shipped Electron v1.4.246) | **Opened**: 2026-07-12
+
+**User repro**: In the planning canvas, typing a space in a subtask or note title appears to reset the bubble text, making multi-word titles unreliable.
+
+**Root cause**: Both title inputs trimmed their value on every 250 ms autosave. A newly typed trailing space was removed before the update reached task state, and the resulting prop echo re-rendered the input with the pre-space value. Description fields already preserved the raw in-progress value and were unaffected.
+
+**Exact failure mode fixed**: Autosave now preserves the raw title while the user is typing, including trailing spaces and Shift+Enter content; normalization still happens on blur when editing is complete.
+
+**Explicitly not covered**: This does not change planning-canvas drag, connection, layout, description autosave, or title normalization after blur.
+
+**Regression added for reported repro**: `tests/unit/mini-canvas/node-autosave.test.ts` reproduces the autosave boundary for both subtask and note titles and requires the trailing space to survive. RED failed for both editors with `Two words` instead of `Two words `; green passed 5/5 after the fix. Related proof: `npm run type-check`; `npm run lint`; `npm run electron:build`; live updater manifest and artifacts verified for `1.4.246`.
+
 ### ~~BUG-1932~~: Phantom sign-out when a launcher rewrites HOME (✅ DONE)
 
 **Root cause**: Electron derives `userData` from `$XDG_CONFIG_HOME`/`$HOME`. The Hermes agent sandboxes each session by rewriting `HOME` for spawned processes (`HOME=~/.hermes/profiles/<p>/home`, `HERMES_REAL_HOME=/home/endlessblink`). FlowState launched from such a session opened a pristine, empty profile — no `store.json`, no auth, no `local-api.json` — and rendered "Sign In" while the real session sat untouched in `~/.config/flow-state/store.json`. Once the launching session exits, the process reparents to `systemd --user` and is indistinguishable from a normally-started app, so it reads as a random sign-out.
@@ -6531,6 +6545,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1939**~~ | **P0** | ✅ **Postpone changes only the task due date without saving Quick Sort app/session state** (✅ DONE 2026-07-10, v1.4.246 deployed and locally installed) |
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
 | ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, v1.4.243 shipped) |
+| ~~**BUG-1937**~~ | **P0** | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.246 shipped) |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

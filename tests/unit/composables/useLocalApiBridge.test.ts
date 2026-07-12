@@ -1,20 +1,36 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { syncLocalApiRendererAuthState, syncLocalApiSession } from '@/composables/useLocalApiBridge'
+import {
+  subscribeLocalApiTaskMutations,
+  syncLocalApiRendererAuthState,
+  syncLocalApiSession,
+} from '@/composables/useLocalApiBridge'
 
 function installElectronApi() {
   const setLocalApiSession = vi.fn().mockResolvedValue({ ok: true })
   const clearLocalApiSession = vi.fn().mockResolvedValue({ ok: true })
   const setLocalApiRendererAuthState = vi.fn().mockResolvedValue({ ok: true })
+  let taskMutationListener: ((mutation: unknown) => void) | null = null
+  const onLocalApiTaskMutation = vi.fn((listener: (mutation: unknown) => void) => { taskMutationListener = listener })
+  const offLocalApiTaskMutation = vi.fn(() => { taskMutationListener = null })
   Object.defineProperty(window, 'electronAPI', {
     value: {
       isElectron: true,
       setLocalApiSession,
       clearLocalApiSession,
       setLocalApiRendererAuthState,
+      onLocalApiTaskMutation,
+      offLocalApiTaskMutation,
     },
     configurable: true,
   })
-  return { setLocalApiSession, clearLocalApiSession, setLocalApiRendererAuthState }
+  return {
+    setLocalApiSession,
+    clearLocalApiSession,
+    setLocalApiRendererAuthState,
+    onLocalApiTaskMutation,
+    offLocalApiTaskMutation,
+    emitTaskMutation: (mutation: unknown) => taskMutationListener?.(mutation),
+  }
 }
 
 describe('useLocalApiBridge', () => {
@@ -87,5 +103,23 @@ describe('useLocalApiBridge', () => {
       updatedAt: 1_777_777,
     })
     expect(JSON.stringify(api.setLocalApiRendererAuthState.mock.calls)).not.toMatch(/access|refresh|token|anonKey|user-1/i)
+  })
+
+  it('delivers validated task mutation notices and unregisters cleanly', () => {
+    const api = installElectronApi()
+    const callback = vi.fn()
+    const unsubscribe = subscribeLocalApiTaskMutations(callback)
+
+    api.emitTaskMutation({ operation: 'update', taskId: 'task-1' })
+    api.emitTaskMutation({ operation: 'update', taskId: '' })
+    api.emitTaskMutation({ operation: 'read', taskId: 'task-1' })
+
+    expect(callback).toHaveBeenCalledOnce()
+    expect(callback).toHaveBeenCalledWith({ operation: 'update', taskId: 'task-1' })
+
+    unsubscribe()
+    api.emitTaskMutation({ operation: 'delete', taskId: 'task-1' })
+    expect(callback).toHaveBeenCalledOnce()
+    expect(api.offLocalApiTaskMutation).toHaveBeenCalledTimes(2)
   })
 })

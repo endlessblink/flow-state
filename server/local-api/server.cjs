@@ -160,6 +160,11 @@ function send(res, status, body) {
   res.end(json)
 }
 
+function notifyTaskMutation(operation, taskId) {
+  if (!PARENT_PORT || !taskId) return
+  PARENT_PORT.postMessage({ type: 'taskMutation', operation, taskId })
+}
+
 /** Reject anything that isn't a loopback Host header. */
 function isLoopbackHost(hostHeader) {
   if (!hostHeader) return false
@@ -346,6 +351,7 @@ async function handleCreateTask(req, res) {
 
   const { error } = await supabase.from('tasks').insert(row)
   if (error) return send(res, 500, { error: error.message })
+  notifyTaskMutation('create', id)
   send(res, 200, { ok: true, task: { id } })
 }
 
@@ -397,6 +403,7 @@ async function handlePatchTask(id, req, res) {
 
   const { error } = await supabase.from('tasks').update(update).eq('id', id).eq('user_id', userId)
   if (error) return send(res, 500, { error: error.message })
+  notifyTaskMutation('update', id)
   send(res, 200, { ok: true })
 }
 
@@ -475,6 +482,7 @@ async function handleDeleteTask(id, res) {
     .eq('user_id', userId)
     .eq('is_deleted', false)
   if (error) return send(res, 500, { error: error.message })
+  notifyTaskMutation('delete', id)
   send(res, 200, { ok: true })
 }
 

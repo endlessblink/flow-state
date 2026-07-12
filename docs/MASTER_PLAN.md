@@ -2654,6 +2654,8 @@ Binds 127.0.0.1 only, rejects non-loopback Host (403), bearer required in token 
 
 **Verified**: (1) `setSession` RLS-scoping in plain Node — anon→0 rows, with-session→only the user's rows; (2) full token-mode integration through a real Electron `utilityProcess` + bundled sidecar — pre-session 503, post-session correct RLS-scoped reads, POST 200; (3) HTTP layer (health/401/403/400/404/DB-error→JSON); (4) esbuild bundles supabase-js self-contained (537KB); (5) standalone service-role mode boots (no regression); (6) no new type/lint errors. **Pending (user-run)**: `npm run electron:dev` → sign in → enable in Settings → curl with bearer → POST shows in UI via realtime. Then ship per rules 6/7 (version bump + Electron deploy).
 
+**Shipped integration follow-up**: **BUG-1942** — v1.4.249 directly reconciles successful Local Task API mutations into the running renderer; the signed-in named-task live check remains pending.
+
 ---
 
 ### ~~TASK-1791~~: Design overhaul — fix critique findings across all views (✅ DONE)
@@ -4207,6 +4209,23 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 ---
 
 ## Active Bugs (P0-P1)
+
+### BUG-1942: Local Task API update succeeds but task stays absent from the running UI (🔄 SHIPPED, LIVE AUTH CHECK PENDING)
+
+**Priority**: P0 | **Status**: 🔄 SHIPPED, LIVE AUTH CHECK PENDING (v1.4.249, 2026-07-13) | **Depends on**: TASK-1797
+
+**User repro**: Hermes patched task `f4658470-fa2f-41e0-ac20-867750278e92` (`לשלוח כביסה`) from due date 2026-07-12 to 2026-07-13. Local API PATCH returned `{ ok: true }` and Local API GET returned the new date, but the running Personal-workspace UI could not find the task in global Search or Inbox.
+
+**Evidence so far**: the production row is non-deleted, personal-workspace, `is_in_inbox=true`, `status=planned`, `priority=high`, due 2026-07-13, with no project or canvas position. A cold Electron restart loaded the same unchanged row and immediately rendered it in Canvas Inbox. This rules out persisted shape, workspace scope, project/status/date filters, and stale updater version for the reported incident. The remaining confirmed failure class is the missing deterministic sidecar-to-renderer reconciliation after a successful mutation; current code relies entirely on Supabase Realtime.
+
+**Acceptance**:
+- A successful Local Task API create/update/delete emits a non-secret mutation notice from sidecar to Electron main and the renderer.
+- The renderer invalidates task read cache and reloads the active workspace so the mutation becomes visible even when realtime delivery is missed.
+- Mutation notices contain only operation and task id; no task body, bearer token, session, or Supabase credentials.
+- Regression proves the Local API→main→preload→renderer reconciliation contract and the exact missed-realtime recovery shape.
+- The named task remains visible in the real Electron UI after an API mutation without restarting the app.
+
+**Shipped evidence**: v1.4.249 adds the explicit sidecar → Electron main → preload → renderer mutation signal and reloads the active task store after successful Local API writes. The focused Local API regression pack passes 41/41, the Electron sync guard passes 221/221, type-check/lint/import/CSS/dependency validation pass, the Electron package validates, and the live updater manifest serves v1.4.249 with both artifacts. The full suite passed 3,279 tests and failed one unrelated pre-existing AI weekly-planning assertion, which also fails alone. The exact named-task post-fix mutation check remains pending because the local Electron profile became signed out after installing the package; the sidecar correctly rejected the attempted write before changing production data.
 
 ### ~~BUG-1907~~: Quick Tasks typed pin can look like a no-op (✅ DONE)
 
@@ -6567,6 +6586,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, v1.4.243 shipped) |
 | ~~**BUG-1940**~~ | **P0** | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.247 shipped) |
 | **BUG-1941** | **P0** | ✅ **Failed permanent-delete/done persistence now rolls back visibly instead of returning as false success** (shipped v1.4.248, 2026-07-12) |
+| **BUG-1942** | **P0** | 🔄 **Deterministic Local API → renderer reconciliation shipped in v1.4.249; signed-in live named-task check pending** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

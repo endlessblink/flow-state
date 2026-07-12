@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path_1 = require("path");
 const fs_1 = require("fs");
+const os_1 = require("os");
+const userDataPath_1 = require("./userDataPath");
 const shell_1 = require("./ipc/shell");
 const dialog_1 = require("./ipc/dialog");
 const fs_2 = require("./ipc/fs");
@@ -12,6 +14,7 @@ const window_1 = require("./ipc/window");
 const updater_1 = require("./updater");
 const oauth_1 = require("./ipc/oauth");
 const localApi_1 = require("./ipc/localApi");
+const diagnostics_1 = require("./ipc/diagnostics");
 function installBrokenPipeConsoleGuard() {
     const isBrokenPipe = (err) => typeof err === 'object' &&
         err !== null &&
@@ -45,6 +48,36 @@ function installBrokenPipeConsoleGuard() {
 installBrokenPipeConsoleGuard();
 // Set WM_CLASS to match .desktop file's StartupWMClass (must be before any window creation)
 electron_1.app.setName('flow-state');
+/**
+ * BUG-1932: pin `userData` to the passwd home before anything reads a path. `store.json` (auth) and
+ * `local-api.json` (sidecar token) both live under `userData`, so a launcher-supplied `HOME` yields
+ * an empty profile — a phantom sign-out — plus a Local API port bound with an unreadable token.
+ * Must run before `registerStoreHandlers()` / `registerLocalApiHandlers()`.
+ */
+let homeOverride = null;
+function pinUserDataToRealHome() {
+    let passwdHome = '';
+    try {
+        passwdHome = (0, os_1.userInfo)().homedir;
+    }
+    catch {
+        return; // No passwd entry (unusual container). Leave Electron's default alone.
+    }
+    const pinned = (0, userDataPath_1.resolveUserDataDir)({
+        env: process.env,
+        passwdHome,
+        appName: electron_1.app.getName(),
+        platform: process.platform,
+    });
+    if (pinned) {
+        electron_1.app.setPath('userData', pinned);
+        homeOverride = { home: process.env.HOME ?? '(unset)', pinnedTo: pinned };
+        console.warn(`[flowstate] HOME override detected (HOME=${homeOverride.home}). ` +
+            `userData pinned to ${pinned}. Set FLOWSTATE_ALLOW_HOME_OVERRIDE=1 to opt out.`);
+    }
+    console.log(`[flowstate] userData: ${electron_1.app.getPath('userData')}`);
+}
+pinUserDataToRealHome();
 // Prevent multiple instances
 const gotLock = electron_1.app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -223,7 +256,11 @@ function createWindow() {
 (0, window_1.registerWindowHandlers)();
 (0, oauth_1.registerOAuthHandlers)();
 (0, localApi_1.registerLocalApiHandlers)();
+(0, diagnostics_1.registerDiagnosticsHandlers)();
 electron_1.ipcMain.handle('app:getVersion', () => electron_1.app.getVersion());
+// BUG-1932: null unless a launcher's HOME was overridden. Renderer surfaces it so a deliberate
+// sandbox run is never silently redirected to the real profile.
+electron_1.ipcMain.handle('app:getHomeOverride', () => homeOverride);
 // App lifecycle
 electron_1.app.whenReady().then(() => {
     registerAppMenu();

@@ -1,4 +1,4 @@
-import { ipcMain, app, utilityProcess, type UtilityProcess } from 'electron'
+import { ipcMain, app, BrowserWindow, utilityProcess, type UtilityProcess } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { randomBytes } from 'crypto'
@@ -161,7 +161,7 @@ function startChild() {
   })
 
   child.on('message', (msg: unknown) => {
-    const m = msg as { type?: string; port?: number }
+    const m = msg as { type?: string; port?: number; operation?: string; taskId?: string }
     lastChildMessageType = typeof m?.type === 'string' ? m.type : 'unknown'
     lastChildMessageAt = Date.now()
     logLifecycle('message', { messageType: lastChildMessageType })
@@ -171,6 +171,18 @@ function startChild() {
       if (latestSession) child?.postMessage({ type: 'session', ...latestSession })
       if (latestTimerSnapshot) child?.postMessage({ type: 'timerSnapshot', snapshot: latestTimerSnapshot })
       if (latestRendererAuthState) child?.postMessage({ type: 'rendererAuthState', state: latestRendererAuthState })
+    } else if (
+      m?.type === 'taskMutation'
+      && (m.operation === 'create' || m.operation === 'update' || m.operation === 'delete')
+      && typeof m.taskId === 'string'
+      && m.taskId
+    ) {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send('localApi:taskMutation', {
+          operation: m.operation,
+          taskId: m.taskId,
+        })
+      }
     }
   })
 

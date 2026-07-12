@@ -20,6 +20,13 @@ interface ElectronLocalApi {
   clearLocalApiSession?: () => Promise<unknown>
   setLocalApiTimerSnapshot?: (snapshot: unknown) => Promise<unknown>
   setLocalApiRendererAuthState?: (state: unknown) => Promise<unknown>
+  onLocalApiTaskMutation?: (callback: (mutation: LocalApiTaskMutation) => void) => void
+  offLocalApiTaskMutation?: () => void
+}
+
+export interface LocalApiTaskMutation {
+  operation: 'create' | 'update' | 'delete'
+  taskId: string
 }
 
 function getElectronApi(): ElectronLocalApi | null {
@@ -56,6 +63,22 @@ export function syncLocalApiSession(session: Session | null): void {
   } catch {
     /* best-effort; never break the auth flow */
   }
+}
+
+export function subscribeLocalApiTaskMutations(
+  callback: (mutation: LocalApiTaskMutation) => void,
+): () => void {
+  const api = getElectronApi()
+  if (!api?.onLocalApiTaskMutation) return () => undefined
+
+  api.offLocalApiTaskMutation?.()
+  api.onLocalApiTaskMutation((mutation) => {
+    if (!mutation || !['create', 'update', 'delete'].includes(mutation.operation)) return
+    if (typeof mutation.taskId !== 'string' || !mutation.taskId) return
+    callback(mutation)
+  })
+
+  return () => api.offLocalApiTaskMutation?.()
 }
 
 export interface LocalApiRendererAuthState {

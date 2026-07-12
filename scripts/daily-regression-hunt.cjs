@@ -47,6 +47,22 @@ const FIXED_DAILY_CHECKS = [
     timeoutMs: 240_000,
   },
   {
+    id: 'lifecycle-durability',
+    title: 'Delete, done, reload, and tombstone durability guard',
+    command: [
+      'npm',
+      'test',
+      '--',
+      'tests/unit/undo-task-operations.test.ts',
+      'tests/unit/task-rollback.test.ts',
+      'tests/unit/stores/smart-merge.test.ts',
+      'tests/unit/composables/useSupabaseDatabase-delete.test.ts',
+      'tests/unit/sync/sync-orchestrator.test.ts',
+    ],
+    failureClass: 'permanent delete/undo',
+    timeoutMs: 240_000,
+  },
+  {
     id: 'timer-boundary',
     title: 'Electron/KDE timer local boundary diagnosis',
     command: ['node', 'scripts/diagnose-timer-boundary.cjs'],

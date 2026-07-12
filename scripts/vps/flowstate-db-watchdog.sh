@@ -18,8 +18,76 @@ STATE_FILE="/var/tmp/flowstate-watchdog.state"
 REALERT_SECONDS=$((4 * 3600))
 
 q() { docker exec "$DB_CONTAINER" psql -U postgres -t -A -c "$1" 2>/dev/null | tr -d '[:space:]'; }
+q_checked() {
+  local output
+  if ! output=$(docker exec "$DB_CONTAINER" psql -U postgres -v ON_ERROR_STOP=1 -t -A -c "$1" 2>&1); then
+    return 1
+  fi
+  printf '%s' "$output" | tr -d '[:space:]'
+}
 
 ANOMALIES=()
+
+# (0) BUG-1941 observability: lifecycle audit schema and triggers must exist.
+# Without this immutable server evidence, the watchdog can detect malformed rows
+# but cannot distinguish an attempted lifecycle action from no action at all.
+if ! audit_table=$(q_checked "SELECT COALESCE(to_regclass('public.task_audit_log')::text,'')"); then
+  ANOMALIES+=("task-audit-query-failed=schema")
+  audit_ready=false
+elif [ -z "${audit_table:-}" ]; then
+  ANOMALIES+=("task-audit-log-missing")
+  audit_ready=false
+else
+  if ! audit_triggers=$(q_checked "SELECT count(*) FROM pg_trigger WHERE tgrelid='public.tasks'::regclass AND tgname IN ('trg_task_audit_log_iu','trg_task_audit_log_d') AND NOT tgisinternal AND tgenabled<>'D' AND tgfoid='public.fn_task_audit_log()'::regprocedure"); then
+    ANOMALIES+=("task-audit-query-failed=triggers")
+    audit_ready=false
+  elif [ "${audit_triggers:-0}" != "2" ]; then
+    ANOMALIES+=("task-audit-triggers-missing=${audit_triggers:-0}/2")
+    audit_ready=false
+  else
+    audit_ready=true
+  fi
+fi
+
+if [ "$audit_ready" = true ]; then
+  # Latest delete/restore intent must agree with both the task row and the
+  # anti-resurrection tombstone. Only counts are emitted; task content stays private.
+  if ! lifecycle_mismatches=$(q_checked "WITH latest AS (
+    SELECT DISTINCT ON (task_id) task_id,user_id,event_type,id
+    FROM task_audit_log
+    WHERE user_id='$MAIN_USER_ID'
+      AND event_at > now()-interval '24 hours'
+      AND event_type IN ('SOFT_DELETED','HARD_DELETED','RESTORED')
+    ORDER BY task_id,event_at DESC,id DESC
+  )
+  SELECT count(*) FROM latest
+  LEFT JOIN tasks t ON t.id::text=latest.task_id AND t.user_id=latest.user_id
+  LEFT JOIN tombstones ts ON ts.entity_type='task' AND ts.entity_id::text=latest.task_id AND ts.user_id=latest.user_id
+  WHERE (latest.event_type='SOFT_DELETED' AND (t.id IS NULL OR t.is_deleted=false OR ts.entity_id IS NULL))
+     OR (latest.event_type='HARD_DELETED' AND (t.id IS NOT NULL OR ts.entity_id IS NULL))
+     OR (latest.event_type='RESTORED' AND (t.id IS NULL OR t.is_deleted=true OR ts.entity_id IS NOT NULL))"); then
+    ANOMALIES+=("task-audit-query-failed=lifecycle-state")
+  elif [ "${lifecycle_mismatches:-0}" != "0" ]; then
+    ANOMALIES+=("lifecycle-audit-state-mismatches-24h=$lifecycle_mismatches")
+  fi
+
+  # The newest lifecycle event being STATUS_CHANGED means the live row must
+  # still carry that audited status. A later delete/restore event supersedes it.
+  if ! status_mismatches=$(q_checked "WITH latest AS (
+    SELECT DISTINCT ON (task_id) task_id,user_id,event_type,status,id
+    FROM task_audit_log
+    WHERE user_id='$MAIN_USER_ID' AND event_at > now()-interval '24 hours'
+    ORDER BY task_id,event_at DESC,id DESC
+  )
+  SELECT count(*) FROM latest
+  LEFT JOIN tasks t ON t.id::text=latest.task_id AND t.user_id=latest.user_id
+  WHERE latest.event_type='STATUS_CHANGED'
+    AND (t.id IS NULL OR t.status IS DISTINCT FROM latest.status)"); then
+    ANOMALIES+=("task-audit-query-failed=status-state")
+  elif [ "${status_mismatches:-0}" != "0" ]; then
+    ANOMALIES+=("status-audit-state-mismatches-24h=$status_mismatches")
+  fi
+fi
 
 # (a) BUG-1891 asymmetry: soft-deleted tasks (last 24h) missing a tombstone
 missing_ts=$(q "SELECT count(*) FROM tasks t WHERE t.is_deleted=true AND t.deleted_at > now()-interval '24 hours'

@@ -36,6 +36,7 @@ describe('daily regression hunt script', () => {
       'electron-sync-guard',
       'type-check',
       'focused-recurring-pack',
+      'lifecycle-durability',
       'timer-boundary',
       'live-boundary',
       'updater-manifest',
@@ -95,6 +96,28 @@ describe('daily regression hunt script', () => {
 
     const report = JSON.parse(output)
     expect(report.checks.map((check: { id: string }) => check.id)).toEqual(['live-boundary'])
+  })
+
+  it('keeps lifecycle durability regressions in the fixed daily watchdog', () => {
+    const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
+    const output = runHunt([
+      '--dry-run',
+      '--json',
+      '--only',
+      'lifecycle-durability',
+      '--report-dir',
+      reportDir,
+    ])
+
+    const report = JSON.parse(output)
+    expect(report.checks).toHaveLength(1)
+    expect(report.checks[0]).toMatchObject({
+      id: 'lifecycle-durability',
+      failureClass: 'permanent delete/undo',
+    })
+    expect(report.checks[0].commandLine).toContain('tests/unit/undo-task-operations.test.ts')
+    expect(report.checks[0].commandLine).toContain('tests/unit/task-rollback.test.ts')
+    expect(report.checks[0].commandLine).toContain('tests/unit/stores/smart-merge.test.ts')
   })
 
   it('classifies recurring FlowState failure signatures', () => {

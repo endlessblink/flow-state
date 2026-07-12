@@ -76,7 +76,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
         const { data, error } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
         if (error) {
            console.log('createUser error:', error)
-        } else {
+        } else if (data && data.user) {
            user = data.user
         }
       } catch (e) {
@@ -89,6 +89,11 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
         user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
       }
     }
+
+    if (!user) {
+      throw new Error("Failed to create or find test user")
+    }
+
     userId = user.id
 
     await admin.from('tasks').delete().in('id', ALL_IDS)

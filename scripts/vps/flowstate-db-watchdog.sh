@@ -89,6 +89,117 @@ if [ "$audit_ready" = true ]; then
   fi
 fi
 
+# (0b) TASK-1949 canonical assistant authority. These probes are read-only and
+# emit only stable labels and counts; no task or Notion content leaves the VPS.
+if ! canonical_authority=$(q_checked "SELECT
+  ((to_regclass('public.canonical_operations') IS NOT NULL)::int
+   + (to_regclass('public.canonical_operation_previews') IS NOT NULL)::int
+   + (to_regclass('public.canonical_change_log') IS NOT NULL)::int)::text
+  || '/'
+  || ((to_regprocedure('public.flowstate_patch_task_v1(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid)') IS NOT NULL)::int
+   + (to_regprocedure('public.flowstate_activate_notion_task_v1(text,jsonb,jsonb,jsonb,boolean,text,timestamptz)') IS NOT NULL)::int)::text"); then
+  ANOMALIES+=("canonical-schema-query-failed=authority")
+  canonical_ready=false
+elif [ "${canonical_authority:-0/0}" != "3/2" ]; then
+  ANOMALIES+=("canonical-authority-missing=${canonical_authority:-0/0}")
+  canonical_ready=false
+else
+  canonical_ready=true
+fi
+
+if [ "$canonical_ready" = true ]; then
+  if ! canonical_triggers=$(q_checked "SELECT count(*) FROM pg_trigger
+    WHERE tgrelid='public.tasks'::regclass
+      AND tgname IN ('flowstate_task_canonical_revision','flowstate_task_canonical_change','guard_task_external_provenance_v1')
+      AND NOT tgisinternal AND tgenabled<>'D'"); then
+    ANOMALIES+=("canonical-schema-query-failed=triggers")
+  elif [ "${canonical_triggers:-0}" != "3" ]; then
+    ANOMALIES+=("canonical-triggers-missing=${canonical_triggers:-0}/3")
+  fi
+
+  if ! notion_index=$(q_checked "SELECT count(*) FROM pg_index AS index
+    WHERE index.indexrelid=to_regclass('public.tasks_active_external_identity_uidx')
+      AND index.indisvalid AND index.indisready AND index.indisunique"); then
+    ANOMALIES+=("canonical-schema-query-failed=notion-index")
+  elif [ "${notion_index:-0}" != "1" ]; then
+    ANOMALIES+=("canonical-notion-index-missing")
+  fi
+
+  if ! stale_applying=$(q_checked "SELECT count(*) FROM public.canonical_operations
+    WHERE user_id='$MAIN_USER_ID' AND state='applying'
+      AND updated_at < now()-interval '15 minutes'"); then
+    ANOMALIES+=("canonical-query-failed=stale-applying")
+  elif [ "${stale_applying:-0}" != "0" ]; then
+    ANOMALIES+=("canonical-stale-applying=$stale_applying")
+  fi
+
+  if ! incomplete_committed=$(q_checked "SELECT count(*) FROM public.canonical_operations
+    WHERE user_id='$MAIN_USER_ID' AND state='committed'
+      AND (canonical_result IS NULL OR canonical_revision IS NULL
+        OR change_sequence IS NULL OR committed_at IS NULL
+        OR nullif(canonical_result->>'operationId','') IS NULL
+        OR nullif(canonical_result->>'readBackHash','') IS NULL)"); then
+    ANOMALIES+=("canonical-query-failed=incomplete-committed")
+  elif [ "${incomplete_committed:-0}" != "0" ]; then
+    ANOMALIES+=("canonical-incomplete-committed=$incomplete_committed")
+  fi
+
+  if ! revision_mismatches=$(q_checked "WITH latest AS (
+    SELECT DISTINCT ON (entity_id) entity_id,canonical_revision
+    FROM public.canonical_change_log
+    WHERE user_id='$MAIN_USER_ID' AND entity_type='task'
+    ORDER BY entity_id,change_sequence DESC
+  )
+  SELECT count(*) FROM public.tasks AS task
+  JOIN latest ON latest.entity_id=task.id
+  WHERE task.user_id='$MAIN_USER_ID' AND task.is_deleted=false
+    AND latest.canonical_revision IS DISTINCT FROM task.canonical_revision"); then
+    ANOMALIES+=("canonical-query-failed=task-change-revision")
+  elif [ "${revision_mismatches:-0}" != "0" ]; then
+    ANOMALIES+=("canonical-task-change-revision-mismatches=$revision_mismatches")
+  fi
+
+  if ! malformed_notion=$(q_checked "SELECT count(*) FROM public.tasks AS task
+    WHERE task.user_id='$MAIN_USER_ID' AND task.is_deleted=false
+      AND ((task.external_source='notion'
+          AND (task.external_id IS NULL OR task.external_url IS NULL
+            OR task.external_data_source_id IS NULL OR task.external_last_edited_at IS NULL))
+        OR (task.external_source IS NULL
+          AND (task.external_id IS NOT NULL OR task.external_url IS NOT NULL
+            OR task.external_data_source_id IS NOT NULL
+            OR task.external_last_edited_at IS NOT NULL)))"); then
+    ANOMALIES+=("canonical-query-failed=notion-provenance")
+  elif [ "${malformed_notion:-0}" != "0" ]; then
+    ANOMALIES+=("canonical-notion-provenance-malformed=$malformed_notion")
+  fi
+
+  if ! missing_notion_evidence=$(q_checked "SELECT count(*)
+    FROM public.canonical_operations AS operation
+    LEFT JOIN public.tasks AS task
+      ON task.user_id=operation.user_id AND task.id=operation.entity_id
+    LEFT JOIN public.canonical_change_log AS change
+      ON change.user_id=operation.user_id
+      AND change.operation_id=operation.operation_id
+      AND change.change_sequence=operation.change_sequence
+    WHERE operation.user_id='$MAIN_USER_ID'
+      AND operation.state='committed'
+      AND operation.contract_version='notion-activation-v1'
+      AND operation.source='notion' AND operation.action='activate'
+      AND (change.id IS NULL
+        OR change.canonical_revision IS DISTINCT FROM operation.canonical_revision
+        OR (task.id IS NULL AND NOT EXISTS (
+          SELECT 1 FROM public.canonical_change_log AS later
+          WHERE later.user_id=operation.user_id
+            AND later.entity_type='task' AND later.entity_id=operation.entity_id
+            AND later.action='deleted'
+            AND later.change_sequence > operation.change_sequence
+        )))"); then
+    ANOMALIES+=("canonical-query-failed=notion-evidence")
+  elif [ "${missing_notion_evidence:-0}" != "0" ]; then
+    ANOMALIES+=("canonical-notion-commit-evidence-missing=$missing_notion_evidence")
+  fi
+fi
+
 # (a) BUG-1891 asymmetry: soft-deleted tasks (last 24h) missing a tombstone
 missing_ts=$(q "SELECT count(*) FROM tasks t WHERE t.is_deleted=true AND t.deleted_at > now()-interval '24 hours'
   AND NOT EXISTS (SELECT 1 FROM tombstones ts WHERE ts.entity_type='task' AND ts.entity_id::text=t.id::text)")

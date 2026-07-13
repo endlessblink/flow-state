@@ -37,6 +37,7 @@ describe('daily regression hunt script', () => {
       'type-check',
       'focused-recurring-pack',
       'lifecycle-durability',
+      'canonical-assistant-contract',
       'timer-boundary',
       'live-boundary',
       'updater-manifest',
@@ -125,14 +126,39 @@ describe('daily regression hunt script', () => {
     expect(report.checks[0].commandLine).toContain('tests/unit/stores/smart-merge.test.ts')
   })
 
+  it('keeps executable canonical assistant proof in the fixed daily watchdog', () => {
+    const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
+    const output = runHunt([
+      '--dry-run',
+      '--json',
+      '--only',
+      'canonical-assistant-contract',
+      '--report-dir',
+      reportDir,
+    ])
+
+    const report = JSON.parse(output)
+    expect(report.checks).toHaveLength(1)
+    expect(report.checks[0]).toMatchObject({
+      id: 'canonical-assistant-contract',
+      failureClass: 'canonical assistant authority',
+    })
+    expect(report.checks[0].commandLine).toContain('test:reliable-assistant-contract')
+    expect(report.checks[0].commandLine).toContain('canonical-task-contract.test.ts')
+    expect(report.checks[0].commandLine).toContain('notion-activation-handler.test.ts')
+    expect(report.checks[0].commandLine).toContain('canonical-change-catchup.test.ts')
+  })
+
   it('classifies recurring FlowState failure signatures', () => {
     const auth = JSON.parse(runHunt(['--classify', 'Sign-in expired changes are kept on this device']))
     const canvas = JSON.parse(runHunt(['--classify', 'canvas groups and tasks disappeared after switching views']))
     const timer = JSON.parse(runHunt(['--classify', 'KDE widget timer stuck at 0 and local api 5577 active task stale']))
+    const canonical = JSON.parse(runHunt(['--classify', 'canonical Notion activation receipt or change sequence failed']))
 
     expect(auth.failureClass).toBe('auth/sync')
     expect(canvas.failureClass).toBe('Canvas data/state')
     expect(timer.failureClass).toBe('KDE/local sidecar')
+    expect(canonical.failureClass).toBe('canonical assistant authority')
   })
 
   it('prints the latest markdown report path and summary', () => {

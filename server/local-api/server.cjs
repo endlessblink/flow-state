@@ -462,13 +462,20 @@ async function handlePatchTask(id, req, res) {
 
 async function handleGetTask(id, res) {
   const { supabase, userId } = ctx
-  const { data: task, error } = await supabase
+  let query = supabase
     .from('tasks')
-    .select('id,title,status,priority,due_date,project_id,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,instances,workspace_id,updated_at')
+    .select('id,title,description,status,priority,progress,due_date,due_time,project_id,subtasks,tags,position,instances,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,is_in_inbox,workspace_id,created_at,updated_at,completed_at')
     .eq('id', id)
-    .eq('user_id', userId)
     .eq('is_deleted', false)
-    .maybeSingle()
+
+  if (ctx.activeWorkspaceId == null) {
+    query = query.eq('user_id', userId).is('workspace_id', null)
+  } else {
+    // The signed-in Supabase client enforces membership through task RLS.
+    query = query.eq('workspace_id', ctx.activeWorkspaceId)
+  }
+
+  const { data: task, error } = await query.maybeSingle()
   if (error) return send(res, 500, { error: { code: 'read_failed', message: 'task could not be read' }, ok: false })
   if (!task) return send(res, 404, { error: { code: 'not_found', message: 'task not found' }, ok: false })
 
@@ -477,17 +484,26 @@ async function handleGetTask(id, res) {
     task: {
       id: task.id,
       title: task.title,
+      description: task.description || '',
       status: fromDbStatus(task.status),
       priority: task.priority,
+      progress: Number(task.progress) || 0,
       dueDate: toDateOnly(task.due_date),
+      dueTime: task.due_time,
       projectId: task.project_id,
+      subtasks: normalizeSubtasks(task.subtasks),
+      tags: Array.isArray(task.tags) ? task.tags : [],
+      canvasPosition: task.position,
       recurrenceRule: task.recurrence_rule,
       recurrenceParentId: task.recurrence_parent_id,
       recurrenceCount: task.recurrence_count,
       isCompletionRecord: task.is_completion_record,
       instances: normalizeTaskInstances(task.instances),
+      isInInbox: task.is_in_inbox === true,
       workspaceId: task.workspace_id,
+      createdAt: task.created_at,
       updatedAt: task.updated_at,
+      completedAt: task.completed_at,
     },
   })
 }

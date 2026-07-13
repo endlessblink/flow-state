@@ -31,6 +31,15 @@ describe('production DB lifecycle watchdog contract', () => {
     expect(watchdog).toContain('status-audit-state-mismatches-24h')
   })
 
+  it('detects broken recurring-completion and merge receipts without logging private task data', () => {
+    expect(watchdog).toContain("operation='done_for_now'")
+    expect(watchdog).toContain('done-for-now-broken-receipts=')
+    expect(watchdog).toContain("operation='merge_tasks'")
+    expect(watchdog).toContain('task-merge-broken-receipts=')
+    expect(watchdog).toContain('t.id::text=')
+    expect(watchdog).not.toContain('receipt->>\'title\'')
+  })
+
   it('ships a rollback-only database smoke for the full lifecycle sequence', () => {
     expect(databaseSmoke).toContain("ARRAY['CREATED','STATUS_CHANGED','SOFT_DELETED','RESTORED','HARD_DELETED']")
     expect(databaseSmoke).toContain('gen_random_uuid() AS tid')

@@ -202,12 +202,12 @@ DECLARE
   v_existing_receipt public.flowstate_action_receipts%ROWTYPE;
   v_payload_hash text;
   v_preview_version text;
-  v_parent_id text;
+  v_parent_id public.tasks.id%TYPE;
   v_current_due date;
   v_next_due date;
   v_next_due_timestamp timestamptz;
   v_next_count integer;
-  v_completion_id text := gen_random_uuid()::text;
+  v_completion_id public.tasks.id%TYPE := gen_random_uuid();
   v_next_instance_id text := gen_random_uuid()::text;
   v_current_instance jsonb;
   v_completion_instances jsonb := '[]'::jsonb;
@@ -283,11 +283,11 @@ BEGIN
   IF p_preview THEN
     SELECT * INTO v_task
     FROM public.tasks
-    WHERE id = p_task_id AND is_deleted = false;
+    WHERE id::text = p_task_id AND is_deleted = false;
   ELSE
     SELECT * INTO v_task
     FROM public.tasks
-    WHERE id = p_task_id AND is_deleted = false
+    WHERE id::text = p_task_id AND is_deleted = false
     FOR UPDATE;
   END IF;
 

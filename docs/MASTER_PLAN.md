@@ -4263,6 +4263,169 @@ Hermes connector and 24-hour approval-form input; migration/docs/build/release.
 **Safety**: the two named real tasks from the report are never mutated. Tests
 use rollback-only disposable fixtures and do not print auth/session secrets.
 
+**Completed foundational slices (2026-07-14)**:
+- Exact user-scoped task read and search are exposed through the signed-in
+  Local API and dedicated Hermes tools; reads remain non-mutating and preserve
+  personal/shared-workspace boundaries.
+- Recurring `Done for now` uses one atomic, previewable, idempotent transaction
+  for completion history, recurrence advancement, and authoritative read-back.
+- Duplicate merge uses one conservative, previewable, idempotent transaction;
+  incompatible recurrence, dependency, assistant-memory, active-timer, and
+  pending-notification cases are rejected instead of guessed.
+
+These foundations do not complete FEATURE-1943: packaged UI reconciliation,
+release/deploy proof, and the broader capability slices below remain gated by
+their own tests and real-surface verification.
+
+### FEATURE-1944: Hermes-safe work-block move, resize, and remove lifecycle (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (2026-07-14) | **Depends on**: FEATURE-1943
+
+**Outcome**: expose one shared transactional lifecycle for moving, resizing,
+and removing a specific task instance/work block. The UI and Local API must use
+the same command rather than independently editing embedded instance arrays.
+
+**Acceptance**:
+- Preview identifies the exact task/instance, before/after interval, due-date or
+  inbox effects, and non-blocking overlap warnings without mutation.
+- Apply is atomic, idempotent, scoped to the signed-in user/workspace, and
+  rejects stale preview versions, generated recurrence instances, missing
+  instances, and conflicting request-ID payloads.
+- Move/resize/remove preserves unrelated instances; last-block removal follows
+  existing Inbox/Canvas rules and never silently deletes the task.
+
+**Test boundary**: rollback-only database tests cover preview, apply,
+idempotency, conflict, authorization, and forced rollback; Local API contract
+tests and renderer store tests exercise the same command path.
+
+**UI verification boundary**: Calendar day/week, Today, Search, Inbox, and
+Canvas update without restart; moving/resizing/removing one block is visible in
+the running signed-in Electron app and does not alter sibling blocks.
+
+### FEATURE-1945: Hermes-safe recurrence chain read and lifecycle editing (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (2026-07-14) | **Depends on**: FEATURE-1943
+
+**Outcome**: expose recurrence definition, occurrence chain, and completion
+history reads plus preview/apply commands to edit cadence, pause, resume, or end
+a series without rewriting historical occurrences.
+
+**Acceptance**:
+- Exact reads distinguish the living recurring definition, completed history,
+  current occurrence, and calculated next occurrence.
+- Cadence edits, pause/resume, and end-series operations are atomic,
+  idempotent, preview-version guarded, timezone-safe, and reject incompatible
+  dates or ambiguous current occurrences.
+- Editing future recurrence never erases completion history or duplicates the
+  next occurrence; explicit next-date overrides obey the recurrence model.
+
+**Test boundary**: planner/domain and rollback-only database tests cover finite
+and infinite rules, timezone boundaries, pause/resume/end, retries, stale
+previews, conflicts, and transaction failure; connector tests prove preview is
+the default and apply requires approval.
+
+**UI verification boundary**: Search remains discoverable, overdue views drop
+closed occurrences, and Today/Inbox/Calendar/Canvas show only the appropriate
+current or future occurrence without restart.
+
+### FEATURE-1946: Hermes-safe project and group reads and assignment (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (2026-07-14) | **Depends on**: FEATURE-1943
+
+**Outcome**: add exact/list reads for accessible projects and task groups plus
+preview/apply assignment and removal commands that preserve workspace scope and
+existing project/group invariants.
+
+**Acceptance**:
+- Reads return stable IDs and user-visible names only for the authenticated
+  personal or active shared workspace.
+- Assignment previews show source/destination and downstream visibility effects;
+  apply is idempotent and rejects inaccessible, deleted, or cross-workspace
+  destinations and stale approvals.
+- Project assignment and group membership remain distinct operations; no title
+  similarity or null project is treated as identity evidence.
+
+**Test boundary**: API/domain tests cover personal/shared membership, missing or
+unauthorized destinations, retries, conflicts, and rollback; Hermes schemas
+require exact IDs and approval for writes.
+
+**UI verification boundary**: Project views, group lanes, Search, Inbox, and
+Canvas resolve the same assignment immediately in the signed-in running app.
+
+### FEATURE-1947: Hermes-safe timer start, pause, resume, and stop (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (2026-07-14) | **Depends on**: FEATURE-1943, BUG-1868, BUG-1898
+
+**Outcome**: expose the existing timer state machine through authenticated
+preview/apply commands while preserving single-session leadership, offline stop
+tombstones, elapsed time, and Electron/KDE synchronization.
+
+**Acceptance**:
+- Exact current-timer read includes stable session/task state without exposing
+  credentials; start/pause/resume/stop previews describe the precise transition.
+- Apply is idempotent, leadership-aware, and rejects stale session IDs,
+  conflicting active sessions, unauthorized tasks, and reused request IDs with
+  different payloads.
+- Agent actions cannot create two active sessions, resurrect a stopped timer,
+  or bypass reconnect-grace/offline correction rules.
+
+**Test boundary**: timer state-machine, Local API, leadership, retry, offline,
+and rollback tests cover Electron and sidecar boundaries; watchdog contracts
+detect contradictory active sessions without logging private task content.
+
+**UI verification boundary**: app header, task controls, Calendar, Canvas, and
+KDE widget converge on the same timer state without restart or duplicate timer.
+
+### FEATURE-1948: Hermes-safe Canvas read and placement operations (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (2026-07-14) | **Depends on**: FEATURE-1944, FEATURE-1946, BUG-1899
+
+**Outcome**: expose bounded Canvas reads and preview/apply commands to move a
+task, group/ungroup selected tasks, and remove placement without deleting the
+underlying task or bypassing Canvas write ordering.
+
+**Acceptance**:
+- Reads return bounded user-scoped placement/group state with stable IDs and a
+  revision suitable for preview conflict detection.
+- Apply uses exact task/group IDs, preserves locked/group geometry invariants,
+  is idempotent, and rejects stale revisions or cross-workspace selections.
+- Removing Canvas placement leaves the task discoverable; grouping never
+  merges task identity or work-block history.
+
+**Test boundary**: domain/store tests cover geometry, group membership, locked
+groups, stale revisions, retries, undo, and rollback; Local API and Hermes tests
+prove bounded reads and approval-gated writes.
+
+**UI verification boundary**: the running Canvas reflects move/group/ungroup/
+remove immediately, while Search, Today, Inbox, and Calendar retain consistent
+task identity and work-block state.
+
+### FEATURE-1949: Complete bounded Hermes task/context capability surface (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (2026-07-14) | **Depends on**: FEATURE-1944, FEATURE-1945, FEATURE-1946, FEATURE-1947, FEATURE-1948
+
+**Outcome**: close the remaining safe capability-matrix gaps: cursor pagination,
+soft-delete restore, bounded batch actions, and exact context/audit reads using
+the same authenticated, preview-first, idempotent command substrate.
+
+**Acceptance**:
+- List/search endpoints use stable cursors and deterministic ordering with
+  explicit limits; no unbounded task, history, Canvas, or audit dumps.
+- Restore and batch writes preview every affected stable ID, reject mixed
+  workspace/authorization scope, apply atomically where product semantics
+  require it, and return per-item receipts where partial success is intended.
+- Context/audit reads expose user-visible facts and mutation receipts only;
+  secrets, auth state, hidden prompts, and unrelated users' content remain out
+  of scope.
+
+**Test boundary**: pagination stability, batch retry/conflict/rollback, restore,
+authorization, redaction, and connector approval tests run at the real shared
+data seam; the capability matrix maps every exposed tool to its domain command.
+
+**UI verification boundary**: restored and batched tasks reconcile in Search,
+Today, Inbox, project/group views, Calendar, and Canvas without restart; audit
+receipts match visible state and a packaged build smoke proves the running seam.
+
 ### ~~BUG-1942~~: Cross-runtime task writes can stay absent from Electron after missed realtime (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (v1.4.250 shipped and verified, 2026-07-13) | **Depends on**: TASK-1797
@@ -6667,6 +6830,12 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1941** | **P0** | ✅ **Failed permanent-delete/done persistence now rolls back visibly instead of returning as false success** (shipped v1.4.248, 2026-07-12) |
 | ~~**BUG-1942**~~ | **P0** | ✅ **PWA-created task and Hermes status changes now reconcile visibly in Electron; v1.4.250 shipped** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
+| **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
+| **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |
+| **FEATURE-1946** | **P1** | 📋 **Authenticated project/group reads and previewed exact-ID assignment** |
+| **FEATURE-1947** | **P0** | 📋 **Leadership-safe timer start/pause/resume/stop through the signed-in Local API** |
+| **FEATURE-1948** | **P1** | 📋 **Bounded Canvas read plus move/group/ungroup/remove-placement actions** |
+| **FEATURE-1949** | **P1** | 📋 **Cursor pagination, restore, bounded batch actions, and context/audit reads** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

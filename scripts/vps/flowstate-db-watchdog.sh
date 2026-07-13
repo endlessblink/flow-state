@@ -126,6 +126,47 @@ fi
 zombies=$(q "SELECT count(*) FROM timer_sessions WHERE user_id='$MAIN_USER_ID' AND is_active=true AND remaining_time=0 AND completed_at IS NULL AND updated_at > now()-interval '10 minutes' AND created_at < now()-interval '15 minutes'")
 [ "${zombies:-0}" != "0" ] && ANOMALIES+=("zombie-timer-sessions=$zombies (active, 0 remaining, still heart-beaten — BUG-1919 class)")
 
+# (d3) Approval-gated domain actions must leave durable receipts that still
+# agree with task truth. This catches partial or later-corrupted recurring
+# completion and merge results without emitting task titles or receipt bodies.
+if ! receipt_table=$(q_checked "SELECT COALESCE(to_regclass('public.flowstate_action_receipts')::text,'')"); then
+  ANOMALIES+=("action-receipt-query-failed=schema")
+elif [ -n "${receipt_table:-}" ]; then
+  if ! broken_done_for_now=$(q_checked "SELECT count(*)
+    FROM flowstate_action_receipts r
+    LEFT JOIN tasks completed ON completed.id::text=r.receipt#>>'{completedOccurrence,id}'
+      AND completed.user_id=r.user_id
+    LEFT JOIN tasks living ON living.id::text=r.receipt->>'taskId'
+      AND living.user_id=r.user_id
+    WHERE r.user_id='$MAIN_USER_ID'
+      AND r.operation='done_for_now'
+      AND r.created_at > now()-interval '24 hours'
+      AND (completed.id IS NULL OR completed.status<>'done'
+        OR completed.completed_at IS NULL OR completed.is_deleted=true
+        OR living.id IS NULL OR living.is_deleted=true OR living.status='done'
+        OR living.due_date::text IS DISTINCT FROM r.receipt#>>'{nextOccurrence,dueDate}')"); then
+    ANOMALIES+=("action-receipt-query-failed=done-for-now")
+  elif [ "${broken_done_for_now:-0}" != "0" ]; then
+    ANOMALIES+=("done-for-now-broken-receipts=$broken_done_for_now")
+  fi
+
+  if ! broken_merges=$(q_checked "SELECT count(*)
+    FROM flowstate_action_receipts r
+    LEFT JOIN tasks survivor ON survivor.id::text=r.receipt#>>'{survivor,id}'
+      AND survivor.user_id=r.user_id
+    LEFT JOIN tasks duplicate ON duplicate.id::text=r.receipt#>>'{duplicate,id}'
+      AND duplicate.user_id=r.user_id
+    WHERE r.user_id='$MAIN_USER_ID'
+      AND r.operation='merge_tasks'
+      AND r.created_at > now()-interval '24 hours'
+      AND (survivor.id IS NULL OR survivor.is_deleted=true
+        OR duplicate.id IS NULL OR duplicate.is_deleted=false OR duplicate.deleted_at IS NULL)"); then
+    ANOMALIES+=("action-receipt-query-failed=task-merge")
+  elif [ "${broken_merges:-0}" != "0" ]; then
+    ANOMALIES+=("task-merge-broken-receipts=$broken_merges")
+  fi
+fi
+
 # (e) Updater manifest health
 manifest_version=$(curl -sS --max-time 15 "$UPDATER_URL" | grep -m1 '^version:' | awk '{print $2}')
 [ -z "${manifest_version:-}" ] && ANOMALIES+=("updater-manifest-unreachable-or-unparseable")

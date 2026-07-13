@@ -41,43 +41,43 @@ INSERT INTO public.tasks (
   is_completion_record, is_deleted, instances, subtasks, is_in_inbox
 ) VALUES
   (
-    'dfn-recurring', 'd0f00000-0000-4000-8000-000000000001', null,
+    'd0f00000-0000-4000-8000-000000000201', 'd0f00000-0000-4000-8000-000000000001', null,
     'Disposable recurring fixture', 'planned', '2026-07-12 20:00:00+03',
     '20:00', 45,
     '{"pattern":"daily","interval":1,"endType":"never"}',
-    'dfn-recurring', 0, false, false,
-    '[{"id":"current-instance","taskId":"dfn-recurring","scheduledDate":"2026-07-12","scheduledTime":"20:00","duration":45,"status":"scheduled"}]',
+    'd0f00000-0000-4000-8000-000000000201', 0, false, false,
+    '[{"id":"current-instance","taskId":"d0f00000-0000-4000-8000-000000000201","scheduledDate":"2026-07-12","scheduledTime":"20:00","duration":45,"status":"scheduled"}]',
     '[{"id":"subtask-1","title":"Reset me","isCompleted":true}]', true
   ),
   (
-    'dfn-non-recurring', 'd0f00000-0000-4000-8000-000000000001', null,
+    'd0f00000-0000-4000-8000-000000000202', 'd0f00000-0000-4000-8000-000000000001', null,
     'Disposable non-recurring fixture', 'planned', '2026-07-12', null, 25,
     null, null, 0, false, false, '[]', '[]', true
   ),
   (
-    'dfn-cross-scope', 'd0f00000-0000-4000-8000-000000000002', null,
+    'd0f00000-0000-4000-8000-000000000203', 'd0f00000-0000-4000-8000-000000000002', null,
     'Disposable other-user fixture', 'planned', '2026-07-12', null, 25,
     '{"pattern":"daily","interval":1,"endType":"never"}',
-    'dfn-cross-scope', 0, false, false, '[]', '[]', true
+    'd0f00000-0000-4000-8000-000000000203', 0, false, false, '[]', '[]', true
   ),
   (
-    'dfn-rollback', 'd0f00000-0000-4000-8000-000000000001', null,
+    'd0f00000-0000-4000-8000-000000000206', 'd0f00000-0000-4000-8000-000000000001', null,
     'Disposable rollback fixture', 'planned', '2026-07-12', null, 25,
     '{"pattern":"daily","interval":1,"endType":"never"}',
-    'dfn-rollback', 0, false, false, '[]', '[]', true
+    'd0f00000-0000-4000-8000-000000000206', 0, false, false, '[]', '[]', true
   ),
   (
-    'dfn-shared', 'd0f00000-0000-4000-8000-000000000001',
+    'd0f00000-0000-4000-8000-000000000204', 'd0f00000-0000-4000-8000-000000000001',
     'd0f00000-0000-4000-8000-000000000101',
     'Disposable workspace fixture', 'planned', '2026-07-12', null, 25,
     '{"pattern":"daily","interval":1,"endType":"never"}',
-    'dfn-shared', 0, false, false, '[]', '[]', true
+    'd0f00000-0000-4000-8000-000000000204', 0, false, false, '[]', '[]', true
   ),
   (
-    'dfn-bounded', 'd0f00000-0000-4000-8000-000000000001', null,
+    'd0f00000-0000-4000-8000-000000000205', 'd0f00000-0000-4000-8000-000000000001', null,
     'Disposable bounded recurrence fixture', 'planned', '2026-07-12', null, 25,
     '{"pattern":"daily","interval":1,"endType":"on_date","endDate":"2026-07-16"}',
-    'dfn-bounded', 0, false, false, '[]', '[]', true
+    'd0f00000-0000-4000-8000-000000000205', 0, false, false, '[]', '[]', true
   );
 
 SELECT set_config('request.jwt.claim.sub', 'd0f00000-0000-4000-8000-000000000001', true);
@@ -95,7 +95,7 @@ CREATE TEMP TABLE done_for_now_results (
 -- Preview is exact and performs no writes.
 INSERT INTO done_for_now_results (key, payload)
 SELECT 'preview', public.flowstate_done_for_now(
-  p_task_id => 'dfn-recurring',
+  p_task_id => 'd0f00000-0000-4000-8000-000000000201',
   p_preview => true,
   p_next_due_date => '2026-07-16'
 );
@@ -118,9 +118,9 @@ BEGIN
     RAISE EXCEPTION 'FAIL: preview was not exact: %', v_preview;
   END IF;
 
-  SELECT * INTO v_task FROM public.tasks WHERE id = 'dfn-recurring';
+  SELECT * INTO v_task FROM public.tasks WHERE id = 'd0f00000-0000-4000-8000-000000000201';
   SELECT count(*) INTO v_history_count FROM public.tasks
-    WHERE recurrence_parent_id = 'dfn-recurring' AND is_completion_record = true;
+    WHERE recurrence_parent_id = 'd0f00000-0000-4000-8000-000000000201' AND is_completion_record = true;
   SELECT count(*) INTO v_receipt_count FROM public.flowstate_action_receipts
     WHERE operation = 'done_for_now';
 
@@ -136,7 +136,7 @@ END $$;
 -- Apply the approved preview.
 INSERT INTO done_for_now_results (key, payload)
 SELECT 'apply', public.flowstate_done_for_now(
-  p_task_id => 'dfn-recurring',
+  p_task_id => 'd0f00000-0000-4000-8000-000000000201',
   p_preview => false,
   p_next_due_date => '2026-07-16',
   p_request_id => 'request-stable-1',
@@ -153,7 +153,7 @@ BEGIN
   IF v_apply #>> '{ok}' <> 'true'
      OR v_apply #>> '{preview}' <> 'false'
      OR v_apply->>'requestId' <> 'request-stable-1'
-     OR v_apply->>'taskId' <> 'dfn-recurring'
+     OR v_apply->>'taskId' <> 'd0f00000-0000-4000-8000-000000000201'
      OR v_apply #>> '{currentOccurrence,dueDate}' <> '2026-07-12'
      OR nullif(v_apply #>> '{completedOccurrence,id}', '') IS NULL
      OR v_apply #>> '{completedOccurrence,status}' <> 'done'
@@ -164,16 +164,16 @@ BEGIN
     RAISE EXCEPTION 'FAIL: apply receipt was incomplete: %', v_apply;
   END IF;
 
-  SELECT * INTO STRICT v_task FROM public.tasks WHERE id = 'dfn-recurring';
+  SELECT * INTO STRICT v_task FROM public.tasks WHERE id = 'd0f00000-0000-4000-8000-000000000201';
   SELECT * INTO STRICT v_history FROM public.tasks
-    WHERE id = v_apply #>> '{completedOccurrence,id}';
+    WHERE id::text = v_apply #>> '{completedOccurrence,id}';
   v_next_instance := v_task.instances->0;
 
   IF v_history.status <> 'done'
      OR v_history.completed_at IS NULL
      OR v_history.due_date::date <> DATE '2026-07-12'
      OR v_history.is_completion_record IS DISTINCT FROM true
-     OR v_history.recurrence_parent_id <> 'dfn-recurring'
+     OR v_history.recurrence_parent_id <> 'd0f00000-0000-4000-8000-000000000201'
      OR v_history.recurrence_count <> 0
      OR v_history.recurrence_rule IS NOT NULL
      OR v_history.instances #>> '{0,status}' <> 'completed' THEN
@@ -199,7 +199,7 @@ END $$;
 -- Identical retry returns the original receipt and creates no duplicates.
 INSERT INTO done_for_now_results (key, payload)
 SELECT 'retry', public.flowstate_done_for_now(
-  p_task_id => 'dfn-recurring',
+  p_task_id => 'd0f00000-0000-4000-8000-000000000201',
   p_preview => false,
   p_next_due_date => '2026-07-16',
   p_request_id => 'request-stable-1',
@@ -217,8 +217,8 @@ BEGIN
   END IF;
 
   SELECT count(*) INTO v_count FROM public.tasks
-    WHERE recurrence_parent_id = 'dfn-recurring' AND is_completion_record = true;
-  IF v_count <> 1 OR (SELECT recurrence_count FROM public.tasks WHERE id = 'dfn-recurring') <> 1 THEN
+    WHERE recurrence_parent_id = 'd0f00000-0000-4000-8000-000000000201' AND is_completion_record = true;
+  IF v_count <> 1 OR (SELECT recurrence_count FROM public.tasks WHERE id = 'd0f00000-0000-4000-8000-000000000201') <> 1 THEN
     RAISE EXCEPTION 'FAIL: retry duplicated history or advanced recurrence twice';
   END IF;
 END $$;
@@ -226,7 +226,7 @@ END $$;
 -- Reusing the request id with another payload is a typed conflict.
 INSERT INTO done_for_now_results (key, payload)
 SELECT 'conflict', public.flowstate_done_for_now(
-  p_task_id => 'dfn-recurring',
+  p_task_id => 'd0f00000-0000-4000-8000-000000000201',
   p_preview => false,
   p_next_due_date => '2026-07-17',
   p_request_id => 'request-stable-1',
@@ -235,25 +235,25 @@ SELECT 'conflict', public.flowstate_done_for_now(
 
 -- Typed validation and scope failures do not mutate rows.
 INSERT INTO done_for_now_results (key, payload) VALUES
-  ('non_recurring', public.flowstate_done_for_now('dfn-non-recurring', true)),
-  ('missing', public.flowstate_done_for_now('dfn-missing', true)),
-  ('cross_scope', public.flowstate_done_for_now('dfn-cross-scope', true)),
-  ('invalid_date', public.flowstate_done_for_now('dfn-rollback', true, '2026-07-12')),
+  ('non_recurring', public.flowstate_done_for_now('d0f00000-0000-4000-8000-000000000202', true)),
+  ('missing', public.flowstate_done_for_now('d0f00000-0000-4000-8000-000000000299', true)),
+  ('cross_scope', public.flowstate_done_for_now('d0f00000-0000-4000-8000-000000000203', true)),
+  ('invalid_date', public.flowstate_done_for_now('d0f00000-0000-4000-8000-000000000206', true, '2026-07-12')),
   ('personal_wrong_workspace', public.flowstate_done_for_now(
-    p_task_id => 'dfn-rollback', p_preview => true,
+    p_task_id => 'd0f00000-0000-4000-8000-000000000206', p_preview => true,
     p_workspace_id => 'd0f00000-0000-4000-8000-000000000101'
   )),
-  ('shared_missing_workspace', public.flowstate_done_for_now('dfn-shared', true)),
+  ('shared_missing_workspace', public.flowstate_done_for_now('d0f00000-0000-4000-8000-000000000204', true)),
   ('shared_wrong_workspace', public.flowstate_done_for_now(
-    p_task_id => 'dfn-shared', p_preview => true,
+    p_task_id => 'd0f00000-0000-4000-8000-000000000204', p_preview => true,
     p_workspace_id => 'd0f00000-0000-4000-8000-000000000102'
   )),
   ('shared_exact_workspace', public.flowstate_done_for_now(
-    p_task_id => 'dfn-shared', p_preview => true,
+    p_task_id => 'd0f00000-0000-4000-8000-000000000204', p_preview => true,
     p_workspace_id => 'd0f00000-0000-4000-8000-000000000101'
   )),
   ('override_beyond_end', public.flowstate_done_for_now(
-    p_task_id => 'dfn-bounded', p_preview => true,
+    p_task_id => 'd0f00000-0000-4000-8000-000000000205', p_preview => true,
     p_next_due_date => '2026-07-17'
   ));
 
@@ -307,7 +307,7 @@ END $$;
 CREATE FUNCTION public.test_force_done_for_now_update_failure()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.id = 'dfn-rollback' THEN
+  IF NEW.id = 'd0f00000-0000-4000-8000-000000000206' THEN
     RAISE EXCEPTION 'injected next-occurrence write failure';
   END IF;
   RETURN NEW;
@@ -322,10 +322,10 @@ DO $$
 DECLARE
   v_preview jsonb;
 BEGIN
-  v_preview := public.flowstate_done_for_now('dfn-rollback', true);
+  v_preview := public.flowstate_done_for_now('d0f00000-0000-4000-8000-000000000206', true);
   BEGIN
     PERFORM public.flowstate_done_for_now(
-      'dfn-rollback', false, null, 'request-rollback-1', v_preview->>'previewVersion'
+      'd0f00000-0000-4000-8000-000000000206', false, null, 'request-rollback-1', v_preview->>'previewVersion'
     );
     RAISE EXCEPTION 'FAIL: injected transaction failure did not propagate';
   EXCEPTION
@@ -337,10 +337,10 @@ BEGIN
 
   IF EXISTS (
        SELECT 1 FROM public.tasks
-       WHERE recurrence_parent_id = 'dfn-rollback' AND is_completion_record = true
+       WHERE recurrence_parent_id = 'd0f00000-0000-4000-8000-000000000206' AND is_completion_record = true
      )
-     OR (SELECT recurrence_count FROM public.tasks WHERE id = 'dfn-rollback') <> 0
-     OR (SELECT due_date::date FROM public.tasks WHERE id = 'dfn-rollback') <> DATE '2026-07-12'
+     OR (SELECT recurrence_count FROM public.tasks WHERE id = 'd0f00000-0000-4000-8000-000000000206') <> 0
+     OR (SELECT due_date::date FROM public.tasks WHERE id = 'd0f00000-0000-4000-8000-000000000206') <> DATE '2026-07-12'
      OR EXISTS (
        SELECT 1 FROM public.flowstate_action_receipts WHERE request_id = 'request-rollback-1'
      ) THEN

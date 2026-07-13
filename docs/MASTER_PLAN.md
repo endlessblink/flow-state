@@ -2167,6 +2167,54 @@ _Original plan below._
 
 ## Active Tasks
 
+### TASK-1943: Reliable Hermes–FlowState personal-assistant program (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1797, BUG-1942 | **Related**: FEATURE-1943
+
+**Goal**: Deliver one reliable personal-assistant lane in which VPS Supabase is the canonical signed-user task authority; Hermes dynamically clarifies and decomposes vague work; FlowState mutations are previewed, applied exactly once, and read back; monitor events do not self-interrupt; and Notion is safely writable according to explicit user needs.
+
+**Program scope**:
+- Safe branch recovery and complete production-writer inventory.
+- Canonical operation, revision, receipt, replay, and change-sequence contract.
+- Migration of task, subtask, instance, recurrence, timer, focus, project, group, lane, settings, and context writers.
+- Compact interactive Hermes decomposition with directly editable ordered steps.
+- Durable monitor assessment, suppression, retry, dead-letter, and attention lifecycle.
+- Writable Notion task creation/property updates plus explicit FlowState activation and stable provenance.
+- Regression, fault-injection, watchdog, packaged Electron, PWA, Hermes, and approval-gated production verification.
+
+**Subtasks**:
+- [ ] **TASK-1944 — Canonical operation, revision, and change-sequence foundation**: recover onto a fresh branch, classify existing work, inventory every production writer, add the signed-user operation ledger and canonical revisions, preserve legacy writers through compatibility triggers, return replayable read-back receipts, and provide durable sequence catch-up.
+
+**Acceptance**:
+- No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
+- One operation ID replays the original durable receipt after timeout, retry, process restart, or duplicate submission.
+- Hermes exposes a compact editable breakdown and asks only the first unresolved consequential question.
+- Notion reads and approved writes are user-scoped, previewable, idempotent, and verified by read-back.
+- Monitor-originated work is structured, coalesced, retryable, causally suppressible, and marked seen only after durable handling.
+- All synchronized entity cohorts and packaged production surfaces pass their program gates before this parent closes.
+
+**Safety**: Repository-local tests and disposable fixtures are autonomous. Production mutations, deployments, credentials, destructive cleanup, and scope expansion remain exact approval boundaries.
+
+### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1943, TASK-1797, BUG-1942 | **Related**: FEATURE-1943
+
+**Scope**:
+- Recover compatible work onto a fresh branch from current `origin/master`; never merge the divergent stale branch or discard the dirty worktree.
+- Produce an exhaustive writer matrix for web, PWA/offline queue, Electron, Local API, recurrence, subtasks, instances, timers, Canvas, and Hermes.
+- Add an RLS-scoped durable operation ledger keyed by user and operation ID.
+- Add independent canonical row revisions, tombstones, and a monotonic change sequence.
+- Install compatibility triggers before writer migration so legacy writes receive revisions and change events.
+- Add preview/apply/read-back contracts whose committed response is a durable replayable receipt.
+- Prove duplicate replay, dropped responses, restart recovery, stale-base conflicts, cross-user denial, and missed-Realtime catch-up.
+
+**Acceptance**:
+- A committed response always names the canonical revision, sequence, timestamp, read-back projection, and read-back hash.
+- A repeated operation ID with the same request returns the original receipt; a changed payload returns a typed conflict.
+- Legacy writers remain functional while being marked as legacy and emitting canonical revisions/change events.
+- A client with Realtime disabled converges through its durable sequence cursor.
+- No production write or deployment is used for this slice without explicit approval.
+
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.246 deployed and locally installed) | **Opened**: 2026-07-10
@@ -2659,6 +2707,9 @@ Binds 127.0.0.1 only, rejects non-loopback Host (403), bearer required in token 
 **Recurring completion follow-up**: **FEATURE-1943** adds an authenticated,
 preview-first, idempotent `Done for now` action shared by the renderer and Local
 Task API, with exact read-back and authoritative renderer reconciliation.
+
+**Personal-assistant reliability follow-up**:
+- [ ] **TASK-1943 — reliable Hermes–FlowState personal-assistant program**, beginning with dependency-linked **TASK-1944** for the canonical operation, revision, receipt, replay, and change-sequence boundary.
 
 ---
 
@@ -6666,6 +6717,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1940**~~ | **P0** | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.247 shipped) |
 | **BUG-1941** | **P0** | ✅ **Failed permanent-delete/done persistence now rolls back visibly instead of returning as false success** (shipped v1.4.248, 2026-07-12) |
 | ~~**BUG-1942**~~ | **P0** | ✅ **PWA-created task and Hermes status changes now reconcile visibly in Electron; v1.4.250 shipped** |
+| **TASK-1943** | **P0** | 🔄 **Reliable Hermes–FlowState personal-assistant program: canonical sync, dynamic decomposition, monitor reliability, writable Notion, watchdogs, and packaged proof** |
+| **TASK-1944** | **P0** | 🔄 **Canonical operation/revision/change-sequence foundation with safe branch recovery, signed-user receipts, replay, compatibility triggers, and deterministic catch-up** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |

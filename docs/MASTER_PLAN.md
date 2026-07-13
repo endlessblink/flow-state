@@ -2188,6 +2188,7 @@ _Original plan below._
 - [ ] **TASK-1947 — Deterministic canonical change-sequence catch-up**: persist a signed-user personal/workspace cursor, consume bounded ordered change-log pages as invalidation hints, reconcile exact task IDs authoritatively, and advance only after projection persistence succeeds.
 - [x] **TASK-1946 — Canonical web/PWA offline scalar task-patch adoption**: after TASK-1947, preserve stable operation identity through the Dexie queue for eligible scalar task edits, execute preview/apply with the signed-user TASK-1944 command, persist receipts before completion, and quarantine conflicts without weakening status, recurrence, geometry, instance, or subtask invariants. Completed 2026-07-13.
 - [x] **TASK-1948 — Canonical Notion task activation**: add signed-user preview/apply activation from stable Notion provenance through the TASK-1944 operation, preview, revision, and change-log authority; create at most one active FlowState task per user/source/page; atomically add an exact approved work block even when the task already exists; and return a replayable canonical receipt verified by the Local API. Completed 2026-07-14.
+- [x] ~~**TASK-1949 — Canonical assistant reliability harness and watchdog**: execute the combined canonical task and Notion activation contracts against a disposable database, inject same-operation and conflicting-operation races, keep the focused cohort in the fixed daily regression lane, and alert on redacted canonical/Notion integrity failures without touching production data.~~ Completed 2026-07-14.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2338,6 +2339,50 @@ _Original plan below._
 - An optional approved work block is appended exactly once even when the Notion task was activated by an earlier operation.
 - Authenticated clients retain no direct write access to canonical operation, preview, or change-log tables; all mutations pass through the typed RPC.
 - Disposable database proof covers cross-user denial, replay, altered operation conflict, duplicate provenance, existing-task scheduling, and rollback; production remains unchanged.
+
+### ~~TASK-1949~~: Canonical assistant reliability harness and watchdog (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: TASK-1943, TASK-1944, TASK-1945, TASK-1947, TASK-1948
+
+**Scope**:
+- Create an executable disposable database harness that clones schema only, applies the ordered TASK-1944 and TASK-1948 migrations, runs both rollback-only SQL suites, and always drops its temporary database.
+- Add a multi-session Notion activation race/fault probe covering identical operation replay, changed-payload conflict, exact work-block duplicate safety, and transaction rollback without orphaned tasks, operations, changes, or consumed previews.
+- Expose the harness as a package command and keep the canonical contract, Local API adapter, convergence, and database proof in the fixed daily regression lane.
+- Extend the production database watchdog with read-only, count-only checks for canonical schema/RPC/trigger/index readiness, stale applying operations, incomplete committed receipts, task/change revision divergence, malformed Notion provenance, and committed Notion activations missing their task or change evidence.
+- Emit explicit query-failure anomaly types without task titles, Notion page contents, credentials, or other private payloads.
+
+**Acceptance**:
+- One command runs the complete repository-local canonical assistant database proof against a unique disposable database and removes it after success or failure.
+- Concurrent identical Notion submissions produce one committed operation, one active task, one exact block, and one canonical change; altered reuse fails closed without extra state.
+- Daily regression cannot pass by exercising only source-shape tests while the executable SQL contract is broken.
+- The VPS watchdog reports missing/broken canonical authority and integrity drift using counts and stable anomaly labels, but never treats valid global sequence gaps as corruption.
+- Production data, deployment, and credentials remain untouched in this slice.
+
+**Implementation**: Added one package-level disposable database command that clones schema into a unique temporary database, restores only the signed-user task grants needed by the RLS contract, applies both canonical migrations in order, executes the task and Notion rollback suites, verifies the exact RPC/index authority used by the watchdog, and drops the database on every exit. The multi-session Notion probe proves one commit plus one replay for a duplicated operation, typed conflict for altered reuse, serialized different-operation activation with one exact work block, and complete rollback after an injected task-trigger failure. The fixed daily hunt now runs that executable database proof plus 90 canonical contract, Local API, and catch-up tests. The VPS watchdog now checks canonical tables/RPCs, enabled triggers, a valid/ready/unique provenance index, stale applying rows, incomplete committed receipts, revision drift, malformed Notion provenance, and missing activation evidence through read-only count queries with explicit failure labels.
+
+**Verification**: RED first failed 10 focused tests because the harness, daily check, and watchdog coverage did not exist. The first executable run then correctly exposed an unrealistic privilege-stripped schema clone; the final harness preserves the intended signed-user task grants explicitly and passes the canonical task SQL suite, Notion SQL suite, executable watchdog authority probe, same/different-operation races, conflict, and injected rollback. The exact scheduled check passed 1/1 and its focused Vitest cohort passed 90/90. Final combined repository proof passed 113/113 tests, TypeScript type-check, source lint, all three shell syntax checks, diff whitespace validation, and a read-back confirming no disposable database remained.
+
+**Failure-class matrix**:
+
+| Failure class | Checked | Evidence | Covered by this fix |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Duplicate, altered, concurrent, and trigger-failure activation submissions are executable fixtures | Yes |
+| Data shape / persisted row shape | Yes | Rollback suites and watchdog assertions cover operations, previews, tasks, work blocks, changes, revisions, and provenance | Yes |
+| Renderer store/state | N/A | This slice verifies the canonical database and Local API contract, not renderer projection | No |
+| Electron main/preload bridge | N/A | No Electron bridge behavior changed | No |
+| Localhost sidecar endpoint | Yes | Fixed daily cohort includes the canonical task and Notion activation Local API adapters | Yes |
+| KDE polling/control path | N/A | No timer or KDE behavior changed | No |
+| Supabase persistence/realtime | Partial | Disposable PostgreSQL proves atomic persistence and revision/change evidence; live Realtime delivery is not exercised | Persistence only |
+| Updater/runtime version | N/A | No package or production deployment occurred | No |
+| Stale live process/cache state | N/A | Disposable database isolation intentionally excludes live process and cache state | No |
+
+**Exact failure mode fixed**: the canonical assistant and Notion activation contracts could regress across SQL ordering, concurrent submissions, rollback, or watchdog coverage while source-shape unit tests still passed; the fixed daily lane now executes those joined database failure classes and the production watchdog can report redacted integrity drift.
+
+**Explicitly not covered**: production deployment, real-user mutations, renderer cache convergence, Realtime transport loss, packaged Electron behavior, and the separate renderer-to-sidecar authentication recovery lane.
+
+**Regression added for reported repro**: executable same-operation replay, altered-operation conflict, serialized provenance races, injected trigger rollback, both canonical SQL suites, fixed daily scheduling, and read-only watchdog contract tests.
+
+**Live boundary proof**: N/A for this repository-local slice; production data and deployment were explicitly excluded, and the disposable database was read back as removed after verification.
 
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
@@ -6847,6 +6892,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1947** | **P0** | 🔄 **Deterministic canonical change-sequence catch-up with scoped durable cursors, ordered invalidation pages, and persistence-gated advancement** |
 | **TASK-1946** | **P0** | ✅ **Canonical web/PWA offline scalar task-patch adoption with durable operation identity, receipts, restart-safe replay, and conflict quarantine** |
 | **TASK-1948** | **P0** | ✅ **Canonical Notion task activation with stable provenance, exact optional work blocks, replayable canonical receipts, and Local API verification** |
+| ~~**TASK-1949**~~ | **P0** | ✅ **Canonical assistant disposable DB harness, race/fault injection, fixed daily regression coverage, and redacted VPS integrity watchdog** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |

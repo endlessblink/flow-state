@@ -87,6 +87,7 @@
     "add_project": "הוסף פרויקט",
     "all_projects": "כל הפרויקטים",
     "sign_in": "התחבר",
+    "restoring_account": "משחזר את החשבון…",
     "selected_count": "{count} נבחרו",
     "delete_projects_title": "למחוק {count} פרויקט? | למחוק {count} פרויקטים?",
     "delete_projects_message": "משימות בפרויקט זה יועברו לתיבת הדואר. לא ניתן לבטל. | משימות בפרויקטים אלה יועברו לתיבת הדואר. לא ניתן לבטל."

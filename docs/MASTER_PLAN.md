@@ -2656,6 +2656,10 @@ Binds 127.0.0.1 only, rejects non-loopback Host (403), bearer required in token 
 
 **Completed integration follow-up**: ~~**BUG-1942**~~ — v1.4.249 directly reconciles Local API mutations; v1.4.250 adds authoritative visible-resume reconciliation for missed PWA realtime events. The named task was recovered visibly in Electron without restarting.
 
+**Completed startup-ownership follow-up**: ~~**BUG-1944**~~ — v1.4.252 separates persisted-account restoration from confirmed guest state, keeps remote operations gated until validation, and clears every account store on confirmed guest/sign-out.
+
+**Completed Canvas deletion follow-up**: ~~**BUG-1945**~~ — v1.4.252 makes image deletion local-first and authoritatively removes protected image nodes from the rendered Canvas, with delete/undo/redo browser proof.
+
 **Recurring completion follow-up**: **FEATURE-1943** adds an authenticated,
 preview-first, idempotent `Done for now` action shared by the renderer and Local
 Task API, with exact read-back and authoritative renderer reconciliation.
@@ -4213,6 +4217,70 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 ---
 
 ## Active Bugs (P0-P1)
+
+### ~~BUG-1944~~: Persisted Electron account renders as a guest while auth validation is pending (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (v1.4.252, 2026-07-14) | **Depends on**: TASK-1797, BUG-1942
+
+**User repro**: after using the PWA, Electron rendered the signed-in account's cached tasks while the footer showed **Sign In**. Hermes/Local API reads and writes succeeded against the account, but the desktop renderer could stay on guest-owned state, so `לשלוח כביסה` and status changes appeared missing.
+
+**Root cause**: Electron loaded account-owned task caches before Supabase's asynchronous `getSession()` completed, but the auth store exposed only `user`/`isAuthenticated`. During that gap the UI labelled the process a guest and task persistence was allowed to write or clear the guest namespace. A failed/slow validation therefore conflated three distinct states: restoring an account, confirmed signed in, and confirmed guest.
+
+**Fix**: startup now peeks the durable primary/backup session for local identity only, exposes an explicit restoring state, and keeps every remote read/write gate closed until auth-js validates the session. Account-owned cache remains visible during restoration; confirmed guest startup and explicit sign-out clear all account stores before loading guest-local data. The Local API bridge receives no session while restoration is pending.
+
+**Regression**: deterministic deferred/rejected `getSession()` tests prove persisted identity appears immediately without enabling remote sync, guest persistence is untouched during restoration, confirmed guests clear account caches, and sign-out clears tasks/projects/lanes/canvas/workspaces. The Electron sync guard passes with these boundaries.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Account cache visible with a false Sign In footer while session validation was delayed. | Yes |
+| Data shape / persisted row shape | Yes | Named task row remains valid and was already proven visible after authoritative account reload in BUG-1942. | No change needed |
+| Renderer store/state | Yes | Startup previously classified the unresolved state as guest and could load/retain the wrong ownership namespace. | Yes |
+| Electron main/preload bridge | Yes | Durable auth primary/backup reads use the existing lazy Electron storage adapter; no token is exposed to the UI. | Yes |
+| Localhost sidecar endpoint | Yes | Renderer sends a null Local API session until validation, then the validated account session. | Yes |
+| KDE polling/control path | N/A | Task ownership restoration does not use KDE timer polling. | N/A |
+| Supabase persistence/realtime | Yes | Auth-js remains authoritative; the durable candidate never enables network operations. | Yes |
+| Updater/runtime version | Yes | v1.4.252 Electron package and live updater are required closeout evidence. | Yes |
+| Stale live process/cache state | Yes | Confirmed guest/sign-out clears every account store before guest data loads. | Yes |
+
+**Exact failure mode fixed**: an unresolved persisted Electron session being presented and persisted as a confirmed guest during slow or failed startup validation.
+
+**Explicitly not covered**: invalid/revoked credentials still require reconnect or sign-in; continuously visible missed-realtime events remain covered by BUG-1942's Local API and visibility reconciliation paths.
+
+**Live boundary proof**: installed and launched the packaged v1.4.252 AppImage against the real Electron profile. The footer rendered the validated account online rather than a false guest. Search found `לשלוח כביסה`; its actual persisted state was `done`, explaining why the normal **Hide Done** filter concealed it. A Local Task API update restored the requested `todo` / `high` / `2026-07-13` / no-project state, exact API read-back matched, and the already-open Electron search reconciled immediately to `Todo`. Re-enabling **Hide Done** left the task as the single visible result. The public updater manifest serves v1.4.252 and both AppImage/deb range requests return HTTP 206.
+
+### ~~BUG-1945~~: Confirmed Canvas image deletion leaves the image rendered (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (v1.4.252, 2026-07-14)
+
+**User repro**: selecting the WhatsApp screenshot image on Canvas and approving Delete closed the dialog, but the image remained and could not be removed.
+
+**Root cause**: image deletion awaited remote cleanup before updating the canonical local image store. After making that local-first, the store-to-Canvas incremental projection still called Vue Flow's guarded `removeNodes()` for an image node deliberately marked `deletable:false`; Vue Flow silently refused the removal.
+
+**Fix**: confirmed deletion snapshots for undo, removes the canonical image locally, and persists that state synchronously. The backing blob is retained because the undo record contains only its URL; deleting it would make a valid later undo render a broken image. Store projection uses its authoritative replacement path only when a removed node is intentionally non-deletable; normal task/group removal retains the incremental anti-jitter path.
+
+**Regression**: the real Chromium Canvas flow now hard-asserts render, select, lightbox, confirmation, immediate disappearance, local persistence removal, undo restore, and redo removal. Unit coverage proves deletion does not destroy the blob URL that undo must restore.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Approval handler ran and canonical store emptied while the Vue Flow image node remained. | Yes |
+| Data shape / persisted row shape | Yes | Image record and id were valid in the dedicated local image store. | No change needed |
+| Renderer store/state | Yes | `deletable:false` caused incremental projection removal to be ignored. | Yes |
+| Electron main/preload bridge | N/A | Image deletion is renderer/local-store behavior. | N/A |
+| Localhost sidecar endpoint | N/A | Canvas images are not Local Task API entities. | N/A |
+| KDE polling/control path | N/A | Canvas images do not use KDE integration. | N/A |
+| Supabase persistence/realtime | Yes | Image metadata is local-only; the backing blob is retained so undo cannot restore a broken URL. | Yes |
+| Updater/runtime version | Yes | v1.4.252 Electron package and live updater are required closeout evidence. | Yes |
+| Stale live process/cache state | Yes | Delete/undo/redo assertions cover canonical storage and rendered projection together. | Yes |
+
+**Exact failure mode fixed**: approved deletion of a protected Canvas image node being ignored by Vue Flow's incremental removal guard.
+
+**Explicitly not covered**: generic cable/edge disconnection and software-compositing zoom glitches remain BUG-1912.
+
+**Release proof**: the real Chromium Canvas repro passed delete, persistence removal, undo restore, and redo removal; the packaged v1.4.252 Electron artifact passed validation and the public updater manifest/artifacts are live.
 
 ### FEATURE-1943: Hermes-safe recurring `Done for now` (🔄 IN PROGRESS)
 
@@ -6829,6 +6897,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1940**~~ | **P0** | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.247 shipped) |
 | **BUG-1941** | **P0** | ✅ **Failed permanent-delete/done persistence now rolls back visibly instead of returning as false success** (shipped v1.4.248, 2026-07-12) |
 | ~~**BUG-1942**~~ | **P0** | ✅ **PWA-created task and Hermes status changes now reconcile visibly in Electron; v1.4.250 shipped** |
+| ~~**BUG-1944**~~ | **P0** | ✅ **Persisted Electron identity stays account-owned while auth validation is pending; remote writes remain gated** |
+| ~~**BUG-1945**~~ | **P1** | ✅ **Confirmed Canvas image deletion now removes the canonical record and rendered node; undo/redo verified** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

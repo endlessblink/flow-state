@@ -43,7 +43,6 @@ describe('canvas image delete undo/redo three-cycle invariants', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     localStorage.clear()
-    mockDeleteCanvasImage.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -80,5 +79,24 @@ describe('canvas image delete undo/redo three-cycle invariants', () => {
 
       expect(imageStore.images).toHaveLength(0)
     }
+  })
+
+  it('removes only local metadata so undo never restores a URL whose blob was deleted', async () => {
+    const imageStore = useCanvasImagesStore()
+    const image: CanvasImage = {
+      id: 'image-local-first-delete',
+      imageUrl: 'https://example.test/slow-delete.png',
+      position: { x: 40, y: 80 },
+      createdAt: '2026-07-14T08:00:00.000Z'
+    }
+    imageStore.addCanvasImage(image)
+
+    const snapshot = imageStore.removeCanvasImage(image.id)
+
+    expect(snapshot).toEqual(image)
+    expect(imageStore.images).toHaveLength(0)
+    expect(JSON.parse(localStorage.getItem('flowstate:canvas-images') || '[]')).toEqual([])
+
+    expect(mockDeleteCanvasImage).not.toHaveBeenCalled()
   })
 })

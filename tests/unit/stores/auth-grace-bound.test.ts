@@ -27,6 +27,7 @@ const {
   mockFromTable,
   mockPersistAuthSessionBackup,
   mockRestoreAuthSessionFromBackup,
+  mockReadPersistedAuthSessionCandidate,
   mockClearAuthSessionBackup,
   mockSyncLocalApiSession,
   mockSyncLocalApiRendererAuthState,
@@ -52,6 +53,7 @@ const {
     })),
     mockPersistAuthSessionBackup: vi.fn(),
     mockRestoreAuthSessionFromBackup: vi.fn(),
+    mockReadPersistedAuthSessionCandidate: vi.fn(),
     mockClearAuthSessionBackup: vi.fn(),
     mockSyncLocalApiSession: vi.fn(),
     mockSyncLocalApiRendererAuthState: vi.fn(),
@@ -73,6 +75,8 @@ vi.mock('@/services/auth/supabase', () => ({
   consumePendingProviderTokens: vi.fn().mockReturnValue(null),
   persistAuthSessionBackup: mockPersistAuthSessionBackup,
   restoreAuthSessionFromBackup: mockRestoreAuthSessionFromBackup,
+  readPersistedAuthSessionCandidate: mockReadPersistedAuthSessionCandidate,
+  persistPrimaryAuthSession: vi.fn().mockResolvedValue(undefined),
   clearAuthSessionBackup: mockClearAuthSessionBackup,
 }))
 vi.mock('@/utils/guestModeStorage', () => ({ clearGuestData: vi.fn(), clearGuestSessionId: vi.fn() }))
@@ -146,6 +150,7 @@ describe('BUG-1898: bounded reconnect grace with explicit re-auth state', () => 
     vi.useFakeTimers()
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    mockReadPersistedAuthSessionCandidate.mockResolvedValue(null)
     // Default: refresh keeps failing with a permanently dead token
     mockRefreshSession.mockResolvedValue({
       data: { session: null },
@@ -170,7 +175,8 @@ describe('BUG-1898: bounded reconnect grace with explicit re-auth state', () => 
 
     await vi.advanceTimersByTimeAsync(GRACE_MAX_MS + 60_000)
 
-    expect(store.isAuthenticated, 'signed-in shell must survive — no hard sign-out').toBe(true)
+    expect(store.isAuthenticated, 'unvalidated shell must remain remote-write-blocked').toBe(false)
+    expect(store.isRestoringSession).toBe(true)
     expect(
       store.reauthRequired,
       'grace expired with refresh still dead but no re-auth state was surfaced — app stays silently write-blocked forever'

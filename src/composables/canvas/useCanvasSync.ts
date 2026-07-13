@@ -891,12 +891,21 @@ export function useCanvasSync() {
                 const removedSafe = removedNodes.every((removed: Record<string, any>) =>
                     !newNodes.some((node) => (node.parentNode ?? null) === removed.id)
                 )
+                // Vue Flow's removeNodes() intentionally ignores nodes marked
+                // deletable:false. Image nodes use that flag so keyboard deletion
+                // must go through our confirmation/undo flow, but a confirmed store
+                // deletion still has to remove the rendered projection. Fall back to
+                // the authoritative setNodes() path for that uncommon case.
+                const removedNodesAreIncrementallyDeletable = removedNodes.every(
+                    (removed: Record<string, any>) => removed.deletable !== false
+                )
 
                 if (
                     (addedNodes.length > 0 || removedNodes.length > 0) &&
                     survivorsTopologyStable &&
                     addedParentsResolvable &&
-                    removedSafe
+                    removedSafe &&
+                    removedNodesAreIncrementallyDeletable
                 ) {
                     // 1. Patch only the survivors whose data/geometry actually changed.
                     for (const node of survivingNodes) {

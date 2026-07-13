@@ -19,6 +19,18 @@ const isRealTaskTitle = (title: unknown): title is string =>
 const shouldPreserveRemoteTitle = (localTask: Task, remoteTask: Task): boolean =>
     !isRealTaskTitle(localTask.title) && isRealTaskTitle(remoteTask.title)
 
+type TaskStorageAuthState = {
+    user: { id?: string } | null
+    isAuthenticated: boolean
+    isRestoringSession?: boolean
+}
+
+export function taskStorageOwner(auth: TaskStorageAuthState): 'restoring' | 'guest' | 'account' {
+    if (auth.isRestoringSession && auth.user?.id) return 'restoring'
+    if (auth.isAuthenticated && auth.user?.id) return 'account'
+    return 'guest'
+}
+
 export function useTaskPersistence(
     // SAFETY: Named _rawTasks to indicate this is the raw array for load/save operations
     _rawTasks: Ref<Task[]>,
@@ -191,9 +203,10 @@ export function useTaskPersistence(
         // which caused duplicates when migrating on next sign-in
         const { useAuthStore } = await import('@/stores/auth')
         const authStore = useAuthStore()
-        if (!authStore.isAuthenticated) {
+        const storageOwner = taskStorageOwner(authStore)
+        if (storageOwner === 'guest') {
             saveTasksToLocalStorage()
-        } else {
+        } else if (storageOwner === 'account') {
             // BUG-339: Clear guest tasks if signed in (prevents stale data buildup)
             localStorage.removeItem(GUEST_TASKS_KEY)
         }

@@ -28,6 +28,11 @@ const {
   mockRestoreAuthSessionFromBackup,
   mockClearAuthSessionBackup,
   mockPersistPrimaryAuthSession,
+  mockReadPersistedAuthSessionCandidate,
+  mockClearProjectStore,
+  mockClearLaneStore,
+  mockClearCanvasImages,
+  mockClearWriteQueue,
   mockSyncLocalApiSession,
   mockSyncLocalApiRendererAuthState,
 } = vi.hoisted(() => {
@@ -59,6 +64,11 @@ const {
     mockRestoreAuthSessionFromBackup: vi.fn(),
     mockClearAuthSessionBackup: vi.fn(),
     mockPersistPrimaryAuthSession: vi.fn(),
+    mockReadPersistedAuthSessionCandidate: vi.fn(),
+    mockClearProjectStore: vi.fn(),
+    mockClearLaneStore: vi.fn(),
+    mockClearCanvasImages: vi.fn(),
+    mockClearWriteQueue: vi.fn(),
     mockSyncLocalApiSession: vi.fn(),
     mockSyncLocalApiRendererAuthState: vi.fn(),
   }
@@ -88,6 +98,7 @@ vi.mock('@/services/auth/supabase', () => ({
   restoreAuthSessionFromBackup: mockRestoreAuthSessionFromBackup,
   clearAuthSessionBackup: mockClearAuthSessionBackup,
   persistPrimaryAuthSession: mockPersistPrimaryAuthSession,
+  readPersistedAuthSessionCandidate: mockReadPersistedAuthSessionCandidate,
 }))
 
 vi.mock('@/utils/guestModeStorage', () => ({
@@ -151,11 +162,24 @@ vi.mock('@/stores/workspace', () => ({
 vi.mock('@/stores/projects', () => ({
   useProjectStore: () => ({
     loadProjectsFromDatabase: vi.fn().mockResolvedValue(undefined),
+    clearAll: mockClearProjectStore,
   }),
+}))
+
+vi.mock('@/stores/lanes', () => ({
+  useLaneStore: () => ({ clearAll: mockClearLaneStore }),
+}))
+
+vi.mock('@/stores/canvasImages', () => ({
+  useCanvasImagesStore: () => ({ clearAll: mockClearCanvasImages }),
 }))
 
 vi.mock('@/services/offline/readCacheDB', () => ({
   clearReadCache: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('@/services/offline/writeQueueDB', () => ({
+  clearAll: mockClearWriteQueue,
 }))
 
 vi.mock('@/stores/settings', () => ({
@@ -243,6 +267,7 @@ describe('Auth Flow — Initial State', () => {
     mockPersistAuthSessionBackup.mockResolvedValue(undefined)
     mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
     mockClearAuthSessionBackup.mockResolvedValue(undefined)
+    mockReadPersistedAuthSessionCandidate.mockResolvedValue(null)
     mockPersistPrimaryAuthSession.mockResolvedValue(undefined)
   })
 
@@ -276,6 +301,8 @@ describe('Auth Flow — initialize()', () => {
     mockPersistAuthSessionBackup.mockResolvedValue(undefined)
     mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
     mockClearAuthSessionBackup.mockResolvedValue(undefined)
+    mockReadPersistedAuthSessionCandidate.mockResolvedValue(null)
+    mockPersistPrimaryAuthSession.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -291,6 +318,53 @@ describe('Auth Flow — initialize()', () => {
     expect(store.isInitialized).toBe(true)
   })
 
+  it('4b. exposes the persisted account as restoring while getSession is still pending', async () => {
+    const persistedSession = buildMockSession({
+      access_token: 'expired-persisted-token',
+      expires_at: Math.floor(Date.now() / 1000) - 60,
+    })
+    let resolveGetSession!: (value: { data: { session: MockSession }, error: null }) => void
+    mockReadPersistedAuthSessionCandidate.mockResolvedValue(persistedSession)
+    mockGetSession.mockReturnValue(new Promise(resolve => { resolveGetSession = resolve }))
+
+    const store = useAuthStore()
+    const initialization = store.initialize()
+    await flushPromises()
+
+    expect(store.user?.id).toBe('user-test-001')
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.isRestoringSession).toBe(true)
+    expect(store.canSyncRemotely).toBe(false)
+    expect(store.isInitialized).toBe(false)
+
+    const freshSession = buildMockSession({ access_token: 'fresh-session-token' })
+    resolveGetSession({ data: { session: freshSession }, error: null })
+    await initialization
+
+    expect(store.isRestoringSession).toBe(false)
+    expect(store.canSyncRemotely).toBe(true)
+  })
+
+  it('4c. keeps a persisted identity write-blocked when getSession fails during restoration', async () => {
+    const persistedSession = buildMockSession({
+      access_token: 'unconfirmed-persisted-token',
+      expires_at: Math.floor(Date.now() / 1000) - 60,
+    })
+    mockReadPersistedAuthSessionCandidate.mockResolvedValue(persistedSession)
+    mockGetSession.mockRejectedValue(new Error('auth storage unavailable'))
+
+    const store = useAuthStore()
+    await store.initialize()
+
+    expect(store.user?.id).toBe('user-test-001')
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.isRestoringSession).toBe(true)
+    expect(store.isOfflineGracePeriod).toBe(true)
+    expect(store.canSyncRemotely).toBe(false)
+    expect(store.initializationFailed).toBe(false)
+    expect(mockSyncLocalApiSession).toHaveBeenLastCalledWith(null)
+  })
+
   it('5. initialize() with active session sets isAuthenticated=true and user', async () => {
     const session = buildMockSession()
     mockGetSession.mockResolvedValue({ data: { session }, error: null })
@@ -299,6 +373,7 @@ describe('Auth Flow — initialize()', () => {
     await store.initialize()
 
     expect(store.isAuthenticated).toBe(true)
+    expect(store.isRestoringSession).toBe(false)
     expect(store.user).not.toBeNull()
     expect(store.user?.id).toBe('user-test-001')
   })
@@ -348,6 +423,7 @@ describe('Auth Flow — initialize()', () => {
     expect(mockRestoreAuthSessionFromBackup).toHaveBeenCalledOnce()
     expect(mockGetSession).toHaveBeenCalledTimes(2)
     expect(store.isAuthenticated).toBe(true)
+    expect(store.isRestoringSession).toBe(false)
     expect(store.user?.id).toBe('user-test-001')
   })
 
@@ -363,7 +439,8 @@ describe('Auth Flow — initialize()', () => {
 
     expect(mockRestoreAuthSessionFromBackup).toHaveBeenCalledOnce()
     expect(mockGetSession).toHaveBeenCalledTimes(2)
-    expect(store.isAuthenticated).toBe(true)
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.isRestoringSession).toBe(true)
     expect(store.canSyncRemotely).toBe(false)
     expect(store.user?.id).toBe('user-test-001')
     expect(store.isOfflineGracePeriod).toBe(true)
@@ -387,7 +464,8 @@ describe('Auth Flow — initialize()', () => {
 
     expect(mockClearAuthSessionBackup).toHaveBeenCalledOnce()
     expect(mockPersistAuthSessionBackup).not.toHaveBeenCalled()
-    expect(store.isAuthenticated).toBe(true)
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.isRestoringSession).toBe(true)
     expect(store.canSyncRemotely).toBe(false)
     expect(store.user?.id).toBe('user-test-001')
     expect(store.isOfflineGracePeriod).toBe(true)
@@ -407,7 +485,8 @@ describe('Auth Flow — initialize()', () => {
     await store.initialize()
 
     expect(mockRefreshSession).toHaveBeenCalledOnce()
-    expect(store.isAuthenticated).toBe(true)
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.isRestoringSession).toBe(true)
     expect(store.user?.id).toBe('user-test-001')
     expect(store.isOfflineGracePeriod).toBe(true)
 
@@ -436,7 +515,8 @@ describe('Auth Flow — initialize()', () => {
       const store = useAuthStore()
       await store.initialize()
 
-      expect(store.isAuthenticated).toBe(true)
+      expect(store.isAuthenticated).toBe(false)
+      expect(store.isRestoringSession).toBe(true)
       expect(store.canSyncRemotely).toBe(false)
       expect(store.isOfflineGracePeriod).toBe(true)
 
@@ -447,7 +527,8 @@ describe('Auth Flow — initialize()', () => {
       await flushPromises()
 
       expect(mockRefreshSession.mock.calls.length).toBeGreaterThanOrEqual(4)
-      expect(store.isAuthenticated).toBe(true)
+      expect(store.isAuthenticated).toBe(false)
+      expect(store.isRestoringSession).toBe(true)
       expect(store.user?.id).toBe('user-test-001')
       expect(store.canSyncRemotely).toBe(false)
       expect(store.isOfflineGracePeriod).toBe(true)
@@ -678,6 +759,21 @@ describe('Auth Flow — signOut', () => {
 
     expect(localStorage.getItem('flowstate-supabase-auth')).toBeNull()
     expect(mockClearAuthSessionBackup).toHaveBeenCalledOnce()
+  })
+
+  it('14b. signOut clears all account metadata and pending writes before guest mode', async () => {
+    const session = buildMockSession()
+    mockGetSession.mockResolvedValue({ data: { session }, error: null })
+    mockSignOut.mockResolvedValue({ error: null })
+
+    const store = useAuthStore()
+    await store.initialize()
+    await store.signOut()
+
+    expect(mockClearProjectStore).toHaveBeenCalledOnce()
+    expect(mockClearLaneStore).toHaveBeenCalledOnce()
+    expect(mockClearCanvasImages).toHaveBeenCalledOnce()
+    expect(mockClearWriteQueue).toHaveBeenCalledOnce()
   })
 })
 

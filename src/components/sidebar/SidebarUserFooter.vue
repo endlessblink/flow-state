@@ -1,6 +1,14 @@
 <template>
   <div class="sidebar-footer">
-    <button v-if="!authStore.user" class="sidebar-login-btn" @click="uiStore.openAuthModal('login')">
+    <div
+      v-if="authStore.isRestoringSession || !authStore.isInitialized"
+      class="sidebar-auth-restoring"
+      role="status"
+      aria-live="polite"
+    >
+      <span>{{ $t('sidebar.restoring_account') }}</span>
+    </div>
+    <button v-else-if="!authStore.user" class="sidebar-login-btn" @click="uiStore.openAuthModal('login')">
       <span style="font-weight: 600;">{{ $t('sidebar.sign_in') }}</span>
     </button>
     <div v-else class="user-profile-row">
@@ -53,6 +61,19 @@ const authStore = useAuthStore()
   background: var(--brand-primary-alpha-10);
   border-color: var(--brand-primary);
   box-shadow: 0 0 15px var(--brand-primary-alpha-20);
+}
+
+.sidebar-auth-restoring {
+  width: 100%;
+  padding: var(--space-2_5);
+  color: var(--text-muted);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
 .user-profile-row {

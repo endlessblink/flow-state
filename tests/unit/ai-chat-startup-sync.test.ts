@@ -15,16 +15,21 @@ describe('AI chat startup sync contract', () => {
     expect(src).toContain('[MAIN] Failed to initialize AI chat sync:')
   })
 
-  it('preserves authenticated read cache when startup auth restore misses transiently', () => {
+  it('clears authenticated read cache only after startup confirms guest mode', () => {
     const src = readFileSync(
       resolve(process.cwd(), 'src/composables/app/useAppInitialization.ts'),
       'utf-8',
     )
 
-    expect(src).toContain('[AUTH] No restored session, but cached authenticated data exists; preserving cache while auth recovers')
-    expect(src).not.toContain('[AUTH] No restored session; clearing authenticated read cache from signed-out view')
-    expect(src).not.toContain('await clearReadCache()')
-    expect(src).toContain('[AUTH] No restored session and no authenticated cache; loading guest-local data')
+    expect(src).not.toContain('preserving cache while auth recovers')
+    expect(src).toContain('[AUTH] No restored session; clearing authenticated read cache from signed-out view')
+    expect(src).toContain('await clearReadCache()')
+    expect(src).toContain('taskStore.clearAll()')
+    expect(src).toContain('projectStore.clearAll()')
+    expect(src).toContain('laneStore.clearAll()')
+    expect(src).toContain('canvasStore.clearAll()')
+    expect(src).toContain('workspaceStore.clearAll()')
+    expect(src).toContain('[AUTH] Confirmed guest mode; loading guest-local data')
     expect(src).toContain('await Promise.all([')
     expect(src).toContain('taskStore.loadFromDatabase()')
     expect(src).toContain('projectStore.loadProjectsFromDatabase()')

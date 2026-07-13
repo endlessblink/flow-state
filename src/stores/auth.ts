@@ -6,6 +6,7 @@ import {
   persistAuthSessionBackup,
   restoreAuthSessionFromBackup,
   persistPrimaryAuthSession,
+  readPersistedAuthSessionCandidate,
   clearAuthSessionBackup,
   type User,
   type Session,
@@ -38,6 +39,10 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<AuthError | null>(null)
   const isInitialized = ref(false)
   const initializationFailed = ref(false)
+  // BUG-1944: A durable account identity exists, but auth-js has not confirmed a
+  // remotely usable session yet. Local edits may queue under this user; remote
+  // consumers and the sign-in UI must remain gated until initialization settles.
+  const isRestoringSession = ref(false)
   // TASK-1426: True when the JWT expired while offline — session kept for local ops (user.id valid)
   const isOfflineGracePeriod = ref(false)
   // BUG-1898: True once the reconnect grace has exceeded GRACE_MAX_MS with the
@@ -193,6 +198,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   const clearOfflineGrace = () => {
     isOfflineGracePeriod.value = false
+    // A successful refresh validates the durable startup candidate and may now
+    // expose the account to remote readers/Local API consumers.
+    isRestoringSession.value = false
     reauthRequired.value = false
     if (graceDeadlineTimer) {
       clearTimeout(graceDeadlineTimer)
@@ -205,17 +213,23 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Getters
-  const isAuthenticated = computed(() => !!user.value)
+  // A persisted identity used to own local queue entries is not proof that its
+  // token is usable. Remote readers/subscriptions continue to see signed-out
+  // until auth-js finishes validating the session.
+  const isAuthenticated = computed(() => !!user.value && !isRestoringSession.value)
   const canSyncRemotely = computed(() =>
     !!session.value?.access_token &&
     !!user.value?.id &&
-    !isOfflineGracePeriod.value
+    !isOfflineGracePeriod.value &&
+    !isRestoringSession.value
   )
 
   // TASK-1797: Keep the Electron Local Task API sidecar's session in sync with
   // ours (no-op outside Electron / when the API is disabled). Fires on sign-in,
   // token refresh, and sign-out.
-  watch(session, (s) => syncLocalApiSession(s), { immediate: true })
+  watch([session, isRestoringSession], ([s, restoring]) => {
+    syncLocalApiSession(restoring ? null : s)
+  }, { immediate: true })
   const publishLocalApiRendererAuthState = () => {
     syncLocalApiRendererAuthState({
       isAuthenticated: isAuthenticated.value,
@@ -370,11 +384,21 @@ export const useAuthStore = defineStore('auth', () => {
     initPromise = (async () => {
       try {
         isLoading.value = true
+        isRestoringSession.value = true
         console.log(`[AUTH:${tabId}] Initializing auth...`)
 
         if (!supabase) {
           console.warn(`[AUTH:${tabId}] Supabase client not available, staying in Guest Mode`)
           return
+        }
+
+        // BUG-1944: Hydrate only the durable identity before getSession(). auth-js can
+        // block here while refreshing an expired token; without this shell, cached
+        // account data renders as a guest and local writes lose their queue owner.
+        const persistedCandidate = await readPersistedAuthSessionCandidate()
+        if (persistedCandidate) {
+          session.value = persistedCandidate
+          user.value = persistedCandidate.user
         }
 
         // Check for existing session
@@ -586,6 +610,7 @@ export const useAuthStore = defineStore('auth', () => {
         // BUG-339 FIX: If we have a session on init (e.g., after OAuth/Magic Link redirect),
         // check if there's guest data to migrate. This catches redirect-based auth flows.
         if (data.session?.user) {
+          clearOfflineGrace()
           // Run migration asynchronously - don't block initialization
           migrateGuestData().catch(e => {
             console.error('[AUTH] Post-init migration failed:', e)
@@ -618,6 +643,12 @@ export const useAuthStore = defineStore('auth', () => {
             console.log(`👤 [AUTH:${currentTabId}] Cancelled pending sign-out — valid session restored`)
           }
 
+          // Any auth-js event carrying a valid session completes restoration,
+          // including cross-tab SIGNED_IN and TOKEN_REFRESHED events.
+          if (newSession) {
+            clearOfflineGrace()
+          }
+
           // BUG-1056: Invalidate SWR cache when user changes to prevent stale data
           // This ensures cached guest data doesn't persist after sign-in
           invalidateCache.onAuthChange(newSession?.user?.id || null)
@@ -634,6 +665,7 @@ export const useAuthStore = defineStore('auth', () => {
               console.log(`👤 [AUTH:${currentTabId}] SIGNED_OUT received but localStorage has session - using it instead`)
               session.value = currentSession.session
               user.value = currentSession.session.user
+              clearOfflineGrace()
               // Schedule refresh for the recovered session
               if (currentSession.session.expires_at) {
                 scheduleTokenRefresh(currentSession.session.expires_at)
@@ -792,6 +824,14 @@ export const useAuthStore = defineStore('auth', () => {
         })
 
       } catch (e: unknown) {
+        if (isRestoringSession.value && session.value?.user?.id) {
+          preserveReconnectShellAfterFailedRefresh(
+            session.value,
+            '[AUTH] Session validation failed during startup — keeping persisted identity write-blocked for reconnect',
+            e as AuthError,
+          )
+          return
+        }
         // BUG-1056: Detect if Brave Shields blocked auth initialization
         if (isBlockedByBrave(e)) {
           recordBlockedResource('supabase-auth-init')
@@ -802,6 +842,10 @@ export const useAuthStore = defineStore('auth', () => {
         initializationFailed.value = true
       } finally {
         isLoading.value = false
+        // A failed validation enters reconnect grace. Keep the account in the
+        // restoring state until a refresh succeeds so no persisted token leaks
+        // back to the Local API or direct writers through isAuthenticated.
+        isRestoringSession.value = isOfflineGracePeriod.value
         isInitialized.value = true
       }
     })()
@@ -1052,6 +1096,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (data.session) {
         session.value = data.session
         user.value = data.user
+        clearOfflineGrace()
         persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup password sign-in session:', e))
         // BUG-339: Schedule proactive refresh
         if (data.session.expires_at) {
@@ -1151,6 +1196,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       // Always clear auth state regardless of signOut result
+      isRestoringSession.value = false
       user.value = null
       session.value = null
 
@@ -1169,6 +1215,17 @@ export const useAuthStore = defineStore('auth', () => {
       const workspaceStore = useWorkspaceStore()
       workspaceStore.clearAll()
 
+      // Clear account metadata that otherwise remains visible in the signed-out sidebar.
+      const [{ useProjectStore }, { useLaneStore }] = await Promise.all([
+        import('@/stores/projects'),
+        import('@/stores/lanes'),
+      ])
+      useProjectStore().clearAll()
+      useLaneStore().clearAll()
+
+      const { useCanvasImagesStore } = await import('@/stores/canvasImages')
+      useCanvasImagesStore().clearAll()
+
       // Clear guest ephemeral data for fresh guest experience
       clearGuestData()
 
@@ -1178,6 +1235,15 @@ export const useAuthStore = defineStore('auth', () => {
         await clearReadCache()
       } catch (_e) {
         // Non-critical — cache will be overwritten on next sign-in anyway
+      }
+
+      // Pending writes belong to the account that created them. Never let a
+      // later account inherit/rewrite them during queue recovery.
+      try {
+        const { clearAll: clearWriteQueue } = await import('@/services/offline/writeQueueDB')
+        await clearWriteQueue()
+      } catch (_e) {
+        // Non-critical in environments without IndexedDB; auth state is already cleared.
       }
 
       // BUG-1352: Disconnect realtime to prevent stale authenticated connections
@@ -1415,6 +1481,7 @@ export const useAuthStore = defineStore('auth', () => {
     error,
     isInitialized,
     initializationFailed,
+    isRestoringSession,
     // TASK-1426: True when JWT expired while offline — user.id still valid for local ops
     isOfflineGracePeriod,
     // BUG-1898: True when the grace period exceeded GRACE_MAX_MS with refresh still failing

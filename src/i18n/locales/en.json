@@ -87,6 +87,7 @@
     "add_project": "Add Project",
     "all_projects": "All Projects",
     "sign_in": "Sign In",
+    "restoring_account": "Restoring account…",
     "selected_count": "{count} selected",
     "delete_projects_title": "Delete {count} project | Delete {count} projects",
     "delete_projects_message": "Tasks in this project will be moved to Inbox. This cannot be undone. | Tasks in these projects will be moved to Inbox. This cannot be undone."

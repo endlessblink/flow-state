@@ -67,4 +67,44 @@ describe('restoreAuthSessionFromBackup — never discard a recoverable backup (T
     })
     expect(await restoreAuthSessionFromBackup()).toBeNull()
   })
+
+  it('peeks the primary session without mutating durable auth storage', async () => {
+    const { readPersistedAuthSessionCandidate, AUTH_SESSION_BACKUP_KEY } = await import('@/services/auth/supabase')
+    const { STORAGE_KEYS } = await import('@/constants/storageKeys')
+    const primary = {
+      access_token: 'primary-access',
+      refresh_token: 'primary-refresh',
+      expires_at: Math.floor(Date.now() / 1000) - 60,
+      user: { id: 'primary-user' },
+    }
+    const backup = {
+      access_token: 'backup-access',
+      refresh_token: 'backup-refresh',
+      user: { id: 'backup-user' },
+    }
+    store[STORAGE_KEYS.SUPABASE_AUTH] = JSON.stringify(primary)
+    store[AUTH_SESSION_BACKUP_KEY] = JSON.stringify({ savedAt: Date.now(), session: backup })
+
+    const candidate = await readPersistedAuthSessionCandidate()
+
+    expect(candidate?.user.id).toBe('primary-user')
+    expect((window as any).electronAPI.storeSet).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the backup session when the primary value is absent or malformed', async () => {
+    const { readPersistedAuthSessionCandidate, AUTH_SESSION_BACKUP_KEY } = await import('@/services/auth/supabase')
+    const { STORAGE_KEYS } = await import('@/constants/storageKeys')
+    store[STORAGE_KEYS.SUPABASE_AUTH] = '{malformed'
+    store[AUTH_SESSION_BACKUP_KEY] = JSON.stringify({
+      savedAt: Date.now(),
+      session: {
+        access_token: 'backup-access',
+        refresh_token: 'backup-refresh',
+        user: { id: 'backup-user' },
+      },
+    })
+
+    expect((await readPersistedAuthSessionCandidate())?.user.id).toBe('backup-user')
+    expect((window as any).electronAPI.storeSet).not.toHaveBeenCalled()
+  })
 })

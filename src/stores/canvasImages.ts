@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { CanvasImage } from './canvas/types'
-import { deleteCanvasImage } from '@/services/canvasImageUpload'
 
 const STORAGE_KEY = 'flowstate:canvas-images'
 
@@ -32,17 +31,16 @@ export const useCanvasImagesStore = defineStore('canvasImages', () => {
   }
 
   // TASK-1690: Remove image and return it (caller pushes to global undo stack)
-  const removeCanvasImage = async (id: string): Promise<CanvasImage | undefined> => {
+  const removeCanvasImage = (id: string): CanvasImage | undefined => {
     const img = images.value.find(i => i.id === id)
     const snapshot = img ? { ...img, position: { ...img.position } } : undefined
 
-    if (img) {
-      try {
-        await deleteCanvasImage(img.imageUrl)
-      } catch (e) {
-        console.warn('[CANVAS_IMAGES] Failed to delete from storage:', e)
-      }
-    }
+    if (!img) return undefined
+
+    // BUG-1945: The local store is authoritative for what Canvas renders. Remove
+    // and persist synchronously so a forced canvas sync cannot re-inject the image.
+    // The backing blob is retained because undo can restore only this metadata/URL;
+    // deleting the blob here would make a later undo render a broken image.
     images.value = images.value.filter(i => i.id !== id)
     saveToLocalStorage(images.value)
     return snapshot
@@ -62,11 +60,21 @@ export const useCanvasImagesStore = defineStore('canvasImages', () => {
     }
   }
 
+  const clearAll = () => {
+    images.value = []
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch (e) {
+      console.warn('[CANVAS_IMAGES] Failed to clear localStorage:', e)
+    }
+  }
+
   return {
     images,
     addCanvasImage,
     removeCanvasImage,
     restoreCanvasImage,
     updateCanvasImagePosition,
+    clearAll,
   }
 })

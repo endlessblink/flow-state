@@ -46,6 +46,7 @@ vi.mock('@/services/auth/supabase', () => ({
   restoreAuthSessionFromBackup: vi.fn().mockResolvedValue(false),
   clearAuthSessionBackup: vi.fn().mockResolvedValue(undefined),
   persistPrimaryAuthSession: vi.fn().mockResolvedValue(undefined),
+  readPersistedAuthSessionCandidate: vi.fn().mockResolvedValue(null),
 }))
 
 vi.mock('@/utils/guestModeStorage', () => ({ clearGuestData: vi.fn(), clearGuestSessionId: vi.fn() }))

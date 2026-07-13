@@ -198,6 +198,29 @@ export async function persistAuthSessionBackup(session: Session | null | undefin
     }
 }
 
+function parsePersistedSession(raw: string | null, fromBackup: boolean): Session | null {
+    if (!raw) return null
+    try {
+        const parsed = JSON.parse(raw) as Session | { session?: Session } | null
+        if (!parsed || typeof parsed !== 'object') return null
+        const candidate = fromBackup && 'session' in parsed ? parsed.session : parsed as Session
+        return candidate?.refresh_token && candidate.user?.id ? candidate : null
+    } catch {
+        return null
+    }
+}
+
+/**
+ * BUG-1944: Read the best durable identity before auth-js finishes its network-backed
+ * initialization. This is deliberately read-only: startup may use the user id for
+ * local queue ownership, but auth-js remains authoritative for the usable session.
+ */
+export async function readPersistedAuthSessionCandidate(): Promise<Session | null> {
+    const primary = parsePersistedSession(await authStorageGet(STORAGE_KEYS.SUPABASE_AUTH), false)
+    if (primary) return primary
+    return parsePersistedSession(await authStorageGet(AUTH_SESSION_BACKUP_KEY), true)
+}
+
 // ~JWT_EXP (GoTrue default 3600s) + 2min buffer. A backup older than this whose
 // access token is already expired would force a refresh of a single-use token that
 // the live instance has very likely already rotated → "Refresh Token: Already Used".

@@ -740,6 +740,11 @@ export const useProjectStore = defineStore('projects', () => {
         return removed
     }
 
+    const clearAll = () => {
+        _rawProjects.value = []
+        activeProjectId.value = null
+    }
+
     // Watchers
     let saveTimeout: ReturnType<typeof setTimeout> | null = null
     watch(projects, (newProjects) => {
@@ -786,6 +791,7 @@ export const useProjectStore = defineStore('projects', () => {
         initializeFromDatabase,
         updateProjectFromSync,
         removeProjectFromSync,
-        cleanupCorruptedProjects
+        cleanupCorruptedProjects,
+        clearAll
     }
 })

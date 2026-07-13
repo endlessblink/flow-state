@@ -5,6 +5,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import { useLaneStore } from '@/stores/lanes'
 import { useCanvasStore } from '@/stores/canvas'
+import { useCanvasImagesStore } from '@/stores/canvasImages'
 import { useUIStore } from '@/stores/ui'
 import { useNotificationStore } from '@/stores/notifications'
 import { useAuthStore } from '@/stores/auth'
@@ -23,7 +24,7 @@ import { getInitialOnlineState } from '@/utils/platform'
 // BUG-1411: Cache stats for offline mode detection
 // TASK-1425: Full cache read functions for fast offline startup
 // TASK-1427: Merged versions include pending write queue operations
-import { getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPendingWrites, getCachedProjects } from '@/services/offline/readCacheDB'
+import { clearReadCache, getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPendingWrites, getCachedProjects } from '@/services/offline/readCacheDB'
 import { applyPendingGroupPatch, applyPendingTaskPatch } from '@/services/offline/pendingWritePatch'
 // TASK-1219: Time block progress notifications
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
@@ -216,21 +217,34 @@ export function useAppInitialization() {
         // 0. Initialize auth and clear guest data if not authenticated
         await authStore.initialize()
 
-        if (!authStore.isAuthenticated) {
-            if (hasUsableCache) {
-                console.warn('[AUTH] No restored session, but cached authenticated data exists; preserving cache while auth recovers')
-            } else {
-                // Guest mode: clear transient data only (TASK-1339: tasks/groups/filters persist)
-                clearGuestData()
-                // BUG-1137: Ensure guest session ID exists for future migration tracking
-                getOrCreateGuestSessionId()
-                console.log('[AUTH] No restored session and no authenticated cache; loading guest-local data')
-                await Promise.all([
-                    taskStore.loadFromDatabase(),
-                    projectStore.loadProjectsFromDatabase(),
-                    canvasStore.loadFromDatabase()
-                ])
-            }
+        if (authStore.isRestoringSession) {
+            // A durable account exists but the server has not validated it yet.
+            // Keep account-owned caches visible and write ownership intact while
+            // every remote consumer remains gated by the auth store.
+            console.warn('[AUTH] Persisted account is reconnecting; preserving account-owned cache')
+        } else if (!authStore.isAuthenticated) {
+            // BUG-1944: initialize() has finished and no durable/remote session survived.
+            // Cached account data must not remain visible under a real Sign In footer.
+            console.warn('[AUTH] No restored session; clearing authenticated read cache from signed-out view')
+            taskStore.clearAll()
+            projectStore.clearAll()
+            laneStore.clearAll()
+            canvasStore.clearAll()
+            workspaceStore.clearAll()
+            useCanvasImagesStore().clearAll()
+            await clearReadCache()
+            const { clearAll: clearWriteQueue } = await import('@/services/offline/writeQueueDB')
+            await clearWriteQueue()
+
+            // Guest mode: clear transient data only (TASK-1339: tasks/groups/filters persist)
+            clearGuestData()
+            getOrCreateGuestSessionId()
+            console.log('[AUTH] Confirmed guest mode; loading guest-local data')
+            await Promise.all([
+                taskStore.loadFromDatabase(),
+                projectStore.loadProjectsFromDatabase(),
+                canvasStore.loadFromDatabase()
+            ])
         } else {
             // BUG-339: Clear ALL stale guest localStorage (including legacy keys)
             // This fixes race condition and historical key naming issues

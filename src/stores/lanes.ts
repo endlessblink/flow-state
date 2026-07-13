@@ -256,6 +256,10 @@ export const useLaneStore = defineStore('lanes', () => {
         }
     }
 
+    const clearAll = () => {
+        _rawLanes.value = []
+    }
+
     // Auto-save watcher (guest-mode/local cache only; authed writes go through CRUD)
     let saveTimeout: ReturnType<typeof setTimeout> | null = null
     watch(lanes, () => {
@@ -276,5 +280,6 @@ export const useLaneStore = defineStore('lanes', () => {
         getLaneName,
         updateLaneFromSync,
         removeLaneFromSync,
+        clearAll,
     }
 })

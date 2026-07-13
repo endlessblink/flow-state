@@ -12,14 +12,16 @@ describe('ensureAuthUser', () => {
     const target = { id: 'playwright-user', email: 'playwright@test.flowstate' }
     const createUser = vi.fn().mockResolvedValue({ data: { user: target }, error: null })
     const signInWithPassword = vi.fn()
+    const signOut = vi.fn()
 
     const result = await ensureAuthUser({
-      auth: { admin: { createUser }, signInWithPassword },
+      auth: { admin: { createUser }, signInWithPassword, signOut },
     } as never, attributes)
 
     expect(result).toEqual(target)
     expect(createUser).toHaveBeenCalledWith(attributes)
     expect(signInWithPassword).not.toHaveBeenCalled()
+    expect(signOut).not.toHaveBeenCalled()
   })
 
   it('resolves an existing disposable user by its owned credentials', async () => {
@@ -32,13 +34,15 @@ describe('ensureAuthUser', () => {
       data: { user: target },
       error: null,
     })
+    const signOut = vi.fn().mockResolvedValue({ error: null })
 
     await expect(ensureAuthUser({
-      auth: { admin: { createUser }, signInWithPassword },
+      auth: { admin: { createUser }, signInWithPassword, signOut },
     } as never, attributes)).resolves.toEqual(target)
     expect(signInWithPassword).toHaveBeenCalledWith({
       email: attributes.email,
       password: attributes.password,
     })
+    expect(signOut).toHaveBeenCalledWith({ scope: 'local' })
   })
 })

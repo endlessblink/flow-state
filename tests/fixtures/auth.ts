@@ -28,7 +28,10 @@ export async function ensureAuthUser(
   if (signInError || !signIn.user) {
     throw signInError ?? new Error('Existing test user sign-in returned no user')
   }
-  return signIn.user
+  const user = signIn.user
+  const { error: signOutError } = await client.auth.signOut({ scope: 'local' })
+  if (signOutError) throw signOutError
+  return user
 }
 
 // Re-export test and expect — tests import from here for authenticated context

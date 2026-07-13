@@ -29,6 +29,10 @@ import { applyPendingGroupPatch, applyPendingTaskPatch } from '@/services/offlin
 // TASK-1219: Time block progress notifications
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
 import { subscribeLocalApiTaskMutations, syncLocalApiWorkspaceContext } from '@/composables/useLocalApiBridge'
+import { supabase } from '@/services/auth/supabase'
+import { createCanonicalChangeCursorStore, type CanonicalChangeScope } from '@/services/sync/canonicalChangeCursor'
+import { createCanonicalChangeCatchup, createCanonicalChangePoller } from '@/services/sync/canonicalChangeCatchup'
+import { createCanonicalChangeSupabaseReader } from '@/services/sync/canonicalChangeSupabase'
 
 export function useAppInitialization() {
     const router = useRouter()
@@ -50,6 +54,79 @@ export function useAppInitialization() {
     // BUG-1339: Signal that initial data load has completed (tasks, projects, canvas)
     // Views should NOT render content until this is true to prevent blank-on-first-load
     const isDataReady = ref(false)
+
+    const canonicalChangeCursorStore = createCanonicalChangeCursorStore()
+    const canonicalChangeReader = createCanonicalChangeSupabaseReader(supabase)
+    const activeCanonicalScope = (): CanonicalChangeScope | null => {
+        const userId = authStore.user?.id
+        if (!authStore.isAuthenticated || !userId) return null
+        return workspaceStore.activeWorkspaceId
+            ? { kind: 'workspace', userId, workspaceId: workspaceStore.activeWorkspaceId }
+            : { kind: 'personal', userId }
+    }
+    const scopeMatchesActiveWorkspace = (scope: CanonicalChangeScope): boolean => {
+        const active = activeCanonicalScope()
+        if (!active || active.kind !== scope.kind || active.userId !== scope.userId) return false
+        if (active.kind === 'personal') return true
+        return scope.kind === 'workspace' && active.workspaceId === scope.workspaceId
+    }
+    const canonicalChangeCatchup = createCanonicalChangeCatchup({
+        readCursor: scope => canonicalChangeCursorStore.read(scope),
+        persistCursor: async (scope, sequence) => {
+            if (!scopeMatchesActiveWorkspace(scope)) throw new Error('Canonical change scope changed')
+            canonicalChangeCursorStore.write(scope, sequence)
+        },
+        resetCursor: async (scope, sequence) => {
+            if (!scopeMatchesActiveWorkspace(scope)) throw new Error('Canonical change scope changed')
+            canonicalChangeCursorStore.reset(scope, sequence)
+        },
+        readHighWater: scope => canonicalChangeReader.readHighWater(scope),
+        reloadAuthoritativeScope: async scope => {
+            if (!scopeMatchesActiveWorkspace(scope)) throw new Error('Canonical change scope changed')
+            invalidateCache.tasks()
+            await taskStore.loadFromDatabase({
+                requireRemoteAuthority: true,
+                authorityScope: {
+                    userId: scope.userId,
+                    workspaceId: scope.kind === 'workspace' ? scope.workspaceId : null,
+                },
+            })
+        },
+        fetchChanges: request => canonicalChangeReader.fetchChanges(request),
+        reconcileTaskIds: async ({ scope, taskIds, tombstoneTaskIds }) => {
+            if (!scopeMatchesActiveWorkspace(scope)) throw new Error('Canonical change scope changed')
+            const authoritativeTaskIds = [...new Set([...taskIds, ...tombstoneTaskIds])]
+            invalidateCache.tasks()
+            await taskStore.loadFromDatabase({
+                authoritativeTaskIds,
+                requireRemoteAuthority: true,
+                authorityScope: {
+                    userId: scope.userId,
+                    workspaceId: scope.kind === 'workspace' ? scope.workspaceId : null,
+                },
+            })
+        },
+    })
+    const runCanonicalChangeCatchup = async () => {
+        const scope = activeCanonicalScope()
+        if (!scope || (typeof navigator !== 'undefined' && navigator.onLine === false)) return
+        try {
+            await canonicalChangeCatchup.run(scope)
+        } catch (error) {
+            console.warn('[CANONICAL-CATCHUP] Deferred after a recoverable failure:', error instanceof Error ? error.message : 'unknown error')
+        }
+    }
+    const canonicalChangePoller = createCanonicalChangePoller({
+        run: scope => canonicalChangeCatchup.run(scope),
+        getScopes: () => {
+            const scope = activeCanonicalScope()
+            return scope ? [scope] : []
+        },
+        isAuthenticated: () => authStore.isAuthenticated && !!authStore.user?.id,
+        isOnline: () => typeof navigator === 'undefined' || navigator.onLine !== false,
+        isVisible: () => typeof document === 'undefined' || document.visibilityState === 'visible',
+        onError: error => console.warn('[CANONICAL-CATCHUP] Foreground retry deferred:', error instanceof Error ? error.message : 'unknown error'),
+    })
 
     const reloadCoreData = async () => {
         await Promise.all([
@@ -100,6 +177,7 @@ export function useAppInitialization() {
     }
 
     onMounted(async () => {
+        canonicalChangePoller.start()
         // MARK: SESSION START for stability guards
         if (typeof window !== 'undefined') {
             window.FlowStateSessionStart = Date.now()
@@ -263,7 +341,7 @@ export function useAppInitialization() {
             // before the sidebar is opened. Keep this non-blocking so task
             // startup remains cache-first, but start the Supabase merge/realtime
             // path once auth is known-good.
-            ;(async () => {
+            void (async () => {
                 try {
                     const { useAIChatStore } = await import('@/stores/aiChat')
                     const aiChatStore = useAIChatStore()
@@ -835,6 +913,7 @@ export function useAppInitialization() {
         const onRecovery = async () => {
             console.log('🔄 [APP-INIT] Reloading data after auth recovery...')
             await reloadCoreData()
+            await runCanonicalChangeCatchup()
             // BUG-1411: Clear offline cache mode — we're back online with fresh data
             try {
                 const { useSyncStatusStore } = await import('@/stores/syncStatus')
@@ -857,6 +936,7 @@ export function useAppInitialization() {
 
         // BUG-1106: Mark onMounted as complete so watcher knows it can run
         onMountedCompleted.value = true
+        await runCanonicalChangeCatchup()
     })
 
     // BUG-1106: Re-initialize realtime when user signs in after initial page load
@@ -953,6 +1033,7 @@ export function useAppInitialization() {
             const onRecovery = async () => {
                 console.log('🔄 [APP-INIT] Reloading data after auth recovery...')
                 await reloadCoreData()
+                await runCanonicalChangeCatchup()
             }
 
             const timerHandler = timerStore.handleRemoteTimerUpdate
@@ -963,6 +1044,7 @@ export function useAppInitialization() {
                 realtimeInitialized.value = true
                 console.log(`📡 [APP-INIT] Realtime subscription created after sign-in (workspace: ${workspaceStore.activeWorkspaceId || 'personal'})`)
             }
+            await runCanonicalChangeCatchup()
         }
     })
 
@@ -1056,6 +1138,7 @@ export function useAppInitialization() {
         const onRecovery = async () => {
             console.log('🔄 [APP-INIT] Reloading data after auth recovery (workspace switch)...')
             await reloadCoreData()
+            await runCanonicalChangeCatchup()
         }
 
         const timerHandler = timerStore.handleRemoteTimerUpdate
@@ -1069,6 +1152,7 @@ export function useAppInitialization() {
         // BUG-1673: Reload data for the new workspace context
         // Without this, tasks loaded for the previous workspace remain stale
         await reloadCoreData()
+        await runCanonicalChangeCatchup()
     })
 
     // TASK-1338: Handle SW push notification click actions
@@ -1115,6 +1199,7 @@ export function useAppInitialization() {
     }
 
     onUnmounted(() => {
+        canonicalChangePoller.stop()
         stopLocalApiMutationSubscription()
         stopLocalApiWorkspaceContextSync()
         if (localApiReloadTimer !== null) window.clearTimeout(localApiReloadTimer)

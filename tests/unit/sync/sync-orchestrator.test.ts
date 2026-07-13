@@ -1224,7 +1224,6 @@ describe('Enqueue operations', () => {
   })
 
   it('enqueue captures workspace context (null for personal workspace)', async () => {
-    // The getActiveWorkspaceId() function uses require() which picks up our mock.
     // Default workspace is null (personal workspace).
     writeQueueMocks.enqueueOperation.mockResolvedValue(makeOp())
 
@@ -1239,6 +1238,22 @@ describe('Enqueue operations', () => {
     // workspaceId is captured from getActiveWorkspaceId() — null for personal
     expect(writeQueueMocks.enqueueOperation).toHaveBeenCalledWith(
       expect.objectContaining({ workspaceId: null })
+    )
+  })
+
+  it('enqueue captures a shared workspace through the ESM store boundary', async () => {
+    workspaceStoreMock.activeWorkspaceId = 'workspace-42' as any
+    writeQueueMocks.enqueueOperation.mockResolvedValue(makeOp({ workspaceId: 'workspace-42' }))
+
+    await useSyncOrchestrator().enqueue({
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'task-workspace',
+      payload: { title: 'Workspace edit' }
+    })
+
+    expect(writeQueueMocks.enqueueOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: 'workspace-42' })
     )
   })
 

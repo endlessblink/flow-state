@@ -13,6 +13,7 @@ import {
   cacheTasks,
   getCachedTasks,
   getCachedTasksWithPendingWrites,
+  overlayPendingTaskWrites,
   cacheGroups,
   getCachedGroups,
   getCachedGroupsWithPendingWrites,
@@ -147,6 +148,53 @@ describe('cacheTasks / getCachedTasks', () => {
     const cached = await getCachedTasks()
     // Empty cache is treated as "no cache" — returns null
     expect(cached).toBeNull()
+  })
+
+  it('caches complete projections larger than the default server page', async () => {
+    const tasks = Array.from({ length: 1001 }, (_, index) => makeTask({ id: `task-${index}` }))
+
+    await cacheTasks(tasks, { throwOnError: true })
+
+    expect(await getCachedTasks()).toHaveLength(1001)
+  })
+
+  it('overlays an exact-scope durable task edit over the canonical projection', async () => {
+    const task = makeTask({ id: 'task-scoped', title: 'Server title' })
+    await getWriteQueueDB().operations.add({
+      status: 'pending',
+      retryCount: 0,
+      createdAt: Date.now(),
+      entityType: 'task',
+      operation: 'update',
+      entityId: task.id,
+      payload: { title: 'Queued title' },
+      userId: 'user-1',
+      workspaceId: null,
+    })
+
+    const projection = await overlayPendingTaskWrites([task], {
+      scope: { userId: 'user-1', workspaceId: null },
+    })
+
+    expect(projection.tasks[0]?.title).toBe('Queued title')
+    expect(projection.pendingTaskIds).toEqual(new Set([task.id]))
+  })
+
+  it('fails closed when a durable task operation has no exact owner scope', async () => {
+    const task = makeTask({ id: 'task-unscoped' })
+    await getWriteQueueDB().operations.add({
+      status: 'pending',
+      retryCount: 0,
+      createdAt: Date.now(),
+      entityType: 'task',
+      operation: 'update',
+      entityId: task.id,
+      payload: { title: 'Unknown owner edit' },
+    })
+
+    await expect(overlayPendingTaskWrites([task], {
+      scope: { userId: 'user-1', workspaceId: null },
+    })).rejects.toThrow('unscoped durable task operation')
   })
 
   it('applies pending canvas geometry writes over the read cache', async () => {

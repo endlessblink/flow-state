@@ -29,36 +29,57 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         return swrCache.getOrFetch(cacheKey, async () => {
             try {
                 return await withRetry(async () => {
-                    let query = getSupabase()
-                        .from('tasks')
-                        .select('*')
-                        .eq('is_deleted', false)
+                    const requestedPageSize = 1000
+                    const rows: SupabaseTask[] = []
+                    let lastTaskId: string | null = null
+                    let initialTotalCount: number | null = null
+                    for (;;) {
+                        let query = getSupabase()
+                            .from('tasks')
+                            .select('*', { count: 'exact' })
+                            .eq('is_deleted', false)
 
-                    // Workspace filter: undefined = legacy (no filter), null = personal, string = workspace
-                    if (workspaceId === null) {
-                        query = query.is('workspace_id', null)
-                    } else if (typeof workspaceId === 'string') {
-                        query = query.eq('workspace_id', workspaceId)
+                        // Workspace filter: undefined = legacy (no filter), null = personal, string = workspace
+                        if (workspaceId === null) {
+                            query = query.is('workspace_id', null)
+                        } else if (typeof workspaceId === 'string') {
+                            query = query.eq('workspace_id', workspaceId)
+                        }
+                        if (lastTaskId) query = query.gt('id', lastTaskId)
+
+                        const { data, error, count } = await query
+                            .order('id', { ascending: true })
+                            .limit(requestedPageSize)
+
+                        if (error) throw error
+                        if (!data) throw new Error('fetchTasks returned an incomplete projection')
+                        if (initialTotalCount === null && count !== null) initialTotalCount = count
+                        rows.push(...data as SupabaseTask[])
+                        if (data.length === 0 || (initialTotalCount !== null && rows.length >= initialTotalCount)) break
+                        const nextLastTaskId = data[data.length - 1]?.id
+                        if (!nextLastTaskId || nextLastTaskId === lastTaskId) {
+                            throw new Error('fetchTasks pagination did not advance')
+                        }
+                        lastTaskId = nextLastTaskId
                     }
-                    // workspaceId === undefined: no filter (legacy/backward-compat)
 
-                    const { data, error } = await query
-                        .order('order', { ascending: true })
-                        .order('created_at', { ascending: true })
-
-                    if (error) throw error
-                    if (!data) return []
+                    rows.sort((left, right) => {
+                        const orderDelta = (left.order ?? 0) - (right.order ?? 0)
+                        if (orderDelta !== 0) return orderDelta
+                        const createdDelta = String(left.created_at ?? '').localeCompare(String(right.created_at ?? ''))
+                        return createdDelta !== 0 ? createdDelta : left.id.localeCompare(right.id)
+                    })
 
                     // TASK-142 DEBUG: Log what positions we receive from Supabase
-                    const tasksWithPos = data.filter((d: Record<string, unknown>) => d.position)
+                    const tasksWithPos = rows.filter(d => d.position)
                     if (tasksWithPos.length > 0) {
                         console.log(`📥 [TASK-142] LOADED ${tasksWithPos.length} tasks with positions from Supabase:`,
-                            tasksWithPos.map((d: Record<string, unknown>) => ({ id: (d.id as string)?.substring(0, 8), pos: d.position })))
+                            tasksWithPos.map(d => ({ id: d.id?.substring(0, 8), pos: d.position })))
                     } else {
-                        console.log(`📥 [TASK-142] LOADED ${data.length} tasks - NONE have positions in DB`)
+                        console.log(`📥 [TASK-142] LOADED ${rows.length} tasks - NONE have positions in DB`)
                     }
 
-                    return (data as SupabaseTask[]).map(fromSupabaseTask)
+                    return rows.map(fromSupabaseTask)
                 }, 'fetchTasks')
             } catch (e: unknown) {
                 handleError(e, 'fetchTasks')

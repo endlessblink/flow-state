@@ -22,6 +22,7 @@ import { toRaw } from 'vue'
 import Dexie, { type Table } from 'dexie'
 import type { Task, Project } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
+import type { WriteOperation } from '@/types/sync'
 import { applyPendingGroupPatch, applyPendingTaskPatch } from './pendingWritePatch'
 
 /** Metadata entry for tracking cache freshness */
@@ -73,12 +74,10 @@ function getDB(): ReadCacheDatabase {
  * Cache all tasks (full snapshot replace).
  * Called after every successful Supabase fetch + smart merge.
  */
-export async function cacheTasks(tasks: Task[]): Promise<void> {
-  // GUARD: Never cache impossibly large task arrays (corruption prevention)
-  if (tasks.length > 1000) {
-    console.error(`🔴 [READ-CACHE] Refusing to cache ${tasks.length} tasks — corruption detected`)
-    return
-  }
+export async function cacheTasks(
+  tasks: Task[],
+  options: { throwOnError?: boolean } = {},
+): Promise<void> {
   try {
     const database = getDB()
     await database.transaction('rw', database.tasks, database.meta, async () => {
@@ -97,6 +96,7 @@ export async function cacheTasks(tasks: Task[]): Promise<void> {
     }
   } catch (e) {
     console.warn('[READ-CACHE] Failed to cache tasks:', e)
+    if (options.throwOnError) throw e
   }
 }
 
@@ -219,6 +219,73 @@ export async function getCachedProjects(): Promise<Project[] | null> {
 
 // ── TASK-1427: Merge write queue into read cache on offline load ────────
 
+export interface PendingTaskWriteScope {
+  userId: string
+  workspaceId: string | null
+}
+
+export interface PendingTaskProjection {
+  tasks: Task[]
+  pendingTaskIds: Set<string>
+}
+
+/**
+ * Apply the durable task write queue over an arbitrary canonical projection.
+ * Exact-scope mode fails closed for legacy/unscoped operations: catch-up must
+ * never advance past local intent whose owner or workspace cannot be proven.
+ */
+export async function overlayPendingTaskWrites(
+  baseTasks: Task[],
+  options: {
+    scope?: PendingTaskWriteScope
+    fallbackTasks?: Task[]
+  } = {},
+): Promise<PendingTaskProjection> {
+  const { getWriteQueueDB } = await import('@/services/offline/writeQueueDB')
+  const allUnsynced = await getWriteQueueDB().operations
+    .where('status')
+    .anyOf(['pending', 'failed', 'syncing'])
+    .toArray()
+
+  const pendingOps = allUnsynced
+    .filter((op): op is WriteOperation => op.entityType === 'task')
+    .filter((op) => {
+      if (!options.scope) return true
+      if (!op.userId || op.workspaceId === undefined) {
+        throw new Error('Canonical authority found an unscoped durable task operation')
+      }
+      return op.userId === options.scope.userId
+        && op.workspaceId === options.scope.workspaceId
+    })
+    .sort((a, b) => a.createdAt - b.createdAt)
+
+  const pendingTaskIds = new Set(pendingOps.map(op => op.entityId))
+  const taskMap = new Map(baseTasks.map(task => [task.id, task]))
+  const fallbackMap = new Map((options.fallbackTasks ?? []).map(task => [task.id, task]))
+  const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
+
+  for (const op of pendingOps) {
+    if (op.operation === 'delete') {
+      taskMap.delete(op.entityId)
+      continue
+    }
+    if (op.operation === 'create') {
+      taskMap.set(
+        op.entityId,
+        fromSupabaseTask(op.payload as unknown as import('@/utils/supabaseMappers').SupabaseTask),
+      )
+      continue
+    }
+    const existing = taskMap.get(op.entityId) ?? fallbackMap.get(op.entityId)
+    if (!existing) {
+      throw new Error(`Durable task update ${op.entityId} has no recoverable base projection`)
+    }
+    taskMap.set(op.entityId, applyPendingTaskPatch(existing, op.payload))
+  }
+
+  return { tasks: [...taskMap.values()], pendingTaskIds }
+}
+
 /**
  * Load tasks from cache AND apply any pending (unsynced) write operations on top.
  *
@@ -236,80 +303,18 @@ export async function getCachedProjects(): Promise<Project[] | null> {
 export async function getCachedTasksWithPendingWrites(): Promise<Task[] | null> {
   // TASK-1427: Load base snapshot
   const cachedTasks = await getCachedTasks()
-
-  // TASK-1427: Load pending write operations from FlowStateSyncQueue
-  let pendingOps: Array<{ entityType: string; operation: string; entityId: string; payload: Record<string, unknown> }> = []
   try {
-    const { getWriteQueueDB } = await import('@/services/offline/writeQueueDB')
-    const queueDB = getWriteQueueDB()
-
-    // Include 'pending', 'failed', and 'syncing' — all represent locally-committed
-    // changes that have not yet been confirmed by Supabase
-    const allUnsynced = await queueDB.operations
-      .where('status')
-      .anyOf(['pending', 'failed', 'syncing'])
-      .toArray()
-
-    // Sort ascending by createdAt to preserve operation order
-    allUnsynced.sort((a, b) => a.createdAt - b.createdAt)
-
-    pendingOps = allUnsynced.filter(op => op.entityType === 'task')
+    const projection = await overlayPendingTaskWrites(cachedTasks ?? [])
+    if (projection.pendingTaskIds.size > 0) {
+      console.log(
+        `📦 [READ-CACHE] TASK-1427: Merged ${cachedTasks?.length ?? 0} cached + ${projection.pendingTaskIds.size} pending task(s) → ${projection.tasks.length} tasks`
+      )
+    }
+    return projection.tasks.length > 0 ? projection.tasks : null
   } catch (e) {
     console.warn('[READ-CACHE] TASK-1427: Could not load pending writes for tasks:', e)
     return cachedTasks
   }
-
-  if (pendingOps.length === 0) return cachedTasks
-
-  // TASK-1427: Build a mutable map from the cached snapshot (or empty if no cache)
-  const taskMap = new Map<string, Task>()
-  if (cachedTasks) {
-    for (const task of cachedTasks) {
-      taskMap.set(task.id, task)
-    }
-  }
-
-  // Creates contain full rows and use the full mapper. Updates are field-level
-  // patches and must only touch columns present in the queued payload.
-  let mapPayloadToTask: ((payload: Record<string, unknown>) => Task) | null = null
-  try {
-    const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
-    mapPayloadToTask = (payload) => fromSupabaseTask(payload as unknown as import('@/utils/supabaseMappers').SupabaseTask)
-  } catch (e) {
-    console.warn('[READ-CACHE] TASK-1428: Could not load mapper, using raw payloads:', e)
-  }
-
-  // TASK-1427: Apply pending operations in chronological order
-  for (const op of pendingOps) {
-    switch (op.operation) {
-      case 'create':
-        // Only add if not already present in the cache snapshot
-        if (!taskMap.has(op.entityId)) {
-          // TASK-1428: Convert DB-format payload to app-format Task
-          const task = mapPayloadToTask
-            ? mapPayloadToTask(op.payload)
-            : { id: op.entityId, ...op.payload } as Task
-          taskMap.set(op.entityId, task)
-        }
-        break
-      case 'update': {
-        const existing = taskMap.get(op.entityId)
-        if (existing) {
-          taskMap.set(op.entityId, applyPendingTaskPatch(existing, op.payload))
-        }
-        break
-      }
-      case 'delete':
-        taskMap.delete(op.entityId)
-        break
-    }
-  }
-
-  const merged = Array.from(taskMap.values())
-  console.log(
-    `📦 [READ-CACHE] TASK-1427: Merged ${cachedTasks?.length ?? 0} cached + ${pendingOps.length} pending ops → ${merged.length} tasks`
-  )
-  return merged.length > 0 ? merged : null
 }
 
 /**

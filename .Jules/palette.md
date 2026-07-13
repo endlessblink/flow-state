@@ -1,0 +1,3 @@
+## 2024-07-13 - Add ARIA Labels to Password/Key Visibility Toggle Buttons
+**Learning:** Found an accessibility issue pattern in settings tabs (`AccountSettingsTab.vue`, `AISettingsTab.vue`) where icon-only buttons for toggling password or API key visibility and copying tokens were missing descriptive ARIA labels. Screen readers would only announce them generically as buttons.
+**Action:** Always dynamically bind `:aria-label` to these visibility toggle buttons based on their current state (e.g., `:aria-label="showPassword ? 'Hide password' : 'Show password'"`) to ensure screen reader users receive contextually accurate interaction cues. For copy buttons, provide a descriptive static `aria-label`.

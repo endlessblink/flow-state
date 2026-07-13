@@ -22,6 +22,7 @@ import type {
 } from '@/types/sync'
 import { DB_TABLES } from '@/constants/dbTables'
 import { getInitialOnlineState } from '@/utils/platform'
+import { executeQueuedCanonicalTaskPatch } from '@/services/sync/canonicalTaskPatch'
 
 // TASK-1177: Check for IndexedDB availability (not available in Node.js/tests)
 const hasIndexedDB = typeof indexedDB !== 'undefined'
@@ -102,6 +103,10 @@ import type {
   markCompleted as _markCompleted,
   markFailed as _markFailed,
   markConflict as _markConflict,
+  updateOperation as _updateOperation,
+  completeCanonicalOperation as _completeCanonicalOperation,
+  completeLegacyTaskOperation as _completeLegacyTaskOperation,
+  getLatestCanonicalCheckpointForEntity as _getLatestCanonicalCheckpointForEntity,
   cleanupCompleted as _cleanupCompleted,
   getStats as _getStats,
   getFailedOperations as _getFailedOperations
@@ -111,6 +116,9 @@ import type {
 const enqueueOperation: typeof _enqueueOperation = async (...args) => {
   const mod = await getWriteQueueModule()
   if (!mod) {
+    if (args[0].canonicalTaskPatch) {
+      throw new Error('IndexedDB is required for durable canonical task patches')
+    }
     console.warn('[SYNC] IndexedDB not available - operation not queued')
     return { ...args[0], id: Date.now(), status: 'pending' as const, retryCount: 0, createdAt: Date.now() }
   }
@@ -141,6 +149,28 @@ const markConflict: typeof _markConflict = async (...args) => {
   const mod = await getWriteQueueModule()
   if (!mod) throw new Error('IndexedDB not available')
   return mod.markConflict(...args)
+}
+
+const updateOperation: typeof _updateOperation = async (...args) => {
+  const mod = await getWriteQueueModule()
+  if (mod) await mod.updateOperation(...args)
+}
+
+const completeCanonicalOperation: typeof _completeCanonicalOperation = async (...args) => {
+  const mod = await getWriteQueueModule()
+  if (!mod) throw new Error('IndexedDB not available')
+  await mod.completeCanonicalOperation(...args)
+}
+
+const completeLegacyTaskOperation: typeof _completeLegacyTaskOperation = async (...args) => {
+  const mod = await getWriteQueueModule()
+  if (!mod) throw new Error('IndexedDB not available')
+  await mod.completeLegacyTaskOperation(...args)
+}
+
+const getLatestCanonicalCheckpointForEntity: typeof _getLatestCanonicalCheckpointForEntity = async (...args) => {
+  const mod = await getWriteQueueModule()
+  return mod ? mod.getLatestCanonicalCheckpointForEntity(...args) : undefined
 }
 
 const cleanupCompleted: typeof _cleanupCompleted = async () => {
@@ -239,6 +269,7 @@ import {
 } from '@/services/offline/retryStrategy'
 import { coalesceOperationsForEntity } from '@/services/offline/operationCoalescer'
 import { sortOperations } from '@/services/offline/operationSorter'
+import { hasEarlierUnresolvedOperation, hasLaterUnresolvedOperation } from '@/services/offline/writeQueueDB'
 import { supabase } from '@/services/auth/supabase'
 import { reportWriteFailure } from '@/composables/sync/writeHealth'
 
@@ -413,10 +444,45 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
   if (userOwnedEntities.includes(entityType)) {
     const currentUserId = await getCurrentAuthUserId()
     if (!currentUserId) {
+      if (operation.canonicalTaskPatch) {
+        return {
+          success: false,
+          operation,
+          error: 'not_authenticated: canonical task patch requires an authenticated user',
+          isAuthError: true,
+          shouldRetry: false,
+          classification: 'auth',
+        }
+      }
       console.warn(`[SYNC] Dropping remote ${entityType}:${operation.operation} ${entityId.slice(0, 8)} — no authenticated user for RLS`)
       return { success: true, operation, serverData: undefined }
     }
-    payload = { ...payload, user_id: currentUserId }
+    if (operation.canonicalTaskPatch && operation.userId !== currentUserId) {
+      return {
+        success: false,
+        operation,
+        error: 'canonical_scope_mismatch: queued intent belongs to another signed user',
+        shouldRetry: false,
+        classification: 'permanent',
+      }
+    }
+    const preserveSharedTaskOwner = entityType === 'task'
+      && operation.operation === 'update'
+      && Boolean(operation.workspaceId)
+    if (preserveSharedTaskOwner) {
+      const { user_id: _ownerId, ...ownerPreservingPayload } = payload as Record<string, unknown>
+      payload = ownerPreservingPayload
+    } else {
+      payload = { ...payload, user_id: currentUserId }
+    }
+  }
+
+  if (operation.canonicalTaskPatch) {
+    return executeQueuedCanonicalTaskPatch(
+      supabase as unknown as Parameters<typeof executeQueuedCanonicalTaskPatch>[0],
+      operation,
+      canonicalTaskPatch => updateOperation(operation.id!, { canonicalTaskPatch }),
+    )
   }
 
   // Map entity type to Supabase table name
@@ -646,7 +712,8 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
     return {
       success: true,
       operation,
-      newVersion
+      newVersion,
+      serverData: result.data?.[0],
     }
   } catch (error) {
     // Handle different error types - Supabase errors have a message property
@@ -687,8 +754,8 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 /**
  * Process a single operation from the queue
  */
-async function processOperation(operation: WriteOperation): Promise<void> {
-  if (!operation.id) return
+async function processOperation(operation: WriteOperation): Promise<SyncResult | undefined> {
+  if (!operation.id) return undefined
 
   // Mark as syncing
   await markSyncing(operation.id)
@@ -697,13 +764,35 @@ async function processOperation(operation: WriteOperation): Promise<void> {
   const result = await executeOperation(operation)
 
   if (result.success) {
+    const returnedCanonicalRevision = Number(result.serverData?.canonical_revision)
     // Success - mark completed
-    await markCompleted(operation.id)
+    if (result.canonicalReceipt) {
+      await completeCanonicalOperation(operation.id, result.canonicalReceipt)
+    } else if (
+      operation.entityType === 'task'
+      && operation.operation === 'update'
+      && Number.isInteger(returnedCanonicalRevision)
+      && returnedCanonicalRevision > 0
+    ) {
+      await completeLegacyTaskOperation(operation.id, returnedCanonicalRevision)
+    } else {
+      await markCompleted(operation.id)
+    }
+    let hasLaterUnresolvedTaskOperation = false
+    if (operation.entityType === 'task') {
+      try {
+        hasLaterUnresolvedTaskOperation = await hasLaterUnresolvedOperation(operation)
+      } catch (error) {
+        // Preserve optimistic state when queue ordering cannot be proven safely.
+        hasLaterUnresolvedTaskOperation = true
+        console.warn('[SYNC] Could not verify later task operations; preserving optimistic state:', error)
+      }
+    }
     await invalidateSyncedEntityCache(operation.entityType)
     state.value.lastSyncAt = Date.now()
     consecutiveTransientFailures = 0  // BUG-P1: reset on any success
 
-    if (operation.entityType === 'task') {
+    if (operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
       try {
         const { useTaskStore } = await import('@/stores/tasks')
         useTaskStore().removePendingWrite(operation.entityId)
@@ -714,7 +803,14 @@ async function processOperation(operation: WriteOperation): Promise<void> {
 
     // BUG-1321: When LWW "server wins", apply serverData back to Pinia store.
     // Without this, the local store silently diverges from VPS truth.
-    if (result.serverData && operation.entityType === 'task') {
+    if (result.canonicalReceipt && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
+      try {
+        const { useTaskStore } = await import('@/stores/tasks')
+        await useTaskStore().applyCanonicalTaskReceipt(result.canonicalReceipt)
+      } catch (error) {
+        console.warn('[SYNC] Failed to project canonical receipt into task state:', error)
+      }
+    } else if (result.serverData && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
       try {
         const { useTaskStore } = await import('@/stores/tasks')
         const taskStore = useTaskStore()
@@ -845,22 +941,27 @@ async function processOperation(operation: WriteOperation): Promise<void> {
     console.error(`❌ [SYNC] Permanent failure: ${operation.entityType}:${operation.entityId.slice(0, 8)} - ${result.error}`)
     permanentFailureCallbacks.forEach(cb => cb(operation))
   }
+  return result
 }
 
 /**
  * Process the queue of pending operations
  */
-async function processQueue(): Promise<void> {
+async function runProcessQueue(): Promise<void> {
   // Skip if already processing, offline, or no supabase
   if (isProcessing.value || !state.value.isOnline || !supabase) {
     return
   }
+  // Claim the queue before any async preflight so two callers cannot both pass
+  // the guard and submit the same durable operation concurrently.
+  isProcessing.value = true
 
   if (isRemoteWriteCoolingDown()) {
     if (import.meta.env.DEV) {
       const remaining = Math.round(((state.value.remoteWriteCooldownUntil ?? Date.now()) - Date.now()) / 1000)
       console.debug(`[SYNC] Remote write cooldown active (${remaining}s): ${state.value.remoteWriteCooldownReason ?? 'backpressure'}`)
     }
+    isProcessing.value = false
     return
   }
 
@@ -872,6 +973,7 @@ async function processQueue(): Promise<void> {
       if (import.meta.env.DEV) {
         console.debug('[SYNC] Skipping queue — workspace switch in progress')
       }
+      isProcessing.value = false
       return
     }
   } catch { /* workspace store not available */ }
@@ -896,6 +998,7 @@ async function processQueue(): Promise<void> {
       if (import.meta.env.DEV) {
         console.debug('[SYNC] Holding queue — auth reconnect grace is active')
       }
+      isProcessing.value = false
       return
     }
   } catch { /* auth store not available */ }
@@ -919,11 +1022,10 @@ async function processQueue(): Promise<void> {
         reportWriteFailure('queueFlushAuthGate', message)
       }
     }
+    isProcessing.value = false
     return
   }
   consecutiveAuthGateSkips = 0
-
-  isProcessing.value = true
 
   try {
     // BUG-1301: Recover operations stuck in 'syncing' from a previous session crash.
@@ -961,7 +1063,31 @@ async function processQueue(): Promise<void> {
 
     // Process operations sequentially for now
     // TODO: Optimize with batching for independent operations
+    const blockedEntities = new Set<string>()
     for (const operation of sorted) {
+      const entityKey = `${operation.userId ?? 'anonymous'}:${operation.workspaceId ?? 'personal'}:${operation.entityType}:${operation.entityId}`
+      if (blockedEntities.has(entityKey) || await hasEarlierUnresolvedOperation(operation)) continue
+      if (operation.canonicalTaskPatch) {
+        let canonicalOperation = operation
+        const canonical = operation.canonicalTaskPatch
+        if (canonical.phase === 'queued') {
+          const predecessor = operation.userId
+            ? await getLatestCanonicalCheckpointForEntity(operation.entityId, operation.userId, operation.workspaceId ?? null)
+            : undefined
+          if (predecessor && predecessor.canonicalRevision > canonical.baseRevision) {
+            const rebased = {
+              ...canonical,
+              baseRevision: predecessor.canonicalRevision,
+              parentOperationId: predecessor.operationId,
+            }
+            await updateOperation(operation.id!, { canonicalTaskPatch: rebased })
+            canonicalOperation = { ...operation, canonicalTaskPatch: rebased }
+          }
+        }
+        const result = await processOperation(canonicalOperation)
+        if (result && !result.success) blockedEntities.add(entityKey)
+        continue
+      }
       // Coalesce before syncing (merge multiple updates to same entity)
       const coalesced = await coalesceOperationsForEntity(
         operation.entityType,
@@ -969,7 +1095,8 @@ async function processQueue(): Promise<void> {
       )
 
       if (coalesced.operation) {
-        await processOperation(coalesced.operation)
+        const result = await processOperation(coalesced.operation)
+        if (result && !result.success) blockedEntities.add(entityKey)
       }
 
       // Check if we're still online
@@ -989,6 +1116,19 @@ async function processQueue(): Promise<void> {
   } finally {
     isProcessing.value = false
     await updateStatus()
+  }
+}
+
+let activeProcessQueuePromise: Promise<void> | null = null
+
+async function processQueue(): Promise<void> {
+  if (activeProcessQueuePromise) return activeProcessQueuePromise
+  const run = runProcessQueue()
+  activeProcessQueuePromise = run
+  try {
+    await run
+  } finally {
+    if (activeProcessQueuePromise === run) activeProcessQueuePromise = null
   }
 }
 
@@ -1046,6 +1186,7 @@ export function useSyncOrchestrator() {
       entityId: string
       payload: Record<string, unknown>
       baseVersion?: number
+      canonicalTaskPatch?: WriteOperation['canonicalTaskPatch']
     }
   ): Promise<WriteOperation> => {
     // Get current user ID

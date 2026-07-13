@@ -115,6 +115,12 @@ describe('toSupabaseTask / fromSupabaseTask', () => {
     expect(roundTrip.estimatedPomodoros).toBe(task.estimatedPomodoros)
   })
 
+  it('maps the canonical task revision from the authoritative row', () => {
+    const supabase = toSupabaseTask(makeTask(), USER_ID)
+
+    expect(fromSupabaseTask({ ...supabase, canonical_revision: 17 }).canonicalRevision).toBe(17)
+  })
+
   it('TASK-1785 Push 2: calendarLocked round-trips via calendar_locked', () => {
     const locked = toSupabaseTask(makeTask({ calendarLocked: true }), USER_ID)
     expect(locked.calendar_locked).toBe(true)

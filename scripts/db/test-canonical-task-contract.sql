@@ -594,10 +594,16 @@ DO $$
 DECLARE
   v_updated integer;
 BEGIN
-  UPDATE public.tasks
-  SET title = 'Viewer direct write must be filtered'
-  WHERE id = 'canonical-shared';
-  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  v_updated := 0;
+  BEGIN
+    UPDATE public.tasks
+    SET title = 'Viewer direct write must be filtered'
+    WHERE id = 'canonical-shared';
+    GET DIAGNOSTICS v_updated = ROW_COUNT;
+  EXCEPTION WHEN insufficient_privilege THEN
+    -- A table-level denial is stronger than an RLS-filtered zero-row update.
+    v_updated := 0;
+  END;
 
   IF EXISTS (
        SELECT 1 FROM public.canonical_operations

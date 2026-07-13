@@ -25,6 +25,13 @@ INSERT INTO auth.users (
     'done-for-now-other@test.flowstate', '', now(), now(), now(),
     '{"provider":"email","providers":["email"]}', '{}',
     'authenticated', 'authenticated', '', ''
+  ),
+  (
+    'd0f00000-0000-4000-8000-000000000003',
+    '00000000-0000-0000-0000-000000000000',
+    'done-for-now-viewer@test.flowstate', '', now(), now(), now(),
+    '{"provider":"email","providers":["email"]}', '{}',
+    'authenticated', 'authenticated', '', ''
   );
 
 INSERT INTO public.workspaces (id, name, owner_id) VALUES
@@ -34,6 +41,9 @@ INSERT INTO public.workspaces (id, name, owner_id) VALUES
 INSERT INTO public.workspace_members (workspace_id, user_id, role) VALUES
   ('d0f00000-0000-4000-8000-000000000101', 'd0f00000-0000-4000-8000-000000000001', 'owner'),
   ('d0f00000-0000-4000-8000-000000000102', 'd0f00000-0000-4000-8000-000000000001', 'owner');
+
+INSERT INTO public.workspace_members (workspace_id, user_id, role) VALUES
+  ('d0f00000-0000-4000-8000-000000000101', 'd0f00000-0000-4000-8000-000000000003', 'viewer');
 
 INSERT INTO public.tasks (
   id, user_id, workspace_id, title, status, due_date, due_time, estimated_duration,
@@ -234,6 +244,23 @@ SELECT 'conflict', public.flowstate_done_for_now(
 );
 
 -- Typed validation and scope failures do not mutate rows.
+SELECT set_config('request.jwt.claim.sub', 'd0f00000-0000-4000-8000-000000000003', true);
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"d0f00000-0000-4000-8000-000000000003","role":"authenticated"}',
+  true
+);
+INSERT INTO done_for_now_results (key, payload)
+SELECT 'shared_viewer', public.flowstate_done_for_now(
+  p_task_id => 'dfn-shared', p_preview => true,
+  p_workspace_id => 'd0f00000-0000-4000-8000-000000000101'
+);
+SELECT set_config('request.jwt.claim.sub', 'd0f00000-0000-4000-8000-000000000001', true);
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"d0f00000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
 INSERT INTO done_for_now_results (key, payload) VALUES
   ('non_recurring', public.flowstate_done_for_now('d0f00000-0000-4000-8000-000000000202', true)),
   ('missing', public.flowstate_done_for_now('d0f00000-0000-4000-8000-000000000299', true)),
@@ -267,6 +294,7 @@ BEGIN
      OR (SELECT payload #>> '{error,code}' FROM done_for_now_results WHERE key = 'personal_wrong_workspace') <> 'not_found'
      OR (SELECT payload #>> '{error,code}' FROM done_for_now_results WHERE key = 'shared_missing_workspace') <> 'not_found'
      OR (SELECT payload #>> '{error,code}' FROM done_for_now_results WHERE key = 'shared_wrong_workspace') <> 'not_found'
+     OR (SELECT payload #>> '{error,code}' FROM done_for_now_results WHERE key = 'shared_viewer') <> 'not_found'
      OR (SELECT payload #>> '{ok}' FROM done_for_now_results WHERE key = 'shared_exact_workspace') <> 'true'
      OR (SELECT payload #>> '{error,code}' FROM done_for_now_results WHERE key = 'override_beyond_end') <> 'invalid_next_date' THEN
     RAISE EXCEPTION 'FAIL: typed errors were not stable: %',

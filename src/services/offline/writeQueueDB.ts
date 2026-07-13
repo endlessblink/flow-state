@@ -13,7 +13,19 @@
 
 import Dexie, { type Table } from 'dexie'
 import { toRaw } from 'vue'
-import type { WriteOperation, WriteConflict, SyncEntityType } from '@/types/sync'
+import type { CanonicalTaskPatchReceipt, WriteOperation, WriteConflict, SyncEntityType } from '@/types/sync'
+
+type StoredCanonicalTaskPatchReceipt = CanonicalTaskPatchReceipt & { scopeKey: string }
+
+export interface CanonicalRevisionCheckpoint {
+  scopeKey: string
+  entityId: string
+  canonicalRevision: number
+  operationId: string
+}
+
+const canonicalScopeKey = (userId: string, workspaceId: string | null | undefined) =>
+  `${userId}:${workspaceId ?? 'personal'}`
 
 /**
  * FlowState Sync Database
@@ -30,6 +42,12 @@ class WriteQueueDatabase extends Dexie {
 
   /** Metadata for sync state */
   metadata!: Table<{ key: string; value: unknown }, string>
+  /** Legacy v3/v4 ledger retained so existing proof can be migrated safely. */
+  canonicalReceipts!: Table<StoredCanonicalTaskPatchReceipt, string>
+  /** User/workspace-scoped canonical proof ledger. */
+  canonicalReceiptsV2!: Table<StoredCanonicalTaskPatchReceipt, [string, string]>
+  /** Latest durable server revision observed for one scoped task. */
+  canonicalCheckpoints!: Table<CanonicalRevisionCheckpoint, [string, string]>
 
   constructor() {
     super('FlowStateSyncQueue')
@@ -54,6 +72,49 @@ class WriteQueueDatabase extends Dexie {
       operations: '++id, status, [entityType+entityId], createdAt, nextRetryAt, userId, workspaceId',
       conflicts: '++id, [operation.entityType+operation.entityId], detectedAt',
       metadata: 'key'
+    })
+
+    this.version(3).stores({
+      operations: '++id, status, [entityType+entityId], createdAt, nextRetryAt, userId, workspaceId',
+      conflicts: '++id, [operation.entityType+operation.entityId], detectedAt',
+      metadata: 'key',
+      canonicalReceipts: 'operationId, entityId, committedAt'
+    })
+
+    this.version(4).stores({
+      operations: '++id, status, [entityType+entityId], createdAt, nextRetryAt, userId, workspaceId',
+      conflicts: '++id, [operation.entityType+operation.entityId], detectedAt',
+      metadata: 'key',
+      canonicalReceipts: 'operationId, [scopeKey+entityId], scopeKey, entityId, changeSequence'
+    })
+
+    this.version(5).stores({
+      operations: '++id, status, [entityType+entityId], createdAt, nextRetryAt, userId, workspaceId',
+      conflicts: '++id, [operation.entityType+operation.entityId], detectedAt',
+      metadata: 'key',
+      canonicalReceipts: 'operationId, [scopeKey+entityId], scopeKey, entityId, changeSequence',
+      canonicalReceiptsV2: '[scopeKey+operationId], operationId, [scopeKey+entityId], scopeKey, entityId, changeSequence',
+      canonicalCheckpoints: '[scopeKey+entityId], scopeKey, entityId, canonicalRevision'
+    }).upgrade(async transaction => {
+      const legacy = await transaction.table<StoredCanonicalTaskPatchReceipt>('canonicalReceipts').toArray()
+      if (legacy.length > 0) {
+        await transaction.table<StoredCanonicalTaskPatchReceipt>('canonicalReceiptsV2').bulkPut(legacy)
+        const latestByEntity = new Map<string, CanonicalRevisionCheckpoint>()
+        for (const receipt of legacy) {
+          const key = `${receipt.scopeKey}:${receipt.entityId}`
+          const current = latestByEntity.get(key)
+          if (!current || receipt.canonicalRevision > current.canonicalRevision) {
+            latestByEntity.set(key, {
+              scopeKey: receipt.scopeKey,
+              entityId: receipt.entityId,
+              canonicalRevision: receipt.canonicalRevision,
+              operationId: receipt.operationId,
+            })
+          }
+        }
+        await transaction.table<CanonicalRevisionCheckpoint>('canonicalCheckpoints')
+          .bulkPut([...latestByEntity.values()])
+      }
     })
   }
 }
@@ -167,6 +228,142 @@ export async function markCompleted(id: number): Promise<void> {
   await updateOperation(id, {
     status: 'completed'
   })
+}
+
+async function putLatestCanonicalCheckpoint(
+  table: Table<CanonicalRevisionCheckpoint, [string, string]>,
+  checkpoint: CanonicalRevisionCheckpoint,
+): Promise<void> {
+  const existing = await table.get([checkpoint.scopeKey, checkpoint.entityId])
+  if (!existing || checkpoint.canonicalRevision >= existing.canonicalRevision) {
+    await table.put(checkpoint)
+  }
+}
+
+/** Persist canonical proof and complete its queue row in one IndexedDB transaction. */
+export async function completeCanonicalOperation(
+  id: number,
+  receipt: CanonicalTaskPatchReceipt,
+): Promise<void> {
+  const db = getWriteQueueDB()
+  await db.transaction('rw', db.operations, db.canonicalReceiptsV2, db.canonicalCheckpoints, async () => {
+    const operation = await db.operations.get(id)
+    if (!operation?.canonicalTaskPatch || operation.canonicalTaskPatch.operationId !== receipt.operationId) {
+      throw new Error('Canonical receipt does not match the queued operation')
+    }
+    if (!operation.userId) throw new Error('Canonical receipt requires a signed-user scope')
+    await db.canonicalReceiptsV2.put({
+      ...receipt,
+      scopeKey: canonicalScopeKey(operation.userId, operation.workspaceId),
+    })
+    await putLatestCanonicalCheckpoint(db.canonicalCheckpoints, {
+      scopeKey: canonicalScopeKey(operation.userId, operation.workspaceId),
+      entityId: operation.entityId,
+      canonicalRevision: receipt.canonicalRevision,
+      operationId: receipt.operationId,
+    })
+    await db.operations.update(id, {
+      status: 'completed',
+      canonicalTaskPatch: {
+        ...operation.canonicalTaskPatch,
+        phase: 'committed',
+        receipt,
+      },
+    })
+  })
+}
+
+/** Complete a compatibility task update and retain the server revision atomically. */
+export async function completeLegacyTaskOperation(id: number, canonicalRevision: number): Promise<void> {
+  if (!Number.isSafeInteger(canonicalRevision) || canonicalRevision < 1) {
+    throw new Error('Canonical revision must be a positive integer')
+  }
+  const db = getWriteQueueDB()
+  await db.transaction('rw', db.operations, db.canonicalCheckpoints, async () => {
+    const operation = await db.operations.get(id)
+    if (!operation || operation.entityType !== 'task' || operation.operation !== 'update' || operation.canonicalTaskPatch) {
+      throw new Error('Legacy task completion requires a queued compatibility update')
+    }
+    if (!operation.userId) throw new Error('Legacy task completion requires a signed-user scope')
+    await putLatestCanonicalCheckpoint(db.canonicalCheckpoints, {
+      scopeKey: canonicalScopeKey(operation.userId, operation.workspaceId),
+      entityId: operation.entityId,
+      canonicalRevision,
+      operationId: `legacy:${id}`,
+    })
+    await db.operations.update(id, { status: 'completed' })
+  })
+}
+
+export async function getLatestCanonicalCheckpointForEntity(
+  entityId: string,
+  userId: string,
+  workspaceId: string | null,
+): Promise<CanonicalRevisionCheckpoint | undefined> {
+  return getWriteQueueDB().canonicalCheckpoints.get([
+    canonicalScopeKey(userId, workspaceId),
+    entityId,
+  ])
+}
+
+export async function getCanonicalReceipt(
+  operationId: string,
+  userId: string,
+  workspaceId: string | null,
+): Promise<CanonicalTaskPatchReceipt | undefined> {
+  const stored = await getWriteQueueDB().canonicalReceiptsV2.get([canonicalScopeKey(userId, workspaceId), operationId])
+  if (!stored) return undefined
+  const { scopeKey: _scopeKey, ...receipt } = stored
+  return receipt
+}
+
+export async function getLatestCanonicalReceiptForEntity(
+  entityId: string,
+  userId: string,
+  workspaceId: string | null,
+): Promise<CanonicalTaskPatchReceipt | undefined> {
+  const receipts = await getWriteQueueDB().canonicalReceiptsV2
+    .where('[scopeKey+entityId]')
+    .equals([canonicalScopeKey(userId, workspaceId), entityId])
+    .toArray()
+  const stored = receipts.sort((left, right) =>
+    right.changeSequence - left.changeSequence
+    || right.canonicalRevision - left.canonicalRevision
+    || Date.parse(right.committedAt) - Date.parse(left.committedAt)
+  )[0]
+  if (!stored) return undefined
+  const { scopeKey: _scopeKey, ...receipt } = stored
+  return receipt
+}
+
+/** Preserve entity ordering even when an earlier retry is not yet eligible for this pass. */
+export async function hasEarlierUnresolvedOperation(operation: WriteOperation): Promise<boolean> {
+  const operationId = operation.id
+  if (!operationId) return false
+  const operations = await getOperationsForEntity(operation.entityType, operation.entityId)
+  return operations.some(candidate =>
+    candidate.id !== operation.id
+    && candidate.status !== 'completed'
+    && candidate.userId === operation.userId
+    && (candidate.workspaceId ?? null) === (operation.workspaceId ?? null)
+    && (candidate.createdAt < operation.createdAt
+      || (candidate.createdAt === operation.createdAt && Number(candidate.id) < operationId))
+  )
+}
+
+/** Protect optimistic state while a later same-scope operation is still durable. */
+export async function hasLaterUnresolvedOperation(operation: WriteOperation): Promise<boolean> {
+  const operationId = operation.id
+  if (!operationId) return false
+  const operations = await getOperationsForEntity(operation.entityType, operation.entityId)
+  return operations.some(candidate =>
+    candidate.id !== operation.id
+    && candidate.status !== 'completed'
+    && candidate.userId === operation.userId
+    && (candidate.workspaceId ?? null) === (operation.workspaceId ?? null)
+    && (candidate.createdAt > operation.createdAt
+      || (candidate.createdAt === operation.createdAt && Number(candidate.id) > operationId))
+  )
 }
 
 /**
@@ -381,7 +578,7 @@ export async function purgeStaleOperations(maxAgeMs = 24 * 60 * 60 * 1000): Prom
   const staleOps = await db.operations
     .where('status')
     .equals('pending')
-    .filter(op => op.createdAt < cutoff)
+    .filter(op => op.createdAt < cutoff && !op.canonicalTaskPatch)
     .toArray()
 
   if (staleOps.length > 0) {
@@ -406,12 +603,12 @@ export async function clearFailedOperations(): Promise<number> {
   // BUG-1301: Also clear 'syncing' operations — these are stuck from a previous
   // session crash and will never complete. Previously only cleared 'failed' and
   // 'conflict', leaving orphaned 'syncing' ops stuck forever.
-  const toDelete = allOps.filter(op =>
+  const toDelete = allOps.filter(op => !op.canonicalTaskPatch && (
     op.status === 'failed' ||
     op.status === 'conflict' ||
     op.status === 'syncing' ||
     op.retryCount >= 10 // Also clear anything stuck after 10+ retries
-  )
+  ))
 
   if (toDelete.length > 0) {
     const ids = toDelete.map(op => op.id!).filter(id => id !== undefined)
@@ -419,12 +616,13 @@ export async function clearFailedOperations(): Promise<number> {
   }
 
   // BUG-1179: Also clear the conflicts table to reset error state
-  const conflictCount = await db.conflicts.count()
-  if (conflictCount > 0) {
-    await db.conflicts.clear()
+  const disposableConflicts = (await db.conflicts.toArray())
+    .filter(conflict => !conflict.operation.canonicalTaskPatch)
+  if (disposableConflicts.length > 0) {
+    await db.conflicts.bulkDelete(disposableConflicts.map(conflict => conflict.id!))
   }
 
-  return toDelete.length + conflictCount
+  return toDelete.length + disposableConflicts.length
 }
 
 /**
@@ -461,15 +659,23 @@ export async function resolveConflictRetry(
   const conflict = await db.conflicts.get(conflictId)
 
   if (conflict && conflict.operation.id) {
-    // Update the operation with new version and reset for retry
-    await updateOperation(conflict.operation.id, {
-      status: 'pending',
-      baseVersion: newBaseVersion,
-      retryCount: 0,
-      nextRetryAt: undefined
+    await db.transaction('rw', db.operations, db.conflicts, async () => {
+      const operation = await db.operations.get(conflict.operation.id!)
+      if (!operation) return
+      if (operation.canonicalTaskPatch?.phase === 'previewed' || operation.canonicalTaskPatch?.phase === 'committed') {
+        throw new Error('Cannot rebase a canonical operation after its preview binding was issued')
+      }
+      await db.operations.update(operation.id!, {
+        status: 'pending',
+        baseVersion: newBaseVersion,
+        retryCount: 0,
+        nextRetryAt: undefined,
+        canonicalTaskPatch: operation.canonicalTaskPatch
+          ? { ...operation.canonicalTaskPatch, baseRevision: newBaseVersion }
+          : undefined,
+      })
+      await db.conflicts.delete(conflictId)
     })
-    // Delete the conflict record
-    await db.conflicts.delete(conflictId)
   }
 }
 
@@ -498,7 +704,10 @@ export async function clearAll(): Promise<void> {
   await Promise.all([
     db.operations.clear(),
     db.conflicts.clear(),
-    db.metadata.clear()
+    db.metadata.clear(),
+    db.canonicalReceipts.clear(),
+    db.canonicalReceiptsV2.clear(),
+    db.canonicalCheckpoints.clear()
   ])
 }
 

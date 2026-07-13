@@ -17,6 +17,7 @@ import { toDbStatus, toSupabaseTask } from '@/utils/supabaseMappers'
 import { useToast } from '@/composables/useToast'
 // TASK-1428: Keep IndexedDB read cache warm after offline mutations
 import { cacheTasks } from '@/services/offline/readCacheDB'
+import { createCanonicalTaskPatchState } from '@/services/sync/canonicalTaskPatch'
 import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 import { sanitizeTaskTitle } from '@/utils/taskValidation'
 // TASK-1871 Phase 0: observable geometry-write chokepoint instrumentation
@@ -816,6 +817,7 @@ export function useTaskOperations(
             // This ensures the update persists in IndexedDB even if network fails
             const updatedTask = _rawTasks.value[freshIndex]
             let persisted = false
+            let canonicalTaskPatch: ReturnType<typeof createCanonicalTaskPatchState>
             try {
                 const syncOrchestrator = useSyncOrchestrator()
                 // BUGFIX: Filter out undefined values to prevent "null" string errors in Postgres
@@ -1014,16 +1016,29 @@ export function useTaskOperations(
                     payload.parent_task_id = isValidUUID(updatedTask.parentTaskId) ? updatedTask.parentTaskId : null
                 }
 
+                canonicalTaskPatch = createCanonicalTaskPatchState(payload, updatedTask.canonicalRevision)
+
                 await syncOrchestrator.enqueue({
                     entityType: 'task',
                     operation: 'update',
                     entityId: taskId,
                     payload: JSON.parse(JSON.stringify(payload)), // Strip all reactivity
-                    baseVersion: currentVersion
+                    baseVersion: currentVersion,
+                    canonicalTaskPatch,
                 })
                 persisted = true
             } catch (queueError) {
                 const errorMsg = queueError instanceof Error ? queueError.message : String(queueError)
+                if (canonicalTaskPatch) {
+                    console.error('[CANONICAL-SYNC] Failed to durably queue task patch; rolling back:', errorMsg)
+                    const rollbackIndex = _rawTasks.value.findIndex(candidate => candidate.id === taskId)
+                    if (rollbackIndex !== -1) _rawTasks.value[rollbackIndex] = previousTask
+                    removePendingWrite(taskId)
+                    await cacheTasks([..._rawTasks.value])
+                    const { showToast } = useToast()
+                    showToast('This change was not safely queued. The task was restored.', 'error')
+                    throw queueError
+                }
                 console.warn('[SYNC-QUEUE] Failed to queue update, falling back to direct save:', errorMsg)
                 // BUG-1207 FIX (Fix 2.3): Only fall back to direct save when sync queue fails
                 // (e.g., guest mode with no auth, or IndexedDB unavailable).

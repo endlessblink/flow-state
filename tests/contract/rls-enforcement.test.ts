@@ -345,7 +345,7 @@ describe('TASK-1591: RLS Enforcement (static analysis)', () => {
           /user_id\s*:/m.test(ctx) ||
           // JWT-authenticated RPC without explicit user param (Supabase uses auth.uid())
           // Allow audited RPCs that scope and authorize through auth.uid() server-side.
-          /accept_workspace_invite|claim_timer_leadership|flowstate_done_for_now|search_task_audit|transfer_workspace_ownership/m.test(ctx)
+          /accept_workspace_invite|claim_timer_leadership|flowstate_done_for_now|flowstate_patch_task_v1|search_task_audit|transfer_workspace_ownership/m.test(ctx)
 
         if (!hasUserParam) {
           unscoped.push({

@@ -76,6 +76,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearLocalApiSession: () => ipcRenderer.invoke('localApi:clearSession'),
   setLocalApiTimerSnapshot: (snapshot: unknown) => ipcRenderer.invoke('localApi:setTimerSnapshot', snapshot),
   setLocalApiRendererAuthState: (state: unknown) => ipcRenderer.invoke('localApi:setRendererAuthState', state),
+  setLocalApiWorkspaceContext: (state: unknown) => ipcRenderer.invoke('localApi:setWorkspaceContext', state),
   setLocalApiEnabled: (enabled: boolean) => ipcRenderer.invoke('localApi:setEnabled', enabled),
   getLocalApiToken: () => ipcRenderer.invoke('localApi:getToken'),
   getLocalApiStatus: () => ipcRenderer.invoke('localApi:status'),
@@ -125,6 +126,7 @@ declare global {
       clearLocalApiSession: () => Promise<{ ok: boolean }>
       setLocalApiTimerSnapshot: (snapshot: unknown) => Promise<{ ok: boolean }>
       setLocalApiRendererAuthState: (state: unknown) => Promise<{ ok: boolean }>
+      setLocalApiWorkspaceContext: (state: unknown) => Promise<{ ok: boolean }>
       setLocalApiEnabled: (enabled: boolean) => Promise<{ ok: boolean; enabled: boolean }>
       appendDragDiag: (line: string) => Promise<string>
       dragDiagPath: () => Promise<string>

@@ -30,6 +30,9 @@ const { mkdirSync } = require('fs')
 const { join } = require('path')
 const { createClient } = require('@supabase/supabase-js')
 const { createAIMastraRuntime } = require('./ai-runtime.cjs')
+const { executeDoneForNow } = require('./done-for-now.cjs')
+const { executeMergeTasks } = require('./merge-tasks.cjs')
+const { buildTaskSearchQuery, parseTaskSearchParams } = require('./task-search.cjs')
 
 // --- Mode detection ---------------------------------------------------------
 // parentPort exists only when launched as an Electron utilityProcess.
@@ -67,6 +70,7 @@ let ctx = null
 let aiRuntime = null
 let localTimerSnapshot = null
 let rendererAuthState = null
+let activeWorkspaceId = null
 
 function getAIRuntime() {
   if (!aiRuntime) {
@@ -85,6 +89,14 @@ function sanitizeRendererAuthState(state) {
     isInitialized: !!state.isInitialized,
     updatedAt: Number(state.updatedAt) || Date.now(),
   }
+}
+
+function sanitizeActiveWorkspaceId(value) {
+  if (value === null) return null
+  if (typeof value !== 'string') return undefined
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : undefined
 }
 
 function buildServiceRoleContext() {
@@ -135,7 +147,7 @@ async function applySession(msg) {
       logErr(`setSession failed: ${error.message}`)
       return
     }
-    ctx = { supabase, userId }
+    ctx = { supabase, userId, activeWorkspaceId }
   } catch (e) {
     logErr(`applySession error: ${e && e.message}`)
   }
@@ -269,6 +281,37 @@ function buildTaskInstanceResponse(task, instance, preview) {
 
 // --- Route handlers ---------------------------------------------------------
 
+async function handleSearchTasks(url, res) {
+  const parsed = parseTaskSearchParams(url.searchParams)
+  if (!parsed.ok) return send(res, 400, { ok: false, error: parsed.error })
+
+  const input = { query: parsed.query, limit: parsed.limit }
+  const { data, error } = await buildTaskSearchQuery(ctx, input)
+  if (error) {
+    return send(res, 500, {
+      ok: false,
+      error: { code: 'search_failed', message: 'tasks could not be searched' },
+    })
+  }
+
+  const tasks = (data || []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    status: fromDbStatus(row.status),
+    priority: row.priority ?? null,
+    dueDate: toDateOnly(row.due_date),
+    projectId: row.project_id ?? null,
+    workspaceId: row.workspace_id ?? null,
+    recurrenceRule: row.recurrence_rule ?? null,
+    recurrenceParentId: row.recurrence_parent_id ?? null,
+    recurrenceCount: row.recurrence_count ?? 0,
+    isCompletionRecord: row.is_completion_record === true,
+    updatedAt: row.updated_at,
+  }))
+
+  send(res, 200, { ok: true, query: input.query, tasks })
+}
+
 async function handleGetTasks(url, res) {
   const { supabase, userId } = ctx
   const statusParam = url.searchParams.get('status') // 'todo' | 'open' | 'done' | null
@@ -360,7 +403,7 @@ async function handlePatchTask(id, req, res) {
   // Verify the row exists for this user (and isn't soft-deleted).
   const { data: existing, error: findErr } = await supabase
     .from('tasks')
-    .select('id')
+    .select('id,recurrence_rule')
     .eq('id', id)
     .eq('user_id', userId)
     .eq('is_deleted', false)
@@ -370,6 +413,16 @@ async function handlePatchTask(id, req, res) {
 
   const body = await readJsonBody(req)
   const update = { updated_at: new Date().toISOString() }
+
+  if (body.status === 'done' && existing.recurrence_rule) {
+    return send(res, 409, {
+      ok: false,
+      error: {
+        code: 'recurring_completion_requires_done_for_now',
+        message: 'Recurring tasks must use POST /api/tasks/:id/done-for-now',
+      },
+    })
+  }
 
   if (body.status !== undefined) {
     if (body.status !== 'todo' && body.status !== 'done') {
@@ -405,6 +458,54 @@ async function handlePatchTask(id, req, res) {
   if (error) return send(res, 500, { error: error.message })
   notifyTaskMutation('update', id)
   send(res, 200, { ok: true })
+}
+
+async function handleGetTask(id, res) {
+  const { supabase, userId } = ctx
+  const { data: task, error } = await supabase
+    .from('tasks')
+    .select('id,title,status,priority,due_date,project_id,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,instances,workspace_id,updated_at')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .maybeSingle()
+  if (error) return send(res, 500, { error: { code: 'read_failed', message: 'task could not be read' }, ok: false })
+  if (!task) return send(res, 404, { error: { code: 'not_found', message: 'task not found' }, ok: false })
+
+  send(res, 200, {
+    ok: true,
+    task: {
+      id: task.id,
+      title: task.title,
+      status: fromDbStatus(task.status),
+      priority: task.priority,
+      dueDate: toDateOnly(task.due_date),
+      projectId: task.project_id,
+      recurrenceRule: task.recurrence_rule,
+      recurrenceParentId: task.recurrence_parent_id,
+      recurrenceCount: task.recurrence_count,
+      isCompletionRecord: task.is_completion_record,
+      instances: normalizeTaskInstances(task.instances),
+      workspaceId: task.workspace_id,
+      updatedAt: task.updated_at,
+    },
+  })
+}
+
+async function handleDoneForNow(id, req, res) {
+  const body = await readJsonBody(req)
+  const doneForNowContext = {
+    ...ctx,
+    activeWorkspaceId: ctx.activeWorkspaceId,
+  }
+  const result = await executeDoneForNow(doneForNowContext, id, body, notifyTaskMutation)
+  send(res, result.status, result.body)
+}
+
+async function handleMergeTasks(survivorId, req, res) {
+  const body = await readJsonBody(req)
+  const result = await executeMergeTasks(ctx, survivorId, body, notifyTaskMutation)
+  send(res, result.status, result.body)
 }
 
 async function handleGetTaskInstances(id, res) {
@@ -875,6 +976,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && path === '/api/tasks') {
       return await handleGetTasks(url, res)
     }
+    if (req.method === 'GET' && path === '/api/tasks/search') {
+      return await handleSearchTasks(url, res)
+    }
     if (req.method === 'GET' && path === '/api/assistant/context') {
       return await handleGetAssistantContext(res)
     }
@@ -895,7 +999,18 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && taskInstancesMatch) {
       return await handlePostTaskInstance(decodeURIComponent(taskInstancesMatch[1]), req, res)
     }
+    const doneForNowMatch = path.match(/^\/api\/tasks\/([^/]+)\/done-for-now$/)
+    if (req.method === 'POST' && doneForNowMatch) {
+      return await handleDoneForNow(decodeURIComponent(doneForNowMatch[1]), req, res)
+    }
+    const mergeTasksMatch = path.match(/^\/api\/tasks\/([^/]+)\/merge$/)
+    if (req.method === 'POST' && mergeTasksMatch) {
+      return await handleMergeTasks(decodeURIComponent(mergeTasksMatch[1]), req, res)
+    }
     const taskMatch = path.match(/^\/api\/tasks\/([^/]+)$/)
+    if (req.method === 'GET' && taskMatch) {
+      return await handleGetTask(decodeURIComponent(taskMatch[1]), res)
+    }
     if (req.method === 'PATCH' && taskMatch) {
       return await handlePatchTask(decodeURIComponent(taskMatch[1]), req, res)
     }
@@ -932,6 +1047,13 @@ if (TOKEN_MODE) {
       }
       else if (msg.type === 'timerSnapshot') localTimerSnapshot = msg.snapshot || null
       else if (msg.type === 'rendererAuthState') rendererAuthState = sanitizeRendererAuthState(msg.state)
+      else if (msg.type === 'workspaceContext') {
+        const sanitizedWorkspaceId = sanitizeActiveWorkspaceId(msg.activeWorkspaceId)
+        if (sanitizedWorkspaceId !== undefined) {
+          activeWorkspaceId = sanitizeActiveWorkspaceId(msg.activeWorkspaceId)
+          if (ctx) ctx = { ...ctx, activeWorkspaceId }
+        }
+      }
     })
   }
 } else {

@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
+const { mockRpc } = vi.hoisted(() => ({ mockRpc: vi.fn() }))
+
 const mockEnqueue = vi.fn()
 const mockSaveTasks = vi.fn()
 const mockDeleteTask = vi.fn()
@@ -48,7 +50,7 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
   })
 }))
 
-vi.mock('@/services/auth/supabase', () => ({ supabase: null }))
+vi.mock('@/services/auth/supabase', () => ({ supabase: { rpc: mockRpc } }))
 
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({
@@ -114,6 +116,7 @@ describe('task operation undo/redo three-cycle invariants', () => {
     mockDeleteTask.mockResolvedValue(undefined)
     mockBulkDeleteTasks.mockResolvedValue(undefined)
     mockPermanentDeleteTask.mockResolvedValue(undefined)
+    mockRpc.mockReset()
   })
 
   afterEach(() => {
@@ -228,48 +231,93 @@ describe('task operation undo/redo three-cycle invariants', () => {
     expect(taskStore._rawTasks.find(candidate => candidate.id === task.id)?.status).toBe('todo')
   })
 
-  it('advances recurring done-for-now locally even when the completion record direct save hangs', async () => {
+  it('advances recurring done-for-now only after the canonical transaction returns a receipt', async () => {
     const taskStore = useTaskStore()
-    const today = new Date()
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const dateKey = (date: Date) => {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
     const task = createMockTask({
       id: 'task-recurring-done-for-now-auth-recovery',
       title: 'Recurring done for now auth recovery',
       status: 'todo',
-      dueDate: dateKey(today),
+      dueDate: '2026-07-12',
       recurrenceRule: {
-        pattern: 'daily',
+        pattern: 'weekly',
         interval: 1,
+        weekdays: [4],
         endType: 'never'
-      }
+      },
+      recurrenceCount: 0,
+      instances: [{
+        id: 'instance-current',
+        taskId: 'task-recurring-done-for-now-auth-recovery',
+        scheduledDate: '2026-07-12',
+        scheduledTime: '20:00',
+        duration: 25,
+        status: 'scheduled'
+      }]
     })
     taskStore._rawTasks.push(task)
 
-    mockSaveTasks.mockImplementationOnce(() => new Promise(() => {}))
+    mockRpc
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          preview: true,
+          previewVersion: 'task-recurring-done-for-now-auth-recovery:0:2026-07-12:v1',
+          recurrence: { nextDueDateAfter: '2026-07-16', cadencePreserved: true }
+        },
+        error: null
+      })
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          preview: false,
+          requestId: 'receipt-request',
+          taskId: task.id,
+          currentOccurrence: { dueDate: '2026-07-12' },
+          completedOccurrence: {
+            id: 'completion-record-1',
+            status: 'done',
+            dueDate: '2026-07-12',
+            completedAt: '2026-07-12T20:30:00.000Z'
+          },
+          nextOccurrence: {
+            id: 'instance-next',
+            taskId: task.id,
+            status: 'todo',
+            dueDate: '2026-07-16',
+            scheduledTime: '20:00',
+            duration: 25
+          },
+          recurrence: { nextDueDateAfter: '2026-07-16', cadencePreserved: true }
+        },
+        error: null
+      })
 
     await expect(taskStore.doneForNow(task.id)).resolves.toBeUndefined()
 
     const advancedTask = taskStore._rawTasks.find(candidate => candidate.id === task.id)
     expect(advancedTask).toMatchObject({
       status: 'todo',
-      dueDate: dateKey(tomorrow),
+      dueDate: '2026-07-16',
       recurrenceCount: 1,
       isInInbox: true
     })
+    expect(advancedTask?.instances).toEqual([expect.objectContaining({
+      id: 'instance-next',
+      scheduledDate: '2026-07-16',
+      scheduledTime: '20:00',
+      status: 'scheduled'
+    })])
     expect(advancedTask?.completedAt).toBeUndefined()
-    expect(taskStore._rawTasks.some(candidate =>
-      candidate.id !== task.id &&
-      candidate.isCompletionRecord === true &&
-      candidate.status === 'done' &&
-      candidate.recurrenceParentId === task.id
-    )).toBe(true)
+    expect(taskStore._rawTasks).toContainEqual(expect.objectContaining({
+      id: 'completion-record-1',
+      isCompletionRecord: true,
+      status: 'done',
+      dueDate: '2026-07-12',
+      recurrenceParentId: task.id,
+      recurrenceCount: 0
+    }))
+    expect(mockSaveTasks).not.toHaveBeenCalled()
+    expect(mockEnqueue).not.toHaveBeenCalled()
   })
 
   it('undoes and redoes the public moveTaskToProjectWithUndo wrapper three consecutive times', async () => {

@@ -246,14 +246,16 @@ export function useTaskPersistence(
     // This prevents race conditions where two loads merge/overwrite each other's results.
     let _loadPromise: Promise<void> | null = null
 
-    const loadFromDatabase = async () => {
+    const loadFromDatabase = async (options: { authoritativeTaskIds?: Iterable<string> } = {}) => {
         if (_loadPromise) {
             if (import.meta.env.DEV) {
                 console.log('[TASK-LOAD] Reentrancy guard: returning existing load promise')
             }
-            return _loadPromise
+            await _loadPromise
+            if (options.authoritativeTaskIds) return loadFromDatabase(options)
+            return
         }
-        _loadPromise = _loadFromDatabaseImpl()
+        _loadPromise = _loadFromDatabaseImpl(new Set(options.authoritativeTaskIds || []))
         try {
             await _loadPromise
         } finally {
@@ -261,7 +263,7 @@ export function useTaskPersistence(
         }
     }
 
-    const _loadFromDatabaseImpl = async () => {
+    const _loadFromDatabaseImpl = async (authoritativeTaskIds: ReadonlySet<string>) => {
         try {
             isLoadingFromDatabase.value = true
 
@@ -427,6 +429,15 @@ export function useTaskPersistence(
 
             for (const localTask of _rawTasks.value) {
                 const remoteTask = remoteMap.get(localTask.id)
+
+                // Local API receipts identify rows whose committed remote state is authoritative.
+                // Accept or remove those exact rows before recent-edit/pending-write overlays,
+                // while leaving unrelated local pending work protected.
+                if (authoritativeTaskIds.has(localTask.id)) {
+                    if (remoteTask) mergedTasks.push(remoteTask)
+                    remoteMap.delete(localTask.id)
+                    continue
+                }
 
                 // BUG-1206 FIX (Fix 1): Always preserve tasks with active pending writes.
                 // A pending write means the user just edited this task and the save is still

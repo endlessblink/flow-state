@@ -165,7 +165,8 @@ const toggleFilter = (key: FilterKey) => {
 // Computed properties for search results
 // TASK-1487: Use rawTasks to search ALL tasks, not just filtered-by-view ones
 const filteredTasks = computed(() => {
-  const allTasks = (taskStore._rawTasks || taskStore.tasks || []).filter(t => !t._soft_deleted)
+  const allTasks = (taskStore._rawTasks || taskStore.tasks || [])
+    .filter(t => !t._soft_deleted && !t.isCompletionRecord)
 
   const query = searchQuery.value.toLowerCase().trim()
   const today = new Date()

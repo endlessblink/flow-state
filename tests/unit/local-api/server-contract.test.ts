@@ -295,4 +295,67 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).not.toContain('description')
     expect(body).not.toContain('subtasks')
   })
+
+  it('exposes recurring Done for now preview/apply behind the signed-in bearer boundary', () => {
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+    const route = SERVER_CJS.indexOf("path.match(/^\\/api\\/tasks\\/([^/]+)\\/done-for-now$/)")
+
+    expect(route, 'Done for now route not found').toBeGreaterThan(-1)
+    expect(route).toBeGreaterThan(tokenCheck)
+    expect(SERVER_CJS).toContain("require('./done-for-now.cjs')")
+    expect(SERVER_CJS).toContain('return await handleDoneForNow(decodeURIComponent(doneForNowMatch[1]), req, res)')
+  })
+
+  it('stores renderer workspace context on the signed-in sidecar context', () => {
+    const messageHandlerStart = SERVER_CJS.indexOf("PARENT_PORT.on('message'")
+    const body = SERVER_CJS.slice(messageHandlerStart, messageHandlerStart + 2200)
+
+    expect(body).toContain("msg.type === 'workspaceContext'")
+    expect(body).toContain('activeWorkspaceId = sanitizeActiveWorkspaceId(msg.activeWorkspaceId)')
+    expect(body).toContain('ctx = { ...ctx, activeWorkspaceId }')
+  })
+
+  it('passes the exact active workspace context into Done for now', () => {
+    const body = functionBody('handleDoneForNow')
+
+    expect(body).toContain('activeWorkspaceId: ctx.activeWorkspaceId')
+    expect(body).toContain('executeDoneForNow(doneForNowContext, id, body, notifyTaskMutation)')
+  })
+
+  it('does not allow generic status updates to complete a recurring task', () => {
+    const body = functionBody('handlePatchTask')
+
+    expect(body).toContain(".select('id,recurrence_rule')")
+    expect(body).toContain("body.status === 'done' && existing.recurrence_rule")
+    expect(body).toContain("code: 'recurring_completion_requires_done_for_now'")
+    expect(body).toContain("use POST /api/tasks/:id/done-for-now")
+  })
+
+  it('exposes an exact task read with recurrence and occurrence state for verification', () => {
+    const route = SERVER_CJS.indexOf("req.method === 'GET' && taskMatch")
+    const body = functionBody('handleGetTask')
+
+    expect(route, 'exact task route not found').toBeGreaterThan(-1)
+    expect(body).toContain(".select('id,title,status,priority,due_date,project_id,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,instances,workspace_id,updated_at')")
+    expect(body).toContain(".eq('id', id)")
+    expect(body).toContain(".eq('is_deleted', false)")
+    expect(body).toContain('recurrenceRule: task.recurrence_rule')
+    expect(body).toContain('instances: normalizeTaskInstances(task.instances)')
+    expect(body).not.toContain('accessToken')
+    expect(body).not.toContain('refreshToken')
+  })
+
+  it('exposes workspace-scoped task search behind the bearer boundary', () => {
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+    const route = SERVER_CJS.indexOf("path === '/api/tasks/search'")
+    const body = functionBody('handleSearchTasks')
+
+    expect(route, 'task search route not found').toBeGreaterThan(tokenCheck)
+    expect(SERVER_CJS).toContain("require('./task-search.cjs')")
+    expect(body).toContain('parseTaskSearchParams(url.searchParams)')
+    expect(body).toContain('buildTaskSearchQuery(ctx, input)')
+    expect(body).toContain('isCompletionRecord: row.is_completion_record')
+    expect(body).not.toContain('accessToken')
+    expect(body).not.toContain('refreshToken')
+  })
 })

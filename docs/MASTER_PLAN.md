@@ -2656,6 +2656,10 @@ Binds 127.0.0.1 only, rejects non-loopback Host (403), bearer required in token 
 
 **Completed integration follow-up**: ~~**BUG-1942**~~ — v1.4.249 directly reconciles Local API mutations; v1.4.250 adds authoritative visible-resume reconciliation for missed PWA realtime events. The named task was recovered visibly in Electron without restarting.
 
+**Recurring completion follow-up**: **FEATURE-1943** adds an authenticated,
+preview-first, idempotent `Done for now` action shared by the renderer and Local
+Task API, with exact read-back and authoritative renderer reconciliation.
+
 ---
 
 ### ~~TASK-1791~~: Design overhaul — fix critique findings across all views (✅ DONE)
@@ -4209,6 +4213,55 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 ---
 
 ## Active Bugs (P0-P1)
+
+### FEATURE-1943: Hermes-safe recurring `Done for now` (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-07-13) | **Depends on**: TASK-1797, BUG-1942
+
+**Root cause**: the existing renderer action implemented recurrence as several
+client writes, while the Local API exposed only task-row PATCH. Updating the
+living row to `done` bypassed the completion-history row, recurrence count/date,
+next instance, and renderer reconciliation. The API could therefore report a
+done task while the UI still resolved the open recurring occurrence.
+
+**Existing call path before the fix**: task context menu → task-store
+`doneForNow` → local completion-record construction → queued create/update
+writes → Supabase realtime/store reload → Search/Today/Inbox/Canvas filters.
+Recurrence date calculation lived in client utilities and the multi-write
+sequence was not transactional or retry-safe.
+
+**Canonical call paths after the fix**:
+- UI: context menu → task-store `doneForNow` → shared domain adapter →
+  `flowstate_done_for_now` transaction → receipt projected locally + realtime.
+- Local API: authenticated POST → validation/workspace context → same RPC →
+  mutation notice → authoritative affected-ID reload.
+- Hermes: dedicated preview-default tool → Local API → explicit approved apply
+  with request/preview IDs → exact receipt/read-back.
+
+**Ranked falsifiable hypotheses**:
+1. Missing Local API operation — confirmed: no recurring action route existed,
+   while the UI had a separate action.
+2. Generic completion bypasses occurrence state — confirmed: PATCH touched the
+   living task row only and could not create history/advance recurrence.
+3. Missing invalidation/subscription — contributing cause: correct external
+   mutations could remain hidden after missed realtime; BUG-1942's bridge now
+   reloads the exact affected IDs authoritatively.
+4. Different identity/storage boundaries — falsified for the reproduced path:
+   signed-in Local API and UI use the same user/project; active workspace is now
+   explicitly bridged and transactionally enforced.
+5. Recurrence calculation only in UI — confirmed as an architectural gap; the
+   planner was extracted into the authenticated database transaction rather
+   than duplicated in Hermes.
+
+**Acceptance**: zero-write preview; explicit preview-version approval; atomic
+history + living-definition advance + exactly-one next instance; stable retry
+receipt and typed payload conflict; personal/shared scope; generic PATCH guard;
+Search hides history while the living task remains discoverable; Today, Inbox,
+and Canvas reconcile without restart; disposable database and Electron proof;
+Hermes connector and 24-hour approval-form input; migration/docs/build/release.
+
+**Safety**: the two named real tasks from the report are never mutated. Tests
+use rollback-only disposable fixtures and do not print auth/session secrets.
 
 ### ~~BUG-1942~~: Cross-runtime task writes can stay absent from Electron after missed realtime (✅ DONE)
 
@@ -6613,6 +6666,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1940**~~ | **P0** | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.247 shipped) |
 | **BUG-1941** | **P0** | ✅ **Failed permanent-delete/done persistence now rolls back visibly instead of returning as false success** (shipped v1.4.248, 2026-07-12) |
 | ~~**BUG-1942**~~ | **P0** | ✅ **PWA-created task and Hermes status changes now reconcile visibly in Electron; v1.4.250 shipped** |
+| **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

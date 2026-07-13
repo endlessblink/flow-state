@@ -339,30 +339,30 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 }
             }
 
-            // Move tasks to matching day group (e.g., "Tomorrow" group)
-            const matchingGroup = findMatchingGroupForDueDate(tomorrowStr, canvasStore.groups)
-            if (matchingGroup) {
-                // BUG-1773: Track batch placements so multi-select siblings
-                // stack below each other regardless of reactivity timing.
-                const batchPlaced: Array<{ x: number; y: number }> = []
-                for (const nodeId of selectedNodeIds) {
-                    const task = taskStore.tasks.find(t => t.id === nodeId)
-                    if (task && task.parentId !== matchingGroup.id) {
-                        const tasksInGroup = taskStore.tasks.filter(t => t.parentId === matchingGroup.id)
-                        const position = calculatePositionInGroup(matchingGroup, tasksInGroup, batchPlaced)
-                        batchPlaced.push(position)
-                        taskStore.updateTask(nodeId, {
-                            parentId: matchingGroup.id,
-                            canvasPosition: position
-                        }, 'USER')
-                    }
+            // Place each task using its committed due date. Recurring tasks may
+            // advance beyond tomorrow, while non-recurring tasks still use tomorrow.
+            const batchPlacedByGroup = new Map<string, Array<{ x: number; y: number }>>()
+            for (const nodeId of selectedNodeIds) {
+                const task = taskStore.tasks.find(t => t.id === nodeId)
+                if (!task?.dueDate) continue
+                const matchingGroup = findMatchingGroupForDueDate(task.dueDate, canvasStore.groups)
+                if (matchingGroup && task.parentId !== matchingGroup.id) {
+                    const batchPlaced = batchPlacedByGroup.get(matchingGroup.id) || []
+                    const tasksInGroup = taskStore.tasks.filter(t => t.parentId === matchingGroup.id)
+                    const position = calculatePositionInGroup(matchingGroup, tasksInGroup, batchPlaced)
+                    batchPlaced.push(position)
+                    batchPlacedByGroup.set(matchingGroup.id, batchPlaced)
+                    await taskStore.updateTask(nodeId, {
+                        parentId: matchingGroup.id,
+                        canvasPosition: position
+                    }, 'USER')
                 }
             }
 
             // Show toast notification
             const msg = selectedNodeIds.length === 1
-                ? 'Moved to tomorrow'
-                : `${selectedNodeIds.length} tasks moved to tomorrow`
+                ? 'Task completed or rescheduled'
+                : `${selectedNodeIds.length} tasks completed or rescheduled`
             showToast(msg, 'success', { duration: TOAST_SUCCESS_DURATION_MS })
 
             // Trigger canvas sync to reflect group change

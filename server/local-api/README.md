@@ -135,6 +135,38 @@ schemas can still serve basic task pressure.
 }
 ```
 
+### `GET /api/tasks/search?q=laundry&limit=25`
+
+Searches living task titles in the renderer's exact active workspace. `q` is
+required, trimmed, treated literally, and capped at 200 characters; `limit` is
+optional and capped at 25. Personal scope is pinned to the signed-in user's
+`workspace_id IS NULL` rows. Shared workspace scope relies on the signed-in
+client's membership RLS, so collaborator-created rows remain visible.
+Completion-history records and soft-deleted rows are excluded.
+
+```json
+{
+  "ok": true,
+  "query": "laundry",
+  "tasks": [
+    {
+      "id": "exact-task-id",
+      "title": "Send laundry",
+      "status": "todo",
+      "priority": "high",
+      "dueDate": "2026-07-13",
+      "projectId": null,
+      "workspaceId": null,
+      "recurrenceRule": null,
+      "recurrenceParentId": null,
+      "recurrenceCount": 0,
+      "isCompletionRecord": false,
+      "updatedAt": "2026-07-13T09:00:00.000Z"
+    }
+  ]
+}
+```
+
 ### `POST /api/tasks`
 `title` required; `priority` ∈ `low|medium|high|null`; `status` defaults to `todo`.
 ```json
@@ -156,6 +188,106 @@ and (unless `progress` is given) `progress: 100`.
 // 404 (unknown id for this user)
 { "error": "not found" }
 ```
+
+Recurring tasks are an exception: `status: "done"` is rejected with
+`recurring_completion_requires_done_for_now`. A recurring definition is the
+living task row; one completed occurrence is a separate immutable completion
+record. Use the operation below so history and cadence cannot be bypassed.
+
+### `GET /api/tasks/:id`
+
+Returns one exact, user/workspace-scoped task plus its recurrence state and
+embedded occurrence instances. This is the read-back endpoint for approved
+mutations; a missing, deleted, cross-user, or out-of-workspace task is reported
+as `404`.
+
+### `POST /api/tasks/:id/done-for-now`
+
+Completes one occurrence without completing the recurring definition. Preview
+is the default and performs no writes. It calculates the next date with the
+same daily/weekly/monthly/yearly recurrence rules used by the UI and returns a
+`previewVersion` tied to the exact task state.
+
+```json
+{ "preview": true, "nextDueDate": "2026-07-16" }
+```
+
+`nextDueDate` is optional. When omitted, cadence chooses it; when supplied it
+must be a later valid occurrence date within the recurrence end condition. The
+preview identifies the current date, proposed next date, recurrence rule/count,
+and the three writes that apply will make.
+
+After explicit approval, reuse the preview verbatim and add a stable request ID:
+
+```json
+{
+  "preview": false,
+  "nextDueDate": "2026-07-16",
+  "previewVersion": "preview-state-hash",
+  "requestId": "stable-client-generated-id"
+}
+```
+
+Apply is one database transaction. It inserts the completed occurrence/history
+row, advances the living recurring row, creates exactly one next embedded
+occurrence, stores an idempotency receipt, then emits the same renderer
+reconciliation notices used by FlowState. Identical retries return the stored
+receipt; reusing a request ID with different payload returns
+`idempotency_conflict`. A changed task returns `state_conflict` and requires a
+new preview. Other typed errors include `not_authenticated`, `not_found`,
+`not_recurring`, `already_completed`, `invalid_next_date`,
+`approval_receipt_required`, and `recurrence_transaction_failed`.
+
+The receipt contains real completion-record and next-instance IDs, dates,
+status, completion time, recurrence count/rule, and request/preview IDs. Search
+excludes completion-history rows while the living task remains discoverable;
+Today, Inbox, and Canvas consume the advanced living task. The Electron bridge
+publishes the active workspace and performs an authoritative reload of affected
+IDs, so the running UI updates without a restart while unrelated optimistic
+writes remain protected.
+
+This endpoint requires migration `20260713010000_done_for_now_rpc.sql` and a
+rebuilt/relaunched Electron application. The transactional RPC intentionally
+requires an authenticated user session; service-role headless mode cannot use
+it as a substitute for the signed-in app boundary.
+
+### `POST /api/tasks/:survivorId/merge`
+
+Safely consolidates one exact duplicate into one exact survivor. FlowState does
+not infer duplicates from titles: callers must supply `duplicateTaskId`, and
+preview is mandatory/default before apply.
+
+```json
+{ "duplicateTaskId": "duplicate-id", "preview": true }
+```
+
+Preview performs no writes. It returns a state-bound `previewVersion`, the
+survivor and duplicate identities, the duplicate's `soft_delete` disposition,
+and exact counts for work blocks, subtasks, attachments, comments, task context,
+Canvas links, and tags to transfer. Recurrence-chain, completion-history,
+project, Canvas, schedule, parent, embedded-ID, status, or assistant-context
+conflicts are rejected with typed errors instead of choosing silently.
+
+After explicit approval, reuse the exact preview choices:
+
+```json
+{
+  "duplicateTaskId": "duplicate-id",
+  "preview": false,
+  "previewVersion": "preview-state-hash",
+  "requestId": "stable-client-generated-id"
+}
+```
+
+Apply runs in one database transaction. It unions compatible embedded work
+blocks, subtasks, attachments, tags, reminders, notes, and mini-Canvas edges;
+transfers comments, task context, project links, timer/history references, and
+representable Canvas links; then soft-deletes the duplicate last. The archived
+source row and task audit remain available for history/restore. Identical
+retries return the same receipt, while a reused request ID with changed input
+returns `idempotency_conflict` and changed live state returns `state_conflict`.
+The Electron bridge reconciles the survivor update and duplicate removal in the
+running UI without a restart.
 
 ### `GET /api/tasks/:id/instances`
 Returns the calendar/time-block instances for one user-owned, non-deleted task.

@@ -41,6 +41,10 @@ interface RendererAuthStateMessage {
   updatedAt: number
 }
 
+interface WorkspaceContextMessage {
+  activeWorkspaceId: string | null
+}
+
 interface LocalApiConfig {
   enabled: boolean
   token: string
@@ -82,6 +86,7 @@ let listening = false
 let latestSession: SessionMessage | null = null
 let latestTimerSnapshot: TimerSnapshotMessage | null = null
 let latestRendererAuthState: RendererAuthStateMessage | null = null
+let latestWorkspaceContext: WorkspaceContextMessage | null = null
 let lastStartAttemptAt: number | null = null
 let lastSidecarPath: string | null = null
 let sidecarPathExists = false
@@ -171,6 +176,7 @@ function startChild() {
       if (latestSession) child?.postMessage({ type: 'session', ...latestSession })
       if (latestTimerSnapshot) child?.postMessage({ type: 'timerSnapshot', snapshot: latestTimerSnapshot })
       if (latestRendererAuthState) child?.postMessage({ type: 'rendererAuthState', state: latestRendererAuthState })
+      if (latestWorkspaceContext) child?.postMessage({ type: 'workspaceContext', ...latestWorkspaceContext })
     } else if (
       m?.type === 'taskMutation'
       && (m.operation === 'create' || m.operation === 'update' || m.operation === 'delete')
@@ -231,6 +237,11 @@ function pushRendererAuthState() {
   if (listening) child.postMessage({ type: 'rendererAuthState', state: latestRendererAuthState })
 }
 
+function pushWorkspaceContext() {
+  if (!child || !latestWorkspaceContext) return
+  if (listening) child.postMessage({ type: 'workspaceContext', ...latestWorkspaceContext })
+}
+
 export function registerLocalApiHandlers() {
   config = loadConfig()
   // Persist (ensures a token exists on first run).
@@ -278,6 +289,22 @@ export function registerLocalApiHandlers() {
     return { ok: true }
   })
 
+  ipcMain.handle('localApi:setWorkspaceContext', (_e, state: WorkspaceContextMessage) => {
+    if (!state || (
+      state.activeWorkspaceId !== null
+      && (typeof state.activeWorkspaceId !== 'string'
+        || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(state.activeWorkspaceId))
+    )) {
+      return { ok: false }
+    }
+    latestWorkspaceContext = { activeWorkspaceId: state.activeWorkspaceId }
+    if (config.enabled || child) {
+      startChild()
+      pushWorkspaceContext()
+    }
+    return { ok: true }
+  })
+
   ipcMain.handle('localApi:setEnabled', (_e, enabled: boolean) => {
     config.enabled = !!enabled
     saveConfig(config)
@@ -286,6 +313,7 @@ export function registerLocalApiHandlers() {
       startChild()
       pushSession()
       pushRendererAuthState()
+      pushWorkspaceContext()
     } else if (!latestSession && !latestTimerSnapshot) {
       stopChild()
     }

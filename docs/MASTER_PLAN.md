@@ -2184,6 +2184,7 @@ _Original plan below._
 
 **Subtasks**:
 - [ ] **TASK-1944 — Canonical operation, revision, and change-sequence foundation**: recover onto a fresh branch, classify existing work, inventory every production writer, add the signed-user operation ledger and canonical revisions, preserve legacy writers through compatibility triggers, return replayable read-back receipts, and provide durable sequence catch-up.
+- [ ] **TASK-1945 — Canonical Local API task patch adoption**: replace direct sidecar task patches and Hermes HTTP-success inference with the TASK-1944 preview/apply/base-revision contract, validate canonical receipts at both boundaries, and preserve exact replay after response loss.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2216,6 +2217,25 @@ _Original plan below._
 - No production write or deployment is used for this slice without explicit approval.
 
 **Progress (2026-07-13)**: The repository-local W0 task foundation now includes actor-bound idempotent previews, a signed-user patch RPC, independent task revisions, compatibility capture, a global RLS-filtered change cursor, replayable read-back receipts, workspace role/scope protection, and the dependency-ordered production writer matrix in `docs/process/canonical-writer-matrix.md`. Static contracts, a rollback-only SQL suite, injected-failure coverage, and multi-session preview/apply races pass against a disposable local database. Production remains unchanged; Local API/offline writer migration and explicit catch-up clients are still pending.
+
+### TASK-1945: Canonical Local API task patch adoption (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1944, TASK-1797
+
+**Scope**:
+- Add failing Local API and Hermes adapter tests that reject HTTP-only, queued, malformed, mismatched-operation, or incomplete receipt responses.
+- Make task patch preview the default and require the exact issued operation ID, preview digest/expiry, base canonical revision, and normalized payload for apply.
+- Call `flowstate_patch_task_v1` under the renderer user's signed-in Supabase session instead of updating `tasks` directly.
+- Return the canonical preview/result unchanged across the sidecar boundary and validate committed receipt/read-back/hash fields before Hermes reports success.
+- Preserve legacy endpoint compatibility only as an explicit non-canonical response; do not silently translate a legacy direct patch into committed success.
+- Prove preview zero-write, apply receipt, dropped-response replay, stale base, altered payload, unauthenticated/offline, and renderer reconciliation behavior.
+
+**Acceptance**:
+- Local API task patches cannot return canonical success without a validated TASK-1944 receipt.
+- Hermes never mutates from a plain-language task update without first returning an exact preview for approval.
+- Repeating an approved operation after a lost response returns the original receipt with `replayed=true` and no second revision.
+- Existing list/search reads and unrelated Local API actions remain compatible while writer cohorts migrate incrementally.
+- Production remains unchanged until the migration, signed-in packaged verification, and deployment boundary are separately approved.
 
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
@@ -6954,6 +6974,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1945**~~ | **P1** | ✅ **Confirmed Canvas image deletion now removes the canonical record and rendered node; undo/redo verified** |
 | **TASK-1943** | **P0** | 🔄 **Reliable Hermes–FlowState personal-assistant program: canonical sync, dynamic decomposition, monitor reliability, writable Notion, watchdogs, and packaged proof** |
 | **TASK-1944** | **P0** | 🔄 **Canonical operation/revision/change-sequence foundation with safe branch recovery, signed-user receipts, replay, compatibility triggers, and deterministic catch-up** |
+| **TASK-1945** | **P0** | 🔄 **Canonical Local API task patch adoption with preview/apply approval binding, receipt validation, and exact replay** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

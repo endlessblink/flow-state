@@ -13,14 +13,13 @@ export async function ensureAuthUser(
   attributes: AdminUserAttributes & { email: string; password: string },
 ): Promise<User> {
   const { data, error } = await client.auth.admin.createUser(attributes)
-  if (data.user) return data.user
-
   const isDuplicate = error?.status === 422 && /already|registered|exists/i.test(error.message)
-  if (!isDuplicate) throw error ?? new Error('Test user creation returned no user')
+  if (error && !isDuplicate) throw error
+  if (!data.user && !isDuplicate) throw new Error('Test user creation returned no user')
 
-  // The local GoTrue build can fail listUsers even on a clean database. The
-  // fixture owns these credentials, so signing in is the stable way to resolve
-  // the existing disposable identity without querying the admin directory.
+  // Seed through the disposable signed-in user and normal RLS. Clean Supabase
+  // stacks do not grant direct table writes to service_role, and tests should
+  // exercise the same identity boundary as the UI rather than broaden grants.
   const { data: signIn, error: signInError } = await client.auth.signInWithPassword({
     email: attributes.email,
     password: attributes.password,
@@ -28,10 +27,7 @@ export async function ensureAuthUser(
   if (signInError || !signIn.user) {
     throw signInError ?? new Error('Existing test user sign-in returned no user')
   }
-  const user = signIn.user
-  const { error: signOutError } = await client.auth.signOut({ scope: 'local' })
-  if (signOutError) throw signOutError
-  return user
+  return signIn.user
 }
 
 // Re-export test and expect — tests import from here for authenticated context

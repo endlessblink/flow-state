@@ -3,12 +3,14 @@ import {
   subscribeLocalApiTaskMutations,
   syncLocalApiRendererAuthState,
   syncLocalApiSession,
+  syncLocalApiWorkspaceContext,
 } from '@/composables/useLocalApiBridge'
 
 function installElectronApi() {
   const setLocalApiSession = vi.fn().mockResolvedValue({ ok: true })
   const clearLocalApiSession = vi.fn().mockResolvedValue({ ok: true })
   const setLocalApiRendererAuthState = vi.fn().mockResolvedValue({ ok: true })
+  const setLocalApiWorkspaceContext = vi.fn().mockResolvedValue({ ok: true })
   let taskMutationListener: ((mutation: unknown) => void) | null = null
   const onLocalApiTaskMutation = vi.fn((listener: (mutation: unknown) => void) => { taskMutationListener = listener })
   const offLocalApiTaskMutation = vi.fn(() => { taskMutationListener = null })
@@ -18,6 +20,7 @@ function installElectronApi() {
       setLocalApiSession,
       clearLocalApiSession,
       setLocalApiRendererAuthState,
+      setLocalApiWorkspaceContext,
       onLocalApiTaskMutation,
       offLocalApiTaskMutation,
     },
@@ -27,6 +30,7 @@ function installElectronApi() {
     setLocalApiSession,
     clearLocalApiSession,
     setLocalApiRendererAuthState,
+    setLocalApiWorkspaceContext,
     onLocalApiTaskMutation,
     offLocalApiTaskMutation,
     emitTaskMutation: (mutation: unknown) => taskMutationListener?.(mutation),
@@ -103,6 +107,17 @@ describe('useLocalApiBridge', () => {
       updatedAt: 1_777_777,
     })
     expect(JSON.stringify(api.setLocalApiRendererAuthState.mock.calls)).not.toMatch(/access|refresh|token|anonKey|user-1/i)
+  })
+
+  it.each([
+    ['workspace scope', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
+    ['personal scope', null],
+  ])('forwards the exact active %s to the Local API sidecar', (_label, activeWorkspaceId) => {
+    const api = installElectronApi()
+
+    syncLocalApiWorkspaceContext(activeWorkspaceId)
+
+    expect(api.setLocalApiWorkspaceContext).toHaveBeenCalledWith({ activeWorkspaceId })
   })
 
   it('delivers validated task mutation notices and unregisters cleanly', () => {

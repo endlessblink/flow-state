@@ -6,6 +6,10 @@ const LOCAL_API_TS = readFileSync(
   resolve(__dirname, '../../../electron/ipc/localApi.ts'),
   'utf-8',
 )
+const PRELOAD_TS = readFileSync(
+  resolve(__dirname, '../../../electron/preload.ts'),
+  'utf-8',
+)
 
 function handlerBody(channel: string): string {
   const marker = `ipcMain.handle('${channel}'`
@@ -84,6 +88,25 @@ describe('Electron local API lifecycle regression contract', () => {
     expect(body).toContain('startChild()')
     expect(body).toContain('pushTimerSnapshot()')
     expect(body).not.toContain('latestSession')
+  })
+
+  it('retains and forwards an exact renderer workspace context across sidecar restarts', () => {
+    const body = handlerBody('localApi:setWorkspaceContext')
+    const startChild = LOCAL_API_TS.slice(
+      LOCAL_API_TS.indexOf('function startChild()'),
+      LOCAL_API_TS.indexOf('\nfunction stopChild()', LOCAL_API_TS.indexOf('function startChild()')),
+    )
+
+    expect(body).toContain('state.activeWorkspaceId !== null')
+    expect(body).toContain('latestWorkspaceContext = { activeWorkspaceId: state.activeWorkspaceId }')
+    expect(body).toContain('pushWorkspaceContext()')
+    expect(startChild).toContain("type: 'workspaceContext'")
+    expect(startChild).toContain('latestWorkspaceContext')
+  })
+
+  it('exposes the workspace context IPC through the isolated preload', () => {
+    expect(PRELOAD_TS).toContain("setLocalApiWorkspaceContext: (state: unknown) => ipcRenderer.invoke('localApi:setWorkspaceContext', state)")
+    expect(PRELOAD_TS).toContain('setLocalApiWorkspaceContext: (state: unknown) => Promise<{ ok: boolean }>')
   })
 
   it('does not report KDE-only background sidecar activity as an enabled task API', () => {

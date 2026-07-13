@@ -23,6 +23,8 @@ import { sanitizeTaskTitle } from '@/utils/taskValidation'
 import { logGeometryWrite } from '@/utils/canvas/geometryWriteLog'
 // TASK-1871: fail-fast guard against write storms (same row hammered)
 import { recordWrite } from '@/utils/sync/writeRateGuard'
+import { supabase } from '@/services/auth/supabase'
+import { runDoneForNow } from '@/services/tasks/doneForNow'
 import {
     beginCanvasDoneTrace,
     getCanvasDoneTraceTaskIds,
@@ -1351,7 +1353,7 @@ export function useTaskOperations(
     // the original task to the next occurrence. For non-recurring tasks, delegates to moveTask.
     // BUG-1536: In-flight guard prevents double-invocation (double-click creating 2 completion records)
     const doneForNowInFlight = new Set<string>()
-    const doneForNow = async (taskId: string) => {
+    const doneForNow = async (taskId: string, options: { nextDueDate?: string; requestId?: string } = {}) => {
         if (doneForNowInFlight.has(taskId)) {
             console.warn(`[DONE-FOR-NOW] Already in flight for ${taskId}, skipping`)
             return
@@ -1381,83 +1383,84 @@ export function useTaskOperations(
             console.warn('[Timer] Auto-stop on done-for-now failed:', e)
         }
 
-        // 2. Calculate next due date
-        const { computeNextDueDate } = await import('@/utils/recurrenceUtils')
-        const today = formatDateKey(new Date())
-        const currentDueDate = task.dueDate || today
-        const count = (task.recurrenceCount || 0) + 1
-        const nextDueDate = computeNextDueDate(currentDueDate, task.recurrenceRule, count)
+        // 2. Preview and apply the same canonical transaction used by the Local Task API.
+        // The renderer action itself is the user's approval, while Hermes must surface
+        // the previewVersion before it can call apply.
+        const preview = await runDoneForNow(supabase, {
+            taskId,
+            preview: true,
+            workspaceId: task.workspaceId,
+            nextDueDate: options.nextDueDate,
+        })
+        if (!preview.previewVersion) throw new Error('Done for now preview did not return a version')
 
-        if (!nextDueDate) {
-            console.warn(`[DONE-FOR-NOW] Recurrence ended for "${task.title?.slice(0, 30)}" — no next occurrence. Creating final completion record.`)
-        }
+        const receipt = await runDoneForNow(supabase, {
+            taskId,
+            preview: false,
+            workspaceId: task.workspaceId,
+            nextDueDate: options.nextDueDate,
+            previewVersion: preview.previewVersion,
+            requestId: options.requestId || crypto.randomUUID(),
+        })
+        const completed = receipt.completedOccurrence
+        const next = receipt.nextOccurrence
+        if (!completed) throw new Error('Done for now receipt did not include the completed occurrence')
 
-        // 3. Create completion record (calendar history clone, not a living task)
-        const completionRecord: Partial<Task> = {
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            projectId: task.projectId,
-            estimatedDuration: task.estimatedDuration,
+        // 3. Project the committed receipt into renderer state immediately. Realtime and
+        // Local API mutation notices then reconcile the same authoritative rows.
+        const currentDueDate = receipt.currentOccurrence?.dueDate || task.dueDate
+        const completionRecord: Task = {
+            ...task,
+            id: completed.id,
             status: 'done',
-            completedAt: new Date(),
-            dueDate: today,
+            completedAt: new Date(completed.completedAt),
+            dueDate: completed.dueDate,
+            recurrenceRule: undefined,
             recurrenceParentId: task.recurrenceParentId || task.id,
+            recurrenceCount: task.recurrenceCount || 0,
             isCompletionRecord: true,
             instances: task.instances
-                ?.filter(inst => inst.scheduledDate === today)
-                .map(inst => ({
-                    ...inst,
-                    id: `instance-completion-${Date.now()}`,
-                    status: 'completed' as const,
-                })) || [],
-            // No recurrenceRule — snapshot, not a living task
-            // No canvas position — completion records are calendar-only
-            isInInbox: false,
-        }
-        await createTask(completionRecord, { awaitDirectSave: false })
-
-        // 4. Update original task: advance to next occurrence
-        const todayInstance = task.instances?.find(inst => inst.scheduledDate === today)
-        const nextInstances: TaskInstance[] = nextDueDate
-            ? [{
-                id: `instance-${taskId}-${Date.now()}`,
-                taskId: taskId,
-                scheduledDate: nextDueDate,
-                scheduledTime: todayInstance?.scheduledTime,
-                duration: todayInstance?.duration || task.estimatedDuration || 25,
-                status: 'scheduled' as const,
-            }]
-            : []
-
-        // Reset subtasks for next occurrence
-        const resetSubtasks = task.subtasks?.map(st => ({
-            ...st,
-            isCompleted: false,
-            updatedAt: new Date(),
-        })) || []
-
-        // Remove from canvas group when due date no longer matches
-        // (task will reappear in the correct group when its date comes)
-        await updateTask(taskId, {
-            status: 'todo',
-            completedAt: undefined,
-            dueDate: nextDueDate || currentDueDate,
-            recurrenceCount: count,
-            instances: nextInstances,
-            subtasks: resetSubtasks,
+                ?.filter(inst => inst.scheduledDate === currentDueDate)
+                .map(inst => ({ ...inst, status: 'completed' as const })) || [],
             parentId: undefined,
             canvasPosition: undefined,
-            isInInbox: true,
-        })
+            isInInbox: false,
+        }
+        const nextInstances: TaskInstance[] = next
+            ? [{
+                id: next.id,
+                taskId,
+                scheduledDate: next.dueDate,
+                scheduledTime: next.scheduledTime,
+                duration: next.duration || task.estimatedDuration || 25,
+                status: 'scheduled',
+            }]
+            : []
+        const updatedTask: Task = {
+            ...task,
+            status: next ? 'todo' : 'done',
+            completedAt: next ? undefined : new Date(completed.completedAt),
+            dueDate: next?.dueDate || task.dueDate,
+            doneForNowUntil: next?.dueDate,
+            recurrenceCount: (task.recurrenceCount || 0) + 1,
+            instances: nextInstances,
+            subtasks: task.subtasks?.map(st => ({ ...st, isCompleted: false, updatedAt: new Date() })) || [],
+            parentId: undefined,
+            canvasPosition: undefined,
+            isInInbox: !!next,
+        }
+        const taskIndex = _rawTasks.value.findIndex(candidate => candidate.id === taskId)
+        if (taskIndex !== -1) _rawTasks.value.splice(taskIndex, 1, updatedTask)
+        _rawTasks.value.push(completionRecord)
+        await cacheTasks([..._rawTasks.value])
 
         // Set recurrence lock to prevent deferred scheduler from creating duplicates
         try {
-            const LOCK_KEY = recurrenceLockKey(today)
+            const LOCK_KEY = recurrenceLockKey(currentDueDate)
             localStorage.setItem(LOCK_KEY, String(Date.now()))
         } catch { /* localStorage may be unavailable */ }
 
-        console.log(`[DONE-FOR-NOW] "${task.title?.slice(0, 30)}" completed for today, next: ${nextDueDate}`)
+        console.log(`[DONE-FOR-NOW] "${task.title?.slice(0, 30)}" occurrence completed, next: ${next?.dueDate || 'ended'}`)
         } finally {
             doneForNowInFlight.delete(taskId)
         }

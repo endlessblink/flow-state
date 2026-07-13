@@ -27,7 +27,7 @@ import { getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPend
 import { applyPendingGroupPatch, applyPendingTaskPatch } from '@/services/offline/pendingWritePatch'
 // TASK-1219: Time block progress notifications
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
-import { subscribeLocalApiTaskMutations } from '@/composables/useLocalApiBridge'
+import { subscribeLocalApiTaskMutations, syncLocalApiWorkspaceContext } from '@/composables/useLocalApiBridge'
 
 export function useAppInitialization() {
     const router = useRouter()
@@ -67,14 +67,23 @@ export function useAppInitialization() {
     }
 
     let localApiReloadTimer: number | null = null
-    const stopLocalApiMutationSubscription = subscribeLocalApiTaskMutations(() => {
+    const pendingAuthoritativeTaskIds = new Set<string>()
+    const stopLocalApiMutationSubscription = subscribeLocalApiTaskMutations((mutation) => {
+        pendingAuthoritativeTaskIds.add(mutation.taskId)
         if (localApiReloadTimer !== null) window.clearTimeout(localApiReloadTimer)
         localApiReloadTimer = window.setTimeout(() => {
             localApiReloadTimer = null
+            const authoritativeTaskIds = [...pendingAuthoritativeTaskIds]
+            pendingAuthoritativeTaskIds.clear()
             invalidateCache.tasks()
-            void taskStore.loadFromDatabase()
+            void taskStore.loadFromDatabase({ authoritativeTaskIds })
         }, 50)
     })
+    const stopLocalApiWorkspaceContextSync = watch(
+        () => workspaceStore.activeWorkspaceId,
+        (activeWorkspaceId) => syncLocalApiWorkspaceContext(activeWorkspaceId),
+        { immediate: true },
+    )
 
     // TASK-1812: Lane realtime handler. Lane is pure metadata (no geometry),
     // so it has no drag/resize lock.
@@ -1093,6 +1102,7 @@ export function useAppInitialization() {
 
     onUnmounted(() => {
         stopLocalApiMutationSubscription()
+        stopLocalApiWorkspaceContextSync()
         if (localApiReloadTimer !== null) window.clearTimeout(localApiReloadTimer)
         if (activeChannel.value) {
 

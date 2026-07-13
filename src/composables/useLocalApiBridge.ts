@@ -20,6 +20,7 @@ interface ElectronLocalApi {
   clearLocalApiSession?: () => Promise<unknown>
   setLocalApiTimerSnapshot?: (snapshot: unknown) => Promise<unknown>
   setLocalApiRendererAuthState?: (state: unknown) => Promise<unknown>
+  setLocalApiWorkspaceContext?: (state: unknown) => Promise<unknown>
   onLocalApiTaskMutation?: (callback: (mutation: LocalApiTaskMutation) => void) => void
   offLocalApiTaskMutation?: () => void
 }
@@ -103,6 +104,16 @@ export function syncLocalApiRendererAuthState(state: LocalApiRendererAuthState):
     })
   } catch {
     /* best-effort; never break the auth flow */
+  }
+}
+
+export function syncLocalApiWorkspaceContext(activeWorkspaceId: string | null): void {
+  const api = getElectronApi()
+  if (!api) return
+  try {
+    void api.setLocalApiWorkspaceContext?.({ activeWorkspaceId })
+  } catch {
+    /* best-effort; never break workspace switching */
   }
 }
 

@@ -47,6 +47,14 @@ describe('BUG-1942 Local Task API renderer reconciliation', () => {
     expect(rendererBridge).toContain('subscribeLocalApiTaskMutations')
     expect(appInitialization).toContain('subscribeLocalApiTaskMutations')
     expect(appInitialization).toContain('invalidateCache.tasks()')
-    expect(appInitialization).toContain('taskStore.loadFromDatabase()')
+    expect(appInitialization).toContain('authoritativeTaskIds')
+    expect(appInitialization).toContain('taskStore.loadFromDatabase({ authoritativeTaskIds')
+    expect(readSource('src/stores/tasks/taskPersistence.ts')).toContain('authoritativeTaskIds.has(localTask.id)')
+  })
+
+  it('publishes the active workspace immediately and whenever it changes', () => {
+    expect(appInitialization).toContain('syncLocalApiWorkspaceContext')
+    expect(appInitialization).toContain('workspaceStore.activeWorkspaceId')
+    expect(appInitialization).toContain('{ immediate: true }')
   })
 })

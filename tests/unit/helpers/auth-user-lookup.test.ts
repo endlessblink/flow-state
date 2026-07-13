@@ -3,7 +3,7 @@ import { findAuthUserByEmail } from '../../fixtures/auth'
 
 describe('findAuthUserByEmail', () => {
   it('continues through auth pages instead of creating a duplicate user', async () => {
-    const firstPage = Array.from({ length: 1000 }, (_, index) => ({
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
       id: `other-${index}`,
       email: `other-${index}@test.flowstate`,
     }))
@@ -17,8 +17,8 @@ describe('findAuthUserByEmail', () => {
     } as never, target.email)
 
     expect(result).toEqual(target)
-    expect(listUsers).toHaveBeenNthCalledWith(1, { page: 1, perPage: 1000 })
-    expect(listUsers).toHaveBeenNthCalledWith(2, { page: 2, perPage: 1000 })
+    expect(listUsers).toHaveBeenNthCalledWith(1, { page: 1, perPage: 100 })
+    expect(listUsers).toHaveBeenNthCalledWith(2, { page: 2, perPage: 100 })
   })
 
   it('stops after a partial page when the user does not exist', async () => {

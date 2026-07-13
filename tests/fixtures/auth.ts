@@ -12,7 +12,9 @@ export async function findAuthUserByEmail(
   client: SupabaseClient,
   email: string,
 ): Promise<User | null> {
-  const perPage = 1000
+  // GoTrue's local admin endpoint rejects oversized pages even though the SDK
+  // accepts the number. Keep this at the service-safe maximum and paginate.
+  const perPage = 100
   for (let page = 1; page <= 100; page += 1) {
     const { data, error } = await client.auth.admin.listUsers({ page, perPage })
     if (error) throw error

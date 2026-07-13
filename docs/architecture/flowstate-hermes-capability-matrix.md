@@ -1,13 +1,16 @@
 # FlowState → Hermes capability matrix
 
-Status date: 2026-07-13. FlowState source snapshot: `c97e6878` plus the in-flight
-Done-for-now and task-search work on `feat/hermes-safe-capabilities`.
+Status date: 2026-07-14. FlowState source snapshot: `97a296bb` plus the
+production-UUID and merge-safety hardening on
+`feat/hermes-broad-capabilities-20260713`. Hermes source includes the exact task
+read added in `102e39786`.
 
 Hermes is maintained in a separate repository. Its integration boundary is the
 bearer-protected FlowState Local Task API on `127.0.0.1:5577`; Hermes must not
-call Supabase directly. The connector snapshot audited here registers task,
-timer-read, task-instance, Done-for-now, and subtask tools. A Hermes tool marked
-"ahead" exists in that repository but has no matching FlowState route yet.
+call Supabase directly. The connector snapshot audited here registers exact
+task read, bounded task search, task mutation, timer-read, task-instance,
+Done-for-now, duplicate-merge, and subtask tools. Subtask tools remain "ahead":
+they exist in Hermes but have no matching FlowState routes yet.
 
 ## Legend and safety contract
 
@@ -26,8 +29,8 @@ timer-read, task-instance, Done-for-now, and subtask tools. A Hermes tool marked
 
 | Capability | UI surface / reusable domain path | Local API | Hermes | Safety | P/I | Audit/RB | Verification and UI sync | Recommendation / priority |
 |---|---|---:|---:|---:|---|---|---|---|
-| Get exact task | Search/details; task store lookup + Supabase mapper | Yes: `GET /api/tasks/:id`, recurrence-rich but owner-filtered | Missing | RO | N/A | N/A | API row; Search, Today, Inbox, Canvas | Expose Hermes tool; make read workspace-member correct. P0 |
-| Search by title | Search modal/task filtering; signed-in RLS query | Yes: `GET /api/tasks/search?q=`, scoped and completion-record-safe | Missing | RO | N/A | N/A | Compact exact IDs; Search modal identity comparison | Expose in Hermes with bounded query/limit. P0 |
+| Get exact task | Search/details; task store lookup + Supabase mapper | Yes: `GET /api/tasks/:id`, full task projection and workspace-member correct | Yes: `flowstate_get_task` | RO | N/A | N/A | API row; Search, Today, Inbox, Canvas | Implemented identity primitive; keep exact ID mandatory for writes. P0 |
+| Search by title | Search modal/task filtering; signed-in RLS query | Yes: `GET /api/tasks/search?q=`, bounded, scoped, and completion-record-safe | Yes: `flowstate_search_tasks` | RO | N/A | N/A | Compact exact IDs; Search modal identity comparison | Implemented discovery primitive; never infer duplicates from title alone. P0 |
 | List/filter tasks | Board, All Tasks, Today, Inbox; task filtering composables | Partial: status/due/25 max, no cursor, owner-only | Yes | RO | N/A | N/A | API list vs each UI filter | Add stable cursor, workspace scope, explicit completion-record exclusion. P0 |
 | Create task | All creation surfaces; `taskOperations.createTask` | Partial: direct row insert, no preview/idempotency/workspace | Yes | REV | No/No | Basic CREATED trigger; no API rollback | Exact read + taskMutation reload | Route through shared command/receipt; add request ID. P1 |
 | Update metadata | Details/board/inbox; `taskOperations.updateTask` | Partial: title/status/priority/due/progress only; direct row update | Yes | REV | No/No | Basic status audit only; UI undo not API | Exact read + taskMutation reload | Add description/tags/metadata using shared command and preview for material batches. P1 |
@@ -35,8 +38,8 @@ timer-read, task-instance, Done-for-now, and subtask tools. A Hermes tool marked
 | Soft-delete/archive | Context menus/trash; `deleteTask`, `TrashService` | Partial: soft-delete, no preview/request ID | Yes | DA | No/No | SOFT_DELETED; UI undo/restore exists | Deleted read + Trash/UI removal | Require preview/receipt and expose restore. P1 |
 | Restore | Trash; `TrashService.restoreTask` / DB restore | Missing | Missing | REV | Desirable/No | RESTORED; tombstone cleanup path | Exact read + Trash/Search | Expose app-mediated exact restore with receipt. P2 |
 | Recent changes | Task history UI / `useTaskAuditLog`, `search_task_audit` RPC | Missing | Missing | RO | N/A | Source is the audit log | Audit rows + exact task | Expose sanitized, workspace-correct audit read. P3 |
-| Duplicate candidates | Search/manual inspection only; no canonical merge service | Missing | Missing | RO | N/A | None | Candidate IDs + reasons | Add read-only candidate inspection; never approve by title. P2 |
-| Merge duplicate | No reusable canonical transaction found | Missing | Missing | HIGH | Mandatory/Mandatory | Missing semantic receipt/RB | Survivor + duplicate + history/work blocks/UI | Design transactional domain service first. P2 |
+| Duplicate candidates | Search/manual inspection; exact/search API supplies IDs but no classifier | Partial | Partial via exact/search tools | RO | N/A | None | Candidate IDs + human-reviewed reasons | Add read-only candidate evidence; never approve by title. P2 |
+| Merge duplicate | Transactional `flowstate_merge_tasks` RPC with fail-closed compatibility checks | Yes: preview/apply + request receipt | Yes: `flowstate_merge_tasks` | HIGH | Yes/Yes | Immutable merge receipt; transaction rollback | Survivor active, duplicate archived, preserved history, taskMutation/UI reload | Implemented for compatible non-recurring tasks; keep structural conflicts typed and conservative. P0 |
 | Batch update/delete | BatchEdit, multi-select, unified undo | Missing | Missing | DA/HIGH | Mandatory/Mandatory | Renderer undo snapshot only | Read every affected ID; all list surfaces | Adapt AI-command batch/undo concepts into durable command receipts. P2 |
 
 ## B. Recurrence
@@ -45,7 +48,7 @@ timer-read, task-instance, Done-for-now, and subtask tools. A Hermes tool marked
 |---|---|---:|---:|---:|---|---|---|---|
 | Read definition/chain/current occurrence | Task details/context menu; task recurrence fields and instances | Partial via exact task; history/root chain not separately queryable | Partial through Done-for-now receipt only | RO | N/A | N/A | Exact task plus completion records | Add explicit chain ID, root ID, current occurrence and history endpoints. P1 |
 | Calculate next date | Recurrence UI; pure `computeNextDueDate` | Yes inside Done-for-now preview only | Yes through preview | RO | N/A | Preview version | Preview response | Expose a read-only recurrence preview for cadence edits. P1 |
-| Done for now | Context menu; shared service + transactional `flowstate_done_for_now` RPC | Yes, preview/apply, workspace/request receipt | Yes | REV | Yes/Yes | Immutable receipt + completion row; no general rollback | Exact read, taskMutation authoritative reload; Search/Today/Inbox/Canvas | First vertical slice; keep generic status blocked. P0 |
+| Done for now | Context menu; shared service + transactional `flowstate_done_for_now` RPC | Yes, preview/apply, workspace/request receipt | Yes: `flowstate_done_for_now` | REV | Yes/Yes | Immutable receipt + completion row; transaction rollback on failure | Exact read, taskMutation authoritative reload; Search/Today/Inbox/Canvas | Implemented first vertical slice; keep generic recurring status completion blocked. P0 |
 | Explicit next-date override | Done-for-now submenu/service | Yes with recurrence validation | Yes | REV | Yes/Yes | Same receipt | Receipt next occurrence + UI date | Keep only within RPC validation. P0 |
 | Occurrence history | Calendar completion records | Missing dedicated read | Missing | RO | N/A | Completion rows exist | Calendar plus chain IDs | Add bounded chain-history read excluding private bulk fields. P1 |
 | Edit cadence | Task recurrence editor; `updateTask(recurrenceRule)` | Missing | Missing | HIGH | Mandatory/Mandatory | Generic task audit is insufficient | Definition + regenerated previews/UI | Extract a shared transactional recurrence command. P2 |
@@ -56,9 +59,13 @@ timer-read, task-instance, Done-for-now, and subtask tools. A Hermes tool marked
 
 | Capability | UI/domain | Local API | Hermes | Safety | P/I | Audit/RB | Verification | Recommendation / priority |
 |---|---|---:|---:|---:|---|---|---|---|
-| Find likely duplicates | Similar-title search only; no domain classifier | Missing | Missing | RO | N/A | N/A | Return exact IDs, chain IDs and evidence | Expose inspection after exact/search reads. P2 |
-| Preview survivor/transfer plan | No canonical service | Missing | Missing | HIGH | Mandatory/N/A | Missing | Full retained/transferred field summary | Build transaction planner; include recurrence, subtasks, blocks, contexts. P2 |
-| Apply merge | No canonical service | Missing | Missing | HIGH | Mandatory/Yes | Dedicated immutable receipt required; rollback only if transaction supports it | Survivor read, duplicate archived, history/context intact, live UI | Defer endpoint until domain transaction exists; prohibit generic patches as substitute. P2 |
+| Find likely duplicates | Similar-title search only; no domain classifier | Partial via exact/search endpoints | Partial via exact/search tools | RO | N/A | N/A | Return exact IDs, chain IDs and human-reviewed evidence | Add a bounded candidate-evidence read; title similarity alone is insufficient. P2 |
+| Preview survivor/transfer plan | Transactional RPC preview over locked, scoped task state | Yes | Yes | HIGH | Yes/N/A | Preview version + proposed preserved counts | Full retained/transferred summary and typed conflict | Implemented for compatible non-recurring tasks. P0 |
+| Apply merge | Transactional `flowstate_merge_tasks` RPC | Yes | Yes | HIGH | Yes/Yes | Immutable request receipt; full transaction rollback | Survivor read, duplicate archived, preserved history, live task reload | Implemented with exact IDs and approval-gated apply. P0 |
+| Recurring task merge | No defined series/occurrence merge semantics | Rejected with typed conflict | Rejected | HIGH | N/A | No writes | Both task chains remain unchanged | Keep unsupported until product semantics are defined. P2 |
+| Dependency-linked merge | Dependency graph requires graph-aware retargeting | Rejected with typed conflict | Rejected | HIGH | N/A | No writes | Dependency edges unchanged | Add a dedicated graph-preserving planner before exposure. P2 |
+| AI-memory-linked merge | Context ownership/provenance requires memory-aware retargeting | Rejected with typed conflict | Rejected | HIGH | N/A | No writes | AI context rows unchanged | Keep fail-closed until privacy and provenance rules exist. P4 |
+| Active timer / pending notification merge | Runtime and delivery ownership cannot be transferred safely in the current transaction | Rejected with typed conflict | Rejected | HIGH | N/A | No writes | Timer/notification state unchanged | Stop/settle explicitly, then preview again; never transfer active coordination state implicitly. P3 |
 
 ## D. Subtasks
 
@@ -123,15 +130,17 @@ timer-read, task-instance, Done-for-now, and subtask tools. A Hermes tool marked
 
 ## Cross-cutting gaps
 
-1. **Workspace scope is inconsistent.** Done-for-now and task search carry the
-   renderer's exact active workspace. Most older endpoints still apply
-   `user_id = actor`, which hides collaborator-owned workspace rows and does not
-   explicitly pin personal rows to `workspace_id IS NULL`.
+1. **Workspace scope is inconsistent.** Exact task read, Done-for-now, task
+   search, and merge carry the renderer's exact active workspace. Most older
+   endpoints still apply `user_id = actor`, which hides collaborator-owned
+   workspace rows and does not explicitly pin personal rows to
+   `workspace_id IS NULL`.
 2. **Most writes bypass renderer domain semantics.** Basic task, instance, and
    timer handlers update rows directly. Their `{ok:true}` does not prove store
    hooks, undo, timer leadership, Canvas semantics, or authoritative UI state.
-3. **Receipts are exceptional.** Done-for-now has preview versioning,
-   idempotency, transactionality, and real identifiers. Other mutations do not.
+3. **Receipts are exceptional.** Done-for-now and duplicate merge have preview
+   versioning, idempotency, transactionality, and real identifiers. Other
+   mutations do not.
 4. **UI synchronization is task-only.** The sidecar emits task mutation notices;
    there are no equivalent project/group/instance/timer/Canvas notifications or
    correlated renderer command responses.
@@ -139,9 +148,10 @@ timer-read, task-instance, Done-for-now, and subtask tools. A Hermes tool marked
    its triggers do not populate all semantic/workspace detail. AI command audit
    and rollback snapshots live in the renderer's IndexedDB and are not a shared
    cross-device API ledger.
-6. **Hermes can be ahead of FlowState.** The connector currently declares
-   subtask operations for routes absent from this FlowState snapshot. Capability
-   health must report per-operation availability, not just `/api/health`.
+6. **Hermes can be ahead of FlowState.** Exact read, search, Done-for-now, and
+   merge are aligned. The connector still declares subtask operations for routes
+   absent from this FlowState snapshot. Capability health must report
+   per-operation availability, not just `/api/health`.
 7. **Search/Today/Inbox/Canvas are not the same projection.** Search should find
    living tasks without completion-history rows; Today is due/instance based;
    Inbox follows `is_in_inbox`; Canvas follows placement/group/work-block state.
@@ -149,27 +159,30 @@ timer-read, task-instance, Done-for-now, and subtask tools. A Hermes tool marked
 
 ## Phased delivery priorities
 
-### P0 — trustworthy identity and recurring completion
+### P0 — implemented trustworthy identity and structural vertical slices
 
-- Finish/ship exact workspace publication, Done-for-now transaction, receipts,
-  retry/conflict tests, and authoritative task reload.
-- Expose exact task read and the new scoped search endpoint in Hermes.
+- Maintain exact workspace-scoped read/search, Done-for-now, and compatible
+  duplicate merge across FlowState and Hermes.
+- Keep production UUID compatibility covered by schema-realistic SQL tests.
+- Keep preview/apply receipts, retry/conflict tests, and authoritative task
+  reload as release gates.
 - Add cursor pagination and workspace-correct filtering to list reads.
 - Keep generic recurring `status=done` rejected.
 
 ### P1 — common planning primitives
 
-- Complete work-block lifecycle through shared instance semantics.
+- Complete work-block move/resize/remove through shared instance semantics;
+  this is the next missing assistant workflow after Done-for-now and merge.
 - Add project/group reads and validated task assignment.
 - Add recurrence chain/current/history reads.
 - Bring subtask routes and Hermes declarations into one versioned contract.
 - Convert non-recurring completion/create/update to previewable receipt-backed
   commands where user approval matters.
 
-### P2 — structural task operations
+### P2 — remaining structural task operations
 
-- Build transactional duplicate preview/apply with a stable survivor and merge
-  receipt.
+- Add read-only duplicate-candidate evidence and define graph-aware merge
+  semantics before relaxing recurrence/dependency conflicts.
 - Add recurrence editing/pause/end semantics.
 - Add restore, batch commands, Canvas read, and placement removal.
 

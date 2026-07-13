@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures/auth'
+import { test, expect, ensureAuthUser, TEST_USER } from '../fixtures/auth'
 import { TEST_TASKS } from '../fixtures/test-ids'
 import { createClient } from '@supabase/supabase-js'
 
@@ -12,14 +12,7 @@ test.describe('Task Comments (TASK-1553)', () => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const { data: users } = await supabase.auth.admin.listUsers()
-    let testUser = users?.users?.find(u => u.email === 'playwright@test.flowstate')
-    for (let i = 0; i < 10 && !testUser; i++) {
-      await new Promise(r => setTimeout(r, 1000))
-      const res = await supabase.auth.admin.listUsers()
-      testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
-    }
-    if (!testUser) { const { data } = await supabase.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
+    const testUser = await ensureAuthUser(supabase, { ...TEST_USER, email_confirm: true })
 
     await supabase.from('workspaces').upsert({
       id: TEST_WORKSPACE_ID, name: 'Test Workspace',

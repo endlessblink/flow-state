@@ -113,8 +113,13 @@ describe('daily regression hunt script', () => {
     expect(report.checks).toHaveLength(1)
     expect(report.checks[0]).toMatchObject({
       id: 'lifecycle-durability',
-      failureClass: 'permanent delete/undo',
+      failureClass: 'permanent delete/undo/recurring completion/duplicate merge',
     })
+    expect(report.checks[0].command).toEqual(expect.arrayContaining([
+      'tests/unit/local-api/done-for-now-handler.test.ts',
+      'tests/unit/local-api/merge-tasks-handler.test.ts',
+      'tests/unit/local-api/task-search.test.ts',
+    ]))
     expect(report.checks[0].commandLine).toContain('tests/unit/undo-task-operations.test.ts')
     expect(report.checks[0].commandLine).toContain('tests/unit/task-rollback.test.ts')
     expect(report.checks[0].commandLine).toContain('tests/unit/stores/smart-merge.test.ts')

@@ -7,7 +7,7 @@
  *   - AllTasks "group by lane" shows the lane group with both tasks
  *   - Creating a lane via the sidebar works and routes to its view
  */
-import { test, expect } from '../fixtures/auth'
+import { test, expect, ensureAuthUser, TEST_USER } from '../fixtures/auth'
 import { createClient } from '@supabase/supabase-js'
 import { TEST_TASKS } from '../fixtures/test-ids'
 
@@ -33,15 +33,8 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const { data: users } = await admin.auth.admin.listUsers()
-    let testUser = users?.users?.find(u => u.email === 'playwright@test.flowstate')
-    for (let i = 0; i < 10 && !testUser; i++) {
-      await new Promise(r => setTimeout(r, 1000))
-      const res = await admin.auth.admin.listUsers()
-      testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
-    }
-    expect(testUser, 'Test user must exist').toBeTruthy()
-    const userId = testUser!.id
+    const testUser = await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })
+    const userId = testUser.id
 
     // Seed lane + assign a Work task (01) and a Personal task (05) — different projects
     await admin.from('lanes').upsert({ id: LANE_ID, user_id: userId, name: LANE_NAME, color: '#4ECDC4' })
@@ -99,14 +92,7 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
     const admin = createClient(SUPABASE_URL, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const { data: users } = await admin.auth.admin.listUsers()
-    let user = users!.users!.find((u) => u.email === 'playwright@test.flowstate')
-    for (let i = 0; i < 10 && !user; i++) {
-      await new Promise(r => setTimeout(r, 1000))
-      const res = await admin.auth.admin.listUsers()
-      user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
-    }
-    if (!user) { const { data } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); user = data.user; }
+    const user = await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })
     const userId = user.id
 
     // Seed an EMPTY lane and ensure the two target tasks aren't in it

@@ -31,6 +31,11 @@ DECLARE
   v_attachment_transfer_count integer := 0;
   v_group_link_count integer := 0;
   v_group_link_type text;
+  v_active_timer_count integer := 0;
+  v_pending_notification_count integer := 0;
+  v_assistant_memory_count integer := 0;
+  v_pomodoro_history_count integer := 0;
+  v_inactive_timer_count integer := 0;
   v_merged_instances jsonb;
   v_merged_subtasks jsonb;
   v_merged_attachments jsonb;
@@ -110,13 +115,13 @@ BEGIN
   IF NOT p_preview THEN
     -- Stable lock order prevents survivor/duplicate inversion deadlocks.
     PERFORM 1 FROM public.tasks
-    WHERE id IN (p_survivor_task_id, p_duplicate_task_id)
-    ORDER BY id
+    WHERE id::text IN (p_survivor_task_id, p_duplicate_task_id)
+    ORDER BY id::text
     FOR UPDATE;
   END IF;
 
   SELECT * INTO v_survivor FROM public.tasks
-  WHERE id = p_survivor_task_id AND is_deleted = false;
+  WHERE id::text = p_survivor_task_id AND is_deleted = false;
   IF NOT FOUND THEN
     RETURN jsonb_build_object(
       'ok', false,
@@ -125,7 +130,7 @@ BEGIN
   END IF;
 
   SELECT * INTO v_duplicate FROM public.tasks
-  WHERE id = p_duplicate_task_id AND is_deleted = false;
+  WHERE id::text = p_duplicate_task_id AND is_deleted = false;
   IF NOT FOUND THEN
     RETURN jsonb_build_object(
       'ok', false,
@@ -187,9 +192,11 @@ BEGIN
     );
   END IF;
 
-  IF v_survivor.recurrence_rule IS DISTINCT FROM v_duplicate.recurrence_rule
-     OR v_survivor.recurrence_parent_id IS DISTINCT FROM v_duplicate.recurrence_parent_id
-     OR COALESCE(v_survivor.recurrence_count, 0) <> COALESCE(v_duplicate.recurrence_count, 0) THEN
+  IF v_survivor.recurrence_rule IS NOT NULL OR v_duplicate.recurrence_rule IS NOT NULL
+     OR v_survivor.recurrence_parent_id IS NOT NULL OR v_duplicate.recurrence_parent_id IS NOT NULL
+     OR v_survivor.recurrence IS NOT NULL OR v_duplicate.recurrence IS NOT NULL
+     OR (v_survivor.recurring_instances IS NOT NULL AND v_survivor.recurring_instances <> '[]'::jsonb)
+     OR (v_duplicate.recurring_instances IS NOT NULL AND v_duplicate.recurring_instances <> '[]'::jsonb) THEN
     RETURN jsonb_build_object(
       'ok', false,
       'error', jsonb_build_object(
@@ -198,6 +205,64 @@ BEGIN
       )
     );
   END IF;
+
+  IF COALESCE(jsonb_array_length(to_jsonb(v_duplicate.depends_on)), 0) > 0
+     OR (v_duplicate.connection_types IS NOT NULL AND v_duplicate.connection_types <> '{}'::jsonb)
+     OR EXISTS (
+       SELECT 1 FROM public.tasks dependency_task
+       WHERE dependency_task.is_deleted = false
+         AND dependency_task.workspace_id IS NOT DISTINCT FROM p_workspace_id
+         AND (
+           COALESCE(to_jsonb(dependency_task.depends_on), '[]'::jsonb) @> jsonb_build_array(v_duplicate.id::text)
+           OR COALESCE(dependency_task.connection_types, '{}'::jsonb) ? v_duplicate.id::text
+         )
+     ) THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'error', jsonb_build_object(
+        'code', 'incompatible_dependencies',
+        'message', 'Task dependencies require an explicit graph-aware merge'
+      )
+    );
+  END IF;
+
+  SELECT count(*) INTO v_active_timer_count FROM public.timer_sessions
+  WHERE task_id::text = v_duplicate.id::text AND user_id = v_actor AND is_active = true;
+  IF v_active_timer_count > 0 THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'error', jsonb_build_object('code', 'incompatible_active_timer', 'message', 'Duplicate task has an active timer')
+    );
+  END IF;
+
+  SELECT count(*) INTO v_pending_notification_count FROM public.notifications
+  WHERE task_id::text = v_duplicate.id::text AND user_id = v_actor
+    AND COALESCE(is_shown, false) = false AND COALESCE(is_dismissed, false) = false;
+  IF v_pending_notification_count > 0 THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'error', jsonb_build_object('code', 'incompatible_notifications', 'message', 'Duplicate task has pending notifications')
+    );
+  END IF;
+
+  SELECT count(*) INTO v_assistant_memory_count FROM public.ai_context_entities
+  WHERE user_id = v_actor
+    AND (canonical_task_id::text IN (v_survivor.id::text, v_duplicate.id::text)
+      OR entity_key IN ('task:' || v_survivor.id::text, 'task:' || v_duplicate.id::text));
+  IF v_assistant_memory_count > 0 THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'error', jsonb_build_object(
+        'code', 'incompatible_assistant_memory',
+        'message', 'Task-linked assistant memory requires an explicit graph-aware merge'
+      )
+    );
+  END IF;
+
+  SELECT count(*) INTO v_pomodoro_history_count FROM public.pomodoro_history
+  WHERE task_id::text = v_duplicate.id::text AND user_id = v_actor;
+  SELECT count(*) INTO v_inactive_timer_count FROM public.timer_sessions
+  WHERE task_id::text = v_duplicate.id::text AND user_id = v_actor AND is_active = false;
 
   IF v_survivor.status IS DISTINCT FROM v_duplicate.status THEN
     RETURN jsonb_build_object(
@@ -302,13 +367,13 @@ BEGIN
     'SELECT count(*) FROM public.groups '
     || 'WHERE linked_parent_task_id::text = $1 AND workspace_id IS NOT DISTINCT FROM $2'
     INTO v_group_link_count
-    USING v_duplicate.id, p_workspace_id;
+    USING v_duplicate.id::text, p_workspace_id;
 
   IF v_group_link_count > 0
      AND v_group_link_type = 'uuid'
      AND (
-       v_survivor.id !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
-       OR v_duplicate.id !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+       v_survivor.id::text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+       OR v_duplicate.id::text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
      ) THEN
     RETURN jsonb_build_object(
       'ok', false,
@@ -356,6 +421,9 @@ BEGIN
           'comments', v_comment_count,
           'duplicateContext', v_duplicate_context,
           'canvasLinks', v_group_link_count,
+          'activeTimers', v_active_timer_count,
+          'pendingNotifications', v_pending_notification_count,
+          'assistantMemory', v_assistant_memory_count,
           'workspaceId', p_workspace_id
         )::text,
         'UTF8'
@@ -393,7 +461,12 @@ BEGIN
         'survivor identity and scalar choices',
         'duplicate archived source record',
         'task audit history',
+        'Pomodoro and inactive timer history on the archived source',
         'recurrence chain metadata'
+      ),
+      'preservedHistory', jsonb_build_object(
+        'pomodoroSessions', v_pomodoro_history_count,
+        'inactiveTimers', v_inactive_timer_count
       )
     );
   END IF;
@@ -414,7 +487,10 @@ BEGIN
     SELECT DISTINCT value FROM (
       SELECT value FROM jsonb_array_elements(COALESCE(v_survivor.instances, '[]'))
       UNION ALL
-      SELECT value FROM jsonb_array_elements(COALESCE(v_duplicate.instances, '[]'))
+      SELECT value
+        || CASE WHEN value->>'taskId' = v_duplicate.id::text THEN jsonb_build_object('taskId', v_survivor.id::text) ELSE '{}'::jsonb END
+        || CASE WHEN value->>'parentTaskId' = v_duplicate.id::text THEN jsonb_build_object('parentTaskId', v_survivor.id::text) ELSE '{}'::jsonb END
+      FROM jsonb_array_elements(COALESCE(v_duplicate.instances, '[]'))
     ) all_values
   ) unique_values;
 
@@ -424,7 +500,10 @@ BEGIN
     SELECT DISTINCT value FROM (
       SELECT value FROM jsonb_array_elements(COALESCE(v_survivor.subtasks, '[]'))
       UNION ALL
-      SELECT value FROM jsonb_array_elements(COALESCE(v_duplicate.subtasks, '[]'))
+      SELECT value
+        || CASE WHEN value->>'taskId' = v_duplicate.id::text THEN jsonb_build_object('taskId', v_survivor.id::text) ELSE '{}'::jsonb END
+        || CASE WHEN value->>'parentTaskId' = v_duplicate.id::text THEN jsonb_build_object('parentTaskId', v_survivor.id::text) ELSE '{}'::jsonb END
+      FROM jsonb_array_elements(COALESCE(v_duplicate.subtasks, '[]'))
     ) all_values
   ) unique_values;
 
@@ -516,20 +595,16 @@ BEGIN
   ON CONFLICT (project_id, task_id, link_type) DO UPDATE
   SET confidence = greatest(public.project_task_links.confidence, EXCLUDED.confidence),
       source = COALESCE(public.project_task_links.source, EXCLUDED.source);
+  -- Safety cleanup: every duplicate link has just been copied to the survivor,
+  -- while the archived duplicate task remains the durable source record.
   DELETE FROM public.project_task_links WHERE task_id = v_duplicate.id;
 
-  UPDATE public.timer_sessions SET task_id = v_survivor.id
-  WHERE task_id = v_duplicate.id AND user_id = v_actor;
-  UPDATE public.notifications SET task_id = v_survivor.id
-  WHERE task_id = v_duplicate.id AND user_id = v_actor;
-  UPDATE public.pomodoro_history SET task_id = v_survivor.id
-  WHERE task_id = v_duplicate.id AND user_id = v_actor;
   IF v_group_link_count > 0 THEN
     EXECUTE format(
       'UPDATE public.groups SET linked_parent_task_id = $1::%s '
       || 'WHERE linked_parent_task_id::text = $2 AND workspace_id IS NOT DISTINCT FROM $3',
       v_group_link_type
-    ) USING v_survivor.id, v_duplicate.id, p_workspace_id;
+    ) USING v_survivor.id, v_duplicate.id::text, p_workspace_id;
   END IF;
 
   -- Archive only after every transfer succeeds. The original duplicate row

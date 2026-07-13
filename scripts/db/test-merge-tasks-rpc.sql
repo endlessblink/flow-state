@@ -30,7 +30,7 @@ INSERT INTO public.tasks (
   is_deleted, is_in_inbox
 ) VALUES
   (
-    'merge-survivor', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000301', 'd0f10000-0000-4000-8000-000000000001',
     'd0f10000-0000-4000-8000-000000000101', 'Survivor', 'Keep this',
     'planned', 'high', '2026-07-20', ARRAY['survivor'],
     '[{"id":"sub-survivor","title":"Keep"}]',
@@ -38,7 +38,7 @@ INSERT INTO public.tasks (
     '[{"id":"attachment-survivor","name":"keep.txt"}]', null, null, 0, false, false, true
   ),
   (
-    'merge-duplicate', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000302', 'd0f10000-0000-4000-8000-000000000001',
     'd0f10000-0000-4000-8000-000000000101', 'Duplicate', 'Archived detail',
     'planned', 'high', '2026-07-20', ARRAY['duplicate'],
     '[{"id":"sub-duplicate","title":"Transfer"}]',
@@ -46,31 +46,31 @@ INSERT INTO public.tasks (
     '[{"id":"attachment-duplicate","name":"transfer.txt"}]', null, null, 0, false, false, true
   ),
   (
-    'merge-recurring-a', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000303', 'd0f10000-0000-4000-8000-000000000001',
     'd0f10000-0000-4000-8000-000000000101', 'Recurring A', null,
     'planned', null, '2026-07-20', null, '[]', '[]', '[]',
     '{"pattern":"daily","interval":1,"endType":"never"}', null, 0, false, false, true
   ),
   (
-    'merge-recurring-b', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000304', 'd0f10000-0000-4000-8000-000000000001',
     'd0f10000-0000-4000-8000-000000000101', 'Recurring B', null,
     'planned', null, '2026-07-20', null, '[]', '[]', '[]',
     '{"pattern":"weekly","interval":1,"weekdays":[1],"endType":"never"}', null, 0, false, false, true
   ),
   (
-    'merge-rollback-survivor', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000305', 'd0f10000-0000-4000-8000-000000000001',
     'd0f10000-0000-4000-8000-000000000101', 'Rollback survivor', null,
     'planned', null, null, ARRAY['before'], '[]', '[]', '[]', null, null, 0, false, false, true
   ),
   (
-    'merge-rollback-duplicate', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000306', 'd0f10000-0000-4000-8000-000000000001',
     'd0f10000-0000-4000-8000-000000000101', 'Rollback duplicate', null,
     'planned', null, null, ARRAY['must-rollback'], '[]', '[]', '[]', null, null, 0, false, false, true
   );
 
 INSERT INTO public.task_comments (id, task_id, workspace_id, user_id, content)
 VALUES (
-  'd0f10000-0000-4000-8000-000000000201', 'merge-duplicate',
+  'd0f10000-0000-4000-8000-000000000201', 'd0f10000-0000-4000-8000-000000000302',
   'd0f10000-0000-4000-8000-000000000101',
   'd0f10000-0000-4000-8000-000000000001', 'Transfer this comment'
 );
@@ -79,7 +79,7 @@ INSERT INTO public.task_contexts (
   task_id, user_id, summary, success_criteria, selection_hints,
   non_goals, user_corrections
 ) VALUES (
-  'merge-duplicate', 'd0f10000-0000-4000-8000-000000000001',
+  'd0f10000-0000-4000-8000-000000000302', 'd0f10000-0000-4000-8000-000000000001',
   'Transfer this context', '[]', '[]', '[]', '[]'
 );
 
@@ -94,8 +94,8 @@ CREATE TEMP TABLE merge_results (key text PRIMARY KEY, payload jsonb NOT NULL) O
 
 INSERT INTO merge_results (key, payload)
 SELECT 'preview', public.flowstate_merge_tasks(
-  p_survivor_task_id => 'merge-survivor',
-  p_duplicate_task_id => 'merge-duplicate',
+  p_survivor_task_id => 'd0f10000-0000-4000-8000-000000000301',
+  p_duplicate_task_id => 'd0f10000-0000-4000-8000-000000000302',
   p_preview => true,
   p_workspace_id => 'd0f10000-0000-4000-8000-000000000101'
 );
@@ -106,8 +106,8 @@ BEGIN
   IF v #>> '{ok}' <> 'true'
      OR v #>> '{preview}' <> 'true'
      OR nullif(v->>'previewVersion', '') IS NULL
-     OR v #>> '{survivor,id}' <> 'merge-survivor'
-     OR v #>> '{duplicate,id}' <> 'merge-duplicate'
+     OR v #>> '{survivor,id}' <> 'd0f10000-0000-4000-8000-000000000301'
+     OR v #>> '{duplicate,id}' <> 'd0f10000-0000-4000-8000-000000000302'
      OR v #>> '{duplicate,disposition}' <> 'soft_delete'
      OR v #>> '{transfer,taskComments}' <> '1'
      OR v #>> '{transfer,taskContext}' <> 'true'
@@ -117,9 +117,9 @@ BEGIN
     RAISE EXCEPTION 'FAIL: merge preview was not exact: %', v;
   END IF;
 
-  IF (SELECT is_deleted FROM public.tasks WHERE id = 'merge-duplicate')
-     OR (SELECT count(*) FROM public.task_comments WHERE task_id = 'merge-duplicate') <> 1
-     OR (SELECT count(*) FROM public.task_contexts WHERE task_id = 'merge-duplicate') <> 1
+  IF (SELECT is_deleted FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000302')
+     OR (SELECT count(*) FROM public.task_comments WHERE task_id = 'd0f10000-0000-4000-8000-000000000302') <> 1
+     OR (SELECT count(*) FROM public.task_contexts WHERE task_id = 'd0f10000-0000-4000-8000-000000000302') <> 1
      OR (SELECT count(*) FROM public.flowstate_action_receipts WHERE operation = 'merge_tasks') <> 0 THEN
     RAISE EXCEPTION 'FAIL: merge preview mutated state';
   END IF;
@@ -127,8 +127,8 @@ END $$;
 
 INSERT INTO merge_results (key, payload)
 SELECT 'apply', public.flowstate_merge_tasks(
-  p_survivor_task_id => 'merge-survivor',
-  p_duplicate_task_id => 'merge-duplicate',
+  p_survivor_task_id => 'd0f10000-0000-4000-8000-000000000301',
+  p_duplicate_task_id => 'd0f10000-0000-4000-8000-000000000302',
   p_preview => false,
   p_request_id => 'merge-request-1',
   p_preview_version => (SELECT payload->>'previewVersion' FROM merge_results WHERE key = 'preview'),
@@ -141,14 +141,14 @@ DECLARE
   s public.tasks%ROWTYPE;
   d public.tasks%ROWTYPE;
 BEGIN
-  SELECT * INTO STRICT s FROM public.tasks WHERE id = 'merge-survivor';
-  SELECT * INTO STRICT d FROM public.tasks WHERE id = 'merge-duplicate';
+  SELECT * INTO STRICT s FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000301';
+  SELECT * INTO STRICT d FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000302';
 
   IF v #>> '{ok}' <> 'true'
      OR v #>> '{preview}' <> 'false'
      OR v->>'requestId' <> 'merge-request-1'
-     OR v #>> '{survivor,id}' <> 'merge-survivor'
-     OR v #>> '{duplicate,id}' <> 'merge-duplicate'
+     OR v #>> '{survivor,id}' <> 'd0f10000-0000-4000-8000-000000000301'
+     OR v #>> '{duplicate,id}' <> 'd0f10000-0000-4000-8000-000000000302'
      OR v #>> '{duplicate,status}' <> 'archived' THEN
     RAISE EXCEPTION 'FAIL: merge apply receipt was incomplete: %', v;
   END IF;
@@ -159,36 +159,36 @@ BEGIN
      OR jsonb_array_length(s.attachments) <> 2
      OR d.is_deleted IS DISTINCT FROM true
      OR d.deleted_at IS NULL
-     OR (SELECT count(*) FROM public.task_comments WHERE task_id = 'merge-survivor') <> 1
-     OR (SELECT count(*) FROM public.task_comments WHERE task_id = 'merge-duplicate') <> 0
-     OR (SELECT count(*) FROM public.task_contexts WHERE task_id = 'merge-survivor') <> 1
-     OR (SELECT count(*) FROM public.task_contexts WHERE task_id = 'merge-duplicate') <> 0 THEN
+     OR (SELECT count(*) FROM public.task_comments WHERE task_id = 'd0f10000-0000-4000-8000-000000000301') <> 1
+     OR (SELECT count(*) FROM public.task_comments WHERE task_id = 'd0f10000-0000-4000-8000-000000000302') <> 0
+     OR (SELECT count(*) FROM public.task_contexts WHERE task_id = 'd0f10000-0000-4000-8000-000000000301') <> 1
+     OR (SELECT count(*) FROM public.task_contexts WHERE task_id = 'd0f10000-0000-4000-8000-000000000302') <> 0 THEN
     RAISE EXCEPTION 'FAIL: merge did not preserve/transfer records atomically';
   END IF;
 END $$;
 
 INSERT INTO merge_results (key, payload)
 SELECT 'retry', public.flowstate_merge_tasks(
-  'merge-survivor', 'merge-duplicate', false, 'merge-request-1',
+  'd0f10000-0000-4000-8000-000000000301', 'd0f10000-0000-4000-8000-000000000302', false, 'merge-request-1',
   (SELECT payload->>'previewVersion' FROM merge_results WHERE key = 'preview'),
   'd0f10000-0000-4000-8000-000000000101'
 );
 
 INSERT INTO merge_results (key, payload) VALUES
   ('conflict', public.flowstate_merge_tasks(
-    'merge-survivor', 'merge-duplicate', false, 'merge-request-1', 'different-preview',
+    'd0f10000-0000-4000-8000-000000000301', 'd0f10000-0000-4000-8000-000000000302', false, 'merge-request-1', 'different-preview',
     'd0f10000-0000-4000-8000-000000000101'
   )),
   ('same_task', public.flowstate_merge_tasks(
-    'merge-survivor', 'merge-survivor', true, null, null,
+    'd0f10000-0000-4000-8000-000000000301', 'd0f10000-0000-4000-8000-000000000301', true, null, null,
     'd0f10000-0000-4000-8000-000000000101'
   )),
   ('wrong_workspace', public.flowstate_merge_tasks(
-    'merge-recurring-a', 'merge-recurring-b', true, null, null,
+    'd0f10000-0000-4000-8000-000000000303', 'd0f10000-0000-4000-8000-000000000304', true, null, null,
     'd0f10000-0000-4000-8000-000000000102'
   )),
   ('incompatible_recurrence', public.flowstate_merge_tasks(
-    'merge-recurring-a', 'merge-recurring-b', true, null, null,
+    'd0f10000-0000-4000-8000-000000000303', 'd0f10000-0000-4000-8000-000000000304', true, null, null,
     'd0f10000-0000-4000-8000-000000000101'
   ));
 
@@ -208,7 +208,7 @@ END $$;
 CREATE FUNCTION public.test_force_merge_archive_failure()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.id = 'merge-rollback-duplicate' AND NEW.is_deleted = true THEN
+  IF NEW.id = 'd0f10000-0000-4000-8000-000000000306' AND NEW.is_deleted = true THEN
     RAISE EXCEPTION 'injected duplicate archive failure';
   END IF;
   RETURN NEW;
@@ -222,12 +222,12 @@ DO $$
 DECLARE v_preview jsonb;
 BEGIN
   v_preview := public.flowstate_merge_tasks(
-    'merge-rollback-survivor', 'merge-rollback-duplicate', true, null, null,
+    'd0f10000-0000-4000-8000-000000000305', 'd0f10000-0000-4000-8000-000000000306', true, null, null,
     'd0f10000-0000-4000-8000-000000000101'
   );
   BEGIN
     PERFORM public.flowstate_merge_tasks(
-      'merge-rollback-survivor', 'merge-rollback-duplicate', false,
+      'd0f10000-0000-4000-8000-000000000305', 'd0f10000-0000-4000-8000-000000000306', false,
       'merge-request-rollback', v_preview->>'previewVersion',
       'd0f10000-0000-4000-8000-000000000101'
     );
@@ -236,8 +236,8 @@ BEGIN
     IF SQLERRM = 'FAIL: injected merge failure did not propagate' THEN RAISE; END IF;
   END;
 
-  IF (SELECT tags FROM public.tasks WHERE id = 'merge-rollback-survivor') IS DISTINCT FROM ARRAY['before']::text[]
-     OR (SELECT is_deleted FROM public.tasks WHERE id = 'merge-rollback-duplicate')
+  IF (SELECT tags FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000305') IS DISTINCT FROM ARRAY['before']::text[]
+     OR (SELECT is_deleted FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000306')
      OR EXISTS (SELECT 1 FROM public.flowstate_action_receipts WHERE request_id = 'merge-request-rollback') THEN
     RAISE EXCEPTION 'FAIL: failed merge left partial state';
   END IF;

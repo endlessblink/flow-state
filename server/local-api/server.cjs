@@ -33,6 +33,7 @@ const { createAIMastraRuntime } = require('./ai-runtime.cjs')
 const { executeDoneForNow } = require('./done-for-now.cjs')
 const { executeMergeTasks } = require('./merge-tasks.cjs')
 const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
+const { executeNotionActivation } = require('./notion-activation.cjs')
 const { buildTaskSearchQuery, parseTaskSearchParams } = require('./task-search.cjs')
 const { scopeTaskQuery } = require('./task-scope.cjs')
 
@@ -407,6 +408,12 @@ async function handlePatchTask(id, req, res) {
   const body = await readJsonBody(req)
   const result = await executeCanonicalTaskPatch(ctx, id, body, notifyTaskMutation)
   send(res, result.status, result.body)
+}
+
+async function handleNotionActivation(req, res) {
+  const body = await readJsonBody(req)
+  const result = await executeNotionActivation(ctx, body, notifyTaskMutation)
+  return send(res, result.status, result.body)
 }
 
 async function handleGetTask(id, res) {
@@ -943,6 +950,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && path === '/api/tasks') {
       return await handleCreateTask(req, res)
+    }
+    if (req.method === 'POST' && path === '/api/integrations/notion/activations') {
+      return await handleNotionActivation(req, res)
     }
     if (req.method === 'POST' && path === '/api/ai/clarifications/start') {
       return await handleAIClarificationStart(req, res)

@@ -2187,6 +2187,7 @@ _Original plan below._
 - [ ] **TASK-1945 — Canonical Local API task patch adoption**: replace direct sidecar task patches and Hermes HTTP-success inference with the TASK-1944 preview/apply/base-revision contract, validate canonical receipts at both boundaries, and preserve exact replay after response loss.
 - [ ] **TASK-1947 — Deterministic canonical change-sequence catch-up**: persist a signed-user personal/workspace cursor, consume bounded ordered change-log pages as invalidation hints, reconcile exact task IDs authoritatively, and advance only after projection persistence succeeds.
 - [x] **TASK-1946 — Canonical web/PWA offline scalar task-patch adoption**: after TASK-1947, preserve stable operation identity through the Dexie queue for eligible scalar task edits, execute preview/apply with the signed-user TASK-1944 command, persist receipts before completion, and quarantine conflicts without weakening status, recurrence, geometry, instance, or subtask invariants. Completed 2026-07-13.
+- [x] **TASK-1948 — Canonical Notion task activation**: add signed-user preview/apply activation from stable Notion provenance through the TASK-1944 operation, preview, revision, and change-log authority; create at most one active FlowState task per user/source/page; atomically add an exact approved work block even when the task already exists; and return a replayable canonical receipt verified by the Local API. Completed 2026-07-14.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2317,6 +2318,26 @@ _Original plan below._
 - Missing authentication, missing rows, queued transport, HTTP success, and malformed `{ok:true}` responses never complete the operation.
 - Unsupported task mutations continue through named compatibility capture and are not silently translated into the generic scalar command.
 - Production remains unchanged until signed-in packaged/web verification and deployment are separately approved.
+
+### ~~TASK-1948~~: Canonical Notion task activation (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: TASK-1943, TASK-1944, TASK-1945
+
+**Scope**:
+- Add stable Notion page provenance to tasks with per-user active uniqueness, without introducing a second receipt ledger.
+- Preview and apply under the signed-in user through `canonical_operation_previews`, `canonical_operations`, task revisions, and `canonical_change_log`.
+- Preserve one global operation identity across preview, commit, response-loss replay, and process restart; reject altered payload reuse.
+- Create a task only when provenance is not already active, but append the exact optional approved work block atomically for both new and already-activated tasks.
+- Return the `notion-activation-v1` canonical receipt with revision, timestamp, change sequence, read-back projection/hash, and provenance.
+- Expose a dedicated Local API adapter and route that validate the complete canonical response before notifying the renderer.
+
+**Acceptance**:
+- Preview performs no task or instance mutation and its digest/expiry are durable and exact-request bound.
+- Apply after preview expiry rejects unless the exact operation was already committed, in which case it replays the original receipt without a second task or work block.
+- Concurrent or repeated activation of one Notion page cannot produce duplicate active FlowState tasks for the same user.
+- An optional approved work block is appended exactly once even when the Notion task was activated by an earlier operation.
+- Authenticated clients retain no direct write access to canonical operation, preview, or change-log tables; all mutations pass through the typed RPC.
+- Disposable database proof covers cross-user denial, replay, altered operation conflict, duplicate provenance, existing-task scheduling, and rollback; production remains unchanged.
 
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
@@ -7058,6 +7079,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1945** | **P0** | 🔄 **Canonical Local API task patch adoption with preview/apply approval binding, receipt validation, and exact replay** |
 | **TASK-1947** | **P0** | 🔄 **Deterministic canonical change-sequence catch-up with scoped durable cursors, ordered invalidation pages, and persistence-gated advancement** |
 | **TASK-1946** | **P0** | ✅ **Canonical web/PWA offline scalar task-patch adoption with durable operation identity, receipts, restart-safe replay, and conflict quarantine** |
+| **TASK-1948** | **P0** | ✅ **Canonical Notion task activation with stable provenance, exact optional work blocks, replayable canonical receipts, and Local API verification** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

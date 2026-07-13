@@ -35,13 +35,24 @@ test.describe('TASK-1455: Catalog — Uncategorized tasks group', () => {
 
     // Find the test user to get their user_id
     const { data: users } = await adminClient.auth.admin.listUsers()
-    let testUser = users?.users?.find(u => u.email === 'playwright@test.flowstate')
-    for (let i = 0; i < 10 && !testUser; i++) {
+    let testUser = users?.users?.find((u: any) => u.email === 'playwright@test.flowstate')
+
+
+    for (let i = 0; i < 5 && !testUser; i++) {
+      try {
+        const res = await adminClient.auth.admin.listUsers()
+        const found = res.data.users.find((u: any) => u.email === 'playwright@test.flowstate')
+        if (found) { testUser = found; break; }
+
+        const { data, error } = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true })
+        if (!error && data?.user) { testUser = data.user; break; }
+      } catch (e) {
+        // Ignore
+      }
       await new Promise(r => setTimeout(r, 1000))
-      const res = await adminClient.auth.admin.listUsers()
-      testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
     }
-    if (!testUser) { const { data } = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
+    if (!testUser) throw new Error('Failed to create or find test user after retries');
+
 
     // Upsert an uncategorized task (project_id = null)
     const { error: upsertError } = await adminClient.from('tasks').upsert(

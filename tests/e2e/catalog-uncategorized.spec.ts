@@ -38,7 +38,7 @@ test.describe('TASK-1455: Catalog — Uncategorized tasks group', () => {
     let testUser = users?.users?.find((u: any) => u.email === 'playwright@test.flowstate')
 
 
-    for (let i = 0; i < 5 && !testUser; i++) {
+    for (let i = 0; i < 15 && !testUser; i++) {
       try {
         const res = await adminClient.auth.admin.listUsers()
         const found = res.data.users.find((u: any) => u.email === 'playwright@test.flowstate')

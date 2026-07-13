@@ -41,7 +41,7 @@ test.describe('canvas renders a task placed inside a group (BUG-1796)', () => {
     let user = data.users.find((u: any) => u.email === 'playwright@test.flowstate')
 
 
-    for (let i = 0; i < 5 && !user; i++) {
+    for (let i = 0; i < 15 && !user; i++) {
       try {
         const res = await admin.auth.admin.listUsers()
         const found = res.data.users.find((u: any) => u.email === 'playwright@test.flowstate')

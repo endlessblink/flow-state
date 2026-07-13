@@ -103,7 +103,7 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
     let user = users!.users!.find((u: any) => u.email === 'playwright@test.flowstate')
 
 
-    for (let i = 0; i < 5 && !user; i++) {
+    for (let i = 0; i < 15 && !user; i++) {
       try {
         const res = await admin.auth.admin.listUsers()
         const found = res.data.users.find((u: any) => u.email === 'playwright@test.flowstate')

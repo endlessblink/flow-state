@@ -32,7 +32,9 @@ const { createClient } = require('@supabase/supabase-js')
 const { createAIMastraRuntime } = require('./ai-runtime.cjs')
 const { executeDoneForNow } = require('./done-for-now.cjs')
 const { executeMergeTasks } = require('./merge-tasks.cjs')
+const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
 const { buildTaskSearchQuery, parseTaskSearchParams } = require('./task-search.cjs')
+const { scopeTaskQuery } = require('./task-scope.cjs')
 
 // --- Mode detection ---------------------------------------------------------
 // parentPort exists only when launched as an Electron utilityProcess.
@@ -120,7 +122,7 @@ function buildServiceRoleContext() {
   const supabase = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
-  return { supabase, userId }
+  return { supabase, userId, activeWorkspaceId: null, signedUser: false }
 }
 
 /**
@@ -147,7 +149,7 @@ async function applySession(msg) {
       logErr(`setSession failed: ${error.message}`)
       return
     }
-    ctx = { supabase, userId, activeWorkspaceId }
+    ctx = { supabase, userId, activeWorkspaceId, signedUser: true }
   } catch (e) {
     logErr(`applySession error: ${e && e.message}`)
   }
@@ -306,6 +308,7 @@ async function handleSearchTasks(url, res) {
     recurrenceParentId: row.recurrence_parent_id ?? null,
     recurrenceCount: row.recurrence_count ?? 0,
     isCompletionRecord: row.is_completion_record === true,
+    canonicalRevision: row.canonical_revision,
     updatedAt: row.updated_at,
   }))
 
@@ -313,7 +316,7 @@ async function handleSearchTasks(url, res) {
 }
 
 async function handleGetTasks(url, res) {
-  const { supabase, userId } = ctx
+  const { supabase } = ctx
   const statusParam = url.searchParams.get('status') // 'todo' | 'open' | 'done' | null
   const dueParam = url.searchParams.get('due') // 'today' | 'overdue' | 'open' | YYYY-MM-DD | null
   const limitParam = Number(url.searchParams.get('limit'))
@@ -325,11 +328,11 @@ async function handleGetTasks(url, res) {
 
   let query = supabase
     .from('tasks')
-    .select('id,title,status,priority,due_date,project_id')
-    .eq('user_id', userId)
+    .select('id,title,status,priority,due_date,project_id,workspace_id,canonical_revision')
     .eq('is_deleted', false)
     .order('updated_at', { ascending: false })
     .limit(limit)
+  query = scopeTaskQuery(ctx, query)
 
   // status=done → done; status=todo or omitted → all open (non-done)
   if (statusParam === 'done') query = query.eq('status', 'done')
@@ -359,6 +362,8 @@ async function handleGetTasks(url, res) {
     priority: r.priority ?? null,
     dueDate: toDateOnly(r.due_date),
     projectId: r.project_id ?? null,
+    workspaceId: r.workspace_id ?? null,
+    canonicalRevision: r.canonical_revision,
   }))
   send(res, 200, { tasks })
 }
@@ -399,82 +404,19 @@ async function handleCreateTask(req, res) {
 }
 
 async function handlePatchTask(id, req, res) {
-  const { supabase, userId } = ctx
-  // Verify the row exists for this user (and isn't soft-deleted).
-  const { data: existing, error: findErr } = await supabase
-    .from('tasks')
-    .select('id,recurrence_rule')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .eq('is_deleted', false)
-    .maybeSingle()
-  if (findErr) return send(res, 500, { error: findErr.message })
-  if (!existing) return send(res, 404, { error: 'not found' })
-
   const body = await readJsonBody(req)
-  const update = { updated_at: new Date().toISOString() }
-
-  if (body.status === 'done' && existing.recurrence_rule) {
-    return send(res, 409, {
-      ok: false,
-      error: {
-        code: 'recurring_completion_requires_done_for_now',
-        message: 'Recurring tasks must use POST /api/tasks/:id/done-for-now',
-      },
-    })
-  }
-
-  if (body.status !== undefined) {
-    if (body.status !== 'todo' && body.status !== 'done') {
-      return send(res, 400, { error: 'status must be todo|done' })
-    }
-    update.status = toDbStatus(body.status)
-    if (body.status === 'done') {
-      update.completed_at = new Date().toISOString()
-      if (body.progress === undefined) update.progress = 100
-    } else {
-      update.completed_at = null
-    }
-  }
-  if (body.title !== undefined) {
-    const t = typeof body.title === 'string' ? body.title.trim() : ''
-    if (!t) return send(res, 400, { error: 'title cannot be empty' })
-    update.title = t
-  }
-  if (body.priority !== undefined) {
-    if (!isValidPriority(body.priority)) {
-      return send(res, 400, { error: 'priority must be low|medium|high or null' })
-    }
-    update.priority = body.priority
-  }
-  if (body.dueDate !== undefined) update.due_date = body.dueDate ?? null
-  if (body.progress !== undefined) {
-    const n = Number(body.progress)
-    if (!Number.isFinite(n)) return send(res, 400, { error: 'progress must be a number' })
-    update.progress = n
-  }
-
-  const { error } = await supabase.from('tasks').update(update).eq('id', id).eq('user_id', userId)
-  if (error) return send(res, 500, { error: error.message })
-  notifyTaskMutation('update', id)
-  send(res, 200, { ok: true })
+  const result = await executeCanonicalTaskPatch(ctx, id, body, notifyTaskMutation)
+  send(res, result.status, result.body)
 }
 
 async function handleGetTask(id, res) {
-  const { supabase, userId } = ctx
+  const { supabase } = ctx
   let query = supabase
     .from('tasks')
-    .select('id,title,description,status,priority,progress,due_date,due_time,project_id,subtasks,tags,position,instances,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,is_in_inbox,workspace_id,created_at,updated_at,completed_at')
+    .select('id,title,description,status,priority,progress,due_date,due_time,project_id,subtasks,tags,position,instances,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,is_in_inbox,workspace_id,canonical_revision,created_at,updated_at,completed_at')
     .eq('id', id)
     .eq('is_deleted', false)
-
-  if (ctx.activeWorkspaceId == null) {
-    query = query.eq('user_id', userId).is('workspace_id', null)
-  } else {
-    // The signed-in Supabase client enforces membership through task RLS.
-    query = query.eq('workspace_id', ctx.activeWorkspaceId)
-  }
-
+  query = scopeTaskQuery(ctx, query)
   const { data: task, error } = await query.maybeSingle()
   if (error) return send(res, 500, { error: { code: 'read_failed', message: 'task could not be read' }, ok: false })
   if (!task) return send(res, 404, { error: { code: 'not_found', message: 'task not found' }, ok: false })
@@ -502,6 +444,7 @@ async function handleGetTask(id, res) {
       isInInbox: task.is_in_inbox === true,
       workspaceId: task.workspace_id,
       createdAt: task.created_at,
+      canonicalRevision: task.canonical_revision,
       updatedAt: task.updated_at,
       completedAt: task.completed_at,
     },

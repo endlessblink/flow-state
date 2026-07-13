@@ -30,7 +30,7 @@ describe('BUG-1942 Local Task API renderer reconciliation', () => {
     const remove = functionSlice(server, 'handleDeleteTask', 'handleGetCurrentTimer')
 
     expect(create).toContain("notifyTaskMutation('create', id)")
-    expect(patch).toContain("notifyTaskMutation('update', id)")
+    expect(patch).toContain('executeCanonicalTaskPatch(ctx, id, body, notifyTaskMutation)')
     expect(remove).toContain("notifyTaskMutation('delete', id)")
   })
 

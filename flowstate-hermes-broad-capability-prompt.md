@@ -335,6 +335,8 @@ Provide tools and API operations for:
 - archive or soft-delete;
 - restore;
 - read recent changes;
+- read and preserve safe external-source provenance for tasks activated from systems such as Notion, including source system, stable external object ID, and optional source URL without storing credentials;
+- find an existing FlowState task by external-source reference so retries and later planning passes cannot create duplicates;
 - inspect duplicate candidates without mutation;
 - preview and apply merge;
 - batch preview and apply.
@@ -465,6 +467,19 @@ Expose or preserve:
 
 Do not expose raw AI conversations, secrets, or bulk private data when summaries are sufficient.
 
+### J. External task-source activation
+
+Support a safe activation boundary for project-task systems such as Notion:
+
+- external systems remain their own project source of truth;
+- Hermes may read and discuss external tasks during planning without creating FlowState tasks;
+- creating or mirroring a task in FlowState requires explicit confirmation that the user is starting it or approval of an exact personal work block;
+- activation preview must show the external source, proposed FlowState task, schedule, and any source-status change;
+- apply must be idempotent and persist a stable external-reference mapping;
+- repeated activation of the same external object must return the existing FlowState task rather than create a duplicate;
+- completion or status propagation back to the external source must be a separate explicit, previewable operation;
+- never store Notion tokens, OAuth material, bearer headers, or private workspace credentials in FlowState task fields.
+
 ---
 
 ## Hermes Tool Design
@@ -474,6 +489,7 @@ Expose self-describing Hermes tools with clear, narrow schemas.
 Possible tool concepts include:
 
 - `flowstate_get_task`
+- `flowstate_get_task_by_external_ref`
 - `flowstate_search_tasks`
 - `flowstate_list_tasks_page`
 - `flowstate_complete_task`

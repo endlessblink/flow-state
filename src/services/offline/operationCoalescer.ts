@@ -62,6 +62,16 @@ export async function coalesceOperationsForEntity(
   // Sort by creation time
   pendingOps.sort((a, b) => a.createdAt - b.createdAt)
 
+  // Canonical patches have server-bound operation identities and preview receipts.
+  // Never merge, rewrite, or delete any operation in a group that contains one.
+  if (pendingOps.some(op => op.canonicalTaskPatch)) {
+    return {
+      operation: pendingOps[0],
+      mergedOperationIds: [],
+      description: 'Canonical operation identities preserved',
+    }
+  }
+
   // Determine the final operation type and payload
   let finalOp: WriteOperation | null = null
   const mergedIds: number[] = []

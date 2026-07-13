@@ -303,7 +303,9 @@ BEGIN
          OR (
            NOT EXISTS (
          SELECT 1 FROM public.workspace_members
-         WHERE workspace_id = v_task.workspace_id AND user_id = v_actor
+         WHERE workspace_id = v_task.workspace_id
+           AND user_id = v_actor
+           AND role IN ('owner', 'admin', 'member')
            )
            AND NOT EXISTS (
              SELECT 1 FROM public.workspaces

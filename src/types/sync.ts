@@ -29,6 +29,57 @@ export type WriteOperationStatus =
   | 'conflict'     // Version conflict detected
   | 'completed'    // Successfully synced (will be cleaned up)
 
+export interface CanonicalTaskReadBack {
+  [key: string]: unknown
+  id: string
+  title: string
+  description: string | null
+  priority: 'low' | 'medium' | 'high' | null
+  dueDate: string | null
+  progress: number
+  status: string
+  isDeleted: boolean
+  workspaceId: string | null
+  canonicalRevision: number
+  canonicalUpdatedAt: string
+}
+
+export interface CanonicalTaskPatchReceipt {
+  contractVersion: 'task-v1'
+  operationId: string
+  source: 'web-pwa'
+  entityType: 'task'
+  action: 'patch'
+  entityId: string
+  canonicalRevision: number
+  canonicalUpdatedAt: string
+  changeSequence: number
+  replayed: boolean
+  committedAt: string
+  readBack: CanonicalTaskReadBack
+  readBackHash: string
+}
+
+export interface CanonicalTaskPatchState {
+  contractVersion: 'task-v1'
+  operationId: string
+  baseRevision: number
+  patch: Partial<{
+    title: string
+    description: string | null
+    priority: 'low' | 'medium' | 'high' | null
+    dueDate: string | null
+    progress: number
+  }>
+  /** Server-normalized patch bound to the durable preview digest. */
+  normalizedPatch?: CanonicalTaskPatchState['patch']
+  phase: 'queued' | 'previewed' | 'committed'
+  previewDigest?: string
+  previewExpiresAt?: string
+  parentOperationId?: string
+  receipt?: CanonicalTaskPatchReceipt
+}
+
 /**
  * A single write operation in the queue
  */
@@ -74,12 +125,17 @@ export interface WriteOperation {
 
   /** Workspace ID (null = personal workspace) */
   workspaceId?: string | null
+
+  /** TASK-1946: durable preview/apply identity for eligible scalar task patches. */
+  canonicalTaskPatch?: CanonicalTaskPatchState
 }
 
 /**
  * Conflict detected during sync
  */
 export interface WriteConflict {
+  /** IndexedDB primary key. */
+  id?: number
   /** The operation that caused the conflict */
   operation: WriteOperation
 
@@ -204,6 +260,9 @@ export interface SyncResult {
 
   /** Server data (returned when LWW resolves in server's favor) */
   serverData?: Record<string, unknown>
+
+  /** Validated canonical proof, persisted before queue completion. */
+  canonicalReceipt?: CanonicalTaskPatchReceipt
 }
 
 /**

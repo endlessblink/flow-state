@@ -516,6 +516,7 @@ BEGIN
   ON CONFLICT (project_id, task_id, link_type) DO UPDATE
   SET confidence = greatest(public.project_task_links.confidence, EXCLUDED.confidence),
       source = COALESCE(public.project_task_links.source, EXCLUDED.source);
+  -- Safety: every duplicate link was copied/upserted to the survivor above before cleanup.
   DELETE FROM public.project_task_links WHERE task_id = v_duplicate.id;
 
   UPDATE public.timer_sessions SET task_id = v_survivor.id

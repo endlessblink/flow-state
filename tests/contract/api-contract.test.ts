@@ -34,6 +34,7 @@ const VALID_TASK_COLUMNS = new Set([
   'due_date', 'due_time', 'estimated_duration',
   'subtasks', 'tags', 'depends_on',
   'position', 'position_version',
+  'canonical_revision',
   'instances', 'connection_types', 'recurrence', 'recurring_instances',
   'notification_prefs', 'reminders', 'attachments',
   'recurrence_rule', 'recurrence_parent_id', 'recurrence_count',

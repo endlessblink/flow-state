@@ -91,24 +91,6 @@ CREATE POLICY canonical_operations_select_own
   FOR SELECT
   USING ((SELECT auth.uid()) = user_id);
 
-DROP POLICY IF EXISTS canonical_change_log_select_scope
-  ON public.canonical_change_log;
-CREATE POLICY canonical_change_log_select_scope
-  ON public.canonical_change_log
-  FOR SELECT
-  USING (
-    (workspace_id IS NULL AND (SELECT auth.uid()) = user_id)
-    OR (
-      workspace_id IS NOT NULL
-      AND EXISTS (
-        SELECT 1
-        FROM public.workspace_members AS member
-        WHERE member.workspace_id = canonical_change_log.workspace_id
-          AND member.user_id = (SELECT auth.uid())
-      )
-    )
-  );
-
 REVOKE ALL ON public.canonical_operations FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.canonical_operation_previews FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.canonical_change_log FROM PUBLIC, anon, authenticated;
@@ -118,6 +100,44 @@ REVOKE ALL ON SEQUENCE public.canonical_operation_previews_id_seq FROM PUBLIC, a
 REVOKE ALL ON SEQUENCE public.canonical_change_log_id_seq FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.canonical_operations TO authenticated;
 GRANT SELECT ON public.canonical_change_log TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.flowstate_can_read_workspace_v1(
+  p_workspace_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT (SELECT auth.uid()) IS NOT NULL
+    AND p_workspace_id IS NOT NULL
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.workspaces AS workspace
+        WHERE workspace.id = p_workspace_id
+          AND workspace.owner_id = (SELECT auth.uid())
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.workspace_members AS member
+        WHERE member.workspace_id = p_workspace_id
+          AND member.user_id = (SELECT auth.uid())
+      )
+    )
+$$;
+
+REVOKE ALL ON FUNCTION public.flowstate_can_read_workspace_v1(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.flowstate_can_read_workspace_v1(uuid) TO authenticated;
+
+DROP POLICY IF EXISTS canonical_change_log_select_scope
+  ON public.canonical_change_log;
+CREATE POLICY canonical_change_log_select_scope
+  ON public.canonical_change_log
+  FOR SELECT
+  USING (
+    (workspace_id IS NULL AND (SELECT auth.uid()) = user_id)
+    OR (workspace_id IS NOT NULL AND public.flowstate_can_read_workspace_v1(workspace_id))
+  );
 
 CREATE OR REPLACE FUNCTION public.flowstate_can_write_workspace_v1(
   p_workspace_id uuid
@@ -327,7 +347,7 @@ BEGIN
     pg_catalog.jsonb_build_object(
       'id', v_row.id,
       'title', v_row.title,
-      'status', v_row.status,
+      'status', CASE WHEN v_row.status = 'done' THEN 'done' ELSE 'todo' END,
       'priority', v_row.priority,
       'dueDate', v_row.due_date,
       'progress', v_row.progress,
@@ -699,7 +719,7 @@ BEGIN
     'priority', v_task.priority,
     'dueDate', v_task.due_date,
     'progress', v_task.progress,
-    'status', v_task.status,
+    'status', CASE WHEN v_task.status = 'done' THEN 'done' ELSE 'todo' END,
     'isDeleted', v_task.is_deleted,
     'workspaceId', v_task.workspace_id,
     'canonicalRevision', v_task.canonical_revision,
@@ -904,7 +924,7 @@ BEGIN
     'priority', v_updated.priority,
     'dueDate', v_updated.due_date,
     'progress', v_updated.progress,
-    'status', v_updated.status,
+    'status', CASE WHEN v_updated.status = 'done' THEN 'done' ELSE 'todo' END,
     'isDeleted', v_updated.is_deleted,
     'workspaceId', v_updated.workspace_id,
     'canonicalRevision', v_updated.canonical_revision,

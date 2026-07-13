@@ -2186,7 +2186,7 @@ _Original plan below._
 - [ ] **TASK-1944 — Canonical operation, revision, and change-sequence foundation**: recover onto a fresh branch, classify existing work, inventory every production writer, add the signed-user operation ledger and canonical revisions, preserve legacy writers through compatibility triggers, return replayable read-back receipts, and provide durable sequence catch-up.
 - [ ] **TASK-1945 — Canonical Local API task patch adoption**: replace direct sidecar task patches and Hermes HTTP-success inference with the TASK-1944 preview/apply/base-revision contract, validate canonical receipts at both boundaries, and preserve exact replay after response loss.
 - [ ] **TASK-1947 — Deterministic canonical change-sequence catch-up**: persist a signed-user personal/workspace cursor, consume bounded ordered change-log pages as invalidation hints, reconcile exact task IDs authoritatively, and advance only after projection persistence succeeds.
-- [ ] **TASK-1946 — Canonical web/PWA offline scalar task-patch adoption**: after TASK-1947, preserve stable operation identity through the Dexie queue for eligible scalar task edits, execute preview/apply with the signed-user TASK-1944 command, persist receipts before completion, and quarantine conflicts without weakening status, recurrence, geometry, instance, or subtask invariants.
+- [x] **TASK-1946 — Canonical web/PWA offline scalar task-patch adoption**: after TASK-1947, preserve stable operation identity through the Dexie queue for eligible scalar task edits, execute preview/apply with the signed-user TASK-1944 command, persist receipts before completion, and quarantine conflicts without weakening status, recurrence, geometry, instance, or subtask invariants. Completed 2026-07-13.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2268,9 +2268,9 @@ _Original plan below._
 - Realtime and Electron IPC remain fast invalidation hints and are never treated as canonical proof.
 - Production remains unchanged until signed-in packaged/web verification and deployment are separately approved.
 
-### TASK-1946: Canonical web/PWA offline scalar task-patch adoption (🔄 IN PROGRESS)
+### TASK-1946: Canonical web/PWA offline scalar task-patch adoption (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1944, TASK-1945, TASK-1947
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-13) | **Depends on**: TASK-1944, TASK-1945, TASK-1947
 
 **Scope**:
 - Carry canonical task revisions through Supabase task mapping and visible renderer state.
@@ -2280,6 +2280,34 @@ _Original plan below._
 - Preserve every canonical operation identity through coalescing and exempt unresolved canonical intent from stale-operation purge.
 - Process multiple offline edits to one task in durable order: rebase only a not-yet-previewed dependent operation to its predecessor receipt revision, record the linkage, and never mutate a patch/base after its preview is issued.
 - Represent stale revision, altered approval, malformed response, missing authentication, and unsupported mutation as durable pending/conflict/quarantine states rather than false success.
+
+**Implementation progress (2026-07-13)**:
+- Web/PWA scalar task edits now retain a signed-user/workspace-scoped operation through Dexie preview, apply, receipt persistence, authoritative projection, restart-safe replay, and deterministic same-task ordering across canonical and compatibility operations.
+- Preview normalization and committed receipts are schema-validated; malformed success, missing rows/auth, response loss, cross-account proof collisions, viewer writes, unsupported fields, and unavailable IndexedDB cannot become false completion. Date/timestamp receipts project through the app's date-only/status contract.
+- Successful compatibility updates now atomically retain the returned canonical revision before completion, so a later unpreviewed canonical edit rebases across the same or a later queue pass. Shared-workspace member updates preserve the task owner instead of attempting an immutable ownership transfer. A predecessor receipt/server echo cannot clear or overwrite a later durable optimistic edit while that successor remains unresolved.
+- Verification passes TypeScript, the 215-test focused canonical cohort, production renderer/PWA build, Electron main/preload/sidecar compilation, disposable SQL preview/apply/RLS/rollback coverage, and concurrent same-operation/stale-base races. The full suite reports 3,464 passing tests, 6 intentional skips, and one unrelated pre-existing auth-backup fixture failure when Supabase env is intentionally absent. A full Electron package remains correctly blocked without build-time Supabase variables; signed-in packaged/web and production rollout proof remain approval-gated.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Online, reconnect, response-loss, same-task successor, mixed compatibility/canonical, and shared-member update regressions | Yes, for eligible scalar web/PWA edits |
+| Data shape / persisted row shape | Yes | Disposable SQL preview/apply/read-back, revision, sequence, RLS, rollback, and race tests | Yes |
+| Renderer store/state | Yes | Canonical projection, date/status normalization, restart ledger, and later-optimistic-edit preservation tests | Yes |
+| Electron main/preload bridge | Yes | Main/preload/sidecar TypeScript and bundle compilation | No behavior change in this slice |
+| Localhost sidecar endpoint | N/A | TASK-1945 owns canonical Local API adoption | No |
+| KDE polling/control path | N/A | No timer or KDE control behavior changed | No |
+| Supabase persistence/realtime | Yes | Canonical receipt SQL, scoped change-log read policy, and deterministic catch-up contract tests | Persistence covered; Realtime remains an invalidation hint |
+| Updater/runtime version | No | Production package and updater were intentionally not changed | No |
+| Stale live process/cache state | Yes | Dexie v4-to-v5 migration, restart replay, missed-response, cache invalidation, and durable cursor regressions | Repository/disposable coverage only |
+
+**Exact failure mode fixed**: Eligible web/PWA scalar task edits could be reported locally successful without a durable canonical receipt, lose operation identity across retry/restart, replay against a stale predecessor revision, overwrite a later optimistic edit, or attempt to replace a shared task owner.
+
+**Explicitly not covered**: Status, recurrence, geometry, task instances, subtasks, create/delete/restore, timers/focus, non-task entities, signed-in packaged runtime proof, production deployment, and the separate missing-env auth-backup test fixture.
+
+**Regression added for reported repro**: Yes; canonical and compatibility predecessors followed by a failing successor preserve the later optimistic state, and shared members update without sending `user_id`.
+
+**Live boundary proof**: Repository builds and disposable database fixtures pass. Signed-in packaged/web and production mutation proof remain deliberately pending exact approval.
 
 **Acceptance**:
 - Online and reconnect scalar edits are called committed only after a complete TASK-1944 receipt is durably stored.
@@ -6796,7 +6824,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1944** | **P0** | 🔄 **Canonical operation/revision/change-sequence foundation with safe branch recovery, signed-user receipts, replay, compatibility triggers, and deterministic catch-up** |
 | **TASK-1945** | **P0** | 🔄 **Canonical Local API task patch adoption with preview/apply approval binding, receipt validation, and exact replay** |
 | **TASK-1947** | **P0** | 🔄 **Deterministic canonical change-sequence catch-up with scoped durable cursors, ordered invalidation pages, and persistence-gated advancement** |
-| **TASK-1946** | **P0** | 🔄 **Canonical web/PWA offline scalar task-patch adoption with durable operation identity, receipts, restart-safe replay, and conflict quarantine** |
+| **TASK-1946** | **P0** | ✅ **Canonical web/PWA offline scalar task-patch adoption with durable operation identity, receipts, restart-safe replay, and conflict quarantine** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |

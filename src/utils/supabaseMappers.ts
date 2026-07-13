@@ -167,6 +167,7 @@ export interface SupabaseTask {
     completed_at?: string | null
     created_at?: string
     updated_at?: string
+    canonical_revision?: number
 
     // "Done for now" feature - tracks when task was rescheduled via this feature
     done_for_now_until?: string | null
@@ -703,6 +704,7 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
 
         createdAt: new Date(record.created_at || Date.now()),
         updatedAt: new Date(record.updated_at || Date.now()),
+        canonicalRevision: record.canonical_revision,
         completedAt: record.completed_at ? new Date(record.completed_at) : undefined,
 
         _soft_deleted: record.is_deleted || false,

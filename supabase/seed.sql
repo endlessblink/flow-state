@@ -3,6 +3,28 @@
 -- BUG-339: Fixed password hashing to use extensions prefix and cost factor 10
 -- This prevents auth.users table reset from breaking local development
 
+-- Local Supabase runs migrations as postgres, so current CLI releases do not
+-- inherit the production API grants for tables created by those migrations.
+-- Mirror the production user-scoped API boundary for development and E2E;
+-- RLS policies still decide which rows each authenticated user may access.
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+    public.tasks,
+    public.groups,
+    public.projects,
+    public.user_settings,
+    public.lanes,
+    public.workspaces,
+    public.workspace_members,
+    public.workspace_invites,
+    public.task_comments,
+    public.workspace_activity,
+    public.notifications,
+    public.timer_sessions,
+    public.pomodoro_history,
+    public.quick_sort_sessions,
+    public.tombstones
+TO authenticated, service_role;
+
 -- Dev user credentials:
 --   Email: dev@flowstate.local
 --   Password: dev123

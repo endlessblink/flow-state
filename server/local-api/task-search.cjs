@@ -1,5 +1,7 @@
 'use strict'
 
+const { scopeTaskQuery } = require('./task-scope.cjs')
+
 const MAX_QUERY_LENGTH = 200
 const MAX_LIMIT = 25
 const DEFAULT_LIMIT = 25
@@ -27,18 +29,12 @@ function escapeIlikePattern(value) {
 function buildTaskSearchQuery(context, input) {
   let query = context.supabase
     .from('tasks')
-    .select('id,title,status,priority,due_date,project_id,workspace_id,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,updated_at')
+    .select('id,title,status,priority,due_date,project_id,workspace_id,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,canonical_revision,updated_at')
     .eq('is_deleted', false)
     .eq('is_completion_record', false)
 
-  if (context.activeWorkspaceId == null) {
-    query = query
-      .eq('user_id', context.userId)
-      .is('workspace_id', null)
-  } else {
-    // Membership and row visibility are enforced by the signed-in client's RLS.
-    query = query.eq('workspace_id', context.activeWorkspaceId)
-  }
+  // Membership and row visibility are enforced by the signed-in client's RLS.
+  query = scopeTaskQuery(context, query)
 
   return query
     .ilike('title', `%${escapeIlikePattern(input.query)}%`)

@@ -2237,6 +2237,8 @@ _Original plan below._
 - Existing list/search reads and unrelated Local API actions remain compatible while writer cohorts migrate incrementally.
 - Production remains unchanged until the migration, signed-in packaged verification, and deployment boundary are separately approved.
 
+**Progress (2026-07-13)**: The Local API task PATCH path is now preview-first and calls the signed-user `flowstate_patch_task_v1` contract instead of directly updating `tasks`. It validates complete preview and committed receipt identities, revisions, sequences, timestamps, read-back projections, and SHA-256 fields before renderer reconciliation; safely preserves durable success when renderer notification fails; redacts connector failures; refuses service-role impersonation; and exposes canonical revisions through personal/shared task reads using one workspace-scoping helper. The complete Local API regression cohort passes. Hermes adapter migration and packaged signed-in proof remain pending, so this task stays in progress.
+
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.246 deployed and locally installed) | **Opened**: 2026-07-10

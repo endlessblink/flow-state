@@ -161,6 +161,7 @@ Completion-history records and soft-deleted rows are excluded.
       "recurrenceParentId": null,
       "recurrenceCount": 0,
       "isCompletionRecord": false,
+      "canonicalRevision": 7,
       "updatedAt": "2026-07-13T09:00:00.000Z"
     }
   ]
@@ -178,21 +179,35 @@ Completion-history records and soft-deleted rows are excluded.
 ```
 
 ### `PATCH /api/tasks/:id`
-Any subset of fields. `status` ∈ `todo|done`. Marking `done` sets `completed_at`
-and (unless `progress` is given) `progress: 100`.
+Preview-first canonical patch for `title`, `description`, `priority`, `dueDate`,
+and `progress`. Obtain `canonicalRevision` from task reads and use it as
+`baseRevision`. The preview does not mutate the task.
 ```json
-// body
-{ "status": "done", "title": "…", "priority": "low", "dueDate": "…", "progress": 100 }
-// 200
-{ "ok": true }
-// 404 (unknown id for this user)
-{ "error": "not found" }
+// preview body
+{ "operationId": "stable-client-operation-id", "baseRevision": 7,
+  "patch": { "title": "Clarified next action", "priority": "high" } }
+
+// preview response
+{ "ok": true, "result": "preview", "contractVersion": "task-v1",
+  "operationId": "stable-client-operation-id", "baseRevision": 7,
+  "previewDigest": "server-issued-digest", "previewExpiresAt": "…",
+  "normalizedPayload": { "title": "Clarified next action", "priority": "high" },
+  "readBack": { "id": "task-id", "canonicalRevision": 7 } }
 ```
 
-Recurring tasks are an exception: `status: "done"` is rejected with
-`recurring_completion_requires_done_for_now`. A recurring definition is the
-living task row; one completed occurrence is a separate immutable completion
-record. Use the operation below so history and cadence cannot be bypassed.
+After explicit approval, repeat the exact operation, revision, patch, issued
+digest, and expiry with `"preview": false`. Success is reported only with a
+validated committed receipt containing the canonical revision, change sequence,
+read-back projection, and read-back hash. Retrying the same operation is safe
+and returns a replayed durable receipt.
+
+Generic status changes are intentionally unsupported. Recurring completion uses
+the operation below so history and cadence cannot be bypassed; other completion
+flows must use their domain-specific canonical command.
+
+This canonical patch endpoint requires token mode with the signed-in user's JWT.
+Standalone service-role mode returns `signed_user_required`; a configured user ID
+is not accepted as a substitute for the actor proven by `auth.uid()`.
 
 ### `GET /api/tasks/:id`
 

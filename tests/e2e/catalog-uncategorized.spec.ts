@@ -4,7 +4,7 @@
  * Verifies that when grouped by "project", tasks with no projectId appear in an
  * "Uncategorized" group at the TOP of the list — before all project groups.
  */
-import { test, expect } from '../fixtures/auth'
+import { test, expect, findAuthUserByEmail } from '../fixtures/auth'
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
@@ -34,20 +34,14 @@ test.describe('TASK-1455: Catalog — Uncategorized tasks group', () => {
     })
 
     // Find the test user to get their user_id
-    const { data: users } = await adminClient.auth.admin.listUsers()
-    let testUser = users?.users?.find(u => u.email === 'playwright@test.flowstate')
-    for (let i = 0; i < 10 && !testUser; i++) {
-      await new Promise(r => setTimeout(r, 1000))
-      const res = await adminClient.auth.admin.listUsers()
-      testUser = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
-    }
-    if (!testUser) { const { data } = await adminClient.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); testUser = data.user; }
+    const testUser = await findAuthUserByEmail(adminClient, 'playwright@test.flowstate')
+    if (!testUser) throw new Error('Global setup did not create the Playwright test user')
 
     // Upsert an uncategorized task (project_id = null)
     const { error: upsertError } = await adminClient.from('tasks').upsert(
       {
         id: UNCATEGORIZED_TASK_ID,
-        user_id: testUser!.id,
+        user_id: testUser.id,
         title: UNCATEGORIZED_TASK_TITLE,
         status: 'planned',
         priority: 'medium',

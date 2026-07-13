@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { chromium, type FullConfig } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
+import { findAuthUserByEmail } from './fixtures/auth'
 
 // TASK-1457: Dedicated Playwright test user — completely isolated from real users
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
@@ -22,8 +23,7 @@ async function ensureTestUser() {
   })
 
   // Check if test user already exists
-  const { data: existingUsers } = await supabase.auth.admin.listUsers()
-  const existingUser = existingUsers?.users?.find(u => u.email === TEST_USER_EMAIL)
+  const existingUser = await findAuthUserByEmail(supabase, TEST_USER_EMAIL)
 
   let userId: string
 

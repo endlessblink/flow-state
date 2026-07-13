@@ -12,7 +12,7 @@
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { test, expect } from '../fixtures/auth'
+import { test, expect, findAuthUserByEmail } from '../fixtures/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -37,14 +37,8 @@ test.describe('canvas renders a task placed inside a group (BUG-1796)', () => {
     admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const { data } = await admin.auth.admin.listUsers()
-    let user = data.users.find((u) => u.email === 'playwright@test.flowstate')
-    for (let i = 0; i < 10 && !user; i++) {
-      await new Promise(r => setTimeout(r, 1000))
-      const res = await admin.auth.admin.listUsers()
-      user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
-    }
-    if (!user) { const { data } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); user = data.user; }
+    const user = await findAuthUserByEmail(admin, 'playwright@test.flowstate')
+    if (!user) throw new Error('Global setup did not create the Playwright test user')
     userId = user.id
 
     // Clean any prior run + tombstones that would make sync skip our CREATE.

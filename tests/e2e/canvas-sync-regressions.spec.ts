@@ -20,6 +20,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { test, expect, readCanvasNodePositions, expectNoNodesMoved, waitForCanvasNodes } from '../fixtures/two-client'
 import type { Page } from '@playwright/test'
+import { findAuthUserByEmail } from '../fixtures/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -64,14 +65,16 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const { data } = await admin.auth.admin.listUsers()
-    let user = data.users.find((u) => u.email === 'playwright@test.flowstate')
-    for (let i = 0; i < 10 && !user; i++) {
-      await new Promise(r => setTimeout(r, 1000))
-      const res = await admin.auth.admin.listUsers()
-      user = res.data.users.find((u) => u.email === 'playwright@test.flowstate')
+    let user = await findAuthUserByEmail(admin, 'playwright@test.flowstate')
+    if (!user) {
+      const { data, error } = await admin.auth.admin.createUser({
+        email: 'playwright@test.flowstate',
+        password: 'pw-playwright-e2e-2026!',
+        email_confirm: true,
+      })
+      if (error || !data.user) throw error ?? new Error('Test user creation returned no user')
+      user = data.user
     }
-    if (!user) { const { data } = await admin.auth.admin.createUser({ email: 'playwright@test.flowstate', password: 'pw-playwright-e2e-2026!', email_confirm: true }); user = data.user; }
     userId = user.id
 
     await admin.from('tasks').delete().in('id', ALL_IDS)

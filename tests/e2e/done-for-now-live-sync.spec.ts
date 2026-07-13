@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
+import { findAuthUserByEmail } from '../fixtures/auth'
 
 const TASK_ID = 'd0f00000-0000-4000-8000-00000000e2e1'
 const TITLE = 'Disposable recurring UI sync fixture'
@@ -15,8 +16,7 @@ test.describe.serial('recurring Done for now live UI synchronization', () => {
     expect(anonKey).not.toBe('')
 
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
-    const { data: users } = await admin.auth.admin.listUsers()
-    const userId = users.users.find(user => user.email === EMAIL)?.id
+    const userId = (await findAuthUserByEmail(admin, EMAIL))?.id
     expect(userId).toBeTruthy()
 
     const current = new Date()

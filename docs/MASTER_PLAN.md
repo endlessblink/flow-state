@@ -2215,6 +2215,8 @@ _Original plan below._
 - A client with Realtime disabled converges through its durable sequence cursor.
 - No production write or deployment is used for this slice without explicit approval.
 
+**Progress (2026-07-13)**: The repository-local W0 task foundation now includes actor-bound idempotent previews, a signed-user patch RPC, independent task revisions, compatibility capture, a global RLS-filtered change cursor, replayable read-back receipts, workspace role/scope protection, and the dependency-ordered production writer matrix in `docs/process/canonical-writer-matrix.md`. Static contracts, a rollback-only SQL suite, injected-failure coverage, and multi-session preview/apply races pass against a disposable local database. Production remains unchanged; Local API/offline writer migration and explicit catch-up clients are still pending.
+
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.246 deployed and locally installed) | **Opened**: 2026-07-10

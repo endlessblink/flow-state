@@ -2654,7 +2654,7 @@ Binds 127.0.0.1 only, rejects non-loopback Host (403), bearer required in token 
 
 **Verified**: (1) `setSession` RLS-scoping in plain Node — anon→0 rows, with-session→only the user's rows; (2) full token-mode integration through a real Electron `utilityProcess` + bundled sidecar — pre-session 503, post-session correct RLS-scoped reads, POST 200; (3) HTTP layer (health/401/403/400/404/DB-error→JSON); (4) esbuild bundles supabase-js self-contained (537KB); (5) standalone service-role mode boots (no regression); (6) no new type/lint errors. **Pending (user-run)**: `npm run electron:dev` → sign in → enable in Settings → curl with bearer → POST shows in UI via realtime. Then ship per rules 6/7 (version bump + Electron deploy).
 
-**Shipped integration follow-up**: **BUG-1942** — v1.4.249 directly reconciles successful Local Task API mutations into the running renderer; the signed-in named-task live check remains pending.
+**Completed integration follow-up**: ~~**BUG-1942**~~ — v1.4.249 directly reconciles Local API mutations; v1.4.250 adds authoritative visible-resume reconciliation for missed PWA realtime events. The named task was recovered visibly in Electron without restarting.
 
 ---
 
@@ -4210,9 +4210,9 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
-### BUG-1942: Local Task API update succeeds but task stays absent from the running UI (🔄 SHIPPED, LIVE AUTH CHECK PENDING)
+### ~~BUG-1942~~: Cross-runtime task writes can stay absent from Electron after missed realtime (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 SHIPPED, LIVE AUTH CHECK PENDING (v1.4.249, 2026-07-13) | **Depends on**: TASK-1797
+**Priority**: P0 | **Status**: ✅ DONE (v1.4.250 shipped and verified, 2026-07-13) | **Depends on**: TASK-1797
 
 **User repro**: Hermes patched task `f4658470-fa2f-41e0-ac20-867750278e92` (`לשלוח כביסה`) from due date 2026-07-12 to 2026-07-13. Local API PATCH returned `{ ok: true }` and Local API GET returned the new date, but the running Personal-workspace UI could not find the task in global Search or Inbox.
 
@@ -4226,6 +4226,32 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 - The named task remains visible in the real Electron UI after an API mutation without restarting the app.
 
 **Shipped evidence**: v1.4.249 adds the explicit sidecar → Electron main → preload → renderer mutation signal and reloads the active task store after successful Local API writes. The focused Local API regression pack passes 41/41, the Electron sync guard passes 221/221, type-check/lint/import/CSS/dependency validation pass, the Electron package validates, and the live updater manifest serves v1.4.249 with both artifacts. The full suite passed 3,279 tests and failed one unrelated pre-existing AI weekly-planning assertion, which also fails alone. The exact named-task post-fix mutation check remains pending because the local Electron profile became signed out after installing the package; the sidecar correctly rejected the attempted write before changing production data.
+
+**Recurrence/root cause (2026-07-13)**: the named task was created in the PWA, not through the Local API. Its production row and Electron's exact Supabase query were correct, but global Search proved it was absent from the renderer store. A no-op Local API PATCH then triggered the v1.4.249 bridge, reloaded authoritative data, and made the task visibly appear in Search and Canvas Inbox without restarting. This proves the remaining gap was a missed PWA realtime event while the channel still reported `joined`; visibility recovery previously reloaded only when the channel reported dead. v1.4.250 reconciles authoritative data on a genuine visible resume even for a healthy-looking channel, while retaining edit-modal protection and a bounded refresh cooldown, with a regression for the exact missed-PWA-event shape.
+
+**Final live proof**: the public updater serves v1.4.250 and both Linux artifacts. The installed signed-in Electron v1.4.250 displayed `לשלוח כביסה` in Canvas Inbox. A Local API status change to done removed it immediately and decremented Today/All Active/Inbox; restoring `{ status: todo, progress: 0 }` made it immediately reappear with the original due date. No restart was used between status transitions.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | PWA-created `לשלוח כביסה` existed in API/DB but not Electron Search or Inbox; Hermes status transitions were replayed live. | Yes |
+| Data shape / persisted row shape | Yes | Correct owner, personal workspace, planned/high, due 2026-07-13, inbox true, non-deleted. | No change needed |
+| Renderer store/state | Yes | Exact global Search returned no result until authoritative reload; sidebar counts changed with the reload. | Yes |
+| Electron main/preload bridge | Yes | v1.4.249 Local API mutation signal made the task appear without restart. | Yes, Local API writes |
+| Localhost sidecar endpoint | Yes | Authenticated GET returned the row; reversible status PATCH calls returned 200 and changed visible Electron state. | Yes |
+| KDE polling/control path | N/A | Task visibility does not use KDE timer polling/control. | N/A |
+| Supabase persistence/realtime | Yes | Electron's exact Supabase query included the row while a healthy-looking realtime channel had missed it. | Yes, visible-resume backstop |
+| Updater/runtime version | Yes | Installed v1.4.250 and public manifest/artifacts verified. | Yes |
+| Stale live process/cache state | Yes | Authoritative reload recovered the row and corrected stale counts without restart. | Yes |
+
+**Exact failure mode fixed**: PWA task INSERT/UPDATE events missed while Electron realtime still reports `joined`, plus direct Local API mutations in the running Electron process.
+
+**Explicitly not covered**: a continuously visible Electron window that never receives a visibility-resume event still depends on realtime or a Local API mutation; KDE timer sync and unrelated task-filter semantics are outside this fix.
+
+**Regression added for reported repro**: a healthy joined channel must still invoke authoritative reconciliation after Electron returns to visible state; the existing Local API bridge regression covers direct Hermes mutations.
+
+**Live boundary proof**: signed-in packaged Electron v1.4.250 visibly removed the named task on `todo → done` and restored it on `done → todo` through Local API PATCH, with the production row restored to todo/progress 0.
 
 ### ~~BUG-1907~~: Quick Tasks typed pin can look like a no-op (✅ DONE)
 
@@ -6586,7 +6612,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, v1.4.243 shipped) |
 | ~~**BUG-1940**~~ | **P0** | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.247 shipped) |
 | **BUG-1941** | **P0** | ✅ **Failed permanent-delete/done persistence now rolls back visibly instead of returning as false success** (shipped v1.4.248, 2026-07-12) |
-| **BUG-1942** | **P0** | 🔄 **Deterministic Local API → renderer reconciliation shipped in v1.4.249; signed-in live named-task check pending** |
+| ~~**BUG-1942**~~ | **P0** | ✅ **PWA-created task and Hermes status changes now reconcile visibly in Electron; v1.4.250 shipped** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |

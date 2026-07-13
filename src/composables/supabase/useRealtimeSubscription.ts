@@ -352,6 +352,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         // BUG-1207 FIX: Track last user interaction to prevent recovery from clobbering recent edits.
         let lastUserInteraction = Date.now()
         const RECOVERY_COOLDOWN_MS = 60000 // 60 seconds
+        let lastAuthoritativeRecovery = Date.now()
         const trackUserInteraction = () => { lastUserInteraction = Date.now() }
         document.addEventListener('click', trackUserInteraction, { passive: true })
         document.addEventListener('keydown', trackUserInteraction, { passive: true })
@@ -405,18 +406,22 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                 if (isDead && !isConnecting && reconnectTimer === null) {
                     console.debug('👀 [REALTIME] Connection dead on resume. Reconnecting...')
                     setupSubscription()
-
-                    // BUG-1207 FIX: Skip recovery reload if user was recently active.
-                    const timeSinceInteraction = Date.now() - lastUserInteraction
-                    if (onRecovery && timeSinceInteraction > RECOVERY_COOLDOWN_MS) {
-                        // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
-                        invalidateCache.all()
-                        onRecovery()
-                    } else if (onRecovery) {
-                        console.debug(`👀 [REALTIME] Skipping recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
-                    }
                 } else if (isDead) {
                     console.debug('👀 [REALTIME] Connection dead but reconnect already in progress/scheduled — skipping')
+                }
+
+                // BUG-1942: A PWA write can be missed while Supabase still reports this
+                // channel as joined. Reconcile authoritative data on a genuine visible
+                // resume even for a healthy-looking channel; realtime remains the fast path.
+                const now = Date.now()
+                const timeSinceInteraction = now - lastUserInteraction
+                const timeSinceRecovery = now - lastAuthoritativeRecovery
+                if (onRecovery && timeSinceRecovery > RECOVERY_COOLDOWN_MS) {
+                    lastAuthoritativeRecovery = now
+                    invalidateCache.all()
+                    await onRecovery().catch(e => console.error('Visibility recovery failed:', e))
+                } else if (onRecovery) {
+                    console.debug(`👀 [REALTIME] Skipping recovery reload - last authoritative refresh was ${Math.round(timeSinceRecovery / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s, last interaction: ${Math.round(timeSinceInteraction / 1000)}s)`)
                 }
             }
         }

@@ -344,6 +344,42 @@ describe('WebSocket Resilience — useRealtimeSubscription', () => {
     expect(taskSub?.options?.filter).toContain('workspace_id=eq.ws-xyz-456')
   })
 
+  it('reconciles authoritative data on visible resume even when realtime still reports joined', async () => {
+    const originalVisibility = document.visibilityState
+    let now = 0
+    const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
+    let subscription: ReturnType<ReturnType<typeof useRealtimeSubscription>['initRealtimeSubscription']> = null
+    try {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+      const onRecovery = vi.fn().mockResolvedValue(undefined)
+      const ctx = buildCtx()
+      const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+      subscription = initRealtimeSubscription(
+        vi.fn(),
+        vi.fn(),
+        undefined,
+        undefined,
+        undefined,
+        onRecovery
+      )
+      await flushAll(10)
+
+      // A PWA write can be missed while Supabase still considers the Electron
+      // channel healthy. Returning to Electron must still reconcile the store.
+      now = 61_000
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+      document.dispatchEvent(new Event('visibilitychange'))
+      await flushAll(10)
+
+      expect(mockChannel.state).toBe('joined')
+      expect(onRecovery).toHaveBeenCalledTimes(1)
+    } finally {
+      await subscription?.unsubscribe()
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: originalVisibility })
+      dateNowSpy.mockRestore()
+    }
+  })
+
   // 16. TASK-1871: no auth token yet → reschedule + connect (no silent death).
   // Without the fix, the no-token branch returned with no retry → realtime never started.
   it('reschedules setup when no auth token yet, then connects', async () => {

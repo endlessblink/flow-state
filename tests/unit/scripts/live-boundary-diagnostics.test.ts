@@ -206,6 +206,45 @@ describe('live boundary diagnostics', () => {
     }
   })
 
+  it('classifies an expired signed-in shell as re-auth required, not a blind sidecar', () => {
+    const diagnostics = {
+      ...healthyDiagnostics,
+      hasAuthContext: false,
+      rendererAuthState: {
+        ...healthyDiagnostics.rendererAuthState,
+        canSyncRemotely: false,
+        reauthRequired: true,
+      },
+    }
+    try {
+      runBoundary(fixtureEnv(diagnostics, '123 1 /tmp/.mount_x/flowstate'))
+      throw new Error('expected command to fail')
+    } catch (error) {
+      const output = String((error as { stdout?: Buffer | string }).stdout || '')
+      expect(output).toContain('renderer-reauth-required')
+      expect(output).not.toContain('sidecar-blind-while-renderer-signed-in')
+    }
+  })
+
+  it('classifies reconnect grace as a warning while the sidecar waits for fresh auth', () => {
+    const diagnostics = {
+      ...healthyDiagnostics,
+      hasAuthContext: false,
+      rendererAuthState: {
+        ...healthyDiagnostics.rendererAuthState,
+        canSyncRemotely: false,
+        reauthRequired: false,
+      },
+    }
+    const output = runBoundary(
+      fixtureEnv(diagnostics, '123 1 /tmp/.mount_x/flowstate'),
+    )
+    const report = JSON.parse(output)
+    expect(report.ok).toBe(true)
+    expect(report.failures).not.toContain('sidecar-blind-while-renderer-signed-in')
+    expect(report.warnings).toContain('renderer-auth-refresh-pending')
+  })
+
   it('BUG-1933: a signed-out renderer with no sidecar context is not a failure', () => {
     const diagnostics = {
       ...healthyDiagnostics,

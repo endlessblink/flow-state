@@ -34,6 +34,7 @@ const { executeDoneForNow } = require('./done-for-now.cjs')
 const { executeMergeTasks } = require('./merge-tasks.cjs')
 const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
+const { classifyMissingAuthContext } = require('./auth-availability.cjs')
 const { buildTaskSearchQuery, parseTaskSearchParams } = require('./task-search.cjs')
 const { scopeTaskQuery } = require('./task-scope.cjs')
 
@@ -928,7 +929,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Data routes require an auth context (token mode: until the app signs in).
-    if (!ctx) return send(res, 503, { error: 'not signed in' })
+    if (!ctx) {
+      const unavailable = classifyMissingAuthContext(rendererAuthState)
+      return send(res, unavailable.status, unavailable.body)
+    }
 
     if (req.method === 'POST' && path === '/api/timer/control') {
       return await handlePostTimerControl(req, res)

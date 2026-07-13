@@ -18,6 +18,16 @@ function functionBody(name: string): string {
 }
 
 describe('Local API sidecar timer endpoint regression contract', () => {
+  it('classifies missing auth context from the renderer heartbeat before protected routes', () => {
+    const classifierImport = SERVER_CJS.indexOf("require('./auth-availability.cjs')")
+    const ctxCheck = SERVER_CJS.indexOf('classifyMissingAuthContext(rendererAuthState)')
+    const tasksRoute = SERVER_CJS.indexOf("path === '/api/tasks'")
+
+    expect(classifierImport).toBeGreaterThan(-1)
+    expect(ctxCheck).toBeGreaterThan(-1)
+    expect(ctxCheck).toBeLessThan(tasksRoute)
+  })
+
   it('exposes GET /api/timer/current before Life OS bearer-token protected task routes', () => {
     const timerRoute = SERVER_CJS.indexOf("path === '/api/timer/current'")
     const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')

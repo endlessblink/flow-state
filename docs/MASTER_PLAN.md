@@ -2189,6 +2189,7 @@ _Original plan below._
 - [x] **TASK-1946 — Canonical web/PWA offline scalar task-patch adoption**: after TASK-1947, preserve stable operation identity through the Dexie queue for eligible scalar task edits, execute preview/apply with the signed-user TASK-1944 command, persist receipts before completion, and quarantine conflicts without weakening status, recurrence, geometry, instance, or subtask invariants. Completed 2026-07-13.
 - [x] **TASK-1948 — Canonical Notion task activation**: add signed-user preview/apply activation from stable Notion provenance through the TASK-1944 operation, preview, revision, and change-log authority; create at most one active FlowState task per user/source/page; atomically add an exact approved work block even when the task already exists; and return a replayable canonical receipt verified by the Local API. Completed 2026-07-14.
 - [x] ~~**TASK-1949 — Canonical assistant reliability harness and watchdog**: execute the combined canonical task and Notion activation contracts against a disposable database, inject same-operation and conflicting-operation races, keep the focused cohort in the fixed daily regression lane, and alert on redacted canonical/Notion integrity failures without touching production data.~~ Completed 2026-07-14.
+- [x] ~~**TASK-1950 — Classify renderer-to-sidecar auth recovery precisely**: distinguish an expired cached signed-in shell, bounded token-refresh recovery, and a genuinely blind sidecar; return actionable protected-route errors and keep the live-boundary diagnostic from raising false sidecar-delivery incidents.~~ Completed 2026-07-14.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2383,6 +2384,50 @@ _Original plan below._
 **Regression added for reported repro**: executable same-operation replay, altered-operation conflict, serialized provenance races, injected trigger rollback, both canonical SQL suites, fixed daily scheduling, and read-only watchdog contract tests.
 
 **Live boundary proof**: N/A for this repository-local slice; production data and deployment were explicitly excluded, and the disposable database was read back as removed after verification.
+
+### ~~TASK-1950~~: Classify renderer-to-sidecar auth recovery precisely (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: BUG-1933, TASK-1949
+
+**Failure-class matrix**: documented with the exact failure mode, uncovered boundaries, regression proof, and live observation below.
+
+**Scope**:
+- Use the renderer auth heartbeat as the authority for why the Local API has no usable auth context instead of collapsing every state into `not signed in`.
+- Preserve the security boundary: never forward an expired access token and never let the sidecar race the renderer for a single-use refresh token.
+- Return stable protected-route responses for re-authentication required, bounded reconnect recovery, and actual signed-out state.
+- Teach the live-boundary diagnostic to report re-authentication as actionable, refresh grace as a warning, and renderer-to-sidecar blindness only when the renderer says remote sync is available.
+
+**Acceptance**:
+- A cached signed-in shell with an exhausted session is not misreported as a renderer-to-sidecar delivery failure.
+- A renderer inside bounded refresh recovery does not raise a hard incident while waiting for a fresh session.
+- A renderer that can sync remotely while the sidecar has no context still fails as a genuine bridge fault.
+- Protected Local API callers can distinguish sign-in, re-authentication, and reconnect states without receiving credentials or session details.
+
+**Implementation**: Added one pure missing-auth classifier shared by protected Local API routes. It derives only stable error/action output from the existing redacted renderer heartbeat. The live-boundary evaluator now uses `canSyncRemotely` and `reauthRequired` to separate a valid refresh grace period and an expired cached shell from an actual sidecar handoff failure.
+
+**Verification**: The two diagnostic regressions failed first against the broad sidecar-blind classification. The Local API classifier and server-contract regressions then failed before the module and routing seam existed, and the genuine bridge-fault case failed when it still received `not_signed_in`. Final host execution passed 44/44 focused auth, Local API, and live-boundary tests plus the joined 67/67 auth/watchdog reliability cohort; all changed CommonJS files passed syntax checks and the diff passed whitespace validation.
+
+**Failure-class matrix**:
+
+| Failure class | Checked | Evidence | Covered by this fix |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Signed-in renderer heartbeat plus absent sidecar auth context is covered in re-auth, reconnect, and bridge-fault variants | Yes |
+| Data shape / persisted row shape | N/A | No task or database row changes | No |
+| Renderer store/state | Yes | Existing redacted heartbeat fields drive the classifier fixtures | Classification only |
+| Electron main/preload bridge | Partial | Existing heartbeat delivery is exercised through diagnostics; IPC transport code is unchanged | Classification only |
+| Localhost sidecar endpoint | Yes | Protected-route contract and pure response classifier cover all missing-context states | Yes |
+| KDE polling/control path | N/A | Timer route ordering and KDE behavior are unchanged | No |
+| Supabase persistence/realtime | N/A | No persistence or Realtime behavior changes | No |
+| Updater/runtime version | Partial | The active packaged runtime was observed recovering its auth context; this source change is not packaged or deployed | No |
+| Stale live process/cache state | Yes | Cached signed-in shell with unusable session is the exact classified state | Yes |
+
+**Exact failure mode fixed**: a cached signed-in renderer shell without a usable JWT was reported as a blind sidecar, and every protected Local API request returned the same `not signed in` 503 even when the renderer was reconnecting or required explicit re-authentication.
+
+**Explicitly not covered**: changing Supabase refresh semantics, forwarding expired tokens, sidecar-owned token refresh, packaged Electron publication, production deployment, or changing timer/KDE endpoint ordering.
+
+**Regression added for reported repro**: pure classifier tests for re-authentication, reconnect grace, and signed-out state; Local API routing contract; diagnostic tests proving re-authentication is not sidecar blindness and refresh grace remains a warning.
+
+**Live boundary proof**: the active packaged app moved from `hasAuthContext=false`, `canSyncRemotely=false`, and `reauthRequired=true` to a restored sidecar context and remote-sync capability without intervention. This proves the observed 503 was bounded renderer auth recovery; packaged verification of the new classification remains in the program's release lane.
 
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
@@ -7126,6 +7171,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1946** | **P0** | ✅ **Canonical web/PWA offline scalar task-patch adoption with durable operation identity, receipts, restart-safe replay, and conflict quarantine** |
 | **TASK-1948** | **P0** | ✅ **Canonical Notion task activation with stable provenance, exact optional work blocks, replayable canonical receipts, and Local API verification** |
 | ~~**TASK-1949**~~ | **P0** | ✅ **Canonical assistant disposable DB harness, race/fault injection, fixed daily regression coverage, and redacted VPS integrity watchdog** |
+| ~~**TASK-1950**~~ | **P0** | ✅ **Renderer-to-sidecar auth recovery classification with actionable protected-route errors and false-incident suppression** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

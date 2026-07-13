@@ -170,10 +170,17 @@ function evaluate({ config, processes, health, diagnostics, assistantContext, st
   if (body.hasAuthContext && rendererAuth && rendererAuth.isInitialized && (!rendererAuth.isAuthenticated || !rendererAuth.hasUser)) {
     failures.push('renderer-signed-out-while-sidecar-authenticated')
   }
-  // BUG-1933, the mirror image: the app is signed in but the sidecar was cleared, so the KDE
-  // widget and every agent tool 401 while the UI looks perfectly healthy.
+  // Distinguish an actual renderer -> sidecar delivery failure from the cached signed-in shell.
+  // The shell intentionally survives a failed refresh for offline work, but it has no usable JWT
+  // to forward. Once grace expires the actionable fault is re-authentication, not a blind sidecar.
   if (!body.hasAuthContext && rendererAuth && rendererAuth.isInitialized && rendererAuth.isAuthenticated && rendererAuth.hasUser) {
-    failures.push('sidecar-blind-while-renderer-signed-in')
+    if (rendererAuth.reauthRequired) {
+      failures.push('renderer-reauth-required')
+    } else if (rendererAuth.canSyncRemotely) {
+      failures.push('sidecar-blind-while-renderer-signed-in')
+    } else {
+      warnings.push('renderer-auth-refresh-pending')
+    }
   }
   if (rendererAuth && rendererAuth.ageMs > 60_000) {
     failures.push('stale-renderer-auth-heartbeat')

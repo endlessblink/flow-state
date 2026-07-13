@@ -26,12 +26,11 @@ import { getInitialOnlineState } from '@/utils/platform'
 // TASK-1177: Check for IndexedDB availability (not available in Node.js/tests)
 const hasIndexedDB = typeof indexedDB !== 'undefined'
 
-// Workspace collaboration: lazily get active workspace ID at enqueue time
-function getActiveWorkspaceId(): string | null {
+// Workspace collaboration: lazily get active workspace ID at enqueue time.
+// Use an ESM import so packaged Vite/Electron builds capture the real store.
+async function getActiveWorkspaceId(): Promise<string | null> {
   try {
-    // Use require-style dynamic import to avoid circular dependency
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { useWorkspaceStore } = require('@/stores/workspace')
+    const { useWorkspaceStore } = await import('@/stores/workspace')
     return useWorkspaceStore().activeWorkspaceId ?? null
   } catch {
     return null
@@ -1060,7 +1059,7 @@ export function useSyncOrchestrator() {
     }
 
     // Capture workspace context at enqueue time (null = personal workspace)
-    const workspaceId = getActiveWorkspaceId()
+    const workspaceId = await getActiveWorkspaceId()
 
     // BUG-1534: When enqueuing a DELETE, cancel any pending CREATEs for the same entity.
     // This prevents stale CREATEs from resurrecting deleted tasks after page reload.

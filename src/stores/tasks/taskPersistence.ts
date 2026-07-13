@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 import type { Task } from '@/types/tasks'
-import { cacheTasks, getCachedTasks, getCachedTasksWithPendingWrites } from '@/services/offline/readCacheDB'
+import { cacheTasks, getCachedTasks, getCachedTasksWithPendingWrites, overlayPendingTaskWrites } from '@/services/offline/readCacheDB'
 import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats, repairTaskTitles, sanitizeLoadedTasks } from '@/utils/taskValidation'
 import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
@@ -245,25 +245,64 @@ export function useTaskPersistence(
     // return the existing promise instead of starting a second concurrent fetch.
     // This prevents race conditions where two loads merge/overwrite each other's results.
     let _loadPromise: Promise<void> | null = null
+    let _loadRequiresRemoteAuthority = false
 
-    const loadFromDatabase = async (options: { authoritativeTaskIds?: Iterable<string> } = {}) => {
+    const loadFromDatabase = async (options: {
+        authoritativeTaskIds?: Iterable<string>
+        requireRemoteAuthority?: boolean
+        authorityScope?: { userId: string; workspaceId: string | null }
+    } = {}) => {
         if (_loadPromise) {
+            const activeLoadRequiresRemoteAuthority = _loadRequiresRemoteAuthority
             if (import.meta.env.DEV) {
                 console.log('[TASK-LOAD] Reentrancy guard: returning existing load promise')
             }
-            await _loadPromise
-            if (options.authoritativeTaskIds) return loadFromDatabase(options)
+            try {
+                await _loadPromise
+            } catch (error) {
+                if (!activeLoadRequiresRemoteAuthority && !options.requireRemoteAuthority) throw error
+            }
+            if (activeLoadRequiresRemoteAuthority && !options.requireRemoteAuthority) {
+                const [{ useWorkspaceStore }, { useAuthStore }] = await Promise.all([
+                    import('../workspace'),
+                    import('../auth'),
+                ])
+                const userId = useAuthStore().user?.id
+                if (userId) {
+                    return loadFromDatabase({
+                        ...options,
+                        requireRemoteAuthority: true,
+                        authorityScope: {
+                            userId,
+                            workspaceId: useWorkspaceStore().activeWorkspaceId ?? null,
+                        },
+                    })
+                }
+            }
+            if (activeLoadRequiresRemoteAuthority || options.authoritativeTaskIds || options.requireRemoteAuthority) {
+                return loadFromDatabase(options)
+            }
             return
         }
-        _loadPromise = _loadFromDatabaseImpl(new Set(options.authoritativeTaskIds || []))
+        _loadRequiresRemoteAuthority = options.requireRemoteAuthority === true
+        _loadPromise = _loadFromDatabaseImpl(
+            new Set(options.authoritativeTaskIds || []),
+            options.requireRemoteAuthority === true,
+            options.authorityScope,
+        )
         try {
             await _loadPromise
         } finally {
             _loadPromise = null
+            _loadRequiresRemoteAuthority = false
         }
     }
 
-    const _loadFromDatabaseImpl = async (authoritativeTaskIds: ReadonlySet<string>) => {
+    const _loadFromDatabaseImpl = async (
+        authoritativeTaskIds: ReadonlySet<string>,
+        requireRemoteAuthority: boolean,
+        authorityScope?: { userId: string; workspaceId: string | null },
+    ) => {
         try {
             isLoadingFromDatabase.value = true
 
@@ -289,8 +328,19 @@ export function useTaskPersistence(
             // so it works before the migration adds the column to VPS
             const { useWorkspaceStore } = await import('../workspace')
             const wsStore = useWorkspaceStore()
+            const assertAuthorityScope = () => {
+                if (!requireRemoteAuthority) return
+                if (!authorityScope) throw new Error('Remote-authority load requires an exact scope')
+                if (authStore.user?.id !== authorityScope.userId) {
+                    throw new Error('Remote-authority user scope changed during task load')
+                }
+                if (wsStore.activeWorkspaceId !== authorityScope.workspaceId) {
+                    throw new Error('Remote-authority workspace scope changed during task load')
+                }
+            }
+            assertAuthorityScope()
             // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq), undefined = legacy (no filter)
-            const workspaceId = wsStore.activeWorkspaceId
+            const workspaceId = authorityScope?.workspaceId ?? wsStore.activeWorkspaceId
             // BUG-1891: Track whether deletion markers loaded reliably. If either the soft-deleted-id
             // or tombstone fetch errors (network blip), both silently return [] — which previously made
             // the smart merge believe NOTHING was deleted and re-CREATE every in-memory deleted task
@@ -303,18 +353,19 @@ export function useTaskPersistence(
                 fetchDeletedTaskIds({ onError: markDeletionInfoUnreliable }),
                 fetchTombstones({ onError: markDeletionInfoUnreliable })
             ])
+            assertAuthorityScope()
             if (!deletionInfoReliable) {
                 console.warn('[BUG-1891] Deletion markers (soft-deleted ids / tombstones) failed to load — failing closed: ambiguous local-only tasks will NOT be re-created this load.')
             }
             const repairedLoaded = repairTaskTitles(sanitizeLoadedTasks(fetchedTasks))
-            const loadedTasks = repairedLoaded.repairedTasks
+            let loadedTasks = repairedLoaded.repairedTasks
             const remotelyDeletedTaskIds = new Set<string>([
                 ...softDeletedTaskIds,
                 ...tombstones
                     .filter(t => t.entityType === 'task')
                     .map(t => t.entityId)
             ])
-            if (repairedLoaded.repairedCount > 0) {
+            if (repairedLoaded.repairedCount > 0 && !requireRemoteAuthority) {
                 console.warn(`🛠️ [TASK-TITLE-REPAIR] Repaired ${repairedLoaded.repairedCount} blank task title(s) during load`)
                 try {
                     await saveTasks(loadedTasks)
@@ -339,7 +390,24 @@ export function useTaskPersistence(
             // newer IndexedDB geometry on reload; do the same for tasks so a
             // restart cannot combine fresh group positions with stale task
             // positions from Supabase.
-            const cachedTasks = (await getCachedTasksWithPendingWrites().catch(() => [])) ?? []
+            const cachedTasks = (
+                requireRemoteAuthority
+                    ? await getCachedTasks()
+                    : await getCachedTasksWithPendingWrites().catch(() => [])
+            ) ?? []
+            assertAuthorityScope()
+            const durablePendingTaskIds = new Set<string>()
+            if (requireRemoteAuthority) {
+                const overlay = await overlayPendingTaskWrites(loadedTasks, {
+                    scope: authorityScope,
+                    fallbackTasks: cachedTasks,
+                })
+                loadedTasks = overlay.tasks
+                for (const taskId of overlay.pendingTaskIds) durablePendingTaskIds.add(taskId)
+                assertAuthorityScope()
+            }
+            const hasPendingTaskWrite = (taskId: string) =>
+                isPendingWrite(taskId) || durablePendingTaskIds.has(taskId)
             const cachedById = new Map<string, Task>()
             for (const cachedTask of cachedTasks) {
                 const existing = cachedById.get(cachedTask.id)
@@ -356,6 +424,7 @@ export function useTaskPersistence(
             const geometryMergedLoadedTasks = loadedTasks.map((remoteTask) => {
                 const cachedTask = cachedById.get(remoteTask.id)
                 if (!cachedTask) return remoteTask
+                if (requireRemoteAuthority && !hasPendingTaskWrite(remoteTask.id)) return remoteTask
 
                 const cachedVersion = cachedTask.positionVersion ?? 0
                 const remoteVersion = remoteTask.positionVersion ?? 0
@@ -393,7 +462,7 @@ export function useTaskPersistence(
 
                     // In the first 60 seconds, don't overwrite existing tasks with empty
                     // This gives plenty of time for network issues to resolve
-                    if (timeSinceSessionStart < 60000) {
+                    if (!requireRemoteAuthority && timeSinceSessionStart < 60000) {
                         console.warn(`🛡️ [TASK-LOAD] BLOCKED empty overwrite - ${_rawTasks.value.length} existing tasks would be lost (session ${timeSinceSessionStart}ms old)`)
                         emptyRemoteLoadIsProtected = true
                         return
@@ -439,10 +508,29 @@ export function useTaskPersistence(
                     continue
                 }
 
+                // The durable queue overlay is already the correct local
+                // projection after restart. It wins over stale in-memory state
+                // for baseline and unrelated-ID reconciliation alike.
+                if (requireRemoteAuthority && durablePendingTaskIds.has(localTask.id)) {
+                    if (remoteTask) mergedTasks.push(remoteTask)
+                    remoteMap.delete(localTask.id)
+                    continue
+                }
+
+                // Canonical baseline/recovery loads accept the signed-user remote
+                // projection for every non-pending row. Proven offline intent stays
+                // visible until its queued operation resolves; absent non-pending rows
+                // are removed without being re-created.
+                if (requireRemoteAuthority && !hasPendingTaskWrite(localTask.id)) {
+                    if (remoteTask) mergedTasks.push(remoteTask)
+                    remoteMap.delete(localTask.id)
+                    continue
+                }
+
                 // BUG-1206 FIX (Fix 1): Always preserve tasks with active pending writes.
                 // A pending write means the user just edited this task and the save is still
                 // in-flight or the echo hasn't been confirmed. Never accept remote data for these.
-                if (remoteTask && isPendingWrite(localTask.id)) {
+                if (remoteTask && hasPendingTaskWrite(localTask.id)) {
                     if (import.meta.env.DEV) {
                         console.log(`🛡️ [SMART-MERGE] Preserving pending-write task "${localTask.title?.slice(0, 15)}" (BUG-1206)`)
                     }
@@ -667,11 +755,16 @@ export function useTaskPersistence(
             for (const [cachedTaskId, cachedTask] of cachedById) {
                 if (localTasksMap.has(cachedTaskId) || remoteMap.has(cachedTaskId)) continue
                 if (remotelyDeletedTaskIds.has(cachedTaskId) || cachedTask._soft_deleted) continue
+                if (requireRemoteAuthority && !isPendingWrite(cachedTaskId)) continue
 
                 if (import.meta.env.DEV) {
                     console.log(`🛟 [SMART-MERGE] Restoring cache-backed task "${cachedTask.title?.slice(0, 15)}" missing from local and remote`)
                 }
                 mergedTasks.push(cachedTask)
+
+                // A canonical authority load may retain proven pending offline
+                // intent, but must not synthesize another CREATE for it.
+                if (requireRemoteAuthority) continue
 
                 if (!deletionInfoReliable) continue
 
@@ -707,6 +800,12 @@ export function useTaskPersistence(
             for (const [_, remoteTask] of remoteMap) {
                 mergedTasks.push(remoteTask)
             }
+
+            // Canonical cursor advancement requires a durable projection. Cache
+            // before mutating the visible store and re-check scope afterward so
+            // an old workspace load cannot become visible in a new workspace.
+            await cacheTasks(mergedTasks, { throwOnError: requireRemoteAuthority })
+            assertAuthorityScope()
 
             // BUG-1207 FIX (Fix 2.2): Granular updates instead of full array replacement.
             // `_rawTasks.value = mergedTasks` replaces the entire ref, causing ALL watchers
@@ -755,8 +854,6 @@ export function useTaskPersistence(
                 console.log(`✅ [SMART-MERGE] Complete. Local: ${localTasksMap.size} -> Merged: ${mergedTasks.length} (Fetched: ${loadedTasks.length})`)
             }
 
-            // BUG-1411: Cache merged tasks to IndexedDB for offline loading
-            cacheTasks(mergedTasks)
             for (const task of mergedTasks) {
                 logPermanentDeleteTraceIfActive(task.id, 'task-load.cache-merged-includes-task', {
                     mergedTaskCount: mergedTasks.length,
@@ -796,7 +893,7 @@ export function useTaskPersistence(
             console.error('❌ [SUPABASE] Load failed:', error)
 
             // BUG-1411: Fall back to IndexedDB read cache when Supabase is unreachable
-            if (_rawTasks.value.length === 0) {
+            if (!requireRemoteAuthority && _rawTasks.value.length === 0) {
                 const cachedTasks = await getCachedTasks()
                 if (cachedTasks && cachedTasks.length > 0) {
                     const repairedCached = repairTaskTitles(sanitizeLoadedTasks(cachedTasks))

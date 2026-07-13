@@ -2254,6 +2254,11 @@ _Original plan below._
 - Trigger serialized/coalesced catch-up on sign-in, reconnect, visibility recovery, Realtime subscription recovery, and workspace switch, plus a single-flight 60-second foreground backstop while authenticated, online, and visible.
 - Prove personal/workspace isolation, removed-member denial, pagination, tombstones, duplicate invocation, concurrent triggers, failed reconciliation, and deliberately dropped Realtime.
 
+**Progress (2026-07-13)**:
+- Implemented signed-user personal/workspace cursors, high-water baselines and rollback recovery, ordered bounded change pages, exact task/tombstone reconciliation, single-flight execution, and the 60-second authenticated foreground backstop.
+- Authoritative reloads now reject and rerun across scope changes, use count-aware immutable-ID keyset pages beyond server row caps, overlay exact-scope durable offline operations after restart, refuse ambiguous unscoped intent, capture workspace queue scope through the packaged ESM boundary, and await strict IndexedDB projection persistence before cursor advancement.
+- Repo-local verification is green: 197 convergence/realtime/cache/queue/Local-API tests, TypeScript type-check, source lint with no errors, and diff whitespace validation. Packaged signed-in and production rollout proof remain approval-gated and outstanding.
+
 **Acceptance**:
 - A client that misses every Realtime notification converges deterministically through its durable sequence cursor.
 - Cursor advancement cannot outrun authoritative projection persistence or cross user/workspace scope.

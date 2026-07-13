@@ -19,7 +19,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import type { Task } from '@/types/tasks'
-import { getCachedTasksWithPendingWrites } from '@/services/offline/readCacheDB'
+import { cacheTasks, getCachedTasksWithPendingWrites, overlayPendingTaskWrites } from '@/services/offline/readCacheDB'
 import { beginPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 
 // ── Module-level mocks ──────────────────────────────────────────────
@@ -29,6 +29,7 @@ const mockFetchDeletedTaskIds = vi.fn().mockResolvedValue([])
 const mockFetchTombstones = vi.fn().mockResolvedValue([])
 const mockEnqueue = vi.fn().mockResolvedValue({ id: 1 })
 let mockIsSwitchingWorkspace = false
+let mockActiveWorkspaceId: string | null = null
 
 vi.mock('@/composables/useSupabaseDatabase', () => ({
   useSupabaseDatabase: () => ({
@@ -55,8 +56,8 @@ vi.mock('@/stores/auth', () => ({
 
 vi.mock('@/stores/workspace', () => ({
   useWorkspaceStore: () => ({
-    activeWorkspaceId: undefined,
-    isSwitchingWorkspace: mockIsSwitchingWorkspace,
+    get activeWorkspaceId() { return mockActiveWorkspaceId },
+    get isSwitchingWorkspace() { return mockIsSwitchingWorkspace },
   })
 }))
 
@@ -101,6 +102,10 @@ vi.mock('@/services/offline/readCacheDB', () => ({
   cacheTasks: vi.fn().mockResolvedValue(undefined),
   getCachedTasks: vi.fn().mockResolvedValue([]),
   getCachedTasksWithPendingWrites: vi.fn().mockResolvedValue([]),
+  overlayPendingTaskWrites: vi.fn().mockImplementation(async (tasks: Task[]) => ({
+    tasks,
+    pendingTaskIds: new Set<string>(),
+  })),
 }))
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -133,10 +138,16 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     vi.clearAllMocks()
     setActivePinia(createPinia())
     mockIsSwitchingWorkspace = false
+    mockActiveWorkspaceId = null
     mockFetchTasks.mockResolvedValue([])
     mockFetchDeletedTaskIds.mockResolvedValue([])
     mockFetchTombstones.mockResolvedValue([])
     vi.mocked(getCachedTasksWithPendingWrites).mockResolvedValue([])
+    vi.mocked(overlayPendingTaskWrites).mockImplementation(async (tasks: Task[]) => ({
+      tasks,
+      pendingTaskIds: new Set<string>(),
+    }))
+    vi.mocked(cacheTasks).mockResolvedValue(undefined)
 
     // Dynamic import after mocks are set up
     const mod = await import('@/stores/tasks')
@@ -151,6 +162,213 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
   })
 
   // ── Branch 1: Pending-write preservation (BUG-1206) ──
+
+  it('canonical authority load bypasses the startup empty guard and removes absent non-pending tasks', async () => {
+    const store = useTaskStore()
+    const localTask = makeTask({ title: 'Deleted on another surface' })
+    store._rawTasks.push(localTask)
+    window.FlowStateSessionStart = Date.now()
+    mockFetchTasks.mockResolvedValue([])
+
+    await store.loadFromDatabase({
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })
+
+    expect(store._rawTasks.find(task => task.id === localTask.id)).toBeUndefined()
+    expect(mockEnqueue).not.toHaveBeenCalled()
+  })
+
+  it('canonical workspace authority removes an absent collaborator task without relying on user tombstones', async () => {
+    const store = useTaskStore()
+    const localTask = makeTask({ title: 'Shared task deleted by owner' })
+    store._rawTasks.push(localTask)
+    mockActiveWorkspaceId = 'workspace-1'
+    mockFetchTasks.mockResolvedValue([])
+    mockFetchDeletedTaskIds.mockResolvedValue([])
+    mockFetchTombstones.mockResolvedValue([])
+
+    await store.loadFromDatabase({
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: 'workspace-1' },
+    })
+
+    expect(store._rawTasks.find(task => task.id === localTask.id)).toBeUndefined()
+    expect(mockEnqueue).not.toHaveBeenCalled()
+  })
+
+  it('canonical authority preserves only proven pending offline intent', async () => {
+    const store = useTaskStore()
+    const pendingTask = makeTask({ title: 'Pending offline edit' })
+    const staleTask = makeTask({ title: 'Stale local projection' })
+    store._rawTasks.push(pendingTask, staleTask)
+    store.addPendingWrite(pendingTask.id)
+    mockFetchTasks.mockResolvedValue([])
+
+    await store.loadFromDatabase({
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })
+
+    expect(store._rawTasks.map(task => task.id)).toEqual([pendingTask.id])
+    expect(mockEnqueue).not.toHaveBeenCalled()
+  })
+
+  it('discards a canonical authority load when workspace scope changes during fetch', async () => {
+    const store = useTaskStore()
+    const localTask = makeTask({ title: 'Personal projection' })
+    store._rawTasks.push(localTask)
+    let resolveFetch!: (tasks: Task[]) => void
+    mockFetchTasks.mockReturnValueOnce(new Promise(resolve => { resolveFetch = resolve }))
+
+    const load = store.loadFromDatabase({
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })
+    await Promise.resolve()
+    mockActiveWorkspaceId = 'workspace-2'
+    resolveFetch([])
+
+    await expect(load).rejects.toThrow('scope changed')
+    expect(store._rawTasks.map(task => task.id)).toEqual([localTask.id])
+  })
+
+  it('preserves a durable queued edit during exact-ID authority reconciliation after restart', async () => {
+    const store = useTaskStore()
+    const taskId = crypto.randomUUID()
+    const serverTask = makeTask({ id: taskId, title: 'Server title' })
+    const queuedTask = makeTask({ id: taskId, title: 'Queued offline title' })
+    store._rawTasks.push(serverTask)
+    mockFetchTasks.mockResolvedValue([serverTask])
+    vi.mocked(overlayPendingTaskWrites).mockResolvedValue({
+      tasks: [queuedTask],
+      pendingTaskIds: new Set([taskId]),
+    })
+
+    await store.loadFromDatabase({
+      authoritativeTaskIds: [taskId],
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })
+
+    expect(store._rawTasks.find(task => task.id === taskId)?.title).toBe('Queued offline title')
+    expect(mockEnqueue).not.toHaveBeenCalled()
+  })
+
+  it('uses the durable queued projection during a baseline authority reload after restart', async () => {
+    const store = useTaskStore()
+    const taskId = crypto.randomUUID()
+    const serverTask = makeTask({ id: taskId, title: 'Server title' })
+    const queuedTask = makeTask({ id: taskId, title: 'Queued baseline title' })
+    store._rawTasks.push(serverTask)
+    mockFetchTasks.mockResolvedValue([serverTask])
+    vi.mocked(overlayPendingTaskWrites).mockResolvedValue({
+      tasks: [queuedTask],
+      pendingTaskIds: new Set([taskId]),
+    })
+
+    await store.loadFromDatabase({
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })
+
+    expect(store._rawTasks.find(task => task.id === taskId)?.title).toBe('Queued baseline title')
+  })
+
+  it('keeps an unrelated durable queued edit while reconciling another exact task ID', async () => {
+    const store = useTaskStore()
+    const changedTask = makeTask({ title: 'Changed remotely' })
+    const queuedServerTask = makeTask({ title: 'Queued server title' })
+    const queuedProjection = makeTask({ ...queuedServerTask, title: 'Queued unrelated title' })
+    store._rawTasks.push(changedTask, queuedServerTask)
+    mockFetchTasks.mockResolvedValue([changedTask, queuedServerTask])
+    vi.mocked(overlayPendingTaskWrites).mockResolvedValue({
+      tasks: [changedTask, queuedProjection],
+      pendingTaskIds: new Set([queuedServerTask.id]),
+    })
+
+    await store.loadFromDatabase({
+      authoritativeTaskIds: [changedTask.id],
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })
+
+    expect(store._rawTasks.find(task => task.id === queuedServerTask.id)?.title).toBe('Queued unrelated title')
+  })
+
+  it('restores a durable queued create into a canonical projection after restart', async () => {
+    const store = useTaskStore()
+    const queuedTask = makeTask({ title: 'Queued offline create' })
+    mockFetchTasks.mockResolvedValue([])
+    vi.mocked(overlayPendingTaskWrites).mockResolvedValue({
+      tasks: [queuedTask],
+      pendingTaskIds: new Set([queuedTask.id]),
+    })
+
+    await store.loadFromDatabase({
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })
+
+    expect(store._rawTasks.find(task => task.id === queuedTask.id)?.title).toBe('Queued offline create')
+  })
+
+  it('fails a canonical authority load when durable projection caching fails', async () => {
+    const store = useTaskStore()
+    mockFetchTasks.mockResolvedValue([makeTask()])
+    vi.mocked(cacheTasks).mockRejectedValueOnce(new Error('IndexedDB unavailable'))
+
+    await expect(store.loadFromDatabase({
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })).rejects.toThrow('IndexedDB unavailable')
+  })
+
+  it('does not apply an old-scope projection when workspace changes during durable caching', async () => {
+    const store = useTaskStore()
+    const oldScopeTask = makeTask({ title: 'Old workspace projection' })
+    const existingTask = makeTask({ title: 'Existing visible task' })
+    store._rawTasks.push(existingTask)
+    mockFetchTasks.mockResolvedValue([oldScopeTask])
+    let finishCache!: () => void
+    vi.mocked(cacheTasks).mockReturnValueOnce(new Promise<void>(resolve => { finishCache = resolve }))
+
+    const load = store.loadFromDatabase({
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })
+    await vi.waitFor(() => expect(cacheTasks).toHaveBeenCalled())
+    mockActiveWorkspaceId = 'workspace-2'
+    finishCache()
+
+    await expect(load).rejects.toThrow('scope changed')
+    expect(store._rawTasks.map(task => task.id)).toEqual([existingTask.id])
+  })
+
+  it('reruns a waiting regular load after an old-scope authority load is discarded', async () => {
+    const store = useTaskStore()
+    const existingTask = makeTask({ title: 'Personal task' })
+    const oldScopeTask = makeTask({ title: 'Old authority result' })
+    const newScopeTask = makeTask({ title: 'Workspace result' })
+    store._rawTasks.push(existingTask)
+    mockFetchTasks.mockResolvedValue([oldScopeTask])
+    let finishCache!: () => void
+    vi.mocked(cacheTasks).mockReturnValueOnce(new Promise<void>(resolve => { finishCache = resolve }))
+
+    const oldLoad = store.loadFromDatabase({
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })
+    await vi.waitFor(() => expect(cacheTasks).toHaveBeenCalled())
+    mockActiveWorkspaceId = 'workspace-2'
+    mockFetchTasks.mockResolvedValue([newScopeTask])
+    const newLoad = store.loadFromDatabase()
+    finishCache()
+
+    await expect(oldLoad).rejects.toThrow('scope changed')
+    await newLoad
+    expect(store._rawTasks.map(task => task.id)).toEqual([newScopeTask.id])
+  })
 
   it('preserves local task when it has a pending write, even if remote is newer', async () => {
     const store = useTaskStore()
@@ -560,15 +778,7 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     store._rawTasks.push(existingTask)
 
     mockIsSwitchingWorkspace = true
-
-    // Re-import to pick up the mock change
-    vi.resetModules()
-    vi.mock('@/stores/workspace', () => ({
-      useWorkspaceStore: () => ({
-        activeWorkspaceId: 'ws-new',
-        isSwitchingWorkspace: true,
-      })
-    }))
+    mockActiveWorkspaceId = 'ws-new'
 
     mockFetchTasks.mockResolvedValue([])
 

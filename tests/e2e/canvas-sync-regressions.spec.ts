@@ -28,16 +28,16 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 // Canvas tasks seeded far from the global-setup groups (x=100/500) to avoid
 // spatial auto-assignment stealing them into a group.
 const ROOT_TASKS = [
-  { id: 'tsr-root-1', title: 'Sync Regr Root 1', x: 2000, y: 2000 },
-  { id: 'tsr-root-2', title: 'Sync Regr Root 2', x: 2400, y: 2000 },
-  { id: 'tsr-root-3', title: 'Sync Regr Root 3', x: 2200, y: 2400 },
+  { id: 'd1000000-0000-4000-8000-000000000001', title: 'Sync Regr Root 1', x: 2000, y: 2000 },
+  { id: 'd1000000-0000-4000-8000-000000000002', title: 'Sync Regr Root 2', x: 2400, y: 2000 },
+  { id: 'd1000000-0000-4000-8000-000000000003', title: 'Sync Regr Root 3', x: 2200, y: 2400 },
 ]
-const INBOX_TASK = { id: 'tsr-inbox-1', title: 'Sync Regr Inbox 1' }
+const INBOX_TASK = { id: 'd1000000-0000-4000-8000-000000000004', title: 'Sync Regr Inbox 1' }
 const DROP_TARGET = { x: 2600, y: 2600 }
 
 const GROUP_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccc01' // real UUID — legacy IDs skip group sync
 const GROUP = { x: 4000, y: 4000, width: 800, height: 600 }
-const CHILD_TASK = { id: 'tsr-child-1', title: 'Sync Regr Child 1', x: 4100, y: 4100 }
+const CHILD_TASK = { id: 'd1000000-0000-4000-8000-000000000005', title: 'Sync Regr Child 1', x: 4100, y: 4100 }
 
 let admin: SupabaseClient
 let userId: string
@@ -74,29 +74,33 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
 
     // Root canvas tasks
     for (const t of ROOT_TASKS) {
-      await admin.from('tasks').insert({
+      const { error } = await admin.from('tasks').insert({
         id: t.id, user_id: userId, title: t.title, status: 'planned', priority: 'medium',
         is_in_inbox: false,
         position: { x: t.x, y: t.y, format: 'absolute' }, position_version: 1,
       })
+      expect(error, `Failed to seed ${t.title}: ${error?.message}`).toBeNull()
     }
     // One inbox task to drop onto the canvas
-    await admin.from('tasks').insert({
+    const { error: inboxError } = await admin.from('tasks').insert({
       id: INBOX_TASK.id, user_id: userId, title: INBOX_TASK.title, status: 'planned',
       priority: 'medium', is_in_inbox: true, position_version: 1,
     })
+    expect(inboxError, `Failed to seed inbox task: ${inboxError?.message}`).toBeNull()
     // A group with a child task (for the no-vanish delete test)
-    await admin.from('groups').insert({
+    const { error: groupError } = await admin.from('groups').insert({
       id: GROUP_ID, user_id: userId, name: 'Regr Group', type: 'custom', color: '#4ECDC4',
       position_json: { x: GROUP.x, y: GROUP.y, width: GROUP.width, height: GROUP.height },
       layout: 'freeform', position_version: 1,
     })
-    await admin.from('tasks').insert({
+    expect(groupError, `Failed to seed regression group: ${groupError?.message}`).toBeNull()
+    const { error: childError } = await admin.from('tasks').insert({
       id: CHILD_TASK.id, user_id: userId, title: CHILD_TASK.title, status: 'planned',
       priority: 'medium', is_in_inbox: false,
       position: { x: CHILD_TASK.x, y: CHILD_TASK.y, format: 'absolute', parentId: GROUP_ID },
       position_version: 1,
     })
+    expect(childError, `Failed to seed child task: ${childError?.message}`).toBeNull()
   })
 
   test.afterAll(async () => {
@@ -160,27 +164,27 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
 
     // Reset the geometry-write log, then perform the real "move inbox task to
     // canvas" path (what a sidebar drop does: updateTask with canvasPosition).
-    await clientA.evaluate((drop) => {
+    await clientA.evaluate(({ drop, taskId }) => {
       const root = document.querySelector('#app') as any
       ;(window as any).__FlowStateGeometryWrites = []
       const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
-      return tasks.updateTask('tsr-inbox-1', {
+      return tasks.updateTask(taskId, {
         isInInbox: false,
         canvasPosition: { x: drop.x, y: drop.y },
         positionFormat: 'absolute',
       }, 'USER')
-    }, DROP_TARGET)
+    }, { drop: DROP_TARGET, taskId: INBOX_TASK.id })
 
     await clientA.waitForTimeout(1500)
 
     // Invariant: only the dropped task may receive a geometry write.
     const writes = await clientA.evaluate(() => (window as any).__FlowStateGeometryWrites ?? [])
-    const movedOthers = (writes as any[]).filter((w) => w.entityId !== 'tsr-inbox-1')
+    const movedOthers = (writes as any[]).filter((w) => w.entityId !== INBOX_TASK.id)
     expect(movedOthers, `Other entities got geometry writes on drop: ${JSON.stringify(movedOthers)}`).toEqual([])
 
     // And the existing nodes' rendered positions must be unchanged.
     const after = await readCanvasNodePositions(clientA)
-    expectNoNodesMoved(before, after, { ignore: ['tsr-inbox-1'] })
+    expectNoNodesMoved(before, after, { ignore: [INBOX_TASK.id] })
   })
 
   // ── R2: a field change on A propagates to an INDEPENDENT client B ──────────
@@ -191,20 +195,20 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
 
     const newTitle = 'Sync Regr Root 1 — EDITED-A'
     // Also touch a non-core field (tags) — the field-completeness trap class.
-    await clientA.evaluate((title) => {
+    await clientA.evaluate(({ title, taskId }) => {
       const root = document.querySelector('#app') as any
       const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
-      return tasks.updateTask('tsr-root-1', { title, tags: ['sync-probe'] }, 'USER')
-    }, newTitle)
+      return tasks.updateTask(taskId, { title, tags: ['sync-probe'] }, 'USER')
+    }, { title: newTitle, taskId: ROOT_TASKS[0].id })
 
     // Client B must reflect both the title AND the non-core field within ~10s.
     await expect(async () => {
-      const state = await clientB.evaluate(() => {
+      const state = await clientB.evaluate((taskId) => {
         const root = document.querySelector('#app') as any
         const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
-        const t = tasks.rawTasks.find((x: any) => x.id === 'tsr-root-1')
+        const t = tasks.rawTasks.find((x: any) => x.id === taskId)
         return { title: t?.title ?? null, tags: t?.tags ?? [] }
-      })
+      }, ROOT_TASKS[0].id)
       expect(state.title).toBe(newTitle)
       expect(state.tags).toContain('sync-probe')
     }).toPass({ timeout: 12_000 })
@@ -218,22 +222,22 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
 
     const target = { x: 2850, y: 2850 }
     // Real drag-equivalent: persist a new canvasPosition from A (source 'DRAG').
-    await clientA.evaluate((pos) => {
+    await clientA.evaluate(({ pos, taskId }) => {
       const root = document.querySelector('#app') as any
       const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
-      return tasks.updateTask('tsr-root-1', {
+      return tasks.updateTask(taskId, {
         canvasPosition: { x: pos.x, y: pos.y }, positionFormat: 'absolute',
       }, 'DRAG')
-    }, target)
+    }, { pos: target, taskId: ROOT_TASKS[0].id })
 
     // (1) B's STORE must receive the new position (realtime → updateTaskFromSync).
     await expect(async () => {
-      const storePos = await clientB.evaluate(() => {
+      const storePos = await clientB.evaluate((taskId) => {
         const root = document.querySelector('#app') as any
         const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
-        const t = tasks.rawTasks.find((x: any) => x.id === 'tsr-root-1')
+        const t = tasks.rawTasks.find((x: any) => x.id === taskId)
         return t?.canvasPosition ?? null
-      })
+      }, ROOT_TASKS[0].id)
       expect(storePos, 'B store never got the new position').toBeTruthy()
       expect(Math.abs(storePos.x - target.x)).toBeLessThan(2)
       expect(Math.abs(storePos.y - target.y)).toBeLessThan(2)
@@ -242,8 +246,8 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     // (2) B's rendered NODE must actually move (no reload) — the live-canvas part.
     await expect(async () => {
       const positions = await readCanvasNodePositions(clientB)
-      const node = positions['tsr-root-1']
-      expect(node, 'B node tsr-root-1 not rendered').toBeTruthy()
+      const node = positions[ROOT_TASKS[0].id]
+      expect(node, `B node ${ROOT_TASKS[0].id} not rendered`).toBeTruthy()
       expect(Math.abs(node.x - target.x)).toBeLessThan(2)
       expect(Math.abs(node.y - target.y)).toBeLessThan(2)
     }).toPass({ timeout: 12_000 })

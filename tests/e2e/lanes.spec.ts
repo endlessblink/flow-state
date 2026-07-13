@@ -7,7 +7,7 @@
  *   - AllTasks "group by lane" shows the lane group with both tasks
  *   - Creating a lane via the sidebar works and routes to its view
  */
-import { test, expect, findAuthUserByEmail } from '../fixtures/auth'
+import { test, expect, ensureAuthUser, TEST_USER } from '../fixtures/auth'
 import { createClient } from '@supabase/supabase-js'
 import { TEST_TASKS } from '../fixtures/test-ids'
 
@@ -33,9 +33,8 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const testUser = await findAuthUserByEmail(admin, 'playwright@test.flowstate')
-    expect(testUser, 'Test user must exist').toBeTruthy()
-    const userId = testUser!.id
+    const testUser = await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })
+    const userId = testUser.id
 
     // Seed lane + assign a Work task (01) and a Personal task (05) — different projects
     await admin.from('lanes').upsert({ id: LANE_ID, user_id: userId, name: LANE_NAME, color: '#4ECDC4' })
@@ -93,8 +92,7 @@ test.describe('TASK-1812: Lanes — cross-project goals', () => {
     const admin = createClient(SUPABASE_URL, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const user = await findAuthUserByEmail(admin, 'playwright@test.flowstate')
-    if (!user) throw new Error('Global setup did not create the Playwright test user')
+    const user = await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })
     const userId = user.id
 
     // Seed an EMPTY lane and ensure the two target tasks aren't in it

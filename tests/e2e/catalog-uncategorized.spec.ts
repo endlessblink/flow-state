@@ -4,7 +4,7 @@
  * Verifies that when grouped by "project", tasks with no projectId appear in an
  * "Uncategorized" group at the TOP of the list — before all project groups.
  */
-import { test, expect, findAuthUserByEmail } from '../fixtures/auth'
+import { test, expect, ensureAuthUser, TEST_USER } from '../fixtures/auth'
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
@@ -34,8 +34,7 @@ test.describe('TASK-1455: Catalog — Uncategorized tasks group', () => {
     })
 
     // Find the test user to get their user_id
-    const testUser = await findAuthUserByEmail(adminClient, 'playwright@test.flowstate')
-    if (!testUser) throw new Error('Global setup did not create the Playwright test user')
+    const testUser = await ensureAuthUser(adminClient, { ...TEST_USER, email_confirm: true })
 
     // Upsert an uncategorized task (project_id = null)
     const { error: upsertError } = await adminClient.from('tasks').upsert(

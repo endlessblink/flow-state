@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { chromium, type FullConfig } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
-import { findAuthUserByEmail } from './fixtures/auth'
+import { ensureAuthUser } from './fixtures/auth'
 
 // TASK-1457: Dedicated Playwright test user — completely isolated from real users
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
@@ -22,31 +22,14 @@ async function ensureTestUser() {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  // Check if test user already exists
-  const existingUser = await findAuthUserByEmail(supabase, TEST_USER_EMAIL)
-
-  let userId: string
-
-  if (existingUser) {
-    userId = existingUser.id
-    console.log('[global-setup] Test user exists:', userId)
-  } else {
-    // Create the test user via Admin API — just like any real sign-up
-    const { data, error } = await supabase.auth.admin.createUser({
-      email: TEST_USER_EMAIL,
-      password: TEST_USER_PASSWORD,
-      email_confirm: true,
-      user_metadata: { name: 'Playwright Test User' },
-    })
-
-    if (error) {
-      console.error('[global-setup] Failed to create test user:', error.message)
-      process.exit(1)
-    }
-
-    userId = data.user.id
-    console.log('[global-setup] Created test user:', userId)
-  }
+  const testUser = await ensureAuthUser(supabase, {
+    email: TEST_USER_EMAIL,
+    password: TEST_USER_PASSWORD,
+    email_confirm: true,
+    user_metadata: { name: 'Playwright Test User' },
+  })
+  const userId = testUser.id
+  console.log('[global-setup] Resolved test user:', userId)
 
   // Clean slate: delete all existing data for this user (FK-safe order)
   await supabase.from('notifications').delete().eq('user_id', userId)

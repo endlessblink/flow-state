@@ -1,4 +1,4 @@
-import { test, expect, findAuthUserByEmail } from '../fixtures/auth'
+import { test, expect, ensureAuthUser, TEST_USER } from '../fixtures/auth'
 import { TEST_TASKS } from '../fixtures/test-ids'
 import { createClient } from '@supabase/supabase-js'
 
@@ -12,8 +12,7 @@ test.describe('Task Comments (TASK-1553)', () => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const testUser = await findAuthUserByEmail(supabase, 'playwright@test.flowstate')
-    if (!testUser) throw new Error('Global setup did not create the Playwright test user')
+    const testUser = await ensureAuthUser(supabase, { ...TEST_USER, email_confirm: true })
 
     await supabase.from('workspaces').upsert({
       id: TEST_WORKSPACE_ID, name: 'Test Workspace',

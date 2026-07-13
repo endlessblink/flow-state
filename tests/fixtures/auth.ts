@@ -1,5 +1,5 @@
 import { test as base } from '@playwright/test'
-import type { SupabaseClient, User } from '@supabase/supabase-js'
+import type { AdminUserAttributes, SupabaseClient, User } from '@supabase/supabase-js'
 
 // TASK-1457: Dedicated Playwright test user — isolated from real users
 // Created by global-setup.ts via Supabase Admin API
@@ -8,21 +8,27 @@ export const TEST_USER = {
   password: 'pw-playwright-e2e-2026!',
 } as const
 
-export async function findAuthUserByEmail(
+export async function ensureAuthUser(
   client: SupabaseClient,
-  email: string,
-): Promise<User | null> {
-  // GoTrue's local admin endpoint rejects oversized pages even though the SDK
-  // accepts the number. Keep this at the service-safe maximum and paginate.
-  const perPage = 100
-  for (let page = 1; page <= 100; page += 1) {
-    const { data, error } = await client.auth.admin.listUsers({ page, perPage })
-    if (error) throw error
-    const user = data.users.find(candidate => candidate.email === email)
-    if (user) return user
-    if (data.users.length < perPage) return null
+  attributes: AdminUserAttributes & { email: string; password: string },
+): Promise<User> {
+  const { data, error } = await client.auth.admin.createUser(attributes)
+  if (data.user) return data.user
+
+  const isDuplicate = error?.status === 422 && /already|registered|exists/i.test(error.message)
+  if (!isDuplicate) throw error ?? new Error('Test user creation returned no user')
+
+  // The local GoTrue build can fail listUsers even on a clean database. The
+  // fixture owns these credentials, so signing in is the stable way to resolve
+  // the existing disposable identity without querying the admin directory.
+  const { data: signIn, error: signInError } = await client.auth.signInWithPassword({
+    email: attributes.email,
+    password: attributes.password,
+  })
+  if (signInError || !signIn.user) {
+    throw signInError ?? new Error('Existing test user sign-in returned no user')
   }
-  throw new Error('Auth user lookup exceeded the bounded page limit')
+  return signIn.user
 }
 
 // Re-export test and expect — tests import from here for authenticated context

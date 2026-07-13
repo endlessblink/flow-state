@@ -1,35 +1,44 @@
 import { describe, expect, it, vi } from 'vitest'
-import { findAuthUserByEmail } from '../../fixtures/auth'
+import { ensureAuthUser } from '../../fixtures/auth'
 
-describe('findAuthUserByEmail', () => {
-  it('continues through auth pages instead of creating a duplicate user', async () => {
-    const firstPage = Array.from({ length: 100 }, (_, index) => ({
-      id: `other-${index}`,
-      email: `other-${index}@test.flowstate`,
-    }))
+describe('ensureAuthUser', () => {
+  const attributes = {
+    email: 'playwright@test.flowstate',
+    password: 'pw-playwright-e2e-2026!',
+    email_confirm: true,
+  }
+
+  it('returns a newly created disposable user', async () => {
     const target = { id: 'playwright-user', email: 'playwright@test.flowstate' }
-    const listUsers = vi.fn()
-      .mockResolvedValueOnce({ data: { users: firstPage }, error: null })
-      .mockResolvedValueOnce({ data: { users: [target] }, error: null })
+    const createUser = vi.fn().mockResolvedValue({ data: { user: target }, error: null })
+    const signInWithPassword = vi.fn()
 
-    const result = await findAuthUserByEmail({
-      auth: { admin: { listUsers } },
-    } as never, target.email)
+    const result = await ensureAuthUser({
+      auth: { admin: { createUser }, signInWithPassword },
+    } as never, attributes)
 
     expect(result).toEqual(target)
-    expect(listUsers).toHaveBeenNthCalledWith(1, { page: 1, perPage: 100 })
-    expect(listUsers).toHaveBeenNthCalledWith(2, { page: 2, perPage: 100 })
+    expect(createUser).toHaveBeenCalledWith(attributes)
+    expect(signInWithPassword).not.toHaveBeenCalled()
   })
 
-  it('stops after a partial page when the user does not exist', async () => {
-    const listUsers = vi.fn().mockResolvedValue({
-      data: { users: [{ id: 'other', email: 'other@test.flowstate' }] },
+  it('resolves an existing disposable user by its owned credentials', async () => {
+    const target = { id: 'playwright-user', email: 'playwright@test.flowstate' }
+    const createUser = vi.fn().mockResolvedValue({
+      data: { user: null },
+      error: { status: 422, message: 'User already registered' },
+    })
+    const signInWithPassword = vi.fn().mockResolvedValue({
+      data: { user: target },
       error: null,
     })
 
-    await expect(findAuthUserByEmail({
-      auth: { admin: { listUsers } },
-    } as never, 'missing@test.flowstate')).resolves.toBeNull()
-    expect(listUsers).toHaveBeenCalledTimes(1)
+    await expect(ensureAuthUser({
+      auth: { admin: { createUser }, signInWithPassword },
+    } as never, attributes)).resolves.toEqual(target)
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: attributes.email,
+      password: attributes.password,
+    })
   })
 })

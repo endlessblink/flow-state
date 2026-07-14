@@ -29,7 +29,7 @@ function fail(message) {
   process.exitCode = 1
 }
 
-function appAsarFromLatestDeb() {
+function latestDebPath() {
   if (!fs.existsSync(latestLinuxManifest)) return null
 
   const manifest = fs.readFileSync(latestLinuxManifest, 'utf-8')
@@ -37,7 +37,37 @@ function appAsarFromLatestDeb() {
   if (!debMatch) return null
 
   const debPath = path.join(root, 'release', debMatch[1])
-  if (!fs.existsSync(debPath)) return null
+  return fs.existsSync(debPath) ? debPath : null
+}
+
+function validateDebArchiveMembers(debPath) {
+  let members
+  try {
+    members = execFileSync('ar', ['t', debPath], { encoding: 'utf8' })
+      .split(/\r?\n/)
+      .map((member) => member.trim())
+      .filter(Boolean)
+  } catch (error) {
+    fail(`Unable to inspect packaged deb archive members: ${error.message}`)
+    return
+  }
+
+  const required = [
+    ['debian-binary', (member) => member === 'debian-binary'],
+    ['control.tar.*', (member) => /^control\.tar(?:\..+)?$/.test(member)],
+    ['data.tar.*', (member) => /^data\.tar(?:\..+)?$/.test(member)],
+  ]
+  for (const [label, matches] of required) {
+    const count = members.filter(matches).length
+    if (count !== 1) {
+      fail(`Packaged deb must contain exactly one ${label} member; found ${count}.`)
+    }
+  }
+}
+
+function appAsarFromLatestDeb() {
+  const debPath = latestDebPath()
+  if (!debPath) return null
 
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'flowstate-electron-package-'))
   execFileSync('dpkg-deb', ['-x', debPath, tempDir], { stdio: 'ignore' })
@@ -46,6 +76,11 @@ function appAsarFromLatestDeb() {
     appAsar: extractedAsar,
     cleanup: () => fs.rmSync(tempDir, { recursive: true, force: true }),
   }
+}
+
+const manifestDebPath = latestDebPath()
+if (manifestDebPath) {
+  validateDebArchiveMembers(manifestDebPath)
 }
 
 function validateAppAsar(packagePath) {

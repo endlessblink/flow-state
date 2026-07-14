@@ -17,13 +17,15 @@ describe('TASK-1949 canonical assistant disposable reliability harness', () => {
     expect(source).toContain('GRANT SELECT, INSERT, UPDATE, DELETE ON public.tasks TO authenticated')
   })
 
-  it('applies both ordered migrations before executable task, Notion, and race proofs', () => {
+  it('applies the merge and canonical migrations before executable task, Notion, and race proofs', () => {
     const source = readFileSync(harnessPath, 'utf8')
 
+    expect(source).toContain('20260713011000_merge_tasks_rpc.sql')
     expect(source).toContain('20260713012000_canonical_task_contract.sql')
     expect(source).toContain('20260714010000_canonical_notion_activation.sql')
     expect(source).toContain('20260714020000_canonical_uuid_compatibility.sql')
     expect(source).toContain('test-canonical-task-contract.sql')
+    expect(source).toContain('test-merge-tasks-rpc.sql')
     expect(source).toContain('test-canonical-notion-activation.sql')
     expect(source).toContain('test-canonical-notion-concurrency.sh')
     expect(source.indexOf('20260713012000_canonical_task_contract.sql'))

@@ -72,6 +72,28 @@ function runValidator(root: string) {
   })
 }
 
+function writeDuplicateDebArchive(root: string) {
+  const releaseDir = join(root, 'release')
+  const membersDir = join(root, 'deb-members')
+  const debPath = join(releaseDir, 'FlowState_1.4.258_amd64.deb')
+
+  mkdirSync(releaseDir, { recursive: true })
+  for (const member of ['debian-binary', 'control.tar.xz', 'data.tar.xz']) {
+    writeFile(membersDir, member, member === 'debian-binary' ? '2.0\n' : 'fixture')
+  }
+
+  const members = ['debian-binary', 'control.tar.xz', 'data.tar.xz'].map((member) =>
+    join(membersDir, member),
+  )
+  expect(spawnSync('ar', ['qc', debPath, ...members]).status).toBe(0)
+  expect(spawnSync('ar', ['q', debPath, ...members]).status).toBe(0)
+  writeFile(
+    root,
+    'release/latest-linux.yml',
+    '- url: FlowState_1.4.258_amd64.deb\n',
+  )
+}
+
 describe('validate-electron-package', () => {
   afterEach(() => {
     for (const root of tempRoots.splice(0)) {
@@ -144,5 +166,25 @@ describe('validate-electron-package', () => {
 
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('executableName: flowstate')
+  })
+
+  it('fails when a manifest deb contains duplicate Debian archive members', async () => {
+    const root = makeRoot()
+    writeBuilderConfig(root)
+    await writeAppAsar(root, [
+      '/dist/index.html',
+      '/dist-electron/main.cjs',
+      '/dist-electron/preload.cjs',
+      '/dist-electron/local-api-server.cjs',
+      '/package.json',
+    ])
+    writeDuplicateDebArchive(root)
+
+    const result = runValidator(root)
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('exactly one debian-binary')
+    expect(result.stderr).toContain('exactly one control.tar.*')
+    expect(result.stderr).toContain('exactly one data.tar.*')
   })
 })

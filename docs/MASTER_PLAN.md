@@ -2208,6 +2208,8 @@ _Original plan below._
 
 **Safety**: Repository-local tests and disposable fixtures are autonomous. Production mutations, deployments, credentials, destructive cleanup, and scope expansion remain exact approval boundaries.
 
+**2026-07-14 release repair**: Public Electron 1.4.257 was held after inspection found two complete Debian member triplets appended into one `.deb`; the AppImage itself remained structurally valid. The package validator now requires exactly one `debian-binary`, one `control.tar.*`, and one `data.tar.*`, while the builder removes only same-version target artifacts and the manifest before packaging. Local 1.4.258 built successfully: the AppImage is `180392753` bytes, the deb is `131375480` bytes with one exact member triplet, and the manifest names 1.4.258. The disposable reliable-assistant database harness now also applies `20260713011000_merge_tasks_rpc.sql` and executes the rollback-only merge suite; merge preview/apply, transfer, replay, conflict, scope, injected failure rollback, canonical task, and Notion contracts all passed. Public deployment and the production merge migration remain held at their explicit approval boundaries.
+
 ### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1943, TASK-1797, BUG-1942 | **Related**: FEATURE-1943

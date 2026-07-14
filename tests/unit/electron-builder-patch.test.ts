@@ -43,6 +43,10 @@ describe('electron-builder dependency parser patch', () => {
     // and the wrapper must ultimately call electron-builder with the shared config.
     expect(packageJson).toContain('npm run electron:patch-builder && bash scripts/run-electron-builder-with-npm-tree.sh')
     expect(builderWrapper).toContain('electron-builder --config electron-builder.yml')
+    expect(builderWrapper).toContain('-name "FlowState-${VERSION}-*.AppImage"')
+    expect(builderWrapper).toContain('-name "FlowState_${VERSION}_*.deb"')
+    expect(builderWrapper).toContain('-name "latest-linux.yml"')
+    expect(builderWrapper).toContain('-delete')
     expect(deployScript).toContain('npm run electron:build')
     expect(deployScript).not.toContain('npx electron-builder --config electron-builder.yml')
   })

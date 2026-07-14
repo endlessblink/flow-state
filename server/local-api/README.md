@@ -428,6 +428,17 @@ Safety notes:
 - Does not overwrite existing instances and does not delete tasks.
 - Response includes only task id/title plus the created/proposed instance; it never includes tokens, auth headers, sessions, subtasks, descriptions, or raw backlog dumps.
 
+### Subtasks
+
+`GET /api/tasks/:id/subtasks` lists the ordered embedded subtasks for one task.
+`POST /api/tasks/:id/subtasks`, `PATCH /api/tasks/:id/subtasks/:subtaskId`, and
+`POST /api/tasks/:id/subtasks/:subtaskId/delete` preview by default. Set
+`preview` to `false` and provide a stable `requestId` only after approval.
+Applied retries are idempotent and return a receipt without duplicating work.
+
+`POST /api/tasks/:id/subtasks/batch` accepts 1-50 `create`, `update`, or `delete`
+operations and applies the approved batch as one task-row update.
+
 ### `DELETE /api/tasks/:id`
 Soft-deletes a task for the current user (`is_deleted=true`, `deleted_at=now`).
 ```json

@@ -289,6 +289,124 @@ function buildTaskInstanceResponse(task, instance, preview) {
   }
 }
 
+// --- Subtask helpers --------------------------------------------------------
+
+const subtaskMutationReceipts = new Map()
+
+function validateSubtaskMutationMetadata(body) {
+  if (!body || typeof body !== 'object') return { ok: false, error: 'body required' }
+  if (body.preview !== undefined && typeof body.preview !== 'boolean') {
+    return { ok: false, error: 'preview must be a boolean when provided' }
+  }
+  const preview = body.preview !== false
+  const requestId = typeof body.requestId === 'string' ? body.requestId.trim() : ''
+  if (!preview && !requestId) {
+    return { ok: false, error: 'requestId required when preview is false' }
+  }
+  return { ok: true, preview, requestId }
+}
+
+function buildSubtaskReceipt(action, taskId, subtask, requestId, replayed = false) {
+  return {
+    requestId: requestId || null,
+    action,
+    taskId,
+    subtaskId: subtask.id,
+    replayed,
+  }
+}
+
+function receiptKey(userId, taskId, requestId) {
+  return `${userId}:${taskId}:${requestId}`
+}
+
+function deterministicSubtaskId(userId, taskId, requestId, index = 0) {
+  const hex = crypto.createHash('sha256')
+    .update(`${userId}:${taskId}:${requestId}:${index}`)
+    .digest('hex')
+    .slice(0, 32)
+    .split('')
+  hex[12] = '5'
+  hex[16] = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16)
+  const value = hex.join('')
+  return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`
+}
+
+function rememberSubtaskResponse(key, response) {
+  subtaskMutationReceipts.set(key, response)
+  if (subtaskMutationReceipts.size > 500) {
+    subtaskMutationReceipts.delete(subtaskMutationReceipts.keys().next().value)
+  }
+}
+
+function replaySubtaskResponse(key, res) {
+  const cached = subtaskMutationReceipts.get(key)
+  if (!cached) return false
+  send(res, 200, {
+    ...cached,
+    receipt: { ...cached.receipt, replayed: true },
+  })
+  return true
+}
+
+function applySubtaskOperations(userId, taskId, requestId, initial, operations, now) {
+  const subtasks = [...initial]
+  const results = []
+  for (const [operationIndex, operation] of operations.entries()) {
+    if (!operation || !['create', 'update', 'delete'].includes(operation.action)) {
+      return { ok: false, error: 'operation action must be create|update|delete' }
+    }
+    if (operation.action === 'create') {
+      const title = typeof operation.title === 'string' ? operation.title.trim() : ''
+      if (!title) return { ok: false, error: 'create operation title required' }
+      const subtaskId = deterministicSubtaskId(userId, taskId, requestId, operationIndex)
+      const existingIndex = subtasks.findIndex((item) => item.id === subtaskId)
+      if (existingIndex !== -1) {
+        results.push({ action: 'create', subtask: subtasks[existingIndex], replayed: true })
+        continue
+      }
+      const subtask = {
+        id: subtaskId, parentTaskId: taskId, title, description: '',
+        completedPomodoros: 0, isCompleted: false, createdAt: now, updatedAt: now,
+      }
+      const order = operation.order === undefined ? subtasks.length : Number(operation.order)
+      if (!Number.isInteger(order) || order < 0) return { ok: false, error: 'order must be a non-negative integer' }
+      subtasks.splice(Math.min(order, subtasks.length), 0, subtask)
+      results.push({ action: 'create', subtask })
+      continue
+    }
+    const subtaskId = typeof operation.subtaskId === 'string' ? operation.subtaskId.trim() : ''
+    const index = subtasks.findIndex((item) => item.id === subtaskId)
+    if (index === -1 && operation.action === 'delete') {
+      results.push({ action: 'delete', subtask: { id: subtaskId }, replayed: true })
+      continue
+    }
+    if (index === -1) return { ok: false, error: 'subtask not found' }
+    const current = subtasks[index]
+    if (operation.action === 'delete') {
+      subtasks.splice(index, 1)
+      results.push({ action: 'delete', subtask: current })
+      continue
+    }
+    const updated = { ...current, updatedAt: now }
+    if (operation.title !== undefined) {
+      const title = typeof operation.title === 'string' ? operation.title.trim() : ''
+      if (!title) return { ok: false, error: 'title cannot be empty' }
+      updated.title = title
+    }
+    if (operation.completed !== undefined) {
+      if (typeof operation.completed !== 'boolean') return { ok: false, error: 'completed must be a boolean' }
+      updated.isCompleted = operation.completed
+    }
+    subtasks.splice(index, 1)
+    const order = operation.order === undefined ? index : Number(operation.order)
+    if (!Number.isInteger(order) || order < 0) return { ok: false, error: 'order must be a non-negative integer' }
+    subtasks.splice(Math.min(order, subtasks.length), 0, updated)
+    results.push({ action: 'update', subtask: updated })
+  }
+  return { ok: true, subtasks, results }
+}
+
 // --- Route handlers ---------------------------------------------------------
 
 async function handleSearchTasks(url, res) {
@@ -374,6 +492,40 @@ async function handleGetTasks(url, res) {
     canonicalRevision: r.canonical_revision,
   }))
   send(res, 200, { tasks })
+}
+
+function toSafeTask(record, detailed = false) {
+  const task = {
+    id: record.id,
+    title: record.title,
+    status: fromDbStatus(record.status),
+    priority: record.priority ?? null,
+    dueDate: toDateOnly(record.due_date),
+    projectId: record.project_id ?? null,
+  }
+  if (!detailed) return task
+  return {
+    ...task,
+    description: record.description || '',
+    progress: Number(record.progress) || 0,
+    dueTime: record.due_time || null,
+    tags: Array.isArray(record.tags) ? record.tags : [],
+    subtasks: normalizeSubtasks(record.subtasks),
+    instances: normalizeTaskInstances(record.instances),
+    recurrence: record.recurrence_rule
+      ? {
+          rule: record.recurrence_rule,
+          parentId: record.recurrence_parent_id || null,
+          count: Number(record.recurrence_count) || 0,
+          isCompletionRecord: record.is_completion_record === true,
+        }
+      : null,
+    isInInbox: record.is_in_inbox === true,
+    canvas: record.position || null,
+    createdAt: record.created_at || null,
+    updatedAt: record.updated_at || null,
+    completedAt: record.completed_at || null,
+  }
 }
 
 async function handleCreateTask(req, res) {
@@ -533,6 +685,223 @@ async function handlePostTaskInstance(id, req, res) {
   if (updateErr) return send(res, 500, { error: updateErr.message })
 
   send(res, 200, buildTaskInstanceResponse(existing, proposedInstance, false))
+}
+
+// --- Subtask handlers -------------------------------------------------------
+
+async function findTaskForSubtasks(id, fields = 'id,title,subtasks') {
+  const { supabase, userId } = ctx
+  return await supabase
+    .from('tasks')
+    .select(fields)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .maybeSingle()
+}
+
+async function handleGetSubtasks(id, res) {
+  const { data: existing, error } = await findTaskForSubtasks(id, 'id,title,subtasks')
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+  send(res, 200, {
+    ok: true,
+    task: { id: existing.id, title: existing.title },
+    subtasks: normalizeSubtasks(existing.subtasks),
+  })
+}
+
+async function handleCreateSubtask(id, req, res) {
+  const { supabase, userId } = ctx
+  const body = await readJsonBody(req)
+  const metadata = validateSubtaskMutationMetadata(body)
+  if (!metadata.ok) return send(res, 400, { error: metadata.error })
+  const title = typeof body.title === 'string' ? body.title.trim() : ''
+  if (!title) return send(res, 400, { error: 'title required' })
+  const order = body.order === undefined ? null : Number(body.order)
+  if (order !== null && (!Number.isInteger(order) || order < 0)) {
+    return send(res, 400, { error: 'order must be a non-negative integer' })
+  }
+  const { data: existing, error } = await findTaskForSubtasks(id)
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+
+  const key = metadata.requestId && receiptKey(userId, id, metadata.requestId)
+  if (!metadata.preview && key && replaySubtaskResponse(key, res)) return
+  const now = new Date().toISOString()
+  const deterministicId = metadata.requestId
+    ? deterministicSubtaskId(userId, id, metadata.requestId)
+    : crypto.randomUUID()
+  const persisted = normalizeSubtasks(existing.subtasks).find((item) => item.id === deterministicId)
+  if (!metadata.preview && persisted) {
+    const response = {
+      ok: true, preview: false, subtask: persisted,
+      receipt: buildSubtaskReceipt('create', id, persisted, metadata.requestId, true),
+    }
+    if (key) rememberSubtaskResponse(key, response)
+    return send(res, 200, response)
+  }
+  const subtask = {
+    id: deterministicId, parentTaskId: id, title, description: '',
+    completedPomodoros: 0, isCompleted: false, createdAt: now, updatedAt: now,
+  }
+  const current = normalizeSubtasks(existing.subtasks)
+  const insertAt = order === null ? current.length : Math.min(order, current.length)
+  const updatedSubtasks = [...current]
+  updatedSubtasks.splice(insertAt, 0, subtask)
+  const response = {
+    ok: true, preview: metadata.preview, subtask,
+    receipt: buildSubtaskReceipt('create', id, subtask, metadata.requestId),
+  }
+  if (metadata.preview) return send(res, 200, response)
+  const { error: updateError } = await supabase.from('tasks')
+    .update({ subtasks: updatedSubtasks, updated_at: now })
+    .eq('id', id).eq('user_id', userId).eq('is_deleted', false)
+  if (updateError) return send(res, 500, { error: updateError.message })
+  rememberSubtaskResponse(key, response)
+  send(res, 200, response)
+}
+
+async function handlePatchSubtask(id, subtaskId, req, res) {
+  const { supabase, userId } = ctx
+  const body = await readJsonBody(req)
+  const metadata = validateSubtaskMutationMetadata(body)
+  if (!metadata.ok) return send(res, 400, { error: metadata.error })
+  const { data: existing, error } = await findTaskForSubtasks(id)
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+  const current = normalizeSubtasks(existing.subtasks)
+  const index = current.findIndex((item) => item.id === subtaskId)
+  if (index === -1) return send(res, 404, { error: 'subtask not found' })
+
+  const key = metadata.requestId && receiptKey(userId, id, metadata.requestId)
+  if (!metadata.preview && key && replaySubtaskResponse(key, res)) return
+  const requestedOrder = body.order === undefined ? null : Number(body.order)
+  const alreadyApplied = !metadata.preview
+    && (body.title === undefined || (typeof body.title === 'string' && current[index].title === body.title.trim()))
+    && (body.completed === undefined || current[index].isCompleted === body.completed)
+    && (requestedOrder === null || requestedOrder === index)
+  if (alreadyApplied) {
+    const response = {
+      ok: true, preview: false, subtask: current[index],
+      receipt: buildSubtaskReceipt('update', id, current[index], metadata.requestId, true),
+    }
+    if (key) rememberSubtaskResponse(key, response)
+    return send(res, 200, response)
+  }
+  const updated = { ...current[index], updatedAt: new Date().toISOString() }
+  if (body.title !== undefined) {
+    const title = typeof body.title === 'string' ? body.title.trim() : ''
+    if (!title) return send(res, 400, { error: 'title cannot be empty' })
+    updated.title = title
+  }
+  if (body.completed !== undefined) {
+    if (typeof body.completed !== 'boolean') return send(res, 400, { error: 'completed must be a boolean' })
+    updated.isCompleted = body.completed
+  }
+  const order = requestedOrder
+  if (order !== null && (!Number.isInteger(order) || order < 0)) {
+    return send(res, 400, { error: 'order must be a non-negative integer' })
+  }
+  if (body.title === undefined && body.completed === undefined && order === null) {
+    return send(res, 400, { error: 'provide at least one field to update' })
+  }
+  const updatedSubtasks = current.filter((item) => item.id !== subtaskId)
+  updatedSubtasks.splice(order === null ? index : Math.min(order, updatedSubtasks.length), 0, updated)
+  const response = {
+    ok: true, preview: metadata.preview, subtask: updated,
+    receipt: buildSubtaskReceipt('update', id, updated, metadata.requestId),
+  }
+  if (metadata.preview) return send(res, 200, response)
+  const { error: updateError } = await supabase.from('tasks')
+    .update({ subtasks: updatedSubtasks, updated_at: updated.updatedAt })
+    .eq('id', id).eq('user_id', userId).eq('is_deleted', false)
+  if (updateError) return send(res, 500, { error: updateError.message })
+  rememberSubtaskResponse(key, response)
+  send(res, 200, response)
+}
+
+async function handleDeleteSubtask(id, subtaskId, req, res) {
+  const { supabase, userId } = ctx
+  const body = await readJsonBody(req)
+  const metadata = validateSubtaskMutationMetadata(body)
+  if (!metadata.ok) return send(res, 400, { error: metadata.error })
+  const { data: existing, error } = await findTaskForSubtasks(id)
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+  const current = normalizeSubtasks(existing.subtasks)
+  const key = metadata.requestId && receiptKey(userId, id, metadata.requestId)
+  const subtask = current.find((item) => item.id === subtaskId)
+  if (!subtask) {
+    if (!metadata.preview && metadata.requestId) {
+      const missing = { id: subtaskId }
+      const response = {
+        ok: true, preview: false, subtask: missing,
+        receipt: buildSubtaskReceipt('delete', id, missing, metadata.requestId, true),
+      }
+      if (key) rememberSubtaskResponse(key, response)
+      return send(res, 200, response)
+    }
+    return send(res, 404, { error: 'subtask not found' })
+  }
+
+  if (!metadata.preview && key && replaySubtaskResponse(key, res)) return
+  const updatedSubtasks = current.filter((item) => item.id !== subtaskId)
+  const response = {
+    ok: true, preview: metadata.preview, subtask,
+    receipt: buildSubtaskReceipt('delete', id, subtask, metadata.requestId),
+  }
+  if (metadata.preview) return send(res, 200, response)
+  const { error: updateError } = await supabase.from('tasks')
+    .update({ subtasks: updatedSubtasks, updated_at: new Date().toISOString() })
+    .eq('id', id).eq('user_id', userId).eq('is_deleted', false)
+  if (updateError) return send(res, 500, { error: updateError.message })
+  rememberSubtaskResponse(key, response)
+  send(res, 200, response)
+}
+
+async function handleSubtaskBatch(id, req, res) {
+  const { supabase, userId } = ctx
+  const body = await readJsonBody(req)
+  const metadata = validateSubtaskMutationMetadata(body)
+  if (!metadata.ok) return send(res, 400, { error: metadata.error })
+  if (!Array.isArray(body.operations) || body.operations.length < 1 || body.operations.length > 50) {
+    return send(res, 400, { error: 'operations must contain 1 to 50 items' })
+  }
+  const { data: existing, error } = await findTaskForSubtasks(id)
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+  const key = metadata.requestId && receiptKey(userId, id, metadata.requestId)
+  if (!metadata.preview && key && replaySubtaskResponse(key, res)) return
+  const now = new Date().toISOString()
+  const applied = applySubtaskOperations(
+    userId,
+    id,
+    metadata.requestId,
+    normalizeSubtasks(existing.subtasks),
+    body.operations,
+    now,
+  )
+  if (!applied.ok) return send(res, 400, { error: applied.error })
+  const response = {
+    ok: true,
+    preview: metadata.preview,
+    operations: applied.results,
+    receipt: {
+      requestId: metadata.requestId || null,
+      action: 'batch',
+      taskId: id,
+      operationCount: applied.results.length,
+      replayed: false,
+    },
+  }
+  if (metadata.preview) return send(res, 200, response)
+  const { error: updateError } = await supabase.from('tasks')
+    .update({ subtasks: applied.subtasks, updated_at: now })
+    .eq('id', id).eq('user_id', userId).eq('is_deleted', false)
+  if (updateError) return send(res, 500, { error: updateError.message })
+  rememberSubtaskResponse(key, response)
+  send(res, 200, response)
 }
 
 async function handleDeleteTask(id, res) {
@@ -985,6 +1354,35 @@ const server = http.createServer(async (req, res) => {
     const mergeTasksMatch = path.match(/^\/api\/tasks\/([^/]+)\/merge$/)
     if (req.method === 'POST' && mergeTasksMatch) {
       return await handleMergeTasks(decodeURIComponent(mergeTasksMatch[1]), req, res)
+    }
+    const subtasksMatch = path.match(/^\/api\/tasks\/([^/]+)\/subtasks$/)
+    if (req.method === 'GET' && subtasksMatch) {
+      return await handleGetSubtasks(decodeURIComponent(subtasksMatch[1]), res)
+    }
+    if (req.method === 'POST' && subtasksMatch) {
+      return await handleCreateSubtask(decodeURIComponent(subtasksMatch[1]), req, res)
+    }
+    const subtaskBatchMatch = path.match(/^\/api\/tasks\/([^/]+)\/subtasks\/batch$/)
+    if (req.method === 'POST' && subtaskBatchMatch) {
+      return await handleSubtaskBatch(decodeURIComponent(subtaskBatchMatch[1]), req, res)
+    }
+    const subtaskDeleteMatch = path.match(/^\/api\/tasks\/([^/]+)\/subtasks\/([^/]+)\/delete$/)
+    if (req.method === 'POST' && subtaskDeleteMatch) {
+      return await handleDeleteSubtask(
+        decodeURIComponent(subtaskDeleteMatch[1]),
+        decodeURIComponent(subtaskDeleteMatch[2]),
+        req,
+        res,
+      )
+    }
+    const subtaskMatch = path.match(/^\/api\/tasks\/([^/]+)\/subtasks\/([^/]+)$/)
+    if (req.method === 'PATCH' && subtaskMatch) {
+      return await handlePatchSubtask(
+        decodeURIComponent(subtaskMatch[1]),
+        decodeURIComponent(subtaskMatch[2]),
+        req,
+        res,
+      )
     }
     const taskMatch = path.match(/^\/api\/tasks\/([^/]+)$/)
     if (req.method === 'GET' && taskMatch) {

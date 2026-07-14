@@ -200,6 +200,8 @@
 
 **Tests**: RED first failed in `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts` because `scripts/daily-regression-hunt.cjs` and the npm scripts did not exist. Follow-up RED failed because `--notify` and installer notification wiring did not exist. Green proof: `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts`; `npm run regression:daily -- --dry-run --date 2026-07-06 --report-dir /tmp/flowstate-regression-hunt-smoke --json`; `npm run regression:daily -- --dry-run --notify --date 2026-07-06 --report-dir /tmp/flowstate-regression-hunt-notify-smoke --json`; `npm run regression:report -- --report-dir /tmp/flowstate-regression-hunt-smoke`; `npm test -- tests/unit/sync/sync-orchestrator.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/canvas/canvas-composables.test.ts tests/unit/undo-entrypoint-contract.test.ts tests/unit/kde/timer-sync.test.ts`; `npm run guard:electron-sync`; `npm run type-check`; `npm run lint`; `npm run electron:build`. 2026-07-08 watchdog hardening added `tests/unit/sync/sync-status-popover.test.ts` to the focused recurring pack so `0 errors` plus stale sign-in-expired UI cannot regress silently. 2026-07-08 live-boundary hardening added a non-secret renderer auth heartbeat and `scripts/diagnose-live-boundary.cjs`; the daily watchdog now fails when the app is running but renderer auth disagrees with sidecar auth, the renderer timer snapshot is missing, or the timer heartbeat is stale. 2026-07-09 rotation hardening retargeted stale canvas/timer flow scripts from deleted user-flow specs to maintained Playwright packs and added a package-script existence guard; proof: RED then green `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts`, `npm run test:canvas-flows` 16/16, `npm run test:timer-flows` 7/7, Tuesday/Thursday dry-run rotations, `npm run type-check`, `npm run guard:electron-sync`, and `npm run electron:build`. Live updater manifest probe passed outside sandbox DNS and served `version: 1.4.236`. Activation proof: `bash scripts/install-daily-regression-hunt.sh`; `systemctl --user status flowstate-daily-regression-hunt.timer --no-pager` showed `active (waiting)` and next trigger `Wed 2026-07-08 09:30:00 IDT`.
 
+**2026-07-14 clean-runner follow-up**: ~~**BUG-1946**~~ makes the installed timer fetch and test a dedicated detached `origin/master` worktree while keeping reports and notifications in the primary checkout. This prevents stale or uncommitted development changes from being reported as released-code regressions without hiding real master failures.
+
 ### ~~TASK-1882~~: Add Android Gemma transcription provider contract and safe Whisper fallback (DONE)
 
 **Priority**: P1 | **Status**: DONE (2026-06-23) — provider abstraction, Android bridge stub, settings selector, fallback tests, typecheck, and PWA build verified. | **Depends on**: TASK-1131
@@ -4527,6 +4529,22 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 ## Active Bugs (P0-P1)
 
+### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-14)
+
+**User repro**: the 09:30 desktop alert reported `electron-sync-guard: auth/sync` and `2/9` failures immediately after v1.4.252 had passed release CI and packaged UI verification.
+
+**Root cause**: the systemd service ran directly inside the primary checkout. That checkout was v1.4.247, 33 commits behind current master, eight commits ahead locally, and contained an unfinished recurring-task rewrite. One outdated undo test called the new RPC path with a deliberately null Supabase mock; the same test belonged to two packs, so one stale-worktree failure appeared as two release regressions.
+
+**Fix**: the installed service now invokes a stable copied runner. Before each hunt the runner fetches `origin/master`, creates or resets a dedicated detached worktree, removes only that runner's generated and ignored files, installs dependencies into a runner-owned cache keyed by the tested lockfile, package metadata, install patch, platform/architecture, Node ABI/version, and npm version, and writes reports back to the primary checkout. It never resets, cleans, rebases, checks out, or imports dependencies from the user's active development tree.
+
+**Regression and live proof**: the installer contract test failed first because the clean runner did not exist. Review then caught dependency drift and source-only test gaps; RED tests failed until the runner used a runtime-and-install-input-keyed dependency cache and an executable temporary Git remote proved a dirty primary checkout/HEAD remained byte-for-byte untouched, the detached runner advanced to remote master, report arguments targeted the primary report directory, and a notified npm failure propagated its exit code. The final suite passed 12/12. The installed systemd service built the exact-input dependency cache and completed the Tuesday daily hunt 10/10, including the 228-test Electron sync guard, lifecycle durability, live Electron auth/timer diagnostics, updater manifest v1.4.252, and seven timer-flow browser tests.
+
+**Exact failure mode fixed**: local WIP or a stale primary branch being labelled as a regression in the currently shipped/master FlowState code.
+
+**Explicitly not covered**: failures in the dirty development checkout remain developer work and are intentionally preserved; a failing check reproduced in the clean master runner will still notify normally.
+
 ### ~~BUG-1944~~: Persisted Electron account renders as a guest while auth validation is pending (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (v1.4.252, 2026-07-14) | **Depends on**: TASK-1797, BUG-1942
@@ -7208,6 +7226,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1942**~~ | **P0** | ✅ **PWA-created task and Hermes status changes now reconcile visibly in Electron; v1.4.250 shipped** |
 | ~~**BUG-1944**~~ | **P0** | ✅ **Persisted Electron identity stays account-owned while auth validation is pending; remote writes remain gated** |
 | ~~**BUG-1945**~~ | **P1** | ✅ **Confirmed Canvas image deletion now removes the canonical record and rendered node; undo/redo verified** |
+| ~~**BUG-1946**~~ | **P1** | ✅ **Daily regression hunt now tests a clean current-master worktree without touching active development changes** |
 | **TASK-1943** | **P0** | 🔄 **Reliable Hermes–FlowState personal-assistant program: canonical sync, dynamic decomposition, monitor reliability, writable Notion, watchdogs, and packaged proof** |
 | **TASK-1944** | **P0** | 🔄 **Canonical operation/revision/change-sequence foundation with safe branch recovery, signed-user receipts, replay, compatibility triggers, and deterministic catch-up** |
 | **TASK-1945** | **P0** | 🔄 **Canonical Local API task patch adoption with preview/apply approval binding, receipt validation, and exact replay** |

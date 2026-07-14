@@ -1,5 +1,5 @@
-import { execFileSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -205,10 +205,100 @@ describe('daily regression hunt script', () => {
     }
   })
 
-  it('installs the user timer with failure notifications enabled', () => {
+  it('installs the user timer against a clean current-master snapshot with notifications enabled', () => {
     const installer = readFileSync('scripts/install-daily-regression-hunt.sh', 'utf8')
+    const runner = readFileSync('scripts/run-daily-regression-hunt-clean.sh', 'utf8')
 
-    expect(installer).toContain("ExecStart=/usr/bin/env bash -lc 'npm run regression:daily -- --notify'")
+    expect(installer).toContain('install -m 0755 "$SCRIPT_REPO_DIR/scripts/run-daily-regression-hunt-clean.sh" "$RUNNER_PATH"')
+    expect(installer).toContain('Environment=FLOWSTATE_REGRESSION_SOURCE_REPO=$SOURCE_REPO')
+    expect(installer).toContain('ExecStart=/usr/bin/env bash $RUNNER_PATH --notify')
     expect(installer).toContain('OnCalendar=*-*-* 09:30:00')
+    expect(runner).toContain('git -C "$SOURCE_REPO" fetch --quiet origin master')
+    expect(runner).toContain('git -C "$SOURCE_REPO" worktree add --detach "$RUNNER_DIR" origin/master')
+    expect(runner).toContain('git -C "$RUNNER_DIR" reset --hard origin/master')
+    expect(runner).toContain('git -C "$RUNNER_DIR" clean -ffdx')
+    expect(runner).toContain('--report-dir "$REPORT_DIR"')
+    expect(runner).toContain('trap notify_preflight_failure ERR')
+    expect(runner).toContain('FlowState regression runner failed before checks')
+    expect(runner).toContain('sha256sum "$RUNNER_DIR/package-lock.json"')
+    expect(runner).toContain('sha256sum "$RUNNER_DIR/package.json"')
+    expect(runner).toContain('sha256sum "$RUNNER_DIR/scripts/patch-electron-builder-dependency-parser.cjs"')
+    expect(runner).toContain("node -p 'process.versions.modules'")
+    expect(runner).toContain("node -p 'process.version'")
+    expect(runner).toContain('npm --version')
+    expect(runner).toContain('uname -s')
+    expect(runner).toContain('uname -m')
+    expect(runner).toContain('npm ci --prefix "$RUNNER_DIR"')
+    expect(runner).not.toContain('"$SOURCE_REPO/node_modules"')
+  })
+
+  it('runs remote master without modifying a dirty primary checkout and propagates notified failures', () => {
+    const root = mkdtempSync(join(tmpdir(), 'flowstate-clean-runner-'))
+    const remote = join(root, 'remote.git')
+    const seed = join(root, 'seed')
+    const primary = join(root, 'primary')
+    const runnerDir = join(root, 'runner')
+    const reports = join(primary, 'reports', 'regression-hunt')
+    const dependencyRoot = join(root, 'dependencies')
+    const binDir = join(root, 'bin')
+    const npmCapture = join(root, 'npm-args.txt')
+    const notifyCapture = join(root, 'notify-args.txt')
+    const lock = JSON.stringify({ name: 'fixture', version: '1.0.0', lockfileVersion: 3, packages: {} })
+
+    execFileSync('git', ['init', '--bare', remote])
+    execFileSync('git', ['init', '-b', 'master', seed])
+    execFileSync('git', ['-C', seed, 'config', 'user.email', 'fixture@flowstate.test'])
+    execFileSync('git', ['-C', seed, 'config', 'user.name', 'FlowState Fixture'])
+    writeFileSync(join(seed, 'package.json'), JSON.stringify({ name: 'fixture', version: '1.0.0' }))
+    writeFileSync(join(seed, 'package-lock.json'), lock)
+    mkdirSync(join(seed, 'scripts'))
+    writeFileSync(join(seed, 'scripts', 'patch-electron-builder-dependency-parser.cjs'), '// fixture patch\n')
+    writeFileSync(join(seed, 'version.txt'), 'remote-v1\n')
+    execFileSync('git', ['-C', seed, 'add', '.'])
+    execFileSync('git', ['-C', seed, 'commit', '-m', 'fixture v1'])
+    execFileSync('git', ['-C', seed, 'remote', 'add', 'origin', remote])
+    execFileSync('git', ['-C', seed, 'push', '-u', 'origin', 'master'])
+    execFileSync('git', ['clone', remote, primary])
+
+    const primaryHead = execFileSync('git', ['-C', primary, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+    writeFileSync(join(primary, 'version.txt'), 'dirty-primary\n')
+    writeFileSync(join(primary, 'keep-untracked.txt'), 'preserve me\n')
+
+    writeFileSync(join(seed, 'version.txt'), 'remote-v2\n')
+    execFileSync('git', ['-C', seed, 'add', 'version.txt'])
+    execFileSync('git', ['-C', seed, 'commit', '-m', 'fixture v2'])
+    execFileSync('git', ['-C', seed, 'push', 'origin', 'master'])
+    const remoteHead = execFileSync('git', ['-C', seed, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+
+    mkdirSync(binDir)
+    writeFileSync(join(binDir, 'notify-send'), '#!/usr/bin/env bash\nprintf "%s\\n" "$*" > "$NOTIFY_CAPTURE"\n')
+    writeFileSync(join(binDir, 'npm'), '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "$NPM_CAPTURE"\nif [ "${1:-}" = "--version" ]; then echo "10.0.0"; exit 0; fi\nif [ "${1:-}" = "ci" ]; then mkdir -p "$FLOWSTATE_REGRESSION_RUNNER_DIR/node_modules"; exit 0; fi\nif [[ " $* " == *" --notify "* ]]; then notify-send "FlowState fixture failure"; fi\nexit 23\n')
+    chmodSync(join(binDir, 'notify-send'), 0o755)
+    chmodSync(join(binDir, 'npm'), 0o755)
+
+    const result = spawnSync('bash', ['scripts/run-daily-regression-hunt-clean.sh', '--notify'], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${binDir}:${process.env.PATH}`,
+        FLOWSTATE_REGRESSION_SOURCE_REPO: primary,
+        FLOWSTATE_REGRESSION_RUNNER_DIR: runnerDir,
+        FLOWSTATE_REGRESSION_REPORT_DIR: reports,
+        FLOWSTATE_REGRESSION_DEPENDENCY_DIR: dependencyRoot,
+        NPM_CAPTURE: npmCapture,
+        NOTIFY_CAPTURE: notifyCapture,
+      },
+    })
+
+    expect(result.status, result.stderr).toBe(23)
+    expect(execFileSync('git', ['-C', primary, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()).toBe(primaryHead)
+    expect(readFileSync(join(primary, 'version.txt'), 'utf8')).toBe('dirty-primary\n')
+    expect(readFileSync(join(primary, 'keep-untracked.txt'), 'utf8')).toBe('preserve me\n')
+    expect(execFileSync('git', ['-C', runnerDir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()).toBe(remoteHead)
+    expect(readFileSync(join(runnerDir, 'version.txt'), 'utf8')).toBe('remote-v2\n')
+    expect(readFileSync(npmCapture, 'utf8')).toContain(`ci --prefix ${runnerDir}`)
+    expect(readFileSync(npmCapture, 'utf8')).toContain(`run regression:daily -- --report-dir ${reports} --notify`)
+    expect(readFileSync(notifyCapture, 'utf8')).toContain('FlowState fixture failure')
   })
 })

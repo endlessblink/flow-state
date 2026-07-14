@@ -247,6 +247,12 @@ function normalizeTaskInstances(instances) {
   return Array.isArray(instances) ? instances.filter((item) => item && typeof item === 'object') : []
 }
 
+function normalizeSubtasks(subtasks) {
+  return Array.isArray(subtasks)
+    ? subtasks.filter((item) => item && typeof item === 'object' && !Array.isArray(item))
+    : []
+}
+
 function validateTaskInstanceInput(body) {
   if (!body || typeof body !== 'object') return { ok: false, error: 'body required' }
   if (!isValidDateOnly(body.scheduledDate)) {

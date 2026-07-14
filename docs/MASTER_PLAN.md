@@ -2196,6 +2196,7 @@ _Original plan below._
 - [ ] **TASK-1952 — Hydrate Electron auth backup into the live Supabase client**: replace the ineffective post-startup storage reread with supported session hydration, preserve stale-token reconnect behavior, and prove packaged protected assistant reads recover after restart.
 - [x] ~~**TASK-1953 — Preserve blocked remote Canvas projection updates**: coalesce remote task/group projection requests while Canvas interaction guards are active, replay the latest store state after the operation returns idle, and prove two-client geometry cannot remain stale after Realtime updates the store.~~ Completed 2026-07-14.
 - [x] **BUG-1954 — Recover signed-in Electron from an empty renderer projection**: shipped in Electron 1.4.255; authenticated empty projections now rebaseline the still-active scope, and the true Canvas empty-state surface uses the opaque design-system overlay.
+- [ ] **BUG-1955 — Restore packaged exact-task reads**: make the detailed Local Task API serializer execute safely with absent, null, empty, or malformed subtasks; add an executable source-and-bundle regression; and ship a version above Electron 1.4.255 with live Hermes read-back proof.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4609,6 +4610,21 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Exact failure mode fixed**: an already-authenticated Electron renderer with zero local task projection can no longer remain permanently empty merely because its saved canonical cursor has no newer change rows.
 
 **Explicitly not covered**: this does not hide legitimate first-run guidance for a genuinely empty account; it makes that real empty-state surface opaque and design-system compliant.
+
+### BUG-1955: Packaged exact-task reads crash because the subtask normalizer is missing (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-14) | **Depends on**: TASK-1797, TASK-1943
+
+**User repro**: Electron 1.4.255 is authenticated and its compact task, search, assistant-context, timer, task-instance, and Supabase reads work, but `GET /api/tasks/:id` returns HTTP 500 with `normalizeSubtasks is not defined`, blocking Hermes from reading the task's detailed planning context.
+
+**Root cause**: PR #207 introduced the detailed serializer call without its helper definition, and the 1.4.255 release faithfully bundled that incomplete committed source. Existing coverage asserted source text but never executed the detailed route from source or the packaged sidecar, so the runtime crash passed every release gate.
+
+**Acceptance**:
+- The detailed exact-task path executes with subtasks absent, null, empty, or containing null/malformed entries and always returns a safe array.
+- Runtime coverage executes the same detailed serializer in source and freshly generated Electron bundle; source-text presence and syntax-only checks are insufficient.
+- User scoping and deleted-task exclusion remain intact, expected detailed fields remain present, and auth/session/token secrets remain absent.
+- Local API suites, typecheck, lint, full tests, Electron main build, package validation, and Electron packaging pass.
+- A version above 1.4.255 is deployed; the installed real-profile app returns HTTP 200 for the reported exact task and Hermes reads it end to end without mutating production data.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7320,6 +7336,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1952** | **P0** | 🔄 **Hydrate Electron auth backup into the live Supabase client and restore protected sidecar reads after restart** |
 | ~~**TASK-1953**~~ | **P0** | ✅ **Preserve blocked remote Canvas projection updates and replay latest store geometry after interaction guards clear** |
 | ~~**BUG-1954**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.255; authenticated empty projections recover and the real Canvas empty state is opaque** |
+| **BUG-1955** | **P0** | 🔄 **Restore packaged exact-task reads with executable source/bundle regression and ship above Electron 1.4.255** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

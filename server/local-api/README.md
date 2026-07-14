@@ -96,6 +96,35 @@ forwarded a session to the sidecar.
 ] }
 ```
 
+### `GET /api/tasks/inventory?limit=100`
+
+Returns a complete, bearer-protected snapshot of every open task visible in the
+authenticated personal or workspace scope. Full mode follows stable keyset pages
+internally, verifies that the scoped canonical task change sequence stayed fixed,
+and emits `total` only after every page succeeds without a concurrent membership
+change. Consumers must require `fresh=true`, `complete=true`, and the stable
+`changeSequence` before treating `total` as exact.
+
+For explicit paging, use `mode=page`; pass the opaque `nextCursor` only with that
+mode. Stateless page responses always use `complete=false` and never expose a
+global `total`, including the terminal page. A failed page also includes a typed
+error. Soft-deleted, done, and completion-history rows are excluded.
+
+```json
+{
+  "source": "flowstate",
+  "scope": "all open tasks visible to the authenticated user",
+  "capturedAt": "2026-07-14T12:00:00.000Z",
+  "appVersion": "1.4.260",
+  "fresh": true,
+  "complete": true,
+  "changeSequence": 12345,
+  "total": 61,
+  "items": [],
+  "page": { "limit": 100, "nextCursor": null, "hasMore": false }
+}
+```
+
 ### `GET /api/assistant/context`
 Bearer-protected read-only summary for local personal-assistant clients such as
 Hermes. It is user-scoped through the same Local Task API auth context and

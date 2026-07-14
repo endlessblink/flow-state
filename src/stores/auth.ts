@@ -227,8 +227,11 @@ export const useAuthStore = defineStore('auth', () => {
   // TASK-1797: Keep the Electron Local Task API sidecar's session in sync with
   // ours (no-op outside Electron / when the API is disabled). Fires on sign-in,
   // token refresh, and sign-out.
-  watch([session, isRestoringSession], ([s, restoring]) => {
-    syncLocalApiSession(restoring ? null : s)
+  watch([session, isRestoringSession, isInitialized], ([s, restoring, initialized]) => {
+    // Startup absence is not a sign-out. Keep any still-valid main/sidecar session
+    // until auth-js has finished validating the renderer's durable session candidate.
+    if (restoring || (!s && !initialized)) return
+    syncLocalApiSession(s)
   }, { immediate: true })
   const publishLocalApiRendererAuthState = () => {
     syncLocalApiRendererAuthState({

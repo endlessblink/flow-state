@@ -367,7 +367,7 @@ describe('Auth Flow — initialize()', () => {
     expect(store.isOfflineGracePeriod).toBe(true)
     expect(store.canSyncRemotely).toBe(false)
     expect(store.initializationFailed).toBe(false)
-    expect(mockSyncLocalApiSession).toHaveBeenLastCalledWith(null)
+    expect(mockSyncLocalApiSession).not.toHaveBeenCalled()
   })
 
   it('5. initialize() with active session sets isAuthenticated=true and user', async () => {

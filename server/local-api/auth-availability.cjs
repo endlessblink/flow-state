@@ -7,7 +7,6 @@ function classifyMissingAuthContext(rendererAuthState) {
   const retainedSignedInShell = !!(
     state
     && state.isInitialized
-    && state.isAuthenticated
     && state.hasUser
   )
 
@@ -23,18 +22,24 @@ function classifyMissingAuthContext(rendererAuthState) {
   if (retainedSignedInShell && !state.canSyncRemotely) {
     return {
       status: 503,
-      body: { error: 'auth_reconnecting' },
+      body: {
+        error: 'reauth_required',
+        action: 'wait_or_sign_in_again',
+      },
     }
   }
   if (retainedSignedInShell && state.canSyncRemotely) {
     return {
       status: 503,
-      body: { error: 'sidecar_auth_unavailable' },
+      body: {
+        error: 'sidecar_auth_bridge_failed',
+        action: 'restart_or_sign_in_again',
+      },
     }
   }
   return {
     status: 503,
-    body: { error: 'not_signed_in' },
+    body: { error: 'signed_out' },
   }
 }
 

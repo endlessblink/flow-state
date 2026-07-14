@@ -20,11 +20,14 @@ function functionBody(name: string): string {
 describe('Local API sidecar timer endpoint regression contract', () => {
   it('classifies missing auth context from the renderer heartbeat before protected routes', () => {
     const classifierImport = SERVER_CJS.indexOf("require('./auth-availability.cjs')")
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
     const ctxCheck = SERVER_CJS.indexOf('classifyMissingAuthContext(rendererAuthState)')
     const tasksRoute = SERVER_CJS.indexOf("path === '/api/tasks'")
 
     expect(classifierImport).toBeGreaterThan(-1)
+    expect(tokenCheck).toBeGreaterThan(-1)
     expect(ctxCheck).toBeGreaterThan(-1)
+    expect(tokenCheck).toBeLessThan(ctxCheck)
     expect(ctxCheck).toBeLessThan(tasksRoute)
   })
 
@@ -379,6 +382,21 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).toContain('parseTaskSearchParams(url.searchParams)')
     expect(body).toContain('buildTaskSearchQuery(ctx, input)')
     expect(body).toContain('isCompletionRecord: row.is_completion_record')
+    expect(body).not.toContain('accessToken')
+    expect(body).not.toContain('refreshToken')
+  })
+
+  it('exposes a bearer-protected complete inventory receipt instead of a capped task sample', () => {
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+    const route = SERVER_CJS.indexOf("path === '/api/tasks/inventory'")
+    const body = functionBody('handleGetTaskInventory')
+
+    expect(route, 'task inventory route not found').toBeGreaterThan(tokenCheck)
+    expect(SERVER_CJS).toContain("require('./task-inventory.cjs')")
+    expect(body).toContain('parseTaskInventoryParams(url.searchParams)')
+    expect(body).toContain('readCompleteTaskInventory')
+    expect(body).toContain('readTaskInventoryPage')
+    expect(body).toContain('APP_VERSION')
     expect(body).not.toContain('accessToken')
     expect(body).not.toContain('refreshToken')
   })

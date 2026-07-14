@@ -36,11 +36,26 @@ const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
 const { buildTaskSearchQuery, parseTaskSearchParams } = require('./task-search.cjs')
+const {
+  parseTaskInventoryParams,
+  readCompleteTaskInventory,
+  readTaskInventoryPage,
+} = require('./task-inventory.cjs')
 const { scopeTaskQuery } = require('./task-scope.cjs')
 
 // --- Mode detection ---------------------------------------------------------
 // parentPort exists only when launched as an Electron utilityProcess.
-const PARENT_PORT = process.parentPort || null
+const PROCESS_IPC_PORT = typeof process.send === 'function'
+  ? {
+      on(event, handler) {
+        if (event === 'message') process.on('message', (data) => handler({ data }))
+      },
+      postMessage(data) {
+        process.send(data)
+      },
+    }
+  : null
+const PARENT_PORT = process.parentPort || PROCESS_IPC_PORT
 const TOKEN_MODE = !!PARENT_PORT || process.env.FLOW_STATE_API_MODE === 'token'
 
 // dotenv is only useful for the standalone service-role run; harmless otherwise.
@@ -492,6 +507,22 @@ async function handleGetTasks(url, res) {
     canonicalRevision: r.canonical_revision,
   }))
   send(res, 200, { tasks })
+}
+
+async function handleGetTaskInventory(url, res) {
+  const parsed = parseTaskInventoryParams(url.searchParams)
+  if (!parsed.ok) return send(res, 400, { complete: false, error: parsed.error })
+
+  const input = {
+    limit: parsed.limit,
+    cursor: parsed.cursor,
+    capturedAt: new Date().toISOString(),
+    appVersion: APP_VERSION,
+  }
+  const result = parsed.mode === 'page'
+    ? await readTaskInventoryPage(ctx, input)
+    : await readCompleteTaskInventory(ctx, input)
+  return send(res, result.error ? 502 : 200, result)
 }
 
 function toSafeTask(record, detailed = false) {
@@ -1303,19 +1334,24 @@ const server = http.createServer(async (req, res) => {
       return await handleGetTimerDiagnostics(res)
     }
 
+    // Renderer-owned timer controls are an internal signed-in boundary and do
+    // not use the external-app bearer token.
+    if (req.method === 'POST' && path === '/api/timer/control') {
+      if (!ctx) return send(res, 503, { error: 'not signed in' })
+      return await handlePostTimerControl(req, res)
+    }
+
+    // Protected data routes must validate the caller before disclosing even
+    // redacted auth-availability state.
+    if (TOKEN) {
+      const auth = req.headers.authorization || ''
+      if (auth !== `Bearer ${TOKEN}`) return send(res, 401, { error: 'unauthorized' })
+    }
+
     // Data routes require an auth context (token mode: until the app signs in).
     if (!ctx) {
       const unavailable = classifyMissingAuthContext(rendererAuthState)
       return send(res, unavailable.status, unavailable.body)
-    }
-
-    if (req.method === 'POST' && path === '/api/timer/control') {
-      return await handlePostTimerControl(req, res)
-    }
-
-    if (TOKEN) {
-      const auth = req.headers.authorization || ''
-      if (auth !== `Bearer ${TOKEN}`) return send(res, 401, { error: 'unauthorized' })
     }
 
     if (req.method === 'GET' && path === '/api/tasks') {
@@ -1323,6 +1359,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && path === '/api/tasks/search') {
       return await handleSearchTasks(url, res)
+    }
+    if (req.method === 'GET' && path === '/api/tasks/inventory') {
+      return await handleGetTaskInventory(url, res)
     }
     if (req.method === 'GET' && path === '/api/assistant/context') {
       return await handleGetAssistantContext(res)

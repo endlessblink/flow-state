@@ -28,6 +28,23 @@ describe('Local API missing auth context classification', () => {
     })
   })
 
+  it.skipIf(!existsSync(modulePath))('classifies the real initialized cached-shell heartbeat as re-auth required', () => {
+    const { classifyMissingAuthContext } = require(modulePath)
+    expect(classifyMissingAuthContext({
+      isAuthenticated: false,
+      hasUser: true,
+      canSyncRemotely: false,
+      reauthRequired: true,
+      isInitialized: true,
+    })).toEqual({
+      status: 503,
+      body: {
+        error: 'reauth_required',
+        action: 'sign_in_again',
+      },
+    })
+  })
+
   it.skipIf(!existsSync(modulePath))('reports bounded refresh grace without claiming sign-out', () => {
     const { classifyMissingAuthContext } = require(modulePath)
     expect(classifyMissingAuthContext({
@@ -38,7 +55,10 @@ describe('Local API missing auth context classification', () => {
       isInitialized: true,
     })).toEqual({
       status: 503,
-      body: { error: 'auth_reconnecting' },
+      body: {
+        error: 'reauth_required',
+        action: 'wait_or_sign_in_again',
+      },
     })
   })
 
@@ -52,7 +72,10 @@ describe('Local API missing auth context classification', () => {
       isInitialized: true,
     })).toEqual({
       status: 503,
-      body: { error: 'sidecar_auth_unavailable' },
+      body: {
+        error: 'sidecar_auth_bridge_failed',
+        action: 'restart_or_sign_in_again',
+      },
     })
   })
 
@@ -60,7 +83,7 @@ describe('Local API missing auth context classification', () => {
     const { classifyMissingAuthContext } = require(modulePath)
     expect(classifyMissingAuthContext(null)).toEqual({
       status: 503,
-      body: { error: 'not_signed_in' },
+      body: { error: 'signed_out' },
     })
   })
 })

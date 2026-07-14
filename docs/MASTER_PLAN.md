@@ -2197,6 +2197,7 @@ _Original plan below._
 - [x] ~~**TASK-1953 — Preserve blocked remote Canvas projection updates**: coalesce remote task/group projection requests while Canvas interaction guards are active, replay the latest store state after the operation returns idle, and prove two-client geometry cannot remain stale after Realtime updates the store.~~ Completed 2026-07-14.
 - [x] **BUG-1954 — Recover signed-in Electron from an empty renderer projection**: shipped in Electron 1.4.255; authenticated empty projections now rebaseline the still-active scope, and the true Canvas empty-state surface uses the opaque design-system overlay.
 - [x] ~~**BUG-1955 — Restore packaged exact-task reads**: make the detailed Local Task API serializer execute safely with absent, null, empty, or malformed subtasks; add an executable source-and-bundle regression; and ship a version above Electron 1.4.255 with live Hermes read-back proof.~~ Completed 2026-07-14 in Electron 1.4.256.
+- [ ] **TASK-1956 — Reliable complete FlowState task inventory for Hermes**: recover renderer-to-sidecar auth after restart, expose a typed complete paginated open-task inventory with stable receipts, and prevent partial or stale samples from becoming exact assistant counts.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4649,6 +4650,22 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Exact failure mode fixed**: the committed detailed-task serializer called an undefined subtask normalizer, so the packaged Electron Local Task API crashed only on `GET /api/tasks/:id` even though health and other routes remained available.
 
 **Explicitly not covered**: this does not claim to repair unrelated protected-route auth recovery tracked by TASK-1952, mutation/Realtime behavior, KDE timer paths, or every possible Local Task API route.
+
+### TASK-1956: Reliable complete FlowState task inventory for Hermes (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-14) | **Depends on**: TASK-1943, TASK-1950, TASK-1952
+
+**User repro**: Hermes can see a healthy packaged Local Task API while protected reads are signed out or limited to one 25-row page. It then falls back to stale snapshots or ledger-file parsing and can present a partial count as the complete live FlowState backlog.
+
+**Acceptance**:
+- A valid remotely syncable renderer session reaches or deterministically repairs a blind sidecar after Electron restart; cached/offline shells return `reauth_required`, genuine sign-out returns `signed_out`, and expired backups are never replayed.
+- A bearer-protected read-only inventory returns all open visible tasks with stable keyset pagination, exact UUID deduplication, receipt metadata, one authenticated scope, and `complete=true` only after every page succeeds.
+- Partial pages, failed later pages, and cached fallbacks cannot emit an exact current total; cached evidence is explicitly `fresh=false` and `complete=false`.
+- Soft-deleted, completed, completion-history, and cross-scope rows are excluded; exact UUID reads preserve canonical revision and supported metadata.
+- Source, packaged-sidecar, renderer/main/preload, redacted diagnostic, and Hermes connector regressions cover the reported restart, truncation, stale-cache, and invalid-search shapes.
+- Full tests, lint, build, Electron packaging, installed-runtime auth/inventory proof, updater manifest/artifact verification, commit, and push are complete before this task is marked done.
+
+**Explicitly not covered**: authoritative Notion or Obsidian inventory validation; this task makes FlowState complete and reconcilable without using file parsing as a substitute for its API.
 
 **Regression added for reported repro**: the executable test spawns both source and freshly bundled or extracted packaged sidecars, performs authenticated exact-task reads across malformed and valid subtask shapes, and verifies user/workspace/deleted filters plus the response allowlist.
 
@@ -7365,6 +7382,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1953**~~ | **P0** | ✅ **Preserve blocked remote Canvas projection updates and replay latest store geometry after interaction guards clear** |
 | ~~**BUG-1954**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.255; authenticated empty projections recover and the real Canvas empty state is opaque** |
 | ~~**BUG-1955**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.256 with executable source/package coverage and live Hermes exact-task read-back** |
+| **TASK-1956** | **P0** | 🔄 **Reliable complete FlowState inventory with restart-safe sidecar auth, typed freshness/completeness, stable pagination, and packaged proof** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

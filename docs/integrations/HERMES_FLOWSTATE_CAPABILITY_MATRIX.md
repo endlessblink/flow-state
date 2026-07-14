@@ -12,7 +12,8 @@ subset exists, **missing** = domain/UI capability exists but is not exposed,
 |---|---|---|---|---|---|
 | Health | Electron sidecar lifecycle | live | live | read-only | Sidecar health; keep |
 | Assistant context summary | AI memory/context queries | live | live | read-only, aggregate only | Read-back only; keep summaries rather than raw chats |
-| List open/done/due tasks | task query layer | live, 25 cap | live | read-only | Search/Today/Inbox comparison; add cursors/ranges |
+| Complete open-task inventory | scoped task query layer | live, stable keyset pages with typed complete/fresh receipt | live | read-only | Exact total is valid only when the live receipt is both fresh and complete |
+| List done/due tasks | task query layer | live, 25 cap | live | read-only | Search/Today/Inbox comparison; retain as a bounded filter, not an inventory count |
 | Search title/description | global task identity lookup | live | live | read-only | Exact IDs returned; add cursor/project filters |
 | Get exact task | task mapper/query | live | live | read-only | Returns recurrence, subtasks, blocks, Canvas placement; use before/after writes |
 | Create task | `taskOperations.createTask` | live | live | meaningful mutation; current endpoint has no preview/idempotency | Renderer reload; adapt to command/receipt substrate |

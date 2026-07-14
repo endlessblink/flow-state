@@ -476,6 +476,8 @@ describe('Auth Flow — initialize()', () => {
     expect(store.canSyncRemotely).toBe(false)
     expect(store.user?.id).toBe('user-test-001')
     expect(store.isOfflineGracePeriod).toBe(true)
+    expect(store.reauthRequired).toBe(true)
+    expect(mockPersistPrimaryAuthSession).not.toHaveBeenCalled()
   })
 
   it('8e. initialize() keeps the signed-in shell when an expired Electron session cannot refresh immediately', async () => {

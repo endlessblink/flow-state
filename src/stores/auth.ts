@@ -328,6 +328,39 @@ export const useAuthStore = defineStore('auth', () => {
     startReconnectRefreshRecovery()
   }
 
+  const keepSessionForExplicitReauth = (
+    recoverableSession: Session,
+    logMessage: string,
+    authError: AuthError,
+  ) => {
+    console.warn(logMessage)
+    session.value = recoverableSession
+    user.value = recoverableSession.user
+    error.value = authError
+    isOfflineGracePeriod.value = true
+    isRestoringSession.value = true
+    reauthRequired.value = true
+
+    // A server-confirmed invalid/used refresh token is terminal. Retrying it or
+    // persisting it as the next-launch recovery source only repeats the failure.
+    if (graceDeadlineTimer) clearTimeout(graceDeadlineTimer)
+    if (graceRetryTimer) clearInterval(graceRetryTimer)
+    if (reconnectRefreshTimer) clearTimeout(reconnectRefreshTimer)
+    if (refreshTimer) clearTimeout(refreshTimer)
+    graceDeadlineTimer = null
+    graceRetryTimer = null
+    reconnectRefreshTimer = null
+    refreshTimer = null
+
+    void import('@/composables/useToast').then(({ useToast }) => {
+      useToast().showToast(
+        'Your FlowState session expired and cannot refresh. Sign in again to reconnect Hermes.',
+        'error',
+        { duration: 15000 },
+      )
+    }).catch(() => { /* headless/test env — heartbeat still carries reauthRequired */ })
+  }
+
   /**
    * BUG-1918: repopulate the stores after a sign-in, in the same order a page reload uses.
    *
@@ -439,11 +472,10 @@ export const useAuthStore = defineStore('auth', () => {
               const m = (refreshErr?.message || '').toLowerCase()
               if (refreshErr?.status === 400 || m.includes('refresh token') || m.includes('already used')) {
                 await clearAuthSessionBackup()
-                keepSessionForReconnect(
+                keepSessionForExplicitReauth(
                   restoredBackupSession,
-                  '[AUTH] Electron backup refresh token already used — cleared stale backup, keeping signed-in shell for reconnect',
+                  '[AUTH] Electron backup refresh token is terminal — cleared stale backup and requiring sign-in',
                   refreshErr,
-                  { persistBackup: false },
                 )
                 return
               }

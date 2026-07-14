@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 const harnessPath = 'scripts/db/test-reliable-assistant-contract.sh'
 const concurrencyPath = 'scripts/db/test-canonical-notion-concurrency.sh'
+const recurrenceConcurrencyPath = 'scripts/db/test-merge-tasks-recurrence-concurrency.sh'
 
 describe('TASK-1949 canonical assistant disposable reliability harness', () => {
   it('creates and always cleans a unique disposable database', () => {
@@ -21,17 +22,31 @@ describe('TASK-1949 canonical assistant disposable reliability harness', () => {
     const source = readFileSync(harnessPath, 'utf8')
 
     expect(source).toContain('20260713011000_merge_tasks_rpc.sql')
+    expect(source).toContain('20260715010000_merge_tasks_recurrence_resolution.sql')
     expect(source).toContain('20260713012000_canonical_task_contract.sql')
     expect(source).toContain('20260714010000_canonical_notion_activation.sql')
     expect(source).toContain('20260714020000_canonical_uuid_compatibility.sql')
     expect(source).toContain('test-canonical-task-contract.sql')
     expect(source).toContain('test-merge-tasks-rpc.sql')
+    expect(source).toContain('test-merge-tasks-recurrence-concurrency.sh')
     expect(source).toContain('test-canonical-notion-activation.sql')
     expect(source).toContain('test-canonical-notion-concurrency.sh')
     expect(source.indexOf('20260713012000_canonical_task_contract.sql'))
       .toBeLessThan(source.indexOf('20260714010000_canonical_notion_activation.sql'))
     expect(source.indexOf('20260714010000_canonical_notion_activation.sql'))
       .toBeLessThan(source.indexOf('20260714020000_canonical_uuid_compatibility.sql'))
+  })
+
+  it('proves recurrence preview stability and concurrent receipt replay across sessions', () => {
+    expect(existsSync(recurrenceConcurrencyPath)).toBe(true)
+    const source = readFileSync(recurrenceConcurrencyPath, 'utf8')
+
+    expect(source).toContain('concurrent-recurrence-request')
+    expect(source).toContain('SELECT pg_sleep(1)')
+    expect(source).toContain('cmp -s')
+    expect(source).toContain('Added after approval')
+    expect(source).toContain('state_conflict')
+    expect(source).toContain('separate-transaction preview, related-state binding, and concurrent recurrence apply replay')
   })
 
   it('executes the watchdog authority signature and valid-index probe in the disposable database', () => {

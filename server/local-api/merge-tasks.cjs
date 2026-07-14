@@ -18,9 +18,11 @@ const ERROR_STATUS = {
   incompatible_status: 409,
   incompatible_subtasks: 409,
   incompatible_task_context: 409,
+  invalid_recurrence_resolution: 400,
   invalid_request: 400,
   not_authenticated: 401,
   not_found: 404,
+  recurrence_history_unsupported: 409,
   state_conflict: 409,
 }
 
@@ -36,6 +38,7 @@ async function executeMergeTasks(context, survivorTaskId, body, notifyTaskMutati
   const preview = body.preview !== false
   const requestId = typeof body.requestId === 'string' ? body.requestId.trim() : ''
   const previewVersion = typeof body.previewVersion === 'string' ? body.previewVersion.trim() : ''
+  const recurrenceResolution = body.recurrenceResolution
 
   if (!survivorTaskId || typeof survivorTaskId !== 'string' || !duplicateTaskId) {
     return failure('invalid_request', 'exact survivor and duplicate task ids are required')
@@ -46,15 +49,30 @@ async function executeMergeTasks(context, survivorTaskId, body, notifyTaskMutati
   if (!preview && (!requestId || !previewVersion)) {
     return failure('approval_receipt_required', 'requestId and previewVersion are required for apply')
   }
+  if (recurrenceResolution !== undefined && (
+    !recurrenceResolution
+    || typeof recurrenceResolution !== 'object'
+    || Array.isArray(recurrenceResolution)
+  )) {
+    return failure('invalid_request', 'recurrenceResolution must be a canonical recurrence rule object')
+  }
 
-  const { data, error } = await context.supabase.rpc('flowstate_merge_tasks', {
+  const rpcName = recurrenceResolution === undefined
+    ? 'flowstate_merge_tasks'
+    : 'flowstate_merge_tasks_with_recurrence'
+  const params = {
     p_duplicate_task_id: duplicateTaskId,
     p_preview: preview,
     p_preview_version: previewVersion || null,
     p_request_id: requestId || null,
     p_survivor_task_id: survivorTaskId,
     p_workspace_id: context.activeWorkspaceId,
-  })
+  }
+  if (recurrenceResolution !== undefined) {
+    params.p_recurrence_resolution = recurrenceResolution
+  }
+
+  const { data, error } = await context.supabase.rpc(rpcName, params)
 
   if (error || !data || typeof data !== 'object') {
     return {
@@ -68,6 +86,24 @@ async function executeMergeTasks(context, survivorTaskId, body, notifyTaskMutati
 
   if (data.ok !== true) {
     const code = data.error && typeof data.error.code === 'string' ? data.error.code : ''
+    if (code === 'incompatible_recurrence' || code === 'recurring_merge_unsupported') {
+      return {
+        status: ERROR_STATUS[code] || 409,
+        body: {
+          ...data,
+          action: 'stop_mutations_and_request_recurrence_resolution',
+        },
+      }
+    }
+    if (code === 'recurrence_history_unsupported') {
+      return {
+        status: 409,
+        body: {
+          ...data,
+          action: 'stop_mutations_and_report_recurrence_history',
+        },
+      }
+    }
     return { status: ERROR_STATUS[code] || 500, body: data }
   }
 

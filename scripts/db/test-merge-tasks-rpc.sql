@@ -14,6 +14,12 @@ INSERT INTO auth.users (
   'merge-tasks-owner@test.flowstate', '', now(), now(), now(),
   '{"provider":"email","providers":["email"]}', '{}',
   'authenticated', 'authenticated', '', ''
+), (
+  'd0f10000-0000-4000-8000-000000000002',
+  '00000000-0000-0000-0000-000000000000',
+  'merge-tasks-viewer@test.flowstate', '', now(), now(), now(),
+  '{"provider":"email","providers":["email"]}', '{}',
+  'authenticated', 'authenticated', '', ''
 );
 
 INSERT INTO public.workspaces (id, name, owner_id) VALUES
@@ -21,7 +27,8 @@ INSERT INTO public.workspaces (id, name, owner_id) VALUES
   ('d0f10000-0000-4000-8000-000000000102', 'Wrong merge workspace', 'd0f10000-0000-4000-8000-000000000001');
 INSERT INTO public.workspace_members (workspace_id, user_id, role) VALUES
   ('d0f10000-0000-4000-8000-000000000101', 'd0f10000-0000-4000-8000-000000000001', 'owner'),
-  ('d0f10000-0000-4000-8000-000000000102', 'd0f10000-0000-4000-8000-000000000001', 'owner');
+  ('d0f10000-0000-4000-8000-000000000102', 'd0f10000-0000-4000-8000-000000000001', 'owner'),
+  ('d0f10000-0000-4000-8000-000000000101', 'd0f10000-0000-4000-8000-000000000002', 'viewer');
 
 INSERT INTO public.tasks (
   id, user_id, workspace_id, title, description, status, priority,
@@ -66,6 +73,36 @@ INSERT INTO public.tasks (
     'd0f10000-0000-4000-8000-000000000306', 'd0f10000-0000-4000-8000-000000000001',
     'd0f10000-0000-4000-8000-000000000101', 'Rollback duplicate', null,
     'planned', null, null, ARRAY['must-rollback'], '[]', '[]', '[]', null, null, 0, false, false, true
+  ),
+  (
+    'd0f10000-0000-4000-8000-000000000307', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000101', 'Established series survivor', null,
+    'planned', null, '2026-07-20', null, '[]', '[]', '[]',
+    '{"pattern":"daily","interval":1,"endType":"never"}', null, 0, false, false, true
+  ),
+  (
+    'd0f10000-0000-4000-8000-000000000308', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000101', 'Established series duplicate', null,
+    'planned', null, '2026-07-20', null, '[]', '[]', '[]',
+    '{"pattern":"daily","interval":2,"endType":"never"}', null, 0, false, false, true
+  ),
+  (
+    'd0f10000-0000-4000-8000-000000000309', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000101', 'Established series history', null,
+    'done', null, '2026-07-19', null, '[]', '[]', '[]', null,
+    'd0f10000-0000-4000-8000-000000000307', 1, true, false, false
+  ),
+  (
+    'd0f10000-0000-4000-8000-000000000310', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000101', 'Wrapper rollback survivor', null,
+    'planned', null, '2026-07-20', null, '[]', '[]', '[]',
+    '{"pattern":"daily","interval":1,"endType":"never"}', null, 0, false, false, true
+  ),
+  (
+    'd0f10000-0000-4000-8000-000000000311', 'd0f10000-0000-4000-8000-000000000001',
+    'd0f10000-0000-4000-8000-000000000101', 'Wrapper rollback duplicate', null,
+    'planned', null, '2026-07-20', null, '[]', '[]', '[]',
+    '{"pattern":"weekly","interval":1,"weekdays":[1],"endType":"never"}', null, 0, false, false, true
   );
 
 INSERT INTO public.task_comments (id, task_id, workspace_id, user_id, content)
@@ -91,6 +128,32 @@ SELECT set_config(
 );
 
 CREATE TEMP TABLE merge_results (key text PRIMARY KEY, payload jsonb NOT NULL) ON COMMIT DROP;
+
+SELECT set_config('request.jwt.claim.sub', 'd0f10000-0000-4000-8000-000000000002', true);
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"d0f10000-0000-4000-8000-000000000002","role":"authenticated"}',
+  true
+);
+INSERT INTO merge_results (key, payload)
+SELECT 'viewer_denied', public.flowstate_merge_tasks_with_recurrence(
+  'd0f10000-0000-4000-8000-000000000303', 'd0f10000-0000-4000-8000-000000000304',
+  '{"pattern":"daily","interval":3,"endType":"never"}', true, null, null,
+  'd0f10000-0000-4000-8000-000000000101'
+);
+DO $$
+BEGIN
+  IF (SELECT payload #>> '{error,code}' FROM merge_results WHERE key = 'viewer_denied') <> 'not_found' THEN
+    RAISE EXCEPTION 'FAIL: workspace viewer could preview a recurrence merge: %',
+      (SELECT payload FROM merge_results WHERE key = 'viewer_denied');
+  END IF;
+END $$;
+SELECT set_config('request.jwt.claim.sub', 'd0f10000-0000-4000-8000-000000000001', true);
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"d0f10000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
 
 INSERT INTO merge_results (key, payload)
 SELECT 'preview', public.flowstate_merge_tasks(
@@ -204,6 +267,158 @@ BEGIN
       (SELECT jsonb_object_agg(key, payload) FROM merge_results);
   END IF;
 END $$;
+
+INSERT INTO merge_results (key, payload)
+SELECT 'recurrence_preview', public.flowstate_merge_tasks_with_recurrence(
+  p_survivor_task_id => 'd0f10000-0000-4000-8000-000000000303',
+  p_duplicate_task_id => 'd0f10000-0000-4000-8000-000000000304',
+  p_recurrence_resolution => '{"pattern":"daily","interval":3,"endType":"never"}',
+  p_preview => true,
+  p_workspace_id => 'd0f10000-0000-4000-8000-000000000101'
+);
+
+DO $$
+DECLARE v jsonb := (SELECT payload FROM merge_results WHERE key = 'recurrence_preview');
+BEGIN
+  IF v #>> '{ok}' <> 'true'
+     OR v #>> '{preview}' <> 'true'
+     OR v #>> '{recurrenceResolution,pattern}' <> 'daily'
+     OR v #>> '{recurrenceResolution,interval}' <> '3'
+     OR nullif(v->>'previewVersion', '') IS NULL THEN
+    RAISE EXCEPTION 'FAIL: recurrence merge preview was incomplete: %', v;
+  END IF;
+  IF (SELECT recurrence_rule FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000303')
+       IS DISTINCT FROM '{"pattern":"daily","interval":1,"endType":"never"}'::jsonb
+     OR (SELECT recurrence_rule FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000304')
+       IS DISTINCT FROM '{"pattern":"weekly","interval":1,"weekdays":[1],"endType":"never"}'::jsonb
+     OR EXISTS (
+       SELECT 1 FROM public.flowstate_action_receipts
+       WHERE operation = 'merge_tasks_recurrence' AND request_id = 'recurrence-merge-request-1'
+     ) THEN
+    RAISE EXCEPTION 'FAIL: recurrence merge preview mutated state';
+  END IF;
+END $$;
+
+INSERT INTO merge_results (key, payload)
+SELECT 'recurrence_apply', public.flowstate_merge_tasks_with_recurrence(
+  p_survivor_task_id => 'd0f10000-0000-4000-8000-000000000303',
+  p_duplicate_task_id => 'd0f10000-0000-4000-8000-000000000304',
+  p_recurrence_resolution => '{"pattern":"daily","interval":3,"endType":"never"}',
+  p_preview => false,
+  p_request_id => 'recurrence-merge-request-1',
+  p_preview_version => (SELECT payload->>'previewVersion' FROM merge_results WHERE key = 'recurrence_preview'),
+  p_workspace_id => 'd0f10000-0000-4000-8000-000000000101'
+);
+
+INSERT INTO merge_results (key, payload)
+SELECT 'recurrence_retry', public.flowstate_merge_tasks_with_recurrence(
+  p_survivor_task_id => 'd0f10000-0000-4000-8000-000000000303',
+  p_duplicate_task_id => 'd0f10000-0000-4000-8000-000000000304',
+  p_recurrence_resolution => '{"pattern":"daily","interval":3,"endType":"never"}',
+  p_preview => false,
+  p_request_id => 'recurrence-merge-request-1',
+  p_preview_version => (SELECT payload->>'previewVersion' FROM merge_results WHERE key = 'recurrence_preview'),
+  p_workspace_id => 'd0f10000-0000-4000-8000-000000000101'
+);
+
+DO $$
+DECLARE
+  v_apply jsonb := (SELECT payload FROM merge_results WHERE key = 'recurrence_apply');
+  v_retry jsonb := (SELECT payload FROM merge_results WHERE key = 'recurrence_retry');
+BEGIN
+  IF v_apply #>> '{ok}' <> 'true'
+     OR v_apply #>> '{preview}' <> 'false'
+     OR v_apply #>> '{readBack,recurrenceRule,interval}' <> '3'
+     OR v_retry IS DISTINCT FROM v_apply
+     OR (SELECT recurrence_rule FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000303')
+       IS DISTINCT FROM '{"pattern":"daily","interval":3,"endType":"never"}'::jsonb
+     OR (SELECT is_deleted FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000304') IS DISTINCT FROM true
+     OR (SELECT recurrence_rule FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000304')
+       IS DISTINCT FROM '{"pattern":"weekly","interval":1,"weekdays":[1],"endType":"never"}'::jsonb THEN
+    RAISE EXCEPTION 'FAIL: recurrence merge apply/retry diverged: % / %', v_apply, v_retry;
+  END IF;
+END $$;
+
+DO $$
+DECLARE
+  v_invalid jsonb;
+  v_history jsonb;
+BEGIN
+  v_invalid := public.flowstate_merge_tasks_with_recurrence(
+    'd0f10000-0000-4000-8000-000000000307', 'd0f10000-0000-4000-8000-000000000308',
+    '{"pattern":"daily","interval":0,"endType":"never"}', true, null, null,
+    'd0f10000-0000-4000-8000-000000000101'
+  );
+  v_history := public.flowstate_merge_tasks_with_recurrence(
+    'd0f10000-0000-4000-8000-000000000307', 'd0f10000-0000-4000-8000-000000000308',
+    '{"pattern":"daily","interval":3,"endType":"never"}', true, null, null,
+    'd0f10000-0000-4000-8000-000000000101'
+  );
+  IF v_invalid #>> '{error,code}' <> 'invalid_recurrence_resolution'
+     OR v_history #>> '{error,code}' <> 'recurrence_history_unsupported'
+     OR (SELECT is_deleted FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000308') THEN
+    RAISE EXCEPTION 'FAIL: recurrence merge safety gates diverged: % / %', v_invalid, v_history;
+  END IF;
+END $$;
+
+INSERT INTO merge_results (key, payload)
+SELECT 'wrapper_rollback_preview', public.flowstate_merge_tasks_with_recurrence(
+  'd0f10000-0000-4000-8000-000000000310', 'd0f10000-0000-4000-8000-000000000311',
+  '{"pattern":"daily","interval":7,"endType":"never"}', true, null, null,
+  'd0f10000-0000-4000-8000-000000000101'
+);
+
+CREATE FUNCTION public.test_force_recurrence_resolution_failure()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.id = 'd0f10000-0000-4000-8000-000000000310'
+     AND NEW.recurrence_rule #>> '{interval}' = '7' THEN
+    RAISE EXCEPTION 'injected recurrence resolution failure';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER test_force_recurrence_resolution_failure
+BEFORE UPDATE ON public.tasks
+FOR EACH ROW EXECUTE FUNCTION public.test_force_recurrence_resolution_failure();
+
+DO $$
+DECLARE
+  v_failed boolean := false;
+  v_inner_receipts_before integer := (
+    SELECT count(*) FROM public.flowstate_action_receipts WHERE operation = 'merge_tasks'
+  );
+BEGIN
+  BEGIN
+    PERFORM public.flowstate_merge_tasks_with_recurrence(
+      'd0f10000-0000-4000-8000-000000000310', 'd0f10000-0000-4000-8000-000000000311',
+      '{"pattern":"daily","interval":7,"endType":"never"}', false,
+      'wrapper-rollback-request',
+      (SELECT payload->>'previewVersion' FROM merge_results WHERE key = 'wrapper_rollback_preview'),
+      'd0f10000-0000-4000-8000-000000000101'
+    );
+  EXCEPTION WHEN OTHERS THEN
+    v_failed := SQLERRM = 'injected recurrence resolution failure';
+  END;
+
+  IF NOT v_failed
+     OR (SELECT is_deleted FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000311')
+     OR (SELECT recurrence_rule FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000310')
+       IS DISTINCT FROM '{"pattern":"daily","interval":1,"endType":"never"}'::jsonb
+     OR (SELECT recurrence_rule FROM public.tasks WHERE id = 'd0f10000-0000-4000-8000-000000000311')
+       IS DISTINCT FROM '{"pattern":"weekly","interval":1,"weekdays":[1],"endType":"never"}'::jsonb
+     OR EXISTS (
+       SELECT 1 FROM public.flowstate_action_receipts
+       WHERE operation = 'merge_tasks_recurrence' AND request_id = 'wrapper-rollback-request'
+     )
+     OR (SELECT count(*) FROM public.flowstate_action_receipts WHERE operation = 'merge_tasks')
+       <> v_inner_receipts_before THEN
+    RAISE EXCEPTION 'FAIL: recurrence wrapper failure did not roll back every inner mutation';
+  END IF;
+END $$;
+
+DROP TRIGGER test_force_recurrence_resolution_failure ON public.tasks;
+DROP FUNCTION public.test_force_recurrence_resolution_failure();
 
 CREATE FUNCTION public.test_force_merge_archive_failure()
 RETURNS trigger LANGUAGE plpgsql AS $$

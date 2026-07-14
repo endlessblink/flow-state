@@ -2198,6 +2198,7 @@ _Original plan below._
 - [x] **BUG-1954 — Recover signed-in Electron from an empty renderer projection**: shipped in Electron 1.4.255; authenticated empty projections now rebaseline the still-active scope, and the true Canvas empty-state surface uses the opaque design-system overlay.
 - [x] ~~**BUG-1955 — Restore packaged exact-task reads**: make the detailed Local Task API serializer execute safely with absent, null, empty, or malformed subtasks; add an executable source-and-bundle regression; and ship a version above Electron 1.4.255 with live Hermes read-back proof.~~ Completed 2026-07-14 in Electron 1.4.256.
 - [ ] **TASK-1956 — Reliable complete FlowState task inventory for Hermes**: recover renderer-to-sidecar auth after restart, expose a typed complete paginated open-task inventory with stable receipts, and prevent partial or stale samples from becoming exact assistant counts.
+- [ ] **TASK-1957 — Atomic recurrence-aware duplicate merge for Hermes**: let an approved merge preview resolve an explicit canonical recurrence only for safe root tasks with no occurrence history, bind that resolution into the receipt, and make unresolved recurrence conflicts stop further assistant mutations.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4670,6 +4671,21 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Regression added for reported repro**: the executable test spawns both source and freshly bundled or extracted packaged sidecars, performs authenticated exact-task reads across malformed and valid subtask shapes, and verifies user/workspace/deleted filters plus the response allowlist.
 
 **Live boundary proof**: the public and installed 1.4.256 bytes match; redacted diagnostics show healthy real-profile authentication and remote sync; the reported exact task returns HTTP 200; Hermes' office-work `flowstate_get_task` handler reads it end to end.
+
+### TASK-1957: Atomic recurrence-aware duplicate merge for Hermes (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-15) | **Depends on**: TASK-1943, FEATURE-1943
+
+**User repro**: after the user confirmed that two tasks are duplicates and supplied the intended cadence, Hermes called the merge operation, received `incompatible_recurrence`, then continued with separate task updates. The duplicate remained unresolved and the separate writes were not one approved, atomic merge.
+
+**Acceptance**:
+- A merge without an explicit recurrence resolution remains non-mutating and returns a typed stop-and-clarify action.
+- A preview may select one validated canonical recurrence rule only when both rows are living root tasks and neither task participates in recurrence parents, children, completion history, legacy generated recurrence state, or another series identity.
+- The selected recurrence is included in the preview version, idempotency payload, exact approval UI, apply receipt, and read-back; apply updates the survivor and archives the duplicate in one transaction.
+- Unsupported series/history shapes still fail closed without changing either task, and a rejected merge cannot be treated as approval for follow-up task updates or deletion.
+- FlowState RPC/Local API and Hermes connector regressions cover absent, conflicting, invalid, stale-preview, replay, and rollback paths before packaged verification.
+
+**Explicitly not covered**: merging two established recurrence chains or rewriting completion history. Those require the broader series-management contract tracked by FEATURE-1945.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7383,6 +7399,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1954**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.255; authenticated empty projections recover and the real Canvas empty state is opaque** |
 | ~~**BUG-1955**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.256 with executable source/package coverage and live Hermes exact-task read-back** |
 | **TASK-1956** | **P0** | 🔄 **Reliable complete FlowState inventory with restart-safe sidecar auth, typed freshness/completeness, stable pagination, and packaged proof** |
+| **TASK-1957** | **P0** | 🔄 **Atomic recurrence-aware duplicate merge with preview-bound cadence resolution and stop-on-conflict assistant behavior** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

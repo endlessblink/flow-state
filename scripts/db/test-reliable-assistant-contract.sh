@@ -6,6 +6,7 @@ source_db="${FLOWSTATE_SOURCE_DB:-postgres}"
 test_db="canonical_assistant_${$}_${RANDOM}"
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 merge_migration="$root_dir/supabase/migrations/20260713011000_merge_tasks_rpc.sql"
+recurrence_merge_migration="$root_dir/supabase/migrations/20260715010000_merge_tasks_recurrence_resolution.sql"
 task_migration="$root_dir/supabase/migrations/20260713012000_canonical_task_contract.sql"
 notion_migration="$root_dir/supabase/migrations/20260714010000_canonical_notion_activation.sql"
 uuid_compatibility_migration="$root_dir/supabase/migrations/20260714020000_canonical_uuid_compatibility.sql"
@@ -25,6 +26,8 @@ docker exec "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
 
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$merge_migration" >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$recurrence_merge_migration" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$task_migration" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
@@ -56,6 +59,8 @@ END $$;
 SQL
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-merge-tasks-rpc.sql" >/dev/null
+FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
+  bash "$root_dir/scripts/db/test-merge-tasks-recurrence-concurrency.sh"
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-task-contract.sql" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \

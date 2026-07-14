@@ -413,11 +413,19 @@ export const useAuthStore = defineStore('auth', () => {
         if (!data.session) {
           restoredBackupSession = await restoreAuthSessionFromBackup()
           if (restoredBackupSession) {
-            const retry = await supabase.auth.getSession()
-            data = retry.data
-            sessionError = retry.error
+            // BUG-1952: auth-js has already initialized its in-memory session by this point.
+            // Writing the backup through the storage adapter does not make that live client
+            // re-read disk, so a second getSession() can keep returning null and overwrite the
+            // restored primary key. Hydrate through the supported auth API instead; it validates
+            // or refreshes the recovered token pair and updates memory plus durable storage.
+            const hydrated = await supabase.auth.setSession({
+              access_token: restoredBackupSession.access_token,
+              refresh_token: restoredBackupSession.refresh_token,
+            })
+            data = hydrated.data
+            sessionError = hydrated.error
             if (sessionError) {
-              console.error(`[AUTH:${tabId}] getSession after backup restore error:`, sessionError)
+              console.error(`[AUTH:${tabId}] setSession from backup error:`, sessionError)
               // TASK-1871: A stale/already-used refresh token in the Electron-safe backup
               // (common when multiple instances rotated the single-use token) must NOT
               // hard-fail auth init. Clear the dead backup so it isn't re-restored, and

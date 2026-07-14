@@ -382,4 +382,98 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).not.toContain('accessToken')
     expect(body).not.toContain('refreshToken')
   })
+
+  it('exposes bearer-protected preview-first subtask routes', () => {
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+    const route = SERVER_CJS.indexOf("path.match(/^\\/api\\/tasks\\/([^/]+)\\/subtasks$/)")
+    const itemRoute = SERVER_CJS.indexOf("path.match(/^\\/api\\/tasks\\/([^/]+)\\/subtasks\\/([^/]+)$/)")
+    const deleteRoute = SERVER_CJS.indexOf("path.match(/^\\/api\\/tasks\\/([^/]+)\\/subtasks\\/([^/]+)\\/delete$/)")
+
+    expect(route).toBeGreaterThan(tokenCheck)
+    expect(itemRoute).toBeGreaterThan(tokenCheck)
+    expect(deleteRoute).toBeGreaterThan(tokenCheck)
+    expect(SERVER_CJS).toContain('handleGetSubtasks')
+    expect(SERVER_CJS).toContain('handleCreateSubtask')
+    expect(SERVER_CJS).toContain('handlePatchSubtask')
+    expect(SERVER_CJS).toContain('handleDeleteSubtask')
+  })
+
+  it('reads only the user-owned task subtask payload', () => {
+    const body = functionBody('handleGetSubtasks')
+    const finder = functionBody('findTaskForSubtasks')
+
+    expect(body).toContain("findTaskForSubtasks(id, 'id,title,subtasks')")
+    expect(finder).toContain('.select(fields)')
+    expect(finder).toContain(".eq('user_id', userId)")
+    expect(finder).toContain(".eq('is_deleted', false)")
+    expect(body).toContain('normalizeSubtasks(existing.subtasks)')
+  })
+
+  it('defaults subtask mutations to preview and requires an idempotency key to apply', () => {
+    const validation = functionBody('validateSubtaskMutationMetadata')
+    const create = functionBody('handleCreateSubtask')
+    const patch = functionBody('handlePatchSubtask')
+    const deletion = functionBody('handleDeleteSubtask')
+
+    expect(validation).toContain('body.preview !== false')
+    expect(validation).toContain("error: 'requestId required when preview is false'")
+    expect(create).toContain('if (metadata.preview)')
+    expect(patch).toContain('if (metadata.preview)')
+    expect(deletion).toContain('if (metadata.preview)')
+  })
+
+  it('persists normalized subtask arrays and returns stable receipts', () => {
+    const create = functionBody('handleCreateSubtask')
+    const patch = functionBody('handlePatchSubtask')
+    const deletion = functionBody('handleDeleteSubtask')
+
+    for (const body of [create, patch, deletion]) {
+      expect(body).toContain(".from('tasks')")
+      expect(body).toContain(".eq('user_id', userId)")
+      expect(body).toContain('buildSubtaskReceipt')
+    }
+    expect(create).toContain('subtasks: updatedSubtasks')
+    expect(patch).toContain('subtasks: updatedSubtasks')
+    expect(deletion).toContain('subtasks: updatedSubtasks')
+  })
+
+  it('supports one preview-first atomic subtask batch receipt', () => {
+    const route = SERVER_CJS.indexOf("path.match(/^\\/api\\/tasks\\/([^/]+)\\/subtasks\\/batch$/)")
+    const body = functionBody('handleSubtaskBatch')
+
+    expect(route).toBeGreaterThan(-1)
+    expect(body).toContain('operations.length > 50')
+    expect(body).toContain('applySubtaskOperations')
+    expect(body).toContain("action: 'batch'")
+    expect(body).toContain('operationCount: applied.results.length')
+    expect(body).toContain('if (metadata.preview)')
+    expect(body).toContain('subtasks: applied.subtasks')
+  })
+
+  it('replays create and batch applies safely after the in-memory receipt cache is lost', () => {
+    const deterministic = functionBody('deterministicSubtaskId')
+    const create = functionBody('handleCreateSubtask')
+    const batch = functionBody('applySubtaskOperations')
+
+    expect(deterministic).toContain("crypto.createHash('sha256')")
+    expect(deterministic).toContain('userId')
+    expect(deterministic).toContain('requestId')
+    expect(deterministic).toContain('index')
+    expect(create).toContain('const persisted = normalizeSubtasks(existing.subtasks).find')
+    expect(create).toContain("buildSubtaskReceipt('create', id, persisted, metadata.requestId, true)")
+    expect(batch).toContain('deterministicSubtaskId(userId, taskId, requestId, operationIndex)')
+    expect(batch).toContain('existingIndex !== -1')
+    expect(batch).toContain("replayed: true")
+  })
+
+  it('treats already-applied update and delete retries as semantic successes', () => {
+    const patch = functionBody('handlePatchSubtask')
+    const deletion = functionBody('handleDeleteSubtask')
+
+    expect(patch).toContain('const alreadyApplied = !metadata.preview')
+    expect(patch).toContain("buildSubtaskReceipt('update', id, current[index], metadata.requestId, true)")
+    expect(deletion).toContain('if (!subtask)')
+    expect(deletion).toContain("buildSubtaskReceipt('delete', id, missing, metadata.requestId, true)")
+  })
+
 })

@@ -18,6 +18,7 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const {
   mockGetSession,
+  mockSetSession,
   mockSignInWithPassword,
   mockSignOut,
   mockRefreshSession,
@@ -41,6 +42,7 @@ const {
   ;(mockOnAuthStateChange as unknown as { _reset: () => void })._reset = () => { _listeners = [] }
   return {
     mockGetSession: vi.fn(),
+    mockSetSession: vi.fn(),
     mockSignInWithPassword: vi.fn(),
     mockSignOut: vi.fn(),
     mockRefreshSession: vi.fn(),
@@ -64,6 +66,7 @@ vi.mock('@/services/auth/supabase', () => ({
   supabase: {
     auth: {
       getSession: mockGetSession,
+      setSession: mockSetSession,
       signInWithPassword: mockSignInWithPassword,
       signOut: mockSignOut,
       refreshSession: mockRefreshSession,
@@ -137,9 +140,8 @@ function buildMockSession(overrides: Record<string, unknown> = {}) {
 async function enterGraceViaBackupRestore(store: ReturnType<typeof useAuthStore>) {
   // Same path as auth-flow test 8d: Supabase reports no session, Electron
   // backup restores one → signed-in shell + offline grace.
-  mockGetSession
-    .mockResolvedValueOnce({ data: { session: null }, error: null })
-    .mockResolvedValueOnce({ data: { session: null }, error: null })
+  mockGetSession.mockResolvedValueOnce({ data: { session: null }, error: null })
+  mockSetSession.mockResolvedValueOnce({ data: { session: null }, error: null })
   mockRestoreAuthSessionFromBackup.mockResolvedValue(buildMockSession())
   await store.initialize()
   expect(store.isOfflineGracePeriod).toBe(true)

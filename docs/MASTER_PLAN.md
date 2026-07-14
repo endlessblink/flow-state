@@ -2193,6 +2193,7 @@ _Original plan below._
 - [x] ~~**TASK-1949 — Canonical assistant reliability harness and watchdog**: execute the combined canonical task and Notion activation contracts against a disposable database, inject same-operation and conflicting-operation races, keep the focused cohort in the fixed daily regression lane, and alert on redacted canonical/Notion integrity failures without touching production data.~~ Completed 2026-07-14.
 - [x] ~~**TASK-1950 — Classify renderer-to-sidecar auth recovery precisely**: distinguish an expired cached signed-in shell, bounded token-refresh recovery, and a genuinely blind sidecar; return actionable protected-route errors and keep the live-boundary diagnostic from raising false sidecar-delivery incidents.~~ Completed 2026-07-14.
 - [x] ~~**TASK-1951 — Production UUID compatibility for canonical assistant contracts**: make canonical task/Notion RPCs, rollback suites, and the VPS watchdog portable across text-ID development schemas and UUID production schemas; ship a forward migration and repeat live rollback-only proof before enabling writers.~~ Completed 2026-07-14.
+- [ ] **TASK-1952 — Hydrate Electron auth backup into the live Supabase client**: replace the ineffective post-startup storage reread with supported session hydration, preserve stale-token reconnect behavior, and prove packaged protected assistant reads recover after restart.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2474,6 +2475,24 @@ _Original plan below._
 **Regression added for reported repro**: UUID-shaped fixtures that remain valid on the text development schema, typed RPC variable assertions, text-projected ledger/watchdog joins, and double-application migration proof.
 
 **Live boundary proof**: The forward migration applied to the VPS Supabase database; both production suites completed and rolled back, exact fixture read-back was zero, and the installed watchdog reported `OK`.
+
+### TASK-1952: Hydrate Electron auth backup into the live Supabase client (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-14) | **Depends on**: TASK-1950, TASK-1951
+
+**Failure class**: The packaged renderer can load a durable backup identity while the primary auth key is null, but copying that backup into the async store after auth-js initializes does not hydrate auth-js memory. A second `getSession()` can therefore remain null, restore the primary key to null, and leave the Local API protected routes at 503.
+
+**Scope**:
+- Reproduce the already-initialized-client failure in the auth-store regression suite.
+- Hydrate the recovered token pair through Supabase auth's supported session API instead of assuming a storage write triggers a reread.
+- Preserve stale/already-used refresh-token cleanup and bounded reconnect behavior.
+- Ship a new Electron updater version and require live diagnostics to show a durable primary session, remote sync, protected assistant context, and no failures.
+
+**Acceptance**:
+- A valid backup session makes the initialized auth client authenticated and persists the refreshed primary session.
+- A rejected backup remains write-blocked, clears only the dead backup, and keeps the user shell available for explicit reconnect.
+- Focused auth tests, type-check, release gates, package validation, and public updater proof pass.
+- The installed packaged app reports the new version with authenticated protected reads and zero live-boundary failures.
 
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
@@ -7236,6 +7255,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1949**~~ | **P0** | ✅ **Canonical assistant disposable DB harness, race/fault injection, fixed daily regression coverage, and redacted VPS integrity watchdog** |
 | ~~**TASK-1950**~~ | **P0** | ✅ **Renderer-to-sidecar auth recovery classification with actionable protected-route errors and false-incident suppression** |
 | ~~**TASK-1951**~~ | **P0** | ✅ **Production UUID compatibility for canonical task/Notion RPCs, rollback suites, and VPS watchdog** |
+| **TASK-1952** | **P0** | 🔄 **Hydrate Electron auth backup into the live Supabase client and restore protected sidecar reads after restart** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

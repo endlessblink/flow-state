@@ -17,6 +17,7 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const {
   mockGetSession,
+  mockSetSession,
   mockSignInWithPassword,
   mockSignOut,
   mockRefreshSession,
@@ -50,6 +51,7 @@ const {
 
   return {
     mockGetSession: vi.fn(),
+    mockSetSession: vi.fn(),
     mockSignInWithPassword: vi.fn(),
     mockSignOut: vi.fn(),
     mockRefreshSession: vi.fn(),
@@ -82,6 +84,7 @@ vi.mock('@/services/auth/supabase', () => ({
   supabase: {
     auth: {
       getSession: mockGetSession,
+      setSession: mockSetSession,
       signInWithPassword: mockSignInWithPassword,
       signOut: mockSignOut,
       refreshSession: mockRefreshSession,
@@ -264,6 +267,7 @@ describe('Auth Flow — Initial State', () => {
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
     mockSignOut.mockResolvedValue({ error: null })
     mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockSetSession.mockResolvedValue({ data: { session: null }, error: null })
     mockPersistAuthSessionBackup.mockResolvedValue(undefined)
     mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
     mockClearAuthSessionBackup.mockResolvedValue(undefined)
@@ -298,6 +302,7 @@ describe('Auth Flow — initialize()', () => {
     vi.clearAllMocks()
     mockSignOut.mockResolvedValue({ error: null })
     mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockSetSession.mockResolvedValue({ data: { session: null }, error: null })
     mockPersistAuthSessionBackup.mockResolvedValue(undefined)
     mockRestoreAuthSessionFromBackup.mockResolvedValue(false)
     mockClearAuthSessionBackup.mockResolvedValue(undefined)
@@ -412,16 +417,19 @@ describe('Auth Flow — initialize()', () => {
 
   it('8b. initialize() restores a missing primary Electron auth session from backup', async () => {
     const session = buildMockSession()
-    mockGetSession
-      .mockResolvedValueOnce({ data: { session: null }, error: null })
-      .mockResolvedValueOnce({ data: { session }, error: null })
+    mockGetSession.mockResolvedValueOnce({ data: { session: null }, error: null })
+    mockSetSession.mockResolvedValueOnce({ data: { session }, error: null })
     mockRestoreAuthSessionFromBackup.mockResolvedValue(session)
 
     const store = useAuthStore()
     await store.initialize()
 
     expect(mockRestoreAuthSessionFromBackup).toHaveBeenCalledOnce()
-    expect(mockGetSession).toHaveBeenCalledTimes(2)
+    expect(mockSetSession).toHaveBeenCalledWith({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    })
+    expect(mockGetSession).toHaveBeenCalledOnce()
     expect(store.isAuthenticated).toBe(true)
     expect(store.isRestoringSession).toBe(false)
     expect(store.user?.id).toBe('user-test-001')
@@ -429,16 +437,16 @@ describe('Auth Flow — initialize()', () => {
 
   it('8d. initialize() keeps the signed-in shell when Electron backup restore succeeds but Supabase still reports no session', async () => {
     const session = buildMockSession()
-    mockGetSession
-      .mockResolvedValueOnce({ data: { session: null }, error: null })
-      .mockResolvedValueOnce({ data: { session: null }, error: null })
+    mockGetSession.mockResolvedValueOnce({ data: { session: null }, error: null })
+    mockSetSession.mockResolvedValueOnce({ data: { session: null }, error: null })
     mockRestoreAuthSessionFromBackup.mockResolvedValue(session)
 
     const store = useAuthStore()
     await store.initialize()
 
     expect(mockRestoreAuthSessionFromBackup).toHaveBeenCalledOnce()
-    expect(mockGetSession).toHaveBeenCalledTimes(2)
+    expect(mockSetSession).toHaveBeenCalledOnce()
+    expect(mockGetSession).toHaveBeenCalledOnce()
     expect(store.isAuthenticated).toBe(false)
     expect(store.isRestoringSession).toBe(true)
     expect(store.canSyncRemotely).toBe(false)
@@ -451,12 +459,11 @@ describe('Auth Flow — initialize()', () => {
       access_token: 'expired-restored-access-token',
       expires_at: Math.floor(Date.now() / 1000) - 60,
     })
-    mockGetSession
-      .mockResolvedValueOnce({ data: { session: null }, error: null })
-      .mockResolvedValueOnce({
-        data: { session: null },
-        error: { name: 'AuthError', message: 'Invalid Refresh Token: Already Used', status: 400 },
-      })
+    mockGetSession.mockResolvedValueOnce({ data: { session: null }, error: null })
+    mockSetSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: { name: 'AuthError', message: 'Invalid Refresh Token: Already Used', status: 400 },
+    })
     mockRestoreAuthSessionFromBackup.mockResolvedValue(restoredSession)
 
     const store = useAuthStore()

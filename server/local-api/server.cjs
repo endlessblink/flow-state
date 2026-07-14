@@ -160,6 +160,11 @@ function send(res, status, body) {
   res.end(json)
 }
 
+function notifyTaskMutation(operation, taskId) {
+  if (!PARENT_PORT || !taskId) return
+  PARENT_PORT.postMessage({ type: 'taskMutation', operation, taskId })
+}
+
 /** Reject anything that isn't a loopback Host header. */
 function isLoopbackHost(hostHeader) {
   if (!hostHeader) return false
@@ -262,6 +267,128 @@ function buildTaskInstanceResponse(task, instance, preview) {
   }
 }
 
+// --- Subtask helpers --------------------------------------------------------
+
+const subtaskMutationReceipts = new Map()
+
+function normalizeSubtasks(subtasks) {
+  return Array.isArray(subtasks) ? subtasks.filter((item) => item && typeof item === 'object') : []
+}
+
+function validateSubtaskMutationMetadata(body) {
+  if (!body || typeof body !== 'object') return { ok: false, error: 'body required' }
+  if (body.preview !== undefined && typeof body.preview !== 'boolean') {
+    return { ok: false, error: 'preview must be a boolean when provided' }
+  }
+  const preview = body.preview !== false
+  const requestId = typeof body.requestId === 'string' ? body.requestId.trim() : ''
+  if (!preview && !requestId) {
+    return { ok: false, error: 'requestId required when preview is false' }
+  }
+  return { ok: true, preview, requestId }
+}
+
+function buildSubtaskReceipt(action, taskId, subtask, requestId, replayed = false) {
+  return {
+    requestId: requestId || null,
+    action,
+    taskId,
+    subtaskId: subtask.id,
+    replayed,
+  }
+}
+
+function receiptKey(userId, taskId, requestId) {
+  return `${userId}:${taskId}:${requestId}`
+}
+
+function deterministicSubtaskId(userId, taskId, requestId, index = 0) {
+  const hex = crypto.createHash('sha256')
+    .update(`${userId}:${taskId}:${requestId}:${index}`)
+    .digest('hex')
+    .slice(0, 32)
+    .split('')
+  hex[12] = '5'
+  hex[16] = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16)
+  const value = hex.join('')
+  return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`
+}
+
+function rememberSubtaskResponse(key, response) {
+  subtaskMutationReceipts.set(key, response)
+  if (subtaskMutationReceipts.size > 500) {
+    subtaskMutationReceipts.delete(subtaskMutationReceipts.keys().next().value)
+  }
+}
+
+function replaySubtaskResponse(key, res) {
+  const cached = subtaskMutationReceipts.get(key)
+  if (!cached) return false
+  send(res, 200, {
+    ...cached,
+    receipt: { ...cached.receipt, replayed: true },
+  })
+  return true
+}
+
+function applySubtaskOperations(userId, taskId, requestId, initial, operations, now) {
+  const subtasks = [...initial]
+  const results = []
+  for (const [operationIndex, operation] of operations.entries()) {
+    if (!operation || !['create', 'update', 'delete'].includes(operation.action)) {
+      return { ok: false, error: 'operation action must be create|update|delete' }
+    }
+    if (operation.action === 'create') {
+      const title = typeof operation.title === 'string' ? operation.title.trim() : ''
+      if (!title) return { ok: false, error: 'create operation title required' }
+      const subtaskId = deterministicSubtaskId(userId, taskId, requestId, operationIndex)
+      const existingIndex = subtasks.findIndex((item) => item.id === subtaskId)
+      if (existingIndex !== -1) {
+        results.push({ action: 'create', subtask: subtasks[existingIndex], replayed: true })
+        continue
+      }
+      const subtask = {
+        id: subtaskId, parentTaskId: taskId, title, description: '',
+        completedPomodoros: 0, isCompleted: false, createdAt: now, updatedAt: now,
+      }
+      const order = operation.order === undefined ? subtasks.length : Number(operation.order)
+      if (!Number.isInteger(order) || order < 0) return { ok: false, error: 'order must be a non-negative integer' }
+      subtasks.splice(Math.min(order, subtasks.length), 0, subtask)
+      results.push({ action: 'create', subtask })
+      continue
+    }
+    const subtaskId = typeof operation.subtaskId === 'string' ? operation.subtaskId.trim() : ''
+    const index = subtasks.findIndex((item) => item.id === subtaskId)
+    if (index === -1 && operation.action === 'delete') {
+      results.push({ action: 'delete', subtask: { id: subtaskId }, replayed: true })
+      continue
+    }
+    if (index === -1) return { ok: false, error: 'subtask not found' }
+    const current = subtasks[index]
+    if (operation.action === 'delete') {
+      subtasks.splice(index, 1)
+      results.push({ action: 'delete', subtask: current })
+      continue
+    }
+    const updated = { ...current, updatedAt: now }
+    if (operation.title !== undefined) {
+      const title = typeof operation.title === 'string' ? operation.title.trim() : ''
+      if (!title) return { ok: false, error: 'title cannot be empty' }
+      updated.title = title
+    }
+    if (operation.completed !== undefined) {
+      if (typeof operation.completed !== 'boolean') return { ok: false, error: 'completed must be a boolean' }
+      updated.isCompleted = operation.completed
+    }
+    subtasks.splice(index, 1)
+    const order = operation.order === undefined ? index : Number(operation.order)
+    if (!Number.isInteger(order) || order < 0) return { ok: false, error: 'order must be a non-negative integer' }
+    subtasks.splice(Math.min(order, subtasks.length), 0, updated)
+    results.push({ action: 'update', subtask: updated })
+  }
+  return { ok: true, subtasks, results }
+}
+
 // --- Route handlers ---------------------------------------------------------
 
 async function handleGetTasks(url, res) {
@@ -315,6 +442,77 @@ async function handleGetTasks(url, res) {
   send(res, 200, { tasks })
 }
 
+function toSafeTask(record, detailed = false) {
+  const task = {
+    id: record.id,
+    title: record.title,
+    status: fromDbStatus(record.status),
+    priority: record.priority ?? null,
+    dueDate: toDateOnly(record.due_date),
+    projectId: record.project_id ?? null,
+  }
+  if (!detailed) return task
+  return {
+    ...task,
+    description: record.description || '',
+    progress: Number(record.progress) || 0,
+    dueTime: record.due_time || null,
+    tags: Array.isArray(record.tags) ? record.tags : [],
+    subtasks: normalizeSubtasks(record.subtasks),
+    instances: normalizeTaskInstances(record.instances),
+    recurrence: record.recurrence_rule
+      ? {
+          rule: record.recurrence_rule,
+          parentId: record.recurrence_parent_id || null,
+          count: Number(record.recurrence_count) || 0,
+          isCompletionRecord: record.is_completion_record === true,
+        }
+      : null,
+    isInInbox: record.is_in_inbox === true,
+    canvas: record.position || null,
+    createdAt: record.created_at || null,
+    updatedAt: record.updated_at || null,
+    completedAt: record.completed_at || null,
+  }
+}
+
+async function handleGetTask(id, res) {
+  const { supabase, userId } = ctx
+  const { data, error } = await supabase.from('tasks')
+    .select('id,title,description,status,priority,progress,due_date,due_time,project_id,tags,subtasks,instances,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,is_in_inbox,position,created_at,updated_at,completed_at')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .maybeSingle()
+  if (error) return send(res, 500, { error: error.message })
+  if (!data) return send(res, 404, { error: 'not found' })
+  return send(res, 200, { ok: true, task: toSafeTask(data, true) })
+}
+
+async function handleSearchTasks(url, res) {
+  const { supabase, userId } = ctx
+  const query = (url.searchParams.get('q') || '').trim()
+  const limitParam = Number(url.searchParams.get('limit'))
+  const limit = Math.min(Number.isInteger(limitParam) && limitParam > 0 ? limitParam : 25, 25)
+  if (!query) return send(res, 400, { error: 'q required' })
+  if (query.length > 200) return send(res, 400, { error: 'q must be at most 200 characters' })
+
+  // PostgREST `.or()` uses commas/parentheses as syntax. Replace those control
+  // characters rather than letting a search term alter the filter expression.
+  const safeQuery = query.replace(/[,()*]/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!safeQuery) return send(res, 400, { error: 'q must contain searchable text' })
+  const pattern = `*${safeQuery}*`
+  const { data, error } = await supabase.from('tasks')
+    .select('id,title,status,priority,due_date,project_id,updated_at')
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .or(`title.ilike.${pattern},description.ilike.${pattern}`)
+    .order('updated_at', { ascending: false })
+    .limit(limit)
+  if (error) return send(res, 500, { error: error.message })
+  return send(res, 200, { ok: true, tasks: (data || []).map((record) => toSafeTask(record)) })
+}
+
 async function handleCreateTask(req, res) {
   const { supabase, userId } = ctx
   const body = await readJsonBody(req)
@@ -346,7 +544,57 @@ async function handleCreateTask(req, res) {
 
   const { error } = await supabase.from('tasks').insert(row)
   if (error) return send(res, 500, { error: error.message })
+  notifyTaskMutation('create', id)
   send(res, 200, { ok: true, task: { id } })
+}
+
+async function handleNotionTaskActivation(req, res) {
+  const { supabase } = ctx
+  const body = await readJsonBody(req)
+  const preview = body.preview !== false
+  const notion = body.notion && typeof body.notion === 'object' ? body.notion : {}
+  const task = body.task && typeof body.task === 'object' ? body.task : {}
+  const operationId = typeof body.operationId === 'string' ? body.operationId.trim() : ''
+  if (!operationId) return send(res, 400, { error: 'operationId required' })
+  if (!preview && !(typeof body.previewDigest === 'string' && body.previewDigest.trim())) {
+    return send(res, 400, { error: 'previewDigest required when preview is false' })
+  }
+  if (!preview && !(typeof body.previewExpiresAt === 'string' && body.previewExpiresAt.trim())) {
+    return send(res, 400, { error: 'previewExpiresAt required when preview is false' })
+  }
+
+  const { data, error } = await supabase.rpc('activate_notion_task', {
+    p_operation_id: operationId,
+    p_notion_page_id: notion.pageId,
+    p_notion_data_source_id: notion.dataSourceId,
+    p_notion_url: notion.url,
+    p_notion_last_edited_at: notion.lastEditedAt,
+    p_title: task.title,
+    p_description: task.description || '',
+    p_priority: task.priority ?? null,
+    p_due_date: task.dueDate ?? null,
+    p_project_id: task.projectId ?? null,
+    p_work_block: body.workBlock ?? null,
+    p_preview: preview,
+    p_preview_digest: body.previewDigest || null,
+    p_preview_expires_at: body.previewExpiresAt || null,
+  })
+  if (error) return send(res, 500, { error: error.message })
+  if (!data || typeof data !== 'object') {
+    return send(res, 500, { error: 'Notion activation returned an invalid response' })
+  }
+  if (data.error) {
+    const conflictCodes = new Set([
+      'idempotency_conflict', 'stale_preview', 'preview_expired',
+    ])
+    const code = data.error && data.error.code
+    return send(res, conflictCodes.has(code) ? 409 : 400, data)
+  }
+  const receipt = data.receipt && typeof data.receipt === 'object' ? data.receipt : null
+  if (!preview && receipt && receipt.entityId) {
+    notifyTaskMutation('create', receipt.entityId)
+  }
+  send(res, 200, data)
 }
 
 async function handlePatchTask(id, req, res) {
@@ -397,7 +645,125 @@ async function handlePatchTask(id, req, res) {
 
   const { error } = await supabase.from('tasks').update(update).eq('id', id).eq('user_id', userId)
   if (error) return send(res, 500, { error: error.message })
+  notifyTaskMutation('update', id)
   send(res, 200, { ok: true })
+}
+
+const DONE_FOR_NOW_CONFLICTS = new Set([
+  'idempotency_conflict',
+  'stale_preview',
+  'occurrence_already_completed',
+])
+
+function doneForNowErrorStatus(code) {
+  if (code === 'unauthorized') return 401
+  if (code === 'task_not_found') return 404
+  if (DONE_FOR_NOW_CONFLICTS.has(code)) return 409
+  if (code === 'operation_failed') return 500
+  return 400
+}
+
+async function handleDoneForNow(id, req, res) {
+  const { supabase } = ctx
+  const body = await readJsonBody(req)
+  const preview = body.preview !== false
+
+  if (body.preview !== undefined && typeof body.preview !== 'boolean') {
+    return send(res, 400, { error: 'preview must be a boolean' })
+  }
+  if (body.nextDueDate !== undefined && !isValidDateOnly(body.nextDueDate)) {
+    return send(res, 400, { error: 'nextDueDate must be YYYY-MM-DD' })
+  }
+  if (!preview && (typeof body.requestId !== 'string' || !body.requestId.trim())) {
+    return send(res, 400, { error: 'requestId required when preview is false' })
+  }
+  if (!preview && (typeof body.previewVersion !== 'string' || !body.previewVersion.trim())) {
+    return send(res, 400, { error: 'previewVersion required when preview is false' })
+  }
+
+  const { data, error } = await supabase.rpc('done_for_now_task', {
+    p_task_id: id,
+    p_preview: preview,
+    p_request_id: preview ? null : body.requestId.trim(),
+    p_preview_version: preview ? null : body.previewVersion.trim(),
+    p_next_due_date: body.nextDueDate ?? null,
+  })
+  if (error) {
+    return send(res, 500, { error: { code: 'operation_failed', message: error.message } })
+  }
+  if (!data || data.ok !== true) {
+    const typedError = data && data.error && typeof data.error === 'object'
+      ? data.error
+      : { code: 'operation_failed', message: 'Done for now returned no result' }
+    return send(res, doneForNowErrorStatus(typedError.code), { error: typedError })
+  }
+
+  // `state` contains exact rows for renderer reconciliation. It is intentionally
+  // not part of the assistant-facing Local API response.
+  const { state: _rendererState, ...safeResult } = data
+  if (!preview) notifyTaskMutation('update', id)
+  return send(res, 200, safeResult)
+}
+
+const MERGE_TASK_CONFLICTS = new Set([
+  'idempotency_conflict',
+  'stale_preview',
+  'merge_conflict',
+  'recurring_merge_unsupported',
+])
+
+function mergeTaskErrorStatus(code) {
+  if (code === 'unauthorized') return 401
+  if (code === 'survivor_not_found' || code === 'duplicate_not_found') return 404
+  if (MERGE_TASK_CONFLICTS.has(code)) return 409
+  if (code === 'operation_failed') return 500
+  return 400
+}
+
+async function handleMergeTasks(survivorTaskId, req, res) {
+  const { supabase } = ctx
+  const body = await readJsonBody(req)
+  const preview = body.preview !== false
+  const duplicateTaskId = typeof body.duplicateTaskId === 'string'
+    ? body.duplicateTaskId.trim()
+    : ''
+
+  if (!duplicateTaskId) return send(res, 400, { error: 'duplicateTaskId required' })
+  if (duplicateTaskId === survivorTaskId) {
+    return send(res, 400, { error: { code: 'same_task', message: 'Survivor and duplicate must be different tasks' } })
+  }
+  if (body.preview !== undefined && typeof body.preview !== 'boolean') {
+    return send(res, 400, { error: 'preview must be a boolean' })
+  }
+  if (!preview && (typeof body.requestId !== 'string' || !body.requestId.trim())) {
+    return send(res, 400, { error: 'requestId required when preview is false' })
+  }
+  if (!preview && (typeof body.previewVersion !== 'string' || !body.previewVersion.trim())) {
+    return send(res, 400, { error: 'previewVersion required when preview is false' })
+  }
+
+  const { data, error } = await supabase.rpc('merge_tasks', {
+    p_survivor_task_id: survivorTaskId,
+    p_duplicate_task_id: duplicateTaskId,
+    p_preview: preview,
+    p_request_id: preview ? null : body.requestId.trim(),
+    p_preview_version: preview ? null : body.previewVersion.trim(),
+  })
+  if (error) {
+    return send(res, 500, { error: { code: 'operation_failed', message: error.message } })
+  }
+  if (!data || data.ok !== true) {
+    const typedError = data && data.error && typeof data.error === 'object'
+      ? data.error
+      : { code: 'operation_failed', message: 'Merge returned no result' }
+    return send(res, mergeTaskErrorStatus(typedError.code), { error: typedError })
+  }
+
+  if (!preview) {
+    notifyTaskMutation('update', survivorTaskId)
+    notifyTaskMutation('delete', duplicateTaskId)
+  }
+  return send(res, 200, data)
 }
 
 async function handleGetTaskInstances(id, res) {
@@ -454,6 +820,223 @@ async function handlePostTaskInstance(id, req, res) {
   send(res, 200, buildTaskInstanceResponse(existing, proposedInstance, false))
 }
 
+// --- Subtask handlers -------------------------------------------------------
+
+async function findTaskForSubtasks(id, fields = 'id,title,subtasks') {
+  const { supabase, userId } = ctx
+  return await supabase
+    .from('tasks')
+    .select(fields)
+    .eq('id', id)
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .maybeSingle()
+}
+
+async function handleGetSubtasks(id, res) {
+  const { data: existing, error } = await findTaskForSubtasks(id, 'id,title,subtasks')
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+  send(res, 200, {
+    ok: true,
+    task: { id: existing.id, title: existing.title },
+    subtasks: normalizeSubtasks(existing.subtasks),
+  })
+}
+
+async function handleCreateSubtask(id, req, res) {
+  const { supabase, userId } = ctx
+  const body = await readJsonBody(req)
+  const metadata = validateSubtaskMutationMetadata(body)
+  if (!metadata.ok) return send(res, 400, { error: metadata.error })
+  const title = typeof body.title === 'string' ? body.title.trim() : ''
+  if (!title) return send(res, 400, { error: 'title required' })
+  const order = body.order === undefined ? null : Number(body.order)
+  if (order !== null && (!Number.isInteger(order) || order < 0)) {
+    return send(res, 400, { error: 'order must be a non-negative integer' })
+  }
+  const { data: existing, error } = await findTaskForSubtasks(id)
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+
+  const key = metadata.requestId && receiptKey(userId, id, metadata.requestId)
+  if (!metadata.preview && key && replaySubtaskResponse(key, res)) return
+  const now = new Date().toISOString()
+  const deterministicId = metadata.requestId
+    ? deterministicSubtaskId(userId, id, metadata.requestId)
+    : crypto.randomUUID()
+  const persisted = normalizeSubtasks(existing.subtasks).find((item) => item.id === deterministicId)
+  if (!metadata.preview && persisted) {
+    const response = {
+      ok: true, preview: false, subtask: persisted,
+      receipt: buildSubtaskReceipt('create', id, persisted, metadata.requestId, true),
+    }
+    if (key) rememberSubtaskResponse(key, response)
+    return send(res, 200, response)
+  }
+  const subtask = {
+    id: deterministicId, parentTaskId: id, title, description: '',
+    completedPomodoros: 0, isCompleted: false, createdAt: now, updatedAt: now,
+  }
+  const current = normalizeSubtasks(existing.subtasks)
+  const insertAt = order === null ? current.length : Math.min(order, current.length)
+  const updatedSubtasks = [...current]
+  updatedSubtasks.splice(insertAt, 0, subtask)
+  const response = {
+    ok: true, preview: metadata.preview, subtask,
+    receipt: buildSubtaskReceipt('create', id, subtask, metadata.requestId),
+  }
+  if (metadata.preview) return send(res, 200, response)
+  const { error: updateError } = await supabase.from('tasks')
+    .update({ subtasks: updatedSubtasks, updated_at: now })
+    .eq('id', id).eq('user_id', userId).eq('is_deleted', false)
+  if (updateError) return send(res, 500, { error: updateError.message })
+  rememberSubtaskResponse(key, response)
+  send(res, 200, response)
+}
+
+async function handlePatchSubtask(id, subtaskId, req, res) {
+  const { supabase, userId } = ctx
+  const body = await readJsonBody(req)
+  const metadata = validateSubtaskMutationMetadata(body)
+  if (!metadata.ok) return send(res, 400, { error: metadata.error })
+  const { data: existing, error } = await findTaskForSubtasks(id)
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+  const current = normalizeSubtasks(existing.subtasks)
+  const index = current.findIndex((item) => item.id === subtaskId)
+  if (index === -1) return send(res, 404, { error: 'subtask not found' })
+
+  const key = metadata.requestId && receiptKey(userId, id, metadata.requestId)
+  if (!metadata.preview && key && replaySubtaskResponse(key, res)) return
+  const requestedOrder = body.order === undefined ? null : Number(body.order)
+  const alreadyApplied = !metadata.preview
+    && (body.title === undefined || (typeof body.title === 'string' && current[index].title === body.title.trim()))
+    && (body.completed === undefined || current[index].isCompleted === body.completed)
+    && (requestedOrder === null || requestedOrder === index)
+  if (alreadyApplied) {
+    const response = {
+      ok: true, preview: false, subtask: current[index],
+      receipt: buildSubtaskReceipt('update', id, current[index], metadata.requestId, true),
+    }
+    if (key) rememberSubtaskResponse(key, response)
+    return send(res, 200, response)
+  }
+  const updated = { ...current[index], updatedAt: new Date().toISOString() }
+  if (body.title !== undefined) {
+    const title = typeof body.title === 'string' ? body.title.trim() : ''
+    if (!title) return send(res, 400, { error: 'title cannot be empty' })
+    updated.title = title
+  }
+  if (body.completed !== undefined) {
+    if (typeof body.completed !== 'boolean') return send(res, 400, { error: 'completed must be a boolean' })
+    updated.isCompleted = body.completed
+  }
+  const order = requestedOrder
+  if (order !== null && (!Number.isInteger(order) || order < 0)) {
+    return send(res, 400, { error: 'order must be a non-negative integer' })
+  }
+  if (body.title === undefined && body.completed === undefined && order === null) {
+    return send(res, 400, { error: 'provide at least one field to update' })
+  }
+  const updatedSubtasks = current.filter((item) => item.id !== subtaskId)
+  updatedSubtasks.splice(order === null ? index : Math.min(order, updatedSubtasks.length), 0, updated)
+  const response = {
+    ok: true, preview: metadata.preview, subtask: updated,
+    receipt: buildSubtaskReceipt('update', id, updated, metadata.requestId),
+  }
+  if (metadata.preview) return send(res, 200, response)
+  const { error: updateError } = await supabase.from('tasks')
+    .update({ subtasks: updatedSubtasks, updated_at: updated.updatedAt })
+    .eq('id', id).eq('user_id', userId).eq('is_deleted', false)
+  if (updateError) return send(res, 500, { error: updateError.message })
+  rememberSubtaskResponse(key, response)
+  send(res, 200, response)
+}
+
+async function handleDeleteSubtask(id, subtaskId, req, res) {
+  const { supabase, userId } = ctx
+  const body = await readJsonBody(req)
+  const metadata = validateSubtaskMutationMetadata(body)
+  if (!metadata.ok) return send(res, 400, { error: metadata.error })
+  const { data: existing, error } = await findTaskForSubtasks(id)
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+  const current = normalizeSubtasks(existing.subtasks)
+  const key = metadata.requestId && receiptKey(userId, id, metadata.requestId)
+  const subtask = current.find((item) => item.id === subtaskId)
+  if (!subtask) {
+    if (!metadata.preview && metadata.requestId) {
+      const missing = { id: subtaskId }
+      const response = {
+        ok: true, preview: false, subtask: missing,
+        receipt: buildSubtaskReceipt('delete', id, missing, metadata.requestId, true),
+      }
+      if (key) rememberSubtaskResponse(key, response)
+      return send(res, 200, response)
+    }
+    return send(res, 404, { error: 'subtask not found' })
+  }
+
+  if (!metadata.preview && key && replaySubtaskResponse(key, res)) return
+  const updatedSubtasks = current.filter((item) => item.id !== subtaskId)
+  const response = {
+    ok: true, preview: metadata.preview, subtask,
+    receipt: buildSubtaskReceipt('delete', id, subtask, metadata.requestId),
+  }
+  if (metadata.preview) return send(res, 200, response)
+  const { error: updateError } = await supabase.from('tasks')
+    .update({ subtasks: updatedSubtasks, updated_at: new Date().toISOString() })
+    .eq('id', id).eq('user_id', userId).eq('is_deleted', false)
+  if (updateError) return send(res, 500, { error: updateError.message })
+  rememberSubtaskResponse(key, response)
+  send(res, 200, response)
+}
+
+async function handleSubtaskBatch(id, req, res) {
+  const { supabase, userId } = ctx
+  const body = await readJsonBody(req)
+  const metadata = validateSubtaskMutationMetadata(body)
+  if (!metadata.ok) return send(res, 400, { error: metadata.error })
+  if (!Array.isArray(body.operations) || body.operations.length < 1 || body.operations.length > 50) {
+    return send(res, 400, { error: 'operations must contain 1 to 50 items' })
+  }
+  const { data: existing, error } = await findTaskForSubtasks(id)
+  if (error) return send(res, 500, { error: error.message })
+  if (!existing) return send(res, 404, { error: 'not found' })
+  const key = metadata.requestId && receiptKey(userId, id, metadata.requestId)
+  if (!metadata.preview && key && replaySubtaskResponse(key, res)) return
+  const now = new Date().toISOString()
+  const applied = applySubtaskOperations(
+    userId,
+    id,
+    metadata.requestId,
+    normalizeSubtasks(existing.subtasks),
+    body.operations,
+    now,
+  )
+  if (!applied.ok) return send(res, 400, { error: applied.error })
+  const response = {
+    ok: true,
+    preview: metadata.preview,
+    operations: applied.results,
+    receipt: {
+      requestId: metadata.requestId || null,
+      action: 'batch',
+      taskId: id,
+      operationCount: applied.results.length,
+      replayed: false,
+    },
+  }
+  if (metadata.preview) return send(res, 200, response)
+  const { error: updateError } = await supabase.from('tasks')
+    .update({ subtasks: applied.subtasks, updated_at: now })
+    .eq('id', id).eq('user_id', userId).eq('is_deleted', false)
+  if (updateError) return send(res, 500, { error: updateError.message })
+  rememberSubtaskResponse(key, response)
+  send(res, 200, response)
+}
+
 async function handleDeleteTask(id, res) {
   const { supabase, userId } = ctx
   // Verify first so callers get a stable 404 for unknown, cross-user, or already-deleted ids.
@@ -475,6 +1058,7 @@ async function handleDeleteTask(id, res) {
     .eq('user_id', userId)
     .eq('is_deleted', false)
   if (error) return send(res, 500, { error: error.message })
+  notifyTaskMutation('delete', id)
   send(res, 200, { ok: true })
 }
 
@@ -867,11 +1451,25 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && path === '/api/tasks') {
       return await handleGetTasks(url, res)
     }
+    if (req.method === 'GET' && path === '/api/tasks/search') {
+      return await handleSearchTasks(url, res)
+    }
     if (req.method === 'GET' && path === '/api/assistant/context') {
       return await handleGetAssistantContext(res)
     }
     if (req.method === 'POST' && path === '/api/tasks') {
       return await handleCreateTask(req, res)
+    }
+    if (req.method === 'POST' && path === '/api/integrations/notion/activations') {
+      return await handleNotionTaskActivation(req, res)
+    }
+    const doneForNowMatch = path.match(/^\/api\/tasks\/([^/]+)\/done-for-now$/)
+    if (req.method === 'POST' && doneForNowMatch) {
+      return await handleDoneForNow(decodeURIComponent(doneForNowMatch[1]), req, res)
+    }
+    const mergeTasksMatch = path.match(/^\/api\/tasks\/([^/]+)\/merge$/)
+    if (req.method === 'POST' && mergeTasksMatch) {
+      return await handleMergeTasks(decodeURIComponent(mergeTasksMatch[1]), req, res)
     }
     if (req.method === 'POST' && path === '/api/ai/clarifications/start') {
       return await handleAIClarificationStart(req, res)
@@ -887,7 +1485,39 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && taskInstancesMatch) {
       return await handlePostTaskInstance(decodeURIComponent(taskInstancesMatch[1]), req, res)
     }
+    const subtasksMatch = path.match(/^\/api\/tasks\/([^/]+)\/subtasks$/)
+    if (req.method === 'GET' && subtasksMatch) {
+      return await handleGetSubtasks(decodeURIComponent(subtasksMatch[1]), res)
+    }
+    if (req.method === 'POST' && subtasksMatch) {
+      return await handleCreateSubtask(decodeURIComponent(subtasksMatch[1]), req, res)
+    }
+    const subtaskBatchMatch = path.match(/^\/api\/tasks\/([^/]+)\/subtasks\/batch$/)
+    if (req.method === 'POST' && subtaskBatchMatch) {
+      return await handleSubtaskBatch(decodeURIComponent(subtaskBatchMatch[1]), req, res)
+    }
+    const subtaskDeleteMatch = path.match(/^\/api\/tasks\/([^/]+)\/subtasks\/([^/]+)\/delete$/)
+    if (req.method === 'POST' && subtaskDeleteMatch) {
+      return await handleDeleteSubtask(
+        decodeURIComponent(subtaskDeleteMatch[1]),
+        decodeURIComponent(subtaskDeleteMatch[2]),
+        req,
+        res,
+      )
+    }
+    const subtaskMatch = path.match(/^\/api\/tasks\/([^/]+)\/subtasks\/([^/]+)$/)
+    if (req.method === 'PATCH' && subtaskMatch) {
+      return await handlePatchSubtask(
+        decodeURIComponent(subtaskMatch[1]),
+        decodeURIComponent(subtaskMatch[2]),
+        req,
+        res,
+      )
+    }
     const taskMatch = path.match(/^\/api\/tasks\/([^/]+)$/)
+    if (req.method === 'GET' && taskMatch) {
+      return await handleGetTask(decodeURIComponent(taskMatch[1]), res)
+    }
     if (req.method === 'PATCH' && taskMatch) {
       return await handlePatchTask(decodeURIComponent(taskMatch[1]), req, res)
     }

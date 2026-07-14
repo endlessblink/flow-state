@@ -157,6 +157,105 @@ and (unless `progress` is given) `progress: 100`.
 { "error": "not found" }
 ```
 
+For recurring tasks, `status: "done"` is intentionally **not** a substitute for
+completing an occurrence. Use the dedicated operation below so history and the
+next occurrence stay coherent.
+
+### `POST /api/tasks/:id/done-for-now`
+
+Completes the current occurrence of a recurring task while keeping its recurring
+definition active. The living task keeps its ID; a separate completion-record
+task row preserves the old occurrence, and the living row advances through the
+shared recurrence engine. If the current occurrence has a Canvas/calendar work
+block, the completed record preserves that block and exactly one corresponding
+block is scheduled for the next date. Due-only tasks remain due-only.
+
+This operation is available through the signed-in Electron token-mode API. It
+defaults to a non-mutating preview:
+
+```json
+{
+  "preview": true,
+  "nextDueDate": "2026-07-16"
+}
+```
+
+`nextDueDate` is optional. Without it, the recurrence rule calculates the next
+date. With it, the chosen date must be after the completed occurrence; the
+recurrence rule remains attached and subsequent dates continue from the chosen
+date.
+
+The preview returns the current occurrence date, calculated and proposed next
+dates, a `previewVersion` bound to current task state, and the exact write kinds.
+It does not change tasks, history, recurrence metadata, or work blocks.
+
+After explicit approval, apply the same proposal with stable identifiers:
+
+```json
+{
+  "preview": false,
+  "nextDueDate": "2026-07-16",
+  "requestId": "stable-assistant-request-id",
+  "previewVersion": "value-from-preview"
+}
+```
+
+Apply runs one database transaction and returns a stable receipt with real
+completion-record and living-task IDs plus a read-back of both occurrences. A
+retry with the same `requestId` and payload returns the stored receipt without
+advancing again. Reusing the ID with a different task/date returns
+`idempotency_conflict`; applying after state changes returns `stale_preview`.
+Other typed errors include `task_not_found`, `non_recurring_task`,
+`occurrence_already_completed`, `invalid_next_due_date`, `recurrence_ended`,
+`request_id_required`, and `preview_version_required`.
+
+On successful apply the sidecar notifies the active Electron renderer, which
+invalidates its task cache and reloads both the completion record and living
+task. Search remains able to find the living task; overdue/Today/Inbox filters
+and Canvas resolve the new occurrence from the same rows without an app restart.
+
+### `POST /api/tasks/:survivorId/merge`
+
+Safely consolidates two exact, user-owned duplicate candidates. Title similarity
+never authorizes a merge. Preview is the default and returns the survivor,
+duplicate, every supported transfer count, preserved historical counts,
+unresolved conflicts, the planned soft deletion, and a state-bound
+`previewVersion`:
+
+```json
+{ "duplicateTaskId": "exact-duplicate-id", "preview": true }
+```
+
+After the user approves that exact preview, apply with a stable request ID:
+
+```json
+{
+  "duplicateTaskId": "exact-duplicate-id",
+  "preview": false,
+  "requestId": "stable-merge-request-id",
+  "previewVersion": "value-from-preview"
+}
+```
+
+The database transaction retains the survivor identity, merges non-conflicting
+tags/subtasks/work blocks/attachments/planning data, rewrites embedded ownership
+IDs, transfers comments, one-sided task context, and project links, then
+soft-deletes the duplicate. Historical Pomodoro/timer/audit/recommendation rows
+remain attached to the archived duplicate so provenance is not rewritten. A
+retry returns the same durable receipt and cannot repeat transfers.
+
+The first safe version refuses recurrence chains, active timers, task
+dependencies/hierarchies, linked groups, assistant-memory graphs, differing
+workspace or completion state, ambiguous scalar values, and stable JSON IDs
+with different contents. Preview reports these conflicts; apply returns a typed
+`merge_conflict` or `recurring_merge_unsupported` rather than guessing. Other
+typed errors include `same_task`, `survivor_not_found`, `duplicate_not_found`,
+`workspace_mismatch`, `stale_preview`, `request_id_required`,
+`preview_version_required`, and `idempotency_conflict`.
+
+Successful apply emits renderer update/delete notices. Search, Board, Today,
+Inbox, and Canvas therefore reload to one active survivor without an app restart.
+
 ### `GET /api/tasks/:id/instances`
 Returns the calendar/time-block instances for one user-owned, non-deleted task.
 This is bearer-protected and never returns the full task body.
@@ -236,6 +335,20 @@ Safety notes:
 - Does not change task status, title, priority, due date, or project.
 - Does not overwrite existing instances and does not delete tasks.
 - Response includes only task id/title plus the created/proposed instance; it never includes tokens, auth headers, sessions, subtasks, descriptions, or raw backlog dumps.
+
+### Subtasks
+
+`GET /api/tasks/:id/subtasks` lists the ordered embedded subtasks for one task.
+`POST /api/tasks/:id/subtasks`, `PATCH /api/tasks/:id/subtasks/:subtaskId`, and
+`POST /api/tasks/:id/subtasks/:subtaskId/delete` preview by default. Set
+`preview: false` and provide a stable `requestId` to apply; the response receipt
+echoes that id. Create IDs are deterministically derived from the user, task,
+request, and batch item, so retries remain idempotent after a sidecar restart;
+already-applied updates and deletes return semantic replay receipts.
+
+`POST /api/tasks/:id/subtasks/batch` accepts 1-50 `create`, `update`, or `delete`
+operations, previews the complete result by default, and applies the updated
+subtask array in one task-row update after approval.
 
 ### `DELETE /api/tasks/:id`
 Soft-deletes a task for the current user (`is_deleted=true`, `deleted_at=now`).

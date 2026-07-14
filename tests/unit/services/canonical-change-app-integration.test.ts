@@ -34,6 +34,11 @@ describe('TASK-1947 app catch-up integration', () => {
     expect(source).toContain('await reloadCoreData()\n        await runCanonicalChangeCatchup()')
   })
 
+  it('rebaselines an empty authenticated projection after startup failure and post-sign-in', () => {
+    expect(source).toContain("recoverCanonicalProjectionIfEmpty('background-refresh-failed')")
+    expect(source).toContain("recoverCanonicalProjectionIfEmpty('post-sign-in')")
+  })
+
   it('starts and stops the bounded foreground convergence poller', () => {
     expect(source).toContain('createCanonicalChangePoller')
     expect(source).toContain('canonicalChangePoller.start()')

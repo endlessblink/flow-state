@@ -2190,6 +2190,7 @@ _Original plan below._
 - [x] **TASK-1948 — Canonical Notion task activation**: add signed-user preview/apply activation from stable Notion provenance through the TASK-1944 operation, preview, revision, and change-log authority; create at most one active FlowState task per user/source/page; atomically add an exact approved work block even when the task already exists; and return a replayable canonical receipt verified by the Local API. Completed 2026-07-14.
 - [x] ~~**TASK-1949 — Canonical assistant reliability harness and watchdog**: execute the combined canonical task and Notion activation contracts against a disposable database, inject same-operation and conflicting-operation races, keep the focused cohort in the fixed daily regression lane, and alert on redacted canonical/Notion integrity failures without touching production data.~~ Completed 2026-07-14.
 - [x] ~~**TASK-1950 — Classify renderer-to-sidecar auth recovery precisely**: distinguish an expired cached signed-in shell, bounded token-refresh recovery, and a genuinely blind sidecar; return actionable protected-route errors and keep the live-boundary diagnostic from raising false sidecar-delivery incidents.~~ Completed 2026-07-14.
+- [x] ~~**TASK-1951 — Production UUID compatibility for canonical assistant contracts**: make canonical task/Notion RPCs, rollback suites, and the VPS watchdog portable across text-ID development schemas and UUID production schemas; ship a forward migration and repeat live rollback-only proof before enabling writers.~~ Completed 2026-07-14.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2428,6 +2429,49 @@ _Original plan below._
 **Regression added for reported repro**: pure classifier tests for re-authentication, reconnect grace, and signed-out state; Local API routing contract; diagnostic tests proving re-authentication is not sidecar blindness and refresh grace remains a warning.
 
 **Live boundary proof**: the active packaged app moved from `hasAuthContext=false`, `canSyncRemotely=false`, and `reauthRequired=true` to a restored sidecar context and remote-sync capability without intervention. This proves the observed 503 was bounded renderer auth recovery; packaged verification of the new classification remains in the program's release lane.
+
+### TASK-1951: Production UUID compatibility for canonical assistant contracts (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: TASK-1943, TASK-1944, TASK-1945, TASK-1948, TASK-1949
+
+**Failure class**: The disposable development schema stores task/project IDs as text, while production stores them as UUID. The merged RPCs, rollback fixtures, and two watchdog joins compared or inserted text IDs directly, so repository proof passed but the approved live rollback suites failed before exercising the contract.
+
+**Scope**:
+- Add production-UUID regression fixtures that still run on text-ID development schemas.
+- Make RPC lookup, insert, operation/change evidence, and provenance guards compare IDs through stable text projections while preserving typed task/project columns.
+- Add an idempotent forward migration; do not rewrite production history as the only repair.
+- Keep the VPS watchdog count-only and portable across both schema variants.
+- Re-run both rollback-only SQL suites against production and verify zero retained fixture rows before enabling Hermes writers.
+
+**Acceptance**:
+- Canonical task preview/apply and Notion activation work with UUID task/project columns and retain string IDs at external/ledger boundaries.
+- Both production rollback suites reach `ROLLBACK` with no failures and leave no fixture users, tasks, projects, previews, operations, or changes.
+- The production watchdog reports `OK` without query-failure suppression.
+- Existing text-ID disposable database tests continue passing.
+
+**Verification**: The disposable database harness passes canonical preview/apply/replay/conflict/RLS/sequence coverage, Notion same-operation/different-operation/conflict/fault races, and double application of the forward migration. The 28 focused source regressions and `vue-tsc` pass. The forward migration applied to production, both SQL contracts reached explicit `ROLLBACK`, exact read-back found zero retained fixture users, tasks, projects, operations, or previews, index/revision integrity remained clean, and the installed VPS watchdog reported `OK` with no suppressed query failure.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Protected canonical and Notion mutations exercised through preview/apply/read-back contracts | Yes |
+| Data shape / persisted row shape | Yes | Text-ID disposable schema and UUID production schema both pass; typed task/project keys and text ledger IDs verified | Yes |
+| Renderer store/state | N/A | This repair changes database contracts and watchdog queries only | No |
+| Electron main/preload bridge | N/A | Covered by the separate authenticated sidecar release lane | No |
+| Localhost sidecar endpoint | N/A | Covered by TASK-1945 and TASK-1950 | No |
+| KDE polling/control path | N/A | No timer or KDE behavior changed | No |
+| Supabase persistence/realtime | Yes | Production transaction proof, revision/change evidence, RLS checks, and zero-residue rollback read-back | Yes |
+| Updater/runtime version | Not yet | Electron packaging remains in the parent TASK-1943 release lane | No |
+| Stale live process/cache state | Yes | Installed VPS watchdog rerun after migration and reported `OK` | Yes |
+
+**Exact failure mode fixed**: Canonical RPCs, SQL proofs, and watchdog joins assumed text task/project primary keys and failed against production UUID columns.
+
+**Explicitly not covered**: Packaged Electron delivery, renderer-to-sidecar credential propagation, Hermes profile/plugin installation, and live Notion credential configuration remain in the parent release lane.
+
+**Regression added for reported repro**: UUID-shaped fixtures that remain valid on the text development schema, typed RPC variable assertions, text-projected ledger/watchdog joins, and double-application migration proof.
+
+**Live boundary proof**: The forward migration applied to the VPS Supabase database; both production suites completed and rolled back, exact fixture read-back was zero, and the installed watchdog reported `OK`.
 
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
@@ -7172,6 +7216,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1948** | **P0** | ✅ **Canonical Notion task activation with stable provenance, exact optional work blocks, replayable canonical receipts, and Local API verification** |
 | ~~**TASK-1949**~~ | **P0** | ✅ **Canonical assistant disposable DB harness, race/fault injection, fixed daily regression coverage, and redacted VPS integrity watchdog** |
 | ~~**TASK-1950**~~ | **P0** | ✅ **Renderer-to-sidecar auth recovery classification with actionable protected-route errors and false-incident suppression** |
+| ~~**TASK-1951**~~ | **P0** | ✅ **Production UUID compatibility for canonical task/Notion RPCs, rollback suites, and VPS watchdog** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

@@ -55,7 +55,7 @@ describe('TASK-1948 canonical Notion activation contract', () => {
         'operation.workspace_id is null',
         "operation.entity_type = 'task'",
         "operation.action = 'activate'",
-        'operation.entity_id = new.id',
+        'operation.entity_id = new.id::text',
       ]) {
         expect(sql).toContain(predicate)
       }
@@ -111,6 +111,11 @@ describe('TASK-1948 canonical Notion activation contract', () => {
         /instances\s*=\s*case[^;]+coalesce\([^;]+\)\s*\|\|\s*pg_catalog\.jsonb_build_array/,
       )
       expect(sql).toMatch(/v_work_block/)
+      expect(sql).toContain('v_project_ref public.projects.id%type')
+      expect(sql).toContain('where project.id::text = v_project_id')
+      expect(sql).toContain('v_task_id public.tasks.id%type')
+      expect(sql).toContain('v_task_id::text, v_request_hash')
+      expect(sql).toContain('change.entity_id = v_updated.id::text')
       expect(sql).toMatch(
         /pg_catalog\.set_config\s*\(\s*'flowstate\.canonical\.operation_id'/,
       )

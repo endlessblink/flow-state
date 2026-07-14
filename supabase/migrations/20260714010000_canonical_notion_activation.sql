@@ -101,7 +101,7 @@ BEGIN
       AND operation.workspace_id IS NULL
       AND operation.entity_type = 'task'
       AND operation.action = 'activate'
-      AND operation.entity_id = NEW.id
+      AND operation.entity_id = NEW.id::text
   ) THEN
     RAISE EXCEPTION 'External task provenance requires a canonical Notion activation'
       USING ERRCODE = '42501';
@@ -155,13 +155,14 @@ DECLARE
   v_priority text;
   v_due_date timestamptz;
   v_project_id text;
+  v_project_ref public.projects.id%TYPE;
   v_work_block jsonb;
   v_normalized jsonb;
   v_request_hash text;
   v_expected_preview_digest text;
   v_preview_expires_at timestamptz;
   v_change_sequence bigint;
-  v_task_id text;
+  v_task_id public.tasks.id%TYPE;
   v_already_activated boolean := false;
   v_work_block_exists boolean := false;
   v_read_back jsonb;
@@ -286,18 +287,20 @@ BEGIN
     );
   END IF;
 
-  IF v_project_id IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM public.projects AS project
-    WHERE project.id = v_project_id
+  IF v_project_id IS NOT NULL THEN
+    SELECT project.id INTO v_project_ref
+    FROM public.projects AS project
+    WHERE project.id::text = v_project_id
       AND project.user_id = v_actor
-      AND project.is_deleted = false
-  ) THEN
-    RETURN pg_catalog.jsonb_build_object(
-      'ok', false, 'result', 'rejected',
-      'error', pg_catalog.jsonb_build_object(
-        'code', 'project_not_found', 'message', 'Project was not found'
-      )
-    );
+      AND project.is_deleted = false;
+    IF NOT FOUND THEN
+      RETURN pg_catalog.jsonb_build_object(
+        'ok', false, 'result', 'rejected',
+        'error', pg_catalog.jsonb_build_object(
+          'code', 'project_not_found', 'message', 'Project was not found'
+        )
+      );
+    END IF;
   END IF;
 
   IF p_work_block IS NOT NULL THEN
@@ -546,10 +549,11 @@ BEGIN
   LIMIT 1
   FOR UPDATE;
   v_already_activated := FOUND;
-  v_task_id := CASE
-    WHEN v_already_activated THEN v_task.id
-    ELSE 'task-' || extensions.gen_random_uuid()::text
-  END;
+  IF v_already_activated THEN
+    v_task_id := v_task.id;
+  ELSE
+    v_task_id := extensions.gen_random_uuid();
+  END IF;
 
   INSERT INTO public.canonical_operations (
     user_id, operation_id, contract_version, source,
@@ -558,7 +562,7 @@ BEGIN
   ) VALUES (
     v_actor, p_operation_id, 'notion-activation-v1', 'notion',
     'personal', v_actor::text, NULL, 'task', 'activate',
-    v_task_id, v_request_hash, 'applying'
+    v_task_id::text, v_request_hash, 'applying'
   )
   ON CONFLICT (user_id, operation_id) DO NOTHING;
 
@@ -625,7 +629,7 @@ BEGIN
         description = v_description,
         priority = v_priority,
         due_date = v_due_date,
-        project_id = v_project_id,
+        project_id = v_project_ref,
         external_url = v_url,
         external_data_source_id = v_data_source_id,
         external_last_edited_at = v_last_edited_at,
@@ -652,7 +656,7 @@ BEGIN
       external_id, external_url, external_data_source_id,
       external_last_edited_at, created_at, updated_at
     ) VALUES (
-      v_task_id, v_actor, v_project_id, v_title, v_description,
+      v_task_id, v_actor, v_project_ref, v_title, v_description,
       'planned', v_priority, v_due_date,
       CASE WHEN v_work_block IS NULL THEN '[]'::jsonb
         ELSE pg_catalog.jsonb_build_array(
@@ -679,7 +683,7 @@ BEGIN
   WHERE change.actor_user_id = v_actor
     AND change.operation_id = p_operation_id
     AND change.entity_type = 'task'
-    AND change.entity_id = v_updated.id
+    AND change.entity_id = v_updated.id::text
   ORDER BY change.change_sequence DESC
   LIMIT 1;
 

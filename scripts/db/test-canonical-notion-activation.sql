@@ -24,7 +24,7 @@ INSERT INTO auth.users (
   );
 
 INSERT INTO public.projects (id, user_id, name, is_deleted)
-VALUES ('notion-owner-project', 'ca120000-0000-4000-8000-000000000001', 'Notion project', false);
+VALUES ('ca120000-0000-4000-8000-000000000100', 'ca120000-0000-4000-8000-000000000001', 'Notion project', false);
 
 SELECT pg_catalog.set_config(
   'request.jwt.claim.sub', 'ca120000-0000-4000-8000-000000000001', true
@@ -56,7 +56,7 @@ VALUES (
       "description":"Exact activation fixture",
       "priority":"high",
       "dueDate":"2026-07-15T12:00:00Z",
-      "projectId":"notion-owner-project"
+      "projectId":"ca120000-0000-4000-8000-000000000100"
     }'::jsonb,
     p_work_block => '{
       "scheduledDate":"2026-07-14",
@@ -113,7 +113,7 @@ SELECT 'apply', public.flowstate_activate_notion_task_v1(
     "description":"Exact activation fixture",
     "priority":"high",
     "dueDate":"2026-07-15T12:00:00Z",
-    "projectId":"notion-owner-project"
+    "projectId":"ca120000-0000-4000-8000-000000000100"
   }'::jsonb,
   p_work_block => '{
     "scheduledDate":"2026-07-14",
@@ -200,7 +200,7 @@ BEGIN
       id, user_id, title, status, progress, is_deleted,
       external_source, external_id, created_at, updated_at
     ) VALUES (
-      'task-forged-provenance',
+      'ca120000-0000-4000-8000-000000000201',
       'ca120000-0000-4000-8000-000000000001',
       'Forged provenance', 'planned', 0, false,
       'notion', 'forged-page', pg_catalog.now(), pg_catalog.now()
@@ -213,7 +213,7 @@ BEGIN
   INSERT INTO public.tasks (
     id, user_id, title, status, progress, is_deleted, created_at, updated_at
   ) VALUES (
-    'task-ordinary-direct',
+    'ca120000-0000-4000-8000-000000000202',
     'ca120000-0000-4000-8000-000000000001',
     'Ordinary direct task', 'planned', 0, false,
     pg_catalog.now(), pg_catalog.now()
@@ -224,12 +224,12 @@ BEGIN
     external_data_source_id, external_last_edited_at
   ) INTO STRICT v_before
   FROM public.tasks
-  WHERE id = (SELECT payload #>> '{receipt,entityId}'
+  WHERE id::text = (SELECT payload #>> '{receipt,entityId}'
               FROM notion_activation_results WHERE key = 'apply');
 
   UPDATE public.tasks
   SET title = 'Allowed ordinary edit'
-  WHERE id = (SELECT payload #>> '{receipt,entityId}'
+  WHERE id::text = (SELECT payload #>> '{receipt,entityId}'
               FROM notion_activation_results WHERE key = 'apply');
 
   SELECT pg_catalog.jsonb_build_array(
@@ -237,7 +237,7 @@ BEGIN
     external_data_source_id, external_last_edited_at
   ) INTO STRICT v_after
   FROM public.tasks
-  WHERE id = (SELECT payload #>> '{receipt,entityId}'
+  WHERE id::text = (SELECT payload #>> '{receipt,entityId}'
               FROM notion_activation_results WHERE key = 'apply');
   IF v_after IS DISTINCT FROM v_before THEN
     RAISE EXCEPTION 'FAIL: ordinary update changed provenance';
@@ -269,7 +269,7 @@ BEGIN
   BEGIN
     UPDATE public.tasks
     SET external_url = NULL
-    WHERE id = (SELECT payload #>> '{receipt,entityId}'
+    WHERE id::text = (SELECT payload #>> '{receipt,entityId}'
                 FROM notion_activation_results WHERE key = 'apply');
     RAISE EXCEPTION 'FAIL: arbitrary canonical GUC authorized provenance';
   EXCEPTION WHEN insufficient_privilege THEN
@@ -289,7 +289,7 @@ INSERT INTO notion_activation_results (key, payload)
 SELECT 'replay', public.flowstate_activate_notion_task_v1(
   'notion-activate-1',
   '{"pageId":"notion-page-1","dataSourceId":"notion-source-1","url":"https://www.notion.so/notion-page-1","lastEditedAt":"2026-07-14T08:00:00Z"}'::jsonb,
-  '{"title":"Canonical Notion task","description":"Exact activation fixture","priority":"high","dueDate":"2026-07-15T12:00:00Z","projectId":"notion-owner-project"}'::jsonb,
+  '{"title":"Canonical Notion task","description":"Exact activation fixture","priority":"high","dueDate":"2026-07-15T12:00:00Z","projectId":"ca120000-0000-4000-8000-000000000100"}'::jsonb,
   '{"scheduledDate":"2026-07-14","scheduledTime":"10:30","duration":25}'::jsonb,
   false,
   preview.payload->>'previewDigest',
@@ -323,7 +323,7 @@ VALUES (
   public.flowstate_activate_notion_task_v1(
     'notion-activate-2',
     '{"pageId":"notion-page-1","dataSourceId":"notion-source-1","url":"https://www.notion.so/notion-page-1","lastEditedAt":"2026-07-14T09:00:00Z"}'::jsonb,
-    '{"title":"Canonical Notion task refreshed","description":"Exact activation fixture","priority":"high","dueDate":"2026-07-15T12:00:00Z","projectId":"notion-owner-project"}'::jsonb,
+    '{"title":"Canonical Notion task refreshed","description":"Exact activation fixture","priority":"high","dueDate":"2026-07-15T12:00:00Z","projectId":"ca120000-0000-4000-8000-000000000100"}'::jsonb,
     '{"scheduledDate":"2026-07-14","scheduledTime":"14:00","duration":40}'::jsonb,
     true
   )
@@ -333,7 +333,7 @@ INSERT INTO notion_activation_results (key, payload)
 SELECT 'existing_apply', public.flowstate_activate_notion_task_v1(
   'notion-activate-2',
   '{"pageId":"notion-page-1","dataSourceId":"notion-source-1","url":"https://www.notion.so/notion-page-1","lastEditedAt":"2026-07-14T09:00:00Z"}'::jsonb,
-  '{"title":"Canonical Notion task refreshed","description":"Exact activation fixture","priority":"high","dueDate":"2026-07-15T12:00:00Z","projectId":"notion-owner-project"}'::jsonb,
+  '{"title":"Canonical Notion task refreshed","description":"Exact activation fixture","priority":"high","dueDate":"2026-07-15T12:00:00Z","projectId":"ca120000-0000-4000-8000-000000000100"}'::jsonb,
   '{"scheduledDate":"2026-07-14","scheduledTime":"14:00","duration":40}'::jsonb,
   false,
   preview.payload->>'previewDigest',
@@ -364,7 +364,7 @@ VALUES (
   public.flowstate_activate_notion_task_v1(
     'notion-activate-3',
     '{"pageId":"notion-page-1","dataSourceId":"notion-source-1","url":"https://www.notion.so/notion-page-1","lastEditedAt":"2026-07-14T09:00:00Z"}'::jsonb,
-    '{"title":"Canonical Notion task refreshed","description":"Exact activation fixture","priority":"high","dueDate":"2026-07-15T12:00:00Z","projectId":"notion-owner-project"}'::jsonb,
+    '{"title":"Canonical Notion task refreshed","description":"Exact activation fixture","priority":"high","dueDate":"2026-07-15T12:00:00Z","projectId":"ca120000-0000-4000-8000-000000000100"}'::jsonb,
     '{"scheduledDate":"2026-07-14","scheduledTime":"14:00","duration":40}'::jsonb,
     true
   )
@@ -374,7 +374,7 @@ INSERT INTO notion_activation_results (key, payload)
 SELECT 'duplicate_block_apply', public.flowstate_activate_notion_task_v1(
   'notion-activate-3',
   '{"pageId":"notion-page-1","dataSourceId":"notion-source-1","url":"https://www.notion.so/notion-page-1","lastEditedAt":"2026-07-14T09:00:00Z"}'::jsonb,
-  '{"title":"Canonical Notion task refreshed","description":"Exact activation fixture","priority":"high","dueDate":"2026-07-15T12:00:00Z","projectId":"notion-owner-project"}'::jsonb,
+  '{"title":"Canonical Notion task refreshed","description":"Exact activation fixture","priority":"high","dueDate":"2026-07-15T12:00:00Z","projectId":"ca120000-0000-4000-8000-000000000100"}'::jsonb,
   '{"scheduledDate":"2026-07-14","scheduledTime":"14:00","duration":40}'::jsonb,
   false,
   preview.payload->>'previewDigest',
@@ -428,7 +428,7 @@ VALUES (
   public.flowstate_activate_notion_task_v1(
     'notion-cross-user',
     '{"pageId":"notion-page-2","dataSourceId":"notion-source-1","url":"https://www.notion.so/notion-page-2","lastEditedAt":"2026-07-14T08:00:00Z"}'::jsonb,
-    '{"title":"Must reject","projectId":"notion-owner-project"}'::jsonb,
+    '{"title":"Must reject","projectId":"ca120000-0000-4000-8000-000000000100"}'::jsonb,
     NULL, true
   )
 );

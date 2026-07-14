@@ -22,7 +22,7 @@ INSERT INTO auth.users (
   (
     'ca110000-0000-4000-8000-000000000002',
     '00000000-0000-0000-0000-000000000000',
-    'canonical-other@test.flowstate', '', now(), now(), now(),
+    'ca110000-0000-4000-8000-000000000102@test.flowstate', '', now(), now(), now(),
     '{"provider":"email","providers":["email"]}', '{}',
     'authenticated', 'authenticated', '', ''
   );
@@ -47,28 +47,28 @@ INSERT INTO public.tasks (
   workspace_id
 ) VALUES
   (
-    'canonical-owned', 'ca110000-0000-4000-8000-000000000001',
+    'ca110000-0000-4000-8000-000000000101', 'ca110000-0000-4000-8000-000000000001',
     'Canonical owned fixture', 'planned', false, '[]', '[]', true, NULL
   ),
   (
-    'canonical-other', 'ca110000-0000-4000-8000-000000000002',
+    'ca110000-0000-4000-8000-000000000102', 'ca110000-0000-4000-8000-000000000002',
     'Canonical other-user fixture', 'planned', false, '[]', '[]', true, NULL
   ),
   (
-    'canonical-rollback', 'ca110000-0000-4000-8000-000000000001',
+    'ca110000-0000-4000-8000-000000000103', 'ca110000-0000-4000-8000-000000000001',
     'Canonical rollback fixture', 'planned', false, '[]', '[]', true, NULL
   ),
   (
-    'canonical-shared', 'ca110000-0000-4000-8000-000000000001',
+    'ca110000-0000-4000-8000-000000000104', 'ca110000-0000-4000-8000-000000000001',
     'Canonical shared fixture', 'planned', false, '[]', '[]', true,
     'ca110000-0000-4000-8000-000000000010'
   ),
   (
-    'canonical-soft-deleted', 'ca110000-0000-4000-8000-000000000001',
+    'ca110000-0000-4000-8000-000000000105', 'ca110000-0000-4000-8000-000000000001',
     'Canonical deleted fixture', 'planned', true, '[]', '[]', true, NULL
   ),
   (
-    'canonical-hard-delete', 'ca110000-0000-4000-8000-000000000001',
+    'ca110000-0000-4000-8000-000000000106', 'ca110000-0000-4000-8000-000000000001',
     'Canonical hard-delete fixture', 'planned', false, '[]', '[]', true, NULL
   );
 
@@ -99,39 +99,39 @@ CREATE TEMP TABLE canonical_test_snapshots (
 -- soft-deleted tasks must all fail closed before any canonical mutation.
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'null_preview', public.flowstate_patch_task_v1(
-  'canonical-op-null-preview', 'task-v1', 'sql-regression', 'canonical-owned',
+  'canonical-op-null-preview', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000101',
   canonical_revision, '{"title":"Must not apply"}'::jsonb, NULL
 )
-FROM public.tasks WHERE id = 'canonical-owned';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'null_source', public.flowstate_patch_task_v1(
-  'canonical-op-null-source', 'task-v1', NULL, 'canonical-owned',
+  'canonical-op-null-source', 'task-v1', NULL, 'ca110000-0000-4000-8000-000000000101',
   canonical_revision, '{"title":"Must not apply"}'::jsonb, true
 )
-FROM public.tasks WHERE id = 'canonical-owned';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'non_iso_due_date', public.flowstate_patch_task_v1(
-  'canonical-op-non-iso-date', 'task-v1', 'sql-regression', 'canonical-owned',
+  'canonical-op-non-iso-date', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000101',
   canonical_revision, '{"dueDate":"tomorrow"}'::jsonb, true
 )
-FROM public.tasks WHERE id = 'canonical-owned';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'forged_preview', public.flowstate_patch_task_v1(
-  'canonical-op-forged-preview', 'task-v1', 'sql-regression', 'canonical-owned',
+  'canonical-op-forged-preview', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000101',
   canonical_revision, '{"title":"Must not apply"}'::jsonb, false,
   repeat('a', 64), clock_timestamp() + interval '1 hour'
 )
-FROM public.tasks WHERE id = 'canonical-owned';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'soft_deleted', public.flowstate_patch_task_v1(
-  'canonical-op-soft-deleted', 'task-v1', 'sql-regression', 'canonical-soft-deleted',
+  'canonical-op-soft-deleted', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000105',
   canonical_revision, '{"title":"Must not apply"}'::jsonb, true
 )
-FROM public.tasks WHERE id = 'canonical-soft-deleted';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000105';
 
 DO $$
 BEGIN
@@ -161,19 +161,19 @@ SELECT
   (
     SELECT max(change_sequence)
     FROM public.canonical_change_log
-    WHERE entity_type = 'task' AND entity_id = 'canonical-owned'
+    WHERE entity_type = 'task' AND entity_id = 'ca110000-0000-4000-8000-000000000101'
   ),
   (
     SELECT count(*)
     FROM public.canonical_change_log
-    WHERE entity_type = 'task' AND entity_id = 'canonical-owned'
+    WHERE entity_type = 'task' AND entity_id = 'ca110000-0000-4000-8000-000000000101'
   )
 FROM public.tasks
-WHERE id = 'canonical-owned';
+WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
 UPDATE public.tasks
 SET planning_notes = '[{"type":"note","content":"legacy compatibility write"}]'::jsonb
-WHERE id = 'canonical-owned';
+WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
 DO $$
 DECLARE
@@ -185,11 +185,11 @@ BEGIN
   FROM canonical_test_snapshots WHERE key = 'before_legacy';
 
   SELECT canonical_revision INTO STRICT v_after_revision
-  FROM public.tasks WHERE id = 'canonical-owned';
+  FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
   SELECT * INTO STRICT v_change
   FROM public.canonical_change_log
-  WHERE entity_type = 'task' AND entity_id = 'canonical-owned'
+  WHERE entity_type = 'task' AND entity_id = 'ca110000-0000-4000-8000-000000000101'
   ORDER BY change_sequence DESC
   LIMIT 1;
 
@@ -205,7 +205,7 @@ BEGIN
   END IF;
 END $$;
 
-DELETE FROM public.tasks WHERE id = 'canonical-hard-delete';
+DELETE FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000106';
 
 DO $$
 DECLARE
@@ -213,7 +213,7 @@ DECLARE
 BEGIN
   SELECT * INTO STRICT v_change
   FROM public.canonical_change_log
-  WHERE entity_type = 'task' AND entity_id = 'canonical-hard-delete'
+  WHERE entity_type = 'task' AND entity_id = 'ca110000-0000-4000-8000-000000000106'
   ORDER BY change_sequence DESC
   LIMIT 1;
 
@@ -232,7 +232,7 @@ SELECT
   (SELECT max(change_sequence) FROM public.canonical_change_log),
   (SELECT count(*) FROM public.canonical_change_log)
 FROM public.tasks
-WHERE id = 'canonical-owned';
+WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
 -- Preview binds the normalized request and exact read-back projection but does
 -- not write the task, operation ledger, or change log.
@@ -241,7 +241,7 @@ SELECT 'preview', public.flowstate_patch_task_v1(
   p_operation_id => 'canonical-op-apply',
   p_contract_version => 'task-v1',
   p_source => 'sql-regression',
-  p_task_id => 'canonical-owned',
+  p_task_id => 'ca110000-0000-4000-8000-000000000101',
   p_base_revision => (
     SELECT revision FROM canonical_test_snapshots WHERE key = 'before_preview'
   ),
@@ -270,9 +270,9 @@ BEGIN
     RAISE EXCEPTION 'FAIL: canonical preview contract was incomplete: %', v_preview;
   END IF;
 
-  IF (SELECT title FROM public.tasks WHERE id = 'canonical-owned')
+  IF (SELECT title FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101')
        <> 'Canonical owned fixture'
-     OR (SELECT canonical_revision FROM public.tasks WHERE id = 'canonical-owned')
+     OR (SELECT canonical_revision FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101')
        <> v_before.revision
      OR (SELECT count(*) FROM public.canonical_change_log) <> v_before.change_count
      OR EXISTS (
@@ -290,7 +290,7 @@ SELECT 'apply', public.flowstate_patch_task_v1(
   p_operation_id => 'canonical-op-apply',
   p_contract_version => 'task-v1',
   p_source => 'sql-regression',
-  p_task_id => 'canonical-owned',
+  p_task_id => 'ca110000-0000-4000-8000-000000000101',
   p_base_revision => (
     SELECT revision FROM canonical_test_snapshots WHERE key = 'before_preview'
   ),
@@ -329,7 +329,7 @@ BEGIN
      OR v_apply #>> '{receipt,source}' <> 'sql-regression'
      OR v_apply #>> '{receipt,entityType}' <> 'task'
      OR v_apply #>> '{receipt,action}' <> 'patch'
-     OR v_apply #>> '{receipt,entityId}' <> 'canonical-owned'
+     OR v_apply #>> '{receipt,entityId}' <> 'ca110000-0000-4000-8000-000000000101'
      OR (v_apply #>> '{receipt,canonicalRevision}')::bigint <> v_before.revision + 1
      OR nullif(v_apply #>> '{receipt,canonicalUpdatedAt}', '') IS NULL
      OR (v_apply #>> '{receipt,changeSequence}')::bigint <> v_change.change_sequence
@@ -337,7 +337,7 @@ BEGIN
      OR nullif(v_apply #>> '{receipt,committedAt}', '') IS NULL
      OR v_apply #>> '{receipt,readBack,title}' <> 'Canonical title after apply'
      OR nullif(v_apply #>> '{receipt,readBackHash}', '') IS NULL
-     OR (SELECT canonical_revision FROM public.tasks WHERE id = 'canonical-owned')
+     OR (SELECT canonical_revision FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101')
        <> v_before.revision + 1
      OR v_change.canonical_revision <> v_before.revision + 1
      OR v_change.source <> 'sql-regression'
@@ -352,7 +352,7 @@ SELECT 'replay', public.flowstate_patch_task_v1(
   p_operation_id => 'canonical-op-apply',
   p_contract_version => 'task-v1',
   p_source => 'sql-regression',
-  p_task_id => 'canonical-owned',
+  p_task_id => 'ca110000-0000-4000-8000-000000000101',
   p_base_revision => (
     SELECT revision FROM canonical_test_snapshots WHERE key = 'before_preview'
   ),
@@ -392,7 +392,7 @@ SELECT 'payload_conflict', public.flowstate_patch_task_v1(
   p_operation_id => 'canonical-op-apply',
   p_contract_version => 'task-v1',
   p_source => 'sql-regression',
-  p_task_id => 'canonical-owned',
+  p_task_id => 'ca110000-0000-4000-8000-000000000101',
   p_base_revision => (
     SELECT revision FROM canonical_test_snapshots WHERE key = 'before_preview'
   ),
@@ -412,25 +412,25 @@ SELECT 'payload_conflict', public.flowstate_patch_task_v1(
 -- stable refusal modes and never create an operation or change row.
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'stale_revision', public.flowstate_patch_task_v1(
-  'canonical-op-stale', 'task-v1', 'sql-regression', 'canonical-owned',
+  'canonical-op-stale', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000101',
   (SELECT revision FROM canonical_test_snapshots WHERE key = 'before_preview'),
   '{"title":"Stale title"}'::jsonb, true
 );
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'mismatch_preview', public.flowstate_patch_task_v1(
-  'canonical-op-mismatch', 'task-v1', 'sql-regression', 'canonical-owned',
+  'canonical-op-mismatch', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000101',
   canonical_revision, '{"title":"Mismatched title"}'::jsonb, false,
   'not-the-approved-digest', clock_timestamp() + interval '5 minutes'
 )
-FROM public.tasks WHERE id = 'canonical-owned';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'expiry_issued', public.flowstate_patch_task_v1(
-  'canonical-op-expired', 'task-v1', 'sql-regression', 'canonical-owned',
+  'canonical-op-expired', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000101',
   canonical_revision, '{"title":"Expired title"}'::jsonb, true
 )
-FROM public.tasks WHERE id = 'canonical-owned';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
 UPDATE public.canonical_operation_previews
 SET expires_at = clock_timestamp() - interval '1 second'
@@ -439,7 +439,7 @@ WHERE user_id = 'ca110000-0000-4000-8000-000000000001'
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'expiry_preview', public.flowstate_patch_task_v1(
-  'canonical-op-expired', 'task-v1', 'sql-regression', 'canonical-owned',
+  'canonical-op-expired', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000101',
   task.canonical_revision, '{"title":"Expired title"}'::jsonb, false,
   preview.preview_digest, preview.expires_at
 )
@@ -447,7 +447,7 @@ FROM public.tasks AS task
 JOIN public.canonical_operation_previews AS preview
   ON preview.user_id = 'ca110000-0000-4000-8000-000000000001'
  AND preview.operation_id = 'canonical-op-expired'
-WHERE task.id = 'canonical-owned';
+WHERE task.id = 'ca110000-0000-4000-8000-000000000101';
 
 DO $$
 BEGIN
@@ -479,7 +479,7 @@ SELECT set_config('request.jwt.claims', '{"role":"authenticated"}', true);
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'not_authenticated', public.flowstate_patch_task_v1(
-  'canonical-op-no-auth', 'task-v1', 'sql-regression', 'canonical-owned', 1,
+  'canonical-op-no-auth', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000101', 1,
   '{"title":"Must not apply"}'::jsonb, true
 );
 
@@ -496,27 +496,27 @@ SELECT set_config(
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'cross_user', public.flowstate_patch_task_v1(
-  'canonical-op-cross-user', 'task-v1', 'sql-regression', 'canonical-owned',
-  (SELECT canonical_revision FROM public.tasks WHERE id = 'canonical-owned'),
+  'canonical-op-cross-user', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000101',
+  (SELECT canonical_revision FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000101'),
   '{"title":"Must not apply"}'::jsonb, true
 );
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'workspace_member', public.flowstate_patch_task_v1(
   'canonical-op-workspace-member', 'task-v1', 'sql-regression',
-  'canonical-shared', canonical_revision,
+  'ca110000-0000-4000-8000-000000000104', canonical_revision,
   '{"title":"Member-approved shared preview"}'::jsonb, true,
   NULL, NULL, 'ca110000-0000-4000-8000-000000000010'
 )
-FROM public.tasks WHERE id = 'canonical-shared';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000104';
 
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'wrong_workspace', public.flowstate_patch_task_v1(
   'canonical-op-wrong-workspace', 'task-v1', 'sql-regression',
-  'canonical-shared', canonical_revision,
+  'ca110000-0000-4000-8000-000000000104', canonical_revision,
   '{"title":"Wrong-scope preview"}'::jsonb, true
 )
-FROM public.tasks WHERE id = 'canonical-shared';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000104';
 
 SET LOCAL ROLE authenticated;
 DO $$
@@ -524,7 +524,7 @@ BEGIN
   BEGIN
     UPDATE public.tasks
     SET user_id = 'ca110000-0000-4000-8000-000000000002'
-    WHERE id = 'canonical-shared';
+    WHERE id = 'ca110000-0000-4000-8000-000000000104';
     RAISE EXCEPTION 'FAIL: workspace member changed task ownership';
   EXCEPTION WHEN insufficient_privilege THEN
     NULL;
@@ -533,7 +533,7 @@ BEGIN
   BEGIN
     UPDATE public.tasks
     SET workspace_id = NULL
-    WHERE id = 'canonical-shared';
+    WHERE id = 'ca110000-0000-4000-8000-000000000104';
     RAISE EXCEPTION 'FAIL: workspace member reassigned task scope';
   EXCEPTION WHEN insufficient_privilege THEN
     NULL;
@@ -544,7 +544,7 @@ BEGIN
       id, user_id, title, status, is_deleted, instances, subtasks,
       is_in_inbox, workspace_id
     ) VALUES (
-      'canonical-forged-owner',
+      'ca110000-0000-4000-8000-000000000107',
       'ca110000-0000-4000-8000-000000000001',
       'Forged owner', 'planned', false, '[]', '[]', true,
       'ca110000-0000-4000-8000-000000000010'
@@ -564,11 +564,11 @@ WHERE workspace_id = 'ca110000-0000-4000-8000-000000000010'
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'workspace_viewer', public.flowstate_patch_task_v1(
   'canonical-op-workspace-viewer', 'task-v1', 'sql-regression',
-  'canonical-shared', canonical_revision,
+  'ca110000-0000-4000-8000-000000000104', canonical_revision,
   '{"title":"Viewer must not write"}'::jsonb, true,
   NULL, NULL, 'ca110000-0000-4000-8000-000000000010'
 )
-FROM public.tasks WHERE id = 'canonical-shared';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000104';
 
 DO $$
 BEGIN
@@ -598,7 +598,7 @@ BEGIN
   BEGIN
     UPDATE public.tasks
     SET title = 'Viewer direct write must be filtered'
-    WHERE id = 'canonical-shared';
+    WHERE id = 'ca110000-0000-4000-8000-000000000104';
     GET DIAGNOSTICS v_updated = ROW_COUNT;
   EXCEPTION WHEN insufficient_privilege THEN
     -- A table-level denial is stronger than an RLS-filtered zero-row update.
@@ -616,11 +616,11 @@ BEGIN
      )
      OR NOT EXISTS (
        SELECT 1 FROM public.canonical_change_log
-       WHERE entity_id = 'canonical-shared'
+       WHERE entity_id = 'ca110000-0000-4000-8000-000000000104'
          AND workspace_id = 'ca110000-0000-4000-8000-000000000010'
      )
      OR v_updated <> 0
-     OR (SELECT title FROM public.tasks WHERE id = 'canonical-shared')
+     OR (SELECT title FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000104')
        <> 'Canonical shared fixture'
   THEN
     RAISE EXCEPTION 'FAIL: workspace viewer RLS read/write scope was incorrect';
@@ -634,7 +634,7 @@ BEGIN
       'ca110000-0000-4000-8000-000000000002', 'forged-ledger-row',
       'task-v1', 'sql-regression', 'personal',
       'ca110000-0000-4000-8000-000000000002', 'task', 'patch',
-      'canonical-other', repeat('0', 64), 'applying'
+      'ca110000-0000-4000-8000-000000000102', repeat('0', 64), 'applying'
     );
     RAISE EXCEPTION 'FAIL: authenticated caller inserted directly into operation ledger';
   EXCEPTION WHEN insufficient_privilege THEN
@@ -644,7 +644,7 @@ BEGIN
   BEGIN
     UPDATE public.canonical_change_log
     SET source = 'forged'
-    WHERE entity_id = 'canonical-shared';
+    WHERE entity_id = 'ca110000-0000-4000-8000-000000000104';
     RAISE EXCEPTION 'FAIL: authenticated caller updated the change log';
   EXCEPTION WHEN insufficient_privilege THEN
     NULL;
@@ -652,7 +652,7 @@ BEGIN
 
   BEGIN
     DELETE FROM public.canonical_change_log
-    WHERE entity_id = 'canonical-shared';
+    WHERE entity_id = 'ca110000-0000-4000-8000-000000000104';
     RAISE EXCEPTION 'FAIL: authenticated caller deleted from the change log';
   EXCEPTION WHEN insufficient_privilege THEN
     NULL;
@@ -668,11 +668,11 @@ SET LOCAL ROLE authenticated;
 DO $$
 BEGIN
   IF EXISTS (
-       SELECT 1 FROM public.tasks WHERE id = 'canonical-shared'
+       SELECT 1 FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000104'
      )
      OR EXISTS (
        SELECT 1 FROM public.canonical_change_log
-       WHERE entity_id = 'canonical-shared'
+       WHERE entity_id = 'ca110000-0000-4000-8000-000000000104'
      ) THEN
     RAISE EXCEPTION 'FAIL: removed workspace member retained task/change-log access';
   END IF;
@@ -694,7 +694,7 @@ SELECT set_config(
 -- catch-up cursor used when Realtime is absent; gaps from other scopes are valid.
 UPDATE public.tasks
 SET planning_notes = '[{"type":"note","content":"second legacy write"}]'::jsonb
-WHERE id = 'canonical-owned';
+WHERE id = 'ca110000-0000-4000-8000-000000000101';
 
 DO $$
 DECLARE
@@ -717,24 +717,24 @@ END $$;
 -- change log, and durable operation free of any false committed receipt.
 INSERT INTO canonical_test_results (key, payload)
 SELECT 'rollback_preview', public.flowstate_patch_task_v1(
-  'canonical-op-rollback', 'task-v1', 'sql-regression', 'canonical-rollback',
+  'canonical-op-rollback', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000103',
   canonical_revision, '{"title":"Must roll back"}'::jsonb, true
 )
-FROM public.tasks WHERE id = 'canonical-rollback';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000103';
 
 INSERT INTO canonical_test_snapshots (key, revision, change_sequence, change_count)
 SELECT
   'before_rollback', canonical_revision,
   (SELECT max(change_sequence) FROM public.canonical_change_log),
   (SELECT count(*) FROM public.canonical_change_log)
-FROM public.tasks WHERE id = 'canonical-rollback';
+FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000103';
 
 CREATE FUNCTION public.test_force_canonical_task_failure()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  IF NEW.id = 'canonical-rollback' THEN
+  IF NEW.id = 'ca110000-0000-4000-8000-000000000103' THEN
     RAISE EXCEPTION 'injected canonical task failure';
   END IF;
   RETURN NEW;
@@ -754,7 +754,7 @@ DECLARE
 BEGIN
   BEGIN
     v_result := public.flowstate_patch_task_v1(
-      'canonical-op-rollback', 'task-v1', 'sql-regression', 'canonical-rollback',
+      'canonical-op-rollback', 'task-v1', 'sql-regression', 'ca110000-0000-4000-8000-000000000103',
       (SELECT revision FROM canonical_test_snapshots WHERE key = 'before_rollback'),
       '{"title":"Must roll back"}'::jsonb, false,
       v_preview->>'previewDigest',
@@ -773,9 +773,9 @@ BEGIN
       -- assertions prove the statement left no partial canonical commit.
   END;
 
-  IF (SELECT title FROM public.tasks WHERE id = 'canonical-rollback')
+  IF (SELECT title FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000103')
        <> 'Canonical rollback fixture'
-     OR (SELECT canonical_revision FROM public.tasks WHERE id = 'canonical-rollback')
+     OR (SELECT canonical_revision FROM public.tasks WHERE id = 'ca110000-0000-4000-8000-000000000103')
        <> (SELECT revision FROM canonical_test_snapshots WHERE key = 'before_rollback')
      OR EXISTS (
        SELECT 1 FROM public.canonical_change_log

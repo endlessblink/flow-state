@@ -7,6 +7,7 @@ test_db="canonical_assistant_${$}_${RANDOM}"
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 task_migration="$root_dir/supabase/migrations/20260713012000_canonical_task_contract.sql"
 notion_migration="$root_dir/supabase/migrations/20260714010000_canonical_notion_activation.sql"
+uuid_compatibility_migration="$root_dir/supabase/migrations/20260714020000_canonical_uuid_compatibility.sql"
 
 cleanup() {
   docker exec "$container" dropdb -U postgres --if-exists --force "$test_db" >/dev/null 2>&1 || true
@@ -25,6 +26,10 @@ docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$task_migration" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$notion_migration" >/dev/null
+for _ in 1 2; do
+  docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+    < "$uuid_compatibility_migration" >/dev/null
+done
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 DO $$
 BEGIN

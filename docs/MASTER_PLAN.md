@@ -2196,7 +2196,7 @@ _Original plan below._
 - [ ] **TASK-1952 — Hydrate Electron auth backup into the live Supabase client**: replace the ineffective post-startup storage reread with supported session hydration, preserve stale-token reconnect behavior, and prove packaged protected assistant reads recover after restart.
 - [x] ~~**TASK-1953 — Preserve blocked remote Canvas projection updates**: coalesce remote task/group projection requests while Canvas interaction guards are active, replay the latest store state after the operation returns idle, and prove two-client geometry cannot remain stale after Realtime updates the store.~~ Completed 2026-07-14.
 - [x] **BUG-1954 — Recover signed-in Electron from an empty renderer projection**: shipped in Electron 1.4.255; authenticated empty projections now rebaseline the still-active scope, and the true Canvas empty-state surface uses the opaque design-system overlay.
-- [ ] **BUG-1955 — Restore packaged exact-task reads**: make the detailed Local Task API serializer execute safely with absent, null, empty, or malformed subtasks; add an executable source-and-bundle regression; and ship a version above Electron 1.4.255 with live Hermes read-back proof.
+- [x] ~~**BUG-1955 — Restore packaged exact-task reads**: make the detailed Local Task API serializer execute safely with absent, null, empty, or malformed subtasks; add an executable source-and-bundle regression; and ship a version above Electron 1.4.255 with live Hermes read-back proof.~~ Completed 2026-07-14 in Electron 1.4.256.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4611,9 +4611,9 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Explicitly not covered**: this does not hide legitimate first-run guidance for a genuinely empty account; it makes that real empty-state surface opaque and design-system compliant.
 
-### BUG-1955: Packaged exact-task reads crash because the subtask normalizer is missing (🔄 IN PROGRESS)
+### ~~BUG-1955~~: Packaged exact-task reads crash because the subtask normalizer is missing (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-14) | **Depends on**: TASK-1797, TASK-1943
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-14; shipped Electron 1.4.256) | **Depends on**: TASK-1797, TASK-1943
 
 **User repro**: Electron 1.4.255 is authenticated and its compact task, search, assistant-context, timer, task-instance, and Supabase reads work, but `GET /api/tasks/:id` returns HTTP 500 with `normalizeSubtasks is not defined`, blocking Hermes from reading the task's detailed planning context.
 
@@ -4625,6 +4625,30 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 - User scoping and deleted-task exclusion remain intact, expected detailed fields remain present, and auth/session/token secrets remain absent.
 - Local API suites, typecheck, lint, full tests, Electron main build, package validation, and Electron packaging pass.
 - A version above 1.4.255 is deployed; the installed real-profile app returns HTTP 200 for the reported exact task and Hermes reads it end to end without mutating production data.
+
+**Verification**: PR #220 merged after both required checks passed. The canonical ship gate passed 3,540 tests with 6 skipped plus the 243-test Electron synchronization guard, package validation, and the executable source/package regression. The public 1.4.256 AppImage checksum matched its updater manifest and the installed file matched those public bytes. The live real-profile diagnostic reported app version 1.4.256, healthy remote authentication, and no boundary failures; the reported task returned HTTP 200 with normalized subtask and instance arrays, and the office-work Hermes `flowstate_get_task` handler read it successfully without exposing authentication fields or mutating task data.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Installed 1.4.255 exact-task read returned HTTP 500; installed 1.4.256 returned HTTP 200 for the reported task | Yes |
+| Data shape / persisted row shape | Yes | Runtime fixtures execute absent, null, empty, scalar, object, mixed, and valid subtask shapes; the live row returned normalized arrays | Yes |
+| Renderer store/state | N/A | The crash occurred in the sidecar serializer before a response reached Hermes; the renderer was not the failing boundary | No |
+| Electron main/preload bridge | Yes | The extracted public AppImage executes the bundled sidecar regression and package validation confirms the main/preload/sidecar payload | Yes, for packaged sidecar inclusion |
+| Localhost sidecar endpoint | Yes | Authenticated live `GET /api/tasks/:id` returned HTTP 200 with the expected safe detailed shape | Yes |
+| KDE polling/control path | N/A | No KDE timer or control path participates in exact-task serialization | No |
+| Supabase persistence/realtime | Read path only | The signed-in sidecar read the canonical live row under user/workspace/deleted filters; no mutation or Realtime behavior changed | No |
+| Updater/runtime version | Yes | Public manifest and artifacts report 1.4.256; public checksum matches the installed AppImage and live diagnostics report 1.4.256 | Yes |
+| Stale live process/cache state | Yes | The running real-profile process reports fresh renderer auth, remote-sync capability, and zero live-boundary failures | Yes, for the reported installed-runtime repro |
+
+**Exact failure mode fixed**: the committed detailed-task serializer called an undefined subtask normalizer, so the packaged Electron Local Task API crashed only on `GET /api/tasks/:id` even though health and other routes remained available.
+
+**Explicitly not covered**: this does not claim to repair unrelated protected-route auth recovery tracked by TASK-1952, mutation/Realtime behavior, KDE timer paths, or every possible Local Task API route.
+
+**Regression added for reported repro**: the executable test spawns both source and freshly bundled or extracted packaged sidecars, performs authenticated exact-task reads across malformed and valid subtask shapes, and verifies user/workspace/deleted filters plus the response allowlist.
+
+**Live boundary proof**: the public and installed 1.4.256 bytes match; redacted diagnostics show healthy real-profile authentication and remote sync; the reported exact task returns HTTP 200; Hermes' office-work `flowstate_get_task` handler reads it end to end.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7336,7 +7360,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1952** | **P0** | 🔄 **Hydrate Electron auth backup into the live Supabase client and restore protected sidecar reads after restart** |
 | ~~**TASK-1953**~~ | **P0** | ✅ **Preserve blocked remote Canvas projection updates and replay latest store geometry after interaction guards clear** |
 | ~~**BUG-1954**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.255; authenticated empty projections recover and the real Canvas empty state is opaque** |
-| **BUG-1955** | **P0** | 🔄 **Restore packaged exact-task reads with executable source/bundle regression and ship above Electron 1.4.255** |
+| ~~**BUG-1955**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.256 with executable source/package coverage and live Hermes exact-task read-back** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

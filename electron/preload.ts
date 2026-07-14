@@ -79,6 +79,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setLocalApiEnabled: (enabled: boolean) => ipcRenderer.invoke('localApi:setEnabled', enabled),
   getLocalApiToken: () => ipcRenderer.invoke('localApi:getToken'),
   getLocalApiStatus: () => ipcRenderer.invoke('localApi:status'),
+  onLocalApiTaskMutation: (callback: (mutation: unknown) => void) => {
+    ipcRenderer.on('localApi:taskMutation', (_event, mutation) => callback(mutation))
+  },
+  offLocalApiTaskMutation: () => ipcRenderer.removeAllListeners('localApi:taskMutation'),
 
   // BUG-1936: drag diagnostics — append a JSON line to <userData>/drag-diagnostics.log
   appendDragDiag: (line: string) => ipcRenderer.invoke('diag:appendDrag', line),
@@ -125,6 +129,8 @@ declare global {
       appendDragDiag: (line: string) => Promise<string>
       dragDiagPath: () => Promise<string>
       getLocalApiToken: () => Promise<string>
+      onLocalApiTaskMutation: (callback: (mutation: unknown) => void) => void
+      offLocalApiTaskMutation: () => void
       getLocalApiStatus: () => Promise<{
         enabled: boolean
         running: boolean

@@ -27,6 +27,7 @@ import { getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPend
 import { applyPendingGroupPatch, applyPendingTaskPatch } from '@/services/offline/pendingWritePatch'
 // TASK-1219: Time block progress notifications
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
+import { subscribeLocalApiTaskMutations } from '@/composables/useLocalApiBridge'
 
 export function useAppInitialization() {
     const router = useRouter()
@@ -64,6 +65,16 @@ export function useAppInitialization() {
             void reloadCoreData()
         }, 0)
     }
+
+    let localApiReloadTimer: number | null = null
+    const stopLocalApiMutationSubscription = subscribeLocalApiTaskMutations(() => {
+        if (localApiReloadTimer !== null) window.clearTimeout(localApiReloadTimer)
+        localApiReloadTimer = window.setTimeout(() => {
+            localApiReloadTimer = null
+            invalidateCache.tasks()
+            void taskStore.loadFromDatabase()
+        }, 50)
+    })
 
     // TASK-1812: Lane realtime handler. Lane is pure metadata (no geometry),
     // so it has no drag/resize lock.
@@ -1081,6 +1092,8 @@ export function useAppInitialization() {
     }
 
     onUnmounted(() => {
+        stopLocalApiMutationSubscription()
+        if (localApiReloadTimer !== null) window.clearTimeout(localApiReloadTimer)
         if (activeChannel.value) {
 
             activeChannel.value.unsubscribe()

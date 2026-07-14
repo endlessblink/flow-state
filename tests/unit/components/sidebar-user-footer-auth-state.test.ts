@@ -22,7 +22,7 @@ describe('SidebarUserFooter auth restoration state', () => {
     openAuthModal.mockClear()
   })
 
-  it('shows a non-interactive restoring state instead of Sign In while auth is unresolved', async () => {
+  it('keeps account recovery visible while offering an immediate Sign In escape hatch', async () => {
     const wrapper = mount(SidebarUserFooter, {
       global: {
         mocks: { $t: (key: string) => key },
@@ -31,8 +31,9 @@ describe('SidebarUserFooter auth restoration state', () => {
     })
 
     expect(wrapper.text()).toContain('sidebar.restoring_account')
-    expect(wrapper.text()).not.toContain('sidebar.sign_in')
-    expect(wrapper.find('button.sidebar-login-btn').exists()).toBe(false)
+    expect(wrapper.text()).toContain('sidebar.sign_in')
+    await wrapper.get('button.sidebar-login-btn').trigger('click')
+    expect(openAuthModal).toHaveBeenCalledWith('login')
   })
 
   it('shows Sign In only after initialization confirms guest mode', async () => {

@@ -2499,6 +2499,8 @@ _Original plan below._
 - Focused auth tests, type-check, release gates, package validation, and public updater proof pass.
 - The installed packaged app reports the new version with authenticated protected reads and zero live-boundary failures.
 
+**2026-07-14 recovery follow-up**: Live 1.4.258 verification found a real profile with cached local tasks and durable identity but no recoverable primary or backup token. Protected routes correctly remained blocked, but the sidebar exposed only a non-interactive “Restoring account” state for the full reconnect grace window. The recovery state now preserves that warning while also offering an immediate Sign In action; the focused sidebar regression failed first, then passed 2/2 with the TypeScript check.
+
 ### ~~TASK-1953~~: Preserve blocked remote Canvas projection updates (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: TASK-1871

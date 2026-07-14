@@ -2,11 +2,14 @@
   <div class="sidebar-footer">
     <div
       v-if="authStore.isRestoringSession || !authStore.isInitialized"
-      class="sidebar-auth-restoring"
-      role="status"
-      aria-live="polite"
+      class="sidebar-auth-recovery"
     >
-      <span>{{ $t('sidebar.restoring_account') }}</span>
+      <div class="sidebar-auth-restoring" role="status" aria-live="polite">
+        <span>{{ $t('sidebar.restoring_account') }}</span>
+      </div>
+      <button class="sidebar-login-btn" @click="uiStore.openAuthModal('login')">
+        <span style="font-weight: 600;">{{ $t('sidebar.sign_in') }}</span>
+      </button>
     </div>
     <button v-else-if="!authStore.user" class="sidebar-login-btn" @click="uiStore.openAuthModal('login')">
       <span style="font-weight: 600;">{{ $t('sidebar.sign_in') }}</span>
@@ -74,6 +77,11 @@ const authStore = useAuthStore()
   justify-content: center;
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+.sidebar-auth-recovery {
+  display: grid;
+  gap: var(--space-2);
 }
 
 .user-profile-row {

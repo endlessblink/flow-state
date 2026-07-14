@@ -58,6 +58,33 @@ fi
 zombies=$(q "SELECT count(*) FROM timer_sessions WHERE user_id='$MAIN_USER_ID' AND is_active=true AND remaining_time=0 AND completed_at IS NULL AND updated_at > now()-interval '10 minutes' AND created_at < now()-interval '15 minutes'")
 [ "${zombies:-0}" != "0" ] && ANOMALIES+=("zombie-timer-sessions=$zombies (active, 0 remaining, still heart-beaten — BUG-1919 class)")
 
+# (d3) TASK-1532: every durable Done-for-now receipt must still resolve both
+# the completion-history row and the living next-occurrence row. Counts only;
+# no task ids, titles, receipt payloads, or user content leave the database.
+has_done_for_now_receipts=$(q "SELECT CASE WHEN to_regclass('public.done_for_now_receipts') IS NULL THEN 0 ELSE 1 END")
+if [ "${has_done_for_now_receipts:-0}" = "1" ]; then
+  broken_done_for_now=$(q "SELECT count(*) FROM done_for_now_receipts r
+    WHERE r.created_at < now()-interval '1 minute'
+      AND (
+        NOT EXISTS (SELECT 1 FROM tasks h WHERE h.id::text=r.response#>>'{receipt,completedOccurrenceId}' AND h.is_completion_record=true AND h.status='done' AND h.is_deleted=false)
+        OR NOT EXISTS (SELECT 1 FROM tasks n WHERE n.id::text=r.response#>>'{receipt,nextOccurrenceId}' AND n.is_completion_record=false AND n.status<>'done' AND n.is_deleted=false)
+      )")
+  [ "${broken_done_for_now:-0}" != "0" ] && ANOMALIES+=("done-for-now-broken-receipts=$broken_done_for_now")
+fi
+
+# (d4) Safe merge receipts must resolve one active survivor and one archived
+# duplicate. Counts only; task ids, titles, and receipt payloads are never logged.
+has_merge_task_receipts=$(q "SELECT CASE WHEN to_regclass('public.merge_task_receipts') IS NULL THEN 0 ELSE 1 END")
+if [ "${has_merge_task_receipts:-0}" = "1" ]; then
+  broken_task_merges=$(q "SELECT count(*) FROM merge_task_receipts r
+    WHERE r.created_at < now()-interval '1 minute'
+      AND (
+        NOT EXISTS (SELECT 1 FROM tasks s WHERE s.id::text=r.survivor_task_id AND s.user_id=r.user_id AND s.is_deleted=false)
+        OR NOT EXISTS (SELECT 1 FROM tasks d WHERE d.id::text=r.duplicate_task_id AND d.user_id=r.user_id AND d.is_deleted=true)
+      )")
+  [ "${broken_task_merges:-0}" != "0" ] && ANOMALIES+=("task-merge-broken-receipts=$broken_task_merges")
+fi
+
 # (e) Updater manifest health
 manifest_version=$(curl -sS --max-time 15 "$UPDATER_URL" | grep -m1 '^version:' | awk '{print $2}')
 [ -z "${manifest_version:-}" ] && ANOMALIES+=("updater-manifest-unreachable-or-unparseable")

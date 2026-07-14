@@ -37,6 +37,42 @@ export interface CanonicalChangeCatchupResult {
   reconciledTaskIds: string[]
 }
 
+interface EmptyProjectionRecoveryOptions {
+  failedScope: CanonicalChangeScope
+  getActiveScope(): CanonicalChangeScope | null
+  hasVisibleTasks(): boolean
+  clearCursor(scope: CanonicalChangeScope): void
+  runCatchup(scope: CanonicalChangeScope): Promise<unknown>
+  onError?(error: unknown): void
+}
+
+function sameScope(left: CanonicalChangeScope | null, right: CanonicalChangeScope): boolean {
+  if (!left || left.kind !== right.kind || left.userId !== right.userId) return false
+  if (left.kind === 'personal') return true
+  return right.kind === 'workspace' && left.workspaceId === right.workspaceId
+}
+
+/**
+ * A durable canonical cursor proves which remote changes were consumed; it does
+ * not prove the renderer still has that projection. If authenticated hydration
+ * fails while the visible task store is empty, clear only the still-active
+ * scope so the existing baseline/poller path remains retryable.
+ */
+export async function recoverEmptyAuthenticatedProjection(
+  options: EmptyProjectionRecoveryOptions,
+): Promise<boolean> {
+  if (options.hasVisibleTasks()) return false
+  if (!sameScope(options.getActiveScope(), options.failedScope)) return false
+
+  options.clearCursor(options.failedScope)
+  try {
+    await options.runCatchup(options.failedScope)
+  } catch (error) {
+    options.onError?.(error)
+  }
+  return true
+}
+
 const PAGE_SIZE = 200
 const MAX_PAGES_PER_RUN = 20
 

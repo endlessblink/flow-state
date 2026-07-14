@@ -31,7 +31,11 @@ import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotificatio
 import { subscribeLocalApiTaskMutations, syncLocalApiWorkspaceContext } from '@/composables/useLocalApiBridge'
 import { supabase } from '@/services/auth/supabase'
 import { createCanonicalChangeCursorStore, type CanonicalChangeScope } from '@/services/sync/canonicalChangeCursor'
-import { createCanonicalChangeCatchup, createCanonicalChangePoller } from '@/services/sync/canonicalChangeCatchup'
+import {
+    createCanonicalChangeCatchup,
+    createCanonicalChangePoller,
+    recoverEmptyAuthenticatedProjection,
+} from '@/services/sync/canonicalChangeCatchup'
 import { createCanonicalChangeSupabaseReader } from '@/services/sync/canonicalChangeSupabase'
 
 export function useAppInitialization() {
@@ -115,6 +119,21 @@ export function useAppInitialization() {
         } catch (error) {
             console.warn('[CANONICAL-CATCHUP] Deferred after a recoverable failure:', error instanceof Error ? error.message : 'unknown error')
         }
+    }
+    const recoverCanonicalProjectionIfEmpty = async (reason: string) => {
+        const failedScope = activeCanonicalScope()
+        if (!failedScope) return false
+        return recoverEmptyAuthenticatedProjection({
+            failedScope,
+            getActiveScope: activeCanonicalScope,
+            hasVisibleTasks: () => taskStore._rawTasks.length > 0,
+            clearCursor: scope => canonicalChangeCursorStore.clear(scope),
+            runCatchup: scope => canonicalChangeCatchup.run(scope),
+            onError: error => console.warn(
+                `⚠️ [BUG-1954] Authoritative empty-projection recovery deferred (${reason}):`,
+                error instanceof Error ? error.message : 'unknown error',
+            ),
+        })
     }
     const canonicalChangePoller = createCanonicalChangePoller({
         run: scope => canonicalChangeCatchup.run(scope),
@@ -577,6 +596,14 @@ export function useAppInitialization() {
                 } catch (refreshError) {
                     console.warn('⚠️ [CACHE-FIRST] Background refresh failed:', refreshError)
 
+                    // BUG-1954: A persisted change cursor only proves that earlier changes were
+                    // consumed; it does not prove this renderer still has their task projection.
+                    // If the authenticated store is empty, invalidate only the still-active scope
+                    // and immediately enter the canonical baseline path. A failed baseline leaves
+                    // the cursor empty, so the existing foreground poller retries without waiting
+                    // for an `online` event that will never fire while Chromium stays online.
+                    await recoverCanonicalProjectionIfEmpty('background-refresh-failed')
+
                     // Register online listener to retry when connectivity returns
                     const onBackOnline = async () => {
                         console.log('🌐 [CACHE-FIRST] Network restored — reloading from Supabase...')
@@ -937,6 +964,7 @@ export function useAppInitialization() {
         // BUG-1106: Mark onMounted as complete so watcher knows it can run
         onMountedCompleted.value = true
         await runCanonicalChangeCatchup()
+        await recoverCanonicalProjectionIfEmpty('initial-catchup')
     })
 
     // BUG-1106: Re-initialize realtime when user signs in after initial page load
@@ -1045,6 +1073,7 @@ export function useAppInitialization() {
                 console.log(`📡 [APP-INIT] Realtime subscription created after sign-in (workspace: ${workspaceStore.activeWorkspaceId || 'personal'})`)
             }
             await runCanonicalChangeCatchup()
+            await recoverCanonicalProjectionIfEmpty('post-sign-in')
         }
     })
 

@@ -2195,6 +2195,7 @@ _Original plan below._
 - [x] ~~**TASK-1951 — Production UUID compatibility for canonical assistant contracts**: make canonical task/Notion RPCs, rollback suites, and the VPS watchdog portable across text-ID development schemas and UUID production schemas; ship a forward migration and repeat live rollback-only proof before enabling writers.~~ Completed 2026-07-14.
 - [ ] **TASK-1952 — Hydrate Electron auth backup into the live Supabase client**: replace the ineffective post-startup storage reread with supported session hydration, preserve stale-token reconnect behavior, and prove packaged protected assistant reads recover after restart.
 - [x] ~~**TASK-1953 — Preserve blocked remote Canvas projection updates**: coalesce remote task/group projection requests while Canvas interaction guards are active, replay the latest store state after the operation returns idle, and prove two-client geometry cannot remain stale after Realtime updates the store.~~ Completed 2026-07-14.
+- [x] **BUG-1954 — Recover signed-in Electron from an empty renderer projection**: shipped in Electron 1.4.255; authenticated empty projections now rebaseline the still-active scope, and the true Canvas empty-state surface uses the opaque design-system overlay.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4587,6 +4588,27 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 ---
 
 ## Active Bugs (P0-P1)
+
+### ~~BUG-1954~~: Signed-in Electron remains empty after one renderer hydration failure (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (Electron 1.4.255, 2026-07-14) | **Depends on**: BUG-1942, BUG-1944, TASK-1947
+
+**User repro**: Electron 1.4.254 shows the authenticated account footer but every sidebar count is zero and Canvas renders `Your spatial canvas awaits`. At the same time the renderer auth heartbeat reports authenticated/remote-capable and the user-scoped Local Task API returns 25 open tasks, including `לשלוח כביסה`.
+
+**Root cause**: the authenticated renderer starts with an empty read cache and performs one fire-and-forget core-data load. If that load rejects while `navigator.onLine` is already true, recovery waits only for a future `online` event that never occurs. The persisted personal canonical cursor then reports no new changes and skips its authoritative baseline, so unchanged remote tasks remain absent indefinitely. Separately, the Canvas empty-state card uses a weak glass background even though global flat mode disables blur, making the columns behind it bleed through.
+
+**Acceptance**:
+- A failed authenticated load with an empty renderer projection invalidates only the still-active personal/workspace cursor and immediately attempts an authoritative baseline.
+- A failed baseline leaves the cursor empty so the existing bounded foreground poll retries; a successful baseline persists high-water only after tasks are visible.
+- Auth or workspace changes cannot clear/reload another scope.
+- A genuinely empty Canvas uses the canonical opaque overlay surface tokens under flat mode.
+- Focused red/green regressions, typecheck, lint, Electron build, packaged signed-in UI, updater manifest, and artifact reachability are verified.
+
+**Regression and live proof**: RED tests first failed because no authenticated-empty recovery helper existed and the Canvas card still used the translucent glass token. Green focused coverage passed 74/74 across canonical catch-up, auth reload, persistence boundaries, and Canvas behavior; the Electron sync guard passed 243/243; the full ship gate passed 3,538 tests with 6 skipped; typecheck and the packaged Electron build passed. The touched-file lint probe reported only pre-existing template formatting debt and the pre-existing unused cache flag. Electron 1.4.255 was deployed, the public updater manifest serves 1.4.255, and both AppImage and deb range requests return 206. The installed signed-in app was relaunched against the real profile: the footer remained authenticated, sidebar counts recovered to Today 4 / This Week 33 / All Active 59, Canvas tasks rendered, and the false empty-state card was absent. The redacted Local Task API read returned 25 tasks and the exact record `f4658470-fa2f-41e0-ac20-867750278e92` as `לשלוח כביסה`, `todo`, `high`, due `2026-07-13`; live diagnostics reported app version 1.4.255, authenticated renderer sync capability, and no failures or warnings.
+
+**Exact failure mode fixed**: an already-authenticated Electron renderer with zero local task projection can no longer remain permanently empty merely because its saved canonical cursor has no newer change rows.
+
+**Explicitly not covered**: this does not hide legitimate first-run guidance for a genuinely empty account; it makes that real empty-state surface opaque and design-system compliant.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7297,6 +7319,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1951**~~ | **P0** | ✅ **Production UUID compatibility for canonical task/Notion RPCs, rollback suites, and VPS watchdog** |
 | **TASK-1952** | **P0** | 🔄 **Hydrate Electron auth backup into the live Supabase client and restore protected sidecar reads after restart** |
 | ~~**TASK-1953**~~ | **P0** | ✅ **Preserve blocked remote Canvas projection updates and replay latest store geometry after interaction guards clear** |
+| ~~**BUG-1954**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.255; authenticated empty projections recover and the real Canvas empty state is opaque** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

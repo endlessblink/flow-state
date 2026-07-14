@@ -194,15 +194,12 @@ function gridDotStyle(i: number): Record<string, string> {
   padding: var(--space-8);
   max-width: 520px;
   width: 100%;
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border-soft);
+  background: var(--overlay-component-bg);
+  border: var(--overlay-component-border);
   border-radius: var(--radius-xl);
   backdrop-filter: blur(var(--blur-md));
   -webkit-backdrop-filter: blur(var(--blur-md));
-  box-shadow:
-    0 0 0 1px var(--glass-border-faint),
-    0 24px 48px rgba(0, 0, 0, 0.28),
-    0 0 80px rgba(45, 212, 191, 0.04);
+  box-shadow: var(--overlay-component-shadow);
   animation: card-arrive 0.6s var(--spring-smooth) both;
 }
 

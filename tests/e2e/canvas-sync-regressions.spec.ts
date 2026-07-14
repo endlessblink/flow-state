@@ -253,6 +253,53 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     }).toPass({ timeout: 12_000 })
   })
 
+  // ── R8: updates blocked by a local interaction replay after the guard clears ─
+  test('R8 - client B replays latest remote geometry after its interaction guard clears', async ({ clientA, clientB }) => {
+    await gotoCanvasReady(clientA)
+    await gotoCanvasReady(clientB)
+    await waitForCanvasNodes(clientB, ROOT_TASKS.length)
+
+    const target = { x: 3250, y: 3250 }
+    const lockAccepted = await clientB.evaluate(async () => {
+      const { useCanvasOperationState } = await import('/src/composables/canvas/useCanvasOperationState.ts')
+      return useCanvasOperationState().startDrag(['deterministic-remote-projection-lock'])
+    })
+    expect(lockAccepted).toBe(true)
+
+    await clientA.evaluate(({ pos, taskId }) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.updateTask(taskId, {
+        canvasPosition: { x: pos.x, y: pos.y }, positionFormat: 'absolute',
+      }, 'DRAG')
+    }, { pos: target, taskId: ROOT_TASKS[0].id })
+
+    await expect(async () => {
+      const storePos = await clientB.evaluate((taskId) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        return tasks.rawTasks.find((task: any) => task.id === taskId)?.canvasPosition ?? null
+      }, ROOT_TASKS[0].id)
+      expect(storePos).toEqual(target)
+    }).toPass({ timeout: 12_000 })
+
+    const blockedNode = (await readCanvasNodePositions(clientB))[ROOT_TASKS[0].id]
+    expect(blockedNode).toBeTruthy()
+    expect(Math.abs(blockedNode.x - target.x)).toBeGreaterThan(100)
+
+    await clientB.evaluate(async () => {
+      const { useCanvasOperationState } = await import('/src/composables/canvas/useCanvasOperationState.ts')
+      useCanvasOperationState().resetToIdle()
+    })
+
+    await expect(async () => {
+      const node = (await readCanvasNodePositions(clientB))[ROOT_TASKS[0].id]
+      expect(node).toBeTruthy()
+      expect(Math.abs(node.x - target.x)).toBeLessThan(2)
+      expect(Math.abs(node.y - target.y)).toBeLessThan(2)
+    }).toPass({ timeout: 12_000 })
+  })
+
   // ── R6: moving a GROUP on A propagates LIVE to independent client B ─────────
   test('R6 - moving a group on client A live-updates its position on client B', async ({ clientA, clientB }) => {
     const bLogs: string[] = []

@@ -479,7 +479,8 @@ BEGIN
   UPDATE public.task_comments SET task_id = v_survivor.id
     WHERE task_id::text = p_duplicate_task_id AND user_id = v_user_id;
 
-  -- Avoid a uniqueness collision when both tasks already have the same project link.
+  -- Safety/backup: the survivor link already preserves the same project, link type,
+  -- and user ownership before this duplicate relationship row is cleaned up.
   DELETE FROM public.project_task_links duplicate_link
     WHERE duplicate_link.task_id::text = p_duplicate_task_id
       AND duplicate_link.user_id = v_user_id

@@ -30,11 +30,17 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }))
 
-import { flushAuthForUpdate, AUTH_SESSION_BACKUP_KEY } from '@/services/auth/supabase'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
 
 describe('flushAuthForUpdate (BUG-1874)', () => {
-  beforeEach(() => {
+  let flushAuthForUpdate: typeof import('@/services/auth/supabase')['flushAuthForUpdate']
+  let authSessionBackupKey: string
+
+  beforeEach(async () => {
+    vi.resetModules()
+    const authModule = await import('@/services/auth/supabase')
+    flushAuthForUpdate = authModule.flushAuthForUpdate
+    authSessionBackupKey = authModule.AUTH_SESSION_BACKUP_KEY
     localStorage.clear()
     getSession.mockClear()
   })
@@ -48,7 +54,7 @@ describe('flushAuthForUpdate (BUG-1874)', () => {
     expect(primary).toBeTruthy()
     expect(JSON.parse(primary!).refresh_token).toBe('rt-current')
 
-    const backupRaw = localStorage.getItem(AUTH_SESSION_BACKUP_KEY)
+    const backupRaw = localStorage.getItem(authSessionBackupKey)
     expect(backupRaw).toBeTruthy()
     const backup = JSON.parse(backupRaw!)
     expect(backup.session.refresh_token).toBe('rt-current')
@@ -59,6 +65,6 @@ describe('flushAuthForUpdate (BUG-1874)', () => {
     getSession.mockResolvedValueOnce({ data: { session: null } } as never)
     await flushAuthForUpdate()
     expect(localStorage.getItem(STORAGE_KEYS.SUPABASE_AUTH)).toBeNull()
-    expect(localStorage.getItem(AUTH_SESSION_BACKUP_KEY)).toBeNull()
+    expect(localStorage.getItem(authSessionBackupKey)).toBeNull()
   })
 })

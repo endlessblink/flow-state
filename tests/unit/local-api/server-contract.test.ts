@@ -18,6 +18,16 @@ function functionBody(name: string): string {
 }
 
 describe('Local API sidecar timer endpoint regression contract', () => {
+  it('classifies missing auth context from the renderer heartbeat before protected routes', () => {
+    const classifierImport = SERVER_CJS.indexOf("require('./auth-availability.cjs')")
+    const ctxCheck = SERVER_CJS.indexOf('classifyMissingAuthContext(rendererAuthState)')
+    const tasksRoute = SERVER_CJS.indexOf("path === '/api/tasks'")
+
+    expect(classifierImport).toBeGreaterThan(-1)
+    expect(ctxCheck).toBeGreaterThan(-1)
+    expect(ctxCheck).toBeLessThan(tasksRoute)
+  })
+
   it('exposes GET /api/timer/current before Life OS bearer-token protected task routes', () => {
     const timerRoute = SERVER_CJS.indexOf("path === '/api/timer/current'")
     const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
@@ -322,13 +332,21 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).toContain('executeDoneForNow(doneForNowContext, id, body, notifyTaskMutation)')
   })
 
-  it('does not allow generic status updates to complete a recurring task', () => {
+  it('routes generic task patches through the canonical preview/apply adapter', () => {
     const body = functionBody('handlePatchTask')
 
-    expect(body).toContain(".select('id,recurrence_rule')")
-    expect(body).toContain("body.status === 'done' && existing.recurrence_rule")
-    expect(body).toContain("code: 'recurring_completion_requires_done_for_now'")
-    expect(body).toContain("use POST /api/tasks/:id/done-for-now")
+    expect(SERVER_CJS).toContain("require('./canonical-task-patch.cjs')")
+    expect(body).toContain('executeCanonicalTaskPatch(ctx, id, body, notifyTaskMutation)')
+    expect(body).not.toContain(".from('tasks').update")
+  })
+
+  it('uses the same active workspace scope for list, exact read, and canonical patch', () => {
+    const listBody = functionBody('handleGetTasks')
+    const detailBody = functionBody('handleGetTask')
+
+    expect(listBody).toContain('scopeTaskQuery(ctx, query)')
+    expect(detailBody).toContain('scopeTaskQuery(ctx, query)')
+    expect(SERVER_CJS).toContain("require('./task-scope.cjs')")
   })
 
   it('exposes an exact task read with recurrence and occurrence state for verification', () => {
@@ -338,15 +356,15 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(route, 'exact task route not found').toBeGreaterThan(-1)
     expect(body).toContain('description,status,priority,progress')
     expect(body).toContain('subtasks,tags,position,instances')
+    expect(body).toContain('workspace_id,canonical_revision,created_at,updated_at,completed_at')
     expect(body).toContain(".eq('id', id)")
     expect(body).toContain(".eq('is_deleted', false)")
-    expect(body).toContain('ctx.activeWorkspaceId == null')
-    expect(body).toContain("query.eq('user_id', userId).is('workspace_id', null)")
-    expect(body).toContain("query.eq('workspace_id', ctx.activeWorkspaceId)")
+    expect(body).toContain('scopeTaskQuery(ctx, query)')
     expect(body).toContain('recurrenceRule: task.recurrence_rule')
     expect(body).toContain('subtasks: normalizeSubtasks(task.subtasks)')
     expect(body).toContain('canvasPosition: task.position')
     expect(body).toContain('instances: normalizeTaskInstances(task.instances)')
+    expect(body).toContain('canonicalRevision: task.canonical_revision')
     expect(body).not.toContain('accessToken')
     expect(body).not.toContain('refreshToken')
   })

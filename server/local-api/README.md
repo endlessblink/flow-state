@@ -161,6 +161,7 @@ Completion-history records and soft-deleted rows are excluded.
       "recurrenceParentId": null,
       "recurrenceCount": 0,
       "isCompletionRecord": false,
+      "canonicalRevision": 7,
       "updatedAt": "2026-07-13T09:00:00.000Z"
     }
   ]
@@ -178,21 +179,79 @@ Completion-history records and soft-deleted rows are excluded.
 ```
 
 ### `PATCH /api/tasks/:id`
-Any subset of fields. `status` ∈ `todo|done`. Marking `done` sets `completed_at`
-and (unless `progress` is given) `progress: 100`.
+Preview-first canonical patch for `title`, `description`, `priority`, `dueDate`,
+and `progress`. Obtain `canonicalRevision` from task reads and use it as
+`baseRevision`. The preview does not mutate the task.
 ```json
-// body
-{ "status": "done", "title": "…", "priority": "low", "dueDate": "…", "progress": 100 }
-// 200
-{ "ok": true }
-// 404 (unknown id for this user)
-{ "error": "not found" }
+// preview body
+{ "operationId": "stable-client-operation-id", "baseRevision": 7,
+  "patch": { "title": "Clarified next action", "priority": "high" } }
+
+// preview response
+{ "ok": true, "result": "preview", "contractVersion": "task-v1",
+  "operationId": "stable-client-operation-id", "baseRevision": 7,
+  "previewDigest": "server-issued-digest", "previewExpiresAt": "…",
+  "normalizedPayload": { "title": "Clarified next action", "priority": "high" },
+  "readBack": { "id": "task-id", "canonicalRevision": 7 } }
 ```
 
-Recurring tasks are an exception: `status: "done"` is rejected with
-`recurring_completion_requires_done_for_now`. A recurring definition is the
-living task row; one completed occurrence is a separate immutable completion
-record. Use the operation below so history and cadence cannot be bypassed.
+After explicit approval, repeat the exact operation, revision, patch, issued
+digest, and expiry with `"preview": false`. Success is reported only with a
+validated committed receipt containing the canonical revision, change sequence,
+read-back projection, and read-back hash. Retrying the same operation is safe
+and returns a replayed durable receipt.
+
+Generic status changes are intentionally unsupported. Recurring completion uses
+the operation below so history and cadence cannot be bypassed; other completion
+flows must use their domain-specific canonical command.
+
+This canonical patch endpoint requires token mode with the signed-in user's JWT.
+Standalone service-role mode returns `signed_user_required`; a configured user ID
+is not accepted as a substitute for the actor proven by `auth.uid()`.
+
+### `POST /api/integrations/notion/activations`
+
+Preview-first activation of one exact Notion page into personal FlowState. The
+request carries a stable operation ID, Notion page/data-source provenance, the
+task projection, and an optional exact calendar work block.
+
+```json
+{
+  "operationId": "stable-global-operation-id",
+  "notion": {
+    "pageId": "notion-page-id",
+    "dataSourceId": "notion-data-source-id",
+    "url": "https://www.notion.so/notion-page-id",
+    "lastEditedAt": "2026-07-14T08:00:00Z"
+  },
+  "task": {
+    "title": "Clarify the next project action",
+    "description": "Bounded context from Notion",
+    "priority": "high",
+    "dueDate": "2026-07-15T12:00:00Z",
+    "projectId": null
+  },
+  "workBlock": {
+    "scheduledDate": "2026-07-14",
+    "scheduledTime": "10:30",
+    "duration": 25
+  }
+}
+```
+
+Preview is the default and durably binds the exact normalized request to the
+returned digest and expiry without creating a task or work block. Apply repeats
+the exact body with `"preview": false`, `previewDigest`, and
+`previewExpiresAt`. A valid commit returns the `notion-activation-v1` canonical
+receipt with task revision, update timestamp, change sequence, read-back hash,
+and provenance. Retrying an already committed operation replays that receipt
+even after preview expiry.
+
+Active provenance is unique per signed-in user. A later approved operation for
+the same Notion page reuses the FlowState task and still appends its optional
+exact work block atomically. The route is personal-scope only, rejects
+service-role mode, and notifies the renderer only after validating the complete
+canonical response.
 
 ### `GET /api/tasks/:id`
 

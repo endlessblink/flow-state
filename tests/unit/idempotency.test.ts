@@ -249,6 +249,39 @@ describe('Idempotency', () => {
     expect(result.mergedOperationIds.length).toBeGreaterThanOrEqual(1)
   })
 
+  it('preserves every canonical operation identity instead of merging or deleting it', async () => {
+    const canonical = {
+      contractVersion: 'task-v1' as const,
+      operationId: 'web:one',
+      baseRevision: 4,
+      patch: { title: 'First' },
+      phase: 'queued' as const,
+    }
+    const first = makeOp({
+      operation: 'update',
+      createdAt: 1000,
+      canonicalTaskPatch: canonical,
+    })
+    const second = makeOp({
+      operation: 'update',
+      createdAt: 2000,
+      id: _nextId++,
+      canonicalTaskPatch: {
+        ...canonical,
+        operationId: 'web:two',
+        patch: { description: 'Second' },
+      },
+    })
+    mockGetOperationsForEntity.mockResolvedValue([first, second])
+
+    const result = await coalesceOperationsForEntity('task', 'entity-123')
+
+    expect(result.operation?.canonicalTaskPatch?.operationId).toBe('web:one')
+    expect(result.mergedOperationIds).toEqual([])
+    expect(mockDeleteOperation).not.toHaveBeenCalled()
+    expect(mockUpdateOperation).not.toHaveBeenCalled()
+  })
+
   // Test 4
   it('operation coalescer: CREATE + DELETE same entity → both cancelled (net effect: nothing)', async () => {
     const createOp = makeOp({ operation: 'create', createdAt: 1000 })

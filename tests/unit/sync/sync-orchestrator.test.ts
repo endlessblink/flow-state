@@ -68,6 +68,8 @@ const supabaseMock = vi.hoisted(() => {
   }
 })
 
+const rpcMock = vi.hoisted(() => vi.fn())
+
 const writeQueueMocks = vi.hoisted(() => ({
   enqueueOperation: vi.fn(),
   getPendingOperations: vi.fn().mockResolvedValue([]),
@@ -75,6 +77,11 @@ const writeQueueMocks = vi.hoisted(() => ({
   markCompleted: vi.fn(),
   markFailed: vi.fn(),
   markConflict: vi.fn(),
+  completeCanonicalOperation: vi.fn(),
+  completeLegacyTaskOperation: vi.fn(),
+  getLatestCanonicalCheckpointForEntity: vi.fn().mockResolvedValue(undefined),
+  hasEarlierUnresolvedOperation: vi.fn().mockResolvedValue(false),
+  hasLaterUnresolvedOperation: vi.fn().mockResolvedValue(false),
   cleanupCompleted: vi.fn().mockResolvedValue(0),
   getStats: vi.fn().mockResolvedValue({
     totalOperations: 0,
@@ -109,7 +116,9 @@ const authStoreMock = vi.hoisted(() => ({
 const taskStoreMock = vi.hoisted(() => ({
   isPendingWrite: vi.fn().mockReturnValue(false),
   removePendingWrite: vi.fn(),
-  updateTaskFromSync: vi.fn()
+  updateTaskFromSync: vi.fn(),
+  applyCanonicalTaskReceipt: vi.fn(),
+  rawTasks: [] as any[],
 }))
 
 const workspaceStoreMock = vi.hoisted(() => ({
@@ -147,6 +156,7 @@ vi.mock('@/services/auth/supabase', () => {
 
   const supabase = {
     from: supabaseMock.fromMock.mockImplementation(() => buildQueryChain()),
+    rpc: rpcMock,
     auth: {
       getSession: vi.fn().mockResolvedValue({
         data: { session: { access_token: 'fresh-token', user: { id: 'user-001' } } },
@@ -231,7 +241,31 @@ function makeOp(partial: Partial<WriteOperation> = {}): WriteOperation {
     lastError: partial.lastError,
     lastAttemptAt: partial.lastAttemptAt,
     userId: partial.userId ?? 'user-001',
-    workspaceId: partial.workspaceId ?? null
+    workspaceId: partial.workspaceId ?? null,
+    canonicalTaskPatch: partial.canonicalTaskPatch,
+  }
+}
+
+function canonicalReceipt(operationId = 'web:queue-1') {
+  return {
+    contractVersion: 'task-v1' as const,
+    operationId,
+    source: 'web-pwa' as const,
+    entityType: 'task' as const,
+    action: 'patch' as const,
+    entityId: 'task-canonical',
+    canonicalRevision: 5,
+    canonicalUpdatedAt: '2026-07-13T10:01:00Z',
+    changeSequence: 50,
+    replayed: false,
+    committedAt: '2026-07-13T10:01:00Z',
+    readBack: {
+      id: 'task-canonical', title: 'Normalized', description: '', priority: null,
+      dueDate: null, progress: 0, status: 'todo', isDeleted: false,
+      workspaceId: null, canonicalRevision: 5,
+      canonicalUpdatedAt: '2026-07-13T10:01:00Z',
+    },
+    readBackHash: 'a'.repeat(64),
   }
 }
 
@@ -303,6 +337,13 @@ beforeEach(async () => {
   writeQueueMocks.purgeStaleOperations.mockResolvedValue(undefined)
   writeQueueMocks.enqueueOperation.mockResolvedValue(makeOp())
   writeQueueMocks.getOperationsForEntity.mockResolvedValue([])
+  writeQueueMocks.completeCanonicalOperation.mockResolvedValue(undefined)
+  writeQueueMocks.completeLegacyTaskOperation.mockResolvedValue(undefined)
+  writeQueueMocks.getLatestCanonicalCheckpointForEntity.mockResolvedValue(undefined)
+  writeQueueMocks.hasEarlierUnresolvedOperation.mockResolvedValue(false)
+  writeQueueMocks.hasLaterUnresolvedOperation.mockResolvedValue(false)
+  taskStoreMock.rawTasks = []
+  rpcMock.mockReset()
   authStoreMock.user = { id: 'user-001' } as any
   workspaceStoreMock.activeWorkspaceId = null
   workspaceStoreMock.isSwitchingWorkspace = false
@@ -334,6 +375,7 @@ beforeEach(async () => {
     return {
       supabase: {
         from: supabaseMock.fromMock.mockImplementation(() => buildQueryChain()),
+        rpc: rpcMock,
         auth: {
           getSession: vi.fn().mockResolvedValue({
             data: { session: { access_token: 'fresh-token', user: { id: 'user-001' } } },
@@ -392,6 +434,393 @@ afterEach(async () => {
   await vi.advanceTimersByTimeAsync(0)
   vi.useRealTimers()
   vi.restoreAllMocks()
+})
+
+// ===========================================================================
+// CANONICAL TASK PATCH QUEUE
+// ===========================================================================
+describe('canonical task patch queue', () => {
+  it('previews, applies, atomically completes, and projects the authoritative receipt', async () => {
+    const receipt = canonicalReceipt()
+    const op = makeOp({
+      id: 1946,
+      entityId: 'task-canonical',
+      payload: { title: 'Optimistic', updated_at: '2026-07-13T10:00:00Z' },
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1',
+        operationId: receipt.operationId,
+        baseRevision: 4,
+        patch: { title: 'Optimistic' },
+        phase: 'queued',
+      },
+    })
+    const preview = {
+      ok: true, result: 'preview', contractVersion: 'task-v1',
+      operationId: receipt.operationId, baseRevision: 4,
+      previewDigest: 'b'.repeat(64), previewExpiresAt: '2026-07-13T10:15:00Z',
+      normalizedPayload: { title: 'Optimistic' },
+      readBack: { ...receipt.readBack, title: 'Before', canonicalRevision: 4 },
+    }
+    rpcMock
+      .mockResolvedValueOnce({ data: preview, error: null })
+      .mockResolvedValueOnce({ data: { ok: true, result: 'committed', receipt }, error: null })
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([op])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(rpcMock).toHaveBeenCalledTimes(2)
+    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledWith(1946, receipt)
+    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledTimes(1)
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1946)
+    expect(coalescerMocks.coalesceOperationsForEntity).not.toHaveBeenCalled()
+    expect(supabaseMock.fromMock).not.toHaveBeenCalled()
+    expect(taskStoreMock.applyCanonicalTaskReceipt).toHaveBeenCalledWith(receipt)
+    expect(taskStoreMock.updateTaskFromSync).not.toHaveBeenCalled()
+  })
+
+  it('keeps canonical intent pending when authentication disappears after queue admission', async () => {
+    const { supabase } = await import('@/services/auth/supabase')
+    const session = { access_token: 'fresh-token', user: { id: 'user-001' } }
+    const op = makeOp({
+      id: 1947,
+      entityId: 'task-canonical',
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:auth-race', baseRevision: 4,
+        patch: { title: 'Still pending' }, phase: 'queued',
+      },
+    })
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([op])
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    vi.mocked(supabase.auth.getSession)
+      .mockResolvedValueOnce({ data: { session }, error: null } as any)
+      .mockResolvedValue({ data: { session: null }, error: null } as any)
+    vi.mocked(supabase.auth.refreshSession).mockResolvedValue({ data: { session: null }, error: null } as any)
+
+    await sync.forceSync()
+
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1947)
+    expect(writeQueueMocks.completeCanonicalOperation).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1947, expect.stringContaining('authenticated'), expect.any(Number))
+    expect(rpcMock).not.toHaveBeenCalled()
+  })
+
+  it('refuses to replay canonical intent captured under another signed user', async () => {
+    const op = makeOp({
+      id: 1948,
+      entityId: 'task-canonical',
+      userId: 'user-other',
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:wrong-user', baseRevision: 4,
+        patch: { title: 'Wrong scope' }, phase: 'queued',
+      },
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValueOnce([]).mockResolvedValue([op])
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await sync.forceSync()
+
+    expect(rpcMock).not.toHaveBeenCalled()
+    expect(writeQueueMocks.completeCanonicalOperation).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1948, expect.stringContaining('scope'), expect.any(Number))
+  })
+
+  it('rebases an unpreviewed successor from the latest durable scoped receipt', async () => {
+    const predecessor = canonicalReceipt('web:predecessor')
+    const op = makeOp({
+      id: 1949, entityId: 'task-canonical', userId: 'user-001', workspaceId: null,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:successor', baseRevision: 4,
+        patch: { title: 'Successor' }, phase: 'queued',
+      },
+    })
+    writeQueueMocks.getLatestCanonicalCheckpointForEntity.mockResolvedValue({
+      scopeKey: 'user-001:personal', entityId: 'task-canonical',
+      canonicalRevision: predecessor.canonicalRevision, operationId: predecessor.operationId,
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValueOnce([]).mockResolvedValue([op])
+    rpcMock.mockRejectedValue(new Error('offline'))
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await sync.forceSync()
+
+    expect(writeQueueMocks.getLatestCanonicalCheckpointForEntity).toHaveBeenCalledWith('task-canonical', 'user-001', null)
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(1949, {
+      canonicalTaskPatch: expect.objectContaining({
+        operationId: 'web:successor', baseRevision: 5, parentOperationId: 'web:predecessor', phase: 'queued',
+      }),
+    })
+    expect(rpcMock).toHaveBeenCalledWith('flowstate_patch_task_v1', expect.objectContaining({ p_base_revision: 5 }))
+  })
+
+  it('commits two queued edits in order and rebases the successor from the first receipt', async () => {
+    const first = makeOp({
+      id: 1960, entityId: 'task-canonical', createdAt: 1,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:ordered-first', baseRevision: 4,
+        patch: { title: 'First' }, phase: 'queued',
+      },
+    })
+    const second = makeOp({
+      id: 1961, entityId: 'task-canonical', createdAt: 2,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:ordered-second', baseRevision: 4,
+        patch: { title: 'Second' }, phase: 'queued',
+      },
+    })
+    const firstReceipt = canonicalReceipt('web:ordered-first')
+    const secondReceipt = {
+      ...canonicalReceipt('web:ordered-second'),
+      canonicalRevision: 6,
+      changeSequence: 51,
+      readBack: { ...canonicalReceipt('web:ordered-second').readBack, canonicalRevision: 6, title: 'Second' },
+    }
+    let latest: ReturnType<typeof canonicalReceipt> | undefined
+    writeQueueMocks.completeCanonicalOperation.mockImplementation(async (_id, next) => { latest = next })
+    writeQueueMocks.getLatestCanonicalCheckpointForEntity.mockImplementation(async () => latest && ({
+      scopeKey: 'user-001:personal', entityId: latest.entityId,
+      canonicalRevision: latest.canonicalRevision, operationId: latest.operationId,
+    }))
+    writeQueueMocks.getPendingOperations.mockResolvedValueOnce([]).mockResolvedValue([first, second])
+    rpcMock
+      .mockResolvedValueOnce({ data: {
+        ok: true, result: 'preview', contractVersion: 'task-v1', operationId: 'web:ordered-first',
+        baseRevision: 4, previewDigest: 'b'.repeat(64), previewExpiresAt: '2026-07-13T10:15:00Z',
+        normalizedPayload: { title: 'First' },
+        readBack: { ...firstReceipt.readBack, canonicalRevision: 4, title: 'Before' },
+      }, error: null })
+      .mockResolvedValueOnce({ data: { ok: true, result: 'committed', receipt: firstReceipt }, error: null })
+      .mockResolvedValueOnce({ data: {
+        ok: true, result: 'preview', contractVersion: 'task-v1', operationId: 'web:ordered-second',
+        baseRevision: 5, previewDigest: 'c'.repeat(64), previewExpiresAt: '2026-07-13T10:15:00Z',
+        normalizedPayload: { title: 'Second' }, readBack: firstReceipt.readBack,
+      }, error: null })
+      .mockResolvedValueOnce({ data: { ok: true, result: 'committed', receipt: secondReceipt }, error: null })
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await sync.forceSync()
+
+    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenNthCalledWith(1, 1960, firstReceipt)
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(1961, {
+      canonicalTaskPatch: expect.objectContaining({ baseRevision: 5, parentOperationId: 'web:ordered-first' }),
+    })
+    expect(rpcMock).toHaveBeenNthCalledWith(3, 'flowstate_patch_task_v1', expect.objectContaining({
+      p_operation_id: 'web:ordered-second', p_base_revision: 5, p_preview: true,
+    }))
+    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenNthCalledWith(2, 1961, secondReceipt)
+  })
+
+  it('rebases a queued canonical successor from a successful legacy task update', async () => {
+    const legacy = makeOp({
+      id: 1962, entityId: 'task-canonical', createdAt: 1,
+      payload: { title: 'Legacy first', updated_at: '2026-07-13T10:00:00Z' },
+    })
+    const successor = makeOp({
+      id: 1963, entityId: 'task-canonical', createdAt: 2,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:after-legacy', baseRevision: 4,
+        patch: { title: 'Canonical second' }, phase: 'queued',
+      },
+    })
+    const chain = mockSupabaseChain({
+      selectData: [{ id: 'task-canonical', title: 'Legacy first', position_version: 2, canonical_revision: 5 }],
+    })
+    supabaseMock.fromMock.mockReturnValue(chain)
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: legacy, mergedOperationIds: [], description: 'No coalescing needed',
+    })
+    let checkpoint: { scopeKey: string; entityId: string; canonicalRevision: number; operationId: string } | undefined
+    writeQueueMocks.completeLegacyTaskOperation.mockImplementation(async (_id, revision) => {
+      checkpoint = {
+        scopeKey: 'user-001:personal', entityId: 'task-canonical',
+        canonicalRevision: revision, operationId: 'legacy:1962',
+      }
+    })
+    writeQueueMocks.getLatestCanonicalCheckpointForEntity.mockImplementation(async () => checkpoint)
+    writeQueueMocks.hasLaterUnresolvedOperation.mockImplementation(async op => op.id === 1962)
+    taskStoreMock.rawTasks = [{ id: 'task-canonical', title: 'Canonical second' }]
+    writeQueueMocks.getPendingOperations.mockResolvedValueOnce([]).mockResolvedValue([legacy, successor])
+    rpcMock.mockRejectedValue(new Error('stop after preview attempt'))
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await sync.forceSync()
+
+    expect(writeQueueMocks.completeLegacyTaskOperation).toHaveBeenCalledWith(1962, 5)
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(1963, {
+      canonicalTaskPatch: expect.objectContaining({
+        baseRevision: 5, parentOperationId: 'legacy:1962', phase: 'queued',
+      }),
+    })
+    expect(rpcMock).toHaveBeenCalledWith('flowstate_patch_task_v1', expect.objectContaining({
+      p_operation_id: 'web:after-legacy', p_base_revision: 5, p_preview: true,
+    }))
+    expect(taskStoreMock.updateTaskFromSync).not.toHaveBeenCalled()
+    expect(taskStoreMock.removePendingWrite).not.toHaveBeenCalled()
+  })
+
+  it('does not project a canonical predecessor over a later optimistic edit that then fails', async () => {
+    const first = makeOp({
+      id: 1964, entityId: 'task-canonical', createdAt: 1,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:projection-first', baseRevision: 4,
+        patch: { title: 'First' }, phase: 'queued',
+      },
+    })
+    const second = makeOp({
+      id: 1965, entityId: 'task-canonical', createdAt: 2,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:projection-second', baseRevision: 4,
+        patch: { title: 'Second optimistic' }, phase: 'queued',
+      },
+    })
+    const firstReceipt = canonicalReceipt('web:projection-first')
+    let checkpoint: { scopeKey: string; entityId: string; canonicalRevision: number; operationId: string } | undefined
+    writeQueueMocks.completeCanonicalOperation.mockImplementation(async (_id, next) => {
+      checkpoint = {
+        scopeKey: 'user-001:personal', entityId: next.entityId,
+        canonicalRevision: next.canonicalRevision, operationId: next.operationId,
+      }
+    })
+    writeQueueMocks.getLatestCanonicalCheckpointForEntity.mockImplementation(async () => checkpoint)
+    writeQueueMocks.hasLaterUnresolvedOperation.mockImplementation(async op => op.id === 1964)
+    writeQueueMocks.getPendingOperations.mockResolvedValueOnce([]).mockResolvedValue([first, second])
+    rpcMock
+      .mockResolvedValueOnce({ data: {
+        ok: true, result: 'preview', contractVersion: 'task-v1', operationId: 'web:projection-first',
+        baseRevision: 4, previewDigest: 'b'.repeat(64), previewExpiresAt: '2026-07-13T10:15:00Z',
+        normalizedPayload: { title: 'First' }, readBack: { ...firstReceipt.readBack, canonicalRevision: 4 },
+      }, error: null })
+      .mockResolvedValueOnce({ data: { ok: true, result: 'committed', receipt: firstReceipt }, error: null })
+      .mockRejectedValueOnce(new Error('successor offline'))
+    taskStoreMock.rawTasks = [{ id: 'task-canonical', title: 'Second optimistic' }]
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await sync.forceSync()
+
+    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledWith(1964, firstReceipt)
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1965, expect.any(String), expect.any(Number))
+    expect(taskStoreMock.applyCanonicalTaskReceipt).not.toHaveBeenCalled()
+    expect(taskStoreMock.removePendingWrite).not.toHaveBeenCalled()
+  })
+
+  it('never rebases a successor after its preview binding exists', async () => {
+    const op = makeOp({
+      id: 1950, entityId: 'task-canonical', userId: 'user-001',
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:bound-successor', baseRevision: 4,
+        patch: { title: 'Bound' }, phase: 'previewed', previewDigest: 'b'.repeat(64),
+        previewExpiresAt: '2026-07-13T10:15:00Z', normalizedPatch: { title: 'Bound' },
+      },
+    })
+    writeQueueMocks.getLatestCanonicalCheckpointForEntity.mockResolvedValue({
+      scopeKey: 'user-001:personal', entityId: 'task-canonical', canonicalRevision: 5,
+      operationId: 'web:predecessor',
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValueOnce([]).mockResolvedValue([op])
+    rpcMock.mockRejectedValue(new Error('offline'))
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await sync.forceSync()
+
+    expect(writeQueueMocks.getLatestCanonicalCheckpointForEntity).not.toHaveBeenCalled()
+    expect(rpcMock).toHaveBeenCalledWith('flowstate_patch_task_v1', expect.objectContaining({ p_base_revision: 4 }))
+    expect(writeQueueMocks.updateOperation).not.toHaveBeenCalledWith(1950, expect.objectContaining({
+      canonicalTaskPatch: expect.objectContaining({ baseRevision: 5 }),
+    }))
+  })
+
+  it('blocks later same-task canonical intent after the first operation fails', async () => {
+    const first = makeOp({
+      id: 1951, entityId: 'task-canonical', createdAt: 1,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:first', baseRevision: 4,
+        patch: { title: 'First' }, phase: 'queued',
+      },
+    })
+    const second = makeOp({
+      id: 1952, entityId: 'task-canonical', createdAt: 2,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:second', baseRevision: 4,
+        patch: { title: 'Second' }, phase: 'queued',
+      },
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValueOnce([]).mockResolvedValue([first, second])
+    rpcMock.mockRejectedValue(new Error('offline'))
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await sync.forceSync()
+
+    expect(rpcMock).toHaveBeenCalledTimes(1)
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1951, expect.any(String), expect.any(Number))
+    expect(writeQueueMocks.markSyncing).not.toHaveBeenCalledWith(1952)
+
+    rpcMock.mockClear()
+    writeQueueMocks.getPendingOperations.mockResolvedValue([second])
+    writeQueueMocks.hasEarlierUnresolvedOperation.mockResolvedValue(true)
+    await sync.forceSync()
+
+    expect(rpcMock).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markSyncing).not.toHaveBeenCalledWith(1952)
+  })
+
+  it('does not let a later legacy update overtake failed canonical intent', async () => {
+    const canonical = makeOp({
+      id: 1953, entityId: 'task-mixed', createdAt: 1,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:canonical-first', baseRevision: 4,
+        patch: { title: 'First' }, phase: 'queued',
+      },
+    })
+    const legacy = makeOp({ id: 1954, entityId: 'task-mixed', createdAt: 2, payload: { status: 'done' } })
+    writeQueueMocks.getPendingOperations.mockResolvedValueOnce([]).mockResolvedValue([canonical, legacy])
+    rpcMock.mockRejectedValue(new Error('offline'))
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await sync.forceSync()
+
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1953, expect.any(String), expect.any(Number))
+    expect(coalescerMocks.coalesceOperationsForEntity).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markSyncing).not.toHaveBeenCalledWith(1954)
+  })
+
+  it('does not let canonical intent overtake a failed earlier legacy update', async () => {
+    const legacy = makeOp({ id: 1955, entityId: 'task-mixed', createdAt: 1, payload: { status: 'done' } })
+    const canonical = makeOp({
+      id: 1956, entityId: 'task-mixed', createdAt: 2,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:canonical-second', baseRevision: 4,
+        patch: { title: 'Second' }, phase: 'queued',
+      },
+    })
+    const chain = mockSupabaseChain({ selectError: { message: 'offline' } })
+    supabaseMock.fromMock.mockReturnValue(chain)
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: legacy, mergedOperationIds: [], description: 'No coalescing needed',
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValueOnce([]).mockResolvedValue([legacy, canonical])
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await sync.forceSync()
+
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1955, expect.any(String), expect.any(Number))
+    expect(rpcMock).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markSyncing).not.toHaveBeenCalledWith(1956)
+  })
 })
 
 // ===========================================================================
@@ -529,6 +958,40 @@ describe('executeOperation: CREATE', () => {
     )
     expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(412)
     expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
+  })
+
+  it('preserves the owner when a workspace member replays a shared task update', async () => {
+    authStoreMock.user = { id: 'member-user' } as any
+    const { supabase } = await import('@/services/auth/supabase')
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'fresh-token', user: { id: 'member-user' } } },
+      error: null,
+    } as any)
+    const op = makeOp({
+      id: 414, operation: 'update', entityType: 'task', entityId: 'shared-task',
+      userId: 'member-user', workspaceId: 'workspace-1',
+      payload: {
+        title: 'Member edit', user_id: 'owner-user', workspace_id: 'workspace-1',
+        updated_at: '2026-07-13T10:00:00Z',
+      },
+    })
+    const taskChain = mockSupabaseChain({
+      selectData: [{ id: 'shared-task', user_id: 'owner-user', canonical_revision: 8 }],
+    })
+    supabaseMock.fromMock.mockReturnValue(taskChain)
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op, mergedOperationIds: [], description: 'No coalescing needed',
+    })
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(taskChain.update).toHaveBeenCalledWith(expect.not.objectContaining({ user_id: expect.anything() }))
+    expect(taskChain.update).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Member edit', workspace_id: 'workspace-1',
+    }))
+    expect(writeQueueMocks.completeLegacyTaskOperation).toHaveBeenCalledWith(414, 8)
   })
 
   it('waits instead of hitting RLS when no fresh auth session is available', async () => {
@@ -1224,7 +1687,6 @@ describe('Enqueue operations', () => {
   })
 
   it('enqueue captures workspace context (null for personal workspace)', async () => {
-    // The getActiveWorkspaceId() function uses require() which picks up our mock.
     // Default workspace is null (personal workspace).
     writeQueueMocks.enqueueOperation.mockResolvedValue(makeOp())
 
@@ -1239,6 +1701,22 @@ describe('Enqueue operations', () => {
     // workspaceId is captured from getActiveWorkspaceId() — null for personal
     expect(writeQueueMocks.enqueueOperation).toHaveBeenCalledWith(
       expect.objectContaining({ workspaceId: null })
+    )
+  })
+
+  it('enqueue captures a shared workspace through the ESM store boundary', async () => {
+    workspaceStoreMock.activeWorkspaceId = 'workspace-42' as any
+    writeQueueMocks.enqueueOperation.mockResolvedValue(makeOp({ workspaceId: 'workspace-42' }))
+
+    await useSyncOrchestrator().enqueue({
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'task-workspace',
+      payload: { title: 'Workspace edit' }
+    })
+
+    expect(writeQueueMocks.enqueueOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: 'workspace-42' })
     )
   })
 

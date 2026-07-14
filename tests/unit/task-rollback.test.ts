@@ -104,6 +104,7 @@ vi.mock('@/composables/useToast', () => ({
 }))
 
 import { useTaskStore } from '@/stores/tasks'
+import type { CanonicalTaskPatchReceipt } from '@/types/sync'
 
 // ============================================================================
 // Group 1: updateTask rollback
@@ -159,6 +160,101 @@ describe('updateTask rollback (TASK-1177)', () => {
 
     const afterUpdate = store.tasks.find(t => t.id === task.id)
     expect(afterUpdate?.title).toBe('Changed')
+  })
+
+  it('queues a pure scalar update with its stable canonical base revision', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({ title: 'Original' })
+    task.canonicalRevision = 4
+    mockEnqueue.mockClear()
+    mockEnqueue.mockResolvedValue({ id: 1, status: 'pending' })
+
+    await store.updateTask(task.id, { title: 'Changed' })
+
+    expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'task',
+      operation: 'update',
+      entityId: task.id,
+      canonicalTaskPatch: expect.objectContaining({
+        baseRevision: 4,
+        patch: { title: 'Changed' },
+        phase: 'queued',
+      }),
+    }))
+  })
+
+  it('rolls back an eligible canonical update instead of using a direct-write fallback', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({ title: 'Original' })
+    task.canonicalRevision = 4
+    mockEnqueue.mockRejectedValue(new Error('queue unavailable'))
+    mockSaveTasks.mockClear()
+
+    await expect(store.updateTask(task.id, { title: 'Changed' })).rejects.toThrow('queue unavailable')
+
+    expect(store.tasks.find(candidate => candidate.id === task.id)?.title).toBe('Original')
+    expect(store.isPendingWrite(task.id)).toBe(false)
+    expect(mockSaveTasks).not.toHaveBeenCalled()
+  })
+
+  it('keeps mixed supported and unsupported edits on the legacy queue path', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({ title: 'Original' })
+    task.canonicalRevision = 4
+    mockEnqueue.mockClear()
+    mockEnqueue.mockResolvedValue({ id: 1, status: 'pending' })
+
+    await store.updateTask(task.id, { title: 'Changed', estimatedDuration: 30 })
+
+    expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({ title: 'Changed', estimated_duration: 30 }),
+      canonicalTaskPatch: undefined,
+    }))
+  })
+
+  it('applies a verified canonical receipt even while generic realtime updates are guarded', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({ title: 'Optimistic', description: 'before' })
+    store.manualOperationInProgress = true
+    const canonicalReceipt: CanonicalTaskPatchReceipt = {
+      contractVersion: 'task-v1',
+      operationId: 'web:normalized',
+      source: 'web-pwa',
+      entityType: 'task',
+      action: 'patch',
+      entityId: task.id,
+      canonicalRevision: 8,
+      canonicalUpdatedAt: '2026-07-13T10:01:00Z',
+      changeSequence: 80,
+      replayed: false,
+      committedAt: '2026-07-13T10:01:00Z',
+      readBack: {
+        id: task.id,
+        title: 'Normalized',
+        description: 'authoritative',
+        priority: 'high',
+        dueDate: '2026-07-14T00:00:00+00:00',
+        progress: 25,
+        status: 'todo',
+        isDeleted: false,
+        workspaceId: null,
+        canonicalRevision: 8,
+        canonicalUpdatedAt: '2026-07-13T10:01:00Z',
+      },
+      readBackHash: 'a'.repeat(64),
+    }
+
+    await store.applyCanonicalTaskReceipt(canonicalReceipt)
+
+    expect(store.tasks.find(candidate => candidate.id === task.id)).toMatchObject({
+      title: 'Normalized',
+      description: 'authoritative',
+      priority: 'high',
+      dueDate: '2026-07-14',
+      progress: 25,
+      canonicalRevision: 8,
+      updatedAt: new Date('2026-07-13T10:01:00Z'),
+    })
   })
 
   it('keeps optimistic update when fallback save succeeds (queue fails)', async () => {

@@ -18,6 +18,8 @@ import { logPermanentDeleteTraceIfActive } from '@/utils/permanentDeleteTrace'
 // Export types and utilities for backward compatibility
 export type { Task, TaskInstance, Subtask, Project, RecurringTaskInstance } from '@/types/tasks'
 import type { Task } from '@/types/tasks'
+import type { CanonicalTaskPatchReceipt } from '@/types/sync'
+import { cacheTasks } from '@/services/offline/readCacheDB'
 export { parseDateKey, formatDateKey } from '@/utils/dateUtils'
 
 /**
@@ -501,6 +503,24 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
+  /** Apply a server-validated receipt for this client's own canonical operation. */
+  const applyCanonicalTaskReceipt = async (receipt: CanonicalTaskPatchReceipt) => {
+    const index = _rawTasks.value.findIndex(task => task.id === receipt.entityId)
+    if (index === -1) return
+    const readBack = receipt.readBack
+    _rawTasks.value[index] = {
+      ..._rawTasks.value[index],
+      title: readBack.title,
+      description: readBack.description ?? '',
+      priority: readBack.priority,
+      dueDate: readBack.dueDate ? readBack.dueDate.slice(0, 10) : '',
+      progress: readBack.progress,
+      canonicalRevision: receipt.canonicalRevision,
+      updatedAt: new Date(receipt.canonicalUpdatedAt),
+    }
+    await cacheTasks([..._rawTasks.value])
+  }
+
   // TASK-1183: Cleanup corrupted tasks with invalid parentId (legacy group IDs)
   const cleanupCorruptedTasks = async () => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -555,6 +575,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
     // BUG-057 FIX: Incremental sync update
     updateTaskFromSync,
+    applyCanonicalTaskReceipt,
     syncInProgress,
     calendarFilteredTasks,
 

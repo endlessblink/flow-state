@@ -2167,6 +2167,268 @@ _Original plan below._
 
 ## Active Tasks
 
+### TASK-1943: Reliable Hermes–FlowState personal-assistant program (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1797, BUG-1942 | **Related**: FEATURE-1943
+
+**Goal**: Deliver one reliable personal-assistant lane in which VPS Supabase is the canonical signed-user task authority; Hermes dynamically clarifies and decomposes vague work; FlowState mutations are previewed, applied exactly once, and read back; monitor events do not self-interrupt; and Notion is safely writable according to explicit user needs.
+
+**Program scope**:
+- Safe branch recovery and complete production-writer inventory.
+- Canonical operation, revision, receipt, replay, and change-sequence contract.
+- Migration of task, subtask, instance, recurrence, timer, focus, project, group, lane, settings, and context writers.
+- Compact interactive Hermes decomposition with directly editable ordered steps.
+- Durable monitor assessment, suppression, retry, dead-letter, and attention lifecycle.
+- Writable Notion task creation/property updates plus explicit FlowState activation and stable provenance.
+- Regression, fault-injection, watchdog, packaged Electron, PWA, Hermes, and approval-gated production verification.
+
+**Subtasks**:
+- [ ] **TASK-1944 — Canonical operation, revision, and change-sequence foundation**: recover onto a fresh branch, classify existing work, inventory every production writer, add the signed-user operation ledger and canonical revisions, preserve legacy writers through compatibility triggers, return replayable read-back receipts, and provide durable sequence catch-up.
+- [ ] **TASK-1945 — Canonical Local API task patch adoption**: replace direct sidecar task patches and Hermes HTTP-success inference with the TASK-1944 preview/apply/base-revision contract, validate canonical receipts at both boundaries, and preserve exact replay after response loss.
+- [ ] **TASK-1947 — Deterministic canonical change-sequence catch-up**: persist a signed-user personal/workspace cursor, consume bounded ordered change-log pages as invalidation hints, reconcile exact task IDs authoritatively, and advance only after projection persistence succeeds.
+- [x] **TASK-1946 — Canonical web/PWA offline scalar task-patch adoption**: after TASK-1947, preserve stable operation identity through the Dexie queue for eligible scalar task edits, execute preview/apply with the signed-user TASK-1944 command, persist receipts before completion, and quarantine conflicts without weakening status, recurrence, geometry, instance, or subtask invariants. Completed 2026-07-13.
+- [x] **TASK-1948 — Canonical Notion task activation**: add signed-user preview/apply activation from stable Notion provenance through the TASK-1944 operation, preview, revision, and change-log authority; create at most one active FlowState task per user/source/page; atomically add an exact approved work block even when the task already exists; and return a replayable canonical receipt verified by the Local API. Completed 2026-07-14.
+- [x] ~~**TASK-1949 — Canonical assistant reliability harness and watchdog**: execute the combined canonical task and Notion activation contracts against a disposable database, inject same-operation and conflicting-operation races, keep the focused cohort in the fixed daily regression lane, and alert on redacted canonical/Notion integrity failures without touching production data.~~ Completed 2026-07-14.
+- [x] ~~**TASK-1950 — Classify renderer-to-sidecar auth recovery precisely**: distinguish an expired cached signed-in shell, bounded token-refresh recovery, and a genuinely blind sidecar; return actionable protected-route errors and keep the live-boundary diagnostic from raising false sidecar-delivery incidents.~~ Completed 2026-07-14.
+
+**Acceptance**:
+- No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
+- One operation ID replays the original durable receipt after timeout, retry, process restart, or duplicate submission.
+- Hermes exposes a compact editable breakdown and asks only the first unresolved consequential question.
+- Notion reads and approved writes are user-scoped, previewable, idempotent, and verified by read-back.
+- Monitor-originated work is structured, coalesced, retryable, causally suppressible, and marked seen only after durable handling.
+- All synchronized entity cohorts and packaged production surfaces pass their program gates before this parent closes.
+
+**Safety**: Repository-local tests and disposable fixtures are autonomous. Production mutations, deployments, credentials, destructive cleanup, and scope expansion remain exact approval boundaries.
+
+### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1943, TASK-1797, BUG-1942 | **Related**: FEATURE-1943
+
+**Scope**:
+- Recover compatible work onto a fresh branch from current `origin/master`; never merge the divergent stale branch or discard the dirty worktree.
+- Produce an exhaustive writer matrix for web, PWA/offline queue, Electron, Local API, recurrence, subtasks, instances, timers, Canvas, and Hermes.
+- Add an RLS-scoped durable operation ledger keyed by user and operation ID.
+- Add independent canonical row revisions, tombstones, and a monotonic change sequence.
+- Install compatibility triggers before writer migration so legacy writes receive revisions and change events.
+- Add preview/apply/read-back contracts whose committed response is a durable replayable receipt.
+- Prove duplicate replay, dropped responses, restart recovery, stale-base conflicts, cross-user denial, and missed-Realtime catch-up.
+
+**Acceptance**:
+- A committed response always names the canonical revision, sequence, timestamp, read-back projection, and read-back hash.
+- A repeated operation ID with the same request returns the original receipt; a changed payload returns a typed conflict.
+- Legacy writers remain functional while being marked as legacy and emitting canonical revisions/change events.
+- A client with Realtime disabled converges through its durable sequence cursor.
+- No production write or deployment is used for this slice without explicit approval.
+
+**Progress (2026-07-13)**: The repository-local W0 task foundation now includes actor-bound idempotent previews, a signed-user patch RPC, independent task revisions, compatibility capture, a global RLS-filtered change cursor, replayable read-back receipts, workspace role/scope protection, and the dependency-ordered production writer matrix in `docs/process/canonical-writer-matrix.md`. Static contracts, a rollback-only SQL suite, injected-failure coverage, and multi-session preview/apply races pass against a disposable local database. Production remains unchanged; Local API/offline writer migration and explicit catch-up clients are still pending.
+
+### TASK-1945: Canonical Local API task patch adoption (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1944, TASK-1797
+
+**Scope**:
+- Add failing Local API and Hermes adapter tests that reject HTTP-only, queued, malformed, mismatched-operation, or incomplete receipt responses.
+- Make task patch preview the default and require the exact issued operation ID, preview digest/expiry, base canonical revision, and normalized payload for apply.
+- Call `flowstate_patch_task_v1` under the renderer user's signed-in Supabase session instead of updating `tasks` directly.
+- Return the canonical preview/result unchanged across the sidecar boundary and validate committed receipt/read-back/hash fields before Hermes reports success.
+- Preserve legacy endpoint compatibility only as an explicit non-canonical response; do not silently translate a legacy direct patch into committed success.
+- Prove preview zero-write, apply receipt, dropped-response replay, stale base, altered payload, unauthenticated/offline, and renderer reconciliation behavior.
+
+**Acceptance**:
+- Local API task patches cannot return canonical success without a validated TASK-1944 receipt.
+- Hermes never mutates from a plain-language task update without first returning an exact preview for approval.
+- Repeating an approved operation after a lost response returns the original receipt with `replayed=true` and no second revision.
+- Existing list/search reads and unrelated Local API actions remain compatible while writer cohorts migrate incrementally.
+- Production remains unchanged until the migration, signed-in packaged verification, and deployment boundary are separately approved.
+
+**Progress (2026-07-13)**: The Local API task PATCH path is now preview-first and calls the signed-user `flowstate_patch_task_v1` contract instead of directly updating `tasks`. It validates complete preview and committed receipt identities, revisions, sequences, timestamps, read-back projections, and SHA-256 fields before renderer reconciliation; safely preserves durable success when renderer notification fails; redacts connector failures; refuses service-role impersonation; and exposes canonical revisions through personal/shared task reads using one workspace-scoping helper. The complete Local API regression cohort passes. Hermes adapter migration and packaged signed-in proof remain pending, so this task stays in progress.
+
+### TASK-1947: Deterministic canonical change-sequence catch-up (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1944, TASK-1945
+
+**Scope**:
+- Add a durable cursor keyed by signed-in user and exact personal/workspace scope; never let one visible scope advance another scope's cursor.
+- Read `canonical_change_log` under RLS in ascending bounded pages after the persisted sequence and treat rows only as invalidation evidence, not as mutation authority.
+- Batch exact task IDs and tombstones into authoritative task reconciliation while preserving unrelated pending local writes.
+- Advance and persist the cursor only after the corresponding authoritative projection update succeeds; failed reads or reconciliation retain the prior cursor for retry.
+- Establish a race-safe first-run baseline by reading the visible high-water sequence before the full authoritative load and persisting it only after that reload succeeds.
+- Trigger serialized/coalesced catch-up on sign-in, reconnect, visibility recovery, Realtime subscription recovery, and workspace switch, plus a single-flight 60-second foreground backstop while authenticated, online, and visible.
+- Prove personal/workspace isolation, removed-member denial, pagination, tombstones, duplicate invocation, concurrent triggers, failed reconciliation, and deliberately dropped Realtime.
+
+**Progress (2026-07-13)**:
+- Implemented signed-user personal/workspace cursors, high-water baselines and rollback recovery, ordered bounded change pages, exact task/tombstone reconciliation, single-flight execution, and the 60-second authenticated foreground backstop.
+- Authoritative reloads now reject and rerun across scope changes, use count-aware immutable-ID keyset pages beyond server row caps, overlay exact-scope durable offline operations after restart, refuse ambiguous unscoped intent, capture workspace queue scope through the packaged ESM boundary, and await strict IndexedDB projection persistence before cursor advancement.
+- Repo-local verification is green: 197 convergence/realtime/cache/queue/Local-API tests, TypeScript type-check, source lint with no errors, and diff whitespace validation. Packaged signed-in and production rollout proof remain approval-gated and outstanding.
+
+**Acceptance**:
+- A client that misses every Realtime notification converges deterministically through its durable sequence cursor.
+- Cursor advancement cannot outrun authoritative projection persistence or cross user/workspace scope.
+- Tombstoned task IDs remove missing/deleted visible rows while unrelated optimistic pending writes remain protected.
+- Clearing local cursor state causes a safe full-load baseline, not history replay from an untrusted sequence.
+- A continuously visible client with silently missed Realtime converges within the bounded foreground interval without overlapping catch-up runs.
+- Realtime and Electron IPC remain fast invalidation hints and are never treated as canonical proof.
+- Production remains unchanged until signed-in packaged/web verification and deployment are separately approved.
+
+### TASK-1946: Canonical web/PWA offline scalar task-patch adoption (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-13) | **Depends on**: TASK-1944, TASK-1945, TASK-1947
+
+**Scope**:
+- Carry canonical task revisions through Supabase task mapping and visible renderer state.
+- Give eligible title, description, priority, due-date, and progress edits a stable operation ID that survives Dexie persistence, retry, restart, reconnect, and response loss.
+- Route those queued operations through signed-user `flowstate_patch_task_v1` preview/apply, persist the issued digest/expiry and validated receipt before queue completion, and replay the same apply after transport ambiguity.
+- Keep status, recurrence, geometry, instances, subtasks, create, delete, restore, and mixed updates on explicit legacy compatibility capture until their domain command cohorts are implemented.
+- Preserve every canonical operation identity through coalescing and exempt unresolved canonical intent from stale-operation purge.
+- Process multiple offline edits to one task in durable order: rebase only a not-yet-previewed dependent operation to its predecessor receipt revision, record the linkage, and never mutate a patch/base after its preview is issued.
+- Represent stale revision, altered approval, malformed response, missing authentication, and unsupported mutation as durable pending/conflict/quarantine states rather than false success.
+
+**Implementation progress (2026-07-13)**:
+- Web/PWA scalar task edits now retain a signed-user/workspace-scoped operation through Dexie preview, apply, receipt persistence, authoritative projection, restart-safe replay, and deterministic same-task ordering across canonical and compatibility operations.
+- Preview normalization and committed receipts are schema-validated; malformed success, missing rows/auth, response loss, cross-account proof collisions, viewer writes, unsupported fields, and unavailable IndexedDB cannot become false completion. Date/timestamp receipts project through the app's date-only/status contract.
+- Successful compatibility updates now atomically retain the returned canonical revision before completion, so a later unpreviewed canonical edit rebases across the same or a later queue pass. Shared-workspace member updates preserve the task owner instead of attempting an immutable ownership transfer. A predecessor receipt/server echo cannot clear or overwrite a later durable optimistic edit while that successor remains unresolved.
+- Verification passes TypeScript, the 215-test focused canonical cohort, production renderer/PWA build, Electron main/preload/sidecar compilation, disposable SQL preview/apply/RLS/rollback coverage, and concurrent same-operation/stale-base races. The full suite reports 3,464 passing tests, 6 intentional skips, and one unrelated pre-existing auth-backup fixture failure when Supabase env is intentionally absent. A full Electron package remains correctly blocked without build-time Supabase variables; signed-in packaged/web and production rollout proof remain approval-gated.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Online, reconnect, response-loss, same-task successor, mixed compatibility/canonical, and shared-member update regressions | Yes, for eligible scalar web/PWA edits |
+| Data shape / persisted row shape | Yes | Disposable SQL preview/apply/read-back, revision, sequence, RLS, rollback, and race tests | Yes |
+| Renderer store/state | Yes | Canonical projection, date/status normalization, restart ledger, and later-optimistic-edit preservation tests | Yes |
+| Electron main/preload bridge | Yes | Main/preload/sidecar TypeScript and bundle compilation | No behavior change in this slice |
+| Localhost sidecar endpoint | N/A | TASK-1945 owns canonical Local API adoption | No |
+| KDE polling/control path | N/A | No timer or KDE control behavior changed | No |
+| Supabase persistence/realtime | Yes | Canonical receipt SQL, scoped change-log read policy, and deterministic catch-up contract tests | Persistence covered; Realtime remains an invalidation hint |
+| Updater/runtime version | No | Production package and updater were intentionally not changed | No |
+| Stale live process/cache state | Yes | Dexie v4-to-v5 migration, restart replay, missed-response, cache invalidation, and durable cursor regressions | Repository/disposable coverage only |
+
+**Exact failure mode fixed**: Eligible web/PWA scalar task edits could be reported locally successful without a durable canonical receipt, lose operation identity across retry/restart, replay against a stale predecessor revision, overwrite a later optimistic edit, or attempt to replace a shared task owner.
+
+**Explicitly not covered**: Status, recurrence, geometry, task instances, subtasks, create/delete/restore, timers/focus, non-task entities, signed-in packaged runtime proof, production deployment, and the separate missing-env auth-backup test fixture.
+
+**Regression added for reported repro**: Yes; canonical and compatibility predecessors followed by a failing successor preserve the later optimistic state, and shared members update without sending `user_id`.
+
+**Live boundary proof**: Repository builds and disposable database fixtures pass. Signed-in packaged/web and production mutation proof remain deliberately pending exact approval.
+
+**Acceptance**:
+- Online and reconnect scalar edits are called committed only after a complete TASK-1944 receipt is durably stored.
+- Preview and apply reuse the same operation ID, base revision, normalized patch, server digest, and expiry; retry after a lost response returns the replayed receipt without a second revision.
+- Browser/PWA restart cannot discard or coalesce away an unresolved canonical operation or its receipt.
+- Two offline scalar edits to the same task either produce ordered revision-linked receipts or one explicit receipt-linked parent with durable child outcomes; the second edit is never silently dropped or replayed against a stale base.
+- Missing authentication, missing rows, queued transport, HTTP success, and malformed `{ok:true}` responses never complete the operation.
+- Unsupported task mutations continue through named compatibility capture and are not silently translated into the generic scalar command.
+- Production remains unchanged until signed-in packaged/web verification and deployment are separately approved.
+
+### ~~TASK-1948~~: Canonical Notion task activation (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: TASK-1943, TASK-1944, TASK-1945
+
+**Scope**:
+- Add stable Notion page provenance to tasks with per-user active uniqueness, without introducing a second receipt ledger.
+- Preview and apply under the signed-in user through `canonical_operation_previews`, `canonical_operations`, task revisions, and `canonical_change_log`.
+- Preserve one global operation identity across preview, commit, response-loss replay, and process restart; reject altered payload reuse.
+- Create a task only when provenance is not already active, but append the exact optional approved work block atomically for both new and already-activated tasks.
+- Return the `notion-activation-v1` canonical receipt with revision, timestamp, change sequence, read-back projection/hash, and provenance.
+- Expose a dedicated Local API adapter and route that validate the complete canonical response before notifying the renderer.
+
+**Acceptance**:
+- Preview performs no task or instance mutation and its digest/expiry are durable and exact-request bound.
+- Apply after preview expiry rejects unless the exact operation was already committed, in which case it replays the original receipt without a second task or work block.
+- Concurrent or repeated activation of one Notion page cannot produce duplicate active FlowState tasks for the same user.
+- An optional approved work block is appended exactly once even when the Notion task was activated by an earlier operation.
+- Authenticated clients retain no direct write access to canonical operation, preview, or change-log tables; all mutations pass through the typed RPC.
+- Disposable database proof covers cross-user denial, replay, altered operation conflict, duplicate provenance, existing-task scheduling, and rollback; production remains unchanged.
+
+### ~~TASK-1949~~: Canonical assistant reliability harness and watchdog (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: TASK-1943, TASK-1944, TASK-1945, TASK-1947, TASK-1948
+
+**Scope**:
+- Create an executable disposable database harness that clones schema only, applies the ordered TASK-1944 and TASK-1948 migrations, runs both rollback-only SQL suites, and always drops its temporary database.
+- Add a multi-session Notion activation race/fault probe covering identical operation replay, changed-payload conflict, exact work-block duplicate safety, and transaction rollback without orphaned tasks, operations, changes, or consumed previews.
+- Expose the harness as a package command and keep the canonical contract, Local API adapter, convergence, and database proof in the fixed daily regression lane.
+- Extend the production database watchdog with read-only, count-only checks for canonical schema/RPC/trigger/index readiness, stale applying operations, incomplete committed receipts, task/change revision divergence, malformed Notion provenance, and committed Notion activations missing their task or change evidence.
+- Emit explicit query-failure anomaly types without task titles, Notion page contents, credentials, or other private payloads.
+
+**Acceptance**:
+- One command runs the complete repository-local canonical assistant database proof against a unique disposable database and removes it after success or failure.
+- Concurrent identical Notion submissions produce one committed operation, one active task, one exact block, and one canonical change; altered reuse fails closed without extra state.
+- Daily regression cannot pass by exercising only source-shape tests while the executable SQL contract is broken.
+- The VPS watchdog reports missing/broken canonical authority and integrity drift using counts and stable anomaly labels, but never treats valid global sequence gaps as corruption.
+- Production data, deployment, and credentials remain untouched in this slice.
+
+**Implementation**: Added one package-level disposable database command that clones schema into a unique temporary database, restores only the signed-user task grants needed by the RLS contract, applies both canonical migrations in order, executes the task and Notion rollback suites, verifies the exact RPC/index authority used by the watchdog, and drops the database on every exit. The multi-session Notion probe proves one commit plus one replay for a duplicated operation, typed conflict for altered reuse, serialized different-operation activation with one exact work block, and complete rollback after an injected task-trigger failure. The fixed daily hunt now runs that executable database proof plus 90 canonical contract, Local API, and catch-up tests. The VPS watchdog now checks canonical tables/RPCs, enabled triggers, a valid/ready/unique provenance index, stale applying rows, incomplete committed receipts, revision drift, malformed Notion provenance, and missing activation evidence through read-only count queries with explicit failure labels.
+
+**Verification**: RED first failed 10 focused tests because the harness, daily check, and watchdog coverage did not exist. The first executable run then correctly exposed an unrealistic privilege-stripped schema clone; the final harness preserves the intended signed-user task grants explicitly and passes the canonical task SQL suite, Notion SQL suite, executable watchdog authority probe, same/different-operation races, conflict, and injected rollback. The exact scheduled check passed 1/1 and its focused Vitest cohort passed 90/90. Final combined repository proof passed 113/113 tests, TypeScript type-check, source lint, all three shell syntax checks, diff whitespace validation, and a read-back confirming no disposable database remained.
+
+**Failure-class matrix**:
+
+| Failure class | Checked | Evidence | Covered by this fix |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Duplicate, altered, concurrent, and trigger-failure activation submissions are executable fixtures | Yes |
+| Data shape / persisted row shape | Yes | Rollback suites and watchdog assertions cover operations, previews, tasks, work blocks, changes, revisions, and provenance | Yes |
+| Renderer store/state | N/A | This slice verifies the canonical database and Local API contract, not renderer projection | No |
+| Electron main/preload bridge | N/A | No Electron bridge behavior changed | No |
+| Localhost sidecar endpoint | Yes | Fixed daily cohort includes the canonical task and Notion activation Local API adapters | Yes |
+| KDE polling/control path | N/A | No timer or KDE behavior changed | No |
+| Supabase persistence/realtime | Partial | Disposable PostgreSQL proves atomic persistence and revision/change evidence; live Realtime delivery is not exercised | Persistence only |
+| Updater/runtime version | N/A | No package or production deployment occurred | No |
+| Stale live process/cache state | N/A | Disposable database isolation intentionally excludes live process and cache state | No |
+
+**Exact failure mode fixed**: the canonical assistant and Notion activation contracts could regress across SQL ordering, concurrent submissions, rollback, or watchdog coverage while source-shape unit tests still passed; the fixed daily lane now executes those joined database failure classes and the production watchdog can report redacted integrity drift.
+
+**Explicitly not covered**: production deployment, real-user mutations, renderer cache convergence, Realtime transport loss, packaged Electron behavior, and the separate renderer-to-sidecar authentication recovery lane.
+
+**Regression added for reported repro**: executable same-operation replay, altered-operation conflict, serialized provenance races, injected trigger rollback, both canonical SQL suites, fixed daily scheduling, and read-only watchdog contract tests.
+
+**Live boundary proof**: N/A for this repository-local slice; production data and deployment were explicitly excluded, and the disposable database was read back as removed after verification.
+
+### ~~TASK-1950~~: Classify renderer-to-sidecar auth recovery precisely (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: BUG-1933, TASK-1949
+
+**Failure-class matrix**: documented with the exact failure mode, uncovered boundaries, regression proof, and live observation below.
+
+**Scope**:
+- Use the renderer auth heartbeat as the authority for why the Local API has no usable auth context instead of collapsing every state into `not signed in`.
+- Preserve the security boundary: never forward an expired access token and never let the sidecar race the renderer for a single-use refresh token.
+- Return stable protected-route responses for re-authentication required, bounded reconnect recovery, and actual signed-out state.
+- Teach the live-boundary diagnostic to report re-authentication as actionable, refresh grace as a warning, and renderer-to-sidecar blindness only when the renderer says remote sync is available.
+
+**Acceptance**:
+- A cached signed-in shell with an exhausted session is not misreported as a renderer-to-sidecar delivery failure.
+- A renderer inside bounded refresh recovery does not raise a hard incident while waiting for a fresh session.
+- A renderer that can sync remotely while the sidecar has no context still fails as a genuine bridge fault.
+- Protected Local API callers can distinguish sign-in, re-authentication, and reconnect states without receiving credentials or session details.
+
+**Implementation**: Added one pure missing-auth classifier shared by protected Local API routes. It derives only stable error/action output from the existing redacted renderer heartbeat. The live-boundary evaluator now uses `canSyncRemotely` and `reauthRequired` to separate a valid refresh grace period and an expired cached shell from an actual sidecar handoff failure.
+
+**Verification**: The two diagnostic regressions failed first against the broad sidecar-blind classification. The Local API classifier and server-contract regressions then failed before the module and routing seam existed, and the genuine bridge-fault case failed when it still received `not_signed_in`. Final host execution passed 44/44 focused auth, Local API, and live-boundary tests plus the joined 67/67 auth/watchdog reliability cohort; all changed CommonJS files passed syntax checks and the diff passed whitespace validation.
+
+**Failure-class matrix**:
+
+| Failure class | Checked | Evidence | Covered by this fix |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Signed-in renderer heartbeat plus absent sidecar auth context is covered in re-auth, reconnect, and bridge-fault variants | Yes |
+| Data shape / persisted row shape | N/A | No task or database row changes | No |
+| Renderer store/state | Yes | Existing redacted heartbeat fields drive the classifier fixtures | Classification only |
+| Electron main/preload bridge | Partial | Existing heartbeat delivery is exercised through diagnostics; IPC transport code is unchanged | Classification only |
+| Localhost sidecar endpoint | Yes | Protected-route contract and pure response classifier cover all missing-context states | Yes |
+| KDE polling/control path | N/A | Timer route ordering and KDE behavior are unchanged | No |
+| Supabase persistence/realtime | N/A | No persistence or Realtime behavior changes | No |
+| Updater/runtime version | Partial | The active packaged runtime was observed recovering its auth context; this source change is not packaged or deployed | No |
+| Stale live process/cache state | Yes | Cached signed-in shell with unusable session is the exact classified state | Yes |
+
+**Exact failure mode fixed**: a cached signed-in renderer shell without a usable JWT was reported as a blind sidecar, and every protected Local API request returned the same `not signed in` 503 even when the renderer was reconnecting or required explicit re-authentication.
+
+**Explicitly not covered**: changing Supabase refresh semantics, forwarding expired tokens, sidecar-owned token refresh, packaged Electron publication, production deployment, or changing timer/KDE endpoint ordering.
+
+**Regression added for reported repro**: pure classifier tests for re-authentication, reconnect grace, and signed-out state; Local API routing contract; diagnostic tests proving re-authentication is not sidecar blindness and refresh grace remains a warning.
+
+**Live boundary proof**: the active packaged app moved from `hasAuthContext=false`, `canSyncRemotely=false`, and `reauthRequired=true` to a restored sidecar context and remote-sync capability without intervention. This proves the observed 503 was bounded renderer auth recovery; packaged verification of the new classification remains in the program's release lane.
+
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-10, Electron v1.4.246 deployed and locally installed) | **Opened**: 2026-07-10
@@ -2663,6 +2925,9 @@ Binds 127.0.0.1 only, rejects non-loopback Host (403), bearer required in token 
 **Recurring completion follow-up**: **FEATURE-1943** adds an authenticated,
 preview-first, idempotent `Done for now` action shared by the renderer and Local
 Task API, with exact read-back and authoritative renderer reconciliation.
+
+**Personal-assistant reliability follow-up**:
+- [ ] **TASK-1943 — reliable Hermes–FlowState personal-assistant program**, beginning with dependency-linked **TASK-1944** for the canonical operation, revision, receipt, replay, and change-sequence boundary.
 
 ---
 
@@ -6899,6 +7164,14 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1942**~~ | **P0** | ✅ **PWA-created task and Hermes status changes now reconcile visibly in Electron; v1.4.250 shipped** |
 | ~~**BUG-1944**~~ | **P0** | ✅ **Persisted Electron identity stays account-owned while auth validation is pending; remote writes remain gated** |
 | ~~**BUG-1945**~~ | **P1** | ✅ **Confirmed Canvas image deletion now removes the canonical record and rendered node; undo/redo verified** |
+| **TASK-1943** | **P0** | 🔄 **Reliable Hermes–FlowState personal-assistant program: canonical sync, dynamic decomposition, monitor reliability, writable Notion, watchdogs, and packaged proof** |
+| **TASK-1944** | **P0** | 🔄 **Canonical operation/revision/change-sequence foundation with safe branch recovery, signed-user receipts, replay, compatibility triggers, and deterministic catch-up** |
+| **TASK-1945** | **P0** | 🔄 **Canonical Local API task patch adoption with preview/apply approval binding, receipt validation, and exact replay** |
+| **TASK-1947** | **P0** | 🔄 **Deterministic canonical change-sequence catch-up with scoped durable cursors, ordered invalidation pages, and persistence-gated advancement** |
+| **TASK-1946** | **P0** | ✅ **Canonical web/PWA offline scalar task-patch adoption with durable operation identity, receipts, restart-safe replay, and conflict quarantine** |
+| **TASK-1948** | **P0** | ✅ **Canonical Notion task activation with stable provenance, exact optional work blocks, replayable canonical receipts, and Local API verification** |
+| ~~**TASK-1949**~~ | **P0** | ✅ **Canonical assistant disposable DB harness, race/fault injection, fixed daily regression coverage, and redacted VPS integrity watchdog** |
+| ~~**TASK-1950**~~ | **P0** | ✅ **Renderer-to-sidecar auth recovery classification with actionable protected-route errors and false-incident suppression** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

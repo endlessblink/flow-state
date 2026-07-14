@@ -114,6 +114,8 @@ export interface Task {
   parentTaskId?: string | null // For nested tasks - null means root-level task
   createdAt: Date
   updatedAt: Date
+  /** Independent canonical row revision used by signed-user domain commands. */
+  canonicalRevision?: number
   // Canvas workflow fields
   canvasPosition?: { x: number; y: number }
   positionVersion?: number // Version for conflict resolution

@@ -68,6 +68,17 @@ const FIXED_DAILY_CHECKS = [
     timeoutMs: 240_000,
   },
   {
+    id: 'canonical-assistant-contract',
+    title: 'Canonical operation, Notion activation, and convergence authority',
+    command: [
+      'bash',
+      '-lc',
+      'npm run test:reliable-assistant-contract && npm test -- tests/contract/canonical-task-contract.test.ts tests/contract/notion-activation-contract.test.ts tests/unit/local-api/canonical-task-patch-handler.test.ts tests/unit/local-api/notion-activation-handler.test.ts tests/unit/services/canonical-change-catchup.test.ts',
+    ],
+    failureClass: 'canonical assistant authority',
+    timeoutMs: 300_000,
+  },
+  {
     id: 'timer-boundary',
     title: 'Electron/KDE timer local boundary diagnosis',
     command: ['node', 'scripts/diagnose-timer-boundary.cjs'],
@@ -222,6 +233,9 @@ function classifyFailure(text = '', fallback = 'unknown') {
   }
   if (/(channel_error|realtime|websocket|supabase)/.test(value)) {
     return 'Supabase/realtime'
+  }
+  if (/(canonical|notion activation|operation receipt|change sequence)/.test(value)) {
+    return 'canonical assistant authority'
   }
   if (/(permanent.?delete|hard.?delete|undo|tombstone|trash)/.test(value)) {
     return 'permanent delete/undo'

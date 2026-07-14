@@ -22,11 +22,14 @@ describe('TASK-1949 canonical assistant disposable reliability harness', () => {
 
     expect(source).toContain('20260713012000_canonical_task_contract.sql')
     expect(source).toContain('20260714010000_canonical_notion_activation.sql')
+    expect(source).toContain('20260714020000_canonical_uuid_compatibility.sql')
     expect(source).toContain('test-canonical-task-contract.sql')
     expect(source).toContain('test-canonical-notion-activation.sql')
     expect(source).toContain('test-canonical-notion-concurrency.sh')
     expect(source.indexOf('20260713012000_canonical_task_contract.sql'))
       .toBeLessThan(source.indexOf('20260714010000_canonical_notion_activation.sql'))
+    expect(source.indexOf('20260714010000_canonical_notion_activation.sql'))
+      .toBeLessThan(source.indexOf('20260714020000_canonical_uuid_compatibility.sql'))
   })
 
   it('executes the watchdog authority signature and valid-index probe in the disposable database', () => {

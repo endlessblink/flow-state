@@ -80,6 +80,8 @@ describe('production DB lifecycle watchdog contract', () => {
     expect(watchdog).toContain('canonical-notion-provenance-malformed=')
     expect(watchdog).toContain('canonical-query-failed=notion-evidence')
     expect(watchdog).toContain('canonical-notion-commit-evidence-missing=')
+    expect(watchdog).toContain('latest.entity_id=task.id::text')
+    expect(watchdog).toContain('task.id::text=operation.entity_id')
     expect(watchdog).not.toContain('canonical-sequence-gap')
   })
 })

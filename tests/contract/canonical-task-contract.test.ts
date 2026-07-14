@@ -88,6 +88,8 @@ describe('TASK-1944 canonical task mutation contract', () => {
         /grant execute on function public\.flowstate_patch_task_v1[^;]+to authenticated/,
       )
       expect(sql).not.toMatch(/grant execute[^;]+to anon/)
+      expect(sql).toContain('task.id::text = p_task_id')
+      expect(sql).toContain('change.entity_id = v_updated.id::text')
     })
 
     it('binds apply to an idempotent preview and returns verifiable read-back receipts', () => {
@@ -120,6 +122,7 @@ describe('TASK-1944 canonical task mutation contract', () => {
       expect(sql).toMatch(/'isdeleted'\s*,\s*tg_op\s*=\s*'delete'\s+or\s+coalesce\(v_row\.is_deleted,\s*false\)/)
       expect(sql).toMatch(/current_setting\([^)]*canonical[^)]*operation[^)]*true[^)]*\)/)
       expect(sql).toMatch(/from public\.canonical_operations[^;]+state\s*=\s*'applying'/)
+      expect(sql).toContain('operation.entity_id = v_row.id::text')
       expect(sql).toMatch(/(?:v_source|source)\s*:=\s*'legacy'/)
       expect(sql).not.toMatch(/current_setting\([^)]*canonical[^)]*source/)
       expect(sql).toMatch(/create trigger [a-z_]*task[a-z_]*change[a-z_]*/)

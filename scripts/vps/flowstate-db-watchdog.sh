@@ -151,7 +151,7 @@ if [ "$canonical_ready" = true ]; then
     ORDER BY entity_id,change_sequence DESC
   )
   SELECT count(*) FROM public.tasks AS task
-  JOIN latest ON latest.entity_id=task.id
+  JOIN latest ON latest.entity_id=task.id::text
   WHERE task.user_id='$MAIN_USER_ID' AND task.is_deleted=false
     AND latest.canonical_revision IS DISTINCT FROM task.canonical_revision"); then
     ANOMALIES+=("canonical-query-failed=task-change-revision")
@@ -176,7 +176,7 @@ if [ "$canonical_ready" = true ]; then
   if ! missing_notion_evidence=$(q_checked "SELECT count(*)
     FROM public.canonical_operations AS operation
     LEFT JOIN public.tasks AS task
-      ON task.user_id=operation.user_id AND task.id=operation.entity_id
+      ON task.user_id=operation.user_id AND task.id::text=operation.entity_id
     LEFT JOIN public.canonical_change_log AS change
       ON change.user_id=operation.user_id
       AND change.operation_id=operation.operation_id

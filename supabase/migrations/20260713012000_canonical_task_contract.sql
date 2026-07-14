@@ -312,7 +312,7 @@ BEGIN
     WHERE operation.user_id = v_actor
       AND operation.operation_id = v_operation_id
       AND operation.entity_type = 'task'
-      AND operation.entity_id = v_row.id
+      AND operation.entity_id = v_row.id::text
       AND operation.state = 'applying';
 
     IF NOT FOUND THEN
@@ -647,13 +647,13 @@ BEGIN
     SELECT *
       INTO v_task
     FROM public.tasks AS task
-    WHERE task.id = p_task_id
+    WHERE task.id::text = p_task_id
       AND task.is_deleted = false;
   ELSE
     SELECT *
       INTO v_task
     FROM public.tasks AS task
-    WHERE task.id = p_task_id
+    WHERE task.id::text = p_task_id
       AND task.is_deleted = false
     FOR UPDATE;
   END IF;
@@ -913,7 +913,7 @@ BEGIN
   WHERE change.actor_user_id = v_actor
     AND change.operation_id = p_operation_id
     AND change.entity_type = 'task'
-    AND change.entity_id = v_updated.id
+    AND change.entity_id = v_updated.id::text
   ORDER BY change.change_sequence DESC
   LIMIT 1;
 

@@ -2502,6 +2502,10 @@ Binds 127.0.0.1 only, rejects non-loopback Host (403), bearer required in token 
 
 **Verified**: (1) `setSession` RLS-scoping in plain Node — anon→0 rows, with-session→only the user's rows; (2) full token-mode integration through a real Electron `utilityProcess` + bundled sidecar — pre-session 503, post-session correct RLS-scoped reads, POST 200; (3) HTTP layer (health/401/403/400/404/DB-error→JSON); (4) esbuild bundles supabase-js self-contained (537KB); (5) standalone service-role mode boots (no regression); (6) no new type/lint errors. **Pending (user-run)**: `npm run electron:dev` → sign in → enable in Settings → curl with bearer → POST shows in UI via realtime. Then ship per rules 6/7 (version bump + Electron deploy).
 
+**Active integration follow-up**: **BUG-1938** — successful Local Task API mutations must notify the running renderer directly so a missed realtime event cannot leave API and UI task state split.
+
+**Personal-assistant integration follow-up**: **TASK-1939** — add the canonical, provenance-aware Notion activation boundary required by Hermes without turning planning reads into task imports.
+
 ---
 
 ### ~~TASK-1791~~: Design overhaul — fix critique findings across all views (✅ DONE)
@@ -4055,6 +4059,89 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 ---
 
 ## Active Bugs (P0-P1)
+
+### TASK-1939: Canonical Notion task activation for Hermes (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (opened 2026-07-13) | **Depends on**: TASK-1797, BUG-1938
+
+**Goal**: Let Hermes activate one exact Notion project task in FlowState only after the user explicitly starts it or approves an exact personal work block, while preserving stable Notion provenance and preventing duplicate imports.
+
+**Scope**:
+- Add RLS-scoped Notion provenance to tasks with a unique active-task identity per user, source, and source page.
+- Add a signed-in Local Task API activation endpoint that defaults to read-only preview and binds apply to an operation ID, digest, expiry, source revision, and exact optional work block.
+- Make activation and its initial work block one atomic task insert, or return the already-created task and original receipt on retry.
+- Return a typed receipt plus canonical task read-back; never treat a local HTTP success without read-back as completion.
+- Keep Notion status/property changes separate from FlowState activation so each system has its own approval and verification receipt.
+
+**Acceptance**:
+- Preview does not mutate and reports whether the Notion page is already activated.
+- Apply requires the exact approved preview and rejects stale or changed source/task/block payloads.
+- Concurrent or repeated activation of the same Notion page returns one FlowState task, never duplicates.
+- Provenance is queryable but contains no Notion token or private connector credential.
+- Contract tests cover preview, apply, replay, operation collision, stale preview, duplicate provenance, exact work-block persistence, RLS user scope, and read-back.
+- No production migration, deployment, or real task mutation occurs without explicit approval.
+
+### BUG-1938: Local Task API update succeeds but task stays absent from the running UI (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (opened 2026-07-13) | **Depends on**: TASK-1797
+
+**User repro**: Hermes patched task `f4658470-fa2f-41e0-ac20-867750278e92` (`לשלוח כביסה`) from due date 2026-07-12 to 2026-07-13. Local API PATCH returned `{ ok: true }` and Local API GET returned the new date, but the running Personal-workspace UI could not find the task in global Search or Inbox.
+
+**Evidence so far**: the production row is non-deleted, personal-workspace, `is_in_inbox=true`, `status=planned`, `priority=high`, due 2026-07-13, with no project or canvas position. A cold Electron restart loaded the same unchanged row and immediately rendered it in Canvas Inbox. This rules out persisted shape, workspace scope, project/status/date filters, and stale updater version for the reported incident. The remaining confirmed failure class is the missing deterministic sidecar-to-renderer reconciliation after a successful mutation; current code relies entirely on Supabase Realtime.
+
+**Acceptance**:
+- A successful Local Task API create/update/delete emits a non-secret mutation notice from sidecar to Electron main and the renderer.
+- The renderer invalidates task read cache and reloads the active workspace so the mutation becomes visible even when realtime delivery is missed.
+- Mutation notices contain only operation and task id; no task body, bearer token, session, or Supabase credentials.
+- Regression proves the Local API→main→preload→renderer reconciliation contract and the exact missed-realtime recovery shape.
+- The named task remains visible in the real Electron UI after an API mutation without restarting the app.
+
+### ~~TASK-1532~~: Shared recurring `Done for now` operation (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-13) | **Depends on**: TASK-1797, BUG-1938
+
+**Root cause and ranked hypotheses**:
+
+1. **Generic completion bypassed occurrence state — confirmed.** Local API PATCH changed only the living task row; recurring completion also requires a completion-history row, recurrence advancement, work-block transition, and subtask reset.
+2. **Dedicated Local API operation was missing — confirmed.** The renderer had `doneForNow()`, but the sidecar exposed only generic task mutation.
+3. **Recurrence calculation existed only in renderer code — confirmed.** The UI assembled two independent writes around the TypeScript recurrence helper; there was no transactional shared backend operation.
+4. **Missing UI invalidation was a second failure — confirmed for the reported consistency class.** Local API mutations depended solely on realtime delivery; BUG-1938 adds a sidecar-to-renderer notice, cache invalidation, and reload.
+5. **Different identity/storage boundaries — falsified for the intended path.** Electron token mode forwards the same signed-in session and RLS user. The new RPC additionally requires `auth.uid()` and an exact user-owned task; standalone service-role mode is not the Hermes boundary.
+
+**Old UI call path**: task context menu/Board/All Tasks/Lane/Calendar/Canvas → Pinia `doneForNow()` → renderer recurrence calculation → create completion task → update living task. The writes were sequential, the in-flight guard was process-local, overdue history used the completion day instead of the occurrence date, and custom next-date selection performed a third generic update that could diverge from its work block.
+
+**New shared call paths**:
+
+- UI → preview/apply task service → `done_for_now_task` RPC → one database transaction → exact returned rows replace renderer state and invalidate task/Canvas caches.
+- Hermes → `flowstate_done_for_now` (preview by default, approval-gated apply) → signed-in Local Task API → the same RPC → stable receipt/read-back → sidecar mutation notice → running renderer reload.
+
+**Stored semantics**: the living task row is the recurring definition and next occurrence. Each completed occurrence is a separate `tasks` row with `is_completion_record=true`, the original due date/count, completed matching work blocks, and no recurrence rule. Due-only tasks do not gain phantom Canvas blocks. An explicit later next date is allowed; the rule remains active and subsequent cadence continues from that chosen date.
+
+**Safety**: preview is read-only and returns a state-bound `previewVersion`. Apply requires that version plus a stable `requestId`, locks the living row, and stores a durable `(user_id, request_id)` receipt. Identical and concurrent retries replay one receipt; changed payloads return `idempotency_conflict`; stale state returns `stale_preview`; any history/next-state failure rolls back the entire transaction.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | ✅ | recurring task completed through UI or signed-in Local API | ✅ shared preview/apply operation tests |
+| Data shape / persisted row shape | ✅ | living occurrence, completion history, work blocks, and subtasks asserted together | ✅ transactional RPC and SQL integration |
+| Renderer store/state | ✅ | exact returned living and completion rows replace local state | ✅ service/store regressions |
+| Electron main/preload bridge | ✅ | mutation notice contains operation and task id only | ✅ bridge contract regression |
+| Localhost sidecar endpoint | ✅ | preview defaults read-only; apply requires request and preview identities | ✅ Local API contract regressions |
+| KDE polling/control path | ✅ | KDE does not perform recurring completion writes | N/A |
+| Supabase persistence/realtime | ✅ | RPC locks the living row and stores durable replay receipts | ✅ SQL integration and rollback cases |
+| Updater/runtime version | ⏳ | desktop delivery must use the final consolidated Electron build | not covered by the snapshot commit |
+| Stale live process/cache state | ✅ | successful sidecar mutation invalidates task cache and reloads canonical rows | ✅ renderer reconciliation regression |
+
+**Exact failure mode fixed**: recurring `Done for now` no longer performs independent client writes that can split completion history, the living next occurrence, work blocks, subtasks, and renderer state.
+
+**Explicitly not covered**: generic status mutations outside the dedicated operation, KDE-authored completion actions, and final Electron delivery of this recovered work.
+
+**Regression added for reported repro**: disposable SQL integration plus focused service, Local API, and renderer reconciliation tests cover preview, apply, replay, rollback, and exact returned rows.
+
+**Live boundary proof**: deferred until the recovered commits are consolidated onto current master, rebuilt, and exercised through both the signed-in Local API and Electron UI.
+
+**Verification**: disposable SQL integration covers preview non-mutation, occurrence history, one next block, overdue/Search/Today/Inbox/Canvas query invariants, idempotent replay, typed conflict, non-recurring rejection, and forced rollback. Focused renderer/service/API tests cover exact-row mapping, custom-date atomicity, Local API notification, cache invalidation, and reload. No real user task IDs are used.
 
 ### ~~BUG-1907~~: Quick Tasks typed pin can look like a no-op (✅ DONE)
 
@@ -6389,6 +6476,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
 | ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, v1.4.243 shipped) |
 | ~~**BUG-1937**~~ | **P0** | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.247 shipped) |
+| **BUG-1938** | **P0** | 🔄 **Local Task API mutation succeeds but running UI misses the task — add deterministic renderer reconciliation** |
+| **TASK-1939** | **P0** | 🔄 **Canonical Notion activation for Hermes — approval-bound create/work-block, stable provenance, replayable receipt, and read-back** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
 | **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
 | **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |
@@ -6660,7 +6749,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1526**~~ | **P1** | ~~**Push notification click actions dead — SW posts NAVIGATE_TO_TASK/NAVIGATE_TO/SNOOZE_NOTIFICATION but no client handler existed; added SW message listener in useAppInitialization.ts**~~ (✅ DONE 2026-03-14) |
 | ~~**TASK-1527**~~ | **P2** | ~~**Remove entire gamification system (XP, achievements, challenges, shop, Cyberflow RPG) — ~23,700 lines removed, DB tables left dormant**~~ (✅ DONE 2026-03-14) |
 | ~~**TASK-1531**~~ | **P2** | ~~**KDE dock: show current scheduled calendar block next to pomodoro timer — always-visible context of what's planned now, with toggle in KDE widget settings**~~ (✅ DONE) |
-| **TASK-1532** | **P1** | **"Done for Now" vs "Done Fully" for recurring tasks — Hybrid clone model: "done for now" creates completion record + advances original to next occurrence; "done fully" stops recurrence (current behavior). DoneToggle click = done-for-now for recurring, context menu offers both options.** (🔄 IN PROGRESS) |
+| **TASK-1532** | **P1** | **"Done for Now" vs "Done Fully" for recurring tasks — shared transactional occurrence completion for UI + signed-in Local API + Hermes preview/apply, durable history and idempotency receipts, exact renderer reconciliation.** (✅ DONE 2026-07-13) |
 | **FEATURE-1759** | **P1** | **📋 Unified Knowledge + Custom Lists roadmap foundation** |
 | **TASK-1760** | **P1** | **📋 Content taxonomy: task, note, list + shared visibility rules** |
 | **TASK-1761** | **P1** | **📋 Catalog -> Knowledge Hub MVP with type filters and capture entry** |

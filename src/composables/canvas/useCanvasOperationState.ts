@@ -27,8 +27,33 @@ export type CanvasOperationState =
 // Singleton state to be shared across all canvas composables
 const state = ref<CanvasOperationState>({ type: 'idle' })
 
-// Queue for updates that arrive during settling state
-const pendingUpdates = ref<Array<() => void>>([])
+type PendingUpdate = {
+    key?: string
+    owner?: symbol
+    retainOnInteractionRestart?: boolean
+    run: () => void
+}
+
+type QueueUpdateOptions = {
+    key?: string
+    owner?: symbol
+    retainOnInteractionRestart?: boolean
+}
+
+type ResetToIdleOptions = {
+    flushPending?: boolean
+}
+
+// Queue for updates that arrive while local interaction guards are active.
+// Keyed work is replaced in place so repeated Realtime events reconcile once
+// from the latest store state after the guard clears.
+const pendingUpdates = ref<PendingUpdate[]>([])
+
+const flushPendingUpdates = () => {
+    const updates = [...pendingUpdates.value]
+    pendingUpdates.value = []
+    updates.forEach(update => update.run())
+}
 
 /**
  * State machine for canvas operations.
@@ -51,10 +76,13 @@ export function useCanvasOperationState() {
             if ('settleTimeout' in state.value) {
                 window.clearTimeout(state.value.settleTimeout as number)
             }
-            // BUG-1492: Clear pending updates from the cancelled settle.
-            // Without this, stale position closures from drag A execute after
-            // drag B's settle timeout, overwriting B's final positions.
-            pendingUpdates.value = []
+            // BUG-1492: Discard interaction-local closures from drag A, but retain
+            // authoritative projection catch-up work that reads latest store state.
+            // Otherwise a second drag can permanently drop a remote update that
+            // arrived during drag A's settling window.
+            pendingUpdates.value = pendingUpdates.value.filter(
+                update => update.retainOnInteractionRestart
+            )
             state.value = { type: 'dragging', nodeIds }
             return true
         }
@@ -95,9 +123,7 @@ export function useCanvasOperationState() {
                     window.__FlowStateIsSettling = false
                 }
                 // Process any queued updates after settling completes
-                const updates = [...pendingUpdates.value]
-                pendingUpdates.value = []
-                updates.forEach(update => update())
+                flushPendingUpdates()
             }
         }, DRAG_SETTLE_TIMEOUT_MS)
 
@@ -134,9 +160,7 @@ export function useCanvasOperationState() {
                     window.__FlowStateIsSettling = false
                 }
                 // Process any queued updates after settling completes
-                const updates = [...pendingUpdates.value]
-                pendingUpdates.value = []
-                updates.forEach(update => update())
+                flushPendingUpdates()
             }
         }, 800)
 
@@ -156,7 +180,7 @@ export function useCanvasOperationState() {
         return true
     }
 
-    const resetToIdle = () => {
+    const resetToIdle = (options: ResetToIdleOptions = {}) => {
         if ('settleTimeout' in state.value) {
             window.clearTimeout(state.value.settleTimeout as number)
         }
@@ -165,6 +189,11 @@ export function useCanvasOperationState() {
             window.__FlowStateIsSettling = false
         }
         state.value = { type: 'idle' }
+        if (options.flushPending === false) {
+            pendingUpdates.value = []
+        } else {
+            flushPendingUpdates()
+        }
     }
 
     // --- Guards/Selectors ---
@@ -209,8 +238,21 @@ export function useCanvasOperationState() {
     /**
      * Queue an update to be processed after settling completes
      */
-    const queueUpdate = (updateFn: () => void) => {
-        pendingUpdates.value.push(updateFn)
+    const queueUpdate = (updateFn: () => void, options: QueueUpdateOptions = {}) => {
+        if (options.key) {
+            const existingIndex = pendingUpdates.value.findIndex(
+                update => update.key === options.key && update.owner === options.owner
+            )
+            if (existingIndex >= 0) {
+                pendingUpdates.value[existingIndex] = { ...options, run: updateFn }
+                return
+            }
+        }
+        pendingUpdates.value.push({ ...options, run: updateFn })
+    }
+
+    const cancelQueuedUpdates = (owner: symbol) => {
+        pendingUpdates.value = pendingUpdates.value.filter(update => update.owner !== owner)
     }
 
     /**
@@ -261,6 +303,7 @@ export function useCanvasOperationState() {
         shouldBlockUpdates,
         isPositionModificationBlocked,
         queueUpdate,
+        cancelQueuedUpdates,
         getDebugInfo
     }
 }

@@ -2194,6 +2194,7 @@ _Original plan below._
 - [x] ~~**TASK-1950 — Classify renderer-to-sidecar auth recovery precisely**: distinguish an expired cached signed-in shell, bounded token-refresh recovery, and a genuinely blind sidecar; return actionable protected-route errors and keep the live-boundary diagnostic from raising false sidecar-delivery incidents.~~ Completed 2026-07-14.
 - [x] ~~**TASK-1951 — Production UUID compatibility for canonical assistant contracts**: make canonical task/Notion RPCs, rollback suites, and the VPS watchdog portable across text-ID development schemas and UUID production schemas; ship a forward migration and repeat live rollback-only proof before enabling writers.~~ Completed 2026-07-14.
 - [ ] **TASK-1952 — Hydrate Electron auth backup into the live Supabase client**: replace the ineffective post-startup storage reread with supported session hydration, preserve stale-token reconnect behavior, and prove packaged protected assistant reads recover after restart.
+- [x] ~~**TASK-1953 — Preserve blocked remote Canvas projection updates**: coalesce remote task/group projection requests while Canvas interaction guards are active, replay the latest store state after the operation returns idle, and prove two-client geometry cannot remain stale after Realtime updates the store.~~ Completed 2026-07-14.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2493,6 +2494,45 @@ _Original plan below._
 - A rejected backup remains write-blocked, clears only the dead backup, and keeps the user shell available for explicit reconnect.
 - Focused auth tests, type-check, release gates, package validation, and public updater proof pass.
 - The installed packaged app reports the new version with authenticated protected reads and zero live-boundary failures.
+
+### ~~TASK-1953~~: Preserve blocked remote Canvas projection updates (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: TASK-1871
+
+**Failure class**: A Realtime task update can reach the second client's Pinia store while Canvas is dragging, resizing, editing, or settling. The one-shot projection request is then rejected by the interaction guard and never retried, leaving the rendered Vue Flow node permanently at stale geometry until another refresh or unrelated sync.
+
+**Scope**:
+- Keep interaction guards authoritative; never force remote geometry through an active local operation.
+- Coalesce blocked node and edge reconciliation requests and replay them from the latest store state when Canvas returns idle.
+- Flush queued work for both settling completion and explicit reset-to-idle transitions.
+- Preserve the existing no-nudge and no-feedback-loop projection invariants.
+
+**Acceptance**:
+- Blocked remote projection work does not mutate rendered geometry during the protected operation.
+- Returning to idle applies the latest store geometry exactly once even when several triggers arrived while blocked.
+- Focused state-machine regressions and repeated two-independent-client R5 propagation pass.
+- The full Canvas/sync release gate passes before the held Electron release resumes.
+
+**Failure-class matrix**:
+
+| Failure class | Checked | Evidence | Covered by this fix |
+|---|---:|---|---:|
+| Realtime / canonical store delivery | Yes | R5 proves client B receives `{2850,2850}` in Pinia before render reconciliation | Existing path retained |
+| Interaction guard behavior | Yes | State-machine regressions prove no queued work runs during drag/settling | Yes |
+| Deferred renderer projection | Yes | Keyed queue keeps only the latest projection and flushes on settle or explicit reset to idle | Yes |
+| Canvas node geometry | Yes | R5 rendered-node propagation passed 10/10 repeated independent-client runs | Yes |
+| Canvas edge projection | Yes | Node and edge requests use separate coalescing keys and read latest store state on replay | Yes |
+| No-nudge / structural Canvas behavior | Yes | Full R1–R8 independent-client suite passed 8/8 | Yes |
+| Broader Canvas/sync contracts | Yes | Focused cohort passed 32 files / 362 tests; type-check passed | Yes |
+| Electron package/runtime | Not yet | Release remains held until this merged repair is included in the next package | Covered by TASK-1952 release |
+
+**Exact failure mode fixed**: A protected Canvas interaction could reject the only store-to-render projection trigger after Realtime updated client B, leaving Pinia correct while Vue Flow stayed permanently at the old position.
+
+**Explicitly not covered**: This task does not change conflict resolution, database geometry writes, auth recovery, or updater delivery. Those remain under their existing tasks and release gates.
+
+**Regression added for reported repro**: Keyed pending updates replace stale work, survive consecutive local drags, remain blocked through settling, and replay exactly once from the latest state on both timeout completion and explicit reset. Deterministic R8 locks client B, delivers client A's Realtime geometry into B's store, proves the rendered node remains protected, then clears the guard and proves the node catches up without reload.
+
+**Verification**: Focused RED tests failed before keyed coalescing, consecutive-drag retention, and owner cleanup; after implementation, the state suite passed 14/14, the Canvas/sync cohort passed 32 files / 362 tests, R5 passed 10/10 repeated two-client runs, deterministic blocked-client R8 passed, the full R1–R8 E2E passed 8/8, type-check passed, and focused lint had zero errors (two pre-existing `no-explicit-any` warnings).
 
 ### ~~BUG-1939~~: Quick Sort postpone also persists the app session state (✅ DONE)
 
@@ -7256,6 +7296,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1950**~~ | **P0** | ✅ **Renderer-to-sidecar auth recovery classification with actionable protected-route errors and false-incident suppression** |
 | ~~**TASK-1951**~~ | **P0** | ✅ **Production UUID compatibility for canonical task/Notion RPCs, rollback suites, and VPS watchdog** |
 | **TASK-1952** | **P0** | 🔄 **Hydrate Electron auth backup into the live Supabase client and restore protected sidecar reads after restart** |
+| ~~**TASK-1953**~~ | **P0** | ✅ **Preserve blocked remote Canvas projection updates and replay latest store geometry after interaction guards clear** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

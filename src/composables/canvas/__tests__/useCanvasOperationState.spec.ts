@@ -5,12 +5,14 @@ describe('useCanvasOperationState', () => {
     let operationState: ReturnType<typeof useCanvasOperationState>
 
     beforeEach(() => {
-        operationState = useCanvasOperationState()
-        operationState.resetToIdle()
         vi.useFakeTimers()
+        operationState = useCanvasOperationState()
+        operationState.resetToIdle({ flushPending: false })
     })
 
     afterEach(() => {
+        operationState.resetToIdle({ flushPending: false })
+        vi.clearAllTimers()
         vi.useRealTimers()
     })
 
@@ -51,6 +53,41 @@ describe('useCanvasOperationState', () => {
             vi.advanceTimersByTime(3000)
             expect(operationState.isIdle.value).toBe(true)
         })
+
+        it('replays the latest keyed update after drag settling completes', () => {
+            const staleProjection = vi.fn()
+            const latestProjection = vi.fn()
+
+            operationState.startDrag(['1'])
+            operationState.queueUpdate(staleProjection, { key: 'canvas-projection' })
+            operationState.queueUpdate(latestProjection, { key: 'canvas-projection' })
+            operationState.endDrag(['1'])
+
+            vi.advanceTimersByTime(2999)
+            expect(latestProjection).not.toHaveBeenCalled()
+
+            vi.advanceTimersByTime(1)
+            expect(operationState.isIdle.value).toBe(true)
+            expect(staleProjection).not.toHaveBeenCalled()
+            expect(latestProjection).toHaveBeenCalledTimes(1)
+        })
+
+        it('retains a deferred remote projection across consecutive local drags', () => {
+            const latestProjection = vi.fn()
+
+            operationState.startDrag(['1'])
+            operationState.queueUpdate(latestProjection, {
+                key: 'canvas-projection',
+                retainOnInteractionRestart: true,
+            })
+            operationState.endDrag(['1'])
+
+            operationState.startDrag(['2'])
+            operationState.endDrag(['2'])
+            vi.advanceTimersByTime(3000)
+
+            expect(latestProjection).toHaveBeenCalledTimes(1)
+        })
     })
 
     describe('Resize Transitions', () => {
@@ -82,6 +119,50 @@ describe('useCanvasOperationState', () => {
         it('should allow remote updates when syncing', () => {
             operationState.setSyncing('remote')
             expect(operationState.canAcceptRemoteUpdate.value).toBe(true)
+        })
+
+        it('coalesces a blocked projection update and flushes the latest work on reset to idle', () => {
+            const staleProjection = vi.fn()
+            const latestProjection = vi.fn()
+
+            operationState.startDrag(['1'])
+            operationState.queueUpdate(staleProjection, { key: 'canvas-projection' })
+            operationState.queueUpdate(latestProjection, { key: 'canvas-projection' })
+
+            expect(operationState.getDebugInfo().pendingUpdatesCount).toBe(1)
+            expect(staleProjection).not.toHaveBeenCalled()
+            expect(latestProjection).not.toHaveBeenCalled()
+
+            operationState.resetToIdle()
+
+            expect(staleProjection).not.toHaveBeenCalled()
+            expect(latestProjection).toHaveBeenCalledTimes(1)
+            expect(operationState.getDebugInfo().pendingUpdatesCount).toBe(0)
+        })
+
+        it('cancels only updates owned by an unmounted projection instance', () => {
+            const staleOwner = Symbol('stale-canvas')
+            const liveOwner = Symbol('live-canvas')
+            const staleProjection = vi.fn()
+            const liveProjection = vi.fn()
+
+            operationState.startDrag(['1'])
+            operationState.queueUpdate(staleProjection, {
+                key: 'canvas-projection',
+                owner: staleOwner,
+                retainOnInteractionRestart: true,
+            })
+            operationState.queueUpdate(liveProjection, {
+                key: 'canvas-projection',
+                owner: liveOwner,
+                retainOnInteractionRestart: true,
+            })
+
+            operationState.cancelQueuedUpdates(staleOwner)
+            operationState.resetToIdle()
+
+            expect(staleProjection).not.toHaveBeenCalled()
+            expect(liveProjection).toHaveBeenCalledTimes(1)
         })
     })
 })

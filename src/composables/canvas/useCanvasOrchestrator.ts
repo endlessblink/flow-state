@@ -168,7 +168,16 @@ export function useCanvasOrchestrator() {
     const persistence = useCanvasSync()
 
     // Unified Interactions (Drag & Resize)
-    const { canAcceptRemoteUpdate, currentType: opCurrentType, state: opState, getDebugInfo: getOpDebugInfo } = useCanvasOperationState()
+    const {
+        canAcceptRemoteUpdate,
+        currentType: opCurrentType,
+        state: opState,
+        getDebugInfo: getOpDebugInfo,
+        queueUpdate,
+        cancelQueuedUpdates,
+        resetToIdle: resetCanvasOperationToIdle,
+    } = useCanvasOperationState()
+    const projectionQueueOwner = Symbol('canvas-orchestrator-projection')
 
     const applyNodeChangesCompat = (changes: unknown[]) => applyNodeChanges(changes as import('@vue-flow/core').NodeChange[])
 
@@ -206,8 +215,13 @@ export function useCanvasOrchestrator() {
         // Block READ-PATH syncs if user is interacting (dragging/resizing)
         // unless forced by explicit user action (e.g., inbox drop)
         if (!options?.force && !canAcceptRemoteUpdate.value) {
+            queueUpdate(() => syncNodes(), {
+                key: 'canvas-node-projection',
+                owner: projectionQueueOwner,
+                retainOnInteractionRestart: true,
+            })
             if (import.meta.env.DEV) {
-                console.log(`[BUG-1492:ORCH] syncNodes BLOCKED`, { canAcceptRemoteUpdate: canAcceptRemoteUpdate.value, opState: opCurrentType.value })
+                console.log(`[BUG-1492:ORCH] syncNodes DEFERRED`, { canAcceptRemoteUpdate: canAcceptRemoteUpdate.value, opState: opCurrentType.value })
             }
             return
         }
@@ -256,6 +270,11 @@ export function useCanvasOrchestrator() {
     const syncEdges = (options?: { force?: boolean }) => {
         // BUG-1371: Allow force bypass for user-initiated actions (e.g. node deletion)
         if (!options?.force && !canAcceptRemoteUpdate.value) {
+            queueUpdate(() => syncEdges(), {
+                key: 'canvas-edge-projection',
+                owner: projectionQueueOwner,
+                retainOnInteractionRestart: true,
+            })
             return
         }
         const visibleEdgeTasks = taskStore.hideCanvasDoneTasks
@@ -693,6 +712,8 @@ export function useCanvasOrchestrator() {
     // CRITICAL: Register onUnmounted synchronously (not inside async onMounted)
     // This fixes Vue warning: "onUnmounted is called when there is no active component instance"
     onUnmounted(() => {
+        cancelQueuedUpdates(projectionQueueOwner)
+        resetCanvasOperationToIdle()
         if (positionManagerUnsubscribe.value) {
             positionManagerUnsubscribe.value()
             positionManagerUnsubscribe.value = null

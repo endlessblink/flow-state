@@ -625,10 +625,9 @@ const handleDoneForNowPickDate = async (timestamp: number) => {
 
   try {
     if (task?.recurrenceRule) {
-      // Recurring: create completion record, then override next due date to picked date
-      await taskStore.doneForNow(taskId)
-      // Override the auto-computed next date with the user's pick
-      await taskStore.updateTask(taskId, { dueDate: dateStr })
+      // Recurring: the override is part of the same previewed transaction so
+      // the task date and next work block cannot diverge.
+      await taskStore.doneForNow(taskId, { nextDueDate: dateStr })
       canvasStore.requestSync('user:context-menu')
       showToast(`Completed for today, next on ${dateStr}`, 'success', { duration: 2000 })
     } else {

@@ -17,6 +17,8 @@ import { toDbStatus, toSupabaseTask } from '@/utils/supabaseMappers'
 import { useToast } from '@/composables/useToast'
 // TASK-1428: Keep IndexedDB read cache warm after offline mutations
 import { cacheTasks } from '@/services/offline/readCacheDB'
+import { invalidateCache } from '@/composables/useSupabaseDatabase'
+import { applyDoneForNow, previewDoneForNow } from '@/services/tasks/doneForNow'
 import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 import { sanitizeTaskTitle } from '@/utils/taskValidation'
 // TASK-1871 Phase 0: observable geometry-write chokepoint instrumentation
@@ -1333,11 +1335,11 @@ export function useTaskOperations(
         await updateTask(taskId, { status: newStatus }) // BUG-1051: AWAIT to ensure persistence
     }
 
-    // TASK-1532: "Done for Now" — for recurring tasks, creates a completion record and advances
-    // the original task to the next occurrence. For non-recurring tasks, delegates to moveTask.
-    // BUG-1536: In-flight guard prevents double-invocation (double-click creating 2 completion records)
+    // TASK-1532: The signed-in transactional domain operation is the sole authority
+    // for recurring occurrence completion. The renderer reconciles from the exact
+    // rows returned by that operation; it never synthesizes recurrence state.
     const doneForNowInFlight = new Set<string>()
-    const doneForNow = async (taskId: string) => {
+    const doneForNow = async (taskId: string, options: { nextDueDate?: string } = {}) => {
         if (doneForNowInFlight.has(taskId)) {
             console.warn(`[DONE-FOR-NOW] Already in flight for ${taskId}, skipping`)
             return
@@ -1354,96 +1356,41 @@ export function useTaskOperations(
 
         doneForNowInFlight.add(taskId)
         try {
+            const preview = await previewDoneForNow(taskId, options.nextDueDate)
+            const result = await applyDoneForNow(taskId, {
+                requestId: crypto.randomUUID(),
+                previewVersion: preview.previewVersion,
+                nextDueDate: options.nextDueDate,
+            })
 
-        // 1. Stop timer if running on this task
-        // BUG-1569: Dynamic import to break circular dependency
-        try {
-            const { useTimerStore } = await import('@/stores/timer')
-            const timerStore = useTimerStore()
-            if (timerStore.currentTaskId === taskId && timerStore.isTimerActive) {
-                await timerStore.stopTimer()
+            const livingIndex = _rawTasks.value.findIndex(candidate => candidate.id === taskId)
+            if (livingIndex === -1) {
+                _rawTasks.value.push(result.tasks.living)
+            } else {
+                _rawTasks.value[livingIndex] = result.tasks.living
             }
-        } catch (e) {
-            console.warn('[Timer] Auto-stop on done-for-now failed:', e)
-        }
+            const completionIndex = _rawTasks.value.findIndex(candidate => candidate.id === result.tasks.completion.id)
+            if (completionIndex === -1) {
+                _rawTasks.value.push(result.tasks.completion)
+            } else {
+                _rawTasks.value[completionIndex] = result.tasks.completion
+            }
 
-        // 2. Calculate next due date
-        const { computeNextDueDate } = await import('@/utils/recurrenceUtils')
-        const today = formatDateKey(new Date())
-        const currentDueDate = task.dueDate || today
-        const count = (task.recurrenceCount || 0) + 1
-        const nextDueDate = computeNextDueDate(currentDueDate, task.recurrenceRule, count)
+            invalidateCache.tasks()
+            await cacheTasks(_rawTasks.value)
+            triggerCanvasSync('user:context-menu')
 
-        if (!nextDueDate) {
-            console.warn(`[DONE-FOR-NOW] Recurrence ended for "${task.title?.slice(0, 30)}" — no next occurrence. Creating final completion record.`)
-        }
-
-        // 3. Create completion record (calendar history clone, not a living task)
-        const completionRecord: Partial<Task> = {
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            projectId: task.projectId,
-            estimatedDuration: task.estimatedDuration,
-            status: 'done',
-            completedAt: new Date(),
-            dueDate: today,
-            recurrenceParentId: task.recurrenceParentId || task.id,
-            isCompletionRecord: true,
-            instances: task.instances
-                ?.filter(inst => inst.scheduledDate === today)
-                .map(inst => ({
-                    ...inst,
-                    id: `instance-completion-${Date.now()}`,
-                    status: 'completed' as const,
-                })) || [],
-            // No recurrenceRule — snapshot, not a living task
-            // No canvas position — completion records are calendar-only
-            isInInbox: false,
-        }
-        await createTask(completionRecord, { awaitDirectSave: false })
-
-        // 4. Update original task: advance to next occurrence
-        const todayInstance = task.instances?.find(inst => inst.scheduledDate === today)
-        const nextInstances: TaskInstance[] = nextDueDate
-            ? [{
-                id: `instance-${taskId}-${Date.now()}`,
-                taskId: taskId,
-                scheduledDate: nextDueDate,
-                scheduledTime: todayInstance?.scheduledTime,
-                duration: todayInstance?.duration || task.estimatedDuration || 25,
-                status: 'scheduled' as const,
-            }]
-            : []
-
-        // Reset subtasks for next occurrence
-        const resetSubtasks = task.subtasks?.map(st => ({
-            ...st,
-            isCompleted: false,
-            updatedAt: new Date(),
-        })) || []
-
-        // Remove from canvas group when due date no longer matches
-        // (task will reappear in the correct group when its date comes)
-        await updateTask(taskId, {
-            status: 'todo',
-            completedAt: undefined,
-            dueDate: nextDueDate || currentDueDate,
-            recurrenceCount: count,
-            instances: nextInstances,
-            subtasks: resetSubtasks,
-            parentId: undefined,
-            canvasPosition: undefined,
-            isInInbox: true,
-        })
-
-        // Set recurrence lock to prevent deferred scheduler from creating duplicates
-        try {
-            const LOCK_KEY = recurrenceLockKey(today)
-            localStorage.setItem(LOCK_KEY, String(Date.now()))
-        } catch { /* localStorage may be unavailable */ }
-
-        console.log(`[DONE-FOR-NOW] "${task.title?.slice(0, 30)}" completed for today, next: ${nextDueDate}`)
+            // Stop a timer only after the occurrence transaction succeeds. A
+            // database failure must not leave the task partially completed.
+            try {
+                const { useTimerStore } = await import('@/stores/timer')
+                const timerStore = useTimerStore()
+                if (timerStore.currentTaskId === taskId && timerStore.isTimerActive) {
+                    await timerStore.stopTimer()
+                }
+            } catch (e) {
+                console.warn('[Timer] Auto-stop on done-for-now failed:', e)
+            }
         } finally {
             doneForNowInFlight.delete(taskId)
         }

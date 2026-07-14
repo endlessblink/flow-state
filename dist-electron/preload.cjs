@@ -15,6 +15,9 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     isElectron: true,
     // App info
     getVersion: () => electron_1.ipcRenderer.invoke('app:getVersion'),
+    // BUG-1932: `{ home, pinnedTo }` when a launcher rewrote HOME and userData was pinned back to the
+    // real home; null otherwise.
+    getHomeOverride: () => electron_1.ipcRenderer.invoke('app:getHomeOverride'),
     // Shell operations (replaces @tauri-apps/plugin-shell)
     openExternal: (url) => electron_1.ipcRenderer.invoke('shell:openExternal', url),
     // Dialog operations (replaces @tauri-apps/plugin-dialog)
@@ -65,5 +68,12 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     setLocalApiEnabled: (enabled) => electron_1.ipcRenderer.invoke('localApi:setEnabled', enabled),
     getLocalApiToken: () => electron_1.ipcRenderer.invoke('localApi:getToken'),
     getLocalApiStatus: () => electron_1.ipcRenderer.invoke('localApi:status'),
+    onLocalApiTaskMutation: (callback) => {
+        electron_1.ipcRenderer.on('localApi:taskMutation', (_event, mutation) => callback(mutation));
+    },
+    offLocalApiTaskMutation: () => electron_1.ipcRenderer.removeAllListeners('localApi:taskMutation'),
+    // BUG-1936: drag diagnostics — append a JSON line to <userData>/drag-diagnostics.log
+    appendDragDiag: (line) => electron_1.ipcRenderer.invoke('diag:appendDrag', line),
+    dragDiagPath: () => electron_1.ipcRenderer.invoke('diag:dragLogPath'),
 });
 //# sourceMappingURL=preload.js.map

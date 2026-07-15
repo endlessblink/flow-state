@@ -70,16 +70,25 @@ SQL
 
 auth_sql="SELECT set_config('request.jwt.claim.sub','dc150000-0000-4000-8000-000000000001',false); SELECT set_config('request.jwt.claims','{\"sub\":\"dc150000-0000-4000-8000-000000000001\",\"role\":\"authenticated\"}',false);"
 
-preview_version="$(docker exec "$container" psql -U postgres -d "$test_db" -qAt -v ON_ERROR_STOP=1 -c \
-  "$auth_sql SELECT result->>'previewVersion' FROM (SELECT public.flowstate_merge_tasks_with_recurrence('dc150000-0000-4000-8000-000000000201','dc150000-0000-4000-8000-000000000202','{\"pattern\":\"daily\",\"interval\":3,\"endType\":\"never\"}',true,null,null,'dc150000-0000-4000-8000-000000000101') AS result) AS preview;" \
+preview_pair="$(docker exec "$container" psql -U postgres -d "$test_db" -qAt -F '|' -v ON_ERROR_STOP=1 -c \
+  "$auth_sql SELECT result->>'previewVersion', result->>'requestHash' FROM (SELECT public.flowstate_merge_tasks_with_recurrence('dc150000-0000-4000-8000-000000000201','dc150000-0000-4000-8000-000000000202','{\"pattern\":\"daily\",\"interval\":3,\"endType\":\"never\"}',true,'concurrent-recurrence-request',null,'dc150000-0000-4000-8000-000000000101') AS result) AS preview;" \
   | tail -n 1)"
+IFS='|' read -r preview_version request_hash <<< "$preview_pair"
 
-if [[ ! "$preview_version" =~ ^[0-9a-f]{64}$ ]]; then
-  echo "FAIL: separate-transaction recurrence preview did not return a stable digest" >&2
+if [[ ! "$preview_version" =~ ^[0-9a-f]{64}$ || ! "$request_hash" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "FAIL: recurrence preview did not return stable preview/request hashes" >&2
   exit 1
 fi
 
-apply_sql="$auth_sql SELECT public.flowstate_merge_tasks_with_recurrence('dc150000-0000-4000-8000-000000000201','dc150000-0000-4000-8000-000000000202','{\"pattern\":\"daily\",\"interval\":3,\"endType\":\"never\"}',false,'concurrent-recurrence-request','$preview_version','dc150000-0000-4000-8000-000000000101');"
+padded_result="$(docker exec "$container" psql -U postgres -d "$test_db" -qAt -v ON_ERROR_STOP=1 -c \
+  "$auth_sql SELECT result#>>'{error,code}' FROM (SELECT public.flowstate_merge_tasks_with_recurrence('dc150000-0000-4000-8000-000000000201','dc150000-0000-4000-8000-000000000202','{\"pattern\":\"daily\",\"interval\":3,\"endType\":\"never\"}',true,' concurrent-recurrence-request ',null,'dc150000-0000-4000-8000-000000000101') AS result) AS rejected;" \
+  | tail -n 1)"
+if [[ "$padded_result" != "invalid_request" ]]; then
+  echo "FAIL: padded recurrence request identity was accepted: $padded_result" >&2
+  exit 1
+fi
+
+apply_sql="$auth_sql SELECT public.flowstate_merge_tasks_with_recurrence('dc150000-0000-4000-8000-000000000201','dc150000-0000-4000-8000-000000000202','{\"pattern\":\"daily\",\"interval\":3,\"endType\":\"never\"}',false,'concurrent-recurrence-request','$preview_version','dc150000-0000-4000-8000-000000000101','$request_hash');"
 
 docker exec "$container" psql -U postgres -d "$test_db" -qAt -v ON_ERROR_STOP=1 -c \
   "BEGIN; $apply_sql SELECT pg_sleep(1); COMMIT;" > "$tmp_dir/apply-a" &
@@ -94,24 +103,29 @@ wait "$pid_b"
 grep -E '^\{' "$tmp_dir/apply-a" | tail -n 1 > "$tmp_dir/receipt-a"
 grep -E '^\{' "$tmp_dir/apply-b" | tail -n 1 > "$tmp_dir/receipt-b"
 
-if ! cmp -s "$tmp_dir/receipt-a" "$tmp_dir/receipt-b" \
-   || ! grep -q '"ok": true' "$tmp_dir/receipt-a" \
-   || ! grep -q '"requestId": "concurrent-recurrence-request"' "$tmp_dir/receipt-a"; then
+status_pair="$(jq -r '.receipt.status' "$tmp_dir/receipt-a" "$tmp_dir/receipt-b" | sort | paste -sd '|' -)"
+hash_a="$(jq -r '.receipt.readBackHash' "$tmp_dir/receipt-a")"
+hash_b="$(jq -r '.receipt.readBackHash' "$tmp_dir/receipt-b")"
+if [[ "$status_pair" != "committed|replayed" \
+   || "$hash_a" != "$hash_b" \
+   || "$(jq -r '.ok' "$tmp_dir/receipt-a")" != "true" \
+   || "$(jq -r '.ok' "$tmp_dir/receipt-b")" != "true" ]]; then
   echo "FAIL: concurrent identical recurrence applies did not replay one receipt" >&2
   exit 1
 fi
 
 state="$(docker exec "$container" psql -U postgres -d "$test_db" -qAt -F '|' -v ON_ERROR_STOP=1 -c \
-  "SELECT (SELECT recurrence_rule->>'interval' FROM public.tasks WHERE id='dc150000-0000-4000-8000-000000000201'), (SELECT is_deleted FROM public.tasks WHERE id='dc150000-0000-4000-8000-000000000202'), (SELECT count(*) FROM public.flowstate_action_receipts WHERE operation='merge_tasks_recurrence' AND request_id='concurrent-recurrence-request');")"
+  "SELECT (SELECT recurrence_rule->>'interval' FROM public.tasks WHERE id='dc150000-0000-4000-8000-000000000201'), (SELECT is_deleted FROM public.tasks WHERE id='dc150000-0000-4000-8000-000000000202'), (SELECT count(*) FROM public.flowstate_action_receipts WHERE operation='merge_tasks_recurrence' AND request_id='concurrent-recurrence-request'), (SELECT count(*) FROM public.canonical_operations WHERE operation_id='concurrent-recurrence-request');")"
 
-if [[ "$state" != "3|t|1" ]]; then
+if [[ "$state" != "3|t|1|1" ]]; then
   echo "FAIL: concurrent recurrence merge ended in unexpected state: $state" >&2
   exit 1
 fi
 
-related_preview="$(docker exec "$container" psql -U postgres -d "$test_db" -qAt -v ON_ERROR_STOP=1 -c \
-  "$auth_sql SELECT result->>'previewVersion' FROM (SELECT public.flowstate_merge_tasks_with_recurrence('dc150000-0000-4000-8000-000000000203','dc150000-0000-4000-8000-000000000204','{\"pattern\":\"daily\",\"interval\":5,\"endType\":\"never\"}',true,null,null,'dc150000-0000-4000-8000-000000000101') AS result) AS preview;" \
+related_pair="$(docker exec "$container" psql -U postgres -d "$test_db" -qAt -F '|' -v ON_ERROR_STOP=1 -c \
+  "$auth_sql SELECT result->>'previewVersion', result->>'requestHash' FROM (SELECT public.flowstate_merge_tasks_with_recurrence('dc150000-0000-4000-8000-000000000203','dc150000-0000-4000-8000-000000000204','{\"pattern\":\"daily\",\"interval\":5,\"endType\":\"never\"}',true,'related-state-request',null,'dc150000-0000-4000-8000-000000000101') AS result) AS preview;" \
   | tail -n 1)"
+IFS='|' read -r related_preview related_hash <<< "$related_pair"
 
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 INSERT INTO public.task_comments (id, task_id, workspace_id, user_id, content) VALUES (
@@ -124,7 +138,7 @@ INSERT INTO public.task_comments (id, task_id, workspace_id, user_id, content) V
 SQL
 
 related_result="$(docker exec "$container" psql -U postgres -d "$test_db" -qAt -v ON_ERROR_STOP=1 -c \
-  "$auth_sql SELECT result#>>'{error,code}' FROM (SELECT public.flowstate_merge_tasks_with_recurrence('dc150000-0000-4000-8000-000000000203','dc150000-0000-4000-8000-000000000204','{\"pattern\":\"daily\",\"interval\":5,\"endType\":\"never\"}',false,'related-state-request','$related_preview','dc150000-0000-4000-8000-000000000101') AS result) AS apply;" \
+  "$auth_sql SELECT result#>>'{error,code}' FROM (SELECT public.flowstate_merge_tasks_with_recurrence('dc150000-0000-4000-8000-000000000203','dc150000-0000-4000-8000-000000000204','{\"pattern\":\"daily\",\"interval\":5,\"endType\":\"never\"}',false,'related-state-request','$related_preview','dc150000-0000-4000-8000-000000000101','$related_hash') AS result) AS apply;" \
   | tail -n 1)"
 
 if [[ "$related_result" != "state_conflict" ]]; then
@@ -132,4 +146,4 @@ if [[ "$related_result" != "state_conflict" ]]; then
   exit 1
 fi
 
-echo "PASS: separate-transaction preview, related-state binding, and concurrent recurrence apply replay"
+echo "PASS: canonical identity, separate-transaction preview, related-state binding, and concurrent recurrence replay"

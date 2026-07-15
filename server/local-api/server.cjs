@@ -26,7 +26,7 @@
 
 const http = require('http')
 const crypto = require('crypto')
-const { mkdirSync } = require('fs')
+const { mkdirSync, readFileSync } = require('fs')
 const { join } = require('path')
 const { createClient } = require('@supabase/supabase-js')
 const { createAIMastraRuntime } = require('./ai-runtime.cjs')
@@ -75,6 +75,31 @@ const TOKEN = process.env.FLOW_STATE_API_TOKEN || ''
 const DATA_DIR = process.env.FLOW_STATE_API_DATA_DIR || join(process.cwd(), '.flowstate-local-api')
 const LOCAL_TIMER_INACTIVE_GRACE_MS = 15_000
 const APP_VERSION = process.env.FLOW_STATE_APP_VERSION || 'unknown'
+const BUILD_PROVENANCE_PATH = process.env.FLOW_STATE_BUILD_PROVENANCE_PATH
+  || join(__dirname, 'flowstate-truth-ledger.json')
+
+function readBuildProvenance() {
+  try {
+    const ledger = JSON.parse(readFileSync(BUILD_PROVENANCE_PATH, 'utf8'))
+    const sourceCommit = /^[0-9a-f]{40}$/.test(ledger?.source?.commit || '')
+      ? ledger.source.commit
+      : null
+    const sourceDirty = typeof ledger?.source?.dirty === 'boolean'
+      ? ledger.source.dirty
+      : null
+    const builtAt = typeof ledger?.build?.builtAt === 'string'
+      ? ledger.build.builtAt
+      : null
+    const contractSet = Array.isArray(ledger?.build?.contractSet)
+      ? ledger.build.contractSet.filter((entry) => typeof entry === 'string')
+      : []
+    return { sourceCommit, sourceDirty, builtAt, contractSet }
+  } catch {
+    return { sourceCommit: null, sourceDirty: null, builtAt: null, contractSet: [] }
+  }
+}
+
+const BUILD_PROVENANCE = readBuildProvenance()
 
 function logErr(msg) {
   console.error(`[local-api] ${msg}`)
@@ -1313,6 +1338,18 @@ async function handleAIClarificationResume(runId, req, res) {
   send(res, 200, { ok: true, ...result })
 }
 
+function handleGetBuildProvenance(res) {
+  const { sourceCommit, sourceDirty, builtAt, contractSet } = BUILD_PROVENANCE
+  send(res, 200, {
+    schemaVersion: 'flowstate-sidecar-provenance-v1',
+    appVersion: APP_VERSION,
+    sourceCommit,
+    sourceDirty,
+    builtAt,
+    contractSet,
+  })
+}
+
 // --- Server -----------------------------------------------------------------
 
 const server = http.createServer(async (req, res) => {
@@ -1328,6 +1365,10 @@ const server = http.createServer(async (req, res) => {
     // not require the Life OS bearer token. Task routes below remain protected.
     if (req.method === 'GET' && path === '/api/health') {
       return send(res, 200, { ok: true })
+    }
+
+    if (req.method === 'GET' && path === '/api/provenance') {
+      return handleGetBuildProvenance(res)
     }
 
     if (req.method === 'GET' && path === '/api/timer/current') {

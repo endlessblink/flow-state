@@ -21,6 +21,7 @@ const requiredAsarEntries = [
   '/dist-electron/main.cjs',
   '/dist-electron/preload.cjs',
   '/dist-electron/local-api-server.cjs',
+  '/dist-electron/flowstate-truth-ledger.json',
   '/package.json',
 ]
 
@@ -88,6 +89,30 @@ function validateAppAsar(packagePath) {
   const missing = requiredAsarEntries.filter((entry) => !entries.has(entry))
   if (missing.length > 0) {
     fail(`Packaged app archive is missing required entries: ${missing.join(', ')}`)
+    return
+  }
+  try {
+    const provenance = JSON.parse(asar.extractFile(
+      packagePath,
+      'dist-electron/flowstate-truth-ledger.json',
+    ).toString('utf8'))
+    const valid = (
+      provenance.schemaVersion === 'flowstate-truth-ledger-v1'
+      && provenance.mode === 'non-live'
+      && /^[0-9a-f]{40}$/.test(provenance.source?.commit || '')
+      && typeof provenance.source?.dirty === 'boolean'
+      && typeof provenance.build?.builtAt === 'string'
+      && Number.isFinite(Date.parse(provenance.build.builtAt))
+      && Array.isArray(provenance.build?.contractSet)
+      && provenance.build.contractSet.length > 0
+    )
+    if (!valid) fail('Packaged FlowState truth ledger is malformed or incomplete.')
+    const serialized = JSON.stringify(provenance)
+    if (/authorization|accessToken|refreshToken|cookie|email|homePath/i.test(serialized)) {
+      fail('Packaged FlowState truth ledger contains a forbidden sensitive field.')
+    }
+  } catch (error) {
+    fail(`Unable to validate packaged FlowState truth ledger: ${error.message}`)
   }
 }
 

@@ -2200,6 +2200,7 @@ _Original plan below._
 - [ ] **TASK-1956 — Reliable complete FlowState task inventory for Hermes**: recover renderer-to-sidecar auth after restart, expose a typed complete paginated open-task inventory with stable receipts, and prevent partial or stale samples from becoming exact assistant counts.
 - [ ] **TASK-1957 — Atomic recurrence-aware duplicate merge for Hermes**: let an approved merge preview resolve an explicit canonical recurrence only for safe root tasks with no occurrence history, bind that resolution into the receipt, and make unresolved recurrence conflicts stop further assistant mutations.
 - [x] ~~**TASK-1958 — Canonical non-recurring task completion for Hermes**: dedicated `flowstate_complete_task_v1` preview/apply completion with approval digest, committed receipt, `completedAt` read-back, typed `recurring_task`/`already_completed` rejections, and disposable-DB runtime regression.~~ Completed 2026-07-15; production migration + Electron ship still pending.
+- [x] ~~**TASK-1959 — Redacted FlowState source-to-runtime truth ledger**: generate one stable, secret-free ledger across source, local build, public release, installed AppImage, and live sidecar truth; keep release builds non-live by default and expose mismatches instead of inferring deployment success.~~ Completed 2026-07-15.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4723,6 +4724,30 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Regression added for reported repro**: `tests/unit/local-api/complete-task-handler.test.ts`, `tests/unit/local-api/complete-task-route-contract.test.ts`, and `scripts/db/test-complete-task-rpc.sql` inside `scripts/db/test-reliable-assistant-contract.sh` (preview non-mutation, forged-approval refusal, commit, replay, read-back hash recomputation, recurring/scope/stale rejections).
 
 **Live boundary proof**: deliberately deferred — requires the production migration plus a packaged sidecar; recorded above as the remaining go-live steps.
+
+### ~~TASK-1959~~: Redacted FlowState source-to-runtime truth ledger (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (filed and completed 2026-07-15) | **Depends on**: TASK-1937, TASK-1942, TASK-1956
+
+**Why**: A green source test or local bundle check does not prove which commit, version, updater manifest, installed AppImage, or Local API sidecar is actually active. Repeated release and packaging failures have shown that these surfaces can diverge while each isolated probe looks healthy.
+
+**Acceptance**:
+- One script emits a versioned JSON ledger with explicit source, build, public, installed, and sidecar sections plus machine-readable mismatches.
+- Output contains no tokens, auth headers, task content, user identity, home paths, query strings, or environment values.
+- Non-live mode performs no network, installed-app, or localhost probes and can be generated safely during Electron packaging.
+- Local release metadata binds the package version, updater manifest, named artifacts, and bundled sidecar digest without claiming public or installed truth.
+- Full mode keeps public, installed, and sidecar checks independently typed so an unavailable surface is not confused with a version mismatch.
+- Focused regressions prove redaction, non-live isolation, mismatch detection, and release-output integration.
+
+**Explicitly not covered**: deploying a release, installing/relaunching an AppImage, mutating production data, authenticating the sidecar, or declaring any live surface current without running full mode against that surface.
+
+**Implementation**: `scripts/flowstate-truth-ledger.cjs` emits the `flowstate-truth-ledger-v1` contract with a full Git commit, clean/dirty bit, build timestamp, FlowState contract set, package version, updater manifest and local artifact digests, embedded sidecar digest, and independently normalized public/installed/sidecar evidence. The canonical Electron builder creates a non-live ledger before packaging so `app.asar` carries source provenance, then writes an enriched non-live ledger beside the finished release artifacts. Package validation now fails when embedded provenance is absent, malformed, or contains forbidden sensitive field names. The loopback-only `/api/provenance` endpoint returns a dedicated `flowstate-sidecar-provenance-v1` allowlist from that embedded ledger; it does not reuse timer diagnostics, auth state, raw process arguments, or task data. Full mode is explicit and retains only allowlisted status/version/hash/provenance fields from live probes.
+
+**Tests**: RED first failed because the ledger script and builder integration did not exist; the second RED proved the package validator accepted an AppImage with no embedded provenance; the third RED proved the full-mode sidecar probe still depended on timer diagnostics and no dedicated provenance route existed. Green proof: `npm test -- tests/unit/scripts/flowstate-truth-ledger.test.ts tests/unit/local-api/server-contract.test.ts tests/unit/scripts/validate-electron-package.test.ts` (48/48); `npm run type-check`; `npm run lint`; `node --check scripts/flowstate-truth-ledger.cjs`; `bash -n scripts/run-electron-builder-with-npm-tree.sh`; `git diff --check`; and the canonical `npm run electron:build`, whose package validator confirmed renderer, main, sidecar, launcher metadata, and embedded truth ledger.
+
+**Package/release proof**: the built `app.asar` contains `/dist-electron/flowstate-truth-ledger.json` with the full source commit, build timestamp, dirty bit, five-contract set, local sidecar digest, and all live surfaces marked `not_checked`. `release/flowstate-truth-ledger.json` binds the same embedded provenance digest to manifest `1.4.262` and both locally verified Linux artifacts. Because this verification build intentionally preceded the commit, its verdict correctly reports only `source.dirty=true` rather than claiming a clean release.
+
+**Live read-only proof**: explicit full mode observed public updater `1.4.262` with reachable artifacts and installed AppImage `1.4.262` with a digest. The currently installed sidecar predates the dedicated provenance route, so that surface honestly reports `http_404` until a later release is shipped and relaunched; it is not inferred current from version equality. No task data, credentials, raw process arguments, timer session, or production state was read or written.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7438,6 +7463,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1956** | **P0** | 🔄 **Reliable complete FlowState inventory with restart-safe sidecar auth, typed freshness/completeness, stable pagination, and packaged proof** |
 | **TASK-1957** | **P0** | 🔄 **Atomic recurrence-aware duplicate merge with preview-bound cadence resolution and stop-on-conflict assistant behavior** |
 | ~~**TASK-1958**~~ | **P1** | ✅ **Canonical non-recurring task completion with approval digest, committed receipt, completedAt read-back, and recurring fail-closed rejection** |
+| ~~**TASK-1959**~~ | **P0** | ✅ **Redacted source/build/public/installed/sidecar truth ledger with embedded non-live package provenance and mismatch evidence** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

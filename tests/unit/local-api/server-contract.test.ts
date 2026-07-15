@@ -66,6 +66,25 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(diagnosticsRoute).toBeLessThan(tasksRoute)
   })
 
+  it('exposes dedicated redacted build provenance without reusing timer diagnostics', () => {
+    const provenanceRoute = SERVER_CJS.indexOf("path === '/api/provenance'")
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+    const body = functionBody('handleGetBuildProvenance')
+
+    expect(provenanceRoute, 'sidecar provenance route not found').toBeGreaterThan(-1)
+    expect(provenanceRoute).toBeLessThan(tokenCheck)
+    expect(body).toContain("schemaVersion: 'flowstate-sidecar-provenance-v1'")
+    expect(body).toContain('appVersion: APP_VERSION')
+    expect(body).toContain('sourceCommit')
+    expect(body).toContain('sourceDirty')
+    expect(body).toContain('builtAt')
+    expect(body).toContain('contractSet')
+    expect(body).not.toContain('localTimerSnapshot')
+    expect(body).not.toContain('rendererAuthState')
+    expect(body).not.toContain('accessToken')
+    expect(body).not.toContain('refreshToken')
+  })
+
   it('diagnoses timer boundary state without exposing secrets or full task rows', () => {
     const body = functionBody('handleGetTimerDiagnostics')
 

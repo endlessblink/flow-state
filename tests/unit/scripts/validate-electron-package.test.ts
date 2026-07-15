@@ -52,9 +52,20 @@ async function writeAppAsar(root: string, entries: string[]) {
   const appAsar = join(root, 'release/linux-unpacked/resources/app.asar')
 
   for (const entry of entries) {
-    writeFile(source, entry.replace(/^\//, ''), entry.endsWith('package.json')
+    const content = entry.endsWith('package.json')
       ? '{"name":"flow-state","main":"dist-electron/main.cjs"}'
-      : 'fixture')
+      : entry.endsWith('flowstate-truth-ledger.json')
+        ? JSON.stringify({
+            schemaVersion: 'flowstate-truth-ledger-v1',
+            mode: 'non-live',
+            source: { commit: 'a'.repeat(40), dirty: false },
+            build: {
+              builtAt: '2026-07-15T12:00:00.000Z',
+              contractSet: ['truth-ledger/flowstate-truth-ledger-v1'],
+            },
+          })
+        : 'fixture'
+    writeFile(source, entry.replace(/^\//, ''), content)
   }
 
   mkdirSync(dirname(appAsar), { recursive: true })
@@ -109,6 +120,7 @@ describe('validate-electron-package', () => {
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
       '/dist-electron/local-api-server.cjs',
+      '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
     ])
 
@@ -125,6 +137,7 @@ describe('validate-electron-package', () => {
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
       '/dist-electron/local-api-server.cjs',
+      '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
     ])
 
@@ -142,6 +155,7 @@ describe('validate-electron-package', () => {
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
       '/dist-electron/ipc/local-api-server.cjs',
+      '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
     ])
 
@@ -159,6 +173,7 @@ describe('validate-electron-package', () => {
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
       '/dist-electron/local-api-server.cjs',
+      '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
     ])
 
@@ -176,6 +191,7 @@ describe('validate-electron-package', () => {
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
       '/dist-electron/local-api-server.cjs',
+      '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
     ])
     writeDuplicateDebArchive(root)
@@ -186,5 +202,22 @@ describe('validate-electron-package', () => {
     expect(result.stderr).toContain('exactly one debian-binary')
     expect(result.stderr).toContain('exactly one control.tar.*')
     expect(result.stderr).toContain('exactly one data.tar.*')
+  })
+
+  it('fails before shipping a package without embedded source provenance', async () => {
+    const root = makeRoot()
+    writeBuilderConfig(root)
+    await writeAppAsar(root, [
+      '/dist/index.html',
+      '/dist-electron/main.cjs',
+      '/dist-electron/preload.cjs',
+      '/dist-electron/local-api-server.cjs',
+      '/package.json',
+    ])
+
+    const result = runValidator(root)
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('/dist-electron/flowstate-truth-ledger.json')
   })
 })

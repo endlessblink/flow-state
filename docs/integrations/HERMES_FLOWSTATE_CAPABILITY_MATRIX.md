@@ -18,7 +18,7 @@ subset exists, **missing** = domain/UI capability exists but is not exposed,
 | Get exact task | task mapper/query | live | live | read-only | Returns recurrence, subtasks, blocks, Canvas placement; use before/after writes |
 | Create task | `taskOperations.createTask` | live | live | meaningful mutation; current endpoint has no preview/idempotency | Renderer reload; adapt to command/receipt substrate |
 | Update basic task metadata | `taskOperations.updateTask` | partial | partial | meaningful mutation; canonical approval contract in Hermes, generic API remains unsafe for recurrence | Search/Board/Today; do not use for recurring completion |
-| Complete non-recurring task | status update | live through update | live through update | reversible; exact ID + approval | Board/Today/read-back |
+| Complete non-recurring task | `flowstate_complete_task_v1` via `POST /api/tasks/:id/complete` | live (dedicated preview/apply) | live (dedicated preview/apply) | reversible; exact ID + approval digest; recurring tasks rejected (`recurring_task`) | Receipt read-back proves `status`/`completedAt`; Board/Today |
 | Soft delete | task delete + tombstone | live | live | destructive-adjacent; no preview | Trash/read-back; add restore and preview |
 | Restore / permanent delete | task persistence + unified undo | missing | missing | high risk; permanent delete requires explicit typed confirmation | Expose restore first; defer permanent delete |
 | Recurrence definition/current chain | task recurrence fields | live through exact read | live through exact read | read-only | Stable `parentId`/count/current task; keep |

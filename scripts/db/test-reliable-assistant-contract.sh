@@ -8,6 +8,7 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 merge_migration="$root_dir/supabase/migrations/20260713011000_merge_tasks_rpc.sql"
 recurrence_merge_migration="$root_dir/supabase/migrations/20260715010000_merge_tasks_recurrence_resolution.sql"
 task_migration="$root_dir/supabase/migrations/20260713012000_canonical_task_contract.sql"
+complete_migration="$root_dir/supabase/migrations/20260715020000_complete_task_rpc.sql"
 notion_migration="$root_dir/supabase/migrations/20260714010000_canonical_notion_activation.sql"
 uuid_compatibility_migration="$root_dir/supabase/migrations/20260714020000_canonical_uuid_compatibility.sql"
 
@@ -31,6 +32,8 @@ docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$task_migration" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$complete_migration" >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$notion_migration" >/dev/null
 for _ in 1 2; do
   docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
@@ -41,6 +44,9 @@ DO $$
 BEGIN
   IF to_regprocedure(
        'public.flowstate_patch_task_v1(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid)'
+     ) IS NULL
+     OR to_regprocedure(
+       'public.flowstate_complete_task_v1(text,text,text,text,bigint,boolean,text,timestamptz,uuid)'
      ) IS NULL
      OR to_regprocedure(
        'public.flowstate_activate_notion_task_v1(text,jsonb,jsonb,jsonb,boolean,text,timestamptz)'
@@ -63,6 +69,8 @@ FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
   bash "$root_dir/scripts/db/test-merge-tasks-recurrence-concurrency.sh"
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-task-contract.sql" >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-complete-task-rpc.sql" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-notion-activation.sql" >/dev/null
 

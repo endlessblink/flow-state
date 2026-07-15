@@ -33,6 +33,7 @@ const { createAIMastraRuntime } = require('./ai-runtime.cjs')
 const { executeDoneForNow } = require('./done-for-now.cjs')
 const { executeMergeTasks } = require('./merge-tasks.cjs')
 const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
+const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
 const { buildTaskSearchQuery, parseTaskSearchParams } = require('./task-search.cjs')
@@ -646,6 +647,12 @@ async function handleGetTask(id, res) {
       completedAt: task.completed_at,
     },
   })
+}
+
+async function handleCompleteTask(id, req, res) {
+  const body = await readJsonBody(req)
+  const result = await executeCompleteTask(ctx, id, body, notifyTaskMutation)
+  send(res, result.status, result.body)
 }
 
 async function handleDoneForNow(id, req, res) {
@@ -1389,6 +1396,10 @@ const server = http.createServer(async (req, res) => {
     const doneForNowMatch = path.match(/^\/api\/tasks\/([^/]+)\/done-for-now$/)
     if (req.method === 'POST' && doneForNowMatch) {
       return await handleDoneForNow(decodeURIComponent(doneForNowMatch[1]), req, res)
+    }
+    const completeTaskMatch = path.match(/^\/api\/tasks\/([^/]+)\/complete$/)
+    if (req.method === 'POST' && completeTaskMatch) {
+      return await handleCompleteTask(decodeURIComponent(completeTaskMatch[1]), req, res)
     }
     const mergeTasksMatch = path.match(/^\/api\/tasks\/([^/]+)\/merge$/)
     if (req.method === 'POST' && mergeTasksMatch) {

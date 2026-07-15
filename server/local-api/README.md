@@ -289,6 +289,41 @@ embedded occurrence instances. This is the read-back endpoint for approved
 mutations; a missing, deleted, cross-user, or out-of-workspace task is reported
 as `404`.
 
+### `POST /api/tasks/:id/complete`
+
+Completes one exact non-recurring task through the canonical preview/apply
+contract (TASK-1958). Preview is the default and performs no writes; it issues
+an approval digest bound to the exact request and task revision:
+
+```json
+{ "operationId": "stable-client-generated-id", "baseRevision": 3 }
+```
+
+The preview response proves the current state (`readBack.status`), states that
+`completedAt` will be set (`willSetCompletedAt`), and returns `previewDigest`
+plus `previewExpiresAt`. After explicit approval, apply re-sends the exact
+binding:
+
+```json
+{
+  "preview": false,
+  "operationId": "stable-client-generated-id",
+  "baseRevision": 3,
+  "previewDigest": "sha256-hex-from-preview",
+  "previewExpiresAt": "timestamp-from-preview"
+}
+```
+
+Apply is one database transaction that sets `status` to `done`, stamps
+`completedAt`, and returns a committed canonical receipt (`action:
+"complete"`) with read-back and `readBackHash`. Identical retries replay the
+stored receipt. Recurring identity fails closed: a task with a recurrence
+rule, a chain parent, or a completion-history record returns `recurring_task`
+and must use `done-for-now` instead. Other typed errors include
+`not_authenticated`, `not_found`, `already_completed`, `stale_revision`,
+`idempotency_conflict`, `preview_mismatch`, `preview_expired`, and
+`approval_receipt_required`.
+
 ### `POST /api/tasks/:id/done-for-now`
 
 Completes one occurrence without completing the recurring definition. Preview

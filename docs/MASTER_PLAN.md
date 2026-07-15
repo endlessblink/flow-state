@@ -2199,6 +2199,7 @@ _Original plan below._
 - [x] ~~**BUG-1955 — Restore packaged exact-task reads**: make the detailed Local Task API serializer execute safely with absent, null, empty, or malformed subtasks; add an executable source-and-bundle regression; and ship a version above Electron 1.4.255 with live Hermes read-back proof.~~ Completed 2026-07-14 in Electron 1.4.256.
 - [ ] **TASK-1956 — Reliable complete FlowState task inventory for Hermes**: recover renderer-to-sidecar auth after restart, expose a typed complete paginated open-task inventory with stable receipts, and prevent partial or stale samples from becoming exact assistant counts.
 - [ ] **TASK-1957 — Atomic recurrence-aware duplicate merge for Hermes**: let an approved merge preview resolve an explicit canonical recurrence only for safe root tasks with no occurrence history, bind that resolution into the receipt, and make unresolved recurrence conflicts stop further assistant mutations.
+- [x] ~~**TASK-1958 — Canonical non-recurring task completion for Hermes**: dedicated `flowstate_complete_task_v1` preview/apply completion with approval digest, committed receipt, `completedAt` read-back, typed `recurring_task`/`already_completed` rejections, and disposable-DB runtime regression.~~ Completed 2026-07-15; production migration + Electron ship still pending.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4686,6 +4687,42 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 - FlowState RPC/Local API and Hermes connector regressions cover absent, conflicting, invalid, stale-preview, replay, and rollback paths before packaged verification.
 
 **Explicitly not covered**: merging two established recurrence chains or rewriting completion history. Those require the broader series-management contract tracked by FEATURE-1945.
+
+### ~~TASK-1958~~: Canonical non-recurring task completion for Hermes (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (filed and completed 2026-07-15) | **Depends on**: TASK-1944, TASK-1951
+
+**User repro**: several real non-recurring tasks are complete in reality but still show as todo, and Hermes had no dedicated safe completion capability — only the generic canonical patch, which is not a completion command and bypasses completion semantics.
+
+**Shipped**:
+- `flowstate_complete_task_v1` (`supabase/migrations/20260715020000_complete_task_rpc.sql`): preview/approval-digest/apply/receipt contract cloned from `flowstate_patch_task_v1`; apply sets `status='done'` and stamps `completed_at` in one transaction; receipt `action='complete'` with read-back and `readBackHash`.
+- Recurring identity fails closed with typed `recurring_task` (recurrence rule, chain parent, or completion record); already-done tasks return `already_completed`; workspace scoping including exact personal `null` scope preserved.
+- Local API route `POST /api/tasks/:id/complete` via `server/local-api/complete-task.cjs`; renderer notification only after a verified committed receipt.
+- Regression coverage: `tests/unit/local-api/complete-task-handler.test.ts` (12 tests) + route contract test; disposable-DB runtime contract `scripts/db/test-complete-task-rpc.sql` wired into `scripts/db/test-reliable-assistant-contract.sh` (preview non-mutation, forged-approval refusal, commit, replay, hash recomputation, recurring/scope/stale rejections).
+
+**Remaining to go live**: apply the migration to production Supabase and ship the Electron sidecar bundle; then register a `flowstate_complete_task` tool in the Hermes repo.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Four real non-recurring tasks stuck as todo; representative IDs recorded in the 2026-07-15 reconciliation source-of-truth note | Capability exists; the four live tasks still need the shipped endpoint plus an approved apply |
+| Data shape / persisted row shape | Yes | Disposable-DB contract proves `status='done'`, `completed_at` stamped, `canonical_revision` incremented, change-log row written | Yes |
+| Renderer store/state | Partial | `notifyTaskMutation('update', id)` fires only after receipt verification, reusing the existing reconciliation path; no new renderer UI | Yes for reconciliation; no dedicated completion UI added |
+| Electron main/preload bridge | N/A | No bridge change; the sidecar route is reached through the existing supervised utility process | N/A |
+| Localhost sidecar endpoint | Yes | `POST /api/tasks/:id/complete` + `complete-task.cjs`; 12 handler unit tests, route contract test, esbuild bundle verified to include the route | Yes |
+| KDE polling/control path | N/A | No timer involvement | N/A |
+| Supabase persistence/realtime | Yes | Single-transaction RPC with idempotency ledger and canonical change log, proven in the disposable-DB harness | Yes |
+| Updater/runtime version | No | Electron build/deploy intentionally not run in this change | Not covered; ship step pending |
+| Stale live process/cache state | No | The live sidecar keeps the old bundle until the next packaged ship/restart | Not covered; ship step pending |
+
+**Exact failure mode fixed**: absence of a dedicated, receipt-backed non-recurring completion command — the generic canonical patch could not complete a task with proof of `status`/`completedAt`, and Hermes had no safe completion surface at all.
+
+**Explicitly not covered**: recurring completion (stays on `flowstate_done_for_now`), production Supabase migration and Electron ship, Hermes-repo tool registration, and a live approved apply against the four real stuck tasks.
+
+**Regression added for reported repro**: `tests/unit/local-api/complete-task-handler.test.ts`, `tests/unit/local-api/complete-task-route-contract.test.ts`, and `scripts/db/test-complete-task-rpc.sql` inside `scripts/db/test-reliable-assistant-contract.sh` (preview non-mutation, forged-approval refusal, commit, replay, read-back hash recomputation, recurring/scope/stale rejections).
+
+**Live boundary proof**: deliberately deferred — requires the production migration plus a packaged sidecar; recorded above as the remaining go-live steps.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7400,6 +7437,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1955**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.256 with executable source/package coverage and live Hermes exact-task read-back** |
 | **TASK-1956** | **P0** | 🔄 **Reliable complete FlowState inventory with restart-safe sidecar auth, typed freshness/completeness, stable pagination, and packaged proof** |
 | **TASK-1957** | **P0** | 🔄 **Atomic recurrence-aware duplicate merge with preview-bound cadence resolution and stop-on-conflict assistant behavior** |
+| ~~**TASK-1958**~~ | **P1** | ✅ **Canonical non-recurring task completion with approval digest, committed receipt, completedAt read-back, and recurring fail-closed rejection** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

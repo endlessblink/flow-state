@@ -530,36 +530,6 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
     expect(result).toEqual({ id: 'session-1' })
   })
 
-  it('saves active timer session', async () => {
-    queueResponse('timer_sessions', [{ error: null }])
-
-    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
-    const db = useSupabaseDatabase()
-
-    await db.saveActiveTimerSession({ id: 'session-1' } as any, 'device-1')
-
-    expect(mapperSpies.toSupabaseTimerSession).toHaveBeenCalledTimes(1)
-    const upsertCalls = queryCalls.filter(call => call.table === 'timer_sessions' && call.method === 'upsert')
-    expect(upsertCalls).toHaveLength(1)
-    expect(upsertCalls[0]?.args[0]).toEqual({
-      id: 'session-1',
-      user_id: 'user-1',
-      device_id: 'device-1'
-    })
-  })
-
-  it('deletes a timer session', async () => {
-    queueResponse('timer_sessions', [{ error: null }])
-
-    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
-    const db = useSupabaseDatabase()
-
-    await db.deleteTimerSession('session-delete-1')
-
-    expect(queryCalls).toContainEqual({ table: 'timer_sessions', method: 'delete', args: [] })
-    expect(queryCalls).toContainEqual({ table: 'timer_sessions', method: 'eq', args: ['id', 'session-delete-1'] })
-  })
-
   // SETTINGS TESTS
   it('fetches user settings', async () => {
     queueResponse('user_settings', [

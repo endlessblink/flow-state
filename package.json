@@ -68,6 +68,7 @@
     "test:all": "npm run test:unit && npm run test:storybook",
     "test:safety": "vitest run --maxWorkers=4 tests/safety/",
     "test:reliable-assistant-contract": "bash scripts/db/test-reliable-assistant-contract.sh",
+    "test:clean-application-migrations": "bash scripts/db/test-clean-application-migrations.sh",
     "test:tauri-parity": "vitest run tests/unit/tauri-parity/ tests/safety/css-syntax.test.ts --reporter=verbose",
     "test:tauri-e2e": "./scripts/run-e2e.sh --project=tauri-simulation",
     "type-check": "vue-tsc --noEmit -p tsconfig.json --composite false",

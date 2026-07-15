@@ -2206,6 +2206,7 @@ _Original plan below._
 - [ ] **TASK-1962 — Canonical task lifecycle commands for Hermes**: replace direct create/delete success inference with signed-user preview/apply create, soft-delete, and restore commands that bind scope, stable task identity, canonical revision, exact replay, tombstone state, and verified canonical receipts.
 - [ ] **TASK-1963 — Canonical subtask batches and assistant decomposition**: replace process-local subtask receipts and whole-array overwrites with one signed-user preview/apply batch that binds the parent revision, exact ordered operations, stable step identities, partial-completion evidence, durable replay, and verified canonical read-back across Hermes and renderer writers.
 - [ ] **TASK-1964 — Canonical work-block lifecycle for Hermes and Calendar**: implement FEATURE-1944 through signed-user create/move/resize/remove commands that bind stable block identity, parent revision, exact interval effects, durable replay, and verified canonical read-back across Hermes and renderer writers.
+- [ ] **TASK-1965 — Complete canonical assistant command surface for recurrence, timers, and organization**: close the remaining assistant authority gaps with exact completion/merge compatibility, history-preserving recurrence lifecycle commands, leadership-safe timer transitions, exact organization reads and mutations, a capability manifest, and clean-install migration proof.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4857,6 +4858,21 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 - Move/resize/remove preserve unrelated sibling instances, reject missing/stale blocks, and return a shared canonical receipt with exact parent revision, sequence, timestamp, and instance read-back hash.
 - Signed renderer and Local API writers use the same command or stop on typed conflict; recurring-instance behavior remains explicit and never falls back to clearing an unknown array.
 - Disposable database, Local API, Hermes, renderer concurrency, build, package, installed protected live, and release proof pass before this task is marked done.
+
+### TASK-1965: Complete canonical assistant command surface for recurrence, timers, and organization (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-15) | **Depends on**: FEATURE-1943, FEATURE-1945, FEATURE-1946, FEATURE-1947, TASK-1959, TASK-1960, TASK-1961, TASK-1964
+
+**Why**: Hermes can now create, patch, complete, merge, decompose, and schedule tasks through canonical authorities, but the remaining recurrence, timer, and organization paths still expose legacy identities, direct writes, or incomplete verification. A fresh database also lacks one ordered proof that every assistant migration composes cleanly from zero.
+
+**Acceptance**:
+- Completion and duplicate-merge compatibility adapters bind operation identity, request hash, recurrence resolution, approval digest, and canonical read-back without accepting legacy HTTP-only success.
+- Recurrence cadence edits, pause, resume, and end-series actions preserve occurrence history, apply only to the approved future scope, reject stale or ambiguous chains, and replay one durable receipt after response loss.
+- Timer start, pause, resume, and stop are explicit atomic commands with stable session identity, legal transition checks, leadership conflict protection, preview/apply binding, and exact canonical receipt verification.
+- Authenticated organization reads return exact projects and groups for the active scope; assignment and membership mutations require exact IDs, preview the resulting placement, and verify canonical read-back.
+- A versioned capability manifest tells Hermes which command contracts and receipt versions are available so unsupported actions fail closed instead of falling back to legacy writes.
+- The complete ordered migration set installs on an empty disposable database and passes all canonical rollback, replay, conflict, scope, and receipt suites without manual repair.
+- Local API, Hermes, renderer, database, build, package, installed protected live, and release proof pass before this task is marked done.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7578,6 +7594,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1962** | **P0** | 🔄 **Canonical create/delete/restore commands with stable identity, revision conflicts, replay, tombstone state, and verified receipts** |
 | **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask batches and partial-completion-aware assistant decomposition across Hermes and renderer writers** |
 | **TASK-1964** | **P0** | 🔄 **Canonical create/move/resize/remove work-block lifecycle across Hermes, Calendar, and Local API** |
+| **TASK-1965** | **P0** | 🔄 **Complete canonical assistant command surface for recurrence, timers, organization, capabilities, and clean migrations** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

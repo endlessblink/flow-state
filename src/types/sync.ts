@@ -80,6 +80,21 @@ export interface CanonicalTaskPatchState {
   receipt?: CanonicalTaskPatchReceipt
 }
 
+export interface CanonicalTimerCommandState {
+  operationId: string
+  action: 'start' | 'pause' | 'resume' | 'stop' | 'switch_task' | 'extend'
+  sessionId: string
+  baseRevision: number
+  deviceId: string
+  workspaceId: string | null
+  taskId?: string
+  startedAt?: string
+  durationSeconds?: number
+  remainingSeconds?: number
+  extensionSeconds?: number
+  isBreak?: boolean
+}
+
 /**
  * A single write operation in the queue
  */
@@ -128,6 +143,9 @@ export interface WriteOperation {
 
   /** TASK-1946: durable preview/apply identity for eligible scalar task patches. */
   canonicalTaskPatch?: CanonicalTaskPatchState
+
+  /** TASK-1965: durable explicit timer intent; never replayed as a direct table write. */
+  canonicalTimerCommand?: CanonicalTimerCommandState
 }
 
 /**

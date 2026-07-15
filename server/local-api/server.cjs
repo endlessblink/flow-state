@@ -37,6 +37,10 @@ const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeTaskLifecycle } = require('./task-lifecycle.cjs')
 const { executeSubtaskBatch } = require('./subtask-batch.cjs')
 const { executeWorkBlockBatch, readWorkBlockInventory } = require('./work-block-batch.cjs')
+const { executeRecurrenceLifecycle, readRecurrenceChain } = require('./recurrence-lifecycle.cjs')
+const { executeTimerCommand, readTimerSession } = require('./timer-command.cjs')
+const { executeOrganizationCommand, readOrganizationInventory } = require('./organization.cjs')
+const { getCapabilityManifest } = require('./capabilities.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
 const {
@@ -227,6 +231,11 @@ function send(res, status, body) {
 function notifyTaskMutation(operation, taskId) {
   if (!PARENT_PORT || !taskId) return
   PARENT_PORT.postMessage({ type: 'taskMutation', operation, taskId })
+}
+
+function notifyTimerMutation(operation, sessionId) {
+  if (!PARENT_PORT || !sessionId) return
+  PARENT_PORT.postMessage({ type: 'timerMutation', operation, sessionId })
 }
 
 /** Reject anything that isn't a loopback Host header. */
@@ -525,6 +534,40 @@ async function handleMergeTasks(survivorId, req, res) {
   send(res, result.status, result.body)
 }
 
+async function handleGetRecurrence(taskId, res) {
+  const result = await readRecurrenceChain(ctx, taskId)
+  send(res, result.status, result.body)
+}
+
+async function handleRecurrenceLifecycle(taskId, req, res) {
+  const body = await readJsonBody(req)
+  body.taskId = taskId
+  const result = await executeRecurrenceLifecycle(ctx, body, notifyTaskMutation)
+  send(res, result.status, result.body)
+}
+
+async function handleGetTimerSession(sessionId, res) {
+  const result = await readTimerSession(ctx, sessionId)
+  send(res, result.status, result.body)
+}
+
+async function handleTimerCommand(req, res) {
+  const body = await readJsonBody(req)
+  const result = await executeTimerCommand(ctx, body, notifyTimerMutation)
+  send(res, result.status, result.body)
+}
+
+async function handleGetOrganization(res) {
+  const result = await readOrganizationInventory(ctx)
+  send(res, result.status, result.body)
+}
+
+async function handleOrganizationCommand(action, taskId, req, res) {
+  const body = await readJsonBody(req)
+  const result = await executeOrganizationCommand(ctx, action, taskId, body, notifyTaskMutation)
+  send(res, result.status, result.body)
+}
+
 async function handleGetTaskInstances(id, res) {
   const result = await readWorkBlockInventory(ctx, id)
   return send(res, result.status, result.body)
@@ -787,83 +830,14 @@ function getLocalTimerResponse() {
 }
 
 async function handlePostTimerControl(req, res) {
-  const { supabase, userId } = ctx
-  const body = await readJsonBody(req)
-  const action = typeof body.action === 'string' ? body.action : ''
-
-  if (action === 'toggle') {
-    const { data: session, error: findErr } = await supabase
-      .from('timer_sessions')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (findErr) return send(res, 500, { error: findErr.message })
-    if (!session) return send(res, 404, { error: 'no active timer' })
-
-    const update = {
-      is_paused: !session.is_paused,
-      device_leader_id: 'kde-widget',
-      device_leader_last_seen: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-    const { data, error } = await supabase
-      .from('timer_sessions')
-      .update(update)
-      .eq('id', session.id)
-      .eq('user_id', userId)
-      .select('*')
-      .single()
-    if (error) return send(res, 500, { error: error.message })
-    return send(res, 200, { ok: true, active: true, session: data })
-  }
-
-  if (action === 'start') {
-    const duration = Number(body.duration)
-    if (!Number.isFinite(duration) || duration <= 0 || duration > 24 * 60 * 60) {
-      return send(res, 400, { error: 'duration must be a positive number of seconds' })
-    }
-
-    const taskId = typeof body.taskId === 'string' && body.taskId.trim()
-      ? body.taskId.trim()
-      : 'general'
-    const isBreak = body.isBreak === true
-    const now = new Date().toISOString()
-    const id = crypto.randomUUID()
-
-    const { error: clearErr } = await supabase
-      .from('timer_sessions')
-      .update({ is_active: false, completed_at: now, updated_at: now })
-      .eq('user_id', userId)
-      .eq('is_active', true)
-    if (clearErr) return send(res, 500, { error: clearErr.message })
-
-    const row = {
-      id,
-      user_id: userId,
-      task_id: taskId,
-      start_time: now,
-      duration,
-      remaining_time: duration,
-      is_active: true,
-      is_paused: false,
-      is_break: isBreak,
-      device_leader_id: 'kde-widget',
-      device_leader_last_seen: now,
-    }
-
-    const { data, error } = await supabase
-      .from('timer_sessions')
-      .insert(row)
-      .select('*')
-      .single()
-    if (error) return send(res, 500, { error: error.message })
-    return send(res, 200, { ok: true, active: true, session: data })
-  }
-
-  send(res, 400, { error: 'action must be toggle|start' })
+  await readJsonBody(req)
+  send(res, 410, {
+    ok: false,
+    error: {
+      code: 'canonical_command_required',
+      message: 'Legacy timer toggle/start is retired; use the authenticated explicit timer command contract',
+    },
+  })
 }
 
 // --- Assistant context -------------------------------------------------------
@@ -1092,6 +1066,20 @@ const server = http.createServer(async (req, res) => {
       return send(res, unavailable.status, unavailable.body)
     }
 
+    if (req.method === 'GET' && path === '/api/capabilities') {
+      return send(res, 200, getCapabilityManifest())
+    }
+    if (req.method === 'GET' && path === '/api/organization') {
+      return await handleGetOrganization(res)
+    }
+    if (req.method === 'POST' && path === '/api/timer/command') {
+      return await handleTimerCommand(req, res)
+    }
+    const timerSessionMatch = path.match(/^\/api\/timer\/sessions\/([^/]+)$/)
+    if (req.method === 'GET' && timerSessionMatch) {
+      return await handleGetTimerSession(decodeURIComponent(timerSessionMatch[1]), res)
+    }
+
     if (req.method === 'GET' && path === '/api/tasks') {
       return await handleGetTasks(url, res)
     }
@@ -1149,6 +1137,19 @@ const server = http.createServer(async (req, res) => {
     const mergeTasksMatch = path.match(/^\/api\/tasks\/([^/]+)\/merge$/)
     if (req.method === 'POST' && mergeTasksMatch) {
       return await handleMergeTasks(decodeURIComponent(mergeTasksMatch[1]), req, res)
+    }
+    const recurrenceMatch = path.match(/^\/api\/tasks\/([^/]+)\/recurrence$/)
+    if (req.method === 'GET' && recurrenceMatch) {
+      return await handleGetRecurrence(decodeURIComponent(recurrenceMatch[1]), res)
+    }
+    if (req.method === 'POST' && recurrenceMatch) {
+      return await handleRecurrenceLifecycle(decodeURIComponent(recurrenceMatch[1]), req, res)
+    }
+    const organizationMatch = path.match(/^\/api\/tasks\/([^/]+)\/organization\/(assign-project|set-canvas-group)$/)
+    if (req.method === 'POST' && organizationMatch) {
+      const taskId = decodeURIComponent(organizationMatch[1])
+      const action = organizationMatch[2] === 'assign-project' ? 'assign_project' : 'set_canvas_group'
+      return await handleOrganizationCommand(action, taskId, req, res)
     }
     const subtasksMatch = path.match(/^\/api\/tasks\/([^/]+)\/subtasks$/)
     if (req.method === 'GET' && subtasksMatch) {

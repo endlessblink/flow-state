@@ -85,6 +85,7 @@ function makeSyncDeps(overrides: Partial<TimerSyncDeps> = {}): TimerSyncDeps {
     } as unknown as TimerSyncDeps['crossTabSync'],
     fetchActiveTimerSession: vi.fn().mockResolvedValue(null),
     saveActiveTimerSession: vi.fn().mockResolvedValue(undefined),
+    heartbeatTimerSession: vi.fn().mockResolvedValue(true),
     claimLeadership: vi.fn().mockResolvedValue(true),
     requestWakeLock: vi.fn().mockResolvedValue(undefined),
     releaseWakeLock: vi.fn(),
@@ -170,8 +171,17 @@ describe('BUG-1897 Part 1: follower poll ignores sessions this device already st
 
 // ── Part 2: stopTimer must durably persist is_active=false ──────────────────
 
-const mockEnqueue = vi.fn().mockResolvedValue({ id: 1, status: 'pending' })
-const mockSaveActiveTimerSession = vi.fn().mockResolvedValue(undefined)
+const { mockEnqueue, mockSaveActiveTimerSession, mockCanonicalTimerCommand } = vi.hoisted(() => ({
+  mockEnqueue: vi.fn().mockResolvedValue({ id: 1, status: 'pending' }),
+  mockSaveActiveTimerSession: vi.fn().mockResolvedValue(undefined),
+  mockCanonicalTimerCommand: vi.fn(),
+}))
+
+vi.mock('@/services/sync/canonicalTimerCommand', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/services/sync/canonicalTimerCommand')>()
+  return { ...actual, executeCanonicalTimerCommand: mockCanonicalTimerCommand }
+})
+vi.mock('@/stores/workspace', () => ({ useWorkspaceStore: () => ({ activeWorkspaceId: null }) }))
 
 // Mutable auth state so individual tests can flip reconnect-grace on/off.
 const authState = {
@@ -185,6 +195,7 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
   useSupabaseDatabase: () => ({
     fetchActiveTimerSession: vi.fn().mockResolvedValue(null),
     saveActiveTimerSession: mockSaveActiveTimerSession,
+    heartbeatTimerSession: mockSaveActiveTimerSession,
     claimLeadership: vi.fn().mockResolvedValue(true),
     insertPomodoroHistory: vi.fn().mockResolvedValue(undefined),
     fetchPomodoroHistory: vi.fn().mockResolvedValue([]),
@@ -250,11 +261,12 @@ vi.mock('@/composables/timer/useTimerAudio', () => ({
   useTimerAudio: () => ({ playStartSound: vi.fn(), playEndSound: vi.fn() }),
 }))
 
+import { CanonicalTimerCommandError } from '@/services/sync/canonicalTimerCommand'
 import { useTimerStore } from '@/stores/timer'
 
 function makeStoreSession(overrides: Partial<PomodoroSession> = {}): PomodoroSession {
   return {
-    id: 'sess-stop-durability-01',
+    id: '11111111-1111-4111-8111-111111111111',
     taskId: 'general',
     startTime: new Date(),
     duration: 1500,
@@ -262,6 +274,8 @@ function makeStoreSession(overrides: Partial<PomodoroSession> = {}): PomodoroSes
     isActive: true,
     isPaused: false,
     isBreak: false,
+    workspaceId: null,
+    canonicalRevision: 1,
     ...overrides,
   }
 }
@@ -272,6 +286,9 @@ describe('BUG-1897/BUG-1898 Part 2: stopTimer durably persists is_active=false',
     mockEnqueue.mockClear()
     mockSaveActiveTimerSession.mockClear()
     mockSaveActiveTimerSession.mockResolvedValue(undefined)
+    mockCanonicalTimerCommand.mockReset().mockRejectedValue(new CanonicalTimerCommandError(
+      'canonical_timer_transport_failed', 'network down',
+    ))
     authState.isAuthenticated = true
     authState.canSyncRemotely = true
     authState.user = { id: 'test-user-id' }
@@ -308,7 +325,7 @@ describe('BUG-1897/BUG-1898 Part 2: stopTimer durably persists is_active=false',
     // showing the timer active.
     authState.canSyncRemotely = false
     const store = useTimerStore()
-    store.currentSession = makeStoreSession({ id: 'sess-grace-stop-01' })
+    store.currentSession = makeStoreSession({ id: '22222222-2222-4222-8222-222222222222' })
 
     await store.stopTimer()
     await flushAsync()
@@ -326,7 +343,7 @@ describe('BUG-1897/BUG-1898 Part 2: stopTimer durably persists is_active=false',
 
   it('regression pin: stop with healthy auth enqueues the is_active=false op', async () => {
     const store = useTimerStore()
-    store.currentSession = makeStoreSession({ id: 'sess-healthy-stop-01' })
+    store.currentSession = makeStoreSession({ id: '33333333-3333-4333-8333-333333333333' })
 
     await store.stopTimer()
     await flushAsync()

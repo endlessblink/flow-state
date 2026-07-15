@@ -7,6 +7,11 @@ import { useIntervalFn } from '@vueuse/core'
 import type { PomodoroSession } from '@/stores/timer'
 import type { getCrossTabSync } from '@/composables/useCrossTabSync'
 import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
+import type {
+  CanonicalTimerCommandRequest,
+  CanonicalTimerCommandResult,
+} from '@/services/sync/canonicalTimerCommand'
+import { CanonicalTimerCommandError } from '@/services/sync/canonicalTimerCommand'
 
 // Constants for device synchronization (moved from timer.ts)
 const DEVICE_HEARTBEAT_INTERVAL_MS = 10000 // 10 seconds
@@ -34,6 +39,8 @@ interface TimerSessionRow {
   completed_at?: string | null
   device_leader_id: string
   device_leader_last_seen: string
+  workspace_id?: string | null
+  canonical_revision?: number
 }
 
 export interface TimerSyncDeps {
@@ -49,9 +56,11 @@ export interface TimerSyncDeps {
   // External stores/composables
   crossTabSync: ReturnType<typeof getCrossTabSync>
   fetchActiveTimerSession: () => Promise<PomodoroSession | null>
-  saveActiveTimerSession: (session: PomodoroSession, deviceId: string) => Promise<void>
   // BUG-1511: Atomic leadership claim — returns true if this device was granted leadership
   claimLeadership: (sessionId: string, deviceId: string) => Promise<boolean>
+  heartbeatTimerSession: (sessionId: string, deviceId: string, remainingTime: number) => Promise<boolean>
+  executeCanonicalCommand: (request: CanonicalTimerCommandRequest) => Promise<CanonicalTimerCommandResult>
+  queueCanonicalCommand: (request: CanonicalTimerCommandRequest, projection: PomodoroSession) => Promise<void>
   requestWakeLock: () => Promise<void>
   releaseWakeLock: () => void
   authStore: { isAuthenticated: boolean; canSyncRemotely?: boolean } // reactive
@@ -64,8 +73,8 @@ export function useTimerSync(deps: TimerSyncDeps) {
   const {
     currentSession, completedSessions, isLeader, isDeviceLeader,
     hasLoadedSession, deviceId, completedSessionIds,
-    crossTabSync, fetchActiveTimerSession, saveActiveTimerSession,
-    claimLeadership,
+    crossTabSync, fetchActiveTimerSession,
+    claimLeadership, heartbeatTimerSession, executeCanonicalCommand, queueCanonicalCommand,
     requestWakeLock, releaseWakeLock, authStore,
     onCountdownComplete
   } = deps
@@ -113,7 +122,11 @@ export function useTimerSync(deps: TimerSyncDeps) {
       // BUG-1511: Renew leadership lease atomically. If another device has stolen
       // the lease (race condition at startup), the RPC returns false and we demote.
       if (!canUseRemoteTimerSync()) return
-      const stillLeader = await claimLeadership(currentSession.value.id, deviceId)
+      const stillLeader = await heartbeatTimerSession(
+        currentSession.value.id,
+        deviceId,
+        currentSession.value.remainingTime,
+      )
       if (!stillLeader) {
         if (import.meta.env.DEV) {
           console.log('🍅 [TIMER] Heartbeat: leadership lease lost — demoting to follower')
@@ -124,15 +137,13 @@ export function useTimerSync(deps: TimerSyncDeps) {
         resumeFollowerPoll()
         return
       }
-      await saveTimerSessionWithLeadership()
     } finally {
       isSaving = false
     }
   }, DEVICE_HEARTBEAT_INTERVAL_MS, { immediate: false })
 
-  // BUG-TIMER-RACE: Guard that blocks follower poll and resync during the async startTimer sequence.
-  // Without this, the follower poll can fire between clearExistingSession() and saveTimerSessionWithLeadership(),
-  // find no active session (it was just cleared), and null out currentSession.
+  // BUG-TIMER-RACE: Guard that blocks follower poll and resync during the
+  // canonical start sequence, before the authoritative read-back is applied.
   let isStarting = false
   const setStartingGuard = (value: boolean) => { isStarting = value }
 
@@ -320,7 +331,50 @@ export function useTimerSync(deps: TimerSyncDeps) {
       return
     }
 
-    // Skip our own updates when we're the leader
+    // A queued canonical command is only a local projection until its exact
+    // server row comes back.  Do not discard that receipt as an ordinary own
+    // heartbeat echo: it is what makes the projection authoritative again.
+    if (
+      currentSession.value?.canonicalPending &&
+      currentSession.value.id === newDoc.id &&
+      newDoc.device_leader_id === deviceId
+    ) {
+      const previous = currentSession.value
+      const serverRemainingTime = Number(newDoc.remaining_time)
+      const remainingTime = Number.isFinite(serverRemainingTime)
+        ? (previous.isActive && !previous.isPaused
+          ? Math.min(previous.remainingTime, serverRemainingTime)
+          : serverRemainingTime)
+        : previous.remainingTime
+      currentSession.value = {
+        ...previous,
+        taskId: newDoc.task_id ?? previous.taskId,
+        startTime: newDoc.start_time ? new Date(newDoc.start_time) : previous.startTime,
+        duration: Number(newDoc.duration) || previous.duration,
+        remainingTime,
+        isActive: !!newDoc.is_active,
+        isPaused: !!newDoc.is_paused,
+        isBreak: !!newDoc.is_break,
+        completedAt: newDoc.completed_at ? new Date(newDoc.completed_at) : undefined,
+        deviceLeaderId: newDoc.device_leader_id,
+        deviceLeaderLastSeen: new Date(newDoc.device_leader_last_seen).getTime(),
+        workspaceId: newDoc.workspace_id ?? previous.workspaceId ?? null,
+        canonicalRevision: Number(newDoc.canonical_revision),
+        canonicalPending: false,
+      }
+      if (currentSession.value.isActive && !currentSession.value.isPaused) {
+        resumeCountdown()
+        resumeHeartbeat()
+        requestWakeLock()
+      } else {
+        pauseCountdown()
+        pauseHeartbeat()
+        releaseWakeLock()
+      }
+      return
+    }
+
+    // Skip ordinary own-device heartbeat echoes once canonical state is known.
     if (isDeviceLeader.value && newDoc.device_leader_id === deviceId) return
 
     const lastSeen = new Date(newDoc.device_leader_last_seen).getTime()
@@ -345,8 +399,8 @@ export function useTimerSync(deps: TimerSyncDeps) {
 
     if (isSessionStopped) {
       // BUG-1354: Only process stop events for our CURRENT session.
-      // Stale echoes from cleared sessions (via clearExistingSession) arrive with
-      // the old device_leader_id, bypassing the own-echo guard above.
+      // Stale echoes from previously completed sessions can arrive with the old
+      // device_leader_id, bypassing the own-echo guard above.
       // Previously, this block unconditionally killed currentSession, destroying
       // a newly-started session when the echo for the OLD session arrived.
       if (currentSession.value && currentSession.value.id !== newDoc.id) {
@@ -417,7 +471,10 @@ export function useTimerSync(deps: TimerSyncDeps) {
         isBreak: !!newDoc.is_break,
         completedAt: newDoc.completed_at ? new Date(newDoc.completed_at) : undefined,
         deviceLeaderId: newDoc.device_leader_id,
-        deviceLeaderLastSeen: lastSeen
+        deviceLeaderLastSeen: lastSeen,
+        workspaceId: newDoc.workspace_id ?? null,
+        canonicalRevision: newDoc.canonical_revision,
+        canonicalPending: false,
       }
 
       // Calculate adjusted remaining time based on drift
@@ -446,74 +503,6 @@ export function useTimerSync(deps: TimerSyncDeps) {
         pauseCountdown()
         releaseWakeLock()
       }
-    }
-  }
-
-  const saveTimerSessionWithLeadership = async () => {
-    if (!currentSession.value) return
-    if (!canUseRemoteTimerSync()) return
-    if (currentSession.value.id.length < 10) {
-      currentSession.value.id = crypto.randomUUID()
-    }
-    // TASK-1009 FIX: Ensure startTime is a Date before saving
-    // BroadcastChannel or other sources may pass string dates
-    const sessionToSave: PomodoroSession = {
-      ...currentSession.value,
-      startTime: currentSession.value.startTime instanceof Date
-        ? currentSession.value.startTime
-        : new Date(currentSession.value.startTime),
-      completedAt: currentSession.value.completedAt
-        ? (currentSession.value.completedAt instanceof Date
-          ? currentSession.value.completedAt
-          : new Date(currentSession.value.completedAt))
-        : undefined
-    }
-    await saveActiveTimerSession(sessionToSave, deviceId)
-  }
-
-  /**
-   * Clears any existing active session so a new one can be started.
-   * User action (clicking Start Timer) takes precedence over any other device.
-   */
-  const clearExistingSession = async (): Promise<void> => {
-    if (!canUseRemoteTimerSync()) return
-    try {
-      const existing = await fetchActiveTimerSession()
-      if (existing) {
-        const lastSeen = existing.deviceLeaderLastSeen || 0
-        const timeSinceLastSeen = Date.now() - lastSeen
-
-        if (import.meta.env.DEV) {
-          console.log('🍅 [TIMER] Clearing existing session for new timer', {
-            sessionId: existing.id,
-            previousLeader: existing.deviceLeaderId,
-            lastSeen: new Date(lastSeen).toISOString(),
-            staleFor: Math.round(timeSinceLastSeen / 1000) + 's'
-          })
-        }
-
-        // Mark the existing session as inactive - user's explicit action takes precedence
-        try {
-          const { supabase } = await import('@/services/auth/supabase')
-          if (supabase) {
-            await supabase
-              .from('timer_sessions')
-              .update({ is_active: false, completed_at: new Date().toISOString() })
-              .eq('id', existing.id)
-
-            // BUG-1354: Pre-track cleared session so its Realtime echo is ignored.
-            // The echo arrives with the OLD device_leader_id (especially after page
-            // reload where deviceId changes), bypassing the own-echo guard at line 345.
-            // Without this, the echo unconditionally kills the newly-started session.
-            completedSessionIds.add(existing.id)
-            setTimeout(() => completedSessionIds.delete(existing.id), PENDING_WRITE_TIMEOUT_MS)
-          }
-        } catch (clearError) {
-          console.warn('🍅 [TIMER] Failed to clear existing session:', clearError)
-        }
-      }
-    } catch (_e) {
-      console.error('🍅 [TIMER] Error clearing existing session:', _e)
     }
   }
 
@@ -567,17 +556,40 @@ export function useTimerSync(deps: TimerSyncDeps) {
             staleFor: Math.round(timeSinceLastSeen / 1000 / 60) + ' minutes'
           })
         }
-        // Clear abandoned session from DB
+        // Retire abandoned state through the same revision-bound authority as
+        // explicit renderer stops. Never let initialization become a direct
+        // semantic database writer.
         try {
-          const { supabase } = await import('@/services/auth/supabase')
-          if (supabase) {
-            await supabase
-              .from('timer_sessions')
-              .update({ is_active: false })
-              .eq('id', saved.id)
+          const baseRevision = saved.canonicalRevision
+          if (!Number.isInteger(baseRevision) || (baseRevision ?? 0) <= 0) {
+            throw new Error('canonical_timer_revision_missing')
           }
+          await executeCanonicalCommand({
+            operationId: `web:timer:stop:${saved.id}:${baseRevision}`,
+            action: 'stop',
+            sessionId: saved.id,
+            workspaceId: saved.workspaceId ?? null,
+            deviceId,
+            baseRevision: baseRevision as number,
+            remainingSeconds: Math.max(0, Math.floor(saved.remainingTime)),
+          })
         } catch (e) {
-          console.warn('🍅 [TIMER] Failed to clear stale session:', e)
+          console.warn('🍅 [TIMER] Canonical stale-session retirement failed:', e)
+          if (e instanceof CanonicalTimerCommandError && e.code === 'canonical_timer_transport_failed') {
+            const baseRevision = saved.canonicalRevision as number
+            const request: CanonicalTimerCommandRequest = {
+              operationId: `web:timer:stop:${saved.id}:${baseRevision}`,
+              action: 'stop', sessionId: saved.id, workspaceId: saved.workspaceId ?? null,
+              deviceId, baseRevision,
+              remainingSeconds: Math.max(0, Math.floor(saved.remainingTime)),
+            }
+            await queueCanonicalCommand(request, {
+              ...saved, isActive: false, isPaused: false, completedAt: new Date(),
+              canonicalRevision: baseRevision + 1, canonicalPending: true,
+            })
+            currentSession.value = null
+          }
+          return
         }
         currentSession.value = null
         return // Don't restore abandoned sessions
@@ -891,8 +903,6 @@ export function useTimerSync(deps: TimerSyncDeps) {
   return {
     // Called by timer.ts actions
     broadcastSession,
-    saveTimerSessionWithLeadership,
-    clearExistingSession,
     handleRemoteTimerUpdate,
     resyncFromDatabase,
     setStartingGuard,

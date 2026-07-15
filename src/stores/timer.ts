@@ -13,8 +13,15 @@ import i18n from '@/i18n'
 import { useTimerAudio } from '@/composables/timer/useTimerAudio'
 import { useTimerNotifications } from '@/composables/timer/useTimerNotifications'
 import { useTimerSync, DEVICE_LEADER_TIMEOUT_MS } from '@/composables/timer/useTimerSync'
-import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 import { syncLocalApiTimerSnapshot } from '@/composables/useLocalApiBridge'
+import { supabase } from '@/services/auth/supabase'
+import {
+  CanonicalTimerCommandError,
+  executeCanonicalTimerCommand,
+  type CanonicalTimerCommandRequest,
+  type CanonicalTimerReadBack,
+} from '@/services/sync/canonicalTimerCommand'
+import { useWorkspaceStore } from './workspace'
 
 const LOCAL_API_TIMER_INACTIVE_HEARTBEAT_MS = 10_000
 
@@ -35,19 +42,23 @@ export interface PomodoroSession {
   completedAt?: Date
   deviceLeaderId?: string | null
   deviceLeaderLastSeen?: number | null
+  workspaceId?: string | null
+  canonicalRevision?: number
+  canonicalPending?: boolean
 }
 
 export const useTimerStore = defineStore('timer', () => {
   // Initialize database composable
   const {
     fetchActiveTimerSession,
-    saveActiveTimerSession,
     claimLeadership,
+    heartbeatTimerSession,
   } = useSupabaseDatabase()
 
   const settingsStore = useSettingsStore()
   const taskStore = useTaskStore()
   const authStore = useAuthStore()
+  const workspaceStore = useWorkspaceStore()
 
   // Track if we've loaded the timer session (to avoid re-loading on every auth change)
   const hasLoadedSession = ref(false)
@@ -79,6 +90,23 @@ export const useTimerStore = defineStore('timer', () => {
   const isDeviceLeader = ref(false)
   const deviceId = crypto.randomUUID()
 
+  const fromCanonicalReadBack = (readBack: CanonicalTimerReadBack): PomodoroSession => ({
+    id: readBack.id,
+    workspaceId: readBack.workspaceId,
+    taskId: readBack.taskId,
+    startTime: new Date(readBack.startTime),
+    duration: readBack.duration,
+    remainingTime: readBack.remainingTime,
+    isActive: readBack.isActive,
+    isPaused: readBack.isPaused,
+    isBreak: readBack.isBreak,
+    completedAt: readBack.completedAt ? new Date(readBack.completedAt) : undefined,
+    deviceLeaderId: readBack.deviceLeaderId,
+    deviceLeaderLastSeen: Date.parse(readBack.canonicalUpdatedAt),
+    canonicalRevision: readBack.canonicalRevision,
+    canonicalPending: false,
+  })
+
   // BUG-1318: Track recently completed session IDs to prevent stale Realtime events from resurrecting them
   const completedSessionIds = new Set<string>()
   // BUG-1318: Lock to prevent concurrent completeSession() calls
@@ -109,8 +137,10 @@ export const useTimerStore = defineStore('timer', () => {
   const sync = useTimerSync({
     currentSession, completedSessions, isLeader, isDeviceLeader, hasLoadedSession,
     deviceId, completedSessionIds, crossTabSync,
-    fetchActiveTimerSession, saveActiveTimerSession,
-    claimLeadership,
+    fetchActiveTimerSession,
+    claimLeadership, heartbeatTimerSession,
+    executeCanonicalCommand: request => executeCanonicalTimerCommand(supabase, request),
+    queueCanonicalCommand: (request, projection) => queueCanonicalTimerCommand(request, projection),
     requestWakeLock, releaseWakeLock,
     authStore,
     onCountdownComplete: () => completeSession()
@@ -271,18 +301,138 @@ export const useTimerStore = defineStore('timer', () => {
 
   // ── Timer Control Actions ────────────────────────────────────────
 
+  const queueCanonicalTimerCommand = async (
+    request: CanonicalTimerCommandRequest,
+    projection: PomodoroSession,
+  ) => {
+    if (!authStore.user?.id) return
+    const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+    await useSyncOrchestrator().enqueue({
+      entityType: 'timer_session',
+      operation: request.action === 'start' ? 'create' : 'update',
+      entityId: request.sessionId,
+      payload: {
+        id: projection.id,
+        task_id: projection.taskId,
+        is_active: projection.isActive,
+        is_paused: projection.isPaused,
+        is_break: projection.isBreak,
+      },
+      baseVersion: request.baseRevision,
+      canonicalTimerCommand: request,
+    })
+  }
+
+  const executeOrQueueTimerCommand = async (
+    request: CanonicalTimerCommandRequest,
+    projection: PomodoroSession,
+    forceQueue = false,
+  ): Promise<PomodoroSession> => {
+    if (authStore.canSyncRemotely && !forceQueue) {
+      try {
+        const result = await executeCanonicalTimerCommand(supabase, request)
+        for (const replaced of result.replacedSessions) {
+          completedSessionIds.add(replaced.id)
+        }
+        return fromCanonicalReadBack(result.readBack)
+      } catch (error) {
+        if (!(error instanceof CanonicalTimerCommandError)
+          || error.code !== 'canonical_timer_transport_failed') throw error
+      }
+    }
+    if (authStore.user?.id) {
+      await queueCanonicalTimerCommand(request, projection)
+      return { ...projection, canonicalPending: true }
+    }
+    return projection
+  }
+
+  const applyCanonicalTimerReadBack = (readBack: CanonicalTimerReadBack) => {
+    const session = fromCanonicalReadBack(readBack)
+    if (session.isActive) {
+      currentSession.value = session
+      isDeviceLeader.value = session.deviceLeaderId === deviceId
+      isLeader.value = isDeviceLeader.value
+      if (isDeviceLeader.value) {
+        sync.pauseFollowerPoll()
+        sync.resumeHeartbeat()
+      } else {
+        sync.pauseHeartbeat()
+        sync.resumeFollowerPoll()
+      }
+      if (session.isPaused) sync.pauseCountdown()
+      else sync.resumeCountdown()
+    } else {
+      const index = completedSessions.value.findIndex(item => item.id === session.id)
+      if (index >= 0) completedSessions.value[index] = session
+      else completedSessions.value.push(session)
+      completedSessionIds.add(session.id)
+      if (currentSession.value?.id === session.id) currentSession.value = null
+      sync.pauseCountdown()
+      sync.pauseHeartbeat()
+      sync.resumeFollowerPoll()
+    }
+    sync.broadcastSession()
+  }
+
+  const transitionRequest = (
+    action: 'pause' | 'resume' | 'stop',
+    session: PomodoroSession,
+  ): CanonicalTimerCommandRequest => {
+    const baseRevision = session.canonicalRevision
+    if (!Number.isSafeInteger(baseRevision) || Number(baseRevision) < 1) {
+      throw new CanonicalTimerCommandError(
+        'invalid_timer_revision',
+        'Canonical timer revision is unavailable; refresh the timer before changing it',
+      )
+    }
+    return {
+      operationId: `web:timer:${action}:${session.id}:${baseRevision}`,
+      action,
+      sessionId: session.id,
+      baseRevision: Number(baseRevision),
+      deviceId,
+      workspaceId: session.workspaceId ?? workspaceStore.activeWorkspaceId ?? null,
+      remainingSeconds: Math.max(0, Math.floor(session.remainingTime)),
+    }
+  }
+
   /**
    * TASK-1287: Switch the timer's associated task without resetting the countdown.
    * Only changes the taskId on the running session and persists to DB.
    */
   const switchTimerTask = async (taskId: string) => {
-    if (!currentSession.value) return
+    const previous = currentSession.value ? { ...currentSession.value } : null
+    if (!previous || previous.taskId === taskId) return
     if (import.meta.env.DEV) {
-      console.log('🍅 [TIMER] switchTimerTask:', { from: currentSession.value.taskId, to: taskId })
+      console.log('🍅 [TIMER] switchTimerTask:', { from: previous.taskId, to: taskId })
     }
-    currentSession.value.taskId = taskId
+    if (!authStore.user?.id) {
+      currentSession.value = { ...previous, taskId }
+      sync.broadcastSession()
+      return
+    }
+    const baseRevision = previous.canonicalRevision
+    if (!Number.isSafeInteger(baseRevision) || Number(baseRevision) < 1) {
+      throw new CanonicalTimerCommandError('invalid_timer_revision', 'Canonical timer revision is unavailable')
+    }
+    const request: CanonicalTimerCommandRequest = {
+      operationId: `web:timer:switch_task:${previous.id}:${baseRevision}`,
+      action: 'switch_task', sessionId: previous.id, baseRevision: Number(baseRevision),
+      deviceId, workspaceId: previous.workspaceId ?? workspaceStore.activeWorkspaceId ?? null,
+      taskId, remainingSeconds: Math.max(0, Math.floor(previous.remainingTime)),
+    }
+    const projection = { ...previous, taskId, canonicalRevision: Number(baseRevision) + 1 }
+    currentSession.value = projection
     sync.broadcastSession()
-    await sync.saveTimerSessionWithLeadership()
+    try {
+      currentSession.value = await executeOrQueueTimerCommand(request, projection, previous.canonicalPending)
+      sync.broadcastSession()
+    } catch (error) {
+      currentSession.value = previous
+      sync.broadcastSession()
+      throw error
+    }
   }
 
   const startTimer = async (taskId: string, duration?: number, isBreak: boolean = false) => {
@@ -299,29 +449,20 @@ export const useTimerStore = defineStore('timer', () => {
       }
       // Same task or different task — either way, resume if paused
       if (currentSession.value.isPaused) {
-        resumeTimer()
+        await resumeTimer()
       }
       // Never reset the running timer
       return
     }
 
-    // BUG-TIMER-RACE: Set leadership state and starting guard BEFORE any async DB calls.
-    // The follower poll fires every 3s; if it runs between clearExistingSession() and
-    // saveTimerSessionWithLeadership() it finds no active session and nulls currentSession.
-    // isDeviceLeader=true makes the poll bail out immediately. The guard blocks resync too.
+    // BUG-TIMER-RACE: Set leadership state and starting guard before the
+    // canonical round-trip. The guard prevents follower reconciliation from
+    // clearing the optimistic in-flight state before its read-back arrives.
     sync.setStartingGuard(true)
     isDeviceLeader.value = true
     sync.pauseFollowerPoll() // Leaders don't poll, they write
 
     try {
-      // User's explicit action takes precedence - clear any existing session
-      try {
-        await sync.clearExistingSession()
-      } catch (error) {
-        console.warn('🍅 [TIMER] clearExistingSession failed, continuing anyway:', error)
-        // Don't block timer start because of DB cleanup failure
-      }
-
       const claimedLeadership = crossTabSync.claimTimerLeadership()
       if (import.meta.env.DEV) {
         console.log('🍅 [TIMER] claimTimerLeadership:', claimedLeadership)
@@ -334,20 +475,39 @@ export const useTimerStore = defineStore('timer', () => {
       isLeader.value = true
 
       const sessionDuration = duration || settings.workDuration
-      currentSession.value = {
-        id: crypto.randomUUID(),
+      const sessionId = crypto.randomUUID()
+      const startedAt = new Date()
+      const workspaceId = workspaceStore.activeWorkspaceId ?? null
+      const projection: PomodoroSession = {
+        id: sessionId,
+        workspaceId,
         taskId,
-        startTime: new Date(),
+        startTime: startedAt,
         duration: sessionDuration,
         remainingTime: sessionDuration,
         isActive: true,
         isPaused: false,
-        isBreak
+        isBreak,
+        deviceLeaderId: deviceId,
+        deviceLeaderLastSeen: startedAt.getTime(),
+        canonicalRevision: 1,
       }
+      const request: CanonicalTimerCommandRequest = {
+        operationId: `web:timer:start:${sessionId}:0`,
+        action: 'start',
+        sessionId,
+        baseRevision: 0,
+        deviceId,
+        workspaceId,
+        taskId,
+        startedAt: startedAt.toISOString(),
+        durationSeconds: sessionDuration,
+        isBreak,
+      }
+      currentSession.value = await executeOrQueueTimerCommand(request, projection)
 
-      sync.resumeHeartbeat()
+      if (!currentSession.value.canonicalPending) sync.resumeHeartbeat()
       sync.broadcastSession()
-      await sync.saveTimerSessionWithLeadership()
       audio.playStartSound()
       sync.resumeCountdown()
       await requestWakeLock() // Keep screen on - ROAD-004
@@ -368,117 +528,92 @@ export const useTimerStore = defineStore('timer', () => {
       console.log('🍅 [TIMER] Timer started successfully, interval resumed')
     }
 
-    // TASK-1439: Queue for offline-first sync (secondary persistence)
+  }
+
+  const pauseTimer = async () => {
+    const previous = currentSession.value ? { ...currentSession.value } : null
+    if (!previous || previous.isPaused) return
+    const request = transitionRequest('pause', previous)
+    const projection: PomodoroSession = {
+      ...previous, isPaused: true, canonicalRevision: request.baseRevision + 1,
+    }
+    currentSession.value = projection
+    sync.pauseCountdown()
+    sync.broadcastSession()
+    releaseWakeLock() // Allow sleep - ROAD-004
     try {
-      const userId = authStore.canSyncRemotely ? authStore.user?.id : null
-      if (userId && currentSession.value) {
-        const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
-        const { toSupabaseTimerSession } = await import('@/utils/supabaseMappers')
-        const payload = toSupabaseTimerSession(currentSession.value, userId, deviceId)
-        await useSyncOrchestrator().enqueue({
-          entityType: 'timer_session',
-          operation: 'create',
-          entityId: currentSession.value.id,
-          payload: JSON.parse(JSON.stringify(payload)),
-          baseVersion: 0
-        })
-      }
-    } catch (queueError) {
-      console.warn('[SYNC-QUEUE] Failed to queue timer start:', queueError)
-    }
-  }
-
-  const pauseTimer = () => {
-    if (currentSession.value) {
-      currentSession.value.isPaused = true
-      sync.pauseCountdown()
+      currentSession.value = await executeOrQueueTimerCommand(request, projection, previous.canonicalPending)
       sync.broadcastSession()
-      releaseWakeLock() // Allow sleep - ROAD-004
-    }
-  }
-
-  const resumeTimer = () => {
-    if (currentSession.value) {
-      currentSession.value.isPaused = false
+    } catch (error) {
+      currentSession.value = previous
       sync.resumeCountdown()
+      requestWakeLock()
       sync.broadcastSession()
-      requestWakeLock() // Keep screen on - ROAD-004
+      throw error
+    }
+  }
+
+  const resumeTimer = async () => {
+    const previous = currentSession.value ? { ...currentSession.value } : null
+    if (!previous || !previous.isPaused) return
+    const request = transitionRequest('resume', previous)
+    const projection: PomodoroSession = {
+      ...previous, isPaused: false, canonicalRevision: request.baseRevision + 1,
+    }
+    currentSession.value = projection
+    sync.resumeCountdown()
+    sync.broadcastSession()
+    requestWakeLock() // Keep screen on - ROAD-004
+    try {
+      currentSession.value = await executeOrQueueTimerCommand(request, projection, previous.canonicalPending)
+      sync.broadcastSession()
+    } catch (error) {
+      currentSession.value = previous
+      sync.pauseCountdown()
+      releaseWakeLock()
+      sync.broadcastSession()
+      throw error
     }
   }
 
   const stopTimer = async () => {
+    const previous = currentSession.value ? { ...currentSession.value } : null
+    if (!previous) return
+    const request = transitionRequest('stop', previous)
+    const stoppedProjection: PomodoroSession = {
+      ...previous,
+      startTime: previous.startTime instanceof Date ? previous.startTime : new Date(previous.startTime),
+      isActive: false,
+      isPaused: false,
+      completedAt: new Date(),
+      canonicalRevision: request.baseRevision + 1,
+    }
     sync.pauseCountdown()
     sync.pauseHeartbeat()
     isDeviceLeader.value = false
     releaseWakeLock() // Allow sleep - ROAD-004
-    if (currentSession.value) {
-      // Create stopped session with isActive: false
-      // TASK-1009 FIX: Ensure startTime is a Date (may be string from BroadcastChannel)
-      const stoppedSession: PomodoroSession = {
-        ...currentSession.value,
-        startTime: currentSession.value.startTime instanceof Date
-          ? currentSession.value.startTime
-          : new Date(currentSession.value.startTime),
-        isActive: false,
-        completedAt: new Date()
-      }
+    completedSessions.value.push(stoppedProjection)
+    completedSessionIds.add(stoppedProjection.id)
+    currentSession.value = null
+    syncLocalApiTimerSnapshot(null, deviceId)
+    sync.resumeFollowerPoll()
 
-      // TASK-1009: Save stopped state to DB - triggers Supabase Realtime for other devices
-      // This ensures desktop app and KDE widget receive the stop event
-      if (import.meta.env.DEV) {
-        console.log('🍅 [TIMER] stopTimer: Saving stopped session to DB for cross-device sync', {
-          sessionId: stoppedSession.id,
-          isActive: stoppedSession.isActive,
-          deviceId
-        })
-      }
-
-      // Clear the local/Electron/KDE-facing timer before remote persistence.
-      // A stopped timer is a user command; stale auth, Supabase, or sync-queue
-      // stalls must not leave the desktop app or localhost widget active.
-      completedSessions.value.push(stoppedSession)
-      completedSessionIds.add(stoppedSession.id)
-      setTimeout(() => completedSessionIds.delete(stoppedSession.id), PENDING_WRITE_TIMEOUT_MS)
-      currentSession.value = null
-      syncLocalApiTimerSnapshot(null, deviceId)
-      sync.resumeFollowerPoll()
-
-      if (authStore.canSyncRemotely) {
-        try {
-          await saveActiveTimerSession(stoppedSession, deviceId)
-          if (import.meta.env.DEV) {
-            console.log('🍅 [TIMER] stopTimer: Session saved to DB successfully')
-          }
-        } catch (saveError) {
-          console.warn('🍅 [TIMER] stopTimer: remote session save failed after local stop; keeping timer stopped', saveError)
-        }
-      } else if (import.meta.env.DEV) {
-        console.log('🍅 [TIMER] stopTimer: reconnect/offline grace, skipping remote session save')
-      }
-
-      // TASK-1439: Queue for offline-first sync.
-      // BUG-1898: enqueue whenever a user exists, even during the auth
-      // reconnect grace (canSyncRemotely=false). The queue only drains with a
-      // fresh session (processQueue auth gate), so this is safe — while
-      // dropping the op here left the server row is_active=true forever and
-      // KDE kept counting.
-      try {
-        const userId = authStore.user?.id ?? null
-        if (userId) {
-          const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
-          const { toSupabaseTimerSession } = await import('@/utils/supabaseMappers')
-          const payload = toSupabaseTimerSession(stoppedSession, userId, deviceId)
-          await useSyncOrchestrator().enqueue({
-            entityType: 'timer_session',
-            operation: 'update',
-            entityId: stoppedSession.id,
-            payload: JSON.parse(JSON.stringify(payload)),
-            baseVersion: 0
-          })
-        }
-      } catch (queueError) {
-        console.warn('[SYNC-QUEUE] Failed to queue timer stop:', queueError)
-      }
+    try {
+      const stopped = await executeOrQueueTimerCommand(request, stoppedProjection, previous.canonicalPending)
+      const index = completedSessions.value.findIndex(session => session.id === stopped.id)
+      if (index >= 0) completedSessions.value[index] = stopped
+    } catch (error) {
+      completedSessions.value = completedSessions.value.filter(session => session.id !== previous.id)
+      completedSessionIds.delete(previous.id)
+      currentSession.value = previous
+      isDeviceLeader.value = true
+      isLeader.value = true
+      sync.pauseFollowerPoll()
+      if (!previous.canonicalPending) sync.resumeHeartbeat()
+      if (previous.isPaused) sync.pauseCountdown()
+      else sync.resumeCountdown()
+      sync.broadcastSession()
+      throw error
     }
   }
 
@@ -508,7 +643,14 @@ export const useTimerStore = defineStore('timer', () => {
       sync.pauseCountdown()
       sync.pauseHeartbeat()
 
-      const completedSession = { ...session, isActive: false, completedAt: new Date() }
+      const stopRequest = transitionRequest('stop', session)
+      const completedSession: PomodoroSession = {
+        ...session,
+        isActive: false,
+        isPaused: false,
+        completedAt: new Date(),
+        canonicalRevision: stopRequest.baseRevision + 1,
+      }
       const wasBreak = session.isBreak
       const lastTaskId = session.taskId
       completedSessions.value.push(completedSession)
@@ -527,44 +669,24 @@ export const useTimerStore = defineStore('timer', () => {
       audio.playEndSound()
       releaseWakeLock() // Allow sleep - ROAD-004
 
-      // BUG-1185: Save completed state to DB - prevents sync from picking up stale active session
-      // Previously only stopTimer() saved to DB, causing completeSession to leave is_active=true in Supabase
       try {
-        const completedForDb: PomodoroSession = {
-          ...completedSession,
-          startTime: completedSession.startTime instanceof Date
-            ? completedSession.startTime
-            : new Date(completedSession.startTime),
-        }
-        if (authStore.canSyncRemotely) {
-          await saveActiveTimerSession(completedForDb, deviceId)
-          if (import.meta.env.DEV) {
-            console.log('🍅 [TIMER] completeSession: Saved completed state to DB', { sessionId: completedSession.id })
-          }
-        } else if (import.meta.env.DEV) {
-          console.log('🍅 [TIMER] completeSession: reconnect/offline grace, skipping remote session save')
-        }
-
-        // TASK-1439: Queue for offline-first sync
-        try {
-          const userId = authStore.canSyncRemotely ? authStore.user?.id : null
-          if (userId) {
-            const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
-            const { toSupabaseTimerSession } = await import('@/utils/supabaseMappers')
-            const payload = toSupabaseTimerSession(completedForDb, userId, deviceId)
-            await useSyncOrchestrator().enqueue({
-              entityType: 'timer_session',
-              operation: 'update',
-              entityId: completedSession.id,
-              payload: JSON.parse(JSON.stringify(payload)),
-              baseVersion: 0
-            })
-          }
-        } catch (queueError) {
-          console.warn('[SYNC-QUEUE] Failed to queue timer complete:', queueError)
-        }
+        const canonicalCompletion = await executeOrQueueTimerCommand(
+          stopRequest,
+          completedSession,
+          session.canonicalPending,
+        )
+        const completedIndex = completedSessions.value.findIndex(item => item.id === session.id)
+        if (completedIndex >= 0) completedSessions.value[completedIndex] = canonicalCompletion
       } catch (e) {
-        console.warn('🍅 [TIMER] completeSession: Failed to save to DB (session may reappear on sync):', e)
+        console.warn('🍅 [TIMER] completeSession: canonical stop was rejected:', e)
+        completedSessions.value = completedSessions.value.filter(item => item.id !== session.id)
+        completedSessionIds.delete(session.id)
+        currentSession.value = { ...session, isPaused: true }
+        isDeviceLeader.value = false
+        isLeader.value = false
+        sync.broadcastSession()
+        sync.resumeFollowerPoll()
+        return
       }
 
       // FEATURE-1317: Write pomodoro history for AI work profile analysis
@@ -620,13 +742,52 @@ export const useTimerStore = defineStore('timer', () => {
     if (import.meta.env.DEV) {
       console.log('🍅 [TIMER] addExtraTime called:', { seconds })
     }
-
     // 1. Find the most recent completed session
     const lastSession = completedSessions.value[completedSessions.value.length - 1]
     if (!lastSession) {
       // Fallback: no session to extend, start fresh
       console.warn('🍅 [TIMER] addExtraTime: No recent session to extend, falling back to startTimer')
       await startTimer('general', seconds, false)
+      return
+    }
+
+    if (authStore.user?.id) {
+      const baseRevision = lastSession.canonicalRevision
+      if (!Number.isSafeInteger(baseRevision) || Number(baseRevision) < 1) {
+        throw new CanonicalTimerCommandError('invalid_timer_revision', 'Canonical timer revision is unavailable')
+      }
+      const request: CanonicalTimerCommandRequest = {
+        operationId: `web:timer:extend:${lastSession.id}:${baseRevision}`,
+        action: 'extend', sessionId: lastSession.id, baseRevision: Number(baseRevision),
+        deviceId, workspaceId: lastSession.workspaceId ?? workspaceStore.activeWorkspaceId ?? null,
+        extensionSeconds: seconds,
+      }
+      const projection: PomodoroSession = {
+        ...lastSession,
+        duration: lastSession.duration + seconds,
+        remainingTime: seconds,
+        isActive: true,
+        isPaused: false,
+        completedAt: undefined,
+        canonicalRevision: Number(baseRevision) + 1,
+      }
+      completedSessions.value.pop()
+      completedSessionIds.delete(lastSession.id)
+      try {
+        currentSession.value = await executeOrQueueTimerCommand(request, projection, lastSession.canonicalPending)
+      } catch (error) {
+        completedSessions.value.push(lastSession)
+        completedSessionIds.add(lastSession.id)
+        currentSession.value = null
+        throw error
+      }
+      isDeviceLeader.value = true
+      isLeader.value = true
+      sync.pauseFollowerPoll()
+      if (!currentSession.value.canonicalPending) sync.resumeHeartbeat()
+      sync.broadcastSession()
+      sync.resumeCountdown()
+      await requestWakeLock()
       return
     }
 
@@ -664,7 +825,6 @@ export const useTimerStore = defineStore('timer', () => {
     sync.pauseFollowerPoll()
     sync.resumeHeartbeat()
     sync.broadcastSession()
-    await sync.saveTimerSessionWithLeadership()
     sync.resumeCountdown()
     await requestWakeLock()
 
@@ -706,6 +866,7 @@ export const useTimerStore = defineStore('timer', () => {
     playEndSound: audio.playEndSound,
     // TASK-1009: Expose handler for app initialization to use in consolidated Realtime subscription
     handleRemoteTimerUpdate: sync.handleRemoteTimerUpdate,
+    applyCanonicalTimerReadBack,
     // BUG-1357: Expose for useAppInitialization recovery callback
     resyncFromDatabase: sync.resyncFromDatabase,
     // TASK-1577: Expose for manual load if needed

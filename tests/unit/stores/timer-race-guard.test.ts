@@ -76,6 +76,7 @@ function makeDeps(overrides: Partial<TimerSyncDeps> = {}): TimerSyncDeps {
     } as unknown as TimerSyncDeps['crossTabSync'],
     fetchActiveTimerSession: vi.fn().mockResolvedValue(null),
     saveActiveTimerSession: vi.fn().mockResolvedValue(undefined),
+    heartbeatTimerSession: vi.fn().mockResolvedValue(true),
     claimLeadership: vi.fn().mockResolvedValue(true),
     requestWakeLock: vi.fn().mockResolvedValue(undefined),
     releaseWakeLock: vi.fn(),

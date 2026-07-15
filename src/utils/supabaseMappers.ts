@@ -250,6 +250,8 @@ export interface SupabaseTimerSession {
     completed_at?: string | null
     device_leader_id?: string | null
     device_leader_last_seen?: string | null
+    workspace_id?: string | null
+    canonical_revision?: number
     created_at?: string
     updated_at?: string
 }
@@ -842,7 +844,8 @@ export function toSupabaseTimerSession(session: PomodoroSession, userId: string,
         is_break: session.isBreak,
         completed_at: session.completedAt?.toISOString() || null,
         device_leader_id: deviceId,
-        device_leader_last_seen: new Date().toISOString()
+        device_leader_last_seen: new Date().toISOString(),
+        workspace_id: session.workspaceId ?? null,
     }
 }
 
@@ -865,7 +868,10 @@ export function fromSupabaseTimerSession(record: SupabaseTimerSession): Pomodoro
         isBreak: record.is_break ?? false,
         completedAt: record.completed_at ? new Date(record.completed_at) : undefined,
         deviceLeaderId: record.device_leader_id,
-        deviceLeaderLastSeen: record.device_leader_last_seen ? new Date(record.device_leader_last_seen).getTime() : undefined
+        deviceLeaderLastSeen: record.device_leader_last_seen ? new Date(record.device_leader_last_seen).getTime() : undefined,
+        workspaceId: record.workspace_id ?? null,
+        canonicalRevision: record.canonical_revision,
+        canonicalPending: false,
     }
 }
 

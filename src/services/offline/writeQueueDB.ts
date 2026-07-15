@@ -578,7 +578,7 @@ export async function purgeStaleOperations(maxAgeMs = 24 * 60 * 60 * 1000): Prom
   const staleOps = await db.operations
     .where('status')
     .equals('pending')
-    .filter(op => op.createdAt < cutoff && !op.canonicalTaskPatch)
+    .filter(op => op.createdAt < cutoff && !op.canonicalTaskPatch && !op.canonicalTimerCommand)
     .toArray()
 
   if (staleOps.length > 0) {
@@ -603,7 +603,7 @@ export async function clearFailedOperations(): Promise<number> {
   // BUG-1301: Also clear 'syncing' operations — these are stuck from a previous
   // session crash and will never complete. Previously only cleared 'failed' and
   // 'conflict', leaving orphaned 'syncing' ops stuck forever.
-  const toDelete = allOps.filter(op => !op.canonicalTaskPatch && (
+  const toDelete = allOps.filter(op => !op.canonicalTaskPatch && !op.canonicalTimerCommand && (
     op.status === 'failed' ||
     op.status === 'conflict' ||
     op.status === 'syncing' ||
@@ -617,7 +617,7 @@ export async function clearFailedOperations(): Promise<number> {
 
   // BUG-1179: Also clear the conflicts table to reset error state
   const disposableConflicts = (await db.conflicts.toArray())
-    .filter(conflict => !conflict.operation.canonicalTaskPatch)
+    .filter(conflict => !conflict.operation.canonicalTaskPatch && !conflict.operation.canonicalTimerCommand)
   if (disposableConflicts.length > 0) {
     await db.conflicts.bulkDelete(disposableConflicts.map(conflict => conflict.id!))
   }
@@ -664,6 +664,9 @@ export async function resolveConflictRetry(
       if (!operation) return
       if (operation.canonicalTaskPatch?.phase === 'previewed' || operation.canonicalTaskPatch?.phase === 'committed') {
         throw new Error('Cannot rebase a canonical operation after its preview binding was issued')
+      }
+      if (operation.canonicalTimerCommand) {
+        throw new Error('Cannot rebase a stable canonical timer command')
       }
       await db.operations.update(operation.id!, {
         status: 'pending',

@@ -23,6 +23,7 @@ import type {
 import { DB_TABLES } from '@/constants/dbTables'
 import { getInitialOnlineState } from '@/utils/platform'
 import { executeQueuedCanonicalTaskPatch } from '@/services/sync/canonicalTaskPatch'
+import { executeQueuedCanonicalTimerCommand } from '@/services/sync/canonicalTimerCommand'
 
 // TASK-1177: Check for IndexedDB availability (not available in Node.js/tests)
 const hasIndexedDB = typeof indexedDB !== 'undefined'
@@ -116,8 +117,8 @@ import type {
 const enqueueOperation: typeof _enqueueOperation = async (...args) => {
   const mod = await getWriteQueueModule()
   if (!mod) {
-    if (args[0].canonicalTaskPatch) {
-      throw new Error('IndexedDB is required for durable canonical task patches')
+    if (args[0].canonicalTaskPatch || args[0].canonicalTimerCommand) {
+      throw new Error('IndexedDB is required for durable canonical operations')
     }
     console.warn('[SYNC] IndexedDB not available - operation not queued')
     return { ...args[0], id: Date.now(), status: 'pending' as const, retryCount: 0, createdAt: Date.now() }
@@ -444,11 +445,11 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
   if (userOwnedEntities.includes(entityType)) {
     const currentUserId = await getCurrentAuthUserId()
     if (!currentUserId) {
-      if (operation.canonicalTaskPatch) {
+      if (operation.canonicalTaskPatch || operation.canonicalTimerCommand) {
         return {
           success: false,
           operation,
-          error: 'not_authenticated: canonical task patch requires an authenticated user',
+          error: 'not_authenticated: canonical operation requires an authenticated user',
           isAuthError: true,
           shouldRetry: false,
           classification: 'auth',
@@ -457,7 +458,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
       console.warn(`[SYNC] Dropping remote ${entityType}:${operation.operation} ${entityId.slice(0, 8)} — no authenticated user for RLS`)
       return { success: true, operation, serverData: undefined }
     }
-    if (operation.canonicalTaskPatch && operation.userId !== currentUserId) {
+    if ((operation.canonicalTaskPatch || operation.canonicalTimerCommand) && operation.userId !== currentUserId) {
       return {
         success: false,
         operation,
@@ -482,6 +483,13 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
       supabase as unknown as Parameters<typeof executeQueuedCanonicalTaskPatch>[0],
       operation,
       canonicalTaskPatch => updateOperation(operation.id!, { canonicalTaskPatch }),
+    )
+  }
+
+  if (operation.canonicalTimerCommand) {
+    return executeQueuedCanonicalTimerCommand(
+      supabase as unknown as Parameters<typeof executeQueuedCanonicalTimerCommand>[0],
+      operation,
     )
   }
 
@@ -803,7 +811,16 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
 
     // BUG-1321: When LWW "server wins", apply serverData back to Pinia store.
     // Without this, the local store silently diverges from VPS truth.
-    if (result.canonicalReceipt && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
+    if (result.serverData && operation.entityType === 'timer_session' && operation.canonicalTimerCommand) {
+      try {
+        const { useTimerStore } = await import('@/stores/timer')
+        useTimerStore().applyCanonicalTimerReadBack(
+          result.serverData as unknown as Parameters<ReturnType<typeof useTimerStore>['applyCanonicalTimerReadBack']>[0],
+        )
+      } catch (error) {
+        console.warn('[SYNC] Failed to project canonical timer read-back into timer state:', error)
+      }
+    } else if (result.canonicalReceipt && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
       try {
         const { useTaskStore } = await import('@/stores/tasks')
         await useTaskStore().applyCanonicalTaskReceipt(result.canonicalReceipt)
@@ -1088,6 +1105,11 @@ async function runProcessQueue(): Promise<void> {
         if (result && !result.success) blockedEntities.add(entityKey)
         continue
       }
+      if (operation.canonicalTimerCommand) {
+        const result = await processOperation(operation)
+        if (result && !result.success) blockedEntities.add(entityKey)
+        continue
+      }
       // Coalesce before syncing (merge multiple updates to same entity)
       const coalesced = await coalesceOperationsForEntity(
         operation.entityType,
@@ -1187,6 +1209,7 @@ export function useSyncOrchestrator() {
       payload: Record<string, unknown>
       baseVersion?: number
       canonicalTaskPatch?: WriteOperation['canonicalTaskPatch']
+      canonicalTimerCommand?: WriteOperation['canonicalTimerCommand']
     }
   ): Promise<WriteOperation> => {
     // Get current user ID
@@ -1200,7 +1223,7 @@ export function useSyncOrchestrator() {
     }
 
     // Capture workspace context at enqueue time (null = personal workspace)
-    const workspaceId = await getActiveWorkspaceId()
+    const workspaceId = operation.canonicalTimerCommand?.workspaceId ?? await getActiveWorkspaceId()
 
     // BUG-1534: When enqueuing a DELETE, cancel any pending CREATEs for the same entity.
     // This prevents stale CREATEs from resurrecting deleted tasks after page reload.

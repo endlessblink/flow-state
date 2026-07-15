@@ -110,7 +110,7 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).toContain('Math.floor')
     expect(body).toContain('session.is_active && !session.is_paused')
     expect(body).toContain('Math.max(0')
-    expect(body).toContain('remaining_time:')
+    expect(body).toContain('session.remaining_time =')
     expect(body).toContain('session.remaining_time <= 0')
     expect(body).toContain("active: false, session: null, source: 'local-snapshot'")
   })
@@ -163,7 +163,7 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).toContain('send(res, 200, { active: true, session: data })')
   })
 
-  it('exposes signed-in local timer controls before the external-app bearer token boundary', () => {
+  it('retires ambiguous unauthenticated timer mutation controls', () => {
     const controlRoute = SERVER_CJS.indexOf("path === '/api/timer/control'")
     const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
 
@@ -171,12 +171,10 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(controlRoute).toBeLessThan(tokenCheck)
 
     const body = functionBody('handlePostTimerControl')
-    expect(body).toContain("action === 'toggle'")
-    expect(body).toContain("action === 'start'")
-    expect(body).toContain(".from('timer_sessions')")
-    expect(body).toContain(".eq('user_id', userId)")
-    expect(body).toContain("device_leader_id: 'kde-widget'")
-    expect(body).toContain("send(res, 400, { error: 'action must be toggle|start' })")
+    expect(body).toContain('canonical_command_required')
+    expect(body).toContain('send(res, 410')
+    expect(body).not.toContain(".from('timer_sessions')")
+    expect(body).not.toContain("action === 'toggle'")
   })
 
   it('keeps task endpoints behind the bearer token used by external local apps', () => {

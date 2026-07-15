@@ -21,11 +21,17 @@ migrations=(
   "$root_dir/supabase/migrations/20260715040000_canonical_task_lifecycle.sql"
   "$root_dir/supabase/migrations/20260715050000_canonical_subtask_batch.sql"
   "$root_dir/supabase/migrations/20260715060000_canonical_work_block_batch.sql"
+  "$root_dir/supabase/migrations/20260716010000_canonical_recurrence_lifecycle.sql"
+  "$root_dir/supabase/migrations/20260716020000_canonical_timer_command.sql"
+  "$root_dir/supabase/migrations/20260716030000_canonical_organization_commands.sql"
 )
 h3_migration="${migrations[11]}"
 h4_migration="${migrations[12]}"
 h5_migration="${migrations[13]}"
 h6_migration="${migrations[14]}"
+h7_recurrence_migration="${migrations[15]}"
+h7_timer_migration="${migrations[16]}"
+h7_organization_migration="${migrations[17]}"
 h3_rollback="$root_dir/scripts/db/rollback-canonical-domain-receipts.sql"
 
 cleanup() {
@@ -200,6 +206,12 @@ for _ in 1 2; do
   docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
     < "$h6_migration" >/dev/null
 done
+for migration in "$h7_recurrence_migration" "$h7_timer_migration" "$h7_organization_migration"; do
+  for _ in 1 2; do
+    docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+      < "$migration" >/dev/null
+  done
+done
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 DO $$
 BEGIN
@@ -236,6 +248,14 @@ docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-subtask-batch-rpc.sql" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-work-block-batch-rpc.sql"
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-recurrence-lifecycle-rpc.sql" >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-canonical-timer-command.sql" >/dev/null
+FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
+  bash "$root_dir/scripts/db/test-canonical-timer-concurrency.sh"
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-canonical-organization-commands.sql" >/dev/null
 
 FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
   bash "$root_dir/scripts/db/test-canonical-notion-concurrency.sh"

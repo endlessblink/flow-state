@@ -16,6 +16,7 @@ import { createPinia, setActivePinia } from 'pinia'
 const {
   mockFetchActiveTimerSession,
   mockSaveActiveTimerSession,
+  mockHeartbeatTimerSession,
   mockClaimLeadership,
   mockClaimTimerLeadership,
   mockBroadcastTimerSession,
@@ -25,9 +26,11 @@ const {
   mockEnqueue,
   mockSyncLocalApiTimerSnapshot,
   mockAuthState,
+  mockCanonicalTimerCommand,
 } = vi.hoisted(() => ({
   mockFetchActiveTimerSession: vi.fn(),
   mockSaveActiveTimerSession: vi.fn().mockResolvedValue(undefined),
+  mockHeartbeatTimerSession: vi.fn().mockResolvedValue(true),
   mockClaimLeadership: vi.fn().mockResolvedValue(true),
   mockClaimTimerLeadership: vi.fn(() => true),
   mockBroadcastTimerSession: vi.fn(),
@@ -41,12 +44,23 @@ const {
     canSyncRemotely: true,
     user: { id: 'test-user-id' },
   },
+  mockCanonicalTimerCommand: vi.fn(),
+}))
+
+vi.mock('@/services/sync/canonicalTimerCommand', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/services/sync/canonicalTimerCommand')>()
+  return { ...actual, executeCanonicalTimerCommand: mockCanonicalTimerCommand }
+})
+
+vi.mock('@/stores/workspace', () => ({
+  useWorkspaceStore: () => ({ activeWorkspaceId: null }),
 }))
 
 vi.mock('@/composables/useSupabaseDatabase', () => ({
   useSupabaseDatabase: () => ({
     fetchActiveTimerSession: mockFetchActiveTimerSession,
     saveActiveTimerSession: mockSaveActiveTimerSession,
+    heartbeatTimerSession: mockHeartbeatTimerSession,
     claimLeadership: mockClaimLeadership,
     insertPomodoroHistory: vi.fn().mockResolvedValue(undefined),
     fetchPomodoroHistory: vi.fn().mockResolvedValue([]),
@@ -165,6 +179,21 @@ beforeEach(() => {
   mockAuthState.isAuthenticated = true
   mockAuthState.canSyncRemotely = true
   mockAuthState.user = { id: 'test-user-id' }
+  mockCanonicalTimerCommand.mockReset().mockImplementation((_client, request) => {
+    const revision = request.action === 'start' ? 1 : request.baseRevision + 1
+    const readBack = {
+      id: request.sessionId, workspaceId: request.workspaceId, taskId: request.taskId ?? 'general',
+      startTime: request.startedAt ?? new Date().toISOString(),
+      duration: request.action === 'extend' ? 60 + (request.extensionSeconds ?? 0) : request.durationSeconds ?? 60,
+      remainingTime: request.durationSeconds ?? request.remainingSeconds ?? request.extensionSeconds ?? 60,
+      isActive: request.action !== 'stop', isPaused: request.action === 'pause',
+      isBreak: request.isBreak ?? false,
+      completedAt: request.action === 'stop' ? new Date().toISOString() : null,
+      deviceLeaderId: request.deviceId, canonicalRevision: revision,
+      canonicalUpdatedAt: new Date().toISOString(),
+    }
+    return Promise.resolve({ receipt: { status: 'committed' }, readBack, replacedSessions: [] })
+  })
 })
 
 // ============================================================================
@@ -280,9 +309,9 @@ describe('Timer State Machine — startTimer', () => {
     expect(store.currentTaskId).toBe('task-abc')
   })
 
-  it('7b. startTimer rolls back local active state when the initial timer session write fails', async () => {
+  it('7b. startTimer rolls back local active state when canonical authority rejects the start', async () => {
     const persistenceError = new Error('stale auth token')
-    mockSaveActiveTimerSession.mockRejectedValueOnce(persistenceError)
+    mockCanonicalTimerCommand.mockRejectedValueOnce(persistenceError)
     const store = useTimerStore()
     await flushPromises()
     mockEnqueue.mockClear()
@@ -322,7 +351,11 @@ describe('Timer State Machine — startTimer', () => {
     expect(mockFetchActiveTimerSession).not.toHaveBeenCalled()
     expect(mockSaveActiveTimerSession).not.toHaveBeenCalled()
     expect(mockClaimLeadership).not.toHaveBeenCalled()
-    expect(mockEnqueue).not.toHaveBeenCalled()
+    expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'timer_session',
+      operation: 'create',
+      canonicalTimerCommand: expect.objectContaining({ action: 'start' }),
+    }))
   })
 
   it('8. countdown advances: remainingTime decrements each second', async () => {
@@ -372,7 +405,7 @@ describe('Timer State Machine — startTimer', () => {
     expect(store.currentSession?.duration).toBe(1500)
   })
 
-  it('12. startTimer on already-running timer switches task, does not reset countdown', async () => {
+  it('12. startTimer switches an active canonical timer task without resetting elapsed time', async () => {
     const store = useTimerStore()
     await flushPromises()
 
@@ -382,12 +415,13 @@ describe('Timer State Machine — startTimer', () => {
     await vi.advanceTimersByTimeAsync(5000)
     const remainingAfter5s = store.currentSession!.remainingTime
 
-    // Start timer with different task — should switch, not reset
     await store.startTimer('task-002', 60, false)
     await flushPromises()
 
     expect(store.currentSession?.taskId).toBe('task-002')
-    // Countdown was NOT reset — it should still be at (or near) remainingAfter5s
+    expect(mockCanonicalTimerCommand.mock.calls.map(call => call[1])).toContainEqual(expect.objectContaining({
+      action: 'switch_task', taskId: 'task-002', remainingSeconds: remainingAfter5s,
+    }))
     expect(store.currentSession!.remainingTime).toBeLessThanOrEqual(remainingAfter5s)
     expect(store.currentSession!.remainingTime).toBeGreaterThan(0)
   })
@@ -518,7 +552,7 @@ describe('Timer State Machine — stopTimer', () => {
     expect(store.isDeviceLeader).toBe(false)
   })
 
-  it('19. stopTimer saves to DB with isActive=false', async () => {
+  it('19. stopTimer commits an explicit canonical stop', async () => {
     const store = useTimerStore()
     await flushPromises()
 
@@ -529,9 +563,10 @@ describe('Timer State Machine — stopTimer', () => {
     await store.stopTimer()
     await flushPromises()
 
-    expect(mockSaveActiveTimerSession).toHaveBeenCalled()
-    const savedSession = mockSaveActiveTimerSession.mock.calls[0][0]
-    expect(savedSession.isActive).toBe(false)
+    expect(mockCanonicalTimerCommand.mock.calls.some(
+      call => call[1]?.action === 'stop' && call[1]?.baseRevision === 1,
+    )).toBe(true)
+    expect(mockSaveActiveTimerSession).not.toHaveBeenCalled()
   })
 
   it('20. after stopTimer, multiple start/stop cycles produce no state leaks', async () => {
@@ -636,7 +671,7 @@ describe('Timer State Machine — Session Completion', () => {
     expect(store.sessions).toBe(store.completedSessions)
   })
 
-  it('24. completeSession saves to DB with isActive=false', async () => {
+  it('24. completeSession commits a canonical stop', async () => {
     const store = useTimerStore()
     await flushPromises()
 
@@ -649,21 +684,17 @@ describe('Timer State Machine — Session Completion', () => {
     await flushPromises()
     await flushPromises()
 
-    // At least one save call with isActive=false
-    const stopSave = mockSaveActiveTimerSession.mock.calls.find(
-      (call) => call[0]?.isActive === false
-    )
-    expect(stopSave).toBeDefined()
+    expect(mockCanonicalTimerCommand.mock.calls.some(call => call[1]?.action === 'stop')).toBe(true)
   })
 
   it('25. completeSession clears the local active timer before completion persistence can hang', async () => {
     const store = useTimerStore()
     await flushPromises()
     const hangingSave = new Promise<void>(() => {})
-    mockSaveActiveTimerSession.mockReturnValueOnce(hangingSave)
+    mockCanonicalTimerCommand.mockReturnValueOnce(hangingSave)
 
     store.currentSession = {
-      id: 'session-completion-hang',
+      id: '11111111-1111-4111-8111-111111111111',
       taskId: 'general',
       startTime: new Date('2026-03-21T10:00:00.000Z'),
       duration: 2,
@@ -671,12 +702,14 @@ describe('Timer State Machine — Session Completion', () => {
       isActive: true,
       isPaused: false,
       isBreak: false,
+      canonicalRevision: 1,
+      workspaceId: null,
     }
 
     void store.completeSession()
     await flushPromises()
 
-    expect(mockSaveActiveTimerSession).toHaveBeenCalled()
+    expect(mockCanonicalTimerCommand).toHaveBeenCalled()
     expect(store.currentSession).toBeNull()
     expect(mockSyncLocalApiTimerSnapshot).toHaveBeenCalledWith(null, expect.any(String))
   })
@@ -773,7 +806,7 @@ describe('Timer State Machine — Computed Properties', () => {
     // Running: isActive=true, isPaused=false → isTimerActive computed
     expect(store.isTimerActive).toBe(true)
 
-    store.pauseTimer()
+    await store.pauseTimer()
     // The isTimerActive computed returns currentSession?.isActive || false
     // After pause, session.isActive is still true (paused ≠ stopped)
     // isPaused only controls the countdown, not isActive flag
@@ -865,7 +898,7 @@ describe('Timer State Machine — Device Leadership', () => {
     await store.startTimer('general', 60, false)
     await flushPromises()
 
-    const ourDeviceId = mockSaveActiveTimerSession.mock.calls.at(-1)?.[1] as string
+    const ourDeviceId = store.currentSession?.deviceLeaderId as string
 
     store.handleRemoteTimerUpdate({
       new: {
@@ -920,7 +953,7 @@ describe('Timer State Machine — DB Persistence Shape', () => {
     vi.useRealTimers()
   })
 
-  it('36. startTimer persists session to Supabase', async () => {
+  it('36. startTimer persists through canonical authority', async () => {
     const store = useTimerStore()
     await flushPromises()
 
@@ -928,13 +961,10 @@ describe('Timer State Machine — DB Persistence Shape', () => {
     await store.startTimer('task-001', 60, false)
     await flushPromises()
 
-    expect(mockSaveActiveTimerSession).toHaveBeenCalled()
-    const [savedSession] = mockSaveActiveTimerSession.mock.calls[0]
-    expect(savedSession).toMatchObject({
-      taskId: 'task-001',
-      isActive: true,
-      isPaused: false,
-    })
+    expect(mockCanonicalTimerCommand.mock.calls.some(
+      call => call[1]?.action === 'start' && call[1]?.taskId === 'task-001',
+    )).toBe(true)
+    expect(mockSaveActiveTimerSession).not.toHaveBeenCalled()
   })
 
   it('37. fetchActiveSession restores running timer state from DB', async () => {
@@ -966,12 +996,12 @@ describe('Timer State Machine — DB Persistence Shape', () => {
     await store.startTimer('general', 60, false)
     await flushPromises()
 
-    const savesAfterStart = mockSaveActiveTimerSession.mock.calls.length
+    const heartbeatsAfterStart = mockHeartbeatTimerSession.mock.calls.length
 
     // Advance past heartbeat interval (10s)
     await vi.advanceTimersByTimeAsync(11_000)
     await flushPromises()
 
-    expect(mockSaveActiveTimerSession.mock.calls.length).toBeGreaterThan(savesAfterStart)
+    expect(mockHeartbeatTimerSession.mock.calls.length).toBeGreaterThan(heartbeatsAfterStart)
   })
 })

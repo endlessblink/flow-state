@@ -73,7 +73,7 @@ const FIXED_DAILY_CHECKS = [
     command: [
       'bash',
       '-lc',
-      'npm run test:reliable-assistant-contract && npm test -- tests/contract/canonical-task-contract.test.ts tests/contract/notion-activation-contract.test.ts tests/unit/local-api/canonical-task-patch-handler.test.ts tests/unit/local-api/notion-activation-handler.test.ts tests/unit/services/canonical-change-catchup.test.ts',
+      'npm run test:clean-application-migrations && npm run test:reliable-assistant-contract && npm test -- tests/contract/canonical-task-contract.test.ts tests/contract/notion-activation-contract.test.ts tests/unit/local-api/canonical-task-patch-handler.test.ts tests/unit/local-api/notion-activation-handler.test.ts tests/unit/services/canonical-change-catchup.test.ts',
     ],
     failureClass: 'canonical assistant authority',
     timeoutMs: 300_000,

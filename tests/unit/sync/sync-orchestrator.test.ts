@@ -120,6 +120,8 @@ const taskStoreMock = vi.hoisted(() => ({
   applyCanonicalTaskReceipt: vi.fn(),
   rawTasks: [] as any[],
 }))
+const timerStoreMock = vi.hoisted(() => ({ applyCanonicalTimerReadBack: vi.fn() }))
+const queuedTimerExecutorMock = vi.hoisted(() => vi.fn())
 
 const workspaceStoreMock = vi.hoisted(() => ({
   activeWorkspaceId: null,
@@ -243,6 +245,7 @@ function makeOp(partial: Partial<WriteOperation> = {}): WriteOperation {
     userId: partial.userId ?? 'user-001',
     workspaceId: partial.workspaceId ?? null,
     canonicalTaskPatch: partial.canonicalTaskPatch,
+    canonicalTimerCommand: partial.canonicalTimerCommand,
   }
 }
 
@@ -343,6 +346,8 @@ beforeEach(async () => {
   writeQueueMocks.hasEarlierUnresolvedOperation.mockResolvedValue(false)
   writeQueueMocks.hasLaterUnresolvedOperation.mockResolvedValue(false)
   taskStoreMock.rawTasks = []
+  timerStoreMock.applyCanonicalTimerReadBack.mockReset()
+  queuedTimerExecutorMock.mockReset()
   rpcMock.mockReset()
   authStoreMock.user = { id: 'user-001' } as any
   workspaceStoreMock.activeWorkspaceId = null
@@ -397,6 +402,10 @@ beforeEach(async () => {
   })
   vi.doMock('@/stores/auth', () => ({ useAuthStore: () => authStoreMock }))
   vi.doMock('@/stores/tasks', () => ({ useTaskStore: () => taskStoreMock }))
+  vi.doMock('@/stores/timer', () => ({ useTimerStore: () => timerStoreMock }))
+  vi.doMock('@/services/sync/canonicalTimerCommand', () => ({
+    executeQueuedCanonicalTimerCommand: queuedTimerExecutorMock,
+  }))
   vi.doMock('@/stores/workspace', () => ({
     useWorkspaceStore: () => workspaceStoreMock
   }))
@@ -434,6 +443,39 @@ afterEach(async () => {
   await vi.advanceTimersByTimeAsync(0)
   vi.useRealTimers()
   vi.restoreAllMocks()
+})
+
+describe('canonical timer queue reconciliation', () => {
+  it('projects returned serverData when Realtime misses the commit', async () => {
+    const readBack = {
+      id: '11111111-1111-4111-8111-111111111111', workspaceId: null, taskId: 'general',
+      startTime: '2026-07-16T07:00:00.000Z', duration: 1500, remainingTime: 1200,
+      isActive: true, isPaused: false, isBreak: false, completedAt: null,
+      deviceLeaderId: 'desktop-1', canonicalRevision: 1,
+      canonicalUpdatedAt: '2026-07-16T07:05:00.000Z',
+    }
+    const op = makeOp({
+      id: 1965, entityType: 'timer_session', operation: 'create', entityId: readBack.id,
+      payload: {}, baseVersion: 0, userId: 'user-001', workspaceId: null,
+      canonicalTimerCommand: {
+        operationId: `web:timer:start:${readBack.id}:0`, action: 'start', sessionId: readBack.id,
+        baseRevision: 0, deviceId: 'desktop-1', workspaceId: null, taskId: 'general',
+        startedAt: readBack.startTime, durationSeconds: 1500, isBreak: false,
+      },
+    })
+    queuedTimerExecutorMock.mockResolvedValue({ success: true, operation: op, serverData: readBack })
+    writeQueueMocks.getPendingOperations.mockResolvedValueOnce([]).mockResolvedValue([op])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(100)
+    await sync.forceSync()
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect(writeQueueMocks.getPendingOperations).toHaveBeenCalled()
+    expect(queuedTimerExecutorMock).toHaveBeenCalled()
+    expect(timerStoreMock.applyCanonicalTimerReadBack).toHaveBeenCalledWith(readBack)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1965)
+  })
 })
 
 // ===========================================================================

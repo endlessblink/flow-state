@@ -1,6 +1,6 @@
 import type { PomodoroSession } from '@/stores/timer'
 import {
-    toSupabaseTimerSession, fromSupabaseTimerSession,
+    fromSupabaseTimerSession,
     type SupabaseTimerSession
 } from '@/utils/supabaseMappers'
 import { getSupabase, type DatabaseContext } from './_infrastructure'
@@ -72,46 +72,6 @@ export function useTimerDatabase(ctx: DatabaseContext) {
         }
     }
 
-    const saveActiveTimerSession = async (session: PomodoroSession, deviceId: string): Promise<void> => {
-        try {
-            const userId = getUserIdSafe()
-            if (!userId) {
-                if (import.meta.env.DEV) console.log('🍅 [DB] saveActiveTimerSession - no userId, skipping')
-                return
-            }
-
-            const payload = toSupabaseTimerSession(session, userId, deviceId)
-            if (import.meta.env.DEV) console.log('🍅 [DB] saveActiveTimerSession:', { sessionId: session.id, userId, deviceId, isActive: session.isActive })
-            // BUG-352: Wrap in withRetry for mobile PWA network resilience (was missing from BUG-1107 fix)
-            await withRetry(async () => {
-                const { error } = await getSupabase().from('timer_sessions').upsert(payload, { onConflict: 'id' })
-                if (error) {
-                    console.error('🍅 [DB] saveActiveTimerSession error:', error)
-                    throw error
-                }
-            }, 'saveActiveTimerSession')
-            if (import.meta.env.DEV) console.log('🍅 [DB] saveActiveTimerSession success')
-        } catch (e: unknown) {
-            handleError(e, 'saveActiveTimerSession')
-            throw e
-        }
-    }
-
-    const deleteTimerSession = async (id: string): Promise<void> => {
-        try {
-            const userId = getUserIdSafe()
-            if (!userId) return // Skip Supabase sync when not authenticated (local-only mode)
-
-            // BUG-352: Wrap in withRetry for mobile PWA network resilience
-            await withRetry(async () => {
-                const { error } = await getSupabase().from('timer_sessions').delete().eq('id', id)
-                if (error) throw error
-            }, 'deleteTimerSession')
-        } catch (e: unknown) {
-            handleError(e, 'deleteTimerSession')
-        }
-    }
-
     /**
      * BUG-1511: Atomic leadership claim via Supabase RPC.
      * The RPC performs a conditional UPDATE — it only sets device_leader_id when
@@ -143,10 +103,33 @@ export function useTimerDatabase(ctx: DatabaseContext) {
         }
     }
 
+    const heartbeatTimerSession = async (
+        sessionId: string,
+        deviceId: string,
+        remainingTime: number,
+    ): Promise<boolean> => {
+        try {
+            const userId = getUserIdSafe()
+            if (!userId) return false
+            const { data, error } = await getSupabase().rpc('heartbeat_timer_session', {
+                p_session_id: sessionId,
+                p_device_id: deviceId,
+                p_remaining_time: Math.max(0, Math.floor(remainingTime)),
+            })
+            if (error) {
+                console.error('🍅 [DB] heartbeatTimerSession RPC error:', error)
+                return false
+            }
+            return data === true
+        } catch (e: unknown) {
+            handleError(e, 'heartbeatTimerSession')
+            return false
+        }
+    }
+
     return {
         fetchActiveTimerSession,
-        saveActiveTimerSession,
-        deleteTimerSession,
         claimLeadership,
+        heartbeatTimerSession,
     }
 }

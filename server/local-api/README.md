@@ -86,6 +86,32 @@ forwarded a session to the sidecar.
 { "active": false, "session": null }
 ```
 
+### Canonical assistant capabilities and H7 commands
+
+All routes below require the Local Task API bearer token and a signed-in user.
+`GET /api/capabilities` returns the deterministic versioned command manifest;
+clients must fail closed when a capability is absent.
+
+- `GET /api/timer/sessions/:sessionId` reads one exact canonical timer session.
+- `POST /api/timer/command` previews or applies explicit `start`, `pause`,
+  `resume`, or `stop`. Stable operation/session/device identity, base revision,
+  and the exact preview receipt are mandatory; `toggle` is not supported.
+- `GET /api/tasks/:id/recurrence` returns the exact recurrence definition,
+  immutable occurrence history, lifecycle state, and canonical revision.
+- `POST /api/tasks/:id/recurrence` previews or applies `edit_future`, `pause`,
+  `resume`, or `end_series`; completed history is never rewritten.
+- `GET /api/organization` returns the exact projects and assignable Canvas
+  groups in the active personal/workspace scope.
+- `POST /api/tasks/:id/organization/assign-project` and
+  `POST /api/tasks/:id/organization/set-canvas-group` preview or apply an
+  exact-ID assignment while preserving unrelated Canvas position metadata.
+
+Every apply route requires `preview:false` plus the server-issued
+`previewDigest`, `previewExpiresAt`, and `requestHash`, and returns a canonical
+receipt verified by read-back. The legacy loopback `POST /api/timer/control`
+route is retired with `410 canonical_command_required` rather than performing
+an ambiguous or unauthenticated write.
+
 ### `GET /api/tasks?status=todo&due=today&limit=25`
 `status` optional (`todo` / `open` | `done`; omitted = all open). `due` optional
 (`today` | `overdue` | `open` for no due date | `YYYY-MM-DD`). Capped at 25 items.

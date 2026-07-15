@@ -22,6 +22,11 @@ import {
     executeCanonicalSubtaskBatch,
     type CanonicalSubtaskOperation,
 } from '@/services/sync/canonicalSubtaskBatch'
+import {
+    canonicalWorkBlockJsonHash,
+    executeCanonicalWorkBlockBatch,
+    type CanonicalWorkBlockOperation,
+} from '@/services/sync/canonicalWorkBlockBatch'
 import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 import { sanitizeTaskTitle } from '@/utils/taskValidation'
 // TASK-1871 Phase 0: observable geometry-write chokepoint instrumentation
@@ -531,6 +536,19 @@ export function useTaskOperations(
                     previousTask.updatedAt = task.updatedAt
                 }
                 delete updates.subtasks
+                if (Object.keys(updates).length === 0) return
+            }
+
+            // TASK-1964: older calendar surfaces still submit a whole-array
+            // snapshot. Treat it as a proposal and convert it to one exact
+            // canonical lifecycle command before generic persistence.
+            if (useAuthStore().user && updates.instances !== undefined) {
+                await applyCanonicalWorkBlockSnapshot(task, updates.instances)
+                previousTask.instances = JSON.parse(JSON.stringify(toRaw(task.instances)))
+                previousTask.isInInbox = task.isInInbox
+                previousTask.canonicalRevision = task.canonicalRevision
+                previousTask.updatedAt = task.updatedAt
+                delete updates.instances
                 if (Object.keys(updates).length === 0) return
             }
 
@@ -1662,12 +1680,168 @@ export function useTaskOperations(
         await updateTask(taskId, { subtasks: updatedSubtasks })
     }
 
-    // BUG-1321: Instance methods now route through updateTask() for proper
-    // echo protection, sync queue enrollment, and bidirectional date sync.
+    const localTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+
+    const canonicalWorkBlockValue = (instance: TaskInstance) => {
+        const { baseWorkBlockHash: _localProof, ...canonical } = instance
+        return canonical
+    }
+
+    const workBlockCasHash = async (instance: TaskInstance) => (
+        typeof instance.baseWorkBlockHash === 'string'
+            && /^[0-9a-f]{64}$/.test(instance.baseWorkBlockHash)
+            ? instance.baseWorkBlockHash
+            : canonicalWorkBlockJsonHash(canonicalWorkBlockValue(instance))
+    )
+
+    const applyCanonicalWorkBlockOperations = async (
+        operations: CanonicalWorkBlockOperation[],
+    ) => {
+        const first = operations[0]
+        const task = first ? _rawTasks.value.find(candidate => candidate.id === first.taskId) : undefined
+        if (!task) throw new Error('canonical_work_block_task_not_found')
+        const timeZone = localTimeZone()
+        const operationHash = await canonicalWorkBlockJsonHash({
+            workspaceId: task.workspaceId ?? null,
+            timeZone,
+            operations,
+        })
+        const result = await executeCanonicalWorkBlockBatch(supabase, {
+            workspaceId: task.workspaceId ?? null,
+            // The identity is derived from the exact base revisions, element
+            // hashes, and requested result. A retry after response loss reaches
+            // the server's durable replay instead of creating a second block.
+            operationId: `web:work-block:${operationHash}`,
+            timeZone,
+            operations,
+        })
+        for (const readBack of result.readBack) {
+            const parent = _rawTasks.value.find(candidate => candidate.id === readBack.id)
+            if (!parent) continue
+            parent.instances = readBack.instances as unknown as TaskInstance[]
+            parent.isInInbox = readBack.isInInbox
+            parent.canonicalRevision = readBack.canonicalRevision
+            parent.updatedAt = new Date(readBack.canonicalUpdatedAt)
+        }
+        await cacheTasks([..._rawTasks.value])
+        return result
+    }
+
+    const applyCanonicalWorkBlockSnapshot = async (
+        task: Task,
+        proposedInstances: TaskInstance[],
+    ) => {
+        if (!task.canonicalRevision || task.canonicalRevision < 1) {
+            throw new Error('canonical_work_block_revision_required')
+        }
+        const current = task.instances ?? []
+        if (current.length > 1 || proposedInstances.length > 1
+            || task.recurrence || task.recurrenceRule || task.recurringInstances?.length) {
+            throw new Error('recurring_work_block_unsupported')
+        }
+        let operation: CanonicalWorkBlockOperation | null = null
+        if (current.length === 0 && proposedInstances.length === 1) {
+            const proposed = proposedInstances[0]
+            if (!proposed.scheduledTime || !proposed.duration) throw new Error('canonical_work_block_interval_required')
+            operation = {
+                kind: 'create',
+                taskId: task.id,
+                baseRevision: task.canonicalRevision,
+                clientId: proposed.clientId || proposed.id || `calendar-snapshot:${crypto.randomUUID()}`,
+                scheduledDate: proposed.scheduledDate,
+                scheduledTime: proposed.scheduledTime,
+                duration: proposed.duration,
+            }
+        } else if (current.length === 1 && proposedInstances.length === 0) {
+            const existing = current[0]
+            if (!existing.id) throw new Error('canonical_work_block_identity_required')
+            operation = {
+                kind: 'remove',
+                taskId: task.id,
+                baseRevision: task.canonicalRevision,
+                workBlockId: existing.id,
+                baseWorkBlockHash: await workBlockCasHash(existing),
+            }
+        } else if (current.length === 1 && proposedInstances.length === 1) {
+            const existing = current[0]
+            const proposed = proposedInstances[0]
+            if (!existing.id || proposed.id !== existing.id) {
+                throw new Error('canonical_work_block_replace_unsupported')
+            }
+            const base = {
+                taskId: task.id,
+                baseRevision: task.canonicalRevision,
+                workBlockId: existing.id,
+                baseWorkBlockHash: await workBlockCasHash(existing),
+            }
+            const moved = proposed.scheduledDate !== existing.scheduledDate
+                || proposed.scheduledTime !== existing.scheduledTime
+            const resized = proposed.duration !== existing.duration
+            if (moved) {
+                if (!proposed.scheduledTime) throw new Error('canonical_work_block_interval_required')
+                operation = {
+                    ...base,
+                    kind: 'move',
+                    scheduledDate: proposed.scheduledDate,
+                    scheduledTime: proposed.scheduledTime,
+                    ...(resized && { duration: proposed.duration }),
+                }
+            } else if (resized) {
+                if (proposed.duration === undefined) throw new Error('canonical_work_block_interval_required')
+                operation = { ...base, kind: 'resize', duration: proposed.duration }
+            } else if (await canonicalWorkBlockJsonHash(canonicalWorkBlockValue(existing))
+                !== await canonicalWorkBlockJsonHash(canonicalWorkBlockValue(proposed))) {
+                const existingWithoutStatus = { ...canonicalWorkBlockValue(existing) }
+                const proposedWithoutStatus = { ...canonicalWorkBlockValue(proposed) }
+                delete existingWithoutStatus.status
+                delete proposedWithoutStatus.status
+                if (await canonicalWorkBlockJsonHash(existingWithoutStatus)
+                    !== await canonicalWorkBlockJsonHash(proposedWithoutStatus)) {
+                    throw new Error('unsupported_canonical_work_block_update')
+                }
+                // Instance status is a renderer compatibility projection of
+                // task/timer lifecycle state, not an independent schedule
+                // mutation. Never replace the canonical instances array for it.
+                existing.baseWorkBlockHash = await workBlockCasHash(existing)
+                existing.status = proposed.status
+                await cacheTasks([..._rawTasks.value])
+            }
+        }
+        if (operation) await applyCanonicalWorkBlockOperations([operation])
+    }
+
+    // Signed-in work-block changes are server-authoritative. Guest/local mode
+    // keeps the existing offline behavior until it has a scoped authority.
 
     const createTaskInstance = async (taskId: string, instanceData: Omit<TaskInstance, 'id'>) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return null
+        if (useAuthStore().user) {
+            if (!task.canonicalRevision || task.canonicalRevision < 1) {
+                throw new Error('canonical_work_block_revision_required')
+            }
+            if (!instanceData.scheduledTime || !instanceData.duration) {
+                throw new Error('canonical_work_block_interval_required')
+            }
+            const clientIdentityHash = await canonicalWorkBlockJsonHash({
+                taskId,
+                baseRevision: task.canonicalRevision,
+                scheduledDate: instanceData.scheduledDate,
+                scheduledTime: instanceData.scheduledTime,
+                duration: instanceData.duration,
+            })
+            const clientId = instanceData.clientId || `calendar-drop:${clientIdentityHash}`
+            const result = await applyCanonicalWorkBlockOperations([{
+                kind: 'create',
+                taskId,
+                baseRevision: task.canonicalRevision,
+                clientId,
+                scheduledDate: instanceData.scheduledDate,
+                scheduledTime: instanceData.scheduledTime,
+                duration: instanceData.duration,
+            }])
+            return result.readBack[0]?.instances.find(instance => instance.clientId === clientId) as TaskInstance | undefined
+        }
         const newInstance: TaskInstance = {
             id: Date.now().toString(),
             ...instanceData
@@ -1687,14 +1861,126 @@ export function useTaskOperations(
         if (!task || !task.instances) return
         const idx = task.instances.findIndex(inst => inst.id === instanceId)
         if (idx === -1) return
+        if (useAuthStore().user) {
+            if (!task.canonicalRevision || task.canonicalRevision < 1) {
+                throw new Error('canonical_work_block_revision_required')
+            }
+            const instance = task.instances[idx]
+            const changesSchedule = updates.scheduledDate !== undefined || updates.scheduledTime !== undefined
+            const changesDuration = updates.duration !== undefined
+            const changesStatus = updates.status !== undefined
+            const updateKeys = Object.keys(updates)
+            if (changesStatus && !changesSchedule && !changesDuration && updateKeys.every(key => key === 'status')) {
+                // Completion/reset is derived UI state. Persisting a whole
+                // instances array here would bypass the canonical block CAS.
+                task.instances[idx] = {
+                    ...task.instances[idx],
+                    status: updates.status,
+                    baseWorkBlockHash: await workBlockCasHash(task.instances[idx]),
+                }
+                await cacheTasks([..._rawTasks.value])
+                return
+            }
+            let operation: CanonicalWorkBlockOperation
+            const base = {
+                taskId,
+                baseRevision: task.canonicalRevision,
+                workBlockId: instanceId,
+                baseWorkBlockHash: await workBlockCasHash(instance),
+            }
+            if (changesSchedule) {
+                const scheduledTime = updates.scheduledTime ?? instance.scheduledTime
+                if (!scheduledTime) {
+                    throw new Error('canonical_work_block_interval_required')
+                }
+                operation = {
+                    ...base,
+                    kind: 'move',
+                    scheduledDate: updates.scheduledDate ?? instance.scheduledDate,
+                    scheduledTime,
+                    ...(changesDuration && { duration: updates.duration }),
+                }
+            } else if (changesDuration) {
+                if (updates.duration === undefined) throw new Error('canonical_work_block_interval_required')
+                operation = { ...base, kind: 'resize', duration: updates.duration }
+            } else {
+                throw new Error('unsupported_canonical_work_block_update')
+            }
+            await applyCanonicalWorkBlockOperations([operation])
+            return
+        }
         const updatedInstances = [...task.instances]
         updatedInstances[idx] = { ...updatedInstances[idx], ...updates }
         await updateTask(taskId, { instances: updatedInstances })
     }
 
+    const moveTaskInstancesBatch = async (
+        taskUpdates: Array<{
+            id: string
+            scheduledDate: string
+            scheduledTime: string
+            instanceId?: string
+            duration?: number
+        }>,
+    ) => {
+        if (!useAuthStore().user) {
+            for (const update of taskUpdates) {
+                await updateTaskWithSchedule(update.id, update)
+            }
+            return
+        }
+        const operations: CanonicalWorkBlockOperation[] = []
+        let workspaceId: string | null | undefined
+        for (const update of taskUpdates) {
+            const task = _rawTasks.value.find(candidate => candidate.id === update.id)
+            if (!task || !task.canonicalRevision) throw new Error('canonical_work_block_revision_required')
+            const taskWorkspaceId = task.workspaceId ?? null
+            if (workspaceId !== undefined && workspaceId !== taskWorkspaceId) {
+                throw new Error('canonical_work_block_workspace_mismatch')
+            }
+            workspaceId = taskWorkspaceId
+            const instance = update.instanceId
+                ? task.instances?.find(candidate => candidate.id === update.instanceId)
+                : task.instances?.length === 1 ? task.instances[0] : undefined
+            if (!instance?.id) throw new Error('canonical_work_block_identity_required')
+            operations.push({
+                kind: 'move',
+                taskId: task.id,
+                baseRevision: task.canonicalRevision,
+                workBlockId: instance.id,
+                baseWorkBlockHash: await workBlockCasHash(instance),
+                scheduledDate: update.scheduledDate,
+                scheduledTime: update.scheduledTime,
+                ...(update.duration !== undefined && { duration: update.duration }),
+            })
+        }
+        await applyCanonicalWorkBlockOperations(operations)
+    }
+
     const deleteTaskInstance = async (taskId: string, instanceId: string) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
+
+        if (useAuthStore().user) {
+            if (!task.canonicalRevision || task.canonicalRevision < 1) {
+                throw new Error('canonical_work_block_revision_required')
+            }
+            const instance = task.instances?.find(candidate => candidate.id === instanceId)
+            if (!instance) {
+                if (task.recurringInstances?.some(candidate => candidate.id === instanceId)) {
+                    throw new Error('recurring_work_block_unsupported')
+                }
+                return
+            }
+            await applyCanonicalWorkBlockOperations([{
+                kind: 'remove',
+                taskId,
+                baseRevision: task.canonicalRevision,
+                workBlockId: instanceId,
+                baseWorkBlockHash: await workBlockCasHash(instance),
+            }])
+            return
+        }
 
         const updates: Partial<Task> = {}
 
@@ -1977,6 +2263,7 @@ export function useTaskOperations(
         createTaskInstance,
         updateTaskInstance,
         deleteTaskInstance,
+        moveTaskInstancesBatch,
         updateTaskWithSchedule,
         startTaskNow,
         moveTaskToSmartGroup,

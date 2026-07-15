@@ -43,6 +43,9 @@ export interface PlanningNote {
 
 export interface TaskInstance {
   id?: string
+  clientId?: string
+  /** Local proof shadow for status-only presentation changes; never canonical block data. */
+  baseWorkBlockHash?: string
   taskId?: string
   scheduledDate: string
   scheduledTime?: string
@@ -51,6 +54,7 @@ export interface TaskInstance {
   status?: 'scheduled' | 'completed' | 'skipped'
   isRecurring?: boolean
   isLater?: boolean
+  timeZone?: string
   pomodoroTracking?: {
     completed: number
     total: number

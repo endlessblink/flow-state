@@ -94,6 +94,23 @@ describe('toDbStatus', () => {
 // ── Task Mappers ─────────────────────────────────────────────────────
 
 describe('toSupabaseTask / fromSupabaseTask', () => {
+  it('never serializes the local work-block CAS shadow into canonical JSON', () => {
+    const canonicalBlock = {
+      id: 'block-a', taskId: '550e8400-e29b-41d4-a716-446655440000',
+      scheduledDate: '2026-07-16', scheduledTime: '09:00', duration: 30,
+      status: 'completed' as const,
+    }
+    const task = makeTask({
+      instances: [{ ...canonicalBlock, baseWorkBlockHash: 'a'.repeat(64) }],
+    })
+
+    const result = toSupabaseTask(task, USER_ID)
+
+    expect(task.instances?.[0].baseWorkBlockHash).toBe('a'.repeat(64))
+    expect(result.instances).toEqual([canonicalBlock])
+    expect(result.instances?.[0]).not.toHaveProperty('baseWorkBlockHash')
+  })
+
   it('BUG-1211 regression: _soft_deleted maps to is_deleted, never _soft_deleted column', () => {
     const task = makeTask({ _soft_deleted: true })
     const result = toSupabaseTask(task, USER_ID)

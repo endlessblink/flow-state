@@ -36,6 +36,7 @@ const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
 const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeTaskLifecycle } = require('./task-lifecycle.cjs')
 const { executeSubtaskBatch } = require('./subtask-batch.cjs')
+const { executeWorkBlockBatch, readWorkBlockInventory } = require('./work-block-batch.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
 const {
@@ -300,42 +301,6 @@ function normalizeSubtasks(subtasks) {
     : []
 }
 
-function validateTaskInstanceInput(body) {
-  if (!body || typeof body !== 'object') return { ok: false, error: 'body required' }
-  if (!isValidDateOnly(body.scheduledDate)) {
-    return { ok: false, error: 'scheduledDate must be YYYY-MM-DD' }
-  }
-  if (!isValidTimeOnly(body.scheduledTime)) {
-    return { ok: false, error: 'scheduledTime must be HH:mm' }
-  }
-  const duration = Number(body.duration)
-  if (!Number.isInteger(duration) || duration < 1 || duration > 1440) {
-    return { ok: false, error: 'duration must be an integer from 1 to 1440 minutes' }
-  }
-  if (body.preview !== undefined && typeof body.preview !== 'boolean') {
-    return { ok: false, error: 'preview must be a boolean when provided' }
-  }
-  return { ok: true }
-}
-
-function buildTaskInstance(body) {
-  return {
-    id: crypto.randomUUID(),
-    scheduledDate: body.scheduledDate,
-    scheduledTime: body.scheduledTime,
-    duration: Number(body.duration),
-  }
-}
-
-function buildTaskInstanceResponse(task, instance, preview) {
-  return {
-    ok: true,
-    preview,
-    task: { id: task.id, title: task.title },
-    instance,
-  }
-}
-
 // --- Route handlers ---------------------------------------------------------
 
 async function handleSearchTasks(url, res) {
@@ -561,57 +526,72 @@ async function handleMergeTasks(survivorId, req, res) {
 }
 
 async function handleGetTaskInstances(id, res) {
-  const { supabase, userId } = ctx
-  const { data: existing, error } = await supabase
-    .from('tasks')
-    .select('id,title,instances')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .eq('is_deleted', false)
-    .maybeSingle()
-  if (error) return send(res, 500, { error: error.message })
-  if (!existing) return send(res, 404, { error: 'not found' })
-
-  send(res, 200, {
-    ok: true,
-    task: { id: existing.id, title: existing.title },
-    instances: normalizeTaskInstances(existing.instances),
-  })
+  const result = await readWorkBlockInventory(ctx, id)
+  return send(res, result.status, result.body)
 }
 
 async function handlePostTaskInstance(id, req, res) {
-  const { supabase, userId } = ctx
   const body = await readJsonBody(req)
-  const validation = validateTaskInstanceInput(body)
-  if (!validation.ok) return send(res, 400, { error: validation.error })
+  body.operations = [{
+    kind: 'create',
+    taskId: id,
+    baseRevision: body.baseRevision,
+    clientId: body.clientId || body.instanceId,
+    scheduledDate: body.scheduledDate,
+    scheduledTime: body.scheduledTime,
+    duration: body.duration,
+  }]
+  body.operationId = body.operationId || body.requestId
+  return await handleCanonicalWorkBlockBatch(body, res)
+}
 
-  const { data: existing, error: findErr } = await supabase
-    .from('tasks')
-    .select('id,title,status,priority,due_date,instances')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .eq('is_deleted', false)
-    .maybeSingle()
-  if (findErr) return send(res, 500, { error: findErr.message })
-  if (!existing) return send(res, 404, { error: 'not found' })
+async function handlePatchTaskInstance(taskId, workBlockId, req, res) {
+  const body = await readJsonBody(req)
+  const kind = body.kind || (
+    body.scheduledDate !== undefined || body.scheduledTime !== undefined ? 'move' : 'resize'
+  )
+  body.operations = [{
+    kind,
+    taskId,
+    baseRevision: body.baseRevision,
+    workBlockId,
+    baseWorkBlockHash: body.baseWorkBlockHash,
+    ...(kind === 'move' && {
+      scheduledDate: body.scheduledDate,
+      scheduledTime: body.scheduledTime,
+    }),
+    ...(kind === 'move' && body.duration !== undefined && { duration: body.duration }),
+    ...(kind === 'resize' && { duration: body.duration }),
+  }]
+  body.operationId = body.operationId || body.requestId
+  return await handleCanonicalWorkBlockBatch(body, res)
+}
 
-  const preview = body.preview !== false
-  const proposedInstance = buildTaskInstance(body)
-  if (preview) {
-    return send(res, 200, buildTaskInstanceResponse(existing, proposedInstance, true))
-  }
+async function handleDeleteTaskInstance(taskId, workBlockId, req, res) {
+  const body = await readJsonBody(req)
+  body.operations = [{
+    kind: 'remove', taskId, baseRevision: body.baseRevision,
+    workBlockId, baseWorkBlockHash: body.baseWorkBlockHash,
+  }]
+  body.operationId = body.operationId || body.requestId
+  return await handleCanonicalWorkBlockBatch(body, res)
+}
 
-  const updatedInstances = [...normalizeTaskInstances(existing.instances), proposedInstance]
-  const now = new Date().toISOString()
-  const { error: updateErr } = await supabase
-    .from('tasks')
-    .update({ instances: updatedInstances, updated_at: now })
-    .eq('id', id)
-    .eq('user_id', userId)
-    .eq('is_deleted', false)
-  if (updateErr) return send(res, 500, { error: updateErr.message })
+async function handleCanonicalWorkBlockBatch(body, res) {
+  const result = await executeWorkBlockBatch(
+    {
+      supabase: ctx.supabase,
+      activeWorkspaceId: ctx.activeWorkspaceId,
+      signedUser: ctx.signedUser,
+    },
+    body,
+    notifyTaskMutation,
+  )
+  send(res, result.status, result.body)
+}
 
-  send(res, 200, buildTaskInstanceResponse(existing, proposedInstance, false))
+async function handleWorkBlockBatch(req, res) {
+  return await handleCanonicalWorkBlockBatch(await readJsonBody(req), res)
 }
 
 // --- Subtask handlers -------------------------------------------------------
@@ -1130,6 +1110,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && path === '/api/integrations/notion/activations') {
       return await handleNotionActivation(req, res)
     }
+    if (req.method === 'POST' && path === '/api/work-blocks/batch') {
+      return await handleWorkBlockBatch(req, res)
+    }
     if (req.method === 'POST' && path === '/api/ai/clarifications/start') {
       return await handleAIClarificationStart(req, res)
     }
@@ -1143,6 +1126,17 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && taskInstancesMatch) {
       return await handlePostTaskInstance(decodeURIComponent(taskInstancesMatch[1]), req, res)
+    }
+    const taskInstanceMatch = path.match(/^\/api\/tasks\/([^/]+)\/instances\/([^/]+)$/)
+    if (req.method === 'PATCH' && taskInstanceMatch) {
+      return await handlePatchTaskInstance(
+        decodeURIComponent(taskInstanceMatch[1]), decodeURIComponent(taskInstanceMatch[2]), req, res,
+      )
+    }
+    if (req.method === 'DELETE' && taskInstanceMatch) {
+      return await handleDeleteTaskInstance(
+        decodeURIComponent(taskInstanceMatch[1]), decodeURIComponent(taskInstanceMatch[2]), req, res,
+      )
     }
     const doneForNowMatch = path.match(/^\/api\/tasks\/([^/]+)\/done-for-now$/)
     if (req.method === 'POST' && doneForNowMatch) {

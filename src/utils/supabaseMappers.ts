@@ -26,6 +26,14 @@ const isValidUUID = (str: string | null | undefined): boolean => {
 // BUG-1320: Track already-warned invalid UUIDs to avoid log spam on every sync cycle
 const warnedInvalidUUIDs = new Set<string>()
 
+const canonicalTaskInstances = (instances: TaskInstance[] | undefined): TaskInstance[] => (
+    (instances || []).map(instance => {
+        const canonical = { ...instance }
+        delete canonical.baseWorkBlockHash
+        return canonical
+    })
+)
+
 const sanitizeUUID = (value: string | null | undefined): string | null => {
     // Handle null/undefined/empty string - catches all falsy values
     if (!value || value === 'undefined' || value === 'null') return null
@@ -590,7 +598,7 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
             format: 'absolute' // Default for existing tasks during migration
         } : null,
         // Note: position_version is managed by DB triggers, not sent on update
-        instances: task.instances || [],
+        instances: canonicalTaskInstances(task.instances),
         connection_types: task.connectionTypes || null,
         recurrence: task.recurrence || null,
         recurring_instances: task.recurringInstances || [],

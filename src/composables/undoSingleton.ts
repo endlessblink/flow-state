@@ -53,6 +53,7 @@ export type UndoOperationType =
   | 'task-delete'
   | 'task-update'
   | 'task-move'
+  | 'task-work-block-batch'
   | 'task-bulk-delete'
   | 'group-create'
   | 'group-delete'
@@ -80,7 +81,26 @@ interface OperationSnapshot {
   operation: UndoOperation
   snapshotBefore: UnifiedUndoState  // State before the operation (for undo)
   snapshotAfter: UnifiedUndoState   // State after the operation (for redo)
+  workBlockIds?: Record<string, string>
 }
+
+const rippleUpdatesFromSnapshot = (
+  operationSnapshot: OperationSnapshot,
+  snapshot: UnifiedUndoState,
+) => operationSnapshot.operation.affectedIds.map(taskId => {
+  const instanceId = operationSnapshot.workBlockIds?.[taskId]
+  const task = snapshot.tasks.find(candidate => candidate.id === taskId)
+  const instance = task?.instances?.find(candidate => candidate.id === instanceId)
+  if (!instanceId || !instance?.scheduledTime) {
+    throw new Error('canonical_work_block_identity_required')
+  }
+  return {
+    id: taskId,
+    instanceId,
+    scheduledDate: instance.scheduledDate,
+    scheduledTime: instance.scheduledTime,
+  }
+})
 
 const computeChangedFields = (
   sourceTask: Task,
@@ -327,6 +347,13 @@ const performSelectiveUndo = async (operationSnapshot: OperationSnapshot): Promi
       break
     }
 
+    case 'task-work-block-batch': {
+      await taskStore.moveTaskInstancesBatch(
+        rippleUpdatesFromSnapshot(operationSnapshot, snapshotBefore),
+      )
+      break
+    }
+
     case 'group-create': {
       // Undo group creation = delete the created group
       const groupId = operation.affectedIds[0]
@@ -510,6 +537,13 @@ const performSelectiveRedo = async (operationSnapshot: OperationSnapshot): Promi
       break
     }
 
+    case 'task-work-block-batch': {
+      await taskStore.moveTaskInstancesBatch(
+        rippleUpdatesFromSnapshot(operationSnapshot, snapshotAfter),
+      )
+      break
+    }
+
     case 'group-create': {
       // Redo group creation = recreate the group
       const groupId = operation.affectedIds[0]
@@ -656,7 +690,15 @@ const performUndo = async () => {
     // The operation stack is the source of truth in operation-aware mode.
     // Calling VueUse undo creates a "ghost" undo that requires double Ctrl+Z.
 
-    const result = await performSelectiveUndo(operationSnapshot)
+    let result: boolean
+    try {
+      result = await performSelectiveUndo(operationSnapshot)
+    } catch (error) {
+      const redoIndex = redoOperationStack.value.lastIndexOf(operationSnapshot)
+      if (redoIndex >= 0) redoOperationStack.value.splice(redoIndex, 1)
+      operationStack.value.push(operationSnapshot)
+      throw error
+    }
 
     // TASK-140: Show toast notification for undo
     if (result) {
@@ -719,7 +761,15 @@ const performRedo = async () => {
     // BUG-336 FIX: Don't call refHistoryInstance.redo() here
     // Operation stack is source of truth in operation-aware mode.
 
-    const result = await performSelectiveRedo(operationSnapshot)
+    let result: boolean
+    try {
+      result = await performSelectiveRedo(operationSnapshot)
+    } catch (error) {
+      const undoIndex = operationStack.value.lastIndexOf(operationSnapshot)
+      if (undoIndex >= 0) operationStack.value.splice(undoIndex, 1)
+      redoOperationStack.value.push(operationSnapshot)
+      throw error
+    }
 
     // TASK-140: Show toast notification for redo
     if (result) {
@@ -1400,27 +1450,29 @@ const rippleShiftWithUndo = async (
 
   const affectedIds = taskUpdates.map(u => u.id)
   const snapshotBefore = await captureCurrentState(affectedIds)
+  const workBlockIds = Object.fromEntries(taskUpdates.map(update => {
+    const task = snapshotBefore.tasks.find(candidate => candidate.id === update.id)
+    const instance = update.instanceId
+      ? task?.instances?.find(candidate => candidate.id === update.instanceId)
+      : task?.instances?.length === 1 ? task.instances[0] : undefined
+    if (!instance?.id) throw new Error('canonical_work_block_identity_required')
+    return [update.id, instance.id]
+  }))
 
-  // Apply schedule updates in order. updateTaskWithSchedule is atomic per task
-  // and respects existing pending-write echo suppression.
-  for (const update of taskUpdates) {
-    await taskStore.updateTaskWithSchedule(update.id, {
-      scheduledDate: update.scheduledDate,
-      scheduledTime: update.scheduledTime,
-      instanceId: update.instanceId
-    })
-  }
+  // One server transaction covers the dragged task and every ripple target.
+  // A stale parent rejects the entire set rather than leaving a partial day.
+  await taskStore.moveTaskInstancesBatch(taskUpdates)
 
   await nextTick()
   const snapshotAfter = await captureCurrentState(affectedIds)
 
   const operation: UndoOperation = {
-    type: 'task-move',
+    type: 'task-work-block-batch',
     affectedIds: [...affectedIds],
     description: description ?? `Ripple shift ${taskUpdates.length} task${taskUpdates.length > 1 ? 's' : ''}`,
     timestamp: Date.now()
   }
-  operationStack.value.push({ operation, snapshotBefore, snapshotAfter })
+  operationStack.value.push({ operation, snapshotBefore, snapshotAfter, workBlockIds })
   if (operationStack.value.length > 30) operationStack.value.shift()
   redoOperationStack.value = []
 

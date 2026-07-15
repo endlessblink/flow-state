@@ -104,7 +104,135 @@ vi.mock('@/services/trash/TrashService', () => ({
 import { useTaskStore } from '@/stores/tasks'
 import { getUndoSystem, resetUndoSystem } from '@/composables/undoSingleton'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
+import { canonicalWorkBlockJsonHash } from '@/services/sync/canonicalWorkBlockBatch'
 import { createMockTask } from '../factories'
+
+type RippleBlock = {
+  id: string
+  taskId: string
+  scheduledDate: string
+  scheduledTime: string
+  duration: number
+  status: 'scheduled'
+}
+
+type RippleParent = {
+  id: string
+  title: string
+  canonicalRevision: number
+  instances: RippleBlock[]
+}
+
+function installAtomicRippleAuthority(
+  parents: RippleParent[],
+  stale: { taskId: string | null },
+) {
+  const serverParents = new Map(parents.map(parent => [parent.id, structuredClone(parent)]))
+
+  mockRpc.mockImplementation(async (_name: string, args: Record<string, unknown>) => {
+    const operations = args.p_operations as Array<Record<string, unknown>>
+    const preview = Boolean(args.p_preview)
+    const readBack = operations.map(operation => {
+      const parent = serverParents.get(String(operation.taskId))!
+      return {
+        id: parent.id,
+        title: parent.title,
+        status: 'todo',
+        workspaceId: null,
+        canonicalRevision: parent.canonicalRevision,
+        canonicalUpdatedAt: '2026-07-15T21:01:00.000Z',
+        isInInbox: false,
+        instances: structuredClone(parent.instances),
+      }
+    })
+
+    if (preview) {
+      return { data: {
+        ok: true,
+        result: 'preview',
+        contractVersion: 'task-v1',
+        action: 'work_block_batch',
+        operationId: args.p_operation_id,
+        workspaceId: null,
+        timeZone: args.p_time_zone,
+        finishBy: null,
+        requestHash: 'c'.repeat(64),
+        previewDigest: 'a'.repeat(64),
+        previewExpiresAt: '2026-07-15T21:15:00.000Z',
+        normalizedPayload: {
+          operations,
+          timeZone: args.p_time_zone,
+          finishBy: args.p_finish_by,
+        },
+        overlapWarnings: [],
+        readBack,
+      }, error: null }
+    }
+
+    if (stale.taskId && operations.some(operation => operation.taskId === stale.taskId)) {
+      const parent = serverParents.get(stale.taskId)!
+      return { data: { ok: false, result: 'conflict', error: {
+        code: 'stale_revision',
+        message: 'One ripple parent changed after preview',
+        currentRevision: parent.canonicalRevision + 1,
+        taskId: stale.taskId,
+      } }, error: null }
+    }
+
+    const committedReadBack = operations.map(operation => {
+      const parent = serverParents.get(String(operation.taskId))!
+      const block = parent.instances.find(candidate => candidate.id === operation.workBlockId)!
+      block.scheduledDate = String(operation.scheduledDate)
+      block.scheduledTime = String(operation.scheduledTime)
+      parent.canonicalRevision += 1
+      return {
+        id: parent.id,
+        title: parent.title,
+        status: 'todo',
+        workspaceId: null,
+        canonicalRevision: parent.canonicalRevision,
+        canonicalUpdatedAt: '2026-07-15T21:01:01.000Z',
+        isInInbox: false,
+        instances: structuredClone(parent.instances),
+      }
+    })
+    const affected = await Promise.all(committedReadBack.map(async (parent, index) => ({
+      entityId: parent.id,
+      entityType: 'task',
+      action: 'update',
+      canonicalRevision: parent.canonicalRevision,
+      changeSequence: 70 + index,
+      readBack: parent,
+      readBackHash: await canonicalWorkBlockJsonHash(parent),
+    })))
+    const receipt = {
+      ok: true,
+      status: 'committed',
+      contractVersion: 'task-v1',
+      operationId: args.p_operation_id,
+      requestHash: 'c'.repeat(64),
+      source: 'web-pwa',
+      entityType: 'batch',
+      entityId: args.p_operation_id,
+      action: 'work_block_batch',
+      canonicalRevision: Math.max(...committedReadBack.map(parent => parent.canonicalRevision)),
+      changeSequence: 70,
+      replayed: false,
+      committedAt: '2026-07-15T21:01:01.010Z',
+      affected,
+      readBack: committedReadBack,
+      readBackHash: await canonicalWorkBlockJsonHash(committedReadBack),
+    }
+    return { data: {
+      ok: true,
+      result: 'committed',
+      action: 'work_block_batch',
+      operationId: args.p_operation_id,
+      requestHash: 'c'.repeat(64),
+      receipt,
+    }, error: null }
+  })
+}
 
 describe('task operation undo/redo three-cycle invariants', () => {
   beforeEach(() => {
@@ -436,6 +564,115 @@ describe('task operation undo/redo three-cycle invariants', () => {
       expect(taskStore._rawTasks.find(candidate => candidate.id === taskA.id)).toMatchObject({ status: 'done', priority: 'high' })
       expect(taskStore._rawTasks.find(candidate => candidate.id === taskB.id)).toMatchObject({ status: 'done', priority: 'high' })
     }
+  })
+
+  it('keeps a signed-in ripple move atomic when one parent is stale during undo', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const taskAId = '11111111-1111-4111-8111-111111111111'
+    const taskBId = '22222222-2222-4222-8222-222222222222'
+    const blockA: RippleBlock = {
+      id: 'block-a', taskId: taskAId, scheduledDate: '2026-07-16',
+      scheduledTime: '09:00', duration: 30, status: 'scheduled',
+    }
+    const blockB: RippleBlock = {
+      id: 'block-b', taskId: taskBId, scheduledDate: '2026-07-16',
+      scheduledTime: '10:00', duration: 30, status: 'scheduled',
+    }
+    const stale = { taskId: null as string | null }
+    installAtomicRippleAuthority([
+      { id: taskAId, title: 'Ripple A', canonicalRevision: 7, instances: [blockA] },
+      { id: taskBId, title: 'Ripple B', canonicalRevision: 4, instances: [blockB] },
+    ], stale)
+    taskStore._rawTasks.push(
+      createMockTask({ id: taskAId, title: 'Ripple A', canonicalRevision: 7, instances: [blockA] }),
+      createMockTask({ id: taskBId, title: 'Ripple B', canonicalRevision: 4, instances: [blockB] }),
+    )
+
+    await undoSystem.rippleShiftWithUndo([
+      { id: taskAId, instanceId: blockA.id, scheduledDate: '2026-07-17', scheduledTime: '11:00' },
+      { id: taskBId, instanceId: blockB.id, scheduledDate: '2026-07-17', scheduledTime: '11:30' },
+    ])
+    expect(taskStore._rawTasks.map(task => task.instances?.[0]?.scheduledTime)).toEqual(['11:00', '11:30'])
+
+    stale.taskId = taskBId
+    mockRpc.mockClear()
+    await expect(undoSystem.undo()).rejects.toMatchObject({
+      code: 'stale_revision',
+      taskId: taskBId,
+    })
+
+    expect(mockRpc).toHaveBeenCalledTimes(2)
+    expect(mockRpc.mock.calls[1][1].p_operations).toHaveLength(2)
+    expect(taskStore._rawTasks.map(task => task.instances?.[0]?.scheduledTime)).toEqual(['11:00', '11:30'])
+    expect(undoSystem.getOperationStack()).toHaveLength(1)
+    expect(undoSystem.getRedoOperationStack()).toHaveLength(0)
+  })
+
+  it('undoes and redoes a signed-in ripple through one batch built from current proofs', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const taskAId = '33333333-3333-4333-8333-333333333333'
+    const taskBId = '44444444-4444-4444-8444-444444444444'
+    const blockA: RippleBlock = {
+      id: 'block-c', taskId: taskAId, scheduledDate: '2026-07-16',
+      scheduledTime: '09:00', duration: 30, status: 'scheduled',
+    }
+    const blockB: RippleBlock = {
+      id: 'block-d', taskId: taskBId, scheduledDate: '2026-07-16',
+      scheduledTime: '10:00', duration: 30, status: 'scheduled',
+    }
+    installAtomicRippleAuthority([
+      { id: taskAId, title: 'Ripple C', canonicalRevision: 7, instances: [blockA] },
+      { id: taskBId, title: 'Ripple D', canonicalRevision: 4, instances: [blockB] },
+    ], { taskId: null })
+    taskStore._rawTasks.push(
+      createMockTask({ id: taskAId, title: 'Ripple C', canonicalRevision: 7, instances: [blockA] }),
+      createMockTask({ id: taskBId, title: 'Ripple D', canonicalRevision: 4, instances: [blockB] }),
+    )
+
+    await undoSystem.rippleShiftWithUndo([
+      { id: taskAId, instanceId: blockA.id, scheduledDate: '2026-07-17', scheduledTime: '11:00' },
+      { id: taskBId, instanceId: blockB.id, scheduledDate: '2026-07-17', scheduledTime: '11:30' },
+    ])
+    const movedBlocks = taskStore._rawTasks.map(task => JSON.parse(JSON.stringify(task.instances?.[0])))
+
+    mockRpc.mockClear()
+    await undoSystem.undo()
+    const undoApply = mockRpc.mock.calls.find(call => call[1].p_preview === false)?.[1]
+    expect(mockRpc).toHaveBeenCalledTimes(2)
+    expect(undoApply?.p_operations).toEqual([
+      expect.objectContaining({
+        taskId: taskAId, baseRevision: 8, workBlockId: blockA.id,
+        baseWorkBlockHash: await canonicalWorkBlockJsonHash(movedBlocks[0]),
+        scheduledDate: blockA.scheduledDate, scheduledTime: blockA.scheduledTime,
+      }),
+      expect.objectContaining({
+        taskId: taskBId, baseRevision: 5, workBlockId: blockB.id,
+        baseWorkBlockHash: await canonicalWorkBlockJsonHash(movedBlocks[1]),
+        scheduledDate: blockB.scheduledDate, scheduledTime: blockB.scheduledTime,
+      }),
+    ])
+    expect(taskStore._rawTasks.map(task => task.instances?.[0]?.scheduledTime)).toEqual(['09:00', '10:00'])
+
+    const restoredBlocks = taskStore._rawTasks.map(task => JSON.parse(JSON.stringify(task.instances?.[0])))
+    mockRpc.mockClear()
+    await undoSystem.redo()
+    const redoApply = mockRpc.mock.calls.find(call => call[1].p_preview === false)?.[1]
+    expect(mockRpc).toHaveBeenCalledTimes(2)
+    expect(redoApply?.p_operations).toEqual([
+      expect.objectContaining({
+        taskId: taskAId, baseRevision: 9, workBlockId: blockA.id,
+        baseWorkBlockHash: await canonicalWorkBlockJsonHash(restoredBlocks[0]),
+        scheduledDate: '2026-07-17', scheduledTime: '11:00',
+      }),
+      expect.objectContaining({
+        taskId: taskBId, baseRevision: 6, workBlockId: blockB.id,
+        baseWorkBlockHash: await canonicalWorkBlockJsonHash(restoredBlocks[1]),
+        scheduledDate: '2026-07-17', scheduledTime: '11:30',
+      }),
+    ])
+    expect(taskStore._rawTasks.map(task => task.instances?.[0]?.scheduledTime)).toEqual(['11:00', '11:30'])
   })
 
   it('undoes and redoes task deletion three consecutive times with the same restored task id', async () => {

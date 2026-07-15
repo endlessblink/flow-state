@@ -2205,6 +2205,7 @@ _Original plan below._
 - [x] ~~**TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.~~ Completed 2026-07-15 in Electron 1.4.263; production rollback-only receipt verification and Hermes boundary validation passed.
 - [ ] **TASK-1962 — Canonical task lifecycle commands for Hermes**: replace direct create/delete success inference with signed-user preview/apply create, soft-delete, and restore commands that bind scope, stable task identity, canonical revision, exact replay, tombstone state, and verified canonical receipts.
 - [ ] **TASK-1963 — Canonical subtask batches and assistant decomposition**: replace process-local subtask receipts and whole-array overwrites with one signed-user preview/apply batch that binds the parent revision, exact ordered operations, stable step identities, partial-completion evidence, durable replay, and verified canonical read-back across Hermes and renderer writers.
+- [ ] **TASK-1964 — Canonical work-block lifecycle for Hermes and Calendar**: implement FEATURE-1944 through signed-user create/move/resize/remove commands that bind stable block identity, parent revision, exact interval effects, durable replay, and verified canonical read-back across Hermes and renderer writers.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4841,6 +4842,20 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 - `doneEnough` and `estimateMinutes` remain optional step metadata. They express a sufficient stopping condition and an estimate without automatically completing the step or requiring maximal parent implementation.
 - Singular Local API and Hermes tools remain compatibility adapters to the canonical batch and reject HTTP-only success, malformed receipts, cross-scope tasks, or fallback whole-array writes.
 - Renderer subtask writers use the same canonical authority or stop on a typed conflict; no production surface retains a silent whole-array authority.
+- Disposable database, Local API, Hermes, renderer concurrency, build, package, installed protected live, and release proof pass before this task is marked done.
+
+### TASK-1964: Canonical work-block lifecycle for Hermes and Calendar (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-15) | **Depends on**: FEATURE-1944, TASK-1944, TASK-1961, TASK-1962
+
+**Why**: The Local API creates a different random work-block ID for preview and apply, then appends a whole `instances` array without a parent revision check or durable receipt. Renderer Calendar writers also replace whole arrays, so retries and concurrent edits can duplicate or erase blocks while Hermes accepts unverified HTTP success.
+
+**Acceptance**:
+- One signed-user command previews and applies create, move, resize, and remove against the exact parent canonical revision and stable block identity.
+- Preview binds normalized local date/time, timezone, duration, overlap warnings, finish-by boundary, task/due-date effects, request hash, approval digest, and expiry; apply cannot substitute another interval.
+- Create uses deterministic client identity; response-loss replay cannot duplicate a block, and changed-payload reuse returns a typed idempotency conflict.
+- Move/resize/remove preserve unrelated sibling instances, reject missing/stale blocks, and return a shared canonical receipt with exact parent revision, sequence, timestamp, and instance read-back hash.
+- Signed renderer and Local API writers use the same command or stop on typed conflict; recurring-instance behavior remains explicit and never falls back to clearing an unknown array.
 - Disposable database, Local API, Hermes, renderer concurrency, build, package, installed protected live, and release proof pass before this task is marked done.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
@@ -7562,6 +7577,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1961**~~ | **P0** | ✅ **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
 | **TASK-1962** | **P0** | 🔄 **Canonical create/delete/restore commands with stable identity, revision conflicts, replay, tombstone state, and verified receipts** |
 | **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask batches and partial-completion-aware assistant decomposition across Hermes and renderer writers** |
+| **TASK-1964** | **P0** | 🔄 **Canonical create/move/resize/remove work-block lifecycle across Hermes, Calendar, and Local API** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

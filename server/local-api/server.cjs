@@ -26,7 +26,7 @@
 
 const http = require('http')
 const crypto = require('crypto')
-const { mkdirSync, readFileSync } = require('fs')
+const { mkdirSync, readFileSync, appendFileSync } = require('fs')
 const { join } = require('path')
 const { createClient } = require('@supabase/supabase-js')
 const { createAIMastraRuntime } = require('./ai-runtime.cjs')
@@ -36,6 +36,7 @@ const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
 const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
+const { executeAuditCoverageReport } = require('./audit-coverage-report.cjs')
 const {
   buildTaskSearchQuery,
   filteredSampleMetadata,
@@ -702,6 +703,44 @@ async function handleDoneForNow(id, req, res) {
 async function handleMergeTasks(survivorId, req, res) {
   const body = await readJsonBody(req)
   const result = await executeMergeTasks(ctx, survivorId, body, notifyTaskMutation)
+  send(res, result.status, result.body)
+}
+
+// Durable JSONL ledger of audit coverage receipts (TASK-1959). Receipts are
+// digest-bound, so a stored line can be re-validated at any later time.
+// Blocked over-claim attempts land in their own ledger so refused summaries
+// leave the same durable audit trail as accepted ones.
+const AUDIT_RECEIPT_FILE = join(DATA_DIR, 'audit-coverage-receipts.jsonl')
+const AUDIT_BLOCKED_FILE = join(DATA_DIR, 'audit-coverage-blocked.jsonl')
+
+async function handleAuditCoverage(req, res) {
+  const body = await readJsonBody(req)
+  const { supabase } = ctx
+  const result = await executeAuditCoverageReport(body, {
+    now: () => new Date().toISOString(),
+    persistReceipt: (receipt) => {
+      appendFileSync(AUDIT_RECEIPT_FILE, `${JSON.stringify(receipt)}\n`)
+    },
+    persistBlockedAttempt: (attempt) => {
+      appendFileSync(AUDIT_BLOCKED_FILE, `${JSON.stringify(attempt)}\n`)
+    },
+    // Server-owned record lookups: only records the sidecar re-reads itself
+    // (RLS/workspace scoped) can gain 'server-read' provenance.
+    fetchTasksByIds: async (ids) => {
+      let query = supabase.from('tasks').select('id,title').in('id', ids).eq('is_deleted', false)
+      query = scopeTaskQuery(ctx, query)
+      const { data, error } = await query
+      if (error) throw new Error('task lookup failed')
+      return data || []
+    },
+    fetchTasksByTitles: async (titles) => {
+      let query = supabase.from('tasks').select('id,title').in('title', titles).eq('is_deleted', false)
+      query = scopeTaskQuery(ctx, query)
+      const { data, error } = await query
+      if (error) throw new Error('task lookup failed')
+      return data || []
+    },
+  })
   send(res, result.status, result.body)
 }
 
@@ -1422,6 +1461,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && path === '/api/assistant/context') {
       return await handleGetAssistantContext(res)
+    }
+    if (req.method === 'POST' && path === '/api/audit/coverage') {
+      return await handleAuditCoverage(req, res)
     }
     if (req.method === 'POST' && path === '/api/tasks') {
       return await handleCreateTask(req, res)

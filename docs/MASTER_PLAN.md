@@ -2202,6 +2202,7 @@ _Original plan below._
 - [x] ~~**TASK-1958 — Canonical non-recurring task completion for Hermes**: dedicated `flowstate_complete_task_v1` preview/apply completion with approval digest, committed receipt, `completedAt` read-back, typed `recurring_task`/`already_completed` rejections, and disposable-DB runtime regression.~~ Completed 2026-07-15; production migration + Electron ship still pending.
 - [x] ~~**TASK-1959 — Redacted FlowState source-to-runtime truth ledger**: generate one stable, secret-free ledger across source, local build, public release, installed AppImage, and live sidecar truth; keep release builds non-live by default and expose mismatches instead of inferring deployment success.~~ Completed 2026-07-15.
 - [ ] **TASK-1960 — Make complete inventory the only exhaustive assistant task boundary**: label capped list/search responses as filtered samples, align inventory item revisions with the canonical receipt contract, and fail closed across large scans, repeated concurrent changes, and scope switches.
+- [ ] **TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4767,6 +4768,21 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Verification so far**: RED first failed on the absent sample metadata helper and the mismatched `revision` field. GREEN proof: the focused Local API cohort passes 59/59 for source and bundled sidecars, `npm run type-check` passes, `npm run lint` completes without findings, and `git diff --check` passes. Electron packaging, installed-runtime proof, release deployment, and push remain intentionally pending for the later release stage, so this task stays in progress.
 
 **Explicitly not covered**: migrating Hermes monitor reads or shipping a new Electron release; those remain later H2/release steps after this FlowState contract slice lands.
+
+### TASK-1961: Shared canonical assistant receipt validation (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-15) | **Depends on**: TASK-1944, TASK-1945, TASK-1957, TASK-1958
+
+**Why**: task patch and non-recurring completion duplicated a receipt shape check that accepted any well-shaped SHA-256 string without recomputing the read-back hash. Recurring completion and duplicate merge treated any Local API HTTP response with `ok=true` as committed and notified the renderer without canonical operation, revision, sequence, timestamp, or read-back proof.
+
+**Acceptance**:
+- One sidecar validator recomputes SHA-256 over the existing FlowState canonical JSON format and binds operation ID, request hash, positive canonical revision/change sequence, aware commit timestamp, exact read-back, and committed/replayed status.
+- Patch and non-recurring completion use the shared validator instead of duplicated permissive checks.
+- Recurring completion and duplicate merge reject legacy or malformed success envelopes before renderer notification; operation-specific read-back validation proves every affected task identity and state.
+- Regression coverage fails first for forged well-shaped hashes, HTTP-only success, mismatched operation/request identity, incomplete revisions/sequences/timestamps, and altered replay.
+- The database receipt migration, disposable response-loss proof, Electron package, installed signed-user proof, production migration, and public release all complete before this task is marked done.
+
+**Implementation progress**: test-first Local API foundation in progress. One shared validator now recomputes canonical read-back hashes and binds both envelope and receipt request identity before mutation notifications; patch, completion, recurring completion, merge, and Notion activation share the primitive. The four task mutations use the unified `task-v1` envelope, recurring completion and merge validate exact distinct affected-task identities plus each row's canonical read-back hash, and replay aliases are optional but fail on contradiction. Focused mutation coverage passes 158 tests, broader Local API reliability coverage passes 43 tests, and type-check/lint are green. The SQL receipt migration is intentionally implemented as a separate dependency-safe slice; legacy receipts will not be accepted as canonical during the transition.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7484,6 +7500,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1958**~~ | **P1** | ✅ **Canonical non-recurring task completion with approval digest, committed receipt, completedAt read-back, and recurring fail-closed rejection** |
 | ~~**TASK-1959**~~ | **P0** | ✅ **Redacted source/build/public/installed/sidecar truth ledger with embedded non-live package provenance and mismatch evidence** |
 | **TASK-1960** | **P0** | 🔄 **Make complete inventory the only exhaustive assistant task boundary with typed samples and fail-closed large scans** |
+| **TASK-1961** | **P0** | 🔄 **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

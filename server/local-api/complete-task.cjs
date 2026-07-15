@@ -1,5 +1,7 @@
 'use strict'
 
+const { validateCanonicalReceipt } = require('./canonical-receipt.cjs')
+
 const CONTRACT_VERSION = 'task-v1'
 const SOURCE = 'local-api'
 const SHA256_HEX_RE = /^[0-9a-f]{64}$/
@@ -19,7 +21,7 @@ const APPROVAL_REQUIRED = {
   ok: false,
   error: {
     code: 'approval_receipt_required',
-    message: 'operationId, baseRevision, previewDigest, and previewExpiresAt are required for apply',
+    message: 'operationId, baseRevision, previewDigest, previewExpiresAt, and requestHash are required for apply',
   },
 }
 
@@ -57,6 +59,7 @@ function validateRequest(taskId, body) {
     || !validPositiveInteger(body.baseRevision)
     || !nonEmptyString(body.previewDigest)
     || !validTimestamp(body.previewExpiresAt)
+    || !validDigest(body.requestHash)
   )) {
     return { status: 400, body: APPROVAL_REQUIRED }
   }
@@ -76,29 +79,6 @@ function validReadBack(readBack, taskId, canonicalRevision) {
   )
 }
 
-function validReceipt(receipt, taskId, operationId) {
-  return Boolean(
-    receipt
-    && typeof receipt === 'object'
-    && !Array.isArray(receipt)
-    && receipt.contractVersion === CONTRACT_VERSION
-    && receipt.operationId === operationId
-    && receipt.source === SOURCE
-    && receipt.entityType === 'task'
-    && receipt.action === 'complete'
-    && receipt.entityId === taskId
-    && validPositiveInteger(receipt.canonicalRevision)
-    && validTimestamp(receipt.canonicalUpdatedAt)
-    && validPositiveInteger(receipt.changeSequence)
-    && typeof receipt.replayed === 'boolean'
-    && validTimestamp(receipt.committedAt)
-    && validReadBack(receipt.readBack, taskId, receipt.canonicalRevision)
-    && receipt.readBack.status === 'done'
-    && validTimestamp(receipt.readBack.completedAt)
-    && validDigest(receipt.readBackHash)
-  )
-}
-
 function validPreview(data, taskId, operationId, baseRevision) {
   return Boolean(
     data
@@ -109,6 +89,7 @@ function validPreview(data, taskId, operationId, baseRevision) {
     && data.contractVersion === CONTRACT_VERSION
     && data.operationId === operationId
     && data.baseRevision === baseRevision
+    && validDigest(data.requestHash)
     && validDigest(data.previewDigest)
     && validTimestamp(data.previewExpiresAt)
     && data.normalizedPayload
@@ -135,6 +116,7 @@ async function executeCompleteTask(context, taskId, body, notifyTaskMutation) {
       p_preview: preview,
       p_preview_digest: preview ? null : body.previewDigest,
       p_preview_expires_at: preview ? null : body.previewExpiresAt,
+      p_request_hash: preview ? null : body.requestHash,
       p_source: SOURCE,
       p_task_id: taskId,
       p_workspace_id: context.activeWorkspaceId,
@@ -157,7 +139,26 @@ async function executeCompleteTask(context, taskId, body, notifyTaskMutation) {
     }
     return { status: 200, body: data }
   }
-  if (data.result !== 'committed' || !validReceipt(data.receipt, taskId, body.operationId)) {
+  const receipt = data.receipt
+  const validation = validateCanonicalReceipt(receipt, {
+    expectedOperationId: body.operationId,
+    expectedRequestHash: body.requestHash,
+    expectedFields: {
+      contractVersion: CONTRACT_VERSION,
+      source: SOURCE,
+      entityType: 'task',
+      action: 'complete',
+      entityId: taskId,
+    },
+    validateReadBack: readBack => (
+      validReadBack(readBack, taskId, receipt && receipt.canonicalRevision)
+      && validTimestamp(receipt && receipt.canonicalUpdatedAt)
+      && readBack.canonicalUpdatedAt === receipt.canonicalUpdatedAt
+      && readBack.status === 'done'
+      && validTimestamp(readBack.completedAt)
+    ),
+  })
+  if (data.result !== 'committed' || data.requestHash !== body.requestHash || !validation.ok) {
     return errorResult(502, 'invalid_canonical_receipt', 'Canonical task receipt could not be verified')
   }
 

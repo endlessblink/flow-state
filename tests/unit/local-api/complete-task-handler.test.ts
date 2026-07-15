@@ -5,6 +5,9 @@ import { describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const modulePath = resolve(process.cwd(), 'server/local-api/complete-task.cjs')
+const { canonicalHash } = require(resolve(process.cwd(), 'server/local-api/canonical-receipt.cjs')) as {
+  canonicalHash: (value: unknown) => string
+}
 const moduleExists = existsSync(modulePath)
 
 type RpcResult = { data: unknown; error: unknown }
@@ -42,6 +45,7 @@ const preview = {
   contractVersion: 'task-v1',
   operationId: 'operation-1',
   baseRevision: 7,
+  requestHash: 'c'.repeat(64),
   previewDigest: 'a'.repeat(64),
   previewExpiresAt: '2026-07-15T12:15:00.000Z',
   normalizedPayload: { status: 'done' },
@@ -50,9 +54,20 @@ const preview = {
 }
 
 function committedReceipt(overrides: Record<string, unknown> = {}) {
+  const readBack = {
+    id: 'task-1',
+    title: 'Before',
+    status: 'done',
+    completedAt: '2026-07-15T12:01:00.000Z',
+    canonicalRevision: 8,
+    canonicalUpdatedAt: '2026-07-15T12:01:00.000Z',
+  }
   return {
+    ok: true,
+    status: 'committed',
     contractVersion: 'task-v1',
     operationId: 'operation-1',
+    requestHash: 'c'.repeat(64),
     source: 'local-api',
     entityType: 'task',
     action: 'complete',
@@ -62,14 +77,8 @@ function committedReceipt(overrides: Record<string, unknown> = {}) {
     changeSequence: 42,
     replayed: false,
     committedAt: '2026-07-15T12:01:00.000Z',
-    readBack: {
-      id: 'task-1',
-      title: 'Before',
-      status: 'done',
-      completedAt: '2026-07-15T12:01:00.000Z',
-      canonicalRevision: 8,
-    },
-    readBackHash: 'b'.repeat(64),
+    readBack,
+    readBackHash: canonicalHash(readBack),
     ...overrides,
   }
 }
@@ -80,6 +89,7 @@ const applyBody = {
   baseRevision: 7,
   previewDigest: 'a'.repeat(64),
   previewExpiresAt: '2026-07-15T12:15:00.000Z',
+  requestHash: 'c'.repeat(64),
 }
 
 describe.runIf(moduleExists)('executeCompleteTask', () => {
@@ -123,6 +133,19 @@ describe.runIf(moduleExists)('executeCompleteTask', () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
+  it('requires the server-issued request hash for apply', async () => {
+    const { executeCompleteTask, notifyTaskMutation, rpc } = harness({ data: preview, error: null })
+    const { requestHash: _requestHash, ...withoutRequestHash } = applyBody
+
+    const result = await executeCompleteTask(
+      context(rpc), 'task-1', withoutRequestHash, notifyTaskMutation,
+    )
+
+    expect(result.status).toBe(400)
+    expect((result.body.error as { code: string }).code).toBe('approval_receipt_required')
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
   it('forwards exact preview parameters including personal null workspace scope', async () => {
     const { executeCompleteTask, notifyTaskMutation, rpc } = harness({ data: preview, error: null })
 
@@ -141,6 +164,7 @@ describe.runIf(moduleExists)('executeCompleteTask', () => {
       p_preview: true,
       p_preview_digest: null,
       p_preview_expires_at: null,
+      p_request_hash: null,
       p_source: 'local-api',
       p_task_id: 'task-1',
       p_workspace_id: null,
@@ -212,7 +236,7 @@ describe.runIf(moduleExists)('executeCompleteTask', () => {
 
   it('accepts a verified committed receipt and notifies the renderer once', async () => {
     const { executeCompleteTask, notifyTaskMutation, rpc } = harness({
-      data: { ok: true, result: 'committed', receipt: committedReceipt() },
+      data: { ok: true, result: 'committed', requestHash: 'c'.repeat(64), receipt: committedReceipt() },
       error: null,
     })
 
@@ -223,11 +247,29 @@ describe.runIf(moduleExists)('executeCompleteTask', () => {
     expect(notifyTaskMutation).toHaveBeenCalledWith('update', 'task-1')
   })
 
+  it('rejects a committed envelope with a mismatched request hash', async () => {
+    const { executeCompleteTask, notifyTaskMutation, rpc } = harness({
+      data: {
+        ok: true,
+        result: 'committed',
+        requestHash: 'd'.repeat(64),
+        receipt: committedReceipt(),
+      },
+      error: null,
+    })
+
+    const result = await executeCompleteTask(context(rpc), 'task-1', applyBody, notifyTaskMutation)
+
+    expect(result.status).toBe(502)
+    expect(notifyTaskMutation).not.toHaveBeenCalled()
+  })
+
   it('rejects a receipt whose read-back does not prove completion', async () => {
     const { executeCompleteTask, notifyTaskMutation, rpc } = harness({
       data: {
         ok: true,
         result: 'committed',
+        requestHash: 'c'.repeat(64),
         receipt: committedReceipt({
           readBack: { id: 'task-1', title: 'Before', status: 'todo', completedAt: null, canonicalRevision: 8 },
         }),
@@ -247,7 +289,8 @@ describe.runIf(moduleExists)('executeCompleteTask', () => {
       data: {
         ok: true,
         result: 'committed',
-        receipt: committedReceipt({ readBackHash: 'not-a-digest' }),
+        requestHash: 'c'.repeat(64),
+        receipt: committedReceipt({ readBackHash: 'f'.repeat(64) }),
       },
       error: null,
     })
@@ -264,6 +307,7 @@ describe.runIf(moduleExists)('executeCompleteTask', () => {
       data: {
         ok: true,
         result: 'committed',
+        requestHash: 'c'.repeat(64),
         receipt: committedReceipt({ action: 'patch' }),
       },
       error: null,

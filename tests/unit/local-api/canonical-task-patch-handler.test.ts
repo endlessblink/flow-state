@@ -5,6 +5,9 @@ import { describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const modulePath = resolve(process.cwd(), 'server/local-api/canonical-task-patch.cjs')
+const { canonicalHash } = require(resolve(process.cwd(), 'server/local-api/canonical-receipt.cjs')) as {
+  canonicalHash: (value: unknown) => string
+}
 const moduleExists = existsSync(modulePath)
 
 type RpcResult = { data: unknown; error: unknown }
@@ -41,6 +44,7 @@ const preview = {
   contractVersion: 'task-v1',
   operationId: 'operation-1',
   baseRevision: 7,
+  requestHash: 'c'.repeat(64),
   previewDigest: 'a'.repeat(64),
   previewExpiresAt: '2026-07-13T12:15:00.000Z',
   normalizedPayload: { title: 'Canonical title' },
@@ -48,9 +52,18 @@ const preview = {
 }
 
 function committedReceipt(overrides: Record<string, unknown> = {}) {
+  const readBack = {
+    id: 'task-1',
+    title: 'Canonical title',
+    canonicalRevision: 8,
+    canonicalUpdatedAt: '2026-07-13T12:01:00.000Z',
+  }
   return {
+    ok: true,
+    status: 'committed',
     contractVersion: 'task-v1',
     operationId: 'operation-1',
+    requestHash: 'c'.repeat(64),
     source: 'local-api',
     entityType: 'task',
     action: 'patch',
@@ -60,13 +73,8 @@ function committedReceipt(overrides: Record<string, unknown> = {}) {
     changeSequence: 42,
     replayed: false,
     committedAt: '2026-07-13T12:01:00.010Z',
-    readBack: {
-      id: 'task-1',
-      title: 'Canonical title',
-      canonicalRevision: 8,
-      canonicalUpdatedAt: '2026-07-13T12:01:00.000Z',
-    },
-    readBackHash: 'b'.repeat(64),
+    readBack,
+    readBackHash: canonicalHash(readBack),
     ...overrides,
   }
 }
@@ -95,6 +103,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
         p_preview: true,
         p_preview_digest: null,
         p_preview_expires_at: null,
+        p_request_hash: null,
         p_source: 'local-api',
         p_task_id: 'task-1',
         p_workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -110,10 +119,11 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
         baseRevision: 7,
         previewDigest: 'a'.repeat(64),
         previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
         patch: { title: 'Canonical title' },
       }
 
-      for (const required of ['operationId', 'baseRevision', 'previewDigest', 'previewExpiresAt']) {
+      for (const required of ['operationId', 'baseRevision', 'previewDigest', 'previewExpiresAt', 'requestHash']) {
         const body = { ...complete }
         delete body[required as keyof typeof body]
         await expect(executeCanonicalTaskPatch(
@@ -124,7 +134,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
             ok: false,
             error: {
               code: 'approval_receipt_required',
-              message: 'operationId, baseRevision, previewDigest, and previewExpiresAt are required for apply',
+              message: 'operationId, baseRevision, previewDigest, previewExpiresAt, and requestHash are required for apply',
             },
           },
         })
@@ -133,7 +143,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
     })
 
     it('forwards the exact approval binding to the canonical RPC', async () => {
-      const response = { ok: true, result: 'committed', receipt: committedReceipt() }
+      const response = { ok: true, result: 'committed', requestHash: 'c'.repeat(64), receipt: committedReceipt() }
       const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
 
       await executeCanonicalTaskPatch(context(rpc), 'task-1', {
@@ -142,6 +152,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
         baseRevision: 7,
         previewDigest: 'a'.repeat(64),
         previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
         patch: { title: 'Canonical title' },
       }, notifyTaskMutation)
 
@@ -153,6 +164,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
         p_preview: false,
         p_preview_digest: 'a'.repeat(64),
         p_preview_expires_at: '2026-07-13T12:15:00.000Z',
+        p_request_hash: 'c'.repeat(64),
         p_source: 'local-api',
         p_task_id: 'task-1',
         p_workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -160,7 +172,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
     })
 
     it('accepts only a complete matching committed receipt before notifying', async () => {
-      const response = { ok: true, result: 'committed', receipt: committedReceipt() }
+      const response = { ok: true, result: 'committed', requestHash: 'c'.repeat(64), receipt: committedReceipt() }
       const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
 
       await expect(executeCanonicalTaskPatch(context(rpc), 'task-1', {
@@ -169,11 +181,35 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
         baseRevision: 7,
         previewDigest: 'a'.repeat(64),
         previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
         patch: { title: 'Canonical title' },
       }, notifyTaskMutation)).resolves.toEqual({ status: 200, body: response })
 
       expect(notifyTaskMutation).toHaveBeenCalledOnce()
       expect(notifyTaskMutation).toHaveBeenCalledWith('update', 'task-1')
+    })
+
+    it('rejects a committed envelope with a mismatched request hash', async () => {
+      const response = {
+        ok: true,
+        result: 'committed',
+        requestHash: 'd'.repeat(64),
+        receipt: committedReceipt(),
+      }
+      const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
+
+      const result = await executeCanonicalTaskPatch(context(rpc), 'task-1', {
+        preview: false,
+        operationId: 'operation-1',
+        baseRevision: 7,
+        previewDigest: 'a'.repeat(64),
+        previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
+        patch: { title: 'Canonical title' },
+      }, notifyTaskMutation)
+
+      expect(result.status).toBe(502)
+      expect(notifyTaskMutation).not.toHaveBeenCalled()
     })
 
     it.each([
@@ -188,7 +224,12 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
       ['readBack', null],
       ['readBackHash', null],
     ])('rejects a committed receipt with invalid %s', async (field, value) => {
-      const response = { ok: true, result: 'committed', receipt: committedReceipt({ [field]: value }) }
+      const response = {
+        ok: true,
+        result: 'committed',
+        requestHash: 'c'.repeat(64),
+        receipt: committedReceipt({ [field]: value }),
+      }
       const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
 
       const result = await executeCanonicalTaskPatch(context(rpc), 'task-1', {
@@ -197,6 +238,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
         baseRevision: 7,
         previewDigest: 'a'.repeat(64),
         previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
         patch: { title: 'Canonical title' },
       }, notifyTaskMutation)
 
@@ -252,7 +294,8 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
       const response = {
         ok: true,
         result: 'committed',
-        receipt: committedReceipt({ readBackHash: 'not-a-hash' }),
+        requestHash: 'c'.repeat(64),
+        receipt: committedReceipt({ readBackHash: 'f'.repeat(64) }),
       }
       const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
 
@@ -262,6 +305,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
         baseRevision: 7,
         previewDigest: 'a'.repeat(64),
         previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
         patch: { title: 'Canonical title' },
       }, notifyTaskMutation)
 
@@ -300,7 +344,8 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
       const response = {
         ok: true,
         result: 'committed',
-        receipt: committedReceipt({ replayed: true }),
+        requestHash: 'c'.repeat(64),
+        receipt: committedReceipt({ status: 'replayed', replayed: true }),
       }
       const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
 
@@ -310,6 +355,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
         baseRevision: 7,
         previewDigest: 'a'.repeat(64),
         previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
         patch: { title: 'Canonical title' },
       }, notifyTaskMutation)
 
@@ -403,7 +449,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
     })
 
     it('returns the durable receipt when renderer reconciliation notification fails', async () => {
-      const response = { ok: true, result: 'committed', receipt: committedReceipt() }
+      const response = { ok: true, result: 'committed', requestHash: 'c'.repeat(64), receipt: committedReceipt() }
       const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
       notifyTaskMutation.mockImplementationOnce(() => { throw new Error('parent port closed') })
 
@@ -413,6 +459,7 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
         baseRevision: 7,
         previewDigest: 'a'.repeat(64),
         previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
         patch: { title: 'Canonical title' },
       }, notifyTaskMutation)
 

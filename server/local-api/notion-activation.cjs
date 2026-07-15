@@ -1,6 +1,6 @@
 'use strict'
 
-const { createHash } = require('node:crypto')
+const { canonicalHash } = require('./canonical-receipt.cjs')
 
 const CONTRACT_VERSION = 'notion-activation-v1'
 const SHA256_HEX_RE = /^[0-9a-f]{64}$/
@@ -70,23 +70,6 @@ function onlyFields(value, allowed) {
   return (
     object(value) && Object.keys(value).every((field) => allowed.has(field))
   )
-}
-
-function canonicalJson(value) {
-  if (Array.isArray(value)) {
-    return `[${value.map(canonicalJson).join(',')}]`
-  }
-  if (object(value)) {
-    return `{${Object.keys(value)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
-      .join(',')}}`
-  }
-  return JSON.stringify(value)
-}
-
-function canonicalHash(value) {
-  return createHash('sha256').update(canonicalJson(value)).digest('hex')
 }
 
 function validWorkBlock(value) {

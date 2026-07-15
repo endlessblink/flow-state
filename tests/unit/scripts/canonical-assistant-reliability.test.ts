@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 const harnessPath = 'scripts/db/test-reliable-assistant-contract.sh'
 const concurrencyPath = 'scripts/db/test-canonical-notion-concurrency.sh'
 const recurrenceConcurrencyPath = 'scripts/db/test-merge-tasks-recurrence-concurrency.sh'
+const h3RollbackPath = 'scripts/db/rollback-canonical-domain-receipts.sql'
 
 describe('TASK-1949 canonical assistant disposable reliability harness', () => {
   it('creates and always cleans a unique disposable database', () => {
@@ -65,6 +66,33 @@ describe('TASK-1949 canonical assistant disposable reliability harness', () => {
     expect(source).toContain('flowstate_activate_notion_task_v1(text,jsonb,jsonb,jsonb,boolean,text,timestamptz)')
     expect(source).toContain('indisvalid AND index.indisready AND index.indisunique')
     expect(source).toContain('TASK-1949 disposable watchdog authority probe passed')
+  })
+
+  it('proves H3 can roll back to the exact legacy RPC surface and reapply cleanly', () => {
+    const harness = readFileSync(harnessPath, 'utf8')
+
+    expect(existsSync(h3RollbackPath)).toBe(true)
+    const rollback = readFileSync(h3RollbackPath, 'utf8')
+    expect(rollback).toContain('BEGIN;')
+    expect(rollback).toContain('DROP FUNCTION IF EXISTS public.flowstate_patch_task_v1(')
+    expect(rollback).toContain('RENAME TO flowstate_patch_task_v1')
+    expect(rollback).toContain('RENAME TO flowstate_complete_task_v1')
+    expect(rollback).toContain('RENAME TO flowstate_done_for_now')
+    expect(rollback).toContain('RENAME TO flowstate_merge_tasks')
+    expect(rollback).toContain('RENAME TO flowstate_merge_tasks_with_recurrence')
+    expect(rollback).toContain('GRANT EXECUTE ON FUNCTION public.flowstate_patch_task_v1(')
+    expect(rollback).toContain('FROM PUBLIC, anon;')
+    expect(rollback).toContain('DROP FUNCTION IF EXISTS public.flowstate_h3_finalize_receipt(')
+    expect(rollback).toContain("NOTIFY pgrst, 'reload schema';")
+    expect(rollback).toContain('COMMIT;')
+    expect(rollback).not.toContain('DROP COLUMN')
+
+    expect(harness).toContain('rollback-canonical-domain-receipts.sql')
+    expect(harness).toContain('H3 rollback legacy surface probe passed')
+    expect(harness).toContain('H3 rollback failure atomicity probe passed')
+    expect(harness).toContain('H3 reapply canonical surface probe passed')
+    expect(harness.indexOf('rollback-canonical-domain-receipts.sql'))
+      .toBeLessThan(harness.lastIndexOf('< "$h3_migration" >/dev/null'))
   })
 
   it('probes Notion replay, conflicts, exact-block deduplication, and injected rollback', () => {

@@ -69,7 +69,7 @@ describe('Local API complete task inventory', () => {
 
   it('reads every page, deduplicates exact UUIDs, and emits a complete receipt', async () => {
     const { readCompleteTaskInventory } = loadInventoryModule()
-    const rows = Array.from({ length: 61 }, (_, index) => row(index))
+    const rows = Array.from({ length: 151 }, (_, index) => row(index))
     const fetchPage = async ({ cursor }: { cursor: { id: string } | null }) => {
       const start = cursor ? Number(cursor.id.slice(-12)) + 1 : 0
       const data = rows.slice(start, start + 26)
@@ -85,9 +85,14 @@ describe('Local API complete task inventory', () => {
 
     expect(result.complete).toBe(true)
     expect(result.fresh).toBe(true)
-    expect(result.total).toBe(61)
-    expect(result.items).toHaveLength(61)
-    expect(new Set(result.items.map((item: { id: string }) => item.id)).size).toBe(61)
+    expect(result.total).toBe(151)
+    expect(result.items).toHaveLength(151)
+    expect(new Set(result.items.map((item: { id: string }) => item.id)).size).toBe(151)
+    expect(result.items.every((item: Record<string, unknown>) => (
+      Number.isInteger(item.canonicalRevision)
+      && Number(item.canonicalRevision) > 0
+      && !Object.hasOwn(item, 'revision')
+    ))).toBe(true)
     expect(result.page).toEqual({ limit: 25, nextCursor: null, hasMore: false })
     expect(result.source).toBe('flowstate')
     expect(result.scope).toBe('all open tasks visible to the authenticated user')
@@ -197,6 +202,58 @@ describe('Local API complete task inventory', () => {
     expect(result.total).toBe(29)
     expect(result.changeSequence).toBe(11)
     expect(result.items.some((item: { id: string }) => item.id === rows[26].id)).toBe(false)
+  })
+
+  it('fails closed without a total when every consistency attempt observes a change', async () => {
+    const { readCompleteTaskInventory } = loadInventoryModule()
+    const rows = Array.from({ length: 30 }, (_, index) => row(index))
+    const sequences = [10, 11, 12, 13, 14, 15]
+    let scans = 0
+    const fetchPage = async ({ cursor }: { cursor: { id: string } | null }) => {
+      if (!cursor) scans += 1
+      const start = cursor ? Number(cursor.id.slice(-12)) + 1 : 0
+      return { data: rows.slice(start, start + 26), error: null }
+    }
+
+    const result = await readCompleteTaskInventory(
+      { userId: 'user-1', activeWorkspaceId: null },
+      { limit: 25, appVersion: '1.4.260', capturedAt: '2026-07-14T12:00:00.000Z' },
+      stableDeps(fetchPage, {
+        readSequence: async () => ({ value: sequences.shift(), error: null }),
+      }),
+    )
+
+    expect(scans).toBe(3)
+    expect(result.complete).toBe(false)
+    expect(result).not.toHaveProperty('total')
+    expect(result.items).toEqual([])
+    expect(result.page.hasMore).toBe(true)
+    expect(result.error.code).toBe('inventory_changed_during_read')
+  })
+
+  it('rejects a personal cursor after switching to a workspace scope', async () => {
+    const { readTaskInventoryPage } = loadInventoryModule()
+    const rows = Array.from({ length: 26 }, (_, index) => row(index))
+    const input = {
+      limit: 25,
+      appVersion: '1.4.260',
+      capturedAt: '2026-07-14T12:00:00.000Z',
+    }
+    const personal = await readTaskInventoryPage(
+      { userId: 'user-1', activeWorkspaceId: null },
+      input,
+      { fetchPage: async () => ({ data: rows, error: null }) },
+    )
+    const workspace = await readTaskInventoryPage(
+      { userId: 'user-1', activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' },
+      { ...input, cursor: personal.page.nextCursor },
+      { fetchPage: async () => { throw new Error('cross-scope cursor must fail before querying') } },
+    )
+
+    expect(personal.page.nextCursor).toEqual(expect.any(String))
+    expect(workspace.complete).toBe(false)
+    expect(workspace.error.code).toBe('invalid_inventory_cursor')
+    expect(workspace.scopeFingerprint).not.toBe(personal.scopeFingerprint)
   })
 
   it('rejects forged cursor IDs and invalid row IDs without claiming completeness', async () => {

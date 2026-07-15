@@ -2201,6 +2201,7 @@ _Original plan below._
 - [ ] **TASK-1957 — Atomic recurrence-aware duplicate merge for Hermes**: let an approved merge preview resolve an explicit canonical recurrence only for safe root tasks with no occurrence history, bind that resolution into the receipt, and make unresolved recurrence conflicts stop further assistant mutations.
 - [x] ~~**TASK-1958 — Canonical non-recurring task completion for Hermes**: dedicated `flowstate_complete_task_v1` preview/apply completion with approval digest, committed receipt, `completedAt` read-back, typed `recurring_task`/`already_completed` rejections, and disposable-DB runtime regression.~~ Completed 2026-07-15; production migration + Electron ship still pending.
 - [x] ~~**TASK-1959 — Redacted FlowState source-to-runtime truth ledger**: generate one stable, secret-free ledger across source, local build, public release, installed AppImage, and live sidecar truth; keep release builds non-live by default and expose mismatches instead of inferring deployment success.~~ Completed 2026-07-15.
+- [ ] **TASK-1960 — Make complete inventory the only exhaustive assistant task boundary**: label capped list/search responses as filtered samples, align inventory item revisions with the canonical receipt contract, and fail closed across large scans, repeated concurrent changes, and scope switches.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4748,6 +4749,24 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Package/release proof**: the built `app.asar` contains `/dist-electron/flowstate-truth-ledger.json` with the full source commit, build timestamp, dirty bit, five-contract set, local sidecar digest, and all live surfaces marked `not_checked`. `release/flowstate-truth-ledger.json` binds the same embedded provenance digest to manifest `1.4.262` and both locally verified Linux artifacts. Because this verification build intentionally preceded the commit, its verdict correctly reports only `source.dirty=true` rather than claiming a clean release.
 
 **Live read-only proof**: explicit full mode observed public updater `1.4.262` with reachable artifacts and installed AppImage `1.4.262` with a digest. The currently installed sidecar predates the dedicated provenance route, so that surface honestly reports `http_404` until a later release is shipped and relaunched; it is not inferred current from version equality. No task data, credentials, raw process arguments, timer session, or production state was read or written.
+
+### TASK-1960: Make complete inventory the only exhaustive assistant task boundary (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-15) | **Depends on**: TASK-1944, TASK-1956
+
+**Why**: The complete inventory endpoint already traverses stable pages, but capped list and search responses do not identify themselves as filtered samples. Inventory rows also expose `revision` while the canonical Hermes receipt validator requires `canonicalRevision`, causing a complete FlowState receipt to fail at the integration boundary.
+
+**Acceptance**:
+- Successful capped list and search responses explicitly return `complete=false`, `scope=filtered_sample`, their effective `limit`, and conservative `hasMore=true`; they never expose an exact total or fresh complete-inventory receipt.
+- Complete inventory rows expose positive `canonicalRevision` values under the same field name used by exact reads and Hermes validation.
+- Regression coverage proves more than 100 rows traverse all pages, repeated mid-read sequence changes fail closed without a total, and a cursor cannot cross personal/workspace scope.
+- Focused tests, typecheck, lint, Electron packaging, installed-runtime proof, release verification, commit, and push complete before this task is marked done.
+
+**Implementation progress**: capped list and search responses now share one conservative filtered-sample marker, and complete inventory rows use the canonical `canonicalRevision` field expected at the Hermes boundary. The source and freshly bundled sidecar regressions traverse 151 rows and assert the response shape; unit regressions cover repeated sequence churn and personal-to-workspace cursor rejection.
+
+**Verification so far**: RED first failed on the absent sample metadata helper and the mismatched `revision` field. GREEN proof: the focused Local API cohort passes 59/59 for source and bundled sidecars, `npm run type-check` passes, `npm run lint` completes without findings, and `git diff --check` passes. Electron packaging, installed-runtime proof, release deployment, and push remain intentionally pending for the later release stage, so this task stays in progress.
+
+**Explicitly not covered**: migrating Hermes monitor reads or shipping a new Electron release; those remain later H2/release steps after this FlowState contract slice lands.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7464,6 +7483,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1957** | **P0** | 🔄 **Atomic recurrence-aware duplicate merge with preview-bound cadence resolution and stop-on-conflict assistant behavior** |
 | ~~**TASK-1958**~~ | **P1** | ✅ **Canonical non-recurring task completion with approval digest, committed receipt, completedAt read-back, and recurring fail-closed rejection** |
 | ~~**TASK-1959**~~ | **P0** | ✅ **Redacted source/build/public/installed/sidecar truth ledger with embedded non-live package provenance and mismatch evidence** |
+| **TASK-1960** | **P0** | 🔄 **Make complete inventory the only exhaustive assistant task boundary with typed samples and fail-closed large scans** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

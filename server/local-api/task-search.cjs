@@ -6,6 +6,15 @@ const MAX_QUERY_LENGTH = 200
 const MAX_LIMIT = 25
 const DEFAULT_LIMIT = 25
 
+function filteredSampleMetadata(limit) {
+  return {
+    complete: false,
+    scope: 'filtered_sample',
+    limit,
+    hasMore: true,
+  }
+}
+
 function parseTaskSearchParams(searchParams) {
   const query = String(searchParams.get('q') || '').trim()
   if (!query) return { ok: false, error: 'q is required' }
@@ -43,4 +52,4 @@ function buildTaskSearchQuery(context, input) {
     .limit(input.limit)
 }
 
-module.exports = { buildTaskSearchQuery, parseTaskSearchParams }
+module.exports = { buildTaskSearchQuery, filteredSampleMetadata, parseTaskSearchParams }

@@ -11,6 +11,12 @@ type SearchModule = {
   parseTaskSearchParams: (searchParams: URLSearchParams) =>
     | { ok: true; query: string; limit: number }
     | { ok: false; error: string }
+  filteredSampleMetadata: (limit: number) => {
+    complete: false
+    scope: 'filtered_sample'
+    limit: number
+    hasMore: true
+  }
 }
 
 function loadSearchModule(): SearchModule {
@@ -35,6 +41,17 @@ class FakeSupabase {
 }
 
 describe('Local API task search query', () => {
+  it('marks bounded task reads as non-exhaustive filtered samples', () => {
+    const { filteredSampleMetadata } = loadSearchModule()
+
+    expect(filteredSampleMetadata(10)).toEqual({
+      complete: false,
+      scope: 'filtered_sample',
+      limit: 10,
+      hasMore: true,
+    })
+  })
+
   it('normalizes a bounded non-empty query and limit', () => {
     const { parseTaskSearchParams } = loadSearchModule()
 

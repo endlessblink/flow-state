@@ -89,8 +89,12 @@ forwarded a session to the sidecar.
 ### `GET /api/tasks?status=todo&due=today&limit=25`
 `status` optional (`todo` / `open` | `done`; omitted = all open). `due` optional
 (`today` | `overdue` | `open` for no due date | `YYYY-MM-DD`). Capped at 25 items.
+This route is a filtered sample, not an exhaustive inventory. `hasMore=true` is
+conservative because the capped route does not prove that the returned page is
+the whole matching set.
 ```json
-{ "tasks": [
+{ "complete": false, "scope": "filtered_sample", "limit": 25, "hasMore": true,
+  "tasks": [
   { "id": "uuid", "title": "Draft Q3 plan", "status": "todo",
     "priority": "high", "dueDate": "2026-06-01", "projectId": "uuid-or-null" }
 ] }
@@ -120,7 +124,10 @@ error. Soft-deleted, done, and completion-history rows are excluded.
   "complete": true,
   "changeSequence": 12345,
   "total": 61,
-  "items": [],
+  "items": [
+    { "id": "uuid", "title": "Draft Q3 plan", "status": "todo",
+      "canonicalRevision": 7 }
+  ],
   "page": { "limit": 100, "nextCursor": null, "hasMore": false }
 }
 ```
@@ -172,11 +179,16 @@ optional and capped at 25. Personal scope is pinned to the signed-in user's
 `workspace_id IS NULL` rows. Shared workspace scope relies on the signed-in
 client's membership RLS, so collaborator-created rows remain visible.
 Completion-history records and soft-deleted rows are excluded.
+This route is also a filtered sample and cannot provide an exact total.
 
 ```json
 {
   "ok": true,
   "query": "laundry",
+  "complete": false,
+  "scope": "filtered_sample",
+  "limit": 25,
+  "hasMore": true,
   "tasks": [
     {
       "id": "exact-task-id",

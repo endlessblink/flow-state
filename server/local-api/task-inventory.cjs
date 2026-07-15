@@ -118,7 +118,7 @@ function mapTask(row) {
     priority: row.priority ?? null,
     projectId: row.project_id ?? null,
     updatedAt: row.updated_at,
-    revision: Number(row.canonical_revision) || 1,
+    canonicalRevision: Number(row.canonical_revision) || 1,
   }
 }
 

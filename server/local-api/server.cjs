@@ -36,7 +36,11 @@ const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
 const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
-const { buildTaskSearchQuery, parseTaskSearchParams } = require('./task-search.cjs')
+const {
+  buildTaskSearchQuery,
+  filteredSampleMetadata,
+  parseTaskSearchParams,
+} = require('./task-search.cjs')
 const {
   parseTaskInventoryParams,
   readCompleteTaskInventory,
@@ -479,7 +483,12 @@ async function handleSearchTasks(url, res) {
     updatedAt: row.updated_at,
   }))
 
-  send(res, 200, { ok: true, query: input.query, tasks })
+  send(res, 200, {
+    ok: true,
+    query: input.query,
+    tasks,
+    ...filteredSampleMetadata(input.limit),
+  })
 }
 
 async function handleGetTasks(url, res) {
@@ -532,7 +541,7 @@ async function handleGetTasks(url, res) {
     workspaceId: r.workspace_id ?? null,
     canonicalRevision: r.canonical_revision,
   }))
-  send(res, 200, { tasks })
+  send(res, 200, { tasks, ...filteredSampleMetadata(limit) })
 }
 
 async function handleGetTaskInventory(url, res) {

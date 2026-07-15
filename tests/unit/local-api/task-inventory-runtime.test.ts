@@ -38,7 +38,7 @@ function syntheticJwt() {
 }
 
 async function startFakePostgrest() {
-  const rows = Array.from({ length: 61 }, (_, index) => task(index))
+  const rows = Array.from({ length: 151 }, (_, index) => task(index))
   const requests: URL[] = []
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url || '/', 'http://127.0.0.1')
@@ -163,9 +163,14 @@ describe('complete task inventory runtime contract', () => {
         expect(body.complete).toBe(true)
         expect(body.fresh).toBe(true)
         expect(body.changeSequence).toBe(7)
-        expect(body.total).toBe(61)
-        expect(body.items).toHaveLength(61)
-        expect(new Set(body.items.map((item: { id: string }) => item.id)).size).toBe(61)
+        expect(body.total).toBe(151)
+        expect(body.items).toHaveLength(151)
+        expect(new Set(body.items.map((item: { id: string }) => item.id)).size).toBe(151)
+        expect(body.items.every((item: Record<string, unknown>) => (
+          Number.isInteger(item.canonicalRevision)
+          && Number(item.canonicalRevision) > 0
+          && !Object.hasOwn(item, 'revision')
+        ))).toBe(true)
         expect(body.page).toEqual({ limit: 25, nextCursor: null, hasMore: false })
         expect(body.appVersion).toBe('1.4.260')
         const taskPages = fake.requests.filter((request) => (
@@ -235,8 +240,34 @@ describe('complete task inventory runtime contract', () => {
         expect(response?.status).toBe(200)
         expect(body.complete).toBe(true)
         expect(body.changeSequence).toBe(7)
-        expect(body.total).toBe(61)
-        expect(body.items).toHaveLength(61)
+        expect(body.total).toBe(151)
+        expect(body.items).toHaveLength(151)
+      } finally {
+        await sidecar.stop()
+        await fake.close()
+      }
+    })
+
+    it(`${label} labels list and search responses as filtered samples`, async () => {
+      const fake = await startFakePostgrest()
+      const sidecar = await startSidecar(artifact, fake.url)
+      try {
+        for (const path of ['/api/tasks?limit=5', '/api/tasks/search?q=Task&limit=5']) {
+          const response = await fetch(`http://127.0.0.1:${sidecar.port}${path}`, {
+            headers: { Authorization: `Bearer ${TOKEN}` },
+          })
+          const body = await response.json() as Record<string, unknown>
+
+          expect(response.status).toBe(200)
+          expect(body).toMatchObject({
+            complete: false,
+            scope: 'filtered_sample',
+            limit: 5,
+            hasMore: true,
+          })
+          expect(body).not.toHaveProperty('fresh')
+          expect(body).not.toHaveProperty('total')
+        }
       } finally {
         await sidecar.stop()
         await fake.close()

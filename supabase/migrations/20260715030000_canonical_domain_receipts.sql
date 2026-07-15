@@ -143,6 +143,7 @@ DECLARE
   v_operation public.canonical_operations%ROWTYPE;
   v_primary jsonb := p_affected->0;
   v_read_back jsonb;
+  v_domain_read_back jsonb;
   v_read_back_hash text;
   v_receipt jsonb;
   v_committed_at timestamptz;
@@ -166,14 +167,28 @@ BEGIN
     RAISE EXCEPTION 'canonical receipt has duplicate affected task identities';
   END IF;
 
+  v_domain_read_back := COALESCE(p_domain_result->'readBack', p_domain_result);
   v_read_back := CASE
     WHEN v_operation.action = 'done_for_now' THEN
       (v_primary->'readBack') || pg_catalog.jsonb_build_object(
-        'completedOccurrence', p_domain_result->'completedOccurrence',
-        'nextOccurrence', p_domain_result->'nextOccurrence'
+        'completedOccurrence',
+          COALESCE(v_domain_read_back->'completedOccurrence', '{}'::jsonb)
+          || COALESCE(p_affected #> '{1,readBack}', '{}'::jsonb)
+          || pg_catalog.jsonb_build_object(
+            'id', p_affected #>> '{1,entityId}',
+            'canonicalRevision', (p_affected #>> '{1,canonicalRevision}')::bigint,
+            'changeSequence', (p_affected #>> '{1,changeSequence}')::bigint
+          ),
+        'nextOccurrence',
+          COALESCE(v_domain_read_back->'nextOccurrence', '{}'::jsonb)
+          || pg_catalog.jsonb_build_object(
+            'taskId', v_primary->>'entityId'
+          )
       )
     WHEN v_operation.action = 'merge' THEN
-      (v_primary->'readBack') || pg_catalog.jsonb_build_object(
+      (v_primary->'readBack')
+      || COALESCE(v_domain_read_back, '{}'::jsonb)
+      || pg_catalog.jsonb_build_object(
         'survivorTaskId', p_operation_context->>'survivorTaskId',
         'duplicateTaskId', p_operation_context->>'duplicateTaskId',
         'duplicateArchived', true
@@ -390,7 +405,9 @@ BEGIN
       )
     );
   END IF;
-  v_affected := public.flowstate_h3_task_affected(ARRAY[p_task_id]);
+  v_affected := public.flowstate_h3_task_affected(
+    ARRAY[p_task_id], ARRAY['update']
+  );
   v_receipt := public.flowstate_h3_finalize_receipt(
     v_actor, p_operation_id, v_result->'receipt',
     pg_catalog.jsonb_build_object(
@@ -486,7 +503,9 @@ BEGIN
       )
     );
   END IF;
-  v_affected := public.flowstate_h3_task_affected(ARRAY[p_task_id]);
+  v_affected := public.flowstate_h3_task_affected(
+    ARRAY[p_task_id], ARRAY['update']
+  );
   v_receipt := public.flowstate_h3_finalize_receipt(
     v_actor, p_operation_id, v_result->'receipt',
     pg_catalog.jsonb_build_object(
@@ -623,12 +642,24 @@ BEGIN
   IF v_result->>'ok' IS DISTINCT FROM 'true' THEN RETURN v_result; END IF;
 
   PERFORM public.flowstate_h3_link_task_changes(
-    ARRAY[p_task_id, v_result #>> '{completedOccurrence,id}'],
+    ARRAY[
+      p_task_id,
+      COALESCE(
+        v_result #>> '{readBack,completedOccurrence,id}',
+        v_result #>> '{completedOccurrence,id}'
+      )
+    ],
     p_request_id,
     v_change_floor
   );
   v_affected := public.flowstate_h3_task_affected(
-    ARRAY[p_task_id, v_result #>> '{completedOccurrence,id}'],
+    ARRAY[
+      p_task_id,
+      COALESCE(
+        v_result #>> '{readBack,completedOccurrence,id}',
+        v_result #>> '{completedOccurrence,id}'
+      )
+    ],
     ARRAY['update', 'create']
   );
   v_context := pg_catalog.jsonb_build_object(

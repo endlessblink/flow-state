@@ -52,6 +52,16 @@ INSERT INTO public.tasks (
   ('c3c30000-0000-4000-8000-000000000111', 'c3c30000-0000-4000-8000-000000000001',
    'Unresolved recurrence B', 'planned', NULL,
    '{"pattern":"weekly","interval":1,"weekdays":[1],"endType":"never"}',
+   NULL, 0, false, false, '[]', '[]', true),
+  ('c3c30000-0000-4000-8000-000000000112', 'c3c30000-0000-4000-8000-000000000001',
+   'Latest nested done fixture', 'planned', '2026-07-15',
+   '{"pattern":"daily","interval":1,"endType":"never"}',
+   NULL, 0, false, false, '[]', '[]', true),
+  ('c3c30000-0000-4000-8000-000000000113', 'c3c30000-0000-4000-8000-000000000001',
+   'Latest nested merge survivor', 'planned', NULL, NULL,
+   NULL, 0, false, false, '[]', '[]', true),
+  ('c3c30000-0000-4000-8000-000000000114', 'c3c30000-0000-4000-8000-000000000001',
+   'Latest nested merge duplicate', 'planned', NULL, NULL,
    NULL, 0, false, false, '[]', '[]', true);
 
 SELECT set_config('request.jwt.claim.sub', 'c3c30000-0000-4000-8000-000000000001', true);
@@ -155,6 +165,143 @@ BEGIN
 END;
 $$;
 
+-- Exercise the latest filename-ordered 20260713190000 nested readBack shape,
+-- not only the original flowstate_done_for_now compatibility body.
+DO $$
+DECLARE
+  v_preview jsonb;
+  v_domain_result jsonb;
+  v_affected jsonb;
+  v_receipt jsonb;
+  v_completion_id text;
+  v_change_floor bigint;
+BEGIN
+  v_preview := public.done_for_now_task(
+    'c3c30000-0000-4000-8000-000000000112', true, NULL, NULL, '2026-07-17'
+  );
+  IF v_preview->>'ok' IS DISTINCT FROM 'true'
+     OR nullif(v_preview->>'previewVersion', '') IS NULL THEN
+    RAISE EXCEPTION 'FAIL: latest done-for-now preview failed: %', v_preview;
+  END IF;
+  SELECT COALESCE(max(change_sequence), 0) INTO v_change_floor
+  FROM public.canonical_change_log;
+  v_domain_result := public.done_for_now_task(
+    'c3c30000-0000-4000-8000-000000000112', false,
+    'h3-latest-done', v_preview->>'previewVersion', '2026-07-17'
+  );
+  v_completion_id := v_domain_result #>> '{readBack,completedOccurrence,id}';
+  IF v_domain_result->>'ok' IS DISTINCT FROM 'true'
+     OR nullif(v_completion_id, '') IS NULL THEN
+    RAISE EXCEPTION 'FAIL: latest nested done-for-now apply failed: %', v_domain_result;
+  END IF;
+  PERFORM public.flowstate_h3_link_task_changes(
+    ARRAY['c3c30000-0000-4000-8000-000000000112', v_completion_id],
+    'h3-latest-done', v_change_floor
+  );
+  v_affected := public.flowstate_h3_task_affected(
+    ARRAY['c3c30000-0000-4000-8000-000000000112', v_completion_id],
+    ARRAY['update', 'create']
+  );
+  INSERT INTO public.canonical_operations (
+    user_id, operation_id, contract_version, source, scope_kind, scope_id,
+    entity_type, action, entity_id, request_hash, state
+  ) VALUES (
+    'c3c30000-0000-4000-8000-000000000001', 'h3-latest-done',
+    'task-v1', 'local-api', 'personal',
+    'c3c30000-0000-4000-8000-000000000001', 'task', 'done_for_now',
+    'c3c30000-0000-4000-8000-000000000112', repeat('c', 64), 'applying'
+  );
+  v_receipt := public.flowstate_h3_finalize_receipt(
+    'c3c30000-0000-4000-8000-000000000001', 'h3-latest-done',
+    v_domain_result,
+    jsonb_build_object('taskId', 'c3c30000-0000-4000-8000-000000000112'),
+    v_affected
+  );
+  IF v_receipt #>> '{readBack,id}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000112'
+     OR v_receipt #>> '{readBack,completedOccurrence,id}' IS DISTINCT FROM v_completion_id
+     OR nullif(v_receipt #>> '{readBack,completedOccurrence,completedAt}', '') IS NULL
+     OR COALESCE((v_receipt #>> '{readBack,completedOccurrence,canonicalRevision}')::bigint, 0) < 1
+     OR COALESCE((v_receipt #>> '{readBack,completedOccurrence,changeSequence}')::bigint, 0) < 1
+     OR v_receipt #>> '{readBack,nextOccurrence,taskId}'
+       IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000112' THEN
+    RAISE EXCEPTION 'FAIL: latest nested done-for-now result produced an invalid receipt: %', v_receipt;
+  END IF;
+  DELETE FROM public.canonical_operations WHERE operation_id = 'h3-latest-done';
+END;
+$$;
+
+-- Exercise the latest filename-ordered 20260713200000 nested merge readBack.
+DO $$
+DECLARE
+  v_preview jsonb;
+  v_domain_result jsonb;
+  v_affected jsonb;
+  v_receipt jsonb;
+  v_change_floor bigint;
+BEGIN
+  v_preview := public.merge_tasks(
+    'c3c30000-0000-4000-8000-000000000113',
+    'c3c30000-0000-4000-8000-000000000114', true
+  );
+  IF v_preview->>'ok' IS DISTINCT FROM 'true'
+     OR nullif(v_preview->>'previewVersion', '') IS NULL THEN
+    RAISE EXCEPTION 'FAIL: latest merge preview failed: %', v_preview;
+  END IF;
+  SELECT COALESCE(max(change_sequence), 0) INTO v_change_floor
+  FROM public.canonical_change_log;
+  v_domain_result := public.merge_tasks(
+    'c3c30000-0000-4000-8000-000000000113',
+    'c3c30000-0000-4000-8000-000000000114', false,
+    'h3-latest-merge', v_preview->>'previewVersion'
+  );
+  IF v_domain_result->>'ok' IS DISTINCT FROM 'true'
+     OR v_domain_result #>> '{readBack,survivorTaskId}'
+       IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000113'
+     OR (v_domain_result #>> '{readBack,duplicateArchived}')::boolean IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'FAIL: latest nested merge apply failed: %', v_domain_result;
+  END IF;
+  PERFORM public.flowstate_h3_link_task_changes(
+    ARRAY[
+      'c3c30000-0000-4000-8000-000000000113',
+      'c3c30000-0000-4000-8000-000000000114'
+    ],
+    'h3-latest-merge', v_change_floor
+  );
+  v_affected := public.flowstate_h3_task_affected(
+    ARRAY[
+      'c3c30000-0000-4000-8000-000000000113',
+      'c3c30000-0000-4000-8000-000000000114'
+    ],
+    ARRAY['update', 'archive']
+  );
+  INSERT INTO public.canonical_operations (
+    user_id, operation_id, contract_version, source, scope_kind, scope_id,
+    entity_type, action, entity_id, request_hash, state
+  ) VALUES (
+    'c3c30000-0000-4000-8000-000000000001', 'h3-latest-merge',
+    'task-v1', 'local-api', 'personal',
+    'c3c30000-0000-4000-8000-000000000001', 'task', 'merge',
+    'c3c30000-0000-4000-8000-000000000113', repeat('d', 64), 'applying'
+  );
+  v_receipt := public.flowstate_h3_finalize_receipt(
+    'c3c30000-0000-4000-8000-000000000001', 'h3-latest-merge',
+    v_domain_result,
+    jsonb_build_object(
+      'survivorTaskId', 'c3c30000-0000-4000-8000-000000000113',
+      'duplicateTaskId', 'c3c30000-0000-4000-8000-000000000114'
+    ),
+    v_affected
+  );
+  IF v_receipt #>> '{readBack,id}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000113'
+     OR v_receipt #>> '{readBack,survivorTaskId}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000113'
+     OR v_receipt #>> '{readBack,duplicateTaskId}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000114'
+     OR (v_receipt #>> '{readBack,duplicateArchived}')::boolean IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'FAIL: latest nested merge result produced an invalid receipt: %', v_receipt;
+  END IF;
+  DELETE FROM public.canonical_operations WHERE operation_id = 'h3-latest-merge';
+END;
+$$;
+
 DO $$
 DECLARE
   v_preview jsonb;
@@ -194,8 +341,24 @@ BEGIN
     NULL, v_preview->>'requestHash'
   );
   PERFORM pg_temp.assert_canonical_envelope(v_apply, 'committed', 'h3-patch', 1);
-  IF v_apply #>> '{receipt,action}' <> 'patch' THEN
-    RAISE EXCEPTION 'FAIL: patch receipt action is wrong: %', v_apply;
+  IF v_apply #>> '{receipt,action}' IS DISTINCT FROM 'patch'
+     OR v_apply #>> '{receipt,affected,0,action}' IS DISTINCT FROM 'update'
+     OR v_apply #>> '{receipt,entityId}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000101'
+     OR v_apply #>> '{receipt,affected,0,entityId}' IS DISTINCT FROM v_apply #>> '{receipt,entityId}'
+     OR v_apply #>> '{receipt,canonicalRevision}'
+       IS DISTINCT FROM v_apply #>> '{receipt,affected,0,canonicalRevision}'
+     OR v_apply #>> '{receipt,changeSequence}'
+       IS DISTINCT FROM v_apply #>> '{receipt,affected,0,changeSequence}'
+     OR v_apply #>> '{receipt,readBack,id}' IS DISTINCT FROM v_apply #>> '{receipt,entityId}'
+     OR v_apply #>> '{receipt,readBack,title}' IS DISTINCT FROM 'Patched once'
+     OR v_apply #>> '{receipt,readBack,canonicalRevision}'
+       IS DISTINCT FROM v_apply #>> '{receipt,canonicalRevision}'
+     OR v_apply #>> '{receipt,readBackHash}' IS DISTINCT FROM pg_catalog.encode(
+       extensions.digest(pg_catalog.convert_to(
+         public.flowstate_canonical_json_text_v1(v_apply #> '{receipt,readBack}'), 'UTF8'
+       ), 'sha256'), 'hex'
+     ) THEN
+    RAISE EXCEPTION 'FAIL: patch receipt primary evidence is wrong: %', v_apply;
   END IF;
   SELECT count(*) INTO v_change_count FROM public.canonical_change_log
   WHERE operation_id = 'h3-patch';
@@ -278,8 +441,25 @@ BEGIN
     NULL, v_preview->>'requestHash'
   );
   PERFORM pg_temp.assert_canonical_envelope(v_apply, 'committed', 'h3-complete', 1);
-  IF v_apply #>> '{receipt,action}' <> 'complete' THEN
-    RAISE EXCEPTION 'FAIL: complete receipt action is wrong: %', v_apply;
+  IF v_apply #>> '{receipt,action}' IS DISTINCT FROM 'complete'
+     OR v_apply #>> '{receipt,affected,0,action}' IS DISTINCT FROM 'update'
+     OR v_apply #>> '{receipt,entityId}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000102'
+     OR v_apply #>> '{receipt,affected,0,entityId}' IS DISTINCT FROM v_apply #>> '{receipt,entityId}'
+     OR v_apply #>> '{receipt,canonicalRevision}'
+       IS DISTINCT FROM v_apply #>> '{receipt,affected,0,canonicalRevision}'
+     OR v_apply #>> '{receipt,changeSequence}'
+       IS DISTINCT FROM v_apply #>> '{receipt,affected,0,changeSequence}'
+     OR v_apply #>> '{receipt,readBack,id}' IS DISTINCT FROM v_apply #>> '{receipt,entityId}'
+     OR v_apply #>> '{receipt,readBack,status}' IS DISTINCT FROM 'done'
+     OR nullif(v_apply #>> '{receipt,readBack,completedAt}', '') IS NULL
+     OR v_apply #>> '{receipt,readBack,canonicalRevision}'
+       IS DISTINCT FROM v_apply #>> '{receipt,canonicalRevision}'
+     OR v_apply #>> '{receipt,readBackHash}' IS DISTINCT FROM pg_catalog.encode(
+       extensions.digest(pg_catalog.convert_to(
+         public.flowstate_canonical_json_text_v1(v_apply #> '{receipt,readBack}'), 'UTF8'
+       ), 'sha256'), 'hex'
+     ) THEN
+    RAISE EXCEPTION 'FAIL: complete receipt primary evidence is wrong: %', v_apply;
   END IF;
   v_replay := public.flowstate_complete_task_v1(
     'h3-complete', 'task-v1', 'local-api',
@@ -305,6 +485,7 @@ DECLARE
   v_preview_alt jsonb;
   v_padded jsonb;
   v_wrong_hash jsonb;
+  v_nested_receipt jsonb;
 BEGIN
   v_preview := public.flowstate_done_for_now(
     'c3c30000-0000-4000-8000-000000000103', true, '2026-07-17', 'h3-done'
@@ -343,16 +524,49 @@ BEGIN
     'h3-done', v_preview->>'previewVersion', NULL, v_preview->>'requestHash'
   );
   PERFORM pg_temp.assert_canonical_envelope(v_apply, 'committed', 'h3-done', 2);
-  IF v_apply #>> '{receipt,contractVersion}' <> 'task-v1'
-     OR v_apply #>> '{receipt,action}' <> 'done_for_now'
-     OR v_apply #>> '{receipt,affected,0,action}' <> 'update'
-     OR v_apply #>> '{receipt,affected,1,action}' <> 'create'
-     OR v_apply #>> '{receipt,readBack,id}' <> 'c3c30000-0000-4000-8000-000000000103'
+  IF v_apply #>> '{receipt,contractVersion}' IS DISTINCT FROM 'task-v1'
+     OR v_apply #>> '{receipt,action}' IS DISTINCT FROM 'done_for_now'
+     OR v_apply #>> '{receipt,affected,0,action}' IS DISTINCT FROM 'update'
+     OR v_apply #>> '{receipt,affected,1,action}' IS DISTINCT FROM 'create'
+     OR v_apply #>> '{receipt,readBack,id}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000103'
      OR v_apply #>> '{receipt,readBack,completedOccurrence,id}'
-       <> v_apply #>> '{receipt,affected,1,entityId}'
-     OR v_apply #> '{receipt,readBack,nextOccurrence}' IS NULL THEN
+       IS DISTINCT FROM v_apply #>> '{receipt,affected,1,entityId}'
+     OR nullif(v_apply #>> '{receipt,readBack,completedOccurrence,completedAt}', '') IS NULL
+     OR v_apply #>> '{receipt,readBack,completedOccurrence,canonicalRevision}'
+       IS DISTINCT FROM v_apply #>> '{receipt,affected,1,canonicalRevision}'
+     OR v_apply #>> '{receipt,readBack,completedOccurrence,changeSequence}'
+       IS DISTINCT FROM v_apply #>> '{receipt,affected,1,changeSequence}'
+     OR v_apply #>> '{receipt,readBack,nextOccurrence,taskId}'
+       IS DISTINCT FROM v_apply #>> '{receipt,affected,0,entityId}' THEN
     RAISE EXCEPTION 'FAIL: done-for-now receipt action linkage is wrong: %', v_apply;
   END IF;
+  INSERT INTO public.canonical_operations (
+    user_id, operation_id, contract_version, source, scope_kind, scope_id,
+    entity_type, action, entity_id, request_hash, state
+  ) VALUES (
+    'c3c30000-0000-4000-8000-000000000001', 'h3-done-nested',
+    'task-v1', 'local-api', 'personal',
+    'c3c30000-0000-4000-8000-000000000001', 'task', 'done_for_now',
+    'c3c30000-0000-4000-8000-000000000103', repeat('a', 64), 'applying'
+  );
+  v_nested_receipt := public.flowstate_h3_finalize_receipt(
+    'c3c30000-0000-4000-8000-000000000001',
+    'h3-done-nested',
+    jsonb_build_object('readBack', jsonb_build_object(
+      'completedOccurrence', v_apply #> '{receipt,readBack,completedOccurrence}',
+      'nextOccurrence', v_apply #> '{receipt,readBack,nextOccurrence}'
+    )),
+    jsonb_build_object('taskId', 'c3c30000-0000-4000-8000-000000000103'),
+    v_apply #> '{receipt,affected}'
+  );
+  IF v_nested_receipt #>> '{readBack,completedOccurrence,id}'
+       IS DISTINCT FROM v_apply #>> '{receipt,affected,1,entityId}'
+     OR nullif(v_nested_receipt #>> '{readBack,completedOccurrence,completedAt}', '') IS NULL
+     OR v_nested_receipt #>> '{readBack,nextOccurrence,taskId}'
+       IS DISTINCT FROM v_apply #>> '{receipt,affected,0,entityId}' THEN
+    RAISE EXCEPTION 'FAIL: nested latest done-for-now readBack was not canonicalized: %', v_nested_receipt;
+  END IF;
+  DELETE FROM public.canonical_operations WHERE operation_id = 'h3-done-nested';
   v_request_hash := v_apply->>'requestHash';
   v_replay := public.flowstate_done_for_now(
     'c3c30000-0000-4000-8000-000000000103', false, '2026-07-17',
@@ -388,6 +602,7 @@ DECLARE
   v_conflict jsonb;
   v_missing_hash jsonb;
   v_wrong_hash jsonb;
+  v_nested_receipt jsonb;
 BEGIN
   v_preview := public.flowstate_merge_tasks(
     'c3c30000-0000-4000-8000-000000000104',
@@ -419,16 +634,46 @@ BEGIN
     'h3-merge', v_preview->>'previewVersion', NULL, v_preview->>'requestHash'
   );
   PERFORM pg_temp.assert_canonical_envelope(v_apply, 'committed', 'h3-merge', 2);
-  IF v_apply #>> '{receipt,contractVersion}' <> 'task-v1'
-     OR v_apply #>> '{receipt,action}' <> 'merge'
-     OR v_apply #>> '{receipt,affected,0,action}' <> 'update'
-     OR v_apply #>> '{receipt,affected,1,action}' <> 'archive'
-     OR v_apply #>> '{receipt,readBack,id}' <> 'c3c30000-0000-4000-8000-000000000104'
-     OR v_apply #>> '{receipt,readBack,survivorTaskId}' <> 'c3c30000-0000-4000-8000-000000000104'
-     OR v_apply #>> '{receipt,readBack,duplicateTaskId}' <> 'c3c30000-0000-4000-8000-000000000105'
+  IF v_apply #>> '{receipt,contractVersion}' IS DISTINCT FROM 'task-v1'
+     OR v_apply #>> '{receipt,action}' IS DISTINCT FROM 'merge'
+     OR v_apply #>> '{receipt,affected,0,action}' IS DISTINCT FROM 'update'
+     OR v_apply #>> '{receipt,affected,1,action}' IS DISTINCT FROM 'archive'
+     OR v_apply #>> '{receipt,readBack,id}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000104'
+     OR v_apply #>> '{receipt,readBack,survivorTaskId}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000104'
+     OR v_apply #>> '{receipt,readBack,duplicateTaskId}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000105'
      OR (v_apply #>> '{receipt,readBack,duplicateArchived}')::boolean IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'FAIL: merge receipt action linkage is wrong: %', v_apply;
   END IF;
+  INSERT INTO public.canonical_operations (
+    user_id, operation_id, contract_version, source, scope_kind, scope_id,
+    entity_type, action, entity_id, request_hash, state
+  ) VALUES (
+    'c3c30000-0000-4000-8000-000000000001', 'h3-merge-nested',
+    'task-v1', 'local-api', 'personal',
+    'c3c30000-0000-4000-8000-000000000001', 'task', 'merge',
+    'c3c30000-0000-4000-8000-000000000104', repeat('b', 64), 'applying'
+  );
+  v_nested_receipt := public.flowstate_h3_finalize_receipt(
+    'c3c30000-0000-4000-8000-000000000001',
+    'h3-merge-nested',
+    jsonb_build_object('readBack', jsonb_build_object(
+      'survivorTaskId', 'c3c30000-0000-4000-8000-000000000104',
+      'duplicateTaskId', 'c3c30000-0000-4000-8000-000000000105',
+      'duplicateArchived', true,
+      'latestShapePreserved', true
+    )),
+    jsonb_build_object(
+      'survivorTaskId', 'c3c30000-0000-4000-8000-000000000104',
+      'duplicateTaskId', 'c3c30000-0000-4000-8000-000000000105'
+    ),
+    v_apply #> '{receipt,affected}'
+  );
+  IF v_nested_receipt #>> '{readBack,id}' IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000104'
+     OR (v_nested_receipt #>> '{readBack,duplicateArchived}')::boolean IS DISTINCT FROM true
+     OR (v_nested_receipt #>> '{readBack,latestShapePreserved}')::boolean IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'FAIL: nested latest merge readBack was not canonicalized: %', v_nested_receipt;
+  END IF;
+  DELETE FROM public.canonical_operations WHERE operation_id = 'h3-merge-nested';
   v_replay := public.flowstate_merge_tasks(
     'c3c30000-0000-4000-8000-000000000104',
     'c3c30000-0000-4000-8000-000000000105', false,
@@ -514,10 +759,19 @@ BEGIN
     'h3-recurrence-merge', v_preview->>'previewVersion', NULL, v_preview->>'requestHash'
   );
   PERFORM pg_temp.assert_canonical_envelope(v_apply, 'committed', 'h3-recurrence-merge', 2);
-  IF v_apply #>> '{receipt,contractVersion}' <> 'task-v1'
-     OR v_apply #>> '{receipt,action}' <> 'merge'
-     OR v_apply #>> '{receipt,affected,0,action}' <> 'update'
-     OR v_apply #>> '{receipt,affected,1,action}' <> 'archive' THEN
+  IF v_apply #>> '{receipt,contractVersion}' IS DISTINCT FROM 'task-v1'
+     OR v_apply #>> '{receipt,action}' IS DISTINCT FROM 'merge'
+     OR v_apply #>> '{receipt,affected,0,action}' IS DISTINCT FROM 'update'
+     OR v_apply #>> '{receipt,affected,1,action}' IS DISTINCT FROM 'archive'
+     OR v_apply #>> '{receipt,readBack,id}'
+       IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000106'
+     OR v_apply #>> '{receipt,readBack,survivorTaskId}'
+       IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000106'
+     OR v_apply #>> '{receipt,readBack,duplicateTaskId}'
+       IS DISTINCT FROM 'c3c30000-0000-4000-8000-000000000107'
+     OR (v_apply #>> '{receipt,readBack,duplicateArchived}')::boolean IS DISTINCT FROM true
+     OR v_apply #> '{receipt,readBack,recurrenceRule}'
+       IS DISTINCT FROM '{"pattern":"daily","interval":3,"endType":"never"}'::jsonb THEN
     RAISE EXCEPTION 'FAIL: recurrence merge receipt action linkage is wrong: %', v_apply;
   END IF;
   v_replay := public.flowstate_merge_tasks_with_recurrence(

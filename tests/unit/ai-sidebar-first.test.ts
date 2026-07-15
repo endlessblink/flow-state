@@ -1902,7 +1902,7 @@ describe('AI sidebar-first desktop experience', () => {
       new Date('2026-06-07T09:00:00Z'),
       {
         parameterBeliefs: [{
-          entityKey: 'week:2026-06-07',
+          entityKey: 'week:2026-06-06',
           entityType: 'week',
           parameterKey: 'thisWeekImportance',
           beliefJson: { value: 'client_money', selectedLabel: 'Client or money' },
@@ -1979,7 +1979,7 @@ describe('AI sidebar-first desktop experience', () => {
       new Date('2026-06-07T09:00:00Z'),
       {
         parameterBeliefs: [{
-          entityKey: 'week:2026-06-07',
+          entityKey: 'week:2026-06-06',
           entityType: 'week',
           parameterKey: 'thisWeekImportance',
           beliefJson: { value: 'client_money', selectedLabel: 'לקוח/כסף' },

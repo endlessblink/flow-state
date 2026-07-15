@@ -11,6 +11,10 @@ export interface Subtask {
   description: string
   completedPomodoros: number
   isCompleted: boolean
+  /** Optional user-defined evidence that this step is sufficiently complete. */
+  doneEnough?: string | null
+  /** Contextual working estimate; it does not imply a hard commitment. */
+  estimateMinutes?: number | null
   createdAt: Date
   updatedAt: Date
   canvasPosition?: { x: number; y: number } | null

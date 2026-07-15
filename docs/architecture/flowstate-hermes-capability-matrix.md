@@ -9,8 +9,9 @@ Hermes is maintained in a separate repository. Its integration boundary is the
 bearer-protected FlowState Local Task API on `127.0.0.1:5577`; Hermes must not
 call Supabase directly. The connector snapshot audited here registers exact
 task read, bounded task search, task mutation, timer-read, task-instance,
-Done-for-now, duplicate-merge, and subtask tools. Subtask tools remain "ahead":
-they exist in Hermes but have no matching FlowState routes yet.
+Done-for-now, duplicate-merge, and subtask tools. Subtask reads and mutations
+now share the TASK-1963 parent-revision command instead of treating an embedded
+array or an HTTP response as authority.
 
 ## Legend and safety contract
 
@@ -73,10 +74,10 @@ they exist in Hermes but have no matching FlowState routes yet.
 
 | Capability | UI surface / reusable domain path | Local API | Hermes | Safety | P/I | Audit/RB | Verification and UI sync | Recommendation / priority |
 |---|---|---:|---:|---:|---|---|---|---|
-| List ordered subtasks | Task details; embedded `task.subtasks` | Missing | Ahead | RO | N/A | N/A | Exact parent read/details | Add workspace-scoped compact route. P1 |
-| Create/update/complete/reopen/reorder | Task details; `createSubtask`, `updateSubtask` | Missing | Ahead | REV | Required for structural edits/Missing | Parent task audit lacks subtask detail; UI undo only | Parent exact read + taskMutation | Reuse a shared embedded-array transaction with preview/version/request ID. P1 |
-| Delete | Task details; `deleteSubtask` | Missing | Ahead | DA | Mandatory/Missing | Missing semantic receipt | Parent exact read/details | Same atomic command; no blind array overwrite. P1 |
-| Atomic batch | AI command batch concepts; no durable subtask transaction | Missing | Ahead | HIGH | Mandatory/Mandatory | Renderer-only batch audit/rollback | Stable ordering receipt + UI | Implement after single-subtask command. P2 |
+| List ordered subtasks | Task details; embedded `task.subtasks` | Live | Live | RO | N/A | Parent canonical read-back | Exact parent read/details | Keep reads scoped to the exact parent. |
+| Create/update/complete/reopen/reorder | `flowstate_subtask_batch_v1`; renderer and Local API adapters | Live | Live | REV | Preview/apply required | Durable operation + parent receipt | Canonical read-back replaces local projection | TASK-1963 implemented; packaged proof remains a release gate. |
+| Delete | Same canonical element-operation batch | Live | Live | DA | Preview/apply required | Explicit delete in durable receipt | Exact parent read-back | No blind array overwrite. |
+| Atomic batch | Ordered 1-50 element operations against parent CAS revision | Live | Live | HIGH | Mandatory/Mandatory | Stable operation, revision, sequence, hashes | Exact ordering and field outcome verified | Preserve replay/conflict/rollback contract. |
 
 ## E. Work blocks and task instances
 
@@ -150,10 +151,10 @@ they exist in Hermes but have no matching FlowState routes yet.
    its triggers do not populate all semantic/workspace detail. AI command audit
    and rollback snapshots live in the renderer's IndexedDB and are not a shared
    cross-device API ledger.
-6. **Hermes can be ahead of FlowState.** Exact read, search, Done-for-now, and
-   merge are aligned. The connector still declares subtask operations for routes
-   absent from this FlowState snapshot. Capability health must report
-   per-operation availability, not just `/api/health`.
+6. **Capability health must be operation-specific.** Exact read, search,
+   Done-for-now, merge, lifecycle, and subtask commands are aligned in source,
+   but packaged availability must still be proven per operation rather than
+   inferred from `/api/health`.
 7. **Search/Today/Inbox/Canvas are not the same projection.** Search should find
    living tasks without completion-history rows; Today is due/instance based;
    Inbox follows `is_in_inbox`; Canvas follows placement/group/work-block state.
@@ -177,7 +178,7 @@ they exist in Hermes but have no matching FlowState routes yet.
   this is the next missing assistant workflow after Done-for-now and merge.
 - Add project/group reads and validated task assignment.
 - Add recurrence chain/current/history reads.
-- Bring subtask routes and Hermes declarations into one versioned contract.
+- Ship and verify the TASK-1963 subtask contract in the packaged signed-in app.
 - Convert non-recurring completion/create/update to previewable receipt-backed
   commands where user approval matters.
 

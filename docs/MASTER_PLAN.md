@@ -2204,6 +2204,7 @@ _Original plan below._
 - [ ] **TASK-1960 — Make complete inventory the only exhaustive assistant task boundary**: label capped list/search responses as filtered samples, align inventory item revisions with the canonical receipt contract, and fail closed across large scans, repeated concurrent changes, and scope switches.
 - [x] ~~**TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.~~ Completed 2026-07-15 in Electron 1.4.263; production rollback-only receipt verification and Hermes boundary validation passed.
 - [ ] **TASK-1962 — Canonical task lifecycle commands for Hermes**: replace direct create/delete success inference with signed-user preview/apply create, soft-delete, and restore commands that bind scope, stable task identity, canonical revision, exact replay, tombstone state, and verified canonical receipts.
+- [ ] **TASK-1963 — Canonical subtask batches and assistant decomposition**: replace process-local subtask receipts and whole-array overwrites with one signed-user preview/apply batch that binds the parent revision, exact ordered operations, stable step identities, partial-completion evidence, durable replay, and verified canonical read-back across Hermes and renderer writers.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4825,6 +4826,22 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 - Disposable database tests prove zero-write preview, response-loss replay, altered-operation conflict, stale revision, viewer denial, restore conflict, injected rollback, and no persisted fixtures.
 - Local API and Hermes regressions reject HTTP-only success and malformed receipts before renderer notification or follow-up mutation.
 - Electron package, installed protected read/write proof with disposable fixtures, public release verification, commit, and push complete before this task is marked done.
+
+### TASK-1963: Canonical subtask batches and assistant decomposition (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-15) | **Depends on**: TASK-1944, TASK-1961, TASK-1962
+
+**Why**: Local API subtask receipts currently live only in process memory, every write replaces the parent task's full embedded array without canonical revision compare-and-swap, and Hermes accepts HTTP success without verifying the approved breakdown. A sidecar restart loses replay identity, while concurrent renderer and Hermes edits can silently overwrite each other.
+
+**Acceptance**:
+- One signed-user subtask batch command previews and applies 1-50 ordered create, update, complete, reopen, reorder, or delete operations against the exact parent canonical revision.
+- Existing opaque subtask IDs and unknown metadata are preserved; new IDs derive stably from actor, parent, operation, and client identity rather than array position.
+- Preview binds the exact ordered normalized operations, resulting subtask array, parent scope/revision, request hash, approval digest, and expiry; changed payloads or stale parents fail with typed conflicts.
+- Apply is atomic, replayable after response loss or sidecar restart, preserves concurrent work by rejecting stale revisions, and returns a shared canonical receipt with exact ordered read-back.
+- `doneEnough` and `estimateMinutes` remain optional step metadata. They express a sufficient stopping condition and an estimate without automatically completing the step or requiring maximal parent implementation.
+- Singular Local API and Hermes tools remain compatibility adapters to the canonical batch and reject HTTP-only success, malformed receipts, cross-scope tasks, or fallback whole-array writes.
+- Renderer subtask writers use the same canonical authority or stop on a typed conflict; no production surface retains a silent whole-array authority.
+- Disposable database, Local API, Hermes, renderer concurrency, build, package, installed protected live, and release proof pass before this task is marked done.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7544,6 +7561,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1960** | **P0** | 🔄 **Make complete inventory the only exhaustive assistant task boundary with typed samples and fail-closed large scans** |
 | ~~**TASK-1961**~~ | **P0** | ✅ **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
 | **TASK-1962** | **P0** | 🔄 **Canonical create/delete/restore commands with stable identity, revision conflicts, replay, tombstone state, and verified receipts** |
+| **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask batches and partial-completion-aware assistant decomposition across Hermes and renderer writers** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

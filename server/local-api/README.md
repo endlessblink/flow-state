@@ -513,11 +513,22 @@ Safety notes:
 `GET /api/tasks/:id/subtasks` lists the ordered embedded subtasks for one task.
 `POST /api/tasks/:id/subtasks`, `PATCH /api/tasks/:id/subtasks/:subtaskId`, and
 `POST /api/tasks/:id/subtasks/:subtaskId/delete` preview by default. Set
-`preview` to `false` and provide a stable `requestId` only after approval.
-Applied retries are idempotent and return a receipt without duplicating work.
+`preview` to `false` only after approval, and return the exact server-issued
+`operationId`, parent `baseRevision`, `previewDigest`, `previewExpiresAt`, and
+`requestHash`. The singular routes are compatibility adapters to the same
+canonical batch command; they never write the task row directly.
 
-`POST /api/tasks/:id/subtasks/batch` accepts 1-50 `create`, `update`, or `delete`
-operations and applies the approved batch as one task-row update.
+`POST /api/tasks/:id/subtasks/batch` accepts 1-50 ordered `create`, `update`, or
+`delete` operations and applies the approved batch atomically. New steps use a
+stable `clientId`; existing opaque subtask IDs and unknown metadata survive
+updates and reordering. Optional `doneEnough` and `estimateMinutes` describe a
+useful stopping condition and estimate without completing the step or parent;
+`canvasPosition` and `completedPomodoros` preserve mini-Canvas and progress
+updates through the same authority instead of dropping them from whole-array
+editor snapshots.
+Durable receipts survive sidecar restarts, exact retries replay without another
+write, and concurrent parent edits return `stale_revision` instead of silently
+overwriting another surface.
 
 ### Task lifecycle actions
 

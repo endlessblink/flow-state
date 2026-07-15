@@ -29,8 +29,8 @@ subset exists, **missing** = domain/UI capability exists but is not exposed,
 | Duplicate candidate inspection | search/exact reads | partial | partial | read-only; no title-based approval | Add explicit candidate endpoint |
 | Merge exact duplicate | shared `merge_tasks` transaction | live | live | preview-first; state-bound apply; durable idempotency receipt; conservative typed conflicts | Search/Board/Today/Inbox/Canvas reload to one survivor; recurring/AI-graph/group merges intentionally unsupported |
 | List subtasks | embedded task array | live | live | read-only | Exact task read/list endpoint |
-| Create/update/complete/reorder/delete subtask | task embedded-array operations | live, preview-first | live | apply uses stable request ID; task-row update atomic | Renderer reload; durable receipt table still recommended |
-| Atomic subtask batch | command-style array transform | live | live | preview-first; one task-row write | Read-back list; keep 50-op cap |
+| Create/update/complete/reorder/delete subtask | `flowstate_subtask_batch_v1` through renderer and Local API adapters | live, canonical preview/apply | live, canonical preview/apply | parent revision CAS, stable operation ID, exact approval binding, explicit delete | Durable receipt + exact parent read-back; position/progress and unknown metadata preserved |
+| Atomic subtask batch | ordered 1-50 element operations | live | live | replay-safe, conflict-safe, rollback-atomic, no whole-array signed-user fallback | Revision/sequence/hash receipt and exact ordered outcome verification |
 | List work blocks | task `instances` | live | live | read-only | Calendar/Canvas |
 | Create work block | `createTaskInstance` | live | live | preview-first; apply lacks durable request receipt | Calendar/Canvas; add idempotent apply |
 | Move/resize/remove work block | Calendar undo-aware instance commands | missing | missing | reversible structural; preview/receipt missing | Extract instance command service, then expose |

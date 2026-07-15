@@ -18,6 +18,10 @@ import { useToast } from '@/composables/useToast'
 // TASK-1428: Keep IndexedDB read cache warm after offline mutations
 import { cacheTasks } from '@/services/offline/readCacheDB'
 import { createCanonicalTaskPatchState } from '@/services/sync/canonicalTaskPatch'
+import {
+    executeCanonicalSubtaskBatch,
+    type CanonicalSubtaskOperation,
+} from '@/services/sync/canonicalSubtaskBatch'
 import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 import { sanitizeTaskTitle } from '@/utils/taskValidation'
 // TASK-1871 Phase 0: observable geometry-write chokepoint instrumentation
@@ -90,6 +94,56 @@ const shouldKeepPermanentDeleteLocallyOnRemoteFailure = (error: unknown): boolea
         lowerMessage.includes('not found') ||
         lowerMessage.includes('postgrest unavailable')
     )
+}
+
+const subtaskValueEqual = (left: unknown, right: unknown): boolean =>
+    JSON.stringify(left ?? null) === JSON.stringify(right ?? null)
+
+const buildCanonicalSubtaskOperations = (
+    current: Subtask[],
+    requested: Subtask[],
+): CanonicalSubtaskOperation[] => {
+    const currentById = new Map(current.map(subtask => [subtask.id, subtask]))
+    const requestedIds = new Set(requested.map(subtask => subtask.id))
+    const operations: CanonicalSubtaskOperation[] = current
+        .filter(subtask => !requestedIds.has(subtask.id))
+        .map(subtask => ({ kind: 'delete' as const, subtaskId: subtask.id }))
+
+    requested.forEach((subtask, order) => {
+        const existing = currentById.get(subtask.id)
+        if (!existing) {
+            operations.push({
+                kind: 'create',
+                clientId: subtask.id,
+                title: subtask.title,
+                ...(subtask.description !== undefined && { description: subtask.description }),
+                ...(subtask.doneEnough !== undefined && { doneEnough: subtask.doneEnough }),
+                ...(subtask.estimateMinutes !== undefined && { estimateMinutes: subtask.estimateMinutes }),
+                ...(subtask.completedPomodoros !== undefined && { completedPomodoros: subtask.completedPomodoros }),
+                ...(subtask.canvasPosition !== undefined && { canvasPosition: subtask.canvasPosition }),
+                ...(subtask.isCompleted !== undefined && { isCompleted: subtask.isCompleted }),
+                order,
+            })
+            return
+        }
+        const update: Extract<CanonicalSubtaskOperation, { kind: 'update' }> = {
+            kind: 'update', subtaskId: subtask.id,
+        }
+        for (const field of [
+            'title', 'description', 'doneEnough', 'estimateMinutes',
+            'completedPomodoros', 'canvasPosition', 'isCompleted',
+        ] as const) {
+            if (!subtaskValueEqual(existing[field], subtask[field])) {
+                Object.assign(update, { [field]: subtask[field] ?? null })
+            }
+        }
+        const existingOrder = current.findIndex(candidate => candidate.id === subtask.id)
+        if (Object.keys(update).length > 2 || existingOrder !== order) {
+            update.order = order
+            operations.push(update)
+        }
+    })
+    return operations
 }
 
 // =============================================================================
@@ -460,6 +514,25 @@ export function useTaskOperations(
             // TASK-1177: Deep snapshot for rollback if all persistence paths fail
             // toRaw() strips Vue reactivity proxy before cloning (structuredClone can't handle Proxy)
             const previousTask = JSON.parse(JSON.stringify(toRaw(task)))
+
+            // TASK-1963: signed-in subtask arrays are proposals, never an
+            // independent whole-row authority. Convert editor/mini-canvas
+            // snapshots into exact element operations before other task fields
+            // enter the generic queue.
+            if (useAuthStore().user && updates.subtasks !== undefined) {
+                const operations = buildCanonicalSubtaskOperations(task.subtasks, updates.subtasks)
+                if (operations.length > 0) {
+                    await applyCanonicalSubtaskOperations(task, operations)
+                    // If a later independent task-field write fails, rollback
+                    // must retain the already committed canonical subtask
+                    // projection rather than resurrecting the stale snapshot.
+                    previousTask.subtasks = JSON.parse(JSON.stringify(toRaw(task.subtasks)))
+                    previousTask.canonicalRevision = task.canonicalRevision
+                    previousTask.updatedAt = task.updatedAt
+                }
+                delete updates.subtasks
+                if (Object.keys(updates).length === 0) return
+            }
 
             // GEOMETRY DRIFT DETECTION (TASK-255): Track and warn about geometry changes
             const hasGeometryChange = ('parentId' in updates && updates.parentId !== task.parentId) ||
@@ -1497,9 +1570,47 @@ export function useTaskOperations(
     // BUG-1321: Subtask methods now route through updateTask() for proper
     // echo protection, sync queue enrollment, and pending write registration.
 
+    const applyCanonicalSubtaskOperations = async (
+        task: Task,
+        operations: CanonicalSubtaskOperation[],
+    ) => {
+        if (!task.canonicalRevision || task.canonicalRevision < 1) {
+            throw new Error('canonical_subtask_revision_required')
+        }
+        const result = await executeCanonicalSubtaskBatch(supabase, {
+            taskId: task.id,
+            workspaceId: task.workspaceId ?? null,
+            baseRevision: task.canonicalRevision,
+            operationId: `web:subtask:${crypto.randomUUID()}`,
+            operations,
+        })
+        task.subtasks = result.readBack.subtasks as unknown as Subtask[]
+        task.canonicalRevision = result.readBack.canonicalRevision
+        task.updatedAt = new Date(result.readBack.canonicalUpdatedAt)
+        await cacheTasks([..._rawTasks.value])
+        return result
+    }
+
     const createSubtask = async (taskId: string, subtaskData: Partial<Subtask>) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return null
+        if (useAuthStore().user) {
+            const clientId = subtaskData.id || `web-step:${crypto.randomUUID()}`
+            const operation: CanonicalSubtaskOperation = {
+                kind: 'create',
+                clientId,
+                title: subtaskData.title || 'New Subtask',
+                ...(subtaskData.description !== undefined && { description: subtaskData.description }),
+                ...(subtaskData.doneEnough !== undefined && { doneEnough: subtaskData.doneEnough }),
+                ...(subtaskData.estimateMinutes !== undefined && { estimateMinutes: subtaskData.estimateMinutes }),
+                ...(subtaskData.completedPomodoros !== undefined && { completedPomodoros: subtaskData.completedPomodoros }),
+                ...(subtaskData.canvasPosition !== undefined && { canvasPosition: subtaskData.canvasPosition }),
+                ...(subtaskData.isCompleted !== undefined && { isCompleted: subtaskData.isCompleted }),
+                order: task.subtasks.length,
+            }
+            const result = await applyCanonicalSubtaskOperations(task, [operation])
+            return result.readBack.subtasks.find(subtask => subtask.clientId === clientId) as unknown as Subtask
+        }
         const newSubtask: Subtask = {
             id: Date.now().toString(),
             parentTaskId: taskId,
@@ -1520,6 +1631,21 @@ export function useTaskOperations(
         if (!task) return
         const idx = task.subtasks.findIndex(st => st.id === subtaskId)
         if (idx === -1) return
+        if (useAuthStore().user) {
+            const operation: CanonicalSubtaskOperation = {
+                kind: 'update',
+                subtaskId,
+                ...(updates.title !== undefined && { title: updates.title }),
+                ...(updates.description !== undefined && { description: updates.description }),
+                ...(updates.doneEnough !== undefined && { doneEnough: updates.doneEnough }),
+                ...(updates.estimateMinutes !== undefined && { estimateMinutes: updates.estimateMinutes }),
+                ...(updates.completedPomodoros !== undefined && { completedPomodoros: updates.completedPomodoros }),
+                ...(updates.canvasPosition !== undefined && { canvasPosition: updates.canvasPosition }),
+                ...(updates.isCompleted !== undefined && { isCompleted: updates.isCompleted }),
+            }
+            await applyCanonicalSubtaskOperations(task, [operation])
+            return
+        }
         const updatedSubtasks = [...task.subtasks]
         updatedSubtasks[idx] = { ...updatedSubtasks[idx], ...updates, updatedAt: new Date() }
         await updateTask(taskId, { subtasks: updatedSubtasks })
@@ -1528,6 +1654,10 @@ export function useTaskOperations(
     const deleteSubtask = async (taskId: string, subtaskId: string) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task) return
+        if (useAuthStore().user) {
+            await applyCanonicalSubtaskOperations(task, [{ kind: 'delete', subtaskId }])
+            return
+        }
         const updatedSubtasks = task.subtasks.filter(st => st.id !== subtaskId)
         await updateTask(taskId, { subtasks: updatedSubtasks })
     }

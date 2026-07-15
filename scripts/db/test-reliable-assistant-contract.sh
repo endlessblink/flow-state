@@ -19,9 +19,11 @@ migrations=(
   "$root_dir/supabase/migrations/20260715020000_complete_task_rpc.sql"
   "$root_dir/supabase/migrations/20260715030000_canonical_domain_receipts.sql"
   "$root_dir/supabase/migrations/20260715040000_canonical_task_lifecycle.sql"
+  "$root_dir/supabase/migrations/20260715050000_canonical_subtask_batch.sql"
 )
 h3_migration="${migrations[11]}"
 h4_migration="${migrations[12]}"
+h5_migration="${migrations[13]}"
 h3_rollback="$root_dir/scripts/db/rollback-canonical-domain-receipts.sql"
 
 cleanup() {
@@ -188,6 +190,10 @@ for _ in 1 2; do
   docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
     < "$h4_migration" >/dev/null
 done
+for _ in 1 2; do
+  docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+    < "$h5_migration" >/dev/null
+done
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 DO $$
 BEGIN
@@ -220,6 +226,8 @@ docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-notion-activation.sql" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-task-lifecycle-rpc.sql" >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-subtask-batch-rpc.sql" >/dev/null
 
 FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
   bash "$root_dir/scripts/db/test-canonical-notion-concurrency.sh"

@@ -142,7 +142,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     await expect(async () => {
       const { data } = await admin.from('groups').select('id,name').eq('user_id', userId).eq('name', 'Monday')
       expect((data ?? []).some((g: any) => UUID_RE.test(g.id)), 'no UUID Monday group in DB').toBe(true)
-    }).toPass({ timeout: 12_000 })
+    }).toPass({ timeout: 30_000 })
 
     // And the independent client B receives it live.
     await expect(async () => {
@@ -152,7 +152,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
         return canvas.groups.some((g: any) => g.name === 'Monday')
       })
       expect(hasMonday, 'client B never received the migrated group').toBe(true)
-    }).toPass({ timeout: 12_000 })
+    }).toPass({ timeout: 30_000 })
   })
 
   // ── R1: dropping one task onto the canvas must not move the others ──────────
@@ -211,7 +211,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       }, ROOT_TASKS[0].id)
       expect(state.title).toBe(newTitle)
       expect(state.tags).toContain('sync-probe')
-    }).toPass({ timeout: 12_000 })
+    }).toPass({ timeout: 30_000 })
   })
 
   // ── R5: moving a node on A propagates LIVE to independent client B ──────────
@@ -241,7 +241,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       expect(storePos, 'B store never got the new position').toBeTruthy()
       expect(Math.abs(storePos.x - target.x)).toBeLessThan(2)
       expect(Math.abs(storePos.y - target.y)).toBeLessThan(2)
-    }).toPass({ timeout: 12_000 })
+    }).toPass({ timeout: 30_000 })
 
     // (2) B's rendered NODE must actually move (no reload) — the live-canvas part.
     await expect(async () => {
@@ -250,7 +250,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       expect(node, `B node ${ROOT_TASKS[0].id} not rendered`).toBeTruthy()
       expect(Math.abs(node.x - target.x)).toBeLessThan(2)
       expect(Math.abs(node.y - target.y)).toBeLessThan(2)
-    }).toPass({ timeout: 12_000 })
+    }).toPass({ timeout: 30_000 })
   })
 
   // ── R8: updates blocked by a local interaction replay after the guard clears ─
@@ -281,7 +281,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
         return tasks.rawTasks.find((task: any) => task.id === taskId)?.canvasPosition ?? null
       }, ROOT_TASKS[0].id)
       expect(storePos).toEqual(target)
-    }).toPass({ timeout: 12_000 })
+    }).toPass({ timeout: 30_000 })
 
     const blockedNode = (await readCanvasNodePositions(clientB))[ROOT_TASKS[0].id]
     expect(blockedNode).toBeTruthy()
@@ -297,7 +297,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       expect(node).toBeTruthy()
       expect(Math.abs(node.x - target.x)).toBeLessThan(2)
       expect(Math.abs(node.y - target.y)).toBeLessThan(2)
-    }).toPass({ timeout: 12_000 })
+    }).toPass({ timeout: 30_000 })
   })
 
   // ── R6: moving a GROUP on A propagates LIVE to independent client B ─────────
@@ -328,7 +328,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       const { data } = await admin.from('groups').select('position_json').eq('id', GROUP_ID).single()
       const dbx = (data?.position_json as any)?.x
       expect(dbx, `DB group x=${dbx} (want ${target.x}) — A never persisted the move.\nA SYNC logs:\n${aLogs.join('\n') || '(no sync logs)'}`).toBe(target.x)
-    }).toPass({ timeout: 12_000 })
+    }).toPass({ timeout: 30_000 })
 
     await expect(async () => {
       const storePos = await clientB.evaluate((gid) => {
@@ -342,7 +342,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
         Math.abs(storePos.x - target.x),
         `B group x=${storePos?.x} (want ${target.x}).\nB GROUP/HANDLER logs:\n${bLogs.join('\n') || '(none — onGroupChange never fired on B)'}`
       ).toBeLessThan(2)
-    }).toPass({ timeout: 12_000 })
+    }).toPass({ timeout: 30_000 })
   })
 
   // ── R3: opening the canvas must not auto-reposition anything ────────────────

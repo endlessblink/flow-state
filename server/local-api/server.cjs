@@ -34,6 +34,7 @@ const { executeDoneForNow } = require('./done-for-now.cjs')
 const { executeMergeTasks } = require('./merge-tasks.cjs')
 const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
 const { executeCompleteTask } = require('./complete-task.cjs')
+const { executeTaskLifecycle } = require('./task-lifecycle.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
 const {
@@ -594,39 +595,10 @@ function toSafeTask(record, detailed = false) {
   }
 }
 
-async function handleCreateTask(req, res) {
-  const { supabase, userId } = ctx
+async function handleTaskLifecycle(action, taskId, req, res) {
   const body = await readJsonBody(req)
-
-  const title = typeof body.title === 'string' ? body.title.trim() : ''
-  if (!title) return send(res, 400, { error: 'title required' })
-
-  const priority = body.priority === undefined ? null : body.priority
-  if (!isValidPriority(priority)) {
-    return send(res, 400, { error: 'priority must be low|medium|high or null' })
-  }
-
-  const now = new Date().toISOString()
-  const id = crypto.randomUUID()
-  const row = {
-    id,
-    user_id: userId,
-    title,
-    description: typeof body.description === 'string' ? body.description : '',
-    status: 'planned', // default todo
-    priority,
-    due_date: body.dueDate ?? null,
-    project_id: body.projectId ?? null,
-    progress: 0,
-    is_deleted: false,
-    created_at: now,
-    updated_at: now,
-  }
-
-  const { error } = await supabase.from('tasks').insert(row)
-  if (error) return send(res, 500, { error: error.message })
-  notifyTaskMutation('create', id)
-  send(res, 200, { ok: true, task: { id } })
+  const result = await executeTaskLifecycle(ctx, action, taskId, body, notifyTaskMutation)
+  return send(res, result.status, result.body)
 }
 
 async function handlePatchTask(id, req, res) {
@@ -974,31 +946,6 @@ async function handleSubtaskBatch(id, req, res) {
   if (updateError) return send(res, 500, { error: updateError.message })
   rememberSubtaskResponse(key, response)
   send(res, 200, response)
-}
-
-async function handleDeleteTask(id, res) {
-  const { supabase, userId } = ctx
-  // Verify first so callers get a stable 404 for unknown, cross-user, or already-deleted ids.
-  const { data: existing, error: findErr } = await supabase
-    .from('tasks')
-    .select('id')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .eq('is_deleted', false)
-    .maybeSingle()
-  if (findErr) return send(res, 500, { error: findErr.message })
-  if (!existing) return send(res, 404, { error: 'not found' })
-
-  const now = new Date().toISOString()
-  const { error } = await supabase
-    .from('tasks')
-    .update({ is_deleted: true, deleted_at: now, updated_at: now })
-    .eq('id', id)
-    .eq('user_id', userId)
-    .eq('is_deleted', false)
-  if (error) return send(res, 500, { error: error.message })
-  notifyTaskMutation('delete', id)
-  send(res, 200, { ok: true })
 }
 
 async function handleGetCurrentTimer(res) {
@@ -1424,7 +1371,7 @@ const server = http.createServer(async (req, res) => {
       return await handleGetAssistantContext(res)
     }
     if (req.method === 'POST' && path === '/api/tasks') {
-      return await handleCreateTask(req, res)
+      return await handleTaskLifecycle('create', null, req, res)
     }
     if (req.method === 'POST' && path === '/api/integrations/notion/activations') {
       return await handleNotionActivation(req, res)
@@ -1485,14 +1432,23 @@ const server = http.createServer(async (req, res) => {
       )
     }
     const taskMatch = path.match(/^\/api\/tasks\/([^/]+)$/)
+    const deleteTaskMatch = path.match(/^\/api\/tasks\/([^/]+)\/delete$/)
+    if (req.method === 'POST' && deleteTaskMatch) {
+      return await handleTaskLifecycle('delete', decodeURIComponent(deleteTaskMatch[1]), req, res)
+    }
+    const restoreTaskMatch = path.match(/^\/api\/tasks\/([^/]+)\/restore$/)
+    if (req.method === 'POST' && restoreTaskMatch) {
+      return await handleTaskLifecycle('restore', decodeURIComponent(restoreTaskMatch[1]), req, res)
+    }
+    const reopenTaskMatch = path.match(/^\/api\/tasks\/([^/]+)\/reopen$/)
+    if (req.method === 'POST' && reopenTaskMatch) {
+      return await handleTaskLifecycle('reopen', decodeURIComponent(reopenTaskMatch[1]), req, res)
+    }
     if (req.method === 'GET' && taskMatch) {
       return await handleGetTask(decodeURIComponent(taskMatch[1]), res)
     }
     if (req.method === 'PATCH' && taskMatch) {
       return await handlePatchTask(decodeURIComponent(taskMatch[1]), req, res)
-    }
-    if (req.method === 'DELETE' && taskMatch) {
-      return await handleDeleteTask(decodeURIComponent(taskMatch[1]), res)
     }
 
     send(res, 404, { error: 'not found' })

@@ -2202,7 +2202,8 @@ _Original plan below._
 - [x] ~~**TASK-1958 — Canonical non-recurring task completion for Hermes**: dedicated `flowstate_complete_task_v1` preview/apply completion with approval digest, committed receipt, `completedAt` read-back, typed `recurring_task`/`already_completed` rejections, and disposable-DB runtime regression.~~ Completed 2026-07-15; production migration + Electron ship still pending.
 - [x] ~~**TASK-1959 — Redacted FlowState source-to-runtime truth ledger**: generate one stable, secret-free ledger across source, local build, public release, installed AppImage, and live sidecar truth; keep release builds non-live by default and expose mismatches instead of inferring deployment success.~~ Completed 2026-07-15.
 - [ ] **TASK-1960 — Make complete inventory the only exhaustive assistant task boundary**: label capped list/search responses as filtered samples, align inventory item revisions with the canonical receipt contract, and fail closed across large scans, repeated concurrent changes, and scope switches.
-- [ ] **TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.
+- [x] ~~**TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.~~ Completed 2026-07-15 in Electron 1.4.263; production rollback-only receipt verification and Hermes boundary validation passed.
+- [ ] **TASK-1962 — Canonical task lifecycle commands for Hermes**: replace direct create/delete success inference with signed-user preview/apply create, soft-delete, and restore commands that bind scope, stable task identity, canonical revision, exact replay, tombstone state, and verified canonical receipts.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4769,9 +4770,9 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Explicitly not covered**: migrating Hermes monitor reads or shipping a new Electron release; those remain later H2/release steps after this FlowState contract slice lands.
 
-### TASK-1961: Shared canonical assistant receipt validation (🔄 IN PROGRESS)
+### ~~TASK-1961~~: Shared canonical assistant receipt validation (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-15) | **Depends on**: TASK-1944, TASK-1945, TASK-1957, TASK-1958
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-15, Electron 1.4.263) | **Depends on**: TASK-1944, TASK-1945, TASK-1957, TASK-1958
 
 **Why**: task patch and non-recurring completion duplicated a receipt shape check that accepted any well-shaped SHA-256 string without recomputing the read-back hash. Recurring completion and duplicate merge treated any Local API HTTP response with `ok=true` as committed and notified the renderer without canonical operation, revision, sequence, timestamp, or read-back proof.
 
@@ -4784,7 +4785,46 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Implementation progress**: test-first Local API foundation in progress. One shared validator now recomputes canonical read-back hashes and binds both envelope and receipt request identity before mutation notifications; patch, completion, recurring completion, merge, and Notion activation share the primitive. The four task mutations use the unified `task-v1` envelope and require exact canonical affected-task evidence: patch/completion require one primary task row, recurring completion/merge require two exact distinct rows, and every primary identity/revision/sequence plus per-row read-back hash is bound to the top receipt and read-back. Every canonical field in the primary affected row must also match the corresponding top read-back field by canonical deep equality, while operation-specific enriched top fields remain allowed. Replay aliases are optional but fail on contradiction. Focused mutation coverage passes 188 tests, broader Local API reliability coverage passes 45 tests, and type-check/lint are green. The SQL receipt migration is implemented as a separate dependency-safe slice; legacy receipts are not accepted as canonical during the transition.
 
-**Reversible production gate**: H3 now has a transaction-owned, idempotent inverse that removes only the five request-hash wrapper signatures, restores the preserved legacy bodies and their exact authenticated/anon/PUBLIC privileges, removes private H3 helpers after wrapper removal, keeps additive receipt columns and committed data intact, and reloads the PostgREST schema. The standard disposable database gate injects an `ALTER FUNCTION` failure after wrapper drops and proves the entire inverse rolls back, then proves inverse replay, executable legacy patch/completion/merge contracts, forward reapplication, and the complete canonical receipt/race suite. No production database was contacted.
+**Reversible production gate**: H3 has a transaction-owned, idempotent inverse that removes only the five request-hash wrapper signatures, restores the preserved legacy bodies and their exact authenticated/anon/PUBLIC privileges, removes private H3 helpers after wrapper removal, keeps additive receipt columns and committed data intact, and reloads the PostgREST schema. The standard disposable database gate injects an `ALTER FUNCTION` failure after wrapper drops and proves the entire inverse rolls back, then proves inverse replay, executable legacy patch/completion/merge contracts, forward reapplication, and the complete canonical receipt/race suite.
+
+**Completion proof**: production was backed up before migration; the dependency and H3 receipt migrations were applied; a rollback-only live transaction verified the canonical patch, completion, recurring completion, and merge receipt surface without persisting fixtures. Electron 1.4.263 was built from clean source, passed 3,685 tests with six skips under the supported Node 20 test runtime, published, checksum-verified, installed, relaunched, and reported the matching sidecar version. Hermes validates recomputed receipt and affected-row hashes and rejects HTTP-only success before renderer notification.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Hermes mutation paths could accept HTTP-only or forged-hash success | Yes, those exact receipt-validation failures now fail closed |
+| Data shape / persisted row shape | Yes | Canonical read-back, affected rows, revision, sequence, and hashes are bound | Yes |
+| Renderer store/state | Yes | Renderer notification occurs only after verified commit proof | Yes |
+| Electron main/preload bridge | Yes | Clean packaged 1.4.263 sidecar and mutation notification path verified | Yes |
+| Localhost sidecar endpoint | Yes | Patch, completion, recurring completion, and merge response contracts verified | Yes |
+| KDE polling/control path | N/A | This task does not change timer or KDE behavior | No |
+| Supabase persistence/realtime | Yes | Production rollback-only receipt transaction and change-log proof passed | Yes |
+| Updater/runtime version | Yes | Public 1.4.263 artifacts were checksum-verified and installed | Yes |
+| Stale live process/cache state | Yes | Installed app was relaunched and reported the matching sidecar version | Yes |
+
+**Exact failure mode fixed**: canonical mutation responses with HTTP success but missing, mismatched, or forged operation/read-back evidence could be treated as committed and trigger renderer reconciliation.
+
+**Explicitly not covered**: canonical create/delete/restore/reopen lifecycle commands, remaining renderer/offline direct writers, and the still-manual signed-in sidecar session boundary are separate tasks.
+
+**Regression added for reported repro**: forged hashes, HTTP-only envelopes, mismatched operation/request identity, incomplete canonical evidence, and altered replay all fail before notification.
+
+**Live boundary proof**: the production rollback-only receipt probe passed and clean packaged Electron 1.4.263 was installed, relaunched, and matched the published artifact.
+
+### TASK-1962: Canonical task lifecycle commands for Hermes (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-15) | **Depends on**: TASK-1944, TASK-1961
+
+**Why**: Local API create still generates an unpreviewed random task ID and reports success after a direct insert; delete performs a direct update and returns only `{ok:true}`; restore has no Hermes-safe route. Those paths lack stable operation identity, approval binding, base-revision conflict detection, durable replay, and canonical read-back proof.
+
+**Acceptance**:
+- One signed-user lifecycle command family previews and applies create, soft-delete, and restore without direct-table fallback.
+- Create preview binds a stable generated task ID, normalized task fields, exact personal/workspace scope, and the same ID on apply/replay.
+- Delete and restore require the current canonical revision, preserve tombstone symmetry, reject stale/conflicting/cross-scope requests, and return typed errors.
+- Every committed/replayed apply returns the shared H3 receipt envelope with exact affected task identity, revision, sequence, timestamp, deletion state, and recomputed read-back hash.
+- Disposable database tests prove zero-write preview, response-loss replay, altered-operation conflict, stale revision, viewer denial, restore conflict, injected rollback, and no persisted fixtures.
+- Local API and Hermes regressions reject HTTP-only success and malformed receipts before renderer notification or follow-up mutation.
+- Electron package, installed protected read/write proof with disposable fixtures, public release verification, commit, and push complete before this task is marked done.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7502,7 +7542,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1958**~~ | **P1** | ✅ **Canonical non-recurring task completion with approval digest, committed receipt, completedAt read-back, and recurring fail-closed rejection** |
 | ~~**TASK-1959**~~ | **P0** | ✅ **Redacted source/build/public/installed/sidecar truth ledger with embedded non-live package provenance and mismatch evidence** |
 | **TASK-1960** | **P0** | 🔄 **Make complete inventory the only exhaustive assistant task boundary with typed samples and fail-closed large scans** |
-| **TASK-1961** | **P0** | 🔄 **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
+| ~~**TASK-1961**~~ | **P0** | ✅ **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
+| **TASK-1962** | **P0** | 🔄 **Canonical create/delete/restore commands with stable identity, revision conflicts, replay, tombstone state, and verified receipts** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

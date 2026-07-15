@@ -210,13 +210,17 @@ This route is also a filtered sample and cannot provide an exact total.
 ```
 
 ### `POST /api/tasks`
-`title` required; `priority` ∈ `low|medium|high|null`; `status` defaults to `todo`.
+Preview-first canonical create. `title` is required; `priority` is
+`low|medium|high|null`; `status`, when supplied, must be `planned`. The preview
+returns a deterministic `taskId`; apply must echo that exact ID plus the
+server-issued approval fields.
 ```json
-// body
-{ "title": "Draft Q3 plan", "description": "", "priority": "high",
-  "dueDate": "2026-06-01", "projectId": "uuid-optional" }
-// 200
-{ "ok": true, "task": { "id": "new-uuid" } }
+// preview body
+{ "operationId": "stable-client-operation-id", "baseRevision": 0,
+  "payload": { "title": "Draft Q3 plan", "priority": "high" } }
+
+// apply body: copy taskId, previewDigest, previewExpiresAt, and requestHash
+// from the exact preview and set preview:false
 ```
 
 ### `PATCH /api/tasks/:id`
@@ -515,14 +519,16 @@ Applied retries are idempotent and return a receipt without duplicating work.
 `POST /api/tasks/:id/subtasks/batch` accepts 1-50 `create`, `update`, or `delete`
 operations and applies the approved batch as one task-row update.
 
-### `DELETE /api/tasks/:id`
-Soft-deletes a task for the current user (`is_deleted=true`, `deleted_at=now`).
-```json
-// 200
-{ "ok": true }
-// 404 (unknown, cross-user, or already deleted id)
-{ "error": "not found" }
-```
+### Task lifecycle actions
+
+`POST /api/tasks/:id/delete`, `POST /api/tasks/:id/restore`, and
+`POST /api/tasks/:id/reopen` use the same preview/apply contract as create.
+Supply the exact current `canonicalRevision` as `baseRevision`. Apply requires
+the preview digest, expiry, request hash, and stable operation ID. Receipts prove
+the committed revision, change sequence, read-back, and tombstone state.
+Recurring tasks cannot use `reopen`; use the recurrence-aware done-for-now
+command. The legacy bare `DELETE /api/tasks/:id` mutation is intentionally not
+available.
 
 Every response is JSON. Errors are `{ "error": "<message>" }` — the handler
 never throws past itself.

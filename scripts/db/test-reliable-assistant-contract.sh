@@ -18,8 +18,10 @@ migrations=(
   "$root_dir/supabase/migrations/20260715010000_merge_tasks_recurrence_resolution.sql"
   "$root_dir/supabase/migrations/20260715020000_complete_task_rpc.sql"
   "$root_dir/supabase/migrations/20260715030000_canonical_domain_receipts.sql"
+  "$root_dir/supabase/migrations/20260715040000_canonical_task_lifecycle.sql"
 )
 h3_migration="${migrations[11]}"
+h4_migration="${migrations[12]}"
 h3_rollback="$root_dir/scripts/db/rollback-canonical-domain-receipts.sql"
 
 cleanup() {
@@ -56,7 +58,6 @@ for _ in 1 2; do
   docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
     < "$h3_migration" >/dev/null
 done
-
 # Force the inverse to fail after its first wrapper drops. Because the inverse
 # owns its transaction, the public H3 surface and private bases must remain
 # byte-for-byte addressable after psql exits on the injected ALTER failure.
@@ -183,6 +184,10 @@ BEGIN
   RAISE NOTICE 'H3 reapply canonical surface probe passed';
 END $$;
 SQL
+for _ in 1 2; do
+  docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+    < "$h4_migration" >/dev/null
+done
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 DO $$
 BEGIN
@@ -213,6 +218,8 @@ docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-domain-receipts.sql" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-notion-activation.sql" >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-task-lifecycle-rpc.sql" >/dev/null
 
 FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
   bash "$root_dir/scripts/db/test-canonical-notion-concurrency.sh"

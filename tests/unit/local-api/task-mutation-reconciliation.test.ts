@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 const readSource = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8')
 
 const server = readSource('server/local-api/server.cjs')
+const lifecycle = readSource('server/local-api/task-lifecycle.cjs')
 const electronMain = readSource('electron/ipc/localApi.ts')
 const preload = readSource('electron/preload.ts')
 const rendererBridge = readSource('src/composables/useLocalApiBridge.ts')
@@ -25,13 +26,14 @@ function functionSlice(source: string, name: string, nextName: string): string {
 
 describe('BUG-1942 Local Task API renderer reconciliation', () => {
   it('notifies the Electron parent after successful task create, patch, and delete writes', () => {
-    const create = functionSlice(server, 'handleCreateTask', 'handlePatchTask')
     const patch = functionSlice(server, 'handlePatchTask', 'handleGetTaskInstances')
-    const remove = functionSlice(server, 'handleDeleteTask', 'handleGetCurrentTimer')
+    const lifecycleHandler = functionSlice(server, 'handleTaskLifecycle', 'handlePatchTask')
 
-    expect(create).toContain("notifyTaskMutation('create', id)")
+    expect(lifecycleHandler).toContain('executeTaskLifecycle(ctx, action, taskId, body, notifyTaskMutation)')
+    expect(lifecycle).toContain("action === 'create' ? 'create' : action === 'delete' ? 'delete' : 'update'")
     expect(patch).toContain('executeCanonicalTaskPatch(ctx, id, body, notifyTaskMutation)')
-    expect(remove).toContain("notifyTaskMutation('delete', id)")
+    expect(server).toContain("handleTaskLifecycle('create', null, req, res)")
+    expect(server).toContain("handleTaskLifecycle('delete', decodeURIComponent(deleteTaskMatch[1]), req, res)")
   })
 
   it('forwards only the task mutation identity from utility process to renderer', () => {

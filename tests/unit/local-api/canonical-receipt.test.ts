@@ -11,6 +11,7 @@ type CanonicalReceiptModule = {
   validateCanonicalReceipt: (
     receipt: unknown,
     options?: {
+      bindPrimaryAffectedReadBack?: boolean
       expectedFields?: Record<string, unknown>
       expectedOperationId?: string
       expectedRequestHash?: string
@@ -192,6 +193,36 @@ describe('canonical assistant receipt validation', () => {
       ...value,
       affected: [{ ...affected[0], readBackHash: 'f'.repeat(64) }],
     })).toEqual({ ok: false, code: 'invalid_affected_entry' })
+  })
+
+  it('binds every primary affected field while allowing enriched top-level evidence', () => {
+    const { canonicalHash, validateCanonicalReceipt } = canonical()
+    const value = receipt()
+    const primaryReadBack = value.readBack as Record<string, unknown>
+    const affected = [{
+      entityId: 'task-1', entityType: 'task', action: 'update',
+      canonicalRevision: 8, changeSequence: 42,
+      readBack: primaryReadBack, readBackHash: canonicalHash(primaryReadBack),
+    }]
+    const enrichedReadBack = { ...primaryReadBack, operationEvidence: { retained: true } }
+
+    expect(validateCanonicalReceipt({
+      ...value,
+      affected,
+      readBack: enrichedReadBack,
+      readBackHash: canonicalHash(enrichedReadBack),
+    }, { bindPrimaryAffectedReadBack: true })).toEqual({ ok: true })
+
+    const forgedReadBack = { ...enrichedReadBack, title: 'Forged title' }
+    expect(validateCanonicalReceipt({
+      ...value,
+      affected,
+      readBack: forgedReadBack,
+      readBackHash: canonicalHash(forgedReadBack),
+    }, { bindPrimaryAffectedReadBack: true })).toEqual({
+      ok: false,
+      code: 'invalid_affected_entry',
+    })
   })
 
   it('rejects a read-back that fails the operation-specific invariant', () => {

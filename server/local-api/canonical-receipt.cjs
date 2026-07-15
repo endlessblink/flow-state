@@ -84,6 +84,18 @@ function invalid(code) {
   return { ok: false, code }
 }
 
+function primaryReadBackMatches(receiptReadBack, primaryReadBack) {
+  if (!object(receiptReadBack) || !object(primaryReadBack)) return false
+  try {
+    return Object.entries(primaryReadBack).every(([key, value]) => (
+      Object.prototype.hasOwnProperty.call(receiptReadBack, key)
+      && canonicalJson(receiptReadBack[key]) === canonicalJson(value)
+    ))
+  } catch {
+    return false
+  }
+}
+
 function validateCanonicalReceipt(receipt, options = {}) {
   if (
     !object(receipt)
@@ -173,6 +185,10 @@ function validateCanonicalReceipt(receipt, options = {}) {
       || primary.entityType !== receipt.entityType
       || primary.canonicalRevision !== receipt.canonicalRevision
       || primary.changeSequence !== receipt.changeSequence
+      || (
+        options.bindPrimaryAffectedReadBack === true
+        && !primaryReadBackMatches(receipt.readBack, primary.readBack)
+      )
     ) {
       return invalid('invalid_affected_entry')
     }

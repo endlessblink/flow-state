@@ -188,6 +188,29 @@ describe('Local API recurring Done for now handler', () => {
   })
 
   it.each([
+    ['title', 'Forged recurring title'],
+    ['status', 'in_progress'],
+    ['dueDate', '2026-08-01T00:00:00+00:00'],
+  ])('rejects a SQL-shaped receipt whose top read-back recomputes a different %s', async (field, value) => {
+    const receipt = committedReceipt()
+    const readBack = { ...(receipt.readBack as Record<string, unknown>), [field]: value }
+    const response = {
+      ok: true,
+      result: 'committed',
+      requestHash,
+      receipt: { ...receipt, readBack, readBackHash: canonicalHash(readBack) },
+    }
+    const { executeDoneForNow, notifyTaskMutation, rpc } = createHarness({ data: response, error: null })
+
+    const result = await executeDoneForNow(
+      { supabase: { rpc }, activeWorkspaceId: null }, 'task-1', applyBody, notifyTaskMutation,
+    )
+
+    expect(result.status).toBe(502)
+    expect(notifyTaskMutation).not.toHaveBeenCalled()
+  })
+
+  it.each([
     ['HTTP-only success', { ok: true }],
     ['forged hash', { ok: true, result: 'committed', requestHash, receipt: committedReceipt({ readBackHash: 'f'.repeat(64) }) }],
     ['operation mismatch', { ok: true, result: 'committed', requestHash, receipt: committedReceipt({ operationId: 'other' }) }],

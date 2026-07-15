@@ -89,6 +89,7 @@ function validCommittedResponse(data, survivorTaskId, duplicateTaskId, body) {
     && validateAffectedTaskEntry(duplicate, { entityId: duplicateTaskId, action: 'archive' }).ok
   )
   const validation = validateCanonicalReceipt(receipt, {
+    bindPrimaryAffectedReadBack: true,
     expectedOperationId: body.requestId,
     expectedRequestHash: body.requestHash,
     expectedFields: {

@@ -55,8 +55,18 @@ function committedReceipt(overrides: Record<string, unknown> = {}) {
   const readBack = {
     id: 'task-1',
     title: 'Canonical title',
+    status: 'todo',
+    completedAt: null,
+    dueDate: '2026-07-16T00:00:00+00:00',
+    isDeleted: false,
+    deletedAt: null,
+    workspaceId: null,
     canonicalRevision: 8,
     canonicalUpdatedAt: '2026-07-13T12:01:00.000Z',
+    recurrenceRule: null,
+    recurrenceParentId: null,
+    recurrenceCount: 0,
+    isCompletionRecord: false,
   }
   return {
     ok: true,
@@ -192,6 +202,63 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
 
       expect(notifyTaskMutation).toHaveBeenCalledOnce()
       expect(notifyTaskMutation).toHaveBeenCalledWith('update', 'task-1')
+    })
+
+    it.each([
+      ['title', 'Forged title'],
+      ['status', 'in_progress'],
+      ['dueDate', '2026-08-01T00:00:00+00:00'],
+    ])('rejects a SQL-shaped receipt whose top read-back recomputes a different %s', async (field, value) => {
+      const receipt = committedReceipt()
+      const readBack = { ...(receipt.readBack as Record<string, unknown>), [field]: value }
+      const response = {
+        ok: true,
+        result: 'committed',
+        requestHash: 'c'.repeat(64),
+        receipt: { ...receipt, readBack, readBackHash: canonicalHash(readBack) },
+      }
+      const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
+
+      const result = await executeCanonicalTaskPatch(context(rpc), 'task-1', {
+        preview: false,
+        operationId: 'operation-1',
+        baseRevision: 7,
+        previewDigest: 'a'.repeat(64),
+        previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
+        patch: { title: 'Canonical title' },
+      }, notifyTaskMutation)
+
+      expect(result.status).toBe(502)
+      expect(notifyTaskMutation).not.toHaveBeenCalled()
+    })
+
+    it('allows enriched top read-back fields after binding every primary field', async () => {
+      const receipt = committedReceipt()
+      const readBack = {
+        ...(receipt.readBack as Record<string, unknown>),
+        operationEvidence: { retained: true },
+      }
+      const response = {
+        ok: true,
+        result: 'committed',
+        requestHash: 'c'.repeat(64),
+        receipt: { ...receipt, readBack, readBackHash: canonicalHash(readBack) },
+      }
+      const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
+
+      const result = await executeCanonicalTaskPatch(context(rpc), 'task-1', {
+        preview: false,
+        operationId: 'operation-1',
+        baseRevision: 7,
+        previewDigest: 'a'.repeat(64),
+        previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
+        patch: { title: 'Canonical title' },
+      }, notifyTaskMutation)
+
+      expect(result.status).toBe(200)
+      expect(notifyTaskMutation).toHaveBeenCalledOnce()
     })
 
     it('rejects a committed envelope with a mismatched request hash', async () => {

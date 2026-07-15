@@ -89,6 +89,7 @@ function validCommittedResponse(data, taskId, body) {
     && validateAffectedTaskEntry(completed, { entityId: completedId, action: 'create' }).ok
   )
   const validation = validateCanonicalReceipt(receipt, {
+    bindPrimaryAffectedReadBack: true,
     expectedOperationId: body.requestId,
     expectedRequestHash: body.requestHash,
     expectedFields: {

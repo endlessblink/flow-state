@@ -172,6 +172,7 @@ async function executeCanonicalTaskPatch(context, taskId, body, notifyTaskMutati
     && primaryAffected.readBack.canonicalRevision === receipt.readBack.canonicalRevision
   )
   const validation = validateCanonicalReceipt(receipt, {
+    bindPrimaryAffectedReadBack: true,
     expectedOperationId: body.operationId,
     expectedRequestHash: body.requestHash,
     expectedFields: {

@@ -206,6 +206,29 @@ describe('Local API duplicate-task merge handler', () => {
     expect(notify).toHaveBeenNthCalledWith(2, 'delete', 'duplicate-1')
   })
 
+  it.each([
+    ['title', 'Forged survivor title'],
+    ['status', 'in_progress'],
+    ['dueDate', '2026-08-01T00:00:00+00:00'],
+  ])('rejects a SQL-shaped receipt whose top read-back recomputes a different %s', async (field, value) => {
+    const receipt = committedReceipt()
+    const readBack = { ...(receipt.readBack as Record<string, unknown>), [field]: value }
+    const response = {
+      ok: true,
+      result: 'committed',
+      requestHash,
+      receipt: { ...receipt, readBack, readBackHash: canonicalHash(readBack) },
+    }
+    const { executeMergeTasks, notify, rpc } = harness(response)
+
+    const result = await executeMergeTasks(
+      { supabase: { rpc }, activeWorkspaceId: null }, 'survivor-1', applyBody, notify,
+    )
+
+    expect(result.status).toBe(502)
+    expect(notify).not.toHaveBeenCalled()
+  })
+
   it('accepts the migrated recurrence merge receipt through operation context and primary read-back', async () => {
     const recurrenceResolution = { pattern: 'daily', interval: 3, endType: 'never' }
     const base = committedReceipt()

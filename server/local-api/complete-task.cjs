@@ -156,6 +156,7 @@ async function executeCompleteTask(context, taskId, body, notifyTaskMutation) {
     && primaryAffected.readBack.canonicalRevision === receipt.readBack.canonicalRevision
   )
   const validation = validateCanonicalReceipt(receipt, {
+    bindPrimaryAffectedReadBack: true,
     expectedOperationId: body.operationId,
     expectedRequestHash: body.requestHash,
     expectedFields: {

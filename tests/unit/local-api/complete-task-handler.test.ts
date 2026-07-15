@@ -59,8 +59,16 @@ function committedReceipt(overrides: Record<string, unknown> = {}) {
     title: 'Before',
     status: 'done',
     completedAt: '2026-07-15T12:01:00.000Z',
+    dueDate: '2026-07-16T00:00:00+00:00',
+    isDeleted: false,
+    deletedAt: null,
+    workspaceId: null,
     canonicalRevision: 8,
     canonicalUpdatedAt: '2026-07-15T12:01:00.000Z',
+    recurrenceRule: null,
+    recurrenceParentId: null,
+    recurrenceCount: 0,
+    isCompletionRecord: false,
   }
   return {
     ok: true,
@@ -250,6 +258,29 @@ describe.runIf(moduleExists)('executeCompleteTask', () => {
     expect(result.status).toBe(200)
     expect(notifyTaskMutation).toHaveBeenCalledTimes(1)
     expect(notifyTaskMutation).toHaveBeenCalledWith('update', 'task-1')
+  })
+
+  it.each([
+    ['title', 'Forged completion title'],
+    ['dueDate', '2026-08-01T00:00:00+00:00'],
+    ['recurrenceCount', 3],
+  ])('rejects a SQL-shaped receipt whose top read-back recomputes a different %s', async (field, value) => {
+    const receipt = committedReceipt()
+    const readBack = { ...(receipt.readBack as Record<string, unknown>), [field]: value }
+    const { executeCompleteTask, notifyTaskMutation, rpc } = harness({
+      data: {
+        ok: true,
+        result: 'committed',
+        requestHash: 'c'.repeat(64),
+        receipt: { ...receipt, readBack, readBackHash: canonicalHash(readBack) },
+      },
+      error: null,
+    })
+
+    const result = await executeCompleteTask(context(rpc), 'task-1', applyBody, notifyTaskMutation)
+
+    expect(result.status).toBe(502)
+    expect(notifyTaskMutation).not.toHaveBeenCalled()
   })
 
   it('rejects a committed envelope with a mismatched request hash', async () => {

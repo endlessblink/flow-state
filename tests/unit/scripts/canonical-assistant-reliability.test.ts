@@ -43,10 +43,12 @@ describe('TASK-1949 canonical assistant disposable reliability harness', () => {
 
     expect(source).toContain('concurrent-recurrence-request')
     expect(source).toContain('SELECT pg_sleep(1)')
-    expect(source).toContain('cmp -s')
+    expect(source).toContain('committed|replayed')
+    expect(source).toContain('hash_a')
+    expect(source).toContain('hash_b')
     expect(source).toContain('Added after approval')
     expect(source).toContain('state_conflict')
-    expect(source).toContain('separate-transaction preview, related-state binding, and concurrent recurrence apply replay')
+    expect(source).toContain('separate-transaction preview, related-state binding, and concurrent recurrence replay')
   })
 
   it('executes the watchdog authority signature and valid-index probe in the disposable database', () => {

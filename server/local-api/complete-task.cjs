@@ -1,6 +1,6 @@
 'use strict'
 
-const { validateCanonicalReceipt } = require('./canonical-receipt.cjs')
+const { validateAffectedTaskEntry, validateCanonicalReceipt } = require('./canonical-receipt.cjs')
 
 const CONTRACT_VERSION = 'task-v1'
 const SOURCE = 'local-api'
@@ -140,6 +140,21 @@ async function executeCompleteTask(context, taskId, body, notifyTaskMutation) {
     return { status: 200, body: data }
   }
   const receipt = data.receipt
+  const primaryAffected = receipt && Array.isArray(receipt.affected) && receipt.affected.length === 1
+    ? receipt.affected[0]
+    : null
+  const validPrimaryAffected = Boolean(
+    primaryAffected
+    && validateAffectedTaskEntry(primaryAffected, { entityId: taskId, action: 'update' }).ok
+    && primaryAffected.entityId === receipt.entityId
+    && primaryAffected.canonicalRevision === receipt.canonicalRevision
+    && primaryAffected.changeSequence === receipt.changeSequence
+    && receipt.readBack
+    && typeof receipt.readBack === 'object'
+    && !Array.isArray(receipt.readBack)
+    && primaryAffected.readBack.id === receipt.readBack.id
+    && primaryAffected.readBack.canonicalRevision === receipt.readBack.canonicalRevision
+  )
   const validation = validateCanonicalReceipt(receipt, {
     expectedOperationId: body.operationId,
     expectedRequestHash: body.requestHash,
@@ -151,7 +166,8 @@ async function executeCompleteTask(context, taskId, body, notifyTaskMutation) {
       entityId: taskId,
     },
     validateReadBack: readBack => (
-      validReadBack(readBack, taskId, receipt && receipt.canonicalRevision)
+      validPrimaryAffected
+      && validReadBack(readBack, taskId, receipt && receipt.canonicalRevision)
       && validTimestamp(receipt && receipt.canonicalUpdatedAt)
       && readBack.canonicalUpdatedAt === receipt.canonicalUpdatedAt
       && readBack.status === 'done'

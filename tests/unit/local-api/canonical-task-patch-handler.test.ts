@@ -73,6 +73,11 @@ function committedReceipt(overrides: Record<string, unknown> = {}) {
     changeSequence: 42,
     replayed: false,
     committedAt: '2026-07-13T12:01:00.010Z',
+    affected: [{
+      entityId: 'task-1', entityType: 'task', action: 'update',
+      canonicalRevision: 8, changeSequence: 42,
+      readBack, readBackHash: canonicalHash(readBack),
+    }],
     readBack,
     readBackHash: canonicalHash(readBack),
     ...overrides,
@@ -195,6 +200,43 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
         result: 'committed',
         requestHash: 'd'.repeat(64),
         receipt: committedReceipt(),
+      }
+      const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
+
+      const result = await executeCanonicalTaskPatch(context(rpc), 'task-1', {
+        preview: false,
+        operationId: 'operation-1',
+        baseRevision: 7,
+        previewDigest: 'a'.repeat(64),
+        previewExpiresAt: '2026-07-13T12:15:00.000Z',
+        requestHash: 'c'.repeat(64),
+        patch: { title: 'Canonical title' },
+      }, notifyTaskMutation)
+
+      expect(result.status).toBe(502)
+      expect(notifyTaskMutation).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['missing affected evidence', undefined],
+      ['mismatched primary id', [{
+        ...committedReceipt().affected[0], entityId: 'another-task',
+      }]],
+      ['mismatched primary revision', [{
+        ...committedReceipt().affected[0], canonicalRevision: 9,
+      }]],
+      ['mismatched primary sequence', [{
+        ...committedReceipt().affected[0], changeSequence: 43,
+      }]],
+      ['forged primary read-back hash', [{
+        ...committedReceipt().affected[0], readBackHash: 'f'.repeat(64),
+      }]],
+    ])('rejects %s before renderer notification', async (_label, affected) => {
+      const response = {
+        ok: true,
+        result: 'committed',
+        requestHash: 'c'.repeat(64),
+        receipt: committedReceipt({ affected }),
       }
       const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: response, error: null })
 

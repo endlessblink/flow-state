@@ -77,6 +77,11 @@ function committedReceipt(overrides: Record<string, unknown> = {}) {
     changeSequence: 42,
     replayed: false,
     committedAt: '2026-07-15T12:01:00.000Z',
+    affected: [{
+      entityId: 'task-1', entityType: 'task', action: 'update',
+      canonicalRevision: 8, changeSequence: 42,
+      readBack, readBackHash: canonicalHash(readBack),
+    }],
     readBack,
     readBackHash: canonicalHash(readBack),
     ...overrides,
@@ -254,6 +259,37 @@ describe.runIf(moduleExists)('executeCompleteTask', () => {
         result: 'committed',
         requestHash: 'd'.repeat(64),
         receipt: committedReceipt(),
+      },
+      error: null,
+    })
+
+    const result = await executeCompleteTask(context(rpc), 'task-1', applyBody, notifyTaskMutation)
+
+    expect(result.status).toBe(502)
+    expect(notifyTaskMutation).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['missing affected evidence', undefined],
+    ['mismatched primary id', [{
+      ...committedReceipt().affected[0], entityId: 'another-task',
+    }]],
+    ['mismatched primary revision', [{
+      ...committedReceipt().affected[0], canonicalRevision: 9,
+    }]],
+    ['mismatched primary sequence', [{
+      ...committedReceipt().affected[0], changeSequence: 43,
+    }]],
+    ['forged primary read-back hash', [{
+      ...committedReceipt().affected[0], readBackHash: 'f'.repeat(64),
+    }]],
+  ])('rejects %s before renderer notification', async (_label, affected) => {
+    const { executeCompleteTask, notifyTaskMutation, rpc } = harness({
+      data: {
+        ok: true,
+        result: 'committed',
+        requestHash: 'c'.repeat(64),
+        receipt: committedReceipt({ affected }),
       },
       error: null,
     })

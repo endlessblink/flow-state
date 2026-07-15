@@ -248,6 +248,30 @@ describe('Local API duplicate-task merge handler', () => {
     ['forged hash', { ok: true, result: 'committed', requestHash, receipt: committedReceipt({ readBackHash: 'f'.repeat(64) }) }],
     ['request mismatch', { ok: true, result: 'committed', requestHash, receipt: committedReceipt({ requestHash: 'c'.repeat(64) }) }],
     ['missing affected revisions', { ok: true, result: 'committed', requestHash, receipt: committedReceipt({ affected: [] }) }],
+    ['mismatched primary affected id', {
+      ok: true, result: 'committed', requestHash,
+      receipt: committedReceipt({
+        affected: committedReceipt().affected.map((entry: Record<string, unknown>, index: number) => (
+          index === 0 ? { ...entry, entityId: 'other-task' } : entry
+        )),
+      }),
+    }],
+    ['mismatched primary affected revision', {
+      ok: true, result: 'committed', requestHash,
+      receipt: committedReceipt({
+        affected: committedReceipt().affected.map((entry: Record<string, unknown>, index: number) => (
+          index === 0 ? { ...entry, canonicalRevision: 9 } : entry
+        )),
+      }),
+    }],
+    ['mismatched primary affected sequence', {
+      ok: true, result: 'committed', requestHash,
+      receipt: committedReceipt({
+        affected: committedReceipt().affected.map((entry: Record<string, unknown>, index: number) => (
+          index === 0 ? { ...entry, changeSequence: 44 } : entry
+        )),
+      }),
+    }],
     ['forged affected read-back', {
       ok: true, result: 'committed', requestHash,
       receipt: committedReceipt({

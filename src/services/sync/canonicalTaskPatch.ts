@@ -109,6 +109,7 @@ export function validCanonicalTaskReceipt(
 function validPreview(value: unknown, operation: WriteOperation): value is Record<string, unknown> & {
   previewDigest: string
   previewExpiresAt: string
+  requestHash: string
   normalizedPayload: CanonicalTaskPatchState['patch']
 } {
   const canonical = operation.canonicalTaskPatch
@@ -121,6 +122,8 @@ function validPreview(value: unknown, operation: WriteOperation): value is Recor
     && typeof value.previewDigest === 'string'
     && SHA256_HEX.test(value.previewDigest)
     && timestamp(value.previewExpiresAt)
+    && typeof value.requestHash === 'string'
+    && SHA256_HEX.test(value.requestHash)
     && validPatch(value.normalizedPayload)
     && samePatchShape(value.normalizedPayload, canonical.patch)
     && validReadBack(value.readBack, operation.entityId, canonical.baseRevision, operation.workspaceId ?? null)
@@ -192,7 +195,7 @@ export async function executeQueuedCanonicalTaskPatch(
     return { success: false, operation, error: 'invalid_persisted_canonical_preview', shouldRetry: false, classification: 'permanent' }
   }
 
-  if (!canonical.previewDigest || !canonical.previewExpiresAt) {
+  if (!canonical.previewDigest || !canonical.previewExpiresAt || !canonical.requestHash) {
     let preview: Awaited<ReturnType<CanonicalRpcClient['rpc']>>
     try {
       preview = await client.rpc('flowstate_patch_task_v1', {
@@ -203,6 +206,7 @@ export async function executeQueuedCanonicalTaskPatch(
         p_preview: true,
         p_preview_digest: null,
         p_preview_expires_at: null,
+        p_request_hash: null,
         p_source: SOURCE,
         p_task_id: operation.entityId,
         p_workspace_id: operation.workspaceId ?? null,
@@ -225,6 +229,7 @@ export async function executeQueuedCanonicalTaskPatch(
       phase: 'previewed',
       previewDigest: preview.data.previewDigest,
       previewExpiresAt: preview.data.previewExpiresAt,
+      requestHash: preview.data.requestHash,
       normalizedPatch: preview.data.normalizedPayload,
     }
     operation.canonicalTaskPatch = canonical
@@ -241,6 +246,7 @@ export async function executeQueuedCanonicalTaskPatch(
       p_preview: false,
       p_preview_digest: canonical.previewDigest,
       p_preview_expires_at: canonical.previewExpiresAt,
+      p_request_hash: canonical.requestHash,
       p_source: SOURCE,
       p_task_id: operation.entityId,
       p_workspace_id: operation.workspaceId ?? null,

@@ -457,6 +457,7 @@ describe('canonical task patch queue', () => {
     const preview = {
       ok: true, result: 'preview', contractVersion: 'task-v1',
       operationId: receipt.operationId, baseRevision: 4,
+      requestHash: 'a'.repeat(64),
       previewDigest: 'b'.repeat(64), previewExpiresAt: '2026-07-13T10:15:00Z',
       normalizedPayload: { title: 'Optimistic' },
       readBack: { ...receipt.readBack, title: 'Before', canonicalRevision: 4 },
@@ -593,6 +594,7 @@ describe('canonical task patch queue', () => {
     rpcMock
       .mockResolvedValueOnce({ data: {
         ok: true, result: 'preview', contractVersion: 'task-v1', operationId: 'web:ordered-first',
+        requestHash: 'a'.repeat(64),
         baseRevision: 4, previewDigest: 'b'.repeat(64), previewExpiresAt: '2026-07-13T10:15:00Z',
         normalizedPayload: { title: 'First' },
         readBack: { ...firstReceipt.readBack, canonicalRevision: 4, title: 'Before' },
@@ -600,6 +602,7 @@ describe('canonical task patch queue', () => {
       .mockResolvedValueOnce({ data: { ok: true, result: 'committed', receipt: firstReceipt }, error: null })
       .mockResolvedValueOnce({ data: {
         ok: true, result: 'preview', contractVersion: 'task-v1', operationId: 'web:ordered-second',
+        requestHash: 'd'.repeat(64),
         baseRevision: 5, previewDigest: 'c'.repeat(64), previewExpiresAt: '2026-07-13T10:15:00Z',
         normalizedPayload: { title: 'Second' }, readBack: firstReceipt.readBack,
       }, error: null })
@@ -697,6 +700,7 @@ describe('canonical task patch queue', () => {
     rpcMock
       .mockResolvedValueOnce({ data: {
         ok: true, result: 'preview', contractVersion: 'task-v1', operationId: 'web:projection-first',
+        requestHash: 'a'.repeat(64),
         baseRevision: 4, previewDigest: 'b'.repeat(64), previewExpiresAt: '2026-07-13T10:15:00Z',
         normalizedPayload: { title: 'First' }, readBack: { ...firstReceipt.readBack, canonicalRevision: 4 },
       }, error: null })
@@ -720,6 +724,7 @@ describe('canonical task patch queue', () => {
       canonicalTaskPatch: {
         contractVersion: 'task-v1', operationId: 'web:bound-successor', baseRevision: 4,
         patch: { title: 'Bound' }, phase: 'previewed', previewDigest: 'b'.repeat(64),
+        requestHash: 'a'.repeat(64),
         previewExpiresAt: '2026-07-13T10:15:00Z', normalizedPatch: { title: 'Bound' },
       },
     })
@@ -1617,6 +1622,28 @@ describe('Permanent failure pub/sub (onPermanentFailure)', () => {
 // 6. COMPOSABLE RETURN SHAPE
 // ===========================================================================
 describe('useSyncOrchestrator composable return shape', () => {
+  it('manual retry unlocks permanent failures even when their retry time is far in the future', async () => {
+    const failed = makeOp({
+      id: 301,
+      status: 'failed',
+      retryCount: 2,
+      nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      lastError: 'request_hash_required: The server-issued requestHash is required for apply',
+    })
+    writeQueueMocks.getFailedOperations.mockResolvedValue([failed])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    writeQueueMocks.updateOperation.mockClear()
+
+    await sync.retryFailed()
+
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(301, {
+      status: 'pending',
+      nextRetryAt: undefined,
+    })
+  })
+
   it('returns all expected reactive state properties', async () => {
     const sync = useSyncOrchestrator()
 

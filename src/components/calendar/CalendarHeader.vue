@@ -187,10 +187,15 @@ const toggleViewOptions = () => {
         </div>
       </BasePopover>
 
-      <div class="view-selector view-selector--minimal">
+      <div
+        class="view-selector view-selector--minimal"
+        role="group"
+        aria-label="Calendar view mode"
+      >
         <button
           class="view-btn"
           :class="{ active: viewMode === 'day' }"
+          :aria-pressed="viewMode === 'day'"
           @click="$emit('update:viewMode', 'day')"
         >
           {{ $t('calendar.day') }}
@@ -198,6 +203,7 @@ const toggleViewOptions = () => {
         <button
           class="view-btn"
           :class="{ active: viewMode === 'week' }"
+          :aria-pressed="viewMode === 'week'"
           @click="$emit('update:viewMode', 'week')"
         >
           {{ $t('calendar.week') }}
@@ -205,6 +211,7 @@ const toggleViewOptions = () => {
         <button
           class="view-btn"
           :class="{ active: viewMode === 'month' }"
+          :aria-pressed="viewMode === 'month'"
           @click="$emit('update:viewMode', 'month')"
         >
           {{ $t('calendar.month') }}

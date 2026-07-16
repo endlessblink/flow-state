@@ -21,6 +21,10 @@ migrations=(
 )
 h3_migration="${migrations[11]}"
 h3_rollback="$root_dir/scripts/db/rollback-canonical-domain-receipts.sql"
+lifecycle_migration="$root_dir/supabase/migrations/20260716090000_canonical_task_lifecycle.sql"
+subtask_batch_migration="$root_dir/supabase/migrations/20260716100000_canonical_subtask_batch.sql"
+work_block_migration="$root_dir/supabase/migrations/20260716110000_canonical_work_blocks.sql"
+work_block_optimization_migration="$root_dir/supabase/migrations/20260716120000_optimize_canonical_work_blocks.sql"
 
 cleanup() {
   docker exec "$container" dropdb -U postgres --if-exists --force "$test_db" >/dev/null 2>&1 || true
@@ -183,6 +187,16 @@ BEGIN
   RAISE NOTICE 'H3 reapply canonical surface probe passed';
 END $$;
 SQL
+for _ in 1 2; do
+  docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+    < "$lifecycle_migration" >/dev/null
+done
+for migration in "$subtask_batch_migration" "$work_block_migration" "$work_block_optimization_migration"; do
+  for _ in 1 2; do
+    docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+      < "$migration" >/dev/null
+  done
+done
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 DO $$
 BEGIN
@@ -194,6 +208,12 @@ BEGIN
      ) IS NULL
      OR to_regprocedure(
        'public.flowstate_activate_notion_task_v1(text,jsonb,jsonb,jsonb,boolean,text,timestamptz)'
+     ) IS NULL
+     OR to_regprocedure(
+       'public.flowstate_subtask_batch_v1(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid,jsonb)'
+     ) IS NULL
+     OR to_regprocedure(
+       'public.flowstate_work_block_v1(text,text,text,text,bigint,bigint,jsonb,boolean,text,timestamptz,uuid)'
      ) IS NULL
      OR NOT EXISTS (
        SELECT 1 FROM pg_index AS index
@@ -212,9 +232,23 @@ FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-domain-receipts.sql" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-canonical-task-lifecycle.sql" >/dev/null
+FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
+  bash "$root_dir/scripts/db/test-task-lifecycle-concurrency.sh"
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-notion-activation.sql" >/dev/null
 
 FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
   bash "$root_dir/scripts/db/test-canonical-notion-concurrency.sh"
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-canonical-subtask-batch.sql" >/dev/null
+FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
+  bash "$root_dir/scripts/db/test-subtask-batch-concurrency.sh"
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-work-block-rpc.sql" >/dev/null
+FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
+  bash "$root_dir/scripts/db/test-work-block-concurrency.sh"
+FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
+  bash "$root_dir/scripts/db/test-work-block-merge-concurrency.sh"
 
 echo "PASS: reliable assistant canonical database contract"

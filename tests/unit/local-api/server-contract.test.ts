@@ -85,6 +85,36 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).not.toContain('refreshToken')
   })
 
+  it('publishes the complete Hermes route manifest before protected work begins', () => {
+    const route = SERVER_CJS.indexOf("path === '/api/capabilities'")
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+    const body = functionBody('handleGetHermesCapabilities')
+
+    expect(route, 'Hermes capabilities route not found').toBeGreaterThan(-1)
+    expect(route).toBeLessThan(tokenCheck)
+    expect(SERVER_CJS).toContain("require('./hermes-route-capabilities.cjs')")
+    expect(body).toContain('schemaVersion: HERMES_CAPABILITIES_SCHEMA_VERSION')
+    expect(body).toContain('routes: HERMES_ROUTE_CAPABILITIES.map')
+    expect(body).not.toContain('TOKEN')
+    expect(body).not.toContain('accessToken')
+    expect(body).not.toContain('refreshToken')
+  })
+
+  it('routes canonical task lifecycle creation and keeps legacy create blocked', () => {
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+    const legacyRoute = SERVER_CJS.indexOf("req.method === 'POST' && path === '/api/tasks'")
+    const lifecycleRoute = SERVER_CJS.indexOf("req.method === 'POST' && path === '/api/tasks/lifecycle'")
+    const legacyBody = functionBody('handleCreateTask')
+
+    expect(lifecycleRoute, 'canonical task lifecycle route not found').toBeGreaterThan(-1)
+    expect(lifecycleRoute).toBeGreaterThan(tokenCheck)
+    expect(SERVER_CJS).toContain("require('./canonical-task-lifecycle.cjs')")
+    expect(SERVER_CJS).toContain('executeCanonicalTaskLifecycle(ctx, body, notifyTaskMutation)')
+    expect(legacyRoute).toBeGreaterThan(tokenCheck)
+    expect(legacyBody).toContain('canonical_lifecycle_required')
+    expect(legacyBody).not.toContain(".from('tasks').insert")
+  })
+
   it('diagnoses timer boundary state without exposing secrets or full task rows', () => {
     const body = functionBody('handleGetTimerDiagnostics')
 
@@ -479,12 +509,11 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     const body = functionBody('handleSubtaskBatch')
 
     expect(route).toBeGreaterThan(-1)
-    expect(body).toContain('operations.length > 50')
-    expect(body).toContain('applySubtaskOperations')
-    expect(body).toContain("action: 'batch'")
-    expect(body).toContain('operationCount: applied.results.length')
-    expect(body).toContain('if (metadata.preview)')
-    expect(body).toContain('subtasks: applied.subtasks')
+    expect(body).toContain('executeCanonicalSubtaskBatch')
+    expect(body).toContain('notifyTaskMutation')
+    expect(body).toContain('result.status')
+    expect(SERVER_CJS).toContain("require('./canonical-subtask-batch.cjs')")
+    expect(body).not.toContain('applySubtaskOperations')
   })
 
   it('replays create and batch applies safely after the in-memory receipt cache is lost', () => {

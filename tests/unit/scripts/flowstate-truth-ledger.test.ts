@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { execFileSync } from 'node:child_process'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const tempRoots: string[] = []
@@ -44,6 +45,7 @@ function makeReleaseFixture(version = '1.4.262') {
 async function loadLedger() {
   return import('../../../scripts/flowstate-truth-ledger.cjs') as Promise<{
     buildTruthLedger: (options: Record<string, unknown>) => Promise<Record<string, any>>
+    readSource: (root: string) => { commit: string; dirty: boolean }
   }>
 }
 
@@ -51,6 +53,26 @@ describe('FlowState source-to-runtime truth ledger', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     for (const root of tempRoots.splice(0)) rmSync(root, { recursive: true, force: true })
+  })
+
+  it('does not mark a clean release dirty only because the build refreshed tracked outputs', async () => {
+    const root = makeReleaseFixture()
+    write(root, 'source.txt', 'source\n')
+    write(root, 'stats.html', 'old stats\n')
+    write(root, 'dist-electron/package.json', '{"old":true}\n')
+    execFileSync('git', ['init'], { cwd: root })
+    execFileSync('git', ['config', 'user.email', 'flowstate-test@example.invalid'], { cwd: root })
+    execFileSync('git', ['config', 'user.name', 'FlowState Test'], { cwd: root })
+    execFileSync('git', ['add', '.'], { cwd: root })
+    execFileSync('git', ['commit', '-m', 'fixture'], { cwd: root })
+    const { readSource } = await loadLedger()
+
+    write(root, 'stats.html', 'new stats\n')
+    write(root, 'dist-electron/package.json', '{"new":true}\n')
+    expect(readSource(root).dirty).toBe(false)
+
+    write(root, 'source.txt', 'changed source\n')
+    expect(readSource(root).dirty).toBe(true)
   })
 
   it('builds a redacted non-live ledger without probing public, installed, or sidecar surfaces', async () => {
@@ -85,6 +107,7 @@ describe('FlowState source-to-runtime truth ledger', () => {
           'canonical-task/task-v1',
           'electron-updater/latest-linux-v1',
           'local-task-api/v1',
+          'local-task-api/flowstate-hermes-capabilities-v1',
           'notion-activation/notion-activation-v1',
           'truth-ledger/flowstate-truth-ledger-v1',
         ],

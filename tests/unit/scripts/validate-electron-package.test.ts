@@ -1,12 +1,28 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createPackage } from '@electron/asar'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const {
+  HERMES_ROUTE_BUNDLE_MARKERS,
+  HERMES_ROUTE_CAPABILITIES,
+  HERMES_ROUTE_DISPATCH_MARKERS,
+  SCHEMA_VERSION,
+} = require('../../../server/local-api/hermes-route-capabilities.cjs') as {
+  HERMES_ROUTE_BUNDLE_MARKERS: string[]
+  HERMES_ROUTE_CAPABILITIES: Array<Record<string, unknown>>
+  HERMES_ROUTE_DISPATCH_MARKERS: string[]
+  SCHEMA_VERSION: string
+}
 
 const scriptPath = resolve(__dirname, '../../../scripts/validate-electron-package.cjs')
+const projectRoot = resolve(__dirname, '../../..')
 const tempRoots: string[] = []
+let cachedBundledSidecar: string | null = null
 
 function makeRoot() {
   const root = mkdtempSync(join(tmpdir(), 'flowstate-electron-package-'))
@@ -18,6 +34,36 @@ function writeFile(root: string, relativePath: string, content = 'fixture') {
   const fullPath = join(root, relativePath)
   mkdirSync(dirname(fullPath), { recursive: true })
   writeFileSync(fullPath, content)
+}
+
+function bundledSidecar() {
+  if (cachedBundledSidecar !== null) return cachedBundledSidecar
+  const buildRoot = makeRoot()
+  const output = join(buildRoot, 'local-api-server.cjs')
+  const result = spawnSync(resolve(projectRoot, 'node_modules/.bin/esbuild'), [
+    'server/local-api/server.cjs', '--bundle', '--platform=node', '--target=node22',
+    `--outfile=${output}`,
+  ], { cwd: projectRoot, encoding: 'utf8' })
+  if (result.status !== 0) throw new Error(result.stderr || 'failed to build sidecar fixture')
+  cachedBundledSidecar = readFileSync(output, 'utf8')
+  return cachedBundledSidecar
+}
+
+function capabilityOnlyExecutableSidecar() {
+  return `
+const http = require('http')
+const manifest = ${JSON.stringify({ schemaVersion: SCHEMA_VERSION, routes: HERMES_ROUTE_CAPABILITIES })}
+http.createServer((req, res) => {
+  const body = req.url === '/api/capabilities'
+    ? manifest
+    : req.url === '/api/health' ? { ok: true } : { error: 'not found' }
+  res.writeHead(req.url === '/api/capabilities' || req.url === '/api/health' ? 200 : 404, {
+    'Content-Type': 'application/json',
+  })
+  res.end(JSON.stringify(body))
+}).listen(Number(process.env.FLOW_STATE_API_PORT), '127.0.0.1')
+/* ${[...HERMES_ROUTE_BUNDLE_MARKERS, ...HERMES_ROUTE_DISPATCH_MARKERS].join('\n')} */
+`
 }
 
 function writeBuilderConfig(root: string, options: { executableName?: string; startupWMClass?: string } = {}) {
@@ -47,7 +93,11 @@ appImage:
   )
 }
 
-async function writeAppAsar(root: string, entries: string[]) {
+async function writeAppAsar(
+  root: string,
+  entries: string[],
+  options: { sidecar?: string } = {},
+) {
   const source = join(root, 'asar-source')
   const appAsar = join(root, 'release/linux-unpacked/resources/app.asar')
 
@@ -61,9 +111,14 @@ async function writeAppAsar(root: string, entries: string[]) {
             source: { commit: 'a'.repeat(40), dirty: false },
             build: {
               builtAt: '2026-07-15T12:00:00.000Z',
-              contractSet: ['truth-ledger/flowstate-truth-ledger-v1'],
+              contractSet: [
+                'truth-ledger/flowstate-truth-ledger-v1',
+                'local-task-api/hermes-tools-v1',
+              ],
             },
           })
+        : entry.endsWith('local-api-server.cjs')
+          ? options.sidecar ?? bundledSidecar()
         : 'fixture'
     writeFile(source, entry.replace(/^\//, ''), content)
   }
@@ -126,7 +181,7 @@ describe('validate-electron-package', () => {
 
     const result = runValidator(root)
 
-    expect(result.status).toBe(0)
+    expect(result.status, result.stderr).toBe(0)
     expect(result.stdout).toContain('Electron package contains renderer')
   })
 
@@ -163,6 +218,42 @@ describe('validate-electron-package', () => {
 
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('/dist-electron/local-api-server.cjs')
+  })
+
+  it('fails before shipping a sidecar that omits a Hermes route capability', async () => {
+    const root = makeRoot()
+    writeBuilderConfig(root)
+    await writeAppAsar(root, [
+      '/dist/index.html',
+      '/dist-electron/main.cjs',
+      '/dist-electron/preload.cjs',
+      '/dist-electron/local-api-server.cjs',
+      '/dist-electron/flowstate-truth-ledger.json',
+      '/package.json',
+    ], { sidecar: 'health-only sidecar fixture' })
+
+    const result = runValidator(root)
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('Hermes route capability contract')
+  })
+
+  it('fails before shipping marker text that has no executable route dispatch', async () => {
+    const root = makeRoot()
+    writeBuilderConfig(root)
+    await writeAppAsar(root, [
+      '/dist/index.html',
+      '/dist-electron/main.cjs',
+      '/dist-electron/preload.cjs',
+      '/dist-electron/local-api-server.cjs',
+      '/dist-electron/flowstate-truth-ledger.json',
+      '/package.json',
+    ], { sidecar: capabilityOnlyExecutableSidecar() })
+
+    const result = runValidator(root)
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('executable Hermes route contract')
   })
 
   it('fails if Linux launcher metadata drifts away from the dock shortcut contract', async () => {

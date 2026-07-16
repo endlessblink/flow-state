@@ -24,12 +24,12 @@ function functionSlice(source: string, name: string, nextName: string): string {
 }
 
 describe('BUG-1942 Local Task API renderer reconciliation', () => {
-  it('notifies the Electron parent after successful task create, patch, and delete writes', () => {
-    const create = functionSlice(server, 'handleCreateTask', 'handlePatchTask')
+  it('notifies the Electron parent after verified lifecycle, patch, and delete writes', () => {
+    const lifecycle = functionSlice(server, 'handleTaskLifecycle', 'handlePatchTask')
     const patch = functionSlice(server, 'handlePatchTask', 'handleGetTaskInstances')
     const remove = functionSlice(server, 'handleDeleteTask', 'handleGetCurrentTimer')
 
-    expect(create).toContain("notifyTaskMutation('create', id)")
+    expect(lifecycle).toContain('executeCanonicalTaskLifecycle(ctx, body, notifyTaskMutation)')
     expect(patch).toContain('executeCanonicalTaskPatch(ctx, id, body, notifyTaskMutation)')
     expect(remove).toContain("notifyTaskMutation('delete', id)")
   })

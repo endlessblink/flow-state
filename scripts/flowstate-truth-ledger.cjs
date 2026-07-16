@@ -15,6 +15,7 @@ const CONTRACT_SET = Object.freeze([
   'canonical-task/task-v1',
   'electron-updater/latest-linux-v1',
   'local-task-api/v1',
+  'local-task-api/flowstate-hermes-capabilities-v1',
   'notion-activation/notion-activation-v1',
   'truth-ledger/flowstate-truth-ledger-v1',
 ])
@@ -62,7 +63,13 @@ function readSource(root) {
   }).trim()
   return {
     commit: git('rev-parse', 'HEAD'),
-    dirty: git('status', '--porcelain', '--untracked-files=no').length > 0,
+    // The canonical frontend/main build refreshes these tracked generated
+    // outputs before provenance is sealed. They are not source drift.
+    dirty: git(
+      'status', '--porcelain', '--untracked-files=no', '--', '.',
+      ':(exclude)dist-electron/package.json',
+      ':(exclude)stats.html',
+    ).length > 0,
   }
 }
 
@@ -394,5 +401,6 @@ module.exports = {
   probeInstalledApp,
   probePublicRelease,
   probeSidecarRuntime,
+  readSource,
   writeTruthLedger,
 }

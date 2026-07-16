@@ -237,9 +237,36 @@ function validateAffectedTaskEntry(entry, options = {}) {
   return { ok: true }
 }
 
+function validCanonicalReceipt(receipt, expected, validateReadBack, hashers = [canonicalHash]) {
+  if (
+    !object(receipt)
+    || !object(expected)
+    || Object.entries(expected).some(([field, value]) => receipt[field] !== value)
+    || !positiveInteger(receipt.canonicalRevision)
+    || !timestamp(receipt.canonicalUpdatedAt)
+    || !positiveInteger(receipt.changeSequence)
+    || !timestamp(receipt.committedAt)
+    || typeof receipt.replayed !== 'boolean'
+    || !object(receipt.readBack)
+    || receipt.readBack.id !== receipt.entityId
+    || receipt.readBack.canonicalRevision !== receipt.canonicalRevision
+    || receipt.readBack.canonicalUpdatedAt !== receipt.canonicalUpdatedAt
+    || !digest(receipt.readBackHash)
+    || !Array.isArray(hashers)
+  ) return false
+
+  try {
+    if (!hashers.some(hasher => receipt.readBackHash === hasher(receipt.readBack))) return false
+    return typeof validateReadBack !== 'function' || validateReadBack(receipt.readBack)
+  } catch {
+    return false
+  }
+}
+
 module.exports = {
   canonicalHash,
   canonicalJson,
   validateAffectedTaskEntry,
   validateCanonicalReceipt,
+  validCanonicalReceipt,
 }

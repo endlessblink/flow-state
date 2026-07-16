@@ -33,6 +33,9 @@ const { createAIMastraRuntime } = require('./ai-runtime.cjs')
 const { executeDoneForNow } = require('./done-for-now.cjs')
 const { executeMergeTasks } = require('./merge-tasks.cjs')
 const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
+const { executeCanonicalTaskLifecycle } = require('./canonical-task-lifecycle.cjs')
+const { executeCanonicalSubtaskBatch } = require('./canonical-subtask-batch.cjs')
+const { executeCanonicalWorkBlock } = require('./canonical-work-block.cjs')
 const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
@@ -48,6 +51,10 @@ const {
   readTaskInventoryPage,
 } = require('./task-inventory.cjs')
 const { scopeTaskQuery } = require('./task-scope.cjs')
+const {
+  HERMES_ROUTE_CAPABILITIES,
+  SCHEMA_VERSION: HERMES_CAPABILITIES_SCHEMA_VERSION,
+} = require('./hermes-route-capabilities.cjs')
 
 // --- Mode detection ---------------------------------------------------------
 // parentPort exists only when launched as an Electron utilityProcess.
@@ -596,38 +603,20 @@ function toSafeTask(record, detailed = false) {
 }
 
 async function handleCreateTask(req, res) {
-  const { supabase, userId } = ctx
+  await readJsonBody(req)
+  return send(res, 409, {
+    ok: false,
+    error: {
+      code: 'canonical_lifecycle_required',
+      message: 'Use POST /api/tasks/lifecycle with preview approval',
+    },
+  })
+}
+
+async function handleTaskLifecycle(req, res) {
   const body = await readJsonBody(req)
-
-  const title = typeof body.title === 'string' ? body.title.trim() : ''
-  if (!title) return send(res, 400, { error: 'title required' })
-
-  const priority = body.priority === undefined ? null : body.priority
-  if (!isValidPriority(priority)) {
-    return send(res, 400, { error: 'priority must be low|medium|high or null' })
-  }
-
-  const now = new Date().toISOString()
-  const id = crypto.randomUUID()
-  const row = {
-    id,
-    user_id: userId,
-    title,
-    description: typeof body.description === 'string' ? body.description : '',
-    status: 'planned', // default todo
-    priority,
-    due_date: body.dueDate ?? null,
-    project_id: body.projectId ?? null,
-    progress: 0,
-    is_deleted: false,
-    created_at: now,
-    updated_at: now,
-  }
-
-  const { error } = await supabase.from('tasks').insert(row)
-  if (error) return send(res, 500, { error: error.message })
-  notifyTaskMutation('create', id)
-  send(res, 200, { ok: true, task: { id } })
+  const result = await executeCanonicalTaskLifecycle(ctx, body, notifyTaskMutation)
+  return send(res, result.status, result.body)
 }
 
 async function handlePatchTask(id, req, res) {
@@ -761,6 +750,13 @@ async function handleGetTaskInstances(id, res) {
     task: { id: existing.id, title: existing.title },
     instances: normalizeTaskInstances(existing.instances),
   })
+}
+
+async function handleWorkBlock(id, req, res) {
+  const body = await readJsonBody(req)
+  const result = await executeCanonicalWorkBlock(ctx, id, body, notifyTaskMutation)
+
+  send(res, result.status, result.body)
 }
 
 async function handlePostTaskInstance(id, req, res) {
@@ -972,47 +968,10 @@ async function handleDeleteSubtask(id, subtaskId, req, res) {
 }
 
 async function handleSubtaskBatch(id, req, res) {
-  const { supabase, userId } = ctx
   const body = await readJsonBody(req)
-  const metadata = validateSubtaskMutationMetadata(body)
-  if (!metadata.ok) return send(res, 400, { error: metadata.error })
-  if (!Array.isArray(body.operations) || body.operations.length < 1 || body.operations.length > 50) {
-    return send(res, 400, { error: 'operations must contain 1 to 50 items' })
-  }
-  const { data: existing, error } = await findTaskForSubtasks(id)
-  if (error) return send(res, 500, { error: error.message })
-  if (!existing) return send(res, 404, { error: 'not found' })
-  const key = metadata.requestId && receiptKey(userId, id, metadata.requestId)
-  if (!metadata.preview && key && replaySubtaskResponse(key, res)) return
-  const now = new Date().toISOString()
-  const applied = applySubtaskOperations(
-    userId,
-    id,
-    metadata.requestId,
-    normalizeSubtasks(existing.subtasks),
-    body.operations,
-    now,
-  )
-  if (!applied.ok) return send(res, 400, { error: applied.error })
-  const response = {
-    ok: true,
-    preview: metadata.preview,
-    operations: applied.results,
-    receipt: {
-      requestId: metadata.requestId || null,
-      action: 'batch',
-      taskId: id,
-      operationCount: applied.results.length,
-      replayed: false,
-    },
-  }
-  if (metadata.preview) return send(res, 200, response)
-  const { error: updateError } = await supabase.from('tasks')
-    .update({ subtasks: applied.subtasks, updated_at: now })
-    .eq('id', id).eq('user_id', userId).eq('is_deleted', false)
-  if (updateError) return send(res, 500, { error: updateError.message })
-  rememberSubtaskResponse(key, response)
-  send(res, 200, response)
+  const result = await executeCanonicalSubtaskBatch(ctx, id, body, notifyTaskMutation)
+
+  send(res, result.status, result.body)
 }
 
 async function handleDeleteTask(id, res) {
@@ -1398,6 +1357,13 @@ function handleGetBuildProvenance(res) {
   })
 }
 
+function handleGetHermesCapabilities(res) {
+  send(res, 200, {
+    schemaVersion: HERMES_CAPABILITIES_SCHEMA_VERSION,
+    routes: HERMES_ROUTE_CAPABILITIES.map((route) => ({ ...route })),
+  })
+}
+
 // --- Server -----------------------------------------------------------------
 
 const server = http.createServer(async (req, res) => {
@@ -1417,6 +1383,10 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && path === '/api/provenance') {
       return handleGetBuildProvenance(res)
+    }
+
+    if (req.method === 'GET' && path === '/api/capabilities') {
+      return handleGetHermesCapabilities(res)
     }
 
     if (req.method === 'GET' && path === '/api/timer/current') {
@@ -1468,6 +1438,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && path === '/api/tasks') {
       return await handleCreateTask(req, res)
     }
+    if (req.method === 'POST' && path === '/api/tasks/lifecycle') {
+      return await handleTaskLifecycle(req, res)
+    }
     if (req.method === 'POST' && path === '/api/integrations/notion/activations') {
       return await handleNotionActivation(req, res)
     }
@@ -1484,6 +1457,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && taskInstancesMatch) {
       return await handlePostTaskInstance(decodeURIComponent(taskInstancesMatch[1]), req, res)
+    }
+    const workBlocksMatch = path.match(/^\/api\/tasks\/([^/]+)\/work-blocks$/)
+    if (req.method === 'POST' && workBlocksMatch) {
+      return await handleWorkBlock(decodeURIComponent(workBlocksMatch[1]), req, res)
     }
     const doneForNowMatch = path.match(/^\/api\/tasks\/([^/]+)\/done-for-now$/)
     if (req.method === 'POST' && doneForNowMatch) {

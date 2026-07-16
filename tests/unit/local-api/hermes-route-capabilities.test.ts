@@ -43,4 +43,17 @@ describe('Hermes route capability manifest', () => {
       available: true,
     })
   })
+
+  it.each([
+    ['PATCH', '/api/tasks/:id'],
+    ['POST', '/api/tasks/:id/done-for-now'],
+    ['POST', '/api/tasks/:id/merge'],
+  ])('names the real task-v1 receipt contract for %s %s', (method, path) => {
+    expect(HERMES_ROUTE_CAPABILITIES).toContainEqual({
+      method,
+      path,
+      contractVersion: 'task-v1',
+      available: true,
+    })
+  })
 })

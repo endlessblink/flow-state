@@ -12,6 +12,7 @@ const { execFileSync } = require('child_process')
 const asar = require('@electron/asar')
 const {
   HERMES_ROUTE_BUNDLE_MARKERS,
+  HERMES_ROUTE_DISPATCH_MARKERS,
   SCHEMA_VERSION: HERMES_CAPABILITIES_SCHEMA_VERSION,
 } = require('../server/local-api/hermes-route-capabilities.cjs')
 
@@ -128,6 +129,12 @@ function validateAppAsar(packagePath) {
       fail(
         `Packaged sidecar is missing the ${HERMES_CAPABILITIES_SCHEMA_VERSION} `
         + `Hermes route capability contract markers: ${missingMarkers.join(', ')}`,
+      )
+    }
+    const missingDispatch = HERMES_ROUTE_DISPATCH_MARKERS.filter((marker) => !sidecar.includes(marker))
+    if (missingDispatch.length > 0) {
+      fail(
+        `Packaged sidecar is missing advertised Hermes route dispatch branches: ${missingDispatch.join(', ')}`,
       )
     }
   } catch (error) {

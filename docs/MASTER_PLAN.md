@@ -2199,11 +2199,13 @@ _Original plan below._
 - [x] ~~**BUG-1955 — Restore packaged exact-task reads**: make the detailed Local Task API serializer execute safely with absent, null, empty, or malformed subtasks; add an executable source-and-bundle regression; and ship a version above Electron 1.4.255 with live Hermes read-back proof.~~ Completed 2026-07-14 in Electron 1.4.256.
 - [ ] **TASK-1956 — Reliable complete FlowState task inventory for Hermes**: recover renderer-to-sidecar auth after restart, expose a typed complete paginated open-task inventory with stable receipts, and prevent partial or stale samples from becoming exact assistant counts.
 - [ ] **TASK-1957 — Atomic recurrence-aware duplicate merge for Hermes**: let an approved merge preview resolve an explicit canonical recurrence only for safe root tasks with no occurrence history, bind that resolution into the receipt, and make unresolved recurrence conflicts stop further assistant mutations.
+- [x] ~~**TASK-1959 — Receipt-backed audit coverage, claim guardrails, and screenshot reconciliation**: add a durable machine-checkable audit coverage receipt (scope, source surface, snapshot, exact reviewed/unreviewed IDs, unresolved rows, completeness class, per-item evidence class), a claim classification guardrail (verified/partial/inferred/blocked/unknown) that blocks "reviewed everything" wording without proven full item coverage, and a screenshot-row reconciliation workflow where visible rows (incl. Hebrew/multiline) never count as exact reviewed tasks without identity proof.~~ Completed 2026-07-15.
 - [x] ~~**TASK-1958 — Canonical non-recurring task completion for Hermes**: dedicated `flowstate_complete_task_v1` preview/apply completion with approval digest, committed receipt, `completedAt` read-back, typed `recurring_task`/`already_completed` rejections, and disposable-DB runtime regression.~~ Completed 2026-07-15; production migration + Electron ship still pending.
 - [x] ~~**TASK-1959 — Redacted FlowState source-to-runtime truth ledger**: generate one stable, secret-free ledger across source, local build, public release, installed AppImage, and live sidecar truth; keep release builds non-live by default and expose mismatches instead of inferring deployment success.~~ Completed 2026-07-15.
 - [ ] **TASK-1960 — Make complete inventory the only exhaustive assistant task boundary**: label capped list/search responses as filtered samples, align inventory item revisions with the canonical receipt contract, and fail closed across large scans, repeated concurrent changes, and scope switches.
 - [ ] **TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.
 - [ ] **TASK-1962 — Preflight every Hermes-to-FlowState route and ship canonical task creation**: deliver the receipt-backed task lifecycle route, make source and bundled-sidecar runtime tests exercise the real HTTP boundary, publish a safe capability manifest, and fail Hermes/package/watchdog checks before work starts when any required route or contract is absent.
+- [ ] **TASK-1963 — Canonical atomic subtask breakdown contract**: port the preview-bound, revision-checked, replay-safe subtask batch RPC onto current main without reverting newer receipt/auth work; expose canonical ordered subtask reads for Hermes and reject malformed existing arrays before mutation.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2216,6 +2218,27 @@ _Original plan below._
 **Safety**: Repository-local tests and disposable fixtures are autonomous. Production mutations, deployments, credentials, destructive cleanup, and scope expansion remain exact approval boundaries.
 
 **2026-07-14 release repair**: Public Electron 1.4.257 was held after inspection found two complete Debian member triplets appended into one `.deb`; the AppImage itself remained structurally valid. The package validator now requires exactly one `debian-binary`, one `control.tar.*`, and one `data.tar.*`, while the builder removes only same-version target artifacts and the manifest before packaging. Local 1.4.258 built successfully: the AppImage is `180392753` bytes, the deb is `131375480` bytes with one exact member triplet, and the manifest names 1.4.258. The disposable reliable-assistant database harness now also applies `20260713011000_merge_tasks_rpc.sql` and executes the rollback-only merge suite; merge preview/apply, transfer, replay, conflict, scope, injected failure rollback, canonical task, and Notion contracts all passed. Public deployment and the production merge migration remain held at their explicit approval boundaries.
+
+### TASK-1963: Canonical atomic subtask breakdown contract (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-16) | **Depends on**: TASK-1944, TASK-1945, TASK-1961
+
+**Scope**:
+- Recover only the canonical subtask batch contract from the stale H10 history onto a fresh current-main worktree; never merge or cherry-pick the divergent branch wholesale.
+- Replace Local API in-memory/direct JSONB batch writes with the signed-user `flowstate_subtask_batch_v1` preview/apply RPC using operation identity, base revision, preview digest/expiry, request hash, and canonical receipt validation.
+- Return exact ordered subtask reads with workspace, revision, and canonical timestamp metadata through revision-bound pages of at most 100 rows; validate the complete stored array before slicing and fail closed on malformed or duplicate persisted identities.
+- Preserve current main's auth recovery, scope enforcement, shared receipt validation, audit guardrails, and unrelated Local API routes.
+- Prove normalization, preview non-mutation, exact apply/read-back, replay, stale revision, altered payload, malformed existing rows, cross-scope denial, and concurrent operation safety without touching production data.
+
+**Acceptance**:
+- Hermes can preview one exact ordered create/update/delete breakdown, approve that immutable proof, and apply it exactly once against the same parent revision.
+- The Local API cannot report canonical success without verifying the RPC result, primary affected task, canonical receipt, and reflected subtask read-back.
+- Duplicate client IDs, subtask IDs, malformed existing rows, stale revisions, expired previews, and changed payloads return typed errors without partial writes.
+- Existing current-main fixes are preserved, focused tests pass, and no package, deployment, or live task mutation occurs in this slice.
+
+**Progress (2026-07-16)**: The current-main recovery now uses the H3 read-back and shared receipt validator already present on `origin/master`, avoiding the stale H4 lifecycle dependency. Source and Electron-bundle runtime tests cover bounded pages, invalid cursors and limits, malformed rows beyond the first page, and typed revision conflicts; the disposable database harness covers preview/apply/replay/rollback and simultaneous stale writes without production data.
+
+**Cross-review hardening (2026-07-16)**: Exact normalized approval operations are now separated from enriched execution/read-back rows, including deep Canvas position equality. The migration losslessly backfills the current-main no-order shape, rejects post-state overflow above 10,001 rows in preview and apply, and returns the current revision from both stale paths. Signed-user source and Electron runtime tests preserve legacy singular preview fields while proving that receipt-free apply remains blocked.
 
 ### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
 
@@ -4676,6 +4699,45 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Regression added for reported repro**: the executable test spawns both source and freshly bundled or extracted packaged sidecars, performs authenticated exact-task reads across malformed and valid subtask shapes, and verifies user/workspace/deleted filters plus the response allowlist.
 
 **Live boundary proof**: the public and installed 1.4.256 bytes match; redacted diagnostics show healthy real-profile authentication and remote sync; the reported exact task returns HTTP 200; Hermes' office-work `flowstate_get_task` handler reads it end to end.
+
+### ~~TASK-1959~~: Receipt-backed audit coverage, claim guardrails, and screenshot reconciliation (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-15) | **Depends on**: TASK-1943, TASK-1956
+
+**User repro**: Hermes reviewed a representative subset of tasks (or capability classes, or screenshot-visible rows without exact identity) and then summarized the work as "reviewed everything". No durable evidence distinguished full coverage from sampled coverage, so the over-broad claim could not be caught.
+
+**Acceptance**:
+- A durable, machine-checkable `audit-coverage-v2` receipt records audit scope, source surface, snapshot time, expected item count/IDs when known, exact reviewed item IDs with per-item evidence class AND per-item provenance (`server-read` vs `declared`), declared-only reviewed IDs, weak title-only candidate IDs, ambiguous candidates with all candidate IDs, exact unreviewed IDs, unresolved observations, an `evidenceBasis`, and a completeness class of `full` / `declared_full` / `partial` / `representative_sample` / `unknown`.
+- The trust boundary is server-side: the route re-reads claimed records itself (RLS/workspace scoped). Completeness `full` and claim level `verified` are only reachable when every expected ID was reviewed with exact evidence the server re-read at audit time; caller-declared evidence classes, caller `knownTasks`, and caller `liveVerified` can never produce `full`/`verified`/"Live workflow verified" (declared coverage caps at `declared_full` → claim level `declared`). The digest proves integrity, not provenance; provenance is a recorded server-assigned class.
+- A claim guardrail classifies summaries as verified/declared/partial/inferred/blocked/unknown and enforces semantically, not by wording blacklist: universal-completeness claims (all/every/entire/whole/each/fully/complete/"nothing was missed"-class negated omission over the audit domain) are blocked below `verified`, and every non-verified summary must explicitly disclose incomplete/declared/unknown coverage (default-deny). Capability audits must say so; live blockers must survive into the wording; live-verified wording requires server-owned live proof, which does not exist in this API shape.
+- Screenshot reconciliation records visible text (Hebrew/multiline safe), proven exact task ID matches, weak title-only candidates, ambiguous candidates, and unresolved rows as separate durable receipt fields with their candidate IDs; review level reflects reviewed evidence (`exact-task-level` / `identity-only` / `mixed` / `screenshot-level`) — a proven identity row with `reviewed:false` can never read as exact-task-level.
+- Blocked over-claim attempts (draft, violations, receipt) are durably appended to `audit-coverage-blocked.jsonl`, so refusals leave the same audit trail as accepted receipts; the 422 response reports whether the blocked attempt persisted.
+- Regression covers the actual failures: fabricated IDs/evidence/knownTasks/liveVerified cannot certify verified/full/live; equivalent broad-claim wording variants are blocked; weak/ambiguous candidates are durable; blocked attempts persist (110 tests across `tests/unit/local-api/audit-coverage*.test.ts`, `claim-guardrail.test.ts`, `screenshot-reconciliation.test.ts`, incl. `audit-coverage-hardening.test.ts`).
+
+**Explicitly not covered**: retroactive classification of historical Hermes summaries; enforcement inside Hermes' own prompt/runtime (this ships the FlowState-side receipt and guard surface it must consume); DB-table persistence of audit receipts (they persist as JSONL under the sidecar data dir); server-owned proof of LIVE workflow verification (deliberately unreachable rather than trusted); packaged-Electron/live-route proof (unit + contract level only so far).
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Regression: a representative-sample/subset receipt blocks "I reviewed everything in FlowState." with 422 `broad_claim_blocked` and a safe rewording | Yes |
+| Data shape / persisted row shape | Yes | `audit-coverage-v2` receipts are digest-bound; JSONL receipt + blocked-attempt ledgers re-validate offline via `validAuditCoverageReceipt()` | Yes |
+| Renderer store/state | N/A | No renderer surface changed | No |
+| Electron main/preload bridge | N/A | No bridge change; sidecar route only | No |
+| Localhost sidecar endpoint | Yes | `POST /api/audit/coverage` registered behind bearer token + auth context; source-order contract test | Yes |
+| KDE polling/control path | N/A | Untouched | No |
+| Supabase persistence/realtime | Yes | `server-read` provenance re-reads claimed records RLS/workspace-scoped at audit time | Yes, for provenance lookups |
+| Updater/runtime version | Not yet | Isolated tree builds with electron-builder; no version bump or updater deploy in this commit | No |
+| Stale live process/cache state | Not yet | A running older sidecar serves this route only after update/restart | No |
+
+**Exact failure mode fixed**: FlowState-side over-claiming — a subset, sample, capability-class, declared-only, or screenshot-title review being summarized as full/verified item coverage through the Local API audit surface.
+
+**Explicitly not covered**: Hermes-side adoption (Hermes must route summaries through `POST /api/audit/coverage` or validate receipts itself); Hebrew-language broad-claim lexicon (the mandatory coverage-disclosure rule is the backstop); Supabase-table receipt persistence; live packaged-app and updater delivery of this route.
+
+**Regression added for reported repro**: representative-sample and partial receipts cannot emit "reviewed everything"/"all tasks" wording; declared/weak/ambiguous evidence can never reach `full`/`verified`; unresolved screenshot rows block "reviewed all visible tasks".
+
+**Live boundary proof**: local vitest packs (local-api + electron) and an isolated-tree `electron-builder` build only; the packaged live sidecar route and Hermes end-to-end use are not yet proven and remain the tracked follow-up.
+
 
 ### TASK-1957: Atomic recurrence-aware duplicate merge for Hermes (🔄 IN PROGRESS)
 
@@ -7516,11 +7578,13 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1955**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.256 with executable source/package coverage and live Hermes exact-task read-back** |
 | **TASK-1956** | **P0** | 🔄 **Reliable complete FlowState inventory with restart-safe sidecar auth, typed freshness/completeness, stable pagination, and packaged proof** |
 | **TASK-1957** | **P0** | 🔄 **Atomic recurrence-aware duplicate merge with preview-bound cadence resolution and stop-on-conflict assistant behavior** |
+| ~~**TASK-1959**~~ | **P0** | ✅ **Receipt-backed audit coverage with completeness classes, broad-claim guardrails, and screenshot-row reconciliation for Hermes summaries** |
 | ~~**TASK-1958**~~ | **P1** | ✅ **Canonical non-recurring task completion with approval digest, committed receipt, completedAt read-back, and recurring fail-closed rejection** |
 | ~~**TASK-1959**~~ | **P0** | ✅ **Redacted source/build/public/installed/sidecar truth ledger with embedded non-live package provenance and mismatch evidence** |
 | **TASK-1960** | **P0** | 🔄 **Make complete inventory the only exhaustive assistant task boundary with typed samples and fail-closed large scans** |
 | **TASK-1961** | **P0** | 🔄 **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
 | **TASK-1962** | **P0** | 🔄 **Preflight every Hermes-to-FlowState route, package the canonical task lifecycle, and reject incomplete runtimes before work starts** |
+| **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask breakdown with immutable preview approval, parent revisions, replay-safe receipts, and validated ordered read-back** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

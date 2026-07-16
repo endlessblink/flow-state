@@ -467,41 +467,73 @@ describe('Local API sidecar timer endpoint regression contract', () => {
 
   it('reads only the user-owned task subtask payload', () => {
     const body = functionBody('handleGetSubtasks')
+    const getBody = body.slice(0, body.indexOf('async function handleCreateSubtask'))
     const finder = functionBody('findTaskForSubtasks')
+    const pageParser = functionBody('parseCanonicalSubtaskPage')
 
-    expect(body).toContain("findTaskForSubtasks(id, 'id,title,subtasks')")
+    expect(getBody).toContain("const fields = 'id,title,workspace_id,canonical_revision,updated_at,subtasks'")
+    expect(getBody).toContain('findTaskForSubtasks(id, fields)')
     expect(finder).toContain('.select(fields)')
-    expect(finder).toContain(".eq('user_id', userId)")
     expect(finder).toContain(".eq('is_deleted', false)")
-    expect(body).toContain('normalizeSubtasks(existing.subtasks)')
+    expect(finder).toContain('scopeTaskQuery(ctx, query)')
+    expect(getBody).toContain('workspaceId: existing.workspace_id')
+    expect(getBody).toContain('canonicalRevision: existing.canonical_revision')
+    expect(getBody).toContain('canonicalUpdatedAt: existing.updated_at')
+    expect(getBody).toContain('validCanonicalSubtasks(existing.subtasks, existing.id)')
+    expect(getBody).toContain('parseCanonicalSubtaskPage(url, existing.id, existing.canonical_revision)')
+    expect(getBody).toContain('subtasks.slice(page.offset, page.offset + page.limit)')
+    expect(getBody).toContain('limit: page.limit')
+    expect(getBody).toContain('total: subtasks.length')
+    expect(getBody).toContain('hasMore')
+    expect(getBody).toContain('nextCursor')
+    expect(pageParser).toContain("code: 'stale_revision'")
+    expect(pageParser).toContain('currentRevision: canonicalRevision')
+    expect(getBody).toContain("code: 'read_failed'")
+    expect(getBody).toContain("code: 'not_found'")
+    expect(getBody).not.toContain('error.message')
   })
 
-  it('defaults subtask mutations to preview and requires an idempotency key to apply', () => {
-    const validation = functionBody('validateSubtaskMutationMetadata')
+  it('routes singular subtask mutations through the canonical preview/apply batch', () => {
     const create = functionBody('handleCreateSubtask')
     const patch = functionBody('handlePatchSubtask')
     const deletion = functionBody('handleDeleteSubtask')
+    const canonical = functionBody('handleCanonicalSubtaskBatch')
+    const wrappers = [
+      create.slice(0, create.indexOf('async function handlePatchSubtask')),
+      patch.slice(0, patch.indexOf('async function handleDeleteSubtask')),
+      deletion.slice(0, deletion.indexOf('async function handleCanonicalSubtaskBatch')),
+    ]
 
-    expect(validation).toContain('body.preview !== false')
-    expect(validation).toContain("error: 'requestId required when preview is false'")
-    expect(create).toContain('if (metadata.preview)')
-    expect(patch).toContain('if (metadata.preview)')
-    expect(deletion).toContain('if (metadata.preview)')
-  })
-
-  it('persists normalized subtask arrays and returns stable receipts', () => {
-    const create = functionBody('handleCreateSubtask')
-    const patch = functionBody('handlePatchSubtask')
-    const deletion = functionBody('handleDeleteSubtask')
-
-    for (const body of [create, patch, deletion]) {
-      expect(body).toContain(".from('tasks')")
-      expect(body).toContain(".eq('user_id', userId)")
-      expect(body).toContain('buildSubtaskReceipt')
+    expect(create).toContain("kind: 'create'")
+    expect(create).toContain('const operationId = body.operationId || body.requestId')
+    expect(create).toContain('clientId: body.clientId || operationId')
+    expect(create).toContain('prepareSingularSubtaskPreview')
+    expect(canonical).toContain('legacySingularPreviewResponse')
+    expect(patch).toContain("kind: 'update', subtaskId")
+    expect(deletion).toContain("kind: 'delete', subtaskId")
+    for (const body of [create, patch]) {
+      expect(body).toContain('completedPomodoros: body.completedPomodoros')
+      expect(body).toContain('canvasPosition: body.canvasPosition')
+      expect(body).toContain('isCompleted: body.isCompleted ?? body.completed')
     }
-    expect(create).toContain('subtasks: updatedSubtasks')
-    expect(patch).toContain('subtasks: updatedSubtasks')
-    expect(deletion).toContain('subtasks: updatedSubtasks')
+    for (const body of wrappers) {
+      expect(body).toContain('body.operationId = body.operationId || body.requestId')
+      expect(body).toContain('handleCanonicalSubtaskBatch')
+      expect(body).not.toContain(".from('tasks')")
+    }
+  })
+
+  it('uses the signed-user canonical adapter instead of direct task writes', () => {
+    const body = functionBody('handleCanonicalSubtaskBatch')
+    const canonicalBody = body.slice(0, body.indexOf('async function handleSubtaskBatch'))
+
+    expect(SERVER_CJS).toContain("require('./subtask-batch.cjs')")
+    expect(canonicalBody).toContain('executeSubtaskBatch')
+    expect(canonicalBody).toContain('signedUser: ctx.signedUser')
+    expect(canonicalBody).not.toContain('ctx.mode')
+    expect(canonicalBody).toContain('activeWorkspaceId: ctx.activeWorkspaceId')
+    expect(canonicalBody).toContain('notifyTaskMutation')
+    expect(canonicalBody).not.toContain(".from('tasks')")
   })
 
   it('supports one preview-first atomic subtask batch receipt', () => {
@@ -509,38 +541,16 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     const body = functionBody('handleSubtaskBatch')
 
     expect(route).toBeGreaterThan(-1)
-    expect(body).toContain('operations.length > 50')
-    expect(body).toContain('applySubtaskOperations')
-    expect(body).toContain("action: 'batch'")
-    expect(body).toContain('operationCount: applied.results.length')
-    expect(body).toContain('if (metadata.preview)')
-    expect(body).toContain('subtasks: applied.subtasks')
+    expect(body).toContain('handleCanonicalSubtaskBatch')
+    expect(SERVER_CJS).not.toContain('applySubtaskOperations')
+    expect(SERVER_CJS).not.toContain('subtaskMutationReceipts')
   })
 
-  it('replays create and batch applies safely after the in-memory receipt cache is lost', () => {
-    const deterministic = functionBody('deterministicSubtaskId')
-    const create = functionBody('handleCreateSubtask')
-    const batch = functionBody('applySubtaskOperations')
-
-    expect(deterministic).toContain("crypto.createHash('sha256')")
-    expect(deterministic).toContain('userId')
-    expect(deterministic).toContain('requestId')
-    expect(deterministic).toContain('index')
-    expect(create).toContain('const persisted = normalizeSubtasks(existing.subtasks).find')
-    expect(create).toContain("buildSubtaskReceipt('create', id, persisted, metadata.requestId, true)")
-    expect(batch).toContain('deterministicSubtaskId(userId, taskId, requestId, operationIndex)')
-    expect(batch).toContain('existingIndex !== -1')
-    expect(batch).toContain("replayed: true")
-  })
-
-  it('treats already-applied update and delete retries as semantic successes', () => {
-    const patch = functionBody('handlePatchSubtask')
-    const deletion = functionBody('handleDeleteSubtask')
-
-    expect(patch).toContain('const alreadyApplied = !metadata.preview')
-    expect(patch).toContain("buildSubtaskReceipt('update', id, current[index], metadata.requestId, true)")
-    expect(deletion).toContain('if (!subtask)')
-    expect(deletion).toContain("buildSubtaskReceipt('delete', id, missing, metadata.requestId, true)")
+  it('keeps replay identity durable outside the sidecar process', () => {
+    expect(SERVER_CJS).not.toContain('subtaskMutationReceipts')
+    expect(SERVER_CJS).not.toContain('deterministicSubtaskId')
+    expect(SERVER_CJS).not.toContain('replaySubtaskResponse')
+    expect(SERVER_CJS).toContain("require('./subtask-batch.cjs')")
   })
 
 })

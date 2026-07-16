@@ -171,6 +171,82 @@ schemas can still serve basic task pressure.
 }
 ```
 
+### `POST /api/audit/coverage`
+
+Bearer-protected coverage recorder for review/audit workflows (TASK-1959).
+The caller declares what was reviewed; the endpoint re-reads the claimed
+records server-side (RLS/workspace scoped) and returns a durable,
+digest-bound `audit-coverage-v2` receipt plus the strongest summary wording
+that evidence justifies. Receipts are appended to
+`<data-dir>/audit-coverage-receipts.jsonl`, blocked over-claim attempts to
+`<data-dir>/audit-coverage-blocked.jsonl`, and both can be re-validated
+offline with `validAuditCoverageReceipt()`.
+
+Trust model: the request body is untrusted self-attestation. The receipt
+digest proves integrity (no later tampering), never provenance. Provenance
+is recorded per reviewed item as `server-read` (the sidecar itself re-read
+the record at audit time) or `declared` (caller assertion only). Declared
+evidence is preserved durably but can never produce `completeness: "full"`,
+`claimLevel: "verified"`, or live-verified wording.
+
+```json
+{
+  "auditScope": "open tasks in personal scope",
+  "sourceSurface": "local-api /api/tasks/inventory",
+  "snapshotAt": "2026-07-15T10:00:00.000Z",
+  "auditMode": "item",
+  "representativeSample": false,
+  "expectedItemIds": ["task-a", "task-b"],
+  "reviewedItems": [
+    { "itemId": "task-a", "evidenceClass": "exact-record-read" }
+  ],
+  "unreviewedItemIds": [],
+  "screenshotRows": [
+    { "visibleText": "לשלוח כביסה", "claimedTaskId": "task-laundry", "reviewed": true }
+  ],
+  "knownTasks": [{ "id": "task-laundry", "title": "לשלוח כביסה" }],
+  "blockers": [],
+  "liveVerified": false,
+  "summaryDraft": "Reviewed 1 of 2 expected tasks; exact task coverage was not completed."
+}
+```
+
+Semantics:
+
+- `completeness` is `full` / `declared_full` / `partial` /
+  `representative_sample` / `unknown`. `full` requires a known
+  `expectedItemIds` universe where every ID was reviewed with exact evidence
+  (`exact-record-read`, `canonical-receipt`, or `screenshot-row-reconciled`)
+  AND was server-read at audit time, with nothing unreviewed, unresolved,
+  weak, or ambiguous. Coverage that is complete only per caller declaration
+  is `declared_full` (`complete: false`), never `full`.
+- The receipt durably separates `reviewedItemIds` (server-read exact),
+  `declaredReviewedItemIds` (exact class, caller-declared only),
+  `weakCandidateItemIds` (title-only candidates with their IDs),
+  `ambiguousCandidates` (visible text plus every candidate ID),
+  `unreviewedItemIds`, and `unresolvedRows`, plus an `evidenceBasis` of
+  `server-read` / `mixed` / `declared` / `none`.
+- Screenshot rows are reconciled against server-fetched records when server
+  lookups are available; caller `knownTasks` are only a declared fallback and
+  can never produce server-read provenance. `screenshot.reviewLevel` is
+  `exact-task-level` (identity proven AND actually reviewed, nothing weaker),
+  `identity-only` (identity proven but not reviewed), `mixed`, or
+  `screenshot-level`.
+- `claimLevel` is `verified` / `declared` / `partial` / `inferred`
+  (capability-based) / `blocked` / `unknown`. `verified` is reachable only
+  from a server-read `full` receipt.
+- Summary guarding is semantic and default-deny: any universal-completeness
+  claim (quantifiers such as all/every/entire/whole/each/fully/complete over
+  the audit domain, or "nothing was missed"-style negated omission) is
+  blocked below `verified`, and every non-verified summary must explicitly
+  disclose incomplete/declared/unknown coverage. `liveVerified` from the
+  caller is a declaration; "Live workflow verified." is unreachable without
+  server-owned live proof, which this API shape does not have. Violations
+  return `422 { "error": "broad_claim_blocked", "violations": [...],
+  "safeSummary": "...", "blockedAttempt": { "persisted": true } }` and the
+  blocked attempt (draft, violations, receipt) is appended to the blocked
+  ledger so refusals are auditable.
+
 ### `GET /api/tasks/search?q=laundry&limit=25`
 
 Searches living task titles in the renderer's exact active workspace. `q` is
@@ -507,13 +583,39 @@ Safety notes:
 ### Subtasks
 
 `GET /api/tasks/:id/subtasks` lists the ordered embedded subtasks for one task.
+The response retains the `subtasks` array and adds
+`page: { limit, total, hasMore, nextCursor }`. Pages default to and are capped
+at 100 rows. Pass the opaque `nextCursor` back as `?cursor=...`; the cursor is
+bound to the task and parent `canonicalRevision`, so a parent edit between
+pages returns typed `409 stale_revision` with `currentRevision`. The server
+validates the complete stored array before slicing a page, including malformed
+rows beyond the returned boundary.
 `POST /api/tasks/:id/subtasks`, `PATCH /api/tasks/:id/subtasks/:subtaskId`, and
 `POST /api/tasks/:id/subtasks/:subtaskId/delete` preview by default. Set
-`preview` to `false` and provide a stable `requestId` only after approval.
-Applied retries are idempotent and return a receipt without duplicating work.
+`preview` to `false` only after approval, and return the exact server-issued
+`operationId`, parent `baseRevision`, `previewDigest`, `previewExpiresAt`, and
+`requestHash`. The singular routes are compatibility adapters to the same
+canonical batch command; they never write the task row directly.
+Legacy singular preview requests such as `{ "title": "Step" }` remain
+supported: the signed-user sidecar derives a fresh operation identity and the
+current parent revision, returns the canonical preview fields plus the legacy
+`subtask` and `receipt` fields, and still refuses `preview:false` without the
+exact server-issued approval proof.
 
-`POST /api/tasks/:id/subtasks/batch` accepts 1-50 `create`, `update`, or `delete`
-operations and applies the approved batch as one task-row update.
+`POST /api/tasks/:id/subtasks/batch` accepts 1-50 ordered `create`, `update`, or
+`delete` operations and applies the approved batch atomically. New steps use a
+stable `clientId`. Optional `doneEnough` and `estimateMinutes` describe a useful
+stopping condition and estimate without completing the step or parent;
+`canvasPosition` and `completedPomodoros` preserve mini-Canvas and progress
+updates through the same authority.
+
+Durable receipts survive sidecar restarts, exact retries replay without another
+write, malformed existing arrays fail closed, and concurrent parent edits
+return `stale_revision` instead of silently overwriting another surface.
+The migration losslessly adds positional `order` to the exact legacy subtask
+shape written by current main; it does not rewrite unknown or already malformed
+rows. Both preview and apply reject a post-operation array above 10,001 rows
+with `subtask_limit_exceeded` before approval consumption or task mutation.
 
 ### `DELETE /api/tasks/:id`
 Soft-deletes a task for the current user (`is_deleted=true`, `deleted_at=now`).

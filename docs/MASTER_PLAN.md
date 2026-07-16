@@ -2204,6 +2204,7 @@ _Original plan below._
 - [x] ~~**TASK-1959 — Redacted FlowState source-to-runtime truth ledger**: generate one stable, secret-free ledger across source, local build, public release, installed AppImage, and live sidecar truth; keep release builds non-live by default and expose mismatches instead of inferring deployment success.~~ Completed 2026-07-15.
 - [ ] **TASK-1960 — Make complete inventory the only exhaustive assistant task boundary**: label capped list/search responses as filtered samples, align inventory item revisions with the canonical receipt contract, and fail closed across large scans, repeated concurrent changes, and scope switches.
 - [ ] **TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.
+- [ ] **TASK-1963 — Canonical atomic subtask breakdown contract**: port the preview-bound, revision-checked, replay-safe subtask batch RPC onto current main without reverting newer receipt/auth work; expose canonical ordered subtask reads for Hermes and reject malformed existing arrays before mutation.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2216,6 +2217,27 @@ _Original plan below._
 **Safety**: Repository-local tests and disposable fixtures are autonomous. Production mutations, deployments, credentials, destructive cleanup, and scope expansion remain exact approval boundaries.
 
 **2026-07-14 release repair**: Public Electron 1.4.257 was held after inspection found two complete Debian member triplets appended into one `.deb`; the AppImage itself remained structurally valid. The package validator now requires exactly one `debian-binary`, one `control.tar.*`, and one `data.tar.*`, while the builder removes only same-version target artifacts and the manifest before packaging. Local 1.4.258 built successfully: the AppImage is `180392753` bytes, the deb is `131375480` bytes with one exact member triplet, and the manifest names 1.4.258. The disposable reliable-assistant database harness now also applies `20260713011000_merge_tasks_rpc.sql` and executes the rollback-only merge suite; merge preview/apply, transfer, replay, conflict, scope, injected failure rollback, canonical task, and Notion contracts all passed. Public deployment and the production merge migration remain held at their explicit approval boundaries.
+
+### TASK-1963: Canonical atomic subtask breakdown contract (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-16) | **Depends on**: TASK-1944, TASK-1945, TASK-1961
+
+**Scope**:
+- Recover only the canonical subtask batch contract from the stale H10 history onto a fresh current-main worktree; never merge or cherry-pick the divergent branch wholesale.
+- Replace Local API in-memory/direct JSONB batch writes with the signed-user `flowstate_subtask_batch_v1` preview/apply RPC using operation identity, base revision, preview digest/expiry, request hash, and canonical receipt validation.
+- Return exact ordered subtask reads with workspace, revision, and canonical timestamp metadata through revision-bound pages of at most 100 rows; validate the complete stored array before slicing and fail closed on malformed or duplicate persisted identities.
+- Preserve current main's auth recovery, scope enforcement, shared receipt validation, audit guardrails, and unrelated Local API routes.
+- Prove normalization, preview non-mutation, exact apply/read-back, replay, stale revision, altered payload, malformed existing rows, cross-scope denial, and concurrent operation safety without touching production data.
+
+**Acceptance**:
+- Hermes can preview one exact ordered create/update/delete breakdown, approve that immutable proof, and apply it exactly once against the same parent revision.
+- The Local API cannot report canonical success without verifying the RPC result, primary affected task, canonical receipt, and reflected subtask read-back.
+- Duplicate client IDs, subtask IDs, malformed existing rows, stale revisions, expired previews, and changed payloads return typed errors without partial writes.
+- Existing current-main fixes are preserved, focused tests pass, and no package, deployment, or live task mutation occurs in this slice.
+
+**Progress (2026-07-16)**: The current-main recovery now uses the H3 read-back and shared receipt validator already present on `origin/master`, avoiding the stale H4 lifecycle dependency. Source and Electron-bundle runtime tests cover bounded pages, invalid cursors and limits, malformed rows beyond the first page, and typed revision conflicts; the disposable database harness covers preview/apply/replay/rollback and simultaneous stale writes without production data.
+
+**Cross-review hardening (2026-07-16)**: Exact normalized approval operations are now separated from enriched execution/read-back rows, including deep Canvas position equality. The migration losslessly backfills the current-main no-order shape, rejects post-state overflow above 10,001 rows in preview and apply, and returns the current revision from both stale paths. Signed-user source and Electron runtime tests preserve legacy singular preview fields while proving that receipt-free apply remains blocked.
 
 ### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
 
@@ -7544,6 +7566,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1959**~~ | **P0** | ✅ **Redacted source/build/public/installed/sidecar truth ledger with embedded non-live package provenance and mismatch evidence** |
 | **TASK-1960** | **P0** | 🔄 **Make complete inventory the only exhaustive assistant task boundary with typed samples and fail-closed large scans** |
 | **TASK-1961** | **P0** | 🔄 **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
+| **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask breakdown with immutable preview approval, parent revisions, replay-safe receipts, and validated ordered read-back** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

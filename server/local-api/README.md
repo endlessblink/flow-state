@@ -583,13 +583,39 @@ Safety notes:
 ### Subtasks
 
 `GET /api/tasks/:id/subtasks` lists the ordered embedded subtasks for one task.
+The response retains the `subtasks` array and adds
+`page: { limit, total, hasMore, nextCursor }`. Pages default to and are capped
+at 100 rows. Pass the opaque `nextCursor` back as `?cursor=...`; the cursor is
+bound to the task and parent `canonicalRevision`, so a parent edit between
+pages returns typed `409 stale_revision` with `currentRevision`. The server
+validates the complete stored array before slicing a page, including malformed
+rows beyond the returned boundary.
 `POST /api/tasks/:id/subtasks`, `PATCH /api/tasks/:id/subtasks/:subtaskId`, and
 `POST /api/tasks/:id/subtasks/:subtaskId/delete` preview by default. Set
-`preview` to `false` and provide a stable `requestId` only after approval.
-Applied retries are idempotent and return a receipt without duplicating work.
+`preview` to `false` only after approval, and return the exact server-issued
+`operationId`, parent `baseRevision`, `previewDigest`, `previewExpiresAt`, and
+`requestHash`. The singular routes are compatibility adapters to the same
+canonical batch command; they never write the task row directly.
+Legacy singular preview requests such as `{ "title": "Step" }` remain
+supported: the signed-user sidecar derives a fresh operation identity and the
+current parent revision, returns the canonical preview fields plus the legacy
+`subtask` and `receipt` fields, and still refuses `preview:false` without the
+exact server-issued approval proof.
 
-`POST /api/tasks/:id/subtasks/batch` accepts 1-50 `create`, `update`, or `delete`
-operations and applies the approved batch as one task-row update.
+`POST /api/tasks/:id/subtasks/batch` accepts 1-50 ordered `create`, `update`, or
+`delete` operations and applies the approved batch atomically. New steps use a
+stable `clientId`. Optional `doneEnough` and `estimateMinutes` describe a useful
+stopping condition and estimate without completing the step or parent;
+`canvasPosition` and `completedPomodoros` preserve mini-Canvas and progress
+updates through the same authority.
+
+Durable receipts survive sidecar restarts, exact retries replay without another
+write, malformed existing arrays fail closed, and concurrent parent edits
+return `stale_revision` instead of silently overwriting another surface.
+The migration losslessly adds positional `order` to the exact legacy subtask
+shape written by current main; it does not rewrite unknown or already malformed
+rows. Both preview and apply reject a post-operation array above 10,001 rows
+with `subtask_limit_exceeded` before approval consumption or task mutation.
 
 ### `DELETE /api/tasks/:id`
 Soft-deletes a task for the current user (`is_deleted=true`, `deleted_at=now`).

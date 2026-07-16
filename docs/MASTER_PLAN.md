@@ -2204,6 +2204,7 @@ _Original plan below._
 - [x] ~~**TASK-1959 — Redacted FlowState source-to-runtime truth ledger**: generate one stable, secret-free ledger across source, local build, public release, installed AppImage, and live sidecar truth; keep release builds non-live by default and expose mismatches instead of inferring deployment success.~~ Completed 2026-07-15.
 - [ ] **TASK-1960 — Make complete inventory the only exhaustive assistant task boundary**: label capped list/search responses as filtered samples, align inventory item revisions with the canonical receipt contract, and fail closed across large scans, repeated concurrent changes, and scope switches.
 - [ ] **TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.
+- [ ] **TASK-1962 — Preflight every Hermes-to-FlowState route and ship canonical task creation**: deliver the receipt-backed task lifecycle route, make source and bundled-sidecar runtime tests exercise the real HTTP boundary, publish a safe capability manifest, and fail Hermes/package/watchdog checks before work starts when any required route or contract is absent.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4825,6 +4826,22 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Implementation progress**: test-first Local API foundation in progress. One shared validator now recomputes canonical read-back hashes and binds both envelope and receipt request identity before mutation notifications; patch, completion, recurring completion, merge, and Notion activation share the primitive. The four task mutations use the unified `task-v1` envelope and require exact canonical affected-task evidence: patch/completion require one primary task row, recurring completion/merge require two exact distinct rows, and every primary identity/revision/sequence plus per-row read-back hash is bound to the top receipt and read-back. Every canonical field in the primary affected row must also match the corresponding top read-back field by canonical deep equality, while operation-specific enriched top fields remain allowed. Replay aliases are optional but fail on contradiction. Focused mutation coverage passes 188 tests, broader Local API reliability coverage passes 45 tests, and type-check/lint are green. The SQL receipt migration is implemented as a separate dependency-safe slice; legacy receipts are not accepted as canonical during the transition.
 
 **Reversible production gate**: H3 now has a transaction-owned, idempotent inverse that removes only the five request-hash wrapper signatures, restores the preserved legacy bodies and their exact authenticated/anon/PUBLIC privileges, removes private H3 helpers after wrapper removal, keeps additive receipt columns and committed data intact, and reloads the PostgREST schema. The standard disposable database gate injects an `ALTER FUNCTION` failure after wrapper drops and proves the entire inverse rolls back, then proves inverse replay, executable legacy patch/completion/merge contracts, forward reapplication, and the complete canonical receipt/race suite. No production database was contacted.
+
+### TASK-1962: Preflight every Hermes-to-FlowState route and ship canonical task creation (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-16) | **Depends on**: TASK-1944, TASK-1959, TASK-1961
+
+**Why**: Hermes health and search succeeded while all canonical task-creation previews returned HTTP 404. Live package inspection proved FlowState Electron 1.4.264 was serving an older sidecar bundle with no task lifecycle route even though dirty local source contained the handler. A health-only availability check therefore let work begin against an incomplete runtime and discovered contract drift only at the first blocked mutation.
+
+**Acceptance**:
+- The canonical task lifecycle route, handler, database migration, preview/apply validation, receipt verification, exact read-back, idempotency, conflict handling, and legacy-create refusal are committed together on current master history.
+- One safe capability contract identifies every Hermes-required Local API method/path family and canonical contract version without exposing tokens, user identity, task content, or private configuration.
+- Hermes or the redacted runtime audit compares its required capabilities with the live packaged sidecar before exposing write work and returns a typed contract/version mismatch instead of a late generic 404.
+- Source and freshly bundled sidecars execute the Hebrew canonical create preview through real HTTP and prove preview non-mutation; apply, replay, conflicting operation reuse, exact revision-1 read-back, and canonical soft-delete are independently verified with disposable data.
+- Electron package validation inspects the bundled sidecar capability contract and fails when a required route/handler is missing, rather than checking only that the sidecar file exists.
+- The released Electron version is newer than the installed 1.4.264 runtime, the public updater manifest and artifact are reachable, the installed process uses the delivered bytes, and the real Hermes preview/apply/read-back/delete loop succeeds without a legacy fallback.
+
+**Cleanup plan**: reuse the existing Local API sidecar, truth-ledger provenance, runtime-test harness, and package validator; add no dependency and no parallel server. Keep route capability data in one small contract module, delete disposable test tasks through the same canonical lifecycle, preserve the existing legacy-create rejection, and leave unrelated dirty reliability work untouched.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7544,6 +7561,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**TASK-1959**~~ | **P0** | ✅ **Redacted source/build/public/installed/sidecar truth ledger with embedded non-live package provenance and mismatch evidence** |
 | **TASK-1960** | **P0** | 🔄 **Make complete inventory the only exhaustive assistant task boundary with typed samples and fail-closed large scans** |
 | **TASK-1961** | **P0** | 🔄 **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
+| **TASK-1962** | **P0** | 🔄 **Preflight every Hermes-to-FlowState route, package the canonical task lifecycle, and reject incomplete runtimes before work starts** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

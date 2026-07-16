@@ -4,6 +4,12 @@ import { dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createPackage } from '@electron/asar'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const { HERMES_ROUTE_BUNDLE_MARKERS } = require('../../../server/local-api/hermes-route-capabilities.cjs') as {
+  HERMES_ROUTE_BUNDLE_MARKERS: string[]
+}
 
 const scriptPath = resolve(__dirname, '../../../scripts/validate-electron-package.cjs')
 const tempRoots: string[] = []
@@ -47,7 +53,11 @@ appImage:
   )
 }
 
-async function writeAppAsar(root: string, entries: string[]) {
+async function writeAppAsar(
+  root: string,
+  entries: string[],
+  options: { sidecar?: string } = {},
+) {
   const source = join(root, 'asar-source')
   const appAsar = join(root, 'release/linux-unpacked/resources/app.asar')
 
@@ -61,9 +71,14 @@ async function writeAppAsar(root: string, entries: string[]) {
             source: { commit: 'a'.repeat(40), dirty: false },
             build: {
               builtAt: '2026-07-15T12:00:00.000Z',
-              contractSet: ['truth-ledger/flowstate-truth-ledger-v1'],
+              contractSet: [
+                'truth-ledger/flowstate-truth-ledger-v1',
+                'local-task-api/hermes-tools-v1',
+              ],
             },
           })
+        : entry.endsWith('local-api-server.cjs')
+          ? options.sidecar ?? HERMES_ROUTE_BUNDLE_MARKERS.join('\n')
         : 'fixture'
     writeFile(source, entry.replace(/^\//, ''), content)
   }
@@ -163,6 +178,24 @@ describe('validate-electron-package', () => {
 
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('/dist-electron/local-api-server.cjs')
+  })
+
+  it('fails before shipping a sidecar that omits a Hermes route capability', async () => {
+    const root = makeRoot()
+    writeBuilderConfig(root)
+    await writeAppAsar(root, [
+      '/dist/index.html',
+      '/dist-electron/main.cjs',
+      '/dist-electron/preload.cjs',
+      '/dist-electron/local-api-server.cjs',
+      '/dist-electron/flowstate-truth-ledger.json',
+      '/package.json',
+    ], { sidecar: 'health-only sidecar fixture' })
+
+    const result = runValidator(root)
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('Hermes route capability contract')
   })
 
   it('fails if Linux launcher metadata drifts away from the dock shortcut contract', async () => {

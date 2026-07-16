@@ -10,6 +10,10 @@ const os = require('os')
 const path = require('path')
 const { execFileSync } = require('child_process')
 const asar = require('@electron/asar')
+const {
+  HERMES_ROUTE_BUNDLE_MARKERS,
+  SCHEMA_VERSION: HERMES_CAPABILITIES_SCHEMA_VERSION,
+} = require('../server/local-api/hermes-route-capabilities.cjs')
 
 const root = process.env.FLOWSTATE_PACKAGE_ROOT || path.resolve(__dirname, '..')
 const appAsar = path.join(root, 'release', 'linux-unpacked', 'resources', 'app.asar')
@@ -114,6 +118,21 @@ function validateAppAsar(packagePath) {
   } catch (error) {
     fail(`Unable to validate packaged FlowState truth ledger: ${error.message}`)
   }
+  try {
+    const sidecar = asar.extractFile(
+      packagePath,
+      'dist-electron/local-api-server.cjs',
+    ).toString('utf8')
+    const missingMarkers = HERMES_ROUTE_BUNDLE_MARKERS.filter((marker) => !sidecar.includes(marker))
+    if (missingMarkers.length > 0) {
+      fail(
+        `Packaged sidecar is missing the ${HERMES_CAPABILITIES_SCHEMA_VERSION} `
+        + `Hermes route capability contract markers: ${missingMarkers.join(', ')}`,
+      )
+    }
+  } catch (error) {
+    fail(`Unable to validate packaged Hermes route capability contract: ${error.message}`)
+  }
 }
 
 if (fs.existsSync(appAsar)) {
@@ -156,4 +175,4 @@ if (process.exitCode) {
   process.exit(process.exitCode)
 }
 
-console.log('[electron-package] Electron package contains renderer, main process, sidecar, and Linux launcher metadata.')
+console.log('[electron-package] Electron package contains renderer, main process, route-compatible sidecar, and Linux launcher metadata.')

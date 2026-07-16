@@ -4843,6 +4843,8 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Cleanup plan**: reuse the existing Local API sidecar, truth-ledger provenance, runtime-test harness, and package validator; add no dependency and no parallel server. Keep route capability data in one small contract module, delete disposable test tasks through the same canonical lifecycle, preserve the existing legacy-create rejection, and leave unrelated dirty reliability work untouched.
 
+**2026-07-16 deployment progress**: Electron 1.4.267 and both canonical database migrations are deployed. The live package advertises all 16 required route families; the bundled-sidecar validator, reliable-assistant database gate, 3,761-test unit suite, package validation, production function/privilege checks, and independent release review pass. Hermes now requires request identity for recurring completion and merge, and forwards exact approved subtask IDs. Final signed-user preview/read-back coverage remains open because the desktop OAuth session expired during the required restart and Google requires the user to approve its existing unverified-app warning; protected routes correctly fail closed with `reauth_required` until that sign-in completes.
+
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-14)

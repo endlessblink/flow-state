@@ -34,6 +34,8 @@ const { executeDoneForNow } = require('./done-for-now.cjs')
 const { executeMergeTasks } = require('./merge-tasks.cjs')
 const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
 const { executeCanonicalTaskLifecycle } = require('./canonical-task-lifecycle.cjs')
+const { executeCanonicalSubtaskBatch } = require('./canonical-subtask-batch.cjs')
+const { executeCanonicalWorkBlock } = require('./canonical-work-block.cjs')
 const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
@@ -750,6 +752,13 @@ async function handleGetTaskInstances(id, res) {
   })
 }
 
+async function handleWorkBlock(id, req, res) {
+  const body = await readJsonBody(req)
+  const result = await executeCanonicalWorkBlock(ctx, id, body, notifyTaskMutation)
+
+  send(res, result.status, result.body)
+}
+
 async function handlePostTaskInstance(id, req, res) {
   const { supabase, userId } = ctx
   const body = await readJsonBody(req)
@@ -959,47 +968,10 @@ async function handleDeleteSubtask(id, subtaskId, req, res) {
 }
 
 async function handleSubtaskBatch(id, req, res) {
-  const { supabase, userId } = ctx
   const body = await readJsonBody(req)
-  const metadata = validateSubtaskMutationMetadata(body)
-  if (!metadata.ok) return send(res, 400, { error: metadata.error })
-  if (!Array.isArray(body.operations) || body.operations.length < 1 || body.operations.length > 50) {
-    return send(res, 400, { error: 'operations must contain 1 to 50 items' })
-  }
-  const { data: existing, error } = await findTaskForSubtasks(id)
-  if (error) return send(res, 500, { error: error.message })
-  if (!existing) return send(res, 404, { error: 'not found' })
-  const key = metadata.requestId && receiptKey(userId, id, metadata.requestId)
-  if (!metadata.preview && key && replaySubtaskResponse(key, res)) return
-  const now = new Date().toISOString()
-  const applied = applySubtaskOperations(
-    userId,
-    id,
-    metadata.requestId,
-    normalizeSubtasks(existing.subtasks),
-    body.operations,
-    now,
-  )
-  if (!applied.ok) return send(res, 400, { error: applied.error })
-  const response = {
-    ok: true,
-    preview: metadata.preview,
-    operations: applied.results,
-    receipt: {
-      requestId: metadata.requestId || null,
-      action: 'batch',
-      taskId: id,
-      operationCount: applied.results.length,
-      replayed: false,
-    },
-  }
-  if (metadata.preview) return send(res, 200, response)
-  const { error: updateError } = await supabase.from('tasks')
-    .update({ subtasks: applied.subtasks, updated_at: now })
-    .eq('id', id).eq('user_id', userId).eq('is_deleted', false)
-  if (updateError) return send(res, 500, { error: updateError.message })
-  rememberSubtaskResponse(key, response)
-  send(res, 200, response)
+  const result = await executeCanonicalSubtaskBatch(ctx, id, body, notifyTaskMutation)
+
+  send(res, result.status, result.body)
 }
 
 async function handleDeleteTask(id, res) {
@@ -1485,6 +1457,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && taskInstancesMatch) {
       return await handlePostTaskInstance(decodeURIComponent(taskInstancesMatch[1]), req, res)
+    }
+    const workBlocksMatch = path.match(/^\/api\/tasks\/([^/]+)\/work-blocks$/)
+    if (req.method === 'POST' && workBlocksMatch) {
+      return await handleWorkBlock(decodeURIComponent(workBlocksMatch[1]), req, res)
     }
     const doneForNowMatch = path.match(/^\/api\/tasks\/([^/]+)\/done-for-now$/)
     if (req.method === 'POST' && doneForNowMatch) {

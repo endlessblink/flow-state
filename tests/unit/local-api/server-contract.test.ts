@@ -509,12 +509,11 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     const body = functionBody('handleSubtaskBatch')
 
     expect(route).toBeGreaterThan(-1)
-    expect(body).toContain('operations.length > 50')
-    expect(body).toContain('applySubtaskOperations')
-    expect(body).toContain("action: 'batch'")
-    expect(body).toContain('operationCount: applied.results.length')
-    expect(body).toContain('if (metadata.preview)')
-    expect(body).toContain('subtasks: applied.subtasks')
+    expect(body).toContain('executeCanonicalSubtaskBatch')
+    expect(body).toContain('notifyTaskMutation')
+    expect(body).toContain('result.status')
+    expect(SERVER_CJS).toContain("require('./canonical-subtask-batch.cjs')")
+    expect(body).not.toContain('applySubtaskOperations')
   })
 
   it('replays create and batch applies safely after the in-memory receipt cache is lost', () => {

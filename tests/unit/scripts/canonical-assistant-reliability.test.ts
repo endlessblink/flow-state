@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 const harnessPath = 'scripts/db/test-reliable-assistant-contract.sh'
 const concurrencyPath = 'scripts/db/test-canonical-notion-concurrency.sh'
 const recurrenceConcurrencyPath = 'scripts/db/test-merge-tasks-recurrence-concurrency.sh'
+const subtaskConcurrencyPath = 'scripts/db/test-subtask-batch-concurrency.sh'
 const h3RollbackPath = 'scripts/db/rollback-canonical-domain-receipts.sql'
 
 describe('TASK-1949 canonical assistant disposable reliability harness', () => {
@@ -28,12 +29,15 @@ describe('TASK-1949 canonical assistant disposable reliability harness', () => {
     expect(source).toContain('20260714010000_canonical_notion_activation.sql')
     expect(source).toContain('20260714020000_canonical_uuid_compatibility.sql')
     expect(source).toContain('20260715030000_canonical_domain_receipts.sql')
+    expect(source).toContain('20260715050000_canonical_subtask_batch.sql')
     expect(source).toContain('test-canonical-task-contract.sql')
     expect(source).toContain('test-merge-tasks-rpc.sql')
     expect(source).toContain('test-merge-tasks-recurrence-concurrency.sh')
     expect(source).toContain('test-canonical-notion-activation.sql')
     expect(source).toContain('test-canonical-notion-concurrency.sh')
     expect(source).toContain('test-canonical-domain-receipts.sql')
+    expect(source).toContain('test-subtask-batch-rpc.sql')
+    expect(source).toContain('test-subtask-batch-concurrency.sh')
     expect(source.indexOf('20260713012000_canonical_task_contract.sql'))
       .toBeLessThan(source.indexOf('20260714010000_canonical_notion_activation.sql'))
     expect(source.indexOf('20260714010000_canonical_notion_activation.sql'))
@@ -41,6 +45,18 @@ describe('TASK-1949 canonical assistant disposable reliability harness', () => {
     expect(source.indexOf('20260714020000_canonical_uuid_compatibility.sql'))
       .toBeLessThan(source.indexOf('20260715030000_canonical_domain_receipts.sql'))
     expect(source).toContain('< "$h3_migration" >/dev/null')
+  })
+
+  it('proves simultaneous approved subtask batches serialize to one commit and one stale conflict', () => {
+    expect(existsSync(subtaskConcurrencyPath)).toBe(true)
+    const source = readFileSync(subtaskConcurrencyPath, 'utf8')
+
+    expect(source).toContain('SELECT pg_sleep(1)')
+    expect(source).toContain('committed|committed||')
+    expect(source).toContain('conflict||stale_revision')
+    expect(source).toContain('canonical_operations')
+    expect(source).toContain('canonical_change_log')
+    expect(source).toContain('canonical_operation_previews')
   })
 
   it('proves recurrence preview stability and concurrent receipt replay across sessions', () => {

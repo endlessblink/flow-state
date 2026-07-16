@@ -76,6 +76,8 @@ export interface CanonicalTaskPatchState {
   phase: 'queued' | 'previewed' | 'committed'
   previewDigest?: string
   previewExpiresAt?: string
+  /** Server-issued hash binding the exact approved preview to apply and replay. */
+  requestHash?: string
   parentOperationId?: string
   receipt?: CanonicalTaskPatchReceipt
 }

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -9,14 +9,20 @@ import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const {
   HERMES_ROUTE_BUNDLE_MARKERS,
+  HERMES_ROUTE_CAPABILITIES,
   HERMES_ROUTE_DISPATCH_MARKERS,
+  SCHEMA_VERSION,
 } = require('../../../server/local-api/hermes-route-capabilities.cjs') as {
   HERMES_ROUTE_BUNDLE_MARKERS: string[]
+  HERMES_ROUTE_CAPABILITIES: Array<Record<string, unknown>>
   HERMES_ROUTE_DISPATCH_MARKERS: string[]
+  SCHEMA_VERSION: string
 }
 
 const scriptPath = resolve(__dirname, '../../../scripts/validate-electron-package.cjs')
+const projectRoot = resolve(__dirname, '../../..')
 const tempRoots: string[] = []
+let cachedBundledSidecar: string | null = null
 
 function makeRoot() {
   const root = mkdtempSync(join(tmpdir(), 'flowstate-electron-package-'))
@@ -28,6 +34,36 @@ function writeFile(root: string, relativePath: string, content = 'fixture') {
   const fullPath = join(root, relativePath)
   mkdirSync(dirname(fullPath), { recursive: true })
   writeFileSync(fullPath, content)
+}
+
+function bundledSidecar() {
+  if (cachedBundledSidecar !== null) return cachedBundledSidecar
+  const buildRoot = makeRoot()
+  const output = join(buildRoot, 'local-api-server.cjs')
+  const result = spawnSync(resolve(projectRoot, 'node_modules/.bin/esbuild'), [
+    'server/local-api/server.cjs', '--bundle', '--platform=node', '--target=node22',
+    `--outfile=${output}`,
+  ], { cwd: projectRoot, encoding: 'utf8' })
+  if (result.status !== 0) throw new Error(result.stderr || 'failed to build sidecar fixture')
+  cachedBundledSidecar = readFileSync(output, 'utf8')
+  return cachedBundledSidecar
+}
+
+function capabilityOnlyExecutableSidecar() {
+  return `
+const http = require('http')
+const manifest = ${JSON.stringify({ schemaVersion: SCHEMA_VERSION, routes: HERMES_ROUTE_CAPABILITIES })}
+http.createServer((req, res) => {
+  const body = req.url === '/api/capabilities'
+    ? manifest
+    : req.url === '/api/health' ? { ok: true } : { error: 'not found' }
+  res.writeHead(req.url === '/api/capabilities' || req.url === '/api/health' ? 200 : 404, {
+    'Content-Type': 'application/json',
+  })
+  res.end(JSON.stringify(body))
+}).listen(Number(process.env.FLOW_STATE_API_PORT), '127.0.0.1')
+/* ${[...HERMES_ROUTE_BUNDLE_MARKERS, ...HERMES_ROUTE_DISPATCH_MARKERS].join('\n')} */
+`
 }
 
 function writeBuilderConfig(root: string, options: { executableName?: string; startupWMClass?: string } = {}) {
@@ -82,7 +118,7 @@ async function writeAppAsar(
             },
           })
         : entry.endsWith('local-api-server.cjs')
-          ? options.sidecar ?? [...HERMES_ROUTE_BUNDLE_MARKERS, ...HERMES_ROUTE_DISPATCH_MARKERS].join('\n')
+          ? options.sidecar ?? bundledSidecar()
         : 'fixture'
     writeFile(source, entry.replace(/^\//, ''), content)
   }
@@ -145,7 +181,7 @@ describe('validate-electron-package', () => {
 
     const result = runValidator(root)
 
-    expect(result.status).toBe(0)
+    expect(result.status, result.stderr).toBe(0)
     expect(result.stdout).toContain('Electron package contains renderer')
   })
 
@@ -202,7 +238,7 @@ describe('validate-electron-package', () => {
     expect(result.stderr).toContain('Hermes route capability contract')
   })
 
-  it('fails before shipping advertised routes that have no dispatch branch', async () => {
+  it('fails before shipping marker text that has no executable route dispatch', async () => {
     const root = makeRoot()
     writeBuilderConfig(root)
     await writeAppAsar(root, [
@@ -212,12 +248,12 @@ describe('validate-electron-package', () => {
       '/dist-electron/local-api-server.cjs',
       '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
-    ], { sidecar: HERMES_ROUTE_BUNDLE_MARKERS.join('\n') })
+    ], { sidecar: capabilityOnlyExecutableSidecar() })
 
     const result = runValidator(root)
 
     expect(result.status).toBe(1)
-    expect(result.stderr).toContain('route dispatch branches')
+    expect(result.stderr).toContain('executable Hermes route contract')
   })
 
   it('fails if Linux launcher metadata drifts away from the dock shortcut contract', async () => {

@@ -122,7 +122,12 @@ declare global {
       minimize: () => Promise<void>
       maximize: () => Promise<void>
       close: () => Promise<void>
-      setLocalApiSession: (session: unknown) => Promise<{ ok: boolean }>
+      setLocalApiSession: (session: unknown) => Promise<{
+        ok: boolean
+        code?: string
+        generation?: number
+        userId?: string
+      }>
       clearLocalApiSession: () => Promise<{ ok: boolean }>
       setLocalApiTimerSnapshot: (snapshot: unknown) => Promise<{ ok: boolean }>
       setLocalApiRendererAuthState: (state: unknown) => Promise<{ ok: boolean }>

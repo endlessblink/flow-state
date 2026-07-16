@@ -37,10 +37,21 @@ describe('Electron local API lifecycle regression contract', () => {
   it('starts the localhost sidecar as soon as a signed-in renderer session arrives', () => {
     const body = handlerBody('localApi:setSession')
 
-    expect(body).toContain('latestSession = session')
+    expect(body).toContain('const generation = ++sessionGeneration')
+    expect(body).toContain('latestSession = { ...session, generation }')
+    expect(body).toContain('waitForSessionApplied(generation, session.userId)')
     expect(body).toContain('startChild()')
     expect(body).toContain('pushSession()')
+    expect(body).toContain('return await applied')
     expect(body).not.toMatch(/if\s*\(\s*config\.enabled\s*\)\s*{[^}]*startChild\(\)/)
+    const preloadSessionType = PRELOAD_TS.slice(
+      PRELOAD_TS.lastIndexOf('setLocalApiSession: (session: unknown)'),
+      PRELOAD_TS.lastIndexOf('setLocalApiSession: (session: unknown)') + 260,
+    )
+    expect(preloadSessionType).toContain('Promise<{')
+    expect(preloadSessionType).toContain('code?: string')
+    expect(preloadSessionType).toContain('generation?: number')
+    expect(preloadSessionType).toContain('userId?: string')
   })
 
   it('passes the Electron userData directory to the sidecar for durable local AI runtime storage', () => {
@@ -143,9 +154,10 @@ describe('Electron local API lifecycle regression contract', () => {
       LOCAL_API_TS.indexOf('\nfunction stopChild()', LOCAL_API_TS.indexOf('function startChild()')),
     )
 
-    expect(startChild).toContain("child.on('spawn'")
-    expect(startChild).toContain("child.on('error'")
-    expect(startChild).toContain("child.on('exit'")
+    expect(startChild).toContain("spawnedChild.on('spawn'")
+    expect(startChild).toContain("spawnedChild.on('error'")
+    expect(startChild).toContain("spawnedChild.on('exit'")
+    expect(startChild).toContain('if (child !== spawnedChild) return')
     expect(startChild).toContain('lastChildError')
     expect(startChild).toContain('lastChildExit')
     expect(startChild).toContain('lastChildMessageType')

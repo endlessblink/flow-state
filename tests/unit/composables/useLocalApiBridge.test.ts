@@ -7,7 +7,10 @@ import {
 } from '@/composables/useLocalApiBridge'
 
 function installElectronApi() {
-  const setLocalApiSession = vi.fn().mockResolvedValue({ ok: true })
+  const setLocalApiSession = vi.fn().mockImplementation((session: { userId?: string }) => Promise.resolve({
+    ok: true,
+    userId: session.userId,
+  }))
   const clearLocalApiSession = vi.fn().mockResolvedValue({ ok: true })
   const setLocalApiRendererAuthState = vi.fn().mockResolvedValue({ ok: true })
   const setLocalApiWorkspaceContext = vi.fn().mockResolvedValue({ ok: true })
@@ -59,6 +62,77 @@ describe('useLocalApiBridge', () => {
       userId: 'user-1',
     }))
     expect(api.clearLocalApiSession).not.toHaveBeenCalled()
+  })
+
+  it('retries a failed acknowledgement while the exact Supabase session remains remotely valid', async () => {
+    vi.useFakeTimers()
+    const api = installElectronApi()
+    api.setLocalApiSession
+      .mockResolvedValueOnce({ ok: false, code: 'session_apply_timeout' })
+      .mockResolvedValueOnce({ ok: true, generation: 2, userId: 'user-1' })
+
+    syncLocalApiSession({
+      access_token: 'fresh-access-token',
+      refresh_token: 'refresh-token',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      user: { id: 'user-1' },
+    } as never)
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(api.setLocalApiSession).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
+
+  it('treats a rejected Electron IPC acknowledgement as retryable without leaking the rejection', async () => {
+    vi.useFakeTimers()
+    const api = installElectronApi()
+    api.setLocalApiSession
+      .mockRejectedValueOnce(new Error('sidecar unavailable'))
+      .mockResolvedValueOnce({ ok: true, generation: 2, userId: 'user-1' })
+
+    syncLocalApiSession({
+      access_token: 'fresh-access-token',
+      refresh_token: 'refresh-token',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      user: { id: 'user-1' },
+    } as never)
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(api.setLocalApiSession).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
+
+  it('does not retry after the exact session expires or is superseded', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-16T10:00:00.900Z'))
+    const api = installElectronApi()
+    api.setLocalApiSession.mockResolvedValue({ ok: false, code: 'session_apply_timeout' })
+
+    syncLocalApiSession({
+      access_token: 'soon-expired-access-token',
+      refresh_token: 'refresh-token',
+      expires_at: Math.floor(Date.now() / 1000) + 31,
+      user: { id: 'user-1' },
+    } as never)
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(250)
+    expect(api.setLocalApiSession).toHaveBeenCalledOnce()
+
+    syncLocalApiSession({
+      access_token: 'new-access-token',
+      refresh_token: 'new-refresh-token',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      user: { id: 'user-2' },
+    } as never)
+    syncLocalApiSession(null)
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(api.setLocalApiSession).toHaveBeenCalledTimes(2)
+    expect(api.clearLocalApiSession).toHaveBeenCalledOnce()
+    vi.useRealTimers()
   })
 
   it('neither forwards nor clears on an expired reconnect-grace session', () => {

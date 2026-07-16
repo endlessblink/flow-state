@@ -17,6 +17,7 @@ import { randomBytes } from 'crypto'
  */
 
 const DEFAULT_PORT = 5577
+const SESSION_APPLY_TIMEOUT_MS = 5_000
 
 interface SessionMessage {
   supabaseUrl: string
@@ -24,6 +25,17 @@ interface SessionMessage {
   accessToken: string
   refreshToken: string
   userId: string
+}
+
+interface SessionDeliveryMessage extends SessionMessage {
+  generation: number
+}
+
+interface SessionDeliveryResult {
+  ok: boolean
+  code?: 'superseded' | 'session_apply_timeout' | 'sidecar_stopped'
+  generation: number
+  userId?: string
 }
 
 interface TimerSnapshotMessage {
@@ -83,7 +95,13 @@ let config: LocalApiConfig = { enabled: false, token: '', port: DEFAULT_PORT }
 let child: UtilityProcess | null = null
 let listening = false
 // Latest session pushed from the renderer; re-sent whenever the child (re)starts.
-let latestSession: SessionMessage | null = null
+let latestSession: SessionDeliveryMessage | null = null
+let sessionGeneration = 0
+const pendingSessionDeliveries = new Map<number, {
+  userId: string
+  timeout: ReturnType<typeof setTimeout>
+  resolve: (result: SessionDeliveryResult) => void
+}>()
 let latestTimerSnapshot: TimerSnapshotMessage | null = null
 let latestRendererAuthState: RendererAuthStateMessage | null = null
 let latestWorkspaceContext: WorkspaceContextMessage | null = null
@@ -94,6 +112,33 @@ let lastChildExit: { code: number | null; signal: string | null; at: number } | 
 let lastChildError: { message: string; at: number } | null = null
 let lastChildMessageType: string | null = null
 let lastChildMessageAt: number | null = null
+
+function settleSessionDelivery(generation: number, result: SessionDeliveryResult) {
+  const pending = pendingSessionDeliveries.get(generation)
+  if (!pending) return
+  clearTimeout(pending.timeout)
+  pendingSessionDeliveries.delete(generation)
+  pending.resolve(result)
+}
+
+function supersedePendingSessionDeliveries() {
+  for (const generation of [...pendingSessionDeliveries.keys()]) {
+    settleSessionDelivery(generation, { ok: false, code: 'superseded', generation })
+  }
+}
+
+function waitForSessionApplied(generation: number, userId: string): Promise<SessionDeliveryResult> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      settleSessionDelivery(generation, {
+        ok: false,
+        code: 'session_apply_timeout',
+        generation,
+      })
+    }, SESSION_APPLY_TIMEOUT_MS)
+    pendingSessionDeliveries.set(generation, { userId, timeout, resolve })
+  })
+}
 
 function sidecarPath() {
   // localApi.cjs lives in dist-electron/ipc/, while the bundled sidecar is
@@ -159,24 +204,52 @@ function startChild() {
     return
   }
 
-  logLifecycle('fork-returned', { childPid: child.pid })
+  const spawnedChild = child
+  logLifecycle('fork-returned', { childPid: spawnedChild.pid })
 
-  child.on('spawn', () => {
-    logLifecycle('spawn', { childPid: child?.pid ?? null })
+  spawnedChild.on('spawn', () => {
+    if (child !== spawnedChild) return
+    logLifecycle('spawn', { childPid: spawnedChild.pid })
   })
 
-  child.on('message', (msg: unknown) => {
-    const m = msg as { type?: string; port?: number; operation?: string; taskId?: string }
+  spawnedChild.on('message', (msg: unknown) => {
+    if (child !== spawnedChild) return
+    const m = msg as {
+      type?: string
+      port?: number
+      operation?: string
+      taskId?: string
+      generation?: number
+      userId?: string
+    }
     lastChildMessageType = typeof m?.type === 'string' ? m.type : 'unknown'
     lastChildMessageAt = Date.now()
     logLifecycle('message', { messageType: lastChildMessageType })
     if (m && m.type === 'listening') {
       listening = true
       // Forward the current session once the server is up.
-      if (latestSession) child?.postMessage({ type: 'session', ...latestSession })
-      if (latestTimerSnapshot) child?.postMessage({ type: 'timerSnapshot', snapshot: latestTimerSnapshot })
-      if (latestRendererAuthState) child?.postMessage({ type: 'rendererAuthState', state: latestRendererAuthState })
-      if (latestWorkspaceContext) child?.postMessage({ type: 'workspaceContext', ...latestWorkspaceContext })
+      if (latestSession) spawnedChild.postMessage({ type: 'session', ...latestSession })
+      if (latestTimerSnapshot) spawnedChild.postMessage({ type: 'timerSnapshot', snapshot: latestTimerSnapshot })
+      if (latestRendererAuthState) spawnedChild.postMessage({ type: 'rendererAuthState', state: latestRendererAuthState })
+      if (latestWorkspaceContext) spawnedChild.postMessage({ type: 'workspaceContext', ...latestWorkspaceContext })
+    } else if (m?.type === 'sessionApplied') {
+      const generation = m.generation
+      const pending = typeof generation === 'number'
+        ? pendingSessionDeliveries.get(generation)
+        : undefined
+      if (
+        pending
+        && latestSession
+        && generation === latestSession.generation
+        && m.userId === latestSession.userId
+        && m.userId === pending.userId
+      ) {
+        settleSessionDelivery(generation, {
+          ok: true,
+          generation,
+          userId: m.userId,
+        })
+      }
     } else if (
       m?.type === 'taskMutation'
       && (m.operation === 'create' || m.operation === 'update' || m.operation === 'delete')
@@ -192,12 +265,14 @@ function startChild() {
     }
   })
 
-  child.on('error', (error) => {
+  spawnedChild.on('error', (error) => {
+    if (child !== spawnedChild) return
     lastChildError = { message: safeErrorMessage(error), at: Date.now() }
     logLifecycle('error', { error: lastChildError.message })
   })
 
-  child.on('exit', () => {
+  spawnedChild.on('exit', () => {
+    if (child !== spawnedChild) return
     lastChildExit = {
       code: null,
       signal: null,
@@ -206,6 +281,9 @@ function startChild() {
     logLifecycle('exit', lastChildExit)
     child = null
     listening = false
+    for (const generation of [...pendingSessionDeliveries.keys()]) {
+      settleSessionDelivery(generation, { ok: false, code: 'sidecar_stopped', generation })
+    }
   })
 }
 
@@ -247,15 +325,19 @@ export function registerLocalApiHandlers() {
   // Persist (ensures a token exists on first run).
   saveConfig(config)
 
-  ipcMain.handle('localApi:setSession', (_e, session: SessionMessage) => {
+  ipcMain.handle('localApi:setSession', async (_e, session: SessionMessage) => {
     if (!session || !session.accessToken || !session.userId) return { ok: false }
-    latestSession = session
+    supersedePendingSessionDeliveries()
+    const generation = ++sessionGeneration
+    latestSession = { ...session, generation }
+    const applied = waitForSessionApplied(generation, session.userId)
     startChild()
     pushSession()
-    return { ok: true }
+    return await applied
   })
 
   ipcMain.handle('localApi:clearSession', () => {
+    supersedePendingSessionDeliveries()
     latestSession = null
     if (child && listening) child.postMessage({ type: 'clear' })
     if (!config.enabled && !latestTimerSnapshot) stopChild()
@@ -358,5 +440,8 @@ export function registerLocalApiHandlers() {
 
 /** Called from main on quit to tear down the sidecar. */
 export function shutdownLocalApi() {
+  for (const generation of [...pendingSessionDeliveries.keys()]) {
+    settleSessionDelivery(generation, { ok: false, code: 'sidecar_stopped', generation })
+  }
   stopChild()
 }

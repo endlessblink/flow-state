@@ -2209,6 +2209,7 @@ _Original plan below._
 - [ ] **TASK-1965 — Complete canonical assistant command surface for recurrence, timers, and organization**: close the remaining assistant authority gaps with exact completion/merge compatibility, history-preserving recurrence lifecycle commands, leadership-safe timer transitions, exact organization reads and mutations, a capability manifest, and clean-install migration proof.
 - [ ] **TASK-1966 — Bind interactive assistant breakdowns to canonical previews**: carry fresh parent revision and stable subtask identities through Hermes' editable breakdown UI, bind approval to one exact canonical subtask preview, preserve typed conflict details for deterministic regeneration, and prove the packaged renderer never falls back to raw artifact code.
 - [x] ~~**TASK-1967 — Causally suppress Hermes-origin monitor events**: expose privacy-safe canonical mutation provenance in complete task inventory, give monitor events stable cause identity, and suppress or merge assistant-known changes instead of launching duplicate contextual episodes.~~ Completed 2026-07-16; production migration/release remains approval-gated.
+- [ ] **TASK-1968 — Acknowledge renderer-to-sidecar session delivery**: bind each renderer session handoff to a monotonic generation and exact user, acknowledge only after the sidecar constructs that auth context, reject stale/out-of-order acknowledgements, and retry only while the Supabase session remains remotely valid.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4935,6 +4936,24 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Live boundary proof**: the clean-stamped Hermes Linux package launched against a credential-free temporary `office-work` profile; both main and profile gateways became ready and exchanged WebSocket messages. No production FlowState or live Hermes profile was mutated.
 
+### TASK-1968: Acknowledge renderer-to-sidecar session delivery (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS
+
+**Goal**: Make the Electron renderer-to-sidecar auth boundary prove that the exact current user session reached a constructed sidecar context instead of treating IPC acceptance as successful delivery.
+
+**Acceptance**:
+- Every session delivery has a monotonically increasing generation and exact user identity.
+- The sidecar emits `sessionApplied` only after constructing the matching authenticated client context.
+- Electron main resolves renderer IPC only for the latest matching generation and user, with a bounded timeout.
+- Stale or out-of-order acknowledgements fail closed.
+- The renderer retries only while the Supabase session remains remotely valid and never logs tokens.
+- Focused tests, type-check, and the Electron sidecar build pass without installing or deploying a release.
+
+**Progress (2026-07-16)**: Added generation-and-user-bound sidecar acknowledgements, a bounded main-process waiter, fail-closed context replacement, process-bound child lifecycle callbacks, and renderer retries that stop on expiry, replacement, or sign-out. RED-first regressions cover delayed construction order, user mismatch, failed replacement, stale/wrong-user acknowledgement, timeout, IPC rejection, and an old child's delayed exit after replacement. Verification passed 103 focused tests, type-check, source/bundle syntax checks, the Electron main/sidecar build, diff checks, and independent review with no remaining findings.
+
+**Explicitly not covered**: no Electron release was installed or deployed, no updater was published, and no production session or task data was read or mutated. Packaged live-profile proof remains part of the approval-gated release lane.
+
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-14)
@@ -7658,6 +7677,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1965** | **P0** | 🔄 **Complete canonical assistant command surface for recurrence, timers, organization, capabilities, and clean migrations** |
 | **TASK-1966** | **P0** | 🔄 **Versioned interactive task breakdowns with fresh revisions, exact preview approval, conflict regeneration, and packaged renderer proof** |
 | ~~**TASK-1967**~~ | **P0** | ✅ **Causal monitor provenance with stable event identity and durable self-origin suppression/active-plan merging** |
+| **TASK-1968** | **P0** | 🔄 **Acknowledged renderer-to-sidecar session delivery with monotonic generations and fail-closed retries** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

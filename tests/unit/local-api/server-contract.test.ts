@@ -147,7 +147,12 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).toContain("msg.type === 'timerSnapshot'")
     expect(body).toContain('localTimerSnapshot = msg.snapshot || null')
     expect(body).toContain("msg.type === 'session'")
+    expect(body).toContain('void sessionDelivery.apply(msg)')
     expect(body).toContain("msg.type === 'clear'")
+    expect(body).toContain('sessionDelivery.clear()')
+    expect(SERVER_CJS).toContain("require('./session-delivery.cjs')")
+    expect(SERVER_CJS).toContain('invalidateContext()')
+    expect(SERVER_CJS).toContain('ctx = null')
   })
 
   it('queries only the current user active timer session and returns an inactive payload when absent', () => {

@@ -43,6 +43,7 @@ const { executeOrganizationCommand, readOrganizationInventory } = require('./org
 const { getCapabilityManifest } = require('./capabilities.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
+const { createSessionDelivery } = require('./session-delivery.cjs')
 const {
   buildTaskSearchQuery,
   filteredSampleMetadata,
@@ -185,29 +186,40 @@ function buildServiceRoleContext() {
  * RLS scopes every query to that user. The renderer is the sole token
  * refresher, so autoRefreshToken is off here.
  */
-async function applySession(msg) {
+async function constructSessionContext(msg) {
   const { supabaseUrl, anonKey, accessToken, refreshToken, userId } = msg || {}
   if (!supabaseUrl || !anonKey || !accessToken || !userId) {
-    logErr('Ignoring incomplete session message')
-    return
+    throw new Error('incomplete_session_message')
   }
-  try {
-    const supabase = createClient(supabaseUrl, anonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    })
-    const { error } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken || '',
-    })
-    if (error) {
-      logErr(`setSession failed: ${error.message}`)
-      return
-    }
-    ctx = { supabase, userId, activeWorkspaceId, signedUser: true }
-  } catch (e) {
-    logErr(`applySession error: ${e && e.message}`)
-  }
+
+  const supabase = createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data, error } = await supabase.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken || '',
+  })
+  if (error) throw new Error('session_rejected')
+  const appliedUserId = data && data.session && data.session.user && data.session.user.id
+  if (!appliedUserId) throw new Error('session_user_missing')
+  return { supabase, userId: appliedUserId, activeWorkspaceId, signedUser: true }
 }
+
+const sessionDelivery = createSessionDelivery({
+  constructContext: constructSessionContext,
+  applyContext(context) {
+    ctx = context
+  },
+  invalidateContext() {
+    ctx = null
+  },
+  postMessage(message) {
+    if (PARENT_PORT) PARENT_PORT.postMessage(message)
+  },
+  onError() {
+    logErr('Session application failed')
+  }
+})
 
 // --- Status mapping (self-contained copy of toDbStatus, see supabaseMappers.ts:477) ---
 // App uses 'todo'|'done'; DB CHECK allows planned|in_progress|done|backlog|on_hold.
@@ -1293,8 +1305,9 @@ if (TOKEN_MODE) {
     PARENT_PORT.on('message', (e) => {
       const msg = e && e.data
       if (!msg || typeof msg !== 'object') return
-      if (msg.type === 'session') applySession(msg)
+      if (msg.type === 'session') void sessionDelivery.apply(msg)
       else if (msg.type === 'clear') {
+        sessionDelivery.clear()
         ctx = null
         rendererAuthState = {
           isAuthenticated: false,

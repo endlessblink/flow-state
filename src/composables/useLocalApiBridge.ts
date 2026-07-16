@@ -25,6 +25,15 @@ interface ElectronLocalApi {
   offLocalApiTaskMutation?: () => void
 }
 
+interface LocalApiSessionDeliveryResult {
+  ok?: boolean
+  userId?: string
+}
+
+const LOCAL_API_SESSION_RETRY_MS = 250
+const LOCAL_API_SESSION_MAX_ATTEMPTS = 3
+let localApiSessionAttempt = 0
+
 export interface LocalApiTaskMutation {
   operation: 'create' | 'update' | 'delete'
   taskId: string
@@ -36,13 +45,41 @@ function getElectronApi(): ElectronLocalApi | null {
   return api && api.isElectron ? api : null
 }
 
+function isRemotelyValidSession(session: Session | null): session is Session {
+  if (!session?.access_token || !session.user?.id) return false
+  const expiresAtMs = session.expires_at ? session.expires_at * 1000 : null
+  return !expiresAtMs || Date.now() < expiresAtMs - 30_000
+}
+
+function waitForRetry(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, LOCAL_API_SESSION_RETRY_MS))
+}
+
+async function deliverLocalApiSession(
+  api: ElectronLocalApi,
+  session: Session,
+  payload: Record<string, string>,
+  attemptId: number,
+): Promise<void> {
+  for (let attempt = 0; attempt < LOCAL_API_SESSION_MAX_ATTEMPTS; attempt += 1) {
+    if (attemptId !== localApiSessionAttempt || !isRemotelyValidSession(session)) return
+    let result: LocalApiSessionDeliveryResult | undefined
+    try {
+      result = await api.setLocalApiSession?.(payload) as LocalApiSessionDeliveryResult | undefined
+    } catch {
+      result = undefined
+    }
+    if (attemptId !== localApiSessionAttempt || !isRemotelyValidSession(session)) return
+    if (result?.ok && result.userId === session.user.id) return
+    if (attempt + 1 < LOCAL_API_SESSION_MAX_ATTEMPTS) await waitForRetry()
+  }
+}
+
 export function syncLocalApiSession(session: Session | null): void {
   const api = getElectronApi()
   if (!api) return
+  const attemptId = ++localApiSessionAttempt
   try {
-    const expiresAtMs = session?.expires_at ? session.expires_at * 1000 : null
-    const isFresh = !expiresAtMs || Date.now() < expiresAtMs - 30_000
-
     // Only a real sign-out clears the sidecar. BUG-1933: a session whose access token has gone
     // stale (e.g. just restored from backup, refresh still in flight) used to send `clear`, which
     // blinded the Local API — and with it the KDE widget and agent tools — while the app itself
@@ -52,15 +89,15 @@ export function syncLocalApiSession(session: Session | null): void {
       void api.clearLocalApiSession?.()
       return
     }
-    if (!isFresh) return
+    if (!isRemotelyValidSession(session)) return
 
-    void api.setLocalApiSession?.({
+    void deliverLocalApiSession(api, session, {
       supabaseUrl: supabaseConfig.url,
       anonKey: supabaseConfig.anonKey,
       accessToken: session.access_token,
       refreshToken: session.refresh_token || '',
       userId: session.user.id,
-    })
+    }, attemptId)
   } catch {
     /* best-effort; never break the auth flow */
   }

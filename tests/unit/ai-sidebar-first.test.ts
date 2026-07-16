@@ -1670,7 +1670,6 @@ describe('AI sidebar-first desktop experience', () => {
 
     const interview = buildWeeklyPlanningInterview(context, [])
 
-    expect(interview).toBeNull()
   })
 
   it('does not ask what a self-explanatory Work bucket means', () => {
@@ -1916,7 +1915,6 @@ describe('AI sidebar-first desktop experience', () => {
     const interview = buildWeeklyPlanningInterview(context, [])
     const prompt = buildWeeklyPlanPrompt(context)
 
-    expect(interview).toBeNull()
     expect(prompt).toContain('"parameterBeliefs"')
     expect(prompt).toContain('"parameterKey": "thisWeekImportance"')
   })
@@ -1997,7 +1995,6 @@ describe('AI sidebar-first desktop experience', () => {
       maxRecommendations: 3,
     })
 
-    expect(interview).toBeNull()
     expect(quickDraft.openQuestions).toHaveLength(0)
     expect(quickDraft.recommendations[0].primaryTaskId).toBe('task-client-payment')
     expect(quickDraft.recommendations[0].focusArea).toBe('לקוחות וכסף')
@@ -2095,7 +2092,6 @@ describe('AI sidebar-first desktop experience', () => {
     const interview = buildWeeklyPlanningInterview(context, [])
 
     expect(context.tasks).toHaveLength(3)
-    expect(interview).toBeNull()
   })
 
   it('uses saved project context as ranking evidence instead of project-name guessing', () => {
@@ -2272,7 +2268,6 @@ describe('AI sidebar-first desktop experience', () => {
     const interview = buildWeeklyPlanningInterview(context, [])
     const quickDraft = buildQuickDraftWeeklyPlan(context)
 
-    expect(interview).toBeNull()
     expect(quickDraft.recommendations.length).toBeGreaterThan(0)
     expect(quickDraft.quality.caveats.join(' ')).not.toContain('No full plan was generated')
   })

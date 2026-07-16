@@ -59,6 +59,161 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.flowstate_h5_valid_timestamp(p_value text)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF p_value IS NULL
+     OR pg_catalog.char_length(p_value) > 64
+     OR p_value !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$' THEN
+    RETURN false;
+  END IF;
+  PERFORM p_value::timestamptz;
+  RETURN true;
+EXCEPTION WHEN OTHERS THEN
+  RETURN false;
+END;
+$$;
+
+DROP FUNCTION IF EXISTS public.flowstate_h5_valid_subtasks(jsonb);
+
+CREATE OR REPLACE FUNCTION public.flowstate_h5_valid_subtasks(
+  p_subtasks jsonb,
+  p_parent_task_id text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_subtask jsonb;
+  v_position integer := 0;
+  v_ids text[] := ARRAY[]::text[];
+  v_client_ids text[] := ARRAY[]::text[];
+BEGIN
+  IF nullif(pg_catalog.btrim(p_parent_task_id), '') IS NULL
+     OR p_parent_task_id IS DISTINCT FROM pg_catalog.btrim(p_parent_task_id)
+     OR pg_catalog.jsonb_typeof(p_subtasks) IS DISTINCT FROM 'array'
+     OR pg_catalog.jsonb_array_length(p_subtasks) > 10001 THEN
+    RETURN false;
+  END IF;
+
+  FOR v_subtask IN
+    SELECT item.value
+    FROM pg_catalog.jsonb_array_elements(p_subtasks) WITH ORDINALITY
+      AS item(value, ordinality)
+    ORDER BY item.ordinality
+  LOOP
+    IF pg_catalog.jsonb_typeof(v_subtask) IS DISTINCT FROM 'object'
+       OR EXISTS (
+         SELECT 1
+         FROM pg_catalog.jsonb_object_keys(v_subtask) AS subtask_key(key)
+         WHERE key NOT IN (
+           'id', 'clientId', 'parentTaskId', 'title', 'description', 'isCompleted',
+           'doneEnough', 'estimateMinutes', 'completedPomodoros', 'canvasPosition',
+           'createdAt', 'updatedAt', 'order'
+         )
+       )
+       OR pg_catalog.jsonb_typeof(v_subtask->'id') IS DISTINCT FROM 'string'
+       OR nullif(pg_catalog.btrim(v_subtask->>'id'), '') IS NULL
+       OR v_subtask->>'id' IS DISTINCT FROM pg_catalog.btrim(v_subtask->>'id')
+       OR pg_catalog.char_length(v_subtask->>'id') > 256
+       OR v_subtask->>'id' = ANY(v_ids)
+       OR pg_catalog.jsonb_typeof(v_subtask->'title') IS DISTINCT FROM 'string'
+       OR nullif(pg_catalog.btrim(v_subtask->>'title'), '') IS NULL
+       OR v_subtask->>'title' IS DISTINCT FROM pg_catalog.btrim(v_subtask->>'title')
+       OR pg_catalog.char_length(v_subtask->>'title') > 500
+       OR pg_catalog.jsonb_typeof(v_subtask->'order') IS DISTINCT FROM 'number'
+       OR v_subtask->>'order' !~ '^(0|[1-9][0-9]*)$'
+       OR (v_subtask->>'order')::numeric IS DISTINCT FROM v_position::numeric THEN
+      RETURN false;
+    END IF;
+
+    IF (v_subtask ? 'clientId' AND (
+         pg_catalog.jsonb_typeof(v_subtask->'clientId') IS DISTINCT FROM 'string'
+         OR nullif(pg_catalog.btrim(v_subtask->>'clientId'), '') IS NULL
+         OR v_subtask->>'clientId' IS DISTINCT FROM pg_catalog.btrim(v_subtask->>'clientId')
+         OR pg_catalog.char_length(v_subtask->>'clientId') > 160
+         OR v_subtask->>'clientId' = ANY(v_client_ids)
+       ))
+       OR (v_subtask ? 'parentTaskId' AND (
+         pg_catalog.jsonb_typeof(v_subtask->'parentTaskId') IS DISTINCT FROM 'string'
+         OR nullif(pg_catalog.btrim(v_subtask->>'parentTaskId'), '') IS NULL
+         OR v_subtask->>'parentTaskId' IS DISTINCT FROM pg_catalog.btrim(v_subtask->>'parentTaskId')
+         OR pg_catalog.char_length(v_subtask->>'parentTaskId') > 256
+         OR v_subtask->>'parentTaskId' IS DISTINCT FROM p_parent_task_id
+       ))
+       OR (v_subtask ? 'description' AND (
+         pg_catalog.jsonb_typeof(v_subtask->'description') IS DISTINCT FROM 'string'
+         OR pg_catalog.char_length(v_subtask->>'description') > 10000
+       ))
+       OR (v_subtask ? 'isCompleted'
+           AND pg_catalog.jsonb_typeof(v_subtask->'isCompleted') IS DISTINCT FROM 'boolean')
+       OR (v_subtask ? 'doneEnough' AND (
+         pg_catalog.jsonb_typeof(v_subtask->'doneEnough') NOT IN ('string', 'null')
+         OR (pg_catalog.jsonb_typeof(v_subtask->'doneEnough') = 'string'
+             AND pg_catalog.char_length(v_subtask->>'doneEnough') > 2000)
+       ))
+       OR (v_subtask ? 'estimateMinutes' AND NOT (
+         pg_catalog.jsonb_typeof(v_subtask->'estimateMinutes') = 'null'
+         OR (
+           pg_catalog.jsonb_typeof(v_subtask->'estimateMinutes') = 'number'
+           AND v_subtask->>'estimateMinutes' ~ '^[1-9][0-9]*$'
+           AND (v_subtask->>'estimateMinutes')::numeric <= 1440
+         )
+       ))
+       OR (v_subtask ? 'completedPomodoros' AND NOT (
+         pg_catalog.jsonb_typeof(v_subtask->'completedPomodoros') = 'number'
+         AND v_subtask->>'completedPomodoros' ~ '^(0|[1-9][0-9]*)$'
+         AND (v_subtask->>'completedPomodoros')::numeric <= 1000000
+       ))
+       OR (v_subtask ? 'canvasPosition' AND NOT (
+         pg_catalog.jsonb_typeof(v_subtask->'canvasPosition') = 'null'
+         OR (
+           pg_catalog.jsonb_typeof(v_subtask->'canvasPosition') = 'object'
+           AND v_subtask->'canvasPosition' ?& ARRAY['x', 'y']
+           AND NOT EXISTS (
+             SELECT 1
+             FROM pg_catalog.jsonb_object_keys(v_subtask->'canvasPosition') AS position_key(key)
+             WHERE key NOT IN ('x', 'y')
+           )
+           AND pg_catalog.jsonb_typeof(v_subtask #> '{canvasPosition,x}') = 'number'
+           AND pg_catalog.jsonb_typeof(v_subtask #> '{canvasPosition,y}') = 'number'
+           AND pg_catalog.abs((v_subtask #>> '{canvasPosition,x}')::numeric)
+                 <= 1.7976931348623157e308::numeric
+           AND pg_catalog.abs((v_subtask #>> '{canvasPosition,y}')::numeric)
+                 <= 1.7976931348623157e308::numeric
+         )
+       ))
+       OR (v_subtask ? 'createdAt' AND (
+         pg_catalog.jsonb_typeof(v_subtask->'createdAt') IS DISTINCT FROM 'string'
+         OR NOT public.flowstate_h5_valid_timestamp(v_subtask->>'createdAt')
+       ))
+       OR (v_subtask ? 'updatedAt' AND (
+         pg_catalog.jsonb_typeof(v_subtask->'updatedAt') IS DISTINCT FROM 'string'
+         OR NOT public.flowstate_h5_valid_timestamp(v_subtask->>'updatedAt')
+       )) THEN
+      RETURN false;
+    END IF;
+
+    v_ids := pg_catalog.array_append(v_ids, v_subtask->>'id');
+    IF v_subtask ? 'clientId' THEN
+      v_client_ids := pg_catalog.array_append(v_client_ids, v_subtask->>'clientId');
+    END IF;
+    v_position := v_position + 1;
+  END LOOP;
+  RETURN true;
+EXCEPTION WHEN OTHERS THEN
+  RETURN false;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.flowstate_h5_apply_subtask_operations(
   p_subtasks jsonb,
   p_operations jsonb
@@ -356,10 +511,17 @@ BEGIN
        ))
        OR (v_operation ? 'isCompleted'
            AND pg_catalog.jsonb_typeof(v_operation->'isCompleted') <> 'boolean')
-       OR (v_operation ? 'description'
-           AND pg_catalog.jsonb_typeof(v_operation->'description') <> 'string')
-       OR (v_operation ? 'doneEnough'
-           AND pg_catalog.jsonb_typeof(v_operation->'doneEnough') NOT IN ('string', 'null'))
+       OR (v_operation ? 'description' AND (
+         pg_catalog.jsonb_typeof(v_operation->'description') <> 'string'
+         OR pg_catalog.char_length(v_operation->>'description') > 10000
+       ))
+       OR (v_operation ? 'doneEnough' AND (
+         pg_catalog.jsonb_typeof(v_operation->'doneEnough') NOT IN ('string', 'null')
+         OR (
+           pg_catalog.jsonb_typeof(v_operation->'doneEnough') = 'string'
+           AND pg_catalog.char_length(pg_catalog.btrim(v_operation->>'doneEnough')) > 2000
+         )
+       ))
        OR (v_operation ? 'estimateMinutes' AND NOT (
          pg_catalog.jsonb_typeof(v_operation->'estimateMinutes') = 'null'
          OR (
@@ -537,44 +699,6 @@ BEGIN
     END IF;
   END IF;
 
-  IF NOT p_preview THEN
-    IF nullif(pg_catalog.btrim(p_request_hash), '') IS NULL THEN
-      RETURN pg_catalog.jsonb_build_object(
-        'ok', false, 'result', 'conflict',
-        'error', pg_catalog.jsonb_build_object(
-          'code', 'request_hash_required',
-          'message', 'The server-issued requestHash is required for apply'
-        )
-      );
-    END IF;
-    SELECT * INTO v_issued_preview
-    FROM public.canonical_operation_previews AS issued
-    WHERE issued.user_id = v_actor
-      AND issued.operation_id = p_operation_id
-    FOR UPDATE;
-    IF NOT FOUND
-       OR v_issued_preview.request_hash IS DISTINCT FROM v_request_hash
-       OR p_request_hash IS DISTINCT FROM v_request_hash
-       OR v_issued_preview.preview_digest IS DISTINCT FROM p_preview_digest
-       OR v_issued_preview.expires_at IS DISTINCT FROM p_preview_expires_at
-       OR v_issued_preview.consumed_at IS NOT NULL THEN
-      RETURN pg_catalog.jsonb_build_object(
-        'ok', false, 'result', 'conflict',
-        'error', pg_catalog.jsonb_build_object(
-          'code', 'preview_mismatch', 'message', 'The approval does not match this request'
-        )
-      );
-    END IF;
-    IF v_issued_preview.expires_at <= pg_catalog.clock_timestamp() THEN
-      RETURN pg_catalog.jsonb_build_object(
-        'ok', false, 'result', 'conflict',
-        'error', pg_catalog.jsonb_build_object(
-          'code', 'preview_expired', 'message', 'The approved preview has expired'
-        )
-      );
-    END IF;
-  END IF;
-
   IF p_preview THEN
     SELECT * INTO v_task
     FROM public.tasks AS task
@@ -620,6 +744,69 @@ BEGIN
         'currentRevision', v_task.canonical_revision
       )
     );
+  END IF;
+  IF NOT public.flowstate_h5_valid_subtasks(v_task.subtasks, p_task_id) THEN
+    RETURN pg_catalog.jsonb_build_object(
+      'ok', false, 'result', 'conflict',
+      'error', pg_catalog.jsonb_build_object(
+        'code', 'invalid_existing_subtasks',
+        'message', 'Existing subtasks are not canonical'
+      )
+    );
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_catalog.jsonb_array_elements(v_normalized_operations) AS requested(operation)
+    JOIN pg_catalog.jsonb_array_elements(v_task.subtasks) AS existing(subtask)
+      ON existing.subtask->>'clientId' = requested.operation->>'clientId'
+    WHERE requested.operation->>'kind' = 'create'
+  ) THEN
+    RETURN pg_catalog.jsonb_build_object(
+      'ok', false, 'result', 'conflict',
+      'error', pg_catalog.jsonb_build_object(
+        'code', 'client_id_conflict',
+        'message', 'A subtask already uses this clientId'
+      )
+    );
+  END IF;
+
+  IF NOT p_preview THEN
+    IF nullif(pg_catalog.btrim(p_request_hash), '') IS NULL THEN
+      RETURN pg_catalog.jsonb_build_object(
+        'ok', false, 'result', 'conflict',
+        'error', pg_catalog.jsonb_build_object(
+          'code', 'request_hash_required',
+          'message', 'The server-issued requestHash is required for apply'
+        )
+      );
+    END IF;
+    SELECT * INTO v_issued_preview
+    FROM public.canonical_operation_previews AS issued
+    WHERE issued.user_id = v_actor
+      AND issued.operation_id = p_operation_id
+    FOR UPDATE;
+    IF NOT FOUND
+       OR v_issued_preview.request_hash IS DISTINCT FROM v_request_hash
+       OR p_request_hash IS DISTINCT FROM v_request_hash
+       OR v_issued_preview.preview_digest IS DISTINCT FROM p_preview_digest
+       OR v_issued_preview.expires_at IS DISTINCT FROM p_preview_expires_at
+       OR v_issued_preview.consumed_at IS NOT NULL THEN
+      RETURN pg_catalog.jsonb_build_object(
+        'ok', false, 'result', 'conflict',
+        'error', pg_catalog.jsonb_build_object(
+          'code', 'preview_mismatch', 'message', 'The approval does not match this request'
+        )
+      );
+    END IF;
+    IF v_issued_preview.expires_at <= pg_catalog.clock_timestamp() THEN
+      RETURN pg_catalog.jsonb_build_object(
+        'ok', false, 'result', 'conflict',
+        'error', pg_catalog.jsonb_build_object(
+          'code', 'preview_expired', 'message', 'The approved preview has expired'
+        )
+      );
+    END IF;
   END IF;
 
   FOR v_operation IN
@@ -828,6 +1015,10 @@ $$;
 REVOKE ALL ON FUNCTION public.flowstate_h5_subtask_id(uuid, text, text, text)
   FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.flowstate_h5_insert_subtask(jsonb, jsonb, integer)
+  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.flowstate_h5_valid_timestamp(text)
+  FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.flowstate_h5_valid_subtasks(jsonb, text)
   FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.flowstate_h5_apply_subtask_operations(jsonb, jsonb)
   FROM PUBLIC, anon, authenticated;

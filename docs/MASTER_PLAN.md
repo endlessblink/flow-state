@@ -2207,6 +2207,7 @@ _Original plan below._
 - [ ] **TASK-1963 — Canonical subtask batches and assistant decomposition**: replace process-local subtask receipts and whole-array overwrites with one signed-user preview/apply batch that binds the parent revision, exact ordered operations, stable step identities, partial-completion evidence, durable replay, and verified canonical read-back across Hermes and renderer writers.
 - [ ] **TASK-1964 — Canonical work-block lifecycle for Hermes and Calendar**: implement FEATURE-1944 through signed-user create/move/resize/remove commands that bind stable block identity, parent revision, exact interval effects, durable replay, and verified canonical read-back across Hermes and renderer writers.
 - [ ] **TASK-1965 — Complete canonical assistant command surface for recurrence, timers, and organization**: close the remaining assistant authority gaps with exact completion/merge compatibility, history-preserving recurrence lifecycle commands, leadership-safe timer transitions, exact organization reads and mutations, a capability manifest, and clean-install migration proof.
+- [ ] **TASK-1966 — Bind interactive assistant breakdowns to canonical previews**: carry fresh parent revision and stable subtask identities through Hermes' editable breakdown UI, bind approval to one exact canonical subtask preview, preserve typed conflict details for deterministic regeneration, and prove the packaged renderer never falls back to raw artifact code.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4873,6 +4874,21 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 - A versioned capability manifest tells Hermes which command contracts and receipt versions are available so unsupported actions fail closed instead of falling back to legacy writes.
 - The complete ordered migration set installs on an empty disposable database and passes all canonical rollback, replay, conflict, scope, and receipt suites without manual repair.
 - Local API, Hermes, renderer, database, build, package, installed protected live, and release proof pass before this task is marked done.
+
+### TASK-1966: Bind interactive assistant breakdowns to canonical previews (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-16) | **Depends on**: TASK-1943, TASK-1960, TASK-1961, TASK-1963
+
+**Why**: Hermes can render and edit a task breakdown, and FlowState can atomically preview/apply an ordered subtask batch, but the current card submits human-readable prose. Stable step identities, the parent canonical revision, and preview proof are lost at the UI boundary, so an edited plan cannot be proven to be the exact plan later approved and applied.
+
+**Acceptance**:
+- Exact subtask reads expose fresh parent scope, canonical revision, canonical timestamp, and ordered subtask identity; mutation planning never treats a stale read-through cache as authority.
+- Typed stale-revision failures preserve the current canonical revision and safe conflict details so Hermes can re-read and regenerate instead of looping or guessing.
+- A versioned task-breakdown proposal carries stable existing/new step identities, parent base revision, proposal revision, exact order, done-enough evidence, estimates, and optionality through edit, reorder, reconnect, resume, and draft restoration.
+- Editing or revising a proposal is never approval. It invalidates every older preview and produces a new exact canonical subtask-batch preview.
+- The approval surface binds operation ID, parent revision, preview digest, expiry, request hash, and exact normalized operations; it includes an optional correction field and applies once only after explicit approval.
+- Stale, expired, changed, duplicated, malformed, or offline proposals fail closed, preserve the user's draft, and require a fresh preview; no singular or whole-array fallback write is allowed.
+- Source, gateway, Desktop, package, installed office-work, FlowState read-back, and response-loss/replay regressions prove the full vague-task question → edit → preview → revise → approve → apply → verify flow without completing the parent task or maximizing scope.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7595,6 +7611,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask batches and partial-completion-aware assistant decomposition across Hermes and renderer writers** |
 | **TASK-1964** | **P0** | 🔄 **Canonical create/move/resize/remove work-block lifecycle across Hermes, Calendar, and Local API** |
 | **TASK-1965** | **P0** | 🔄 **Complete canonical assistant command surface for recurrence, timers, organization, capabilities, and clean migrations** |
+| **TASK-1966** | **P0** | 🔄 **Versioned interactive task breakdowns with fresh revisions, exact preview approval, conflict regeneration, and packaged renderer proof** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

@@ -49,7 +49,7 @@ INSERT INTO public.tasks (
     '1fc30000-0000-4000-8000-000000000101',
     '1fc30000-0000-4000-8000-000000000001',
     'Break down launch preparation', 'planned', NULL, false, '[]',
-    '[{"id":"existing-step","parentTaskId":"1fc30000-0000-4000-8000-000000000101","order":0,"title":"Collect source material","doneEnough":"Links are in one note","estimateMinutes":15,"isCompleted":false,"legacyMarker":"preserve-me"},{"id":"obsolete-step","parentTaskId":"1fc30000-0000-4000-8000-000000000101","order":1,"title":"Obsolete step","isCompleted":false,"legacyMarker":"delete-only-this"}]',
+    '[{"id":"existing-step","clientId":"existing-client","parentTaskId":"1fc30000-0000-4000-8000-000000000101","order":0,"title":"Collect source material","doneEnough":"Links are in one note","estimateMinutes":15,"isCompleted":false},{"id":"obsolete-step","parentTaskId":"1fc30000-0000-4000-8000-000000000101","order":1,"title":"Obsolete step","isCompleted":false}]',
     true, NULL
   ),
   (
@@ -62,6 +62,27 @@ INSERT INTO public.tasks (
     '1fc30000-0000-4000-8000-000000000103',
     '1fc30000-0000-4000-8000-000000000001',
     'Rollback breakdown fixture', 'planned', NULL, false, '[]', '[]', true, NULL
+  ),
+  (
+    '1fc30000-0000-4000-8000-000000000104',
+    '1fc30000-0000-4000-8000-000000000001',
+    'Malformed legacy breakdown fixture', 'planned', NULL, false, '[]',
+    '[{"id":"legacy-step","parentTaskId":"1fc30000-0000-4000-8000-000000000104","order":0,"title":"Legacy step","isCompleted":false,"legacyMarker":"must-not-be-canonicalized"}]',
+    true, NULL
+  ),
+  (
+    '1fc30000-0000-4000-8000-000000000105',
+    '1fc30000-0000-4000-8000-000000000001',
+    'Wrong parent provenance fixture', 'planned', NULL, false, '[]',
+    '[{"id":"wrong-parent-step","parentTaskId":"1fc30000-0000-4000-8000-000000000999","order":0,"title":"Wrong parent","isCompleted":false}]',
+    true, NULL
+  ),
+  (
+    '1fc30000-0000-4000-8000-000000000106',
+    '1fc30000-0000-4000-8000-000000000001',
+    'Duplicate client provenance fixture', 'planned', NULL, false, '[]',
+    '[{"id":"client-step-one","clientId":"same-client","order":0,"title":"First","isCompleted":false},{"id":"client-step-two","clientId":"same-client","order":1,"title":"Second","isCompleted":false}]',
+    true, NULL
   );
 
 SELECT set_config('request.jwt.claim.sub', '1fc30000-0000-4000-8000-000000000001', true);
@@ -143,6 +164,177 @@ BEGIN
 END;
 $$;
 
+-- The private validator matches the exact-read row contract, including shape,
+-- identity uniqueness, ordering, optional types, and timezone-aware timestamps.
+DO $$
+BEGIN
+  IF public.flowstate_h5_valid_subtasks('{}'::jsonb, 'parent')
+     OR public.flowstate_h5_valid_subtasks(
+       '[{"id":"same","title":"One","order":0},{"id":"same","title":"Two","order":1}]', 'parent'
+     )
+     OR public.flowstate_h5_valid_subtasks(
+       '[{"id":"wrong-order","title":"Wrong order","order":1}]', 'parent'
+     )
+     OR public.flowstate_h5_valid_subtasks(
+       '[{"id":"bad-estimate","title":"Bad estimate","order":0,"estimateMinutes":"20"}]', 'parent'
+     )
+     OR public.flowstate_h5_valid_subtasks(
+       '[{"id":"bad-time","title":"Bad time","order":0,"createdAt":"2026-07-16T08:00:00"}]', 'parent'
+     )
+     OR public.flowstate_h5_valid_subtasks(
+       '[{"id":"unknown","title":"Unknown","order":0,"legacyMarker":true}]', 'parent'
+     )
+     OR public.flowstate_h5_valid_subtasks(
+       '[{"id":"wrong-parent","parentTaskId":"other","title":"Wrong parent","order":0}]', 'parent'
+     )
+     OR public.flowstate_h5_valid_subtasks(
+       '[{"id":"one","clientId":"same-client","title":"One","order":0},{"id":"two","clientId":"same-client","title":"Two","order":1}]', 'parent'
+     )
+     OR NOT public.flowstate_h5_valid_subtasks(
+       '[{"id":"valid","clientId":"client","parentTaskId":"parent","title":"Valid","description":"","isCompleted":false,"doneEnough":null,"estimateMinutes":20,"completedPomodoros":1,"canvasPosition":{"x":1.5,"y":-2},"createdAt":"2026-07-16T08:00:00.000Z","updatedAt":"2026-07-16T10:00:00+02:00","order":0}]', 'parent'
+     )
+     OR NOT public.flowstate_h5_valid_subtasks(
+       '[{"id":"legacy-no-parent","clientId":"legacy-client","title":"Legacy without parentTaskId","order":0}]', 'parent'
+     ) THEN
+    RAISE EXCEPTION 'FAIL: canonical existing-subtask validator accepted malformed rows or rejected the exact shape';
+  END IF;
+END;
+$$;
+
+-- Provenance corruption is rejected by the real RPC, not only its private
+-- validator, and produces no approval or canonical mutation evidence.
+DO $$
+DECLARE
+  v_before_previews bigint;
+  v_before_operations bigint;
+  v_before_changes bigint;
+  v_task_id text;
+  v_revision bigint;
+  v_subtasks jsonb;
+  v_result jsonb;
+BEGIN
+  SELECT count(*) INTO v_before_previews FROM public.canonical_operation_previews;
+  SELECT count(*) INTO v_before_operations FROM public.canonical_operations;
+  SELECT count(*) INTO v_before_changes FROM public.canonical_change_log;
+
+  FOREACH v_task_id IN ARRAY ARRAY[
+    '1fc30000-0000-4000-8000-000000000105',
+    '1fc30000-0000-4000-8000-000000000106'
+  ] LOOP
+    SELECT canonical_revision, subtasks INTO v_revision, v_subtasks
+    FROM public.tasks WHERE id::text = v_task_id;
+
+    v_result := public.flowstate_subtask_batch_v1(
+      'subtask-provenance-' || v_task_id, 'task-v1', 'local-api',
+      v_task_id, v_revision,
+      '[{"kind":"create","clientId":"new-step","title":"New step"}]',
+      true, NULL, NULL, NULL, NULL
+    );
+
+    IF v_result #>> '{error,code}' IS DISTINCT FROM 'invalid_existing_subtasks'
+       OR v_result->>'result' IS DISTINCT FROM 'conflict'
+       OR (SELECT canonical_revision FROM public.tasks WHERE id::text = v_task_id) <> v_revision
+       OR (SELECT subtasks FROM public.tasks WHERE id::text = v_task_id) IS DISTINCT FROM v_subtasks THEN
+      RAISE EXCEPTION 'FAIL: malformed provenance did not fail closed for %: %',
+        v_task_id, v_result;
+    END IF;
+  END LOOP;
+
+  IF (SELECT count(*) FROM public.canonical_operation_previews) <> v_before_previews
+     OR (SELECT count(*) FROM public.canonical_operations) <> v_before_operations
+     OR (SELECT count(*) FROM public.canonical_change_log) <> v_before_changes THEN
+    RAISE EXCEPTION 'FAIL: malformed provenance wrote preview or canonical evidence';
+  END IF;
+END;
+$$;
+
+-- A create clientId is stable provenance and cannot be reused by another
+-- operation against an existing canonical row. Rejection writes no evidence.
+DO $$
+DECLARE
+  v_revision bigint;
+  v_before_subtasks jsonb;
+  v_before_previews bigint;
+  v_before_operations bigint;
+  v_before_changes bigint;
+  v_result jsonb;
+BEGIN
+  SELECT canonical_revision, subtasks INTO v_revision, v_before_subtasks
+  FROM public.tasks WHERE id = '1fc30000-0000-4000-8000-000000000101';
+  SELECT count(*) INTO v_before_previews FROM public.canonical_operation_previews;
+  SELECT count(*) INTO v_before_operations FROM public.canonical_operations;
+  SELECT count(*) INTO v_before_changes FROM public.canonical_change_log;
+
+  v_result := public.flowstate_subtask_batch_v1(
+    'subtask-existing-client-collision', 'task-v1', 'local-api',
+    '1fc30000-0000-4000-8000-000000000101', v_revision,
+    '[{"kind":"create","clientId":"existing-client","title":"Duplicate provenance"}]',
+    true, NULL, NULL, NULL, NULL
+  );
+
+  IF v_result #>> '{error,code}' IS DISTINCT FROM 'client_id_conflict'
+     OR v_result->>'result' IS DISTINCT FROM 'conflict'
+     OR (SELECT canonical_revision FROM public.tasks
+         WHERE id = '1fc30000-0000-4000-8000-000000000101') <> v_revision
+     OR (SELECT subtasks FROM public.tasks
+         WHERE id = '1fc30000-0000-4000-8000-000000000101') IS DISTINCT FROM v_before_subtasks
+     OR (SELECT count(*) FROM public.canonical_operation_previews) <> v_before_previews
+     OR (SELECT count(*) FROM public.canonical_operations) <> v_before_operations
+     OR (SELECT count(*) FROM public.canonical_change_log) <> v_before_changes THEN
+    RAISE EXCEPTION 'FAIL: existing clientId collision did not fail closed: %', v_result;
+  END IF;
+END;
+$$;
+
+-- Existing malformed rows are not silently stripped or preserved as canonical.
+-- Both preview and apply fail closed before durable evidence or task state changes.
+DO $$
+DECLARE
+  v_revision bigint;
+  v_before_subtasks jsonb;
+  v_before_previews bigint;
+  v_before_operations bigint;
+  v_before_changes bigint;
+  v_preview_result jsonb;
+  v_apply_result jsonb;
+BEGIN
+  SELECT canonical_revision, subtasks INTO v_revision, v_before_subtasks
+  FROM public.tasks WHERE id = '1fc30000-0000-4000-8000-000000000104';
+  SELECT count(*) INTO v_before_previews FROM public.canonical_operation_previews;
+  SELECT count(*) INTO v_before_operations FROM public.canonical_operations;
+  SELECT count(*) INTO v_before_changes FROM public.canonical_change_log;
+
+  v_preview_result := public.flowstate_subtask_batch_v1(
+    'subtask-malformed-existing-preview', 'task-v1', 'local-api',
+    '1fc30000-0000-4000-8000-000000000104', v_revision,
+    '[{"kind":"create","clientId":"new-step","title":"New step"}]',
+    true, NULL, NULL, NULL, NULL
+  );
+  v_apply_result := public.flowstate_subtask_batch_v1(
+    'subtask-malformed-existing-apply', 'task-v1', 'local-api',
+    '1fc30000-0000-4000-8000-000000000104', v_revision,
+    '[{"kind":"create","clientId":"new-step","title":"New step"}]',
+    false, repeat('b', 64), clock_timestamp() + interval '15 minutes',
+    NULL, repeat('a', 64)
+  );
+
+  IF v_preview_result #>> '{error,code}' IS DISTINCT FROM 'invalid_existing_subtasks'
+     OR v_preview_result->>'result' IS DISTINCT FROM 'conflict'
+     OR v_apply_result #>> '{error,code}' IS DISTINCT FROM 'invalid_existing_subtasks'
+     OR v_apply_result->>'result' IS DISTINCT FROM 'conflict'
+     OR (SELECT canonical_revision FROM public.tasks
+         WHERE id = '1fc30000-0000-4000-8000-000000000104') <> v_revision
+     OR (SELECT subtasks FROM public.tasks
+         WHERE id = '1fc30000-0000-4000-8000-000000000104') IS DISTINCT FROM v_before_subtasks
+     OR (SELECT count(*) FROM public.canonical_operation_previews) <> v_before_previews
+     OR (SELECT count(*) FROM public.canonical_operations) <> v_before_operations
+     OR (SELECT count(*) FROM public.canonical_change_log) <> v_before_changes THEN
+    RAISE EXCEPTION 'FAIL: malformed existing subtasks did not fail closed: preview=%, apply=%',
+      v_preview_result, v_apply_result;
+  END IF;
+END;
+$$;
+
 -- Preview is deterministic and changes no task, operation, or change row.
 DO $$
 DECLARE
@@ -207,6 +399,194 @@ BEGIN
   END IF;
 
   INSERT INTO subtask_batch_results VALUES ('main-preview', v_preview);
+END;
+$$;
+
+-- Duplicate client/target identities are rejected before preview state exists.
+DO $$
+DECLARE
+  v_revision bigint;
+  v_result jsonb;
+BEGIN
+  SELECT canonical_revision INTO v_revision FROM public.tasks
+  WHERE id = '1fc30000-0000-4000-8000-000000000103';
+
+  v_result := public.flowstate_subtask_batch_v1(
+    'subtask-breakdown-duplicate-client', 'task-v1', 'local-api',
+    '1fc30000-0000-4000-8000-000000000103', v_revision,
+    '[
+      {"kind":"create","clientId":"same-step","title":"First step"},
+      {"kind":"create","clientId":"same-step","title":"Second step"}
+    ]',
+    true, NULL, NULL, NULL, NULL
+  );
+  IF v_result #>> '{error,code}' <> 'invalid_operations'
+     OR EXISTS (
+       SELECT 1 FROM public.canonical_operation_previews
+       WHERE operation_id = 'subtask-breakdown-duplicate-client'
+     ) THEN
+    RAISE EXCEPTION 'FAIL: duplicate subtask identity reached preview state: %', v_result;
+  END IF;
+
+  v_result := public.flowstate_subtask_batch_v1(
+    'subtask-breakdown-duplicate-target', 'task-v1', 'local-api',
+    '1fc30000-0000-4000-8000-000000000101',
+    (SELECT canonical_revision FROM public.tasks
+     WHERE id = '1fc30000-0000-4000-8000-000000000101'),
+    '[
+      {"kind":"update","subtaskId":"existing-step","title":"First edit"},
+      {"kind":"update","subtaskId":"existing-step","title":"Second edit"}
+    ]',
+    true, NULL, NULL, NULL, NULL
+  );
+  IF v_result #>> '{error,code}' <> 'invalid_operations'
+     OR EXISTS (
+       SELECT 1 FROM public.canonical_operation_previews
+       WHERE operation_id = 'subtask-breakdown-duplicate-target'
+     ) THEN
+    RAISE EXCEPTION 'FAIL: duplicate subtask target reached preview state: %', v_result;
+  END IF;
+END;
+$$;
+
+-- Text that the exact canonical reader cannot safely return is rejected before
+-- preview state, task state, or a durable operation receipt can be created.
+DO $$
+DECLARE
+  v_revision bigint;
+  v_before_subtasks jsonb;
+  v_before_previews bigint;
+  v_before_operations bigint;
+  v_before_changes bigint;
+  v_case jsonb;
+  v_result jsonb;
+BEGIN
+  SELECT canonical_revision, subtasks INTO v_revision, v_before_subtasks
+  FROM public.tasks WHERE id = '1fc30000-0000-4000-8000-000000000101';
+  SELECT count(*) INTO v_before_previews FROM public.canonical_operation_previews;
+  SELECT count(*) INTO v_before_operations FROM public.canonical_operations;
+  SELECT count(*) INTO v_before_changes FROM public.canonical_change_log;
+
+  FOR v_case IN
+    SELECT item.value
+    FROM jsonb_array_elements(jsonb_build_array(
+      jsonb_build_object(
+        'operationId', 'subtask-over-limit-create-title',
+        'operations', jsonb_build_array(jsonb_build_object(
+          'kind', 'create', 'clientId', 'long-create-title', 'title', repeat('x', 501)
+        ))
+      ),
+      jsonb_build_object(
+        'operationId', 'subtask-over-limit-update-title',
+        'operations', jsonb_build_array(jsonb_build_object(
+          'kind', 'update', 'subtaskId', 'existing-step', 'title', repeat('x', 501)
+        ))
+      ),
+      jsonb_build_object(
+        'operationId', 'subtask-over-limit-create-description',
+        'operations', jsonb_build_array(jsonb_build_object(
+          'kind', 'create', 'clientId', 'long-create-description', 'title', 'Step',
+          'description', repeat('x', 10001)
+        ))
+      ),
+      jsonb_build_object(
+        'operationId', 'subtask-over-limit-update-description',
+        'operations', jsonb_build_array(jsonb_build_object(
+          'kind', 'update', 'subtaskId', 'existing-step', 'description', repeat('x', 10001)
+        ))
+      ),
+      jsonb_build_object(
+        'operationId', 'subtask-over-limit-create-done-enough',
+        'operations', jsonb_build_array(jsonb_build_object(
+          'kind', 'create', 'clientId', 'long-create-done-enough', 'title', 'Step',
+          'doneEnough', repeat('x', 2001)
+        ))
+      ),
+      jsonb_build_object(
+        'operationId', 'subtask-over-limit-update-done-enough',
+        'operations', jsonb_build_array(jsonb_build_object(
+          'kind', 'update', 'subtaskId', 'existing-step', 'doneEnough', repeat('x', 2001)
+        ))
+      )
+    )) AS item(value)
+  LOOP
+    v_result := public.flowstate_subtask_batch_v1(
+      v_case->>'operationId', 'task-v1', 'local-api',
+      '1fc30000-0000-4000-8000-000000000101', v_revision,
+      v_case->'operations', true, NULL, NULL, NULL, NULL
+    );
+    IF v_result #>> '{error,code}' IS DISTINCT FROM 'invalid_operations' THEN
+      RAISE EXCEPTION 'FAIL: over-limit subtask text reached preview state: %', v_result;
+    END IF;
+  END LOOP;
+
+  IF (SELECT canonical_revision FROM public.tasks
+      WHERE id = '1fc30000-0000-4000-8000-000000000101') <> v_revision
+     OR (SELECT subtasks FROM public.tasks
+         WHERE id = '1fc30000-0000-4000-8000-000000000101') IS DISTINCT FROM v_before_subtasks
+     OR (SELECT count(*) FROM public.canonical_operation_previews) <> v_before_previews
+     OR (SELECT count(*) FROM public.canonical_operations) <> v_before_operations
+     OR (SELECT count(*) FROM public.canonical_change_log) <> v_before_changes THEN
+    RAISE EXCEPTION 'FAIL: rejected over-limit subtask text changed canonical state or receipts: %',
+      jsonb_build_object(
+        'revisionBefore', v_revision,
+        'revisionAfter', (SELECT canonical_revision FROM public.tasks
+                          WHERE id = '1fc30000-0000-4000-8000-000000000101'),
+        'subtasksChanged', (SELECT subtasks FROM public.tasks
+                            WHERE id = '1fc30000-0000-4000-8000-000000000101')
+                           IS DISTINCT FROM v_before_subtasks,
+        'previewsBefore', v_before_previews,
+        'previewsAfter', (SELECT count(*) FROM public.canonical_operation_previews),
+        'operationsBefore', v_before_operations,
+        'operationsAfter', (SELECT count(*) FROM public.canonical_operations),
+        'changesBefore', v_before_changes,
+        'changesAfter', (SELECT count(*) FROM public.canonical_change_log)
+      );
+  END IF;
+END;
+$$;
+
+-- An expired approval fails closed without consuming the preview or writing.
+DO $$
+DECLARE
+  v_revision bigint;
+  v_before_subtasks jsonb;
+  v_preview jsonb;
+  v_expired_at timestamptz;
+  v_result jsonb;
+BEGIN
+  SELECT canonical_revision, subtasks INTO v_revision, v_before_subtasks
+  FROM public.tasks WHERE id = '1fc30000-0000-4000-8000-000000000103';
+  v_preview := public.flowstate_subtask_batch_v1(
+    'subtask-breakdown-expired', 'task-v1', 'local-api',
+    '1fc30000-0000-4000-8000-000000000103', v_revision,
+    '[{"kind":"create","clientId":"expired-step","title":"Expired step"}]',
+    true, NULL, NULL, NULL, NULL
+  );
+  v_expired_at := clock_timestamp() - interval '1 second';
+  UPDATE public.canonical_operation_previews
+  SET expires_at = v_expired_at
+  WHERE user_id = '1fc30000-0000-4000-8000-000000000001'
+    AND operation_id = 'subtask-breakdown-expired';
+
+  v_result := public.flowstate_subtask_batch_v1(
+    'subtask-breakdown-expired', 'task-v1', 'local-api',
+    '1fc30000-0000-4000-8000-000000000103', v_revision,
+    '[{"kind":"create","clientId":"expired-step","title":"Expired step"}]',
+    false, v_preview->>'previewDigest', v_expired_at, NULL, v_preview->>'requestHash'
+  );
+  IF v_result #>> '{error,code}' <> 'preview_expired'
+     OR (SELECT subtasks FROM public.tasks
+         WHERE id = '1fc30000-0000-4000-8000-000000000103') IS DISTINCT FROM v_before_subtasks
+     OR EXISTS (
+       SELECT 1 FROM public.canonical_operations
+       WHERE operation_id = 'subtask-breakdown-expired'
+     )
+     OR (SELECT consumed_at FROM public.canonical_operation_previews
+         WHERE user_id = '1fc30000-0000-4000-8000-000000000001'
+           AND operation_id = 'subtask-breakdown-expired') IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL: expired subtask approval did not fail closed: %', v_result;
+  END IF;
 END;
 $$;
 
@@ -280,14 +660,19 @@ BEGIN
          WHERE id = '1fc30000-0000-4000-8000-000000000101') <> '260'
      OR (SELECT subtasks #>> '{1,isCompleted}' FROM public.tasks
          WHERE id = '1fc30000-0000-4000-8000-000000000101') <> 'false'
-     OR (SELECT subtasks #>> '{0,legacyMarker}' FROM public.tasks
-         WHERE id = '1fc30000-0000-4000-8000-000000000101') <> 'preserve-me'
      OR (SELECT subtasks #>> '{1,clientId}' FROM public.tasks
          WHERE id = '1fc30000-0000-4000-8000-000000000101') <> 'outline-step'
      OR (SELECT count(*) FROM public.canonical_change_log
          WHERE operation_id = 'subtask-breakdown-main') <> 1 THEN
     RAISE EXCEPTION 'FAIL: subtask apply was partial or completed the parent: %', v_apply;
   END IF;
+
+  -- Model a lost HTTP response followed by a delayed retry. A committed
+  -- operation must replay before the now-expired/consumed preview is checked.
+  UPDATE public.canonical_operation_previews
+  SET expires_at = clock_timestamp() - interval '1 second'
+  WHERE user_id = '1fc30000-0000-4000-8000-000000000001'
+    AND operation_id = 'subtask-breakdown-main';
 
   v_replay := public.flowstate_subtask_batch_v1(
     'subtask-breakdown-main', 'task-v1', 'local-api',

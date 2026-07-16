@@ -12,17 +12,21 @@ const SHA256_HEX_RE = /^[0-9a-f]{64}$/
 const ERROR_STATUS = {
   invalid_request: 400,
   invalid_operation: 400,
+  invalid_operations: 400,
   approval_receipt_required: 400,
   not_authenticated: 401,
   scope_denied: 403,
   not_found: 404,
   subtask_not_found: 404,
   stale_revision: 409,
+  invalid_existing_subtasks: 409,
   idempotency_conflict: 409,
   request_hash_required: 409,
   request_hash_mismatch: 409,
   preview_mismatch: 409,
   preview_expired: 409,
+  client_id_conflict: 409,
+  subtask_id_conflict: 409,
 }
 
 function object(value) {
@@ -60,7 +64,8 @@ function normalizeOperation(value) {
 
   const normalized = { kind }
   if (kind === 'create') {
-    if (!nonEmptyString(value.clientId) || !nonEmptyString(value.title)) return null
+    if (!nonEmptyString(value.clientId) || !nonEmptyString(value.title)
+      || value.title.length > 500) return null
     normalized.clientId = value.clientId
     normalized.title = value.title
   } else {
@@ -70,15 +75,16 @@ function normalizeOperation(value) {
   if (kind === 'delete') return normalized
 
   if (value.title !== undefined) {
-    if (!nonEmptyString(value.title)) return null
+    if (!nonEmptyString(value.title) || value.title.length > 500) return null
     normalized.title = value.title
   }
   if (value.description !== undefined) {
-    if (typeof value.description !== 'string') return null
+    if (typeof value.description !== 'string' || value.description.length > 10000) return null
     normalized.description = value.description
   }
   if (value.doneEnough !== undefined) {
-    if (value.doneEnough !== null && typeof value.doneEnough !== 'string') return null
+    if (value.doneEnough !== null
+      && (typeof value.doneEnough !== 'string' || value.doneEnough.length > 2000)) return null
     normalized.doneEnough = value.doneEnough
   }
   if (value.estimateMinutes !== undefined) {
@@ -132,7 +138,10 @@ function validateRequest(taskId, body) {
     }
   }
   const operations = normalizedOperations(body.operations)
-  if (!operations || !nonEmptyString(body.operationId) || body.operationId.length > 160) {
+  if (!operations) {
+    return { error: errorResult(400, 'invalid_operations', 'Subtask operations are invalid') }
+  }
+  if (!nonEmptyString(body.operationId) || body.operationId.length > 160) {
     return { error: errorResult(400, 'invalid_request', 'The canonical subtask request is invalid') }
   }
   if (!positiveInteger(body.baseRevision)) {
@@ -303,7 +312,7 @@ async function executeSubtaskBatch(context, taskId, body, notifyTaskMutation) {
     return errorResult(502, 'invalid_canonical_response', 'Canonical subtask receipt could not be verified')
   }
 
-  if (!receipt.replayed) {
+  if (receipt.status === 'committed') {
     try {
       notifyTaskMutation('update', taskId)
     } catch {

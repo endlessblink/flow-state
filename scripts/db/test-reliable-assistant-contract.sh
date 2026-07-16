@@ -246,6 +246,8 @@ docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-task-lifecycle-rpc.sql" >/dev/null
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-subtask-batch-rpc.sql" >/dev/null
+FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
+  bash "$root_dir/scripts/db/test-subtask-batch-concurrency.sh"
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-work-block-batch-rpc.sql"
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \

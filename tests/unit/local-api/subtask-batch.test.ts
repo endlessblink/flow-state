@@ -249,6 +249,65 @@ describe('TASK-1963 canonical Local API subtask batch', () => {
       },
     )
 
+    it.each([
+      ['create title', { kind: 'create', clientId: 'long-title', title: 'x'.repeat(501) }],
+      ['update title', { kind: 'update', subtaskId: 'existing-step', title: 'x'.repeat(501) }],
+      ['create description', {
+        kind: 'create', clientId: 'long-description', title: 'Step', description: 'x'.repeat(10001),
+      }],
+      ['update description', {
+        kind: 'update', subtaskId: 'existing-step', description: 'x'.repeat(10001),
+      }],
+      ['create doneEnough', {
+        kind: 'create', clientId: 'long-done-enough', title: 'Step', doneEnough: 'x'.repeat(2001),
+      }],
+      ['update doneEnough', {
+        kind: 'update', subtaskId: 'existing-step', doneEnough: 'x'.repeat(2001),
+      }],
+    ])('rejects over-limit %s before calling the canonical RPC', async (_label, operation) => {
+      const { executeSubtaskBatch, notifyTaskMutation, rpc } = harness(null)
+
+      const result = await executeSubtaskBatch(
+        context(rpc),
+        taskId,
+        { operationId, baseRevision: 7, operations: [operation] },
+        notifyTaskMutation,
+      )
+
+      expect(result).toEqual({
+        status: 400,
+        body: {
+          ok: false,
+          error: { code: 'invalid_operations', message: 'Subtask operations are invalid' },
+        },
+      })
+      expect(rpc).not.toHaveBeenCalled()
+      expect(notifyTaskMutation).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['create title', { kind: 'create', clientId: 'max-title', title: 'x'.repeat(500) }],
+      ['update title', { kind: 'update', subtaskId: 'existing-step', title: 'x'.repeat(500) }],
+      ['create description', {
+        kind: 'create', clientId: 'max-description', title: 'Step', description: 'x'.repeat(10000),
+      }],
+      ['update description', {
+        kind: 'update', subtaskId: 'existing-step', description: 'x'.repeat(10000),
+      }],
+      ['create doneEnough', {
+        kind: 'create', clientId: 'max-done-enough', title: 'Step', doneEnough: 'x'.repeat(2000),
+      }],
+      ['update doneEnough', {
+        kind: 'update', subtaskId: 'existing-step', doneEnough: 'x'.repeat(2000),
+      }],
+    ])('keeps the exact %s boundary valid', (_label, operation) => {
+      const { normalizeOperation } = require(modulePath) as {
+        normalizeOperation: (value: unknown) => unknown
+      }
+
+      expect(normalizeOperation(operation)).toEqual(operation)
+    })
+
     it('maps a durable same-operation changed-payload conflict after handler recreation', async () => {
       const conflict = {
         ok: false,
@@ -280,17 +339,39 @@ describe('TASK-1963 canonical Local API subtask batch', () => {
       expect(second.notifyTaskMutation).not.toHaveBeenCalled()
     })
 
-    it.each(['stale_revision', 'preview_mismatch', 'preview_expired'])(
+    it.each([
+      ['invalid_operations', 400],
+      ['invalid_existing_subtasks', 409],
+      ['client_id_conflict', 409],
+      ['subtask_id_conflict', 409],
+    ])('maps typed canonical failure %s without reporting an internal error', async (code, status) => {
+      const failure = { ok: false, error: { code, message: code } }
+      const { executeSubtaskBatch, notifyTaskMutation, rpc } = harness(failure)
+
+      const result = await executeSubtaskBatch(
+        context(rpc), taskId, applyBody, notifyTaskMutation,
+      )
+
+      expect(result.status).toBe(status)
+      expect(result.body).toEqual(failure)
+      expect(notifyTaskMutation).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['stale_revision', { currentRevision: 9 }],
+      ['preview_mismatch', {}],
+      ['preview_expired', {}],
+    ])(
       'maps %s as a conflict without a mutation notification',
-      async (code) => {
-        const failure = { ok: false, error: { code, message: code } }
+      async (code, details) => {
+        const failure = { ok: false, error: { code, message: code, ...details } }
         const { executeSubtaskBatch, notifyTaskMutation, rpc } = harness(failure)
         const result = await executeSubtaskBatch(
           context(rpc), taskId, applyBody, notifyTaskMutation,
         )
 
         expect(result.status).toBe(409)
-        expect((result.body.error as { code: string }).code).toBe(code)
+        expect(result.body).toEqual(failure)
         expect(notifyTaskMutation).not.toHaveBeenCalled()
       },
     )
@@ -304,6 +385,30 @@ describe('TASK-1963 canonical Local API subtask batch', () => {
       )
 
       expect(result).toEqual({ status: 200, body: response })
+      expect(notifyTaskMutation).not.toHaveBeenCalled()
+    })
+
+    it('recovers a response-loss retry from a status-only replay without notifying twice', async () => {
+      const response = committed({ status: 'replayed', replayed: undefined })
+      const rpc = vi.fn()
+        .mockRejectedValueOnce(new Error('connection closed after commit'))
+        .mockResolvedValueOnce({ data: response, error: null })
+      const notifyTaskMutation = vi.fn()
+      const { executeSubtaskBatch } = require(modulePath) as {
+        executeSubtaskBatch: ExecuteSubtaskBatch
+      }
+
+      const lost = await executeSubtaskBatch(
+        context(rpc), taskId, applyBody, notifyTaskMutation,
+      )
+      const replayed = await executeSubtaskBatch(
+        context(rpc), taskId, applyBody, notifyTaskMutation,
+      )
+
+      expect(lost.status).toBe(500)
+      expect((lost.body.error as { code: string }).code).toBe('canonical_subtask_batch_failed')
+      expect(replayed).toEqual({ status: 200, body: response })
+      expect(rpc).toHaveBeenCalledTimes(2)
       expect(notifyTaskMutation).not.toHaveBeenCalled()
     })
 

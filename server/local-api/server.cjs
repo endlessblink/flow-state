@@ -310,6 +310,66 @@ function normalizeSubtasks(subtasks) {
     : []
 }
 
+const CANONICAL_SUBTASK_KEYS = new Set([
+  'id', 'clientId', 'parentTaskId', 'title', 'description', 'isCompleted',
+  'doneEnough', 'estimateMinutes', 'completedPomodoros', 'canvasPosition',
+  'createdAt', 'updatedAt', 'order',
+])
+const CANONICAL_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/
+
+function boundedCanonicalString(value, maxLength, allowEmpty = false) {
+  return typeof value === 'string'
+    && value.length <= maxLength
+    && (allowEmpty || (value.length > 0 && value === value.trim()))
+}
+
+function validCanonicalSubtasks(subtasks, parentTaskId) {
+  if (!Array.isArray(subtasks) || subtasks.length > 10001) return null
+  const ids = new Set()
+  const clientIds = new Set()
+  for (let index = 0; index < subtasks.length; index += 1) {
+    const row = subtasks[index]
+    if (!row || typeof row !== 'object' || Array.isArray(row)
+      || Object.keys(row).some(key => !CANONICAL_SUBTASK_KEYS.has(key))
+      || !boundedCanonicalString(row.id, 256)
+      || ids.has(row.id)
+      || !boundedCanonicalString(row.title, 500)
+      || row.order !== index) return null
+
+    if (row.clientId !== undefined
+      && (!boundedCanonicalString(row.clientId, 160) || clientIds.has(row.clientId))) return null
+    if (row.parentTaskId !== undefined
+      && (!boundedCanonicalString(row.parentTaskId, 256) || row.parentTaskId !== parentTaskId)) return null
+    if (row.description !== undefined && !boundedCanonicalString(row.description, 10000, true)) return null
+    if (row.isCompleted !== undefined && typeof row.isCompleted !== 'boolean') return null
+    if (row.doneEnough !== undefined && row.doneEnough !== null
+      && !boundedCanonicalString(row.doneEnough, 2000, true)) return null
+    if (row.estimateMinutes !== undefined && row.estimateMinutes !== null
+      && (!Number.isSafeInteger(row.estimateMinutes)
+        || row.estimateMinutes < 1 || row.estimateMinutes > 1440)) return null
+    if (row.completedPomodoros !== undefined
+      && (!Number.isSafeInteger(row.completedPomodoros)
+        || row.completedPomodoros < 0 || row.completedPomodoros > 1000000)) return null
+    if (row.canvasPosition !== undefined && row.canvasPosition !== null
+      && (!row.canvasPosition || typeof row.canvasPosition !== 'object'
+        || Array.isArray(row.canvasPosition)
+        || Object.keys(row.canvasPosition).some(key => !['x', 'y'].includes(key))
+        || !Number.isFinite(row.canvasPosition.x)
+        || !Number.isFinite(row.canvasPosition.y))) return null
+    if (row.createdAt !== undefined
+      && (!boundedCanonicalString(row.createdAt, 64)
+        || !CANONICAL_TIMESTAMP_RE.test(row.createdAt)
+        || !Number.isFinite(Date.parse(row.createdAt)))) return null
+    if (row.updatedAt !== undefined
+      && (!boundedCanonicalString(row.updatedAt, 64)
+        || !CANONICAL_TIMESTAMP_RE.test(row.updatedAt)
+        || !Number.isFinite(Date.parse(row.updatedAt)))) return null
+    ids.add(row.id)
+    if (row.clientId !== undefined) clientIds.add(row.clientId)
+  }
+  return subtasks
+}
+
 // --- Route handlers ---------------------------------------------------------
 
 async function handleSearchTasks(url, res) {
@@ -640,24 +700,42 @@ async function handleWorkBlockBatch(req, res) {
 // --- Subtask handlers -------------------------------------------------------
 
 async function findTaskForSubtasks(id, fields = 'id,title,subtasks') {
-  const { supabase, userId } = ctx
-  return await supabase
+  const { supabase } = ctx
+  let query = supabase
     .from('tasks')
     .select(fields)
     .eq('id', id)
-    .eq('user_id', userId)
     .eq('is_deleted', false)
-    .maybeSingle()
+  query = scopeTaskQuery(ctx, query)
+  return await query.maybeSingle()
 }
 
 async function handleGetSubtasks(id, res) {
-  const { data: existing, error } = await findTaskForSubtasks(id, 'id,title,subtasks')
-  if (error) return send(res, 500, { error: error.message })
-  if (!existing) return send(res, 404, { error: 'not found' })
+  const fields = 'id,title,workspace_id,canonical_revision,updated_at,subtasks'
+  const { data: existing, error } = await findTaskForSubtasks(id, fields)
+  if (error) return send(res, 500, {
+    ok: false,
+    error: { code: 'read_failed', message: 'subtasks could not be read' },
+  })
+  if (!existing) return send(res, 404, {
+    ok: false,
+    error: { code: 'not_found', message: 'task not found' },
+  })
+  const subtasks = validCanonicalSubtasks(existing.subtasks, existing.id)
+  if (!subtasks) return send(res, 500, {
+    ok: false,
+    error: { code: 'read_failed', message: 'subtasks could not be read' },
+  })
   send(res, 200, {
     ok: true,
-    task: { id: existing.id, title: existing.title },
-    subtasks: normalizeSubtasks(existing.subtasks),
+    task: {
+      id: existing.id,
+      title: existing.title,
+      workspaceId: existing.workspace_id ?? null,
+      canonicalRevision: existing.canonical_revision,
+      canonicalUpdatedAt: existing.updated_at,
+    },
+    subtasks,
   })
 }
 
@@ -712,7 +790,7 @@ async function handleCanonicalSubtaskBatch(id, body, res) {
     {
       supabase: ctx.supabase,
       activeWorkspaceId: ctx.activeWorkspaceId,
-      signedUser: ctx.mode === 'token',
+      signedUser: ctx.signedUser,
     },
     id,
     body,

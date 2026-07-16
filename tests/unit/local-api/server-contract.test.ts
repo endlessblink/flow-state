@@ -422,13 +422,21 @@ describe('Local API sidecar timer endpoint regression contract', () => {
 
   it('reads only the user-owned task subtask payload', () => {
     const body = functionBody('handleGetSubtasks')
+    const getBody = body.slice(0, body.indexOf('async function handleCreateSubtask'))
     const finder = functionBody('findTaskForSubtasks')
 
-    expect(body).toContain("findTaskForSubtasks(id, 'id,title,subtasks')")
+    expect(getBody).toContain("const fields = 'id,title,workspace_id,canonical_revision,updated_at,subtasks'")
+    expect(getBody).toContain('findTaskForSubtasks(id, fields)')
     expect(finder).toContain('.select(fields)')
-    expect(finder).toContain(".eq('user_id', userId)")
     expect(finder).toContain(".eq('is_deleted', false)")
-    expect(body).toContain('normalizeSubtasks(existing.subtasks)')
+    expect(finder).toContain('scopeTaskQuery(ctx, query)')
+    expect(getBody).toContain('workspaceId: existing.workspace_id')
+    expect(getBody).toContain('canonicalRevision: existing.canonical_revision')
+    expect(getBody).toContain('canonicalUpdatedAt: existing.updated_at')
+    expect(getBody).toContain('validCanonicalSubtasks(existing.subtasks, existing.id)')
+    expect(getBody).toContain("code: 'read_failed'")
+    expect(getBody).toContain("code: 'not_found'")
+    expect(getBody).not.toContain('error.message')
   })
 
   it('routes singular subtask mutations through the canonical preview/apply batch', () => {
@@ -457,7 +465,8 @@ describe('Local API sidecar timer endpoint regression contract', () => {
 
     expect(SERVER_CJS).toContain("require('./subtask-batch.cjs')")
     expect(body).toContain('executeSubtaskBatch')
-    expect(body).toContain("signedUser: ctx.mode === 'token'")
+    expect(body).toContain('signedUser: ctx.signedUser')
+    expect(body).not.toContain('ctx.mode')
     expect(body).toContain('activeWorkspaceId: ctx.activeWorkspaceId')
     expect(body).toContain('notifyTaskMutation')
     expect(body).not.toContain(".from('tasks')")

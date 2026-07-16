@@ -93,7 +93,7 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(route, 'Hermes capabilities route not found').toBeGreaterThan(-1)
     expect(route).toBeLessThan(tokenCheck)
     expect(SERVER_CJS).toContain("require('./hermes-route-capabilities.cjs')")
-    expect(body).toContain("schemaVersion: 'flowstate-hermes-capabilities-v1'")
+    expect(body).toContain('schemaVersion: HERMES_CAPABILITIES_SCHEMA_VERSION')
     expect(body).toContain('routes: HERMES_ROUTE_CAPABILITIES.map')
     expect(body).not.toContain('TOKEN')
     expect(body).not.toContain('accessToken')

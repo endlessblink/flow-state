@@ -15,6 +15,7 @@ const {
   HERMES_ROUTE_DISPATCH_MARKERS,
   SCHEMA_VERSION: HERMES_CAPABILITIES_SCHEMA_VERSION,
 } = require('../server/local-api/hermes-route-capabilities.cjs')
+const { probePackagedHermesRoutes } = require('./probe-packaged-hermes-routes.cjs')
 
 const root = process.env.FLOWSTATE_PACKAGE_ROOT || path.resolve(__dirname, '..')
 const appAsar = path.join(root, 'release', 'linux-unpacked', 'resources', 'app.asar')
@@ -89,7 +90,7 @@ if (manifestDebPath) {
   validateDebArchiveMembers(manifestDebPath)
 }
 
-function validateAppAsar(packagePath) {
+async function validateAppAsar(packagePath) {
   const entries = new Set(asar.listPackage(packagePath))
   const missing = requiredAsarEntries.filter((entry) => !entries.has(entry))
   if (missing.length > 0) {
@@ -137,49 +138,65 @@ function validateAppAsar(packagePath) {
         `Packaged sidecar is missing advertised Hermes route dispatch branches: ${missingDispatch.join(', ')}`,
       )
     }
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'flowstate-sidecar-probe-'))
+    try {
+      const sidecarPath = path.join(tempDir, 'local-api-server.cjs')
+      fs.writeFileSync(sidecarPath, sidecar)
+      await probePackagedHermesRoutes(sidecarPath)
+    } catch (error) {
+      fail(`Packaged sidecar failed its executable Hermes route contract: ${error.message}`)
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true })
+    }
   } catch (error) {
     fail(`Unable to validate packaged Hermes route capability contract: ${error.message}`)
   }
 }
 
-if (fs.existsSync(appAsar)) {
-  validateAppAsar(appAsar)
-} else {
-  let extractedPackage = null
-  try {
-    extractedPackage = appAsarFromLatestDeb()
-    if (!extractedPackage || !fs.existsSync(extractedPackage.appAsar)) {
-      fail(`Missing packaged app archive: ${appAsar}`)
-    } else {
-      validateAppAsar(extractedPackage.appAsar)
+async function main() {
+  if (fs.existsSync(appAsar)) {
+    await validateAppAsar(appAsar)
+  } else {
+    let extractedPackage = null
+    try {
+      extractedPackage = appAsarFromLatestDeb()
+      if (!extractedPackage || !fs.existsSync(extractedPackage.appAsar)) {
+        fail(`Missing packaged app archive: ${appAsar}`)
+      } else {
+        await validateAppAsar(extractedPackage.appAsar)
+      }
+    } catch (error) {
+      fail(`Unable to validate packaged deb app archive: ${error.message}`)
+    } finally {
+      extractedPackage?.cleanup()
     }
-  } catch (error) {
-    fail(`Unable to validate packaged deb app archive: ${error.message}`)
-  } finally {
-    extractedPackage?.cleanup()
   }
-}
 
-if (!fs.existsSync(builderConfig)) {
-  fail(`Missing electron-builder config: ${builderConfig}`)
-} else {
-  const config = fs.readFileSync(builderConfig, 'utf-8')
-  const requiredConfigSnippets = [
-    '  - dist/**/*',
-    '  - dist-electron/**/*',
-    'main: dist-electron/main.cjs',
-    'executableName: flowstate',
-    'StartupWMClass: flow-state',
-    'FlowState-${version}-${arch}.AppImage',
-  ]
-  const missing = requiredConfigSnippets.filter((snippet) => !config.includes(snippet))
-  if (missing.length > 0) {
-    fail(`electron-builder.yml is missing required Linux package contract snippets: ${missing.join(', ')}`)
+  if (!fs.existsSync(builderConfig)) {
+    fail(`Missing electron-builder config: ${builderConfig}`)
+  } else {
+    const config = fs.readFileSync(builderConfig, 'utf-8')
+    const requiredConfigSnippets = [
+      '  - dist/**/*',
+      '  - dist-electron/**/*',
+      'main: dist-electron/main.cjs',
+      'executableName: flowstate',
+      'StartupWMClass: flow-state',
+      'FlowState-${version}-${arch}.AppImage',
+    ]
+    const missing = requiredConfigSnippets.filter((snippet) => !config.includes(snippet))
+    if (missing.length > 0) {
+      fail(`electron-builder.yml is missing required Linux package contract snippets: ${missing.join(', ')}`)
+    }
   }
+
+  if (!process.exitCode) {
+    console.log('[electron-package] Electron package contains renderer, main process, route-compatible sidecar, and Linux launcher metadata.')
+  }
+  process.exit(process.exitCode || 0)
 }
 
-if (process.exitCode) {
-  process.exit(process.exitCode)
-}
-
-console.log('[electron-package] Electron package contains renderer, main process, route-compatible sidecar, and Linux launcher metadata.')
+main().catch(error => {
+  fail(`Package validation crashed: ${error.message}`)
+  process.exit(process.exitCode || 1)
+})

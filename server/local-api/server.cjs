@@ -50,6 +50,7 @@ const {
 const { scopeTaskQuery } = require('./task-scope.cjs')
 const {
   HERMES_ROUTE_CAPABILITIES,
+  SCHEMA_VERSION: HERMES_CAPABILITIES_SCHEMA_VERSION,
 } = require('./hermes-route-capabilities.cjs')
 
 // --- Mode detection ---------------------------------------------------------
@@ -1347,7 +1348,7 @@ function handleGetBuildProvenance(res) {
 
 function handleGetHermesCapabilities(res) {
   send(res, 200, {
-    schemaVersion: 'flowstate-hermes-capabilities-v1',
+    schemaVersion: HERMES_CAPABILITIES_SCHEMA_VERSION,
     routes: HERMES_ROUTE_CAPABILITIES.map((route) => ({ ...route })),
   })
 }

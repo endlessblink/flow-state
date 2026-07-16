@@ -240,5 +240,39 @@ DO $$ DECLARE p jsonb := (SELECT payload FROM work_block_results WHERE key='fail
   END IF;
 END $$;
 
+-- Recurrence-heavy scopes must not rescan the timezone catalog once per
+-- occurrence. These legacy occurrence rows intentionally share the instances
+-- collection with canonical work blocks.
+INSERT INTO public.tasks (id,user_id,title,status,due_date,is_deleted,instances,subtasks,is_in_inbox)
+SELECT
+  '6b600000-0000-4000-8000-000000000108',
+  '6b600000-0000-4000-8000-000000000001',
+  'recurrence-heavy work-block target',
+  'planned',
+  '2026-12-31',
+  false,
+  pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+    'id','legacy-occurrence-' || occurrence,
+    'taskId','6b600000-0000-4000-8000-000000000108',
+    'scheduledDate','2026-07-18',
+    'scheduledTime','10:00',
+    'duration',15,
+    'timezone','UTC'
+  )),
+  '[]'::jsonb,
+  false
+FROM pg_catalog.generate_series(1,800) occurrence;
+SET LOCAL statement_timeout = '5s';
+INSERT INTO work_block_results SELECT 'recurrence_heavy_preview',public.flowstate_work_block_v1(
+  'work-block-recurrence-heavy','work-block-v1','local-api','6b600000-0000-4000-8000-000000000108',1,0,
+  '{"action":"create","workBlock":{"id":"6b600000-0000-4000-8000-000000000214","scheduledDate":"2026-07-18","scheduledTime":"12:00","duration":15,"timezone":"UTC"}}',true);
+SET LOCAL statement_timeout = 0;
+DO $$ BEGIN
+  IF (SELECT payload->>'result' FROM work_block_results WHERE key='recurrence_heavy_preview') <> 'preview'
+     OR (SELECT pg_catalog.jsonb_array_length(payload#>'{readBack,instances}') FROM work_block_results WHERE key='recurrence_heavy_preview') <> 801 THEN
+    RAISE EXCEPTION 'FAIL: recurrence-heavy work-block preview was slow or lost legacy occurrences';
+  END IF;
+END $$;
+
 ROLLBACK;
 SELECT 'PASS: work-block stable IDs, exact intervals, CAS, replay, scope, finish-by, overlap, and rollback';

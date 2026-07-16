@@ -24,6 +24,7 @@ h3_rollback="$root_dir/scripts/db/rollback-canonical-domain-receipts.sql"
 lifecycle_migration="$root_dir/supabase/migrations/20260716090000_canonical_task_lifecycle.sql"
 subtask_batch_migration="$root_dir/supabase/migrations/20260716100000_canonical_subtask_batch.sql"
 work_block_migration="$root_dir/supabase/migrations/20260716110000_canonical_work_blocks.sql"
+work_block_optimization_migration="$root_dir/supabase/migrations/20260716120000_optimize_canonical_work_blocks.sql"
 
 cleanup() {
   docker exec "$container" dropdb -U postgres --if-exists --force "$test_db" >/dev/null 2>&1 || true
@@ -190,7 +191,7 @@ for _ in 1 2; do
   docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
     < "$lifecycle_migration" >/dev/null
 done
-for migration in "$subtask_batch_migration" "$work_block_migration"; do
+for migration in "$subtask_batch_migration" "$work_block_migration" "$work_block_optimization_migration"; do
   for _ in 1 2; do
     docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
       < "$migration" >/dev/null

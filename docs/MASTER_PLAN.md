@@ -2205,6 +2205,7 @@ _Original plan below._
 - [ ] **TASK-1960 — Make complete inventory the only exhaustive assistant task boundary**: label capped list/search responses as filtered samples, align inventory item revisions with the canonical receipt contract, and fail closed across large scans, repeated concurrent changes, and scope switches.
 - [ ] **TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.
 - [ ] **TASK-1963 — Canonical atomic subtask breakdown contract**: port the preview-bound, revision-checked, replay-safe subtask batch RPC onto current main without reverting newer receipt/auth work; expose canonical ordered subtask reads for Hermes and reject malformed existing arrays before mutation.
+- [ ] **TASK-1964 — Connect Martha's binaclub.com mailbox to Gmail**: add `martha-bar@binaclub.com` as a Gmail send-as identity through Purelymail SMTP, approve it from Purelymail Webmail, route incoming mail to Martha's Gmail, and prove both directions without changing the completed DNS cutover.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2238,6 +2239,30 @@ _Original plan below._
 **Progress (2026-07-16)**: The current-main recovery now uses the H3 read-back and shared receipt validator already present on `origin/master`, avoiding the stale H4 lifecycle dependency. Source and Electron-bundle runtime tests cover bounded pages, invalid cursors and limits, malformed rows beyond the first page, and typed revision conflicts; the disposable database harness covers preview/apply/replay/rollback and simultaneous stale writes without production data.
 
 **Cross-review hardening (2026-07-16)**: Exact normalized approval operations are now separated from enriched execution/read-back rows, including deep Canvas position equality. The migration losslessly backfills the current-main no-order shape, rejects post-state overflow above 10,001 rows in preview and apply, and returns the current revision from both stale paths. Signed-user source and Electron runtime tests preserve legacy singular preview fields while proving that receipt-free apply remains blocked.
+
+### TASK-1964: Connect Martha's binaclub.com mailbox to Gmail (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (filed 2026-07-17)
+
+**Why**: `noam-naumovsky@binaclub.com` can already send successfully from Gmail through Purelymail, but Martha's equivalent Gmail send-as identity and incoming forwarding are still pending. Preserve the working domain and mail configuration while completing the same setup for `martha-bar@binaclub.com`.
+
+**Current verified context**:
+- The `binaclub.com` domain remains registered at Hostinger; authoritative DNS is managed in Cloudflare through `dee.ns.cloudflare.com` and `ridge.ns.cloudflare.com`.
+- Mail hosting moved from Hostinger to Purelymail. Purelymail users exist for `info@binaclub.com`, `martha-bar@binaclub.com`, and `noam-naumovsky@binaclub.com`.
+- Root MX points to `mailserver.purelymail.com`; root SPF is `v=spf1 include:_spf.purelymail.com ~all`; all three `purelymail1/2/3._domainkey` DKIM CNAMEs validate. The separate `send.binaclub.com` Amazon SES records are unrelated and must remain unchanged.
+- Public DMARC is already valid as `v=DMARC1; p=none; rua=mailto:admin@binaclub.com`; Purelymail's DMARC warning does not justify replacing it.
+- Symbolic Subaddressing is disabled for `binaclub.com` so the hyphenated mailbox names remain literal users.
+- No Hostinger mailbox history needs migration. Noam's Gmail send-as setup is the working reference pattern.
+
+**Remaining work**:
+- In Martha's Gmail, add `martha-bar@binaclub.com` under **Settings → Accounts and Import → Send mail as** using `smtp.purelymail.com`, port `465`, SSL, the full mailbox address as username, and the mailbox password or a Purelymail app password when 2FA is enabled.
+- Open Purelymail Webmail as `martha-bar@binaclub.com` and approve Google's verification message.
+- In Purelymail **Account → Routing**, add an exact-address rule for local part `martha-bar` (without `@binaclub.com`) whose destination is Martha's Gmail address. The routing rule redirects rather than retaining a Purelymail inbox copy.
+- Send an external message to `martha-bar@binaclub.com` and prove it arrives in Martha's Gmail; reply from Gmail with the From address set to `martha-bar@binaclub.com` and prove external delivery.
+
+**Safety constraints**: do not change nameservers, website records, MX, SPF, DKIM, existing DMARC, or `send.binaclub.com` Amazon SES records. Do not store mailbox or Gmail passwords in this plan.
+
+**Progress (2026-07-17):** Purelymail domain/users and the DNS cutover are complete, and Noam's Gmail send-as identity works. Martha's Gmail send-as verification, exact-address forwarding rule, and two-way delivery test remain pending.
 
 ### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
 

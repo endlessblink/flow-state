@@ -54,7 +54,11 @@ describe('useVoiceNLPParser', () => {
       const result = parser.parseTranscription(input)
       const expected = new Date()
       expected.setDate(expected.getDate() + daysOffset)
-      expect(result.dueDate).toBe(expected.toISOString().split('T')[0])
+      // Compare in LOCAL time via the parser's own formatter. toISOString()
+      // is UTC: between midnight and UTC-offset hours (00:00-03:00 in
+      // Israel) it still reports yesterday, so these tests failed — and
+      // blocked the deploy gate — every night in that window.
+      expect(result.dueDate).toBe(parser.formatDate(expected))
     })
 
     it('extracts "this weekend" as Saturday', () => {

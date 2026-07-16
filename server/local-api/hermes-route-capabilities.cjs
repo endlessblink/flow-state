@@ -13,13 +13,13 @@ const HERMES_ROUTE_CAPABILITIES = Object.freeze([
   { method: 'GET', path: '/api/tasks/inventory', contractVersion: 'task-inventory-v1', available: true },
   { method: 'GET', path: '/api/tasks/:id', contractVersion: 'task-read-v1', available: true },
   { method: 'POST', path: '/api/tasks/lifecycle', contractVersion: 'task-lifecycle-v1', available: true },
-  { method: 'PATCH', path: '/api/tasks/:id', contractVersion: 'canonical-task-patch-v1', available: true },
+  { method: 'PATCH', path: '/api/tasks/:id', contractVersion: 'task-v1', available: true },
   { method: 'GET', path: '/api/timer/current', contractVersion: 'timer-current-v1', available: true },
   { method: 'GET', path: '/api/timer/diagnostics', contractVersion: 'timer-diagnostics-v1', available: true },
   { method: 'GET', path: '/api/tasks/:id/instances', contractVersion: 'task-instances-v1', available: true },
   { method: 'POST', path: '/api/tasks/:id/work-blocks', contractVersion: 'work-block-v1', available: false },
-  { method: 'POST', path: '/api/tasks/:id/done-for-now', contractVersion: 'done-for-now-v1', available: true },
-  { method: 'POST', path: '/api/tasks/:id/merge', contractVersion: 'task-merge-v1', available: true },
+  { method: 'POST', path: '/api/tasks/:id/done-for-now', contractVersion: 'task-v1', available: true },
+  { method: 'POST', path: '/api/tasks/:id/merge', contractVersion: 'task-v1', available: true },
   { method: 'GET', path: '/api/tasks/:id/subtasks', contractVersion: 'subtask-list-v1', available: true },
   { method: 'POST', path: '/api/tasks/:id/subtasks/batch', contractVersion: 'legacy-subtask-batch-v0', available: true },
 ])
@@ -29,8 +29,30 @@ const HERMES_ROUTE_BUNDLE_MARKERS = Object.freeze([
   ...HERMES_ROUTE_CAPABILITIES.flatMap(({ method, path, contractVersion }) => [method, path, contractVersion]),
 ])
 
+// These strings are emitted by esbuild for the actual router branches. They
+// cannot be satisfied by the capability data itself, so package validation
+// catches a route that was advertised but never wired into the sidecar.
+const HERMES_ROUTE_DISPATCH_MARKERS = Object.freeze([
+  'if (req.method === "GET" && path === "/api/health")',
+  'if (req.method === "GET" && path === "/api/assistant/context")',
+  'if (req.method === "GET" && path === "/api/tasks")',
+  'if (req.method === "GET" && path === "/api/tasks/search")',
+  'if (req.method === "GET" && path === "/api/tasks/inventory")',
+  'if (req.method === "GET" && taskMatch)',
+  'if (req.method === "POST" && path === "/api/tasks/lifecycle")',
+  'if (req.method === "PATCH" && taskMatch)',
+  'if (req.method === "GET" && path === "/api/timer/current")',
+  'if (req.method === "GET" && path === "/api/timer/diagnostics")',
+  'if (req.method === "GET" && taskInstancesMatch)',
+  'if (req.method === "POST" && doneForNowMatch)',
+  'if (req.method === "POST" && mergeTasksMatch)',
+  'if (req.method === "GET" && subtasksMatch)',
+  'if (req.method === "POST" && subtaskBatchMatch)',
+])
+
 module.exports = {
   HERMES_ROUTE_BUNDLE_MARKERS,
   HERMES_ROUTE_CAPABILITIES,
+  HERMES_ROUTE_DISPATCH_MARKERS,
   SCHEMA_VERSION,
 }

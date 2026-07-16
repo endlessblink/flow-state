@@ -7,8 +7,12 @@ import { createPackage } from '@electron/asar'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const { HERMES_ROUTE_BUNDLE_MARKERS } = require('../../../server/local-api/hermes-route-capabilities.cjs') as {
+const {
+  HERMES_ROUTE_BUNDLE_MARKERS,
+  HERMES_ROUTE_DISPATCH_MARKERS,
+} = require('../../../server/local-api/hermes-route-capabilities.cjs') as {
   HERMES_ROUTE_BUNDLE_MARKERS: string[]
+  HERMES_ROUTE_DISPATCH_MARKERS: string[]
 }
 
 const scriptPath = resolve(__dirname, '../../../scripts/validate-electron-package.cjs')
@@ -78,7 +82,7 @@ async function writeAppAsar(
             },
           })
         : entry.endsWith('local-api-server.cjs')
-          ? options.sidecar ?? HERMES_ROUTE_BUNDLE_MARKERS.join('\n')
+          ? options.sidecar ?? [...HERMES_ROUTE_BUNDLE_MARKERS, ...HERMES_ROUTE_DISPATCH_MARKERS].join('\n')
         : 'fixture'
     writeFile(source, entry.replace(/^\//, ''), content)
   }
@@ -196,6 +200,24 @@ describe('validate-electron-package', () => {
 
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('Hermes route capability contract')
+  })
+
+  it('fails before shipping advertised routes that have no dispatch branch', async () => {
+    const root = makeRoot()
+    writeBuilderConfig(root)
+    await writeAppAsar(root, [
+      '/dist/index.html',
+      '/dist-electron/main.cjs',
+      '/dist-electron/preload.cjs',
+      '/dist-electron/local-api-server.cjs',
+      '/dist-electron/flowstate-truth-ledger.json',
+      '/package.json',
+    ], { sidecar: HERMES_ROUTE_BUNDLE_MARKERS.join('\n') })
+
+    const result = runValidator(root)
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('route dispatch branches')
   })
 
   it('fails if Linux launcher metadata drifts away from the dock shortcut contract', async () => {

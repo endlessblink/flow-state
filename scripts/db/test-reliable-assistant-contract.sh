@@ -21,6 +21,7 @@ migrations=(
 )
 h3_migration="${migrations[11]}"
 h3_rollback="$root_dir/scripts/db/rollback-canonical-domain-receipts.sql"
+lifecycle_migration="$root_dir/supabase/migrations/20260716090000_canonical_task_lifecycle.sql"
 
 cleanup() {
   docker exec "$container" dropdb -U postgres --if-exists --force "$test_db" >/dev/null 2>&1 || true
@@ -183,6 +184,10 @@ BEGIN
   RAISE NOTICE 'H3 reapply canonical surface probe passed';
 END $$;
 SQL
+for _ in 1 2; do
+  docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+    < "$lifecycle_migration" >/dev/null
+done
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 DO $$
 BEGIN
@@ -211,6 +216,10 @@ FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
   bash "$root_dir/scripts/db/test-merge-tasks-recurrence-concurrency.sh"
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-domain-receipts.sql" >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-canonical-task-lifecycle.sql" >/dev/null
+FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
+  bash "$root_dir/scripts/db/test-task-lifecycle-concurrency.sh"
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-notion-activation.sql" >/dev/null
 

@@ -15,6 +15,7 @@ const CONTRACT_SET = Object.freeze([
   'canonical-task/task-v1',
   'electron-updater/latest-linux-v1',
   'local-task-api/v1',
+  'local-task-api/flowstate-hermes-capabilities-v1',
   'notion-activation/notion-activation-v1',
   'truth-ledger/flowstate-truth-ledger-v1',
 ])

@@ -40,7 +40,7 @@ function syntheticJwt() {
 async function startFakePostgrest() {
   const rows = Array.from({ length: 151 }, (_, index) => task(index))
   const requests: URL[] = []
-  const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+  const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url || '/', 'http://127.0.0.1')
     requests.push(url)
     if (url.pathname === '/auth/v1/user') {
@@ -51,6 +51,27 @@ async function startFakePostgrest() {
     if (url.pathname === '/rest/v1/canonical_change_log') {
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify([{ change_sequence: 7 }]))
+      return
+    }
+    if (req.method === 'POST' && url.pathname === '/rest/v1/rpc/flowstate_task_change_causes_v1') {
+      const chunks: Buffer[] = []
+      for await (const chunk of req) chunks.push(Buffer.from(chunk))
+      const input = JSON.parse(Buffer.concat(chunks).toString('utf8')) as {
+        p_task_ids?: string[]
+        p_at_sequence?: number
+      }
+      const selected = new Set(input.p_task_ids || [])
+      const causes = rows
+        .filter((item) => selected.has(item.id))
+        .map((item, index) => ({
+          task_id: item.id,
+          change_sequence: input.p_at_sequence,
+          canonical_revision: item.canonical_revision,
+          operation_id: index % 2 ? `hermes:operation:${item.id}` : null,
+          source: index % 2 ? 'local-api' : 'legacy',
+        }))
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify(causes))
       return
     }
     if (req.method !== 'GET' || url.pathname !== '/rest/v1/tasks') {
@@ -170,7 +191,20 @@ describe('complete task inventory runtime contract', () => {
           Number.isInteger(item.canonicalRevision)
           && Number(item.canonicalRevision) > 0
           && !Object.hasOwn(item, 'revision')
+          && typeof item.lastChangeCause === 'object'
         ))).toBe(true)
+        expect(body.items[0].lastChangeCause).toEqual({
+          operationId: null,
+          source: 'legacy',
+          changeSequence: 7,
+          canonicalRevision: body.items[0].canonicalRevision,
+        })
+        expect(body.items[1].lastChangeCause).toEqual({
+          operationId: `hermes:operation:${body.items[1].id}`,
+          source: 'local-api',
+          changeSequence: 7,
+          canonicalRevision: body.items[1].canonicalRevision,
+        })
         expect(body.page).toEqual({ limit: 25, nextCursor: null, hasMore: false })
         expect(body.appVersion).toBe('1.4.260')
         const taskPages = fake.requests.filter((request) => (
@@ -242,6 +276,12 @@ describe('complete task inventory runtime contract', () => {
         expect(body.changeSequence).toBe(7)
         expect(body.total).toBe(151)
         expect(body.items).toHaveLength(151)
+        expect(body.items[1].lastChangeCause.operationId).toBe(
+          `hermes:operation:${body.items[1].id}`,
+        )
+        expect(body.items[1].lastChangeCause.canonicalRevision).toBe(
+          body.items[1].canonicalRevision,
+        )
       } finally {
         await sidecar.stop()
         await fake.close()

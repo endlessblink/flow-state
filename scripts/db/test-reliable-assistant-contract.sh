@@ -24,6 +24,7 @@ migrations=(
   "$root_dir/supabase/migrations/20260716010000_canonical_recurrence_lifecycle.sql"
   "$root_dir/supabase/migrations/20260716020000_canonical_timer_command.sql"
   "$root_dir/supabase/migrations/20260716030000_canonical_organization_commands.sql"
+  "$root_dir/supabase/migrations/20260716040000_task_inventory_change_causes.sql"
 )
 h3_migration="${migrations[11]}"
 h4_migration="${migrations[12]}"
@@ -32,6 +33,7 @@ h6_migration="${migrations[14]}"
 h7_recurrence_migration="${migrations[15]}"
 h7_timer_migration="${migrations[16]}"
 h7_organization_migration="${migrations[17]}"
+h8_cause_migration="${migrations[18]}"
 h3_rollback="$root_dir/scripts/db/rollback-canonical-domain-receipts.sql"
 
 cleanup() {
@@ -212,6 +214,10 @@ for migration in "$h7_recurrence_migration" "$h7_timer_migration" "$h7_organizat
       < "$migration" >/dev/null
   done
 done
+for _ in 1 2; do
+  docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+    < "$h8_cause_migration" >/dev/null
+done
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 DO $$
 BEGIN
@@ -258,6 +264,8 @@ FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
   bash "$root_dir/scripts/db/test-canonical-timer-concurrency.sh"
 docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
   < "$root_dir/scripts/db/test-canonical-organization-commands.sql" >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-task-inventory-change-causes.sql" >/dev/null
 
 FLOWSTATE_DB_CONTAINER="$container" FLOWSTATE_TEST_DB="$test_db" \
   bash "$root_dir/scripts/db/test-canonical-notion-concurrency.sh"

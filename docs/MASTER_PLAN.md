@@ -2208,6 +2208,7 @@ _Original plan below._
 - [ ] **TASK-1964 — Canonical work-block lifecycle for Hermes and Calendar**: implement FEATURE-1944 through signed-user create/move/resize/remove commands that bind stable block identity, parent revision, exact interval effects, durable replay, and verified canonical read-back across Hermes and renderer writers.
 - [ ] **TASK-1965 — Complete canonical assistant command surface for recurrence, timers, and organization**: close the remaining assistant authority gaps with exact completion/merge compatibility, history-preserving recurrence lifecycle commands, leadership-safe timer transitions, exact organization reads and mutations, a capability manifest, and clean-install migration proof.
 - [ ] **TASK-1966 — Bind interactive assistant breakdowns to canonical previews**: carry fresh parent revision and stable subtask identities through Hermes' editable breakdown UI, bind approval to one exact canonical subtask preview, preserve typed conflict details for deterministic regeneration, and prove the packaged renderer never falls back to raw artifact code.
+- [x] ~~**TASK-1967 — Causally suppress Hermes-origin monitor events**: expose privacy-safe canonical mutation provenance in complete task inventory, give monitor events stable cause identity, and suppress or merge assistant-known changes instead of launching duplicate contextual episodes.~~ Completed 2026-07-16; production migration/release remains approval-gated.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -4889,6 +4890,50 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 - The approval surface binds operation ID, parent revision, preview digest, expiry, request hash, and exact normalized operations; it includes an optional correction field and applies once only after explicit approval.
 - Stale, expired, changed, duplicated, malformed, or offline proposals fail closed, preserve the user's draft, and require a fresh preview; no singular or whole-array fallback write is allowed.
 - Source, gateway, Desktop, package, installed office-work, FlowState read-back, and response-loss/replay regressions prove the full vague-task question → edit → preview → revise → approve → apply → verify flow without completing the parent task or maximizing scope.
+
+### TASK-1967: Causally suppress Hermes-origin monitor events (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (filed 2026-07-15, completed 2026-07-16) | **Depends on**: TASK-1943, TASK-1944, TASK-1956, TASK-1960, TASK-1961
+
+**Why**: The monitor correctly avoids generic high-priority metadata false positives and defers while a planning turn is active, but its inventory evidence does not identify the canonical operation that caused a change. A task Hermes changed during planning can therefore be deferred and later launch a second contextual personal-assistant episode after the original turn ends.
+
+**Acceptance**:
+- Complete task inventory exposes only privacy-safe, user-scoped causal mutation provenance already committed by the canonical command authority; missing provenance remains explicit and never invents origin.
+- Monitor event identity prefers a stable canonical cause over an occurrence counter, while persisted v1/v2 queue state remains readable and replay-safe.
+- Missing priority in either snapshot cannot be inferred as a promotion to high priority.
+- The consumer classifies current-assistant-origin changes as `suppressed`, active-plan overlap as `merged`, and launches a contextual episode only for remaining consequential unknown events.
+- Suppressed and merged events receive durable terminal lifecycle evidence; retries, leases, response settlement, redaction, connector failure typing, and dead-letter behavior remain intact.
+- FlowState inventory, Hermes monitor/state/consumer, watchdog/service, package, and isolated office-work runtime regressions pass before completion.
+
+**Progress (FlowState, 2026-07-16)**:
+- Added a bounded signed-user/service-mode canonical cause reader over the existing change ledger and joined its operation/source identity into full inventory only under the same stable high-water proof. Cause failures, malformed rows, and revision contradictions fail the complete inventory closed; stateless pages remain explicitly non-causal.
+- Added unit, SQL-contract, source-runtime, and bundled-runtime regressions plus the Local API contract documentation.
+
+**Progress (Hermes, 2026-07-16)**:
+- The live personal-assistant session now records only verified committed/replayed canonical task receipts. Monitor classification suppresses only complete per-task self-origin proof, uses revision fallback only without an explicit cause, merges only fully known active-context batches, and leaves mixed, nullable-provenance, later-external, and conflicting-cause work visible.
+- RED/green regressions cover the real tool envelope, priority schema introduction, stable cause identity, replay, busy planning, mixed batches, nullable legacy causes, later external changes, and session binding. Final proof passed 149 Hermes assistant/monitor/watchdog tests, 21 FlowState inventory source/bundle tests, disposable canonical database contracts, type checking, lint/static checks, FlowState Electron packaging, independent review, and a clean-stamped Hermes package whose isolated main and `office-work` gateways both became ready and exchanged WebSocket messages. Production migration/release was not performed.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | A Hermes task mutation followed by the monitor observing that task no longer launches or defers a duplicate contextual episode when the exact canonical cause is known. | Yes |
+| Data shape / persisted row shape | Yes | Full inventory returns bounded cause identity at one high-water; absent/pre-ledger causes remain explicit nulls and revision contradictions fail closed. | Yes |
+| Renderer store/state | Yes | Durable assistant-mutation and monitor-context state survives reload, rejects identity collisions, and classifies mixed/self/external batches conservatively. | Yes, in Hermes state rather than the FlowState renderer store. |
+| Electron main/preload bridge | Yes | Source and bundled sidecar tests match, FlowState packaging validates, and the exact clean-stamped Hermes Electron package launches. | Yes |
+| Localhost sidecar endpoint | Yes | Complete inventory source/bundle runtime tests cover pagination, auth repair, causal joins, malformed responses, and typed incomplete receipts. | Yes |
+| KDE polling/control path | N/A | Monitor causal identity and assistant episode delivery do not use KDE timer polling. | N/A |
+| Supabase persistence/realtime | Yes | The disposable database harness covers signed-user/service-mode scope, RLS/workspace denial, stable sequence reads, replay, rollback, and nullable legacy provenance. | Yes locally; production migration is not claimed. |
+| Updater/runtime version | Yes | FlowState Electron package validation passed and Hermes package stamp identifies commit `f95a461251d8`; no updater publication was attempted. | Package proof only; rollout remains approval-gated. |
+| Stale live process/cache state | Yes | Persisted queue/state replay, active-turn deferral, terminal settlement, later external changes, and process-reload mutation memory have deterministic regressions. | Yes |
+
+**Exact failure mode fixed**: a FlowState task changed by the active Hermes personal-assistant episode being observed without canonical cause identity and later starting, deferring, or interrupting with a duplicate contextual assistant episode; plus over-broad suppression that could hide mixed or later external changes.
+
+**Explicitly not covered**: production database migration, Electron/updater publication, and live-profile installation remain approval-gated. Pre-ledger changes with no operation identity intentionally remain visible as external/unknown rather than being guessed as Hermes-origin; non-task schedule/pressure events retain their existing identity rules.
+
+**Regression added for reported repro**: committed receipt recording followed by a causally identical monitor event is durably suppressed before both idle and busy episode-start paths; real receipt envelopes, replay, nullable/mixed causes, and later external changes are covered.
+
+**Live boundary proof**: the clean-stamped Hermes Linux package launched against a credential-free temporary `office-work` profile; both main and profile gateways became ready and exchanged WebSocket messages. No production FlowState or live Hermes profile was mutated.
 
 ### ~~BUG-1946~~: Daily regression hunt tests a stale dirty development checkout (✅ DONE)
 
@@ -7612,6 +7657,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1964** | **P0** | 🔄 **Canonical create/move/resize/remove work-block lifecycle across Hermes, Calendar, and Local API** |
 | **TASK-1965** | **P0** | 🔄 **Complete canonical assistant command surface for recurrence, timers, organization, capabilities, and clean migrations** |
 | **TASK-1966** | **P0** | 🔄 **Versioned interactive task breakdowns with fresh revisions, exact preview approval, conflict regeneration, and packaged renderer proof** |
+| ~~**TASK-1967**~~ | **P0** | ✅ **Causal monitor provenance with stable event identity and durable self-origin suppression/active-plan merging** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

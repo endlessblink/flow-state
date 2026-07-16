@@ -7,6 +7,7 @@ const DEFAULT_LIMIT = 100
 const MAX_LIMIT = 100
 const MAX_PAGES = 1000
 const MAX_CONSISTENCY_RETRIES = 3
+const CAUSE_CHUNK_LIMIT = 100
 const INVENTORY_SCOPE = 'all open tasks visible to the authenticated user'
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -97,6 +98,57 @@ async function readScopeChangeSequence(context) {
     .limit(1)
   if (error) return { value: null, error }
   return { value: Number(data?.[0]?.change_sequence) || 0, error: null }
+}
+
+async function fetchTaskChangeCauses(input) {
+  return await input.context.supabase.rpc('flowstate_task_change_causes_v1', {
+    p_at_sequence: input.atSequence,
+    p_task_ids: input.taskIds,
+    p_user_id: input.context.userId,
+    p_workspace_id: input.context.activeWorkspaceId,
+  })
+}
+
+function validCauseRow(row, requestedIds, atSequence) {
+  return row
+    && typeof row === 'object'
+    && UUID_RE.test(String(row.task_id || ''))
+    && requestedIds.has(row.task_id)
+    && Number.isSafeInteger(row.change_sequence)
+    && row.change_sequence > 0
+    && row.change_sequence <= atSequence
+    && Number.isSafeInteger(row.canonical_revision)
+    && row.canonical_revision > 0
+    && (row.operation_id === null || (
+      typeof row.operation_id === 'string'
+      && row.operation_id.length > 0
+      && row.operation_id.length <= 160
+      && row.operation_id.trim() === row.operation_id
+    ))
+    && typeof row.source === 'string'
+    && row.source.length > 0
+    && row.source.length <= 64
+    && row.source.trim() === row.source
+}
+
+async function readTaskChangeCauses(context, taskIds, atSequence, deps = {}) {
+  const readCauses = deps.readCauses || fetchTaskChangeCauses
+  const causes = new Map()
+  for (let offset = 0; offset < taskIds.length; offset += CAUSE_CHUNK_LIMIT) {
+    const chunk = taskIds.slice(offset, offset + CAUSE_CHUNK_LIMIT)
+    const requestedIds = new Set(chunk)
+    const { data, error } = await readCauses({ context, taskIds: chunk, atSequence })
+    if (error || !Array.isArray(data)) {
+      return { causes: null, error: 'inventory_cause_unavailable' }
+    }
+    for (const row of data) {
+      if (!validCauseRow(row, requestedIds, atSequence) || causes.has(row.task_id)) {
+        return { causes: null, error: 'invalid_inventory_cause' }
+      }
+      causes.set(row.task_id, row)
+    }
+  }
+  return { causes, error: null }
 }
 
 async function findInvalidInventoryRow(context) {
@@ -284,6 +336,28 @@ async function readCompleteTaskInventory(context, input, deps = {}) {
       }
     }
 
+    const rawItems = [...itemsById.values()]
+    const causeResult = await readTaskChangeCauses(
+      context,
+      rawItems.map(item => item.id),
+      before.value,
+      deps,
+    )
+    if (causeResult.error) {
+      return {
+        ...receiptBase(context, input),
+        complete: false,
+        items: rawItems,
+        page: terminalPage.page,
+        error: {
+          code: causeResult.error,
+          message: causeResult.error === 'inventory_cause_unavailable'
+            ? 'inventory causal provenance is unavailable'
+            : 'inventory causal provenance is invalid',
+        },
+      }
+    }
+
     const after = await readSequence(context)
     if (after.error || !Number.isSafeInteger(after.value) || after.value < 0) {
       return {
@@ -296,7 +370,35 @@ async function readCompleteTaskInventory(context, input, deps = {}) {
     }
     if (before.value !== after.value) continue
 
-    const items = [...itemsById.values()]
+    const items = rawItems.map((item) => {
+      const cause = causeResult.causes.get(item.id)
+      if (cause && cause.canonical_revision !== item.canonicalRevision) return null
+      return {
+        ...item,
+        lastChangeCause: cause
+          ? {
+              operationId: cause.operation_id,
+              source: cause.source,
+              changeSequence: cause.change_sequence,
+              canonicalRevision: cause.canonical_revision,
+            }
+          : {
+              operationId: null,
+              source: null,
+              changeSequence: null,
+              canonicalRevision: null,
+            },
+      }
+    })
+    if (items.some(item => item === null)) {
+      return {
+        ...receiptBase(context, input),
+        complete: false,
+        items: rawItems,
+        page: terminalPage.page,
+        error: { code: 'invalid_inventory_cause', message: 'inventory causal revision does not match task state' },
+      }
+    }
     return {
       ...receiptBase(context, input),
       changeSequence: after.value,
@@ -321,6 +423,7 @@ module.exports = {
   decodeCursor,
   parseTaskInventoryParams,
   readScopeChangeSequence,
+  readTaskChangeCauses,
   readCompleteTaskInventory,
   readTaskInventoryPage,
 }

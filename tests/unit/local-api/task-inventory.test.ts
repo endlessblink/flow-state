@@ -39,6 +39,7 @@ function stableDeps(fetchPage: (...args: any[]) => any, overrides: Record<string
   return {
     fetchPage,
     readSequence: async () => ({ value: 7, error: null }),
+    readCauses: async () => ({ data: [], error: null }),
     findInvalidRow: async () => ({ data: null, error: null }),
     ...overrides,
   }
@@ -229,6 +230,120 @@ describe('Local API complete task inventory', () => {
     expect(result.items).toEqual([])
     expect(result.page.hasMore).toBe(true)
     expect(result.error.code).toBe('inventory_changed_during_read')
+  })
+
+  it('binds each complete item to its latest canonical cause at the stable high-water mark', async () => {
+    const { readCompleteTaskInventory } = loadInventoryModule()
+    const rows = [row(1), row(2), row(3)]
+    const causeCalls: Array<Record<string, unknown>> = []
+
+    const result = await readCompleteTaskInventory(
+      { userId: 'user-1', activeWorkspaceId: null, signedUser: true },
+      { limit: 25, appVersion: '1.4.260', capturedAt: '2026-07-14T12:00:00.000Z' },
+      stableDeps(async () => ({ data: rows, error: null }), {
+        readCauses: async (input: Record<string, unknown>) => {
+          causeCalls.push(input)
+          return {
+            data: [
+              {
+                task_id: rows[0].id,
+                change_sequence: 5,
+                canonical_revision: rows[0].canonical_revision,
+                operation_id: 'hermes:planning:episode-1:patch-1',
+                source: 'local-api',
+              },
+              {
+                task_id: rows[1].id,
+                change_sequence: 6,
+                canonical_revision: rows[1].canonical_revision,
+                operation_id: 'notion:activation:page-1',
+                source: 'notion',
+              },
+            ],
+            error: null,
+          }
+        },
+      }),
+    )
+
+    expect(causeCalls).toEqual([{
+      context: { userId: 'user-1', activeWorkspaceId: null, signedUser: true },
+      taskIds: rows.map((item) => item.id),
+      atSequence: 7,
+    }])
+    expect(result.items.map((item: Record<string, unknown>) => item.lastChangeCause)).toEqual([
+      {
+        operationId: 'hermes:planning:episode-1:patch-1',
+        source: 'local-api',
+        changeSequence: 5,
+        canonicalRevision: rows[0].canonical_revision,
+      },
+      {
+        operationId: 'notion:activation:page-1',
+        source: 'notion',
+        changeSequence: 6,
+        canonicalRevision: rows[1].canonical_revision,
+      },
+      { operationId: null, source: null, changeSequence: null, canonicalRevision: null },
+    ])
+  })
+
+  it('chunks cause reads and fails closed on unavailable or contradictory provenance', async () => {
+    const { readCompleteTaskInventory } = loadInventoryModule()
+    const rows = Array.from({ length: 151 }, (_, index) => row(index))
+    const chunkSizes: number[] = []
+    const base = {
+      limit: 100,
+      appVersion: '1.4.260',
+      capturedAt: '2026-07-14T12:00:00.000Z',
+    }
+    const context = { userId: 'user-1', activeWorkspaceId: null, signedUser: true }
+
+    const chunked = await readCompleteTaskInventory(
+      context,
+      base,
+      stableDeps(async ({ cursor }: { cursor: { id: string } | null }) => {
+        const start = cursor ? Number(cursor.id.slice(-12)) + 1 : 0
+        return { data: rows.slice(start, start + 101), error: null }
+      }, {
+        readCauses: async ({ taskIds }: { taskIds: string[] }) => {
+          chunkSizes.push(taskIds.length)
+          return { data: [], error: null }
+        },
+      }),
+    )
+    expect(chunked.complete).toBe(true)
+    expect(chunkSizes).toEqual([100, 51])
+
+    const unavailable = await readCompleteTaskInventory(
+      context,
+      base,
+      stableDeps(async () => ({ data: [rows[0]], error: null }), {
+        readCauses: async () => ({ data: null, error: new Error('RPC unavailable') }),
+      }),
+    )
+    expect(unavailable.complete).toBe(false)
+    expect(unavailable).not.toHaveProperty('total')
+    expect(unavailable.error.code).toBe('inventory_cause_unavailable')
+
+    const contradictory = await readCompleteTaskInventory(
+      context,
+      base,
+      stableDeps(async () => ({ data: [rows[0]], error: null }), {
+        readCauses: async () => ({
+          data: [{
+            task_id: rows[0].id,
+            change_sequence: 7,
+            canonical_revision: rows[0].canonical_revision + 1,
+            operation_id: 'operation-1',
+            source: 'local-api',
+          }],
+          error: null,
+        }),
+      }),
+    )
+    expect(contradictory.complete).toBe(false)
+    expect(contradictory.error.code).toBe('invalid_inventory_cause')
   })
 
   it('rejects a personal cursor after switching to a workspace scope', async () => {

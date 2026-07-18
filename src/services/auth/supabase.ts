@@ -227,11 +227,12 @@ export async function readPersistedAuthIdentity(): Promise<User | null> {
 }
 
 export async function clearPersistedAuthIdentity(): Promise<void> {
-    try {
-        await authStorageRemove(AUTH_IDENTITY_KEY)
-    } catch (e) {
-        console.warn('[Supabase] Failed to clear auth identity:', e)
-    }
+    await authStorageRemove(AUTH_IDENTITY_KEY)
+}
+
+/** Explicit sign-out must remove the Electron IPC-backed primary key, not only localStorage. */
+export async function clearPrimaryAuthSession(): Promise<void> {
+    await authStorageRemove(STORAGE_KEYS.SUPABASE_AUTH)
 }
 
 function parsePersistedSession(raw: string | null, fromBackup: boolean): Session | null {
@@ -311,11 +312,7 @@ export async function restoreAuthSessionFromBackup(): Promise<Session | null> {
 }
 
 export async function clearAuthSessionBackup(): Promise<void> {
-    try {
-        await authStorageRemove(AUTH_SESSION_BACKUP_KEY)
-    } catch (e) {
-        console.warn('[Supabase] Failed to clear auth session backup:', e)
-    }
+    await authStorageRemove(AUTH_SESSION_BACKUP_KEY)
 }
 
 let supabaseClient: ReturnType<typeof createClient> | null;
@@ -415,16 +412,15 @@ export function consumePendingProviderTokens(): { provider_token: string; provid
  * flushes the IPC store write queue (see electron/ipc/store.ts flushStore) before exiting.
  */
 export async function flushAuthForUpdate(): Promise<void> {
-    try {
-        if (!supabaseClient) return
-        const { data } = await supabaseClient.auth.getSession()
-        const session = data?.session
-        if (!session) return
-        await persistAuthSessionBackup(session)
-        await authStorageSet(STORAGE_KEYS.SUPABASE_AUTH, JSON.stringify(session))
-    } catch (e) {
-        console.warn('[Supabase] flushAuthForUpdate failed:', e)
-    }
+    if (!supabaseClient) return
+    const { data, error } = await supabaseClient.auth.getSession()
+    if (error) throw error
+    const session = data?.session
+    if (!session) return
+    if (!authStorage) throw new Error('Auth storage is unavailable during update checkpoint')
+    await authStorageSet(AUTH_SESSION_BACKUP_KEY, JSON.stringify({ savedAt: Date.now(), session }))
+    await authStorageSet(AUTH_IDENTITY_KEY, JSON.stringify(session.user))
+    await authStorageSet(STORAGE_KEYS.SUPABASE_AUTH, JSON.stringify(session))
 }
 
 /**

@@ -67,4 +67,10 @@ describe('flushAuthForUpdate (BUG-1874)', () => {
     expect(localStorage.getItem(STORAGE_KEYS.SUPABASE_AUTH)).toBeNull()
     expect(localStorage.getItem(authSessionBackupKey)).toBeNull()
   })
+
+  it('rejects the update checkpoint when session validation fails', async () => {
+    getSession.mockResolvedValueOnce({ data: { session: null }, error: new Error('auth storage failed') } as never)
+
+    await expect(flushAuthForUpdate()).rejects.toThrow('auth storage failed')
+  })
 })

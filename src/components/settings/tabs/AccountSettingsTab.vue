@@ -385,6 +385,11 @@ const handleChangePassword = async () => {
         <span>Loading account info...</span>
       </div>
 
+      <div v-else-if="authStore.user" class="loading-state">
+        <Loader2 :size="20" class="animate-spin" />
+        <span>Reconnecting {{ authStore.user.email || 'your account' }}… Your local work is still here.</span>
+      </div>
+
       <!-- Guest Mode - shows when not authenticated -->
       <div v-else class="guest-info">
         <div class="guest-status">

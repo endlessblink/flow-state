@@ -2267,6 +2267,10 @@ _Original plan below._
 
 **Explicitly not covered**: silently granting remote access with an expired/rejected token. The remembered account shell and local ownership persist, while remote sync remains fail-closed until authentication recovers.
 
+**Follow-up hardening (2026-07-18)**: Expanded the recurring-issue audit beyond the original rejected-key failure. Regression coverage now protects identity-only startup errors, every passive null-session event, auth-js listener lock safety, cross-account reconnects, durable Electron storage failures, updater and ordinary-quit checkpoints, and recovery UI that must not present a remembered user as signed out. Explicit Sign Out remains the sole account-clearing transition and cancels all delayed recovery work.
+
+**Remaining operational classes**: Future production-key rotations must overlap old and new public keys until released clients have adopted the replacement. Multiple independently installed builds or deliberately changed Electron profile directories remain separate profiles and cannot share a local session by design; release validation and single-instance/profile pinning are the controls for the supported app path.
+
 **Completion proof (2026-07-18)**: 58 focused auth/release regressions and the full 3,893-test suite passed, type-check and Electron build completed, and the live updater published 1.4.269. On the installed packaged app, Google sign-in created the primary session, Electron backup, and credential-free identity; after every packaged process was terminated and the app relaunched, diagnostics again reported 1.4.269 with an authenticated user, remote sync enabled, and no reauthentication requirement.
 
 ### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)

@@ -5,11 +5,9 @@
       class="sidebar-auth-recovery"
     >
       <div class="sidebar-auth-restoring" role="status" aria-live="polite">
-        <span>{{ $t('sidebar.restoring_account') }}</span>
+        <span>{{ authStore.reauthRequired ? 'Reconnecting account…' : $t('sidebar.restoring_account') }}</span>
+        <span v-if="authStore.user?.email" class="sidebar-auth-email">{{ authStore.user.email }}</span>
       </div>
-      <button class="sidebar-login-btn" @click="uiStore.openAuthModal('login')">
-        <span style="font-weight: 600;">{{ $t('sidebar.sign_in') }}</span>
-      </button>
     </div>
     <button v-else-if="!authStore.user" class="sidebar-login-btn" @click="uiStore.openAuthModal('login')">
       <span style="font-weight: 600;">{{ $t('sidebar.sign_in') }}</span>
@@ -73,10 +71,22 @@ const authStore = useAuthStore()
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   align-items: center;
   justify-content: center;
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+.sidebar-auth-email {
+  max-width: 100%;
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-auth-recovery {

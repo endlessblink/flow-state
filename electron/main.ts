@@ -6,7 +6,7 @@ import { resolveUserDataDir } from './userDataPath'
 import { registerShellHandlers } from './ipc/shell'
 import { registerDialogHandlers } from './ipc/dialog'
 import { registerFsHandlers } from './ipc/fs'
-import { registerStoreHandlers } from './ipc/store'
+import { registerStoreHandlers, flushStore } from './ipc/store'
 import { registerHttpHandlers } from './ipc/http'
 import { registerWindowHandlers } from './ipc/window'
 import { registerUpdater } from './updater'
@@ -119,13 +119,15 @@ function toggleMainWindowDevTools() {
   }
 }
 
-// TASK-1871: Reliable quit. Force-destroys the window so nothing in the
-// renderer (e.g. a beforeunload guard) can wedge the close — the recurring
-// "can't quit FlowState" regression. Bound to Ctrl/Cmd+Q and the File menu.
+let storeFlushedForQuit = false
+let storeFlushForQuitPromise: Promise<void> | null = null
+let destroyWindowAfterStoreFlush = false
+
+// TASK-1871: Reliable quit. The durable main-process store must flush before the renderer is
+// destroyed; once it has, force-destroy the window so a renderer beforeunload guard cannot wedge
+// Ctrl/Cmd+Q or the File menu.
 function forceQuit() {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.destroy()
-  }
+  destroyWindowAfterStoreFlush = true
   app.quit()
 }
 
@@ -297,9 +299,50 @@ app.whenReady().then(() => {
   })
 })
 
-app.on('before-quit', () => {
-  globalShortcut.unregister('CommandOrControl+Shift+I')
-  shutdownLocalApi()
+app.on('before-quit', (event) => {
+  if (storeFlushedForQuit) {
+    globalShortcut.unregister('CommandOrControl+Shift+I')
+    shutdownLocalApi()
+    return
+  }
+
+  // Electron does not await async lifecycle listeners. Cancel this quit attempt, finish every
+  // queued auth/store write, then issue a second quit that is allowed through by the flag above.
+  event.preventDefault()
+  if (storeFlushForQuitPromise) return
+
+  storeFlushForQuitPromise = (async () => {
+    try {
+      let timeout: ReturnType<typeof setTimeout> | null = null
+      try {
+        await Promise.race([
+          flushStore(),
+          new Promise<void>((_resolve, reject) => {
+            timeout = setTimeout(() => reject(new Error('Store flush before quit timed out')), 5000)
+          }),
+        ])
+      } finally {
+        if (timeout) clearTimeout(timeout)
+      }
+      storeFlushedForQuit = true
+      if (destroyWindowAfterStoreFlush && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.destroy()
+      }
+      app.quit()
+      // If another lifecycle listener canceled the second quit, require a new
+      // checkpoint instead of letting this one-shot success stay valid forever.
+      setTimeout(() => {
+        storeFlushedForQuit = false
+        storeFlushForQuitPromise = null
+        destroyWindowAfterStoreFlush = false
+      }, 0)
+    } catch (err) {
+      // Losing a newly rotated refresh token is worse than aborting a quit. Leave the process alive
+      // so the user can retry instead of silently reopening into a signed-out account.
+      console.error('[flowstate] Quit aborted because durable store flush failed:', (err as Error).message)
+      storeFlushForQuitPromise = null
+    }
+  })()
 })
 
 app.on('window-all-closed', () => {

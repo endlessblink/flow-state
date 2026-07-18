@@ -4,21 +4,28 @@ import { spawn } from 'node:child_process'
 import { pendingUpdateInfoPath, clearStalePendingUpdate, pendingAppImagePath } from './updater-pending'
 import { flushStore } from './ipc/store'
 
-// BUG-1874: never let the store flush hang the update handoff. The AppImage installer polls the
-// old PID and the single-instance lock is already released — exit must proceed even if flush is slow.
-// TASK-1881: raised 1500 → 5000ms. The just-rotated refresh token is written here right before
-// app.exit(0) (which bypasses before-quit); 1.5s was too tight on a slow disk and could drop the
-// token, signing the user out after an auto-update. 5s still bounds the handoff.
+// BUG-1874: bound the store flush, but never install/restart unless it actually succeeds. A timeout
+// used to resolve the race as if persistence had completed, allowing a just-rotated single-use
+// refresh token to be lost when app.exit(0) terminated the old process.
 const STORE_FLUSH_TIMEOUT_MS = 5000
 
 async function flushStoreBeforeExit(): Promise<void> {
+  let timeout: ReturnType<typeof setTimeout> | null = null
   try {
     await Promise.race([
       flushStore(),
-      new Promise<void>((resolve) => setTimeout(resolve, STORE_FLUSH_TIMEOUT_MS)),
+      new Promise<void>((_resolve, reject) => {
+        timeout = setTimeout(
+          () => reject(new Error('Store flush before exit timed out')),
+          STORE_FLUSH_TIMEOUT_MS,
+        )
+      }),
     ])
   } catch (err) {
-    console.warn('[Updater] Store flush before exit failed:', (err as Error).message)
+    console.error('[Updater] Store flush before exit failed:', (err as Error).message)
+    throw err
+  } finally {
+    if (timeout) clearTimeout(timeout)
   }
 }
 
@@ -136,7 +143,9 @@ export function registerUpdater() {
   ;(app as unknown as { on(event: 'before-quit-for-update', listener: () => void): void })
     .on('before-quit-for-update', () => {
       console.log('[Updater] before-quit-for-update received')
-      void flushStoreBeforeExit()
+      void flushStoreBeforeExit().catch((err) => {
+        console.error('[Updater] Update-triggered quit could not flush durable store:', (err as Error).message)
+      })
     })
 
   // Register IPC handlers in all environments so renderer invocations don't
@@ -165,7 +174,13 @@ export function registerUpdater() {
     // BUG-1874: flush any in-flight auth/store writes (a just-rotated refresh token) to disk
     // BEFORE we tear the process down. The AppImage path exits via app.exit(0), which bypasses
     // before-quit/will-quit, so this is the only place the flush can happen for that path.
-    await flushStoreBeforeExit()
+    try {
+      await flushStoreBeforeExit()
+    } catch (err) {
+      const message = 'Update restart aborted because FlowState could not save the current session.'
+      emitUpdaterError(message)
+      throw new Error(message, { cause: err })
+    }
 
     // Release single-instance lock before restart, otherwise the new process
     // can't acquire the lock and immediately exits (appears as a crash).

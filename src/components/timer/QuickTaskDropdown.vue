@@ -43,7 +43,7 @@
           </div>
           <!-- Guest mode notice -->
           <div v-else class="guest-notice">
-            <span>Sign in to use Quick Tasks</span>
+            <span>{{ authStore.user ? 'Quick Tasks will return when your account reconnects' : 'Sign in to use Quick Tasks' }}</span>
           </div>
 
           <!-- Search Results -->

@@ -11,6 +11,7 @@ import {
   readPersistedAuthIdentity,
   clearPersistedAuthIdentity,
   clearAuthSessionBackup,
+  clearPrimaryAuthSession,
   type User,
   type Session,
   type AuthError
@@ -421,11 +422,6 @@ export const useAuthStore = defineStore('auth', () => {
         isRestoringSession.value = true
         console.log(`[AUTH:${tabId}] Initializing auth...`)
 
-        if (!supabase) {
-          console.warn(`[AUTH:${tabId}] Supabase client not available, staying in Guest Mode`)
-          return
-        }
-
         // BUG-1944: Hydrate only the durable identity before getSession(). auth-js can
         // block here while refreshing an expired token; without this shell, cached
         // account data renders as a guest and local writes lose their queue owner.
@@ -437,6 +433,17 @@ export const useAuthStore = defineStore('auth', () => {
           persistAuthIdentity(persistedCandidate.user).catch(e => console.warn('[AUTH] Failed to persist restored identity:', e))
         } else if (persistedIdentity) {
           user.value = persistedIdentity
+        }
+
+        if (!supabase) {
+          if (user.value) {
+            isOfflineGracePeriod.value = true
+            reauthRequired.value = true
+            console.warn(`[AUTH:${tabId}] Supabase client unavailable — retaining remembered account for reconnect`)
+          } else {
+            console.warn(`[AUTH:${tabId}] Supabase client not available, staying in Guest Mode`)
+          }
+          return
         }
 
         // Check for existing session
@@ -674,7 +681,7 @@ export const useAuthStore = defineStore('auth', () => {
 
         // Listen for auth changes (sign in, sign out, etc.)
         // BUG-1056: This fires across all tabs when auth state changes (via localStorage sync)
-        supabase.auth.onAuthStateChange(async (_event: string, newSession: Session | null) => {
+        const handleAuthStateChange = async (_event: string, newSession: Session | null) => {
           const currentTabId = (window as unknown as { __flowstate_tab_id?: string }).__flowstate_tab_id || 'unknown'
           const currentUserId = user.value?.id?.substring(0, 8) || 'none'
           const newUserId = newSession?.user?.id?.substring(0, 8) || 'none'
@@ -689,6 +696,16 @@ export const useAuthStore = defineStore('auth', () => {
             return
           }
 
+          // A reconnect prompt belongs to the remembered account. Accepting a
+          // different user's session here would silently transfer cached data
+          // and queued writes across accounts. Account switching requires the
+          // explicit sign-out path that clears that ownership first.
+          if (newSession && user.value?.id && user.value.id !== newSession.user.id) {
+            console.warn(`👤 [AUTH:${currentTabId}] Rejected session for a different account; sign out before switching accounts`)
+            await supabase.auth.signOut({ scope: 'local' })
+            return
+          }
+
           // Any auth-js event carrying a valid session completes restoration,
           // including cross-tab SIGNED_IN and TOKEN_REFRESHED events.
           if (newSession) {
@@ -696,40 +713,38 @@ export const useAuthStore = defineStore('auth', () => {
             persistAuthIdentity(newSession.user).catch(e => console.warn('[AUTH] Failed to persist auth event identity:', e))
           }
 
-          // BUG-1056: Invalidate SWR cache when user changes to prevent stale data
-          // This ensures cached guest data doesn't persist after sign-in
-          invalidateCache.onAuthChange(newSession?.user?.id || null)
-
           // BUG-1103: Multi-tab sign-in fix
           // When Tab 2 signs in, Supabase may fire SIGNED_OUT (old session) before SIGNED_IN (new session)
           // Tab 1 would blindly clear state, even though localStorage has Tab 2's valid new session
           // Fix: On SIGNED_OUT, check if localStorage actually has a session before clearing
           // BUG-1352: Skip this recovery when the user explicitly requested sign-out
-          if (_event === 'SIGNED_OUT' && !newSession && !isSigningOut) {
-            // Double-check: maybe another tab just signed in and localStorage has their session
-            const { data: currentSession } = await supabase.auth.getSession()
-            if (currentSession.session) {
-              console.log(`👤 [AUTH:${currentTabId}] SIGNED_OUT received but localStorage has session - using it instead`)
-              session.value = currentSession.session
-              user.value = currentSession.session.user
-              clearOfflineGrace()
-              // Schedule refresh for the recovered session
-              if (currentSession.session.expires_at) {
-                scheduleTokenRefresh(currentSession.session.expires_at)
+          if (!newSession && !isSigningOut) {
+            if (_event === 'SIGNED_OUT') {
+              // Double-check: maybe another tab just signed in and localStorage has their session
+              const { data: currentSession } = await supabase.auth.getSession()
+              if (currentSession.session) {
+                console.log(`👤 [AUTH:${currentTabId}] SIGNED_OUT received but localStorage has session - using it instead`)
+                session.value = currentSession.session
+                user.value = currentSession.session.user
+                clearOfflineGrace()
+                // Schedule refresh for the recovered session
+                if (currentSession.session.expires_at) {
+                  scheduleTokenRefresh(currentSession.session.expires_at)
+                }
+                return // Don't process as sign-out
               }
-              return // Don't process as sign-out
             }
 
-            // A passive auth-js SIGNED_OUT means the credential needs recovery; it is
-            // never proof that the person chose to leave this account. Only signOut()
-            // may erase the account shell, identity, caches, or queue ownership.
+            // No null-session auth-js callback proves that the person chose to
+            // leave this account. INITIAL_SESSION can race durable identity
+            // hydration, and future passive events can also arrive without a
+            // usable session. Only signOut() may erase account ownership.
             if (user.value && session.value) {
               keepSessionForExplicitReauth(
                 session.value,
-                `👤 [AUTH:${currentTabId}] Passive SIGNED_OUT — retaining account until explicit sign-out`,
+                `👤 [AUTH:${currentTabId}] Passive ${_event} without session — retaining account until explicit sign-out`,
                 { name: 'AuthError', message: 'Session needs reconnection', status: 401 } as AuthError,
               )
-              persistPrimaryAuthSession(session.value).catch(e => console.warn('[AUTH] Failed to preserve passive sign-out session:', e))
               return
             }
             if (user.value) {
@@ -740,6 +755,11 @@ export const useAuthStore = defineStore('auth', () => {
               return
             }
           }
+
+          // Invalidate only after passive null-session callbacks have been
+          // rejected. Otherwise a retained account still loses cache ownership
+          // as though an explicit sign-out occurred.
+          invalidateCache.onAuthChange(newSession?.user?.id || null)
 
           // Update local state
           session.value = newSession
@@ -851,15 +871,45 @@ export const useAuthStore = defineStore('auth', () => {
               }
             }
           }
+        }
+
+        // auth-js invokes listeners while holding its internal auth lock. Returning
+        // a Promise, or calling another auth method before that lock is released,
+        // can deadlock session restoration. Defer all listener work to a new task.
+        let authEventQueue: Promise<void> = Promise.resolve()
+        supabase.auth.onAuthStateChange((_event: string, newSession: Session | null) => {
+          setTimeout(() => {
+            authEventQueue = authEventQueue.then(() => handleAuthStateChange(_event, newSession)).catch(e => {
+              console.error(`[AUTH] Failed to process ${_event} event:`, e)
+            })
+          }, 0)
         })
 
       } catch (e: unknown) {
+        if (isRestoringSession.value && (e as Error)?.message?.includes('Electron preload bridge unavailable')) {
+          // Storage unavailability is not proof of a guest account. Keep caches
+          // and the UI in recovery until the preload bridge can be retried.
+          isOfflineGracePeriod.value = true
+          initializationFailed.value = true
+          error.value = e as AuthError
+          return
+        }
         if (isRestoringSession.value && session.value?.user?.id) {
           preserveReconnectShellAfterFailedRefresh(
             session.value,
             '[AUTH] Session validation failed during startup — keeping persisted identity write-blocked for reconnect',
             e as AuthError,
           )
+          return
+        }
+        if (isRestoringSession.value && user.value?.id) {
+          // The durable identity still proves which account owns local data even
+          // when the session cannot be read. Keep it write-blocked instead of
+          // treating a validation/storage error as a sign-out.
+          isOfflineGracePeriod.value = true
+          reauthRequired.value = true
+          initializationFailed.value = false
+          persistAuthIdentity(user.value).catch(err => console.warn('[AUTH] Failed to preserve identity after startup validation error:', err))
           return
         }
         // BUG-1056: Detect if Brave Shields blocked auth initialization
@@ -1190,11 +1240,18 @@ export const useAuthStore = defineStore('auth', () => {
       // BUG-1352: Set flag to prevent onAuthStateChange from re-establishing session
       isSigningOut = true
 
-      // BUG-339: Clear refresh timer on sign-out
-      if (refreshTimer) {
-        clearTimeout(refreshTimer)
-        refreshTimer = null
-      }
+      // Explicit sign-out is the only terminal account transition. Cancel every
+      // recovery path so no delayed refresh can recreate auth afterward.
+      if (graceDeadlineTimer) clearTimeout(graceDeadlineTimer)
+      if (graceRetryTimer) clearInterval(graceRetryTimer)
+      if (reconnectRefreshTimer) clearTimeout(reconnectRefreshTimer)
+      if (refreshTimer) clearTimeout(refreshTimer)
+      graceDeadlineTimer = null
+      graceRetryTimer = null
+      reconnectRefreshTimer = null
+      refreshTimer = null
+      isOfflineGracePeriod.value = false
+      reauthRequired.value = false
 
       // BUG-1352: supabase.auth.signOut() still makes a server request even with
       // scope: 'local'. If the server returns an error (500, timeout), the Supabase
@@ -1204,9 +1261,10 @@ export const useAuthStore = defineStore('auth', () => {
       //
       // Fix: Force-remove the session from localStorage BEFORE calling signOut,
       // so even if signOut fails, the session can't be restored.
+      await clearAuthSessionBackup()
+      await clearPersistedAuthIdentity()
+      await clearPrimaryAuthSession()
       try {
-        await clearAuthSessionBackup()
-        await clearPersistedAuthIdentity()
         localStorage.removeItem('flowstate-supabase-auth')
         localStorage.removeItem('flowstate-supabase-auth-code-verifier')
       } catch (_e) {

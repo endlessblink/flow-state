@@ -33,12 +33,14 @@ const {
   mockPersistAuthIdentity,
   mockReadPersistedAuthIdentity,
   mockClearPersistedAuthIdentity,
+  mockClearPrimaryAuthSession,
   mockClearProjectStore,
   mockClearLaneStore,
   mockClearCanvasImages,
   mockClearWriteQueue,
   mockSyncLocalApiSession,
   mockSyncLocalApiRendererAuthState,
+  mockInvalidateAuthCache,
 } = vi.hoisted(() => {
   type AuthCallback = (event: string, session: unknown) => void
   let _listeners: AuthCallback[] = []
@@ -73,12 +75,14 @@ const {
     mockPersistAuthIdentity: vi.fn(),
     mockReadPersistedAuthIdentity: vi.fn(),
     mockClearPersistedAuthIdentity: vi.fn(),
+    mockClearPrimaryAuthSession: vi.fn(),
     mockClearProjectStore: vi.fn(),
     mockClearLaneStore: vi.fn(),
     mockClearCanvasImages: vi.fn(),
     mockClearWriteQueue: vi.fn(),
     mockSyncLocalApiSession: vi.fn(),
     mockSyncLocalApiRendererAuthState: vi.fn(),
+    mockInvalidateAuthCache: vi.fn(),
   }
 })
 
@@ -111,6 +115,7 @@ vi.mock('@/services/auth/supabase', () => ({
   persistAuthIdentity: mockPersistAuthIdentity,
   readPersistedAuthIdentity: mockReadPersistedAuthIdentity,
   clearPersistedAuthIdentity: mockClearPersistedAuthIdentity,
+  clearPrimaryAuthSession: mockClearPrimaryAuthSession,
 }))
 
 vi.mock('@/utils/guestModeStorage', () => ({
@@ -131,7 +136,7 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
     safeCreateTask: vi.fn().mockResolvedValue({ status: 'created' }),
   }),
   invalidateCache: {
-    onAuthChange: vi.fn(),
+    onAuthChange: mockInvalidateAuthCache,
     all: vi.fn(),
   },
 }))
@@ -251,13 +256,16 @@ const flushPromises = async () => {
 }
 
 type AuthListenersMock = {
-  _getListeners: () => Array<(event: string, session: unknown) => void>
+  _getListeners: () => Array<(event: string, session: unknown) => unknown>
   _reset: () => void
 }
 
-const fireAuthStateChange = (event: string, session: MockSession | null) => {
+const fireAuthStateChange = async (event: string, session: MockSession | null) => {
   const listeners = (mockOnAuthStateChange as unknown as AuthListenersMock)._getListeners()
-  listeners.forEach((cb) => cb(event, session))
+  const callbackResults = listeners.map((cb) => cb(event, session))
+  await vi.advanceTimersByTimeAsync(0)
+  await flushPromises()
+  return callbackResults
 }
 
 const resetAuthListeners = () => {
@@ -268,6 +276,7 @@ beforeEach(() => {
   mockPersistAuthIdentity.mockResolvedValue(undefined)
   mockReadPersistedAuthIdentity.mockResolvedValue(null)
   mockClearPersistedAuthIdentity.mockResolvedValue(undefined)
+  mockClearPrimaryAuthSession.mockResolvedValue(undefined)
 })
 
 // ============================================================================
@@ -399,6 +408,24 @@ describe('Auth Flow — initialize()', () => {
     expect(store.session).toBeNull()
     expect(store.isRestoringSession).toBe(true)
     expect(store.reauthRequired).toBe(true)
+  })
+
+  it('4e. keeps an identity-only account write-blocked when startup session validation errors', async () => {
+    const rememberedUser = buildMockUser({ id: 'remembered-after-storage-error' })
+    mockReadPersistedAuthSessionCandidate.mockResolvedValue(null)
+    mockReadPersistedAuthIdentity.mockResolvedValue(rememberedUser)
+    mockGetSession.mockRejectedValue(new Error('auth storage temporarily unavailable'))
+
+    const store = useAuthStore()
+    await store.initialize()
+
+    expect(store.user?.id).toBe(rememberedUser.id)
+    expect(store.session).toBeNull()
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.isRestoringSession).toBe(true)
+    expect(store.reauthRequired).toBe(true)
+    expect(store.initializationFailed).toBe(false)
+    expect(store.canSyncRemotely).toBe(false)
   })
 
   it('5. initialize() with active session sets isAuthenticated=true and user', async () => {
@@ -800,6 +827,7 @@ describe('Auth Flow — signOut', () => {
     expect(localStorage.getItem('flowstate-supabase-auth')).toBeNull()
     expect(mockClearAuthSessionBackup).toHaveBeenCalledOnce()
     expect(mockClearPersistedAuthIdentity).toHaveBeenCalledOnce()
+    expect(mockClearPrimaryAuthSession).toHaveBeenCalledOnce()
   })
 
   it('14b. signOut clears all account metadata and pending writes before guest mode', async () => {
@@ -815,6 +843,34 @@ describe('Auth Flow — signOut', () => {
     expect(mockClearLaneStore).toHaveBeenCalledOnce()
     expect(mockClearCanvasImages).toHaveBeenCalledOnce()
     expect(mockClearWriteQueue).toHaveBeenCalledOnce()
+  })
+
+  it('14c. signOut durably clears the primary session even when auth-js returns an error', async () => {
+    const session = buildMockSession()
+    mockGetSession.mockResolvedValue({ data: { session }, error: null })
+    mockSignOut.mockResolvedValue({ error: new Error('server unavailable') })
+
+    const store = useAuthStore()
+    await store.initialize()
+    await store.signOut()
+
+    expect(mockClearPrimaryAuthSession).toHaveBeenCalledOnce()
+    expect(store.user).toBeNull()
+    expect(store.session).toBeNull()
+  })
+
+  it('14d. failed durable cleanup aborts sign-out instead of allowing backup resurrection', async () => {
+    const session = buildMockSession()
+    mockGetSession.mockResolvedValue({ data: { session }, error: null })
+    mockClearAuthSessionBackup.mockRejectedValueOnce(new Error('disk unavailable'))
+
+    const store = useAuthStore()
+    await store.initialize()
+    await store.signOut()
+
+    expect(mockClearPrimaryAuthSession).not.toHaveBeenCalled()
+    expect(store.user?.id).toBe(session.user.id)
+    expect(store.session?.refresh_token).toBe(session.refresh_token)
   })
 })
 
@@ -867,7 +923,7 @@ describe('Auth Flow — Token Refresh', () => {
     await store.initialize()
 
     const newSession = buildMockSession({ access_token: 'new-access-token-999' })
-    fireAuthStateChange('TOKEN_REFRESHED', newSession)
+    await fireAuthStateChange('TOKEN_REFRESHED', newSession)
     await flushPromises()
 
     expect(store.session?.access_token).toBe('new-access-token-999')
@@ -980,6 +1036,25 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     vi.useRealTimers()
   })
 
+  it('22a. auth-js callbacks return synchronously before any Supabase recheck', async () => {
+    const session = buildMockSession()
+    mockGetSession
+      .mockResolvedValueOnce({ data: { session }, error: null })
+      .mockResolvedValue({ data: { session: null }, error: null })
+
+    const store = useAuthStore()
+    await store.initialize()
+    mockGetSession.mockClear()
+
+    const callbackResultsPromise = fireAuthStateChange('SIGNED_OUT', null)
+    const listeners = (mockOnAuthStateChange as unknown as AuthListenersMock)._getListeners()
+    const immediateResult = listeners[0]?.('USER_UPDATED', null)
+
+    expect(immediateResult).toBeUndefined()
+    expect(mockGetSession).not.toHaveBeenCalled()
+    await callbackResultsPromise
+  })
+
   it('23. SIGNED_IN event updates user and session', async () => {
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
 
@@ -989,7 +1064,7 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     expect(store.isAuthenticated).toBe(false)
 
     const session = buildMockSession()
-    fireAuthStateChange('SIGNED_IN', session)
+    await fireAuthStateChange('SIGNED_IN', session)
     await flushPromises()
 
     expect(store.user).not.toBeNull()
@@ -1008,7 +1083,7 @@ describe('Auth Flow — onAuthStateChange Events', () => {
 
     expect(store.isAuthenticated).toBe(true)
 
-    fireAuthStateChange('SIGNED_OUT', null)
+    await fireAuthStateChange('SIGNED_OUT', null)
     await flushPromises()
 
     // The account shell remains immediately and permanently. Only signOut() may clear it.
@@ -1019,7 +1094,7 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     expect(store.session?.access_token).toBe(session.access_token)
     expect(store.reauthRequired).toBe(true)
     expect(mockPersistAuthIdentity).toHaveBeenCalledWith(session.user)
-    expect(mockPersistPrimaryAuthSession).toHaveBeenCalledWith(session)
+    expect(mockPersistPrimaryAuthSession).not.toHaveBeenCalledWith(session)
   })
 
   it('24a. repeated passive SIGNED_OUT events still cannot erase the account', async () => {
@@ -1030,13 +1105,69 @@ describe('Auth Flow — onAuthStateChange Events', () => {
 
     const store = useAuthStore()
     await store.initialize()
-    fireAuthStateChange('SIGNED_OUT', null)
-    fireAuthStateChange('SIGNED_OUT', null)
+    await fireAuthStateChange('SIGNED_OUT', null)
+    await fireAuthStateChange('SIGNED_OUT', null)
     await flushPromises()
     await vi.advanceTimersByTimeAsync(30_000)
 
     expect(store.user?.id).toBe(session.user.id)
     expect(store.session?.user.id).toBe(session.user.id)
+  })
+
+  it('24a2. null INITIAL_SESSION after identity recovery cannot erase the remembered account', async () => {
+    const rememberedUser = buildMockUser({ id: 'remembered-initial-session' })
+    mockReadPersistedAuthSessionCandidate.mockResolvedValue(null)
+    mockReadPersistedAuthIdentity.mockResolvedValue(rememberedUser)
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(null)
+
+    const store = useAuthStore()
+    await store.initialize()
+    mockInvalidateAuthCache.mockClear()
+
+    await fireAuthStateChange('INITIAL_SESSION', null)
+    await flushPromises()
+
+    expect(store.user?.id).toBe(rememberedUser.id)
+    expect(store.session).toBeNull()
+    expect(store.isRestoringSession).toBe(true)
+    expect(store.reauthRequired).toBe(true)
+    expect(mockInvalidateAuthCache).not.toHaveBeenCalledWith(null)
+  })
+
+  it('24a3. a passive null-session event cannot clear the active account or its cache ownership', async () => {
+    const session = buildMockSession()
+    mockGetSession.mockResolvedValue({ data: { session }, error: null })
+
+    const store = useAuthStore()
+    await store.initialize()
+    mockInvalidateAuthCache.mockClear()
+
+    await fireAuthStateChange('USER_UPDATED', null)
+    await flushPromises()
+
+    expect(store.user?.id).toBe(session.user.id)
+    expect(store.session?.access_token).toBe(session.access_token)
+    expect(store.reauthRequired).toBe(true)
+    expect(mockInvalidateAuthCache).not.toHaveBeenCalledWith(null)
+  })
+
+  it('24a4. reconnect cannot silently switch the remembered account', async () => {
+    const remembered = buildMockUser({ id: 'account-a' })
+    mockReadPersistedAuthIdentity.mockResolvedValue(remembered)
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(null)
+
+    const store = useAuthStore()
+    await store.initialize()
+    const otherSession = buildMockSession({ user: buildMockUser({ id: 'account-b' }) })
+
+    await fireAuthStateChange('SIGNED_IN', otherSession)
+
+    expect(store.user?.id).toBe('account-a')
+    expect(store.session).toBeNull()
+    expect(store.reauthRequired).toBe(true)
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' })
   })
 
   it('24b. transient SIGNED_OUT followed by SIGNED_IN keeps user signed in (no flicker)', async () => {
@@ -1051,18 +1182,44 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     await store.initialize()
     expect(store.isAuthenticated).toBe(true)
 
-    fireAuthStateChange('SIGNED_OUT', null)
+    await fireAuthStateChange('SIGNED_OUT', null)
     await flushPromises()
     expect(store.user).not.toBeNull() // deferred, not cleared
 
     // Valid session re-appears before the grace timer fires → cancels the pending clear
-    fireAuthStateChange('TOKEN_REFRESHED', session)
+    await fireAuthStateChange('TOKEN_REFRESHED', session)
     await flushPromises()
 
     // Even after the grace window, the user stays signed in
     await vi.advanceTimersByTimeAsync(2100)
     expect(store.user).not.toBeNull()
     expect(store.session?.access_token).toBe('access-token-xyz')
+  })
+
+  it('24c. preserves auth event order when SIGNED_OUT validation is slow', async () => {
+    const initial = buildMockSession({ access_token: 'initial-token' })
+    const refreshed = buildMockSession({ access_token: 'fresh-token' })
+    let resolveRecheck!: (value: { data: { session: null } }) => void
+    const slowRecheck = new Promise<{ data: { session: null } }>(resolve => { resolveRecheck = resolve })
+    mockGetSession
+      .mockResolvedValueOnce({ data: { session: initial }, error: null })
+      .mockReturnValueOnce(slowRecheck as never)
+
+    const store = useAuthStore()
+    await store.initialize()
+    const listeners = (mockOnAuthStateChange as unknown as AuthListenersMock)._getListeners()
+    listeners[0]?.('SIGNED_OUT', null)
+    listeners[0]?.('TOKEN_REFRESHED', refreshed)
+    await vi.advanceTimersByTimeAsync(0)
+
+    resolveRecheck({ data: { session: null } })
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(0)
+    await flushPromises()
+
+    expect(store.session?.access_token).toBe('fresh-token')
+    expect(store.reauthRequired).toBe(false)
+    expect(store.isRestoringSession).toBe(false)
   })
 
   it('25. retryInitialization resets failure state and allows fresh attempt', async () => {

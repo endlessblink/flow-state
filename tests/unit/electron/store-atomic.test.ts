@@ -63,6 +63,17 @@ describe('jsonStore — atomic, corruption-safe, serialized (BUG-1874)', () => {
     expect(value).toEqual({ refresh_token: 'good' })
   })
 
+  it('recovers from backup when the primary is valid JSON but not an object', async () => {
+    writeFileSync(file, 'null')
+    writeFileSync(`${file}.bak`, JSON.stringify({
+      'flowstate-supabase-auth': { refresh_token: 'backup-token' },
+    }))
+
+    const recovered = createJsonStore(file)
+
+    expect(await recovered.get('flowstate-supabase-auth')).toEqual({ refresh_token: 'backup-token' })
+  })
+
   it('flush() resolves only after the queued writes are on disk', async () => {
     const store = createJsonStore(file)
     store.set('a', 1)
@@ -74,5 +85,31 @@ describe('jsonStore — atomic, corruption-safe, serialized (BUG-1874)', () => {
     expect(onDisk['flowstate-supabase-auth']).toEqual({ token: 'final' })
     expect(onDisk.a).toBe(1)
     expect(onDisk.b).toBe(2)
+  })
+
+  it('flush() rejects when a queued write failed', async () => {
+    const nonDirectory = join(dir, 'not-a-directory')
+    writeFileSync(nonDirectory, 'blocks child paths')
+    const store = createJsonStore(join(nonDirectory, 'store.json'))
+
+    await expect(store.set('flowstate-supabase-auth', { token: 'must-surface' })).rejects.toThrow()
+    await expect(store.flush()).rejects.toThrow()
+  })
+
+  it('preserves the last good backup when writing after corrupt-primary recovery', async () => {
+    const store = createJsonStore(file)
+    await store.set('flowstate-supabase-auth', { refresh_token: 'backup-token' })
+    await store.set('flowstate-supabase-auth', { refresh_token: 'primary-token' })
+    await store.flush()
+
+    writeFileSync(file, '{ corrupt primary')
+
+    const recovered = createJsonStore(file)
+    expect(await recovered.get('flowstate-supabase-auth')).toEqual({ refresh_token: 'backup-token' })
+    await recovered.set('another-key', 'another-value')
+    await recovered.flush()
+
+    const backup = JSON.parse(readFileSync(`${file}.bak`, 'utf-8'))
+    expect(backup['flowstate-supabase-auth']).toEqual({ refresh_token: 'backup-token' })
   })
 })

@@ -32,23 +32,35 @@ export function createJsonStore(filePath: string): JsonStore {
 
   let storeData: Record<string, unknown> = {}
   let loaded = false
+  let primaryIsKnownGood = false
+  let hasPendingWriteError = false
+  let pendingWriteError: unknown
   // Tail of the serialized write queue (the mutex). Each save chains onto this.
   let writeQueue: Promise<void> = Promise.resolve()
+
+  const parseRecord = (raw: string): Record<string, unknown> => {
+    const parsed: unknown = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('Store root must be a JSON object')
+    }
+    return parsed as Record<string, unknown>
+  }
 
   async function load(): Promise<void> {
     if (loaded) return
     try {
       if (existsSync(filePath)) {
-        storeData = JSON.parse(await readFile(filePath, 'utf-8'))
+        storeData = parseRecord(await readFile(filePath, 'utf-8'))
+        primaryIsKnownGood = true
       } else if (existsSync(bakPath)) {
         // Primary missing but a backup survived (e.g. crash between writes) — recover from it.
-        storeData = JSON.parse(await readFile(bakPath, 'utf-8'))
+        storeData = parseRecord(await readFile(bakPath, 'utf-8'))
       }
     } catch {
       // Primary is corrupt/truncated. Try the last known-good backup before giving up.
       try {
         if (existsSync(bakPath)) {
-          storeData = JSON.parse(await readFile(bakPath, 'utf-8'))
+          storeData = parseRecord(await readFile(bakPath, 'utf-8'))
         } else {
           storeData = {}
         }
@@ -77,7 +89,7 @@ export function createJsonStore(filePath: string): JsonStore {
     }
 
     // Preserve the previous good file as .bak so a crash can recover the last committed state.
-    if (existsSync(filePath)) {
+    if (primaryIsKnownGood && existsSync(filePath)) {
       try {
         await copyFile(filePath, bakPath)
       } catch {
@@ -87,6 +99,7 @@ export function createJsonStore(filePath: string): JsonStore {
 
     // Atomic replace.
     await rename(tmpPath, filePath)
+    primaryIsKnownGood = true
   }
 
   /**
@@ -104,7 +117,12 @@ export function createJsonStore(filePath: string): JsonStore {
     const next = writeQueue.then(op, op)
     // Swallow rejection on the tail so one failed write doesn't poison the chain, while still
     // surfacing the error to the specific caller that awaited `next`.
-    writeQueue = next.catch(() => {})
+    writeQueue = next.catch((error) => {
+      if (!hasPendingWriteError) {
+        hasPendingWriteError = true
+        pendingWriteError = error
+      }
+    })
     return next
   }
 
@@ -120,6 +138,12 @@ export function createJsonStore(filePath: string): JsonStore {
     },
     async flush(): Promise<void> {
       await writeQueue
+      if (hasPendingWriteError) {
+        const error = pendingWriteError
+        hasPendingWriteError = false
+        pendingWriteError = undefined
+        throw error
+      }
     },
   }
 }

@@ -39,9 +39,13 @@
             
             <div class="menu-items">
               <!-- Auth Actions -->
-              <div v-if="!authStore.isAuthenticated" class="menu-item" @click="handleSignIn">
+              <div v-if="!authStore.user" class="menu-item" @click="handleSignIn">
                 <LogIn :size="20" />
                 <span>Sign In</span>
+              </div>
+              <div v-else-if="!authStore.isAuthenticated" class="menu-item" role="status">
+                <RefreshCw :size="20" />
+                <span>Account reconnecting ({{ authStore.user?.email }})</span>
               </div>
               <div v-else class="menu-item" @click="handleSignOut">
                 <LogOut :size="20" />

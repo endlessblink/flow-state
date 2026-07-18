@@ -80,11 +80,47 @@ describe('createLazyAuthStorage — call-time backend resolution (BUG-1874)', ()
     })
     const storage = createLazyAuthStorage()!
     const write = storage.setItem('flowstate-supabase-auth', 'token-that-must-not-enter-localStorage')
+    const settledWrite = write.catch(() => undefined)
 
     await vi.advanceTimersByTimeAsync(1100)
-    await write
+    await settledWrite
 
     expect(localStorage.getItem('flowstate-supabase-auth')).toBeNull()
+  })
+
+  it('rejects Electron auth writes when the preload bridge never appears', async () => {
+    vi.useFakeTimers()
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 FlowState/1.4.215 Chrome/120 Electron/28.0.0 Safari/537.36',
+      configurable: true,
+    })
+    const storage = createLazyAuthStorage()!
+
+    const outcome = storage
+      .setItem('flowstate-supabase-auth', 'token-that-was-not-persisted')
+      .then(() => null, error => error as Error)
+    await vi.advanceTimersByTimeAsync(1100)
+
+    expect(await outcome).toEqual(expect.objectContaining({
+      message: expect.stringContaining('Electron preload bridge unavailable'),
+    }))
+    expect(localStorage.getItem('flowstate-supabase-auth')).toBeNull()
+  })
+
+  it('rejects unavailable Electron reads instead of reporting a signed-out null session', async () => {
+    vi.useFakeTimers()
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 FlowState Chrome/120 Electron/28.0.0',
+      configurable: true,
+    })
+    const storage = createLazyAuthStorage()!
+
+    const outcome = storage.getItem('flowstate-supabase-auth').then(() => null, error => error as Error)
+    await vi.advanceTimersByTimeAsync(1100)
+
+    expect(await outcome).toEqual(expect.objectContaining({
+      message: expect.stringContaining('auth state is unknown'),
+    }))
   })
 
   it('removeItem stores null via the Electron bridge (absent-key semantics)', async () => {
@@ -98,6 +134,22 @@ describe('createLazyAuthStorage — call-time backend resolution (BUG-1874)', ()
     await storage.removeItem('flowstate-supabase-auth')
     expect((window as any).electronAPI.storeSet).toHaveBeenCalledWith('flowstate-supabase-auth', null)
     expect(await storage.getItem('flowstate-supabase-auth')).toBeNull()
+  })
+
+  it('rejects Electron auth removal when the durable bridge never appears', async () => {
+    vi.useFakeTimers()
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 FlowState Chrome/120 Electron/28.0.0',
+      configurable: true,
+    })
+    const storage = createLazyAuthStorage()!
+
+    const outcome = storage.removeItem('flowstate-supabase-auth').then(() => null, error => error as Error)
+    await vi.advanceTimersByTimeAsync(1100)
+
+    expect(await outcome).toEqual(expect.objectContaining({
+      message: expect.stringContaining('refusing to clear auth'),
+    }))
   })
 
   it('ignores a non-Electron bridge object (isElectron falsy)', async () => {

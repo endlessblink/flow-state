@@ -15,9 +15,25 @@
 
     <!-- Modal Body -->
     <div class="auth-modal-body">
+      <div
+        v-if="authStore.isRestoringSession || (authStore.user && authStore.reauthRequired)"
+        class="auth-recovery-state"
+        data-testid="account-recovery"
+        role="status"
+        aria-live="polite"
+      >
+        <h3>
+          {{ authStore.reauthRequired ? 'Reconnecting your FlowState account…' : 'Restoring your FlowState account…' }}
+        </h3>
+        <p v-if="authStore.user?.email">
+          {{ authStore.user?.email }}
+        </p>
+        <p>Your account and local work are still here.</p>
+      </div>
+
       <!-- Login Form -->
       <LoginForm
-        v-if="uiStore.authModalView === 'login'"
+        v-else-if="uiStore.authModalView === 'login'"
         @success="handleAuthSuccess"
         @switch-to-signup="uiStore.switchAuthView('signup')"
         @forgot-password="handleForgotPassword"
@@ -75,6 +91,15 @@ const router = useRouter()
 const resetEmail = ref('')
 
 // ===== Watchers =====
+// A durable remembered identity is enough to dismiss a stale sign-in modal.
+// Session validation can continue behind the signed-in account shell.
+watch(() => authStore.user?.id, async (userId, oldUserId) => {
+  if (userId && !oldUserId && uiStore.authModalOpen) {
+    await nextTick()
+    uiStore.closeAuthModal()
+  }
+}, { flush: 'post' })
+
 // Auto-close modal when user becomes authenticated
 // BUG-340: Fixed Tauri WebView reactivity issue - use nextTick + immediate close
 watch(() => authStore.isAuthenticated, async (isAuth, oldIsAuth) => {
@@ -168,6 +193,22 @@ function handleClose() {
 .auth-modal-body {
   padding: var(--space-4) 0;
   /* Allow content to define height */
+}
+
+.auth-recovery-state {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.auth-recovery-state h3,
+.auth-recovery-state p {
+  margin: 0;
+}
+
+.auth-recovery-state p {
+  color: var(--text-muted);
 }
 
 /* Responsive */

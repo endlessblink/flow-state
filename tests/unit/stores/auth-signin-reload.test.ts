@@ -113,8 +113,12 @@ async function signInFromSignedOut() {
   await store.initialize()
   calls.length = 0
   await (mockOnAuthStateChange as any)._fire('SIGNED_IN', session)
-  // let the handler's dynamic imports settle
-  await new Promise(r => setTimeout(r, 0))
+  // The auth-js listener intentionally returns synchronously and defers all
+  // async work outside auth-js's internal lock. Let that task and its dynamic
+  // store imports settle.
+  await vi.waitFor(() => {
+    expect(calls).toContain('workspaces')
+  }, { timeout: 1000 })
   return store
 }
 

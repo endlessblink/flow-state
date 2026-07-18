@@ -106,6 +106,46 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('return true')
   })
 
+  it('aborts update installation when durable auth storage cannot be flushed', () => {
+    const updaterSource = readSource('electron/updater.ts')
+    const installHandlerStart = updaterSource.indexOf("ipcMain.handle('updater:install'")
+    const releaseLockIndex = updaterSource.indexOf('app.releaseSingleInstanceLock()', installHandlerStart)
+    const installHandler = updaterSource.slice(
+      installHandlerStart,
+      releaseLockIndex + 'app.releaseSingleInstanceLock()'.length,
+    )
+
+    expect(updaterSource).toContain('Store flush before exit timed out')
+    expect(updaterSource).toContain('Store flush before exit failed')
+    expect(installHandler).toContain('await flushStoreBeforeExit()')
+    expect(installHandler).toContain('throw new Error')
+    expect(installHandler.indexOf('await flushStoreBeforeExit()')).toBeLessThan(
+      installHandler.indexOf('app.releaseSingleInstanceLock()'),
+    )
+    expect(installHandler.indexOf('throw new Error')).toBeLessThan(
+      installHandler.indexOf('app.releaseSingleInstanceLock()'),
+    )
+  })
+
+  it('waits for the durable store before every ordinary app quit', () => {
+    const mainSource = readSource('electron/main.ts')
+    const beforeQuitHandler = mainSource.slice(
+      mainSource.indexOf("app.on('before-quit'"),
+      mainSource.indexOf("app.on('window-all-closed'"),
+    )
+
+    expect(mainSource).toContain("import { registerStoreHandlers, flushStore } from './ipc/store'")
+    expect(beforeQuitHandler).toContain('event.preventDefault()')
+    expect(beforeQuitHandler).toContain('flushStore(),')
+    expect(beforeQuitHandler).toContain('app.quit()')
+    expect(beforeQuitHandler.indexOf('event.preventDefault()')).toBeLessThan(
+      beforeQuitHandler.indexOf('flushStore(),'),
+    )
+    expect(beforeQuitHandler.indexOf('await flushStore()')).toBeLessThan(
+      beforeQuitHandler.indexOf('app.quit()'),
+    )
+  })
+
   it('uses a detached AppImage installer before falling back to quitAndInstall', () => {
     const updaterSource = readSource('electron/updater.ts')
 
@@ -134,5 +174,9 @@ describe('Electron updater restart contract', () => {
     expect(composableSource).toContain("status.value = 'installing'")
     expect(composableSource).toContain('Restart did not complete automatically')
     expect(composableSource).toContain('}, 10_000)')
+    expect(composableSource).not.toContain('Auth flush before install failed (continuing)')
+    expect(composableSource.indexOf('await flushAuthForUpdate()')).toBeLessThan(
+      composableSource.indexOf('await api.installUpdate()'),
+    )
   })
 })

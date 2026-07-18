@@ -64,7 +64,9 @@ export function createLazyAuthStorage(): AsyncAuthStorage | null {
                 const value = await api.storeGet(key)
                 return typeof value === 'string' ? value : null
             }
-            if (electronRuntime) return null
+            if (electronRuntime) {
+                throw new Error('[AuthStorage] Electron preload bridge unavailable; auth state is unknown, not signed out')
+            }
             return window.localStorage.getItem(key)
         },
         setItem: async (key: string, value: string): Promise<void> => {
@@ -75,8 +77,9 @@ export function createLazyAuthStorage(): AsyncAuthStorage | null {
                 return
             }
             if (electronRuntime) {
-                console.warn('[AuthStorage] Electron preload bridge unavailable; refusing to persist auth in file:// localStorage')
-                return
+                const message = '[AuthStorage] Electron preload bridge unavailable; refusing to persist auth in file:// localStorage'
+                console.warn(message)
+                throw new Error(message)
             }
             window.localStorage.setItem(key, value)
         },
@@ -89,7 +92,9 @@ export function createLazyAuthStorage(): AsyncAuthStorage | null {
                 await api.storeSet(key, null)
                 return
             }
-            if (electronRuntime) return
+            if (electronRuntime) {
+                throw new Error('[AuthStorage] Electron preload bridge unavailable; refusing to clear auth outside the durable store')
+            }
             window.localStorage.removeItem(key)
         },
     }

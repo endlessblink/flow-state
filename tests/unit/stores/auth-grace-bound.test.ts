@@ -79,6 +79,9 @@ vi.mock('@/services/auth/supabase', () => ({
   persistAuthSessionBackup: mockPersistAuthSessionBackup,
   restoreAuthSessionFromBackup: mockRestoreAuthSessionFromBackup,
   readPersistedAuthSessionCandidate: mockReadPersistedAuthSessionCandidate,
+  readPersistedAuthIdentity: vi.fn().mockResolvedValue(null),
+  persistAuthIdentity: vi.fn().mockResolvedValue(undefined),
+  clearPersistedAuthIdentity: vi.fn().mockResolvedValue(undefined),
   persistPrimaryAuthSession: vi.fn().mockResolvedValue(undefined),
   clearAuthSessionBackup: mockClearAuthSessionBackup,
 }))

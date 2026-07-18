@@ -107,4 +107,36 @@ describe('restoreAuthSessionFromBackup — never discard a recoverable backup (T
     expect((await readPersistedAuthSessionCandidate())?.user.id).toBe('backup-user')
     expect((window as any).electronAPI.storeSet).not.toHaveBeenCalled()
   })
+
+  it('keeps a credential-free account identity after a terminal token failure', async () => {
+    const {
+      persistAuthIdentity,
+      readPersistedAuthIdentity,
+      clearAuthSessionBackup,
+      AUTH_SESSION_BACKUP_KEY,
+      AUTH_IDENTITY_KEY,
+    } = await import('@/services/auth/supabase')
+    const user = { id: 'remembered-user', email: 'remembered@example.com' }
+
+    await persistAuthIdentity(user as any)
+    store[AUTH_SESSION_BACKUP_KEY] = JSON.stringify({ session: { refresh_token: 'dead-secret', user } })
+    await clearAuthSessionBackup()
+
+    expect(await readPersistedAuthIdentity()).toEqual(user)
+    expect(store[AUTH_IDENTITY_KEY]).not.toContain('dead-secret')
+  })
+
+  it('clears the remembered identity only for explicit sign-out', async () => {
+    const {
+      persistAuthIdentity,
+      readPersistedAuthIdentity,
+      clearPersistedAuthIdentity,
+    } = await import('@/services/auth/supabase')
+    const user = { id: 'remembered-user', email: 'remembered@example.com' }
+
+    await persistAuthIdentity(user as any)
+    expect((await readPersistedAuthIdentity())?.id).toBe(user.id)
+    await clearPersistedAuthIdentity()
+    expect(await readPersistedAuthIdentity()).toBeNull()
+  })
 })

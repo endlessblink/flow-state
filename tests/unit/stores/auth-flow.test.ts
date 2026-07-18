@@ -30,6 +30,9 @@ const {
   mockClearAuthSessionBackup,
   mockPersistPrimaryAuthSession,
   mockReadPersistedAuthSessionCandidate,
+  mockPersistAuthIdentity,
+  mockReadPersistedAuthIdentity,
+  mockClearPersistedAuthIdentity,
   mockClearProjectStore,
   mockClearLaneStore,
   mockClearCanvasImages,
@@ -67,6 +70,9 @@ const {
     mockClearAuthSessionBackup: vi.fn(),
     mockPersistPrimaryAuthSession: vi.fn(),
     mockReadPersistedAuthSessionCandidate: vi.fn(),
+    mockPersistAuthIdentity: vi.fn(),
+    mockReadPersistedAuthIdentity: vi.fn(),
+    mockClearPersistedAuthIdentity: vi.fn(),
     mockClearProjectStore: vi.fn(),
     mockClearLaneStore: vi.fn(),
     mockClearCanvasImages: vi.fn(),
@@ -102,6 +108,9 @@ vi.mock('@/services/auth/supabase', () => ({
   clearAuthSessionBackup: mockClearAuthSessionBackup,
   persistPrimaryAuthSession: mockPersistPrimaryAuthSession,
   readPersistedAuthSessionCandidate: mockReadPersistedAuthSessionCandidate,
+  persistAuthIdentity: mockPersistAuthIdentity,
+  readPersistedAuthIdentity: mockReadPersistedAuthIdentity,
+  clearPersistedAuthIdentity: mockClearPersistedAuthIdentity,
 }))
 
 vi.mock('@/utils/guestModeStorage', () => ({
@@ -255,6 +264,12 @@ const resetAuthListeners = () => {
   ;(mockOnAuthStateChange as unknown as AuthListenersMock)._reset()
 }
 
+beforeEach(() => {
+  mockPersistAuthIdentity.mockResolvedValue(undefined)
+  mockReadPersistedAuthIdentity.mockResolvedValue(null)
+  mockClearPersistedAuthIdentity.mockResolvedValue(undefined)
+})
+
 // ============================================================================
 // Group 1: Initial State
 // ============================================================================
@@ -368,6 +383,22 @@ describe('Auth Flow — initialize()', () => {
     expect(store.canSyncRemotely).toBe(false)
     expect(store.initializationFailed).toBe(false)
     expect(mockSyncLocalApiSession).not.toHaveBeenCalled()
+  })
+
+  it('4d. restores the remembered account after its dead token was removed on a prior launch', async () => {
+    const rememberedUser = buildMockUser({ id: 'remembered-after-restart' })
+    mockReadPersistedAuthSessionCandidate.mockResolvedValue(null)
+    mockReadPersistedAuthIdentity.mockResolvedValue(rememberedUser)
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(null)
+
+    const store = useAuthStore()
+    await store.initialize()
+
+    expect(store.user?.id).toBe(rememberedUser.id)
+    expect(store.session).toBeNull()
+    expect(store.isRestoringSession).toBe(true)
+    expect(store.reauthRequired).toBe(true)
   })
 
   it('5. initialize() with active session sets isAuthenticated=true and user', async () => {
@@ -768,6 +799,7 @@ describe('Auth Flow — signOut', () => {
 
     expect(localStorage.getItem('flowstate-supabase-auth')).toBeNull()
     expect(mockClearAuthSessionBackup).toHaveBeenCalledOnce()
+    expect(mockClearPersistedAuthIdentity).toHaveBeenCalledOnce()
   })
 
   it('14b. signOut clears all account metadata and pending writes before guest mode', async () => {
@@ -964,11 +996,7 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     expect(store.session?.access_token).toBe('access-token-xyz')
   })
 
-  it('24. SIGNED_OUT event clears user and session (after grace period)', async () => {
-    // TASK-1794: A transient SIGNED_OUT (no recoverable session) is NOT cleared
-    // synchronously — it is deferred behind a 2s grace timer to avoid flashing the
-    // login screen on Electron focus-change refresh races. With no session recovered,
-    // the timer elapses and clears auth state.
+  it('24. passive SIGNED_OUT never clears the remembered account', async () => {
     const session = buildMockSession()
     // initialize → has session; every subsequent getSession (double-check + grace recheck) → null
     mockGetSession
@@ -983,14 +1011,32 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     fireAuthStateChange('SIGNED_OUT', null)
     await flushPromises()
 
-    // Grace period: still signed in immediately after the transient SIGNED_OUT
+    // The account shell remains immediately and permanently. Only signOut() may clear it.
     expect(store.user).not.toBeNull()
-
-    // Advance past the 2s grace timer; recheck finds no session → state cleared
     await vi.advanceTimersByTimeAsync(2100)
 
-    expect(store.user).toBeNull()
-    expect(store.session).toBeNull()
+    expect(store.user?.id).toBe(session.user.id)
+    expect(store.session?.access_token).toBe(session.access_token)
+    expect(store.reauthRequired).toBe(true)
+    expect(mockPersistAuthIdentity).toHaveBeenCalledWith(session.user)
+    expect(mockPersistPrimaryAuthSession).toHaveBeenCalledWith(session)
+  })
+
+  it('24a. repeated passive SIGNED_OUT events still cannot erase the account', async () => {
+    const session = buildMockSession()
+    mockGetSession
+      .mockResolvedValueOnce({ data: { session }, error: null })
+      .mockResolvedValue({ data: { session: null }, error: null })
+
+    const store = useAuthStore()
+    await store.initialize()
+    fireAuthStateChange('SIGNED_OUT', null)
+    fireAuthStateChange('SIGNED_OUT', null)
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(30_000)
+
+    expect(store.user?.id).toBe(session.user.id)
+    expect(store.session?.user.id).toBe(session.user.id)
   })
 
   it('24b. transient SIGNED_OUT followed by SIGNED_IN keeps user signed in (no flicker)', async () => {

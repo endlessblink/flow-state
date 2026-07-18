@@ -7,6 +7,9 @@ import {
   restoreAuthSessionFromBackup,
   persistPrimaryAuthSession,
   readPersistedAuthSessionCandidate,
+  persistAuthIdentity,
+  readPersistedAuthIdentity,
+  clearPersistedAuthIdentity,
   clearAuthSessionBackup,
   type User,
   type Session,
@@ -67,12 +70,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   // BUG-1352: Flag to prevent onAuthStateChange from re-establishing session during signOut
   let isSigningOut = false
-
-  // TASK-1794: Grace timer for transient SIGNED_OUT events. A failed/racing background refresh
-  // (frequent on Electron focus changes) can emit SIGNED_OUT with no session even though the
-  // session is still valid. Instead of clearing auth state synchronously (which flashes the
-  // login screen), we defer the clear; a valid session re-appearing cancels the timer.
-  let pendingSignOutTimer: ReturnType<typeof setTimeout> | null = null
 
   // BUG-339: Proactive token refresh timer
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
@@ -340,6 +337,7 @@ export const useAuthStore = defineStore('auth', () => {
     isOfflineGracePeriod.value = true
     isRestoringSession.value = true
     reauthRequired.value = true
+    persistAuthIdentity(recoverableSession.user).catch(e => console.warn('[AUTH] Failed to persist account identity:', e))
 
     // A server-confirmed invalid/used refresh token is terminal. Retrying it or
     // persisting it as the next-launch recovery source only repeats the failure.
@@ -432,9 +430,13 @@ export const useAuthStore = defineStore('auth', () => {
         // block here while refreshing an expired token; without this shell, cached
         // account data renders as a guest and local writes lose their queue owner.
         const persistedCandidate = await readPersistedAuthSessionCandidate()
+        const persistedIdentity = persistedCandidate?.user || await readPersistedAuthIdentity()
         if (persistedCandidate) {
           session.value = persistedCandidate
           user.value = persistedCandidate.user
+          persistAuthIdentity(persistedCandidate.user).catch(e => console.warn('[AUTH] Failed to persist restored identity:', e))
+        } else if (persistedIdentity) {
+          user.value = persistedIdentity
         }
 
         // Check for existing session
@@ -644,10 +646,20 @@ export const useAuthStore = defineStore('auth', () => {
             // BUG-339: Schedule proactive refresh for valid session
             scheduleTokenRefresh(data.session.expires_at)
           }
-        } else {
+        } else if (data.session) {
           session.value = data.session
-          user.value = data.session?.user || null
+          user.value = data.session.user
           persistAuthSessionBackup(data.session).catch(e => console.warn('[AUTH] Failed to backup session:', e))
+        } else if (persistedIdentity) {
+          // A server-usable session is gone, but the user never explicitly signed out.
+          // Keep the credential-free identity and account-owned cache across restarts.
+          session.value = null
+          user.value = persistedIdentity
+          isOfflineGracePeriod.value = true
+          reauthRequired.value = true
+        } else {
+          session.value = null
+          user.value = null
         }
 
         // BUG-339 FIX: If we have a session on init (e.g., after OAuth/Magic Link redirect),
@@ -677,19 +689,11 @@ export const useAuthStore = defineStore('auth', () => {
             return
           }
 
-          // TASK-1794: A valid session arrived — cancel any pending grace-period sign-out clear.
-          // This is the common path for the Electron flicker: a spurious SIGNED_OUT is quickly
-          // followed by SIGNED_IN/TOKEN_REFRESHED, so we keep the user signed in with no flash.
-          if (newSession && pendingSignOutTimer) {
-            clearTimeout(pendingSignOutTimer)
-            pendingSignOutTimer = null
-            console.log(`👤 [AUTH:${currentTabId}] Cancelled pending sign-out — valid session restored`)
-          }
-
           // Any auth-js event carrying a valid session completes restoration,
           // including cross-tab SIGNED_IN and TOKEN_REFRESHED events.
           if (newSession) {
             clearOfflineGrace()
+            persistAuthIdentity(newSession.user).catch(e => console.warn('[AUTH] Failed to persist auth event identity:', e))
           }
 
           // BUG-1056: Invalidate SWR cache when user changes to prevent stale data
@@ -716,41 +720,24 @@ export const useAuthStore = defineStore('auth', () => {
               return // Don't process as sign-out
             }
 
-            // TASK-1794: Storage has no session either, but a non-explicit SIGNED_OUT is often
-            // a transient artifact of a failed/racing background refresh (very common on Electron
-            // focus changes). If we currently believe the user is signed in, DON'T clear state
-            // synchronously — defer it behind a short grace period. A valid session re-appearing
-            // cancels this timer (see the newSession check above), so no login-screen flash.
-            if (user.value && !pendingSignOutTimer) {
-              if (isOfflineGracePeriod.value) {
-                console.log(`👤 [AUTH:${currentTabId}] SIGNED_OUT during reconnect grace — keeping signed-in shell`)
-                return
-              }
-              console.log(`👤 [AUTH:${currentTabId}] Transient SIGNED_OUT — deferring clear for 2s grace period`)
-              pendingSignOutTimer = setTimeout(async () => {
-                pendingSignOutTimer = null
-                // Re-verify once more before committing to the sign-out
-                const { data: recheck } = await supabase.auth.getSession()
-                if (recheck.session) {
-                  console.log(`👤 [AUTH:${currentTabId}] Grace period: session recovered — staying signed in`)
-                  session.value = recheck.session
-                  user.value = recheck.session.user
-                  if (recheck.session.expires_at) {
-                    scheduleTokenRefresh(recheck.session.expires_at)
-                  }
-                  return
-                }
-                if (isOfflineGracePeriod.value) {
-                  console.log(`👤 [AUTH:${currentTabId}] Grace period elapsed during reconnect grace — keeping signed-in shell`)
-                  return
-                }
-                console.log(`👤 [AUTH:${currentTabId}] Grace period elapsed with no session — clearing auth state`)
-                session.value = null
-                user.value = null
-                handledSignInForUserId = null
-                appInitLoadComplete = false
-              }, 2000)
-              return // Don't clear synchronously
+            // A passive auth-js SIGNED_OUT means the credential needs recovery; it is
+            // never proof that the person chose to leave this account. Only signOut()
+            // may erase the account shell, identity, caches, or queue ownership.
+            if (user.value && session.value) {
+              keepSessionForExplicitReauth(
+                session.value,
+                `👤 [AUTH:${currentTabId}] Passive SIGNED_OUT — retaining account until explicit sign-out`,
+                { name: 'AuthError', message: 'Session needs reconnection', status: 401 } as AuthError,
+              )
+              persistPrimaryAuthSession(session.value).catch(e => console.warn('[AUTH] Failed to preserve passive sign-out session:', e))
+              return
+            }
+            if (user.value) {
+              reauthRequired.value = true
+              isOfflineGracePeriod.value = true
+              isRestoringSession.value = true
+              persistAuthIdentity(user.value).catch(e => console.warn('[AUTH] Failed to preserve passive sign-out identity:', e))
+              return
             }
           }
 
@@ -1209,13 +1196,6 @@ export const useAuthStore = defineStore('auth', () => {
         refreshTimer = null
       }
 
-      // TASK-1794: Cancel any pending grace-period clear so it can't interfere with this
-      // explicit sign-out (it would re-check getSession and find nothing anyway, but be tidy).
-      if (pendingSignOutTimer) {
-        clearTimeout(pendingSignOutTimer)
-        pendingSignOutTimer = null
-      }
-
       // BUG-1352: supabase.auth.signOut() still makes a server request even with
       // scope: 'local'. If the server returns an error (500, timeout), the Supabase
       // client returns { error } WITHOUT removing the session from localStorage and
@@ -1226,6 +1206,7 @@ export const useAuthStore = defineStore('auth', () => {
       // so even if signOut fails, the session can't be restored.
       try {
         await clearAuthSessionBackup()
+        await clearPersistedAuthIdentity()
         localStorage.removeItem('flowstate-supabase-auth')
         localStorage.removeItem('flowstate-supabase-auth-code-verifier')
       } catch (_e) {

@@ -2206,6 +2206,7 @@ _Original plan below._
 - [ ] **TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.
 - [ ] **TASK-1962 — Preflight every Hermes-to-FlowState route and ship canonical task creation**: deliver the receipt-backed task lifecycle route, make source and bundled-sidecar runtime tests exercise the real HTTP boundary, publish a safe capability manifest, and fail Hermes/package/watchdog checks before work starts when any required route or contract is absent.
 - [ ] **TASK-1963 — Canonical atomic subtask breakdown contract**: port the preview-bound, revision-checked, replay-safe subtask batch RPC onto current main without reverting newer receipt/auth work; expose canonical ordered subtask reads for Hermes and reject malformed existing arrays before mutation.
+- [x] **BUG-1964 — Sign in once, stay signed in until explicit Sign Out**: replace destructive passive auth-event handling with durable account identity retention, reject invalid Electron release credentials before packaging, and prove sign-in plus close/relaunch/update persistence in the packaged app. ✅ DONE 2026-07-18
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2239,6 +2240,34 @@ _Original plan below._
 **Progress (2026-07-16)**: The current-main recovery now uses the H3 read-back and shared receipt validator already present on `origin/master`, avoiding the stale H4 lifecycle dependency. Source and Electron-bundle runtime tests cover bounded pages, invalid cursors and limits, malformed rows beyond the first page, and typed revision conflicts; the disposable database harness covers preview/apply/replay/rollback and simultaneous stale writes without production data.
 
 **Cross-review hardening (2026-07-16)**: Exact normalized approval operations are now separated from enriched execution/read-back rows, including deep Canvas position equality. The migration losslessly backfills the current-main no-order shape, rejects post-state overflow above 10,001 rows in preview and apply, and returns the current revision from both stale paths. Signed-user source and Electron runtime tests preserve legacy singular preview fields while proving that receipt-free apply remains blocked.
+
+### BUG-1964: Sign in once, stay signed in until explicit Sign Out (✅ DONE 2026-07-18)
+
+**Priority**: P0 | **Status**: ✅ DONE 2026-07-18 (filed 2026-07-18) | **Depends on**: TASK-1952
+
+**Exact failure mode**: Electron 1.4.268 embedded a Supabase public key that production rejected with HTTP 401 during PKCE exchange and refresh. A passive auth-js `SIGNED_OUT` event then erased the renderer account after two seconds, while terminal refresh recovery deleted the token backup without retaining a credential-free identity for the next cold start.
+
+**Acceptance**:
+- A valid production public key is recognized before an Electron build starts; rejected, unreachable, redirected, or timed-out credentials fail closed without logging credentials or response bodies.
+- Background refresh, focus, sleep/resume, network recovery, app close/relaunch, and updater restarts cannot erase the remembered account or account-owned cache.
+- A terminal refresh token may be removed, but the credential-free account identity survives cold restart and all remote writes remain gated until a fresh server session exists.
+- Only the explicit Sign Out action clears the remembered identity, auth storage, account stores, caches, and pending account writes.
+- Focused regressions, full type/lint/test gates, Electron package validation, live updater manifest, real sign-in, and packaged close/relaunch proof pass before completion.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Packaged Google sign-in returned to FlowState but stayed on the sign-in modal. | Yes |
+| Renderer auth state | Yes | Passive `SIGNED_OUT` cleared user/session after a two-second timer. | Yes |
+| Electron main/preload | Yes | PKCE callback reached the renderer; failure occurred at the backend token exchange. | Release credential boundary |
+| Supabase/auth persistence | Yes | Installed key returned 401; current production key was recognized; terminal backup cleanup lost cold-start identity. | Yes |
+| Updater/runtime version | Yes | Installed runtime remained 1.4.268 and carried the rejected key. | New version and release gate |
+| Stale live process state | Yes | Reproduced twice against the actual packaged profile and callback listener. | Relaunch proof required |
+
+**Explicitly not covered**: silently granting remote access with an expired/rejected token. The remembered account shell and local ownership persist, while remote sync remains fail-closed until authentication recovers.
+
+**Completion proof (2026-07-18)**: 58 focused auth/release regressions and the full 3,893-test suite passed, type-check and Electron build completed, and the live updater published 1.4.269. On the installed packaged app, Google sign-in created the primary session, Electron backup, and credential-free identity; after every packaged process was terminated and the app relaunched, diagnostics again reported 1.4.269 with an authenticated user, remote sync enabled, and no reauthentication requirement.
 
 ### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
 
@@ -7585,6 +7614,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1961** | **P0** | 🔄 **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
 | **TASK-1962** | **P0** | 🔄 **Preflight every Hermes-to-FlowState route, package the canonical task lifecycle, and reject incomplete runtimes before work starts** |
 | **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask breakdown with immutable preview approval, parent revisions, replay-safe receipts, and validated ordered read-back** |
+| **BUG-1964** | **P0** | ✅ **DONE 2026-07-18 — Sign in once and retain the account through refresh failures, close/relaunch, and updates until explicit Sign Out** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

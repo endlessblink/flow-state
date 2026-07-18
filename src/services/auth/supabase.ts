@@ -1,4 +1,4 @@
-import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type Session, type SupabaseClient, type User } from '@supabase/supabase-js'
 import { isTauri as isTauriRuntime } from '@/utils/platform'
 import { STORAGE_KEYS } from '@/constants/storageKeys'
 import { createLazyAuthStorage } from './authStorage'
@@ -169,6 +169,7 @@ if (typeof window !== 'undefined' && !isTauri && !isElectronRuntime && !isCapaci
 const authStorage = createLazyAuthStorage()
 
 export const AUTH_SESSION_BACKUP_KEY = `${STORAGE_KEYS.SUPABASE_AUTH}-backup-v1`
+export const AUTH_IDENTITY_KEY = `${STORAGE_KEYS.SUPABASE_AUTH}-identity-v1`
 
 async function authStorageGet(key: string): Promise<string | null> {
     if (!authStorage) return null
@@ -193,8 +194,43 @@ export async function persistAuthSessionBackup(session: Session | null | undefin
             savedAt: Date.now(),
             session,
         }))
+        await authStorageSet(AUTH_IDENTITY_KEY, JSON.stringify(session.user))
     } catch (e) {
         console.warn('[Supabase] Failed to persist auth session backup:', e)
+    }
+}
+
+/**
+ * A credential-free durable account marker. Refresh-token rotation or a bad
+ * release credential may invalidate the session, but that is not a user sign-out.
+ * Keeping the User separately lets a cold restart retain account ownership and
+ * cached data without replaying a server-rejected secret.
+ */
+export async function persistAuthIdentity(user: User | null | undefined): Promise<void> {
+    if (!user?.id) return
+    try {
+        await authStorageSet(AUTH_IDENTITY_KEY, JSON.stringify(user))
+    } catch (e) {
+        console.warn('[Supabase] Failed to persist auth identity:', e)
+    }
+}
+
+export async function readPersistedAuthIdentity(): Promise<User | null> {
+    try {
+        const raw = await authStorageGet(AUTH_IDENTITY_KEY)
+        if (!raw) return null
+        const user = JSON.parse(raw) as User | null
+        return user?.id ? user : null
+    } catch {
+        return null
+    }
+}
+
+export async function clearPersistedAuthIdentity(): Promise<void> {
+    try {
+        await authStorageRemove(AUTH_IDENTITY_KEY)
+    } catch (e) {
+        console.warn('[Supabase] Failed to clear auth identity:', e)
     }
 }
 

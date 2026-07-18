@@ -127,6 +127,8 @@ describe('validate-electron-vite-env', () => {
     )
 
     expect(packageJson.scripts['electron:build']).toMatch(/^npm run electron:validate-env &&/)
+    expect(packageJson.scripts['electron:build']).toContain('flock -n /tmp/flowstate-electron-build.lock')
+    expect(packageJson.scripts['electron:build:locked']).toContain('npm run electron:validate-package')
     expect(deployScript.indexOf('validate-electron-vite-env.cjs')).toBeGreaterThan(-1)
     expect(deployScript.indexOf('validate-electron-vite-env.cjs')).toBeLessThan(
       deployScript.indexOf('guard:electron-sync')

@@ -185,7 +185,7 @@ export const useAuthStore = defineStore('auth', () => {
         try {
           const { useToast } = await import('@/composables/useToast')
           useToast().showToast(
-            'Your session expired and could not refresh — sign out and back in to resume saving changes.',
+            'Your account is still here, but it needs to reconnect. Choose Reconnect account; your local work is safe.',
             'error',
             { duration: 15000 }
           )
@@ -353,7 +353,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     void import('@/composables/useToast').then(({ useToast }) => {
       useToast().showToast(
-        'Your FlowState session expired and cannot refresh. Sign in again to reconnect Hermes.',
+        'Your account is still here, but it needs to reconnect. Choose Reconnect account; your local work is safe.',
         'error',
         { duration: 15000 },
       )

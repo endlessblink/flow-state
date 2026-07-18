@@ -16,7 +16,7 @@
     <!-- Modal Body -->
     <div class="auth-modal-body">
       <div
-        v-if="authStore.isRestoringSession || (authStore.user && authStore.reauthRequired)"
+        v-if="(authStore.isRestoringSession || (authStore.user && authStore.reauthRequired)) && !showReconnectForm"
         class="auth-recovery-state"
         data-testid="account-recovery"
         role="status"
@@ -29,6 +29,15 @@
           {{ authStore.user?.email }}
         </p>
         <p>Your account and local work are still here.</p>
+        <button
+          v-if="authStore.reauthRequired"
+          type="button"
+          class="auth-reconnect-btn"
+          data-testid="reconnect-account"
+          @click="handleReconnect"
+        >
+          Reconnect account
+        </button>
       </div>
 
       <!-- Login Form -->
@@ -89,12 +98,13 @@ const router = useRouter()
 
 // ===== State =====
 const resetEmail = ref('')
+const showReconnectForm = ref(false)
 
 // ===== Watchers =====
 // A durable remembered identity is enough to dismiss a stale sign-in modal.
 // Session validation can continue behind the signed-in account shell.
 watch(() => authStore.user?.id, async (userId, oldUserId) => {
-  if (userId && !oldUserId && uiStore.authModalOpen) {
+  if (userId && !oldUserId && uiStore.authModalOpen && !authStore.isRestoringSession && !authStore.reauthRequired) {
     await nextTick()
     uiStore.closeAuthModal()
   }
@@ -179,7 +189,13 @@ function handleGoogleError(error: Error) {
   // Error is already handled by GoogleSignInButton and auth store
 }
 
+function handleReconnect() {
+  uiStore.switchAuthView('login')
+  showReconnectForm.value = true
+}
+
 function handleClose() {
+  showReconnectForm.value = false
   uiStore.closeAuthModal()
 }
 </script>
@@ -209,6 +225,17 @@ function handleClose() {
 
 .auth-recovery-state p {
   color: var(--text-muted);
+}
+
+.auth-reconnect-btn {
+  margin-top: var(--space-2);
+  padding: var(--space-2_5) var(--space-4);
+  color: var(--text-inverse);
+  background: var(--brand-primary);
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 700;
 }
 
 /* Responsive */

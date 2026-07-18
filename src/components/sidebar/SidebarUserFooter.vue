@@ -4,7 +4,22 @@
       v-if="authStore.isRestoringSession || !authStore.isInitialized"
       class="sidebar-auth-recovery"
     >
-      <div class="sidebar-auth-restoring" role="status" aria-live="polite">
+      <button
+        v-if="authStore.reauthRequired"
+        type="button"
+        class="sidebar-auth-restoring sidebar-auth-reconnect"
+        data-testid="reconnect-account"
+        @click="uiStore.openAuthModal('login')"
+      >
+        <span>Reconnect account</span>
+        <span v-if="authStore.user?.email" class="sidebar-auth-email">{{ authStore.user.email }}</span>
+      </button>
+      <div
+        v-else
+        class="sidebar-auth-restoring"
+        role="status"
+        aria-live="polite"
+      >
         <span>{{ authStore.reauthRequired ? 'Reconnecting account…' : $t('sidebar.restoring_account') }}</span>
         <span v-if="authStore.user?.email" class="sidebar-auth-email">{{ authStore.user.email }}</span>
       </div>
@@ -77,6 +92,17 @@ const authStore = useAuthStore()
   justify-content: center;
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+.sidebar-auth-reconnect {
+  background: var(--glass-bg-soft);
+  cursor: pointer;
+  font: inherit;
+}
+
+.sidebar-auth-reconnect:hover {
+  color: var(--brand-primary);
+  border-color: var(--brand-primary-alpha-40);
 }
 
 .sidebar-auth-email {

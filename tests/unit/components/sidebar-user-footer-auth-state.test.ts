@@ -39,7 +39,7 @@ describe('SidebarUserFooter auth restoration state', () => {
     expect(wrapper.find('button.sidebar-login-btn').exists()).toBe(false)
   })
 
-  it('shows reconnect wording without presenting Sign In when reauthentication is required', () => {
+  it('opens account reconnection without presenting the user as signed out', async () => {
     authState.user = { id: 'remembered-user', email: 'remembered@example.com' }
     authState.isInitialized = true
     authState.isRestoringSession = true
@@ -51,10 +51,12 @@ describe('SidebarUserFooter auth restoration state', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('Reconnecting account')
+    expect(wrapper.text()).toContain('Reconnect account')
     expect(wrapper.text()).toContain('remembered@example.com')
     expect(wrapper.text()).not.toContain('sidebar.sign_in')
     expect(wrapper.find('button.sidebar-login-btn').exists()).toBe(false)
+    await wrapper.get('[data-testid="reconnect-account"]').trigger('click')
+    expect(openAuthModal).toHaveBeenCalledWith('login')
   })
 
   it('shows Sign In only after initialization confirms guest mode', async () => {

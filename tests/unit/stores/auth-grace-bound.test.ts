@@ -32,6 +32,7 @@ const {
   mockClearAuthSessionBackup,
   mockSyncLocalApiSession,
   mockSyncLocalApiRendererAuthState,
+  mockShowToast,
 } = vi.hoisted(() => {
   type AuthCallback = (event: string, session: unknown) => void
   let _listeners: AuthCallback[] = []
@@ -59,6 +60,7 @@ const {
     mockClearAuthSessionBackup: vi.fn(),
     mockSyncLocalApiSession: vi.fn(),
     mockSyncLocalApiRendererAuthState: vi.fn(),
+    mockShowToast: vi.fn(),
   }
 })
 
@@ -103,6 +105,7 @@ vi.mock('@/composables/useLocalApiBridge', () => ({
   syncLocalApiSession: mockSyncLocalApiSession,
   syncLocalApiRendererAuthState: mockSyncLocalApiRendererAuthState,
 }))
+vi.mock('@/composables/useToast', () => ({ useToast: () => ({ showToast: mockShowToast }) }))
 vi.mock('@/constants/dbTables', () => ({ DB_TABLES: { TASKS: 'tasks', PROJECTS: 'projects' } }))
 vi.mock('@/utils/platform', () => ({ isTauri: vi.fn().mockReturnValue(false) }))
 vi.mock('@/stores/tasks', () => ({
@@ -186,6 +189,12 @@ describe('BUG-1898: bounded reconnect grace with explicit re-auth state', () => 
       store.reauthRequired,
       'grace expired with refresh still dead but no re-auth state was surfaced — app stays silently write-blocked forever'
     ).toBe(true)
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.stringContaining('Reconnect account'),
+      'error',
+      expect.any(Object),
+    )
+    expect(mockShowToast.mock.calls.flat().join(' ')).not.toMatch(/sign out/i)
   })
 
   it('grace auto-retries the refresh and clears without flagging when it recovers before the deadline', async () => {

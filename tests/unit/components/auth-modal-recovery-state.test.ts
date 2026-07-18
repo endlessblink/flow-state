@@ -46,6 +46,10 @@ describe('AuthModal remembered-account recovery state', () => {
     uiState.authModalOpen = true
     uiState.authModalView = 'login'
     uiState.closeAuthModal.mockClear()
+    uiState.switchAuthView.mockReset()
+    uiState.switchAuthView.mockImplementation((view: string) => {
+      uiState.authModalView = view
+    })
   })
 
   it('replaces the sign-in form with restoring status for a remembered account', () => {
@@ -60,16 +64,20 @@ describe('AuthModal remembered-account recovery state', () => {
     expect(wrapper.text()).not.toContain('Sign In')
   })
 
-  it('shows reconnect status instead of the sign-in form when reauthentication is required', () => {
+  it('lets a remembered account open the sign-in form when reauthentication is required', async () => {
     authState.user = { id: 'remembered-user', email: 'remembered@example.com' }
     authState.isRestoringSession = true
     authState.reauthRequired = true
+    uiState.authModalView = 'signup'
 
     const wrapper = mountModal()
 
     expect(wrapper.get('[data-testid="account-recovery"]').text()).toContain('Reconnecting your FlowState account')
     expect(wrapper.find('[data-testid="login-form"]').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('Sign In')
+    await wrapper.get('[data-testid="reconnect-account"]').trigger('click')
+    expect(uiState.switchAuthView).toHaveBeenCalledWith('login')
+    expect(wrapper.find('[data-testid="account-recovery"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="login-form"]').text()).toContain('Sign In')
   })
 
   it('keeps the normal sign-in form for a confirmed guest', () => {
@@ -82,11 +90,25 @@ describe('AuthModal remembered-account recovery state', () => {
   it('closes a stale sign-in modal as soon as the remembered account appears', async () => {
     mountModal()
 
+    authState.isAuthenticated = true
+    authState.isRestoringSession = false
     authState.user = { id: 'remembered-user', email: 'remembered@example.com' }
-    authState.isRestoringSession = true
     await nextTick()
     await nextTick()
 
     expect(uiState.closeAuthModal).toHaveBeenCalled()
+  })
+
+  it('does not close a reconnect modal when a remembered identity appears', async () => {
+    mountModal()
+    uiState.closeAuthModal.mockClear()
+
+    authState.isRestoringSession = true
+    authState.user = { id: 'remembered-user', email: 'remembered@example.com' }
+    await nextTick()
+    authState.reauthRequired = true
+    await nextTick()
+
+    expect(uiState.closeAuthModal).not.toHaveBeenCalled()
   })
 })

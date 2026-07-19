@@ -2211,6 +2211,7 @@ _Original plan below._
 - [x] ~~**BUG-1966 — Timer crosses zero and remains active**: make Electron completion locks session-scoped, floor every renderer countdown/display at zero, make KDE leader countdowns use elapsed wall time, and clear already-completed widget state.~~ ✅ DONE 2026-07-19 in Electron 1.4.274.
 - [x] ~~**BUG-1967 — Newly created task appears accepted and then disappears**: require durable account-queue or guest-storage enrollment before success, await Canvas sidebar acknowledgement, preserve the draft on failure, and reject empty server create acknowledgements.~~ ✅ DONE 2026-07-19 in Electron 1.4.274.
 - [x] ~~**TASK-1968 — Always-on signed-in Hermes bridge**: supervise one canonical Electron process, keep its authenticated renderer and Local API alive when the window closes, serialize sidecar/update ownership, and preserve the same profile across desktop launches, restarts, and updates.~~ ✅ DONE 2026-07-19 in Electron 1.4.275.
+- [x] ~~**BUG-1969 — Restore full Hermes route compatibility**: expose canonical work-block lifecycle operations, align Hermes subtask batches with the live task-v1 contract, forward immutable approval hashes on apply, and prove capability preflight plus preview behavior against the packaged signed-in bridge.~~ ✅ DONE 2026-07-19 in Electron 1.4.277.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2244,6 +2245,40 @@ _Original plan below._
 **Progress (2026-07-16)**: The current-main recovery now uses the H3 read-back and shared receipt validator already present on `origin/master`, avoiding the stale H4 lifecycle dependency. Source and Electron-bundle runtime tests cover bounded pages, invalid cursors and limits, malformed rows beyond the first page, and typed revision conflicts; the disposable database harness covers preview/apply/replay/rollback and simultaneous stale writes without production data.
 
 **Cross-review hardening (2026-07-16)**: Exact normalized approval operations are now separated from enriched execution/read-back rows, including deep Canvas position equality. The migration losslessly backfills the current-main no-order shape, rejects post-state overflow above 10,001 rows in preview and apply, and returns the current revision from both stale paths. Signed-user source and Electron runtime tests preserve legacy singular preview fields while proving that receipt-free apply remains blocked.
+
+### BUG-1969: Restore full Hermes route compatibility (✅ DONE 2026-07-19)
+
+**Priority**: P0-HIGH | **Status**: ✅ DONE 2026-07-19 in Electron 1.4.277 (filed 2026-07-19) | **Depends on**: TASK-1962, TASK-1963, FEATURE-1944
+
+**Exact failure mode**: Hermes correctly rejected five tools because the packaged capability manifest advertised no canonical work-block route and advertised the subtask batch under a legacy contract that did not match the already-shipped task-v1 request and response shape. Both apply adapters also omitted the server-issued request hash.
+
+**Acceptance**:
+- Work-block create, move, resize, and remove share one preview-first, replay-safe signed-user Local API route with exact receipt validation.
+- Hermes translates its editable subtask input into the existing task-v1 wire contract and validates the exact preview/read-back shape instead of relabeling an incompatible payload.
+- Apply forwards the immutable request hash for both operation families; preview remains non-mutating.
+- Source, disposable-database, packaged-sidecar, capability-preflight, and live signed-in preview checks pass before the compatibility claim closes.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Hermes capability preflight reproduced the exact Hebrew incompatibility report. | Yes |
+| Data shape / persisted row shape | Yes | Disposable rollback tests cover legacy instance arrays, canonical blocks, malformed data, replay, and subtask ordering. | Yes |
+| Renderer store/state | N/A | This slice exposes assistant routes; shared UI work-block adoption remains FEATURE-1944. | No |
+| Electron main/preload bridge | Yes | Source and bundled-sidecar route tests exercise dispatch and capability advertisement. | Yes |
+| Localhost sidecar endpoint | Yes | Installed 1.4.277 returned the complete 16-route manifest; Hermes produced task-v1 subtask, work-block create, and shipped legacy timed-block move previews without applying them. | Yes |
+| KDE polling/control path | N/A | No timer behavior is changed. | No |
+| Supabase persistence/realtime | Yes | Rollback-only RPC and concurrency suites verify atomic storage and canonical receipts. | Yes |
+| Updater/runtime version | Yes | Public updater and checksum-matched installed AppImage are Electron 1.4.277. | Yes |
+| Stale live process/cache state | Yes | The prior mount was terminated, 1.4.277 relaunched on the existing profile, health returned 200, and Hermes gateway/watchdog reloaded active. | Yes |
+
+**Exact failure mode fixed**: FlowState had no truthful canonical work-block route, Hermes nested subtask operations did not match the task-v1 wire contract, apply omitted the server request hash, and production still exposed the pre-current subtask RPC signature. Electron 1.4.277 plus the production migrations and matching Hermes adapter now agree on all 16 registered routes; live preflight reports `compatible: true` with no blocked tools.
+
+**Explicitly not covered**: renderer Calendar adoption of the shared work-block transaction, recurrence lifecycle editing, projects/groups, Canvas, timer control, and date-only scheduled instances without a start time remain separate capabilities; the canonical work-block lifecycle covers timed blocks.
+
+**Regression added for reported repro**: exact FlowState task-v1 subtask preview/apply fixtures, request-hash forwarding, capability contract checks, work-block dispatch, replay, recurrence-heavy scope, and database concurrency.
+
+**Live boundary proof**: Public `latest-linux.yml` serves 1.4.277; the installed AppImage is byte-identical to the release artifact and relaunched with the existing signed-in profile. Packaged `/api/health` returned 200 and `/api/capabilities` advertised the work-block route as `work-block-v1` and subtask batch as `task-v1`. Live Hermes health reported 16 routes, `compatible: true`, and zero blocked tools. Non-mutating Hermes previews succeeded for task-v1 subtask creation, canonical work-block creation, and movement of an actual shipped non-UUID timed block. The production rollback-only work-block and subtask suites passed, including replay, conflicts, scope, concurrency, retirement, and rollback.
 
 ### BUG-1964: Sign in once, stay signed in until explicit Sign Out (✅ DONE 2026-07-18)
 
@@ -7760,6 +7795,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1966**~~ | **P0** | ✅ **DONE — Electron 1.4.274 keeps KDE/Electron at the same non-negative timer state and clears completed-ID loops** |
 | ~~**BUG-1967**~~ | **P0** | ✅ **DONE — Electron 1.4.274 requires durable task admission before clearing drafts or showing success** |
 | ~~**TASK-1968**~~ | **P0** | ✅ **DONE — Electron 1.4.275 keeps the signed-in Hermes bridge alive across window close, restart, and updater handoff** |
+| ~~**BUG-1969**~~ | **P0-HIGH** | ✅ **DONE — Electron 1.4.277 and the live Hermes adapter agree on all work-block and subtask-batch contracts** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

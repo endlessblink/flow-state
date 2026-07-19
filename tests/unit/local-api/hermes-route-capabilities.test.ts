@@ -29,17 +29,17 @@ describe('Hermes route capability manifest', () => {
     }
   })
 
-  it('advertises known gaps and semantic mismatches instead of hiding them', () => {
+  it('advertises only contracts that Hermes can invoke end to end', () => {
     expect(HERMES_ROUTE_CAPABILITIES).toContainEqual({
       method: 'POST',
       path: '/api/tasks/:id/work-blocks',
       contractVersion: 'work-block-v1',
-      available: false,
+      available: true,
     })
     expect(HERMES_ROUTE_CAPABILITIES).toContainEqual({
       method: 'POST',
       path: '/api/tasks/:id/subtasks/batch',
-      contractVersion: 'legacy-subtask-batch-v0',
+      contractVersion: 'task-v1',
       available: true,
     })
   })

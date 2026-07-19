@@ -288,17 +288,18 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(SERVER_CJS).toContain('return await handlePostTaskInstance(decodeURIComponent(taskInstancesMatch[1]), req, res)')
   })
 
-  it('reads task instances from only the current user task row without returning full task bodies', () => {
+  it('reads task instances from the active signed-user scope with revision authority', () => {
     const body = functionBody('handleGetTaskInstances')
 
     expect(body).toContain(".from('tasks')")
-    expect(body).toContain(".select('id,title,instances')")
+    expect(body).toContain(".select('id,title,instances,workspace_id,canonical_revision,updated_at')")
     expect(body).toContain(".eq('id', id)")
-    expect(body).toContain(".eq('user_id', userId)")
+    expect(body).toContain('scopeTaskQuery(ctx, query)')
     expect(body).toContain(".eq('is_deleted', false)")
     expect(body).toContain('.maybeSingle()')
     expect(body).toContain("return send(res, 404, { error: 'not found' })")
     expect(body).toContain('instances: normalizeTaskInstances(existing.instances)')
+    expect(body).toContain('canonicalRevision: existing.canonical_revision')
     expect(body).not.toContain('accessToken')
     expect(body).not.toContain('refreshToken')
     expect(body).not.toContain('anonKey')

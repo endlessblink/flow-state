@@ -17,11 +17,11 @@ const HERMES_ROUTE_CAPABILITIES = Object.freeze([
   { method: 'GET', path: '/api/timer/current', contractVersion: 'timer-current-v1', available: true },
   { method: 'GET', path: '/api/timer/diagnostics', contractVersion: 'timer-diagnostics-v1', available: true },
   { method: 'GET', path: '/api/tasks/:id/instances', contractVersion: 'task-instances-v1', available: true },
-  { method: 'POST', path: '/api/tasks/:id/work-blocks', contractVersion: 'work-block-v1', available: false },
+  { method: 'POST', path: '/api/tasks/:id/work-blocks', contractVersion: 'work-block-v1', available: true },
   { method: 'POST', path: '/api/tasks/:id/done-for-now', contractVersion: 'task-v1', available: true },
   { method: 'POST', path: '/api/tasks/:id/merge', contractVersion: 'task-v1', available: true },
   { method: 'GET', path: '/api/tasks/:id/subtasks', contractVersion: 'subtask-list-v1', available: true },
-  { method: 'POST', path: '/api/tasks/:id/subtasks/batch', contractVersion: 'legacy-subtask-batch-v0', available: true },
+  { method: 'POST', path: '/api/tasks/:id/subtasks/batch', contractVersion: 'task-v1', available: true },
 ])
 
 const HERMES_ROUTE_BUNDLE_MARKERS = Object.freeze([
@@ -44,6 +44,7 @@ const HERMES_ROUTE_DISPATCH_MARKERS = Object.freeze([
   'if (req.method === "GET" && path === "/api/timer/current")',
   'if (req.method === "GET" && path === "/api/timer/diagnostics")',
   'if (req.method === "GET" && taskInstancesMatch)',
+  'if (req.method === "POST" && workBlocksMatch)',
   'if (req.method === "POST" && doneForNowMatch)',
   'if (req.method === "POST" && mergeTasksMatch)',
   'if (req.method === "GET" && subtasksMatch)',

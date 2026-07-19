@@ -34,6 +34,7 @@ const { executeDoneForNow } = require('./done-for-now.cjs')
 const { executeMergeTasks } = require('./merge-tasks.cjs')
 const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
 const { executeCanonicalTaskLifecycle } = require('./canonical-task-lifecycle.cjs')
+const { executeCanonicalWorkBlock } = require('./canonical-work-block.cjs')
 const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeSubtaskBatch } = require('./subtask-batch.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
@@ -738,14 +739,14 @@ async function handleAuditCoverage(req, res) {
 }
 
 async function handleGetTaskInstances(id, res) {
-  const { supabase, userId } = ctx
-  const { data: existing, error } = await supabase
+  const { supabase } = ctx
+  let query = supabase
     .from('tasks')
-    .select('id,title,instances')
+    .select('id,title,instances,workspace_id,canonical_revision,updated_at')
     .eq('id', id)
-    .eq('user_id', userId)
     .eq('is_deleted', false)
-    .maybeSingle()
+  query = scopeTaskQuery(ctx, query)
+  const { data: existing, error } = await query.maybeSingle()
   if (error) return send(res, 500, { error: error.message })
   if (!existing) return send(res, 404, { error: 'not found' })
 
@@ -753,7 +754,17 @@ async function handleGetTaskInstances(id, res) {
     ok: true,
     task: { id: existing.id, title: existing.title },
     instances: normalizeTaskInstances(existing.instances),
+    workspaceId: existing.workspace_id,
+    canonicalRevision: existing.canonical_revision,
+    canonicalUpdatedAt: existing.updated_at,
   })
+}
+
+async function handleWorkBlock(id, req, res) {
+  const body = await readJsonBody(req)
+  const result = await executeCanonicalWorkBlock(ctx, id, body, notifyTaskMutation)
+
+  send(res, result.status, result.body)
 }
 
 async function handlePostTaskInstance(id, req, res) {
@@ -1486,6 +1497,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && taskInstancesMatch) {
       return await handlePostTaskInstance(decodeURIComponent(taskInstancesMatch[1]), req, res)
+    }
+    const workBlocksMatch = path.match(/^\/api\/tasks\/([^/]+)\/work-blocks$/)
+    if (req.method === 'POST' && workBlocksMatch) {
+      return await handleWorkBlock(decodeURIComponent(workBlocksMatch[1]), req, res)
     }
     const doneForNowMatch = path.match(/^\/api\/tasks\/([^/]+)\/done-for-now$/)
     if (req.method === 'POST' && doneForNowMatch) {

@@ -69,7 +69,10 @@
             />
           </button>
 
-          <div class="subtask-content">
+          <div
+            class="subtask-content"
+            @focusout="handleSubtaskFocusOut(subtask.id, $event)"
+          >
             <div class="subtask-header">
               <input
                 v-model="subtask.title"
@@ -79,7 +82,6 @@
                 placeholder="Subtask title"
                 dir="auto"
                 @focus="focusedSubtaskId = subtask.id"
-                @blur="focusedSubtaskId = null"
                 @keydown.enter.prevent="$emit('add')"
               >
               <button
@@ -137,6 +139,17 @@ const progressPercent = computed(() => {
   if (props.subtasks.length === 0) return 0
   return (completedCount.value / props.subtasks.length) * 100
 })
+
+const handleSubtaskFocusOut = (subtaskId: string, event: FocusEvent) => {
+  const nextTarget = event.relatedTarget
+  if (nextTarget instanceof Node && event.currentTarget instanceof HTMLElement && event.currentTarget.contains(nextTarget)) {
+    return
+  }
+
+  if (focusedSubtaskId.value === subtaskId) {
+    focusedSubtaskId.value = null
+  }
+}
 
 // Hebrew Alignment
 const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()

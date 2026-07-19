@@ -2210,6 +2210,7 @@ _Original plan below._
 - [x] **BUG-1965 — Recover queued task edits rejected without server request hashes**: persist and replay the server-issued preview hash, rotate expired approval identities without losing queued intent, and make Retry All unlock permanently parked failures. ✅ DONE 2026-07-19 in Electron 1.4.273.
 - [x] ~~**BUG-1966 — Timer crosses zero and remains active**: make Electron completion locks session-scoped, floor every renderer countdown/display at zero, make KDE leader countdowns use elapsed wall time, and clear already-completed widget state.~~ ✅ DONE 2026-07-19 in Electron 1.4.274.
 - [x] ~~**BUG-1967 — Newly created task appears accepted and then disappears**: require durable account-queue or guest-storage enrollment before success, await Canvas sidebar acknowledgement, preserve the draft on failure, and reject empty server create acknowledgements.~~ ✅ DONE 2026-07-19 in Electron 1.4.274.
+- [x] ~~**BUG-1968 — Empty subtask description collapses before it can be edited**: keep the description open while focus moves from the subtask title into its description, then collapse it only after focus leaves that subtask.~~ ✅ DONE 2026-07-19 in Electron 1.4.276.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2373,6 +2374,26 @@ _Original plan below._
 **Regression added for reported repro**: Canvas sidebar failure and acknowledgement timeout retain the typed draft and withhold success; the real modal preserves all entered state and blocks duplicate submits; task-store coverage rejects a cache-only authenticated create; guest creation persists through the true guest store; sync coverage keeps an empty server create response pending.
 
 **Explicitly not covered**: reconstructing the lost task title. Live server, audit, canonical log, and durable queue evidence proves the reported task never crossed the renderer-to-durable boundary, so its content is not recoverable.
+
+### BUG-1968: Empty subtask description collapses before it can be edited (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE 2026-07-19 in Electron 1.4.276 | **Related**: TASK-1571
+
+**Exact failure mode**: focusing a subtask title reveals its empty description, but the title's blur handler clears the shared focused-subtask state before the browser completes the click into the description. The description is hidden during that internal focus transition, so the user cannot place a caret or type.
+
+**Acceptance**:
+- Moving focus from a subtask title into its empty description keeps the description visible and editable.
+- Moving focus outside the subtask collapses an empty description as before.
+- Existing descriptions, title editing, completion controls, Hebrew/RTL alignment, and task autosave remain unchanged.
+- A focused regression and packaged Electron proof cover the user's exact click-and-type repro.
+
+**Regression added for reported repro**: component coverage starts with a Hebrew subtask and empty description, reproduces the title-to-description focus transition, proves the description stays visible and accepts text, and confirms it still collapses after focus leaves the subtask.
+
+**Verification**: the focused regression, type-check, source lint, import validation, dependency safety checks, Electron sync guard, production Electron build, package validation, and live updater manifest all passed. The full unit suite executed without reporting a failed assertion but did not exit after its existing background timers completed, so the deploy used the documented hotfix escape hatch after the release guard passed.
+
+**Failure-class closeout**: this fixes the renderer focus-state race for empty subtask descriptions. It does not change Electron main/preload, localhost sidecar, KDE integration, Supabase persistence, updater behavior, or stale-process recovery; Electron 1.4.276 packaging and updater publication prove the corrected renderer is deliverable.
+
+**Explicitly not covered**: main task description editing, mini-canvas subtask nodes, or changing subtask persistence formats.
 
 ### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
 
@@ -7723,6 +7744,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1965**~~ | **P0** | ✅ **DONE — Electron 1.4.273 recovered all seven request-hash-rejected queued edits and remained synced after relaunch** |
 | ~~**BUG-1966**~~ | **P0** | ✅ **DONE — Electron 1.4.274 keeps KDE/Electron at the same non-negative timer state and clears completed-ID loops** |
 | ~~**BUG-1967**~~ | **P0** | ✅ **DONE — Electron 1.4.274 requires durable task admission before clearing drafts or showing success** |
+| ~~**BUG-1968**~~ | **P1** | ✅ **DONE — Electron 1.4.276 keeps empty subtask descriptions editable during internal focus movement** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

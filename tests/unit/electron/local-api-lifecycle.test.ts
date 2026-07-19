@@ -20,6 +20,12 @@ function handlerBody(channel: string): string {
   return LOCAL_API_TS.slice(start, nextHandler === -1 ? undefined : nextHandler)
 }
 
+function spawnChildBody(): string {
+  const start = LOCAL_API_TS.indexOf('function spawnChild()')
+  expect(start, 'spawnChild helper not found').toBeGreaterThan(-1)
+  return LOCAL_API_TS.slice(start, LOCAL_API_TS.indexOf('\nfunction scheduleRestart()', start))
+}
+
 describe('Electron local API lifecycle regression contract', () => {
   it('resolves the packaged sidecar next to main.cjs, not inside the ipc subdirectory', () => {
     const sidecarStart = LOCAL_API_TS.indexOf('function sidecarPath()')
@@ -44,20 +50,14 @@ describe('Electron local API lifecycle regression contract', () => {
   })
 
   it('passes the Electron userData directory to the sidecar for durable local AI runtime storage', () => {
-    const startChild = LOCAL_API_TS.slice(
-      LOCAL_API_TS.indexOf('function startChild()'),
-      LOCAL_API_TS.indexOf('\nfunction stopChild()', LOCAL_API_TS.indexOf('function startChild()')),
-    )
+    const startChild = spawnChildBody()
 
     expect(startChild).toContain('FLOW_STATE_API_DATA_DIR')
     expect(startChild).toContain("app.getPath('userData')")
   })
 
   it('passes the loaded Electron app version to the sidecar diagnostics context', () => {
-    const startChild = LOCAL_API_TS.slice(
-      LOCAL_API_TS.indexOf('function startChild()'),
-      LOCAL_API_TS.indexOf('\nfunction stopChild()', LOCAL_API_TS.indexOf('function startChild()')),
-    )
+    const startChild = spawnChildBody()
 
     expect(startChild).toContain('FLOW_STATE_APP_VERSION')
     expect(startChild).toContain('app.getVersion()')
@@ -92,10 +92,7 @@ describe('Electron local API lifecycle regression contract', () => {
 
   it('retains and forwards an exact renderer workspace context across sidecar restarts', () => {
     const body = handlerBody('localApi:setWorkspaceContext')
-    const startChild = LOCAL_API_TS.slice(
-      LOCAL_API_TS.indexOf('function startChild()'),
-      LOCAL_API_TS.indexOf('\nfunction stopChild()', LOCAL_API_TS.indexOf('function startChild()')),
-    )
+    const startChild = spawnChildBody()
 
     expect(body).toContain('state.activeWorkspaceId !== null')
     expect(body).toContain('latestWorkspaceContext = { activeWorkspaceId: state.activeWorkspaceId }')
@@ -138,14 +135,11 @@ describe('Electron local API lifecycle regression contract', () => {
   })
 
   it('records child spawn, message, error, and exit events without secret-bearing values', () => {
-    const startChild = LOCAL_API_TS.slice(
-      LOCAL_API_TS.indexOf('function startChild()'),
-      LOCAL_API_TS.indexOf('\nfunction stopChild()', LOCAL_API_TS.indexOf('function startChild()')),
-    )
+    const startChild = spawnChildBody()
 
-    expect(startChild).toContain("child.on('spawn'")
-    expect(startChild).toContain("child.on('error'")
-    expect(startChild).toContain("child.on('exit'")
+    expect(startChild).toContain("startedChild.on('spawn'")
+    expect(startChild).toContain("startedChild.on('error'")
+    expect(startChild).toContain("startedChild.on('exit'")
     expect(startChild).toContain('lastChildError')
     expect(startChild).toContain('lastChildExit')
     expect(startChild).toContain('lastChildMessageType')

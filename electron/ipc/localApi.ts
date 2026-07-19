@@ -82,6 +82,24 @@ function saveConfig(cfg: LocalApiConfig) {
 let config: LocalApiConfig = { enabled: false, token: '', port: DEFAULT_PORT }
 let child: UtilityProcess | null = null
 let listening = false
+let desiredRunning = false
+let finalShutdownRequested = false
+let childGeneration = 0
+let lifecyclePromise: Promise<void> | null = null
+let reconcileRequested = false
+let restartTimer: ReturnType<typeof setTimeout> | null = null
+let restartAttempt = 0
+const RESTART_BACKOFF_MS = [100, 500, 1_000, 2_000, 5_000] as const
+const FINAL_SHUTDOWN_EXIT_TIMEOUT_MS = 5_000
+
+interface ActiveChild {
+  process: UtilityProcess
+  generation: number
+  exitPromise: Promise<void>
+  killRequested: boolean
+}
+
+let activeChild: ActiveChild | null = null
 // Latest session pushed from the renderer; re-sent whenever the child (re)starts.
 let latestSession: SessionMessage | null = null
 let latestTimerSnapshot: TimerSnapshotMessage | null = null
@@ -117,11 +135,7 @@ function logLifecycle(event: string, details: Record<string, unknown> = {}) {
   })
 }
 
-function startChild() {
-  if (child) {
-    logLifecycle('start-skipped-already-running')
-    return
-  }
+function spawnChild() {
   const path = sidecarPath()
   lastStartAttemptAt = Date.now()
   lastSidecarPath = path
@@ -159,24 +173,38 @@ function startChild() {
     return
   }
 
-  logLifecycle('fork-returned', { childPid: child.pid })
+  const startedChild = child
+  const generation = ++childGeneration
+  let resolveExit!: () => void
+  const exitPromise = new Promise<void>((resolve) => {
+    resolveExit = resolve
+  })
+  activeChild = {
+    process: startedChild,
+    generation,
+    exitPromise,
+    killRequested: false,
+  }
+  logLifecycle('fork-returned', { childPid: startedChild.pid, generation })
 
-  child.on('spawn', () => {
-    logLifecycle('spawn', { childPid: child?.pid ?? null })
+  startedChild.on('spawn', () => {
+    logLifecycle('spawn', { childPid: startedChild.pid, generation })
   })
 
-  child.on('message', (msg: unknown) => {
+  startedChild.on('message', (msg: unknown) => {
+    if (activeChild?.process !== startedChild || activeChild.generation !== generation) return
     const m = msg as { type?: string; port?: number; operation?: string; taskId?: string }
     lastChildMessageType = typeof m?.type === 'string' ? m.type : 'unknown'
     lastChildMessageAt = Date.now()
     logLifecycle('message', { messageType: lastChildMessageType })
     if (m && m.type === 'listening') {
       listening = true
+      restartAttempt = 0
       // Forward the current session once the server is up.
-      if (latestSession) child?.postMessage({ type: 'session', ...latestSession })
-      if (latestTimerSnapshot) child?.postMessage({ type: 'timerSnapshot', snapshot: latestTimerSnapshot })
-      if (latestRendererAuthState) child?.postMessage({ type: 'rendererAuthState', state: latestRendererAuthState })
-      if (latestWorkspaceContext) child?.postMessage({ type: 'workspaceContext', ...latestWorkspaceContext })
+      if (latestSession) startedChild.postMessage({ type: 'session', ...latestSession })
+      if (latestTimerSnapshot) startedChild.postMessage({ type: 'timerSnapshot', snapshot: latestTimerSnapshot })
+      if (latestRendererAuthState) startedChild.postMessage({ type: 'rendererAuthState', state: latestRendererAuthState })
+      if (latestWorkspaceContext) startedChild.postMessage({ type: 'workspaceContext', ...latestWorkspaceContext })
     } else if (
       m?.type === 'taskMutation'
       && (m.operation === 'create' || m.operation === 'update' || m.operation === 'delete')
@@ -192,32 +220,120 @@ function startChild() {
     }
   })
 
-  child.on('error', (error) => {
+  startedChild.on('error', (error) => {
     lastChildError = { message: safeErrorMessage(error), at: Date.now() }
     logLifecycle('error', { error: lastChildError.message })
   })
 
-  child.on('exit', () => {
+  startedChild.on('exit', (code) => {
     lastChildExit = {
-      code: null,
+      code: typeof code === 'number' ? code : null,
       signal: null,
       at: Date.now(),
     }
-    logLifecycle('exit', lastChildExit)
+    const current = activeChild?.process === startedChild && activeChild.generation === generation
+    const intentionallyStopped = current && activeChild?.killRequested
+    logLifecycle(current ? 'exit' : 'stale-exit', { ...lastChildExit, generation })
+    resolveExit()
+    if (!current) return
+    activeChild = null
     child = null
     listening = false
+    if (!intentionallyStopped && desiredRunning && !finalShutdownRequested) scheduleRestart()
   })
 }
 
-function stopChild() {
-  if (!child) return
-  try {
-    child.kill()
-  } catch {
-    /* ignore */
+function scheduleRestart() {
+  if (restartTimer || finalShutdownRequested || !desiredRunning) return
+  const delay = RESTART_BACKOFF_MS[Math.min(restartAttempt, RESTART_BACKOFF_MS.length - 1)]
+  restartAttempt += 1
+  logLifecycle('restart-scheduled', { delay, restartAttempt })
+  restartTimer = setTimeout(() => {
+    restartTimer = null
+    void queueReconcile()
+  }, delay)
+}
+
+function waitForExitOrTimeout(current: ActiveChild, timeoutMs: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = (exited: boolean) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      resolve(exited)
+    }
+    const timeout = setTimeout(() => finish(false), timeoutMs)
+    void current.exitPromise.then(() => finish(true))
+  })
+}
+
+async function reconcileChildLifecycle() {
+  do {
+    reconcileRequested = false
+    const current = activeChild
+    if (finalShutdownRequested || !desiredRunning) {
+      if (current) {
+        if (!current.killRequested) {
+          current.killRequested = true
+          try {
+            current.process.kill()
+          } catch {
+            /* wait for the process exit event if kill raced with termination */
+          }
+        }
+        if (finalShutdownRequested) {
+          const exited = await waitForExitOrTimeout(current, FINAL_SHUTDOWN_EXIT_TIMEOUT_MS)
+          if (!exited && activeChild === current) {
+            logLifecycle('final-exit-timeout', {
+              generation: current.generation,
+              timeoutMs: FINAL_SHUTDOWN_EXIT_TIMEOUT_MS,
+            })
+            activeChild = null
+            child = null
+            listening = false
+          }
+        } else {
+          await current.exitPromise
+        }
+      }
+    } else if (!current) {
+      spawnChild()
+    }
+  } while (reconcileRequested)
+}
+
+function queueReconcile(): Promise<void> {
+  reconcileRequested = true
+  if (lifecyclePromise) return lifecyclePromise
+
+  const run = reconcileChildLifecycle()
+  lifecyclePromise = run
+  void run.finally(() => {
+    if (lifecyclePromise !== run) return
+    lifecyclePromise = null
+    if (reconcileRequested) void queueReconcile()
+  })
+  return run
+}
+
+function startChild() {
+  if (finalShutdownRequested) {
+    logLifecycle('start-skipped-final-shutdown')
+    return
   }
-  child = null
-  listening = false
+  desiredRunning = true
+  if (restartTimer) return
+  void queueReconcile()
+}
+
+function stopChild() {
+  desiredRunning = false
+  if (restartTimer) {
+    clearTimeout(restartTimer)
+    restartTimer = null
+  }
+  void queueReconcile()
 }
 
 function pushSession() {
@@ -356,7 +472,19 @@ export function registerLocalApiHandlers() {
   }))
 }
 
-/** Called from main on quit to tear down the sidecar. */
-export function shutdownLocalApi() {
-  stopChild()
+/** Called from main on quit to tear down the sidecar and permanently suppress restarts. */
+export async function shutdownLocalApi(): Promise<void> {
+  finalShutdownRequested = true
+  desiredRunning = false
+  if (restartTimer) {
+    clearTimeout(restartTimer)
+    restartTimer = null
+  }
+  do {
+    await queueReconcile()
+    // A request can arrive after a synchronous reconcile has returned but before
+    // its promise-finally clears the serialized lifecycle slot. Loop until the
+    // final stop has observed and reaped the active generation.
+    await Promise.resolve()
+  } while (activeChild || lifecyclePromise || reconcileRequested)
 }

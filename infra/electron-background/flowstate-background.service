@@ -1,0 +1,20 @@
+[Unit]
+Description=FlowState always-on desktop process
+After=graphical-session.target
+PartOf=graphical-session.target
+StartLimitIntervalSec=60s
+StartLimitBurst=5
+
+[Service]
+Type=simple
+Environment=HOME=%h
+Environment=XDG_CONFIG_HOME=%h/.config
+Environment=FLOWSTATE_SUPERVISED=1
+Environment=FLOWSTATE_UPDATE_EXIT_CODE=75
+ExecStart=%h/.local/bin/flowstate --background --user-data-dir=%h/.config/flow-state
+Restart=always
+RestartPreventExitStatus=75
+RestartSec=5s
+
+[Install]
+WantedBy=graphical-session.target

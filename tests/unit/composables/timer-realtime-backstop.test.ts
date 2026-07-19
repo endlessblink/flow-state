@@ -15,7 +15,7 @@
  * Source: src/composables/timer/useTimerSync.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ref, nextTick } from 'vue'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -113,6 +113,38 @@ describe('TASK-1790: follower poll as Realtime backstop', () => {
   beforeEach(() => {
     intervals.length = 0
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  describe('Wall-clock countdown boundary', () => {
+    it('catches up after delayed renderer callbacks instead of extending the session', () => {
+      let now = 1_000_000
+      vi.spyOn(Date, 'now').mockImplementation(() => now)
+      const currentSession = ref<PomodoroSession | null>({
+        id: 'renderer-delayed-countdown',
+        taskId: 'general',
+        startTime: new Date(now),
+        duration: 300,
+        remainingTime: 300,
+        isActive: true,
+        isPaused: false,
+        isBreak: false,
+      })
+      const sync = useTimerSync(makeDeps({
+        currentSession,
+        isDeviceLeader: ref(true),
+        hasLoadedSession: ref(true),
+      }))
+
+      sync.resumeCountdown()
+      now += 125_000
+      intervals[0].callback()
+
+      expect(currentSession.value?.remainingTime).toBe(175)
+    })
   })
 
   describe('Cadence', () => {

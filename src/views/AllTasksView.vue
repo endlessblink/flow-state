@@ -619,13 +619,21 @@ const handleCreateTaskFromModal = async (data: {
   priority: 'low' | 'medium' | 'high'
   dueDate?: string
   projectId?: string
+  onSettled?: (saved: boolean) => void
 }) => {
-  await createTaskWithUndo({
-    ...createTaskDefaults.value,
-    ...data,
-    status: data.status as Task['status']
-  })
-  closeCreateModal()
+  try {
+    const { onSettled: _onSettled, ...taskData } = data
+    await createTaskWithUndo({
+      ...createTaskDefaults.value,
+      ...taskData,
+      status: data.status as Task['status']
+    })
+    closeCreateModal()
+    data.onSettled?.(true)
+  } catch (error) {
+    console.error('Failed to create task:', error)
+    data.onSettled?.(false)
+  }
 }
 
 const handleContextMenu = (event: MouseEvent, task: Task) => {

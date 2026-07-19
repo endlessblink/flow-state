@@ -296,14 +296,15 @@ export function useTaskOperations(
 
             // TASK-1177: Queue for offline-first sync
             // This ensures the task persists in IndexedDB even if network fails
+            let queuePersisted = false
+            const authStore = useAuthStore()
+            const userId = authStore.user?.id
             try {
                 const syncOrchestrator = useSyncOrchestrator()
-                const authStore = useAuthStore()
                 // BUG-1184: CRITICAL - user_id is REQUIRED for RLS policy
                 // authStore exports `user` not `userId` - must use user?.id
-                const userId = authStore.user?.id
                 if (!userId) {
-                    console.warn('[SYNC] Skipping sync queue: user not authenticated; task is kept in local store/cache')
+                    console.warn('[SYNC] Skipping sync queue: user not authenticated; task requires guest storage')
                     throw new Error('SKIP_QUEUE_NO_AUTH')
                 }
                 // BUG-1516b: Use toSupabaseTask() to build the full payload so no fields
@@ -331,13 +332,28 @@ export function useTaskOperations(
                     payload: JSON.parse(JSON.stringify(payload)), // Strip all reactivity
                     baseVersion: 0
                 })
+                queuePersisted = true
             } catch (queueError) {
                 console.warn('[SYNC-QUEUE] Failed to queue create; task remains local-first and will be retried by cache/session recovery:', queueError)
             }
 
             // TASK-1428: Update IndexedDB read cache immediately. The sync queue is the
             // single remote writer; local cache keeps Electron reload/restart behavior durable.
-            cacheTasks([..._rawTasks.value])
+            try {
+                await cacheTasks([..._rawTasks.value], { throwOnError: true })
+            } catch (cacheError) {
+                console.warn('[READ-CACHE] Failed to persist newly created task:', cacheError)
+            }
+
+            // BUG-1967: The read cache is only a projection; authoritative account loads
+            // intentionally remove server-absent rows unless a durable queued intent exists.
+            // Guest mode has a separate reload path and must persist to its real localStorage.
+            if (userId && !queuePersisted) {
+                throw new Error('Task could not be saved. Please try again.')
+            }
+            if (!userId) {
+                await saveTasksToStorage([..._rawTasks.value], 'create-task-guest-durability')
+            }
 
             // Trigger canvas sync for Tauri reactivity
             triggerCanvasSync()
@@ -357,9 +373,16 @@ export function useTaskOperations(
 
             return newTask
         } catch (error) {
-            // Only reaches here if sync queue AND cache both failed (extremely unlikely)
+            // Only reaches here if sync queue AND cache both failed (extremely unlikely).
+            // Remove both the optimistic row and its echo guard so a retry starts cleanly.
             const index = _rawTasks.value.findIndex(t => t.id === taskId)
             if (index !== -1) _rawTasks.value.splice(index, 1)
+            removePendingWrite(taskId)
+            try {
+                await cacheTasks([..._rawTasks.value], { throwOnError: true })
+            } catch (rollbackCacheError) {
+                console.warn('[READ-CACHE] Failed to remove rolled-back task from cache:', rollbackCacheError)
+            }
             throw error
         } finally {
             manualOperationInProgress.value = false

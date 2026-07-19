@@ -412,6 +412,7 @@ const handleQuickTaskCreate = async (data: {
   dueDate?: string
   projectId?: string
   attachments?: TaskAttachment[]  // FEATURE-1414
+  onSettled?: (saved: boolean) => void
 }) => {
   const newTask = await createTaskForColumn(
     data.title,
@@ -423,6 +424,9 @@ const handleQuickTaskCreate = async (data: {
   )
   if (newTask) {
     closeQuickTaskCreate()
+    data.onSettled?.(true)
+  } else {
+    data.onSettled?.(false)
   }
 }
 

@@ -56,6 +56,10 @@ PlasmoidItem {
     property bool hasActiveSession: false
     property int totalSeconds: plasmoid.configuration.workDuration * 60
     property int secondsRemaining: totalSeconds
+    // Wall-clock deadline for leader countdowns. QML Timer callbacks can be
+    // delayed while Plasma is busy or the screen is idle, so callback count is
+    // not elapsed time.
+    property real countdownDeadlineMs: 0
     property bool isRunning: false
     property bool isWorkSession: true
     property int completedSessions: 0
@@ -153,8 +157,9 @@ PlasmoidItem {
     property string lastWriteCmd: ""
 
     // ===== COMPUTED =====
-    readonly property int minutes: Math.floor(secondsRemaining / 60)
-    readonly property int seconds: secondsRemaining % 60
+    readonly property int displaySecondsRemaining: Math.max(0, secondsRemaining)
+    readonly property int minutes: Math.floor(displaySecondsRemaining / 60)
+    readonly property int seconds: displaySecondsRemaining % 60
     readonly property string timeDisplay: String(minutes).padStart(2, '0') + ":" + String(seconds).padStart(2, '0')
     readonly property real progress: totalSeconds > 0 ? (1 - (secondsRemaining / totalSeconds)) : 0
 
@@ -164,6 +169,19 @@ PlasmoidItem {
     // Pre-end warning: reset each session to prevent repeat warnings
     property bool preEndWarningShown: false
     property bool checkingCompletion: false
+
+    function armCountdownDeadline() {
+        if (root.isRunning && root.hasActiveSession && root.isDeviceLeader && root.secondsRemaining > 0) {
+            root.countdownDeadlineMs = Date.now() + (root.secondsRemaining * 1000)
+        } else {
+            root.countdownDeadlineMs = 0
+        }
+    }
+
+    function syncCountdownFromClock() {
+        if (root.countdownDeadlineMs <= 0) return
+        root.secondsRemaining = Math.max(0, Math.ceil((root.countdownDeadlineMs - Date.now()) / 1000))
+    }
 
     // ===== STUCK-POPUP SAFETY NET (dock-freeze fix) =====
     // Each always-on-top Window can cover the dock if a dismiss path is missed.
@@ -3919,16 +3937,18 @@ PlasmoidItem {
         running: root.isRunning && root.hasActiveSession && root.isDeviceLeader
         repeat: true
         onTriggered: {
-            if (root.secondsRemaining > 0) {
-                root.secondsRemaining--
-                // Pre-end warning check
-                var warningSeconds = plasmoid.configuration.preEndWarningSeconds || 0
-                if (warningSeconds > 0 && !root.preEndWarningShown && root.secondsRemaining <= warningSeconds && root.secondsRemaining > 0) {
-                    root.preEndWarningShown = true
-                    root.showPreEndWarning()
-                }
-            } else {
+            if (root.countdownDeadlineMs <= 0) root.armCountdownDeadline()
+            root.syncCountdownFromClock()
+            if (root.secondsRemaining <= 0) {
                 root.onSessionComplete()
+                return
+            }
+
+            // Pre-end warning check
+            var warningSeconds = plasmoid.configuration.preEndWarningSeconds || 0
+            if (warningSeconds > 0 && !root.preEndWarningShown && root.secondsRemaining <= warningSeconds) {
+                root.preEndWarningShown = true
+                root.showPreEndWarning()
             }
         }
     }
@@ -3977,7 +3997,15 @@ PlasmoidItem {
     }
 
     // Update current block immediately when timer starts/stops
-    onIsRunningChanged: updateCurrentBlock()
+    onIsRunningChanged: {
+        updateCurrentBlock()
+        if (root.isRunning) root.armCountdownDeadline()
+        else root.countdownDeadlineMs = 0
+    }
+    onIsDeviceLeaderChanged: {
+        if (root.isDeviceLeader && root.isRunning) root.armCountdownDeadline()
+        else if (!root.isDeviceLeader) root.countdownDeadlineMs = 0
+    }
     onCurrentTaskIdChanged: updateCurrentBlock()
 
     // BUG-1347: Timer to clear transition state (replaces Date.now() < transitionUntil)
@@ -4282,6 +4310,27 @@ PlasmoidItem {
 
     // ===== TIMER SESSION FUNCTIONS =====
 
+    function clearActiveSessionState(resetToReady) {
+        if (root.hasActiveSession) {
+            root.nannyLastSessionEndTime = Date.now()
+        }
+        root.hasActiveSession = false
+        root.currentSessionId = ""
+        root.currentTaskId = ""
+        root._cachedActiveTaskId = ""
+        root._cachedActiveTaskName = ""
+        root.isRunning = false
+        root.isDeviceLeader = false
+        root.countdownDeadlineMs = 0
+        if (resetToReady) {
+            root.sessionJustCompleted = false
+            root.isWorkSession = true
+            root.totalSeconds = plasmoid.configuration.workDuration * 60
+            root.secondsRemaining = root.totalSeconds
+        }
+        root.writeActiveTaskFile()
+    }
+
     // BUG: Detect session completion by another device (follower mode)
     // Called when we had an active session but polling returns empty (is_active=eq.true returns nothing)
     // Does a one-time check to see if the session completed naturally vs was manually stopped
@@ -4299,6 +4348,11 @@ PlasmoidItem {
         xhr.setRequestHeader("Authorization", "Bearer " + root.accessToken)
 
         xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE && root.currentSessionId !== sessionId) {
+                // The response belongs to an older timer. Never complete or clear a newer one.
+                root.checkingCompletion = false
+                return
+            }
             if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                 var sessions = JSON.parse(xhr.responseText)
                 if (sessions.length > 0) {
@@ -4320,36 +4374,19 @@ PlasmoidItem {
                     } else {
                         // Session was manually stopped - clear silently
                         console.log("[SYNC] Session was manually stopped - clearing silently")
-                        root.hasActiveSession = false
-                        root.currentSessionId = ""
-                        root.currentTaskId = ""
-                        root.isRunning = false
-                        root.isDeviceLeader = false
-                        root.nannyLastSessionEndTime = Date.now()  // TASK-1424
-                        root.writeActiveTaskFile()
+                        root.clearActiveSessionState(true)
                         root.checkingCompletion = false
                     }
                 } else {
                     // Session not found at all - clear silently
                     console.log("[SYNC] Session not found - clearing silently")
-                    root.hasActiveSession = false
-                    root.currentSessionId = ""
-                    root.currentTaskId = ""
-                    root.isRunning = false
-                    root.isDeviceLeader = false
-                    root.nannyLastSessionEndTime = Date.now()  // TASK-1424
-                    root.writeActiveTaskFile()
+                    root.clearActiveSessionState(true)
                     root.checkingCompletion = false
                 }
             } else if (xhr.readyState === XMLHttpRequest.DONE) {
                 console.warn("[SYNC] Session check failed:", xhr.status)
                 // On error, fall through to normal clear
-                root.hasActiveSession = false
-                root.currentSessionId = ""
-                root.currentTaskId = ""
-                root.isRunning = false
-                root.isDeviceLeader = false
-                root.writeActiveTaskFile()
+                root.clearActiveSessionState(true)
                 root.checkingCompletion = false
             }
         }
@@ -4358,6 +4395,7 @@ PlasmoidItem {
 
     function applyFetchedSession(s, source) {
         if (root.debugLogging) console.log("[SYNC] Session (" + source + "):", s.id, "remaining:", s.remaining_time, "leader:", s.device_leader_id, "task:", s.task_id)
+        var sessionChanged = s.id !== root.currentSessionId
         root.currentSessionId = s.id
         var newTaskId = s.task_id || ""
         if (newTaskId !== root.currentTaskId) {
@@ -4407,8 +4445,8 @@ PlasmoidItem {
         if (shouldBeLeader) {
             // Widget is leader - only update if we're not actively counting
             // This prevents sync from overwriting our local countdown
-            if (!root.isRunning) {
-                root.secondsRemaining = s.remaining_time
+            if (!root.isRunning || sessionChanged) {
+                root.secondsRemaining = Math.max(0, s.remaining_time || 0)
             }
         } else {
             // Widget is follower - use DB value with drift correction
@@ -4423,10 +4461,11 @@ PlasmoidItem {
                 }
             }
 
-            root.secondsRemaining = baseTime
+            root.secondsRemaining = Math.max(0, baseTime || 0)
         }
 
         root.isRunning = s.is_active && !s.is_paused
+        if (shouldBeLeader && root.isRunning && sessionChanged) root.armCountdownDeadline()
         root.writeActiveTaskFile()
     }
 
@@ -4442,18 +4481,7 @@ PlasmoidItem {
             checkSessionCompletion(root.currentSessionId, root.isWorkSession)
             // Don't clear state here - checkSessionCompletion will handle it
         } else {
-            // Only update nanny timestamp on actual transition (had session → no session)
-            if (root.hasActiveSession) {
-                root.nannyLastSessionEndTime = Date.now()  // TASK-1424
-            }
-            root.hasActiveSession = false
-            root.currentSessionId = ""
-            root.currentTaskId = ""  // TASK-1087: Clear active task
-            root._cachedActiveTaskId = ""
-            root._cachedActiveTaskName = ""
-            root.isRunning = false
-            root.isDeviceLeader = false
-            root.writeActiveTaskFile()
+            root.clearActiveSessionState(true)
         }
     }
 
@@ -4467,7 +4495,13 @@ PlasmoidItem {
                 if (body.active && body.session) {
                     applyFetchedSession(body.session, "local-api")
                 } else {
-                    fallback()
+                    // A known completed ID is safe to clear immediately. An unseen inactive
+                    // snapshot still needs the server completion check so its alert is not lost.
+                    if (root.currentSessionId && root.currentSessionId === root.lastCompletedSessionId) {
+                        root.clearActiveSessionState(true)
+                    } else {
+                        fallback()
+                    }
                 }
                 return
             }
@@ -4540,6 +4574,7 @@ PlasmoidItem {
                     device_leader_id: "kde-widget",
                     device_leader_last_seen: new Date().toISOString()
                 })
+                if (root.isRunning) root.syncCountdownFromClock()
                 root.isRunning = !root.isRunning
                 root.isDeviceLeader = true  // Widget takes control
             })
@@ -4786,6 +4821,7 @@ PlasmoidItem {
         // has a different lastCompletedSessionId, so this never blocks a legitimate completion.
         if (root.currentSessionId && root.currentSessionId === root.lastCompletedSessionId) {
             console.log("[TIMER] Session " + root.currentSessionId + " already completed - ignoring re-fire")
+            root.clearActiveSessionState(true)
             return
         }
         root.isRunning = false
@@ -4968,6 +5004,11 @@ PlasmoidItem {
 
     function sendHeartbeat() {
         if (!root.currentSessionId || !root.isRunning) return
+
+        // Timer callbacks and heartbeat callbacks can be dispatched in either
+        // order after Plasma is delayed. Reconcile from the deadline before
+        // stamping this heartbeat as fresh authority.
+        root.syncCountdownFromClock()
 
         patchSession({
             remaining_time: root.secondsRemaining,

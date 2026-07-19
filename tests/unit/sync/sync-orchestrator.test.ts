@@ -834,6 +834,42 @@ describe('canonical task patch queue', () => {
 // 1. EXECUTE OPERATION — CREATE
 // ===========================================================================
 describe('executeOperation: CREATE', () => {
+  it('keeps a task create pending when the server returns no saved row', async () => {
+    const op = makeOp({
+      id: 411,
+      operation: 'create',
+      entityType: 'task',
+      entityId: 'task-empty-create',
+      payload: { id: 'task-empty-create', title: 'Must be acknowledged' }
+    })
+    const taskChain = mockSupabaseChain({ selectData: [] })
+    supabaseMock.fromMock.mockImplementation((table: string) => {
+      if (table === 'tombstones') {
+        const tombChain: Record<string, any> = {}
+        tombChain.select = vi.fn().mockReturnValue(tombChain)
+        tombChain.eq = vi.fn().mockReturnValue(tombChain)
+        tombChain.limit = vi.fn().mockReturnValue(tombChain)
+        tombChain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
+        return tombChain
+      }
+      return taskChain
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed'
+    })
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(taskChain.upsert).toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(411)
+    expect(taskStoreMock.removePendingWrite).not.toHaveBeenCalledWith('task-empty-create')
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(411, expect.any(String), expect.any(Number))
+  })
+
   it('uses upsert with onConflict: id (BUG-1212 fix)', async () => {
     const chain = mockSupabaseChain()
     const op = makeOp({ operation: 'create', entityType: 'task', entityId: 'task-new' })

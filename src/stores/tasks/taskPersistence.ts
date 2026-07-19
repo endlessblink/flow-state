@@ -94,6 +94,7 @@ export function useTaskPersistence(
             }
         } catch (e) {
             console.error('❌ [GUEST-MODE] Failed to save tasks to localStorage:', e)
+            throw e
         }
     }
 

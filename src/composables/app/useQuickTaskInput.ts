@@ -6,6 +6,8 @@ import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useFilterDefaults } from '@/composables/tasks/useFilterDefaults'
 import { SUCCESS_FLASH_DURATION_MS } from '@/config/timing'
 
+const CANVAS_CREATE_ACK_TIMEOUT_MS = 15_000
+
 export function useQuickTaskInput() {
   const { t } = useI18n()
   const route = useRoute()
@@ -21,6 +23,7 @@ export function useQuickTaskInput() {
   const quickTaskFocused = ref(false)
   const showFullscreenCreator = ref(false)
   const showSuccessFlash = ref(false)
+  const isQuickTaskSubmitting = ref(false)
 
   // TASK-1324: Quick task metadata (date + priority)
   const quickTaskDueDate = ref<string | null>(null)
@@ -102,6 +105,7 @@ export function useQuickTaskInput() {
     priority: 'low' | 'medium' | 'high'
     dueDate?: string
     projectId?: string
+    onSettled?: (saved: boolean) => void
   }) => {
     try {
       await taskStore.createTaskWithUndo({
@@ -119,8 +123,10 @@ export function useQuickTaskInput() {
       showFullscreenCreator.value = false
       showSuccessFlash.value = true
       setTimeout(() => { showSuccessFlash.value = false }, SUCCESS_FLASH_DURATION_MS)
+      data.onSettled?.(true)
     } catch (error) {
       console.error('Error creating task from fullscreen:', error)
+      data.onSettled?.(false)
     }
   }
 
@@ -251,48 +257,72 @@ export function useQuickTaskInput() {
   }
 
   const createQuickTask = async () => {
-    if (!quickTaskText.value.trim()) return
+    if (!quickTaskText.value.trim() || isQuickTaskSubmitting.value) return
 
-    const title = quickTaskText.value.trim()
+    const submittedText = quickTaskText.value
+    const submittedDueDate = quickTaskDueDate.value
+    const submittedPriority = quickTaskPriority.value
+    const title = submittedText.trim()
+    isQuickTaskSubmitting.value = true
 
-    // When on canvas view, dispatch event so CanvasView handles creation at viewport center
-    if (route.path === '/canvas') {
-      window.dispatchEvent(new CustomEvent('sidebar-quick-task-create', {
-        detail: {
-          ...filterDefaults.value,
-          title,
-          description: '',
-          status: 'todo',
-          priority: quickTaskPriority.value || 'medium',
-          dueDate: quickTaskDueDate.value || undefined,
-        }
-      }))
-      quickTaskText.value = ''
-      quickTaskDueDate.value = null
-      quickTaskPriority.value = null
-      showSuccessFlash.value = true
-      setTimeout(() => { showSuccessFlash.value = false }, SUCCESS_FLASH_DURATION_MS)
-      return
-    }
-
-    // Default: create inbox task
     try {
+      // When on canvas view, dispatch event so CanvasView handles creation at viewport center
+      if (route.path === '/canvas') {
+        await new Promise<void>((resolve, reject) => {
+          let settled = false
+          const settle = (saved: boolean, error?: Error) => {
+            if (settled) return
+            settled = true
+            window.clearTimeout(timeoutId)
+            if (saved) resolve()
+            else reject(error || new Error('Canvas task was not saved'))
+          }
+          const timeoutId = window.setTimeout(
+            () => settle(false, new Error('Canvas task creation acknowledgement timed out')),
+            CANVAS_CREATE_ACK_TIMEOUT_MS
+          )
+          const event = new CustomEvent('sidebar-quick-task-create', {
+            cancelable: true,
+            detail: {
+              ...filterDefaults.value,
+              title,
+              description: '',
+              status: 'todo',
+              priority: submittedPriority || 'medium',
+              dueDate: submittedDueDate || undefined,
+              onComplete: (saved: boolean) => settle(saved),
+            }
+          })
+          const handled = !window.dispatchEvent(event)
+          if (!handled) settle(false, new Error('Canvas task creation is unavailable'))
+        })
+        if (quickTaskText.value === submittedText) quickTaskText.value = ''
+        if (quickTaskDueDate.value === submittedDueDate) quickTaskDueDate.value = null
+        if (quickTaskPriority.value === submittedPriority) quickTaskPriority.value = null
+        showSuccessFlash.value = true
+        setTimeout(() => { showSuccessFlash.value = false }, SUCCESS_FLASH_DURATION_MS)
+        return
+      }
+
+      // Default: create inbox task
       await taskStore.createTaskWithUndo({
         ...filterDefaults.value,
         title,
         description: '',
         status: 'todo',
-        ...(quickTaskDueDate.value && { dueDate: quickTaskDueDate.value }),
-        ...(quickTaskPriority.value && { priority: quickTaskPriority.value })
+        ...(submittedDueDate && { dueDate: submittedDueDate }),
+        ...(submittedPriority && { priority: submittedPriority })
       })
-      quickTaskText.value = ''
-      quickTaskDueDate.value = null
-      quickTaskPriority.value = null
+      if (quickTaskText.value === submittedText) quickTaskText.value = ''
+      if (quickTaskDueDate.value === submittedDueDate) quickTaskDueDate.value = null
+      if (quickTaskPriority.value === submittedPriority) quickTaskPriority.value = null
       // Visual confirmation flash
       showSuccessFlash.value = true
       setTimeout(() => { showSuccessFlash.value = false }, SUCCESS_FLASH_DURATION_MS)
     } catch (error) {
-      console.error('Error creating quick task:', error)
+      console.error(route.path === '/canvas' ? 'Error creating quick task on canvas:' : 'Error creating quick task:', error)
+    } finally {
+      isQuickTaskSubmitting.value = false
     }
   }
 
@@ -312,6 +342,7 @@ export function useQuickTaskInput() {
     quickTaskDirection,
     showFullscreenCreator,
     showSuccessFlash,
+    isQuickTaskSubmitting,
     quickTaskDueDate,
     quickTaskPriority,
     showDatePicker,

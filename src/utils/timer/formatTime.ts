@@ -2,8 +2,11 @@
  * Format seconds into MM:SS display string
  */
 export function formatTime(totalSeconds: number): string {
-    const minutes = Math.floor(totalSeconds / 60)
-    const seconds = totalSeconds % 60
+    const safeSeconds = Number.isFinite(totalSeconds)
+        ? Math.max(0, Math.floor(totalSeconds))
+        : 0
+    const minutes = Math.floor(safeSeconds / 60)
+    const seconds = safeSeconds % 60
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 

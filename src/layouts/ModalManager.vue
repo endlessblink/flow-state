@@ -516,6 +516,7 @@ const handleQuickTaskCreate = async (data: {
   dueDate?: string
   projectId?: string
   attachments?: TaskAttachment[]  // FEATURE-1414
+  onSettled?: (saved: boolean) => void
 }) => {
   try {
     await taskStore.createTaskWithUndo({
@@ -528,8 +529,10 @@ const handleQuickTaskCreate = async (data: {
       attachments: data.attachments
     })
     closeQuickTaskCreate()
+    data.onSettled?.(true)
   } catch (error) {
     console.error('Failed to create task:', error)
+    data.onSettled?.(false)
   }
 }
 

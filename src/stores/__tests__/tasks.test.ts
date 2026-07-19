@@ -39,6 +39,19 @@ describe('TaskStore', () => {
       expect(task.projectId).toBe('uncategorized')
     })
 
+    it('persists guest task creation through the guest reload store', async () => {
+      localStorage.removeItem('flowstate-guest-tasks')
+      const store = useTaskStore()
+
+      const task = await store.createTask({ title: 'Guest task survives reload' })
+
+      const persisted = JSON.parse(localStorage.getItem('flowstate-guest-tasks') || '[]')
+      expect(persisted).toContainEqual(expect.objectContaining({
+        id: task.id,
+        title: 'Guest task survives reload'
+      }))
+    })
+
     it('rejects blank titles when creating tasks', async () => {
       const store = useTaskStore()
 

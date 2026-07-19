@@ -76,18 +76,28 @@ export function useTimerSync(deps: TimerSyncDeps) {
   // CRITICAL: useIntervalFn calls MUST be at top level of composable for proper
   // Vue effect scope registration and cleanup.
 
-  const { pause: pauseCountdown, resume: resumeCountdown } = useIntervalFn(() => {
+  let countdownDeadlineMs = 0
+  let countdownSessionId: string | null = null
+  const countdownInterval = useIntervalFn(() => {
     const session = currentSession.value
     if (session && session.isActive && !session.isPaused) {
-      session.remainingTime -= 1
+      if (countdownSessionId !== session.id || countdownDeadlineMs <= 0) {
+        countdownSessionId = session.id
+        countdownDeadlineMs = Date.now() + (Math.max(0, session.remainingTime) * 1000)
+      }
+      session.remainingTime = Math.max(0, Math.ceil((countdownDeadlineMs - Date.now()) / 1000))
       if (session.remainingTime % 5 === 0 && isDeviceLeader.value) broadcastSession()
       if (session.remainingTime <= 0) {
+        // Stop at the boundary before handing completion to async store work.
+        // A previous session may still be persisting or showing its notification;
+        // the visible timer must never keep ticking into negative values while
+        // that work settles.
+        pauseCountdown()
         if (isDeviceLeader.value) {
           onCountdownComplete()
         } else {
           // BUG-1315: Followers must NOT call completeSession independently.
           // Pause local countdown and wait for leader's Realtime event.
-          pauseCountdown()
           if (import.meta.env.DEV) {
             console.log('🍅 [TIMER] Follower reached 0 - pausing, waiting for leader completion via Realtime')
           }
@@ -95,6 +105,19 @@ export function useTimerSync(deps: TimerSyncDeps) {
       }
     }
   }, 1000, { immediate: false })
+
+  function pauseCountdown() {
+    countdownInterval.pause()
+  }
+
+  function resumeCountdown() {
+    const session = currentSession.value
+    if (session) {
+      countdownSessionId = session.id
+      countdownDeadlineMs = Date.now() + (Math.max(0, session.remainingTime) * 1000)
+    }
+    countdownInterval.resume()
+  }
 
   // BUG-1411: Guard against overlapping heartbeat saves when network is slow
   let isSaving = false

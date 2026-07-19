@@ -186,13 +186,17 @@ export function useSidebarManagement() {
       // Use the unified undo system
       const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
       const undoRedoActions = useUnifiedUndoRedo()
-      undoRedoActions.createTaskWithUndo({
-        title: newTaskTitle.value.trim(),
-        description: '',
-        status: 'todo',
-        projectId: undefined // ✅ FIXED: Use undefined instead of forbidden '1'
-      })
-      newTaskTitle.value = ''
+      try {
+        await undoRedoActions.createTaskWithUndo({
+          title: newTaskTitle.value.trim(),
+          description: '',
+          status: 'todo',
+          projectId: undefined // ✅ FIXED: Use undefined instead of forbidden '1'
+        })
+        newTaskTitle.value = ''
+      } catch (error) {
+        console.error('Failed to create sidebar task:', error)
+      }
     }
   }
 

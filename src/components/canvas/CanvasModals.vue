@@ -13,7 +13,7 @@
     :loading="false"
     :inherited-props="modals.groupInheritedProps"
     @cancel="modals.closeQuickTaskCreate"
-    @create="handleQuickTaskCreateAndClose"
+    @create="handleQuickTaskCreate"
   />
 
   <!-- Batch Edit Modal -->
@@ -94,6 +94,7 @@ interface QuickTaskData {
   dueDate?: string
   projectId?: string
   attachments?: TaskAttachment[]  // FEATURE-1414
+  onSettled?: (saved: boolean) => void
 }
 
 const emit = defineEmits<{
@@ -109,10 +110,10 @@ const emit = defineEmits<{
 
 const modals = useCanvasModalsStore()
 
-// FIX: Handle quick task create - emit full data AND close modal
-const handleQuickTaskCreateAndClose = (data: QuickTaskData) => {
+// The async owner closes only after createTask has reached durable storage.
+// Closing here would make a failed optimistic create look successful.
+const handleQuickTaskCreate = (data: QuickTaskData) => {
   emit('handleQuickTaskCreate', data)
-  modals.closeQuickTaskCreate()
 }
 
 // BUG-1074 FIX: Use explicit emit function to ensure proper event propagation

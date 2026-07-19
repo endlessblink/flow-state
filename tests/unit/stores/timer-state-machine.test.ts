@@ -24,6 +24,7 @@ const {
   mockReleaseWakeLock,
   mockEnqueue,
   mockSyncLocalApiTimerSnapshot,
+  mockShowTimerNotification,
   mockAuthState,
 } = vi.hoisted(() => ({
   mockFetchActiveTimerSession: vi.fn(),
@@ -36,6 +37,7 @@ const {
   mockReleaseWakeLock: vi.fn(),
   mockEnqueue: vi.fn().mockResolvedValue({ id: 1, status: 'pending' }),
   mockSyncLocalApiTimerSnapshot: vi.fn(),
+  mockShowTimerNotification: vi.fn().mockResolvedValue(undefined),
   mockAuthState: {
     isAuthenticated: true,
     canSyncRemotely: true,
@@ -136,7 +138,7 @@ vi.mock('@/utils/supabaseMappers', () => ({
 
 vi.mock('@/composables/timer/useTimerNotifications', () => ({
   useTimerNotifications: () => ({
-    showTimerNotification: vi.fn().mockResolvedValue(undefined),
+    showTimerNotification: mockShowTimerNotification,
     requestNotificationPermission: vi.fn().mockResolvedValue(undefined),
     setupServiceWorkerListener: vi.fn(),
     cleanupServiceWorkerListener: vi.fn(),
@@ -165,6 +167,7 @@ beforeEach(() => {
   mockAuthState.isAuthenticated = true
   mockAuthState.canSyncRemotely = true
   mockAuthState.user = { id: 'test-user-id' }
+  mockShowTimerNotification.mockReset().mockResolvedValue(undefined)
 })
 
 // ============================================================================
@@ -679,6 +682,39 @@ describe('Timer State Machine — Session Completion', () => {
     expect(mockSaveActiveTimerSession).toHaveBeenCalled()
     expect(store.currentSession).toBeNull()
     expect(mockSyncLocalApiTimerSnapshot).toHaveBeenCalledWith(null, expect.any(String))
+  })
+
+  it('26. a same-session extension completes while the previous notification is still pending', async () => {
+    const store = useTimerStore()
+    await flushPromises()
+    const hangingNotification = new Promise<void>(() => {})
+    mockShowTimerNotification
+      .mockReturnValueOnce(hangingNotification)
+      .mockResolvedValueOnce(undefined)
+
+    store.currentSession = {
+      id: 'session-still-notifying',
+      taskId: 'general',
+      startTime: new Date('2026-03-21T10:00:00.000Z'),
+      duration: 1,
+      remainingTime: 0,
+      isActive: true,
+      isPaused: false,
+      isBreak: false,
+    }
+
+    void store.completeSession()
+    await flushPromises()
+    expect(store.currentSession).toBeNull()
+
+    await store.addExtraTime(1)
+    expect(store.currentSession?.id).toBe('session-still-notifying')
+    await vi.advanceTimersByTimeAsync(2000)
+    await flushPromises()
+
+    expect(store.currentSession).toBeNull()
+    expect(store.displayTime).not.toMatch(/-/)
+    expect(mockShowTimerNotification).toHaveBeenCalledTimes(2)
   })
 })
 

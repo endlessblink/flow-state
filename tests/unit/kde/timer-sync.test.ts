@@ -99,6 +99,14 @@ function isSessionComplete(secondsRemaining: number): boolean {
   return secondsRemaining <= 0
 }
 
+function remainingFromDeadline(deadlineMs: number, nowMs: number): number {
+  return Math.max(0, Math.ceil((deadlineMs - nowMs) / 1000))
+}
+
+function safeRemaining(secondsRemaining: number): number {
+  return Math.max(0, Number.isFinite(secondsRemaining) ? secondsRemaining : 0)
+}
+
 // --- Toggle pause/resume (lines 4356-4368) ---
 function toggleIsRunning(isRunning: boolean): boolean {
   return !isRunning
@@ -129,6 +137,44 @@ function resolveTaskName(currentTaskId: string, tasks: TaskEntry[]): string {
 // ---------------------------------------------------------------------------
 
 describe('TASK-1652: KDE Timer Sync', () => {
+  describe('Wall-clock countdown boundary', () => {
+    it('catches up after delayed Plasma callbacks instead of extending the session', () => {
+      const startedAt = 1_000_000
+      const deadline = startedAt + (300 * 1000)
+
+      expect(remainingFromDeadline(deadline, startedAt + (125 * 1000))).toBe(175)
+      expect(remainingFromDeadline(deadline, startedAt + (300 * 1000))).toBe(0)
+      expect(remainingFromDeadline(deadline, startedAt + (425 * 1000))).toBe(0)
+    })
+
+    it('main.qml derives leader remaining time from Date.now and never decrements per callback', () => {
+      const timerStart = MAIN_QML.indexOf('id: countdownTimer')
+      expect(timerStart, 'countdownTimer not found').toBeGreaterThan(-1)
+      const timerBlock = MAIN_QML.slice(timerStart, timerStart + 1200)
+
+      expect(MAIN_QML).toContain('countdownDeadlineMs = Date.now() + (root.secondsRemaining * 1000)')
+      expect(MAIN_QML).toContain('Math.ceil((root.countdownDeadlineMs - Date.now()) / 1000)')
+      expect(timerBlock).not.toContain('secondsRemaining--')
+      expect(timerBlock).toContain('root.onSessionComplete()')
+    })
+
+    it('clamps negative fetched follower or paused values before display', () => {
+      expect(safeRemaining(-3)).toBe(0)
+      expect(MAIN_QML).toContain('readonly property int displaySecondsRemaining: Math.max(0, secondsRemaining)')
+      expect(MAIN_QML).toContain('root.secondsRemaining = Math.max(0, s.remaining_time || 0)')
+      expect(MAIN_QML).toContain('root.secondsRemaining = Math.max(0, baseTime || 0)')
+    })
+
+    it('reconciles elapsed wall time before publishing a fresh KDE heartbeat', () => {
+      const heartbeatStart = MAIN_QML.indexOf('function sendHeartbeat()')
+      expect(heartbeatStart, 'sendHeartbeat not found').toBeGreaterThan(-1)
+      const heartbeatBlock = MAIN_QML.slice(heartbeatStart, heartbeatStart + 700)
+      expect(heartbeatBlock.indexOf('root.syncCountdownFromClock()')).toBeGreaterThan(-1)
+      expect(heartbeatBlock.indexOf('root.syncCountdownFromClock()'))
+        .toBeLessThan(heartbeatBlock.indexOf('patchSession({'))
+    })
+  })
+
   describe('Poll interval', () => {
     it('1. poll interval is 2000ms when hasActiveSession is true', () => {
       expect(getPollInterval(true, false, false)).toBe(2000)
@@ -206,14 +252,15 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(body).toContain('fallback()')
     })
 
-    it('2. local inactive timer payloads fall through to Supabase completion detection instead of clearing ready', () => {
+    it('2. clears a known completed local snapshot but preserves completion detection for unseen sessions', () => {
       const localFnStart = MAIN_QML.indexOf('function fetchLocalCurrentSession(')
       expect(localFnStart, 'fetchLocalCurrentSession not found').toBeGreaterThan(-1)
       const body = MAIN_QML.slice(localFnStart, localFnStart + 2500)
       const inactiveBranch = body.slice(body.indexOf('} else {'), body.indexOf('return', body.indexOf('} else {')))
 
+      expect(inactiveBranch).toContain('root.currentSessionId === root.lastCompletedSessionId')
+      expect(inactiveBranch).toContain('clearActiveSessionState(true)')
       expect(inactiveBranch).toContain('fallback()')
-      expect(inactiveBranch).not.toContain('handleNoActiveSession()')
     })
 
     it('2. accepts Electron renderer-owned local-snapshot responses without requiring Supabase auth', () => {
@@ -236,9 +283,41 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(localFnStart, 'fetchLocalCurrentSession not found').toBeGreaterThan(-1)
       const localBody = MAIN_QML.slice(localFnStart, localFnStart + 2500)
 
+      expect(localBody).toContain('clearActiveSessionState(true)')
       expect(localBody).toContain('fallback()')
       expect(serverSource).toContain('LOCAL_TIMER_INACTIVE_GRACE_MS')
       expect(serverSource).toContain('snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS')
+    })
+
+    it('2. clears a completed session even when its notification was already delivered', () => {
+      const completeFnStart = MAIN_QML.indexOf('function onSessionComplete(')
+      expect(completeFnStart, 'onSessionComplete not found').toBeGreaterThan(-1)
+      const body = MAIN_QML.slice(completeFnStart, completeFnStart + 1200)
+      const duplicateGuardStart = body.indexOf('root.currentSessionId === root.lastCompletedSessionId')
+      const duplicateGuard = body.slice(duplicateGuardStart, body.indexOf('return', duplicateGuardStart))
+
+      expect(duplicateGuard).toContain('clearActiveSessionState(true)')
+      expect(MAIN_QML).toContain('function clearActiveSessionState(resetToReady)')
+    })
+
+    it('2. ignores a delayed completion check after a newer session has started', () => {
+      const checkFnStart = MAIN_QML.indexOf('function checkSessionCompletion(')
+      expect(checkFnStart, 'checkSessionCompletion not found').toBeGreaterThan(-1)
+      const body = MAIN_QML.slice(checkFnStart, checkFnStart + 1800)
+
+      expect(body).toContain('root.currentSessionId !== sessionId')
+      expect(body.indexOf('root.currentSessionId !== sessionId'))
+        .toBeLessThan(body.indexOf('var sessions = JSON.parse(xhr.responseText)'))
+    })
+
+    it('2. preserves completed-session metadata when returning the widget to ready', () => {
+      const clearFnStart = MAIN_QML.indexOf('function clearActiveSessionState(')
+      expect(clearFnStart, 'clearActiveSessionState not found').toBeGreaterThan(-1)
+      const body = MAIN_QML.slice(clearFnStart, clearFnStart + 900)
+
+      expect(body).not.toContain('lastCompletedSessionId = ""')
+      expect(body).not.toContain('lastCompletedDuration = 0')
+      expect(body).not.toContain('lastCompletedTaskId = "general"')
     })
 
     it('2. fetchCurrentSession queries timer_sessions with is_active=eq.true', () => {

@@ -16,6 +16,7 @@ import { createMockTask } from '../../factories'
 // ============================================================================
 
 const mockEnqueue = vi.fn().mockResolvedValue({ id: 1, status: 'pending' })
+const mockCacheTasks = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 
 vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
   useSyncOrchestrator: () => ({
@@ -102,7 +103,7 @@ vi.mock('@/composables/useToast', () => ({
 }))
 
 vi.mock('@/services/offline/readCacheDB', () => ({
-  cacheTasks: vi.fn().mockResolvedValue(undefined),
+  cacheTasks: mockCacheTasks,
   cacheProjects: vi.fn().mockResolvedValue(undefined)
 }))
 
@@ -128,6 +129,7 @@ describe('Task Store — CRUD', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     mockEnqueue.mockResolvedValue({ id: 1, status: 'pending' })
+    mockCacheTasks.mockResolvedValue(undefined)
     mockSaveTasks.mockResolvedValue(undefined)
     mockDeleteTask.mockResolvedValue(undefined)
   })
@@ -147,6 +149,24 @@ describe('Task Store — CRUD', () => {
     expect(task.isInInbox).toBe(true)
     expect(task.createdAt).toBeInstanceOf(Date)
     expect(task.updatedAt).toBeInstanceOf(Date)
+  })
+
+  it('does not treat the read cache as durable intent when the authenticated queue rejects', async () => {
+    mockEnqueue.mockRejectedValueOnce(new Error('queue unavailable'))
+    const store = useTaskStore()
+
+    await expect(store.createTask({ title: 'Must survive refresh' })).rejects.toThrow(
+      'Task could not be saved'
+    )
+
+    expect(store._rawTasks).not.toContainEqual(
+      expect.objectContaining({ title: 'Must survive refresh' })
+    )
+    expect(mockCacheTasks).toHaveBeenCalled()
+    expect(mockCacheTasks).toHaveBeenLastCalledWith(
+      expect.not.arrayContaining([expect.objectContaining({ title: 'Must survive refresh' })]),
+      { throwOnError: true }
+    )
   })
 
   it('creates task with all fields preserved', async () => {

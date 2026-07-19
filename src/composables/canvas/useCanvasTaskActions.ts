@@ -202,11 +202,12 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
         dueDate?: string
         projectId?: string
         attachments?: TaskAttachment[]  // FEATURE-1414
+        onSettled?: (saved: boolean) => void
     }
 
     const handleQuickTaskCreate = async (data: QuickTaskData) => {
         try {
-            if (!data.title?.trim()) return
+            if (!data.title?.trim()) return false
 
             const isDefaultPosition = quickTaskPosition.value.x === 0 && quickTaskPosition.value.y === 0
             const shouldCreateInInbox = isDefaultPosition
@@ -245,12 +246,17 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
                 deps.syncNodes()
             }
 
-        } catch (error) {
-            console.error('Failed to create task', error)
-        } finally {
-            // Always close modal, even on error
             isQuickTaskCreateOpen.value = false
             quickTaskPosition.value = { x: 0, y: 0 }
+            data.onSettled?.(true)
+            return true
+
+        } catch (error) {
+            console.error('Failed to create task', error)
+            const { showToast } = useToast()
+            showToast('Task could not be saved. Your draft is still open — please try again.', 'error')
+            data.onSettled?.(false)
+            return false
         }
     }
 

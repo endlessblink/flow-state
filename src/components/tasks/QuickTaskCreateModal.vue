@@ -5,9 +5,9 @@
     description="Enter task details"
     size="md"
     :show-footer="false"
-    close-on-overlay-click
-    close-on-escape
-    @close="$emit('cancel')"
+    :close-on-overlay-click="!isSubmitting"
+    :close-on-escape="!isSubmitting"
+    @close="handleCancel"
     @after-open="handleAfterOpen"
   >
     <!-- Task Form -->
@@ -27,7 +27,7 @@
           maxlength="200"
           dir="auto"
           @keydown.enter="handleCreateTask"
-          @keydown.esc="$emit('cancel')"
+          @keydown.esc="handleCancel"
           @paste="handlePaste"
         >
 
@@ -168,13 +168,18 @@
 
       <!-- Actions -->
       <div class="actions-row">
-        <button class="cancel-btn" type="button" @click="$emit('cancel')">
+        <button
+          class="cancel-btn"
+          type="button"
+          :disabled="isSubmitting"
+          @click="handleCancel"
+        >
           Cancel
         </button>
         <button
           class="create-btn"
           type="button"
-          :disabled="!taskTitle.trim()"
+          :disabled="!taskTitle.trim() || isSubmitting || loading"
           @click="handleCreateTask"
         >
           Add task
@@ -228,6 +233,7 @@ const emit = defineEmits<{
     dueDate?: string
     projectId?: string
     attachments?: TaskAttachment[]  // FEATURE-1414
+    onSettled?: (saved: boolean) => void
   }]
 }>()
 
@@ -247,6 +253,11 @@ const localDate = ref('')
 
 // FEATURE-1414: Image attachments
 const pendingAttachments = ref<TaskAttachment[]>([])
+const isSubmitting = ref(false)
+
+const handleCancel = () => {
+  if (!isSubmitting.value) emit('cancel')
+}
 
 // Hebrew alignment
 const { getAlignmentClasses, applyInputAlignment } = useHebrewAlignment()
@@ -401,22 +412,7 @@ function handleRemoveAttachment(attachmentId: string) {
 }
 
 // Handle task creation
-const handleCreateTask = () => {
-  const trimmedTitle = taskTitle.value.trim()
-  if (!trimmedTitle) return
-
-  cancelScraping() // Cancel any in-progress scrape
-  emit('create', {
-    title: trimmedTitle,
-    description: taskDescription.value.trim(),
-    status: status.value,
-    priority: priority.value,
-    dueDate: localDate.value || undefined,
-    projectId: projectId.value || undefined,
-    attachments: pendingAttachments.value.length > 0 ? [...pendingAttachments.value] : undefined
-  })
-
-  // Reset form
+const resetForm = () => {
   taskTitle.value = ''
   taskDescription.value = ''
   status.value = 'todo'
@@ -426,6 +422,27 @@ const handleCreateTask = () => {
   pendingAttachments.value = []
 }
 
+const handleCreateTask = () => {
+  const trimmedTitle = taskTitle.value.trim()
+  if (!trimmedTitle || isSubmitting.value || _props.loading) return
+
+  cancelScraping() // Cancel any in-progress scrape
+  isSubmitting.value = true
+  emit('create', {
+    title: trimmedTitle,
+    description: taskDescription.value.trim(),
+    status: status.value,
+    priority: priority.value,
+    dueDate: localDate.value || undefined,
+    projectId: projectId.value || undefined,
+    attachments: pendingAttachments.value.length > 0 ? [...pendingAttachments.value] : undefined,
+    onSettled: (saved: boolean) => {
+      isSubmitting.value = false
+      if (saved) resetForm()
+    }
+  })
+}
+
 // Reset form when modal opens
 // BUG-1335: Auto-select the active project so tasks created on canvas
 // inherit the currently selected sidebar project (especially nested 3rd-depth+).
@@ -433,6 +450,7 @@ const handleCreateTask = () => {
 // TASK-1428: Pre-fill form from inherited group properties (Today → today's date, etc.)
 watch(() => _props.isOpen, (isOpen) => {
   if (isOpen) {
+    isSubmitting.value = false
     const inherited = _props.inheritedProps
     taskTitle.value = _props.initialTitle || ''
     taskDescription.value = ''

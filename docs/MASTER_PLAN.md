@@ -2208,6 +2208,8 @@ _Original plan below._
 - [ ] **TASK-1963 — Canonical atomic subtask breakdown contract**: port the preview-bound, revision-checked, replay-safe subtask batch RPC onto current main without reverting newer receipt/auth work; expose canonical ordered subtask reads for Hermes and reject malformed existing arrays before mutation.
 - [x] **BUG-1964 — Sign in once, stay signed in until explicit Sign Out**: replace destructive passive auth-event handling with durable account identity retention, reject invalid Electron release credentials before packaging, and prove sign-in plus close/relaunch/update persistence in the packaged app. ✅ DONE 2026-07-18
 - [x] **BUG-1965 — Recover queued task edits rejected without server request hashes**: persist and replay the server-issued preview hash, rotate expired approval identities without losing queued intent, and make Retry All unlock permanently parked failures. ✅ DONE 2026-07-19 in Electron 1.4.273.
+- [x] ~~**BUG-1966 — Timer crosses zero and remains active**: make Electron completion locks session-scoped, floor every renderer countdown/display at zero, make KDE leader countdowns use elapsed wall time, and clear already-completed widget state.~~ ✅ DONE 2026-07-19 in Electron 1.4.274.
+- [x] ~~**BUG-1967 — Newly created task appears accepted and then disappears**: require durable account-queue or guest-storage enrollment before success, await Canvas sidebar acknowledgement, preserve the draft on failure, and reject empty server create acknowledgements.~~ ✅ DONE 2026-07-19 in Electron 1.4.274.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2306,6 +2308,71 @@ _Original plan below._
 **Explicitly not covered**: genuine stale-revision, deleted-task, cross-account, or authorization conflicts. Those remain fail-closed and visible instead of being force-applied.
 
 **Completion proof (2026-07-19)**: RED/GREEN coverage reproduced fresh missing-hash applies, legacy expired previews, crash-before-preview-persistence recovery, far-future Retry All selection, and mismatched receipt hashes. Focused 121-test coverage, the full 3,923-test suite with 6 intentional skips, type-check, focused source lint with no errors, independent blocker review, Electron build/package validation, and the 256-test Electron ship guard passed. The live updater serves 1.4.273 with validated AppImage and Debian artifacts. Those exact AppImage bytes were installed over 1.4.272 on the existing profile; the real Sync Errors panel showed seven retained `request_hash_required` task updates, Retry All cleared them, the indicator turned green, and a full close/relaunch remained Online, signed in, and error-free.
+
+### ~~BUG-1966: Timer crosses zero and remains active~~ (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE 2026-07-19 | **Related**: BUG-1892, BUG-1897, BUG-1919
+
+**Exact failure modes**: Electron decremented before checking zero and formatted raw negative seconds, so a follower waiting for KDE rendered `-1:-3`. Live production history also proved KDE-owned five-minute extensions took about seven minutes because the widget subtracted one per delayed QML callback instead of deriving remaining time from a wall-clock deadline. Separately, a global Electron completion lock could reject a newer session's completion while an older notification was still pending. The user's later split-state repro exposed a fourth path: KDE's duplicate-completion guard suppressed a repeated alert but returned before clearing the re-adopted completed session, leaving the widget at active `00:00` while Electron was idle at `25:00`.
+
+**Acceptance**:
+- No renderer or widget surface can display remaining time below `00:00`.
+- KDE-owned timers complete from elapsed wall time even when Plasma delays callbacks.
+- A new timer completes while an older session's persistence or notification is still pending.
+- Pause/resume, extension, follower polling, heartbeat, and completion idempotency remain intact.
+- Focused regressions, full quality gates, Electron packaging, updater publication, widget reload, and real short-timer proof pass before completion.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Electron header showed active `Focus Session` at `-1:-3`. | Yes |
+| Data shape / persisted row | Yes | Latest KDE-led row stayed active until the widget completed it; final row is inactive at zero. | Yes, leader timing |
+| Renderer store/state | Yes | Countdown decremented before zero check; formatter accepted negatives; global completion lock spanned sessions. | Yes |
+| Electron main/preload | Yes | Local snapshot bridge already clamps to zero and reported inactive after completion. | No change needed |
+| Localhost sidecar | Yes | `/api/timer/current` was inactive after the leader completed; it did not create the negative value. | No change needed |
+| KDE polling/control | Yes | Two five-minute extensions each took about seven minutes under QML callback counting. | Yes |
+| Supabase persistence/realtime | Yes | KDE remained authoritative and Electron correctly waited as follower; active row eventually cleared. | Existing authority preserved |
+| Updater/runtime | Yes | Repro occurred on packaged Electron 1.4.273 and the live symlinked widget. | New release required |
+| Stale live process state | Yes | One packaged Electron process was running; renderer, sidecar, DB, and window title later all cleared. | Yes |
+
+**Regression added for reported repro**: store state-machine coverage reproduces a newer timer expiring while an older notification hangs; KDE coverage proves delayed callbacks catch up to a fixed deadline; formatter coverage rejects negative and non-finite inputs.
+
+**Explicitly not covered**: changing the single-leader/follower completion model or awarding duplicate completion credit on follower devices.
+
+**Completion proof (2026-07-19)**: RED/GREEN coverage reproduces delayed callbacks, negative display inputs, overlapping completion notifications, the exact completed-ID KDE split state, and a stale completion response arriving after a newer timer starts. Focused timer review found no remaining Critical or Important issue. The full suite passed 3,943 tests with 6 intentional skips; type-check, focused lint, Electron packaging validation, and the locked ship gate passed. Electron 1.4.274 is live in the updater and the installed AppImage is byte-identical. After replacing the widget and Plasma process, the packaged app remained signed in and Online with an idle `25:00`; the live sidecar returned inactive and the widget bridge wrote inactive `25:00`, with no repeated completion loop in the new process.
+
+### ~~BUG-1967: Newly created task appears accepted and then disappears~~ (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE 2026-07-19 | **Related**: BUG-1965, TASK-1428, TASK-1177
+
+**Exact failure modes**: the Canvas sidebar dispatched asynchronous creation, immediately cleared the draft, and showed success without receiving a result. The Canvas modal also closed synchronously before its async owner finished. At the store boundary, queue failure was swallowed and cache persistence was fire-and-forget, so both durable stores could fail while the optimistic task was still returned as successful. Finally, a server create response with no error but no returned row was marked completed and lost its pending-write guard.
+
+**Acceptance**:
+- No task-creation surface shows success or clears its draft before the task reaches the durable queue or restart-safe cache.
+- If the account queue or true guest store fails, creation rejects visibly, removes the transient row, preserves the user's draft, and leaves no stale pending-write guard; the read cache alone never counts as durable intent.
+
+**Completion proof (2026-07-19)**: RED/GREEN regressions cover authenticated queue failure despite cache success, guest-store persistence failure, empty server create acknowledgement, Canvas acknowledgement failure/timeout, duplicate submission, modal dismissal during persistence, attachment preservation, and editing a newer sidebar draft before the first acknowledgement returns. Independent durability review found no remaining Critical or Important issue. The same 3,943-test full suite, type-check, focused lint, Electron package validation, locked ship gate, public updater validation, exact installed-AppImage checksum, and signed-in packaged-app relaunch passed for Electron 1.4.274. The original disappeared title was not recoverable because live inventory, audit history, and queue evidence proved it never crossed the renderer-to-durable boundary.
+- A queued create remains retryable unless the server returns a saved row or a pre-existing tombstone proves deletion authority.
+- The Canvas modal and sidebar cover the user's exact apparent-success-then-disappearance repro.
+- Focused regressions, full quality gates, Electron packaging, updater publication, and signed-in live create/relaunch proof pass before completion.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Sidebar/modal could clear or close before asynchronous durable creation completed. | Yes |
+| Data shape / durable queue | Yes | Live queue contained zero task operations and the task was absent from restart-safe state. | Yes |
+| Renderer state | Yes | Optimistic create was treated as success even after both durability paths failed. | Yes |
+| Electron main/preload | Yes | No task-create acknowledgement is synthesized by main/preload. | No change needed |
+| Localhost sidecar | Yes | Fresh complete inventory showed 71 tasks and no new task. | No change needed |
+| Supabase persistence | Yes | Tasks, immutable audit history, and canonical change history contained no create, update, move, completion, or delete for the reported task. | Yes, fail closed on empty create response |
+| Updater/runtime | Yes | Repro occurred in packaged Electron 1.4.273. | New release required |
+| Stale live process state | Yes | Fresh authenticated personal scope and complete inventory ruled out workspace/account mismatch. | Yes |
+
+**Regression added for reported repro**: Canvas sidebar failure and acknowledgement timeout retain the typed draft and withhold success; the real modal preserves all entered state and blocks duplicate submits; task-store coverage rejects a cache-only authenticated create; guest creation persists through the true guest store; sync coverage keeps an empty server create response pending.
+
+**Explicitly not covered**: reconstructing the lost task title. Live server, audit, canonical log, and durable queue evidence proves the reported task never crossed the renderer-to-durable boundary, so its content is not recoverable.
 
 ### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
 
@@ -7654,6 +7721,8 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask breakdown with immutable preview approval, parent revisions, replay-safe receipts, and validated ordered read-back** |
 | **BUG-1964** | **P0** | ✅ **DONE 2026-07-18 — Sign in once and retain the account through refresh failures, close/relaunch, and updates until explicit Sign Out** |
 | ~~**BUG-1965**~~ | **P0** | ✅ **DONE — Electron 1.4.273 recovered all seven request-hash-rejected queued edits and remained synced after relaunch** |
+| ~~**BUG-1966**~~ | **P0** | ✅ **DONE — Electron 1.4.274 keeps KDE/Electron at the same non-negative timer state and clears completed-ID loops** |
+| ~~**BUG-1967**~~ | **P0** | ✅ **DONE — Electron 1.4.274 requires durable task admission before clearing drafts or showing success** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

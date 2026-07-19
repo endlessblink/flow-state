@@ -1144,24 +1144,35 @@ useEventListener(window, 'collect-overdue-tasks', (e: Event) => {
 
 // Sidebar quick-add on canvas view: create task at viewport center
 useEventListener(window, 'sidebar-quick-task-create', async (e: Event) => {
+  e.preventDefault()
   const data = (e as CustomEvent).detail
-  if (!data?.title) return
-
-  // Calculate viewport center in flow coordinates
-  const vueFlowElement = document.querySelector('.vue-flow')
-  if (vueFlowElement) {
-    const rect = vueFlowElement.getBoundingClientRect()
-    const screenCenter = {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2
-    }
-    const flowCoords = screenToFlowCoordinate(screenCenter)
-    modalsStore.quickTaskPosition = flowCoords
-  } else {
-    modalsStore.quickTaskPosition = { x: 200, y: 200 }
+  if (!data?.title) {
+    data?.onComplete?.(false)
+    return
   }
 
-  await handleQuickTaskCreate(data)
+  let saved = false
+  try {
+    // Calculate viewport center in flow coordinates
+    const vueFlowElement = document.querySelector('.vue-flow')
+    if (vueFlowElement) {
+      const rect = vueFlowElement.getBoundingClientRect()
+      const screenCenter = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      }
+      const flowCoords = screenToFlowCoordinate(screenCenter)
+      modalsStore.quickTaskPosition = flowCoords
+    } else {
+      modalsStore.quickTaskPosition = { x: 200, y: 200 }
+    }
+
+    saved = await handleQuickTaskCreate(data)
+  } catch (error) {
+    console.error('Failed to handle sidebar Canvas task creation:', error)
+  } finally {
+    data.onComplete?.(saved)
+  }
 })
 
 // TASK-288 DEBUG: Wrapper to trace createTaskInGroup call

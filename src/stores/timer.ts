@@ -81,8 +81,10 @@ export const useTimerStore = defineStore('timer', () => {
 
   // BUG-1318: Track recently completed session IDs to prevent stale Realtime events from resurrecting them
   const completedSessionIds = new Set<string>()
-  // BUG-1318: Lock to prevent concurrent completeSession() calls
-  let isCompleting = false
+  // Completion work can outlive the visible session while persistence or a
+  // notification settles. Lock per session so duplicate callbacks stay
+  // idempotent without blocking a newer timer from completing.
+  const completingSessions = new WeakSet<PomodoroSession>()
 
   // Cross-tab sync integration
   const crossTabSync = getCrossTabSync()
@@ -484,8 +486,7 @@ export const useTimerStore = defineStore('timer', () => {
 
   const completeSession = async () => {
     const session = currentSession.value
-    // BUG-1318: Merged null-check with completion lock to prevent concurrent calls
-    if (!session || isCompleting) return
+    if (!session || completingSessions.has(session)) return
     // BUG-1892: Idempotency per session id — never complete/notify the same session twice.
     // The follower poll / resync (useTimerSync) can re-adopt an expired-but-still-active
     // session row; without this guard completeSession re-fires the "Time for a break"
@@ -499,7 +500,7 @@ export const useTimerStore = defineStore('timer', () => {
       }
       return
     }
-    isCompleting = true
+    completingSessions.add(session)
 
     try {
       // BUG: Capture KDE widget state BEFORE clearing currentSession
@@ -604,15 +605,20 @@ export const useTimerStore = defineStore('timer', () => {
       // TASK-1009 + BUG-1315: Only the leader completes sessions.
       // Followers wait for Realtime. Auto-start removed per TASK-1009.
       // Old settings (autoStartBreaks, autoStartPomodoros) are now ignored for notifications
-      isDeviceLeader.value = false
-      // TASK-1790: Resume follower poll as the Realtime backstop after completion.
-      // At 15s cadence (FOLLOWER_POLL_INTERVAL_MS) this is cheap and ensures the
-      // device picks up the next session from another device even if Realtime drops.
-      sync.resumeFollowerPoll()
+      // A newer timer may have started while this session's notification or
+      // persistence was still pending. Never let late cleanup from the old
+      // session demote or poll over that newer active timer.
+      if (!currentSession.value) {
+        isDeviceLeader.value = false
+        // TASK-1790: Resume follower poll as the Realtime backstop after completion.
+        // At 15s cadence (FOLLOWER_POLL_INTERVAL_MS) this is cheap and ensures the
+        // device picks up the next session from another device even if Realtime drops.
+        sync.resumeFollowerPoll()
+      }
     } finally {
-      // BUG-1318: ALWAYS release the lock, even if an error occurs mid-completion
-      // Without this, any unhandled error would permanently block all future completions
-      isCompleting = false
+      // The object identity remains guarded for its lifetime. An extension
+      // intentionally creates a new session object, even when it reuses the
+      // same durable session id, so it can complete independently.
     }
   }
 

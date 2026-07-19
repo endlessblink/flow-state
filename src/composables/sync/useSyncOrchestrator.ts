@@ -546,6 +546,11 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
             .select()
           result = { ...deleteResult, data: deleteResult.data, error: null }
         }
+        // BUG-1967: PostgREST can return no error with an empty representation when
+        // no row was accepted. That is not durable success and must remain retryable.
+        if (!result.error && (!Array.isArray(result.data) || result.data.length === 0)) {
+          throw new Error(`CREATE was not acknowledged for ${entityType}:${entityId}`)
+        }
         break
       }
 

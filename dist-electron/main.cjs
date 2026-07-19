@@ -108,13 +108,14 @@ function toggleMainWindowDevTools() {
         webContents.openDevTools({ mode: 'detach' });
     }
 }
-// TASK-1871: Reliable quit. Force-destroys the window so nothing in the
-// renderer (e.g. a beforeunload guard) can wedge the close — the recurring
-// "can't quit FlowState" regression. Bound to Ctrl/Cmd+Q and the File menu.
+let storeFlushedForQuit = false;
+let storeFlushForQuitPromise = null;
+let destroyWindowAfterStoreFlush = false;
+// TASK-1871: Reliable quit. The durable main-process store must flush before the renderer is
+// destroyed; once it has, force-destroy the window so a renderer beforeunload guard cannot wedge
+// Ctrl/Cmd+Q or the File menu.
 function forceQuit() {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.destroy();
-    }
+    destroyWindowAfterStoreFlush = true;
     electron_1.app.quit();
 }
 function registerAppMenu() {
@@ -273,9 +274,52 @@ electron_1.app.whenReady().then(() => {
         }
     });
 });
-electron_1.app.on('before-quit', () => {
-    electron_1.globalShortcut.unregister('CommandOrControl+Shift+I');
-    (0, localApi_1.shutdownLocalApi)();
+electron_1.app.on('before-quit', (event) => {
+    if (storeFlushedForQuit) {
+        electron_1.globalShortcut.unregister('CommandOrControl+Shift+I');
+        (0, localApi_1.shutdownLocalApi)();
+        return;
+    }
+    // Electron does not await async lifecycle listeners. Cancel this quit attempt, finish every
+    // queued auth/store write, then issue a second quit that is allowed through by the flag above.
+    event.preventDefault();
+    if (storeFlushForQuitPromise)
+        return;
+    storeFlushForQuitPromise = (async () => {
+        try {
+            let timeout = null;
+            try {
+                await Promise.race([
+                    (0, store_1.flushStore)(),
+                    new Promise((_resolve, reject) => {
+                        timeout = setTimeout(() => reject(new Error('Store flush before quit timed out')), 5000);
+                    }),
+                ]);
+            }
+            finally {
+                if (timeout)
+                    clearTimeout(timeout);
+            }
+            storeFlushedForQuit = true;
+            if (destroyWindowAfterStoreFlush && mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.destroy();
+            }
+            electron_1.app.quit();
+            // If another lifecycle listener canceled the second quit, require a new
+            // checkpoint instead of letting this one-shot success stay valid forever.
+            setTimeout(() => {
+                storeFlushedForQuit = false;
+                storeFlushForQuitPromise = null;
+                destroyWindowAfterStoreFlush = false;
+            }, 0);
+        }
+        catch (err) {
+            // Losing a newly rotated refresh token is worse than aborting a quit. Leave the process alive
+            // so the user can retry instead of silently reopening into a signed-out account.
+            console.error('[flowstate] Quit aborted because durable store flush failed:', err.message);
+            storeFlushForQuitPromise = null;
+        }
+    })();
 });
 electron_1.app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {

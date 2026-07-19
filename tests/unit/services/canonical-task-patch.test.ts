@@ -5,6 +5,8 @@ import {
   executeQueuedCanonicalTaskPatch,
 } from '@/services/sync/canonicalTaskPatch'
 
+const REQUEST_HASH = 'c'.repeat(64)
+
 function operation(): WriteOperation {
   return {
     id: 1,
@@ -29,6 +31,7 @@ function receipt(overrides: Partial<CanonicalTaskPatchReceipt> = {}): CanonicalT
   return {
     contractVersion: 'task-v1',
     operationId: 'web:operation-1',
+    requestHash: REQUEST_HASH,
     source: 'web-pwa',
     entityType: 'task',
     action: 'patch',
@@ -55,6 +58,7 @@ function preview() {
     contractVersion: 'task-v1',
     operationId: 'web:operation-1',
     baseRevision: 4,
+    requestHash: REQUEST_HASH,
     previewDigest: 'b'.repeat(64),
     previewExpiresAt: '2026-07-13T10:15:00Z',
     normalizedPayload: { title: 'New title' },
@@ -67,6 +71,152 @@ function preview() {
 }
 
 describe('canonical queued task patch', () => {
+  it('persists and sends the server-issued request hash before apply', async () => {
+    const op = operation()
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ data: preview(), error: null })
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: receipt({ operationId: args.p_operation_id }) },
+        error: null,
+      }))
+    const persist = vi.fn().mockResolvedValue(undefined)
+
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, persist)
+
+    expect(result.success).toBe(true)
+    expect(persist).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      phase: 'previewed',
+      requestHash: REQUEST_HASH,
+    }))
+    expect(rpc).toHaveBeenNthCalledWith(1, 'flowstate_patch_task_v1', expect.objectContaining({
+      p_preview: true,
+      p_request_hash: null,
+    }))
+    expect(rpc).toHaveBeenNthCalledWith(2, 'flowstate_patch_task_v1', expect.objectContaining({
+      p_preview: false,
+      p_request_hash: REQUEST_HASH,
+    }))
+  })
+
+  it('re-previews a legacy queued update that was persisted before request hashes', async () => {
+    const op = operation()
+    op.canonicalTaskPatch = {
+      ...op.canonicalTaskPatch!,
+      phase: 'previewed',
+      previewDigest: 'b'.repeat(64),
+      previewExpiresAt: '2026-07-13T10:15:00Z',
+      normalizedPatch: { title: 'New title' },
+    }
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({
+        data: { ok: false, result: 'conflict', error: { code: 'preview_expired', message: 'Use a new operationId for a fresh preview' } },
+        error: null,
+      })
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ...preview(), operationId: args.p_operation_id },
+        error: null,
+      }))
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: receipt({ operationId: args.p_operation_id }) },
+        error: null,
+      }))
+
+    const persist = vi.fn().mockResolvedValue(undefined)
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, persist)
+
+    expect(result.success).toBe(true)
+    expect(rpc).toHaveBeenNthCalledWith(1, 'flowstate_patch_task_v1', expect.objectContaining({
+      p_preview: true,
+      p_request_hash: null,
+      p_operation_id: 'web:operation-1',
+    }))
+    expect(rpc).toHaveBeenNthCalledWith(2, 'flowstate_patch_task_v1', expect.objectContaining({
+      p_preview: true,
+      p_request_hash: null,
+      p_operation_id: expect.not.stringMatching(/^web:operation-1$/),
+    }))
+    expect(rpc).toHaveBeenNthCalledWith(3, 'flowstate_patch_task_v1', expect.objectContaining({
+      p_preview: false,
+      p_request_hash: REQUEST_HASH,
+      p_operation_id: expect.not.stringMatching(/^web:operation-1$/),
+    }))
+    expect(persist).toHaveBeenCalledWith(expect.objectContaining({
+      phase: 'queued',
+      previewDigest: undefined,
+      previewExpiresAt: undefined,
+      requestHash: undefined,
+      operationId: expect.not.stringMatching(/^web:operation-1$/),
+    }))
+  })
+
+  it('rotates a clean queued operation whose server preview expired before local persistence', async () => {
+    const op = operation()
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({
+        data: { ok: false, result: 'conflict', error: { code: 'preview_expired', message: 'Use a new operationId for a fresh preview' } },
+        error: null,
+      })
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ...preview(), operationId: args.p_operation_id },
+        error: null,
+      }))
+      .mockImplementationOnce(async (_name, args) => ({
+        data: {
+          ok: true,
+          result: 'committed',
+          requestHash: REQUEST_HASH,
+          receipt: { ...receipt({ operationId: args.p_operation_id }), requestHash: REQUEST_HASH },
+        },
+        error: null,
+      }))
+
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, vi.fn())
+
+    expect(result.success).toBe(true)
+    expect(rpc).toHaveBeenCalledTimes(3)
+    expect(rpc.mock.calls[1][1]).toMatchObject({
+      p_preview: true,
+      p_operation_id: expect.not.stringMatching(/^web:operation-1$/),
+    })
+  })
+
+  it('rejects committed responses not bound to the persisted request hash', async () => {
+    const op = operation()
+    op.canonicalTaskPatch = {
+      ...op.canonicalTaskPatch!,
+      phase: 'previewed',
+      previewDigest: 'b'.repeat(64),
+      previewExpiresAt: '2026-07-13T10:15:00Z',
+      requestHash: REQUEST_HASH,
+      normalizedPatch: { title: 'New title' },
+    }
+    for (const data of [
+      {
+        ok: true,
+        result: 'committed',
+        requestHash: 'd'.repeat(64),
+        receipt: { ...receipt(), requestHash: REQUEST_HASH },
+      },
+      {
+        ok: true,
+        result: 'committed',
+        requestHash: REQUEST_HASH,
+        receipt: { ...receipt(), requestHash: 'd'.repeat(64) },
+      },
+    ]) {
+      const result = await executeQueuedCanonicalTaskPatch(
+        { rpc: vi.fn().mockResolvedValue({ data, error: null }) },
+        structuredClone(op),
+        vi.fn(),
+      )
+      expect(result).toMatchObject({
+        success: false,
+        error: 'invalid_canonical_receipt',
+        classification: 'permanent',
+      })
+    }
+  })
+
   it('classifies only pure supported scalar payloads with a canonical base revision', () => {
     expect(createCanonicalTaskPatchState({ title: 'A', due_date: null, updated_at: 'now' }, 7, 'op')).toMatchObject({
       operationId: 'op',
@@ -87,7 +237,7 @@ describe('canonical queued task patch', () => {
     const op = operation()
     const rpc = vi.fn()
       .mockResolvedValueOnce({ data: preview(), error: null })
-      .mockResolvedValueOnce({ data: { ok: true, result: 'committed', receipt: receipt() }, error: null })
+      .mockResolvedValueOnce({ data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: receipt() }, error: null })
     const persist = vi.fn().mockResolvedValue(undefined)
 
     const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, persist)
@@ -118,6 +268,7 @@ describe('canonical queued task patch', () => {
       phase: 'previewed',
       previewDigest: 'b'.repeat(64),
       previewExpiresAt: '2026-07-13T10:15:00Z',
+      requestHash: REQUEST_HASH,
       normalizedPatch: { title: 'New title' },
     }
     const rpc = vi.fn().mockResolvedValue({ data: null, error: new Error('lost response') })
@@ -163,7 +314,7 @@ describe('canonical queued task patch', () => {
     const replayed = receipt({ replayed: true })
     op.canonicalTaskPatch = persisted[0]
     const retryRpc = vi.fn().mockResolvedValue({
-      data: { ok: true, result: 'committed', receipt: replayed }, error: null,
+      data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: replayed }, error: null,
     })
     const second = await executeQueuedCanonicalTaskPatch({ rpc: retryRpc }, op, vi.fn())
 
@@ -218,7 +369,7 @@ describe('canonical queued task patch', () => {
     })
     const rpc = vi.fn()
       .mockResolvedValueOnce({ data: scopedPreview, error: null })
-      .mockResolvedValueOnce({ data: { ok: true, result: 'committed', receipt: scopedReceipt }, error: null })
+      .mockResolvedValueOnce({ data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: scopedReceipt }, error: null })
 
     const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, vi.fn())
 
@@ -252,6 +403,7 @@ describe('canonical queued task patch', () => {
           phase: 'previewed',
           previewDigest: 'b'.repeat(64),
           previewExpiresAt: '2026-07-13T10:15:00Z',
+          requestHash: REQUEST_HASH,
           normalizedPatch: { title: 'New title' },
         },
       }),
@@ -265,6 +417,7 @@ describe('canonical queued task patch', () => {
       phase: 'previewed',
       previewDigest: 'b'.repeat(64),
       previewExpiresAt: '2026-07-13T10:15:00Z',
+      requestHash: REQUEST_HASH,
       normalizedPatch: { title: 'New title' },
     }
     const stale = await executeQueuedCanonicalTaskPatch(
@@ -282,6 +435,7 @@ describe('canonical queued task patch', () => {
       phase: 'previewed',
       previewDigest: 'b'.repeat(64),
       previewExpiresAt: '2026-07-13T10:15:00Z',
+      requestHash: REQUEST_HASH,
       normalizedPatch: { title: 'New title' },
     }
     const invalid = receipt({
@@ -301,7 +455,7 @@ describe('canonical queued task patch', () => {
     } as Partial<CanonicalTaskPatchReceipt>)
 
     const result = await executeQueuedCanonicalTaskPatch(
-      { rpc: vi.fn().mockResolvedValue({ data: { ok: true, result: 'committed', receipt: invalid }, error: null }) },
+      { rpc: vi.fn().mockResolvedValue({ data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: invalid }, error: null }) },
       op,
       vi.fn(),
     )
@@ -313,7 +467,8 @@ describe('canonical queued task patch', () => {
     const op = operation()
     op.canonicalTaskPatch = {
       ...op.canonicalTaskPatch!, phase: 'previewed', previewDigest: 'b'.repeat(64),
-      previewExpiresAt: '2026-07-13T10:15:00Z', normalizedPatch: { title: 'New title' },
+      previewExpiresAt: '2026-07-13T10:15:00Z', requestHash: REQUEST_HASH,
+      normalizedPatch: { title: 'New title' },
     }
     for (const readBack of [
       { ...receipt().readBack, title: '' },
@@ -324,7 +479,7 @@ describe('canonical queued task patch', () => {
     ]) {
       const result = await executeQueuedCanonicalTaskPatch(
         { rpc: vi.fn().mockResolvedValue({
-          data: { ok: true, result: 'committed', receipt: receipt({ readBack }) }, error: null,
+          data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: receipt({ readBack }) }, error: null,
         }) },
         op, vi.fn(),
       )
@@ -338,7 +493,8 @@ describe('canonical queued task patch', () => {
     const op = operation()
     op.canonicalTaskPatch = {
       ...op.canonicalTaskPatch!, phase: 'previewed', previewDigest: 'b'.repeat(64),
-      previewExpiresAt: '2026-07-13T10:15:00Z', normalizedPatch: { title: 'New title' },
+      previewExpiresAt: '2026-07-13T10:15:00Z', requestHash: REQUEST_HASH,
+      normalizedPatch: { title: 'New title' },
     }
     const mismatched = receipt({
       readBack: {
@@ -349,7 +505,7 @@ describe('canonical queued task patch', () => {
     })
 
     const result = await executeQueuedCanonicalTaskPatch(
-      { rpc: vi.fn().mockResolvedValue({ data: { ok: true, result: 'committed', receipt: mismatched }, error: null }) },
+      { rpc: vi.fn().mockResolvedValue({ data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: mismatched }, error: null }) },
       op,
       vi.fn(),
     )

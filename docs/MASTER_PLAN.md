@@ -2207,6 +2207,7 @@ _Original plan below._
 - [ ] **TASK-1962 — Preflight every Hermes-to-FlowState route and ship canonical task creation**: deliver the receipt-backed task lifecycle route, make source and bundled-sidecar runtime tests exercise the real HTTP boundary, publish a safe capability manifest, and fail Hermes/package/watchdog checks before work starts when any required route or contract is absent.
 - [ ] **TASK-1963 — Canonical atomic subtask breakdown contract**: port the preview-bound, revision-checked, replay-safe subtask batch RPC onto current main without reverting newer receipt/auth work; expose canonical ordered subtask reads for Hermes and reject malformed existing arrays before mutation.
 - [x] **BUG-1964 — Sign in once, stay signed in until explicit Sign Out**: replace destructive passive auth-event handling with durable account identity retention, reject invalid Electron release credentials before packaging, and prove sign-in plus close/relaunch/update persistence in the packaged app. ✅ DONE 2026-07-18
+- [x] **BUG-1965 — Recover queued task edits rejected without server request hashes**: persist and replay the server-issued preview hash, rotate expired approval identities without losing queued intent, and make Retry All unlock permanently parked failures. ✅ DONE 2026-07-19 in Electron 1.4.273.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2276,6 +2277,35 @@ _Original plan below._
 **Remaining operational classes**: Future production-key rotations must overlap old and new public keys until released clients have adopted the replacement. Multiple independently installed builds or deliberately changed Electron profile directories remain separate profiles and cannot share a local session by design; release validation and single-instance/profile pinning are the controls for the supported app path.
 
 **Completion proof (2026-07-18)**: 58 focused auth/release regressions and the full 3,893-test suite passed, type-check and Electron build completed, and the live updater published 1.4.269. On the installed packaged app, Google sign-in created the primary session, Electron backup, and credential-free identity; after every packaged process was terminated and the app relaunched, diagnostics again reported 1.4.269 with an authenticated user, remote sync enabled, and no reauthentication requirement.
+
+### ~~BUG-1965~~: Queued task edits are rejected without the server request hash (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE 2026-07-19 in Electron 1.4.273 | **Depends on**: TASK-1944, TASK-1946
+
+**Exact failure mode**: the canonical task backend began requiring the server-issued preview request hash, but the current desktop release persisted only the preview digest and omitted the request hash from apply. Those edits were classified as permanent failures and parked one year out, while Retry All queried only currently due operations and could not unlock them.
+
+**Acceptance**:
+- Fresh queued task edits persist the server-issued request hash and send it on apply.
+- Legacy previewed edits without a request hash re-preview with the same durable intent before applying.
+- Retry All selects permanently parked failures regardless of their future retry timestamp.
+- Existing queued payloads are retained; recovery never requires Clear All.
+- Focused regressions, full quality gates, Electron packaging, updater publication, and installed-profile queue replay pass before completion.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Installed Sync Errors popover showed seven task updates rejected with `request_hash_required`. | Yes |
+| Data shape / durable queue | Yes | Preview state had digest and expiry but no server request hash. | Yes |
+| Renderer sync state | Yes | The rejection was classified permanent and parked with a far-future retry time. | Yes |
+| Electron main/preload | Yes | No main/preload transformation participates in canonical renderer RPC arguments. | No change needed |
+| Supabase persistence | Yes | The live canonical apply contract rejects a missing request hash. | Client contract alignment |
+| Updater/runtime version | Yes | Installed Electron 1.4.272 predates the integrated repair. | New desktop release required |
+| Stale live process state | Yes | The installed 1.4.273 profile replayed all seven retained failures, then stayed synced and signed in after close/relaunch. | Yes |
+
+**Explicitly not covered**: genuine stale-revision, deleted-task, cross-account, or authorization conflicts. Those remain fail-closed and visible instead of being force-applied.
+
+**Completion proof (2026-07-19)**: RED/GREEN coverage reproduced fresh missing-hash applies, legacy expired previews, crash-before-preview-persistence recovery, far-future Retry All selection, and mismatched receipt hashes. Focused 121-test coverage, the full 3,923-test suite with 6 intentional skips, type-check, focused source lint with no errors, independent blocker review, Electron build/package validation, and the 256-test Electron ship guard passed. The live updater serves 1.4.273 with validated AppImage and Debian artifacts. Those exact AppImage bytes were installed over 1.4.272 on the existing profile; the real Sync Errors panel showed seven retained `request_hash_required` task updates, Retry All cleared them, the indicator turned green, and a full close/relaunch remained Online, signed in, and error-free.
 
 ### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
 
@@ -7623,6 +7653,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1962** | **P0** | 🔄 **Preflight every Hermes-to-FlowState route, package the canonical task lifecycle, and reject incomplete runtimes before work starts** |
 | **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask breakdown with immutable preview approval, parent revisions, replay-safe receipts, and validated ordered read-back** |
 | **BUG-1964** | **P0** | ✅ **DONE 2026-07-18 — Sign in once and retain the account through refresh failures, close/relaunch, and updates until explicit Sign Out** |
+| ~~**BUG-1965**~~ | **P0** | ✅ **DONE — Electron 1.4.273 recovered all seven request-hash-rejected queued edits and remained synced after relaunch** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

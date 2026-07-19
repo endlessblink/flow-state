@@ -272,6 +272,7 @@
    are in different scoped components (HierarchicalTaskRowContent vs TaskRowActions) */
 .task-row__actions {
     opacity: 0;
+    pointer-events: none;
     transition: opacity var(--duration-fast);
 }
 
@@ -279,4 +280,5 @@
 .task-row--hovered .task-row__actions,
 .task-row__actions:focus-within {
     opacity: 1;
+    pointer-events: auto;
 }

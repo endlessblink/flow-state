@@ -94,7 +94,11 @@ describe('Electron updater restart contract', () => {
     // BUG-1874: in-flight auth/store writes are flushed to disk BEFORE the handoff/exit,
     // and that flush happens before the single-instance lock is released.
     expect(updaterSource).toContain('await flushStoreBeforeExit()')
+    expect(updaterSource).toContain('await shutdownLocalApi()')
     expect(updaterSource.indexOf('await flushStoreBeforeExit()')).toBeLessThan(
+      updaterSource.indexOf('await shutdownLocalApi()'),
+    )
+    expect(updaterSource.indexOf('await shutdownLocalApi()')).toBeLessThan(
       updaterSource.indexOf('app.releaseSingleInstanceLock()'),
     )
     expect(updaterSource).toContain('app.releaseSingleInstanceLock()')
@@ -103,6 +107,8 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('quitAndInstall did not terminate the app within 8s')
     expect(updaterSource).toContain('app.quit()')
     expect(updaterSource).toContain('app.exit(0)')
+    expect(updaterSource).toContain('SUPERVISED_UPDATE_EXIT_CODE')
+    expect(updaterSource).toContain("systemctl --user start flowstate-background.service")
     expect(updaterSource).toContain('return true')
   })
 
@@ -137,11 +143,15 @@ describe('Electron updater restart contract', () => {
     expect(mainSource).toContain("import { registerStoreHandlers, flushStore } from './ipc/store'")
     expect(beforeQuitHandler).toContain('event.preventDefault()')
     expect(beforeQuitHandler).toContain('flushStore(),')
+    expect(beforeQuitHandler).toContain('await shutdownLocalApi()')
     expect(beforeQuitHandler).toContain('app.quit()')
     expect(beforeQuitHandler.indexOf('event.preventDefault()')).toBeLessThan(
       beforeQuitHandler.indexOf('flushStore(),'),
     )
     expect(beforeQuitHandler.indexOf('await flushStore()')).toBeLessThan(
+      beforeQuitHandler.indexOf('await shutdownLocalApi()'),
+    )
+    expect(beforeQuitHandler.indexOf('await shutdownLocalApi()')).toBeLessThan(
       beforeQuitHandler.indexOf('app.quit()'),
     )
   })
@@ -156,6 +166,76 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('launchDetachedAppImageInstaller()')
     expect(updaterSource.indexOf('launchDetachedAppImageInstaller()')).toBeLessThan(
       updaterSource.indexOf('autoUpdater.quitAndInstall(false, true)'),
+    )
+  })
+
+  it('restarts the supervised known-good app when an AppImage swap step fails', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain('fail_install()')
+    expect(updaterSource).toContain('restart_supervised_on_failure()')
+    expect(updaterSource).toContain('chmod 755 "$pending" || fail_install "chmod pending"')
+    expect(updaterSource).toContain('cp -f "$pending" "$tmp" || fail_install "copy pending"')
+    expect(updaterSource).toContain('mv -f "$tmp" "$target" || fail_after_swap "swap target"')
+  })
+
+  it('prepares the supervised detached handoff before stopping the local bridge', () => {
+    const updaterSource = readSource('electron/updater.ts')
+    const installHandlerStart = updaterSource.indexOf("ipcMain.handle('updater:install'")
+    const installHandlerEnd = updaterSource.indexOf('\n  })', installHandlerStart)
+    const installHandler = updaterSource.slice(installHandlerStart, installHandlerEnd)
+
+    expect(installHandler).toContain('prepareDetachedAppImageInstaller')
+    expect(installHandler.indexOf('prepareDetachedAppImageInstaller')).toBeLessThan(
+      installHandler.indexOf('await shutdownLocalApi()'),
+    )
+    expect(installHandler).toContain('could not prepare the supervised update handoff')
+    expect(updaterSource).toContain("spawnSync('systemd-run'")
+    expect(updaterSource).toContain('flowstate-update-handoff-')
+    expect(updaterSource).toContain("['--user', 'show', '--property=RestartPreventExitStatus'")
+  })
+
+  it('keeps a known-good AppImage until the supervised replacement is healthy', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain('backup="$target.flowstate-update-backup"')
+    expect(updaterSource).toContain('cp -p "$target" "$backup"')
+    expect(updaterSource).toContain('restore_known_good()')
+    expect(updaterSource).toContain('mv -f "$backup" "$target"')
+    expect(updaterSource).toContain('wait_for_supervised_health()')
+    expect(updaterSource).toContain('curl -fsS http://127.0.0.1:5577/api/provenance')
+    expect(updaterSource).toContain('grep -F "\\\"appVersion\\\":\\\"$expected_version\\\""')
+    expect(updaterSource).toContain('fail_after_swap "supervised readiness"')
+    expect(updaterSource.indexOf('wait_for_supervised_health')).toBeLessThan(
+      updaterSource.lastIndexOf('rm -f "$backup"'),
+    )
+  })
+
+  it('rechecks that the transient supervised handoff is armed before exiting', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain('isArmed: () => boolean')
+    expect(updaterSource).toContain("spawnSync('systemctl', ['--user', 'is-active', '--quiet', handoffUnit]")
+    expect(updaterSource).toContain('if (preparedInstaller && !preparedInstaller.isArmed())')
+    expect(updaterSource).toContain('app.exit(1)')
+  })
+
+  it('never falls through to direct quitAndInstall under systemd supervision', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain("if (relaunch.strategy === 'systemd')")
+    expect(updaterSource).toContain('could not prepare the supervised update handoff')
+    expect(updaterSource).toContain('autoUpdater.quitAndInstall(false, true)')
+  })
+
+  it('never swaps the AppImage while the old process is still alive', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain('if kill -0 "$parent" 2>/dev/null; then')
+    expect(updaterSource).toContain('[ "$i" -lt 300 ]')
+    expect(updaterSource).toContain('fail_install "parent did not exit before update deadline"')
+    expect(updaterSource.indexOf('fail_install "parent did not exit before update deadline"')).toBeLessThan(
+      updaterSource.indexOf('mv -f "$tmp" "$target"'),
     )
   })
 

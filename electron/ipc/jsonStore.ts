@@ -1,4 +1,4 @@
-import { readFile, writeFile, rename, mkdir, open, copyFile } from 'fs/promises'
+import { readFile, writeFile, rename, mkdir, open, copyFile, chmod } from 'fs/promises'
 import { existsSync } from 'fs'
 import { dirname } from 'path'
 
@@ -74,14 +74,16 @@ export function createJsonStore(filePath: string): JsonStore {
   async function writeAtomic(): Promise<void> {
     const dir = dirname(filePath)
     if (!existsSync(dir)) {
-      await mkdir(dir, { recursive: true })
+      await mkdir(dir, { recursive: true, mode: 0o700 })
     }
+    await chmod(dir, 0o700)
 
     const payload = JSON.stringify(storeData, null, 2)
 
     // Write + fsync the temp file so the bytes are durably on disk before the rename.
-    const handle = await open(tmpPath, 'w')
+    const handle = await open(tmpPath, 'w', 0o600)
     try {
+      await handle.chmod(0o600)
       await handle.writeFile(payload, 'utf-8')
       await handle.sync()
     } finally {
@@ -92,6 +94,7 @@ export function createJsonStore(filePath: string): JsonStore {
     if (primaryIsKnownGood && existsSync(filePath)) {
       try {
         await copyFile(filePath, bakPath)
+        await chmod(bakPath, 0o600)
       } catch {
         // A missing/locked .bak must not block the primary write.
       }
@@ -99,6 +102,7 @@ export function createJsonStore(filePath: string): JsonStore {
 
     // Atomic replace.
     await rename(tmpPath, filePath)
+    await chmod(filePath, 0o600)
     primaryIsKnownGood = true
   }
 

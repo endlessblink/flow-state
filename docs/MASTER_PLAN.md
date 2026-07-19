@@ -2210,6 +2210,7 @@ _Original plan below._
 - [x] **BUG-1965 — Recover queued task edits rejected without server request hashes**: persist and replay the server-issued preview hash, rotate expired approval identities without losing queued intent, and make Retry All unlock permanently parked failures. ✅ DONE 2026-07-19 in Electron 1.4.273.
 - [x] ~~**BUG-1966 — Timer crosses zero and remains active**: make Electron completion locks session-scoped, floor every renderer countdown/display at zero, make KDE leader countdowns use elapsed wall time, and clear already-completed widget state.~~ ✅ DONE 2026-07-19 in Electron 1.4.274.
 - [x] ~~**BUG-1967 — Newly created task appears accepted and then disappears**: require durable account-queue or guest-storage enrollment before success, await Canvas sidebar acknowledgement, preserve the draft on failure, and reject empty server create acknowledgements.~~ ✅ DONE 2026-07-19 in Electron 1.4.274.
+- [ ] **TASK-1968 — Always-on signed-in Hermes bridge**: supervise one canonical Electron process, keep its authenticated renderer and Local API alive when the window closes, serialize sidecar/update ownership, and preserve the same profile across desktop launches, restarts, and updates.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2373,6 +2374,37 @@ _Original plan below._
 **Regression added for reported repro**: Canvas sidebar failure and acknowledgement timeout retain the typed draft and withhold success; the real modal preserves all entered state and blocks duplicate submits; task-store coverage rejects a cache-only authenticated create; guest creation persists through the true guest store; sync coverage keeps an empty server create response pending.
 
 **Explicitly not covered**: reconstructing the lost task title. Live server, audit, canonical log, and durable queue evidence proves the reported task never crossed the renderer-to-durable boundary, so its content is not recoverable.
+
+### TASK-1968: Always-on signed-in Hermes bridge (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-19) | **Related**: BUG-1964, TASK-1931, TASK-1956
+
+**Scope**: Keep one supervised Electron process running in the graphical user session with the canonical signed-in profile. Closing the window hides it; launching FlowState again reveals that same instance. The renderer remains the sole Supabase refresh owner and continues feeding one serialized, bearer-protected Local API sidecar for Hermes. Explicit Sign Out still clears account authority. Updater handoff must flush auth/store state, drain the sidecar, reserve a supervisor exit code, atomically swap the AppImage, and restart or roll back the service without creating a second profile or writer.
+
+**Acceptance**:
+- Closing the desktop window or ending a visible FlowState session does not stop the authenticated Local API; Hermes can still read the protected aggregate/task boundaries.
+- Login persistence survives graphical-session restart and Electron update using the same `flow-state` profile; only explicit Sign Out removes the durable identity.
+- Exactly one renderer owns auth refresh and exactly one sidecar owns port 5577, including crash recovery, rapid lifecycle calls, and updater handoff.
+- Secret-bearing profile files are owner-only, the service never uses service-role credentials, and the verified desktop launcher is the only supervised entrypoint.
+- Focused regressions, full quality gates, Electron packaging, local supervised-runtime proof, public updater proof, and Hermes watchdog proof pass before completion.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this change? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | FlowState showed Sign In or session-expired UI after close/relaunch/update; Hermes lost the localhost bridge. | Yes |
+| Data shape / persisted state | Yes | Canonical Electron auth backup and Local API config already live under one `flow-state` profile. | Yes, one fixed profile |
+| Renderer store/state | Yes | Auth refresh and renderer heartbeats require a living renderer; closing the last window previously ended that owner. | Yes, hidden renderer retained |
+| Electron main/preload | Yes | Window close, second-instance routing, quit, sidecar shutdown, and updater exit were separate unsupervised lifecycle paths. | Yes |
+| Localhost sidecar | Yes | Multiple rapid starts/exits could race port ownership and crash restart timing. | Yes, serialized generation-safe lifecycle |
+| KDE polling/control | Yes | KDE consumes the same bearer-protected 5577 timer boundary. | Existing boundary retained |
+| Supabase persistence/realtime | Yes | The renderer keeps the existing signed-user RLS/session path; service-role bypass is rejected. | Existing authority retained |
+| Updater/runtime | Yes | AppImage swap previously relaunched independently of a durable background supervisor. | Yes, reserved handoff and rollback |
+| Stale live process state | Yes | An older unsupervised app can still own port 5577 during rollout. | Live rollout must replace it and prove one PID |
+
+**Regression for the reported shape**: main-process contract coverage closes the last window, reopens through a second launch, awaits auth/store and sidecar shutdown, and hands updates to the supervisor; lifecycle tests cover coalesced starts, stale exits, bounded backoff, and final shutdown timeout; service tests lock the canonical launcher/profile and owner-only secrets.
+
+**Explicitly not covered**: running FlowState mutations from a headless service-role client, supporting multiple simultaneous user profiles, or keeping the bridge alive after explicit Sign Out.
 
 ### TASK-1944: Canonical operation, revision, and change-sequence foundation (🔄 IN PROGRESS)
 
@@ -7723,6 +7755,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1965**~~ | **P0** | ✅ **DONE — Electron 1.4.273 recovered all seven request-hash-rejected queued edits and remained synced after relaunch** |
 | ~~**BUG-1966**~~ | **P0** | ✅ **DONE — Electron 1.4.274 keeps KDE/Electron at the same non-negative timer state and clears completed-ID loops** |
 | ~~**BUG-1967**~~ | **P0** | ✅ **DONE — Electron 1.4.274 requires durable task admission before clearing drafts or showing success** |
+| **TASK-1968** | **P0** | 🔄 **Always-on signed-in Hermes bridge with one supervised Electron renderer, sidecar, profile, and updater authority** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

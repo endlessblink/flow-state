@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from 'fs'
+import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, statSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { createJsonStore } from '../../../electron/ipc/jsonStore'
@@ -31,6 +31,18 @@ describe('jsonStore — atomic, corruption-safe, serialized (BUG-1874)', () => {
 
     const fresh = createJsonStore(file)
     expect(await fresh.get('flowstate-supabase-auth')).toEqual({ refresh_token: 'r1' })
+  })
+
+  it('keeps the auth store and backup owner-only across atomic rewrites', async () => {
+    writeFileSync(file, JSON.stringify({ seed: true }), { mode: 0o664 })
+    const store = createJsonStore(file)
+
+    await store.set('flowstate-supabase-auth', { refresh_token: 'private' })
+    await store.flush()
+
+    expect(statSync(dir).mode & 0o777).toBe(0o700)
+    expect(statSync(file).mode & 0o777).toBe(0o600)
+    expect(statSync(`${file}.bak`).mode & 0o777).toBe(0o600)
   })
 
   it('concurrent set() on different keys both persist (no read-modify-write clobber)', async () => {

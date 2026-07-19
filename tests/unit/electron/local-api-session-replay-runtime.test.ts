@@ -10,6 +10,8 @@ const runtime = vi.hoisted(() => ({
   handlers: new Map<string, (...args: any[]) => any>(),
   children: [] as Array<EventEmitter & { pid: number; postMessage: ReturnType<typeof vi.fn>; kill: ReturnType<typeof vi.fn> }>,
   userData: '',
+  forkAttempts: 0,
+  forkFailuresRemaining: 0,
 }))
 
 const session = {
@@ -31,6 +33,11 @@ vi.mock('electron', () => ({
   },
   utilityProcess: {
     fork: () => {
+      runtime.forkAttempts += 1
+      if (runtime.forkFailuresRemaining > 0) {
+        runtime.forkFailuresRemaining -= 1
+        throw new Error('synthetic synchronous fork failure')
+      }
       const child = Object.assign(new EventEmitter(), {
         pid: 9000 + runtime.children.length,
         postMessage: vi.fn(),
@@ -47,6 +54,8 @@ describe('Electron Local API session replay runtime', () => {
     vi.useRealTimers()
     runtime.handlers.clear()
     runtime.children.length = 0
+    runtime.forkAttempts = 0
+    runtime.forkFailuresRemaining = 0
     runtime.userData = mkdtempSync(join(tmpdir(), 'flowstate-local-api-main-'))
     vi.resetModules()
   })
@@ -192,7 +201,7 @@ describe('Electron Local API session replay runtime', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('bounds final shutdown when a killed child never emits exit', async () => {
+  it('rejects final shutdown when a killed child never proves it exited', async () => {
     vi.useFakeTimers()
     writeFileSync(sourceSidecarFixture, '')
     const { registerLocalApiHandlers, shutdownLocalApi } = await import('../../../electron/ipc/localApi')
@@ -201,18 +210,69 @@ describe('Electron Local API session replay runtime', () => {
     const child = runtime.children[0]
 
     let settled = false
-    const shutdown = shutdownLocalApi().then(() => {
-      settled = true
-    })
+    const shutdown = shutdownLocalApi()
+    void shutdown.then(
+      () => { settled = true },
+      () => { settled = true },
+    )
+    const rejected = expect(shutdown).rejects.toThrow(/did not exit/i)
     await Promise.resolve()
     expect(child.kill).toHaveBeenCalledOnce()
 
     await vi.advanceTimersByTimeAsync(4_999)
     expect(settled).toBe(false)
     await vi.advanceTimersByTimeAsync(1)
-    await shutdown
+    await rejected
 
     expect(settled).toBe(true)
     expect(runtime.children).toHaveLength(1)
+  })
+
+  it('retries a missing sidecar with bounded backoff while running is still desired', async () => {
+    vi.useFakeTimers()
+    const { registerLocalApiHandlers, shutdownLocalApi } = await import('../../../electron/ipc/localApi')
+    registerLocalApiHandlers()
+
+    runtime.handlers.get('localApi:setSession')?.({}, session)
+    expect(runtime.forkAttempts).toBe(0)
+
+    writeFileSync(sourceSidecarFixture, '')
+    await vi.advanceTimersByTimeAsync(99)
+    expect(runtime.forkAttempts).toBe(0)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(runtime.forkAttempts).toBe(1)
+    expect(runtime.children).toHaveLength(1)
+
+    const shutdown = shutdownLocalApi()
+    runtime.children[0].emit('exit', 0, null)
+    await shutdown
+  })
+
+  it('retries synchronous fork failures with the existing bounded backoff', async () => {
+    vi.useFakeTimers()
+    writeFileSync(sourceSidecarFixture, '')
+    runtime.forkFailuresRemaining = 2
+    const { registerLocalApiHandlers, shutdownLocalApi } = await import('../../../electron/ipc/localApi')
+    registerLocalApiHandlers()
+
+    runtime.handlers.get('localApi:setSession')?.({}, session)
+    expect(runtime.forkAttempts).toBe(1)
+    expect(runtime.children).toHaveLength(0)
+
+    await vi.advanceTimersByTimeAsync(99)
+    expect(runtime.forkAttempts).toBe(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(runtime.forkAttempts).toBe(2)
+    expect(runtime.children).toHaveLength(0)
+
+    await vi.advanceTimersByTimeAsync(499)
+    expect(runtime.forkAttempts).toBe(2)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(runtime.forkAttempts).toBe(3)
+    expect(runtime.children).toHaveLength(1)
+
+    const shutdown = shutdownLocalApi()
+    runtime.children[0].emit('exit', 0, null)
+    await shutdown
   })
 })

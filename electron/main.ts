@@ -13,6 +13,10 @@ import { registerUpdater } from './updater'
 import { registerOAuthHandlers } from './ipc/oauth'
 import { registerLocalApiHandlers, shutdownLocalApi } from './ipc/localApi'
 import { registerDiagnosticsHandlers } from './ipc/diagnostics'
+import {
+  createBackgroundWindowLifecycle,
+  isBackgroundLaunch,
+} from './backgroundWindowLifecycle'
 
 function installBrokenPipeConsoleGuard() {
   const isBrokenPipe = (err: unknown) =>
@@ -95,6 +99,13 @@ if (!gotLock) {
 }
 
 let mainWindow: BrowserWindow | null = null
+const backgroundEnabled =
+  isBackgroundLaunch(process.argv) || process.env.FLOWSTATE_SUPERVISED === '1'
+const backgroundLifecycle = createBackgroundWindowLifecycle({
+  getWindow: () => mainWindow,
+  createWindow,
+  isBackgroundEnabled: () => backgroundEnabled,
+})
 
 function openSearchInRenderer() {
   if (!mainWindow || mainWindow.isDestroyed()) return
@@ -122,14 +133,25 @@ function toggleMainWindowDevTools() {
 let storeFlushedForQuit = false
 let storeFlushForQuitPromise: Promise<void> | null = null
 let destroyWindowAfterStoreFlush = false
+let signalQuitRequested = false
 
 // TASK-1871: Reliable quit. The durable main-process store must flush before the renderer is
 // destroyed; once it has, force-destroy the window so a renderer beforeunload guard cannot wedge
 // Ctrl/Cmd+Q or the File menu.
 function forceQuit() {
+  backgroundLifecycle.beginQuit()
   destroyWindowAfterStoreFlush = true
   app.quit()
 }
+
+function requestGracefulSignalQuit() {
+  if (signalQuitRequested) return
+  signalQuitRequested = true
+  forceQuit()
+}
+
+process.on('SIGTERM', requestGracefulSignalQuit)
+process.on('SIGINT', requestGracefulSignalQuit)
 
 function registerAppMenu() {
   const menu = Menu.buildFromTemplate([
@@ -177,8 +199,8 @@ function registerAppMenu() {
   Menu.setApplicationMenu(menu)
 }
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
+function createWindow(): BrowserWindow {
+  const window = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 800,
@@ -190,6 +212,8 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      // The hidden renderer remains the auth-refresh and Local API heartbeat owner.
+      backgroundThrottling: false,
     },
     // Glass-like frame
     titleBarStyle: 'hiddenInset',
@@ -197,21 +221,26 @@ function createWindow() {
     autoHideMenuBar: true,
     show: false,
   })
+  mainWindow = window
 
   // Show when ready to prevent white flash
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
+  window.once('ready-to-show', () => {
+    backgroundLifecycle.handleReadyToShow(window, process.argv)
+  })
+
+  window.on('close', (event) => {
+    backgroundLifecycle.handleClose(event, window)
   })
 
   // Open external links in default browser
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+  window.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: 'deny' }
   })
 
   // Electron can consume renderer keydown events in some focused states. Keep
   // search shortcuts available while preserving the renderer's input/modal guard.
-  mainWindow.webContents.on('before-input-event', (_event, input) => {
+  window.webContents.on('before-input-event', (_event, input) => {
     const key = input.key.toLowerCase()
     if (input.control && input.shift && (key === 'i' || input.code === 'KeyI')) {
       toggleMainWindowDevTools()
@@ -234,7 +263,7 @@ function createWindow() {
   // Catch plain <a href> clicks and any programmatic navigation that would
   // replace the app window. setWindowOpenHandler only fires for target="_blank"
   // and window.open(); will-navigate covers everything else.
-  mainWindow.webContents.on('will-navigate', (event, url) => {
+  window.webContents.on('will-navigate', (event, url) => {
     const currentUrl = mainWindow?.webContents.getURL() ?? ''
     try {
       const target = new URL(url)
@@ -252,22 +281,24 @@ function createWindow() {
   // Load the app
   if (process.env.VITE_DEV_SERVER_URL) {
     // Dev mode — connect to Vite dev server
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
-    mainWindow.webContents.openDevTools()
+    window.loadURL(process.env.VITE_DEV_SERVER_URL)
+    window.webContents.openDevTools()
   } else {
     // Production — load built files
     const indexPath = join(__dirname, '../dist/index.html')
     if (existsSync(indexPath)) {
-      mainWindow.loadFile(indexPath)
+      window.loadFile(indexPath)
     } else {
       console.error('dist/index.html not found — run npm run build first')
       app.quit()
     }
   }
 
-  mainWindow.on('closed', () => {
-    mainWindow = null
+  window.on('closed', () => {
+    if (mainWindow === window) mainWindow = null
   })
+
+  return window
 }
 
 // Register IPC handlers (must be before window creation)
@@ -293,16 +324,13 @@ app.whenReady().then(() => {
   registerUpdater()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
-    }
+    backgroundLifecycle.showOrCreate()
   })
 })
 
 app.on('before-quit', (event) => {
   if (storeFlushedForQuit) {
     globalShortcut.unregister('CommandOrControl+Shift+I')
-    shutdownLocalApi()
     return
   }
 
@@ -324,6 +352,7 @@ app.on('before-quit', (event) => {
       } finally {
         if (timeout) clearTimeout(timeout)
       }
+      await shutdownLocalApi()
       storeFlushedForQuit = true
       if (destroyWindowAfterStoreFlush && mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.destroy()
@@ -353,8 +382,5 @@ app.on('window-all-closed', () => {
 
 // Handle second instance — focus existing window
 app.on('second-instance', () => {
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    mainWindow.focus()
-  }
+  backgroundLifecycle.showOrCreate()
 })

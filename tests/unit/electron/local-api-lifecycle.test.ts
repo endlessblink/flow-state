@@ -63,6 +63,13 @@ describe('Electron local API lifecycle regression contract', () => {
     expect(startChild).toContain('app.getVersion()')
   })
 
+  it('keeps the bearer-token config owner-only whenever it is persisted', () => {
+    expect(LOCAL_API_TS).toContain("mkdirSync(dir, { recursive: true, mode: 0o700 })")
+    expect(LOCAL_API_TS).toContain('chmodSync(dir, 0o700)')
+    expect(LOCAL_API_TS).toContain("writeFileSync(configPath(), JSON.stringify(cfg, null, 2), { encoding: 'utf-8', mode: 0o600 })")
+    expect(LOCAL_API_TS).toContain('chmodSync(configPath(), 0o600)')
+  })
+
   it('keeps the sidecar running when Local Task API is disabled but a session is still available', () => {
     const body = handlerBody('localApi:setEnabled')
 

@@ -6,6 +6,8 @@ const electron_1 = require("electron");
 const node_child_process_1 = require("node:child_process");
 const updater_pending_1 = require("./updater-pending");
 const store_1 = require("./ipc/store");
+const localApi_1 = require("./ipc/localApi");
+const supervisedUpdate_1 = require("./supervisedUpdate");
 // BUG-1874: bound the store flush, but never install/restart unless it actually succeeds. A timeout
 // used to resolve the race as if persistence had completed, allowing a just-rotated single-use
 // refresh token to be lost when app.exit(0) terminated the old process.
@@ -39,12 +41,31 @@ function emitUpdaterError(message) {
 }
 function launchDetachedAppImageInstaller() {
     if (process.platform !== 'linux')
-        return false;
+        return null;
     const targetAppImage = process.env.APPIMAGE;
     const pendingAppImage = (0, updater_pending_1.pendingAppImagePath)();
     if (!targetAppImage || !pendingAppImage)
-        return false;
+        return null;
+    const expectedVersion = (0, updater_pending_1.versionFromUpdateFileName)(pendingAppImage);
+    if (!expectedVersion)
+        return null;
     const updateInfoPath = (0, updater_pending_1.pendingUpdateInfoPath)();
+    const relaunch = (0, supervisedUpdate_1.resolveUpdateRelaunch)(process.env);
+    if (relaunch.strategy === 'systemd') {
+        const serviceCheck = (0, node_child_process_1.spawnSync)('systemctl', ['--user', 'cat', 'flowstate-background.service'], { stdio: 'ignore' });
+        if (serviceCheck.error || serviceCheck.status !== 0) {
+            console.error('[Updater] Supervised update preflight could not find the background service');
+            return null;
+        }
+        const restartGuard = (0, node_child_process_1.spawnSync)('systemctl', ['--user', 'show', '--property=RestartPreventExitStatus', '--value', 'flowstate-background.service'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        const guardedExitCodes = restartGuard.stdout?.trim().split(/\s+/) ?? [];
+        if (restartGuard.error ||
+            restartGuard.status !== 0 ||
+            !guardedExitCodes.includes(String(supervisedUpdate_1.SUPERVISED_UPDATE_EXIT_CODE))) {
+            console.error('[Updater] Background service would race the supervised update handoff');
+            return null;
+        }
+    }
     // BUG-1917: the previous script ran blind (stdio ignored, no log) and clicking
     // Restart could end with the app exited, the AppImage NOT swapped, and no
     // relaunch — with zero forensic trail (pending/ kept a graveyard of 1.4.223/
@@ -60,30 +81,132 @@ target="$1"
 pending="$2"
 info="$3"
 parent="$4"
+strategy="$5"
+expected_version="$6"
 tmp="$target.flowstate-update-tmp"
+backup="$target.flowstate-update-backup"
+restart_supervised_on_failure() {
+  if [ "$strategy" = "systemd" ]; then
+    systemctl --user reset-failed flowstate-background.service || true
+    systemctl --user start flowstate-background.service || true
+  fi
+}
+fail_install() {
+  echo "FAIL $1"
+  rm -f "$tmp"
+  restart_supervised_on_failure
+  exit 1
+}
+restore_known_good() {
+  echo "restoring known-good AppImage"
+  systemctl --user stop flowstate-background.service || true
+  mv -f "$backup" "$target" || {
+    echo "FAIL restore known-good AppImage"
+    exit 1
+  }
+  restart_supervised_on_failure
+}
+fail_after_swap() {
+  echo "FAIL $1"
+  restore_known_good
+  exit 1
+}
+wait_for_supervised_health() {
+  health_attempt=0
+  while [ "$health_attempt" -lt 100 ]; do
+    if systemctl --user is-active --quiet flowstate-background.service && \
+      curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
+        grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
+      return 0
+    fi
+    health_attempt=$((health_attempt + 1))
+    sleep 0.2
+  done
+  return 1
+}
 i=0
-while kill -0 "$parent" 2>/dev/null && [ "$i" -lt 100 ]; do
+while kill -0 "$parent" 2>/dev/null && [ "$i" -lt 300 ]; do
   i=$((i + 1))
   sleep 0.1
 done
+if kill -0 "$parent" 2>/dev/null; then
+  fail_install "parent did not exit before update deadline"
+fi
 echo "parent gone after $i ticks"
-chmod 755 "$pending" || { echo "FAIL chmod pending"; exit 1; }
-cp -f "$pending" "$tmp" || { echo "FAIL cp to tmp"; exit 1; }
-chmod 755 "$tmp" || { echo "FAIL chmod tmp"; exit 1; }
-mv -f "$tmp" "$target" || { echo "FAIL mv into place"; exit 1; }
+chmod 755 "$pending" || fail_install "chmod pending"
+cp -f "$pending" "$tmp" || fail_install "copy pending"
+chmod 755 "$tmp" || fail_install "chmod temporary target"
+if [ "$strategy" = "systemd" ]; then
+  systemctl --user stop flowstate-background.service || fail_install "stop supervisor before swap"
+  rm -f "$backup"
+  cp -p "$target" "$backup" || fail_install "backup known-good target"
+  mv -f "$tmp" "$target" || fail_after_swap "swap target"
+  echo "swap complete, starting supervised replacement"
+  systemctl --user reset-failed flowstate-background.service || true
+  systemctl --user start flowstate-background.service || fail_after_swap "supervised restart"
+  wait_for_supervised_health || fail_after_swap "supervised readiness"
+  rm -f "$backup"
+  rm -f "$info"
+  echo "supervised replacement is healthy"
+  exit 0
+fi
+mv -f "$tmp" "$target" || fail_install "swap target"
 rm -f "$info"
 echo "swap complete, relaunching"
 exec "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state
 `;
-    const child = (0, node_child_process_1.spawn)('/bin/sh', ['-c', script, 'flowstate-appimage-install', targetAppImage, pendingAppImage, updateInfoPath, String(process.pid)], {
+    const installerArgs = [
+        '-c',
+        script,
+        'flowstate-appimage-install',
+        targetAppImage,
+        pendingAppImage,
+        updateInfoPath,
+        String(process.pid),
+        relaunch.strategy,
+        expectedVersion,
+    ];
+    const installerEnv = {
+        ...process.env,
+        APPIMAGE_SILENT_INSTALL: 'true',
+    };
+    if (relaunch.strategy === 'systemd') {
+        const handoffUnit = `flowstate-update-handoff-${process.pid}-${Date.now()}`;
+        const handoff = (0, node_child_process_1.spawnSync)('systemd-run', [
+            '--user',
+            `--unit=${handoffUnit}`,
+            '--collect',
+            '--property=Type=exec',
+            '--working-directory=/',
+            '/bin/sh',
+            ...installerArgs,
+        ], {
+            stdio: 'ignore',
+            cwd: '/',
+            env: installerEnv,
+        });
+        if (handoff.error || handoff.status !== 0) {
+            console.error('[Updater] Failed to create isolated supervised update handoff');
+            return null;
+        }
+        return {
+            cancel: () => {
+                (0, node_child_process_1.spawnSync)('systemctl', ['--user', 'stop', handoffUnit], { stdio: 'ignore' });
+            },
+            isArmed: () => {
+                const status = (0, node_child_process_1.spawnSync)('systemctl', ['--user', 'is-active', '--quiet', handoffUnit], {
+                    stdio: 'ignore',
+                });
+                return !status.error && status.status === 0;
+            },
+        };
+    }
+    const child = (0, node_child_process_1.spawn)('/bin/sh', installerArgs, {
         detached: true,
         stdio: 'ignore',
         // BUG-1917: never inherit a cwd inside the soon-to-unmount AppImage FUSE dir
         cwd: '/',
-        env: {
-            ...process.env,
-            APPIMAGE_SILENT_INSTALL: 'true',
-        },
+        env: installerEnv,
     });
     child.once('error', (err) => {
         console.error('[Updater] Detached installer failed to spawn:', err.message);
@@ -93,9 +216,18 @@ exec "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-stat
     // never started — fall back to electron-updater's own quitAndInstall path.
     if (!child.pid) {
         console.error('[Updater] Detached installer has no pid — falling back to quitAndInstall');
-        return false;
+        return null;
     }
-    return true;
+    return {
+        cancel: () => {
+            if (!child.killed)
+                child.kill('SIGTERM');
+        },
+        isArmed: () => child.exitCode === null && !child.killed,
+    };
+}
+function prepareDetachedAppImageInstaller() {
+    return launchDetachedAppImageInstaller();
 }
 /**
  * Electron auto-updater setup.
@@ -167,6 +299,22 @@ function registerUpdater() {
             emitUpdaterError(message);
             throw new Error(message, { cause: err });
         }
+        const relaunch = (0, supervisedUpdate_1.resolveUpdateRelaunch)(process.env);
+        let preparedInstaller = prepareDetachedAppImageInstaller();
+        if (relaunch.strategy === 'systemd' && !preparedInstaller) {
+            const message = 'Update restart aborted because FlowState could not prepare the supervised update handoff.';
+            emitUpdaterError(message);
+            throw new Error(message);
+        }
+        try {
+            await (0, localApi_1.shutdownLocalApi)();
+        }
+        catch (err) {
+            preparedInstaller?.cancel();
+            const message = 'Update restart aborted because FlowState could not safely stop the local bridge.';
+            emitUpdaterError(message);
+            throw new Error(message, { cause: err });
+        }
         // Release single-instance lock before restart, otherwise the new process
         // can't acquire the lock and immediately exits (appears as a crash).
         electron_1.app.releaseSingleInstanceLock();
@@ -175,9 +323,23 @@ function registerUpdater() {
         // renderer stuck in a half-dead state while the app is trying to exit.
         setImmediate(() => {
             console.log('[Updater] Starting quitAndInstall handoff');
-            if (launchDetachedAppImageInstaller()) {
+            if (preparedInstaller && !preparedInstaller.isArmed()) {
+                preparedInstaller = null;
+                const message = 'The prepared updater handoff stopped before FlowState could exit.';
+                emitUpdaterError(message);
+                if (relaunch.strategy === 'systemd') {
+                    // Exit normally so Restart=always brings the known-good supervised app back.
+                    electron_1.app.exit(1);
+                    return;
+                }
+            }
+            if (preparedInstaller) {
                 console.log('[Updater] Started detached AppImage installer handoff');
-                electron_1.app.exit(0);
+                electron_1.app.exit(relaunch.exitCode === supervisedUpdate_1.SUPERVISED_UPDATE_EXIT_CODE ? supervisedUpdate_1.SUPERVISED_UPDATE_EXIT_CODE : 0);
+                return;
+            }
+            if (relaunch.strategy === 'systemd') {
+                emitUpdaterError('The supervised updater handoff was lost; FlowState will remain open.');
                 return;
             }
             const fallbackTimer = setTimeout(() => {

@@ -1,6 +1,6 @@
 import { ipcMain, app, BrowserWindow, utilityProcess, type UtilityProcess } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from 'fs'
 import { randomBytes } from 'crypto'
 
 /**
@@ -72,8 +72,10 @@ function loadConfig(): LocalApiConfig {
 function saveConfig(cfg: LocalApiConfig) {
   try {
     const dir = join(configPath(), '..')
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-    writeFileSync(configPath(), JSON.stringify(cfg, null, 2), 'utf-8')
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 })
+    chmodSync(dir, 0o700)
+    writeFileSync(configPath(), JSON.stringify(cfg, null, 2), { encoding: 'utf-8', mode: 0o600 })
+    chmodSync(configPath(), 0o600)
   } catch (e) {
     console.error('[local-api] failed to persist config:', e)
   }
@@ -149,6 +151,7 @@ function spawnChild() {
     const message = `sidecar bundle missing at ${path}`
     lastChildError = { message, at: Date.now() }
     console.error(`[local-api] ${message} — run electron:build-main`)
+    scheduleRestart()
     return
   }
   listening = false
@@ -170,6 +173,7 @@ function spawnChild() {
     logLifecycle('fork-threw', { error: lastChildError.message })
     child = null
     listening = false
+    scheduleRestart()
     return
   }
 
@@ -289,9 +293,9 @@ async function reconcileChildLifecycle() {
               generation: current.generation,
               timeoutMs: FINAL_SHUTDOWN_EXIT_TIMEOUT_MS,
             })
-            activeChild = null
-            child = null
-            listening = false
+            throw new Error(
+              `Local API child generation ${current.generation} did not exit within ${FINAL_SHUTDOWN_EXIT_TIMEOUT_MS}ms`,
+            )
           }
         } else {
           await current.exitPromise
@@ -309,11 +313,12 @@ function queueReconcile(): Promise<void> {
 
   const run = reconcileChildLifecycle()
   lifecyclePromise = run
-  void run.finally(() => {
+  const finishRun = () => {
     if (lifecyclePromise !== run) return
     lifecyclePromise = null
     if (reconcileRequested) void queueReconcile()
-  })
+  }
+  void run.then(finishRun, finishRun)
   return run
 }
 

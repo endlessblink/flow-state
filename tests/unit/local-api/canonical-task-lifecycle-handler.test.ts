@@ -236,6 +236,7 @@ describe('canonical Local API task lifecycle handler', () => {
       payload,
       previewDigest: 'a'.repeat(64),
       previewExpiresAt: '2026-07-15T13:15:00.000Z',
+      requestHash: canonicalHash(normalized),
     }, notify)).resolves.toEqual({ status: 200, body: data })
     expect(notify).toHaveBeenCalledWith('create', taskId)
   })
@@ -262,6 +263,27 @@ describe('canonical Local API task lifecycle handler', () => {
       })
     }
     expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects a changed server-issued request hash before apply', async () => {
+    const { executeCanonicalTaskLifecycle, notify, rpc } = harness({ data: null, error: null })
+
+    await expect(executeCanonicalTaskLifecycle(context(rpc), {
+      preview: false,
+      operationId,
+      taskId,
+      baseRevision: 7,
+      action: 'set_status',
+      payload: { status: 'in_progress' },
+      previewDigest: 'a'.repeat(64),
+      previewExpiresAt: '2026-07-15T13:15:00.000Z',
+      requestHash: 'b'.repeat(64),
+    }, notify)).resolves.toMatchObject({
+      status: 409,
+      body: { ok: false, error: { code: 'request_hash_mismatch' } },
+    })
+    expect(rpc).not.toHaveBeenCalled()
+    expect(notify).not.toHaveBeenCalled()
   })
 
   it('rejects action payloads that do not match the lifecycle contract', async () => {

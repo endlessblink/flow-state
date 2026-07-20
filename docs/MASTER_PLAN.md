@@ -2212,6 +2212,7 @@ _Original plan below._
 - [x] ~~**BUG-1967 — Newly created task appears accepted and then disappears**: require durable account-queue or guest-storage enrollment before success, await Canvas sidebar acknowledgement, preserve the draft on failure, and reject empty server create acknowledgements.~~ ✅ DONE 2026-07-19 in Electron 1.4.274.
 - [x] ~~**TASK-1968 — Always-on signed-in Hermes bridge**: supervise one canonical Electron process, keep its authenticated renderer and Local API alive when the window closes, serialize sidecar/update ownership, and preserve the same profile across desktop launches, restarts, and updates.~~ ✅ DONE 2026-07-19 in Electron 1.4.275.
 - [x] ~~**BUG-1969 — Restore full Hermes route compatibility**: expose canonical work-block lifecycle operations, align Hermes subtask batches with the live task-v1 contract, forward immutable approval hashes on apply, and prove capability preflight plus preview behavior against the packaged signed-in bridge.~~ ✅ DONE 2026-07-19 in Electron 1.4.277.
+- [x] ~~**BUG-1970 — Accept the server-issued lifecycle request hash on apply**: align the canonical lifecycle validator with its own preview receipt, reject changed hashes before persistence, and prove Hermes can apply an approved task creation without losing the task.~~ ✅ DONE 2026-07-20 in Electron 1.4.280.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2279,6 +2280,38 @@ _Original plan below._
 **Regression added for reported repro**: exact FlowState task-v1 subtask preview/apply fixtures, request-hash forwarding, capability contract checks, work-block dispatch, replay, recurrence-heavy scope, and database concurrency.
 
 **Live boundary proof**: Public `latest-linux.yml` serves 1.4.277; the installed AppImage is byte-identical to the release artifact and relaunched with the existing signed-in profile. Packaged `/api/health` returned 200 and `/api/capabilities` advertised the work-block route as `work-block-v1` and subtask batch as `task-v1`. Live Hermes health reported 16 routes, `compatible: true`, and zero blocked tools. Non-mutating Hermes previews succeeded for task-v1 subtask creation, canonical work-block creation, and movement of an actual shipped non-UUID timed block. The production rollback-only work-block and subtask suites passed, including replay, conflicts, scope, concurrency, retirement, and rollback.
+
+### ~~BUG-1970: Approved Hermes task creation is rejected as an invalid lifecycle request~~ (✅ DONE)
+
+**Priority**: P0-HIGH | **Status**: ✅ DONE 2026-07-20 in Electron 1.4.280 | **Depends on**: BUG-1969, TASK-1962
+
+**Exact failure mode**: The canonical task-lifecycle preview returned a server-issued `requestHash`, and Hermes correctly returned that immutable approval field on apply. The Local API request allowlist omitted `requestHash`, so the exact approved apply was rejected with HTTP 400 `invalid_request` before the canonical RPC ran. The separate multi-action repro also showed that dependent writes against the same task can invalidate a later preview and that expired previews require a fresh operation identity.
+
+**Acceptance**:
+- A fresh task-lifecycle preview can be applied with the exact server-issued request hash.
+- A changed request hash is rejected before any persistence call.
+- Regression coverage uses the user's exact create-preview/apply payload shape.
+- Hermes stops remaining writes after typed `state_conflict` or `preview_expired` results and requires a fresh read/preview/approval instead of replaying stale authorization.
+- Electron updater and the packaged signed-in localhost boundary prove the corrected contract.
+
+**Outside this fix**: Automatic approval of a changed preview remains forbidden; Hermes must obtain fresh approval after state or expiry invalidates the prior preview.
+
+**Implementation**: The lifecycle boundary now accepts the preview-issued request hash on apply, validates its SHA-256 shape, and rejects a changed value before calling the canonical RPC. Hermes treats trusted `state_conflict` and `preview_expired` results as write-batch circuit breakers, drains every unstarted call across later execution segments, and tells the next turn to reread, re-preview, and request fresh approval. Same-task FlowState writes are explicitly ordered dependencies rather than one assistant-message batch.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Exact accepted Hebrew task preview then rejected apply was reconstructed from the live Hermes session. | Yes |
+| Data shape / persisted row shape | Yes | Preview and apply payloads were byte-equivalent except for the server-issued approval fields. | Yes |
+| Renderer state | Yes | Verified committed lifecycle receipts still reconcile through the existing task notification path. | Existing path |
+| Electron main/preload | Yes | Fresh packaged sidecar contains the corrected lifecycle boundary. | Yes |
+| Localhost sidecar | Yes | Packaged signed-in route accepts the approval hash instead of rejecting it as unknown. | Yes |
+| Supabase persistence | Yes | Changed hashes stop before RPC; matching hashes reach the canonical contract. | Yes |
+| Updater/runtime version | Yes | Electron 1.4.280 is the clean-provenance release for this fix. | Yes |
+| Stale live process state | Yes | Supervised runtime is replaced and re-probed after install. | Yes |
+
+**Regression and verification**: RED reproduced the exact HTTP 400 before RPC when apply added `requestHash`; GREEN covers matching create apply plus mismatched-hash rejection. FlowState's full suite passed 4,007 tests with six intentional skips; type-check, lint, Electron package validation, and the locked Electron build passed. Hermes RED/GREEN coverage proves adjacent and mixed-segment mutations stop after both typed failures, including untrusted-tool negatives; its broader touched suite passed 242 tests with one skip, plus Ruff, focused type-check, compilation, and independent blocker review with no remaining Critical or Important findings.
 
 ### BUG-1964: Sign in once, stay signed in until explicit Sign Out (✅ DONE 2026-07-18)
 

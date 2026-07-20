@@ -99,7 +99,7 @@ function normalizePayload(action, payload, baseRevision) {
 function validatedRequest(body) {
   const allowed = new Set([
     'operationId', 'taskId', 'baseRevision', 'action', 'payload', 'preview',
-    'previewDigest', 'previewExpiresAt', 'workspaceId',
+    'previewDigest', 'previewExpiresAt', 'requestHash', 'workspaceId',
   ])
   if (!object(body)
     || Object.keys(body).some(key => !allowed.has(key))
@@ -108,7 +108,8 @@ function validatedRequest(body) {
     || !nonEmptyString(body.taskId)
     || !Number.isSafeInteger(body.baseRevision)
     || !ACTIONS.has(body.action)
-    || (body.preview !== undefined && typeof body.preview !== 'boolean')) {
+    || (body.preview !== undefined && typeof body.preview !== 'boolean')
+    || (body.requestHash !== undefined && !digest(body.requestHash))) {
     return { error: errorResult(400, 'invalid_request', 'The canonical lifecycle request is invalid') }
   }
   const payload = normalizePayload(body.action, body.payload, body.baseRevision)
@@ -264,6 +265,9 @@ async function executeCanonicalTaskLifecycle(context, body, notifyTaskMutation) 
     expectedHash = canonicalHash(expectedRequest)
   } catch {
     return errorResult(400, 'invalid_request', 'The canonical lifecycle request is invalid')
+  }
+  if (!validated.preview && body.requestHash !== undefined && body.requestHash !== expectedHash) {
+    return errorResult(409, 'request_hash_mismatch', 'The approved lifecycle request no longer matches')
   }
 
   let rpcResult

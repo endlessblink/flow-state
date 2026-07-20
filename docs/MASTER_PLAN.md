@@ -2277,6 +2277,10 @@ _Original plan below._
 
 **Explicitly not covered**: renderer Calendar adoption of the shared work-block transaction, recurrence lifecycle editing, projects/groups, Canvas, timer control, and date-only scheduled instances without a start time remain separate capabilities; the canonical work-block lifecycle covers timed blocks.
 
+**Regression added for reported repro**: exact FlowState task-v1 subtask preview/apply fixtures, request-hash forwarding, capability contract checks, work-block dispatch, replay, recurrence-heavy scope, and database concurrency.
+
+**Live boundary proof**: Public `latest-linux.yml` serves 1.4.277; the installed AppImage is byte-identical to the release artifact and relaunched with the existing signed-in profile. Packaged `/api/health` returned 200 and `/api/capabilities` advertised the work-block route as `work-block-v1` and subtask batch as `task-v1`. Live Hermes health reported 16 routes, `compatible: true`, and zero blocked tools. Non-mutating Hermes previews succeeded for task-v1 subtask creation, canonical work-block creation, and movement of an actual shipped non-UUID timed block. The production rollback-only work-block and subtask suites passed, including replay, conflicts, scope, concurrency, retirement, and rollback.
+
 ### BUG-1970: Empty subtask description closes when clicked (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE 2026-07-20 in Electron 1.4.278 | **Related**: TASK-1571
@@ -2303,15 +2307,11 @@ _Original plan below._
 | KDE polling/control path | N/A | No timer behavior changed. | No |
 | Supabase persistence/realtime | N/A | The existing task autosave path and persisted subtask format are unchanged. | No |
 | Updater/runtime version | Yes | Electron 1.4.278 passed the release guard, package validation, live manifest check, and AppImage/deb HTTP checks. | Yes |
-| Stale live process/cache state | Pending user restart | The current 1.4.277 process was intentionally left open to avoid disrupting the reported task modal. | No |
+| Stale live process/cache state | Yes | The user restarted into Electron 1.4.278 and confirmed the same empty-description field accepts typing without closing. | Yes |
 
-**Verification**: focused red-green mouse regression, type-check, source lint, import validation, CSS validation, dependency safety checks, Electron sync guard, production Electron build, package validation, and live 1.4.278 updater/artifact checks passed. The full unit suite ran through its assertions without reporting a failure but retained existing background handles, so deployment used the documented guarded hotfix path.
+**Verification**: focused red-green mouse regression, type-check, source lint, import validation, CSS validation, dependency safety checks, Electron sync guard, production Electron build, package validation, and live 1.4.278 updater/artifact checks passed. The full unit suite ran through its assertions without reporting a failure but retained existing background handles, so deployment used the documented guarded hotfix path. User packaged-app confirmation on 2026-07-20 completed the exact click-and-type repro proof after restart.
 
 **Explicitly not covered**: main task descriptions, mini-canvas nodes, or changing subtask persistence formats.
-
-**Regression added for reported repro**: exact FlowState task-v1 subtask preview/apply fixtures, request-hash forwarding, capability contract checks, work-block dispatch, replay, recurrence-heavy scope, and database concurrency.
-
-**Live boundary proof**: Public `latest-linux.yml` serves 1.4.277; the installed AppImage is byte-identical to the release artifact and relaunched with the existing signed-in profile. Packaged `/api/health` returned 200 and `/api/capabilities` advertised the work-block route as `work-block-v1` and subtask batch as `task-v1`. Live Hermes health reported 16 routes, `compatible: true`, and zero blocked tools. Non-mutating Hermes previews succeeded for task-v1 subtask creation, canonical work-block creation, and movement of an actual shipped non-UUID timed block. The production rollback-only work-block and subtask suites passed, including replay, conflicts, scope, concurrency, retirement, and rollback.
 
 ### BUG-1964: Sign in once, stay signed in until explicit Sign Out (✅ DONE 2026-07-18)
 

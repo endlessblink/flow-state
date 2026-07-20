@@ -2320,7 +2320,7 @@ _Original plan below._
 
 **Exact failure mode**: FlowState normalized a date-only due date such as `2026-07-20` to UTC midnight. Hermes parsed the original date-only value as local midnight, so Asia/Jerusalem shifted it three hours and falsely rejected the otherwise identical preview as `receipt_mismatch` before saving or applying it. In the same turn, a valid completion preview was bundled with the failing activation and never reached apply.
 
-**Regression and live proof**: A timezone-forced regression now covers both preview and committed read-back with a date-only due date. The bridge suite passes 36 tests. The restarted live Hermes runtime accepted a fresh preview, committed exactly one Notion-backed syllabus task with one 30-minute block, read it back at canonical revision 1, committed the earlier task completion at revision 3, and converged the active local timer snapshot to the syllabus task.
+**Regression and live proof**: A timezone-forced regression now covers both preview and committed read-back with a date-only due date, plus fail-closed malformed-date cases. The bridge suite passes 38 tests. The restarted live Hermes runtime accepted a fresh preview, committed exactly one Notion-backed syllabus task with one 30-minute block, read it back at canonical revision 1, committed the earlier task completion at revision 3, and converged the active local timer snapshot to the syllabus task.
 
 **Failure-class matrix**:
 

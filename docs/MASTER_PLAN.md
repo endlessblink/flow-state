@@ -2212,6 +2212,7 @@ _Original plan below._
 - [x] ~~**BUG-1967 — Newly created task appears accepted and then disappears**: require durable account-queue or guest-storage enrollment before success, await Canvas sidebar acknowledgement, preserve the draft on failure, and reject empty server create acknowledgements.~~ ✅ DONE 2026-07-19 in Electron 1.4.274.
 - [x] ~~**TASK-1968 — Always-on signed-in Hermes bridge**: supervise one canonical Electron process, keep its authenticated renderer and Local API alive when the window closes, serialize sidecar/update ownership, and preserve the same profile across desktop launches, restarts, and updates.~~ ✅ DONE 2026-07-19 in Electron 1.4.275.
 - [x] ~~**BUG-1969 — Restore full Hermes route compatibility**: expose canonical work-block lifecycle operations, align Hermes subtask batches with the live task-v1 contract, forward immutable approval hashes on apply, and prove capability preflight plus preview behavior against the packaged signed-in bridge.~~ ✅ DONE 2026-07-19 in Electron 1.4.277.
+- [x] ~~**BUG-1970 — Empty subtask description closes when clicked**: keep every subtask description directly visible and editable, and carry the regression on the current Electron release line so a later updater cannot restore the collapsing behavior.~~ ✅ DONE 2026-07-20 in Electron 1.4.278.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2275,6 +2276,38 @@ _Original plan below._
 **Exact failure mode fixed**: FlowState had no truthful canonical work-block route, Hermes nested subtask operations did not match the task-v1 wire contract, apply omitted the server request hash, and production still exposed the pre-current subtask RPC signature. Electron 1.4.277 plus the production migrations and matching Hermes adapter now agree on all 16 registered routes; live preflight reports `compatible: true` with no blocked tools.
 
 **Explicitly not covered**: renderer Calendar adoption of the shared work-block transaction, recurrence lifecycle editing, projects/groups, Canvas, timer control, and date-only scheduled instances without a start time remain separate capabilities; the canonical work-block lifecycle covers timed blocks.
+
+### BUG-1970: Empty subtask description closes when clicked (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE 2026-07-20 in Electron 1.4.278 | **Related**: TASK-1571
+
+**Exact failure mode**: Electron 1.4.277 was published from a newer release branch that did not contain the earlier description-focus fix. Its title blur handler still hides an empty description before a mouse click can establish focus, so the current updater restores the reported collapse even after 1.4.276 briefly carried a branch-local fix.
+
+**Acceptance**:
+- An empty subtask description is visible and clickable without first focusing its title.
+- A real DOM focus transfer places the caret in the empty description and accepts Hebrew text.
+- Existing descriptions, subtask titles, completion controls, deletion, RTL alignment, and task autosave remain unchanged.
+- The regression and fix ship together from the exact current Electron release base.
+
+**Regression added for the reported repro**: component coverage mounts a Hebrew subtask with an empty description, proves the box is immediately visible, transfers real DOM focus after a mouse-down, types Hebrew text, and verifies the subtask model receives it.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | The running 1.4.277 AppImage contained the original focus-gated field; the direct mouse-access regression failed before the change and passed after it. | Yes |
+| Data shape / persisted row shape | Yes | The regression uses the existing empty-description subtask shape and verifies Hebrew text reaches the same model field. | Yes |
+| Renderer store/state | Yes | The focus-only visibility state was deleted, so empty descriptions no longer disappear during pointer focus transitions. | Yes |
+| Electron main/preload bridge | N/A | No bridge behavior changed. | No |
+| Localhost sidecar endpoint | N/A | No sidecar behavior changed. | No |
+| KDE polling/control path | N/A | No timer behavior changed. | No |
+| Supabase persistence/realtime | N/A | The existing task autosave path and persisted subtask format are unchanged. | No |
+| Updater/runtime version | Yes | Electron 1.4.278 passed the release guard, package validation, live manifest check, and AppImage/deb HTTP checks. | Yes |
+| Stale live process/cache state | Pending user restart | The current 1.4.277 process was intentionally left open to avoid disrupting the reported task modal. | No |
+
+**Verification**: focused red-green mouse regression, type-check, source lint, import validation, CSS validation, dependency safety checks, Electron sync guard, production Electron build, package validation, and live 1.4.278 updater/artifact checks passed. The full unit suite ran through its assertions without reporting a failure but retained existing background handles, so deployment used the documented guarded hotfix path.
+
+**Explicitly not covered**: main task descriptions, mini-canvas nodes, or changing subtask persistence formats.
 
 **Regression added for reported repro**: exact FlowState task-v1 subtask preview/apply fixtures, request-hash forwarding, capability contract checks, work-block dispatch, replay, recurrence-heavy scope, and database concurrency.
 
@@ -7796,6 +7829,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1967**~~ | **P0** | ✅ **DONE — Electron 1.4.274 requires durable task admission before clearing drafts or showing success** |
 | ~~**TASK-1968**~~ | **P0** | ✅ **DONE — Electron 1.4.275 keeps the signed-in Hermes bridge alive across window close, restart, and updater handoff** |
 | ~~**BUG-1969**~~ | **P0-HIGH** | ✅ **DONE — Electron 1.4.277 and the live Hermes adapter agree on all work-block and subtask-batch contracts** |
+| ~~**BUG-1970**~~ | **P1** | ✅ **DONE — Electron 1.4.278 keeps empty subtask descriptions directly visible and editable** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

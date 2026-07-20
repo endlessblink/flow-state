@@ -78,8 +78,6 @@
                 :style="applyInputAlignment(subtask.title)"
                 placeholder="Subtask title"
                 dir="auto"
-                @focus="focusedSubtaskId = subtask.id"
-                @blur="focusedSubtaskId = null"
                 @keydown.enter.prevent="$emit('add')"
               >
               <button
@@ -91,9 +89,7 @@
               </button>
             </div>
 
-            <!-- Description shown only when focused or has content -->
             <textarea
-              v-show="focusedSubtaskId === subtask.id || subtask.description?.trim()"
               v-model="subtask.description"
               class="subtask-desc-input"
               :class="[getAlignmentClasses(subtask.description)]"
@@ -101,7 +97,6 @@
               rows="2"
               placeholder="Add description..."
               dir="auto"
-              @focus="focusedSubtaskId = subtask.id"
             />
           </div>
         </div>
@@ -127,8 +122,6 @@ defineEmits<{
 }>()
 
 const isExpanded = ref(true)
-const focusedSubtaskId = ref<string | null>(null)
-
 const completedCount = computed(() =>
   props.subtasks.filter(s => s.isCompleted).length
 )

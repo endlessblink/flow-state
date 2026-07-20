@@ -2213,6 +2213,7 @@ _Original plan below._
 - [x] ~~**TASK-1968 — Always-on signed-in Hermes bridge**: supervise one canonical Electron process, keep its authenticated renderer and Local API alive when the window closes, serialize sidecar/update ownership, and preserve the same profile across desktop launches, restarts, and updates.~~ ✅ DONE 2026-07-19 in Electron 1.4.275.
 - [x] ~~**BUG-1969 — Restore full Hermes route compatibility**: expose canonical work-block lifecycle operations, align Hermes subtask batches with the live task-v1 contract, forward immutable approval hashes on apply, and prove capability preflight plus preview behavior against the packaged signed-in bridge.~~ ✅ DONE 2026-07-19 in Electron 1.4.277.
 - [x] ~~**BUG-1970 — Accept the server-issued lifecycle request hash on apply**: align the canonical lifecycle validator with its own preview receipt, reject changed hashes before persistence, and prove Hermes can apply an approved task creation without losing the task.~~ ✅ DONE 2026-07-20 in Electron 1.4.280.
+- [x] ~~**BUG-1971 — Accept date-only Notion activations outside UTC**: compare canonical due dates as calendar dates so Hermes accepts FlowState's UTC-normalized preview and receipt in Jerusalem, then prove the exact task, work block, completion, and timer switch live.~~ ✅ DONE 2026-07-20 in Hermes Desktop.
 
 **Acceptance**:
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
@@ -2312,6 +2313,36 @@ _Original plan below._
 | Stale live process state | Yes | Supervised runtime is replaced and re-probed after install. | Yes |
 
 **Regression and verification**: RED reproduced the exact HTTP 400 before RPC when apply added `requestHash`; GREEN covers matching create apply plus mismatched-hash rejection. FlowState's full suite passed 4,007 tests with six intentional skips; type-check, lint, Electron package validation, and the locked Electron build passed. Hermes RED/GREEN coverage proves adjacent and mixed-segment mutations stop after both typed failures, including untrusted-tool negatives; its broader touched suite passed 242 tests with one skip, plus Ruff, focused type-check, compilation, and independent blocker review with no remaining Critical or Important findings.
+
+### ~~BUG-1971: Valid Notion activation preview is rejected as a receipt mismatch~~ (✅ DONE)
+
+**Priority**: P0-HIGH | **Status**: ✅ DONE 2026-07-20 in Hermes Desktop | **Depends on**: BUG-1970
+
+**Exact failure mode**: FlowState normalized a date-only due date such as `2026-07-20` to UTC midnight. Hermes parsed the original date-only value as local midnight, so Asia/Jerusalem shifted it three hours and falsely rejected the otherwise identical preview as `receipt_mismatch` before saving or applying it. In the same turn, a valid completion preview was bundled with the failing activation and never reached apply.
+
+**Regression and live proof**: A timezone-forced regression now covers both preview and committed read-back with a date-only due date. The bridge suite passes 36 tests. The restarted live Hermes runtime accepted a fresh preview, committed exactly one Notion-backed syllabus task with one 30-minute block, read it back at canonical revision 1, committed the earlier task completion at revision 3, and converged the active local timer snapshot to the syllabus task.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Replayed the exact Hebrew Notion task, date-only due date, and 30-minute work block from the live Hermes session. | Yes |
+| Data shape / persisted row shape | Yes | Canonical receipt read back one Notion-backed task and one matching work-block instance. | Yes |
+| Renderer store/state | Yes | Completion and activation appeared through fresh signed-in Local API reads after commit. | Existing path |
+| Electron main/preload bridge | N/A | No Electron IPC or preload contract changed. | No |
+| Localhost sidecar endpoint | Yes | Live preview and apply both passed the existing Notion activation endpoint. | Existing path |
+| KDE polling/control path | Yes | Timer snapshot initially retained the old local value, then converged to the new task; diagnostics showed matching local and Supabase state. | Existing path |
+| Supabase persistence/realtime | Yes | Receipts reported committed revisions and the timer control write reconciled through the renderer snapshot. | Existing path |
+| Updater/runtime version | N/A | The defect and fix are in the Hermes Python runtime, not the FlowState Electron package. | No |
+| Stale live process/cache state | Yes | Hermes Desktop was fully restarted and the new office-work process imported the checksum-matched patched source. | Yes |
+
+**Exact failure mode fixed**: Hermes interpreted a date-only due date as local midnight while FlowState returned UTC midnight, causing a false preview and receipt identity mismatch outside UTC.
+
+**Explicitly not covered**: Preview-first approval remains required; this fix does not weaken receipt identity, provenance, work-block, or explicit-approval checks. General timer-control API exposure to Hermes remains a separate capability.
+
+**Regression added for reported repro**: Preview and committed read-back with `2026-07-20` normalized to UTC midnight under `TZ=Asia/Jerusalem`.
+
+**Live boundary proof**: The restarted office-work runtime accepted, applied, and read back the exact activation; the earlier task completion committed separately, and timer diagnostics showed the new task in both the signed-in backend and local snapshot.
 
 ### BUG-1964: Sign in once, stay signed in until explicit Sign Out (✅ DONE 2026-07-18)
 

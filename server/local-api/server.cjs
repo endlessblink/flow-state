@@ -34,6 +34,7 @@ const { executeDoneForNow } = require('./done-for-now.cjs')
 const { executeMergeTasks } = require('./merge-tasks.cjs')
 const { executeCanonicalTaskPatch } = require('./canonical-task-patch.cjs')
 const { executeCanonicalTaskLifecycle } = require('./canonical-task-lifecycle.cjs')
+const { executeCanonicalTimerLifecycle } = require('./canonical-timer-lifecycle.cjs')
 const { executeCanonicalWorkBlock } = require('./canonical-work-block.cjs')
 const { executeCompleteTask } = require('./complete-task.cjs')
 const { executeSubtaskBatch } = require('./subtask-batch.cjs')
@@ -124,6 +125,7 @@ mkdirSync(DATA_DIR, { recursive: true })
 // once at startup; in token mode it is set/replaced when the parent posts a
 // session, and cleared on sign-out.
 let ctx = null
+let authSubscription = null
 let aiRuntime = null
 let localTimerSnapshot = null
 let rendererAuthState = null
@@ -183,8 +185,8 @@ function buildServiceRoleContext() {
 /**
  * Token mode: (re)build the context from a session posted by the Electron main
  * process. Uses the anon key; setSession makes PostgREST carry the user JWT so
- * RLS scopes every query to that user. The renderer is the sole token
- * refresher, so autoRefreshToken is off here.
+ * RLS scopes every query to that user. The sidecar refreshes its own token so
+ * it stays authoritative when no renderer window is alive.
  */
 async function applySession(msg) {
   const { supabaseUrl, anonKey, accessToken, refreshToken, userId } = msg || {}
@@ -193,8 +195,12 @@ async function applySession(msg) {
     return
   }
   try {
+    if (authSubscription) {
+      authSubscription.unsubscribe()
+      authSubscription = null
+    }
     const supabase = createClient(supabaseUrl, anonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
+      auth: { persistSession: false, autoRefreshToken: true },
     })
     const { error } = await supabase.auth.setSession({
       access_token: accessToken,
@@ -204,6 +210,16 @@ async function applySession(msg) {
       logErr(`setSession failed: ${error.message}`)
       return
     }
+    const { data: listener } = supabase.auth.onAuthStateChange((event, refreshedSession) => {
+      if (event !== 'TOKEN_REFRESHED' || !refreshedSession || !PARENT_PORT) return
+      PARENT_PORT.postMessage({
+        type: 'sessionRefresh',
+        accessToken: refreshedSession.access_token,
+        refreshToken: refreshedSession.refresh_token,
+        userId: refreshedSession.user?.id || userId,
+      })
+    })
+    authSubscription = listener.subscription
     ctx = { supabase, userId, activeWorkspaceId, signedUser: true }
   } catch (e) {
     logErr(`applySession error: ${e && e.message}`)
@@ -232,6 +248,32 @@ function send(res, status, body) {
 function notifyTaskMutation(operation, taskId) {
   if (!PARENT_PORT || !taskId) return
   PARENT_PORT.postMessage({ type: 'taskMutation', operation, taskId })
+}
+
+function notifyTimerMutation(session) {
+  const active = !!session?.isActive
+  localTimerSnapshot = {
+    active,
+    updatedAt: Date.now(),
+    session: active
+      ? {
+          id: session.id,
+          task_id: session.taskId,
+          start_time: session.startTime,
+          duration: session.duration,
+          remaining_time: session.remainingTime,
+          is_active: session.isActive,
+          is_paused: session.isPaused,
+          is_break: session.isBreak,
+          completed_at: session.completedAt,
+          device_leader_id: session.deviceLeaderId,
+          device_leader_last_seen: session.deviceLeaderLastSeen,
+          canonical_revision: session.canonicalRevision,
+          updated_at: session.canonicalUpdatedAt,
+        }
+      : null,
+  }
+  if (PARENT_PORT) PARENT_PORT.postMessage({ type: 'timerMutation', session })
 }
 
 /** Reject anything that isn't a loopback Host header. */
@@ -1053,6 +1095,39 @@ async function handleGetCurrentTimer(res) {
   if (error) return send(res, 500, { error: error.message })
   if (!data) return send(res, 200, { active: false, session: null })
 
+  if (!data.is_paused) {
+    const referenceTime = Date.parse(
+      data.device_leader_last_seen || data.updated_at || data.start_time,
+    )
+    const elapsedSeconds = Number.isFinite(referenceTime)
+      ? Math.max(0, Math.floor((Date.now() - referenceTime) / 1000))
+      : 0
+    const remainingTime = Math.max(0, Number(data.remaining_time || 0) - elapsedSeconds)
+    const completedAt = remainingTime <= 0
+      ? new Date(referenceTime + (Number(data.remaining_time || 0) * 1000)).toISOString()
+      : null
+    const update = {
+      remaining_time: remainingTime,
+      is_active: remainingTime > 0,
+      completed_at: completedAt,
+      device_leader_id: 'flowstate-companion',
+      device_leader_last_seen: new Date().toISOString(),
+    }
+    const { data: materialized, error: materializeError } = await supabase
+      .from('timer_sessions')
+      .update(update)
+      .eq('id', data.id)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .eq('canonical_revision', data.canonical_revision)
+      .select('*')
+      .maybeSingle()
+    if (materializeError) return send(res, 500, { error: materializeError.message })
+    if (remainingTime <= 0) return send(res, 200, { active: false, session: null })
+    if (materialized) return send(res, 200, { active: true, session: materialized })
+    return await handleGetCurrentTimer(res)
+  }
+
   send(res, 200, { active: true, session: data })
 }
 
@@ -1221,6 +1296,12 @@ async function handlePostTimerControl(req, res) {
   }
 
   send(res, 400, { error: 'action must be toggle|start' })
+}
+
+async function handleTimerLifecycle(req, res) {
+  const body = await readJsonBody(req)
+  const result = await executeCanonicalTimerLifecycle(ctx, body, notifyTimerMutation)
+  send(res, result.status, result.body)
 }
 
 // --- Assistant context -------------------------------------------------------
@@ -1472,6 +1553,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && path === '/api/assistant/context') {
       return await handleGetAssistantContext(res)
     }
+    if (req.method === 'POST' && path === '/api/timer/lifecycle') {
+      return await handleTimerLifecycle(req, res)
+    }
     if (req.method === 'POST' && path === '/api/audit/coverage') {
       return await handleAuditCoverage(req, res)
     }
@@ -1571,6 +1655,10 @@ if (TOKEN_MODE) {
       if (!msg || typeof msg !== 'object') return
       if (msg.type === 'session') applySession(msg)
       else if (msg.type === 'clear') {
+        if (authSubscription) {
+          authSubscription.unsubscribe()
+          authSubscription = null
+        }
         ctx = null
         rendererAuthState = {
           isAuthenticated: false,

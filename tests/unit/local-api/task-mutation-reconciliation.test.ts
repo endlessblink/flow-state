@@ -57,4 +57,38 @@ describe('BUG-1942 Local Task API renderer reconciliation', () => {
     expect(appInitialization).toContain('workspaceStore.activeWorkspaceId')
     expect(appInitialization).toContain('{ immediate: true }')
   })
+
+  it('updates companion timer cache and reconciles an available renderer', () => {
+    expect(server).toContain("PARENT_PORT.postMessage({ type: 'timerMutation', session })")
+    expect(server).toContain('localTimerSnapshot = {')
+    expect(electronMain).toContain("m?.type === 'timerMutation'")
+    expect(electronMain).toContain("webContents.send('localApi:timerMutation'")
+    expect(preload).toContain("ipcRenderer.on('localApi:timerMutation'")
+    expect(rendererBridge).toContain('subscribeLocalApiTimerMutations')
+    expect(readSource('src/stores/timer.ts')).toContain('sync.resyncFromDatabase(true)')
+    expect(readSource('src/composables/timer/useTimerSync.ts')).toContain('if (!force && now - lastResyncAt < 1000) return')
+  })
+
+  it('lets the sidecar refresh its signed user session without a renderer heartbeat', () => {
+    const tokenContext = server.slice(
+      server.indexOf('async function applySession('),
+      server.indexOf('// --- Status mapping'),
+    )
+    expect(tokenContext).toContain('autoRefreshToken: true')
+    expect(tokenContext).toContain('persistSession: false')
+    expect(tokenContext).toContain("event !== 'TOKEN_REFRESHED'")
+    expect(tokenContext).toContain("type: 'sessionRefresh'")
+    expect(electronMain).toContain("m?.type === 'sessionRefresh'")
+    expect(electronMain).toContain('m.userId === latestSession.userId')
+    expect(electronMain).toContain('refreshToken: m.refreshToken')
+  })
+
+  it('materializes elapsed companion time and closes expired rows on canonical reads', () => {
+    const current = functionSlice(server, 'handleGetCurrentTimer', 'handleGetTimerDiagnostics')
+    expect(current).toContain('const elapsedSeconds')
+    expect(current).toContain('remaining_time: remainingTime')
+    expect(current).toContain('is_active: remainingTime > 0')
+    expect(current).toContain("device_leader_id: 'flowstate-companion'")
+    expect(current).toContain("if (remainingTime <= 0) return send(res, 200, { active: false, session: null })")
+  })
 })

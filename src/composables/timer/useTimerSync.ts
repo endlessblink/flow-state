@@ -769,10 +769,10 @@ export function useTimerSync(deps: TimerSyncDeps) {
   // Mobile browsers freeze setInterval and kill WebSocket when backgrounded.
   // This method re-fetches the session and recalibrates local state.
   let lastResyncAt = 0
-  const resyncFromDatabase = async () => {
+  const resyncFromDatabase = async (force = false) => {
     // Debounce: skip if called within 1 second
     const now = Date.now()
-    if (now - lastResyncAt < 1000) return
+    if (!force && now - lastResyncAt < 1000) return
     lastResyncAt = now
 
     if (isStarting) return // BUG-TIMER-RACE: Block resync during async start sequence

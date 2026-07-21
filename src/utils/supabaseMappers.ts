@@ -244,6 +244,7 @@ export interface SupabaseTimerSession {
     device_leader_last_seen?: string | null
     created_at?: string
     updated_at?: string
+    canonical_revision?: number
 }
 
 export interface SupabaseUserSettings {
@@ -857,7 +858,8 @@ export function fromSupabaseTimerSession(record: SupabaseTimerSession): Pomodoro
         isBreak: record.is_break ?? false,
         completedAt: record.completed_at ? new Date(record.completed_at) : undefined,
         deviceLeaderId: record.device_leader_id,
-        deviceLeaderLastSeen: record.device_leader_last_seen ? new Date(record.device_leader_last_seen).getTime() : undefined
+        deviceLeaderLastSeen: record.device_leader_last_seen ? new Date(record.device_leader_last_seen).getTime() : undefined,
+        canonicalRevision: record.canonical_revision
     }
 }
 

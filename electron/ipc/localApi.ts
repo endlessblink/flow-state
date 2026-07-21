@@ -197,7 +197,16 @@ function spawnChild() {
 
   startedChild.on('message', (msg: unknown) => {
     if (activeChild?.process !== startedChild || activeChild.generation !== generation) return
-    const m = msg as { type?: string; port?: number; operation?: string; taskId?: string }
+    const m = msg as {
+      type?: string
+      port?: number
+      operation?: string
+      taskId?: string
+      session?: Record<string, unknown>
+      accessToken?: string
+      refreshToken?: string
+      userId?: string
+    }
     lastChildMessageType = typeof m?.type === 'string' ? m.type : 'unknown'
     lastChildMessageAt = Date.now()
     logLifecycle('message', { messageType: lastChildMessageType })
@@ -220,6 +229,24 @@ function spawnChild() {
           operation: m.operation,
           taskId: m.taskId,
         })
+      }
+    } else if (m?.type === 'timerMutation' && m.session && typeof m.session === 'object') {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send('localApi:timerMutation', m.session)
+      }
+    } else if (
+      m?.type === 'sessionRefresh'
+      && latestSession
+      && m.userId === latestSession.userId
+      && typeof m.accessToken === 'string'
+      && m.accessToken
+      && typeof m.refreshToken === 'string'
+      && m.refreshToken
+    ) {
+      latestSession = {
+        ...latestSession,
+        accessToken: m.accessToken,
+        refreshToken: m.refreshToken,
       }
     }
   })

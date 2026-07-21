@@ -209,6 +209,17 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(body).toContain("send(res, 400, { error: 'action must be toggle|start' })")
   })
 
+  it('routes Hermes timer lifecycle commands behind bearer auth without requiring a renderer', () => {
+    const tokenCheck = SERVER_CJS.indexOf('if (TOKEN)')
+    const route = SERVER_CJS.indexOf("path === '/api/timer/lifecycle'")
+
+    expect(route, 'Hermes timer lifecycle route not found').toBeGreaterThan(-1)
+    expect(route).toBeGreaterThan(tokenCheck)
+    expect(SERVER_CJS).toContain("require('./canonical-timer-lifecycle.cjs')")
+    expect(SERVER_CJS).toContain('executeCanonicalTimerLifecycle(ctx, body, notifyTimerMutation)')
+    expect(SERVER_CJS).not.toContain('executeCanonicalTimerLifecycle(ctx, body, BrowserWindow')
+  })
+
   it('keeps task endpoints behind the bearer token used by external local apps', () => {
     const tokenBlockStart = SERVER_CJS.indexOf('if (TOKEN)')
     const tokenBlock = SERVER_CJS.slice(tokenBlockStart, tokenBlockStart + 220)

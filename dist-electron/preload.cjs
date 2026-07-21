@@ -73,6 +73,10 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
         electron_1.ipcRenderer.on('localApi:taskMutation', (_event, mutation) => callback(mutation));
     },
     offLocalApiTaskMutation: () => electron_1.ipcRenderer.removeAllListeners('localApi:taskMutation'),
+    onLocalApiTimerMutation: (callback) => {
+        electron_1.ipcRenderer.on('localApi:timerMutation', (_event, session) => callback(session));
+    },
+    offLocalApiTimerMutation: () => electron_1.ipcRenderer.removeAllListeners('localApi:timerMutation'),
     // BUG-1936: drag diagnostics — append a JSON line to <userData>/drag-diagnostics.log
     appendDragDiag: (line) => electron_1.ipcRenderer.invoke('diag:appendDrag', line),
     dragDiagPath: () => electron_1.ipcRenderer.invoke('diag:dragLogPath'),

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   subscribeLocalApiTaskMutations,
+  subscribeLocalApiTimerMutations,
   syncLocalApiRendererAuthState,
   syncLocalApiSession,
   syncLocalApiWorkspaceContext,
@@ -12,8 +13,11 @@ function installElectronApi() {
   const setLocalApiRendererAuthState = vi.fn().mockResolvedValue({ ok: true })
   const setLocalApiWorkspaceContext = vi.fn().mockResolvedValue({ ok: true })
   let taskMutationListener: ((mutation: unknown) => void) | null = null
+  let timerMutationListener: ((session: unknown) => void) | null = null
   const onLocalApiTaskMutation = vi.fn((listener: (mutation: unknown) => void) => { taskMutationListener = listener })
   const offLocalApiTaskMutation = vi.fn(() => { taskMutationListener = null })
+  const onLocalApiTimerMutation = vi.fn((listener: (session: unknown) => void) => { timerMutationListener = listener })
+  const offLocalApiTimerMutation = vi.fn(() => { timerMutationListener = null })
   Object.defineProperty(window, 'electronAPI', {
     value: {
       isElectron: true,
@@ -23,6 +27,8 @@ function installElectronApi() {
       setLocalApiWorkspaceContext,
       onLocalApiTaskMutation,
       offLocalApiTaskMutation,
+      onLocalApiTimerMutation,
+      offLocalApiTimerMutation,
     },
     configurable: true,
   })
@@ -34,6 +40,8 @@ function installElectronApi() {
     onLocalApiTaskMutation,
     offLocalApiTaskMutation,
     emitTaskMutation: (mutation: unknown) => taskMutationListener?.(mutation),
+    offLocalApiTimerMutation,
+    emitTimerMutation: (session: unknown) => timerMutationListener?.(session),
   }
 }
 
@@ -136,5 +144,19 @@ describe('useLocalApiBridge', () => {
     api.emitTaskMutation({ operation: 'delete', taskId: 'task-1' })
     expect(callback).toHaveBeenCalledOnce()
     expect(api.offLocalApiTaskMutation).toHaveBeenCalledTimes(2)
+  })
+
+  it('resyncs the renderer after a companion timer mutation and unregisters cleanly', () => {
+    const api = installElectronApi()
+    const callback = vi.fn()
+    const unsubscribe = subscribeLocalApiTimerMutations(callback)
+
+    api.emitTimerMutation({ id: 'timer-1', isActive: true })
+    expect(callback).toHaveBeenCalledOnce()
+
+    unsubscribe()
+    api.emitTimerMutation({ id: 'timer-1', isActive: false })
+    expect(callback).toHaveBeenCalledOnce()
+    expect(api.offLocalApiTimerMutation).toHaveBeenCalledTimes(2)
   })
 })

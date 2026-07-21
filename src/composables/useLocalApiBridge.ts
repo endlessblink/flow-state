@@ -23,6 +23,8 @@ interface ElectronLocalApi {
   setLocalApiWorkspaceContext?: (state: unknown) => Promise<unknown>
   onLocalApiTaskMutation?: (callback: (mutation: LocalApiTaskMutation) => void) => void
   offLocalApiTaskMutation?: () => void
+  onLocalApiTimerMutation?: (callback: (session: unknown) => void) => void
+  offLocalApiTimerMutation?: () => void
 }
 
 export interface LocalApiTaskMutation {
@@ -80,6 +82,15 @@ export function subscribeLocalApiTaskMutations(
   })
 
   return () => api.offLocalApiTaskMutation?.()
+}
+
+export function subscribeLocalApiTimerMutations(callback: () => void): () => void {
+  const api = getElectronApi()
+  if (!api?.onLocalApiTimerMutation) return () => undefined
+
+  api.offLocalApiTimerMutation?.()
+  api.onLocalApiTimerMutation(() => callback())
+  return () => api.offLocalApiTimerMutation?.()
 }
 
 export interface LocalApiRendererAuthState {
@@ -144,6 +155,7 @@ export function syncLocalApiTimerSnapshot(session: PomodoroSession | null, devic
             completed_at: toIso(session.completedAt),
             device_leader_id: session.deviceLeaderId || deviceId || 'electron-app',
             device_leader_last_seen: new Date(session.deviceLeaderLastSeen || now).toISOString(),
+            canonical_revision: session.canonicalRevision,
           }
         : null,
     })

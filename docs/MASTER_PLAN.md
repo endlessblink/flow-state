@@ -5352,9 +5352,9 @@ require exact IDs and approval for writes.
 **UI verification boundary**: Project views, group lanes, Search, Inbox, and
 Canvas resolve the same assignment immediately in the signed-in running app.
 
-### FEATURE-1947: Hermes-safe timer start, pause, resume, and stop (📋 PLANNED)
+### FEATURE-1947: Hermes-safe timer start, pause, resume, and stop (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED (2026-07-14) | **Depends on**: FEATURE-1943, BUG-1868, BUG-1898
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-07-21) | **Depends on**: FEATURE-1943, BUG-1868, BUG-1898
 
 **Outcome**: expose the existing timer state machine through authenticated
 preview/apply commands while preserving single-session leadership, offline stop
@@ -7864,7 +7864,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |
 | **FEATURE-1946** | **P1** | 📋 **Authenticated project/group reads and previewed exact-ID assignment** |
-| **FEATURE-1947** | **P0** | 📋 **Leadership-safe timer start/pause/resume/stop through the signed-in Local API** |
+| **FEATURE-1947** | **P0** | 🔄 **Leadership-safe timer start/pause/resume/stop through the signed-in Local API** |
 | **FEATURE-1948** | **P1** | 📋 **Bounded Canvas read plus move/group/ungroup/remove-placement actions** |
 | **FEATURE-1949** | **P1** | 📋 **Cursor pagination, restore, bounded batch actions, and context/audit reads** |
 | **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |

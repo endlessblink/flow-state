@@ -130,6 +130,7 @@ vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
 
 vi.mock('@/composables/useLocalApiBridge', () => ({
   syncLocalApiTimerSnapshot: mockSyncLocalApiTimerSnapshot,
+  subscribeLocalApiTimerMutations: vi.fn(() => vi.fn()),
 }))
 
 vi.mock('@/utils/supabaseMappers', () => ({

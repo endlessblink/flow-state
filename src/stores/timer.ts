@@ -14,7 +14,7 @@ import { useTimerAudio } from '@/composables/timer/useTimerAudio'
 import { useTimerNotifications } from '@/composables/timer/useTimerNotifications'
 import { useTimerSync, DEVICE_LEADER_TIMEOUT_MS } from '@/composables/timer/useTimerSync'
 import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
-import { syncLocalApiTimerSnapshot } from '@/composables/useLocalApiBridge'
+import { subscribeLocalApiTimerMutations, syncLocalApiTimerSnapshot } from '@/composables/useLocalApiBridge'
 
 const LOCAL_API_TIMER_INACTIVE_HEARTBEAT_MS = 10_000
 
@@ -35,6 +35,7 @@ export interface PomodoroSession {
   completedAt?: Date
   deviceLeaderId?: string | null
   deviceLeaderLastSeen?: number | null
+  canonicalRevision?: number
 }
 
 export const useTimerStore = defineStore('timer', () => {
@@ -116,6 +117,9 @@ export const useTimerStore = defineStore('timer', () => {
     requestWakeLock, releaseWakeLock,
     authStore,
     onCountdownComplete: () => completeSession()
+  })
+  const unsubscribeLocalApiTimer = subscribeLocalApiTimerMutations(() => {
+    void sync.resyncFromDatabase(true)
   })
 
   watch(
@@ -695,6 +699,7 @@ export const useTimerStore = defineStore('timer', () => {
     notifications.cleanupServiceWorkerListener()
     clearInterval(localApiInactiveHeartbeat)
     unsubscribeAuth() // TASK-1577: Clean up auth watcher
+    unsubscribeLocalApiTimer()
   }
 
   onUnmounted(cleanupAllListeners)

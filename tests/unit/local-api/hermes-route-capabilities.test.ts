@@ -17,8 +17,8 @@ const { HERMES_ROUTE_CAPABILITIES, SCHEMA_VERSION } = require(
 describe('Hermes route capability manifest', () => {
   it('enumerates every Hermes route family with a versioned semantic contract', () => {
     expect(SCHEMA_VERSION).toBe('flowstate-hermes-capabilities-v1')
-    expect(HERMES_ROUTE_CAPABILITIES).toHaveLength(16)
-    expect(new Set(HERMES_ROUTE_CAPABILITIES.map(({ method, path }) => `${method} ${path}`)).size).toBe(16)
+    expect(HERMES_ROUTE_CAPABILITIES).toHaveLength(17)
+    expect(new Set(HERMES_ROUTE_CAPABILITIES.map(({ method, path }) => `${method} ${path}`)).size).toBe(17)
     for (const route of HERMES_ROUTE_CAPABILITIES) {
       expect(route).toEqual({
         method: expect.stringMatching(/^(GET|POST|PATCH)$/),
@@ -30,6 +30,12 @@ describe('Hermes route capability manifest', () => {
   })
 
   it('advertises only contracts that Hermes can invoke end to end', () => {
+    expect(HERMES_ROUTE_CAPABILITIES).toContainEqual({
+      method: 'POST',
+      path: '/api/timer/lifecycle',
+      contractVersion: 'timer-lifecycle-v1',
+      available: true,
+    })
     expect(HERMES_ROUTE_CAPABILITIES).toContainEqual({
       method: 'POST',
       path: '/api/tasks/:id/work-blocks',

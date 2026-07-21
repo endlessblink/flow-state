@@ -246,7 +246,7 @@ function makeOp(partial: Partial<WriteOperation> = {}): WriteOperation {
   }
 }
 
-function canonicalReceipt(operationId = 'web:queue-1') {
+function canonicalReceipt(operationId = 'web:queue-1', requestHash = 'a'.repeat(64)) {
   return {
     contractVersion: 'task-v1' as const,
     operationId,
@@ -259,6 +259,7 @@ function canonicalReceipt(operationId = 'web:queue-1') {
     changeSequence: 50,
     replayed: false,
     committedAt: '2026-07-13T10:01:00Z',
+    requestHash,
     readBack: {
       id: 'task-canonical', title: 'Normalized', description: '', priority: null,
       dueDate: null, progress: 0, status: 'todo', isDeleted: false,
@@ -579,7 +580,7 @@ describe('canonical task patch queue', () => {
     })
     const firstReceipt = canonicalReceipt('web:ordered-first')
     const secondReceipt = {
-      ...canonicalReceipt('web:ordered-second'),
+      ...canonicalReceipt('web:ordered-second', 'd'.repeat(64)),
       canonicalRevision: 6,
       changeSequence: 51,
       readBack: { ...canonicalReceipt('web:ordered-second').readBack, canonicalRevision: 6, title: 'Second' },

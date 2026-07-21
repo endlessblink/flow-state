@@ -87,6 +87,7 @@ export function validCanonicalTaskReceipt(
   taskId: string,
   operationId: string,
   workspaceId: string | null,
+  requestHash: string | undefined,
 ): value is CanonicalTaskPatchReceipt {
   if (!object(value)) return false
   return value.contractVersion === CONTRACT_VERSION
@@ -100,6 +101,9 @@ export function validCanonicalTaskReceipt(
     && positiveInteger(value.changeSequence)
     && typeof value.replayed === 'boolean'
     && timestamp(value.committedAt)
+    && typeof requestHash === 'string'
+    && SHA256_HEX.test(requestHash)
+    && value.requestHash === requestHash
     && validReadBack(value.readBack, taskId, value.canonicalRevision, workspaceId)
     && value.readBack.canonicalUpdatedAt === value.canonicalUpdatedAt
     && typeof value.readBackHash === 'string'
@@ -185,7 +189,13 @@ export async function executeQueuedCanonicalTaskPatch(
   }
   let canonical: CanonicalTaskPatchState = initialCanonical
   if (canonical.receipt) {
-    if (!validCanonicalTaskReceipt(canonical.receipt, operation.entityId, canonical.operationId, operation.workspaceId ?? null)) {
+    if (!validCanonicalTaskReceipt(
+      canonical.receipt,
+      operation.entityId,
+      canonical.operationId,
+      operation.workspaceId ?? null,
+      canonical.requestHash,
+    )) {
       return { success: false, operation, error: 'invalid_persisted_canonical_receipt', shouldRetry: false, classification: 'permanent' }
     }
     return { success: true, operation, canonicalReceipt: canonical.receipt, serverData: canonical.receipt.readBack }
@@ -196,44 +206,71 @@ export async function executeQueuedCanonicalTaskPatch(
   }
 
   if (!canonical.previewDigest || !canonical.previewExpiresAt || !canonical.requestHash) {
-    let preview: Awaited<ReturnType<CanonicalRpcClient['rpc']>>
-    try {
-      preview = await client.rpc('flowstate_patch_task_v1', {
-        p_base_revision: canonical.baseRevision,
-        p_contract_version: CONTRACT_VERSION,
-        p_operation_id: canonical.operationId,
-        p_patch: canonical.patch,
-        p_preview: true,
-        p_preview_digest: null,
-        p_preview_expires_at: null,
-        p_request_hash: null,
-        p_source: SOURCE,
-        p_task_id: operation.entityId,
-        p_workspace_id: operation.workspaceId ?? null,
-      })
-    } catch {
-      return { success: false, operation, error: 'canonical_preview_transport_failed', shouldRetry: true, classification: 'transient' }
+    let mayReplaceExpiredLegacyIdentity = !canonical.requestHash
+      && Boolean(canonical.previewDigest || canonical.previewExpiresAt || canonical.phase === 'previewed')
+    let previewResolved = false
+    for (let previewAttempt = 0; previewAttempt < 2; previewAttempt += 1) {
+      let preview: Awaited<ReturnType<CanonicalRpcClient['rpc']>>
+      try {
+        preview = await client.rpc('flowstate_patch_task_v1', {
+          p_base_revision: canonical.baseRevision,
+          p_contract_version: CONTRACT_VERSION,
+          p_operation_id: canonical.operationId,
+          p_patch: canonical.patch,
+          p_preview: true,
+          p_preview_digest: null,
+          p_preview_expires_at: null,
+          p_request_hash: null,
+          p_source: SOURCE,
+          p_task_id: operation.entityId,
+          p_workspace_id: operation.workspaceId ?? null,
+        })
+      } catch {
+        return { success: false, operation, error: 'canonical_preview_transport_failed', shouldRetry: true, classification: 'transient' }
+      }
+      if (preview.error) {
+        return { success: false, operation, error: 'canonical_preview_transport_failed', shouldRetry: true, classification: 'transient' }
+      }
+      if (!object(preview.data)) {
+        return { success: false, operation, error: 'invalid_canonical_preview', shouldRetry: false, classification: 'permanent' }
+      }
+      const previewError = object(preview.data.error) ? preview.data.error : undefined
+      if (preview.data.ok !== true && mayReplaceExpiredLegacyIdentity && previewError?.code === 'preview_expired') {
+        canonical = {
+          ...canonical,
+          operationId: operationId(),
+          parentOperationId: canonical.operationId,
+          phase: 'queued',
+          previewDigest: undefined,
+          previewExpiresAt: undefined,
+          requestHash: undefined,
+          normalizedPatch: undefined,
+        }
+        operation.canonicalTaskPatch = canonical
+        await persist(canonical)
+        mayReplaceExpiredLegacyIdentity = false
+        continue
+      }
+      if (preview.data.ok !== true) return rejected(operation, preview.data)
+      if (!validPreview(preview.data, operation)) {
+        return { success: false, operation, error: 'invalid_canonical_preview', shouldRetry: false, classification: 'permanent' }
+      }
+      canonical = {
+        ...canonical,
+        phase: 'previewed',
+        previewDigest: preview.data.previewDigest,
+        previewExpiresAt: preview.data.previewExpiresAt,
+        requestHash: preview.data.requestHash,
+        normalizedPatch: preview.data.normalizedPayload,
+      }
+      operation.canonicalTaskPatch = canonical
+      await persist(canonical)
+      previewResolved = true
+      break
     }
-    if (preview.error) {
-      return { success: false, operation, error: 'canonical_preview_transport_failed', shouldRetry: true, classification: 'transient' }
-    }
-    if (!object(preview.data)) {
+    if (!previewResolved) {
       return { success: false, operation, error: 'invalid_canonical_preview', shouldRetry: false, classification: 'permanent' }
     }
-    if (preview.data.ok !== true) return rejected(operation, preview.data)
-    if (!validPreview(preview.data, operation)) {
-      return { success: false, operation, error: 'invalid_canonical_preview', shouldRetry: false, classification: 'permanent' }
-    }
-    canonical = {
-      ...canonical,
-      phase: 'previewed',
-      previewDigest: preview.data.previewDigest,
-      previewExpiresAt: preview.data.previewExpiresAt,
-      requestHash: preview.data.requestHash,
-      normalizedPatch: preview.data.normalizedPayload,
-    }
-    operation.canonicalTaskPatch = canonical
-    await persist(canonical)
   }
 
   let applied: Awaited<ReturnType<CanonicalRpcClient['rpc']>>
@@ -266,6 +303,7 @@ export async function executeQueuedCanonicalTaskPatch(
     operation.entityId,
     canonical.operationId,
     operation.workspaceId ?? null,
+    canonical.requestHash,
   )) {
     return { success: false, operation, error: 'invalid_canonical_receipt', shouldRetry: false, classification: 'permanent' }
   }

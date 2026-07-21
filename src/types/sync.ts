@@ -56,6 +56,7 @@ export interface CanonicalTaskPatchReceipt {
   changeSequence: number
   replayed: boolean
   committedAt: string
+  requestHash: string
   readBack: CanonicalTaskReadBack
   readBackHash: string
 }

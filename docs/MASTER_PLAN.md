@@ -2203,6 +2203,7 @@ _Original plan below._
 - [x] ~~**TASK-1958 — Canonical non-recurring task completion for Hermes**: dedicated `flowstate_complete_task_v1` preview/apply completion with approval digest, committed receipt, `completedAt` read-back, typed `recurring_task`/`already_completed` rejections, and disposable-DB runtime regression.~~ Completed 2026-07-15; production migration + Electron ship still pending.
 - [x] ~~**TASK-1959 — Redacted FlowState source-to-runtime truth ledger**: generate one stable, secret-free ledger across source, local build, public release, installed AppImage, and live sidecar truth; keep release builds non-live by default and expose mismatches instead of inferring deployment success.~~ Completed 2026-07-15.
 - [ ] **TASK-1960 — Make complete inventory the only exhaustive assistant task boundary**: label capped list/search responses as filtered samples, align inventory item revisions with the canonical receipt contract, and fail closed across large scans, repeated concurrent changes, and scope switches.
+- [x] ~~**BUG-1970 — Recover request-hash-rejected canonical task retries**: preserve the server-issued request hash through durable preview/apply replay, unlock every failed queue entry during manual retry, replace an expired legacy preview identity before re-previewing, and reject committed receipts whose request hash does not match the approved preview.~~ Completed 2026-07-21.
 - [ ] **TASK-1961 — Shared canonical assistant receipt validation**: validate canonical JSON hashes, operation/request identity, revisions, sequences, timestamps, and domain read-backs through one Local API boundary before any renderer notification; migrate patch, completion, recurring completion, and duplicate merge without accepting legacy HTTP-only success.
 - [ ] **TASK-1962 — Preflight every Hermes-to-FlowState route and ship canonical task creation**: deliver the receipt-backed task lifecycle route, make source and bundled-sidecar runtime tests exercise the real HTTP boundary, publish a safe capability manifest, and fail Hermes/package/watchdog checks before work starts when any required route or contract is absent.
 - [ ] **TASK-1963 — Canonical atomic subtask breakdown contract**: port the preview-bound, revision-checked, replay-safe subtask batch RPC onto current main without reverting newer receipt/auth work; expose canonical ordered subtask reads for Hermes and reject malformed existing arrays before mutation.
@@ -4813,6 +4814,22 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Package/release proof**: the built `app.asar` contains `/dist-electron/flowstate-truth-ledger.json` with the full source commit, build timestamp, dirty bit, five-contract set, local sidecar digest, and all live surfaces marked `not_checked`. `release/flowstate-truth-ledger.json` binds the same embedded provenance digest to manifest `1.4.262` and both locally verified Linux artifacts. Because this verification build intentionally preceded the commit, its verdict correctly reports only `source.dirty=true` rather than claiming a clean release.
 
 **Live read-only proof**: explicit full mode observed public updater `1.4.262` with reachable artifacts and installed AppImage `1.4.262` with a digest. The currently installed sidecar predates the dedicated provenance route, so that surface honestly reports `http_404` until a later release is shipped and relaunched; it is not inferred current from version equality. No task data, credentials, raw process arguments, timer session, or production state was read or written.
+
+### ~~BUG-1970~~: Recover request-hash-rejected canonical task retries (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (filed and completed 2026-07-21) | **Related**: TASK-1946, TASK-1961
+
+**User repro**: durable browser/PWA task edits previewed before request-hash enforcement were parked as permanent failures. Manual retry skipped failures with far-future retry timestamps, and a days-old legacy preview could not be refreshed under the same operation identity after the server reported `preview_expired`.
+
+**Fixed failure mode**:
+- Preview responses now persist the server-issued request hash and apply/replay sends the exact binding.
+- Manual retry enumerates every failed operation instead of only the currently due queue window.
+- An expired legacy preview without a request hash is durably re-issued under a new operation identity linked to the replaced identity; the old identity is never applied.
+- Committed and replayed receipts must carry the same valid request hash as the persisted preview before queue completion is recorded.
+
+**Regression proof**: focused tests cover hash persistence/apply, legacy same-identity recovery, expired-preview identity replacement, old-identity apply prevention, far-future manual retry, and missing/malformed/mismatched committed receipt hashes. The two new contract tests failed before the recovery and receipt-validation implementation, then passed afterward.
+
+**Explicitly not covered**: non-canonical queue operations, renderer-to-sidecar authentication, Supabase migration deployment, unrelated canonical task lifecycle routes, and live packaged-app replay remain separate failure classes.
 
 ### TASK-1960: Make complete inventory the only exhaustive assistant task boundary (🔄 IN PROGRESS)
 
@@ -7585,6 +7602,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **TASK-1961** | **P0** | 🔄 **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
 | **TASK-1962** | **P0** | 🔄 **Preflight every Hermes-to-FlowState route, package the canonical task lifecycle, and reject incomplete runtimes before work starts** |
 | **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask breakdown with immutable preview approval, parent revisions, replay-safe receipts, and validated ordered read-back** |
+| ~~**BUG-1970**~~ | **P0** | ✅ **Recover request-hash-rejected canonical task retries, expired legacy previews, and receipt-binding validation** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

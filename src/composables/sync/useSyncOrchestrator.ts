@@ -1252,8 +1252,7 @@ export function useSyncOrchestrator() {
     }
 
     // Get all failed operations and reset their retry time
-    const operations = await getPendingOperations(100)
-    const failed = operations.filter(op => op.status === 'failed')
+    const failed = await getFailedOperations()
 
     for (const op of failed) {
       if (op.id) {

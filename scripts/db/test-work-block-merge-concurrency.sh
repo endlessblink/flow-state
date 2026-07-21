@@ -44,4 +44,3 @@ if [[ "$state" != "2|1|1" ]] || ! grep -q '"ok": true' "$tmp_dir/work-block"; th
 fi
 
 echo "PASS: work-block apply follows merge-compatible task lock order"
-

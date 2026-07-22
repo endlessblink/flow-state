@@ -520,3 +520,18 @@ export async function shutdownLocalApi(): Promise<void> {
     await Promise.resolve()
   } while (activeChild || lifecyclePromise || reconcileRequested)
 }
+
+/**
+ * Roll back an ordinary shutdown when another Electron lifecycle listener keeps the app alive.
+ * The renderer state is retained across shutdown, so one fresh child can receive the same
+ * authenticated session, timer, and workspace context after it reports that it is listening.
+ */
+export async function resumeLocalApiAfterCancelledShutdown(): Promise<void> {
+  if (!finalShutdownRequested) return
+
+  finalShutdownRequested = false
+  desiredRunning = config.enabled || !!latestSession || !!latestTimerSnapshot
+  restartAttempt = 0
+  logLifecycle('cancelled-shutdown-resumed', { desiredRunning })
+  if (desiredRunning) await queueReconcile()
+}

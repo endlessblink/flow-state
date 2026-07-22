@@ -141,10 +141,12 @@ describe('Electron updater restart contract', () => {
     )
 
     expect(mainSource).toContain("import { registerStoreHandlers, flushStore } from './ipc/store'")
+    expect(mainSource).toContain('resumeLocalApiAfterCancelledShutdown')
     expect(beforeQuitHandler).toContain('event.preventDefault()')
     expect(beforeQuitHandler).toContain('flushStore(),')
     expect(beforeQuitHandler).toContain('await shutdownLocalApi()')
     expect(beforeQuitHandler).toContain('app.quit()')
+    expect(beforeQuitHandler).toContain('void resumeLocalApiAfterCancelledShutdown()')
     expect(beforeQuitHandler.indexOf('event.preventDefault()')).toBeLessThan(
       beforeQuitHandler.indexOf('flushStore(),'),
     )
@@ -153,6 +155,9 @@ describe('Electron updater restart contract', () => {
     )
     expect(beforeQuitHandler.indexOf('await shutdownLocalApi()')).toBeLessThan(
       beforeQuitHandler.indexOf('app.quit()'),
+    )
+    expect(beforeQuitHandler.indexOf('app.quit()')).toBeLessThan(
+      beforeQuitHandler.indexOf('void resumeLocalApiAfterCancelledShutdown()'),
     )
   })
 

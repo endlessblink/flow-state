@@ -334,6 +334,9 @@ electron_1.app.on('before-quit', (event) => {
                 storeFlushedForQuit = false;
                 storeFlushForQuitPromise = null;
                 destroyWindowAfterStoreFlush = false;
+                void (0, localApi_1.resumeLocalApiAfterCancelledShutdown)().catch((resumeError) => {
+                    console.error('[flowstate] Failed to resume Local API after cancelled quit:', resumeError.message);
+                });
             }, 0);
         }
         catch (err) {
@@ -341,6 +344,9 @@ electron_1.app.on('before-quit', (event) => {
             // so the user can retry instead of silently reopening into a signed-out account.
             console.error('[flowstate] Quit aborted because durable store flush failed:', err.message);
             storeFlushForQuitPromise = null;
+            void (0, localApi_1.resumeLocalApiAfterCancelledShutdown)().catch((resumeError) => {
+                console.error('[flowstate] Failed to resume Local API after aborted quit:', resumeError.message);
+            });
         }
     })();
 });

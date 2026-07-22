@@ -184,6 +184,53 @@ describe('Electron Local API session replay runtime', () => {
     expect(runtime.children).toHaveLength(1)
   })
 
+  it('resumes one sidecar and replays renderer state when an ordinary quit is cancelled', async () => {
+    writeFileSync(sourceSidecarFixture, '')
+    const {
+      registerLocalApiHandlers,
+      resumeLocalApiAfterCancelledShutdown,
+      shutdownLocalApi,
+    } = await import('../../../electron/ipc/localApi')
+    registerLocalApiHandlers()
+
+    runtime.handlers.get('localApi:setSession')?.({}, session)
+    runtime.handlers.get('localApi:setRendererAuthState')?.({}, {
+      isAuthenticated: true,
+      hasUser: true,
+      canSyncRemotely: true,
+      reauthRequired: false,
+      isInitialized: true,
+      updatedAt: Date.now(),
+    })
+    runtime.handlers.get('localApi:setWorkspaceContext')?.({}, {
+      activeWorkspaceId: '22222222-2222-4222-8222-222222222222',
+    })
+    const first = runtime.children[0]
+    first.emit('message', { type: 'listening', port: 5577 })
+
+    const shutdown = shutdownLocalApi()
+    first.emit('exit', 0, null)
+    await shutdown
+    await resumeLocalApiAfterCancelledShutdown()
+
+    expect(runtime.children).toHaveLength(2)
+    const replacement = runtime.children[1]
+    replacement.emit('message', { type: 'listening', port: 5577 })
+    expect(replacement.postMessage).toHaveBeenCalledWith({ type: 'session', ...session })
+    expect(replacement.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'rendererAuthState',
+      state: expect.objectContaining({ isAuthenticated: true, canSyncRemotely: true }),
+    }))
+    expect(replacement.postMessage).toHaveBeenCalledWith({
+      type: 'workspaceContext',
+      activeWorkspaceId: '22222222-2222-4222-8222-222222222222',
+    })
+
+    const finalShutdown = shutdownLocalApi()
+    replacement.emit('exit', 0, null)
+    await finalShutdown
+  })
+
   it('final shutdown cancels an unexpected-exit restart that is already pending', async () => {
     vi.useFakeTimers()
     writeFileSync(sourceSidecarFixture, '')

@@ -11,7 +11,11 @@ import { registerHttpHandlers } from './ipc/http'
 import { registerWindowHandlers } from './ipc/window'
 import { registerUpdater } from './updater'
 import { registerOAuthHandlers } from './ipc/oauth'
-import { registerLocalApiHandlers, shutdownLocalApi } from './ipc/localApi'
+import {
+  registerLocalApiHandlers,
+  resumeLocalApiAfterCancelledShutdown,
+  shutdownLocalApi,
+} from './ipc/localApi'
 import { registerDiagnosticsHandlers } from './ipc/diagnostics'
 import {
   createBackgroundWindowLifecycle,
@@ -364,12 +368,24 @@ app.on('before-quit', (event) => {
         storeFlushedForQuit = false
         storeFlushForQuitPromise = null
         destroyWindowAfterStoreFlush = false
+        void resumeLocalApiAfterCancelledShutdown().catch((resumeError) => {
+          console.error(
+            '[flowstate] Failed to resume Local API after cancelled quit:',
+            (resumeError as Error).message,
+          )
+        })
       }, 0)
     } catch (err) {
       // Losing a newly rotated refresh token is worse than aborting a quit. Leave the process alive
       // so the user can retry instead of silently reopening into a signed-out account.
       console.error('[flowstate] Quit aborted because durable store flush failed:', (err as Error).message)
       storeFlushForQuitPromise = null
+      void resumeLocalApiAfterCancelledShutdown().catch((resumeError) => {
+        console.error(
+          '[flowstate] Failed to resume Local API after aborted quit:',
+          (resumeError as Error).message,
+        )
+      })
     }
   })()
 })

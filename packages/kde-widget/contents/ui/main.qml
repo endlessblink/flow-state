@@ -4473,6 +4473,13 @@ PlasmoidItem {
         // BUG-1292: Don't clear state during transition - notify.sh curl may still be in flight
         if (root.sessionJustCompleted || root.isInTransition) {
             if (root.debugLogging) console.log("[SYNC] No session during transition - waiting for new session")
+        } else if (root.currentSessionId && root.currentSessionId === root.lastCompletedSessionId) {
+            // BUG-1972: we already notified for this session id. Re-checking it would
+            // re-enter onSessionComplete on every poll, and the re-fire guard's clear is
+            // the only thing that stops the countdown — so a stale local state resurrects
+            // the widget timer once per poll instead of stopping with the app. Clear here.
+            console.log("[SYNC] Session already completed - clearing stale widget state")
+            root.clearActiveSessionState(true)
         } else if (root.hasActiveSession && root.isRunning && root.currentSessionId && !root.checkingCompletion) {
             // BUG: Follower completion detection
             // We had a running session but polling found nothing active

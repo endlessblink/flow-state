@@ -1,12 +1,20 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
 import type { CanvasSection } from './types'
 
 export const useCanvasModalsStore = defineStore('canvasModals', () => {
+    const taskStore = useTaskStore()
+
     // Task Edit Modal
     const isEditModalOpen = ref(false)
-    const selectedTask = ref<Task | null>(null)
+    const selectedTaskId = ref<string | null>(null)
+    const selectedTaskSnapshot = ref<Task | null>(null)
+    const selectedTask = computed(() => {
+        if (!selectedTaskId.value) return null
+        return taskStore.getTask(selectedTaskId.value) ?? selectedTaskSnapshot.value
+    })
 
     // Quick Task Create Modal
     const isQuickTaskCreateOpen = ref(false)
@@ -64,12 +72,14 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
 
     // Actions
     const openEditModal = (task: Task) => {
-        selectedTask.value = task
+        selectedTaskId.value = task.id
+        selectedTaskSnapshot.value = task
         isEditModalOpen.value = true
     }
     const closeEditModal = () => {
         isEditModalOpen.value = false
-        selectedTask.value = null
+        selectedTaskId.value = null
+        selectedTaskSnapshot.value = null
     }
 
     const openQuickTaskCreate = (position: { x: number; y: number; parentId?: string; parentTaskId?: string }) => {
@@ -142,7 +152,7 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
     return {
         isMiniCanvasOpen, miniCanvasTaskId,
         openMiniCanvas, closeMiniCanvas,
-        isEditModalOpen, selectedTask,
+        isEditModalOpen, selectedTask, selectedTaskId,
         isQuickTaskCreateOpen, quickTaskPosition, groupInheritedProps,
         isBatchEditModalOpen, batchEditTaskIds,
         isSectionSettingsOpen, editingSection,

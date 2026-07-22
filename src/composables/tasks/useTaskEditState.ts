@@ -214,7 +214,7 @@ export function useTaskEditState(
     watch(() => props.isOpen, (isOpen) => {
         if (isOpen && props.task) {
             // Get FRESH task from store (not the potentially stale props.task)
-            const freshTask = taskStore.tasks.find(t => t.id === props.task!.id)
+            const freshTask = taskStore.getTask(props.task.id)
             if (freshTask) {
                 const newTaskState = {
                     ...freshTask,

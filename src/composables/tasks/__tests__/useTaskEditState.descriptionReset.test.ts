@@ -2,10 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { reactive, nextTick } from 'vue'
 import type { Task } from '@/stores/tasks'
 
-// Minimal store mock — useTaskEditState only reads taskStore.tasks (isOpen watcher).
+// Canonical tasks can include records hidden from the active display projection.
 const tasks: Task[] = []
 vi.mock('@/stores/tasks', () => ({
-  useTaskStore: () => ({ tasks })
+  useTaskStore: () => ({
+    tasks: [],
+    getTask: (taskId: string) => tasks.find(task => task.id === taskId)
+  })
 }))
 
 import { useTaskEditState } from '../useTaskEditState'
@@ -100,6 +103,21 @@ describe('useTaskEditState — local draft fallback (TASK-1873, "can\'t get lost
     // The recovered draft wins, AND it reads as dirty so autosave will persist it.
     expect(s2.editedTask.value.description).toBe('half-typed unsaved text')
     expect(s2.isFormDirty.value).toBe(true)
+  })
+
+  it('opens the canonical task even when active filters hide it', async () => {
+    tasks.push(makeTask({ id: 'hidden', title: 'Canonical title', description: 'Canonical description' }))
+    const props = reactive({
+      isOpen: false,
+      task: makeTask({ id: 'hidden', title: 'Stale title', description: 'Stale description' })
+    })
+    const state = useTaskEditState(props)
+
+    props.isOpen = true
+    await nextTick()
+
+    expect(state.editedTask.value.title).toBe('Canonical title')
+    expect(state.editedTask.value.description).toBe('Canonical description')
   })
 
   it('clears the draft once a save confirms (no stale restore later)', async () => {

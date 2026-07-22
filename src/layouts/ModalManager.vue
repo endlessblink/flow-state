@@ -802,22 +802,25 @@ const handleConfirmDeleteSelected = () => {
 // Global Event Handlers
 const handleOpenTaskEdit = (event: Event) => {
   const customEvent = event as CustomEvent
-  const task = taskStore.tasks.find(t => t.id === customEvent.detail.taskId)
+  const task = taskStore.getTask(customEvent.detail.taskId)
   if (task) openEditTask(task)
 }
 
 const handleTaskContextMenu = (event: Event) => {
   const customEvent = event as CustomEvent
-  const { event: mouseEvent, task, instanceId, isCalendarEvent, selectedIds, selectedCount, context } = customEvent.detail
+  const { event: mouseEvent, task, taskId, instanceId, isCalendarEvent, selectedIds, selectedCount, context } = customEvent.detail
+  const resolvedTaskId = typeof taskId === 'string' ? taskId : task?.id
+  const currentTask = resolvedTaskId ? taskStore.getTask(resolvedTaskId) ?? task : task
+  if (!currentTask) return
 
   if (isCalendarEvent && instanceId) {
     contextMenuTask.value = {
-      ...task,
+      ...currentTask,
       instanceId,
       isCalendarEvent
     } as Task & { instanceId: string; isCalendarEvent: boolean }
   } else {
-    contextMenuTask.value = task
+    contextMenuTask.value = currentTask
   }
 
   // TASK-1785 Push 2: 'calendar' enables the lock toggle in the menu.
@@ -829,7 +832,7 @@ const handleTaskContextMenu = (event: Event) => {
       : 'list'
 
   // TASK-1419: Pass multi-select info to context menu
-  contextMenuSelectedIds.value = selectedIds || [task.id]
+  contextMenuSelectedIds.value = selectedIds || [currentTask.id]
   contextMenuSelectedCount.value = selectedCount || 1
 
   // BUG-1096: Use normalized coordinates for Tauri compatibility

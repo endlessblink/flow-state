@@ -41,10 +41,16 @@ describe('undo-aware modal and context-menu entry points', () => {
     const canvasTaskActions = readSource('src/composables/canvas/useCanvasTaskActions.ts')
     const canvasHotkeys = readSource('src/composables/canvas/useCanvasHotkeys.ts')
 
-    expect(canvasView).toContain("detail: { event, task, context: 'canvas' }")
-    expect(canvasEvents).toContain("context: 'canvas'")
+    expect(canvasView).toContain("detail: { event, taskId: task.id, task, context: 'canvas' }")
+    expect(canvasView).toContain("const task = taskStore.getTask(taskId) ?? node.data?.task")
+    expect(canvasEvents).toContain("taskId: CanvasIds.parseNodeId(node.id).id")
+    expect(canvasEvents).toContain("task: node.data?.task")
     expect(canvasTaskActions).toContain("detail: { taskId: task.id, permanent: false, context: 'canvas' }")
     expect(canvasHotkeys).toContain("detail: { taskId: task.id, permanent: permanentDelete, context: 'canvas' }")
+    expect(modalManager).toContain("const { event: mouseEvent, task, taskId, instanceId, isCalendarEvent, selectedIds, selectedCount, context } = customEvent.detail")
+    expect(modalManager).toContain("const resolvedTaskId = typeof taskId === 'string' ? taskId : task?.id")
+    expect(modalManager).toContain("const currentTask = resolvedTaskId ? taskStore.getTask(resolvedTaskId) ?? task : task")
+    expect(modalManager).toContain("const task = taskStore.getTask(customEvent.detail.taskId)")
 
     // BUG-1850: canvas permanent delete must hit the tombstone-writing path, not soft delete.
     expect(canvasTaskActions).toContain('await undoHistory.bulkPermanentlyDeleteTasksWithUndo(taskIdsToDelete)')

@@ -54,6 +54,7 @@ vi.mock('@/stores/tasks', () => ({
   useTaskStore: () => ({
     tasks: mockTasks.value,
     _rawTasks: mockRawTasks.value,
+    getTask: (taskId: string) => mockRawTasks.value.find(task => task.id === taskId),
     loadFromDatabase: mockLoadFromDatabase,
     manualOperationInProgress: mockManualOperationInProgress,
   }),
@@ -192,6 +193,24 @@ describe('useCrossTabSync — handleTaskOperation', () => {
     })
 
     expect(task.title).toBe('No Workspace')
+  })
+
+  it('updates the canonical task when active filters hide it', async () => {
+    const task = makeTask()
+    mockRawTasks.value.push(task)
+
+    await fireTaskOperation({
+      operation: 'update',
+      taskId: task.id,
+      taskData: {
+        title: 'Updated While Hidden',
+        updatedAt: new Date('2026-04-01T13:00:00Z').toISOString(),
+        positionVersion: 0,
+      },
+      timestamp: Date.now(),
+    })
+
+    expect(task.title).toBe('Updated While Hidden')
   })
 
   // ── Update: manualOperationInProgress ──

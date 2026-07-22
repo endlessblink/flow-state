@@ -192,6 +192,77 @@ describe('useQuickTasks — pinTask result contract', () => {
         expect(createTaskWithUndo).not.toHaveBeenCalled()
     })
 
+    it('keeps pinned tasks visible when only canonical raw tasks contain them', async () => {
+        const rawTasks = [
+            { id: 'task-1', title: 'לארגן משימות', status: 'todo', _soft_deleted: false, isPinned: true, projectId: null, priority: null },
+        ]
+
+        vi.doMock('@/stores/auth', () => ({ useAuthStore: () => ({ isAuthenticated: true }) }))
+        vi.doMock('@/stores/tasks', () => ({
+            useTaskStore: () => ({
+                tasks: [],
+                rawTasks,
+                getTask: (taskId: string) => rawTasks.find(task => task.id === taskId) ?? null,
+                activeStatusFilter: null,
+                getProjectById: () => null,
+                createTaskWithUndo: vi.fn(),
+                updateTaskWithUndo: vi.fn(),
+            }),
+        }))
+        vi.doMock('@/stores/projects', () => ({
+            useProjectStore: () => ({
+                activeProjectId: null,
+                isDescendantOf: () => false,
+            }),
+        }))
+        vi.doMock('@/stores/timer', () => ({
+            useTimerStore: () => ({ startTimer: async () => {} }),
+        }))
+
+        const { useQuickTasks } = await import('@/composables/useQuickTasks')
+        const { pinnedTasks, quickTaskItems } = useQuickTasks()
+
+        expect(pinnedTasks.value.map(task => task.id)).toEqual(['task-1'])
+        expect(quickTaskItems.value.map(item => item.sourceId)).toEqual(['task-1'])
+    })
+
+    it('reports pinned-existing when only canonical raw tasks contain the title match', async () => {
+        const createTaskWithUndo = vi.fn()
+        const updateTaskWithUndo = vi.fn(async () => {})
+        const rawTasks = [
+            { id: 'task-1', title: 'לארגן משימות', status: 'todo', _soft_deleted: false, isPinned: false },
+        ]
+
+        vi.doMock('@/stores/auth', () => ({ useAuthStore: () => ({ isAuthenticated: true }) }))
+        vi.doMock('@/stores/tasks', () => ({
+            useTaskStore: () => ({
+                tasks: [],
+                rawTasks,
+                getTask: (taskId: string) => rawTasks.find(task => task.id === taskId) ?? null,
+                activeStatusFilter: null,
+                getProjectById: () => null,
+                createTaskWithUndo,
+                updateTaskWithUndo,
+            }),
+        }))
+        vi.doMock('@/stores/projects', () => ({
+            useProjectStore: () => ({
+                activeProjectId: null,
+                isDescendantOf: () => false,
+            }),
+        }))
+        vi.doMock('@/stores/timer', () => ({
+            useTimerStore: () => ({ startTimer: async () => {} }),
+        }))
+
+        const { useQuickTasks } = await import('@/composables/useQuickTasks')
+        const { pinTask } = useQuickTasks()
+
+        await expect(pinTask('לארגן משימות')).resolves.toEqual({ status: 'pinned-existing', taskId: 'task-1' })
+        expect(updateTaskWithUndo).toHaveBeenCalledWith('task-1', { isPinned: true })
+        expect(createTaskWithUndo).not.toHaveBeenCalled()
+    })
+
     it('reports already-pinned when typed title matches an existing pinned task', async () => {
         const createTaskWithUndo = vi.fn()
         const updateTaskWithUndo = vi.fn()

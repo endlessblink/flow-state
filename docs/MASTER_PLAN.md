@@ -2169,6 +2169,20 @@ _Original plan below._
 
 ## Active Tasks
 
+### ~~BUG-1974~~: Task state disagrees across filtered views, quick tasks, Canvas, and edit entry points (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-23, Electron 1.4.283) | **Related**: BUG-1925, BUG-1942, TASK-1953
+
+**Exact failure modes fixed**: authoritative ID lookups used the active filtered projection, pinned quick tasks were derived from a projection that excludes pinned tasks, and Canvas edit/context actions consumed copied node snapshots that did not refresh for many task fields.
+
+**Implementation**: hidden-task cross-tab and edit entry points now resolve through the canonical task accessor; quick-task pinned/title/unpin behavior uses canonical task state; Canvas modal, double-click, and context-menu entry points resolve current state by task ID with a snapshot fallback only during transient store misses.
+
+**Regression proof**: RED tests reproduced hidden canonical updates, hidden edit-modal refresh, missing pinned quick tasks, duplicate pin-by-title behavior, stale Canvas modal metadata, and snapshot-based Canvas dispatch. GREEN proof: 41 focused tests passed, full Vitest passed 4,031 tests with 6 intentional skips, `npm run type-check` passed, focused ESLint reported no errors, independent review approved with no remaining findings, and `npm run electron:build` completed.
+
+**Release proof**: public `latest-linux.yml` serves version 1.4.283; the AppImage and deb endpoints return HTTP 200 with content lengths matching the manifest. A later byte-different same-version rebuild was correctly rejected by the collision guard instead of overwriting the published release.
+
+**Explicitly not covered**: intentional view filters still produce different visible subsets; the dormant task-operation broadcaster remains unused; no claim is made that future task fields cannot introduce a new projection bug without parity coverage.
+
 ### TASK-1943: Reliable Hermes–FlowState personal-assistant program (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1797, BUG-1942 | **Related**: FEATURE-1943
@@ -2185,6 +2199,7 @@ _Original plan below._
 - Regression, fault-injection, watchdog, packaged Electron, PWA, Hermes, and approval-gated production verification.
 
 **Subtasks**:
+- [x] ~~**BUG-1974 — Keep task identity and current state consistent across views**: move authoritative ID lookups, quick-task pinning, and Canvas edit/context actions onto canonical task state; preserve transient Canvas availability with canonical-first snapshot fallback; ship Electron 1.4.283 with RED/GREEN and updater proof.~~ Completed 2026-07-23.
 - [ ] **TASK-1944 — Canonical operation, revision, and change-sequence foundation**: recover onto a fresh branch, classify existing work, inventory every production writer, add the signed-user operation ledger and canonical revisions, preserve legacy writers through compatibility triggers, return replayable read-back receipts, and provide durable sequence catch-up.
 - [ ] **TASK-1945 — Canonical Local API task patch adoption**: replace direct sidecar task patches and Hermes HTTP-success inference with the TASK-1944 preview/apply/base-revision contract, validate canonical receipts at both boundaries, and preserve exact replay after response loss.
 - [ ] **TASK-1947 — Deterministic canonical change-sequence catch-up**: persist a signed-user personal/workspace cursor, consume bounded ordered change-log pages as invalidation hints, reconcile exact task IDs authoritatively, and advance only after projection persistence succeeds.
@@ -7860,6 +7875,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1967**~~ | **P0** | ✅ **DONE — Electron 1.4.274 requires durable task admission before clearing drafts or showing success** |
 | ~~**TASK-1968**~~ | **P0** | ✅ **DONE — Electron 1.4.275 keeps the signed-in Hermes bridge alive across window close, restart, and updater handoff** |
 | ~~**BUG-1969**~~ | **P0-HIGH** | ✅ **DONE — Electron 1.4.277 and the live Hermes adapter agree on all work-block and subtask-batch contracts** |
+| ~~**BUG-1974**~~ | **P0** | ✅ **DONE — Electron 1.4.283 resolves hidden, pinned, and Canvas task actions through canonical task identity instead of filtered or copied state** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

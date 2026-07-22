@@ -58,11 +58,27 @@ export function useQuickTasks() {
     const taskStore = useTaskStore()
     const projectStore = useProjectStore()
     const timerStore = useTimerStore()
+    const canonicalTasks = computed<Task[]>(() => {
+        const rawTasks = (taskStore as typeof taskStore & { rawTasks?: Task[]; _rawTasks?: Task[] }).rawTasks
+        if (Array.isArray(rawTasks)) return rawTasks
+
+        const privateRawTasks = (taskStore as typeof taskStore & { _rawTasks?: Task[] })._rawTasks
+        if (Array.isArray(privateRawTasks)) return privateRawTasks
+
+        return taskStore.tasks
+    })
+
+    const getCanonicalTask = (taskId: string) => {
+        if (typeof taskStore.getTask === 'function') {
+            return taskStore.getTask(taskId)
+        }
+        return canonicalTasks.value.find(task => task.id === taskId)
+    }
 
     // --- Pinned Tasks (from task store — single source of truth) ---
 
     const pinnedTasks = computed<Task[]>(() =>
-        taskStore.tasks.filter(t =>
+        canonicalTasks.value.filter(t =>
             t.isPinned === true &&
             t.status !== 'done' &&
             !t._soft_deleted
@@ -75,7 +91,7 @@ export function useQuickTasks() {
         if (!trimmed) return { status: 'empty' }
 
         // If a task with this title already exists, just pin it in place.
-        const existing = taskStore.tasks.find(
+        const existing = canonicalTasks.value.find(
             t => t.title.toLowerCase() === trimmed.toLowerCase() &&
                 t.status !== 'done' &&
                 !t._soft_deleted
@@ -100,7 +116,7 @@ export function useQuickTasks() {
     }
 
     const unpinTask = async (taskId: string) => {
-        const task = taskStore.tasks.find(t => t.id === taskId)
+        const task = getCanonicalTask(taskId)
         if (!task || !task.isPinned) return
         await taskStore.updateTaskWithUndo(taskId, { isPinned: false })
     }

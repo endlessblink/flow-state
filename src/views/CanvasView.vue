@@ -1187,18 +1187,24 @@ const handleCreateTaskInGroupDebug = (section: CanvasGroup) => {
 
 const handleSectionUpdate = (id: string, data: Record<string, unknown>) => canvasStore.updateSection(id, data)
 const { closeAllContextMenus: closeCanvasContextMenu } = useCanvasContextMenus()
-const handleEditTask = (task: Task) => { modalsStore.openEditModal(task); closeCanvasContextMenu() }
+const handleEditTask = (task: Task) => {
+    const currentTask = taskStore.getTask(task.id) ?? task
+    modalsStore.openEditModal(currentTask)
+    closeCanvasContextMenu()
+}
 // Handle double-click on nodes to open edit modal for tasks
 const handleNodeDoubleClick = ({ node }: NodeMouseEvent) => {
-    if (node.type === 'taskNode' && node.data?.task) {
-        handleEditTask(node.data.task)
+    if (node.type === 'taskNode') {
+        const taskId = CanvasIds.parseNodeId(node.id).id
+        const task = taskStore.getTask(taskId) ?? node.data?.task
+        if (task) handleEditTask(task)
     }
 }
 const handleTaskContextMenu = (event: MouseEvent, task: Task) => {
     if (event) event.preventDefault()
     // Dispatch global event for ModalManager to handle (shared TaskContextMenu)
     window.dispatchEvent(new CustomEvent('task-context-menu', {
-        detail: { event, task, context: 'canvas' }
+        detail: { event, taskId: task.id, task, context: 'canvas' }
     }))
 }
 

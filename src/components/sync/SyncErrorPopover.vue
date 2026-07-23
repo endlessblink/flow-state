@@ -17,7 +17,7 @@
             <p class="header-subtitle">
               {{ errors.length }} error{{ errors.length !== 1 ? 's' : '' }}
               <template v-if="permanentCount > 0">
-                ({{ permanentCount }} corrupted - click Clear All)
+                ({{ permanentCount }} need attention)
               </template>
             </p>
           </div>
@@ -56,7 +56,7 @@
                 <span class="entity-type">{{ formatEntityType(error.entityType) }}</span>
                 <span class="entity-id">{{ error.entityId.slice(0, 8) }}...</span>
                 <span v-if="isPermanentError(error)" class="permanent-badge">
-                  <Ban :size="10" /> Corrupted
+                  <Ban :size="10" /> Needs attention
                 </span>
               </div>
               <div class="error-operation">
@@ -70,7 +70,7 @@
                 <span v-if="error.lastAttemptAt" class="last-attempt">
                   {{ formatTime(error.lastAttemptAt) }}
                 </span>
-                <span v-if="isPermanentError(error)" class="no-retry-hint">Cannot retry</span>
+                <span v-if="isPermanentError(error)" class="no-retry-hint">Manual retry available</span>
               </div>
             </div>
           </div>
@@ -86,13 +86,13 @@
 
         <!-- Actions -->
         <div class="popover-footer">
-          <button v-if="showRetryButton" class="retry-btn" @click="$emit('retry')">
+          <button v-if="errors.length > 0" class="retry-btn" @click="$emit('retry')">
             <RefreshCw :size="16" />
-            Retry {{ retryableCount === errors.length ? 'All' : retryableCount }}
+            Retry All
           </button>
           <button v-if="errors.length > 0" class="clear-btn" @click="$emit('clear')">
             <Trash2 :size="16" />
-            Clear All
+            Discard local changes
           </button>
           <button class="dismiss-btn" @click="$emit('close')">
             Dismiss
@@ -139,19 +139,11 @@ const isPermanentError = (error: WriteOperation): boolean => {
   return classifyError(error.lastError) === 'permanent'
 }
 
-// Count retryable vs permanent errors
-const retryableCount = computed(() => {
-  return props.errors.filter(e => !isPermanentError(e)).length
-})
-
 const permanentCount = computed(() => {
   return props.errors.filter(e => isPermanentError(e)).length
 })
 
 const showErrorSummary = computed(() => Boolean(props.lastError) && props.errors.length > 0)
-
-// Hide retry button if ALL errors are permanent
-const showRetryButton = computed(() => retryableCount.value > 0)
 
 // Only show first 3 errors unless expanded
 const displayedErrors = computed(() => {

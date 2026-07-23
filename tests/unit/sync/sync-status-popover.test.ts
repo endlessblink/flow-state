@@ -75,4 +75,86 @@ describe('sync status auth-error watchdog', () => {
     expect(document.body.textContent).not.toContain('sign in again')
     expect(document.body.textContent).toContain('No failed sync operations')
   })
+
+  it('offers manual retry for a permanently failed local change instead of calling it corrupted', async () => {
+    const { default: SyncErrorPopover } = await import('@/components/sync/SyncErrorPopover.vue')
+
+    wrapper = mount(SyncErrorPopover, {
+      attachTo: document.body,
+      props: {
+        errors: [{
+          id: 42,
+          entityType: 'task',
+          entityId: 'task-permanent-failure',
+          operation: 'update',
+          payload: { title: 'Still local' },
+          status: 'failed',
+          retryCount: 3,
+          createdAt: Date.now(),
+          lastError: '403 Forbidden: injected permanent rejection',
+        }],
+        lastError: '403 Forbidden: injected permanent rejection',
+      },
+      global: {
+        stubs: {
+          Teleport: false,
+        },
+      },
+    })
+    await nextTick()
+
+    expect(document.body.textContent).toContain('Retry All')
+    expect(document.body.textContent).toContain('Needs attention')
+    expect(document.body.textContent).not.toContain('Corrupted')
+    expect(document.body.textContent).not.toContain('Cannot retry')
+  })
+
+  it('requires explicit confirmation before discarding failed local changes', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const { syncState } = await import('@/composables/sync/useSyncOrchestrator')
+    const { useSyncStatusStore } = await import('@/stores/syncStatus')
+    const { default: SyncStatusIndicator } = await import('@/components/sync/SyncStatusIndicator.vue')
+    const failedOperation = {
+      id: 43,
+      entityType: 'task' as const,
+      entityId: 'task-failed-local-change',
+      operation: 'update' as const,
+      payload: { title: 'Still local' },
+      status: 'failed' as const,
+      retryCount: 3,
+      createdAt: Date.now(),
+      lastError: '403 Forbidden: injected permanent rejection',
+    }
+    syncState.value = {
+      status: 'error',
+      pendingCount: 0,
+      failedCount: 1,
+      lastSyncAt: undefined,
+      lastError: failedOperation.lastError,
+      isOnline: true,
+      failedOperations: [failedOperation],
+    }
+    const store = useSyncStatusStore()
+    const clearFailed = vi.spyOn(store, 'clearFailed').mockResolvedValue(1)
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    wrapper = mount(SyncStatusIndicator, {
+      attachTo: document.body,
+      global: {
+        plugins: [pinia],
+        stubs: {
+          Teleport: false,
+        },
+      },
+    })
+    await nextTick()
+    await wrapper.get('.sync-indicator').trigger('click')
+    await nextTick()
+    document.querySelector<HTMLButtonElement>('.clear-btn')?.click()
+    await nextTick()
+
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(clearFailed).not.toHaveBeenCalled()
+  })
 })

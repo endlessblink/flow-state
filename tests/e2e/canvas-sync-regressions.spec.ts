@@ -1114,6 +1114,79 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     }, task.id)).toBe(true)
   })
 
+  test('R22 - a rejected Board edit remains recoverable and converges after manual retry', async ({ clientA, clientB }) => {
+    await gotoBoardReady(clientA)
+    await gotoBoardReady(clientB)
+
+    const task = ROOT_TASKS[2]
+    const rejectedTitle = `${task.title} Recoverable Rejection`
+    const writePattern = '**/*'
+    await clientA.route(writePattern, route => {
+      const request = route.request()
+      const rejectsTaskPatch = request.method() === 'PATCH'
+        && request.url().includes('/rest/v1/tasks')
+        && request.url().includes(task.id)
+      if (!rejectsTaskPatch) {
+        return route.continue()
+      }
+      return route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: '403 Forbidden: injected permanent persistence rejection' }),
+      })
+    })
+
+    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`)
+    await taskCard.click({ button: 'right' })
+    await clientA.getByText('Edit', { exact: true }).click()
+    const editModal = clientA.locator('.modal-content').filter({ hasText: 'Edit Task' })
+    await editModal.locator('input[placeholder="Task title"]').fill(rejectedTitle)
+    await editModal.getByText('Save Changes', { exact: true }).click()
+
+    await expect(clientA.locator('.sync-indicator.status-error')).toBeVisible({ timeout: 20_000 })
+    await clientA.locator('.sync-indicator.status-error').click()
+    await expect(clientA.getByText('Retry All', { exact: true })).toBeVisible()
+    await expect(clientA.getByText('Needs attention', { exact: true })).toBeVisible()
+    await expect(clientA.getByText('Discard local changes', { exact: true })).toBeVisible()
+    await expect(clientA.getByText('Corrupted', { exact: true })).toHaveCount(0)
+    await expect(clientA.getByText('Cannot retry', { exact: true })).toHaveCount(0)
+
+    const { data: unchangedTask, error: unchangedError } = await admin
+      .from('tasks')
+      .select('title')
+      .eq('id', task.id)
+      .single()
+    expect(unchangedError).toBeNull()
+    expect(unchangedTask?.title).toBe(task.title)
+
+    await clientA.unroute(writePattern)
+    await clientA.getByText('Retry All', { exact: true }).click()
+
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('title')
+        .eq('id', task.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data?.title).toBe(rejectedTitle)
+    }).toPass({ timeout: 20_000 })
+
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.title ?? null
+    }, task.id), { timeout: 20_000 }).toBe(rejectedTitle)
+
+    await clientA.reload()
+    await gotoBoardReady(clientA)
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.title ?? null
+    }, task.id)).toBe(rejectedTitle)
+  })
+
   test('R11 - offline edit and completion drain after reconnect and survive reload', async ({ clientA, clientB }) => {
     await gotoCanvasReady(clientA)
     await gotoCanvasReady(clientB)

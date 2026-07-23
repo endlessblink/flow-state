@@ -137,6 +137,12 @@ const handleRetry = async () => {
 
 // Handle clear from popover
 const handleClear = async () => {
+  const count = failedCount.value
+  const confirmed = window.confirm(
+    `Discard ${count} failed local change${count === 1 ? '' : 's'}? This permanently removes the retry data and cannot be undone.`
+  )
+  if (!confirmed) return
+
   showPopover.value = false
   await syncStore.clearFailed()
 }

@@ -69,9 +69,9 @@ describe('PWA Offline Configuration (regression)', () => {
       expect(swSource).toMatch(/denylist.*realtime/)
     })
 
-    it('only caches GET requests to Supabase REST API', () => {
-      expect(swSource).toContain("request.method !== 'GET'")
-      expect(swSource).toContain("url.pathname.includes('/rest/v1/')")
+    it('never caches authenticated Supabase REST responses across users or workspaces', () => {
+      expect(swSource).not.toContain("cacheName: 'supabase-rest-cache'")
+      expect(swSource).not.toContain("url.pathname.includes('/rest/v1/')")
     })
 
     it('force-activates on install and also accepts SKIP_WAITING message (BUG-1743)', () => {
@@ -85,9 +85,20 @@ describe('PWA Offline Configuration (regression)', () => {
       expect(swSource).toMatch(/addEventListener\('install'[\s\S]*?self\.skipWaiting\(\)/)
     })
 
-    it('uses supabase-rest-cache (not supabase-api-fallback which cached auth)', () => {
-      expect(swSource).toContain('supabase-rest-cache')
-      expect(swSource).not.toContain('supabase-api-fallback')
+    it('does not register either historical Supabase response cache', () => {
+      expect(swSource).not.toContain("cacheName: 'supabase-rest-cache'")
+      expect(swSource).not.toContain("cacheName: 'supabase-api-fallback'")
+    })
+
+    it('deletes historical cross-session Supabase response caches on activation', () => {
+      expect(swSource).toContain("caches.delete('supabase-rest-cache')")
+      expect(swSource).toContain("caches.delete('supabase-api-fallback')")
+    })
+
+    it('never caches user images across authenticated sessions', () => {
+      expect(swSource).not.toContain("cacheName: 'image-cache'")
+      expect(swSource).not.toMatch(/request\.destination\s*===\s*['"]image['"]/)
+      expect(swSource).toContain("caches.delete('image-cache')")
     })
   })
 

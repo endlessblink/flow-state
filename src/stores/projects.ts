@@ -2,7 +2,13 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { type Project, type ProjectTreeNode, UNCATEGORIZED_PROJECT_ID } from '@/types/tasks'
-import { cacheProjects, getCachedProjects } from '@/services/offline/readCacheDB'
+import {
+    cacheProjects,
+    captureReadCacheScope,
+    configureReadCacheScope,
+    getCachedProjects,
+    isReadCacheScopeTokenCurrent,
+} from '@/services/offline/readCacheDB'
 
 export function filterProjectsForWorkspaceSync(projects: Project[], activeWorkspaceId: string | null): Project[] {
     return projects.filter(project => {
@@ -28,6 +34,7 @@ export const useProjectStore = defineStore('projects', () => {
 
     // BUG-1728: Guard against concurrent loadProjectsFromDatabase calls
     let loadInFlightPromise: Promise<void> | null = null
+    let loadInFlightScopeKey: string | null = null
 
     const GUEST_PROJECTS_KEY = 'flowstate-guest-projects'
 
@@ -155,15 +162,44 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     const loadProjectsFromDatabase = async () => {
-        // BUG-1728: If a load is already in progress, return existing promise
-        if (loadInFlightPromise) return loadInFlightPromise
+        const [{ useAuthStore }, { useWorkspaceStore }] = await Promise.all([
+            import('@/stores/auth'),
+            import('@/stores/workspace'),
+        ])
+        const authStore = useAuthStore()
+        const wsStore = useWorkspaceStore()
+        const scopeKey = canUseRemoteProjectSync(authStore)
+            ? `${authStore.user?.id ?? 'unknown'}:${wsStore.activeWorkspaceId ?? 'personal'}`
+            : 'guest'
+        if (canUseRemoteProjectSync(authStore) && authStore.user?.id) {
+            configureReadCacheScope({
+                userId: authStore.user.id,
+                workspaceId: wsStore.activeWorkspaceId ?? null,
+            })
+        }
+        if (loadInFlightPromise) {
+            if (loadInFlightScopeKey === scopeKey) return loadInFlightPromise
+            await loadInFlightPromise.catch(() => undefined)
+            return loadProjectsFromDatabase()
+        }
+        const readCacheScopeToken = captureReadCacheScope()
+        const assertScope = () => {
+            if (scopeKey === 'guest') return
+            if (
+                !readCacheScopeToken
+                || authStore.user?.id !== readCacheScopeToken.scope.userId
+                || wsStore.activeWorkspaceId !== readCacheScopeToken.scope.workspaceId
+                || !isReadCacheScopeTokenCurrent(readCacheScopeToken)
+            ) {
+                throw new Error('Project load scope changed')
+            }
+        }
 
+        loadInFlightScopeKey = scopeKey
         loadInFlightPromise = (async () => {
         isLoading.value = true
         try {
             // Guest mode: skip Supabase, start with empty projects
-            const { useAuthStore } = await import('@/stores/auth')
-            const authStore = useAuthStore()
             if (!canUseRemoteProjectSync(authStore)) {
                 _rawProjects.value = loadProjectsFromLocalStorage()
                 console.log(`👤 [GUEST-MODE] Loaded ${_rawProjects.value.length} projects from localStorage`)
@@ -172,11 +208,15 @@ export const useProjectStore = defineStore('projects', () => {
 
             // Workspace collaboration: filter projects by active workspace
             // undefined = no filter (personal/pre-migration safe), string = workspace filter
-            const { useWorkspaceStore } = await import('@/stores/workspace')
-            const wsStore = useWorkspaceStore()
             // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq)
             const workspaceId = wsStore.activeWorkspaceId
             const loadedProjects = await fetchProjects(workspaceId)
+            assertScope()
+            await cacheProjects(loadedProjects, {
+                scopeToken: readCacheScopeToken ?? undefined,
+                throwOnError: true,
+            })
+            assertScope()
             // BUG-1723: Set syncUpdateInProgress to prevent watcher from echoing
             // all projects back to Supabase (which triggers a Realtime PROJECT storm)
             syncUpdateInProgress = true
@@ -184,10 +224,9 @@ export const useProjectStore = defineStore('projects', () => {
             nextTick(() => { syncUpdateInProgress = false })
             console.log(`✅ [SUPABASE] Loaded ${loadedProjects.length} projects`)
 
-            // BUG-1411: Cache projects to IndexedDB for offline loading
-            cacheProjects(loadedProjects)
         } catch (error) {
             console.error('❌ [SUPABASE] Projects load failed:', error)
+            if (readCacheScopeToken && !isReadCacheScopeTokenCurrent(readCacheScopeToken)) throw error
 
             // BUG-1411: Fall back to IndexedDB read cache when Supabase is unreachable
             if (_rawProjects.value.length === 0) {
@@ -206,6 +245,7 @@ export const useProjectStore = defineStore('projects', () => {
             await loadInFlightPromise
         } finally {
             loadInFlightPromise = null
+            loadInFlightScopeKey = null
         }
     }
 

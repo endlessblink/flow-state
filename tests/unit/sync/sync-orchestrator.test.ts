@@ -914,8 +914,311 @@ describe('recurring done-for-now queue', () => {
     await sync.forceSync()
 
     expect(rpcMock).toHaveBeenCalledTimes(2)
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(1950, {
+      doneForNow: {
+        requestId: 'done-for-now-request',
+        nextDueDate: '2026-07-24',
+        previewVersion: 'done-preview',
+        requestHash: 'a'.repeat(64),
+      },
+    })
     expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1950)
     expect(taskStoreMock.updateTaskFromSync).not.toHaveBeenCalled()
+  })
+
+  it('reuses the durable preview binding when the server commit acknowledgement is lost', async () => {
+    const queued = makeOp({
+      id: 1951,
+      entityId: 'task-recurring-ack-loss',
+      payload: {},
+      workspaceId: null,
+      doneForNow: {
+        requestId: 'done-for-now-ack-loss',
+        nextDueDate: '2026-07-25',
+      },
+    })
+    const previewed = makeOp({
+      ...queued,
+      doneForNow: {
+        ...queued.doneForNow!,
+        previewVersion: 'stable-preview',
+        requestHash: 'b'.repeat(64),
+      },
+    })
+    rpcMock
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          preview: true,
+          previewVersion: 'stable-preview',
+          requestHash: 'b'.repeat(64),
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: 'response lost after commit' },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          result: 'committed',
+          requestHash: 'b'.repeat(64),
+          receipt: {
+            operationId: 'done-for-now-ack-loss',
+            requestHash: 'b'.repeat(64),
+            status: 'replayed',
+            replayed: true,
+          },
+        },
+        error: null,
+      })
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([queued])
+      .mockResolvedValue([previewed])
+    coalescerMocks.coalesceOperationsForEntity
+      .mockResolvedValueOnce({
+        operation: queued,
+        mergedOperationIds: [],
+        description: 'No coalescing needed',
+      })
+      .mockResolvedValue({
+        operation: previewed,
+        mergedOperationIds: [],
+        description: 'No coalescing needed',
+      })
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+    await sync.forceSync()
+
+    expect(rpcMock).toHaveBeenCalledTimes(3)
+    expect(rpcMock.mock.calls.filter(([, params]) => params.p_preview === true)).toHaveLength(1)
+    const applyCalls = rpcMock.mock.calls.filter(([, params]) => params.p_preview === false)
+    expect(applyCalls).toHaveLength(2)
+    expect(applyCalls[0][1]).toMatchObject({
+      p_preview_version: 'stable-preview',
+      p_request_hash: 'b'.repeat(64),
+      p_request_id: 'done-for-now-ack-loss',
+    })
+    expect(applyCalls[1][1]).toMatchObject({
+      p_preview_version: 'stable-preview',
+      p_request_hash: 'b'.repeat(64),
+      p_request_id: 'done-for-now-ack-loss',
+    })
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1951)
+  })
+
+  it('clears a stale durable binding and re-previews with the same request identity', async () => {
+    const stale = makeOp({
+      id: 1952,
+      entityId: 'task-recurring-stale-preview',
+      payload: {},
+      workspaceId: null,
+      doneForNow: {
+        requestId: 'done-for-now-stale',
+        nextDueDate: '2026-07-26',
+        previewVersion: 'stale-preview',
+        requestHash: 'c'.repeat(64),
+      },
+    })
+    const reset = makeOp({
+      ...stale,
+      doneForNow: {
+        requestId: 'done-for-now-stale',
+        nextDueDate: '2026-07-26',
+      },
+    })
+    rpcMock
+      .mockResolvedValueOnce({
+        data: {
+          ok: false,
+          error: { code: 'stale_preview', message: 'Task changed after preview' },
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          preview: true,
+          previewVersion: 'fresh-preview',
+          requestHash: 'd'.repeat(64),
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          preview: false,
+          requestId: 'done-for-now-stale',
+          completedOccurrence: { id: 'completion-fresh', status: 'done' },
+        },
+        error: null,
+      })
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([stale])
+      .mockResolvedValue([reset])
+    coalescerMocks.coalesceOperationsForEntity
+      .mockResolvedValueOnce({
+        operation: stale,
+        mergedOperationIds: [],
+        description: 'No coalescing needed',
+      })
+      .mockResolvedValue({
+        operation: reset,
+        mergedOperationIds: [],
+        description: 'No coalescing needed',
+      })
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+    await sync.forceSync()
+
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(1952, {
+      doneForNow: {
+        requestId: 'done-for-now-stale',
+        nextDueDate: '2026-07-26',
+      },
+    })
+    expect(rpcMock.mock.calls.filter(([, params]) => params.p_preview === true)).toHaveLength(1)
+    expect(rpcMock.mock.calls.at(-1)?.[1]).toMatchObject({
+      p_preview: false,
+      p_preview_version: 'fresh-preview',
+      p_request_hash: 'd'.repeat(64),
+      p_request_id: 'done-for-now-stale',
+    })
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1952)
+  })
+
+  it('keeps the queue row retryable when apply omits the durable request identity', async () => {
+    const op = makeOp({
+      id: 1953,
+      entityId: 'task-recurring-missing-receipt',
+      payload: {},
+      workspaceId: null,
+      doneForNow: {
+        requestId: 'done-for-now-missing-receipt',
+        nextDueDate: '2026-07-27',
+        previewVersion: 'bound-preview',
+        requestHash: 'e'.repeat(64),
+      },
+    })
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        ok: true,
+        preview: false,
+        completedOccurrence: { id: 'completion-unknown', status: 'done' },
+      },
+      error: null,
+    })
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed',
+    })
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1953)
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1953, expect.any(String), expect.any(Number))
+  })
+
+  it('keeps the queue row retryable when receipt fields contradict the durable request', async () => {
+    const op = makeOp({
+      id: 1957,
+      entityId: 'task-recurring-contradictory-receipt',
+      payload: {},
+      workspaceId: null,
+      doneForNow: {
+        requestId: 'done-for-now-expected',
+        nextDueDate: '2026-07-27',
+        previewVersion: 'bound-preview',
+        requestHash: 'f'.repeat(64),
+      },
+    })
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        ok: true,
+        result: 'committed',
+        requestId: 'done-for-now-expected',
+        requestHash: 'f'.repeat(64),
+        receipt: {
+          operationId: 'done-for-now-other',
+          requestHash: '0'.repeat(64),
+          status: 'replayed',
+          replayed: true,
+        },
+      },
+      error: null,
+    })
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed',
+    })
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1957)
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1957, expect.any(String), expect.any(Number))
+  })
+
+  it('clears a version-only legacy binding when apply requires a request hash', async () => {
+    const op = makeOp({
+      id: 1954,
+      entityId: 'task-recurring-version-only',
+      payload: {},
+      workspaceId: null,
+      doneForNow: {
+        requestId: 'done-for-now-version-only',
+        nextDueDate: '2026-07-28',
+        previewVersion: 'legacy-preview',
+      },
+    })
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        ok: false,
+        error: {
+          code: 'request_hash_required',
+          message: 'The server-issued request hash is required',
+        },
+      },
+      error: null,
+    })
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed',
+    })
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(1954, {
+      doneForNow: {
+        requestId: 'done-for-now-version-only',
+        nextDueDate: '2026-07-28',
+      },
+    })
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1954)
   })
 })
 
@@ -1042,7 +1345,7 @@ describe('executeOperation: CREATE', () => {
     expect(supabaseMock.fromMock).toBeDefined()
   })
 
-  it('rewrites stale queued task user_id to the current auth user before upsert', async () => {
+  it('quarantines another account queued task instead of adopting it before upsert', async () => {
     authStoreMock.user = { id: 'current-user' } as any
     const { supabase } = await import('@/services/auth/supabase')
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
@@ -1084,12 +1387,54 @@ describe('executeOperation: CREATE', () => {
     const sync = useSyncOrchestrator()
     await sync.forceSync()
 
-    expect(taskChain.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ user_id: 'current-user' }),
-      { onConflict: 'id' }
+    expect(supabaseMock.fromMock).not.toHaveBeenCalled()
+    expect(taskChain.upsert).not.toHaveBeenCalled()
+    expect(rpcMock).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(412)
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(
+      412,
+      expect.stringContaining('another signed user'),
+      expect.any(Number),
     )
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(412)
-    expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
+    expect(writeQueueMocks.deleteOperation).not.toHaveBeenCalledWith(412)
+  })
+
+  it('quarantines an unowned legacy queued task across account reconnect', async () => {
+    authStoreMock.user = { id: 'account-b' } as any
+    const { supabase } = await import('@/services/auth/supabase')
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'fresh-token', user: { id: 'account-b' } } },
+      error: null,
+    } as any)
+    const op = makeOp({
+      id: 415,
+      operation: 'create',
+      entityType: 'task',
+      entityId: 'account-a-unowned-task',
+      payload: { id: 'account-a-unowned-task', title: 'Account A private task' },
+    })
+    op.userId = undefined
+    const taskChain = mockSupabaseChain()
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed',
+    })
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(supabaseMock.fromMock).not.toHaveBeenCalled()
+    expect(taskChain.upsert).not.toHaveBeenCalled()
+    expect(rpcMock).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(415)
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(
+      415,
+      expect.stringContaining('no provable account owner'),
+      expect.any(Number),
+    )
+    expect(writeQueueMocks.deleteOperation).not.toHaveBeenCalledWith(415)
   })
 
   it('preserves the owner when a workspace member replays a shared task update', async () => {

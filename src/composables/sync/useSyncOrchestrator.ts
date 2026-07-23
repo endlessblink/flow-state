@@ -439,9 +439,9 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
     payload = { ...payload, workspace_id: operation.workspaceId as string }
   }
 
-  // User-owned tables must never replay stale guest/old-user payloads against RLS.
-  // If a current user exists, adopt that user_id for legacy queued writes. If not,
-  // this is local-only/guest state and there is no valid remote write to perform.
+  // User-owned tables must never replay unowned guest/legacy writes or another
+  // account's durable writes against the current session. Ownership may only be
+  // assigned when the operation was created; it cannot be inferred at replay.
   const userOwnedEntities: SyncEntityType[] = ['task', 'group', 'project', 'lane', 'timer_session', 'quick_sort_session']
   if (userOwnedEntities.includes(entityType)) {
     const currentUserId = await getCurrentAuthUserId()
@@ -459,11 +459,13 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
       console.warn(`[SYNC] Dropping remote ${entityType}:${operation.operation} ${entityId.slice(0, 8)} — no authenticated user for RLS`)
       return { success: true, operation, serverData: undefined }
     }
-    if (operation.canonicalTaskPatch && operation.userId !== currentUserId) {
+    if (!operation.userId || operation.userId !== currentUserId) {
       return {
         success: false,
         operation,
-        error: 'canonical_scope_mismatch: queued intent belongs to another signed user',
+        error: operation.userId
+          ? 'queue_scope_mismatch: queued intent belongs to another signed user'
+          : 'queue_scope_unowned: queued intent has no provable account owner',
         shouldRetry: false,
         classification: 'permanent',
       }
@@ -475,7 +477,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
       const { user_id: _ownerId, ...ownerPreservingPayload } = payload as Record<string, unknown>
       payload = ownerPreservingPayload
     } else {
-      payload = { ...payload, user_id: currentUserId }
+      payload = { ...payload, user_id: operation.userId }
     }
   }
 
@@ -502,25 +504,69 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
     let result
 
     if (operation.doneForNow) {
-      const { runDoneForNow } = await import('@/services/tasks/doneForNow')
-      const preview = await runDoneForNow(supabase!, {
-        taskId: entityId,
-        preview: true,
-        workspaceId: operation.workspaceId,
-        nextDueDate: operation.doneForNow.nextDueDate,
-      })
-      if (!preview.previewVersion) {
-        throw new Error('Done for now preview did not return a version')
+      const { runDoneForNow, DoneForNowError } = await import('@/services/tasks/doneForNow')
+      let canonicalIntent = operation.doneForNow
+      if (!canonicalIntent.previewVersion) {
+        const preview = await runDoneForNow(supabase!, {
+          taskId: entityId,
+          preview: true,
+          workspaceId: operation.workspaceId,
+          nextDueDate: canonicalIntent.nextDueDate,
+        })
+        if (!preview.previewVersion) {
+          throw new Error('Done for now preview did not return a version')
+        }
+        canonicalIntent = {
+          ...canonicalIntent,
+          previewVersion: preview.previewVersion,
+          ...(preview.requestHash ? { requestHash: preview.requestHash } : {}),
+        }
+        await updateOperation(operation.id!, { doneForNow: canonicalIntent })
       }
-      await runDoneForNow(supabase!, {
-        taskId: entityId,
-        preview: false,
-        workspaceId: operation.workspaceId,
-        nextDueDate: operation.doneForNow.nextDueDate,
-        previewVersion: preview.previewVersion,
-        ...(preview.requestHash ? { requestHash: preview.requestHash } : {}),
-        requestId: operation.doneForNow.requestId,
-      })
+      let applied
+      try {
+        applied = await runDoneForNow(supabase!, {
+          taskId: entityId,
+          preview: false,
+          workspaceId: operation.workspaceId,
+          nextDueDate: canonicalIntent.nextDueDate,
+          previewVersion: canonicalIntent.previewVersion,
+          ...(canonicalIntent.requestHash ? { requestHash: canonicalIntent.requestHash } : {}),
+          requestId: canonicalIntent.requestId,
+        })
+      } catch (error) {
+        if (
+          error instanceof DoneForNowError
+          && (error.code === 'stale_preview' || error.code === 'request_hash_required')
+        ) {
+          await updateOperation(operation.id!, {
+            doneForNow: {
+              requestId: canonicalIntent.requestId,
+              nextDueDate: canonicalIntent.nextDueDate,
+            },
+          })
+        }
+        throw error
+      }
+      const returnedRequestIds = [
+        applied.requestId,
+        applied.receipt?.operationId,
+      ].filter((value): value is string => typeof value === 'string')
+      if (
+        returnedRequestIds.length === 0
+        || returnedRequestIds.some(requestId => requestId !== canonicalIntent.requestId)
+      ) {
+        throw new Error('Done for now receipt did not match the durable request')
+      }
+      const returnedRequestHashes = [
+        applied.requestHash,
+        applied.receipt?.requestHash,
+      ].filter((value): value is string => typeof value === 'string')
+      if (canonicalIntent.requestHash && returnedRequestHashes.some(
+        requestHash => requestHash !== canonicalIntent.requestHash,
+      )) {
+        throw new Error('Done for now receipt hash did not match the durable request')
+      }
       return {
         success: true,
         operation,

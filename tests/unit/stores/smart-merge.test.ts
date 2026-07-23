@@ -100,6 +100,12 @@ vi.mock('@/services/offline/writeQueueDB', () => ({
 
 vi.mock('@/services/offline/readCacheDB', () => ({
   cacheTasks: vi.fn().mockResolvedValue(undefined),
+  captureReadCacheScope: vi.fn(() => ({
+    scope: { userId: 'test-user-id', workspaceId: mockActiveWorkspaceId },
+    epoch: 1,
+  })),
+  configureReadCacheScope: vi.fn(),
+  isReadCacheScopeTokenCurrent: vi.fn(() => true),
   getCachedTasks: vi.fn().mockResolvedValue([]),
   getCachedTasksWithPendingWrites: vi.fn().mockResolvedValue([]),
   overlayPendingTaskWrites: vi.fn().mockImplementation(async (tasks: Task[]) => ({
@@ -231,6 +237,30 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
 
     await expect(load).rejects.toThrow('scope changed')
     expect(store._rawTasks.map(task => task.id)).toEqual([localTask.id])
+  })
+
+  it('starts a fresh default load when an in-flight load belongs to the previous workspace', async () => {
+    const store = useTaskStore()
+    let resolveWorkspaceA!: (tasks: Task[]) => void
+    mockActiveWorkspaceId = 'workspace-a'
+    mockFetchTasks
+      .mockReturnValueOnce(new Promise(resolve => { resolveWorkspaceA = resolve }))
+      .mockResolvedValueOnce([
+        makeTask({ id: 'workspace-b-task', title: 'Workspace B', workspaceId: 'workspace-b' }),
+      ])
+
+    const workspaceALoad = store.loadFromDatabase()
+    await vi.waitFor(() => expect(mockFetchTasks).toHaveBeenCalledTimes(1))
+    mockActiveWorkspaceId = 'workspace-b'
+    const workspaceBLoad = store.loadFromDatabase()
+    resolveWorkspaceA([
+      makeTask({ id: 'workspace-a-task', title: 'Workspace A', workspaceId: 'workspace-a' }),
+    ])
+
+    await expect(workspaceALoad).rejects.toThrow('scope changed')
+    await expect(workspaceBLoad).resolves.toBeUndefined()
+    expect(mockFetchTasks).toHaveBeenCalledTimes(2)
+    expect(store._rawTasks.map(task => task.id)).toEqual(['workspace-b-task'])
   })
 
   it('preserves a durable queued edit during exact-ID authority reconciliation after restart', async () => {

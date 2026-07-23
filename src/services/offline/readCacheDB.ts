@@ -44,8 +44,8 @@ class ReadCacheDatabase extends Dexie {
   projects!: Table<Project, string>
   meta!: Table<CacheMeta, string>
 
-  constructor() {
-    super('FlowStateReadCache')
+  constructor(databaseName: string) {
+    super(databaseName)
 
     this.version(1).stores({
       // Primary key is the entity's id field
@@ -58,14 +58,61 @@ class ReadCacheDatabase extends Dexie {
   }
 }
 
-// Singleton instance
-let db: ReadCacheDatabase | null = null
+export interface ReadCacheScope {
+  userId: string
+  workspaceId: string | null
+}
 
-function getDB(): ReadCacheDatabase {
-  if (!db) {
-    db = new ReadCacheDatabase()
+// A scope gets its own physical database so entity IDs and metadata can never
+// collide across accounts or workspaces. The legacy unscoped database is not
+// opened by this module.
+let activeScope: ReadCacheScope | null = null
+let activeScopeEpoch = 0
+const databases = new Map<string, ReadCacheDatabase>()
+
+function scopeDatabaseName(scope: ReadCacheScope): string {
+  return `FlowStateReadCache-v2:${scope.userId}:${scope.workspaceId ?? 'personal'}`
+}
+
+export function configureReadCacheScope(scope: ReadCacheScope | null): void {
+  if (
+    activeScope?.userId === scope?.userId
+    && activeScope?.workspaceId === scope?.workspaceId
+  ) return
+  activeScope = scope ? { ...scope } : null
+  activeScopeEpoch++
+}
+
+export function getReadCacheScope(): ReadCacheScope | null {
+  return activeScope ? { ...activeScope } : null
+}
+
+export interface ReadCacheScopeToken {
+  scope: ReadCacheScope
+  epoch: number
+}
+
+export function captureReadCacheScope(): ReadCacheScopeToken | null {
+  return activeScope ? { scope: { ...activeScope }, epoch: activeScopeEpoch } : null
+}
+
+export function isReadCacheScopeTokenCurrent(token: ReadCacheScopeToken): boolean {
+  return token.epoch === activeScopeEpoch
+    && token.scope.userId === activeScope?.userId
+    && token.scope.workspaceId === activeScope?.workspaceId
+}
+
+function getDB(scope: ReadCacheScope | null = activeScope): ReadCacheDatabase {
+  if (!scope) {
+    throw new Error('Read cache scope is not configured')
   }
-  return db
+  const name = scopeDatabaseName(scope)
+  let database = databases.get(name)
+  if (!database) {
+    database = new ReadCacheDatabase(name)
+    databases.set(name, database)
+  }
+  return database
 }
 
 // ── Tasks ──────────────────────────────────────────────────────────────
@@ -76,10 +123,13 @@ function getDB(): ReadCacheDatabase {
  */
 export async function cacheTasks(
   tasks: Task[],
-  options: { throwOnError?: boolean } = {},
+  options: { throwOnError?: boolean; scopeToken?: ReadCacheScopeToken } = {},
 ): Promise<void> {
   try {
-    const database = getDB()
+    if (options.scopeToken && !isReadCacheScopeTokenCurrent(options.scopeToken)) {
+      throw new Error('Read cache scope changed during task load')
+    }
+    const database = getDB(options.scopeToken?.scope)
     await database.transaction('rw', database.tasks, database.meta, async () => {
       await database.tasks.clear()
       if (tasks.length > 0) {
@@ -96,7 +146,10 @@ export async function cacheTasks(
     }
   } catch (e) {
     console.warn('[READ-CACHE] Failed to cache tasks:', e)
-    if (options.throwOnError) throw e
+    if (
+      options.throwOnError
+      || (options.scopeToken && !isReadCacheScopeTokenCurrent(options.scopeToken))
+    ) throw e
   }
 }
 
@@ -126,9 +179,15 @@ export async function getCachedTasks(): Promise<Task[] | null> {
 /**
  * Cache all canvas groups (full snapshot replace).
  */
-export async function cacheGroups(groups: CanvasGroup[]): Promise<void> {
+export async function cacheGroups(
+  groups: CanvasGroup[],
+  options: { scopeToken?: ReadCacheScopeToken; throwOnError?: boolean } = {},
+): Promise<void> {
   try {
-    const database = getDB()
+    if (options.scopeToken && !isReadCacheScopeTokenCurrent(options.scopeToken)) {
+      throw new Error('Read cache scope changed during group load')
+    }
+    const database = getDB(options.scopeToken?.scope)
     await database.transaction('rw', database.groups, database.meta, async () => {
       await database.groups.clear()
       if (groups.length > 0) {
@@ -145,6 +204,7 @@ export async function cacheGroups(groups: CanvasGroup[]): Promise<void> {
     }
   } catch (e) {
     console.warn('[READ-CACHE] Failed to cache groups:', e)
+    if (options.throwOnError) throw e
   }
 }
 
@@ -174,9 +234,15 @@ export async function getCachedGroups(): Promise<CanvasGroup[] | null> {
 /**
  * Cache all projects (full snapshot replace).
  */
-export async function cacheProjects(projects: Project[]): Promise<void> {
+export async function cacheProjects(
+  projects: Project[],
+  options: { scopeToken?: ReadCacheScopeToken; throwOnError?: boolean } = {},
+): Promise<void> {
   try {
-    const database = getDB()
+    if (options.scopeToken && !isReadCacheScopeTokenCurrent(options.scopeToken)) {
+      throw new Error('Read cache scope changed during project load')
+    }
+    const database = getDB(options.scopeToken?.scope)
     await database.transaction('rw', database.projects, database.meta, async () => {
       await database.projects.clear()
       if (projects.length > 0) {
@@ -193,6 +259,7 @@ export async function cacheProjects(projects: Project[]): Promise<void> {
     }
   } catch (e) {
     console.warn('[READ-CACHE] Failed to cache projects:', e)
+    if (options.throwOnError) throw e
   }
 }
 
@@ -301,10 +368,12 @@ export async function overlayPendingTaskWrites(
  * a create and an update exist for the same entity the update wins.
  */
 export async function getCachedTasksWithPendingWrites(): Promise<Task[] | null> {
+  const scope = getReadCacheScope()
+  if (!scope) return null
   // TASK-1427: Load base snapshot
   const cachedTasks = await getCachedTasks()
   try {
-    const projection = await overlayPendingTaskWrites(cachedTasks ?? [])
+    const projection = await overlayPendingTaskWrites(cachedTasks ?? [], { scope })
     if (projection.pendingTaskIds.size > 0) {
       console.log(
         `📦 [READ-CACHE] TASK-1427: Merged ${cachedTasks?.length ?? 0} cached + ${projection.pendingTaskIds.size} pending task(s) → ${projection.tasks.length} tasks`
@@ -324,6 +393,8 @@ export async function getCachedTasksWithPendingWrites(): Promise<Task[] | null> 
  * Includes 'pending', 'failed', and 'syncing' write-queue entries for entity type 'group'.
  */
 export async function getCachedGroupsWithPendingWrites(): Promise<CanvasGroup[] | null> {
+  const scope = getReadCacheScope()
+  if (!scope) return null
   // TASK-1427: Load base snapshot
   const cachedGroups = await getCachedGroups()
 
@@ -340,7 +411,14 @@ export async function getCachedGroupsWithPendingWrites(): Promise<CanvasGroup[] 
 
     allUnsynced.sort((a, b) => a.createdAt - b.createdAt)
 
-    pendingOps = allUnsynced.filter(op => op.entityType === 'group')
+    pendingOps = allUnsynced
+      .filter(op => op.entityType === 'group')
+      .filter((op) => {
+        if (!op.userId || op.workspaceId === undefined) {
+          throw new Error('Read cache found an unscoped durable group operation')
+        }
+        return op.userId === scope.userId && op.workspaceId === scope.workspaceId
+      })
   } catch (e) {
     console.warn('[READ-CACHE] TASK-1427: Could not load pending writes for groups:', e)
     return cachedGroups
@@ -436,9 +514,9 @@ export async function getCacheStats(): Promise<{
 /**
  * Clear all cached data. Used on sign-out or manual cache reset.
  */
-export async function clearReadCache(): Promise<void> {
+export async function clearReadCache(scope: ReadCacheScope | null = activeScope): Promise<void> {
   try {
-    const database = getDB()
+    const database = getDB(scope)
     await Promise.all([
       database.tasks.clear(),
       database.groups.clear(),
@@ -449,4 +527,12 @@ export async function clearReadCache(): Promise<void> {
   } catch (e) {
     console.warn('[READ-CACHE] Failed to clear cache:', e)
   }
+}
+
+export async function deleteReadCacheScope(scope: ReadCacheScope): Promise<void> {
+  const name = scopeDatabaseName(scope)
+  const database = databases.get(name)
+  database?.close()
+  databases.delete(name)
+  await Dexie.delete(name)
 }

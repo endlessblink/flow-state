@@ -1236,6 +1236,8 @@ export const useAuthStore = defineStore('auth', () => {
   const signOut = async () => {
     try {
       isLoading.value = true
+      const readCache = await import('@/services/offline/readCacheDB')
+      const signedOutCacheScope = readCache.getReadCacheScope()
 
       // BUG-1352: Set flag to prevent onAuthStateChange from re-establishing session
       isSigningOut = true
@@ -1313,8 +1315,9 @@ export const useAuthStore = defineStore('auth', () => {
 
       // BUG-1411: Clear IndexedDB read cache on sign-out (prevent data leaking to guest mode)
       try {
-        const { clearReadCache } = await import('@/services/offline/readCacheDB')
-        await clearReadCache()
+        if (signedOutCacheScope) {
+          await readCache.deleteReadCacheScope(signedOutCacheScope)
+        }
       } catch (_e) {
         // Non-critical — cache will be overwritten on next sign-in anyway
       }

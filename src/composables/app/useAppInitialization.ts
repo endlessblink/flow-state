@@ -19,17 +19,18 @@ import { fromSupabaseTask, fromSupabaseProject, fromSupabaseGroup, fromSupabaseL
 // TASK-1177: Offline-first sync system
 import type { RealtimePayload } from '@/composables/supabase/useRealtimeSubscription'
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
+import { runWithQueueProcessorBarrier } from '@/services/offline/queueProcessorLock'
 import { useBeforeUnload } from '@/composables/useBeforeUnload'
 import { getInitialOnlineState } from '@/utils/platform'
 // BUG-1411: Cache stats for offline mode detection
 // TASK-1425: Full cache read functions for fast offline startup
 // TASK-1427: Merged versions include pending write queue operations
-import { clearReadCache, getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPendingWrites, getCachedProjects } from '@/services/offline/readCacheDB'
+import { clearReadCache, configureReadCacheScope, getCacheStats, getCachedTasksWithPendingWrites, getCachedGroupsWithPendingWrites, getCachedProjects } from '@/services/offline/readCacheDB'
 import { applyPendingGroupPatch, applyPendingTaskPatch } from '@/services/offline/pendingWritePatch'
 // TASK-1219: Time block progress notifications
 import { useTimeBlockNotifications } from '@/composables/useTimeBlockNotifications'
 import { subscribeLocalApiTaskMutations, syncLocalApiWorkspaceContext } from '@/composables/useLocalApiBridge'
-import { supabase } from '@/services/auth/supabase'
+import { readPersistedAuthIdentity, readPersistedAuthSessionCandidate, supabase } from '@/services/auth/supabase'
 import { createCanonicalChangeCursorStore, type CanonicalChangeScope } from '@/services/sync/canonicalChangeCursor'
 import {
     createCanonicalChangeCatchup,
@@ -37,6 +38,7 @@ import {
     recoverEmptyAuthenticatedProjection,
 } from '@/services/sync/canonicalChangeCatchup'
 import { createCanonicalChangeSupabaseReader } from '@/services/sync/canonicalChangeSupabase'
+import { realtimeRowMatchesScope } from '@/services/sync/realtimeScopeGuard'
 
 export function useAppInitialization() {
     const router = useRouter()
@@ -54,6 +56,7 @@ export function useAppInitialization() {
     useBeforeUnload()
     const activeChannel = ref<{ unsubscribe: () => Promise<void> } | null>(null)
     const realtimeInitialized = ref(false)
+    let realtimeSubscriptionGeneration = 0
     const onMountedCompleted = ref(false)  // BUG-1106: Prevent race condition between watcher and onMounted
     // BUG-1339: Signal that initial data load has completed (tasks, projects, canvas)
     // Views should NOT render content until this is true to prevent blank-on-first-load
@@ -73,6 +76,22 @@ export function useAppInitialization() {
         if (!active || active.kind !== scope.kind || active.userId !== scope.userId) return false
         if (active.kind === 'personal') return true
         return scope.kind === 'workspace' && active.workspaceId === scope.workspaceId
+    }
+    const realtimePayloadMatchesActiveScope = (
+        payload: RealtimePayload,
+        subscriptionScope: CanonicalChangeScope | null,
+        subscriptionGeneration: number,
+    ): boolean => {
+        if (
+            subscriptionGeneration !== realtimeSubscriptionGeneration
+            || !subscriptionScope
+            || !scopeMatchesActiveWorkspace(subscriptionScope)
+        ) return false
+        return realtimeRowMatchesScope(
+            payload,
+            workspaceStore.activeWorkspaceId,
+            authStore.user?.id,
+        )
     }
     const canonicalChangeCatchup = createCanonicalChangeCatchup({
         readCursor: scope => canonicalChangeCursorStore.read(scope),
@@ -148,24 +167,33 @@ export function useAppInitialization() {
         onError: error => console.warn('[CANONICAL-CATCHUP] Foreground retry deferred:', error instanceof Error ? error.message : 'unknown error'),
     })
 
-    const reloadCoreData = async () => {
-        await Promise.all([
-            taskStore.loadFromDatabase(),
-            projectStore.loadProjectsFromDatabase(),
-            laneStore.loadLanesFromDatabase(),
-            canvasStore.loadFromDatabase()
-        ])
-    }
-
     let reapplyPendingWrites: () => Promise<void> = async () => {
         throw new Error('Pending write recovery is not initialized')
+    }
+
+    const reloadCoreData = async () => {
+        await runWithQueueProcessorBarrier(async () => {
+            const scope = activeCanonicalScope()
+            await Promise.all([
+                taskStore.loadFromDatabase(scope ? {
+                    requireRemoteAuthority: true,
+                    authorityScope: {
+                        userId: scope.userId,
+                        workspaceId: scope.kind === 'workspace' ? scope.workspaceId : null,
+                    },
+                } : {}),
+                projectStore.loadProjectsFromDatabase(),
+                laneStore.loadLanesFromDatabase(),
+                canvasStore.loadFromDatabase()
+            ])
+            await reapplyPendingWrites()
+        })
     }
 
     const recoverSkippedTaskChange = () => {
         invalidateCache.all()
         window.setTimeout(async () => {
             await reloadCoreData()
-            await reapplyPendingWrites()
         }, 0)
     }
 
@@ -230,8 +258,23 @@ export function useAppInitialization() {
         // startup time (3 retries × 30s Supabase timeout) when offline or on flaky networks.
 
         // Phase A (blocking): Load from IndexedDB cache (~10-50ms)
+        // The cache must be scoped before it is opened. A credential-free
+        // durable identity is sufficient to select account-owned local data;
+        // an unknown identity fails closed and shows no authenticated cache.
+        const persistedIdentity = await readPersistedAuthIdentity()
+        const persistedSession = await readPersistedAuthSessionCandidate()
+        const persistedWorkspace = localStorage.getItem('flowstate-last-workspace')
+        const preAuthScope = persistedIdentity?.id
+            && persistedSession?.user?.id === persistedIdentity.id
+            ? {
+                userId: persistedIdentity.id,
+                workspaceId: persistedWorkspace && persistedWorkspace !== 'personal'
+                    ? persistedWorkspace
+                    : null,
+            }
+            : null
+        configureReadCacheScope(preAuthScope)
         let hasCache = false
-        let hasUsableCache = false
         try {
             const [cachedTasks, cachedGroups, cachedProjects] = await Promise.all([
                 getCachedTasksWithPendingWrites(),
@@ -268,18 +311,15 @@ export function useAppInitialization() {
                         console.error(`🔴 [CACHE-CORRUPTION] Even after dedup, ${dedupedCache.length} tasks remain — skipping cache`)
                     } else {
                         taskStore._rawTasks = dedupedCache
-                        hasUsableCache = true
                         console.log(`📦 [CACHE-FIRST] Loaded ${cachedTasks.length} tasks from IndexedDB cache`)
                     }
                 }
                 if (cachedGroups && cachedGroups.length > 0) {
                     canvasStore.setGroups(cachedGroups)
-                    hasUsableCache = true
                     console.log(`📦 [CACHE-FIRST] Loaded ${cachedGroups.length} groups from IndexedDB cache`)
                 }
                 if (cachedProjects && cachedProjects.length > 0) {
                     projectStore._rawProjects = cachedProjects
-                    hasUsableCache = true
                     console.log(`📦 [CACHE-FIRST] Loaded ${cachedProjects.length} projects from IndexedDB cache`)
                 }
 
@@ -341,7 +381,8 @@ export function useAppInitialization() {
 
             // Guest mode: clear transient data only (TASK-1339: tasks/groups/filters persist)
             clearGuestData()
-            getOrCreateGuestSessionId()
+            const guestSessionId = getOrCreateGuestSessionId()
+            configureReadCacheScope({ userId: `guest:${guestSessionId}`, workspaceId: null })
             console.log('[AUTH] Confirmed guest mode; loading guest-local data')
             await Promise.all([
                 taskStore.loadFromDatabase(),
@@ -358,6 +399,10 @@ export function useAppInitialization() {
             try {
                 const { useWorkspaceStore } = await import('@/stores/workspace')
                 await useWorkspaceStore().loadWorkspaces()
+                configureReadCacheScope({
+                    userId: authStore.user!.id,
+                    workspaceId: workspaceStore.activeWorkspaceId,
+                })
             } catch (e) {
                 console.warn('[MAIN] Failed to load workspaces:', e)
             }
@@ -412,14 +457,23 @@ export function useAppInitialization() {
                     .toArray()
 
                 if (pendingOps.length === 0) return
+                const scope = activeCanonicalScope()
+                if (!scope) return
+                const scopedPendingOps = pendingOps.filter((op) => {
+                    if (!op.userId || op.workspaceId === undefined) {
+                        throw new Error('Reconnect recovery found an unscoped durable operation')
+                    }
+                    return op.userId === scope.userId
+                        && op.workspaceId === (scope.kind === 'workspace' ? scope.workspaceId : null)
+                })
 
                 // Sort by createdAt to preserve operation order
-                pendingOps.sort((a, b) => a.createdAt - b.createdAt)
+                scopedPendingOps.sort((a, b) => a.createdAt - b.createdAt)
 
                 let applied = 0
 
                 // Apply task operations (create, update, delete)
-                const taskOps = pendingOps.filter(op => op.entityType === 'task')
+                const taskOps = scopedPendingOps.filter(op => op.entityType === 'task')
                 for (const op of taskOps) {
                     if (op.operation === 'delete') {
                         const idx = taskStore._rawTasks.findIndex(t => t.id === op.entityId)
@@ -451,7 +505,7 @@ export function useAppInitialization() {
                 }
 
                 // Apply project operations (create, update, delete)
-                const projectOps = pendingOps.filter(op => op.entityType === 'project')
+                const projectOps = scopedPendingOps.filter(op => op.entityType === 'project')
                 for (const op of projectOps) {
                     if (op.operation === 'delete') {
                         const idx = projectStore._rawProjects.findIndex(p => p.id === op.entityId)
@@ -484,7 +538,7 @@ export function useAppInitialization() {
                 }
 
                 // Apply group operations (create, update, delete)
-                const groupOps = pendingOps.filter(op => op.entityType === 'group')
+                const groupOps = scopedPendingOps.filter(op => op.entityType === 'group')
                 for (const op of groupOps) {
                     if (op.operation === 'delete') {
                         const rawGroups = canvasStore._rawGroups
@@ -531,9 +585,6 @@ export function useAppInitialization() {
                 try {
                     invalidateCache.all()
                     await reloadCoreData()
-
-                    // TASK-1428: Re-apply unsynced offline changes that Supabase doesn't know about yet
-                    await reapplyPendingWrites()
 
                     // Clear cache-mode indicator — we have fresh data now
                     try {
@@ -593,7 +644,6 @@ export function useAppInitialization() {
                                     console.log('🔄 [BUG-1339] Delayed retry: invalidating cache and reloading...')
                                     invalidateCache.all()
                                     await reloadCoreData()
-                                    await reapplyPendingWrites()
                                     console.log(`✅ [BUG-1339] Delayed retry loaded ${taskStore._rawTasks.length} tasks`)
                                 }
                             })().catch(e => console.warn('⚠️ [BUG-1339] Delayed retry failed:', e))
@@ -791,8 +841,16 @@ export function useAppInitialization() {
 
         // 3. Initialize Realtime Subscriptions
         const { initRealtimeSubscription } = useSupabaseDatabase()
+        const subscriptionGeneration = ++realtimeSubscriptionGeneration
+        const subscriptionScope = activeCanonicalScope()
+        const guardedLaneChange = (payload: RealtimePayload) => {
+            if (realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) {
+                onLaneChange(payload)
+            }
+        }
 
         const onProjectChange = (payload: RealtimePayload) => {
+            if (!realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) return
             // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
             const canvas = useCanvasStore()
             const projects = useProjectStore()
@@ -830,6 +888,7 @@ export function useAppInitialization() {
         }
 
         const onTaskChange = (payload: RealtimePayload) => {
+            if (!realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) return
             // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
             const canvas = useCanvasStore()
             const tasks = useTaskStore()
@@ -899,6 +958,7 @@ export function useAppInitialization() {
         }
 
         const onGroupChange = (payload: RealtimePayload) => {
+            if (!realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) return
             // BUG-FIX: Fetch FRESH store instance inside callback to prevent stale closures
             const canvas = useCanvasStore()
             const tasks = useTaskStore()
@@ -947,7 +1007,6 @@ export function useAppInitialization() {
             console.log('🔄 [APP-INIT] Reloading data after auth recovery...')
             await reloadCoreData()
             await runCanonicalChangeCatchup()
-            await reapplyPendingWrites()
             // BUG-1411: Clear offline cache mode — we're back online with fresh data
             try {
                 const { useSyncStatusStore } = await import('@/stores/syncStatus')
@@ -958,7 +1017,7 @@ export function useAppInitialization() {
             timerStore.resyncFromDatabase()
         }
 
-        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, workspaceStore.activeWorkspaceId, onLaneChange)
+        const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, workspaceStore.activeWorkspaceId, guardedLaneChange)
         activeChannel.value = channel
         realtimeInitialized.value = !!channel
 
@@ -977,6 +1036,10 @@ export function useAppInitialization() {
     // BUG-1106: Re-initialize realtime when user signs in after initial page load
     // This handles the case where user opens the app as guest and later signs in via modal
     watch(() => authStore.isAuthenticated, async (isAuthenticated, wasAuthenticated) => {
+        if (isAuthenticated !== wasAuthenticated) realtimeSubscriptionGeneration++
+        configureReadCacheScope(isAuthenticated && authStore.user?.id
+            ? { userId: authStore.user.id, workspaceId: workspaceStore.activeWorkspaceId }
+            : { userId: `guest:${getOrCreateGuestSessionId()}`, workspaceId: null })
         // Only trigger when:
         // 1. Going from NOT authenticated to authenticated
         // 2. Realtime wasn't already initialized
@@ -988,7 +1051,15 @@ export function useAppInitialization() {
 
             // Simplified handlers for post-login initialization
             // These use the same logic as the onMounted handlers
+            const subscriptionGeneration = ++realtimeSubscriptionGeneration
+            const subscriptionScope = activeCanonicalScope()
+            const guardedLaneChange = (payload: RealtimePayload) => {
+                if (realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) {
+                    onLaneChange(payload)
+                }
+            }
             const onProjectChange = (payload: RealtimePayload) => {
+                if (!realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) return
                 const canvas = useCanvasStore()
                 const projects = useProjectStore()
                 const tasks = useTaskStore()
@@ -1011,6 +1082,7 @@ export function useAppInitialization() {
             }
 
             const onTaskChange = (payload: RealtimePayload) => {
+                if (!realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) return
                 const canvas = useCanvasStore()
                 const tasks = useTaskStore()
 
@@ -1044,6 +1116,7 @@ export function useAppInitialization() {
             }
 
             const onGroupChange = (payload: RealtimePayload) => {
+                if (!realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) return
                 const canvas = useCanvasStore()
                 const tasks = useTaskStore()
 
@@ -1069,11 +1142,10 @@ export function useAppInitialization() {
                 console.log('🔄 [APP-INIT] Reloading data after auth recovery...')
                 await reloadCoreData()
                 await runCanonicalChangeCatchup()
-                await reapplyPendingWrites()
             }
 
             const timerHandler = timerStore.handleRemoteTimerUpdate
-            const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, workspaceStore.activeWorkspaceId, onLaneChange)
+            const channel = initRealtimeSubscription(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, workspaceStore.activeWorkspaceId, guardedLaneChange)
 
             if (channel) {
                 activeChannel.value = channel
@@ -1089,6 +1161,10 @@ export function useAppInitialization() {
     // When user switches workspace, the realtime filters must change from
     // user_id=X to workspace_id=Y (or back to user_id for personal workspace)
     watch(() => workspaceStore.activeWorkspaceId, async (newWsId, oldWsId) => {
+        if (newWsId !== oldWsId) realtimeSubscriptionGeneration++
+        if (authStore.user?.id) {
+            configureReadCacheScope({ userId: authStore.user.id, workspaceId: newWsId })
+        }
         if (!realtimeInitialized.value || !authStore.isAuthenticated) return
         // Skip initial undefined → null transition
         if (newWsId === oldWsId) return
@@ -1104,9 +1180,17 @@ export function useAppInitialization() {
         }
 
         const { initRealtimeSubscription: initRealtime } = useSupabaseDatabase()
+        const subscriptionGeneration = ++realtimeSubscriptionGeneration
+        const subscriptionScope = activeCanonicalScope()
+        const guardedLaneChange = (payload: RealtimePayload) => {
+            if (realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) {
+                onLaneChange(payload)
+            }
+        }
 
         // Re-use the same handler pattern as the auth watcher
         const onProjectChange = (payload: RealtimePayload) => {
+            if (!realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) return
             const canvas = useCanvasStore()
             const projects = useProjectStore()
             const tasks = useTaskStore()
@@ -1126,6 +1210,7 @@ export function useAppInitialization() {
         }
 
         const onTaskChange = (payload: RealtimePayload) => {
+            if (!realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) return
             const canvas = useCanvasStore()
             const tasks = useTaskStore()
             const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
@@ -1155,6 +1240,7 @@ export function useAppInitialization() {
         }
 
         const onGroupChange = (payload: RealtimePayload) => {
+            if (!realtimePayloadMatchesActiveScope(payload, subscriptionScope, subscriptionGeneration)) return
             const canvas = useCanvasStore()
             const tasks = useTaskStore()
             const isLocked = canvas.isDragging || tasks.manualOperationInProgress || (typeof window !== 'undefined' && (
@@ -1176,11 +1262,10 @@ export function useAppInitialization() {
             console.log('🔄 [APP-INIT] Reloading data after auth recovery (workspace switch)...')
             await reloadCoreData()
             await runCanonicalChangeCatchup()
-            await reapplyPendingWrites()
         }
 
         const timerHandler = timerStore.handleRemoteTimerUpdate
-        const channel = initRealtime(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, newWsId, onLaneChange)
+        const channel = initRealtime(onProjectChange, onTaskChange, timerHandler, undefined, onGroupChange, onRecovery, newWsId, guardedLaneChange)
 
         if (channel) {
             activeChannel.value = channel

@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { PENDING_WRITE_TIMEOUT_MS } from '@/config/timing'
 import type { Task } from '@/types/tasks'
-import { cacheTasks, getCachedTasks, getCachedTasksWithPendingWrites, overlayPendingTaskWrites } from '@/services/offline/readCacheDB'
+import { cacheTasks, captureReadCacheScope, configureReadCacheScope, getCachedTasks, getCachedTasksWithPendingWrites, isReadCacheScopeTokenCurrent, overlayPendingTaskWrites } from '@/services/offline/readCacheDB'
 import { useProjectStore } from '../projects'
 import { validateBeforeSave, logTaskIdStats, repairTaskTitles, sanitizeLoadedTasks } from '@/utils/taskValidation'
 import { logSupabaseTaskIdHistogram } from '@/utils/canvas/invariants'
@@ -260,21 +260,44 @@ export function useTaskPersistence(
     // This prevents race conditions where two loads merge/overwrite each other's results.
     let _loadPromise: Promise<void> | null = null
     let _loadRequiresRemoteAuthority = false
+    let _loadScopeKey: string | null = null
 
     const loadFromDatabase = async (options: {
         authoritativeTaskIds?: Iterable<string>
         requireRemoteAuthority?: boolean
         authorityScope?: { userId: string; workspaceId: string | null }
     } = {}) => {
+        const [{ useAuthStore }, { useWorkspaceStore }] = await Promise.all([
+            import('../auth'),
+            import('../workspace'),
+        ])
+        const currentAuth = useAuthStore()
+        const currentWorkspace = useWorkspaceStore()
+        const requestedScopeKey = currentAuth.isAuthenticated && currentAuth.user?.id
+            ? `${currentAuth.user.id}:${currentWorkspace.activeWorkspaceId ?? 'personal'}`
+            : 'guest'
         if (_loadPromise) {
             const activeLoadRequiresRemoteAuthority = _loadRequiresRemoteAuthority
+            const activeLoadScopeKey = _loadScopeKey
+            let staleScopeFailure = false
             if (import.meta.env.DEV) {
                 console.log('[TASK-LOAD] Reentrancy guard: returning existing load promise')
             }
             try {
                 await _loadPromise
             } catch (error) {
-                if (!activeLoadRequiresRemoteAuthority && !options.requireRemoteAuthority) throw error
+                staleScopeFailure = error instanceof Error && error.message.includes('scope changed')
+                if (
+                    !staleScopeFailure
+                    && !activeLoadRequiresRemoteAuthority
+                    && !options.requireRemoteAuthority
+                ) throw error
+            }
+            if (staleScopeFailure || activeLoadScopeKey !== requestedScopeKey) {
+                _loadPromise = null
+                _loadRequiresRemoteAuthority = false
+                _loadScopeKey = null
+                return loadFromDatabase(options)
             }
             if (activeLoadRequiresRemoteAuthority && !options.requireRemoteAuthority) {
                 const [{ useWorkspaceStore }, { useAuthStore }] = await Promise.all([
@@ -299,16 +322,21 @@ export function useTaskPersistence(
             return
         }
         _loadRequiresRemoteAuthority = options.requireRemoteAuthority === true
-        _loadPromise = _loadFromDatabaseImpl(
+        _loadScopeKey = requestedScopeKey
+        const startedLoad = _loadFromDatabaseImpl(
             new Set(options.authoritativeTaskIds || []),
             options.requireRemoteAuthority === true,
             options.authorityScope,
         )
+        _loadPromise = startedLoad
         try {
-            await _loadPromise
+            await startedLoad
         } finally {
-            _loadPromise = null
-            _loadRequiresRemoteAuthority = false
+            if (_loadPromise === startedLoad) {
+                _loadPromise = null
+                _loadRequiresRemoteAuthority = false
+                _loadScopeKey = null
+            }
         }
     }
 
@@ -342,6 +370,21 @@ export function useTaskPersistence(
             // so it works before the migration adds the column to VPS
             const { useWorkspaceStore } = await import('../workspace')
             const wsStore = useWorkspaceStore()
+            configureReadCacheScope({
+                userId: authStore.user!.id,
+                workspaceId: wsStore.activeWorkspaceId ?? null,
+            })
+            const readCacheScopeToken = captureReadCacheScope()
+            const assertReadCacheScope = () => {
+                if (
+                    !readCacheScopeToken
+                    || authStore.user?.id !== readCacheScopeToken.scope.userId
+                    || wsStore.activeWorkspaceId !== readCacheScopeToken.scope.workspaceId
+                    || !isReadCacheScopeTokenCurrent(readCacheScopeToken)
+                ) {
+                    throw new Error('Task load scope changed')
+                }
+            }
             const assertAuthorityScope = () => {
                 if (!requireRemoteAuthority) return
                 if (!authorityScope) throw new Error('Remote-authority load requires an exact scope')
@@ -367,6 +410,7 @@ export function useTaskPersistence(
                 fetchDeletedTaskIds({ onError: markDeletionInfoUnreliable }),
                 fetchTombstones({ onError: markDeletionInfoUnreliable })
             ])
+            assertReadCacheScope()
             assertAuthorityScope()
             if (!deletionInfoReliable) {
                 console.warn('[BUG-1891] Deletion markers (soft-deleted ids / tombstones) failed to load — failing closed: ambiguous local-only tasks will NOT be re-created this load.')
@@ -826,7 +870,11 @@ export function useTaskPersistence(
             // Canonical cursor advancement requires a durable projection. Cache
             // before mutating the visible store and re-check scope afterward so
             // an old workspace load cannot become visible in a new workspace.
-            await cacheTasks(mergedTasks, { throwOnError: requireRemoteAuthority })
+            await cacheTasks(mergedTasks, {
+                throwOnError: requireRemoteAuthority,
+                scopeToken: readCacheScopeToken ?? undefined,
+            })
+            assertReadCacheScope()
             assertAuthorityScope()
 
             // BUG-1207 FIX (Fix 2.2): Granular updates instead of full array replacement.

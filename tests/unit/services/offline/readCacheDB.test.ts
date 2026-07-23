@@ -22,6 +22,9 @@ import {
   getCacheAge,
   getCacheStats,
   clearReadCache,
+  captureReadCacheScope,
+  configureReadCacheScope,
+  deleteReadCacheScope,
 } from '@/services/offline/readCacheDB'
 import { clearAll as clearWriteQueue, getWriteQueueDB } from '@/services/offline/writeQueueDB'
 import type { Task, Project } from '@/types/tasks'
@@ -77,18 +80,125 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 // ── Setup ──────────────────────────────────────────────────────────────────
 
 beforeEach(async () => {
+  configureReadCacheScope({ userId: 'user-1', workspaceId: null })
   await clearReadCache()
   await clearWriteQueue()
 })
 
 afterEach(async () => {
   await clearReadCache()
+  configureReadCacheScope(null)
   await clearWriteQueue()
 })
 
 // ── Task cache tests ───────────────────────────────────────────────────────
 
 describe('cacheTasks / getCachedTasks', () => {
+  it('fails closed before an account and workspace scope is known', async () => {
+    configureReadCacheScope(null)
+
+    await cacheTasks([makeTask({ id: 'must-not-be-visible' })])
+
+    expect(await getCachedTasks()).toBeNull()
+    expect(await getCachedTasksWithPendingWrites()).toBeNull()
+  })
+
+  it('isolates task snapshots across accounts and workspaces', async () => {
+    await cacheTasks([makeTask({ id: 'personal-a' })])
+    await cacheProjects([makeProject({ id: 'personal-project-a' })])
+    await cacheGroups([makeGroup({ id: 'personal-group-a' })])
+
+    configureReadCacheScope({ userId: 'user-1', workspaceId: 'workspace-1' })
+    expect(await getCachedTasks()).toBeNull()
+    await cacheTasks([makeTask({ id: 'shared-a' })])
+    await cacheProjects([makeProject({ id: 'shared-project-a', workspaceId: 'workspace-1' })])
+    await cacheGroups([makeGroup({ id: 'shared-group-a' })])
+
+    configureReadCacheScope({ userId: 'user-2', workspaceId: null })
+    expect(await getCachedTasks()).toBeNull()
+    await cacheTasks([makeTask({ id: 'personal-b' })])
+    await cacheProjects([makeProject({ id: 'personal-project-b' })])
+    await cacheGroups([makeGroup({ id: 'personal-group-b' })])
+
+    configureReadCacheScope({ userId: 'user-1', workspaceId: null })
+    expect((await getCachedTasks())?.map(task => task.id)).toEqual(['personal-a'])
+    expect((await getCachedProjects())?.map(project => project.id)).toEqual(['personal-project-a'])
+    expect((await getCachedGroups())?.map(group => group.id)).toEqual(['personal-group-a'])
+    configureReadCacheScope({ userId: 'user-1', workspaceId: 'workspace-1' })
+    expect((await getCachedTasks())?.map(task => task.id)).toEqual(['shared-a'])
+    expect((await getCachedProjects())?.map(project => project.id)).toEqual(['shared-project-a'])
+    expect((await getCachedGroups())?.map(group => group.id)).toEqual(['shared-group-a'])
+    configureReadCacheScope({ userId: 'user-2', workspaceId: null })
+    expect((await getCachedTasks())?.map(task => task.id)).toEqual(['personal-b'])
+    expect((await getCachedProjects())?.map(project => project.id)).toEqual(['personal-project-b'])
+    expect((await getCachedGroups())?.map(group => group.id)).toEqual(['personal-group-b'])
+  })
+
+  it('never overlays another account or workspace durable writes', async () => {
+    await cacheTasks([makeTask({ id: 'visible-task', title: 'Visible title' })])
+    await cacheGroups([makeGroup({ id: 'visible-group', name: 'Visible group' })])
+    await getWriteQueueDB().operations.add({
+      status: 'pending',
+      retryCount: 0,
+      createdAt: Date.now(),
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'visible-task',
+      payload: { title: 'Other account title' },
+      userId: 'user-2',
+      workspaceId: null,
+    })
+    await getWriteQueueDB().operations.add({
+      status: 'pending',
+      retryCount: 0,
+      createdAt: Date.now() + 1,
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'visible-task',
+      payload: { title: 'Other workspace title' },
+      userId: 'user-1',
+      workspaceId: 'workspace-1',
+    })
+    await getWriteQueueDB().operations.add({
+      status: 'pending',
+      retryCount: 0,
+      createdAt: Date.now() + 2,
+      entityType: 'group',
+      operation: 'update',
+      entityId: 'visible-group',
+      payload: { name: 'Other account group' },
+      userId: 'user-2',
+      workspaceId: null,
+    })
+
+    expect((await getCachedTasksWithPendingWrites())?.[0]?.title).toBe('Visible title')
+    expect((await getCachedGroupsWithPendingWrites())?.[0]?.name).toBe('Visible group')
+  })
+
+  it('rejects an old workspace result that finishes after the scope changes', async () => {
+    const workspaceAToken = captureReadCacheScope()
+    expect(workspaceAToken).not.toBeNull()
+
+    configureReadCacheScope({ userId: 'user-1', workspaceId: 'workspace-b' })
+
+    await expect(cacheTasks(
+      [makeTask({ id: 'late-workspace-a' })],
+      { scopeToken: workspaceAToken!, throwOnError: true },
+    )).rejects.toThrow('scope changed')
+    expect(await getCachedTasks()).toBeNull()
+  })
+
+  it('deletes the captured account database even after the active scope changes', async () => {
+    const accountScope = { userId: 'user-1', workspaceId: null }
+    await cacheTasks([makeTask({ id: 'account-secret' })])
+    configureReadCacheScope({ userId: 'guest:next', workspaceId: null })
+
+    await deleteReadCacheScope(accountScope)
+    configureReadCacheScope(accountScope)
+
+    expect(await getCachedTasks()).toBeNull()
+  })
+
   it('returns null when the cache is empty', async () => {
     const result = await getCachedTasks()
     expect(result).toBeNull()
@@ -215,6 +325,8 @@ describe('cacheTasks / getCachedTasks', () => {
       entityType: 'task',
       operation: 'update',
       entityId: cachedTask.id,
+      userId: 'user-1',
+      workspaceId: null,
       payload: {
         id: cachedTask.id,
         title: cachedTask.title,
@@ -252,6 +364,8 @@ describe('cacheTasks / getCachedTasks', () => {
       entityType: 'task',
       operation: 'update',
       entityId: cachedTask.id,
+      userId: 'user-1',
+      workspaceId: null,
       payload: {
         title: 'Renamed while offline',
         updated_at: '2026-06-01T10:01:00Z',
@@ -317,6 +431,8 @@ describe('cacheGroups / getCachedGroups', () => {
       entityType: 'group',
       operation: 'update',
       entityId: cachedGroup.id,
+      userId: 'user-1',
+      workspaceId: null,
       payload: {
         name: 'Renamed group while offline',
         updated_at: '2026-06-01T10:01:00Z',

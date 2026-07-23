@@ -1,7 +1,9 @@
+import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
 import type { Task } from '@/types/tasks'
+import { configureReadCacheScope } from '@/services/offline/readCacheDB'
 
 /**
  * High Severity Issue #7: Realtime Sync Race Protection
@@ -15,6 +17,7 @@ import type { Task } from '@/types/tasks'
  */
 describe('Realtime Sync Race Protection', () => {
   beforeEach(() => {
+    configureReadCacheScope({ userId: 'realtime-race-test', workspaceId: null })
     setActivePinia(createPinia())
   })
 

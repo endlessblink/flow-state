@@ -14,6 +14,13 @@ export interface DoneForNowResult {
   previewVersion?: string
   requestHash?: string
   requestId?: string
+  receipt?: {
+    operationId?: string
+    requestHash?: string
+    status?: string
+    replayed?: boolean
+    [key: string]: unknown
+  }
   taskId?: string
   currentOccurrence?: {
     dueDate: string

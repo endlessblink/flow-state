@@ -40,7 +40,7 @@ export interface BackupConfig {
   enabled: boolean
   autoSaveInterval: number // milliseconds (default: 5 min)
   maxHistorySize: number   // max backups to keep (default: 10)
-  filterMockTasks: boolean // remove mock/test tasks (default: true)
+  filterMockTasks: boolean // optional explicit cleanup; disabled by default to preserve user data
 }
 
 export interface BackupStats {
@@ -137,7 +137,7 @@ export const DEFAULT_CONFIG: BackupConfig = {
   enabled: true,
   autoSaveInterval: 5 * 60 * 1000, // 5 minutes
   maxHistorySize: 10,
-  filterMockTasks: true
+  filterMockTasks: false
 }
 
 // ============================================================================

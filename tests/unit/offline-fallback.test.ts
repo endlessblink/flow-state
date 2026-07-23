@@ -27,6 +27,7 @@ import {
   getCacheAge,
   getCacheStats,
   clearReadCache,
+  configureReadCacheScope,
 } from '@/services/offline/readCacheDB'
 import type { Task, Project } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
@@ -82,11 +83,13 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 // ── Setup ───────────────────────────────────────────────────────────────────
 
 beforeEach(async () => {
+  configureReadCacheScope({ userId: 'offline-user', workspaceId: null })
   await clearReadCache()
 })
 
 afterEach(async () => {
   await clearReadCache()
+  configureReadCacheScope(null)
 })
 
 // ── 1. Tasks offline fallback cycle ────────────────────────────────────────

@@ -87,6 +87,8 @@ export interface CanonicalTaskPatchState {
 export interface QueuedDoneForNowState {
   requestId: string
   nextDueDate: string
+  previewVersion?: string
+  requestHash?: string
 }
 
 /**

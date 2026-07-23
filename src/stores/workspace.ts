@@ -149,6 +149,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       // and filterByWorkspace computed work immediately
       activeWorkspaceId.value = id
       localStorage.setItem(LAST_WORKSPACE_KEY, id ?? 'personal')
+      const { configureReadCacheScope } = await import('@/services/offline/readCacheDB')
+      configureReadCacheScope({ userId: authStore.user!.id, workspaceId: id })
 
       if (id) {
         await loadMembers(id)
@@ -165,11 +167,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       const { useTaskStore } = await import('@/stores/tasks')
       const { useProjectStore } = await import('@/stores/projects')
       const { useCanvasStore } = await import('@/stores/canvas')
+      const taskStore = useTaskStore()
+      const projectStore = useProjectStore()
+      const canvasStore = useCanvasStore()
+      taskStore.clearAll()
+      projectStore.clearAll()
+      canvasStore.clearAll()
 
       await Promise.all([
-        useTaskStore().loadFromDatabase(),
-        useProjectStore().loadProjectsFromDatabase(),
-        useCanvasStore().loadFromDatabase(),
+        taskStore.loadFromDatabase({
+          requireRemoteAuthority: true,
+          authorityScope: { userId: authStore.user!.id, workspaceId: id },
+        }),
+        projectStore.loadProjectsFromDatabase(),
+        canvasStore.loadFromDatabase(),
       ])
 
       // TASK-1559: Connect presence to new shared workspace

@@ -37,9 +37,17 @@ describe('app realtime task delete contract', () => {
 
   it('replays queued optimistic task state after every authoritative recovery reload', () => {
     const src = readAppInitialization()
-    const recoveryReplays = src.match(/await reapplyPendingWrites\(\)/g) ?? []
 
     expect(src).toContain('const recoverSkippedTaskChange = () => {')
-    expect(recoveryReplays).toHaveLength(6)
+    expect(src).toContain('await runWithQueueProcessorBarrier(async () => {')
+    expect(src).toContain('await reapplyPendingWrites()')
+  })
+
+  it('opens a shared-workspace offline cache only for the matching durable session', () => {
+    const src = readAppInitialization()
+
+    expect(src).toContain('persistedSession?.user?.id === persistedIdentity.id')
+    expect(src).toContain("persistedWorkspace && persistedWorkspace !== 'personal'")
+    expect(src).toContain('workspaceId: persistedWorkspace')
   })
 })

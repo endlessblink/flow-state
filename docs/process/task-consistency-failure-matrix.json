@@ -266,6 +266,18 @@
       "liveEvidence": ["2026-07-23: local Supabase with the canonical task migration and two independent Chromium contexts converged persisted title and tags from client A to client B in 5.0 seconds"]
     },
     {
+      "id": "reconnect-refresh-queue-serialization",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["queue-ordering-and-replay", "realtime-gap-recovery", "workspace-scope-isolation"],
+      "mutations": ["create", "edit-metadata", "change-status", "complete", "delete"],
+      "surfaces": ["all-views", "pwa", "electron"],
+      "states": ["reconnecting", "renderer-reloaded", "workspace-switched", "concurrent-write"],
+      "layers": ["renderer-store", "sync-queue", "indexeddb-read-cache", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/services/offline/queue-processor-lock.test.ts", "tests/unit/app-realtime-delete-contract.test.ts", "tests/unit/services/offline/readCacheDB.test.ts"],
+      "liveEvidence": []
+    },
+    {
       "id": "offline-store-queue-and-reconnect-convergence",
       "severity": "critical",
       "status": "live-proven",
@@ -506,6 +518,18 @@
       "liveEvidence": ["2026-07-23: authenticated Chromium R21 forced the visible Board right-click Delete action's durable store call to reject. Before the fix, the task remained intact but the action failed silently because useBoardActions discarded its error message. After the fix, the same real UI path retained the task and displayed 'Task could not be deleted. No changes were saved.'; the isolated run passed in 14.6 seconds. This proves Board immediate-rejection visibility and no-change behavior only; post-enqueue permanent failures, partial batches, and the remaining mutation/surface permutations remain open."]
     },
     {
+      "id": "offline-cache-account-workspace-isolation",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["identity-and-field-mapping", "workspace-scope-isolation", "auth-expiry-and-recovery"],
+      "mutations": ["create", "edit-metadata", "change-status", "complete", "delete"],
+      "surfaces": ["all-views", "pwa"],
+      "states": ["offline", "renderer-reloaded", "workspace-switched", "auth-expired"],
+      "layers": ["indexeddb-read-cache", "renderer-store", "sync-queue"],
+      "automatedEvidence": ["tests/unit/services/offline/readCacheDB.test.ts", "tests/unit/offline-fallback.test.ts"],
+      "liveEvidence": []
+    },
+    {
       "id": "pwa-service-worker-contract-skew",
       "severity": "critical",
       "status": "open",
@@ -514,7 +538,7 @@
       "surfaces": ["pwa"],
       "states": ["offline", "reconnecting", "updater-stale", "renderer-reloaded"],
       "layers": ["service-worker-cache", "renderer-store", "sync-queue", "supabase-persistence"],
-      "automatedEvidence": [],
+      "automatedEvidence": ["tests/unit/pwa-offline-regression.test.ts"],
       "liveEvidence": []
     },
     {
@@ -526,7 +550,7 @@
       "surfaces": ["pwa", "all-views"],
       "states": ["offline", "reconnecting", "renderer-reloaded", "updater-stale", "backup-restore"],
       "layers": ["service-worker-cache", "sync-queue", "supabase-persistence", "task-inventory"],
-      "automatedEvidence": [],
+      "automatedEvidence": ["tests/unit/pwa-offline-regression.test.ts", "tests/unit/pwa/background-sync.test.ts"],
       "liveEvidence": []
     },
     {
@@ -623,6 +647,54 @@
       "states": ["visible", "filtered-hidden", "workspace-switched", "renderer-reloaded", "cross-client"],
       "layers": ["renderer-component", "renderer-selection", "renderer-store", "supabase-persistence"],
       "automatedEvidence": ["tests/contract/canonical-task-renderer-authority.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "legacy-write-acknowledgement-idempotency",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["queue-ordering-and-replay", "partial-batch-atomicity", "delete-tombstone-and-undo"],
+      "mutations": ["create", "complete", "done-for-now", "delete", "permanent-delete", "restore"],
+      "surfaces": ["all-views", "electron"],
+      "states": ["reconnecting", "renderer-reloaded", "electron-restarted", "concurrent-write", "tombstoned"],
+      "layers": ["sync-queue", "sync-transport", "canonical-receipt", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/sync/sync-orchestrator.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "backup-referential-graph-and-content-completeness",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "hierarchy-and-project-integrity", "canvas-geometry-persistence"],
+      "mutations": ["backup", "restore", "subtask-change", "delete", "permanent-delete"],
+      "surfaces": ["backup", "task-inventory", "canvas", "all-views"],
+      "states": ["backup-restore", "restore-drill", "workspace-switched", "tombstoned", "inventory-mismatch"],
+      "layers": ["backup-artifact", "restore-procedure", "task-inventory", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "backup-independent-failure-domain",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory"],
+      "mutations": ["backup", "restore"],
+      "surfaces": ["backup", "electron"],
+      "states": ["backup-corrupt", "restore-drill", "electron-restarted", "inventory-mismatch"],
+      "layers": ["backup-artifact", "restore-procedure", "electron-package"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "project-lane-membership-delete-atomicity",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["hierarchy-and-project-integrity", "optimistic-rollback", "partial-batch-atomicity", "delete-tombstone-and-undo"],
+      "mutations": ["move", "delete", "restore", "permanent-delete"],
+      "surfaces": ["catalog", "board", "canvas"],
+      "states": ["workspace-switched", "stale-snapshot", "concurrent-write", "tombstoned"],
+      "layers": ["renderer-store", "sync-queue", "supabase-persistence", "supabase-rls"],
+      "automatedEvidence": [],
       "liveEvidence": []
     },
     {

@@ -98,6 +98,7 @@ describe('TASK-1669: Backup System Comprehensive', () => {
   it('1. Auto-backup interval configured at 5 minutes', () => {
     expect(DEFAULT_CONFIG.autoSaveInterval).toBe(5 * 60 * 1000) // 5 min in ms
     expect(DEFAULT_CONFIG.enabled).toBe(true)
+    expect(DEFAULT_CONFIG.filterMockTasks).toBe(false)
   })
 
   it('2. Backup contains all task fields', () => {

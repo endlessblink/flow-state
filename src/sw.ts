@@ -60,44 +60,10 @@ registerRoute(
 // RUNTIME CACHING STRATEGIES
 // ============================================================================
 
-// BUG-352: NetworkFirst with timeout for Supabase REST API (GET only).
-// Auth endpoints (/auth/v1/) are NEVER cached — stale tokens cause auth failures.
-// Realtime endpoints (/realtime/) are NEVER cached — SSE/WebSocket don't cache well.
-registerRoute(
-  new Route(
-    ({ url, request }) => {
-      // Only cache GET requests to the REST API
-      if (request.method !== 'GET') return false
-      return url.pathname.includes('/rest/v1/')
-    },
-    new NetworkFirst({
-      cacheName: 'supabase-rest-cache',
-      networkTimeoutSeconds: 8,
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 5 * 60  // 5 minutes — useful for offline reads
-        })
-      ]
-    })
-  )
-)
-
-// Images: Cache-first with 30-day expiry
-registerRoute(
-  new Route(
-    ({ request }) => request.destination === 'image',
-    new CacheFirst({
-      cacheName: 'image-cache',
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-        }),
-      ],
-    })
-  )
-)
+// Authenticated Supabase responses are intentionally never cached here.
+// Cache Storage keys do not partition by Authorization header, user, or
+// workspace, so a shared REST cache can expose another session's task snapshot.
+// Offline task reads come from the user/workspace-scoped IndexedDB read cache.
 
 // Fonts: Cache-first with 1-year expiry
 registerRoute(
@@ -444,6 +410,12 @@ self.addEventListener('install', () => {
 
 self.addEventListener('activate', (event) => {
   console.log('[SW] Timer notification service worker activated')
-  // Claim all clients immediately
-  event.waitUntil(self.clients.claim())
+  event.waitUntil(Promise.all([
+    // Remove historical runtime caches whose keys were not partitioned by
+    // signed-in user or workspace.
+    caches.delete('supabase-rest-cache'),
+    caches.delete('supabase-api-fallback'),
+    caches.delete('image-cache'),
+    self.clients.claim(),
+  ]))
 })

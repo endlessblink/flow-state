@@ -15,7 +15,14 @@ import { isNodeCompletelyInside } from '@/utils/canvas/spatialContainment'
 import { useCanvasGroups } from './canvas/canvasGroups'
 import { useCanvasViewport } from './canvas/canvasViewport'
 import { useCanvasPersistence } from './canvas/canvasPersistence'
-import { cacheGroups, getCachedGroups, getCachedGroupsWithPendingWrites } from '@/services/offline/readCacheDB'
+import {
+  cacheGroups,
+  captureReadCacheScope,
+  configureReadCacheScope,
+  getCachedGroups,
+  getCachedGroupsWithPendingWrites,
+  isReadCacheScopeTokenCurrent,
+} from '@/services/offline/readCacheDB'
 import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 import { useAuthStore } from './auth'
 import { toSupabaseGroup } from '@/utils/supabaseMappers'
@@ -120,9 +127,25 @@ export const useCanvasStore = defineStore('canvas', () => {
       // undefined = no filter (personal/pre-migration safe), string = workspace filter
       const { useWorkspaceStore } = await import('@/stores/workspace')
       const wsStore = useWorkspaceStore()
+      configureReadCacheScope({
+        userId: authStore.user!.id,
+        workspaceId: wsStore.activeWorkspaceId ?? null,
+      })
+      const readCacheScopeToken = captureReadCacheScope()
+      const assertScope = () => {
+        if (
+          !readCacheScopeToken
+          || authStore.user?.id !== readCacheScopeToken.scope.userId
+          || wsStore.activeWorkspaceId !== readCacheScopeToken.scope.workspaceId
+          || !isReadCacheScopeTokenCurrent(readCacheScopeToken)
+        ) {
+          throw new Error('Canvas load scope changed')
+        }
+      }
       // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq)
       const workspaceId = wsStore.activeWorkspaceId
       const loadedGroups = await fetchGroups(workspaceId)
+      assertScope()
 
       // Electron updates/restarts can happen before the queued remote group
       // geometry write finishes. In that case Supabase may still contain the
@@ -131,6 +154,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       // groups that still exist in the remote result to avoid resurrecting
       // deleted groups from cache.
       const cachedGroupsWithPendingWrites = (await getCachedGroupsWithPendingWrites().catch(() => [])) ?? []
+      assertScope()
       const localCandidates = [
         ...loadGroupsFromLocalStorage(),
         ...cachedGroupsWithPendingWrites,
@@ -213,10 +237,12 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
 
       const cleanedGroups = breakGroupCycles(geometryMergedGroups)
+      await cacheGroups(cleanedGroups, {
+        scopeToken: readCacheScopeToken ?? undefined,
+        throwOnError: true,
+      })
+      assertScope()
       groupsModule.setGroups(cleanedGroups, isWorkspaceSwitch)
-
-      // BUG-1411: Cache groups to IndexedDB for offline loading
-      cacheGroups(cleanedGroups)
 
       // Persist fixes
       cleanedGroups.forEach((g: CanvasGroup, i: number) => {
@@ -237,6 +263,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     } catch (e) {
       console.error('[CANVAS:LOAD] Failed to load canvas groups:', e)
+      if (e instanceof Error && e.message.includes('scope changed')) throw e
 
       // BUG-1411: Try IndexedDB cache first (has full group data including positions)
       const cachedGroups = await getCachedGroups()

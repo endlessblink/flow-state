@@ -91,6 +91,8 @@ const FIXED_DAILY_CHECKS = [
       '--',
       'tests/unit/backup-validation.test.ts',
       'tests/unit/backup/backup-comprehensive.test.ts',
+      'tests/unit/composables/useBackupRestoreDatabase.test.ts',
+      'tests/unit/migrations/atomic-backup-restore.test.ts',
       'tests/unit/scripts/backup-release-gates.test.ts',
       'src/composables/backup/__tests__/backupPreservesDescription.test.ts',
       'src/composables/tasks/__tests__/useTaskEditState.descriptionReset.test.ts',

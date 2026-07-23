@@ -207,7 +207,9 @@ export function createCoreOperations(
       }
 
       // Save to localStorage
-      historyOps.saveToHistory(backupData)
+      if (!historyOps.saveToHistory(backupData)) {
+        throw new Error('Backup could not be persisted and verified')
+      }
 
       // BUG-059 FIX: Update max task count and golden backup
       const taskCount = backupData.metadata?.taskCount || 0

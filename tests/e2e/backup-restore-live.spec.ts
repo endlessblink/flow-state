@@ -100,8 +100,11 @@ test.describe.serial('absolute task backup and recovery', () => {
 
       const backupJson = await page.evaluate(async (taskId) => {
         const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
-        const backup = await useBackupSystem().createBackup('manual')
-        if (!backup) throw new Error('Backup creation returned null')
+        const backupSystem = useBackupSystem()
+        const backup = await backupSystem.createBackup('manual')
+        if (!backup) {
+          throw new Error(`Backup creation returned null: ${backupSystem.state.value.error ?? 'unknown error'}`)
+        }
         if (!backup.tasks.some(task => task.id === taskId)) {
           throw new Error('Backup omitted the recovery probe task')
         }
@@ -284,8 +287,11 @@ test.describe.serial('absolute task backup and recovery', () => {
 
       const backupJson = await page.evaluate(async () => {
         const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
-        const backup = await useBackupSystem().createBackup('manual')
-        if (!backup) throw new Error('Backup creation returned null')
+        const backupSystem = useBackupSystem()
+        const backup = await backupSystem.createBackup('manual')
+        if (!backup) {
+          throw new Error(`Backup creation returned null: ${backupSystem.state.value.error ?? 'unknown error'}`)
+        }
         return JSON.stringify(backup)
       })
 

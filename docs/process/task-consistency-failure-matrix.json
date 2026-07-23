@@ -18,7 +18,17 @@
     "restore",
     "permanent-delete",
     "start-timer",
-    "stop-timer"
+    "stop-timer",
+    "extend-timer",
+    "postpone",
+    "undo",
+    "redo",
+    "assign-project",
+    "assign-lane",
+    "resize",
+    "reparent",
+    "edit-recurrence",
+    "import-external"
   ],
   "requiredStates": [
     "visible",
@@ -42,7 +52,24 @@
     "backup-corrupt",
     "inventory-mismatch",
     "restore-drill",
-    "concurrent-write"
+    "concurrent-write",
+    "boot-hydrating",
+    "update-activating",
+    "session-dead-shell",
+    "scope-transition",
+    "server-committed-unacked",
+    "large-inventory",
+    "rate-limited",
+    "suspend-resume",
+    "schema-upgrade",
+    "forward-incompatible-artifact",
+    "wrong-account",
+    "lost-restore-ack",
+    "export-interrupted",
+    "capacity-limit",
+    "shared-workspace-restore",
+    "clock-shifted",
+    "storage-unavailable"
   ],
   "requiredSurfaces": [
     "ai-actions",
@@ -59,6 +86,9 @@
     "kde",
     "lane",
     "local-task-api",
+    "mobile-today",
+    "mobile-inbox",
+    "mobile-quick-sort",
     "pwa",
     "quick-create",
     "quick-tasks",
@@ -94,6 +124,14 @@
     "task-inventory",
     "undo",
     "updater-manifest"
+    ,"mobile-domain"
+    ,"calendar-instance-projection"
+    ,"sidecar-process"
+    ,"auth-storage"
+    ,"pagination"
+    ,"test-isolation"
+    ,"external-provider"
+    ,"filesystem-backup"
   ],
   "requiredFailureClasses": [
     "auth-expiry-and-recovery",
@@ -118,6 +156,12 @@
     "updater-artifact-and-live-runtime",
     "workspace-scope-isolation",
     "write-failure-visibility"
+    ,"durable-storage-failure"
+    ,"process-lifecycle"
+    ,"schema-migration-compatibility"
+    ,"provider-ownership-and-replay"
+    ,"test-gate-truthfulness"
+    ,"capacity-and-rate-limits"
   ],
   "requiredDataGuarantees": [
     "server-read-after-write",
@@ -129,10 +173,21 @@
     "backup-artifact-integrity",
     "tombstone-aware-restore",
     "restore-round-trip",
-    "point-in-time-recovery-drill"
+    "point-in-time-recovery-drill",
+    "source-account-affinity",
+    "snapshot-revision-coherence",
+    "full-field-equality",
+    "relationship-closure",
+    "recurrence-history-equality",
+    "atomic-rollback-after-first-write",
+    "receipt-replay-after-crash",
+    "independent-backup-copy",
+    "file-write-readback",
+    "large-inventory-pagination",
+    "durable-intent-before-success"
   ],
   "historyAudit": {
-    "reviewedThrough": "2026-07-23",
+    "reviewedThrough": "2026-07-24",
     "sources": ["docs/MASTER_PLAN.md", "git log --all", "tests"],
     "gitCommitSignals": ["f65fc589", "e27e0cfc", "805d5b74", "3041b893", "9f68e70d", "cd872ca1", "59bd332e", "e1556314", "348b6118", "4503bc74", "ff4539e0", "b22811a4"],
     "testSignals": ["tests/unit/services/canonical-task-patch.test.ts", "tests/unit/sync/sync-orchestrator.test.ts", "tests/unit/kde/timer-sync.test.ts", "tests/unit/undo-task-operations.test.ts", "tests/e2e/done-for-now-live-sync.spec.ts", "tests/e2e/backup-restore-live.spec.ts", "tests/contract/canonical-task-renderer-authority.test.ts", "tests/unit/stores/task-store-crud.test.ts", "tests/unit/sync/cross-tab-sync.test.ts", "tests/unit/backup-validation.test.ts"],
@@ -688,7 +743,7 @@
     {
       "id": "backup-deletion-truth-consistency",
       "severity": "critical",
-      "status": "automated",
+      "status": "open",
       "failureClasses": ["backup-restore-and-inventory", "delete-tombstone-and-undo", "cross-tab-echo-and-deduplication"],
       "mutations": ["backup", "restore", "delete", "permanent-delete"],
       "surfaces": ["backup", "task-inventory", "all-views"],
@@ -706,7 +761,13 @@
       "surfaces": ["backup", "task-inventory", "canvas"],
       "states": ["backup-restore", "restore-drill", "inventory-mismatch", "concurrent-write"],
       "layers": ["backup-artifact", "restore-procedure", "supabase-persistence", "supabase-rls"],
-      "automatedEvidence": ["tests/unit/backup-validation.test.ts", "tests/unit/composables/useSupabaseDatabase.test.ts"],
+      "automatedEvidence": [
+        "tests/unit/backup-validation.test.ts",
+        "tests/unit/composables/useSupabaseDatabase.test.ts",
+        "tests/unit/composables/useBackupRestoreDatabase.test.ts",
+        "tests/unit/migrations/atomic-backup-restore.test.ts",
+        "scripts/db/verify-atomic-backup-restore.sql"
+      ],
       "liveEvidence": []
     },
     {
@@ -791,6 +852,210 @@
       "states": ["concurrent-write", "backup-corrupt", "inventory-mismatch", "restore-drill"],
       "layers": ["backup-artifact", "restore-procedure", "supabase-persistence", "task-inventory"],
       "automatedEvidence": ["tests/unit/backup-validation.test.ts", "tests/unit/backup/backup-comprehensive.test.ts", "tests/unit/scripts/backup-release-gates.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "mobile-domain-and-entrypoint-parity",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["identity-and-field-mapping", "queue-ordering-and-replay", "write-failure-visibility"],
+      "mutations": ["create", "edit-metadata", "change-status", "complete", "reopen", "schedule", "delete"],
+      "surfaces": ["mobile-today", "mobile-inbox", "pwa"],
+      "states": ["offline", "filtered-hidden", "recurring", "renderer-reloaded"],
+      "layers": ["mobile-domain", "renderer-store", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "calendar-instance-and-task-truth-convergence",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["timezone-and-date-projection", "recurrence-lifecycle", "identity-and-field-mapping"],
+      "mutations": ["schedule", "move", "resize", "complete", "reopen", "delete", "restore", "edit-recurrence"],
+      "surfaces": ["calendar", "board", "canvas"],
+      "states": ["recurring", "stale-snapshot", "concurrent-write", "clock-shifted"],
+      "layers": ["calendar-instance-projection", "recurrence-engine", "renderer-store", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "canvas-boot-hydration-writer-serialization",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["canvas-geometry-persistence", "cache-corruption-and-stale-snapshots", "concurrent-conflict-resolution"],
+      "mutations": ["create", "move", "resize", "reparent", "delete"],
+      "surfaces": ["canvas", "electron"],
+      "states": ["boot-hydrating", "stale-snapshot", "realtime-dropped", "electron-restarted"],
+      "layers": ["indexeddb-read-cache", "renderer-store", "supabase-realtime", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "workspace-transition-operation-isolation",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["workspace-scope-isolation", "queue-ordering-and-replay", "realtime-gap-recovery"],
+      "mutations": ["create", "edit-metadata", "move", "reparent", "delete"],
+      "surfaces": ["all-views", "external-client"],
+      "states": ["scope-transition", "workspace-switched", "offline", "concurrent-write"],
+      "layers": ["renderer-store", "sync-queue", "supabase-realtime", "supabase-rls"],
+      "automatedEvidence": ["tests/unit/sync/sync-orchestrator.test.ts", "tests/unit/services/offline/readCacheDB.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "dead-session-multi-instance-queue-recovery",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["auth-expiry-and-recovery", "queue-ordering-and-replay", "process-lifecycle"],
+      "mutations": ["create", "edit-metadata", "complete", "delete"],
+      "surfaces": ["electron", "pwa", "all-views"],
+      "states": ["session-dead-shell", "auth-expired", "reconnecting", "server-committed-unacked"],
+      "layers": ["auth-storage", "sync-queue", "electron-main-preload", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/sync/sync-orchestrator.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "mutation-complete-realtime-gap-recovery",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["realtime-gap-recovery", "cross-tab-echo-and-deduplication", "delete-tombstone-and-undo"],
+      "mutations": ["create", "edit-metadata", "change-status", "complete", "delete", "restore", "assign-project", "assign-lane"],
+      "surfaces": ["all-views", "external-client"],
+      "states": ["realtime-dropped", "reconnecting", "cross-client", "stale-snapshot"],
+      "layers": ["canonical-change-log", "supabase-realtime", "renderer-store", "task-inventory"],
+      "automatedEvidence": ["tests/unit/sync/cross-tab-sync.test.ts", "tests/unit/app-realtime-delete-contract.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "delete-undo-redo-crash-interleavings",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["delete-tombstone-and-undo", "queue-ordering-and-replay", "partial-batch-atomicity"],
+      "mutations": ["delete", "permanent-delete", "undo", "redo", "restore"],
+      "surfaces": ["catalog", "board", "canvas", "batch-edit"],
+      "states": ["server-committed-unacked", "offline", "cross-client", "tombstoned"],
+      "layers": ["undo", "sync-queue", "supabase-persistence", "canonical-receipt"],
+      "automatedEvidence": ["tests/unit/undo-task-operations.test.ts", "tests/unit/task-rollback.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "assistant-action-stale-preview-apply-undo",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["external-contract-drift", "concurrent-conflict-resolution", "partial-batch-atomicity"],
+      "mutations": ["edit-metadata", "complete", "subtask-change", "undo", "redo"],
+      "surfaces": ["ai-actions", "local-task-api", "external-client"],
+      "states": ["stale-snapshot", "concurrent-write", "server-committed-unacked"],
+      "layers": ["canonical-receipt", "signed-transaction-boundary", "local-task-api", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/local-api/server-contract.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "large-inventory-pagination-and-null-shape-completeness",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "identity-and-field-mapping", "capacity-and-rate-limits"],
+      "mutations": ["create", "backup", "restore"],
+      "surfaces": ["task-inventory", "local-task-api", "kde", "backup"],
+      "states": ["large-inventory", "capacity-limit", "inventory-mismatch"],
+      "layers": ["pagination", "task-inventory", "backup-artifact", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/backup-validation.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "electron-sidecar-lifecycle-and-data-availability",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["process-lifecycle", "external-contract-drift", "timer-cross-runtime-coordination"],
+      "mutations": ["create", "edit-metadata", "start-timer", "stop-timer"],
+      "surfaces": ["electron", "local-task-api"],
+      "states": ["sidecar-unavailable", "suspend-resume", "electron-restarted", "update-activating"],
+      "layers": ["sidecar-process", "electron-main-preload", "live-process", "local-task-api"],
+      "automatedEvidence": ["tests/unit/local-api/server-contract.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "timer-task-referential-leadership-and-extension",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["timer-cross-runtime-coordination", "delete-tombstone-and-undo", "process-lifecycle"],
+      "mutations": ["start-timer", "stop-timer", "extend-timer", "complete", "delete", "restore"],
+      "surfaces": ["electron", "kde", "pwa", "local-task-api"],
+      "states": ["offline", "suspend-resume", "electron-restarted", "tombstoned", "workspace-switched"],
+      "layers": ["kde", "sidecar-process", "electron-main-preload", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/kde/timer-sync.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "mixed-version-update-write-and-queue-migration",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["updater-artifact-and-live-runtime", "service-worker-cache-skew", "schema-migration-compatibility"],
+      "mutations": ["create", "edit-metadata", "complete", "delete"],
+      "surfaces": ["pwa", "electron", "all-views"],
+      "states": ["update-activating", "updater-stale", "server-committed-unacked", "schema-upgrade"],
+      "layers": ["service-worker-cache", "updater-manifest", "electron-package", "sync-queue"],
+      "automatedEvidence": ["tests/unit/pwa-offline-regression.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "quick-sort-focus-and-quick-task-lifecycle",
+      "severity": "high",
+      "status": "open",
+      "failureClasses": ["selection-and-filter-scope", "identity-and-field-mapping", "recurrence-lifecycle"],
+      "mutations": ["postpone", "pin", "edit-metadata", "complete", "reopen", "start-timer", "stop-timer"],
+      "surfaces": ["mobile-quick-sort", "quick-tasks", "focus"],
+      "states": ["filtered-hidden", "recurring", "offline", "cross-client"],
+      "layers": ["mobile-domain", "renderer-component", "renderer-store", "sync-queue"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "durable-storage-fault-and-write-storm-safety",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["durable-storage-failure", "write-failure-visibility", "capacity-and-rate-limits"],
+      "mutations": ["create", "edit-metadata", "complete", "delete", "move", "resize"],
+      "surfaces": ["all-views", "canvas", "electron", "pwa"],
+      "states": ["storage-unavailable", "capacity-limit", "rate-limited", "large-inventory"],
+      "layers": ["indexeddb-read-cache", "sync-queue", "renderer-store", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/sync/write-health.test.ts", "tests/unit/task-rollback.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "backup-account-schema-workspace-and-file-boundaries",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "schema-migration-compatibility", "workspace-scope-isolation"],
+      "mutations": ["backup", "restore"],
+      "surfaces": ["backup", "electron", "supabase", "task-inventory"],
+      "states": ["wrong-account", "schema-upgrade", "forward-incompatible-artifact", "shared-workspace-restore", "lost-restore-ack", "export-interrupted"],
+      "layers": ["backup-artifact", "restore-procedure", "auth-storage", "filesystem-backup", "supabase-rls"],
+      "automatedEvidence": ["tests/unit/backup-validation.test.ts", "tests/unit/composables/useBackupRestoreDatabase.test.ts", "tests/unit/migrations/atomic-backup-restore.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "external-calendar-ownership-clock-and-replay",
+      "severity": "high",
+      "status": "open",
+      "failureClasses": ["provider-ownership-and-replay", "timezone-and-date-projection", "external-contract-drift"],
+      "mutations": ["import-external", "schedule", "edit-metadata", "delete", "restore"],
+      "surfaces": ["calendar", "external-client"],
+      "states": ["offline", "reconnecting", "clock-shifted", "concurrent-write"],
+      "layers": ["external-provider", "calendar-instance-projection", "canonical-receipt", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "cardinal-test-gate-sentinel-truthfulness",
+      "severity": "high",
+      "status": "open",
+      "failureClasses": ["test-gate-truthfulness"],
+      "mutations": ["create", "edit-metadata", "complete", "delete", "restore"],
+      "surfaces": ["all-views", "pwa", "electron"],
+      "states": ["cross-client", "offline", "renderer-reloaded"],
+      "layers": ["test-isolation"],
+      "automatedEvidence": ["tests/unit/scripts/daily-regression-hunt.test.ts", "tests/contract/task-consistency-failure-matrix.test.ts"],
       "liveEvidence": []
     }
   ]

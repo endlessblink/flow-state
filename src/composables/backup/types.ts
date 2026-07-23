@@ -55,6 +55,7 @@ export interface BackupSystemState {
   isRestoring: boolean
   restoreProgress: number
   error: string | null
+  warning: string | null
 }
 
 // TASK-153: Types for golden backup validation

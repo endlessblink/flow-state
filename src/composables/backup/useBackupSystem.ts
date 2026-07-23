@@ -52,7 +52,8 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     isReady: false,
     isRestoring: false,
     restoreProgress: 0,
-    error: null
+    error: null,
+    warning: null,
   })
 
   const stats = ref<BackupStats>({
@@ -155,7 +156,8 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       historyCount: stats.value.historyCount,
       isBackupInProgress: stats.value.isBackupInProgress,
       isRestoring: state.value.isRestoring,
-      error: state.value.error
+      error: state.value.error,
+      warning: state.value.warning,
     }
   }
 

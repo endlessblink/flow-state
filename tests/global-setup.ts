@@ -58,6 +58,9 @@ async function ensureTestUser() {
   await supabase.from('groups').delete().eq('user_id', userId)
   await supabase.from('projects').delete().eq('user_id', userId)
   await supabase.from('user_settings').delete().eq('user_id', userId)
+  // Entity cleanup can create tombstones; clear them last so seeded live rows
+  // never inherit contradictory deletion truth from an earlier test run.
+  await supabase.from('tombstones').delete().eq('user_id', userId)
 
   // Seed projects
   const workProjectId = '11111111-1111-1111-1111-111111111111'
@@ -85,8 +88,8 @@ async function ensureTestUser() {
 
   // Seed canvas groups
   await supabase.from('groups').insert([
-    { id: 'group-todo-test', user_id: userId, name: 'To Do', type: 'custom', color: '#4ECDC4', position_json: { x: 100, y: 100, width: 300, height: 400 }, layout: 'vertical' },
-    { id: 'group-done-test', user_id: userId, name: 'Completed', type: 'custom', color: '#2ECC71', position_json: { x: 500, y: 100, width: 300, height: 400 }, layout: 'vertical' },
+    { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb01', user_id: userId, name: 'To Do', type: 'custom', color: '#4ECDC4', position_json: { x: 100, y: 100, width: 300, height: 400 }, layout: 'vertical' },
+    { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb02', user_id: userId, name: 'Completed', type: 'custom', color: '#2ECC71', position_json: { x: 500, y: 100, width: 300, height: 400 }, layout: 'vertical' },
   ])
 
   // Seed user settings (prevents first-time setup wizard)

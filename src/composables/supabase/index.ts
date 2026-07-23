@@ -17,6 +17,7 @@ import { useWorkProfileDatabase } from './useWorkProfileDatabase'
 import { useAIMemoryDatabase } from './useAIMemoryDatabase'
 import { useRealtimeSubscription } from './useRealtimeSubscription'
 import { useTaskAuditLog } from './useTaskAuditLog'
+import { useBackupRestoreDatabase } from './useBackupRestoreDatabase'
 
 // Re-export types and singletons used by consumers
 export { invalidateCache } from './_infrastructure'
@@ -49,6 +50,7 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const aiMemory = useAIMemoryDatabase(ctx)
     const realtime = useRealtimeSubscription(ctx)
     const auditLog = useTaskAuditLog(ctx)
+    const backupRestore = useBackupRestoreDatabase(ctx)
 
     return {
         isSyncing,
@@ -70,5 +72,6 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         ...realtime,
         // TASK-1734: Task Audit Log
         ...auditLog,
+        ...backupRestore,
     }
 }

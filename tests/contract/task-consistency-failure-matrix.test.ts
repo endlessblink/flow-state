@@ -106,7 +106,7 @@ describe('cardinal task consistency failure matrix', () => {
         .map(vectorId => `${cluster.id}: ${vectorId}`)
     ))
 
-    expect(matrix.historyAudit.reviewedThrough).toBe('2026-07-23')
+    expect(matrix.historyAudit.reviewedThrough).toBe('2026-07-24')
     expect(matrix.historyAudit.sources).toEqual(expect.arrayContaining([
       'docs/MASTER_PLAN.md',
       'git log --all',
@@ -184,5 +184,18 @@ describe('cardinal task consistency failure matrix', () => {
     ))
 
     expect(invalid).toEqual([])
+  })
+
+  it('clears test-user tombstones after destructive fixture cleanup', () => {
+    const setup = readFileSync(resolve(process.cwd(), 'tests/global-setup.ts'), 'utf8')
+    const taskCleanup = setup.indexOf("from('tasks').delete().eq('user_id', userId)")
+    const projectCleanup = setup.indexOf("from('projects').delete().eq('user_id', userId)")
+    const tombstoneCleanup = setup.indexOf("from('tombstones').delete().eq('user_id', userId)")
+    const taskSeed = setup.indexOf("from('tasks').insert([")
+
+    expect(taskCleanup).toBeGreaterThan(-1)
+    expect(projectCleanup).toBeGreaterThan(taskCleanup)
+    expect(tombstoneCleanup).toBeGreaterThan(projectCleanup)
+    expect(taskSeed).toBeGreaterThan(tombstoneCleanup)
   })
 })

@@ -21,6 +21,6 @@ export const TEST_TASKS = {
 } as const
 
 export const TEST_GROUPS = {
-  todo: { id: 'group-todo-test', name: 'To Do' },
-  done: { id: 'group-done-test', name: 'Completed' },
+  todo: { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb01', name: 'To Do' },
+  done: { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb02', name: 'Completed' },
 } as const

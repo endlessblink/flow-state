@@ -147,6 +147,8 @@ describe('daily regression hunt script', () => {
     })
     expect(report.checks[0].commandLine).toContain('tests/unit/backup-validation.test.ts')
     expect(report.checks[0].commandLine).toContain('tests/unit/backup/backup-comprehensive.test.ts')
+    expect(report.checks[0].commandLine).toContain('tests/unit/composables/useBackupRestoreDatabase.test.ts')
+    expect(report.checks[0].commandLine).toContain('tests/unit/migrations/atomic-backup-restore.test.ts')
     expect(report.checks[0].commandLine).toContain('src/composables/backup/__tests__/backupPreservesDescription.test.ts')
     expect(report.checks[0].commandLine).toContain('src/composables/tasks/__tests__/useTaskEditState.descriptionReset.test.ts')
     expect(report.checks[0].commandLine).toContain('tests/unit/sync/task-sync-payload-completeness.test.ts')

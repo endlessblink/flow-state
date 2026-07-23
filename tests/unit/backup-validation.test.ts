@@ -32,6 +32,7 @@ const mockSafeCreateTask = vi.fn()
 const mockSaveProjects = vi.fn()
 const mockSaveGroup = vi.fn()
 const mockLogDedupDecision = vi.fn()
+const mockRestoreBackupTransaction = vi.fn()
 
 // Mock useSupabaseDatabase
 vi.mock('@/composables/useSupabaseDatabase', () => ({
@@ -48,6 +49,7 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
     saveProjects: mockSaveProjects,
     saveGroup: mockSaveGroup,
     logDedupDecision: mockLogDedupDecision,
+    restoreBackupTransaction: mockRestoreBackupTransaction,
   }),
 }))
 
@@ -137,6 +139,13 @@ describe('TASK-332: Backup Reliability & Verification', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorageMock.clear()
+    localStorageMock.getItem.mockImplementation((key: string) => localStorageStore[key] || null)
+    localStorageMock.setItem.mockImplementation((key: string, value: string) => {
+      localStorageStore[key] = value
+    })
+    localStorageMock.removeItem.mockImplementation((key: string) => {
+      delete localStorageStore[key]
+    })
     checksumMap.clear()
 
     // Reset mock store data
@@ -155,6 +164,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
     mockCheckTaskIdsAvailability.mockResolvedValue([])
     mockSafeCreateTask.mockResolvedValue({ status: 'created', message: 'Created' })
     mockLogDedupDecision.mockResolvedValue(undefined)
+    mockRestoreBackupTransaction.mockResolvedValue(null)
 
     backupSystem = useBackupSystem()
   })
@@ -194,6 +204,41 @@ describe('TASK-332: Backup Reliability & Verification', () => {
   // 2. Data Completeness Tests
   // =========================================================================
   describe('Data Completeness', () => {
+    it('refuses to claim an emergency backup exists when durable storage rejects it', async () => {
+      localStorageMock.setItem.mockImplementation(() => {
+        throw new Error('storage unavailable')
+      })
+
+      const backup = await backupSystem.createBackup('emergency')
+
+      expect(backup).toBeNull()
+      expect(backupSystem.state.value.error).toContain('persisted and verified')
+      expect(backupSystem.backupHistory.value).toEqual([])
+    })
+
+    it('keeps the newest recovery point when quota pressure trims backup history', async () => {
+      mockTaskStore.tasks = [{ id: 'quota-task', title: 'Quota task', status: 'todo' }]
+      const first = await backupSystem.createBackup('manual')
+      expect(first).not.toBeNull()
+
+      let historyAttempts = 0
+      localStorageMock.setItem.mockImplementation((key: string, value: string) => {
+        if (key === STORAGE_KEYS.HISTORY && historyAttempts++ === 0) {
+          throw new DOMException('quota', 'QuotaExceededError')
+        }
+        localStorageStore[key] = value
+      })
+
+      const emergency = await backupSystem.createBackup('emergency')
+      const durableHistory = JSON.parse(
+        localStorageStore[STORAGE_KEYS.HISTORY] || '[]'
+      ) as BackupData[]
+
+      expect(emergency).not.toBeNull()
+      expect(durableHistory[0]?.id).toBe(emergency?.id)
+      expect(durableHistory.some(item => item.id === first?.id)).toBe(false)
+    })
+
     it('includes active, deleted, completion, and workspace task identities in inventory metadata', async () => {
       mockTaskStore.tasks = [
         { id: 'active-1', title: 'Active', status: 'todo' },
@@ -630,6 +675,198 @@ describe('TASK-332: Backup Reliability & Verification', () => {
   })
 
   describe('Restore execution fails closed', () => {
+    it('uses one atomic database transaction for the complete durable restore set', async () => {
+      const incoming = createMockBackup(1, Date.now(), {
+        projects: [{
+          id: 'project-1',
+          name: 'Recovered project',
+          color: '#123456',
+          createdAt: new Date().toISOString(),
+        }] as any[],
+        groups: [{
+          id: '00000000-0000-4000-8000-000000000001',
+          name: 'Recovered group',
+          type: 'status',
+          position: { x: 0, y: 0, width: 100, height: 100 },
+        }] as any[],
+        tombstones: [{ entityType: 'task', entityId: 'gone-task' }],
+        metadata: {
+          taskCount: 1,
+          projectCount: 1,
+          groupCount: 1,
+          tombstoneCount: 1,
+        },
+      })
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+        tombstones: incoming.tombstones,
+      })
+      mockCheckTaskIdsAvailability
+        .mockResolvedValueOnce([
+          { taskId: 'task-1', status: 'available', reason: '' },
+        ])
+        .mockResolvedValueOnce([
+          { taskId: 'task-1', status: 'active', reason: 'Readable after commit' },
+        ])
+      mockFetchTombstones
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ entityType: 'task', entityId: 'gone-task' }])
+      mockRestoreBackupTransaction.mockResolvedValue({
+        ok: true,
+        tasksCreated: 1,
+        projectsCreated: 1,
+        groupsCreated: 1,
+        tombstonesCreated: 1,
+      })
+
+      const restored = await backupSystem.restoreBackup(incoming)
+
+      expect(restored).toBe(true)
+      expect(mockRestoreBackupTransaction).toHaveBeenCalledWith({
+        operationId: incoming.id,
+        artifactHash: incoming.checksum,
+        schemaVersion: incoming.version,
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+        tombstones: incoming.tombstones,
+      })
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+      expect(mockSaveProjects).not.toHaveBeenCalled()
+      expect(mockSaveGroup).not.toHaveBeenCalled()
+      expect(mockRecordTombstone).not.toHaveBeenCalled()
+    })
+
+    it('reports refresh-needed instead of claiming a committed atomic restore failed', async () => {
+      const incoming = createMockBackup(1)
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+      })
+      mockCheckTaskIdsAvailability
+        .mockResolvedValueOnce([
+          { taskId: 'task-1', status: 'available', reason: '' },
+        ])
+        .mockResolvedValueOnce([])
+      mockRestoreBackupTransaction.mockResolvedValue({
+        ok: true,
+        tasksCreated: 1,
+        projectsCreated: 0,
+        groupsCreated: 0,
+        tombstonesCreated: 0,
+      })
+
+      const restored = await backupSystem.restoreBackup(incoming)
+
+      expect(restored).toBe(true)
+      expect(backupSystem.state.value.error).toBeNull()
+      expect(backupSystem.state.value.warning).toContain('Restore committed')
+      expect(backupSystem.state.value.warning).toContain('Refresh is required')
+    })
+
+    it('reports refresh-needed when committed task verification cannot be fetched', async () => {
+      const incoming = createMockBackup(1)
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+      })
+      mockCheckTaskIdsAvailability
+        .mockResolvedValueOnce([
+          { taskId: 'task-1', status: 'available', reason: '' },
+        ])
+        .mockRejectedValueOnce(new Error('Task verification unavailable'))
+      mockRestoreBackupTransaction.mockResolvedValue({
+        ok: true,
+        tasksCreated: 1,
+        projectsCreated: 0,
+        groupsCreated: 0,
+        tombstonesCreated: 0,
+      })
+
+      const restored = await backupSystem.restoreBackup(incoming)
+
+      expect(restored).toBe(true)
+      expect(backupSystem.state.value.error).toBeNull()
+      expect(backupSystem.state.value.warning).toContain('task verification')
+      expect(backupSystem.state.value.warning).toContain('Refresh is required')
+    })
+
+    it('does not report failure when committed tombstones are temporarily unreadable', async () => {
+      const incoming = createMockBackup(0, Date.now(), {
+        tombstones: [{ entityType: 'task', entityId: 'committed-gone-task' }],
+        metadata: {
+          taskCount: 0,
+          projectCount: 0,
+          groupCount: 0,
+          tombstoneCount: 1,
+        },
+      })
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+        tombstones: incoming.tombstones,
+      })
+      mockFetchTombstones.mockResolvedValue([])
+      mockRestoreBackupTransaction.mockResolvedValue({
+        ok: true,
+        tasksCreated: 0,
+        projectsCreated: 0,
+        groupsCreated: 0,
+        tombstonesCreated: 1,
+      })
+
+      const restored = await backupSystem.restoreBackup(incoming)
+
+      expect(restored).toBe(true)
+      expect(backupSystem.state.value.error).toBeNull()
+      expect(backupSystem.state.value.warning).toContain('permanent deletions')
+      expect(backupSystem.state.value.warning).toContain('Refresh is required')
+    })
+
+    it('reports refresh-needed when committed tombstone verification cannot be fetched', async () => {
+      const incoming = createMockBackup(0, Date.now(), {
+        tombstones: [{ entityType: 'task', entityId: 'committed-gone-task' }],
+        metadata: {
+          taskCount: 0,
+          projectCount: 0,
+          groupCount: 0,
+          tombstoneCount: 1,
+        },
+      })
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+        tombstones: incoming.tombstones,
+      })
+      mockFetchTombstones
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockRejectedValueOnce(new Error('Tombstone verification unavailable'))
+      mockRestoreBackupTransaction.mockResolvedValue({
+        ok: true,
+        tasksCreated: 0,
+        projectsCreated: 0,
+        groupsCreated: 0,
+        tombstonesCreated: 1,
+      })
+
+      const restored = await backupSystem.restoreBackup(incoming)
+
+      expect(restored).toBe(true)
+      expect(backupSystem.state.value.error).toBeNull()
+      expect(backupSystem.state.value.warning).toContain('permanent-deletion verification')
+      expect(backupSystem.state.value.warning).toContain('Refresh is required')
+    })
+
     it('restores child-before-parent artifacts in parent-first order', async () => {
       const incoming = createMockBackup(0, Date.now(), {
         tasks: [

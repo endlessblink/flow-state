@@ -176,6 +176,7 @@ export function createRestoreOperations(
     ctx.state.value.isRestoring = true
     ctx.state.value.restoreProgress = 0
     ctx.state.value.error = null
+    ctx.state.value.warning = null
 
     try {
       console.log('[Backup] Starting restore...')
@@ -324,9 +325,21 @@ export function createRestoreOperations(
       }
       ctx.state.value.restoreProgress = 40
 
+      const atomicReceipt = typeof ctx.db.restoreBackupTransaction === 'function'
+        ? await ctx.db.restoreBackupTransaction({
+            operationId: backupData.id,
+            artifactHash: backupData.checksum,
+            schemaVersion: backupData.version,
+            tasks: tasksToRestore,
+            projects: projectsToRestore,
+            groups: groupsToRestore,
+            tombstones: backupData.tombstones || [],
+          })
+        : null
+
       // Restore to Supabase using safeCreateTask for each task
       // TASK-344: This ensures immutable IDs - no duplicates even with race conditions
-      if (tasksToRestore.length > 0) {
+      if (!atomicReceipt && tasksToRestore.length > 0) {
         console.log(`[Backup] Restoring ${tasksToRestore.length} tasks using safeCreateTask...`)
         let created = 0
         let skipped = 0
@@ -379,17 +392,44 @@ export function createRestoreOperations(
           )
         }
       }
+      if (atomicReceipt && tasksToRestore.length > 0) {
+        try {
+          const restoredIds = tasksToRestore.map(task => task.id)
+          const readback = await ctx.db.checkTaskIdsAvailability(restoredIds)
+          const expectedStatusById = new Map(
+            tasksToRestore.map(task => [
+              task.id,
+              task._soft_deleted ? 'soft_deleted' : 'active',
+            ])
+          )
+          const readableIds = new Set(readback
+            .filter((result: TaskIdAvailability) => (
+              result.status === expectedStatusById.get(result.taskId)
+            ))
+            .map((result: TaskIdAvailability) => result.taskId))
+          const missingIds = restoredIds.filter(taskId => !readableIds.has(taskId))
+          if (missingIds.length > 0) {
+            ctx.state.value.warning =
+              `Restore committed, but ${missingIds.length} of ${restoredIds.length} tasks could not be verified yet. Refresh is required.`
+            console.warn(`[Backup] ${ctx.state.value.warning}`)
+          }
+        } catch (readbackError) {
+          ctx.state.value.warning =
+            'Restore committed, but task verification is temporarily unavailable. Refresh is required.'
+          console.warn(`[Backup] ${ctx.state.value.warning}`, readbackError)
+        }
+      }
       ctx.state.value.restoreProgress = 60
 
       // Restore Projects
-      if (projectsToRestore.length > 0) {
+      if (!atomicReceipt && projectsToRestore.length > 0) {
         console.log(`[Backup] Restoring ${projectsToRestore.length} projects...`)
         await ctx.db.saveProjects(projectsToRestore)
       }
       ctx.state.value.restoreProgress = 70
 
       // Restore Groups
-      if (groupsToRestore.length > 0) {
+      if (!atomicReceipt && groupsToRestore.length > 0) {
         console.log(`[Backup] Restoring ${groupsToRestore.length} groups...`)
         for (const group of groupsToRestore) {
           await ctx.db.saveGroup(group)
@@ -400,23 +440,37 @@ export function createRestoreOperations(
       // Apply irreversible permanent-deletion markers only after all recoverable
       // entities have been recreated successfully.
       const tombstonesToRestore = backupData.tombstones || []
-      for (const tombstone of tombstonesToRestore) {
-        await ctx.db.recordTombstone(tombstone.entityType, tombstone.entityId)
+      if (!atomicReceipt) {
+        for (const tombstone of tombstonesToRestore) {
+          await ctx.db.recordTombstone(tombstone.entityType, tombstone.entityId)
+        }
       }
       if (tombstonesToRestore.length > 0) {
-        const restoredTombstones = await ctx.db.fetchTombstones()
-        const restoredKeys = new Set(
-          restoredTombstones.map((tombstone: { entityType: string; entityId: string }) =>
-            `${tombstone.entityType}:${tombstone.entityId}`
+        try {
+          const restoredTombstones = await ctx.db.fetchTombstones()
+          const restoredKeys = new Set(
+            restoredTombstones.map((tombstone: { entityType: string; entityId: string }) =>
+              `${tombstone.entityType}:${tombstone.entityId}`
+            )
           )
-        )
-        const missingTombstones = tombstonesToRestore.filter(
-          tombstone => !restoredKeys.has(`${tombstone.entityType}:${tombstone.entityId}`)
-        )
-        if (missingTombstones.length > 0) {
-          throw new Error(
-            `Tombstone restore incomplete: ${missingTombstones.length} of ${tombstonesToRestore.length} permanent deletions are not readable after restore`
+          const missingTombstones = tombstonesToRestore.filter(
+            tombstone => !restoredKeys.has(`${tombstone.entityType}:${tombstone.entityId}`)
           )
+          if (missingTombstones.length > 0) {
+            const message =
+              `${missingTombstones.length} of ${tombstonesToRestore.length} permanent deletions are not readable after restore`
+            if (!atomicReceipt) {
+              throw new Error(`Tombstone restore incomplete: ${message}`)
+            }
+            ctx.state.value.warning =
+              `Restore committed, but ${message} yet. Refresh is required.`
+            console.warn(`[Backup] ${ctx.state.value.warning}`)
+          }
+        } catch (readbackError) {
+          if (!atomicReceipt) throw readbackError
+          ctx.state.value.warning =
+            'Restore committed, but permanent-deletion verification is temporarily unavailable. Refresh is required.'
+          console.warn(`[Backup] ${ctx.state.value.warning}`, readbackError)
         }
       }
 
@@ -443,9 +497,16 @@ export function createRestoreOperations(
       }
 
       // Reload stores from database
-      if (ctx.taskStore.loadFromDatabase) await ctx.taskStore.loadFromDatabase()
-      if (ctx.projectStore.loadProjectsFromDatabase) await ctx.projectStore.loadProjectsFromDatabase()
-      if (ctx.canvasStore.loadFromDatabase) await ctx.canvasStore.loadFromDatabase()
+      try {
+        if (ctx.taskStore.loadFromDatabase) await ctx.taskStore.loadFromDatabase()
+        if (ctx.projectStore.loadProjectsFromDatabase) await ctx.projectStore.loadProjectsFromDatabase()
+        if (ctx.canvasStore.loadFromDatabase) await ctx.canvasStore.loadFromDatabase()
+      } catch (reloadError) {
+        if (!atomicReceipt) throw reloadError
+        ctx.state.value.warning =
+          'Restore committed, but the refreshed data could not be loaded yet. Refresh is required.'
+        console.warn(`[Backup] ${ctx.state.value.warning}`, reloadError)
+      }
 
       ctx.state.value.restoreProgress = 100
 

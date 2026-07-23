@@ -2,7 +2,7 @@ import { STORAGE_KEYS, BACKUP_HISTORY_TTL_MS } from './types'
 import type { BackupContext, BackupData } from './types'
 
 export interface HistoryOperations {
-  saveToHistory: (backup: BackupData) => void
+  saveToHistory: (backup: BackupData) => boolean
   loadHistory: () => void
   getLatestBackup: () => BackupData | null
   clearHistory: () => void
@@ -12,7 +12,8 @@ export function createHistoryOperations(ctx: BackupContext): HistoryOperations {
   /**
    * Save backup to history (localStorage)
    */
-  function saveToHistory(backup: BackupData): void {
+  function saveToHistory(backup: BackupData): boolean {
+    const previousHistory = [...ctx.backupHistory.value]
     try {
       // Add to beginning of history
       ctx.backupHistory.value.unshift(backup)
@@ -29,13 +30,16 @@ export function createHistoryOperations(ctx: BackupContext): HistoryOperations {
       } catch (e) {
         if (e instanceof DOMException && e.name === 'QuotaExceededError') {
           console.warn('[Backup] localStorage quota exceeded — trimming oldest backups and retrying')
+          let persisted = false
           while (ctx.backupHistory.value.length > 1) {
-            ctx.backupHistory.value.shift()
+            ctx.backupHistory.value.pop()
             try {
               localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(ctx.backupHistory.value))
+              persisted = true
               break
             } catch { continue }
           }
+          if (!persisted) throw e
         } else {
           throw e
         }
@@ -48,9 +52,20 @@ export function createHistoryOperations(ctx: BackupContext): HistoryOperations {
       }
 
       ctx.stats.value.historyCount = ctx.backupHistory.value.length
+      const durableHistory: BackupData[] = JSON.parse(
+        localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]'
+      )
+      const durableBackup = durableHistory.find(item => item.id === backup.id)
+      if (!durableBackup || durableBackup.checksum !== backup.checksum) {
+        throw new Error('Backup history write could not be verified')
+      }
+      return true
 
     } catch (error) {
+      ctx.backupHistory.value = previousHistory
+      ctx.stats.value.historyCount = previousHistory.length
       console.error('[Backup] Failed to save to history:', error)
+      return false
     }
   }
 

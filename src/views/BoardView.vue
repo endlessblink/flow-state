@@ -443,11 +443,9 @@ const handleConfirmDelete = (taskId: string) => {
   confirmTitle.value = t('task.delete_confirm_title')
   confirmMessage.value = t('task.delete_confirm_message')
   confirmText.value = t('common.delete')
+  const confirmedTaskId = taskId
   confirmActionFn.value = async () => {
-    if (taskToDelete.value) {
-      await doDeleteTask(taskToDelete.value)
-      taskToDelete.value = null
-    }
+    await doDeleteTask(confirmedTaskId)
   }
   showConfirmModal.value = true
 }

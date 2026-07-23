@@ -981,6 +981,110 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     })
   })
 
+  test('R19 - Board right-click edit works offline, converges, and survives reload', async ({ clientA, clientB }) => {
+    await gotoBoardReady(clientA)
+    await gotoBoardReady(clientB)
+
+    const task = ROOT_TASKS[2]
+    const editedTitle = `${task.title} Board Offline Edit`
+    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`)
+    await expect(taskCard).toBeVisible()
+
+    await clientA.context().setOffline(true)
+    await taskCard.click({ button: 'right' })
+    await clientA.getByText('Edit', { exact: true }).click()
+
+    const editModal = clientA.locator('.modal-content').filter({ hasText: 'Edit Task' })
+    await expect(editModal).toBeVisible()
+    await editModal.locator('input[placeholder="Task title"]').fill(editedTitle)
+    await editModal.getByText('Save Changes', { exact: true }).click()
+
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.title ?? null
+    }, task.id)).toBe(editedTitle)
+
+    await clientA.context().setOffline(false)
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,title,is_deleted')
+        .eq('id', task.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: task.id,
+        title: editedTitle,
+        is_deleted: false,
+      }))
+    }).toPass({ timeout: 20_000 })
+
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.title ?? null
+    }, task.id), { timeout: 20_000 }).toBe(editedTitle)
+
+    await clientA.reload()
+    await gotoBoardReady(clientA)
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.title ?? null
+    }, task.id)).toBe(editedTitle)
+  })
+
+  test('R20 - Board right-click delete works offline and cannot resurrect', async ({ clientA, clientB }) => {
+    await gotoBoardReady(clientA)
+    await gotoBoardReady(clientB)
+
+    const task = ROOT_TASKS[0]
+    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`)
+    await expect(taskCard).toBeVisible()
+
+    await clientA.context().setOffline(true)
+    await taskCard.click({ button: 'right' })
+    await clientA.getByText('Delete', { exact: true }).click()
+    const confirmation = clientA.getByRole('dialog')
+    await expect(confirmation).toBeVisible()
+    await confirmation.getByText('Delete', { exact: true }).click()
+
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.some((candidate: any) => candidate.id === taskId && !candidate.isDeleted)
+    }, task.id)).toBe(false)
+
+    await clientA.context().setOffline(false)
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,is_deleted')
+        .eq('id', task.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: task.id,
+        is_deleted: true,
+      }))
+    }).toPass({ timeout: 20_000 })
+
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.some((candidate: any) => candidate.id === taskId && !candidate.isDeleted)
+    }, task.id), { timeout: 20_000 }).toBe(false)
+
+    await clientA.reload()
+    await gotoBoardReady(clientA)
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.some((candidate: any) => candidate.id === taskId && !candidate.isDeleted)
+    }, task.id)).toBe(false)
+  })
+
   test('R11 - offline edit and completion drain after reconnect and survive reload', async ({ clientA, clientB }) => {
     await gotoCanvasReady(clientA)
     await gotoCanvasReady(clientB)

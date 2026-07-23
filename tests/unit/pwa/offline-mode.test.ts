@@ -99,6 +99,7 @@ vi.mock('@/services/offline/writeQueueDB', () => ({
   clearFailedOperations: () => mockClearFailed(),
   purgeStaleOperations: () => mockPurgeStale(),
   getOperationsForEntity: (...args: any[]) => mockGetOperationsForEntity(...args),
+  hasEarlierUnresolvedOperation: async () => false,
   deleteOperation: (...args: any[]) => mockDeleteOperation(...args),
   updateOperation: vi.fn(),
 }))
@@ -113,10 +114,10 @@ vi.mock('@/services/offline/retryStrategy', () => ({
 
 // Mock operation coalescer/sorter
 vi.mock('@/services/offline/operationCoalescer', () => ({
-  coalesceOperationsForEntity: vi.fn().mockImplementation((_type, _id) => ({ operation: null }))
+  coalesceOperationsForEntity: async () => ({ operation: null })
 }))
 vi.mock('@/services/offline/operationSorter', () => ({
-  sortOperations: vi.fn().mockImplementation((ops) => ops)
+  sortOperations: (ops: any[]) => ops
 }))
 
 // Mock stores

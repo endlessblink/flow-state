@@ -182,6 +182,26 @@ describe('canonical write queue durability', () => {
     expect(await getWriteQueueDB().operations.get(id)).toBeDefined()
   })
 
+  it.each(['create', 'update', 'delete'] as const)(
+    'never purges an unresolved legacy task %s by age',
+    async operation => {
+      const id = await getWriteQueueDB().operations.add({
+        entityType: 'task',
+        operation,
+        entityId: `task-old-${operation}`,
+        payload: operation === 'delete' ? { id: `task-old-${operation}` } : { title: 'Still unsynced' },
+        status: 'pending',
+        retryCount: 0,
+        createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
+        userId: 'user-1',
+        workspaceId: null,
+      })
+
+      expect(await purgeStaleOperations(0)).toBe(0)
+      expect(await getWriteQueueDB().operations.get(id)).toBeDefined()
+    },
+  )
+
   it('blocks a successor while an earlier failed operation waits for its retry time', async () => {
     const first = await enqueueOperation({
       entityType: 'task', operation: 'update', entityId: 'task-ordered', payload: { title: 'First' },

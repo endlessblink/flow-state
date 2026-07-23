@@ -12,7 +12,7 @@
  * 7.  Queue stats accurate after reload
  * 8.  Multiple tabs don't process same queue item (syncing status lock)
  * 9.  Queue processing is serial (no parallel corruption)
- * 10. Queue max size limit (purgeStaleOperations prevents unbounded growth)
+ * 10. Unresolved operations are not discarded by age
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
@@ -391,16 +391,12 @@ describe('TASK-1646: Background Sync (Queue)', () => {
   })
 
   // =========================================================================
-  // 10. Queue max size / purgeStale prevents unbounded growth
+  // 10. Compatibility cleanup hook cannot claim unresolved writes were purged
   // =========================================================================
-  it('10. purgeStaleOperations function exists and can be called to limit queue size', async () => {
-    // The queue relies on purgeStaleOperations to remove very old completed ops
-    // that weren't cleaned up (e.g. crash before cleanupCompleted ran)
+  it('10. purgeStaleOperations reports that no unresolved writes were discarded', async () => {
     expect(mockPurgeStale).toBeDefined()
 
-    // Calling it should resolve without throwing
     const purged = await mockPurgeStale()
-    expect(typeof purged).toBe('number')
-    expect(purged).toBeGreaterThanOrEqual(0)
+    expect(purged).toBe(0)
   })
 })

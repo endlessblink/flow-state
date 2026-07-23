@@ -27,6 +27,7 @@
     "recurring",
     "batch-selected",
     "offline",
+    "auth-expired",
     "reconnecting",
     "realtime-dropped",
     "cross-client",
@@ -144,7 +145,7 @@
       {
         "id": "offline-queue-replay-and-auth-expiry",
         "issueSignals": ["BUG-1514", "BUG-1517", "BUG-1561", "BUG-1562", "BUG-1565", "BUG-1411", "BUG-1182"],
-        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-quick-create-ui-durability", "offline-catalog-completion-durability", "offline-user-entrypoint-parity", "board-offline-right-click-completion-parity", "board-offline-edit-delete-entrypoint-parity", "durable-write-failure-visibility-and-rollback"]
+        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-quick-create-ui-durability", "offline-catalog-completion-durability", "offline-user-entrypoint-parity", "board-offline-right-click-completion-parity", "board-offline-edit-delete-entrypoint-parity", "durable-write-failure-visibility-and-rollback", "unresolved-write-age-retention"]
       },
       {
         "id": "realtime-gap-echo-and-resurrection",
@@ -535,7 +536,7 @@
       "failureClasses": ["write-failure-visibility", "optimistic-rollback", "partial-batch-atomicity"],
       "mutations": ["create", "edit-metadata", "change-status", "complete", "bulk-update", "delete", "permanent-delete"],
       "surfaces": ["all-views", "batch-edit"],
-      "states": ["offline", "reconnecting", "stale-snapshot", "concurrent-write"],
+      "states": ["offline", "auth-expired", "reconnecting", "stale-snapshot", "concurrent-write"],
       "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
       "automatedEvidence": ["tests/unit/sync/sync-status-popover.test.ts", "tests/unit/sync/sync-orchestrator.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
       "liveEvidence": ["2026-07-23: authenticated Chromium R22 forced a visible Board edit into a permanent 403 persistence failure after the local mutation was accepted. The app retained the failed operation, exposed Retry All and Discard local changes without falsely calling the data corrupted or impossible to retry, then committed the same edit after manual retry. Database readback, independent-client convergence, and renderer reload all matched the edited title. Unit coverage separately proves permanent failures are manually retryable and that discarding their retry data requires explicit confirmation. Create, completion, batch, delete, permanent-delete, concurrent-write, and remaining surface permutations remain open."]
@@ -550,6 +551,18 @@
       "states": ["offline", "renderer-reloaded", "electron-restarted", "reconnecting"],
       "layers": ["renderer-store", "sync-queue", "indexeddb-read-cache", "electron-main-preload", "supabase-persistence"],
       "automatedEvidence": ["tests/unit/services/offline/canonical-write-queue.test.ts", "tests/unit/before-unload-electron.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "unresolved-write-age-retention",
+      "severity": "critical",
+      "status": "automated",
+      "failureClasses": ["queue-ordering-and-replay"],
+      "mutations": ["create", "edit-metadata", "delete"],
+      "surfaces": ["all-views"],
+      "states": ["offline"],
+      "layers": ["sync-queue"],
+      "automatedEvidence": ["tests/unit/services/offline/canonical-write-queue.test.ts"],
       "liveEvidence": []
     },
     {

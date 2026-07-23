@@ -567,27 +567,15 @@ export async function recoverStaleSyncing(maxAgeMs = 60_000): Promise<number> {
 }
 
 /**
- * BUG-6: Purge pending operations older than maxAgeMs.
- * Stale operations from browser sessions closed mid-sync can resurrect deleted tasks
- * when replayed days later. 24h max age is safe since the app syncs within seconds when online.
+ * Historical compatibility hook retained for callers.
+ *
+ * Age is never proof that a pending write is disposable. A device may remain
+ * offline or signed out for days; deleting its queue entry would silently lose
+ * the user's only durable task intent. Resurrection prevention belongs to
+ * ordered DELETE replacement and server tombstones, not time-based data loss.
  */
-export async function purgeStaleOperations(maxAgeMs = 24 * 60 * 60 * 1000): Promise<number> {
-  const db = getWriteQueueDB()
-  const cutoff = Date.now() - maxAgeMs
-
-  const staleOps = await db.operations
-    .where('status')
-    .equals('pending')
-    .filter(op => op.createdAt < cutoff && !op.canonicalTaskPatch)
-    .toArray()
-
-  if (staleOps.length > 0) {
-    const ids = staleOps.map(op => op.id!).filter(id => id !== undefined)
-    await db.operations.bulkDelete(ids)
-    console.warn(`🗑️ [SYNC] BUG-6: Purged ${staleOps.length} stale pending operation(s) older than ${Math.round(maxAgeMs / 3600000)}h`)
-  }
-
-  return staleOps.length
+export async function purgeStaleOperations(_maxAgeMs = 24 * 60 * 60 * 1000): Promise<number> {
+  return 0
 }
 
 /**

@@ -8,6 +8,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import 'fake-indexeddb/auto'
 
 // ============================================================================
 // Module-level mocks — must be at top level before any imports

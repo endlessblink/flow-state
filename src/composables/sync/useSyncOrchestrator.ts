@@ -1072,8 +1072,8 @@ async function runProcessQueue(): Promise<void> {
     await recoverStaleSyncing()
     await recoverRlsPolicyFailures()
 
-    // BUG-6: Purge pending operations older than 24h to prevent stale queue replay
-    // from resurrecting tasks that were deleted days ago on another device.
+    // Compatibility hook: unresolved writes are retained regardless of age.
+    // Anti-resurrection is enforced by ordered deletes and server tombstones.
     try {
       const { purgeStaleOperations } = await import('@/services/offline/writeQueueDB')
       await purgeStaleOperations()

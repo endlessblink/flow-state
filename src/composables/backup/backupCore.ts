@@ -99,9 +99,33 @@ export function createCoreOperations(
     try {
       console.log(`[Backup] Creating ${type} backup...`)
 
-      // Get tasks from store — use _rawTasks to capture ALL tasks regardless of view filters,
-      // then exclude soft-deleted so backups only contain live data
-      let tasks = [...(ctx.taskStore._rawTasks || [])].filter(t => !t._soft_deleted)
+      // Backups are an absolute inventory, not a view export. The renderer store
+      // may hold only the active workspace, while local optimistic rows may be
+      // newer than Supabase. Merge all remote scopes, then local intent, then Trash.
+      const { useAuthStore } = await import('@/stores/auth')
+      const isAuthenticated = Boolean(useAuthStore().user?.id)
+      const remoteActiveTasks = isAuthenticated && typeof ctx.db.fetchTasks === 'function'
+        ? await ctx.db.fetchTasks(undefined, { forceFresh: true })
+        : []
+      let trashReadFailed = false
+      const trashTasks = isAuthenticated && typeof ctx.db.fetchTrash === 'function'
+        ? await ctx.db.fetchTrash({ onError: () => { trashReadFailed = true } })
+        : []
+      if (trashReadFailed) {
+        throw new Error('Backup refused because deleted-task inventory could not be read')
+      }
+      let tombstoneReadFailed = false
+      const tombstones = isAuthenticated && typeof ctx.db.fetchTombstones === 'function'
+        ? await ctx.db.fetchTombstones({ onError: () => { tombstoneReadFailed = true } })
+        : []
+      if (tombstoneReadFailed) {
+        throw new Error('Backup refused because permanent-delete inventory could not be read')
+      }
+      const tasksById = new Map(
+        [...remoteActiveTasks, ...(ctx.taskStore._rawTasks || []), ...trashTasks]
+          .map(task => [task.id, task])
+      )
+      let tasks = [...tasksById.values()]
 
       // Filter mock tasks if enabled
       if (ctx.config.value.filterMockTasks && tasks.length > 0) {
@@ -122,6 +146,9 @@ export function createCoreOperations(
       // Get projects and groups from stores
       const projects = [...(ctx.projectStore.projects || [])]
       const groups = [...(ctx.canvasStore.groups || [])]
+      const deletedTaskCount = tasks.filter(task => task._soft_deleted).length
+      const completionRecordCount = tasks.filter(task => task.isCompletionRecord).length
+      const workspaceTaskCount = tasks.filter(task => Boolean(task.workspaceId)).length
 
       // Bug 3 fix: capture settings (exclude sensitive tokens/keys)
       let settings: Record<string, unknown> = {}
@@ -145,6 +172,7 @@ export function createCoreOperations(
         tasks,
         projects,
         groups,
+        tombstones,
         settings,
         timestamp: Date.now(),
         version: BACKUP_SCHEMA_VERSION,
@@ -152,6 +180,11 @@ export function createCoreOperations(
         type,
         metadata: {
           taskCount: tasks.length,
+          activeTaskCount: tasks.length - deletedTaskCount,
+          deletedTaskCount,
+          completionRecordCount,
+          workspaceTaskCount,
+          tombstoneCount: tombstones.length,
           projectCount: projects.length,
           groupCount: groups.length
         }
@@ -161,7 +194,8 @@ export function createCoreOperations(
       backupData.checksum = calculateChecksum({
         tasks: backupData.tasks,
         projects: backupData.projects,
-        groups: backupData.groups
+        groups: backupData.groups,
+        tombstones: backupData.tombstones
       })
 
       // Calculate approximate size

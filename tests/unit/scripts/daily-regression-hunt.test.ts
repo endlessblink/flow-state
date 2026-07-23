@@ -37,6 +37,7 @@ describe('daily regression hunt script', () => {
       'type-check',
       'focused-recurring-pack',
       'lifecycle-durability',
+      'recoverability-pack',
       'offline-reconnect-convergence',
       'canonical-assistant-contract',
       'timer-boundary',
@@ -127,6 +128,30 @@ describe('daily regression hunt script', () => {
     expect(report.checks[0].commandLine).toContain('tests/unit/stores/smart-merge.test.ts')
   })
 
+  it('keeps recoverability regressions in the fixed daily watchdog', () => {
+    const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
+    const output = runHunt([
+      '--dry-run',
+      '--json',
+      '--only',
+      'recoverability-pack',
+      '--report-dir',
+      reportDir,
+    ])
+
+    const report = JSON.parse(output)
+    expect(report.checks).toHaveLength(1)
+    expect(report.checks[0]).toMatchObject({
+      id: 'recoverability-pack',
+      failureClass: 'task consistency/data recoverability',
+    })
+    expect(report.checks[0].commandLine).toContain('tests/unit/backup-validation.test.ts')
+    expect(report.checks[0].commandLine).toContain('tests/unit/backup/backup-comprehensive.test.ts')
+    expect(report.checks[0].commandLine).toContain('src/composables/backup/__tests__/backupPreservesDescription.test.ts')
+    expect(report.checks[0].commandLine).toContain('src/composables/tasks/__tests__/useTaskEditState.descriptionReset.test.ts')
+    expect(report.checks[0].commandLine).toContain('tests/unit/sync/task-sync-payload-completeness.test.ts')
+  })
+
   it('keeps executable canonical assistant proof in the fixed daily watchdog', () => {
     const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
     const output = runHunt([
@@ -155,11 +180,13 @@ describe('daily regression hunt script', () => {
     const canvas = JSON.parse(runHunt(['--classify', 'canvas groups and tasks disappeared after switching views']))
     const timer = JSON.parse(runHunt(['--classify', 'KDE widget timer stuck at 0 and local api 5577 active task stale']))
     const canonical = JSON.parse(runHunt(['--classify', 'canonical Notion activation receipt or change sequence failed']))
+    const recoverability = JSON.parse(runHunt(['--classify', 'backup restore inventory drift left a draft unrecoverable']))
 
     expect(auth.failureClass).toBe('auth/sync')
     expect(canvas.failureClass).toBe('Canvas data/state')
     expect(timer.failureClass).toBe('KDE/local sidecar')
     expect(canonical.failureClass).toBe('canonical assistant authority')
+    expect(recoverability.failureClass).toBe('task consistency/data recoverability')
   })
 
   it('prints the latest markdown report path and summary', () => {

@@ -192,6 +192,11 @@
         "vectorIds": ["local-api-canonical-client-contract-parity", "create-existence-readback", "pwa-service-worker-contract-skew", "pwa-offline-readback-cache-integrity"]
       },
       {
+        "id": "field-completeness-and-editor-recoverability",
+        "issueSignals": ["BUG-1884", "BUG-1872", "TASK-1873", "BUG-1778", "BUG-1757", "BUG-1880"],
+        "vectorIds": ["metadata-null-clear-and-readback", "description-draft-and-backup-durability", "backup-restore-absolute-data-existence"]
+      },
+      {
         "id": "release-process-and-live-runtime-truth",
         "issueSignals": ["TASK-1930", "TASK-1931", "TASK-1927", "BUG-1946", "BUG-1932"],
         "vectorIds": ["updater-runtime-and-package-provenance", "timer-task-existence-and-restart", "durable-write-failure-visibility-and-rollback"]
@@ -380,6 +385,30 @@
       "liveEvidence": []
     },
     {
+      "id": "metadata-null-clear-and-readback",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["identity-and-field-mapping", "write-failure-visibility"],
+      "mutations": ["edit-metadata", "schedule"],
+      "surfaces": ["all-views"],
+      "states": ["visible", "renderer-reloaded", "cross-client"],
+      "layers": ["renderer-component", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/sync/task-sync-payload-completeness.test.ts", "tests/unit/components/task-row-project.test.ts"],
+      "liveEvidence": ["2026-06-23: BUG-1884 proved a visible context-menu project/category clear could look accepted locally and then revert after refresh because the sync payload omitted project_id=null for Uncategorized. 2026-04-22: BUG-1778 required production recovery of description, priority, due date, project, duration, inbox, and pin fields after a broader content wipe. Due-date projection, cross-surface null-clears, and packaged restart proof remain open."]
+    },
+    {
+      "id": "description-draft-and-backup-durability",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["cache-corruption-and-stale-snapshots", "backup-restore-and-inventory", "write-failure-visibility"],
+      "mutations": ["edit-metadata", "backup", "restore"],
+      "surfaces": ["catalog", "board", "canvas", "backup"],
+      "states": ["visible", "renderer-reloaded", "backup-restore"],
+      "layers": ["renderer-component", "backup-artifact", "restore-procedure"],
+      "automatedEvidence": ["src/composables/tasks/__tests__/useTaskEditState.descriptionReset.test.ts", "src/composables/backup/__tests__/backupPreservesDescription.test.ts", "tests/unit/backup-validation.test.ts"],
+      "liveEvidence": ["2026-06-17: BUG-1872 proved a task description could reset while the user was typing and be lost before autosave persisted it. TASK-1873 replaced the lossy markdown round-trip, added the single local-draft fallback, and asserted backup artifacts retain description. Packaged crash/restart proof for in-progress drafts remains open."]
+    },
+    {
       "id": "backup-restore-absolute-data-existence",
       "severity": "critical",
       "status": "open",
@@ -389,7 +418,7 @@
       "states": ["backup-restore", "backup-corrupt", "inventory-mismatch", "restore-drill", "tombstoned", "concurrent-write"],
       "layers": ["supabase-persistence", "backup-artifact", "restore-procedure", "task-inventory"],
       "automatedEvidence": ["tests/unit/backup-validation.test.ts", "tests/unit/backup/backup-comprehensive.test.ts", "tests/unit/scripts/backup-release-gates.test.ts", "tests/e2e/backup-restore-live.spec.ts"],
-      "liveEvidence": ["2026-07-23: a real browser created a full task, produced a serialization-stable backup, simulated loss of both the Supabase row and disaster-lost tombstone, restored through production backup code, read back identity and metadata from Supabase, and found the same task after renderer reload; isolated E2E passed in 16.9 seconds; complete inventory reconciliation, concurrent-write recovery, and a packaged Electron recovery drill remain open", "2026-07-23: after fail-closed restore validation, a fresh live browser drill again created, backed up, deleted, restored, read back, and reloaded a full task through production code; the isolated end-to-end run passed in 19.2 seconds.", "2026-07-23: a real browser created and backed up a task, changed its title while fully offline, attempted restore, and proved production restore refused without clearing the queued edit. After reconnect the preserved write reached Supabase with exact owner and title, and renderer reload retained it. This exposed and removed a restore path that previously cleared the entire offline queue before validating the artifact. Backup restore unit and live drills are now mandatory Electron prebuild gates; complete inventory reconciliation and packaged Electron recovery remain open."]
+      "liveEvidence": ["2026-07-23: a real browser created a full task, produced a serialization-stable backup, simulated loss of both the Supabase row and disaster-lost tombstone, restored through production backup code, read back identity and metadata from Supabase, and found the same task after renderer reload; isolated E2E passed in 16.9 seconds.", "2026-07-23: after fail-closed restore validation, a fresh live browser drill again created, backed up, deleted, restored, read back, and reloaded a full task through production code; the isolated end-to-end run passed in 19.2 seconds.", "2026-07-23: a real browser created and backed up a task, changed its title while fully offline, attempted restore, and proved production restore refused without clearing the queued edit. After reconnect the preserved write reached Supabase with exact owner and title, and renderer reload retained it. This exposed and removed a restore path that previously cleared the entire offline queue before validating the artifact. Backup restore unit and live drills are now mandatory Electron prebuild gates.", "2026-07-23: the authenticated R16 browser drill created one personal and one shared-workspace task, switched the rendered store between scopes, then proved a single production backup contained both identities and reported workspace inventory. The expanded recovery drill then backed up one active task, an authoritative Supabase Trash row, and a permanent-delete tombstone; deleted all three durable records; restored through production code; verified exact active, deleted, owner, and tombstone states; and retained the active task after reload. Both recovery scenarios passed in 20.3 seconds. Completion-record inventory is unit-proven; concurrent-write recovery and a packaged Electron recovery drill remain open."]
     },
     {
       "id": "offline-quick-create-ui-durability",
@@ -510,6 +539,78 @@
       "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
       "automatedEvidence": ["tests/unit/sync/sync-status-popover.test.ts", "tests/unit/sync/sync-orchestrator.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
       "liveEvidence": ["2026-07-23: authenticated Chromium R22 forced a visible Board edit into a permanent 403 persistence failure after the local mutation was accepted. The app retained the failed operation, exposed Retry All and Discard local changes without falsely calling the data corrupted or impossible to retry, then committed the same edit after manual retry. Database readback, independent-client convergence, and renderer reload all matched the edited title. Unit coverage separately proves permanent failures are manually retryable and that discarding their retry data requires explicit confirmation. Create, completion, batch, delete, permanent-delete, concurrent-write, and remaining surface permutations remain open."]
+    },
+    {
+      "id": "offline-acknowledgement-crash-boundary-durability",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["queue-ordering-and-replay", "cache-corruption-and-stale-snapshots", "write-failure-visibility"],
+      "mutations": ["create", "edit-metadata", "complete", "delete"],
+      "surfaces": ["all-views", "electron"],
+      "states": ["offline", "renderer-reloaded", "electron-restarted", "reconnecting"],
+      "layers": ["renderer-store", "sync-queue", "indexeddb-read-cache", "electron-main-preload", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/services/offline/canonical-write-queue.test.ts", "tests/unit/before-unload-electron.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "poison-write-partial-batch-and-exactly-once-replay",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["partial-batch-atomicity", "queue-ordering-and-replay", "auth-expiry-and-recovery", "write-failure-visibility"],
+      "mutations": ["create", "edit-metadata", "complete", "bulk-update", "delete"],
+      "surfaces": ["all-views", "batch-edit"],
+      "states": ["offline", "reconnecting", "workspace-switched", "concurrent-write"],
+      "layers": ["sync-queue", "sync-transport", "canonical-receipt", "supabase-rls", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/sync/sync-orchestrator.test.ts", "tests/unit/sync/write-health.test.ts", "tests/unit/task-rollback.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "stale-client-edit-delete-anti-resurrection",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["cache-corruption-and-stale-snapshots", "realtime-gap-recovery", "cross-tab-echo-and-deduplication", "delete-tombstone-and-undo"],
+      "mutations": ["edit-metadata", "complete", "delete", "permanent-delete"],
+      "surfaces": ["all-views", "external-client", "electron"],
+      "states": ["offline", "stale-snapshot", "cross-client", "reconnecting", "electron-restarted", "tombstoned"],
+      "layers": ["renderer-store", "sync-queue", "canonical-change-log", "supabase-realtime", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/app-realtime-delete-contract.test.ts", "tests/unit/sync/cross-tab-sync.test.ts", "tests/unit/sync/conflict-resolution-edge-cases.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "full-fidelity-recovery-and-restart-inventory",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "hierarchy-and-project-integrity", "canvas-geometry-persistence", "recurrence-lifecycle"],
+      "mutations": ["backup", "restore", "delete", "permanent-delete", "subtask-change"],
+      "surfaces": ["backup", "task-inventory", "supabase", "electron", "canvas"],
+      "states": ["backup-restore", "restore-drill", "tombstoned", "renderer-reloaded", "electron-restarted", "inventory-mismatch"],
+      "layers": ["backup-artifact", "restore-procedure", "task-inventory", "supabase-persistence", "electron-package"],
+      "automatedEvidence": ["tests/unit/backup-validation.test.ts", "tests/unit/backup/backup-comprehensive.test.ts", "tests/contract/backup-restore-field-fidelity.test.ts", "tests/e2e/backup-restore-live.spec.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "cross-view-real-surface-mutation-parity",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["identity-and-field-mapping", "selection-and-filter-scope", "workspace-scope-isolation"],
+      "mutations": ["create", "edit-metadata", "change-status", "complete", "reopen", "schedule", "move", "pin", "delete"],
+      "surfaces": ["catalog", "board", "calendar", "canvas", "unified-inbox", "focus", "quick-tasks", "all-views"],
+      "states": ["visible", "filtered-hidden", "workspace-switched", "renderer-reloaded", "cross-client"],
+      "layers": ["renderer-component", "renderer-selection", "renderer-store", "supabase-persistence"],
+      "automatedEvidence": ["tests/contract/canonical-task-renderer-authority.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "coherent-backup-revision-and-known-good-fallback",
+      "severity": "high",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "concurrent-conflict-resolution", "partial-batch-atomicity"],
+      "mutations": ["edit-metadata", "backup", "restore"],
+      "surfaces": ["backup", "task-inventory", "supabase"],
+      "states": ["concurrent-write", "backup-corrupt", "inventory-mismatch", "restore-drill"],
+      "layers": ["backup-artifact", "restore-procedure", "supabase-persistence", "task-inventory"],
+      "automatedEvidence": ["tests/unit/backup-validation.test.ts", "tests/unit/backup/backup-comprehensive.test.ts", "tests/unit/scripts/backup-release-gates.test.ts"],
+      "liveEvidence": []
     }
   ]
 }

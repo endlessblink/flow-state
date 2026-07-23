@@ -1,9 +1,8 @@
 import type { Task } from '@/types/tasks'
 import {
-    toSupabaseTask, fromSupabaseTask, toDbStatus,
+    toSupabaseTask, fromSupabaseTask,
     type SupabaseTask
 } from '@/utils/supabaseMappers'
-import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import {
     getSupabase, swrCache, invalidateCache,
     type DatabaseContext, type SafeCreateTaskResult, type TaskIdAvailability
@@ -12,7 +11,10 @@ import { logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 export function useTasksDatabase(ctx: DatabaseContext) {
     const { authStore, isSyncing, lastSyncError, getUserIdSafe, withRetry, handleError } = ctx
 
-    const fetchTasks = async (workspaceId?: string | null): Promise<Task[]> => {
+    const fetchTasks = async (
+        workspaceId?: string | null,
+        options?: { forceFresh?: boolean }
+    ): Promise<Task[]> => {
         // TASK-1060: Ensure auth is initialized before fetching to avoid stale guest data
         if (!authStore.isInitialized) {
             console.log('🔄 [TASK-1060] Auth not initialized, waiting...')
@@ -25,6 +27,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         // Workspace-aware cache key so switching workspaces invalidates stale results
         const wsKey = workspaceId === undefined ? 'all' : (workspaceId ?? 'personal')
         const cacheKey = `tasks:${userId || 'guest'}:ws:${wsKey}`
+        if (options?.forceFresh) invalidateCache.tasks()
 
         return swrCache.getOrFetch(cacheKey, async () => {
             try {
@@ -89,14 +92,18 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         })
     }
 
-    const fetchTrash = async (): Promise<Task[]> => {
+    const fetchTrash = async (opts?: { onError?: () => void }): Promise<Task[]> => {
         try {
+            const userId = getUserIdSafe()
+            if (!userId) return []
+
             // BUG-1107: Wrap in withRetry for mobile PWA network resilience
             return await withRetry(async () => {
                 const { data, error } = await getSupabase()
                     .from('tasks')
                     .select('*')
                     .eq('is_deleted', true)
+                    .eq('user_id', userId)
                     .order('deleted_at', { ascending: false })
 
                 if (error) throw error
@@ -106,6 +113,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
             }, 'fetchTrash')
         } catch (e: unknown) {
             handleError(e, 'fetchTrash')
+            opts?.onError?.()
             return []
         }
     }

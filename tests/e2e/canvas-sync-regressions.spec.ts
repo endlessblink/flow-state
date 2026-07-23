@@ -552,6 +552,20 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
         throw error
       }
 
+      const backupScopeProof = await clientA.evaluate(async ({ personalTitle, workspaceTitle }) => {
+        const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
+        const backup = await useBackupSystem().createBackup('manual')
+        if (!backup) throw new Error('Cross-scope backup creation failed')
+        return {
+          titles: backup.tasks
+            .filter(task => task.title === personalTitle || task.title === workspaceTitle)
+            .map(task => task.title),
+          workspaceTaskCount: backup.metadata?.workspaceTaskCount ?? 0,
+        }
+      }, { personalTitle, workspaceTitle })
+      expect(backupScopeProof.titles).toEqual(expect.arrayContaining([personalTitle, workspaceTitle]))
+      expect(backupScopeProof.workspaceTaskCount).toBeGreaterThanOrEqual(1)
+
       await switcher.click()
       await clientA.locator('.workspace-menu .workspace-option').filter({ hasText: /Personal/i }).click()
       await expect(clientA.getByText(personalTitle, { exact: true })).toBeVisible()

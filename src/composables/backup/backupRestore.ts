@@ -36,6 +36,7 @@ export function createRestoreOperations(
         tasks: { total: 0, available: 0, existsActive: 0, existsDeleted: 0, tombstoned: 0, toRestore: [], skipped: [] },
         projects: { total: 0, toRestore: 0, skipped: 0 },
         groups: { total: 0, toRestore: 0, skipped: 0 },
+        tombstones: { total: 0, toRestore: 0 },
         warnings: ['Invalid backup: missing tasks array'],
         canProceed: false
       }
@@ -134,8 +135,15 @@ export function createRestoreOperations(
         toRestore: groupsToRestore.length,
         skipped: groupsSkipped
       },
+      tombstones: {
+        total: backupData.tombstones?.length || 0,
+        toRestore: backupData.tombstones?.length || 0,
+      },
       warnings,
-      canProceed: toRestore.length > 0 || projectsToRestore.length > 0 || groupsToRestore.length > 0
+      canProceed: toRestore.length > 0
+        || projectsToRestore.length > 0
+        || groupsToRestore.length > 0
+        || (backupData.tombstones?.length || 0) > 0
     }
   }
 
@@ -182,6 +190,11 @@ export function createRestoreOperations(
 
       const countChecks = [
         ['task', backupData.metadata?.taskCount, backupData.tasks.length],
+        ['active task', backupData.metadata?.activeTaskCount, backupData.tasks.filter(task => !task._soft_deleted).length],
+        ['deleted task', backupData.metadata?.deletedTaskCount, backupData.tasks.filter(task => task._soft_deleted).length],
+        ['completion record', backupData.metadata?.completionRecordCount, backupData.tasks.filter(task => task.isCompletionRecord).length],
+        ['workspace task', backupData.metadata?.workspaceTaskCount, backupData.tasks.filter(task => Boolean(task.workspaceId)).length],
+        ['tombstone', backupData.metadata?.tombstoneCount, backupData.tombstones?.length || 0],
         ['project', backupData.metadata?.projectCount, backupData.projects?.length || 0],
         ['group', backupData.metadata?.groupCount, backupData.groups?.length || 0],
       ] as const
@@ -195,11 +208,13 @@ export function createRestoreOperations(
 
       // Verify checksum if present
       if (backupData.checksum) {
-        const currentChecksum = calculateChecksum({
+        const checksumPayload = {
           tasks: backupData.tasks,
           projects: backupData.projects,
-          groups: backupData.groups
-        })
+          groups: backupData.groups,
+          ...(backupData.tombstones ? { tombstones: backupData.tombstones } : {}),
+        }
+        const currentChecksum = calculateChecksum(checksumPayload)
         if (currentChecksum !== backupData.checksum) {
           if (backupData.version === BACKUP_SCHEMA_VERSION) {
             throw new Error('Backup checksum mismatch: restore refused because the backup may be corrupted')
@@ -314,11 +329,17 @@ export function createRestoreOperations(
 
         const restoredIds = tasksToRestore.map(task => task.id)
         const readback = await ctx.db.checkTaskIdsAvailability(restoredIds)
-        const readableIds = new Set(
-          readback
-            .filter((result: TaskIdAvailability) => result.status === 'active')
-            .map((result: TaskIdAvailability) => result.taskId)
+        const expectedStatusById = new Map(
+          tasksToRestore.map(task => [
+            task.id,
+            task._soft_deleted ? 'soft_deleted' : 'active',
+          ])
         )
+        const readableIds = new Set(readback
+          .filter((result: TaskIdAvailability) => (
+            result.status === expectedStatusById.get(result.taskId)
+          ))
+          .map((result: TaskIdAvailability) => result.taskId))
         const missingIds = restoredIds.filter(taskId => !readableIds.has(taskId))
         if (missingIds.length > 0) {
           throw new Error(
@@ -343,6 +364,29 @@ export function createRestoreOperations(
         }
       }
       ctx.state.value.restoreProgress = 80
+
+      // Apply irreversible permanent-deletion markers only after all recoverable
+      // entities have been recreated successfully.
+      const tombstonesToRestore = backupData.tombstones || []
+      for (const tombstone of tombstonesToRestore) {
+        await ctx.db.recordTombstone(tombstone.entityType, tombstone.entityId)
+      }
+      if (tombstonesToRestore.length > 0) {
+        const restoredTombstones = await ctx.db.fetchTombstones()
+        const restoredKeys = new Set(
+          restoredTombstones.map((tombstone: { entityType: string; entityId: string }) =>
+            `${tombstone.entityType}:${tombstone.entityId}`
+          )
+        )
+        const missingTombstones = tombstonesToRestore.filter(
+          tombstone => !restoredKeys.has(`${tombstone.entityType}:${tombstone.entityId}`)
+        )
+        if (missingTombstones.length > 0) {
+          throw new Error(
+            `Tombstone restore incomplete: ${missingTombstones.length} of ${tombstonesToRestore.length} permanent deletions are not readable after restore`
+          )
+        }
+      }
 
       // Bug 3 fix: restore settings if present in backup
       if (backupData.settings && Object.keys(backupData.settings).length > 0) {

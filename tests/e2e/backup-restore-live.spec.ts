@@ -6,6 +6,9 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const TASK_ID = 'bacc0000-0000-4000-8000-000000000001'
 const TASK_TITLE = 'Absolute Recovery Round Trip'
+const DELETED_TASK_ID = 'bacc0000-0000-4000-8000-000000000002'
+const DELETED_TASK_TITLE = 'Recoverable Trash Inventory'
+const PERMANENT_DELETED_ID = 'bacc0000-0000-4000-8000-000000000003'
 
 test.describe.serial('absolute task backup and recovery', () => {
   test.skip(!SERVICE_ROLE_KEY, 'requires local Supabase service role key')
@@ -21,8 +24,8 @@ test.describe.serial('absolute task backup and recovery', () => {
     })
     const userId = (await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })).id
 
-    await admin.from('tasks').delete().eq('id', TASK_ID)
-    await admin.from('tombstones').delete().eq('entity_id', TASK_ID)
+    await admin.from('tasks').delete().in('id', [TASK_ID, DELETED_TASK_ID])
+    await admin.from('tombstones').delete().in('entity_id', [TASK_ID, DELETED_TASK_ID, PERMANENT_DELETED_ID])
 
     try {
       await page.goto('/#/tasks')
@@ -76,6 +79,25 @@ test.describe.serial('absolute task backup and recovery', () => {
         ]))
       }).toPass({ timeout: 12_000 })
 
+      const { error: trashSeedError } = await admin.from('tasks').insert({
+        id: DELETED_TASK_ID,
+        user_id: userId,
+        title: DELETED_TASK_TITLE,
+        status: 'planned',
+        priority: 'medium',
+        is_deleted: true,
+        deleted_at: new Date().toISOString(),
+      })
+      expect(trashSeedError).toBeNull()
+      const { error: tombstoneSeedError } = await admin.from('tombstones').insert({
+        user_id: userId,
+        entity_type: 'task',
+        entity_id: PERMANENT_DELETED_ID,
+        deleted_at: new Date().toISOString(),
+        expires_at: null,
+      })
+      expect(tombstoneSeedError).toBeNull()
+
       const backupJson = await page.evaluate(async (taskId) => {
         const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
         const backup = await useBackupSystem().createBackup('manual')
@@ -87,16 +109,33 @@ test.describe.serial('absolute task backup and recovery', () => {
       }, TASK_ID)
       const backup = JSON.parse(backupJson) as {
         checksum: string
-        metadata?: { taskCount?: number }
+        metadata?: {
+          taskCount?: number
+          activeTaskCount?: number
+          deletedTaskCount?: number
+          tombstoneCount?: number
+        }
+        tombstones?: Array<{ entityType: string; entityId: string }>
         tasks: Array<Record<string, any>>
       }
       expect(backup.checksum).toBeTruthy()
       expect(backup.metadata?.taskCount).toBe(backup.tasks.length)
+      expect(backup.metadata?.activeTaskCount).toBe(backup.tasks.length - (backup.metadata?.deletedTaskCount ?? 0))
+      expect(backup.metadata?.deletedTaskCount).toBeGreaterThanOrEqual(1)
+      expect(backup.metadata?.tombstoneCount).toBeGreaterThanOrEqual(1)
       expect(backup.tasks.find(task => task.id === TASK_ID)).toEqual(expect.objectContaining({
         title: TASK_TITLE,
         description: 'Must survive a complete backup restore cycle',
         estimatedDuration: 47,
       }))
+      expect(backup.tasks.find(task => task.id === DELETED_TASK_ID)).toEqual(expect.objectContaining({
+        title: DELETED_TASK_TITLE,
+        _soft_deleted: true,
+      }))
+      expect(backup.tombstones).toContainEqual({
+        entityType: 'task',
+        entityId: PERMANENT_DELETED_ID,
+      })
 
       await page.reload()
       await page.waitForFunction((taskId) => {
@@ -110,10 +149,10 @@ test.describe.serial('absolute task backup and recovery', () => {
         return stats.pendingCount + stats.syncingCount + stats.failedCount + stats.conflictCount
       }), { timeout: 20_000 }).toBe(0)
 
-      const { error: deleteError } = await admin.from('tasks').delete().eq('id', TASK_ID)
+      const { error: deleteError } = await admin.from('tasks').delete().in('id', [TASK_ID, DELETED_TASK_ID])
       expect(deleteError).toBeNull()
-      await admin.from('tombstones').delete().eq('entity_id', TASK_ID)
-      const { data: absent } = await admin.from('tasks').select('id').eq('id', TASK_ID)
+      await admin.from('tombstones').delete().in('entity_id', [TASK_ID, DELETED_TASK_ID, PERMANENT_DELETED_ID])
+      const { data: absent } = await admin.from('tasks').select('id').in('id', [TASK_ID, DELETED_TASK_ID])
       expect(absent).toEqual([])
 
       const restoreAnalysis = await page.evaluate(async ({ serializedBackup, taskId }) => {
@@ -129,6 +168,7 @@ test.describe.serial('absolute task backup and recovery', () => {
         restoreAnalysis.toRestore,
         restoreAnalysis.probeSkipReason ?? `analysis reported ${restoreAnalysis.available} available tasks`
       ).toContain(TASK_ID)
+      expect(restoreAnalysis.toRestore).toContain(DELETED_TASK_ID)
 
       const restoreResult = await page.evaluate(async (serializedBackup) => {
         const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
@@ -159,6 +199,30 @@ test.describe.serial('absolute task backup and recovery', () => {
       expect(restoredRow?.subtasks).toEqual(expect.arrayContaining([
         expect.objectContaining({ title: 'Recovery subtask', isCompleted: false }),
       ]))
+      const { data: restoredDeletedRow, error: restoredDeletedError } = await admin
+        .from('tasks')
+        .select('id,user_id,title,is_deleted')
+        .eq('id', DELETED_TASK_ID)
+        .single()
+      expect(restoredDeletedError).toBeNull()
+      expect(restoredDeletedRow).toEqual({
+        id: DELETED_TASK_ID,
+        user_id: userId,
+        title: DELETED_TASK_TITLE,
+        is_deleted: true,
+      })
+      const { data: restoredTombstone, error: restoredTombstoneError } = await admin
+        .from('tombstones')
+        .select('entity_type,entity_id,user_id,expires_at')
+        .eq('entity_id', PERMANENT_DELETED_ID)
+        .single()
+      expect(restoredTombstoneError).toBeNull()
+      expect(restoredTombstone).toEqual({
+        entity_type: 'task',
+        entity_id: PERMANENT_DELETED_ID,
+        user_id: userId,
+        expires_at: null,
+      })
 
       await page.reload()
       await page.waitForFunction((taskId) => {
@@ -180,8 +244,8 @@ test.describe.serial('absolute task backup and recovery', () => {
       }))
       expect(reloadedTask.tags).toEqual(expect.arrayContaining(['recovery', 'absolute-existence']))
     } finally {
-      await admin.from('tasks').delete().eq('id', TASK_ID)
-      await admin.from('tombstones').delete().eq('entity_id', TASK_ID)
+      await admin.from('tasks').delete().in('id', [TASK_ID, DELETED_TASK_ID])
+      await admin.from('tombstones').delete().in('entity_id', [TASK_ID, DELETED_TASK_ID, PERMANENT_DELETED_ID])
     }
   })
 

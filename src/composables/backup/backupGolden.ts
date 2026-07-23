@@ -217,14 +217,19 @@ export function createGoldenOperations(ctx: BackupContext): GoldenOperations {
       console.warn('[Backup] Could not fetch deleted IDs, restoring all items:', error)
     }
 
+    const filteredTasks = golden.tasks.filter(t => !deletedTaskIds.has(t.id))
     const filtered: BackupData = {
       ...golden,
-      tasks: golden.tasks.filter(t => !deletedTaskIds.has(t.id)),
+      tasks: filteredTasks,
       projects: (golden.projects || []).filter(p => !deletedProjectIds.has(p.id)),
       groups: (golden.groups || []).filter(g => !deletedGroupIds.has(g.id)),
       metadata: {
         ...golden.metadata,
-        taskCount: golden.tasks.filter(t => !deletedTaskIds.has(t.id)).length,
+        taskCount: filteredTasks.length,
+        activeTaskCount: filteredTasks.filter(task => !task._soft_deleted).length,
+        deletedTaskCount: filteredTasks.filter(task => task._soft_deleted).length,
+        completionRecordCount: filteredTasks.filter(task => task.isCompletionRecord).length,
+        workspaceTaskCount: filteredTasks.filter(task => Boolean(task.workspaceId)).length,
         projectCount: (golden.projects || []).filter(p => !deletedProjectIds.has(p.id)).length,
         groupCount: (golden.groups || []).filter(g => !deletedGroupIds.has(g.id)).length
       }
@@ -232,7 +237,8 @@ export function createGoldenOperations(ctx: BackupContext): GoldenOperations {
     filtered.checksum = calculateChecksum({
       tasks: filtered.tasks,
       projects: filtered.projects,
-      groups: filtered.groups
+      groups: filtered.groups,
+      ...(filtered.tombstones ? { tombstones: filtered.tombstones } : {}),
     })
     return filtered
   }

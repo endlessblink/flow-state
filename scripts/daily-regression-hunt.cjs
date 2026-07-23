@@ -83,6 +83,25 @@ const FIXED_DAILY_CHECKS = [
     timeoutMs: 240_000,
   },
   {
+    id: 'recoverability-pack',
+    title: 'Backup, restore, draft, and field-completeness guard',
+    command: [
+      'npm',
+      'test',
+      '--',
+      'tests/unit/backup-validation.test.ts',
+      'tests/unit/backup/backup-comprehensive.test.ts',
+      'tests/unit/scripts/backup-release-gates.test.ts',
+      'src/composables/backup/__tests__/backupPreservesDescription.test.ts',
+      'src/composables/tasks/__tests__/useTaskEditState.descriptionReset.test.ts',
+      'tests/unit/sync/task-sync-payload-completeness.test.ts',
+      'tests/unit/components/task-row-project.test.ts',
+      'tests/unit/stores/project-workspace-sync-scope.test.ts',
+    ],
+    failureClass: 'task consistency/data recoverability',
+    timeoutMs: 240_000,
+  },
+  {
     id: 'offline-reconnect-convergence',
     title: 'Offline create, edit, completion, and delete convergence',
     command: ['npm', 'run', 'test:offline-reconnect-flows'],
@@ -181,6 +200,13 @@ const WEEKLY_CHECKS = [
   ROTATING_DAILY_CHECKS[3],
   ROTATING_DAILY_CHECKS[6],
   ROTATING_DAILY_CHECKS[0],
+  {
+    id: 'backup-restore-e2e',
+    title: 'Live backup and restore recovery drill',
+    command: ['npm', 'run', 'test:restore:e2e'],
+    failureClass: 'task consistency/data recoverability',
+    timeoutMs: 300_000,
+  },
 ]
 
 function parseArgs(argv) {
@@ -258,6 +284,9 @@ function classifyFailure(text = '', fallback = 'unknown') {
   }
   if (/(canonical|notion activation|operation receipt|change sequence)/.test(value)) {
     return 'canonical assistant authority'
+  }
+  if (/(backup|restore|inventory|description reset|draft|recoverab|tombstone artifact)/.test(value)) {
+    return 'task consistency/data recoverability'
   }
   if (/(permanent.?delete|hard.?delete|undo|tombstone|trash)/.test(value)) {
     return 'permanent delete/undo'

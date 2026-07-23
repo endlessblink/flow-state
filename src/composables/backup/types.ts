@@ -12,6 +12,10 @@ export interface BackupData {
   tasks: Task[]
   projects: Project[]
   groups: CanvasGroup[]
+  tombstones?: Array<{
+    entityType: 'task' | 'group' | 'project' | 'lane'
+    entityId: string
+  }>
   /** App settings snapshot (Bug 3 fix). Sensitive fields excluded at capture time. */
   settings?: Record<string, unknown>
   timestamp: number
@@ -20,6 +24,11 @@ export interface BackupData {
   type: 'auto' | 'manual' | 'emergency'
   metadata?: {
     taskCount: number
+    activeTaskCount?: number
+    deletedTaskCount?: number
+    completionRecordCount?: number
+    workspaceTaskCount?: number
+    tombstoneCount?: number
     projectCount: number
     groupCount: number
     size?: number
@@ -83,6 +92,10 @@ export interface RestoreAnalysis {
     toRestore: number
     skipped: number
   }
+  tombstones: {
+    total: number
+    toRestore: number
+  }
   warnings: string[]
   canProceed: boolean
 }
@@ -118,7 +131,7 @@ export const GOLDEN_BACKUP_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 export const BACKUP_HISTORY_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 // TASK-156: Current backup schema version
-export const BACKUP_SCHEMA_VERSION = '3.2.0'
+export const BACKUP_SCHEMA_VERSION = '3.3.0'
 
 export const DEFAULT_CONFIG: BackupConfig = {
   enabled: true,

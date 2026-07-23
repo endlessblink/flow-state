@@ -17,9 +17,12 @@ import { BACKUP_SCHEMA_VERSION } from '../../src/composables/backup/types'
 
 // Mock dependencies
 const mockFetchDeletedTaskIds = vi.fn()
+const mockFetchTasks = vi.fn()
+const mockFetchTrash = vi.fn()
 const mockFetchDeletedProjectIds = vi.fn()
 const mockFetchDeletedGroupIds = vi.fn()
 const mockFetchTombstones = vi.fn()
+const mockRecordTombstone = vi.fn()
 const mockCheckTaskIdsAvailability = vi.fn()
 const mockSafeCreateTask = vi.fn()
 const mockSaveProjects = vi.fn()
@@ -30,9 +33,12 @@ const mockLogDedupDecision = vi.fn()
 vi.mock('@/composables/useSupabaseDatabase', () => ({
   useSupabaseDatabase: () => ({
     fetchDeletedTaskIds: mockFetchDeletedTaskIds,
+    fetchTasks: mockFetchTasks,
+    fetchTrash: mockFetchTrash,
     fetchDeletedProjectIds: mockFetchDeletedProjectIds,
     fetchDeletedGroupIds: mockFetchDeletedGroupIds,
     fetchTombstones: mockFetchTombstones,
+    recordTombstone: mockRecordTombstone,
     checkTaskIdsAvailability: mockCheckTaskIdsAvailability,
     safeCreateTask: mockSafeCreateTask,
     saveProjects: mockSaveProjects,
@@ -78,6 +84,7 @@ const mockCanvasStore = {
 vi.mock('@/stores/tasks', () => ({ useTaskStore: () => mockTaskStore }))
 vi.mock('@/stores/projects', () => ({ useProjectStore: () => mockProjectStore }))
 vi.mock('@/stores/canvas', () => ({ useCanvasStore: () => mockCanvasStore }))
+vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ user: { id: 'user-1' } }) }))
 
 // Mock localStorage with in-memory store
 let localStorageStore: Record<string, string> = {}
@@ -135,9 +142,12 @@ describe('TASK-332: Backup Reliability & Verification', () => {
 
     // Default mock implementations
     mockFetchDeletedTaskIds.mockResolvedValue([])
+    mockFetchTasks.mockResolvedValue([])
+    mockFetchTrash.mockResolvedValue([])
     mockFetchDeletedProjectIds.mockResolvedValue([])
     mockFetchDeletedGroupIds.mockResolvedValue([])
     mockFetchTombstones.mockResolvedValue([])
+    mockRecordTombstone.mockResolvedValue(true)
     mockCheckTaskIdsAvailability.mockResolvedValue([])
     mockSafeCreateTask.mockResolvedValue({ status: 'created', message: 'Created' })
     mockLogDedupDecision.mockResolvedValue(undefined)
@@ -180,6 +190,78 @@ describe('TASK-332: Backup Reliability & Verification', () => {
   // 2. Data Completeness Tests
   // =========================================================================
   describe('Data Completeness', () => {
+    it('includes active, deleted, completion, and workspace task identities in inventory metadata', async () => {
+      mockTaskStore.tasks = [
+        { id: 'active-1', title: 'Active', status: 'todo' },
+        { id: 'completion-1', title: 'Completion history', status: 'done', isCompletionRecord: true },
+      ]
+      mockFetchTasks.mockResolvedValue([
+        { id: 'active-1', title: 'Older remote copy', status: 'todo' },
+        { id: 'workspace-1', title: 'Shared', status: 'todo', workspaceId: 'workspace-a' },
+      ])
+      mockFetchTrash.mockResolvedValue([
+        { id: 'deleted-1', title: 'Deleted but recoverable', status: 'todo', _soft_deleted: true },
+      ])
+
+      const backup = await backupSystem.createBackup('manual')
+
+      expect(backup?.tasks.map(task => task.id).sort()).toEqual([
+        'active-1',
+        'completion-1',
+        'deleted-1',
+        'workspace-1',
+      ])
+      expect(backup?.metadata).toEqual(expect.objectContaining({
+        taskCount: 4,
+        activeTaskCount: 3,
+        deletedTaskCount: 1,
+        completionRecordCount: 1,
+        workspaceTaskCount: 1,
+      }))
+      expect(backup?.tasks.find(task => task.id === 'active-1')?.title).toBe('Active')
+    })
+
+    it('refuses to publish an incomplete backup when deleted-task inventory cannot be read', async () => {
+      mockTaskStore.tasks = [{ id: 'active-1', title: 'Active', status: 'todo' }]
+      mockFetchTrash.mockImplementation(async (options?: { onError?: () => void }) => {
+        options?.onError?.()
+        return []
+      })
+
+      const backup = await backupSystem.createBackup('manual')
+
+      expect(backup).toBeNull()
+      expect(backupSystem.state.value.error).toContain('deleted-task inventory')
+    })
+
+    it('includes permanent-delete tombstones in the checksummed inventory', async () => {
+      mockTaskStore.tasks = [{ id: 'active-1', title: 'Active', status: 'todo' }]
+      mockFetchTombstones.mockResolvedValue([
+        { entityType: 'task', entityId: 'gone-task' },
+        { entityType: 'project', entityId: 'gone-project' },
+      ])
+
+      const backup = await backupSystem.createBackup('manual')
+
+      expect(backup?.tombstones).toEqual([
+        { entityType: 'task', entityId: 'gone-task' },
+        { entityType: 'project', entityId: 'gone-project' },
+      ])
+      expect(backup?.metadata?.tombstoneCount).toBe(2)
+    })
+
+    it('refuses to publish a backup when permanent-delete inventory cannot be read', async () => {
+      mockFetchTombstones.mockImplementation(async (options?: { onError?: () => void }) => {
+        options?.onError?.()
+        return []
+      })
+
+      const backup = await backupSystem.createBackup('manual')
+
+      expect(backup).toBeNull()
+      expect(backupSystem.state.value.error).toContain('permanent-delete inventory')
+    })
+
     it('should include all required fields in backup', async () => {
       mockTaskStore.tasks = [{ id: 'task-1', title: 'Task 1' }]
       mockProjectStore.projects = [{ id: 'proj-1', name: 'Project 1' }]
@@ -465,6 +547,17 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       expect(analysis.tasks.available).toBe(0)
       expect(analysis.canProceed).toBe(false)
     })
+
+    it('reports a tombstone-only artifact as actionable recovery work', async () => {
+      const backup = createMockBackup(0)
+      backup.tombstones = [{ entityType: 'task', entityId: 'gone-task' }]
+      backup.metadata = { ...backup.metadata!, tombstoneCount: 1 }
+
+      const analysis = await backupSystem.analyzeRestore(backup)
+
+      expect(analysis.tombstones).toEqual({ total: 1, toRestore: 1 })
+      expect(analysis.canProceed).toBe(true)
+    })
   })
 
   describe('Restore execution fails closed', () => {
@@ -560,6 +653,64 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       expect(backupSystem.state.value.error).toContain('not readable')
     })
 
+    it('accepts exact deleted-state readback when recovering a soft-deleted task', async () => {
+      const backup = createMockBackup(1)
+      backup.tasks[0]._soft_deleted = true
+      backup.metadata = {
+        ...backup.metadata!,
+        activeTaskCount: 0,
+        deletedTaskCount: 1,
+        completionRecordCount: 0,
+        workspaceTaskCount: 0,
+      }
+      backup.checksum = 'checksum_0'
+      mockCheckTaskIdsAvailability.mockResolvedValue([
+        { taskId: 'task-1', status: 'soft_deleted', reason: 'Deleted task is readable in Trash' },
+      ])
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(true)
+      expect(mockSafeCreateTask).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'task-1',
+        _soft_deleted: true,
+      }))
+    })
+
+    it('restores and verifies permanent-delete tombstones after recoverable entities', async () => {
+      const backup = createMockBackup(1)
+      backup.tombstones = [{ entityType: 'task', entityId: 'gone-task' }]
+      backup.metadata = {
+        ...backup.metadata!,
+        tombstoneCount: 1,
+      }
+      backup.checksum = 'checksum_0'
+      mockFetchTombstones
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ entityType: 'task', entityId: 'gone-task' }])
+      mockCheckTaskIdsAvailability.mockResolvedValue([
+        { taskId: 'task-1', status: 'active', reason: 'Task is readable' },
+      ])
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(true)
+      expect(mockRecordTombstone).toHaveBeenCalledWith('task', 'gone-task')
+    })
+
+    it('does not apply permanent-delete markers when recoverable entity restore fails', async () => {
+      const backup = createMockBackup(1)
+      backup.tombstones = [{ entityType: 'task', entityId: 'gone-task' }]
+      backup.metadata = { ...backup.metadata!, tombstoneCount: 1 }
+      backup.checksum = 'checksum_0'
+      mockSafeCreateTask.mockResolvedValue({ status: 'error', message: 'Database write failed' })
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(mockRecordTombstone).not.toHaveBeenCalled()
+    })
+
     it('refuses a current-schema artifact with no checksum', async () => {
       const backup = createMockBackup(1, Date.now(), { checksum: '' })
 
@@ -586,6 +737,18 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         version: '3.1.0',
         checksum: 'legacy-serialization-checksum',
       })
+      mockCheckTaskIdsAvailability.mockResolvedValue([
+        { taskId: 'task-1', status: 'active', reason: 'Task is readable' },
+      ])
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(true)
+      expect(mockSafeCreateTask).toHaveBeenCalledTimes(1)
+    })
+
+    it('restores a valid 3.2.0 backup that predates tombstone inventory', async () => {
+      const backup = createMockBackup(1, Date.now(), { version: '3.2.0' })
       mockCheckTaskIdsAvailability.mockResolvedValue([
         { taskId: 'task-1', status: 'active', reason: 'Task is readable' },
       ])

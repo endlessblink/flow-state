@@ -361,7 +361,8 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       shadowBackup.checksum = calculateChecksum({
         tasks: shadowBackup.tasks,
         projects: shadowBackup.projects,
-        groups: shadowBackup.groups
+        groups: shadowBackup.groups,
+        ...(shadowBackup.tombstones ? { tombstones: shadowBackup.tombstones } : {}),
       })
       const result = await restoreOps.restoreBackup(
         shadowBackup,

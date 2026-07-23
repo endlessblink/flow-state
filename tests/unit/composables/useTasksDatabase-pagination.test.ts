@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 const gtCalls = vi.hoisted(() => [] as string[])
 const selectCalls = vi.hoisted(() => [] as unknown[][])
+const taskCache = vi.hoisted(() => new Map<string, unknown>())
 const rows = vi.hoisted(() => Array.from({ length: 1001 }, (_, index) => ({
   id: `task-${String(index).padStart(4, '0')}`,
   title: `Task ${index}`,
@@ -11,9 +12,14 @@ const rows = vi.hoisted(() => Array.from({ length: 1001 }, (_, index) => ({
 vi.mock('@/composables/supabase/_infrastructure', () => ({
   swrCache: {
     checkUserChange: vi.fn(),
-    getOrFetch: (_key: string, fetcher: () => Promise<unknown>) => fetcher(),
+    getOrFetch: async (key: string, fetcher: () => Promise<unknown>) => {
+      if (taskCache.has(key)) return taskCache.get(key)
+      const value = await fetcher()
+      taskCache.set(key, value)
+      return value
+    },
   },
-  invalidateCache: { tasks: vi.fn() },
+  invalidateCache: { tasks: vi.fn(() => taskCache.clear()) },
   getSupabase: () => ({
     from: () => {
       let afterId: string | null = null
@@ -69,5 +75,25 @@ describe('useTasksDatabase authoritative pagination', () => {
     expect(result).toHaveLength(1001)
     expect(gtCalls).toEqual(['task-0399', 'task-0799'])
     expect(selectCalls.every(call => JSON.stringify(call) === JSON.stringify(['*', { count: 'exact' }]))).toBe(true)
+  })
+
+  it('bypasses cached rows for an authoritative backup inventory read', async () => {
+    const database = useTasksDatabase({
+      authStore: { isInitialized: true, initialize: vi.fn() },
+      isSyncing: { value: false },
+      lastSyncError: { value: null },
+      getUserIdSafe: () => 'user-1',
+      withRetry: async (operation: () => Promise<unknown>) => operation(),
+      handleError: vi.fn(),
+    } as never)
+
+    await database.fetchTasks(undefined)
+    const queriesAfterCachedRead = selectCalls.length
+    await database.fetchTasks(undefined)
+    expect(selectCalls).toHaveLength(queriesAfterCachedRead)
+
+    await database.fetchTasks(undefined, { forceFresh: true })
+
+    expect(selectCalls.length).toBeGreaterThan(queriesAfterCachedRead)
   })
 })

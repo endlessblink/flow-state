@@ -433,6 +433,8 @@ export const useSmartViews = () => {
           return isUnscheduledTask(task)
         case 'in_progress':
           return isInProgressTask(task)
+        case 'all_active':
+          return task.status !== 'done'
         case 'quick':
           return isQuickTask(task)
         case 'short':

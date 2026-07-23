@@ -144,7 +144,7 @@
       {
         "id": "offline-queue-replay-and-auth-expiry",
         "issueSignals": ["BUG-1514", "BUG-1517", "BUG-1561", "BUG-1562", "BUG-1565", "BUG-1411", "BUG-1182"],
-        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-quick-create-ui-durability", "offline-user-entrypoint-parity", "durable-write-failure-visibility-and-rollback"]
+        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-quick-create-ui-durability", "offline-catalog-completion-durability", "offline-user-entrypoint-parity", "durable-write-failure-visibility-and-rollback"]
       },
       {
         "id": "realtime-gap-echo-and-resurrection",
@@ -390,6 +390,18 @@
       "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
       "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
       "liveEvidence": ["2026-07-23: authenticated Chromium R13 used the visible Quick Add input while the browser context was fully offline. The new task appeared in the renderer, drained to canonical Supabase after reconnect, converged in an independent client, and survived renderer reload. The isolated user-surface run passed in 22.0 seconds and is included in the daily and Electron release gate."]
+    },
+    {
+      "id": "offline-catalog-completion-durability",
+      "severity": "critical",
+      "status": "live-proven",
+      "failureClasses": ["queue-ordering-and-replay", "optimistic-rollback"],
+      "mutations": ["change-status", "complete"],
+      "surfaces": ["catalog"],
+      "states": ["offline", "reconnecting", "renderer-reloaded", "cross-client"],
+      "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
+      "liveEvidence": ["2026-07-23: authenticated Chromium R14 opened the current Catalog route, selected an active task, and used the visible right-click Mark as Done action while fully offline. The task immediately disappeared from the rendered All Active view, drained to canonical Supabase after reconnect, converged in an independent client, and remained absent from All Active after renderer reload. The isolated user-surface run passed in 22.0 seconds and is included in the daily and Electron release gate."]
     },
     {
       "id": "offline-user-entrypoint-parity",

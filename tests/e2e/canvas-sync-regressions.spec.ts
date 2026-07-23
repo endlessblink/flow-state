@@ -57,6 +57,12 @@ async function gotoCanvasReady(page: Page) {
   await page.waitForFunction(ready, { timeout: 30_000 })
 }
 
+async function gotoCatalogReady(page: Page) {
+  await page.goto('/#/catalog')
+  await page.waitForSelector('.all-tasks-view', { timeout: 30_000 })
+  await page.getByText('All Active', { exact: true }).click()
+}
+
 test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
   // Serial: every test re-seeds the SAME fixed IDs in beforeEach. Under parallel
   // workers two tests would delete/insert the same rows concurrently and flake.
@@ -443,6 +449,57 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
       return tasks.rawTasks.find((candidate: any) => candidate.title === title)?.id ?? null
     }, OFFLINE_QUICK_CREATE_TITLE)).toBe(persistedId)
+  })
+
+  test('R14 - Catalog right-click completion works offline, drains after reconnect, reaches another client, and survives reload', async ({ clientA, clientB }) => {
+    await gotoCatalogReady(clientA)
+    await gotoCanvasReady(clientB)
+
+    const task = ROOT_TASKS[0]
+    const taskRow = clientA.locator('.hierarchical-task-row').filter({ hasText: task.title }).first()
+    await expect(taskRow).toBeVisible()
+    await clientA.context().setOffline(true)
+    await taskRow.click({ button: 'right' })
+    await clientA.getByText('Mark as Done', { exact: true }).click()
+
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, task.id)).toBe('done')
+    await expect(taskRow).toBeHidden()
+
+    await clientA.context().setOffline(false)
+
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,status,is_deleted')
+        .eq('id', task.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: task.id,
+        status: 'done',
+        is_deleted: false,
+      }))
+    }).toPass({ timeout: 20_000 })
+
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, task.id), { timeout: 20_000 }).toBe('done')
+
+    await clientA.reload()
+    await clientA.waitForSelector('.all-tasks-view', { timeout: 30_000 })
+    await clientA.getByText('All Active', { exact: true }).click()
+    await expect(clientA.locator('.hierarchical-task-row').filter({ hasText: task.title })).toHaveCount(0)
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, task.id)).toBe('done')
   })
 
   test('R11 - offline edit and completion drain after reconnect and survive reload', async ({ clientA, clientB }) => {

@@ -51,3 +51,21 @@ describe("useSmartViews today filtering", () => {
     ).toBe(true);
   });
 });
+
+describe("useSmartViews all-active filtering", () => {
+  it("excludes completed tasks while retaining every active status", () => {
+    const { applySmartViewFilter } = useSmartViews();
+    const tasks = [
+      makeTask({ id: "todo", status: "todo" }),
+      makeTask({ id: "planned", status: "planned" }),
+      makeTask({ id: "in-progress", status: "in_progress" }),
+      makeTask({ id: "done", status: "done" }),
+    ];
+
+    expect(applySmartViewFilter(tasks, "all_active").map(task => task.id)).toEqual([
+      "todo",
+      "planned",
+      "in-progress",
+    ]);
+  });
+});

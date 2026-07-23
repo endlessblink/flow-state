@@ -7,6 +7,7 @@
     "complete",
     "reopen",
     "done-for-now",
+    "done-for-now-next-occurrence",
     "schedule",
     "move",
     "pin",
@@ -29,6 +30,7 @@
     "reconnecting",
     "realtime-dropped",
     "cross-client",
+    "guest-mode",
     "workspace-switched",
     "renderer-reloaded",
     "electron-restarted",
@@ -75,6 +77,28 @@
       "layers": ["renderer-component", "renderer-store"],
       "automatedEvidence": ["src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts"],
       "liveEvidence": []
+    },
+    {
+      "id": "guest-mutation-reload-durability",
+      "severity": "critical",
+      "status": "automated",
+      "mutations": ["create", "edit-metadata", "change-status", "complete", "reopen", "schedule", "move", "pin", "subtask-change", "delete"],
+      "surfaces": ["catalog", "board", "calendar", "canvas", "quick-create"],
+      "states": ["visible", "renderer-reloaded", "offline"],
+      "layers": ["renderer-store", "guest-local-storage", "indexeddb-read-cache"],
+      "automatedEvidence": ["tests/unit/stores/task-store-crud.test.ts", "tests/user-flows/task-management.spec.ts", "tests/unit/user-flow-playwright-config.test.ts"],
+      "liveEvidence": ["2026-07-23: the task-management browser rotation reproduced right-click Mark as Done reverting from Done to Todo after reload for a guest quick-add task. Root cause: updateTask acknowledged the IndexedDB queue/cache path but never updated guest mode's actual reload authority in localStorage. The strengthened three-test user flow passed after guest-authority persistence and durable cache acknowledgement were added."]
+    },
+    {
+      "id": "guest-recurring-completion-authority",
+      "severity": "critical",
+      "status": "automated",
+      "mutations": ["complete", "done-for-now-next-occurrence"],
+      "surfaces": ["catalog", "board", "canvas"],
+      "states": ["guest-mode", "renderer-reloaded", "recurring"],
+      "layers": ["renderer-store", "guest-local-storage", "recurrence-engine", "signed-transaction-boundary"],
+      "automatedEvidence": ["tests/unit/stores/task-store-crud.test.ts", "tests/user-flows/task-management.spec.ts"],
+      "liveEvidence": ["2026-07-23: a guest recurring task reproduced the user-visible 'Failed to complete task' class because Done for now always routed through the signed Supabase transaction path. The guest fallback now advances the occurrence, writes the completion record, and survives reload in the task-flow browser gate."]
     },
     {
       "id": "independent-client-metadata-convergence",

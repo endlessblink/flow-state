@@ -82,4 +82,113 @@ test.describe('Task Management', () => {
         //   await hideDoneBtn.click();
         // }
     });
+
+    test('right-click completion persists after reload', async ({ page }) => {
+        const taskTitle = `Recurring Action Gate ${Date.now()}`;
+        const quickAddInput = page.getByPlaceholder(/Quick add task/i);
+        await quickAddInput.fill(taskTitle);
+        await quickAddInput.press('Enter');
+        await page.getByText('Inbox', { exact: true }).click();
+
+        const taskRow = page.locator('.hierarchical-task-row').filter({ hasText: taskTitle }).first();
+        await expect(taskRow).toBeVisible();
+        await taskRow.click({ button: 'right' });
+        await page.getByText('Mark as Done', { exact: true }).click();
+
+        await expect.poll(async () => page.evaluate((title) => {
+            const root = document.querySelector('#app') as any;
+            const tasks = root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks');
+            return tasks?.rawTasks.find((task: any) => task.title === title)?.status;
+        }, taskTitle)).toBe('done');
+
+        await page.reload();
+        await page.waitForSelector('.all-tasks-view');
+        await expect.poll(async () => page.evaluate((title) => {
+            const root = document.querySelector('#app') as any;
+            const tasks = root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks');
+            return tasks?.rawTasks.find((task: any) => task.title === title)?.status;
+        }, taskTitle)).toBe('done');
+    });
+
+    test('recurring guest mark-as-done advances to the next occurrence without an error toast', async ({ page }) => {
+        const taskId = `00000000-0000-4000-8000-${String(Date.now()).slice(-12).padStart(12, '0')}`;
+        const taskTitle = `Recurring Guest Gate ${Date.now()}`;
+        await page.evaluate(({ taskId, taskTitle }) => {
+            const now = new Date().toISOString();
+            localStorage.setItem('flowstate-guest-tasks', JSON.stringify([{
+                id: taskId,
+                title: taskTitle,
+                description: '',
+                status: 'todo',
+                priority: 'medium',
+                progress: 0,
+                completedPomodoros: 0,
+                subtasks: [],
+                dueDate: '2026-07-23',
+                estimatedDuration: 25,
+                projectId: 'inbox',
+                isInInbox: true,
+                createdAt: now,
+                updatedAt: now,
+                recurrenceRule: {
+                    pattern: 'daily',
+                    interval: 1,
+                    endType: 'never',
+                },
+            }]));
+        }, { taskId, taskTitle });
+
+        await page.reload();
+        await page.waitForSelector('.all-tasks-view');
+        await page.getByText('Inbox', { exact: true }).click();
+
+        const taskRow = page.locator('.hierarchical-task-row').filter({ hasText: taskTitle }).first();
+        await expect(taskRow).toBeVisible();
+        await taskRow.click({ button: 'right' });
+        await page.getByText('Mark as Done', { exact: true }).click();
+
+        await expect(page.getByText('Failed to complete task', { exact: true })).toHaveCount(0);
+        await expect.poll(async () => page.evaluate(([taskTitle, taskId]) => {
+            const root = document.querySelector('#app') as any;
+            const tasks = root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks');
+            const living = tasks?.rawTasks.find((task: any) => task.id === taskId);
+            const completion = tasks?.rawTasks.find((task: any) => task.recurrenceParentId === taskId && task.isCompletionRecord);
+            return {
+                title: living?.title,
+                status: living?.status,
+                dueDate: living?.dueDate,
+                doneForNowUntil: living?.doneForNowUntil,
+                recurrenceCount: living?.recurrenceCount,
+                completionDueDate: completion?.dueDate,
+                completionStatus: completion?.status,
+            };
+        }, [taskTitle, taskId])).toEqual({
+            title: taskTitle,
+            status: 'todo',
+            dueDate: '2026-07-24',
+            doneForNowUntil: '2026-07-24',
+            recurrenceCount: 1,
+            completionDueDate: '2026-07-23',
+            completionStatus: 'done',
+        });
+
+        await page.reload();
+        await page.waitForSelector('.all-tasks-view');
+        await expect.poll(async () => page.evaluate((taskId) => {
+            const root = document.querySelector('#app') as any;
+            const tasks = root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks');
+            const living = tasks?.rawTasks.find((task: any) => task.id === taskId);
+            return {
+                status: living?.status,
+                dueDate: living?.dueDate,
+                doneForNowUntil: living?.doneForNowUntil,
+                recurrenceCount: living?.recurrenceCount,
+            };
+        }, taskId)).toEqual({
+            status: 'todo',
+            dueDate: '2026-07-24',
+            doneForNowUntil: '2026-07-24',
+            recurrenceCount: 1,
+        });
+    });
 });

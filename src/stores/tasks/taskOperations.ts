@@ -455,6 +455,7 @@ export function useTaskOperations(
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
+        const authStore = useAuthStore()
         const task = _rawTasks.value[index]
         updates = sanitizeGeometryUpdates(updates, source, task, taskId)
         if (Object.keys(updates).length === 0) return
@@ -1095,13 +1096,13 @@ export function useTaskOperations(
                 }
             }
 
-            // TASK-1428: Update IndexedDB read cache so offline reloads see the updated task.
-            // Geometry changes must be durable before restart/update handoff can interrupt JS.
+            // TASK-1428: Update IndexedDB read cache so reloads see the acknowledged mutation.
+            // Every update must await this boundary: a fast reload can otherwise hydrate the
+            // previous snapshot even though the UI already reported the action as complete.
             const cacheSnapshot = [..._rawTasks.value]
-            if (hasGeometryChange) {
-                await cacheTasks(cacheSnapshot)
-            } else {
-                cacheTasks(cacheSnapshot)
+            await cacheTasks(cacheSnapshot, { throwOnError: true })
+            if (!authStore.user?.id) {
+                await saveTasksToStorage(cacheSnapshot, 'update-task-guest-durability')
             }
         } finally {
             if (!wasManualInProgress) manualOperationInProgress.value = false
@@ -1408,6 +1409,7 @@ export function useTaskOperations(
 
         doneForNowInFlight.add(taskId)
         try {
+            const authStore = useAuthStore()
 
         // 1. Stop timer if running on this task
         // BUG-1569: Dynamic import to break circular dependency
@@ -1419,6 +1421,63 @@ export function useTaskOperations(
             }
         } catch (e) {
             console.warn('[Timer] Auto-stop on done-for-now failed:', e)
+        }
+
+        if (!authStore.user?.id) {
+            const { computeNextDueDate } = await import('@/utils/recurrenceUtils')
+            const currentDueDate = task.dueDate || formatDateKey(new Date())
+            const nextDueDate = options.nextDueDate ?? computeNextDueDate(
+                currentDueDate,
+                task.recurrenceRule,
+                (task.recurrenceCount || 0) + 1,
+            )
+            const completedAt = new Date()
+            const completionRecord: Task = {
+                ...task,
+                id: crypto.randomUUID(),
+                status: 'done',
+                completedAt,
+                dueDate: currentDueDate,
+                recurrenceRule: undefined,
+                recurrenceParentId: task.recurrenceParentId || task.id,
+                recurrenceCount: task.recurrenceCount || 0,
+                isCompletionRecord: true,
+                instances: task.instances
+                    ?.filter(inst => inst.scheduledDate === currentDueDate)
+                    .map(inst => ({ ...inst, status: 'completed' as const })) || [],
+                parentId: undefined,
+                canvasPosition: undefined,
+                isInInbox: false,
+            }
+            const nextInstances: TaskInstance[] = nextDueDate
+                ? [{
+                    id: crypto.randomUUID(),
+                    taskId,
+                    scheduledDate: nextDueDate,
+                    scheduledTime: task.dueTime,
+                    duration: task.estimatedDuration || 25,
+                    status: 'scheduled',
+                }]
+                : []
+            const updatedTask: Task = {
+                ...task,
+                status: nextDueDate ? 'todo' : 'done',
+                completedAt: nextDueDate ? undefined : completedAt,
+                dueDate: nextDueDate || currentDueDate,
+                doneForNowUntil: nextDueDate || undefined,
+                recurrenceCount: (task.recurrenceCount || 0) + 1,
+                instances: nextInstances,
+                subtasks: task.subtasks?.map(st => ({ ...st, isCompleted: false, updatedAt: new Date() })) || [],
+                parentId: undefined,
+                canvasPosition: undefined,
+                isInInbox: !!nextDueDate,
+            }
+            const taskIndex = _rawTasks.value.findIndex(candidate => candidate.id === taskId)
+            if (taskIndex !== -1) _rawTasks.value.splice(taskIndex, 1, updatedTask)
+            _rawTasks.value.push(completionRecord)
+            await cacheTasks([..._rawTasks.value], { throwOnError: true })
+            await saveTasksToStorage([..._rawTasks.value], 'done-for-now-guest-durability')
+            return
         }
 
         // 2. Preview and apply the same canonical transaction used by the Local Task API.

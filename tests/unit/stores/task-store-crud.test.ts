@@ -17,6 +17,10 @@ import { createMockTask } from '../../factories'
 
 const mockEnqueue = vi.fn().mockResolvedValue({ id: 1, status: 'pending' })
 const mockCacheTasks = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
+const mockAuth = vi.hoisted(() => ({
+  user: { id: '00000000-0000-0000-0000-000000000001' } as { id: string } | null,
+  isAuthenticated: true,
+}))
 
 vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
   useSyncOrchestrator: () => ({
@@ -76,10 +80,7 @@ vi.mock('@/services/auth/supabase', () => ({
 }))
 
 vi.mock('@/stores/auth', () => ({
-  useAuthStore: () => ({
-    user: { id: '00000000-0000-0000-0000-000000000001' },
-    isAuthenticated: true
-  })
+  useAuthStore: () => mockAuth
 }))
 
 vi.mock('@/composables/useGamificationHooks', () => ({
@@ -132,6 +133,9 @@ describe('Task Store — CRUD', () => {
     mockCacheTasks.mockResolvedValue(undefined)
     mockSaveTasks.mockResolvedValue(undefined)
     mockDeleteTask.mockResolvedValue(undefined)
+    mockAuth.user = { id: '00000000-0000-0000-0000-000000000001' }
+    mockAuth.isAuthenticated = true
+    localStorage.clear()
   })
 
   it('creates task with minimal fields and fills defaults', async () => {
@@ -278,6 +282,92 @@ describe('Task Store — CRUD', () => {
     expect(updated?.parentId).toBe('group-a')
     expect(updated?.canvasPosition).toEqual({ x: 120, y: 240 })
     expect(updated?.positionVersion).toBe(4)
+  })
+
+  it('does not acknowledge a status update before the reload cache is durable', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({ title: 'Durable completion', status: 'todo' })
+    const priorCacheCalls = mockCacheTasks.mock.calls.length
+    let finishCache!: () => void
+    mockCacheTasks.mockReturnValueOnce(new Promise<void>(resolve => {
+      finishCache = resolve
+    }))
+    let resolved = false
+
+    const update = store.updateTask(task.id, { status: 'done' }).then(() => {
+      resolved = true
+    })
+    await vi.waitFor(() => expect(mockCacheTasks.mock.calls.length).toBeGreaterThan(priorCacheCalls))
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    expect(resolved).toBe(false)
+    finishCache()
+    await update
+    expect(resolved).toBe(true)
+  })
+
+  it('persists guest status updates to the guest reload authority', async () => {
+    mockAuth.user = null
+    mockAuth.isAuthenticated = false
+    const store = useTaskStore()
+    const task = await store.createTask({ title: 'Guest completion', status: 'todo' })
+
+    await store.updateTask(task.id, { status: 'done' })
+
+    const persisted = JSON.parse(localStorage.getItem('flowstate-guest-tasks') || '[]')
+    expect(persisted.find((candidate: { id: string }) => candidate.id === task.id)?.status).toBe('done')
+  })
+
+  it('advances recurring guest tasks to the next occurrence without the signed-in transaction path', async () => {
+    mockAuth.user = null
+    mockAuth.isAuthenticated = false
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Guest recurring completion',
+      status: 'todo',
+      dueDate: '2026-07-23',
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+      estimatedDuration: 25,
+    })
+
+    await store.doneForNow(task.id)
+
+    const livingTask = store._rawTasks.find(candidate => candidate.id === task.id)
+    expect(livingTask).toMatchObject({
+      id: task.id,
+      status: 'todo',
+      dueDate: '2026-07-24',
+      doneForNowUntil: '2026-07-24',
+      recurrenceCount: 1,
+    })
+    expect(livingTask?.instances).toEqual([
+      expect.objectContaining({
+        taskId: task.id,
+        scheduledDate: '2026-07-24',
+        duration: 25,
+        status: 'scheduled',
+      }),
+    ])
+
+    const completionRecord = store._rawTasks.find(candidate => candidate.recurrenceParentId === task.id && candidate.isCompletionRecord)
+    expect(completionRecord).toMatchObject({
+      status: 'done',
+      dueDate: '2026-07-23',
+      recurrenceParentId: task.id,
+      isCompletionRecord: true,
+    })
+
+    const persisted = JSON.parse(localStorage.getItem('flowstate-guest-tasks') || '[]')
+    expect(persisted.find((candidate: { id: string }) => candidate.id === task.id)).toMatchObject({
+      status: 'todo',
+      dueDate: '2026-07-24',
+      doneForNowUntil: '2026-07-24',
+      recurrenceCount: 1,
+    })
   })
 
   it('updates task priority', async () => {

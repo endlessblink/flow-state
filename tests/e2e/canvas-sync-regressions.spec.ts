@@ -35,6 +35,7 @@ const ROOT_TASKS = [
 const INBOX_TASK = { id: 'd1000000-0000-4000-8000-000000000004', title: 'Sync Regr Inbox 1' }
 const CREATED_TASK = { id: 'd1000000-0000-4000-8000-000000000006', title: 'Absolute Existence Probe' }
 const OFFLINE_TASK = { id: 'd1000000-0000-4000-8000-000000000007', title: 'Offline Reconnect Probe' }
+const OFFLINE_QUICK_CREATE_TITLE = 'Offline Quick Create Probe'
 const DROP_TARGET = { x: 2600, y: 2600 }
 
 const GROUP_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccc01' // real UUID — legacy IDs skip group sync
@@ -71,6 +72,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     userId = user.id
 
     await admin.from('tasks').delete().in('id', ALL_IDS)
+    await admin.from('tasks').delete().eq('user_id', userId).eq('title', OFFLINE_QUICK_CREATE_TITLE)
     await admin.from('groups').delete().eq('id', GROUP_ID)
     await admin.from('tombstones').delete().in('entity_id', [...ALL_IDS, GROUP_ID])
 
@@ -108,6 +110,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
   test.afterAll(async () => {
     if (!admin) return
     await admin.from('tasks').delete().in('id', ALL_IDS)
+    await admin.from('tasks').delete().eq('user_id', userId).eq('title', OFFLINE_QUICK_CREATE_TITLE)
     await admin.from('groups').delete().eq('id', GROUP_ID)
     await admin.from('groups').delete().eq('user_id', userId).eq('name', 'Monday') // R7 migrated group
     await admin.from('tombstones').delete().in('entity_id', [...ALL_IDS, GROUP_ID])
@@ -384,6 +387,62 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       id: OFFLINE_TASK.id,
       title: OFFLINE_TASK.title,
     }))
+  })
+
+  test('R13 - Quick Create works offline, drains after reconnect, reaches another client, and survives reload', async ({ clientA, clientB }) => {
+    await gotoCanvasReady(clientA)
+    await gotoCanvasReady(clientB)
+
+    const quickCreate = clientA.getByPlaceholder(/Quick add task/i)
+    await expect(quickCreate).toBeVisible()
+    await clientA.context().setOffline(true)
+    await quickCreate.fill(OFFLINE_QUICK_CREATE_TITLE)
+    await quickCreate.press('Enter')
+
+    await expect.poll(async () => clientA.evaluate((title) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.title === title)?.id ?? null
+    }, OFFLINE_QUICK_CREATE_TITLE), { timeout: 10_000 }).not.toBeNull()
+
+    await clientA.context().setOffline(false)
+
+    let persistedId = ''
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,title,is_deleted')
+        .eq('user_id', userId)
+        .eq('title', OFFLINE_QUICK_CREATE_TITLE)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        title: OFFLINE_QUICK_CREATE_TITLE,
+        is_deleted: false,
+      }))
+      persistedId = data?.id ?? ''
+      expect(persistedId).not.toBe('')
+    }).toPass({ timeout: 20_000 })
+
+    await expect(async () => {
+      const task = await clientB.evaluate((title) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        return tasks.rawTasks.find((candidate: any) => candidate.title === title) ?? null
+      }, OFFLINE_QUICK_CREATE_TITLE)
+      expect(task).toEqual(expect.objectContaining({
+        id: persistedId,
+        title: OFFLINE_QUICK_CREATE_TITLE,
+      }))
+    }).toPass({ timeout: 20_000 })
+
+    await clientA.reload()
+    await gotoCanvasReady(clientA)
+    await expect.poll(async () => clientA.evaluate((title) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.title === title)?.id ?? null
+    }, OFFLINE_QUICK_CREATE_TITLE)).toBe(persistedId)
   })
 
   test('R11 - offline edit and completion drain after reconnect and survive reload', async ({ clientA, clientB }) => {

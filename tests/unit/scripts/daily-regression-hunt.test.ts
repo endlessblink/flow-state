@@ -179,7 +179,7 @@ describe('daily regression hunt script', () => {
     expect(packageJson.scripts['regression:daily']).toBe('node scripts/daily-regression-hunt.cjs --mode daily')
     expect(packageJson.scripts['regression:weekly']).toBe('node scripts/daily-regression-hunt.cjs --mode weekly')
     expect(packageJson.scripts['regression:report']).toBe('node scripts/daily-regression-hunt.cjs --latest')
-    expect(packageJson.scripts['test:offline-reconnect-flows']).toContain('R10|R11|R12')
+    expect(packageJson.scripts['test:offline-reconnect-flows']).toContain('R10|R11|R12|R13')
     expect(packageJson.scripts['preelectron:build']).toContain('test:offline-reconnect-flows')
   })
 

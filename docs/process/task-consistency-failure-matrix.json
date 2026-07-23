@@ -144,7 +144,7 @@
       {
         "id": "offline-queue-replay-and-auth-expiry",
         "issueSignals": ["BUG-1514", "BUG-1517", "BUG-1561", "BUG-1562", "BUG-1565", "BUG-1411", "BUG-1182"],
-        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-user-entrypoint-parity", "durable-write-failure-visibility-and-rollback"]
+        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-quick-create-ui-durability", "offline-user-entrypoint-parity", "durable-write-failure-visibility-and-rollback"]
       },
       {
         "id": "realtime-gap-echo-and-resurrection",
@@ -380,12 +380,24 @@
       "liveEvidence": ["2026-07-23: a real browser created a full task, produced a serialization-stable backup, simulated loss of both the Supabase row and disaster-lost tombstone, restored through production backup code, read back identity and metadata from Supabase, and found the same task after renderer reload; isolated E2E passed in 16.9 seconds; complete inventory reconciliation, concurrent-write recovery, and a packaged Electron recovery drill remain open", "2026-07-23: after fail-closed restore validation, a fresh live browser drill again created, backed up, deleted, restored, read back, and reloaded a full task through production code; the isolated end-to-end run passed in 19.2 seconds."]
     },
     {
+      "id": "offline-quick-create-ui-durability",
+      "severity": "critical",
+      "status": "live-proven",
+      "failureClasses": ["queue-ordering-and-replay", "optimistic-rollback"],
+      "mutations": ["create"],
+      "surfaces": ["quick-create"],
+      "states": ["offline", "reconnecting", "renderer-reloaded", "cross-client"],
+      "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
+      "liveEvidence": ["2026-07-23: authenticated Chromium R13 used the visible Quick Add input while the browser context was fully offline. The new task appeared in the renderer, drained to canonical Supabase after reconnect, converged in an independent client, and survived renderer reload. The isolated user-surface run passed in 22.0 seconds and is included in the daily and Electron release gate."]
+    },
+    {
       "id": "offline-user-entrypoint-parity",
       "severity": "critical",
       "status": "open",
       "failureClasses": ["queue-ordering-and-replay", "optimistic-rollback", "write-failure-visibility"],
-      "mutations": ["create", "edit-metadata", "change-status", "complete", "delete"],
-      "surfaces": ["catalog", "board", "canvas", "quick-create"],
+      "mutations": ["edit-metadata", "change-status", "complete", "delete"],
+      "surfaces": ["catalog", "board", "canvas"],
       "states": ["offline", "reconnecting", "renderer-reloaded"],
       "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
       "automatedEvidence": [],

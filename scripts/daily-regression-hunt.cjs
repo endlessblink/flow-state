@@ -83,6 +83,13 @@ const FIXED_DAILY_CHECKS = [
     timeoutMs: 240_000,
   },
   {
+    id: 'offline-reconnect-convergence',
+    title: 'Offline create, edit, completion, and delete convergence',
+    command: ['npm', 'run', 'test:offline-reconnect-flows'],
+    failureClass: 'task consistency/offline sync queue',
+    timeoutMs: 240_000,
+  },
+  {
     id: 'canonical-assistant-contract',
     title: 'Canonical operation, Notion activation, and convergence authority',
     command: [

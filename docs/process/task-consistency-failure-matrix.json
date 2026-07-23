@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "flowstate-task-consistency-matrix-v1",
+  "schemaVersion": "flowstate-task-consistency-matrix-v2",
   "requiredMutations": [
     "create",
     "edit-metadata",
@@ -43,6 +43,81 @@
     "restore-drill",
     "concurrent-write"
   ],
+  "requiredSurfaces": [
+    "ai-actions",
+    "all-views",
+    "backup",
+    "batch-edit",
+    "board",
+    "calendar",
+    "canvas",
+    "catalog",
+    "electron",
+    "external-client",
+    "focus",
+    "kde",
+    "lane",
+    "local-task-api",
+    "pwa",
+    "quick-create",
+    "quick-tasks",
+    "renderer-store",
+    "supabase",
+    "task-inventory",
+    "unified-inbox"
+  ],
+  "requiredLayers": [
+    "backup-artifact",
+    "canonical-change-log",
+    "canonical-receipt",
+    "electron-main-preload",
+    "electron-package",
+    "guest-local-storage",
+    "indexeddb-read-cache",
+    "kde",
+    "local-api-documentation",
+    "local-task-api",
+    "live-process",
+    "recurrence-engine",
+    "renderer-component",
+    "renderer-selection",
+    "renderer-store",
+    "restore-procedure",
+    "service-worker-cache",
+    "signed-transaction-boundary",
+    "supabase-persistence",
+    "supabase-realtime",
+    "supabase-rls",
+    "sync-queue",
+    "sync-transport",
+    "task-inventory",
+    "undo",
+    "updater-manifest"
+  ],
+  "requiredFailureClasses": [
+    "auth-expiry-and-recovery",
+    "backup-restore-and-inventory",
+    "cache-corruption-and-stale-snapshots",
+    "canvas-geometry-persistence",
+    "concurrent-conflict-resolution",
+    "cross-tab-echo-and-deduplication",
+    "delete-tombstone-and-undo",
+    "external-contract-drift",
+    "hierarchy-and-project-integrity",
+    "identity-and-field-mapping",
+    "optimistic-rollback",
+    "partial-batch-atomicity",
+    "queue-ordering-and-replay",
+    "realtime-gap-recovery",
+    "recurrence-lifecycle",
+    "selection-and-filter-scope",
+    "service-worker-cache-skew",
+    "timer-cross-runtime-coordination",
+    "timezone-and-date-projection",
+    "updater-artifact-and-live-runtime",
+    "workspace-scope-isolation",
+    "write-failure-visibility"
+  ],
   "requiredDataGuarantees": [
     "server-read-after-write",
     "independent-client-readback",
@@ -55,11 +130,80 @@
     "restore-round-trip",
     "point-in-time-recovery-drill"
   ],
+  "historyAudit": {
+    "reviewedThrough": "2026-07-23",
+    "sources": ["docs/MASTER_PLAN.md", "git log --all", "tests"],
+    "gitCommitSignals": ["f65fc589", "e27e0cfc", "805d5b74", "3041b893", "9f68e70d", "cd872ca1", "59bd332e", "e1556314", "348b6118", "4503bc74", "ff4539e0", "b22811a4"],
+    "testSignals": ["tests/unit/services/canonical-task-patch.test.ts", "tests/unit/sync/sync-orchestrator.test.ts", "tests/unit/kde/timer-sync.test.ts", "tests/unit/undo-task-operations.test.ts", "tests/e2e/done-for-now-live-sync.spec.ts", "tests/e2e/backup-restore-live.spec.ts", "tests/contract/canonical-task-renderer-authority.test.ts", "tests/unit/stores/task-store-crud.test.ts", "tests/unit/sync/cross-tab-sync.test.ts", "tests/unit/backup-validation.test.ts"],
+    "clusters": [
+      {
+        "id": "authentication-and-runtime-recovery",
+        "issueSignals": ["BUG-1920", "BUG-1926", "BUG-1927", "BUG-1922", "BUG-1889", "BUG-1895", "BUG-1870", "BUG-1865", "BUG-1944", "BUG-1731", "BUG-1103"],
+        "vectorIds": ["guest-mutation-reload-durability", "timer-task-existence-and-restart", "updater-runtime-and-package-provenance"]
+      },
+      {
+        "id": "offline-queue-replay-and-auth-expiry",
+        "issueSignals": ["BUG-1514", "BUG-1517", "BUG-1561", "BUG-1562", "BUG-1565", "BUG-1411", "BUG-1182"],
+        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-user-entrypoint-parity", "durable-write-failure-visibility-and-rollback"]
+      },
+      {
+        "id": "realtime-gap-echo-and-resurrection",
+        "issueSignals": ["BUG-1921", "BUG-1869", "BUG-1799", "BUG-1728", "BUG-1723", "BUG-1320"],
+        "vectorIds": ["independent-client-metadata-convergence", "workspace-scope-isolation", "delete-restore-and-tombstone-recoverability"]
+      },
+      {
+        "id": "workspace-scope-and-rls-isolation",
+        "issueSignals": ["BUG-1886", "BUG-1741", "BUG-1740", "BUG-1738", "BUG-1563", "BUG-1564"],
+        "vectorIds": ["workspace-scope-isolation", "create-existence-readback", "task-hierarchy-and-project-membership-integrity"]
+      },
+      {
+        "id": "canvas-geometry-membership-and-cache",
+        "issueSignals": ["BUG-1804", "BUG-1800", "BUG-1796", "BUG-1792", "BUG-1781", "BUG-1782", "BUG-1780", "BUG-1776", "BUG-1732", "BUG-1736"],
+        "vectorIds": ["canvas-geometry-and-membership-durability", "bulk-and-hidden-selection-consistency"]
+      },
+      {
+        "id": "task-shape-title-and-hierarchy-integrity",
+        "issueSignals": ["BUG-1795", "BUG-1778", "BUG-1777", "BUG-347", "TASK-1524"],
+        "vectorIds": ["canonical-identity-for-every-renderer-action", "task-hierarchy-and-project-membership-integrity", "backup-restore-absolute-data-existence"]
+      },
+      {
+        "id": "delete-undo-and-permanent-delete",
+        "issueSignals": ["BUG-1925", "BUG-1941", "BUG-1934", "BUG-1737", "BUG-309", "TASK-1525"],
+        "vectorIds": ["delete-restore-and-tombstone-recoverability", "bulk-and-hidden-selection-consistency", "durable-write-failure-visibility-and-rollback"]
+      },
+      {
+        "id": "recurrence-date-and-calendar-projection",
+        "issueSignals": ["BUG-1971", "BUG-1901", "BUG-1909", "BUG-1935", "TASK-1520", "TASK-1521", "TASK-1785"],
+        "vectorIds": ["recurring-completion-durability", "context-menu-label-and-action-parity", "guest-recurring-completion-authority"]
+      },
+      {
+        "id": "timer-cross-runtime-coordination",
+        "issueSignals": ["BUG-1923", "BUG-1924", "BUG-1888", "BUG-1896", "BUG-1894", "BUG-1891", "BUG-1868", "BUG-1583", "BUG-1898", "BUG-1919"],
+        "vectorIds": ["timer-task-existence-and-restart", "updater-runtime-and-package-provenance"]
+      },
+      {
+        "id": "cache-corruption-and-mass-resurrection",
+        "issueSignals": ["BUG-1582", "BUG-1533", "BUG-1802", "BUG-1880", "BUG-1801"],
+        "vectorIds": ["guest-mutation-reload-durability", "canvas-geometry-and-membership-durability", "backup-restore-absolute-data-existence"]
+      },
+      {
+        "id": "local-api-and-external-contract-drift",
+        "issueSignals": ["TASK-1797", "TASK-1928", "TASK-1929", "BUG-1933", "BUG-1965"],
+        "vectorIds": ["local-api-canonical-client-contract-parity", "create-existence-readback", "pwa-service-worker-contract-skew"]
+      },
+      {
+        "id": "release-process-and-live-runtime-truth",
+        "issueSignals": ["TASK-1930", "TASK-1931", "TASK-1927", "BUG-1946", "BUG-1932"],
+        "vectorIds": ["updater-runtime-and-package-provenance", "timer-task-existence-and-restart", "durable-write-failure-visibility-and-rollback"]
+      }
+    ]
+  },
   "vectors": [
     {
       "id": "canonical-identity-for-every-renderer-action",
       "severity": "critical",
       "status": "automated",
+      "failureClasses": ["identity-and-field-mapping", "optimistic-rollback"],
       "mutations": ["edit-metadata", "change-status", "complete", "reopen", "schedule", "move", "pin", "subtask-change", "bulk-update", "delete", "start-timer"],
       "surfaces": ["catalog", "board", "lane", "calendar", "canvas", "focus", "quick-tasks", "ai-actions", "batch-edit"],
       "states": ["visible", "filtered-hidden", "stale-snapshot"],
@@ -71,6 +215,7 @@
       "id": "context-menu-label-and-action-parity",
       "severity": "critical",
       "status": "automated",
+      "failureClasses": ["identity-and-field-mapping", "recurrence-lifecycle"],
       "mutations": ["complete", "reopen", "done-for-now"],
       "surfaces": ["catalog", "board", "lane", "calendar", "canvas"],
       "states": ["visible", "stale-snapshot", "recurring"],
@@ -82,6 +227,7 @@
       "id": "guest-mutation-reload-durability",
       "severity": "critical",
       "status": "automated",
+      "failureClasses": ["cache-corruption-and-stale-snapshots", "optimistic-rollback"],
       "mutations": ["create", "edit-metadata", "change-status", "complete", "reopen", "schedule", "move", "pin", "subtask-change", "delete"],
       "surfaces": ["catalog", "board", "calendar", "canvas", "quick-create"],
       "states": ["visible", "renderer-reloaded", "offline"],
@@ -93,6 +239,7 @@
       "id": "guest-recurring-completion-authority",
       "severity": "critical",
       "status": "automated",
+      "failureClasses": ["recurrence-lifecycle", "external-contract-drift"],
       "mutations": ["complete", "done-for-now-next-occurrence"],
       "surfaces": ["catalog", "board", "canvas"],
       "states": ["guest-mode", "renderer-reloaded", "recurring"],
@@ -104,6 +251,7 @@
       "id": "independent-client-metadata-convergence",
       "severity": "critical",
       "status": "live-proven",
+      "failureClasses": ["realtime-gap-recovery", "concurrent-conflict-resolution"],
       "mutations": ["edit-metadata", "change-status", "schedule", "move"],
       "surfaces": ["catalog", "board", "calendar", "canvas"],
       "states": ["cross-client", "realtime-dropped", "concurrent-write"],
@@ -112,20 +260,22 @@
       "liveEvidence": ["2026-07-23: local Supabase with the canonical task migration and two independent Chromium contexts converged persisted title and tags from client A to client B in 5.0 seconds"]
     },
     {
-      "id": "offline-queue-and-reconnect-convergence",
+      "id": "offline-store-queue-and-reconnect-convergence",
       "severity": "critical",
-      "status": "automated",
-      "mutations": ["create", "edit-metadata", "change-status", "complete", "delete"],
-      "surfaces": ["catalog", "board", "canvas", "quick-create"],
+      "status": "live-proven",
+      "failureClasses": ["queue-ordering-and-replay", "realtime-gap-recovery"],
+      "mutations": ["create", "edit-metadata", "change-status", "delete"],
+      "surfaces": ["renderer-store"],
       "states": ["offline", "reconnecting", "realtime-dropped"],
       "layers": ["renderer-store", "sync-queue", "supabase-persistence"],
-      "automatedEvidence": ["tests/unit/sync/sync-orchestrator.test.ts", "tests/unit/app-realtime-delete-contract.test.ts"],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/unit/sync/sync-orchestrator.test.ts", "tests/unit/app-realtime-delete-contract.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
+      "liveEvidence": ["2026-07-23: authenticated Chromium R10-R12 ran against local canonical Supabase with the browser context fully offline during each direct renderer-store mutation. Offline create, metadata edit plus status change, and soft delete remained correct in the store, drained after reconnect, converged in persisted rows and an independent client, and survived renderer reload. This proves renderer-store and queue convergence only; offline Catalog, Board, Canvas, and Quick Create controls remain separately open."]
     },
     {
       "id": "recurring-completion-durability",
       "severity": "critical",
       "status": "open",
+      "failureClasses": ["recurrence-lifecycle", "timezone-and-date-projection"],
       "mutations": ["done-for-now", "complete", "reopen", "schedule"],
       "surfaces": ["catalog", "calendar", "canvas"],
       "states": ["recurring", "renderer-reloaded", "electron-restarted"],
@@ -137,28 +287,43 @@
       "id": "create-existence-readback",
       "severity": "critical",
       "status": "open",
+      "failureClasses": ["identity-and-field-mapping", "backup-restore-and-inventory"],
       "mutations": ["create"],
       "surfaces": ["quick-create", "catalog", "canvas", "local-task-api"],
       "states": ["renderer-reloaded", "electron-restarted", "workspace-switched"],
       "layers": ["renderer-store", "local-task-api", "supabase-persistence", "task-inventory"],
       "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts"],
-      "liveEvidence": ["2026-07-23: R9 created a fixed-identity task through the real store, read the complete non-deleted row from local Supabase, observed it in an independent Chromium client, and observed it again after that client reloaded; the isolated end-to-end run passed in 17.3 seconds; Electron restart, workspace switch, local task API, and inventory proof remain open"]
+      "liveEvidence": ["2026-07-23: R9 created a fixed-identity task through the real store, read the complete non-deleted row from local Supabase, observed it in an independent Chromium client, and observed it again after that client reloaded; the isolated end-to-end run passed in 17.3 seconds; Electron restart, workspace switch, local task API, and inventory proof remain open", "2026-07-23: installed Electron 1.4.286 created task ca80d2d3-ba73-49de-805f-bf14a7221421 through the canonical Local Task API lifecycle, then exact read-back, title search, and a fresh complete 53-task inventory returned the same identity. After SIGKILL and supervised Electron restart, all three boundaries still returned the task at canonical revision 1. Workspace-switch proof remains open."]
+    },
+    {
+      "id": "local-api-canonical-client-contract-parity",
+      "severity": "critical",
+      "status": "live-proven",
+      "failureClasses": ["external-contract-drift", "identity-and-field-mapping"],
+      "mutations": ["create", "change-status", "delete", "restore"],
+      "surfaces": ["local-task-api", "external-client"],
+      "states": ["electron-restarted", "cross-client"],
+      "layers": ["local-api-documentation", "local-task-api", "canonical-receipt"],
+      "automatedEvidence": ["tests/unit/local-api/server-contract.test.ts"],
+      "liveEvidence": ["2026-07-23: installed Electron 1.4.286 returned canonical_lifecycle_required from the legacy documented POST /api/tasks route, proving the connector example was stale. The canonical task-lifecycle-v1 preview/apply route then created, soft-deleted, restored, and soft-deleted the same task with verified receipts. Documentation and its contract gate now require the canonical route."]
     },
     {
       "id": "delete-restore-and-tombstone-recoverability",
       "severity": "critical",
       "status": "automated",
+      "failureClasses": ["delete-tombstone-and-undo", "queue-ordering-and-replay"],
       "mutations": ["delete", "restore", "permanent-delete"],
       "surfaces": ["catalog", "board", "canvas", "local-task-api"],
       "states": ["tombstoned", "renderer-reloaded", "backup-restore"],
       "layers": ["renderer-store", "undo", "sync-queue", "supabase-persistence"],
       "automatedEvidence": ["tests/unit/undo-task-operations.test.ts", "tests/unit/composables/useSupabaseDatabase-delete.test.ts", "tests/unit/bug-1737-undo-delete-race.test.ts"],
-      "liveEvidence": []
+      "liveEvidence": ["2026-07-23: installed Electron 1.4.286 soft-deleted the live audit task through canonical lifecycle revision 2, exact read-back returned 404, then restored the same identity and title at revision 3 into a fresh complete inventory. After forced Electron restart the restored row remained exact, and final canonical soft-delete cleanup committed with exact read-back returning 404."]
     },
     {
       "id": "bulk-and-hidden-selection-consistency",
       "severity": "high",
       "status": "open",
+      "failureClasses": ["selection-and-filter-scope", "partial-batch-atomicity"],
       "mutations": ["bulk-update", "complete", "move", "delete"],
       "surfaces": ["catalog", "board", "canvas", "unified-inbox", "batch-edit"],
       "states": ["batch-selected", "filtered-hidden"],
@@ -170,6 +335,7 @@
       "id": "timer-task-existence-and-restart",
       "severity": "critical",
       "status": "automated",
+      "failureClasses": ["timer-cross-runtime-coordination", "auth-expiry-and-recovery"],
       "mutations": ["start-timer", "stop-timer"],
       "surfaces": ["catalog", "calendar", "canvas", "quick-tasks", "kde"],
       "states": ["filtered-hidden", "electron-restarted", "sidecar-unavailable"],
@@ -181,6 +347,7 @@
       "id": "workspace-scope-isolation",
       "severity": "critical",
       "status": "automated",
+      "failureClasses": ["workspace-scope-isolation", "cross-tab-echo-and-deduplication"],
       "mutations": ["create", "edit-metadata", "delete", "restore"],
       "surfaces": ["all-views", "local-task-api"],
       "states": ["workspace-switched", "cross-client"],
@@ -192,6 +359,7 @@
       "id": "updater-runtime-and-package-provenance",
       "severity": "critical",
       "status": "automated",
+      "failureClasses": ["updater-artifact-and-live-runtime", "auth-expiry-and-recovery"],
       "mutations": ["create", "edit-metadata", "complete", "delete"],
       "surfaces": ["electron"],
       "states": ["updater-stale", "electron-restarted"],
@@ -203,12 +371,73 @@
       "id": "backup-restore-absolute-data-existence",
       "severity": "critical",
       "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "concurrent-conflict-resolution"],
       "mutations": ["create", "edit-metadata", "subtask-change", "delete", "backup", "restore"],
       "surfaces": ["supabase", "backup", "task-inventory"],
       "states": ["backup-restore", "backup-corrupt", "inventory-mismatch", "restore-drill", "tombstoned", "concurrent-write"],
       "layers": ["supabase-persistence", "backup-artifact", "restore-procedure", "task-inventory"],
       "automatedEvidence": ["tests/unit/backup-validation.test.ts", "tests/unit/backup/backup-comprehensive.test.ts", "tests/unit/scripts/backup-release-gates.test.ts", "tests/e2e/backup-restore-live.spec.ts"],
       "liveEvidence": ["2026-07-23: a real browser created a full task, produced a serialization-stable backup, simulated loss of both the Supabase row and disaster-lost tombstone, restored through production backup code, read back identity and metadata from Supabase, and found the same task after renderer reload; isolated E2E passed in 16.9 seconds; complete inventory reconciliation, concurrent-write recovery, and a packaged Electron recovery drill remain open", "2026-07-23: after fail-closed restore validation, a fresh live browser drill again created, backed up, deleted, restored, read back, and reloaded a full task through production code; the isolated end-to-end run passed in 19.2 seconds."]
+    },
+    {
+      "id": "offline-user-entrypoint-parity",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["queue-ordering-and-replay", "optimistic-rollback", "write-failure-visibility"],
+      "mutations": ["create", "edit-metadata", "change-status", "complete", "delete"],
+      "surfaces": ["catalog", "board", "canvas", "quick-create"],
+      "states": ["offline", "reconnecting", "renderer-reloaded"],
+      "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "canvas-geometry-and-membership-durability",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["canvas-geometry-persistence", "cache-corruption-and-stale-snapshots", "concurrent-conflict-resolution"],
+      "mutations": ["move", "bulk-update", "delete", "restore"],
+      "surfaces": ["canvas"],
+      "states": ["stale-snapshot", "renderer-reloaded", "electron-restarted", "concurrent-write"],
+      "layers": ["renderer-store", "indexeddb-read-cache", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": ["src/composables/canvas/__tests__/canvasDeleteUndo.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "task-hierarchy-and-project-membership-integrity",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["hierarchy-and-project-integrity", "identity-and-field-mapping", "delete-tombstone-and-undo"],
+      "mutations": ["subtask-change", "move", "delete", "restore", "permanent-delete"],
+      "surfaces": ["catalog", "board", "canvas", "unified-inbox"],
+      "states": ["filtered-hidden", "tombstoned", "workspace-switched", "concurrent-write"],
+      "layers": ["renderer-store", "sync-queue", "supabase-persistence", "supabase-rls"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "pwa-service-worker-contract-skew",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["service-worker-cache-skew", "external-contract-drift", "auth-expiry-and-recovery"],
+      "mutations": ["create", "edit-metadata", "complete", "delete"],
+      "surfaces": ["pwa"],
+      "states": ["offline", "reconnecting", "updater-stale", "renderer-reloaded"],
+      "layers": ["service-worker-cache", "renderer-store", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "durable-write-failure-visibility-and-rollback",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["write-failure-visibility", "optimistic-rollback", "partial-batch-atomicity"],
+      "mutations": ["create", "edit-metadata", "change-status", "complete", "bulk-update", "delete", "permanent-delete"],
+      "surfaces": ["all-views", "batch-edit"],
+      "states": ["offline", "reconnecting", "stale-snapshot", "concurrent-write"],
+      "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
     }
   ]
 }

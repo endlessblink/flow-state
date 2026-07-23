@@ -34,6 +34,7 @@ const ROOT_TASKS = [
 ]
 const INBOX_TASK = { id: 'd1000000-0000-4000-8000-000000000004', title: 'Sync Regr Inbox 1' }
 const CREATED_TASK = { id: 'd1000000-0000-4000-8000-000000000006', title: 'Absolute Existence Probe' }
+const OFFLINE_TASK = { id: 'd1000000-0000-4000-8000-000000000007', title: 'Offline Reconnect Probe' }
 const DROP_TARGET = { x: 2600, y: 2600 }
 
 const GROUP_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccc01' // real UUID — legacy IDs skip group sync
@@ -43,7 +44,7 @@ const CHILD_TASK = { id: 'd1000000-0000-4000-8000-000000000005', title: 'Sync Re
 let admin: SupabaseClient
 let userId: string
 
-const ALL_IDS = [...ROOT_TASKS.map((t) => t.id), INBOX_TASK.id, CHILD_TASK.id, CREATED_TASK.id]
+const ALL_IDS = [...ROOT_TASKS.map((t) => t.id), INBOX_TASK.id, CHILD_TASK.id, CREATED_TASK.id, OFFLINE_TASK.id]
 
 async function gotoCanvasReady(page: Page) {
   const ready = () => {
@@ -306,6 +307,208 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       }))
       expect(task.tags).toContain('existence-probe')
     }).toPass({ timeout: 12_000 })
+  })
+
+  test('R10 - a task created offline drains after reconnect, reaches another client, and survives reload', async ({ clientA, clientB }) => {
+    await gotoCanvasReady(clientA)
+    await gotoCanvasReady(clientB)
+    await clientA.context().setOffline(true)
+
+    const createdId = await clientA.evaluate(async (task) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const created = await tasks.createTask({
+        id: task.id,
+        title: task.title,
+        description: 'Created while the browser context was offline',
+        status: 'planned',
+        priority: 'medium',
+        tags: ['offline-reconnect-probe'],
+        isInInbox: true,
+      })
+      return created.id
+    }, OFFLINE_TASK)
+    expect(createdId).toBe(OFFLINE_TASK.id)
+
+    const localWhileOffline = await clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId) ?? null
+    }, OFFLINE_TASK.id)
+    expect(localWhileOffline).toEqual(expect.objectContaining({
+      id: OFFLINE_TASK.id,
+      title: OFFLINE_TASK.title,
+    }))
+
+    await clientA.context().setOffline(false)
+
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,title,description,status,priority,tags,is_deleted')
+        .eq('id', OFFLINE_TASK.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: OFFLINE_TASK.id,
+        title: OFFLINE_TASK.title,
+        description: 'Created while the browser context was offline',
+        status: 'planned',
+        priority: 'medium',
+        is_deleted: false,
+      }))
+      expect(data?.tags).toContain('offline-reconnect-probe')
+    }).toPass({ timeout: 20_000 })
+
+    await expect(async () => {
+      const task = await clientB.evaluate((taskId) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        return tasks.rawTasks.find((candidate: any) => candidate.id === taskId) ?? null
+      }, OFFLINE_TASK.id)
+      expect(task).toEqual(expect.objectContaining({
+        id: OFFLINE_TASK.id,
+        title: OFFLINE_TASK.title,
+      }))
+      expect(task.tags).toContain('offline-reconnect-probe')
+    }).toPass({ timeout: 20_000 })
+
+    await clientA.reload()
+    await gotoCanvasReady(clientA)
+    const taskAfterReload = await clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId) ?? null
+    }, OFFLINE_TASK.id)
+    expect(taskAfterReload).toEqual(expect.objectContaining({
+      id: OFFLINE_TASK.id,
+      title: OFFLINE_TASK.title,
+    }))
+  })
+
+  test('R11 - offline edit and completion drain after reconnect and survive reload', async ({ clientA, clientB }) => {
+    await gotoCanvasReady(clientA)
+    await gotoCanvasReady(clientB)
+    const taskId = ROOT_TASKS[1].id
+    const updatedTitle = 'Offline Edit and Completion Probe'
+    await clientA.context().setOffline(true)
+
+    await clientA.evaluate(async ({ taskId, updatedTitle }) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      await tasks.updateTask(taskId, {
+        title: updatedTitle,
+        status: 'done',
+        tags: ['offline-completion-probe'],
+      }, 'USER')
+    }, { taskId, updatedTitle })
+
+    const localWhileOffline = await clientA.evaluate((id) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === id)
+      return { title: task?.title, status: task?.status, tags: task?.tags }
+    }, taskId)
+    expect(localWhileOffline).toEqual({
+      title: updatedTitle,
+      status: 'done',
+      tags: ['offline-completion-probe'],
+    })
+
+    await clientA.context().setOffline(false)
+
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('title,status,tags,is_deleted')
+        .eq('id', taskId)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        title: updatedTitle,
+        status: 'done',
+        is_deleted: false,
+      }))
+      expect(data?.tags).toContain('offline-completion-probe')
+    }).toPass({ timeout: 20_000 })
+
+    await expect(async () => {
+      const state = await clientB.evaluate((id) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        const task = tasks.rawTasks.find((candidate: any) => candidate.id === id)
+        return { title: task?.title, status: task?.status, tags: task?.tags }
+      }, taskId)
+      expect(state).toEqual({
+        title: updatedTitle,
+        status: 'done',
+        tags: expect.arrayContaining(['offline-completion-probe']),
+      })
+    }).toPass({ timeout: 20_000 })
+
+    await clientA.reload()
+    await gotoCanvasReady(clientA)
+    const afterReload = await clientA.evaluate((id) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === id)
+      return { title: task?.title, status: task?.status, tags: task?.tags }
+    }, taskId)
+    expect(afterReload).toEqual({
+      title: updatedTitle,
+      status: 'done',
+      tags: expect.arrayContaining(['offline-completion-probe']),
+    })
+  })
+
+  test('R12 - offline delete drains after reconnect and remains absent after reload', async ({ clientA, clientB }) => {
+    await gotoCanvasReady(clientA)
+    await gotoCanvasReady(clientB)
+    const taskId = ROOT_TASKS[2].id
+    await clientA.context().setOffline(true)
+
+    await clientA.evaluate(async (id) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      await tasks.deleteTask(id)
+    }, taskId)
+    const localVisibleOffline = await clientA.evaluate((id) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.tasks.some((candidate: any) => candidate.id === id)
+    }, taskId)
+    expect(localVisibleOffline).toBe(false)
+
+    await clientA.context().setOffline(false)
+
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('is_deleted,deleted_at')
+        .eq('id', taskId)
+        .single()
+      expect(error).toBeNull()
+      expect(data?.is_deleted).toBe(true)
+      expect(data?.deleted_at).toBeTruthy()
+    }).toPass({ timeout: 20_000 })
+
+    await expect(async () => {
+      const visible = await clientB.evaluate((id) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        return tasks.tasks.some((candidate: any) => candidate.id === id)
+      }, taskId)
+      expect(visible).toBe(false)
+    }).toPass({ timeout: 20_000 })
+
+    await clientA.reload()
+    await gotoCanvasReady(clientA)
+    const visibleAfterReload = await clientA.evaluate((id) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.tasks.some((candidate: any) => candidate.id === id)
+    }, taskId)
+    expect(visibleAfterReload).toBe(false)
   })
 
   // ── R5: moving a node on A propagates LIVE to independent client B ──────────

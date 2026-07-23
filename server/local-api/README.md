@@ -285,15 +285,36 @@ This route is also a filtered sample and cannot provide an exact total.
 }
 ```
 
-### `POST /api/tasks`
-`title` required; `priority` ∈ `low|medium|high|null`; `status` defaults to `todo`.
+### `POST /api/tasks/lifecycle`
+
+Canonical preview/apply endpoint for task creation, status changes, soft deletion,
+and restoration. Direct `POST /api/tasks` is intentionally blocked with
+`canonical_lifecycle_required`.
+
 ```json
-// body
-{ "title": "Draft Q3 plan", "description": "", "priority": "high",
-  "dueDate": "2026-06-01", "projectId": "uuid-optional" }
-// 200
-{ "ok": true, "task": { "id": "new-uuid" } }
+// create preview
+{
+  "operationId": "stable-client-operation-id",
+  "taskId": "client-generated-uuid",
+  "baseRevision": 0,
+  "action": "create",
+  "preview": true,
+  "payload": {
+    "title": "Draft Q3 plan",
+    "status": "planned",
+    "description": "",
+    "priority": "high",
+    "dueDate": "2026-06-01",
+    "projectId": null
+  }
+}
 ```
+
+After explicit approval, repeat the exact request with `"preview": false` plus
+the server-issued `previewDigest`, `previewExpiresAt`, and `requestHash`.
+Creation returns a validated `task-lifecycle-v1` committed receipt. The same
+contract uses `action: 'set_status'`, `action: 'soft_delete'`, or
+`action: 'restore'` with the task's current canonical revision.
 
 ### `PATCH /api/tasks/:id`
 Preview-first canonical patch for `title`, `description`, `priority`, `dueDate`,
@@ -629,7 +650,7 @@ Soft-deletes a task for the current user (`is_deleted=true`, `deleted_at=now`).
 Every response is JSON. Errors are `{ "error": "<message>" }` — the handler
 never throws past itself.
 
-## Life OS connector (~30 lines)
+## Life OS connector
 
 In token mode the bearer token is **required** — copy it from FlowState's
 Settings → Account → Local Task API and set it as `FLOW_STATE_API_TOKEN` for Life OS.
@@ -645,21 +666,68 @@ export async function getTasks(opts: { status?: 'todo' | 'open' | 'done'; due?: 
   if (opts.due) q.set('due', opts.due)
   const suffix = q.size ? `?${q}` : ''
   const r = await fetch(`${BASE}/api/tasks${suffix}`, { headers })
-  return (await r.json()).tasks as Array<{ id: string; title: string; status: string; priority: string | null; dueDate: string | null; projectId: string | null }>
+  return (await r.json()).tasks as Array<{ id: string; title: string; status: string; priority: string | null; dueDate: string | null; projectId: string | null; canonicalRevision: number }>
 }
 
-export async function createTask(input: { title: string; description?: string; priority?: 'low' | 'medium' | 'high' | null; dueDate?: string; projectId?: string }) {
-  const r = await fetch(`${BASE}/api/tasks`, { method: 'POST', headers, body: JSON.stringify(input) })
-  return r.json() // { ok, task: { id } }
+async function approvedLifecycle(request: {
+  operationId: string
+  taskId: string
+  baseRevision: number
+  action: 'create' | 'set_status' | 'soft_delete' | 'restore'
+  payload: Record<string, unknown>
+}) {
+  const preview = await fetch(`${BASE}/api/tasks/lifecycle`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ ...request, preview: true }),
+  }).then(r => r.json())
+  if (!preview.ok) throw new Error(preview.error?.message || 'Task preview failed')
+
+  const committed = await fetch(`${BASE}/api/tasks/lifecycle`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      ...request,
+      preview: false,
+      previewDigest: preview.previewDigest,
+      previewExpiresAt: preview.previewExpiresAt,
+      requestHash: preview.requestHash,
+    }),
+  }).then(r => r.json())
+  if (!committed.ok) throw new Error(committed.error?.message || 'Task commit failed')
+  return committed
 }
 
-export async function updateTask(id: string, patch: { status?: 'todo' | 'done'; title?: string; priority?: 'low' | 'medium' | 'high' | null; dueDate?: string; progress?: number }) {
-  const r = await fetch(`${BASE}/api/tasks/${id}`, { method: 'PATCH', headers, body: JSON.stringify(patch) })
-  return r.json() // { ok: true } or { error }
+export function createTask(input: {
+  title: string
+  description?: string
+  priority?: 'low' | 'medium' | 'high' | null
+  dueDate?: string | null
+  projectId?: string | null
+}) {
+  return approvedLifecycle({
+    operationId: crypto.randomUUID(),
+    taskId: crypto.randomUUID(),
+    baseRevision: 0,
+    action: 'create',
+    payload: {
+      title: input.title,
+      status: 'planned',
+      description: input.description || '',
+      priority: input.priority ?? null,
+      dueDate: input.dueDate ?? null,
+      projectId: input.projectId ?? null,
+    },
+  })
 }
 
-export async function deleteTask(id: string) {
-  const r = await fetch(`${BASE}/api/tasks/${id}`, { method: 'DELETE', headers })
-  return r.json() // { ok: true } or { error }
+export function deleteTask(id: string, canonicalRevision: number) {
+  return approvedLifecycle({
+    operationId: crypto.randomUUID(),
+    taskId: id,
+    baseRevision: canonicalRevision,
+    action: 'soft_delete',
+    payload: {},
+  })
 }
 ```

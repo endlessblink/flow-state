@@ -6,6 +6,10 @@ const SERVER_CJS = readFileSync(
   resolve(__dirname, '../../../server/local-api/server.cjs'),
   'utf-8',
 )
+const README = readFileSync(
+  resolve(__dirname, '../../../server/local-api/README.md'),
+  'utf-8',
+)
 
 function functionBody(name: string): string {
   const start = SERVER_CJS.indexOf(`function ${name}(`)
@@ -113,6 +117,14 @@ describe('Local API sidecar timer endpoint regression contract', () => {
     expect(legacyRoute).toBeGreaterThan(tokenCheck)
     expect(legacyBody).toContain('canonical_lifecycle_required')
     expect(legacyBody).not.toContain(".from('tasks').insert")
+  })
+
+  it('documents canonical lifecycle creation instead of the blocked legacy endpoint', () => {
+    expect(README).toContain('### `POST /api/tasks/lifecycle`')
+    expect(README).toContain("action: 'create'")
+    expect(README).toMatch(/getTasks[\s\S]*canonicalRevision: number[\s\S]*deleteTask\(id: string, canonicalRevision: number\)/)
+    expect(README).not.toContain('### `POST /api/tasks`\n')
+    expect(README).not.toContain('fetch(`${BASE}/api/tasks`, { method: \'POST\'')
   })
 
   it('diagnoses timer boundary state without exposing secrets or full task rows', () => {

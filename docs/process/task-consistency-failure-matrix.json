@@ -292,8 +292,8 @@
       "surfaces": ["board", "canvas", "catalog"],
       "states": ["visible", "recurring", "renderer-reloaded", "electron-restarted", "offline", "reconnecting"],
       "layers": ["renderer-component", "renderer-store", "local-task-api", "supabase-persistence", "canonical-change-log"],
-      "automatedEvidence": [],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
+      "liveEvidence": ["2026-07-23: authenticated Chromium R18 exercised the exact Board right-click More > Done for now > Next occurrence path while fully offline. The renderer advanced the living occurrence optimistically, reconnect persisted the advanced row plus exactly one completion row, an independent client converged, and reload retained the advanced occurrence. The isolated real-surface run passed in 17.9 seconds. Board reopen, scheduling, concurrent action, and packaged Electron restart remain open."]
     },
     {
       "id": "create-existence-readback",
@@ -425,7 +425,7 @@
       "states": ["offline", "reconnecting", "renderer-reloaded"],
       "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
       "automatedEvidence": ["tests/unit/sync/sync-orchestrator.test.ts", "tests/unit/services/canonical-change-app-integration.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
-      "liveEvidence": ["2026-07-23: authenticated Chromium R14 proved the Catalog right-click Mark as Done path offline through reconnect, independent-client convergence, and reload. R15 proved the Canvas recurring right-click Done for now > Next occurrence path through the same boundaries, including exactly-once completion and canonical catch-up after a missed Realtime event. Board actions and the remaining edit/delete surface permutations remain open."]
+      "liveEvidence": ["2026-07-23: authenticated Chromium R14 proved the Catalog right-click Mark as Done path offline through reconnect, independent-client convergence, and reload. R15 proved the Canvas recurring right-click Done for now > Next occurrence path through the same boundaries, including exactly-once completion and canonical catch-up after a missed Realtime event. R17 then proved Board right-click Mark as Done through the same offline, canonical persistence, independent-client, and reload boundaries in 28.9 seconds. R18 proved Board recurring More > Done for now > Next occurrence while offline, including one and only one completion row, an advanced living occurrence, independent-client convergence, and reload durability in 17.9 seconds. Board edit/delete and the remaining surface permutations remain open."]
     },
     {
       "id": "board-offline-right-click-completion-parity",
@@ -436,8 +436,8 @@
       "surfaces": ["board", "catalog"],
       "states": ["offline", "reconnecting", "renderer-reloaded", "cross-client"],
       "layers": ["renderer-component", "renderer-store", "sync-queue", "canonical-change-log", "supabase-persistence"],
-      "automatedEvidence": [],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
+      "liveEvidence": ["2026-07-23: authenticated Chromium R17 used the visible Board card right-click Mark as Done action while fully offline. The store changed immediately, reconnect persisted canonical status, an independent client converged, and renderer reload retained done status. The isolated real-surface run passed in 28.9 seconds. Board recurring completion was separately proved by R18; reopen and packaged Electron restart remain open."]
     },
     {
       "id": "board-offline-edit-delete-entrypoint-parity",

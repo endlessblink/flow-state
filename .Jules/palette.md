@@ -1,0 +1,3 @@
+## 2024-05-14 - Dynamic ARIA labels for icon-only toggles
+**Learning:** For accessibility in icon-only buttons where the action changes dynamically (like showing/hiding a password or an API key), a static `aria-label` or `title` is insufficient and can be confusing. Screen readers will misinterpret the current state if it's just "Toggle visibility".
+**Action:** Always dynamically bind the `:aria-label` attribute using a ternary operator based on the toggle state (e.g., `:aria-label="showPassword ? 'Hide password' : 'Show password'"`) to ensure screen readers announce the correct current action.

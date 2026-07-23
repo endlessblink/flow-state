@@ -33,6 +33,7 @@ const ROOT_TASKS = [
   { id: 'd1000000-0000-4000-8000-000000000003', title: 'Sync Regr Root 3', x: 2200, y: 2400 },
 ]
 const INBOX_TASK = { id: 'd1000000-0000-4000-8000-000000000004', title: 'Sync Regr Inbox 1' }
+const CREATED_TASK = { id: 'd1000000-0000-4000-8000-000000000006', title: 'Absolute Existence Probe' }
 const DROP_TARGET = { x: 2600, y: 2600 }
 
 const GROUP_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccc01' // real UUID — legacy IDs skip group sync
@@ -42,7 +43,7 @@ const CHILD_TASK = { id: 'd1000000-0000-4000-8000-000000000005', title: 'Sync Re
 let admin: SupabaseClient
 let userId: string
 
-const ALL_IDS = [...ROOT_TASKS.map((t) => t.id), INBOX_TASK.id, CHILD_TASK.id]
+const ALL_IDS = [...ROOT_TASKS.map((t) => t.id), INBOX_TASK.id, CHILD_TASK.id, CREATED_TASK.id]
 
 async function gotoCanvasReady(page: Page) {
   const ready = () => {
@@ -189,6 +190,13 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
 
   // ── R2: a field change on A propagates to an INDEPENDENT client B ──────────
   test('R2 - task field update on client A reaches independent client B via Realtime', async ({ clientA, clientB }) => {
+    const clientBLogs: string[] = []
+    clientB.on('console', message => {
+      const text = message.text()
+      if (text.includes('[REALTIME]') || text.includes('[HANDLER]') || text.includes('[CANONICAL-CATCHUP]')) {
+        clientBLogs.push(text)
+      }
+    })
     await gotoCanvasReady(clientA)
     await gotoCanvasReady(clientB)
     await waitForCanvasNodes(clientB, ROOT_TASKS.length)
@@ -201,16 +209,102 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       return tasks.updateTask(taskId, { title, tags: ['sync-probe'] }, 'USER')
     }, { title: newTitle, taskId: ROOT_TASKS[0].id })
 
-    // Client B must reflect both the title AND the non-core field within ~10s.
     await expect(async () => {
-      const state = await clientB.evaluate((taskId) => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('title,tags')
+        .eq('id', ROOT_TASKS[0].id)
+        .single()
+      expect(error).toBeNull()
+      expect(data?.title).toBe(newTitle)
+      expect(data?.tags).toContain('sync-probe')
+    }).toPass({ timeout: 12_000 })
+
+    // Client B must reflect both the title AND the non-core field within ~10s.
+    try {
+      await expect(async () => {
+        const state = await clientB.evaluate((taskId) => {
+          const root = document.querySelector('#app') as any
+          const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+          const t = tasks.rawTasks.find((x: any) => x.id === taskId)
+          return { title: t?.title ?? null, tags: t?.tags ?? [] }
+        }, ROOT_TASKS[0].id)
+        expect(state.title).toBe(newTitle)
+        expect(state.tags).toContain('sync-probe')
+      }).toPass({ timeout: 12_000 })
+    } finally {
+      console.log(`R2 client B sync diagnostics:\n${clientBLogs.join('\n')}`)
+    }
+  })
+
+  test('R9 - a created task exists in Supabase, reaches another client, and survives reload', async ({ clientA, clientB }) => {
+    await gotoCanvasReady(clientA)
+    await gotoCanvasReady(clientB)
+
+    const createdId = await clientA.evaluate(async (task) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const created = await tasks.createTask({
+        id: task.id,
+        title: task.title,
+        description: 'Created through the real task store',
+        status: 'planned',
+        priority: 'high',
+        tags: ['existence-probe'],
+        isInInbox: true,
+      })
+      return created.id
+    }, CREATED_TASK)
+    expect(createdId).toBe(CREATED_TASK.id)
+
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,title,description,status,priority,tags,is_deleted')
+        .eq('id', CREATED_TASK.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: CREATED_TASK.id,
+        title: CREATED_TASK.title,
+        description: 'Created through the real task store',
+        status: 'planned',
+        priority: 'high',
+        is_deleted: false,
+      }))
+      expect(data?.tags).toContain('existence-probe')
+    }).toPass({ timeout: 12_000 })
+
+    await expect(async () => {
+      const task = await clientB.evaluate((taskId) => {
         const root = document.querySelector('#app') as any
         const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
-        const t = tasks.rawTasks.find((x: any) => x.id === taskId)
-        return { title: t?.title ?? null, tags: t?.tags ?? [] }
-      }, ROOT_TASKS[0].id)
-      expect(state.title).toBe(newTitle)
-      expect(state.tags).toContain('sync-probe')
+        return tasks.rawTasks.find((candidate: any) => candidate.id === taskId) ?? null
+      }, CREATED_TASK.id)
+      expect(task).toEqual(expect.objectContaining({
+        id: CREATED_TASK.id,
+        title: CREATED_TASK.title,
+        priority: 'high',
+      }))
+      expect(task.tags).toContain('existence-probe')
+    }).toPass({ timeout: 12_000 })
+
+    await clientB.reload()
+    await gotoCanvasReady(clientB)
+
+    await expect(async () => {
+      const task = await clientB.evaluate((taskId) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        return tasks.rawTasks.find((candidate: any) => candidate.id === taskId) ?? null
+      }, CREATED_TASK.id)
+      expect(task).toEqual(expect.objectContaining({
+        id: CREATED_TASK.id,
+        title: CREATED_TASK.title,
+        description: 'Created through the real task store',
+        priority: 'high',
+      }))
+      expect(task.tags).toContain('existence-probe')
     }).toPass({ timeout: 12_000 })
   })
 

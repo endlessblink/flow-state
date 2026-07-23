@@ -134,7 +134,9 @@ async function globalSetup(config: FullConfig) {
   console.log('[global-setup] Authenticated as', TEST_USER_EMAIL)
 
   // Step 3: Inject session into browser localStorage and save storageState
-  const browser = await chromium.launch()
+  const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+  })
   const baseURL = config.projects[0].use.baseURL || 'http://127.0.0.1:5547'
 
   // Build the localStorage value that Supabase client expects

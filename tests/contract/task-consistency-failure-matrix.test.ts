@@ -18,6 +18,7 @@ interface FailureMatrix {
   schemaVersion: string
   requiredMutations: string[]
   requiredStates: string[]
+  requiredDataGuarantees: string[]
   vectors: FailureVector[]
 }
 
@@ -47,6 +48,22 @@ describe('cardinal task consistency failure matrix', () => {
     ))
 
     expect(invalid).toEqual([])
+  })
+
+  it('treats absolute existence and recoverability as release requirements', () => {
+    const matrix = loadMatrix()
+
+    expect(matrix.requiredDataGuarantees).toEqual(expect.arrayContaining([
+      'server-read-after-write',
+      'independent-client-readback',
+      'renderer-reload-readback',
+      'electron-restart-readback',
+      'complete-task-inventory',
+      'backup-artifact-integrity',
+      'tombstone-aware-restore',
+      'restore-round-trip',
+      'point-in-time-recovery-drill',
+    ]))
   })
 
   it('keeps every automated evidence path executable and present', () => {

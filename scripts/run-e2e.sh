@@ -38,4 +38,6 @@ export SUPABASE_URL="${SUPABASE_URL:-http://127.0.0.1:54321}"
 # (not production from .env.local). Env vars take precedence over .env files in Vite.
 export VITE_SUPABASE_URL="${SUPABASE_URL}"
 
+node scripts/check-local-e2e-canonical-schema.cjs
+
 exec npx playwright test "$@"

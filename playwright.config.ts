@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 const authFile = 'tests/.auth/user.json';
 const hasAuth = fs.existsSync(authFile);
+const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -43,6 +44,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        ...(chromiumExecutablePath ? { launchOptions: { executablePath: chromiumExecutablePath } } : {}),
         // TASK-1457: Use saved auth state if available (from global-setup)
         ...(hasAuth ? { storageState: authFile } : {}),
       },

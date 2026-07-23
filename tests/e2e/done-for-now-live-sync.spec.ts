@@ -87,6 +87,49 @@ test.describe.serial('recurring Done for now live UI synchronization', () => {
       expect(applyError).toBeNull()
       expect(receipt.nextOccurrence.dueDate).toBe(nextDate)
 
+      const { data: persistedTask, error: persistedTaskError } = await admin
+        .from('tasks')
+        .select('id,due_date,status,is_completion_record,is_deleted,recurrence_count')
+        .eq('id', TASK_ID)
+        .single()
+      expect(persistedTaskError).toBeNull()
+      expect(persistedTask).toEqual(expect.objectContaining({
+        id: TASK_ID,
+        status: 'planned',
+        is_completion_record: false,
+        is_deleted: false,
+        recurrence_count: 1,
+      }))
+      expect(String(persistedTask?.due_date).slice(0, 10)).toBe(nextDate)
+
+      const { data: completionRecords, error: completionRecordsError } = await admin
+        .from('tasks')
+        .select('id,status,is_completion_record,recurrence_parent_id')
+        .eq('recurrence_parent_id', TASK_ID)
+        .eq('is_completion_record', true)
+      expect(completionRecordsError).toBeNull()
+      expect(completionRecords).toHaveLength(1)
+      expect(completionRecords?.[0]).toEqual(expect.objectContaining({
+        status: 'done',
+        is_completion_record: true,
+        recurrence_parent_id: TASK_ID,
+      }))
+
+      const { data: persistedReceipt, error: persistedReceiptError } = await admin
+        .from('flowstate_action_receipts')
+        .select('operation,receipt')
+        .eq('user_id', userId!)
+        .eq('operation', 'done_for_now')
+        .contains('receipt', { taskId: TASK_ID })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      expect(persistedReceiptError).toBeNull()
+      expect(persistedReceipt).toEqual(expect.objectContaining({
+        operation: 'done_for_now',
+        receipt: expect.objectContaining({ taskId: TASK_ID, ok: true }),
+      }))
+
       const searchButton = page.getByRole('button', { name: 'Search tasks' }).first()
       await expect(searchButton).toBeVisible({ timeout: 10_000 })
       await searchButton.click()
@@ -108,6 +151,17 @@ test.describe.serial('recurring Done for now live UI synchronization', () => {
       // from the unscheduled Inbox and free Canvas; Search remains its discovery path.
       await expect(page.locator('.unified-inbox-panel').getByText(TITLE)).toHaveCount(0)
       await expect(page.locator('.canvas-container').getByText(TITLE)).toHaveCount(0)
+
+      await page.reload()
+      await page.waitForLoadState('networkidle')
+      const reloadedSearchButton = page.getByRole('button', { name: 'Search tasks' }).first()
+      await expect(reloadedSearchButton).toBeVisible({ timeout: 10_000 })
+      await reloadedSearchButton.click()
+      const reloadedSearch = page.locator('.search-modal-content input.search-input').first()
+      await reloadedSearch.fill(TITLE)
+      const reloadedResult = page.locator('.search-modal-content .result-item').filter({ hasText: TITLE })
+      await expect(reloadedResult).toBeVisible({ timeout: 15_000 })
+      await expect(reloadedResult.locator('.result-due')).toHaveText('Tomorrow')
     } finally {
       await admin.from('tasks').delete().eq('recurrence_parent_id', TASK_ID)
       await admin.from('tasks').delete().eq('id', TASK_ID)

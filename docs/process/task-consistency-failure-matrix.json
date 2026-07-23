@@ -13,6 +13,7 @@
     "subtask-change",
     "bulk-update",
     "delete",
+    "backup",
     "restore",
     "permanent-delete",
     "start-timer",
@@ -35,7 +36,22 @@
     "updater-stale",
     "tombstoned",
     "backup-restore",
+    "backup-corrupt",
+    "inventory-mismatch",
+    "restore-drill",
     "concurrent-write"
+  ],
+  "requiredDataGuarantees": [
+    "server-read-after-write",
+    "independent-client-readback",
+    "renderer-reload-readback",
+    "electron-restart-readback",
+    "workspace-scope-readback",
+    "complete-task-inventory",
+    "backup-artifact-integrity",
+    "tombstone-aware-restore",
+    "restore-round-trip",
+    "point-in-time-recovery-drill"
   ],
   "vectors": [
     {
@@ -63,13 +79,13 @@
     {
       "id": "independent-client-metadata-convergence",
       "severity": "critical",
-      "status": "open",
+      "status": "live-proven",
       "mutations": ["edit-metadata", "change-status", "schedule", "move"],
       "surfaces": ["catalog", "board", "calendar", "canvas"],
       "states": ["cross-client", "realtime-dropped", "concurrent-write"],
       "layers": ["renderer-store", "supabase-realtime", "canonical-change-log"],
-      "automatedEvidence": [],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts"],
+      "liveEvidence": ["2026-07-23: local Supabase with the canonical task migration and two independent Chromium contexts converged persisted title and tags from client A to client B in 5.0 seconds"]
     },
     {
       "id": "offline-queue-and-reconnect-convergence",
@@ -90,8 +106,8 @@
       "surfaces": ["catalog", "calendar", "canvas"],
       "states": ["recurring", "renderer-reloaded", "electron-restarted"],
       "layers": ["renderer-store", "local-task-api", "supabase-persistence"],
-      "automatedEvidence": [],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/e2e/done-for-now-live-sync.spec.ts"],
+      "liveEvidence": ["2026-07-23: the live done-for-now RPC persisted the advanced living row, exactly one completed occurrence, and an action receipt; Search showed the advanced date before and after renderer reload; the isolated end-to-end run passed in 18.6 seconds; right-click UI entry, local task API, and Electron restart proof remain open"]
     },
     {
       "id": "create-existence-readback",
@@ -101,8 +117,8 @@
       "surfaces": ["quick-create", "catalog", "canvas", "local-task-api"],
       "states": ["renderer-reloaded", "electron-restarted", "workspace-switched"],
       "layers": ["renderer-store", "local-task-api", "supabase-persistence", "task-inventory"],
-      "automatedEvidence": [],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts"],
+      "liveEvidence": ["2026-07-23: R9 created a fixed-identity task through the real store, read the complete non-deleted row from local Supabase, observed it in an independent Chromium client, and observed it again after that client reloaded; the isolated end-to-end run passed in 17.3 seconds; Electron restart, workspace switch, local task API, and inventory proof remain open"]
     },
     {
       "id": "delete-restore-and-tombstone-recoverability",
@@ -163,9 +179,9 @@
       "id": "backup-restore-absolute-data-existence",
       "severity": "critical",
       "status": "open",
-      "mutations": ["create", "edit-metadata", "subtask-change", "delete", "restore"],
+      "mutations": ["create", "edit-metadata", "subtask-change", "delete", "backup", "restore"],
       "surfaces": ["supabase", "backup", "task-inventory"],
-      "states": ["backup-restore", "tombstoned", "concurrent-write"],
+      "states": ["backup-restore", "backup-corrupt", "inventory-mismatch", "restore-drill", "tombstoned", "concurrent-write"],
       "layers": ["supabase-persistence", "backup-artifact", "restore-procedure", "task-inventory"],
       "automatedEvidence": [],
       "liveEvidence": []

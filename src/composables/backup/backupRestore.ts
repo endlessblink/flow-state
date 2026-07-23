@@ -160,15 +160,6 @@ export function createRestoreOperations(
     ctx.state.value.restoreProgress = 0
     ctx.state.value.error = null
 
-    // Bug 1 fix: clear stale sync queue ops before restoring to prevent conflicts
-    try {
-      const { clearAll } = await import('@/services/offline/writeQueueDB')
-      await clearAll()
-      console.log('[Backup] Cleared sync queue before restore')
-    } catch {
-      // Non-critical — proceed even if queue clear fails
-    }
-
     try {
       console.log('[Backup] Starting restore...')
 
@@ -218,6 +209,21 @@ export function createRestoreOperations(
             'continuing only after structural count validation'
           )
         }
+      }
+
+      // A restore must never discard the only durable copy of an offline edit.
+      // Resolve or explicitly discard queued work through the sync UI before
+      // restoring so backup rows cannot race or overwrite unresolved intent.
+      const { getStats } = await import('@/services/offline/writeQueueDB')
+      const queueStats = await getStats()
+      const unresolvedQueueCount = queueStats.pendingCount
+        + queueStats.syncingCount
+        + queueStats.failedCount
+        + queueStats.conflictCount
+      if (unresolvedQueueCount > 0) {
+        throw new Error(
+          `Restore blocked: ${unresolvedQueueCount} unsynced local change${unresolvedQueueCount === 1 ? '' : 's'} must be resolved first`
+        )
       }
 
       ctx.state.value.restoreProgress = 10

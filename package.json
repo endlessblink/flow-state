@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.4.292",
+  "version": "1.4.293",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://github.com/endlessblink/flow-state",
   "repository": {
@@ -47,7 +47,7 @@
     "electron:patch-builder": "node scripts/patch-electron-builder-dependency-parser.cjs",
     "electron:validate-env": "node scripts/validate-electron-vite-env.cjs",
     "electron:validate-package": "node scripts/validate-electron-package.cjs",
-    "preelectron:build": "vitest run tests/contract/task-consistency-failure-matrix.test.ts tests/unit/local-api/server-contract.test.ts && npm run test:offline-reconnect-flows",
+    "preelectron:build": "vitest run tests/contract/task-consistency-failure-matrix.test.ts tests/unit/local-api/server-contract.test.ts && npm run test:backup:restore && npm run test:restore:e2e && npm run test:offline-reconnect-flows",
     "electron:build": "npm run electron:validate-env && flock -n /tmp/flowstate-electron-build.lock npm run electron:build:locked",
     "electron:build:locked": "ELECTRON_BUILD=true npm run build && npm run electron:build-main && npm run electron:patch-builder && bash scripts/run-electron-builder-with-npm-tree.sh && npm run electron:validate-package",
     "electron:preview": "npm run electron:validate-env && ELECTRON_BUILD=true npm run build && npm run electron:build-main && electron dist-electron/main.cjs --no-sandbox",
@@ -228,7 +228,7 @@
     "test:backup:restore": "vitest run tests/unit/backup-validation.test.ts --maxWorkers=1 --testNamePattern='Restore'",
     "test:restore": "npm run test:backup:restore",
     "test:restore:full": "npm run test:backup && npm run test:restore:e2e",
-    "test:restore:e2e": "bash scripts/run-e2e.sh backup-restore-live.spec.ts --project=chromium --workers=1",
+    "test:restore:e2e": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium} bash scripts/run-e2e.sh tests/e2e/backup-restore-live.spec.ts --project=chromium --workers=1",
     "test:container": "node scripts/stress-container.cjs",
     "test:container:quick": "node scripts/stress-container.cjs --quick",
     "test:sync": "node scripts/stress-sync.cjs",

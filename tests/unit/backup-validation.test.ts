@@ -10,6 +10,7 @@
  * 6. Suspicious data loss detection (BUG-059)
  */
 
+import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useBackupSystem, BackupData } from '../../src/composables/useBackupSystem'
 import { BACKUP_SCHEMA_VERSION } from '../../src/composables/backup/types'
@@ -467,6 +468,62 @@ describe('TASK-332: Backup Reliability & Verification', () => {
   })
 
   describe('Restore execution fails closed', () => {
+    it('never discards unsynced task changes when a restore artifact is invalid', async () => {
+      const queue = await import('@/services/offline/writeQueueDB')
+      await queue.clearAll()
+      await queue.enqueueOperation({
+        entityType: 'task',
+        operation: 'update',
+        entityId: 'unsynced-task-1',
+        payload: { title: 'Only copy of this edit' },
+        userId: 'user-1',
+        workspaceId: null,
+      })
+      const backup = createMockBackup(1, Date.now(), { checksum: 'tampered-checksum' })
+
+      try {
+        const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+        expect(restored).toBe(false)
+        expect(await queue.getPendingOperations()).toEqual([
+          expect.objectContaining({
+            entityId: 'unsynced-task-1',
+            payload: { title: 'Only copy of this edit' },
+          }),
+        ])
+      } finally {
+        await queue.clearAll()
+      }
+    })
+
+    it('blocks a valid restore until unsynced task changes are resolved', async () => {
+      const queue = await import('@/services/offline/writeQueueDB')
+      await queue.clearAll()
+      await queue.enqueueOperation({
+        entityType: 'task',
+        operation: 'update',
+        entityId: 'unsynced-task-2',
+        payload: { title: 'Do not overwrite or discard me' },
+        userId: 'user-1',
+        workspaceId: null,
+      })
+      const backup = createMockBackup(1)
+      backup.checksum = 'checksum_0'
+
+      try {
+        const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+        expect(restored).toBe(false)
+        expect(backupSystem.state.value.error).toContain('1 unsynced local change')
+        expect(mockSafeCreateTask).not.toHaveBeenCalled()
+        expect(await queue.getPendingOperations()).toEqual([
+          expect.objectContaining({ entityId: 'unsynced-task-2' }),
+        ])
+      } finally {
+        await queue.clearAll()
+      }
+    })
+
     it('refuses a backup whose checksum does not match its contents', async () => {
       const backup = createMockBackup(1, Date.now(), { checksum: 'tampered-checksum' })
 

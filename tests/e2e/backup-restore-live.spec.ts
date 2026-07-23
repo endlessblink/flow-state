@@ -104,6 +104,11 @@ test.describe.serial('absolute task backup and recovery', () => {
         const tasks = root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks')
         return tasks?.rawTasks.some((task: any) => task.id === taskId)
       }, TASK_ID, { timeout: 30_000 })
+      await expect.poll(async () => page.evaluate(async () => {
+        const { getStats } = await import('/src/services/offline/writeQueueDB.ts')
+        const stats = await getStats()
+        return stats.pendingCount + stats.syncingCount + stats.failedCount + stats.conflictCount
+      }), { timeout: 20_000 }).toBe(0)
 
       const { error: deleteError } = await admin.from('tasks').delete().eq('id', TASK_ID)
       expect(deleteError).toBeNull()
@@ -175,6 +180,102 @@ test.describe.serial('absolute task backup and recovery', () => {
       }))
       expect(reloadedTask.tags).toEqual(expect.arrayContaining(['recovery', 'absolute-existence']))
     } finally {
+      await admin.from('tasks').delete().eq('id', TASK_ID)
+      await admin.from('tombstones').delete().eq('entity_id', TASK_ID)
+    }
+  })
+
+  test('refuses restore without deleting an offline edit, then syncs that edit after reconnect', async ({ page }) => {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const userId = (await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })).id
+    const offlineTitle = `${TASK_TITLE} Offline Edit`
+
+    await admin.from('tasks').delete().eq('id', TASK_ID)
+    await admin.from('tombstones').delete().eq('entity_id', TASK_ID)
+
+    try {
+      await page.goto('/#/tasks')
+      await page.waitForFunction(() => {
+        const root = document.querySelector('#app') as any
+        return !!root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks')
+      }, { timeout: 30_000 })
+
+      await page.evaluate(async ({ id, title }) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        await tasks.createTask({
+          id,
+          title,
+          status: 'planned',
+          priority: 'high',
+          isInInbox: true,
+        })
+      }, { id: TASK_ID, title: TASK_TITLE })
+      await expect(async () => {
+        const { data } = await admin.from('tasks').select('title').eq('id', TASK_ID).single()
+        expect(data?.title).toBe(TASK_TITLE)
+      }).toPass({ timeout: 12_000 })
+
+      const backupJson = await page.evaluate(async () => {
+        const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
+        const backup = await useBackupSystem().createBackup('manual')
+        if (!backup) throw new Error('Backup creation returned null')
+        return JSON.stringify(backup)
+      })
+
+      await page.context().setOffline(true)
+      await page.evaluate(async ({ id, title }) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        await tasks.updateTask(id, { title }, 'USER')
+      }, { id: TASK_ID, title: offlineTitle })
+
+      const restoreAttempt = await page.evaluate(async (serializedBackup) => {
+        const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
+        const queue = await import('/src/services/offline/writeQueueDB.ts')
+        const backupSystem = useBackupSystem()
+        const restored = await backupSystem.restoreBackup(serializedBackup, {
+          backupSource: 'playwright-preserve-offline-edit',
+        })
+        return {
+          restored,
+          error: backupSystem.state.value.error,
+          queued: (await queue.getPendingOperations()).map(operation => ({
+            entityId: operation.entityId,
+            payload: operation.payload,
+          })),
+        }
+      }, backupJson)
+      expect(restoreAttempt.restored).toBe(false)
+      expect(restoreAttempt.error).toContain('unsynced local change')
+      expect(restoreAttempt.queued).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          entityId: TASK_ID,
+          payload: expect.objectContaining({ title: offlineTitle }),
+        }),
+      ]))
+
+      await page.context().setOffline(false)
+      await expect(async () => {
+        const { data, error } = await admin
+          .from('tasks')
+          .select('user_id,title')
+          .eq('id', TASK_ID)
+          .single()
+        expect(error).toBeNull()
+        expect(data).toEqual({ user_id: userId, title: offlineTitle })
+      }).toPass({ timeout: 20_000 })
+
+      await page.reload()
+      await page.waitForFunction(({ taskId, title }) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks')
+        return tasks?.rawTasks.some((task: any) => task.id === taskId && task.title === title)
+      }, { taskId: TASK_ID, title: offlineTitle }, { timeout: 30_000 })
+    } finally {
+      await page.context().setOffline(false)
       await admin.from('tasks').delete().eq('id', TASK_ID)
       await admin.from('tombstones').delete().eq('entity_id', TASK_ID)
     }

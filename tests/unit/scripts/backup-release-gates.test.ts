@@ -32,5 +32,8 @@ describe('backup and restore release gates', () => {
   it('runs the real persistence round trip in the restore E2E gate', () => {
     expect(manifest.scripts['test:restore:e2e']).toContain('backup-restore-live.spec.ts')
     expect(manifest.scripts['test:restore:e2e']).toContain('run-e2e.sh')
+    expect(manifest.scripts['test:restore:e2e']).toContain('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')
+    expect(manifest.scripts['preelectron:build']).toContain('test:backup:restore')
+    expect(manifest.scripts['preelectron:build']).toContain('test:restore:e2e')
   })
 })

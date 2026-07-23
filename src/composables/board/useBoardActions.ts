@@ -3,6 +3,7 @@ import type { TaskAttachment } from '@/types/tasks'
 import type { useTimerStore } from '@/stores/timer'
 import type { BoardViewType } from './useBoardModals'
 import { useFilterDefaults } from '@/composables/tasks/useFilterDefaults'
+import { useToast } from '@/composables/useToast'
 
 interface BoardActionsDependencies {
     taskStore: ReturnType<typeof useTaskStore>
@@ -50,14 +51,17 @@ function getDateFromColumnKey(key: string): string | undefined {
 export function useBoardActions(deps: BoardActionsDependencies) {
     const { taskStore, timerStore } = deps
     const { filterDefaults } = useFilterDefaults()
+    const { showToast } = useToast()
 
     const handleWithError = async <T>(
         operation: () => Promise<T>,
-        _errorMessage: string
+        errorMessage: string
     ): Promise<T | null> => {
         try {
             return await operation()
-        } catch (_error) {
+        } catch (error) {
+            console.error(errorMessage, error)
+            showToast(errorMessage, 'error')
             return null
         }
     }
@@ -80,7 +84,7 @@ export function useBoardActions(deps: BoardActionsDependencies) {
                 status: status as 'todo' | 'done',
                 projectId: projectId
             }),
-            '❌ Error creating task:'
+            'Task could not be created. No changes were saved.'
         )
     }
 
@@ -121,28 +125,28 @@ export function useBoardActions(deps: BoardActionsDependencies) {
 
         return handleWithError(
             () => taskStore.createTaskWithUndo(taskData),
-            '❌ Error creating task:'
+            'Task could not be created. No changes were saved.'
         )
     }
 
     const deleteTask = async (taskId: string) => {
         return handleWithError(
             () => taskStore.deleteTaskWithUndo(taskId),
-            '❌ Error deleting task:'
+            'Task could not be deleted. No changes were saved.'
         )
     }
 
     const moveTask = async (taskId: string, newStatus: string) => {
         return handleWithError(
             () => taskStore.moveTaskWithUndo(taskId, newStatus as 'todo' | 'done'),
-            '❌ Error moving task:'
+            'Task could not be moved. No changes were saved.'
         )
     }
 
     const addSubtask = async (taskId: string, title: string = 'New Subtask') => {
         return handleWithError(
             () => taskStore.createSubtaskWithUndo(taskId, { title }),
-            '❌ Error creating subtask:'
+            'Subtask could not be created. No changes were saved.'
         )
     }
 

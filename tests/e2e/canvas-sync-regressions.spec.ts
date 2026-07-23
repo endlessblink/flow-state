@@ -1085,6 +1085,35 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     }, task.id)).toBe(false)
   })
 
+  test('R21 - Board delete rejection stays visible and leaves the task intact', async ({ clientA }) => {
+    await gotoBoardReady(clientA)
+
+    const task = ROOT_TASKS[0]
+    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`)
+    await expect(taskCard).toBeVisible()
+    await clientA.evaluate(() => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      tasks.deleteTaskWithUndo = async () => {
+        throw new Error('Injected durable delete rejection')
+      }
+    })
+
+    await taskCard.click({ button: 'right' })
+    await clientA.getByText('Delete', { exact: true }).click()
+    const confirmation = clientA.getByRole('dialog')
+    await expect(confirmation).toBeVisible()
+    await confirmation.getByText('Delete', { exact: true }).click()
+
+    await expect(clientA.getByText('Task could not be deleted. No changes were saved.', { exact: true })).toBeVisible()
+    await expect(taskCard).toBeVisible()
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.some((candidate: any) => candidate.id === taskId && !candidate.isDeleted)
+    }, task.id)).toBe(true)
+  })
+
   test('R11 - offline edit and completion drain after reconnect and survive reload', async ({ clientA, clientB }) => {
     await gotoCanvasReady(clientA)
     await gotoCanvasReady(clientB)

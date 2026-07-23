@@ -449,7 +449,7 @@
       "states": ["offline", "reconnecting", "renderer-reloaded", "cross-client", "concurrent-write"],
       "layers": ["renderer-component", "renderer-store", "sync-queue", "undo", "supabase-persistence"],
       "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
-      "liveEvidence": ["2026-07-23: authenticated Chromium R19 used the visible Board right-click Edit action while fully offline, changed the title through the task editor, persisted it after reconnect, converged in an independent client, and retained it after reload in 26.5 seconds. R20 used the visible Board right-click Delete action while fully offline and initially failed because dialog teardown cleared taskToDelete before the deferred callback read it, making confirmed deletion a silent no-op. Capturing the confirmed ID fixed the exact lifecycle failure; the task then disappeared optimistically, persisted as a tombstone after reconnect, stayed absent in an independent client, and did not resurrect after reload in 25.7 seconds. Restore, concurrent-write, and remaining Catalog/Canvas entrypoint permutations remain open."]
+      "liveEvidence": ["2026-07-23: authenticated Chromium R19 used the visible Board right-click Edit action while fully offline, changed the title through the task editor, persisted it after reconnect, converged in an independent client, and retained it after reload in 26.5 seconds. R20 used the visible Board right-click Delete action while fully offline and initially failed because dialog teardown cleared taskToDelete before the deferred callback read it, making confirmed deletion a silent no-op. Capturing the confirmed ID fixed the exact lifecycle failure; the task then disappeared optimistically, persisted as a tombstone after reconnect, stayed absent in an independent client, and did not resurrect after reload in 25.7 seconds. R21 forced the Board delete entrypoint to reject before persistence, proved the old path silently swallowed the failure, then proved the repaired path retained the task and showed an explicit error in the rendered UI in 14.6 seconds. Restore, concurrent-write, and remaining Catalog/Canvas entrypoint permutations remain open."]
     },
     {
       "id": "canvas-geometry-and-membership-durability",
@@ -472,8 +472,8 @@
       "surfaces": ["catalog", "board", "canvas", "unified-inbox"],
       "states": ["filtered-hidden", "tombstoned", "workspace-switched", "concurrent-write"],
       "layers": ["renderer-store", "sync-queue", "supabase-persistence", "supabase-rls"],
-      "automatedEvidence": [],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/unit/task-rollback.test.ts", "tests/unit/sync/write-health.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
+      "liveEvidence": ["2026-07-23: authenticated Chromium R21 forced the visible Board right-click Delete action's durable store call to reject. Before the fix, the task remained intact but the action failed silently because useBoardActions discarded its error message. After the fix, the same real UI path retained the task and displayed 'Task could not be deleted. No changes were saved.'; the isolated run passed in 14.6 seconds. This proves Board immediate-rejection visibility and no-change behavior only; post-enqueue permanent failures, partial batches, and the remaining mutation/surface permutations remain open."]
     },
     {
       "id": "pwa-service-worker-contract-skew",

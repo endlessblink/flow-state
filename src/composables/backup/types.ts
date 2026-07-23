@@ -80,7 +80,11 @@ export interface RestoreAnalysis {
     existsDeleted: number  // Already exists (soft-deleted)
     tombstoned: number     // Permanently deleted - cannot restore
     toRestore: Task[]      // Tasks that will be restored
-    skipped: Array<{ task: Task; reason: string }>  // Tasks that will be skipped
+    skipped: Array<{
+      task: Task
+      reason: string
+      status: 'active' | 'soft_deleted' | 'tombstoned'
+    }>  // Tasks that will be skipped
   }
   projects: {
     total: number
@@ -166,6 +170,76 @@ export function generateBackupId(): string {
 export function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp)
   return date.toLocaleString()
+}
+
+export function assertNoTombstoneContradictions(
+  backup: Pick<BackupData, 'tasks' | 'projects' | 'groups' | 'tombstones'>
+): void {
+  const recoverableIdsByType = {
+    task: new Set(backup.tasks.map(task => task.id)),
+    project: new Set(backup.projects.map(project => project.id)),
+    group: new Set(backup.groups.map(group => group.id)),
+  }
+  const contradiction = backup.tombstones?.find(tombstone =>
+    tombstone.entityType !== 'lane'
+    && recoverableIdsByType[tombstone.entityType].has(tombstone.entityId)
+  )
+  if (contradiction) {
+    throw new Error(
+      `Backup refused because contradictory permanent-delete inventory contains live ${contradiction.entityType} ${contradiction.entityId}`
+    )
+  }
+}
+
+export function validateAndSortTasksForRestore(
+  artifactTasks: Task[],
+  tasksToRestore: Task[] = artifactTasks,
+  existingParentIds: ReadonlySet<string> = new Set(),
+): Task[] {
+  const tasksById = new Map(artifactTasks.map(task => [task.id, task]))
+  if (tasksById.size !== artifactTasks.length) {
+    throw new Error('Backup task graph contains duplicate task identities')
+  }
+
+  const state = new Map<string, 'visiting' | 'visited'>()
+  const ordered: Task[] = []
+  const parentIdOf = (task: Task): string | null => {
+    const legacyParentId = (task as Task & { parent_task_id?: string | null }).parent_task_id
+    return task.parentTaskId ?? legacyParentId ?? null
+  }
+
+  const visit = (task: Task): void => {
+    const currentState = state.get(task.id)
+    if (currentState === 'visited') return
+    if (currentState === 'visiting') {
+      throw new Error(`Backup task graph contains a parent cycle at ${task.id}`)
+    }
+    state.set(task.id, 'visiting')
+
+    const parentId = parentIdOf(task)
+    if (parentId) {
+      const parent = tasksById.get(parentId)
+      if (!parent) {
+        throw new Error(`Backup task graph has missing parent ${parentId} for ${task.id}`)
+      }
+      visit(parent)
+    }
+
+    state.set(task.id, 'visited')
+    ordered.push(task)
+  }
+
+  for (const task of artifactTasks) visit(task)
+  const selectedIds = new Set(tasksToRestore.map(task => task.id))
+  for (const task of tasksToRestore) {
+    const parentId = parentIdOf(task)
+    if (parentId && !selectedIds.has(parentId) && !existingParentIds.has(parentId)) {
+      throw new Error(
+        `Backup task graph has omitted parent ${parentId} for selected task ${task.id}`
+      )
+    }
+  }
+  return ordered.filter(task => selectedIds.has(task.id))
 }
 
 // ============================================================================

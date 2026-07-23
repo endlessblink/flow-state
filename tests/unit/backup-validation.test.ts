@@ -13,7 +13,11 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useBackupSystem, BackupData } from '../../src/composables/useBackupSystem'
-import { BACKUP_SCHEMA_VERSION } from '../../src/composables/backup/types'
+import {
+  BACKUP_SCHEMA_VERSION,
+  STORAGE_KEYS,
+  calculateChecksum,
+} from '../../src/composables/backup/types'
 
 // Mock dependencies
 const mockFetchDeletedTaskIds = vi.fn()
@@ -248,6 +252,71 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         { entityType: 'project', entityId: 'gone-project' },
       ])
       expect(backup?.metadata?.tombstoneCount).toBe(2)
+    })
+
+    it('refuses an artifact that contains both a task and its permanent-delete tombstone', async () => {
+      mockTaskStore.tasks = [{
+        id: 'stale-task',
+        title: 'Stale row retained by another window',
+        status: 'todo',
+      }]
+      mockFetchTombstones.mockResolvedValue([
+        { entityType: 'task', entityId: 'stale-task' },
+      ])
+
+      const backup = await backupSystem.createBackup('manual')
+
+      expect(backup).toBeNull()
+      expect(backupSystem.state.value.error).toContain('contradictory permanent-delete inventory')
+      expect(localStorageMock.setItem).not.toHaveBeenCalledWith(
+        STORAGE_KEYS.LATEST,
+        expect.any(String),
+      )
+    })
+
+    it.each([
+      {
+        entityType: 'project' as const,
+        entityId: 'stale-project',
+        arrange: () => {
+          mockProjectStore.projects = [{ id: 'stale-project', name: 'Stale project' }]
+        },
+      },
+      {
+        entityType: 'group' as const,
+        entityId: 'stale-group',
+        arrange: () => {
+          mockCanvasStore.groups = [{ id: 'stale-group', name: 'Stale group' }]
+        },
+      },
+    ])('refuses a live $entityType and matching permanent-delete tombstone', async ({
+      entityType,
+      entityId,
+      arrange,
+    }) => {
+      arrange()
+      mockFetchTombstones.mockResolvedValue([{ entityType, entityId }])
+
+      const backup = await backupSystem.createBackup('manual')
+
+      expect(backup).toBeNull()
+      expect(backupSystem.state.value.error).toContain('contradictory permanent-delete inventory')
+    })
+
+    it('preserves legitimate tasks with test-like titles in default backups', async () => {
+      mockTaskStore.tasks = [
+        { id: 'real-new-task', title: 'New Task', status: 'todo' },
+        { id: 'real-test-task', title: 'Test Task 2', status: 'todo' },
+        { id: 'real-performance-task', title: 'Performance testing', status: 'todo' },
+      ]
+
+      const backup = await backupSystem.createBackup('manual')
+
+      expect(backup?.tasks.map(task => task.id)).toEqual([
+        'real-new-task',
+        'real-test-task',
+        'real-performance-task',
+      ])
     })
 
     it('refuses to publish a backup when permanent-delete inventory cannot be read', async () => {
@@ -561,6 +630,299 @@ describe('TASK-332: Backup Reliability & Verification', () => {
   })
 
   describe('Restore execution fails closed', () => {
+    it('restores child-before-parent artifacts in parent-first order', async () => {
+      const incoming = createMockBackup(0, Date.now(), {
+        tasks: [
+          {
+            id: 'child-task',
+            title: 'Child',
+            status: 'todo',
+            parentTaskId: 'parent-task',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'parent-task',
+            title: 'Parent',
+            status: 'todo',
+            createdAt: new Date().toISOString(),
+          },
+        ] as any[],
+        metadata: {
+          taskCount: 2,
+          projectCount: 0,
+          groupCount: 0,
+        },
+      })
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+      })
+      mockCheckTaskIdsAvailability.mockResolvedValue([
+        { taskId: 'parent-task', status: 'active', reason: 'Readable' },
+        { taskId: 'child-task', status: 'active', reason: 'Readable' },
+      ])
+
+      const restored = await backupSystem.restoreBackup(incoming, { skipDedupCheck: true })
+
+      expect(restored).toBe(true)
+      expect(mockSafeCreateTask.mock.calls.map(([task]) => task.id)).toEqual([
+        'parent-task',
+        'child-task',
+      ])
+    })
+
+    it.each([
+      {
+        name: 'missing parent',
+        tasks: [
+          {
+            id: 'orphan-task',
+            title: 'Orphan',
+            status: 'todo',
+            parentTaskId: 'absent-parent',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        error: 'missing parent',
+      },
+      {
+        name: 'parent cycle',
+        tasks: [
+          {
+            id: 'cycle-a',
+            title: 'Cycle A',
+            status: 'todo',
+            parentTaskId: 'cycle-b',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'cycle-b',
+            title: 'Cycle B',
+            status: 'todo',
+            parentTaskId: 'cycle-a',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        error: 'cycle',
+      },
+    ])('rejects a $name before any restore mutation', async ({ tasks, error }) => {
+      const incoming = createMockBackup(0, Date.now(), {
+        tasks: tasks as any[],
+        metadata: {
+          taskCount: tasks.length,
+          projectCount: 0,
+          groupCount: 0,
+        },
+      })
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+      })
+
+      const restored = await backupSystem.restoreBackup(incoming, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error?.toLowerCase()).toContain(error)
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+      expect(mockSaveProjects).not.toHaveBeenCalled()
+      expect(mockSaveGroup).not.toHaveBeenCalled()
+      expect(mockRecordTombstone).not.toHaveBeenCalled()
+    })
+
+    it('rejects a child whose artifact parent is tombstoned before restoring unrelated tasks', async () => {
+      const incoming = createMockBackup(0, Date.now(), {
+        tasks: [
+          {
+            id: 'unrelated-task',
+            title: 'Unrelated',
+            status: 'todo',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'tombstoned-parent',
+            title: 'Parent',
+            status: 'todo',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'dependent-child',
+            title: 'Child',
+            status: 'todo',
+            parentTaskId: 'tombstoned-parent',
+            createdAt: new Date().toISOString(),
+          },
+        ] as any[],
+        metadata: {
+          taskCount: 3,
+          projectCount: 0,
+          groupCount: 0,
+        },
+      })
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+      })
+      mockCheckTaskIdsAvailability.mockResolvedValue([
+        { taskId: 'unrelated-task', status: 'available', reason: '' },
+        { taskId: 'tombstoned-parent', status: 'tombstoned', reason: 'Permanently deleted' },
+        { taskId: 'dependent-child', status: 'available', reason: '' },
+      ])
+
+      const restored = await backupSystem.restoreBackup(incoming)
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('omitted parent tombstoned-parent')
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+      expect(mockSaveProjects).not.toHaveBeenCalled()
+      expect(mockSaveGroup).not.toHaveBeenCalled()
+      expect(mockRecordTombstone).not.toHaveBeenCalled()
+    })
+
+    it('rejects a partially selected multi-level hierarchy before any restore mutation', async () => {
+      const incoming = createMockBackup(0, Date.now(), {
+        tasks: [
+          {
+            id: 'deleted-root',
+            title: 'Root',
+            status: 'todo',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'middle-task',
+            title: 'Middle',
+            status: 'todo',
+            parentTaskId: 'deleted-root',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'leaf-task',
+            title: 'Leaf',
+            status: 'todo',
+            parentTaskId: 'middle-task',
+            createdAt: new Date().toISOString(),
+          },
+        ] as any[],
+        metadata: {
+          taskCount: 3,
+          projectCount: 0,
+          groupCount: 0,
+        },
+      })
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+      })
+      mockCheckTaskIdsAvailability.mockResolvedValue([
+        { taskId: 'deleted-root', status: 'tombstoned', reason: 'Permanently deleted' },
+        { taskId: 'middle-task', status: 'available', reason: '' },
+        { taskId: 'leaf-task', status: 'available', reason: '' },
+      ])
+
+      const restored = await backupSystem.restoreBackup(incoming)
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('omitted parent deleted-root')
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+      expect(mockSaveProjects).not.toHaveBeenCalled()
+      expect(mockSaveGroup).not.toHaveBeenCalled()
+      expect(mockRecordTombstone).not.toHaveBeenCalled()
+    })
+
+    it('rejects a child whose omitted parent is only present in trash', async () => {
+      const incoming = createMockBackup(0, Date.now(), {
+        tasks: [
+          {
+            id: 'trashed-parent',
+            title: 'Parent in trash',
+            status: 'todo',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'visible-child',
+            title: 'Child',
+            status: 'todo',
+            parentTaskId: 'trashed-parent',
+            createdAt: new Date().toISOString(),
+          },
+        ] as any[],
+        metadata: {
+          taskCount: 2,
+          projectCount: 0,
+          groupCount: 0,
+        },
+      })
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+      })
+      mockCheckTaskIdsAvailability.mockResolvedValue([
+        { taskId: 'trashed-parent', status: 'soft_deleted', reason: 'Parent is in trash' },
+        { taskId: 'visible-child', status: 'available', reason: '' },
+      ])
+
+      const restored = await backupSystem.restoreBackup(incoming)
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('omitted parent trashed-parent')
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+      expect(mockSaveProjects).not.toHaveBeenCalled()
+      expect(mockSaveGroup).not.toHaveBeenCalled()
+      expect(mockRecordTombstone).not.toHaveBeenCalled()
+    })
+
+    it('does not mutate anything when the emergency rollback backup is refused', async () => {
+      mockTaskStore.tasks = [{
+        id: 'contradictory-live-task',
+        title: 'Stale live state',
+        status: 'todo',
+      }]
+      mockFetchTombstones.mockResolvedValue([
+        { entityType: 'task', entityId: 'contradictory-live-task' },
+      ])
+      const incoming = createMockBackup(1)
+      incoming.checksum = calculateChecksum({
+        tasks: incoming.tasks,
+        projects: incoming.projects,
+        groups: incoming.groups,
+      })
+
+      const restored = await backupSystem.restoreBackup(incoming, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('emergency rollback backup')
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+      expect(mockSaveProjects).not.toHaveBeenCalled()
+      expect(mockSaveGroup).not.toHaveBeenCalled()
+      expect(mockRecordTombstone).not.toHaveBeenCalled()
+    })
+
+    it('refuses a validly checksummed artifact with contradictory deletion truth', async () => {
+      const backup = createMockBackup(1)
+      backup.tombstones = [{ entityType: 'task', entityId: 'task-1' }]
+      backup.metadata = {
+        ...backup.metadata!,
+        tombstoneCount: 1,
+      }
+      backup.checksum = calculateChecksum({
+        tasks: backup.tasks,
+        projects: backup.projects,
+        groups: backup.groups,
+        tombstones: backup.tombstones,
+      })
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('contradictory permanent-delete inventory')
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+      expect(mockRecordTombstone).not.toHaveBeenCalled()
+    })
+
     it('never discards unsynced task changes when a restore artifact is invalid', async () => {
       const queue = await import('@/services/offline/writeQueueDB')
       await queue.clearAll()

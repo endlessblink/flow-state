@@ -1316,7 +1316,7 @@ export const useAuthStore = defineStore('auth', () => {
       // BUG-1411: Clear IndexedDB read cache on sign-out (prevent data leaking to guest mode)
       try {
         if (signedOutCacheScope) {
-          await readCache.deleteReadCacheScope(signedOutCacheScope)
+          await readCache.deleteReadCacheScopesForUser(signedOutCacheScope.userId)
         }
       } catch (_e) {
         // Non-critical — cache will be overwritten on next sign-in anyway

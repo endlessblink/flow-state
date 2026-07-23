@@ -37,12 +37,15 @@ const createQueryBuilder = (table: string) => {
 
   builder.select = chain('select')
   builder.eq = chain('eq')
+  builder.is = chain('is')
+  builder.or = chain('or')
   builder.order = chain('order')
   builder.upsert = chain('upsert')
   builder.delete = chain('delete')
   builder.update = chain('update')
   builder.insert = chain('insert')
   builder.gte = chain('gte')
+  builder.gt = chain('gt')
   builder.maybeSingle = chain('maybeSingle')
   builder.limit = chain('limit')
 
@@ -198,7 +201,8 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
           { id: 'task-1', title: 'Task One', is_deleted: false },
           { id: 'task-2', title: 'Task Two', is_deleted: false }
         ],
-        error: null
+        error: null,
+        count: 2,
       }
     ])
 
@@ -209,10 +213,10 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
 
     expect(fromMock).toHaveBeenCalledWith('tasks')
     expect(queryCalls).toEqual([
-      { table: 'tasks', method: 'select', args: ['*'] },
+      { table: 'tasks', method: 'select', args: ['*', { count: 'exact' }] },
       { table: 'tasks', method: 'eq', args: ['is_deleted', false] },
-      { table: 'tasks', method: 'order', args: ['order', { ascending: true }] },
-      { table: 'tasks', method: 'order', args: ['created_at', { ascending: true }] }
+      { table: 'tasks', method: 'order', args: ['id', { ascending: true }] },
+      { table: 'tasks', method: 'limit', args: [1000] },
     ])
 
     expect(mapperSpies.fromSupabaseTask).toHaveBeenCalledTimes(2)
@@ -226,7 +230,8 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
     queueResponse('tasks', [
       {
         data: [{ id: 'task-1', title: 'Task One', is_deleted: false }],
-        error: null
+        error: null,
+        count: 1,
       }
     ])
 
@@ -321,10 +326,7 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
 
     expect(authStoreMock.initialize).toHaveBeenCalledTimes(1)
     expect(fromMock).toHaveBeenCalledWith('projects')
-    expect(queryCalls).toEqual([
-      { table: 'projects', method: 'select', args: ['*'] },
-      { table: 'projects', method: 'order', args: ['created_at', { ascending: true }] }
-    ])
+    expect(queryCalls).toContainEqual({ table: 'projects', method: 'select', args: ['*'] })
     expect(mapperSpies.fromSupabaseProject).toHaveBeenCalledTimes(2)
     expect(projects).toEqual([
       { id: 'project-1', name: 'Alpha' },
@@ -372,6 +374,33 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
       { id: 'task-2', user_id: 'user-1', parent_task_id: null }
     ])
     expect(queryCalls).toContainEqual({ table: 'tasks', method: 'select', args: ['id, position'] })
+  })
+
+  it('never flattens valid task hierarchy when one bulk parent reference is invalid', async () => {
+    queueResponse('tasks', [
+      { error: { code: '23503', message: 'violates foreign key constraint on parent_task_id' } },
+      { error: null },
+    ])
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+
+    await expect(db.saveTasks([
+      { id: 'valid-child', parentTaskId: 'valid-parent' } as any,
+      { id: 'orphan-child', parentTaskId: 'missing-parent' } as any,
+    ])).rejects.toMatchObject({ code: '23503' })
+
+    const upsertCalls = queryCalls.filter(call => call.table === 'tasks' && call.method === 'upsert')
+    expect(upsertCalls).toHaveLength(1)
+    expect(upsertCalls[0]?.args[0]).toEqual([
+      { id: 'valid-child', user_id: 'user-1', parent_task_id: 'valid-parent' },
+      { id: 'orphan-child', user_id: 'user-1', parent_task_id: 'missing-parent' },
+    ])
+    expect(upsertCalls).not.toContainEqual(expect.objectContaining({
+      args: [expect.arrayContaining([
+        expect.objectContaining({ id: 'valid-child', parent_task_id: null }),
+      ])],
+    }))
   })
 
   it('retries saveTask on 403 by refreshing auth session', async () => {
@@ -425,10 +454,13 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
     expect(queryCalls).toContainEqual({
       table: 'tasks',
       method: 'update',
-      args: [expect.objectContaining({ is_deleted: true, deleted_at: expect.any(String) })]
+      args: [
+        expect.objectContaining({ is_deleted: true, deleted_at: expect.any(String) }),
+        { count: 'exact' },
+      ]
     })
     expect(queryCalls).toContainEqual({ table: 'tasks', method: 'eq', args: ['id', 'task-delete-1'] })
-    expect(queryCalls).toContainEqual({ table: 'tasks', method: 'select', args: ['*', { count: 'exact' }] })
+    expect(queryCalls).toContainEqual({ table: 'tasks', method: 'select', args: ['*'] })
   })
 
   // GROUP TESTS

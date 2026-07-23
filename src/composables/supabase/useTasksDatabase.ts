@@ -180,13 +180,6 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     .upsert(payloadToSave, { onConflict: 'id' })
                     .select('id, position')
 
-                // Handle FK constraint violation on parent_task_id
-                if (error?.code === '23503' && error?.message?.includes('parent_task_id') && !isRetry) {
-                    console.warn(`⚠️ [saveTasks] FK violation on parent_task_id, clearing orphaned references and retrying`)
-                    const clearedPayload = payloadToSave.map(t => ({ ...t, parent_task_id: null }))
-                    return attemptUpsert(clearedPayload, true)
-                }
-
                 // Handle recurrence dedup constraint (idx_unique_recurrence_occurrence) — cross-device race
                 // The batch includes both legitimate updates (done toggle) and duplicate clones.
                 // We can't tell which task caused the conflict from the batch error, so retry

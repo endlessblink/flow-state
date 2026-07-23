@@ -514,7 +514,7 @@
       "surfaces": ["catalog", "board", "canvas", "unified-inbox"],
       "states": ["filtered-hidden", "tombstoned", "workspace-switched", "concurrent-write"],
       "layers": ["renderer-store", "sync-queue", "supabase-persistence", "supabase-rls"],
-      "automatedEvidence": ["tests/unit/task-rollback.test.ts", "tests/unit/sync/write-health.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
+      "automatedEvidence": ["tests/unit/task-rollback.test.ts", "tests/unit/sync/write-health.test.ts", "tests/unit/composables/useSupabaseDatabase.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
       "liveEvidence": ["2026-07-23: authenticated Chromium R21 forced the visible Board right-click Delete action's durable store call to reject. Before the fix, the task remained intact but the action failed silently because useBoardActions discarded its error message. After the fix, the same real UI path retained the task and displayed 'Task could not be deleted. No changes were saved.'; the isolated run passed in 14.6 seconds. This proves Board immediate-rejection visibility and no-change behavior only; post-enqueue permanent failures, partial batches, and the remaining mutation/surface permutations remain open."]
     },
     {
@@ -683,6 +683,90 @@
       "states": ["backup-corrupt", "restore-drill", "electron-restarted", "inventory-mismatch"],
       "layers": ["backup-artifact", "restore-procedure", "electron-package"],
       "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "backup-deletion-truth-consistency",
+      "severity": "critical",
+      "status": "automated",
+      "failureClasses": ["backup-restore-and-inventory", "delete-tombstone-and-undo", "cross-tab-echo-and-deduplication"],
+      "mutations": ["backup", "restore", "delete", "permanent-delete"],
+      "surfaces": ["backup", "task-inventory", "all-views"],
+      "states": ["stale-snapshot", "cross-client", "tombstoned", "backup-restore", "inventory-mismatch"],
+      "layers": ["renderer-store", "backup-artifact", "restore-procedure", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/backup-validation.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "transactional-topological-graph-restore",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "hierarchy-and-project-integrity", "partial-batch-atomicity"],
+      "mutations": ["backup", "restore", "subtask-change", "move"],
+      "surfaces": ["backup", "task-inventory", "canvas"],
+      "states": ["backup-restore", "restore-drill", "inventory-mismatch", "concurrent-write"],
+      "layers": ["backup-artifact", "restore-procedure", "supabase-persistence", "supabase-rls"],
+      "automatedEvidence": ["tests/unit/backup-validation.test.ts", "tests/unit/composables/useSupabaseDatabase.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "backup-recovery-engine-parity",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "external-contract-drift", "identity-and-field-mapping"],
+      "mutations": ["backup", "restore"],
+      "surfaces": ["backup", "electron", "task-inventory"],
+      "states": ["backup-restore", "restore-drill", "renderer-reloaded", "electron-restarted", "inventory-mismatch"],
+      "layers": ["backup-artifact", "restore-procedure", "electron-package", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "guest-backup-retention-and-restart",
+      "severity": "high",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "cache-corruption-and-stale-snapshots"],
+      "mutations": ["create", "backup", "restore"],
+      "surfaces": ["backup", "all-views", "electron"],
+      "states": ["guest-mode", "renderer-reloaded", "electron-restarted", "backup-restore"],
+      "layers": ["renderer-store", "backup-artifact", "electron-package"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "comments-and-attachment-recovery-inventory",
+      "severity": "high",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "external-contract-drift"],
+      "mutations": ["edit-metadata", "backup", "restore", "delete"],
+      "surfaces": ["backup", "task-inventory", "all-views"],
+      "states": ["backup-restore", "restore-drill", "inventory-mismatch"],
+      "layers": ["backup-artifact", "restore-procedure", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "scoped-cache-account-erasure",
+      "severity": "high",
+      "status": "automated",
+      "failureClasses": ["workspace-scope-isolation", "auth-expiry-and-recovery", "cache-corruption-and-stale-snapshots"],
+      "mutations": ["create", "edit-metadata", "delete"],
+      "surfaces": ["pwa", "all-views"],
+      "states": ["workspace-switched", "auth-expired", "renderer-reloaded"],
+      "layers": ["indexeddb-read-cache", "renderer-store"],
+      "automatedEvidence": ["tests/unit/services/offline/readCacheDB.test.ts"],
+      "liveEvidence": []
+    },
+    {
+      "id": "pwa-controllerchange-write-durability",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["service-worker-cache-skew", "queue-ordering-and-replay", "partial-batch-atomicity"],
+      "mutations": ["create", "edit-metadata", "complete", "delete"],
+      "surfaces": ["pwa", "all-views"],
+      "states": ["updater-stale", "renderer-reloaded", "offline", "reconnecting"],
+      "layers": ["service-worker-cache", "renderer-store", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/pwa-offline-regression.test.ts"],
       "liveEvidence": []
     },
     {

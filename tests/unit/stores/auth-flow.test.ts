@@ -38,7 +38,7 @@ const {
   mockClearLaneStore,
   mockClearCanvasImages,
   mockClearWriteQueue,
-  mockDeleteReadCacheScope,
+  mockDeleteReadCacheScopesForUser,
   mockSyncLocalApiSession,
   mockSyncLocalApiRendererAuthState,
   mockInvalidateAuthCache,
@@ -81,7 +81,7 @@ const {
     mockClearLaneStore: vi.fn(),
     mockClearCanvasImages: vi.fn(),
     mockClearWriteQueue: vi.fn(),
-    mockDeleteReadCacheScope: vi.fn(),
+    mockDeleteReadCacheScopesForUser: vi.fn(),
     mockSyncLocalApiSession: vi.fn(),
     mockSyncLocalApiRendererAuthState: vi.fn(),
     mockInvalidateAuthCache: vi.fn(),
@@ -196,7 +196,7 @@ vi.mock('@/stores/canvasImages', () => ({
 vi.mock('@/services/offline/readCacheDB', () => ({
   clearReadCache: vi.fn().mockResolvedValue(undefined),
   getReadCacheScope: vi.fn(() => ({ userId: 'user-123', workspaceId: null })),
-  deleteReadCacheScope: mockDeleteReadCacheScope,
+  deleteReadCacheScopesForUser: mockDeleteReadCacheScopesForUser,
 }))
 
 vi.mock('@/services/offline/writeQueueDB', () => ({
@@ -847,10 +847,7 @@ describe('Auth Flow — signOut', () => {
     expect(mockClearLaneStore).toHaveBeenCalledOnce()
     expect(mockClearCanvasImages).toHaveBeenCalledOnce()
     expect(mockClearWriteQueue).toHaveBeenCalledOnce()
-    expect(mockDeleteReadCacheScope).toHaveBeenCalledWith({
-      userId: 'user-123',
-      workspaceId: null,
-    })
+    expect(mockDeleteReadCacheScopesForUser).toHaveBeenCalledWith('user-123')
   })
 
   it('14c. signOut durably clears the primary session even when auth-js returns an error', async () => {

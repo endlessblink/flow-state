@@ -2,6 +2,7 @@ import {
   STORAGE_KEYS,
   DATA_LOSS_THRESHOLD,
   BACKUP_SCHEMA_VERSION,
+  assertNoTombstoneContradictions,
   calculateChecksum,
   generateBackupId
 } from './types'
@@ -126,6 +127,10 @@ export function createCoreOperations(
           .map(task => [task.id, task])
       )
       let tasks = [...tasksById.values()]
+      const projects = [...(ctx.projectStore.projects || [])]
+      const groups = [...(ctx.canvasStore.groups || [])]
+
+      assertNoTombstoneContradictions({ tasks, projects, groups, tombstones })
 
       // Filter mock tasks if enabled
       if (ctx.config.value.filterMockTasks && tasks.length > 0) {
@@ -143,9 +148,6 @@ export function createCoreOperations(
         return null
       }
 
-      // Get projects and groups from stores
-      const projects = [...(ctx.projectStore.projects || [])]
-      const groups = [...(ctx.canvasStore.groups || [])]
       const deletedTaskCount = tasks.filter(task => task._soft_deleted).length
       const completionRecordCount = tasks.filter(task => task.isCompletionRecord).length
       const workspaceTaskCount = tasks.filter(task => Boolean(task.workspaceId)).length

@@ -25,6 +25,7 @@ import {
   captureReadCacheScope,
   configureReadCacheScope,
   deleteReadCacheScope,
+  deleteReadCacheScopesForUser,
 } from '@/services/offline/readCacheDB'
 import { clearAll as clearWriteQueue, getWriteQueueDB } from '@/services/offline/writeQueueDB'
 import type { Task, Project } from '@/types/tasks'
@@ -197,6 +198,28 @@ describe('cacheTasks / getCachedTasks', () => {
     configureReadCacheScope(accountScope)
 
     expect(await getCachedTasks()).toBeNull()
+  })
+
+  it('deletes every cached workspace for the signed-out account only', async () => {
+    const personalScope = { userId: 'user-1', workspaceId: null }
+    const sharedScope = { userId: 'user-1', workspaceId: 'workspace-b' }
+    const otherAccountScope = { userId: 'user-2', workspaceId: null }
+
+    configureReadCacheScope(personalScope)
+    await cacheTasks([makeTask({ id: 'personal-secret' })])
+    configureReadCacheScope(sharedScope)
+    await cacheTasks([makeTask({ id: 'workspace-secret' })])
+    configureReadCacheScope(otherAccountScope)
+    await cacheTasks([makeTask({ id: 'other-account-task' })])
+
+    await deleteReadCacheScopesForUser('user-1')
+
+    configureReadCacheScope(personalScope)
+    expect(await getCachedTasks()).toBeNull()
+    configureReadCacheScope(sharedScope)
+    expect(await getCachedTasks()).toBeNull()
+    configureReadCacheScope(otherAccountScope)
+    expect((await getCachedTasks())?.map(task => task.id)).toEqual(['other-account-task'])
   })
 
   it('returns null when the cache is empty', async () => {

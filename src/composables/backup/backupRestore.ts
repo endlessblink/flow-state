@@ -1,4 +1,9 @@
-import { BACKUP_SCHEMA_VERSION, calculateChecksum } from './types'
+import {
+  BACKUP_SCHEMA_VERSION,
+  assertNoTombstoneContradictions,
+  calculateChecksum,
+  validateAndSortTasksForRestore,
+} from './types'
 import type { BackupContext, BackupData, RestoreAnalysis } from './types'
 import type { CoreOperations } from './backupCore'
 import type { GoldenOperations } from './backupGolden'
@@ -54,7 +59,7 @@ export function createRestoreOperations(
 
     // Categorize tasks
     const toRestore: any[] = []
-    const skipped: Array<{ task: any; reason: string }> = []
+    const skipped: RestoreAnalysis['tasks']['skipped'] = []
     let existsActive = 0
     let existsDeleted = 0
     let tombstoned = 0
@@ -64,7 +69,11 @@ export function createRestoreOperations(
       if (!availability || availability.status === 'available') {
         toRestore.push(task)
       } else {
-        skipped.push({ task, reason: availability.reason })
+        skipped.push({
+          task,
+          reason: availability.reason,
+          status: availability.status,
+        })
         switch (availability.status) {
           case 'active':
             existsActive++
@@ -226,6 +235,13 @@ export function createRestoreOperations(
         }
       }
 
+      assertNoTombstoneContradictions({
+        tasks: backupData.tasks,
+        projects: backupData.projects || [],
+        groups: backupData.groups || [],
+        tombstones: backupData.tombstones,
+      })
+
       // A restore must never discard the only durable copy of an offline edit.
       // Resolve or explicitly discard queued work through the sync UI before
       // restoring so backup rows cannot race or overwrite unresolved intent.
@@ -245,6 +261,7 @@ export function createRestoreOperations(
 
       // TASK-344: Analyze and filter tasks before restore
       let tasksToRestore = backupData.tasks
+      const existingParentIds = new Set<string>()
       let projectsToRestore = backupData.projects || []
       let groupsToRestore = backupData.groups || []
 
@@ -253,6 +270,11 @@ export function createRestoreOperations(
         const analysis = await analyzeRestore(backupData)
 
         tasksToRestore = analysis.tasks.toRestore
+        for (const skipped of analysis.tasks.skipped) {
+          if (skipped.status === 'active') {
+            existingParentIds.add(skipped.task.id)
+          }
+        }
         ctx.state.value.restoreProgress = 20
 
         // Log dedup decisions for audit trail
@@ -286,10 +308,20 @@ export function createRestoreOperations(
         console.log(`  Groups: ${groupsToRestore.length}/${backupData.groups?.length || 0} will be restored`)
       }
 
+      tasksToRestore = validateAndSortTasksForRestore(
+        backupData.tasks,
+        tasksToRestore,
+        existingParentIds,
+      )
       ctx.state.value.restoreProgress = 30
 
       // Create emergency backup before restore (rollback point)
-      await coreOps.createBackup('emergency')
+      const emergencyBackup = await coreOps.createBackup('emergency')
+      if (!emergencyBackup) {
+        throw new Error(
+          'Restore refused because the emergency rollback backup could not be created'
+        )
+      }
       ctx.state.value.restoreProgress = 40
 
       // Restore to Supabase using safeCreateTask for each task

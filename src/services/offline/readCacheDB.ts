@@ -69,9 +69,34 @@ export interface ReadCacheScope {
 let activeScope: ReadCacheScope | null = null
 let activeScopeEpoch = 0
 const databases = new Map<string, ReadCacheDatabase>()
+const READ_CACHE_SCOPE_REGISTRY_KEY = 'flowstate-read-cache-v2-scopes'
 
 function scopeDatabaseName(scope: ReadCacheScope): string {
   return `FlowStateReadCache-v2:${scope.userId}:${scope.workspaceId ?? 'personal'}`
+}
+
+function readScopeRegistry(): Set<string> {
+  try {
+    const value = localStorage.getItem(READ_CACHE_SCOPE_REGISTRY_KEY)
+    const names = value ? JSON.parse(value) : []
+    return new Set(Array.isArray(names) ? names.filter(name => typeof name === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function writeScopeRegistry(names: Set<string>): void {
+  try {
+    localStorage.setItem(READ_CACHE_SCOPE_REGISTRY_KEY, JSON.stringify([...names]))
+  } catch {
+    // IndexedDB enumeration remains the fallback when localStorage is unavailable.
+  }
+}
+
+function registerScopeDatabase(name: string): void {
+  const names = readScopeRegistry()
+  names.add(name)
+  writeScopeRegistry(names)
 }
 
 export function configureReadCacheScope(scope: ReadCacheScope | null): void {
@@ -111,6 +136,7 @@ function getDB(scope: ReadCacheScope | null = activeScope): ReadCacheDatabase {
   if (!database) {
     database = new ReadCacheDatabase(name)
     databases.set(name, database)
+    registerScopeDatabase(name)
   }
   return database
 }
@@ -535,4 +561,32 @@ export async function deleteReadCacheScope(scope: ReadCacheScope): Promise<void>
   database?.close()
   databases.delete(name)
   await Dexie.delete(name)
+  const names = readScopeRegistry()
+  names.delete(name)
+  writeScopeRegistry(names)
+}
+
+export async function deleteReadCacheScopesForUser(userId: string): Promise<void> {
+  const prefix = `FlowStateReadCache-v2:${userId}:`
+  const names = readScopeRegistry()
+  for (const name of databases.keys()) names.add(name)
+
+  if (typeof indexedDB.databases === 'function') {
+    try {
+      for (const database of await indexedDB.databases()) {
+        if (database.name) names.add(database.name)
+      }
+    } catch {
+      // The persisted registry and opened-database map remain authoritative fallbacks.
+    }
+  }
+
+  const accountNames = [...names].filter(name => name.startsWith(prefix))
+  await Promise.all(accountNames.map(async name => {
+    databases.get(name)?.close()
+    databases.delete(name)
+    await Dexie.delete(name)
+    names.delete(name)
+  }))
+  writeScopeRegistry(names)
 }

@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.4.288",
+  "version": "1.4.289",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://github.com/endlessblink/flow-state",
   "repository": {
@@ -172,7 +172,7 @@
     "test:user-flows": "npx playwright test tests/user-flows/ --config=tests/user-flows/playwright.config.ts",
     "pretest:task-flows": "npm run build",
     "test:task-flows": "npx playwright test tests/user-flows/task-management.spec.ts --config=tests/user-flows/playwright.config.ts",
-    "test:offline-reconnect-flows": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium} ./scripts/run-e2e.sh tests/e2e/canvas-sync-regressions.spec.ts --project=chromium --workers=1 -g 'R10|R11|R12|R13|R14|R15'",
+    "test:offline-reconnect-flows": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium} ./scripts/run-e2e.sh tests/e2e/canvas-sync-regressions.spec.ts --project=chromium --workers=1 -g 'R10|R11|R12|R13|R14|R15|R16'",
     "test:timer-flows": "bash scripts/run-e2e.sh tests/e2e/mobile/mobile-timer.spec.ts --project=mobile-chrome --workers=1",
     "pretest:navigation-flows": "npm run build",
     "test:navigation-flows": "npx playwright test tests/user-flows/navigation.spec.ts --config=tests/user-flows/playwright.config.ts",

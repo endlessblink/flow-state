@@ -443,6 +443,138 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     }))
   })
 
+  test('R16 - workspace switching never hides, leaks, or loses newly created tasks', async ({ clientA, clientB }) => {
+    const workspaceId = randomUUID()
+    const personalTitle = `Personal existence ${randomUUID()}`
+    const workspaceTitle = `Workspace existence ${randomUUID()}`
+    const clientLogs: string[] = []
+    clientA.on('console', message => {
+      const text = message.text()
+      if (/SYNC|WORKSPACE|Task could not be saved|Failed to queue/i.test(text)) {
+        clientLogs.push(`${message.type()}: ${text}`)
+      }
+    })
+
+    try {
+      const { error: workspaceError } = await admin.from('workspaces').insert({
+        id: workspaceId,
+        name: 'Existence Boundary Workspace',
+        owner_id: userId,
+        color: '#4ECDC4',
+      })
+      expect(workspaceError).toBeNull()
+      const { error: membershipError } = await admin.from('workspace_members').insert({
+        workspace_id: workspaceId,
+        user_id: userId,
+        role: 'owner',
+      })
+      expect(membershipError).toBeNull()
+
+      await gotoCatalogReady(clientA)
+      await clientA.evaluate(async () => {
+        const root = document.querySelector('#app') as any
+        const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+        const workspace = pinia._s.get('workspace')!
+        await workspace.loadWorkspaces()
+        await workspace.switchWorkspace(null)
+      })
+
+      const quickCreate = clientA.getByPlaceholder(/Quick add task/i)
+      await quickCreate.fill(personalTitle)
+      await quickCreate.press('Enter')
+      await expect(clientA.getByText(personalTitle, { exact: true })).toBeVisible()
+
+      const switcher = clientA.locator('.workspace-switcher .switcher-trigger')
+      await switcher.click()
+      await clientA.locator('.workspace-menu .workspace-option')
+        .filter({ hasText: 'Existence Boundary Workspace' })
+        .click()
+
+      await expect.poll(async () => clientA.evaluate(() => {
+        const root = document.querySelector('#app') as any
+        const workspace = root.__vue_app__._context.config.globalProperties.$pinia._s.get('workspace')!
+        return workspace.activeWorkspaceId
+      })).toBe(workspaceId)
+      await expect(clientA.getByText(personalTitle, { exact: true })).toHaveCount(0)
+
+      await quickCreate.fill(workspaceTitle)
+      await quickCreate.press('Enter')
+      await expect(clientA.getByText(workspaceTitle, { exact: true })).toBeVisible()
+
+      try {
+        await expect(async () => {
+          const { data, error } = await admin
+            .from('tasks')
+            .select('id,title,workspace_id,is_deleted')
+            .eq('user_id', userId)
+            .in('title', [personalTitle, workspaceTitle])
+          expect(error).toBeNull()
+          expect(data).toEqual(expect.arrayContaining([
+            expect.objectContaining({ title: personalTitle, workspace_id: null, is_deleted: false }),
+            expect.objectContaining({ title: workspaceTitle, workspace_id: workspaceId, is_deleted: false }),
+          ]))
+        }).toPass({ timeout: 20_000 })
+      } catch (error) {
+        const syncDiagnostics = await clientA.evaluate(async () => {
+          const [{ useSyncOrchestrator }, { useWorkspaceStore }, { getFailedOperations }] = await Promise.all([
+            import('/src/composables/sync/useSyncOrchestrator.ts'),
+            import('/src/stores/workspace.ts'),
+            import('/src/services/offline/writeQueueDB.ts'),
+          ])
+          const sync = useSyncOrchestrator()
+          const workspace = useWorkspaceStore()
+          return {
+            activeWorkspaceId: workspace.activeWorkspaceId,
+            isSwitchingWorkspace: workspace.isSwitchingWorkspace,
+            status: sync.status.value,
+            isOnline: sync.isOnline.value,
+            lastError: sync.lastError.value,
+            queue: await sync.getQueueStats(),
+            failedOperations: (await getFailedOperations()).map(operation => ({
+              entityId: operation.entityId,
+              operation: operation.operation,
+              workspaceId: operation.workspaceId,
+              retryCount: operation.retryCount,
+              error: operation.error,
+            })),
+          }
+        })
+        console.log(`R16 sync diagnostics:\n${JSON.stringify(syncDiagnostics, null, 2)}\n${clientLogs.join('\n')}`)
+        throw error
+      }
+
+      await switcher.click()
+      await clientA.locator('.workspace-menu .workspace-option').filter({ hasText: /Personal/i }).click()
+      await expect(clientA.getByText(personalTitle, { exact: true })).toBeVisible()
+      await expect(clientA.getByText(workspaceTitle, { exact: true })).toHaveCount(0)
+
+      await clientA.reload()
+      await gotoCatalogReady(clientA)
+      await expect(clientA.getByText(personalTitle, { exact: true })).toBeVisible()
+
+      await gotoCatalogReady(clientB)
+      await clientB.evaluate(async () => {
+        const root = document.querySelector('#app') as any
+        const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+        const workspace = pinia._s.get('workspace')!
+        await workspace.loadWorkspaces()
+        await workspace.switchWorkspace(null)
+      })
+      await expect(clientB.getByText(personalTitle, { exact: true })).toBeVisible()
+      await clientB.evaluate(async (id) => {
+        const root = document.querySelector('#app') as any
+        const workspace = root.__vue_app__._context.config.globalProperties.$pinia._s.get('workspace')!
+        await workspace.switchWorkspace(id)
+      }, workspaceId)
+      await expect(clientB.getByText(workspaceTitle, { exact: true })).toBeVisible()
+      await expect(clientB.getByText(personalTitle, { exact: true })).toHaveCount(0)
+    } finally {
+      await admin.from('tasks').delete().eq('user_id', userId).in('title', [personalTitle, workspaceTitle])
+      await admin.from('workspace_members').delete().eq('workspace_id', workspaceId)
+      await admin.from('workspaces').delete().eq('id', workspaceId)
+    }
+  })
+
   test('R13 - Quick Create works offline, drains after reconnect, reaches another client, and survives reload', async ({ clientA, clientB }) => {
     await gotoCanvasReady(clientA)
     await gotoCanvasReady(clientB)

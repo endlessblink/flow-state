@@ -181,6 +181,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       }
     } finally {
       isSwitchingWorkspace.value = false  // Resume sync queue — always reset, even on early throw
+      try {
+        const { useSyncOrchestrator } = await import('@/composables/sync/useSyncOrchestrator')
+        await useSyncOrchestrator().forceSync()
+      } catch (error) {
+        console.warn('[WORKSPACE] Failed to resume durable writes after workspace switch:', error)
+      }
     }
   }
 

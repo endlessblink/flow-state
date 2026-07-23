@@ -508,9 +508,16 @@ export function useTaskPersistence(
             const authenticatedEmptyRemoteLoad = geometryMergedLoadedTasks.length === 0 && !emptyRemoteLoadIsProtected
 
             // 2. Process existing local tasks (Preserve optimistic, Handle Remote Deletes)
-            const localTasksMap = new Map(_rawTasks.value.map(t => [t.id, t]))
+            // A workspace load is an exact authority scope. Never compare or recover
+            // tasks from another scope against this response: doing so can turn every
+            // old-scope row into a CREATE in the newly selected workspace.
+            const normalizedWorkspaceId = workspaceId ?? null
+            const belongsToAuthorityScope = (task: Task) =>
+                (task.workspaceId ?? null) === normalizedWorkspaceId
+            const localTasksForScope = _rawTasks.value.filter(belongsToAuthorityScope)
+            const localTasksMap = new Map(localTasksForScope.map(t => [t.id, t]))
 
-            for (const localTask of _rawTasks.value) {
+            for (const localTask of localTasksForScope) {
                 const remoteTask = remoteMap.get(localTask.id)
 
                 // Local API receipts identify rows whose committed remote state is authoritative.
@@ -767,6 +774,7 @@ export function useTaskPersistence(
             // path for sign-in/auth-recovery loads that briefly render an empty
             // or partial canvas even though IndexedDB still has the user's data.
             for (const [cachedTaskId, cachedTask] of cachedById) {
+                if (!belongsToAuthorityScope(cachedTask)) continue
                 if (localTasksMap.has(cachedTaskId) || remoteMap.has(cachedTaskId)) continue
                 if (remotelyDeletedTaskIds.has(cachedTaskId) || cachedTask._soft_deleted) continue
                 if (requireRemoteAuthority && !isPendingWrite(cachedTaskId)) continue

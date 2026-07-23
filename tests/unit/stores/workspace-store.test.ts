@@ -23,6 +23,7 @@ import { setActivePinia, createPinia } from 'pinia'
 
 const mockSupabaseFrom = vi.fn()
 const mockRpc = vi.fn()
+const mockForceSync = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@/services/auth/supabase', () => ({
   supabase: {
@@ -51,6 +52,9 @@ vi.mock('@/stores/projects', () => ({
 }))
 vi.mock('@/stores/canvas', () => ({
   useCanvasStore: () => ({ loadFromDatabase: vi.fn().mockResolvedValue(undefined) }),
+}))
+vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
+  useSyncOrchestrator: () => ({ forceSync: mockForceSync }),
 }))
 vi.mock('@/composables/supabase/_infrastructure', () => ({
   invalidateCache: { all: vi.fn() },
@@ -155,6 +159,22 @@ describe('useWorkspaceStore', () => {
 
     expect(store.activeWorkspaceId).toBe('ws-abc')
     expect(store.isPersonalWorkspace).toBe(false)
+  })
+
+  it('resumes durable writes immediately after a workspace switch completes', async () => {
+    const memberChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+    }
+    mockSupabaseFrom.mockReturnValue(memberChain)
+
+    const { useWorkspaceStore } = await import('@/stores/workspace')
+    const store = useWorkspaceStore()
+
+    await store.switchWorkspace('ws-durable')
+
+    expect(store.isSwitchingWorkspace).toBe(false)
+    expect(mockForceSync).toHaveBeenCalledTimes(1)
   })
 
   it('6. personal workspace: activeMembers is empty (no shared members)', async () => {

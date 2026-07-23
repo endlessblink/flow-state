@@ -772,10 +772,17 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     expect(store._rawTasks.find(task => task.id === cachedTask.id)?.title).toBe('Recovered from cache')
   })
 
-  it('allows empty overwrite during workspace switch', async () => {
+  it('never re-enqueues or carries old-scope tasks into a newly selected workspace', async () => {
     const store = useTaskStore()
-    const existingTask = makeTask({ title: 'Old Workspace Task' })
+    const existingTask = makeTask({
+      id: 'personal-task-before-switch',
+      title: 'Old Personal Workspace Task',
+      workspaceId: undefined,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
     store._rawTasks.push(existingTask)
+    vi.mocked(getCachedTasksWithPendingWrites).mockResolvedValue([existingTask])
 
     mockIsSwitchingWorkspace = true
     mockActiveWorkspaceId = 'ws-new'
@@ -783,9 +790,11 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     mockFetchTasks.mockResolvedValue([])
 
     await store.loadFromDatabase()
+    await new Promise(resolve => setTimeout(resolve, 20))
 
-    // Workspace switch should allow clearing
-    // (The exact behavior depends on the isSwitchingWorkspace check at line 280)
+    expect(store._rawTasks).toEqual([])
+    expect(mockEnqueue).not.toHaveBeenCalled()
+    expect(cacheTasks).toHaveBeenCalledWith([], expect.anything())
   })
 
   // ── Dedup safety ──

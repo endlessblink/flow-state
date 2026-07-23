@@ -144,7 +144,7 @@
       {
         "id": "offline-queue-replay-and-auth-expiry",
         "issueSignals": ["BUG-1514", "BUG-1517", "BUG-1561", "BUG-1562", "BUG-1565", "BUG-1411", "BUG-1182"],
-        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-quick-create-ui-durability", "offline-catalog-completion-durability", "offline-user-entrypoint-parity", "durable-write-failure-visibility-and-rollback"]
+        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-quick-create-ui-durability", "offline-catalog-completion-durability", "offline-user-entrypoint-parity", "board-offline-right-click-completion-parity", "board-offline-edit-delete-entrypoint-parity", "durable-write-failure-visibility-and-rollback"]
       },
       {
         "id": "realtime-gap-echo-and-resurrection",
@@ -174,7 +174,7 @@
       {
         "id": "recurrence-date-and-calendar-projection",
         "issueSignals": ["BUG-1971", "BUG-1901", "BUG-1909", "BUG-1935", "TASK-1520", "TASK-1521", "TASK-1785"],
-        "vectorIds": ["recurring-completion-durability", "context-menu-label-and-action-parity", "guest-recurring-completion-authority"]
+        "vectorIds": ["recurring-completion-durability", "board-recurring-completion-durability", "context-menu-label-and-action-parity", "guest-recurring-completion-authority"]
       },
       {
         "id": "timer-cross-runtime-coordination",
@@ -189,7 +189,7 @@
       {
         "id": "local-api-and-external-contract-drift",
         "issueSignals": ["TASK-1797", "TASK-1928", "TASK-1929", "BUG-1933", "BUG-1965"],
-        "vectorIds": ["local-api-canonical-client-contract-parity", "create-existence-readback", "pwa-service-worker-contract-skew"]
+        "vectorIds": ["local-api-canonical-client-contract-parity", "create-existence-readback", "pwa-service-worker-contract-skew", "pwa-offline-readback-cache-integrity"]
       },
       {
         "id": "release-process-and-live-runtime-truth",
@@ -284,6 +284,18 @@
       "liveEvidence": ["2026-07-23: the live done-for-now RPC persisted the advanced living row, exactly one completed occurrence, and an action receipt; Search showed the advanced date before and after renderer reload; the isolated end-to-end run passed in 18.6 seconds", "2026-07-23: installed Electron 1.4.283 reproduced right-click Mark as Done and Done for now failures on the same recurring Canvas task; root cause was renderer apply omitting the requestHash required by the deployed canonical receipt contract; unit coverage now requires forwarding the preview hash and the local multi-view end-to-end run passed in 17.1 seconds; packaged Electron restart proof remains open", "2026-07-23: the local browser recurring end-to-end proof showed a second failure shape: the local canonical Supabase function still emits a legacy preview with no requestHash. Renderer compatibility coverage now accepts both hashed and legacy previews, and the real browser recurring flow passed in 18.2 seconds without breaking the newer hash-forwarding path.", "2026-07-23: clean supervised Electron 1.4.285 reproduced the exact user path on task 54d11a20-2b02-4892-a67c-950f2aec9deb: Catalog search, right-click, Mark as Done. The visible recurring row advanced from Jul 26 to Jul 29, canonical revision advanced from 7 to 8, status correctly remained Todo for the next occurrence, and no failure toast appeared. Provenance reported source commit 805d5b74 with sourceDirty false before the action.", "2026-07-23: authenticated Chromium R15 exercised the exact Canvas right-click More > Done for now > Next occurrence path while fully offline. It advanced optimistically, preserved the task workspace in the durable queue, committed exactly one completion after reconnect, converged in an independent client through the five-second canonical catch-up safety net when Realtime emitted no usable event, and survived renderer reload. The live run passed in 26.6 seconds; packaged Electron restart proof remains open."]
     },
     {
+      "id": "board-recurring-completion-durability",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["recurrence-lifecycle", "timezone-and-date-projection"],
+      "mutations": ["done-for-now", "complete", "reopen", "schedule"],
+      "surfaces": ["board", "canvas", "catalog"],
+      "states": ["visible", "recurring", "renderer-reloaded", "electron-restarted", "offline", "reconnecting"],
+      "layers": ["renderer-component", "renderer-store", "local-task-api", "supabase-persistence", "canonical-change-log"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
       "id": "create-existence-readback",
       "severity": "critical",
       "status": "open",
@@ -292,8 +304,8 @@
       "surfaces": ["quick-create", "catalog", "canvas", "local-task-api"],
       "states": ["renderer-reloaded", "electron-restarted", "workspace-switched"],
       "layers": ["renderer-store", "local-task-api", "supabase-persistence", "task-inventory"],
-      "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts"],
-      "liveEvidence": ["2026-07-23: R9 created a fixed-identity task through the real store, read the complete non-deleted row from local Supabase, observed it in an independent Chromium client, and observed it again after that client reloaded; the isolated end-to-end run passed in 17.3 seconds; Electron restart, workspace switch, local task API, and inventory proof remain open", "2026-07-23: installed Electron 1.4.286 created task ca80d2d3-ba73-49de-805f-bf14a7221421 through the canonical Local Task API lifecycle, then exact read-back, title search, and a fresh complete 53-task inventory returned the same identity. After SIGKILL and supervised Electron restart, all three boundaries still returned the task at canonical revision 1. Workspace-switch proof remains open."]
+      "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/stores/smart-merge.test.ts", "tests/unit/stores/workspace-store.test.ts"],
+      "liveEvidence": ["2026-07-23: R9 created a fixed-identity task through the real store, read the complete non-deleted row from local Supabase, observed it in an independent Chromium client, and observed it again after that client reloaded; the isolated end-to-end run passed in 17.3 seconds; Electron restart, workspace switch, local task API, and inventory proof remain open", "2026-07-23: installed Electron 1.4.286 created task ca80d2d3-ba73-49de-805f-bf14a7221421 through the canonical Local Task API lifecycle, then exact read-back, title search, and a fresh complete 53-task inventory returned the same identity. After SIGKILL and supervised Electron restart, all three boundaries still returned the task at canonical revision 1. Workspace-switch proof remains open.", "2026-07-23: authenticated Chromium R16 created tasks through the visible Quick Add control in personal and shared workspaces, reproduced old-scope smart merge rows being misclassified and enqueued into the new workspace until sync globally paused, then proved the scope-safe fix: both rows persisted with exact workspace ownership, never leaked into the other rendered scope, survived reload, and were read by an independent client. R10-R16 passed together in 1.0 minute."]
     },
     {
       "id": "local-api-canonical-client-contract-parity",
@@ -352,8 +364,8 @@
       "surfaces": ["all-views", "local-task-api"],
       "states": ["workspace-switched", "cross-client"],
       "layers": ["renderer-store", "sync-transport", "supabase-rls"],
-      "automatedEvidence": ["tests/unit/sync/cross-tab-sync.test.ts", "tests/contract/canonical-task-contract.test.ts"],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/unit/sync/cross-tab-sync.test.ts", "tests/contract/canonical-task-contract.test.ts", "tests/unit/stores/smart-merge.test.ts", "tests/unit/stores/workspace-store.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts"],
+      "liveEvidence": ["2026-07-23: authenticated Chromium R16 proved exact personal/shared workspace isolation during visible workspace switching, including canonical ownership, reload, and independent-client readback. The regression also proves old-scope in-memory and cached tasks cannot be re-enqueued into the newly selected scope."]
     },
     {
       "id": "updater-runtime-and-package-provenance",
@@ -416,6 +428,30 @@
       "liveEvidence": ["2026-07-23: authenticated Chromium R14 proved the Catalog right-click Mark as Done path offline through reconnect, independent-client convergence, and reload. R15 proved the Canvas recurring right-click Done for now > Next occurrence path through the same boundaries, including exactly-once completion and canonical catch-up after a missed Realtime event. Board actions and the remaining edit/delete surface permutations remain open."]
     },
     {
+      "id": "board-offline-right-click-completion-parity",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["queue-ordering-and-replay", "write-failure-visibility", "cache-corruption-and-stale-snapshots"],
+      "mutations": ["change-status", "complete", "done-for-now", "reopen"],
+      "surfaces": ["board", "catalog"],
+      "states": ["offline", "reconnecting", "renderer-reloaded", "cross-client"],
+      "layers": ["renderer-component", "renderer-store", "sync-queue", "canonical-change-log", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "board-offline-edit-delete-entrypoint-parity",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["write-failure-visibility", "partial-batch-atomicity", "delete-tombstone-and-undo"],
+      "mutations": ["edit-metadata", "delete", "restore", "change-status"],
+      "surfaces": ["board", "catalog", "canvas"],
+      "states": ["offline", "reconnecting", "renderer-reloaded", "cross-client", "concurrent-write"],
+      "layers": ["renderer-component", "renderer-store", "sync-queue", "undo", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
       "id": "canvas-geometry-and-membership-durability",
       "severity": "critical",
       "status": "open",
@@ -448,6 +484,18 @@
       "surfaces": ["pwa"],
       "states": ["offline", "reconnecting", "updater-stale", "renderer-reloaded"],
       "layers": ["service-worker-cache", "renderer-store", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "pwa-offline-readback-cache-integrity",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["service-worker-cache-skew", "realtime-gap-recovery", "auth-expiry-and-recovery"],
+      "mutations": ["create", "edit-metadata", "change-status", "delete", "backup", "restore"],
+      "surfaces": ["pwa", "all-views"],
+      "states": ["offline", "reconnecting", "renderer-reloaded", "updater-stale", "backup-restore"],
+      "layers": ["service-worker-cache", "sync-queue", "supabase-persistence", "task-inventory"],
       "automatedEvidence": [],
       "liveEvidence": []
     },

@@ -1916,6 +1916,21 @@ describe('Enqueue operations', () => {
     expect(writeQueueMocks.deleteOperation).toHaveBeenCalledWith(50)
   })
 
+  it('keeps a pending CREATE when durable DELETE enrollment fails', async () => {
+    const pendingCreate = makeOp({ id: 51, operation: 'create', status: 'pending' })
+    writeQueueMocks.getOperationsForEntity.mockResolvedValue([pendingCreate])
+    writeQueueMocks.enqueueOperation.mockRejectedValueOnce(new Error('IndexedDB add failed'))
+
+    await expect(useSyncOrchestrator().enqueue({
+      entityType: 'task',
+      operation: 'delete',
+      entityId: 'entity-crash-boundary',
+      payload: {}
+    })).rejects.toThrow('IndexedDB add failed')
+
+    expect(writeQueueMocks.deleteOperation).not.toHaveBeenCalled()
+  })
+
   it('enqueue triggers immediate processing when online', async () => {
     writeQueueMocks.enqueueOperation.mockResolvedValue(makeOp())
     writeQueueMocks.getPendingOperations.mockResolvedValue([])

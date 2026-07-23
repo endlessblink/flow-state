@@ -763,6 +763,23 @@ describe('task operation undo/redo three-cycle invariants', () => {
     await redoPromise
   })
 
+  it('restores only bulk deletes that could not be durably queued and reports the partial failure', async () => {
+    const taskStore = useTaskStore()
+    const durableTask = createMockTask({ id: 'task-bulk-delete-durable', title: 'Durable delete' })
+    const failedTask = createMockTask({ id: 'task-bulk-delete-failed', title: 'Failed delete' })
+    taskStore._rawTasks.push(durableTask, failedTask)
+    mockEnqueue
+      .mockResolvedValueOnce({ id: 1, status: 'pending' })
+      .mockRejectedValueOnce(new Error('IndexedDB write failed'))
+
+    await expect(taskStore.bulkDeleteTasks([durableTask.id, failedTask.id])).rejects.toThrow(
+      'could not be durably queued'
+    )
+
+    expect(taskStore._rawTasks.some(task => task.id === durableTask.id)).toBe(false)
+    expect(taskStore._rawTasks.some(task => task.id === failedTask.id)).toBe(true)
+  })
+
   it('keeps a bulk delete removed when saving remaining cached tasks fails', async () => {
     const taskStore = useTaskStore()
     const taskA = createMockTask({ id: 'task-bulk-delete-save-fails-a', title: 'Bulk delete A' })

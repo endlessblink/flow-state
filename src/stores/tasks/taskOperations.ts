@@ -1131,9 +1131,6 @@ export function useTaskOperations(
         }
         _rawTasks.value.splice(index, 1)
 
-        // TASK-1428: Update IndexedDB read cache so offline reloads reflect the deletion.
-        await cacheTasks([..._rawTasks.value])
-
         // BUG-1737: Single-write path — sync queue is the SOLE path to Supabase for deletes.
         // Previously also called deleteTaskFromStorage() directly, creating a dual-write race
         // where undo couldn't cleanly cancel both the queue DELETE and the direct DELETE.
@@ -1158,6 +1155,15 @@ export function useTaskOperations(
             throw queueError
         } finally {
             manualOperationInProgress.value = false
+        }
+
+        // The durable delete must exist before the reload cache is allowed to show
+        // the task as gone. A crash before queue enrollment must restart from the
+        // older truthful cache; a crash after enrollment is covered by queue replay.
+        try {
+            await cacheTasks([..._rawTasks.value])
+        } catch (cacheError) {
+            console.warn(`⚠️ [DELETE] Durable delete queued but read cache update failed for ${taskId.slice(0, 8)}:`, cacheError)
         }
 
         // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
@@ -1221,8 +1227,6 @@ export function useTaskOperations(
                     rawTaskCount: _rawTasks.value.length,
                 })
 
-                await cacheTasks([..._rawTasks.value])
-
                 try {
                     const syncOrchestrator = useSyncOrchestrator()
                     await syncOrchestrator.enqueue({
@@ -1235,6 +1239,11 @@ export function useTaskOperations(
                     logPermanentDeleteTrace(taskId, 'store.remote-failed-permanent-delete-queued', {
                         rawTaskCount: _rawTasks.value.length,
                     })
+                    try {
+                        await cacheTasks([..._rawTasks.value])
+                    } catch (cacheError) {
+                        console.warn(`⚠️ [PERMANENT-DELETE] Durable fallback queued but read cache update failed for ${taskId.slice(0, 8)}:`, cacheError)
+                    }
                     return
                 } catch (queueError) {
                     logPermanentDeleteTrace(taskId, 'store.remote-failed-permanent-delete-queue-error', {
@@ -1353,35 +1362,63 @@ export function useTaskOperations(
         if (!taskIds.length) return
         manualOperationInProgress.value = true
 
-        // TASK-1159: Echo protection for each deleted task
-        taskIds.forEach(id => addPendingWrite(id))
+        try {
+            // Keep the optimistic all-at-once UI behavior, but do not make the
+            // reload cache authoritative until every individual result is known.
+            const originalTasks = [..._rawTasks.value]
+            const deletedTasks = originalTasks
+                .map((task, index) => ({ task, index }))
+                .filter(({ task }) => taskIds.includes(task.id))
+            deletedTasks.forEach(({ task }) => addPendingWrite(task.id))
+            _rawTasks.value = _rawTasks.value.filter(t => !taskIds.includes(t.id))
 
-        // TASK-1159: Capture deleted tasks for rollback, then filter immediately
-        const deletedTasks = _rawTasks.value.filter(t => taskIds.includes(t.id))
-        _rawTasks.value = _rawTasks.value.filter(t => !taskIds.includes(t.id))
-
-        await cacheTasks([..._rawTasks.value])
-
-        // Enqueue DELETE for each task so offline bulk deletes can retry via sync queue
-        const syncOrchestrator = useSyncOrchestrator()
-        for (const deletedTask of deletedTasks) {
-            try {
-                await syncOrchestrator.enqueue({
-                    entityType: 'task',
-                    operation: 'delete',
-                    entityId: deletedTask.id,
-                    payload: { id: deletedTask.id },
-                    baseVersion: deletedTask.positionVersion || 0
-                })
-            } catch (queueError) {
-                console.warn(`⚠️ [BULK-DELETE] Failed to queue delete for ${deletedTask.id.slice(0, 8)}; local cache still keeps it removed:`, queueError)
+            const syncOrchestrator = useSyncOrchestrator()
+            const failed: Array<{ task: Task; index: number; error: unknown }> = []
+            for (const deleted of deletedTasks) {
+                try {
+                    await syncOrchestrator.enqueue({
+                        entityType: 'task',
+                        operation: 'delete',
+                        entityId: deleted.task.id,
+                        payload: { id: deleted.task.id },
+                        baseVersion: deleted.task.positionVersion || 0
+                    })
+                } catch (error) {
+                    failed.push({ ...deleted, error })
+                }
             }
+
+            if (failed.length > 0) {
+                const failedIds = new Set(failed.map(({ task }) => task.id))
+                const originalIds = new Set(originalTasks.map(task => task.id))
+                const tasksAddedWhileQueued = _rawTasks.value.filter(task => !originalIds.has(task.id))
+                _rawTasks.value = [
+                    ...originalTasks.filter(task => !taskIds.includes(task.id) || failedIds.has(task.id)),
+                    ...tasksAddedWhileQueued,
+                ]
+            }
+            for (const { task } of failed) {
+                removePendingWrite(task.id)
+            }
+
+            try {
+                await cacheTasks([..._rawTasks.value])
+            } catch (cacheError) {
+                console.warn('[BULK-DELETE] Durable queue results could not be projected to the read cache:', cacheError)
+            }
+
+            if (failed.length > 0) {
+                const { showToast } = useToast()
+                showToast(`${failed.length} task${failed.length === 1 ? '' : 's'} could not be deleted and were restored.`, 'error')
+                throw new Error(
+                    `${failed.length} task delete${failed.length === 1 ? '' : 's'} could not be durably queued: ${
+                        failed.map(({ error }) => error instanceof Error ? error.message : String(error)).join('; ')
+                    }`
+                )
+            }
+        } finally {
+            manualOperationInProgress.value = false
         }
-
-        manualOperationInProgress.value = false
-
-        // TASK-131: Removed triggerCanvasSync() - surgical deletion watcher in CanvasView handles this
-        // The watcher detects bulk deletions and removes only the affected nodes, preventing position resets
     }
 
     const moveTask = async (taskId: string, newStatus: Task['status']) => {

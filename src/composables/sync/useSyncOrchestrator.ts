@@ -116,11 +116,7 @@ import type {
 const enqueueOperation: typeof _enqueueOperation = async (...args) => {
   const mod = await getWriteQueueModule()
   if (!mod) {
-    if (args[0].canonicalTaskPatch) {
-      throw new Error('IndexedDB is required for durable canonical task patches')
-    }
-    console.warn('[SYNC] IndexedDB not available - operation not queued')
-    return { ...args[0], id: Date.now(), status: 'pending' as const, retryCount: 0, createdAt: Date.now() }
+    throw new Error('IndexedDB is required for durable queued writes')
   }
   return mod.enqueueOperation(...args)
 }
@@ -1247,31 +1243,32 @@ export function useSyncOrchestrator() {
       ? operation.workspaceId
       : await getActiveWorkspaceId()
 
-    // BUG-1534: When enqueuing a DELETE, cancel any pending CREATEs for the same entity.
-    // This prevents stale CREATEs from resurrecting deleted tasks after page reload.
-    if (operation.operation === 'delete') {
-      try {
-        const { getOperationsForEntity, deleteOperation: deleteOp } = await import('@/services/offline/writeQueueDB')
-        const pendingOps = await getOperationsForEntity(operation.entityType, operation.entityId)
-        for (const op of pendingOps) {
-          if (op.operation === 'create' && (op.status === 'pending' || op.status === 'failed')) {
-            await deleteOp(op.id!)
-            if (import.meta.env.DEV) {
-              console.debug(`🗑️ [SYNC] Cancelled stale CREATE for ${operation.entityType}:${operation.entityId.slice(0, 8)} (DELETE takes precedence)`)
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('[SYNC] Failed to cancel pending CREATEs on DELETE:', e)
-      }
-    }
-
     // Enqueue the operation
     const queued = await enqueueOperation({
       ...operation,
       userId,
       workspaceId
     })
+
+    // BUG-1534: A DELETE supersedes pending CREATEs, but the replacement intent
+    // must be durable before removing the only existing copy. If IndexedDB fails
+    // while adding DELETE, the CREATE remains available for crash recovery.
+    if (operation.operation === 'delete') {
+      try {
+        const { getOperationsForEntity, deleteOperation: deleteOp } = await import('@/services/offline/writeQueueDB')
+        const pendingOps = await getOperationsForEntity(operation.entityType, operation.entityId)
+        for (const op of pendingOps) {
+          if (op.id !== queued.id && op.operation === 'create' && (op.status === 'pending' || op.status === 'failed')) {
+            await deleteOp(op.id!)
+            if (import.meta.env.DEV) {
+              console.debug(`🗑️ [SYNC] Cancelled stale CREATE for ${operation.entityType}:${operation.entityId.slice(0, 8)} (durable DELETE takes precedence)`)
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[SYNC] Durable DELETE queued, but stale CREATE cleanup failed:', e)
+      }
+    }
 
     if (import.meta.env.DEV) {
       console.debug(`📝 [SYNC] Queued: ${operation.entityType}:${operation.operation} ${operation.entityId.slice(0, 8)}`)

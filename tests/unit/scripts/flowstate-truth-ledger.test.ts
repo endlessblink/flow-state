@@ -192,4 +192,11 @@ describe('FlowState source-to-runtime truth ledger', () => {
     expect(buildScript.indexOf('dist-electron/flowstate-truth-ledger.json'))
       .toBeLessThan(buildScript.indexOf('electron-builder --config electron-builder.yml'))
   })
+
+  it('keeps mandatory browser-test reports out of tracked release provenance', () => {
+    const root = resolve(__dirname, '../../..')
+    const config = readFileSync(join(root, 'playwright.config.ts'), 'utf8')
+
+    expect(config).toContain("outputFolder: 'test-results/playwright-report'")
+  })
 })

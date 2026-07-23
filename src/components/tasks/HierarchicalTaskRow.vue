@@ -63,6 +63,7 @@
           :key="childTask.id"
           v-memo="[childTask.id, childTask.status, state.isExpanded.value]"
           :task="childTask"
+          :data-task-id="childTask.id"
           :indent-level="indentLevel + 1"
           :visited-ids="new Set([...visitedIds, task.id])"
           :expanded-tasks="expandedTasks"

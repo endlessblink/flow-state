@@ -158,11 +158,11 @@ const selectionModes = [
 const multiSelectMode = computed(() => canvasStore.multiSelectMode)
 const selectionMode = computed(() => canvasStore.selectionMode)
 const selectionRect = computed(() => canvasStore.selectionRect)
-const selectedCount = computed(() => props.selectedNodeIds.length)
-
 const selectedNodes = computed(() => 
   props.nodes.filter(node => props.selectedNodeIds.includes(node.id))
 )
+const visibleSelectedNodeIds = computed(() => selectedNodes.value.map(node => node.id))
+const selectedCount = computed(() => visibleSelectedNodeIds.value.length)
 
 const selectionRectStyle = computed(() => {
   if (!selectionRect.value) return {}
@@ -201,7 +201,7 @@ const invertSelection = () => {
 
 const bulkUpdateStatus = (status: TaskStatus) => {
   emit('bulkAction', 'updateStatus', { 
-    nodeIds: props.selectedNodeIds, 
+    nodeIds: visibleSelectedNodeIds.value,
     status 
   })
   showBulkMenu.value = false
@@ -209,7 +209,7 @@ const bulkUpdateStatus = (status: TaskStatus) => {
 
 const bulkUpdatePriority = (priority: TaskPriority) => {
   emit('bulkAction', 'updatePriority', { 
-    nodeIds: props.selectedNodeIds, 
+    nodeIds: visibleSelectedNodeIds.value,
     priority 
   })
   showBulkMenu.value = false
@@ -217,7 +217,7 @@ const bulkUpdatePriority = (priority: TaskPriority) => {
 
 const bulkDelete = () => {
   // BUG-1580: native confirm() is broken in Tauri/WebKitGTK — use bulk delete modal instead
-  const taskNodeIds = props.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
+  const taskNodeIds = visibleSelectedNodeIds.value.filter(id => !CanvasIds.isGroupNode(id))
   if (taskNodeIds.length === 0) return
 
   const items = taskNodeIds.map(nodeId => {
@@ -236,12 +236,12 @@ const bulkDelete = () => {
 }
 
 const bulkDuplicate = () => {
-  emit('bulkAction', 'duplicate', { nodeIds: props.selectedNodeIds })
+  emit('bulkAction', 'duplicate', { nodeIds: visibleSelectedNodeIds.value })
   showBulkMenu.value = false
 }
 
 const bulkMoveToSection = () => {
-  emit('bulkAction', 'moveToSection', { nodeIds: props.selectedNodeIds })
+  emit('bulkAction', 'moveToSection', { nodeIds: visibleSelectedNodeIds.value })
   showBulkMenu.value = false
 }
 

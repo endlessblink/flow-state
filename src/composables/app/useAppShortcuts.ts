@@ -1,5 +1,6 @@
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
+import { retainVisibleSelection } from '@/utils/selectionVisibility'
 
 export function useAppShortcuts() {
     const router = useRouter()
@@ -33,8 +34,24 @@ export function useAppShortcuts() {
         return false
     }
 
+    const visibleSelectedTaskIds = () => {
+        const renderedIds = Array.from(
+            document.querySelectorAll<HTMLElement>('[data-task-id]')
+        ).flatMap(element => element.dataset.taskId ? [element.dataset.taskId] : [])
+        return retainVisibleSelection(taskStore.selectedTaskIds, renderedIds)
+    }
+
+    const reconcileSelectionToRenderedTasks = () => {
+        const visibleIds = visibleSelectedTaskIds()
+        if (visibleIds.length !== taskStore.selectedTaskIds.length) {
+            taskStore.clearSelection()
+            visibleIds.forEach(taskId => taskStore.selectTask(taskId))
+        }
+        return visibleIds
+    }
+
     const handleDeleteSelectedTasks = async () => {
-        const selectedTaskIds = [...taskStore.selectedTaskIds]
+        const selectedTaskIds = reconcileSelectionToRenderedTasks()
         if (selectedTaskIds.length === 0) return
 
         // Instead of showing confirmation here, we could emit an event
@@ -70,9 +87,10 @@ export function useAppShortcuts() {
         // Ctrl+E (or Cmd+E) to edit selected task
         if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
             event.preventDefault()
-            if (taskStore.selectedTaskIds.length === 1) {
+            const selectedTaskIds = reconcileSelectionToRenderedTasks()
+            if (selectedTaskIds.length === 1) {
                 window.dispatchEvent(new CustomEvent('open-task-edit', {
-                    detail: { taskId: taskStore.selectedTaskIds[0] }
+                    detail: { taskId: selectedTaskIds[0] }
                 }))
             }
         }
@@ -106,11 +124,12 @@ export function useAppShortcuts() {
         // Follows VS Code convention for quick actions/suggestions. Ctrl+/ is taken by AI Chat toggle.
         if ((event.ctrlKey || event.metaKey) && event.key === '.') {
             event.preventDefault()
-            if (taskStore.selectedTaskIds.length === 1) {
+            const selectedTaskIds = reconcileSelectionToRenderedTasks()
+            if (selectedTaskIds.length === 1) {
                 window.dispatchEvent(new CustomEvent('open-ai-assist', {
-                    detail: { taskId: taskStore.selectedTaskIds[0] }
+                    detail: { taskId: selectedTaskIds[0] }
                 }))
-            } else if (taskStore.selectedTaskIds.length === 0) {
+            } else if (selectedTaskIds.length === 0) {
                 // No selection — open with no specific task (will show command palette hint instead)
                 window.dispatchEvent(new CustomEvent('open-ai-assist', { detail: { taskId: null } }))
             }

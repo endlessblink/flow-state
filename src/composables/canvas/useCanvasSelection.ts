@@ -1,8 +1,9 @@
-import { ref, reactive, type Ref, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, type Ref, onMounted, onUnmounted, watch } from 'vue'
 import { type Node } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvas'
 import type { Task } from '@/types/tasks'
 import { useCanvasCore } from './useCanvasCore'
+import { retainVisibleSelection } from '@/utils/selectionVisibility'
 
 export interface SelectionBox {
     x: number
@@ -40,6 +41,17 @@ export function useCanvasSelection(deps: {
     })
 
     const selectedTask = ref<Task | null>(null)
+
+    watch(
+        () => nodes.value.map(node => node.id),
+        visibleIds => {
+            const retained = retainVisibleSelection(canvasStore.selectedNodeIds, visibleIds)
+            if (retained.length !== canvasStore.selectedNodeIds.length) {
+                canvasStore.setSelectedNodes(retained)
+            }
+        },
+        { flush: 'sync' }
+    )
 
     // --- NODE CLICK HANDLER (Migrated from CanvasView.vue) ---
     const handleNodeClick = (event: { event: MouseEvent | TouchEvent; node: Node }) => {

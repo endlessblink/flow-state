@@ -20,12 +20,12 @@
       <template v-if="selectionMode">
         <!-- Bulk action bar when tasks selected -->
         <div class="bulk-actions-bar">
-          <span class="selection-count">{{ selectedTaskIds.length }} selected</span>
-          <button class="bulk-action-btn bulk-action-btn--edit" title="Batch edit selected tasks" @click="emit('batchEdit', [...selectedTaskIds])">
+          <span class="selection-count">{{ visibleSelectedTaskIds.length }} selected</span>
+          <button class="bulk-action-btn bulk-action-btn--edit" title="Batch edit selected tasks" @click="emit('batchEdit', [...visibleSelectedTaskIds])">
             <Pencil :size="14" />
             Edit
           </button>
-          <button class="bulk-action-btn bulk-action-btn--delete" title="Delete selected tasks" @click="emit('deleteSelected', [...selectedTaskIds])">
+          <button class="bulk-action-btn bulk-action-btn--delete" title="Delete selected tasks" @click="emit('deleteSelected', [...visibleSelectedTaskIds])">
             <Trash2 :size="14" />
             Delete
           </button>
@@ -95,6 +95,7 @@
             type="checkbox"
             :checked="isGroupAllSelected(group)"
             :indeterminate.prop="isGroupPartiallySelected(group)"
+            :disabled="!expandedGroups.has(group.key)"
             @change="toggleGroupSelect(group)"
           >
         </label>
@@ -176,6 +177,7 @@
               v-for="{ data: task } in virtualTaskList"
               :key="task.id"
               :task="task"
+              :data-task-id="task.id"
               :indent-level="0"
               :selected="selectedTaskIds.includes(task.id)"
               :selection-mode="selectionMode"
@@ -200,6 +202,7 @@
             v-for="task in group.parentTasks"
             :key="task.id"
             :task="task"
+            :data-task-id="task.id"
             :indent-level="0"
             :selected="selectedTaskIds.includes(task.id)"
             :selection-mode="selectionMode"
@@ -257,6 +260,7 @@ import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
+import { collectVisibleTaskIds, retainVisibleSelection } from '@/utils/selectionVisibility'
 import { Inbox, ChevronRight, ChevronUp, ChevronDown, Pencil, Trash2, X, Zap, ArrowDownToLine, Plus } from 'lucide-vue-next'
 
 interface Props {
@@ -405,13 +409,13 @@ const headerDropTarget = ref<string | null>(null)
 
 // Multi-drag: when dragging a selected task, augment shared dragData with all selected IDs
 const augmentDragWithSelection = () => {
-  if (selectedTaskIds.value.length < 2) return
+  if (visibleSelectedTaskIds.value.length < 2) return
   // The child's handleDragStart runs first (capture phase, but child fires synchronously).
   // After it sets dragData, we augment it with the full selection.
   requestAnimationFrame(() => {
-    if (dragData.value?.taskId && selectedTaskIds.value.includes(dragData.value.taskId)) {
-      dragData.value.taskIds = [...selectedTaskIds.value]
-      dragData.value.title = `${selectedTaskIds.value.length} tasks`
+    if (dragData.value?.taskId && visibleSelectedTaskIds.value.includes(dragData.value.taskId)) {
+      dragData.value.taskIds = [...visibleSelectedTaskIds.value]
+      dragData.value.title = `${visibleSelectedTaskIds.value.length} tasks`
     }
   })
 }
@@ -677,14 +681,40 @@ const handleAcceptSmartSuggestGroup = async (updates: Array<{ taskId: string; fi
 }
 
 // --- Bulk Selection ---
-const selectionMode = computed(() => selectedTaskIds.value.length > 0)
-
 const allTasks = computed(() => {
-  return props.groups.flatMap(g => g.parentTasks || [])
+  const visibleRoots = (props.groupBy === 'none'
+    ? props.groups
+    : props.groups.filter(group => expandedGroups.value.has(group.key)))
+    .flatMap(group => group.parentTasks || [])
+  const visibleIds = new Set(collectVisibleTaskIds(
+    props.tasks,
+    visibleRoots.map(task => task.id),
+    expandedTasks.value
+  ))
+
+  return props.tasks.filter(task => visibleIds.has(task.id))
 })
 
+const visibleSelectedTaskIds = computed(() =>
+  retainVisibleSelection(selectedTaskIds.value, allTasks.value.map(task => task.id))
+)
+
+const selectionMode = computed(() => visibleSelectedTaskIds.value.length > 0)
+
+watch(
+  () => allTasks.value.map(task => task.id),
+  visibleIds => {
+    const retained = retainVisibleSelection(selectedTaskIds.value, visibleIds)
+    if (retained.length !== selectedTaskIds.value.length) {
+      selectedTaskIds.value = retained
+    }
+  },
+  { flush: 'sync' }
+)
+
 const allSelected = computed(() => {
-  return allTasks.value.length > 0 && selectedTaskIds.value.length === allTasks.value.length
+  return allTasks.value.length > 0 &&
+    allTasks.value.every(task => selectedTaskIds.value.includes(task.id))
 })
 
 const someSelected = computed(() => {
@@ -725,6 +755,8 @@ const isGroupPartiallySelected = (group: TaskGroup) => {
 }
 
 const toggleGroupSelect = (group: TaskGroup) => {
+  if (!expandedGroups.value.has(group.key)) return
+
   const ids = (group.parentTasks || []).map(t => t.id)
   if (isGroupAllSelected(group)) {
     // Deselect all in this group
@@ -750,9 +782,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
   const target = event.target as HTMLElement
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
-  if ((event.key === 'Delete' || event.key === 'Backspace') && selectedTaskIds.value.length > 0) {
+  if ((event.key === 'Delete' || event.key === 'Backspace') && visibleSelectedTaskIds.value.length > 0) {
     event.preventDefault()
-    emit('deleteSelected', [...selectedTaskIds.value])
+    emit('deleteSelected', [...visibleSelectedTaskIds.value])
   } else if (event.key === 'Escape' && selectionMode.value) {
     clearSelection()
   }

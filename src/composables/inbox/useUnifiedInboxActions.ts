@@ -1,4 +1,4 @@
-import { ref, computed, type Ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, type Ref, onMounted, onUnmounted, watch } from 'vue'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
@@ -14,6 +14,7 @@ import {
 import { useCanvasSectionProperties } from '@/composables/canvas/useCanvasSectionProperties'
 import type { CanvasSection } from '@/stores/canvas/types'
 import { TOAST_SUCCESS_DURATION_MS } from '@/config/timing'
+import { retainVisibleSelection } from '@/utils/selectionVisibility'
 
 export function useUnifiedInboxActions(
     inboxTasks: { value: Task[] },
@@ -42,6 +43,26 @@ export function useUnifiedInboxActions(
     const multiSelectActive = ref(false)
     const multiSelectMode = computed(() => multiSelectActive.value && selectedTaskIds.value.size > 0)
     const draggingTaskId = ref<string | null>(null)
+    const getVisibleSelectedTaskIds = () =>
+        retainVisibleSelection(
+            [...selectedTaskIds.value],
+            inboxTasks.value.map(task => task.id)
+        )
+
+    watch(
+        () => inboxTasks.value.map(task => task.id),
+        visibleIds => {
+            const retained = retainVisibleSelection([...selectedTaskIds.value], visibleIds)
+            if (retained.length !== selectedTaskIds.value.size) {
+                selectedTaskIds.value = new Set(retained)
+                if (lastSelectedTaskId.value && !selectedTaskIds.value.has(lastSelectedTaskId.value)) {
+                    lastSelectedTaskId.value = retained[retained.length - 1] ?? null
+                }
+                if (retained.length === 0) multiSelectActive.value = false
+            }
+        },
+        { flush: 'sync' }
+    )
 
     // --- Task Operations ---
 
@@ -77,9 +98,9 @@ export function useUnifiedInboxActions(
     }
 
     const deleteSelectedTasks = async () => {
-        if (selectedTaskIds.value.size === 0) return
+        const idsToDelete = getVisibleSelectedTaskIds()
+        if (idsToDelete.length === 0) return
 
-        const idsToDelete = Array.from(selectedTaskIds.value)
         await bulkDeleteTasksWithUndo(idsToDelete)
         clearSelection()
     }
@@ -186,8 +207,9 @@ export function useUnifiedInboxActions(
             multiSelectActive.value = false
         }
 
-        const selectedIds = selectedTaskIds.value.size > 0
-            ? Array.from(selectedTaskIds.value)
+        const visibleSelectedIds = getVisibleSelectedTaskIds()
+        const selectedIds = visibleSelectedIds.length > 0
+            ? visibleSelectedIds
             : [task.id]
 
         window.dispatchEvent(new CustomEvent('task-context-menu', {
@@ -214,8 +236,9 @@ export function useUnifiedInboxActions(
         draggingTaskId.value = task.id
         e.dataTransfer.effectAllowed = 'move'
 
-        const taskIds = selectedTaskIds.value.has(task.id) && selectedTaskIds.value.size > 1
-            ? Array.from(selectedTaskIds.value)
+        const visibleSelectedIds = getVisibleSelectedTaskIds()
+        const taskIds = visibleSelectedIds.includes(task.id) && visibleSelectedIds.length > 1
+            ? visibleSelectedIds
             : [task.id]
 
         const dragData: Record<string, unknown> = {
@@ -368,9 +391,9 @@ export function useUnifiedInboxActions(
      * Each task is matched individually to its appropriate group
      */
     const sendSelectedToCanvas = async () => {
-        if (selectedTaskIds.value.size === 0) return
+        const taskIds = getVisibleSelectedTaskIds()
+        if (taskIds.length === 0) return
 
-        const taskIds = Array.from(selectedTaskIds.value)
         let successCount = 0
         const groupCounts = new Map<string, number>()
 

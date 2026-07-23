@@ -136,11 +136,11 @@
       "severity": "high",
       "status": "open",
       "mutations": ["bulk-update", "complete", "move", "delete"],
-      "surfaces": ["catalog", "board", "canvas", "batch-edit"],
+      "surfaces": ["catalog", "board", "canvas", "unified-inbox", "batch-edit"],
       "states": ["batch-selected", "filtered-hidden"],
       "layers": ["renderer-selection", "renderer-store", "sync-queue"],
-      "automatedEvidence": [],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/unit/selection-visibility.test.ts", "tests/unit/task-list-hidden-selection.test.ts", "tests/unit/canvas-hidden-selection.test.ts", "tests/unit/canvas-bulk-visible-boundary.test.ts", "src/composables/canvas/__tests__/canvasDeleteUndo.test.ts", "tests/unit/inbox-hidden-selection.test.ts", "tests/unit/app-shortcuts-hidden-selection.test.ts"],
+      "liveEvidence": ["2026-07-23: source audit reproduced stale selected IDs surviving Catalog filters, Canvas node removal, Unified Inbox filters, and global keyboard shortcuts; automated component/composable coverage now proves hidden IDs are pruned and mutation entry points intersect the rendered task/node set; real Board and Electron interaction proof remain open"]
     },
     {
       "id": "timer-task-existence-and-restart",

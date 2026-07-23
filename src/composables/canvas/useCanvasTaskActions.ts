@@ -19,6 +19,7 @@ import { pushImageDeleteUndo } from '@/composables/undoSingleton'
 import { useVueFlow } from '@vue-flow/core'
 import { snapPositionToGrid } from '@/utils/canvas/coordinates'
 import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
+import { retainVisibleSelection } from '@/utils/selectionVisibility'
 
 
 
@@ -45,7 +46,16 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
     const modalsStore = useCanvasModalsStore()
+    const { getNodes } = useVueFlow()
     const { undoHistory } = deps
+
+    const getVisibleSelectedTaskIds = () =>
+        retainVisibleSelection(
+            canvasStore.selectedNodeIds,
+            getNodes.value
+                .filter(node => node.type === 'taskNode')
+                .map(node => node.id)
+        )
 
     const {
         isBulkDeleteModalOpen,
@@ -289,7 +299,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
      * This is an ALLOWED geometry write as it's an explicit user action (move to inbox).
      */
     const moveSelectedTasksToInbox = async () => {
-        const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
+        const selectedNodeIds = getVisibleSelectedTaskIds()
         if (selectedNodeIds.length === 0) return
 
         const count = selectedNodeIds.length
@@ -316,7 +326,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
      */
     const doneForNowSelectedTasks = async () => {
         const { showToast } = useToast()
-        const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
+        const selectedNodeIds = getVisibleSelectedTaskIds()
         if (selectedNodeIds.length === 0) return
 
         // Calculate tomorrow's date in YYYY-MM-DD format
@@ -382,7 +392,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
     }
 
     const deleteSelectedTasks = () => {
-        const selectedNodeIds = canvasStore.selectedNodeIds.filter(id => !CanvasIds.isGroupNode(id))
+        const selectedNodeIds = getVisibleSelectedTaskIds()
         if (selectedNodeIds.length === 0) return
 
         // BUG-1580: native confirm() is broken in Tauri/WebKitGTK — use modal instead

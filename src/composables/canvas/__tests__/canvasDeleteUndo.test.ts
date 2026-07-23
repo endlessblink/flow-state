@@ -76,7 +76,7 @@ vi.mock('@/stores/canvas/modals', () => ({
         bulkDeleteIsPermanent: bulkDeleteIsPermanentValue,
         isQuickTaskCreateOpen: false,
         quickTaskPosition: { x: 0, y: 0 },
-        groupInheritedProps: null,
+        groupInheritedProps: {},
     }),
 }))
 
@@ -415,5 +415,40 @@ describe('TASK-1722 — global keydown handler does not skip Delete/Backspace', 
         // Delete on canvas (no input focus) — canvas SHOULD see it
         handleKeydown({ key: 'Delete', target: { tagName: 'DIV' } })
         expect(canvasDeleteCalled).toContain('Delete')
+    })
+})
+
+describe('Canvas hidden selection mutation safety', () => {
+    beforeEach(() => {
+        setActivePinia(createPinia())
+        vi.clearAllMocks()
+        selectedNodeIdsValue = ['visible-task', 'visible-image', 'hidden-task']
+        mockGetNodes.value = [
+            { id: 'visible-task', type: 'taskNode', position: { x: 0, y: 0 }, data: {} },
+            { id: 'visible-image', type: 'imageNode', position: { x: 100, y: 0 }, data: {} },
+        ] as any
+    })
+
+    it('moves only task nodes that still exist on the rendered canvas', async () => {
+        const { useCanvasTaskActions } = await import('../useCanvasTaskActions')
+        const actions = useCanvasTaskActions(buildDeps())
+
+        await actions.moveSelectedTasksToInbox()
+
+        expect(mockBulkMoveToInboxWithUndo).toHaveBeenCalledOnce()
+        expect(mockBulkMoveToInboxWithUndo).toHaveBeenCalledWith(['visible-task'])
+    })
+
+    it('reschedules only task nodes that still exist on the rendered canvas', async () => {
+        const { useCanvasTaskActions } = await import('../useCanvasTaskActions')
+        const actions = useCanvasTaskActions(buildDeps())
+
+        await actions.doneForNowSelectedTasks()
+
+        expect(mockUpdateTaskWithUndo).toHaveBeenCalledOnce()
+        expect(mockUpdateTaskWithUndo).toHaveBeenCalledWith(
+            'visible-task',
+            expect.objectContaining({ doneForNowUntil: expect.any(String) }),
+        )
     })
 })

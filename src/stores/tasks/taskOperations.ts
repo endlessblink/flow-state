@@ -1431,13 +1431,13 @@ export function useTaskOperations(
             nextDueDate: options.nextDueDate,
         })
         if (!preview.previewVersion) throw new Error('Done for now preview did not return a version')
-
         const receipt = await runDoneForNow(supabase, {
             taskId,
             preview: false,
             workspaceId: task.workspaceId,
             nextDueDate: options.nextDueDate,
             previewVersion: preview.previewVersion,
+            ...(preview.requestHash ? { requestHash: preview.requestHash } : {}),
             requestId: options.requestId || crypto.randomUUID(),
         })
         const completed = receipt.completedOccurrence

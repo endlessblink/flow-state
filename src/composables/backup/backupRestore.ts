@@ -1,4 +1,4 @@
-import { calculateChecksum } from './types'
+import { BACKUP_SCHEMA_VERSION, calculateChecksum } from './types'
 import type { BackupContext, BackupData, RestoreAnalysis } from './types'
 import type { CoreOperations } from './backupCore'
 import type { GoldenOperations } from './backupGolden'
@@ -182,6 +182,26 @@ export function createRestoreOperations(
         throw new Error('Invalid backup: missing tasks array')
       }
 
+      if (backupData.version === BACKUP_SCHEMA_VERSION && !backupData.checksum) {
+        throw new Error('Backup checksum is required for the current schema')
+      }
+      if (backupData.version === BACKUP_SCHEMA_VERSION && !backupData.metadata) {
+        throw new Error('Backup count metadata is required for the current schema')
+      }
+
+      const countChecks = [
+        ['task', backupData.metadata?.taskCount, backupData.tasks.length],
+        ['project', backupData.metadata?.projectCount, backupData.projects?.length || 0],
+        ['group', backupData.metadata?.groupCount, backupData.groups?.length || 0],
+      ] as const
+      for (const [entity, expected, actual] of countChecks) {
+        if (typeof expected === 'number' && expected !== actual) {
+          throw new Error(
+            `Backup ${entity} count mismatch: metadata says ${expected}, artifact contains ${actual}`
+          )
+        }
+      }
+
       // Verify checksum if present
       if (backupData.checksum) {
         const currentChecksum = calculateChecksum({
@@ -190,7 +210,13 @@ export function createRestoreOperations(
           groups: backupData.groups
         })
         if (currentChecksum !== backupData.checksum) {
-          console.warn('[Backup] Checksum mismatch - backup may be corrupted')
+          if (backupData.version === BACKUP_SCHEMA_VERSION) {
+            throw new Error('Backup checksum mismatch: restore refused because the backup may be corrupted')
+          }
+          console.warn(
+            `[Backup] Legacy ${backupData.version} checksum is not serialization-stable; ` +
+            'continuing only after structural count validation'
+          )
         }
       }
 
@@ -274,6 +300,25 @@ export function createRestoreOperations(
         }
 
         console.log(`[Backup] Task restore complete: ${created} created, ${skipped} skipped`)
+        if (created !== tasksToRestore.length) {
+          throw new Error(
+            `Task restore incomplete: ${tasksToRestore.length - created} of ${tasksToRestore.length} tasks could not be recreated`
+          )
+        }
+
+        const restoredIds = tasksToRestore.map(task => task.id)
+        const readback = await ctx.db.checkTaskIdsAvailability(restoredIds)
+        const readableIds = new Set(
+          readback
+            .filter((result: TaskIdAvailability) => result.status === 'active')
+            .map((result: TaskIdAvailability) => result.taskId)
+        )
+        const missingIds = restoredIds.filter(taskId => !readableIds.has(taskId))
+        if (missingIds.length > 0) {
+          throw new Error(
+            `Task restore incomplete: ${missingIds.length} of ${restoredIds.length} tasks are not readable after restore`
+          )
+        }
       }
       ctx.state.value.restoreProgress = 60
 

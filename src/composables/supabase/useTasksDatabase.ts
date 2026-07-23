@@ -489,58 +489,14 @@ export function useTasksDatabase(ctx: DatabaseContext) {
     const safeCreateTask = async (task: Task): Promise<SafeCreateTaskResult> => {
         const userId = getUserIdSafe()
         if (!userId) {
-            console.debug('⏭️ [GUEST] safeCreateTask - not authenticated, falling back to local')
             return {
-                status: 'created',
+                status: 'error',
                 taskId: task.id,
-                message: 'Task created locally (guest mode)'
+                message: 'Cannot restore task without authenticated persistence'
             }
         }
 
-        try {
-            // Try to use the RPC function if available (more efficient)
-            // TASK-1183: Sanitize project_id - 'uncategorized' is not a valid UUID
-            const sanitizedProjectId = task.projectId === UNCATEGORIZED_PROJECT_ID || task.projectId === '1'
-                ? null
-                : (task.projectId || null)
-
-            const { data: rpcResult, error: rpcError } = await getSupabase().rpc('safe_create_task', {
-                p_task_id: task.id,
-                p_user_id: userId,
-                p_title: task.title,
-                p_description: task.description || '',
-                p_status: toDbStatus(task.status || 'todo'),
-                p_priority: task.priority || 'medium',
-                p_due_date: task.dueDate || null,
-                p_project_id: sanitizedProjectId,
-                p_position: task.canvasPosition ? JSON.stringify(task.canvasPosition) : null,
-                p_tags: task.tags || [],
-                p_is_in_inbox: task.isInInbox !== false,
-                p_parent_task_id: task.parentTaskId || null
-            })
-
-            if (rpcError) {
-                // RPC function might not exist yet - fall back to manual check
-                console.warn('[TASK-344] RPC failed, falling back to manual check:', rpcError.message)
-                return await safeCreateTaskManual(task, userId)
-            }
-
-            // Parse RPC result
-            const result = rpcResult as { status: string; task_id: string; message: string; is_deleted?: boolean; title?: string; deleted_at?: string }
-            return {
-                status: result.status as SafeCreateTaskResult['status'],
-                taskId: result.task_id,
-                message: result.message,
-                isDeleted: result.is_deleted,
-                title: result.title,
-                deletedAt: result.deleted_at
-            }
-
-        } catch (e: unknown) {
-            console.error('[TASK-344] safeCreateTask failed:', e)
-            // Fall back to manual check
-            return await safeCreateTaskManual(task, userId)
-        }
+        return safeCreateTaskManual(task, userId)
     }
 
     /**

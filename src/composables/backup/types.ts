@@ -118,7 +118,7 @@ export const GOLDEN_BACKUP_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 export const BACKUP_HISTORY_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 // TASK-156: Current backup schema version
-export const BACKUP_SCHEMA_VERSION = '3.1.0'
+export const BACKUP_SCHEMA_VERSION = '3.2.0'
 
 export const DEFAULT_CONFIG: BackupConfig = {
   enabled: true,
@@ -135,7 +135,9 @@ export const DEFAULT_CONFIG: BackupConfig = {
  * Calculate simple checksum for data integrity verification
  */
 export function calculateChecksum(data: unknown): string {
-  return IntegrityService.calculateChecksum(data)
+  const serialized = JSON.stringify(data)
+  const jsonStableData = serialized === undefined ? null : JSON.parse(serialized)
+  return IntegrityService.calculateChecksum(jsonStableData)
 }
 
 /**

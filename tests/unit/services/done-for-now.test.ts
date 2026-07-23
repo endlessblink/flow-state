@@ -3,7 +3,7 @@ import { runDoneForNow } from '@/services/tasks/doneForNow'
 
 describe('recurring Done for now domain adapter', () => {
   it('previews and applies through the same canonical transaction contract', async () => {
-    const preview = { ok: true, preview: true, previewVersion: 'v1' }
+    const preview = { ok: true, preview: true, previewVersion: 'v1', requestHash: 'hash-1' }
     const receipt = { ok: true, preview: false, requestId: 'request-1', taskId: 'task-1' }
     const rpc = vi.fn()
       .mockResolvedValueOnce({ data: preview, error: null })
@@ -20,6 +20,7 @@ describe('recurring Done for now domain adapter', () => {
       preview: false,
       requestId: 'request-1',
       previewVersion: 'v1',
+      requestHash: 'hash-1',
     })).resolves.toEqual(receipt)
 
     expect(rpc).toHaveBeenNthCalledWith(1, 'flowstate_done_for_now', {
@@ -27,6 +28,7 @@ describe('recurring Done for now domain adapter', () => {
       p_preview: true,
       p_preview_version: null,
       p_request_id: null,
+      p_request_hash: null,
       p_task_id: 'task-1',
       p_workspace_id: 'workspace-1',
     })
@@ -35,6 +37,7 @@ describe('recurring Done for now domain adapter', () => {
       p_preview: false,
       p_preview_version: 'v1',
       p_request_id: 'request-1',
+      p_request_hash: 'hash-1',
       p_task_id: 'task-1',
       p_workspace_id: null,
     })
@@ -53,5 +56,19 @@ describe('recurring Done for now domain adapter', () => {
       code: 'recurrence_transaction_failed',
       message: 'Done for now could not be completed',
     })
+  })
+
+  it('keeps compatibility with a pre-receipt server that returns no request hash', async () => {
+    const preview = { ok: true, preview: true, previewVersion: 'legacy-v1' }
+    const client = { rpc: vi.fn().mockResolvedValue({ data: preview, error: null }) }
+
+    await expect(runDoneForNow(client, {
+      taskId: 'legacy-task',
+      preview: true,
+    })).resolves.toEqual(preview)
+
+    expect(client.rpc).toHaveBeenCalledWith('flowstate_done_for_now', expect.objectContaining({
+      p_request_hash: null,
+    }))
   })
 })

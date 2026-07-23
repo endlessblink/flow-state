@@ -20,6 +20,7 @@ import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import {
   DEFAULT_CONFIG,
   BACKUP_SCHEMA_VERSION,
+  calculateChecksum,
   formatTimestamp
 } from './types'
 import type {
@@ -344,7 +345,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     restoreFromShadow: async (shadowData: any) => {
       console.log(`[Backup] Restoring from Shadow Hub: ${shadowData.meta?.counts?.tasks} tasks`)
       // TASK-344: Explicitly specify no dry-run to get boolean return
-      const result = await restoreOps.restoreBackup({
+      const shadowBackup = {
         ...shadowData,
         id: `shadow_${shadowData.meta.timestamp}`,
         timestamp: shadowData.meta.timestamp,
@@ -356,7 +357,16 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
           projectCount: shadowData.meta.counts.projects,
           groupCount: shadowData.meta.counts.groups
         }
-      } as BackupData, { dryRun: false, backupSource: 'shadow' })
+      } as BackupData
+      shadowBackup.checksum = calculateChecksum({
+        tasks: shadowBackup.tasks,
+        projects: shadowBackup.projects,
+        groups: shadowBackup.groups
+      })
+      const result = await restoreOps.restoreBackup(
+        shadowBackup,
+        { dryRun: false, backupSource: 'shadow' }
+      )
       return result === true
     }
   }

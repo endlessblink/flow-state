@@ -262,6 +262,7 @@ describe('task operation undo/redo three-cycle invariants', () => {
           ok: true,
           preview: true,
           previewVersion: 'task-recurring-done-for-now-auth-recovery:0:2026-07-12:v1',
+          requestHash: 'request-hash-1',
           recurrence: { nextDueDateAfter: '2026-07-16', cadencePreserved: true }
         },
         error: null
@@ -318,6 +319,9 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }))
     expect(mockSaveTasks).not.toHaveBeenCalled()
     expect(mockEnqueue).not.toHaveBeenCalled()
+    expect(mockRpc).toHaveBeenNthCalledWith(2, 'flowstate_done_for_now', expect.objectContaining({
+      p_request_hash: 'request-hash-1',
+    }))
   })
 
   it('undoes and redoes the public moveTaskToProjectWithUndo wrapper three consecutive times', async () => {

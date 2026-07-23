@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, MAX_GOLDEN_BACKUPS, GOLDEN_BACKUP_MAX_AGE_MS } from './types'
+import { STORAGE_KEYS, MAX_GOLDEN_BACKUPS, GOLDEN_BACKUP_MAX_AGE_MS, calculateChecksum } from './types'
 import type { BackupContext, BackupData, GoldenBackupValidation } from './types'
 
 export interface GoldenOperations {
@@ -217,7 +217,7 @@ export function createGoldenOperations(ctx: BackupContext): GoldenOperations {
       console.warn('[Backup] Could not fetch deleted IDs, restoring all items:', error)
     }
 
-    return {
+    const filtered: BackupData = {
       ...golden,
       tasks: golden.tasks.filter(t => !deletedTaskIds.has(t.id)),
       projects: (golden.projects || []).filter(p => !deletedProjectIds.has(p.id)),
@@ -229,6 +229,12 @@ export function createGoldenOperations(ctx: BackupContext): GoldenOperations {
         groupCount: (golden.groups || []).filter(g => !deletedGroupIds.has(g.id)).length
       }
     }
+    filtered.checksum = calculateChecksum({
+      tasks: filtered.tasks,
+      projects: filtered.projects,
+      groups: filtered.groups
+    })
+    return filtered
   }
 
   return {

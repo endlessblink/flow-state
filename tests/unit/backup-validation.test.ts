@@ -12,6 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useBackupSystem, BackupData } from '../../src/composables/useBackupSystem'
+import { BACKUP_SCHEMA_VERSION } from '../../src/composables/backup/types'
 
 // Mock dependencies
 const mockFetchDeletedTaskIds = vi.fn()
@@ -106,7 +107,7 @@ function createMockBackup(
     projects: [],
     groups: [],
     timestamp,
-    version: '3.1.0',
+    version: BACKUP_SCHEMA_VERSION,
     checksum: `checksum_${taskCount}`,
     type: 'manual',
     metadata: {
@@ -188,7 +189,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       expect(backup).toBeDefined()
       expect(backup?.id).toBeDefined()
       expect(backup?.timestamp).toBeDefined()
-      expect(backup?.version).toBe('3.1.0')
+      expect(backup?.version).toBe(BACKUP_SCHEMA_VERSION)
       expect(backup?.checksum).toBeDefined()
       expect(backup?.type).toBe('manual')
       expect(backup?.tasks).toHaveLength(1)
@@ -235,7 +236,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         projects: [],
         groups: [],
         timestamp: Date.now(),
-        version: '3.1.0',
+        version: BACKUP_SCHEMA_VERSION,
         checksum: 'abc',
         type: 'manual' as const,
         // No metadata
@@ -462,6 +463,129 @@ describe('TASK-332: Backup Reliability & Verification', () => {
 
       expect(analysis.tasks.available).toBe(0)
       expect(analysis.canProceed).toBe(false)
+    })
+  })
+
+  describe('Restore execution fails closed', () => {
+    it('refuses a backup whose checksum does not match its contents', async () => {
+      const backup = createMockBackup(1, Date.now(), { checksum: 'tampered-checksum' })
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('checksum')
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+    })
+
+    it('reports failure when any task could not be recreated', async () => {
+      const backup = createMockBackup(2)
+      backup.checksum = 'checksum_0'
+      mockSafeCreateTask
+        .mockResolvedValueOnce({ status: 'created', message: 'Created' })
+        .mockResolvedValueOnce({ status: 'error', message: 'Database write failed' })
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('1 of 2')
+    })
+
+    it('reports failure when a claimed restore is not readable afterward', async () => {
+      const backup = createMockBackup(1)
+      backup.checksum = 'checksum_0'
+      mockCheckTaskIdsAvailability.mockResolvedValue([
+        { taskId: 'task-1', status: 'available', reason: 'Task is still absent' },
+      ])
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('not readable')
+    })
+
+    it('refuses a current-schema artifact with no checksum', async () => {
+      const backup = createMockBackup(1, Date.now(), { checksum: '' })
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('checksum is required')
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+    })
+
+    it('refuses a current-schema artifact with no count metadata', async () => {
+      const backup = createMockBackup(1)
+      delete backup.metadata
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('metadata is required')
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+    })
+
+    it('accepts a structurally valid legacy artifact with its old unstable checksum', async () => {
+      const backup = createMockBackup(1, Date.now(), {
+        version: '3.1.0',
+        checksum: 'legacy-serialization-checksum',
+      })
+      mockCheckTaskIdsAvailability.mockResolvedValue([
+        { taskId: 'task-1', status: 'active', reason: 'Task is readable' },
+      ])
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(true)
+      expect(mockSafeCreateTask).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('Recovery entrypoints preserve validated artifacts', () => {
+    it('recomputes integrity after filtering intentionally deleted golden items', async () => {
+      mockTaskStore.tasks = [
+        { id: 'task-1', title: 'Recover me', status: 'todo' },
+        { id: 'task-2', title: 'Keep deleted', status: 'todo' },
+      ]
+      const backup = await backupSystem.createBackup('manual')
+      expect(backup).not.toBeNull()
+      mockFetchDeletedTaskIds.mockResolvedValue(['task-2'])
+      mockCheckTaskIdsAvailability
+        .mockResolvedValueOnce([
+          { taskId: 'task-1', status: 'available', reason: '' },
+        ])
+        .mockResolvedValueOnce([
+          { taskId: 'task-1', status: 'active', reason: 'Task is readable' },
+        ])
+
+      const restored = await backupSystem.restoreFromGoldenBackup(true)
+
+      expect(restored).toBe(true)
+      expect(mockSafeCreateTask).toHaveBeenCalledTimes(1)
+      expect(mockSafeCreateTask).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }))
+    })
+
+    it('adds a valid checksum before restoring a shadow snapshot', async () => {
+      mockCheckTaskIdsAvailability
+        .mockResolvedValueOnce([
+          { taskId: 'shadow-task', status: 'available', reason: '' },
+        ])
+        .mockResolvedValueOnce([
+          { taskId: 'shadow-task', status: 'active', reason: 'Task is readable' },
+        ])
+      const shadow = {
+        tasks: [{ id: 'shadow-task', title: 'Shadow recovery', status: 'todo' }],
+        projects: [],
+        groups: [],
+        meta: {
+          timestamp: Date.now(),
+          counts: { tasks: 1, projects: 0, groups: 0 },
+        },
+      }
+
+      const restored = await backupSystem.restoreFromShadow(shadow)
+
+      expect(restored).toBe(true)
+      expect(mockSafeCreateTask).toHaveBeenCalledWith(expect.objectContaining({ id: 'shadow-task' }))
     })
   })
 

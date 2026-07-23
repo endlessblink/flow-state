@@ -76,14 +76,17 @@ test.describe.serial('recurring Done for now live UI synchronization', () => {
       expect(previewError).toBeNull()
       expect(preview.ok).toBe(true)
 
-      const { data: receipt, error: applyError } = await userClient.rpc('flowstate_done_for_now', {
+      const applyPayload = {
         p_task_id: TASK_ID,
         p_preview: false,
         p_next_due_date: nextDate,
         p_request_id: `e2e-${Date.now()}`,
         p_preview_version: preview.previewVersion,
         p_workspace_id: null,
-      })
+        ...(typeof preview.requestHash === 'string' ? { p_request_hash: preview.requestHash } : {}),
+      }
+
+      const { data: receipt, error: applyError } = await userClient.rpc('flowstate_done_for_now', applyPayload)
       expect(applyError).toBeNull()
       expect(receipt.nextOccurrence.dueDate).toBe(nextDate)
 

@@ -5,12 +5,14 @@ export interface DoneForNowInput {
   nextDueDate?: string | null
   requestId?: string | null
   previewVersion?: string | null
+  requestHash?: string | null
 }
 
 export interface DoneForNowResult {
   ok: true
   preview: boolean
   previewVersion?: string
+  requestHash?: string
   requestId?: string
   taskId?: string
   currentOccurrence?: {
@@ -65,6 +67,7 @@ export async function runDoneForNow(client: DoneForNowClient, input: DoneForNowI
     p_preview: input.preview,
     p_preview_version: input.previewVersion || null,
     p_request_id: input.requestId || null,
+    p_request_hash: input.requestHash || null,
     p_task_id: input.taskId,
     p_workspace_id: input.workspaceId || null,
   })

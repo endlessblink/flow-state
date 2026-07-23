@@ -176,6 +176,24 @@ describe('TASK-1669: Backup System Comprehensive', () => {
     expect(newChecksum).not.toBe(originalChecksum)
   })
 
+  it('7b. Checksum survives the JSON export and import boundary', () => {
+    const data = {
+      tasks: [{
+        id: 'date-task',
+        title: 'Serialization boundary',
+        createdAt: new Date('2026-07-23T10:00:00.000Z'),
+        updatedAt: new Date('2026-07-23T10:01:00.000Z'),
+        optionalValue: undefined,
+      }],
+      projects: [],
+      groups: [],
+    }
+    const beforeExport = calculateChecksum(data)
+    const afterImport = calculateChecksum(JSON.parse(JSON.stringify(data)))
+
+    expect(afterImport).toBe(beforeExport)
+  })
+
   it('8. Task IDs preserved in backup', () => {
     const originalIds = ['uuid-1', 'uuid-2', 'uuid-3']
     const tasks = originalIds.map(id => ({ id, title: `Task ${id}` })) as any[]

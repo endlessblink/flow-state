@@ -32,7 +32,20 @@ export function useTaskContextMenuActions(
         return _moveComposable.moveToGroupWithToast
     }
 
-    const currentTask = computed(() => props.contextTask || props.task)
+    const currentTask = computed(() => {
+        const snapshot = props.contextTask || props.task
+        if (!snapshot) return null
+
+        const canonicalTask = taskStore.getTask(snapshot.id)
+        if (!canonicalTask) return snapshot
+
+        const transient = snapshot as unknown as { instanceId?: string; isCalendarEvent?: boolean }
+        return {
+            ...canonicalTask,
+            ...(transient.instanceId ? { instanceId: transient.instanceId } : {}),
+            ...(transient.isCalendarEvent !== undefined ? { isCalendarEvent: transient.isCalendarEvent } : {})
+        } as Task
+    })
     const isBatchOperation = computed(() => (props.selectedCount || 0) > 1)
 
     const updateDueDateWithCalendarInstance = async (taskId: string, dueDate: string, calendarInstanceId?: string) => {

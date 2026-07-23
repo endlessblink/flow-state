@@ -19,7 +19,7 @@ describe('app realtime task delete contract', () => {
     const src = readAppInitialization()
 
     expect(src).toContain('invalidateCache.all()')
-    expect(src).toContain('void reloadCoreData()')
+    expect(src).toContain('await reloadCoreData()')
     expect(src).toContain('if (taskId) recoverSkippedTaskChange()')
     expect(src).toContain('if (isDeleteEvent) {')
   })
@@ -32,6 +32,14 @@ describe('app realtime task delete contract', () => {
     expect(src).toContain('if (tasks.isPendingWrite(taskId)) {')
     expect(src).toContain('if (tasks.isLoadingFromDatabase) {')
     expect(src).toContain('window.setTimeout(() => {')
-    expect(src).toContain('void reloadCoreData()')
+    expect(src).toContain('await reloadCoreData()')
+  })
+
+  it('replays queued optimistic task state after every authoritative recovery reload', () => {
+    const src = readAppInitialization()
+    const recoveryReplays = src.match(/await reapplyPendingWrites\(\)/g) ?? []
+
+    expect(src).toContain('const recoverSkippedTaskChange = () => {')
+    expect(recoveryReplays).toHaveLength(6)
   })
 })

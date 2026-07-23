@@ -56,6 +56,14 @@ echo -e "Notes: ${NOTES:-'(none)'}"
 
 node "$PROJECT_DIR/scripts/validate-electron-vite-env.cjs"
 
+# Cardinal consistency/recoverability is not an emergency-skip class. A release
+# cannot make trust claims while a known critical/high vector remains open.
+if [ "$DRY_RUN" = true ]; then
+  echo -e "${CYAN}  [DRY RUN] Would run: npm run guard:task-consistency${NC}"
+else
+  NODE_ENV=test npm run guard:task-consistency
+fi
+
 # Step 1: Run the Electron sync/auth/canvas regression sentinel before packaging.
 echo -e "\n${YELLOW}[1/3] Electron sync regression guard...${NC}"
 if [ "$SKIP_GUARD" = true ]; then

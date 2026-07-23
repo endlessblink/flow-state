@@ -484,6 +484,42 @@ describe('canonical task patch queue', () => {
     expect(taskStoreMock.updateTaskFromSync).not.toHaveBeenCalled()
   })
 
+  it('keeps a committed receipt retryable when renderer projection fails', async () => {
+    const receipt = canonicalReceipt('web:projection-retry')
+    const op = makeOp({
+      id: 1966,
+      entityId: 'task-canonical',
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1',
+        operationId: receipt.operationId,
+        baseRevision: 4,
+        patch: { title: 'Authoritative title' },
+        phase: 'committed',
+        previewDigest: 'b'.repeat(64),
+        previewExpiresAt: '2026-07-13T10:15:00Z',
+        requestHash: 'a'.repeat(64),
+        normalizedPatch: { title: 'Authoritative title' },
+        receipt
+      }
+    })
+    taskStoreMock.applyCanonicalTaskReceipt.mockRejectedValueOnce(new Error('cache unavailable'))
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([op])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledWith(1966, receipt)
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(
+      1966,
+      expect.stringContaining('projection'),
+      expect.any(Number)
+    )
+    expect(taskStoreMock.removePendingWrite).not.toHaveBeenCalled()
+  })
+
   it('keeps canonical intent pending when authentication disappears after queue admission', async () => {
     const { supabase } = await import('@/services/auth/supabase')
     const session = { access_token: 'fresh-token', user: { id: 'user-001' } }

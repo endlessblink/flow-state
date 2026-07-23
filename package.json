@@ -62,6 +62,8 @@
     "test": "vitest run --maxWorkers=4",
     "test:watch": "vitest --maxWorkers=4",
     "test:unit": "vitest run --maxWorkers=4",
+    "audit:task-consistency": "node scripts/task-consistency-audit.cjs",
+    "guard:task-consistency": "vitest run --maxWorkers=4 tests/contract/canonical-task-renderer-authority.test.ts tests/contract/task-consistency-failure-matrix.test.ts tests/unit/scripts/task-consistency-audit.test.ts src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts && node scripts/task-consistency-audit.cjs --fail-on-open",
     "guard:electron-sync": "vitest run --maxWorkers=4 tests/contract/canonical-task-renderer-authority.test.ts src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts tests/unit/sync/cross-tab-sync.test.ts tests/unit/canvas/modal-task-resolution.test.ts tests/unit/components/quick-task-dropdown-pin.test.ts tests/unit/app/quick-task-durable-ack.test.ts tests/unit/kde/today-filter-parity.test.ts tests/unit/services/canonical-change-catchup.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/stores/auth-signin-reload.test.ts tests/unit/user-data-path.test.ts tests/unit/electron-runtime-detection.test.ts tests/unit/restore-auth-backup.test.ts tests/unit/composables/useLocalApiBridge.test.ts tests/unit/scripts/live-boundary-diagnostics.test.ts tests/unit/sync/sync-orchestrator.test.ts tests/unit/supabase-group-backpressure.test.ts tests/unit/undo-task-operations.test.ts tests/unit/bug-1737-undo-delete-race.test.ts tests/unit/composables/useSupabaseDatabase-delete.test.ts tests/unit/geometry-invariants.test.ts",
     "test:ai-quality": "node scripts/test-ai-quality.cjs",
     "test:storybook": "vitest run --config vitest.storybook.config.ts",

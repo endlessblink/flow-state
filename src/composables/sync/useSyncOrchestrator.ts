@@ -797,15 +797,6 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     state.value.lastSyncAt = Date.now()
     consecutiveTransientFailures = 0  // BUG-P1: reset on any success
 
-    if (operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
-      try {
-        const { useTaskStore } = await import('@/stores/tasks')
-        useTaskStore().removePendingWrite(operation.entityId)
-      } catch (e) {
-        console.warn(`[SYNC] Failed to clear pending-write guard for ${operation.entityId.slice(0, 8)}:`, e)
-      }
-    }
-
     // BUG-1321: When LWW "server wins", apply serverData back to Pinia store.
     // Without this, the local store silently diverges from VPS truth.
     if (result.canonicalReceipt && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
@@ -814,6 +805,16 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
         await useTaskStore().applyCanonicalTaskReceipt(result.canonicalReceipt)
       } catch (error) {
         console.warn('[SYNC] Failed to project canonical receipt into task state:', error)
+        const message = error instanceof Error ? error.message : String(error)
+        await markFailed(operation.id, `Canonical receipt projection failed: ${message}`, Date.now() + 1_000)
+        state.value.lastError = `Canonical receipt projection failed: ${message}`
+        return {
+          success: false,
+          operation,
+          error: state.value.lastError,
+          shouldRetry: true,
+          classification: 'transient'
+        }
       }
     } else if (result.serverData && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
       try {
@@ -856,6 +857,15 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
         }
       } catch (e) {
         console.warn(`[SYNC] Failed to apply LWW server data to store:`, e)
+      }
+    }
+
+    if (operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
+      try {
+        const { useTaskStore } = await import('@/stores/tasks')
+        useTaskStore().removePendingWrite(operation.entityId)
+      } catch (e) {
+        console.warn(`[SYNC] Failed to clear pending-write guard for ${operation.entityId.slice(0, 8)}:`, e)
       }
     }
 

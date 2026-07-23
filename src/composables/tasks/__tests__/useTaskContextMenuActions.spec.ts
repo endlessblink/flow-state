@@ -134,6 +134,35 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
     expect(doneForNow).not.toHaveBeenCalled()
   })
 
+  it('keeps the visible context-menu state aligned with the canonical action state', () => {
+    const staleCatalogTask = {
+      id: 'task-1',
+      title: 'Old title',
+      status: 'todo',
+      instanceId: 'instance-1',
+      isCalendarEvent: true
+    } as unknown as Task
+    getTask.mockReturnValue({
+      ...staleCatalogTask,
+      title: 'Current title',
+      status: 'done'
+    } as Task)
+
+    const { currentTask } = useTaskContextMenuActions({
+      task: staleCatalogTask,
+      contextTask: null,
+      selectedCount: 1
+    }, vi.fn())
+
+    expect(currentTask.value).toMatchObject({
+      id: 'task-1',
+      title: 'Current title',
+      status: 'done',
+      instanceId: 'instance-1',
+      isCalendarEvent: true
+    })
+  })
+
   it('USER REPRO: right-click Mark done uses canonical recurrence state for Done for now', async () => {
     const staleCatalogTask = {
       id: 'task-1',

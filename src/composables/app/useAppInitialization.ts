@@ -156,10 +156,15 @@ export function useAppInitialization() {
         ])
     }
 
+    let reapplyPendingWrites: () => Promise<void> = async () => {
+        throw new Error('Pending write recovery is not initialized')
+    }
+
     const recoverSkippedTaskChange = () => {
         invalidateCache.all()
-        window.setTimeout(() => {
-            void reloadCoreData()
+        window.setTimeout(async () => {
+            await reloadCoreData()
+            await reapplyPendingWrites()
         }, 0)
     }
 
@@ -396,7 +401,7 @@ export function useAppInitialization() {
         // TASK-1428: Re-apply unsynced local changes after any Supabase refresh.
         // Without this, loadFromDatabase() overwrites _rawTasks with server data
         // that doesn't reflect offline deletes/creates/updates yet.
-        const reapplyPendingWrites = async () => {
+        reapplyPendingWrites = async () => {
             try {
                 const { getWriteQueueDB } = await import('@/services/offline/writeQueueDB')
                 const queueDB = getWriteQueueDB()
@@ -941,6 +946,7 @@ export function useAppInitialization() {
             console.log('🔄 [APP-INIT] Reloading data after auth recovery...')
             await reloadCoreData()
             await runCanonicalChangeCatchup()
+            await reapplyPendingWrites()
             // BUG-1411: Clear offline cache mode — we're back online with fresh data
             try {
                 const { useSyncStatusStore } = await import('@/stores/syncStatus')
@@ -1062,6 +1068,7 @@ export function useAppInitialization() {
                 console.log('🔄 [APP-INIT] Reloading data after auth recovery...')
                 await reloadCoreData()
                 await runCanonicalChangeCatchup()
+                await reapplyPendingWrites()
             }
 
             const timerHandler = timerStore.handleRemoteTimerUpdate
@@ -1168,6 +1175,7 @@ export function useAppInitialization() {
             console.log('🔄 [APP-INIT] Reloading data after auth recovery (workspace switch)...')
             await reloadCoreData()
             await runCanonicalChangeCatchup()
+            await reapplyPendingWrites()
         }
 
         const timerHandler = timerStore.handleRemoteTimerUpdate

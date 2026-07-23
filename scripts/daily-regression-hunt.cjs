@@ -23,6 +23,13 @@ const FIXED_DAILY_CHECKS = [
     timeoutMs: 240_000,
   },
   {
+    id: 'task-consistency-audit',
+    title: 'Cardinal task consistency and recoverability inventory',
+    command: ['npm', 'run', 'audit:task-consistency'],
+    failureClass: 'task consistency/data recoverability',
+    timeoutMs: 20_000,
+  },
+  {
     id: 'type-check',
     title: 'TypeScript/Vue contract check',
     command: ['npm', 'run', 'type-check'],

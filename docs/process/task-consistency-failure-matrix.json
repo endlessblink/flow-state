@@ -145,7 +145,7 @@
       {
         "id": "offline-queue-replay-and-auth-expiry",
         "issueSignals": ["BUG-1514", "BUG-1517", "BUG-1561", "BUG-1562", "BUG-1565", "BUG-1411", "BUG-1182"],
-        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-quick-create-ui-durability", "offline-catalog-completion-durability", "offline-user-entrypoint-parity", "board-offline-right-click-completion-parity", "board-offline-edit-delete-entrypoint-parity", "durable-write-failure-visibility-and-rollback", "unresolved-write-age-retention"]
+        "vectorIds": ["offline-store-queue-and-reconnect-convergence", "offline-quick-create-ui-durability", "offline-catalog-completion-durability", "offline-user-entrypoint-parity", "board-offline-right-click-completion-parity", "board-offline-edit-delete-entrypoint-parity", "durable-write-failure-visibility-and-rollback", "unresolved-write-age-retention", "cross-window-canonical-edit-exclusion"]
       },
       {
         "id": "realtime-gap-echo-and-resurrection",
@@ -550,8 +550,20 @@
       "surfaces": ["all-views", "electron"],
       "states": ["offline", "renderer-reloaded", "electron-restarted", "reconnecting"],
       "layers": ["renderer-store", "sync-queue", "indexeddb-read-cache", "electron-main-preload", "supabase-persistence"],
-      "automatedEvidence": ["tests/unit/services/offline/canonical-write-queue.test.ts", "tests/unit/before-unload-electron.test.ts"],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/unit/services/offline/canonical-write-queue.test.ts", "tests/unit/services/offline/queue-processor-lock.test.ts", "tests/unit/sync/sync-orchestrator.test.ts", "tests/unit/before-unload-electron.test.ts"],
+      "liveEvidence": ["2026-07-23: authenticated Chromium R23 created a task visibly through Quick Create while offline, simulated a syncing row old enough for conservative crash recovery, closed that renderer, opened a replacement renderer, reconnected, and proved canonical persistence plus independent-client convergence. This is browser-renderer recovery from a synthetic stale pre-submit crash state; a recent in-flight request, network acknowledgement loss, and packaged Electron restart remain open."]
+    },
+    {
+      "id": "cross-window-canonical-edit-exclusion",
+      "severity": "critical",
+      "status": "live-proven",
+      "failureClasses": ["queue-ordering-and-replay", "cross-tab-echo-and-deduplication"],
+      "mutations": ["edit-metadata"],
+      "surfaces": ["board"],
+      "states": ["offline", "reconnecting", "cross-client"],
+      "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
+      "automatedEvidence": ["tests/unit/services/offline/queue-processor-lock.test.ts", "tests/unit/services/offline/canonical-write-queue.test.ts", "tests/unit/sync/sync-orchestrator.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts"],
+      "liveEvidence": ["2026-07-23: authenticated Chromium R24 kept two FlowState Board windows open in one browser profile, performed a visible right-click title edit while offline, reconnected both windows together, and proved canonical_revision advanced exactly once while the title converged in an independent client. Cross-window create, completion, fallback platforms, mixed-version live windows, and packaged Electron remain open."]
     },
     {
       "id": "unresolved-write-age-retention",

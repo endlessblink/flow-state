@@ -217,7 +217,7 @@ export async function updateOperation(
 export async function markSyncing(id: number): Promise<void> {
   await updateOperation(id, {
     status: 'syncing',
-    lastAttemptAt: Date.now()
+    lastAttemptAt: Date.now(),
   })
 }
 
@@ -543,7 +543,7 @@ export async function getFailedOperations(): Promise<WriteOperation[]> {
  */
 export async function recoverStaleSyncing(maxAgeMs = 60_000): Promise<number> {
   const db = getWriteQueueDB()
-  const cutoff = Date.now() - maxAgeMs
+  const cutoff = Date.now() - Math.max(maxAgeMs, 60_000)
 
   const staleOps = await db.operations
     .where('status')

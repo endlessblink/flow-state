@@ -43,6 +43,7 @@ const OFFLINE_RECURRING_TASK = {
   y: 2200,
 }
 const OFFLINE_QUICK_CREATE_TITLE = 'Offline Quick Create Probe'
+const CRASH_RECOVERY_QUICK_CREATE_TITLE = 'Crash Recovery Quick Create Probe'
 const DROP_TARGET = { x: 2600, y: 2600 }
 
 const GROUP_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccc01' // real UUID — legacy IDs skip group sync
@@ -107,6 +108,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     await admin.from('tombstones').delete().eq('entity_id', OFFLINE_RECURRING_TASK.id)
     OFFLINE_RECURRING_TASK.id = randomUUID()
     await admin.from('tasks').delete().eq('user_id', userId).eq('title', OFFLINE_QUICK_CREATE_TITLE)
+    await admin.from('tasks').delete().eq('user_id', userId).eq('title', CRASH_RECOVERY_QUICK_CREATE_TITLE)
     await admin.from('groups').delete().eq('id', GROUP_ID)
     await admin.from('tombstones').delete().in('entity_id', [...ALL_IDS, GROUP_ID])
 
@@ -174,6 +176,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     await admin.from('tasks').delete().eq('recurrence_parent_id', OFFLINE_RECURRING_TASK.id)
     await admin.from('tombstones').delete().eq('entity_id', OFFLINE_RECURRING_TASK.id)
     await admin.from('tasks').delete().eq('user_id', userId).eq('title', OFFLINE_QUICK_CREATE_TITLE)
+    await admin.from('tasks').delete().eq('user_id', userId).eq('title', CRASH_RECOVERY_QUICK_CREATE_TITLE)
     await admin.from('groups').delete().eq('id', GROUP_ID)
     await admin.from('groups').delete().eq('user_id', userId).eq('name', 'Monday') // R7 migrated group
     await admin.from('tombstones').delete().in('entity_id', [...ALL_IDS, GROUP_ID])
@@ -654,6 +657,91 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     }, OFFLINE_QUICK_CREATE_TITLE)).toBe(persistedId)
   })
 
+  test('R23 - a stale Quick Create write survives a renderer crash and resumes after reload', async ({ clientA, clientB }) => {
+    await gotoCanvasReady(clientA)
+    await gotoCanvasReady(clientB)
+
+    const quickCreate = clientA.getByPlaceholder(/Quick add task/i)
+    await expect(quickCreate).toBeVisible()
+    await clientA.context().setOffline(true)
+    await quickCreate.fill(CRASH_RECOVERY_QUICK_CREATE_TITLE)
+    await quickCreate.press('Enter')
+
+    await expect.poll(async () => clientA.evaluate((title) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.title === title)?.id ?? null
+    }, CRASH_RECOVERY_QUICK_CREATE_TITLE), { timeout: 10_000 }).not.toBeNull()
+    const taskId = await clientA.evaluate((title) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.title === title)?.id ?? null
+    }, CRASH_RECOVERY_QUICK_CREATE_TITLE)
+
+    const crashedTaskId = await clientA.evaluate(async (title) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.title === title)
+      if (!task) throw new Error('Quick Create task missing before crash simulation')
+
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('FlowStateSyncQueue')
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction('operations', 'readwrite')
+        const store = transaction.objectStore('operations')
+        const request = store.getAll()
+        request.onsuccess = () => {
+          const operation = request.result.find(candidate => candidate.entityId === task.id)
+          if (!operation) {
+            reject(new Error('Durable Quick Create operation missing before crash simulation'))
+            return
+          }
+          store.put({
+            ...operation,
+            status: 'syncing',
+            lastAttemptAt: Date.now() - 60_001,
+          })
+        }
+        transaction.oncomplete = () => resolve()
+        transaction.onerror = () => reject(transaction.error)
+        transaction.onabort = () => reject(transaction.error)
+      })
+      database.close()
+      return task.id
+    }, CRASH_RECOVERY_QUICK_CREATE_TITLE)
+    expect(crashedTaskId).toBe(taskId)
+
+    const restartedContext = clientA.context()
+    await clientA.close()
+    await restartedContext.setOffline(false)
+    const restartedClient = await restartedContext.newPage()
+    await gotoCanvasReady(restartedClient)
+
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,title,is_deleted')
+        .eq('id', crashedTaskId)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: crashedTaskId,
+        title: CRASH_RECOVERY_QUICK_CREATE_TITLE,
+        is_deleted: false,
+      }))
+    }).toPass({ timeout: 20_000 })
+
+    await expect.poll(async () => clientB.evaluate((id) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === id)?.title ?? null
+    }, crashedTaskId), { timeout: 20_000 }).toBe(CRASH_RECOVERY_QUICK_CREATE_TITLE)
+    await restartedClient.close()
+  })
+
   test('R14 - Catalog right-click completion works offline, drains after reconnect, reaches another client, and survives reload', async ({ clientA, clientB }) => {
     await gotoCatalogReady(clientA)
     await gotoCanvasReady(clientB)
@@ -1047,6 +1135,58 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
       return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.title ?? null
     }, task.id)).toBe(editedTitle)
+  })
+
+  test('R24 - two open windows submit one offline Board edit exactly once', async ({ clientA, clientB }) => {
+    await gotoBoardReady(clientA)
+    await gotoBoardReady(clientB)
+    const competingWindow = await clientA.context().newPage()
+    await gotoBoardReady(competingWindow)
+
+    const task = ROOT_TASKS[1]
+    const editedTitle = `${task.title} Two Window Offline Edit`
+    const { data: before, error: beforeError } = await admin
+      .from('tasks')
+      .select('canonical_revision')
+      .eq('id', task.id)
+      .single()
+    expect(beforeError).toBeNull()
+    const initialRevision = Number(before?.canonical_revision)
+    expect(Number.isInteger(initialRevision)).toBe(true)
+
+    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`)
+    await expect(taskCard).toBeVisible()
+    await clientA.context().setOffline(true)
+    await taskCard.click({ button: 'right' })
+    await clientA.getByText('Edit', { exact: true }).click()
+    const editModal = clientA.locator('.modal-content').filter({ hasText: 'Edit Task' })
+    await expect(editModal).toBeVisible()
+    await editModal.locator('input[placeholder="Task title"]').fill(editedTitle)
+    await editModal.getByText('Save Changes', { exact: true }).click()
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.title ?? null
+    }, task.id)).toBe(editedTitle)
+
+    await clientA.context().setOffline(false)
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('title,canonical_revision')
+        .eq('id', task.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data?.title).toBe(editedTitle)
+      expect(Number(data?.canonical_revision)).toBe(initialRevision + 1)
+    }).toPass({ timeout: 20_000 })
+
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.title ?? null
+    }, task.id), { timeout: 20_000 }).toBe(editedTitle)
+    await competingWindow.close()
   })
 
   test('R20 - Board right-click delete works offline and cannot resurrect', async ({ clientA, clientB }) => {

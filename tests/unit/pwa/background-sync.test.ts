@@ -10,8 +10,8 @@
  * 5.  Successful operations removed from queue
  * 6.  Queue coalescing works after persistence reload
  * 7.  Queue stats accurate after reload
- * 8.  Multiple tabs don't process same queue item (syncing status lock)
- * 9.  Queue processing is serial (no parallel corruption)
+ * 8.  Claimed operations disappear from the pending query
+ * 9.  A later queue read excludes an already-claimed operation
  * 10. Unresolved operations are not discarded by age
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -343,7 +343,7 @@ describe('TASK-1646: Background Sync (Queue)', () => {
   })
 
   // =========================================================================
-  // 8. Multiple tabs don't process same queue item (syncing status lock)
+  // 8. A claimed queue item is excluded from later pending reads
   // =========================================================================
   it('8. an operation in syncing status is not returned by getPendingOperations', async () => {
     const op = await mockEnqueue({
@@ -351,10 +351,10 @@ describe('TASK-1646: Background Sync (Queue)', () => {
       payload: {}, userId: 'user-abc'
     } as any)
 
-    // Tab A marks as syncing
+    // A processor marks the operation as syncing
     await mockMarkSyncing(op.id)
 
-    // Tab B calls getPendingOperations — should NOT get the already-syncing item
+    // A later pending query should NOT return the already-syncing item
     const pending = await mockGetPending()
     const conflict = pending.find(o => o.id === op.id)
     expect(conflict).toBeUndefined()
@@ -365,11 +365,9 @@ describe('TASK-1646: Background Sync (Queue)', () => {
   })
 
   // =========================================================================
-  // 9. Queue processing is serial (no parallel corruption)
+  // 9. Sequential claim visibility
   // =========================================================================
-  it('9. concurrent processQueue calls would not pick the same pending operation twice', async () => {
-    // This tests the lock mechanism: once an op is marked syncing, it disappears
-    // from getPendingOperations even if a second caller runs concurrently.
+  it('9. a pending read after claim does not return the same operation', async () => {
     const op = await mockEnqueue({
       entityType: 'task', entityId: 'task-9', operation: 'update',
       payload: {}, userId: 'user-abc'

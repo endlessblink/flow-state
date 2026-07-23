@@ -18,7 +18,9 @@ import {
   hasLaterUnresolvedOperation,
   markFailed,
   markConflict,
+  markSyncing,
   purgeStaleOperations,
+  recoverStaleSyncing,
   resolveConflictRetry,
 } from '@/services/offline/writeQueueDB'
 
@@ -201,6 +203,85 @@ describe('canonical write queue durability', () => {
       expect(await getWriteQueueDB().operations.get(id)).toBeDefined()
     },
   )
+
+  it('requeues a crash-abandoned write after the conservative stale timeout', async () => {
+    const operation = await enqueueOperation({
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'task-crash-abandoned',
+      payload: { title: 'Must survive renderer crash' },
+      userId: 'user-1',
+      workspaceId: null,
+    })
+    await markSyncing(operation.id!)
+    await getWriteQueueDB().operations.update(operation.id!, {
+      lastAttemptAt: Date.now() - 60_001,
+    })
+
+    expect(await recoverStaleSyncing()).toBe(1)
+    await expect(getWriteQueueDB().operations.get(operation.id!)).resolves.toMatchObject({
+      status: 'pending',
+      retryCount: 1,
+    })
+  })
+
+  it('does not immediately steal an unmarked in-flight write from an older app window', async () => {
+    const operation = await enqueueOperation({
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'task-legacy-window',
+      payload: { title: 'Older window may still be submitting' },
+      userId: 'user-1',
+      workspaceId: null,
+    })
+    await getWriteQueueDB().operations.update(operation.id!, {
+      status: 'syncing',
+      lastAttemptAt: Date.now() - 1,
+    })
+
+    expect(await recoverStaleSyncing(0)).toBe(0)
+    await expect(getWriteQueueDB().operations.get(operation.id!)).resolves.toMatchObject({
+      status: 'syncing',
+      retryCount: 0,
+    })
+  })
+
+  it('does not steal an in-flight mixed-version claim before the stale timeout', async () => {
+    const operation = await enqueueOperation({
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'task-mixed-version-window',
+      payload: { title: 'Mixed version claim' },
+      userId: 'user-1',
+      workspaceId: null,
+    })
+    await markSyncing(operation.id!)
+    const currentClaim = await getWriteQueueDB().operations.get(operation.id!)
+    await getWriteQueueDB().operations.update(operation.id!, {
+      status: 'syncing',
+      lastAttemptAt: currentClaim?.lastAttemptAt ?? Date.now(),
+    })
+
+    expect(await recoverStaleSyncing(0)).toBe(0)
+    await expect(getWriteQueueDB().operations.get(operation.id!)).resolves.toMatchObject({
+      status: 'syncing',
+      retryCount: 0,
+    })
+  })
+
+  it('does not recover a fallback-platform claim before the stale timeout', async () => {
+    const operation = await enqueueOperation({
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'task-no-web-locks',
+      payload: { title: 'Fallback claim' },
+      userId: 'user-1',
+      workspaceId: null,
+    })
+    await markSyncing(operation.id!)
+
+    expect(await recoverStaleSyncing(0)).toBe(0)
+  })
 
   it('blocks a successor while an earlier failed operation waits for its retry time', async () => {
     const first = await enqueueOperation({

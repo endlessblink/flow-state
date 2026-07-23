@@ -2324,6 +2324,71 @@ describe('Operation dependency analysis', () => {
 // 19. PROCESS QUEUE GUARDS
 // ===========================================================================
 describe('processQueue guards', () => {
+  it('holds the cross-window queue lock while using conservative crash recovery', async () => {
+    const originalLocks = navigator.locks
+    const request = vi.fn(async (_name, _options, callback) =>
+      callback({ name: 'flowstate-sync-queue' }))
+    Object.defineProperty(navigator, 'locks', {
+      configurable: true,
+      value: { request },
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([])
+
+    try {
+      const sync = useSyncOrchestrator()
+      await sync.forceSync()
+
+      expect(request).toHaveBeenCalledWith(
+        'flowstate-sync-queue',
+        { mode: 'exclusive', ifAvailable: true },
+        expect.any(Function),
+      )
+      expect(writeQueueMocks.recoverStaleSyncing).toHaveBeenCalledWith(undefined)
+    } finally {
+      Object.defineProperty(navigator, 'locks', {
+        configurable: true,
+        value: originalLocks,
+      })
+    }
+  })
+
+  it('surfaces a lock-service failure while retaining queued changes for retry', async () => {
+    const originalLocks = navigator.locks
+    Object.defineProperty(navigator, 'locks', {
+      configurable: true,
+      value: {
+        request: vi.fn().mockRejectedValue(new DOMException('Locks unavailable', 'SecurityError')),
+      },
+    })
+
+    try {
+      const sync = useSyncOrchestrator()
+      await sync.forceSync()
+
+      expect(sync.status.value).toBe('error')
+      expect(sync.lastError.value).toContain('changes remain on this device and will retry')
+      expect(writeQueueMocks.getPendingOperations).not.toHaveBeenCalled()
+
+      Object.defineProperty(navigator, 'locks', {
+        configurable: true,
+        value: {
+          request: vi.fn(async (_name, _options, callback) =>
+            callback({ name: 'flowstate-sync-queue' })),
+        },
+      })
+      writeQueueMocks.getPendingOperations.mockResolvedValue([])
+      await sync.forceSync()
+
+      expect(sync.status.value).toBe('synced')
+      expect(sync.lastError.value).toBeUndefined()
+    } finally {
+      Object.defineProperty(navigator, 'locks', {
+        configurable: true,
+        value: originalLocks,
+      })
+    }
+  })
+
   it('skips processing when workspace switch is in progress', async () => {
     workspaceStoreMock.isSwitchingWorkspace = true as any
 

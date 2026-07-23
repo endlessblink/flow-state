@@ -23,6 +23,10 @@ import type {
 import { DB_TABLES } from '@/constants/dbTables'
 import { getInitialOnlineState } from '@/utils/platform'
 import { executeQueuedCanonicalTaskPatch } from '@/services/sync/canonicalTaskPatch'
+import {
+  runWithExclusiveQueueProcessorLock,
+  type QueueProcessorLockContext,
+} from '@/services/offline/queueProcessorLock'
 
 // TASK-1177: Check for IndexedDB availability (not available in Node.js/tests)
 const hasIndexedDB = typeof indexedDB !== 'undefined'
@@ -109,7 +113,8 @@ import type {
   getLatestCanonicalCheckpointForEntity as _getLatestCanonicalCheckpointForEntity,
   cleanupCompleted as _cleanupCompleted,
   getStats as _getStats,
-  getFailedOperations as _getFailedOperations
+  getFailedOperations as _getFailedOperations,
+  recoverStaleSyncing as _recoverStaleSyncing,
 } from '@/services/offline/writeQueueDB'
 
 // Wrapped functions that handle missing IndexedDB gracefully
@@ -192,9 +197,9 @@ const getFailedOperations: typeof _getFailedOperations = async () => {
 }
 
 // BUG-1301: Recover stale syncing operations on startup/process cycle
-const recoverStaleSyncing = async (): Promise<number> => {
+const recoverStaleSyncing: typeof _recoverStaleSyncing = async maxAgeMs => {
   const mod = await getWriteQueueModule()
-  return mod ? mod.recoverStaleSyncing() : 0
+  return mod ? mod.recoverStaleSyncing(maxAgeMs) : 0
 }
 
 const recoverRlsPolicyFailures = async (): Promise<number> => {
@@ -297,6 +302,7 @@ let consecutiveAuthGateSkips = 0
 const AUTH_GATE_SURFACE_AFTER = 2
 const TRANSIENT_PAUSE_THRESHOLD = 5
 const MIN_RATE_LIMIT_COOLDOWN_MS = 30_000
+const QUEUE_LOCK_ERROR_PREFIX = 'Safe sync coordination is unavailable'
 
 // TASK-1177: Permanent failure pub/sub (module-level to match singleton state)
 const permanentFailureCallbacks = new Set<(op: WriteOperation) => void>()
@@ -984,7 +990,9 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
 /**
  * Process the queue of pending operations
  */
-async function runProcessQueue(): Promise<void> {
+async function runProcessQueue(
+  _context: Partial<QueueProcessorLockContext> = {},
+): Promise<void> {
   // Skip if already processing, offline, or no supabase
   if (isProcessing.value || !state.value.isOnline || !supabase) {
     return
@@ -1160,7 +1168,19 @@ let activeProcessQueuePromise: Promise<void> | null = null
 
 async function processQueue(): Promise<void> {
   if (activeProcessQueuePromise) return activeProcessQueuePromise
-  const run = runProcessQueue()
+  const run = runWithExclusiveQueueProcessorLock(runProcessQueue).then(result => {
+    if (result.status === 'processed') {
+      if (state.value.lastError?.startsWith(QUEUE_LOCK_ERROR_PREFIX)) {
+        state.value.lastError = undefined
+      }
+      return
+    }
+    if (result.status !== 'unavailable') return
+    const detail = result.error instanceof Error ? result.error.message : String(result.error)
+    const message = `${QUEUE_LOCK_ERROR_PREFIX} — changes remain on this device and will retry (${detail})`
+    state.value.status = 'error'
+    state.value.lastError = message
+  })
   activeProcessQueuePromise = run
   try {
     await run

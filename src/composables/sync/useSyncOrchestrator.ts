@@ -499,6 +499,32 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
   try {
     let result
 
+    if (operation.doneForNow) {
+      const { runDoneForNow } = await import('@/services/tasks/doneForNow')
+      const preview = await runDoneForNow(supabase!, {
+        taskId: entityId,
+        preview: true,
+        workspaceId: operation.workspaceId,
+        nextDueDate: operation.doneForNow.nextDueDate,
+      })
+      if (!preview.previewVersion) {
+        throw new Error('Done for now preview did not return a version')
+      }
+      await runDoneForNow(supabase!, {
+        taskId: entityId,
+        preview: false,
+        workspaceId: operation.workspaceId,
+        nextDueDate: operation.doneForNow.nextDueDate,
+        previewVersion: preview.previewVersion,
+        ...(preview.requestHash ? { requestHash: preview.requestHash } : {}),
+        requestId: operation.doneForNow.requestId,
+      })
+      return {
+        success: true,
+        operation,
+      }
+    }
+
     switch (operation.operation) {
       case 'create': {
         // BUG-1534: Check tombstones before CREATE — prevents resurrecting deleted tasks.
@@ -1201,7 +1227,9 @@ export function useSyncOrchestrator() {
       entityId: string
       payload: Record<string, unknown>
       baseVersion?: number
+      workspaceId?: string | null
       canonicalTaskPatch?: WriteOperation['canonicalTaskPatch']
+      doneForNow?: WriteOperation['doneForNow']
     }
   ): Promise<WriteOperation> => {
     // Get current user ID
@@ -1215,7 +1243,9 @@ export function useSyncOrchestrator() {
     }
 
     // Capture workspace context at enqueue time (null = personal workspace)
-    const workspaceId = await getActiveWorkspaceId()
+    const workspaceId = operation.workspaceId !== undefined
+      ? operation.workspaceId
+      : await getActiveWorkspaceId()
 
     // BUG-1534: When enqueuing a DELETE, cancel any pending CREATEs for the same entity.
     // This prevents stale CREATEs from resurrecting deleted tasks after page reload.

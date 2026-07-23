@@ -73,6 +73,9 @@ export async function runDoneForNow(client: DoneForNowClient, input: DoneForNowI
   })
 
   if (error || !isRecord(data)) {
+    if (import.meta.env.DEV) {
+      console.error('[DONE-FOR-NOW] Canonical transaction failed', error)
+    }
     throw new DoneForNowError('recurrence_transaction_failed', 'Done for now could not be completed')
   }
 

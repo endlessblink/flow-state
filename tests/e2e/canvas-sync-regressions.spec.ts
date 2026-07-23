@@ -20,6 +20,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { test, expect, readCanvasNodePositions, expectNoNodesMoved, waitForCanvasNodes } from '../fixtures/two-client'
 import type { Page } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 import { ensureAuthUser, TEST_USER } from '../fixtures/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
@@ -35,6 +36,12 @@ const ROOT_TASKS = [
 const INBOX_TASK = { id: 'd1000000-0000-4000-8000-000000000004', title: 'Sync Regr Inbox 1' }
 const CREATED_TASK = { id: 'd1000000-0000-4000-8000-000000000006', title: 'Absolute Existence Probe' }
 const OFFLINE_TASK = { id: 'd1000000-0000-4000-8000-000000000007', title: 'Offline Reconnect Probe' }
+const OFFLINE_RECURRING_TASK = {
+  id: 'd1000000-0000-4000-8000-000000000008',
+  title: 'Offline Recurring Completion Probe',
+  x: 2800,
+  y: 2200,
+}
 const OFFLINE_QUICK_CREATE_TITLE = 'Offline Quick Create Probe'
 const DROP_TARGET = { x: 2600, y: 2600 }
 
@@ -45,7 +52,14 @@ const CHILD_TASK = { id: 'd1000000-0000-4000-8000-000000000005', title: 'Sync Re
 let admin: SupabaseClient
 let userId: string
 
-const ALL_IDS = [...ROOT_TASKS.map((t) => t.id), INBOX_TASK.id, CHILD_TASK.id, CREATED_TASK.id, OFFLINE_TASK.id]
+const ALL_IDS = [
+  ...ROOT_TASKS.map((t) => t.id),
+  INBOX_TASK.id,
+  CHILD_TASK.id,
+  CREATED_TASK.id,
+  OFFLINE_TASK.id,
+  OFFLINE_RECURRING_TASK.id,
+]
 
 async function gotoCanvasReady(page: Page) {
   const ready = () => {
@@ -53,7 +67,9 @@ async function gotoCanvasReady(page: Page) {
     const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
     return !!pinia?._s.get('tasks') && !!pinia?._s.get('canvas')
   }
-  await page.goto('/#/canvas')
+  await expect(async () => {
+    await page.goto('/#/canvas')
+  }).toPass({ timeout: 30_000 })
   await page.waitForFunction(ready, { timeout: 30_000 })
 }
 
@@ -78,6 +94,9 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     userId = user.id
 
     await admin.from('tasks').delete().in('id', ALL_IDS)
+    await admin.from('tasks').delete().eq('recurrence_parent_id', OFFLINE_RECURRING_TASK.id)
+    await admin.from('tombstones').delete().eq('entity_id', OFFLINE_RECURRING_TASK.id)
+    OFFLINE_RECURRING_TASK.id = randomUUID()
     await admin.from('tasks').delete().eq('user_id', userId).eq('title', OFFLINE_QUICK_CREATE_TITLE)
     await admin.from('groups').delete().eq('id', GROUP_ID)
     await admin.from('tombstones').delete().in('entity_id', [...ALL_IDS, GROUP_ID])
@@ -111,11 +130,40 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       position_version: 1,
     })
     expect(childError, `Failed to seed child task: ${childError?.message}`).toBeNull()
+
+    const currentOccurrence = new Date()
+    currentOccurrence.setDate(currentOccurrence.getDate() - 1)
+    const currentOccurrenceDate = currentOccurrence.toISOString().slice(0, 10)
+    const { error: recurringError } = await admin.from('tasks').insert({
+      id: OFFLINE_RECURRING_TASK.id,
+      user_id: userId,
+      title: OFFLINE_RECURRING_TASK.title,
+      status: 'planned',
+      priority: 'medium',
+      due_date: `${currentOccurrenceDate}T09:00:00+03:00`,
+      due_time: '09:00',
+      estimated_duration: 25,
+      recurrence_rule: { pattern: 'daily', interval: 1, endType: 'never' },
+      recurrence_parent_id: OFFLINE_RECURRING_TASK.id,
+      recurrence_count: 0,
+      is_completion_record: false,
+      is_deleted: false,
+      is_in_inbox: false,
+      position: {
+        x: OFFLINE_RECURRING_TASK.x,
+        y: OFFLINE_RECURRING_TASK.y,
+        format: 'absolute',
+      },
+      position_version: 1,
+    })
+    expect(recurringError, `Failed to seed recurring task: ${recurringError?.message}`).toBeNull()
   })
 
   test.afterAll(async () => {
     if (!admin) return
     await admin.from('tasks').delete().in('id', ALL_IDS)
+    await admin.from('tasks').delete().eq('recurrence_parent_id', OFFLINE_RECURRING_TASK.id)
+    await admin.from('tombstones').delete().eq('entity_id', OFFLINE_RECURRING_TASK.id)
     await admin.from('tasks').delete().eq('user_id', userId).eq('title', OFFLINE_QUICK_CREATE_TITLE)
     await admin.from('groups').delete().eq('id', GROUP_ID)
     await admin.from('groups').delete().eq('user_id', userId).eq('name', 'Monday') // R7 migrated group
@@ -500,6 +548,156 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
       return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
     }, task.id)).toBe('done')
+  })
+
+  test('R15 - Canvas next-occurrence completion works offline, commits once, converges, and survives reload', async ({ clientA, clientB }) => {
+    const clientAErrors: string[] = []
+    const clientBLogs: string[] = []
+    clientA.on('console', message => {
+      if (message.type() === 'error' || message.text().includes('[DONE-FOR-NOW]')) {
+        clientAErrors.push(message.text())
+      }
+    })
+    clientB.on('console', message => {
+      const text = message.text()
+      if (text.includes('[REALTIME]') || text.includes('[HANDLER]') || text.includes('[SYNC]')) {
+        clientBLogs.push(text)
+      }
+    })
+    await gotoCanvasReady(clientA)
+    await gotoCanvasReady(clientB)
+
+    const initialDueDate = await clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.dueDate ?? null
+    }, OFFLINE_RECURRING_TASK.id)
+    expect(initialDueDate).toBeTruthy()
+
+    const recurringNode = clientA.locator(
+      `.task-node[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`,
+    )
+    await expect(recurringNode).toBeVisible()
+    await clientA.context().setOffline(true)
+    await clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        button: 2,
+        clientX: 400,
+        clientY: 300,
+      })
+      window.dispatchEvent(new CustomEvent('task-context-menu', {
+        detail: { event, taskId, task, context: 'canvas' },
+      }))
+    }, OFFLINE_RECURRING_TASK.id)
+    await clientA.getByText('More', { exact: true }).click()
+    await clientA.getByText('Done for now', { exact: true }).click()
+    await clientA.getByText('Next occurrence', { exact: true }).click()
+
+    await expect(clientA.getByText('Failed to complete task', { exact: true })).toHaveCount(0)
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        dueDate: task?.dueDate ?? null,
+        recurrenceCount: task?.recurrenceCount ?? null,
+        status: task?.status ?? null,
+      }
+    }, OFFLINE_RECURRING_TASK.id)).toEqual({
+      dueDate: expect.not.stringMatching(initialDueDate),
+      recurrenceCount: 1,
+      status: 'todo',
+    })
+
+    await clientA.context().setOffline(false)
+
+    try {
+      await expect(async () => {
+        const { data: livingTask, error: livingError } = await admin
+          .from('tasks')
+          .select('id,due_date,status,recurrence_count,is_completion_record,is_deleted')
+          .eq('id', OFFLINE_RECURRING_TASK.id)
+          .single()
+        expect(livingError).toBeNull()
+        expect(livingTask).toEqual(expect.objectContaining({
+          id: OFFLINE_RECURRING_TASK.id,
+          status: 'planned',
+          recurrence_count: 1,
+          is_completion_record: false,
+          is_deleted: false,
+        }))
+        expect(String(livingTask?.due_date).slice(0, 10)).not.toBe(initialDueDate)
+
+        const { data: completions, error: completionsError } = await admin
+          .from('tasks')
+          .select('id,status,is_completion_record,recurrence_parent_id')
+          .eq('recurrence_parent_id', OFFLINE_RECURRING_TASK.id)
+          .eq('is_completion_record', true)
+        expect(completionsError).toBeNull()
+        expect(completions).toHaveLength(1)
+        expect(completions?.[0]).toEqual(expect.objectContaining({
+          status: 'done',
+          is_completion_record: true,
+          recurrence_parent_id: OFFLINE_RECURRING_TASK.id,
+        }))
+      }).toPass({ timeout: 20_000 })
+    } catch (error) {
+      const queuedOperations = await clientA.evaluate(async (taskId) => {
+        const database = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open('FlowStateSyncQueue')
+          request.onsuccess = () => resolve(request.result)
+          request.onerror = () => reject(request.error)
+        })
+        const operations = await new Promise<any[]>((resolve, reject) => {
+          const request = database.transaction('operations', 'readonly').objectStore('operations').getAll()
+          request.onsuccess = () => resolve(request.result)
+          request.onerror = () => reject(request.error)
+        })
+        database.close()
+        return operations.filter(operation => operation.entityId === taskId)
+      }, OFFLINE_RECURRING_TASK.id)
+      throw new Error(`${error instanceof Error ? error.message : String(error)}\nQueued operations: ${JSON.stringify(queuedOperations)}\nClient errors: ${JSON.stringify(clientAErrors)}`)
+    }
+
+    try {
+      await expect.poll(async () => clientB.evaluate((taskId) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+        return {
+          dueDate: task?.dueDate ?? null,
+          recurrenceCount: task?.recurrenceCount ?? null,
+          status: task?.status ?? null,
+        }
+      }, OFFLINE_RECURRING_TASK.id), { timeout: 20_000 }).toEqual({
+        dueDate: expect.not.stringMatching(initialDueDate),
+        recurrenceCount: 1,
+        status: 'todo',
+      })
+    } catch (error) {
+      throw new Error(`${error instanceof Error ? error.message : String(error)}\nClient B sync logs: ${JSON.stringify(clientBLogs)}`)
+    }
+
+    await clientA.reload()
+    await gotoCanvasReady(clientA)
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        dueDate: task?.dueDate ?? null,
+        recurrenceCount: task?.recurrenceCount ?? null,
+        status: task?.status ?? null,
+      }
+    }, OFFLINE_RECURRING_TASK.id)).toEqual({
+      dueDate: expect.not.stringMatching(initialDueDate),
+      recurrenceCount: 1,
+      status: 'todo',
+    })
   })
 
   test('R11 - offline edit and completion drain after reconnect and survive reload', async ({ clientA, clientB }) => {

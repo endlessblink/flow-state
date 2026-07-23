@@ -243,6 +243,7 @@ function makeOp(partial: Partial<WriteOperation> = {}): WriteOperation {
     userId: partial.userId ?? 'user-001',
     workspaceId: partial.workspaceId ?? null,
     canonicalTaskPatch: partial.canonicalTaskPatch,
+    doneForNow: partial.doneForNow,
   }
 }
 
@@ -863,6 +864,58 @@ describe('canonical task patch queue', () => {
     expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1955, expect.any(String), expect.any(Number))
     expect(rpcMock).not.toHaveBeenCalled()
     expect(writeQueueMocks.markSyncing).not.toHaveBeenCalledWith(1956)
+  })
+})
+
+describe('recurring done-for-now queue', () => {
+  it('commits the canonical recurrence intent without treating its receipt as a task row', async () => {
+    const op = makeOp({
+      id: 1950,
+      entityId: 'task-recurring',
+      payload: {},
+      workspaceId: null,
+      doneForNow: {
+        requestId: 'done-for-now-request',
+        nextDueDate: '2026-07-24',
+      },
+    })
+    rpcMock
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          preview: true,
+          previewVersion: 'done-preview',
+          requestHash: 'a'.repeat(64),
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          preview: false,
+          requestId: 'done-for-now-request',
+          completedOccurrence: { id: 'completion-1', status: 'done' },
+          nextOccurrence: { taskId: 'task-recurring', status: 'todo', dueDate: '2026-07-24' },
+        },
+        error: null,
+      })
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed',
+    })
+    taskStoreMock.rawTasks = [{ id: 'task-recurring', title: 'Recurring task' }]
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(rpcMock).toHaveBeenCalledTimes(2)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1950)
+    expect(taskStoreMock.updateTaskFromSync).not.toHaveBeenCalled()
   })
 })
 
@@ -1818,6 +1871,32 @@ describe('Enqueue operations', () => {
 
     expect(writeQueueMocks.enqueueOperation).toHaveBeenCalledWith(
       expect.objectContaining({ workspaceId: 'workspace-42' })
+    )
+  })
+
+  it('enqueue preserves an explicit task workspace instead of the active workspace', async () => {
+    workspaceStoreMock.activeWorkspaceId = 'workspace-42' as any
+    writeQueueMocks.enqueueOperation.mockResolvedValue(makeOp({ workspaceId: null }))
+
+    await useSyncOrchestrator().enqueue({
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'personal-recurring-task',
+      payload: {},
+      workspaceId: null,
+      doneForNow: {
+        requestId: 'done-for-now-request',
+        nextDueDate: '2026-07-24',
+      },
+    })
+
+    expect(writeQueueMocks.enqueueOperation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: null,
+        doneForNow: expect.objectContaining({
+          requestId: 'done-for-now-request',
+        }),
+      }),
     )
   })
 

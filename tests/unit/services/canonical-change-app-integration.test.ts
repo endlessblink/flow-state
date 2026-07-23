@@ -44,5 +44,6 @@ describe('TASK-1947 app catch-up integration', () => {
     expect(source).toContain('canonicalChangePoller.start()')
     expect(source).toContain('canonicalChangePoller.stop()')
     expect(source).toContain("document.visibilityState === 'visible'")
+    expect(source).toContain('intervalMs: 5_000')
   })
 })

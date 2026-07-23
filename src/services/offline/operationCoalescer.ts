@@ -72,6 +72,17 @@ export async function coalesceOperationsForEntity(
     }
   }
 
+  // Recurring "done for now" is also a durable multi-step transaction intent.
+  // Keep its queue row intact so same-entity update coalescing cannot erase
+  // the request ID or next-occurrence date before reconnect.
+  if (pendingOps.some(op => op.doneForNow)) {
+    return {
+      operation: pendingOps[0],
+      mergedOperationIds: [],
+      description: 'Done-for-now operation identity preserved',
+    }
+  }
+
   // Determine the final operation type and payload
   let finalOp: WriteOperation | null = null
   const mergedIds: number[] = []

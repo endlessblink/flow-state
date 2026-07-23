@@ -144,6 +144,7 @@ export function useAppInitialization() {
         isAuthenticated: () => authStore.isAuthenticated && !!authStore.user?.id,
         isOnline: () => typeof navigator === 'undefined' || navigator.onLine !== false,
         isVisible: () => typeof document === 'undefined' || document.visibilityState === 'visible',
+        intervalMs: 5_000,
         onError: error => console.warn('[CANONICAL-CATCHUP] Foreground retry deferred:', error instanceof Error ? error.message : 'unknown error'),
     })
 

@@ -1480,6 +1480,64 @@ export function useTaskOperations(
             return
         }
 
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            const { computeNextDueDate } = await import('@/utils/recurrenceUtils')
+            const currentDueDate = task.dueDate || formatDateKey(new Date())
+            const nextDueDate = options.nextDueDate ?? computeNextDueDate(
+                currentDueDate,
+                task.recurrenceRule,
+                (task.recurrenceCount || 0) + 1,
+            )
+            if (!nextDueDate) {
+                throw new Error('Done for now could not compute the next occurrence while offline')
+            }
+
+            const updatedTask: Task = {
+                ...task,
+                status: 'todo',
+                completedAt: undefined,
+                dueDate: nextDueDate,
+                doneForNowUntil: nextDueDate,
+                recurrenceCount: (task.recurrenceCount || 0) + 1,
+                instances: [{
+                    id: crypto.randomUUID(),
+                    taskId,
+                    scheduledDate: nextDueDate,
+                    scheduledTime: task.dueTime,
+                    duration: task.estimatedDuration || 25,
+                    status: 'scheduled',
+                }],
+                subtasks: task.subtasks?.map(st => ({ ...st, isCompleted: false, updatedAt: new Date() })) || [],
+                parentId: undefined,
+                canvasPosition: undefined,
+                isInInbox: true,
+            }
+            const taskIndex = _rawTasks.value.findIndex(candidate => candidate.id === taskId)
+            if (taskIndex === -1) return
+
+            _rawTasks.value.splice(taskIndex, 1, updatedTask)
+            try {
+                await cacheTasks([..._rawTasks.value], { throwOnError: true })
+                const syncOrchestrator = useSyncOrchestrator()
+                await syncOrchestrator.enqueue({
+                    entityType: 'task',
+                    operation: 'update',
+                    entityId: taskId,
+                    payload: {},
+                    workspaceId: task.workspaceId ?? null,
+                    doneForNow: {
+                        requestId: options.requestId || crypto.randomUUID(),
+                        nextDueDate,
+                    },
+                })
+            } catch (error) {
+                _rawTasks.value.splice(taskIndex, 1, task)
+                await cacheTasks([..._rawTasks.value], { throwOnError: true })
+                throw error
+            }
+            return
+        }
+
         // 2. Preview and apply the same canonical transaction used by the Local Task API.
         // The renderer action itself is the user's approval, while Hermes must surface
         // the previewVersion before it can call apply.

@@ -84,6 +84,11 @@ export interface CanonicalTaskPatchState {
   receipt?: CanonicalTaskPatchReceipt
 }
 
+export interface QueuedDoneForNowState {
+  requestId: string
+  nextDueDate: string
+}
+
 /**
  * A single write operation in the queue
  */
@@ -132,6 +137,9 @@ export interface WriteOperation {
 
   /** TASK-1946: durable preview/apply identity for eligible scalar task patches. */
   canonicalTaskPatch?: CanonicalTaskPatchState
+
+  /** Durable recurrence transaction intent created while the renderer is offline. */
+  doneForNow?: QueuedDoneForNowState
 }
 
 /**

@@ -43,7 +43,7 @@
       :compact-mode="settingsStore.boardDensity === 'ultrathin'"
       @close="closeTaskContextMenu"
       @edit="(taskId: string) => {
-        const task = taskStore.tasks.find(t => t.id === taskId)
+        const task = taskStore.getTask(taskId)
         if (task) openEditTask(task)
       }"
       @confirm-delete="handleContextMenuDelete"
@@ -198,7 +198,7 @@ watch(() => route.query.editTask, async (taskId) => {
     return
   }
 
-  const task = taskStore.tasks.find(t => t.id === taskId)
+  const task = taskStore.getTask(taskId)
   if (task) {
     openEditTask(task)
   } else {

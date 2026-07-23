@@ -89,14 +89,14 @@ export function useTaskNodeActions(
     // BUG-357 FIX: Always get fresh task from store instead of using potentially stale props.task
     const triggerEdit = (task: Task) => {
         // Get fresh task from store (source of truth) instead of stale node data
-        const freshTask = taskStore.tasks.find(t => t.id === task.id) || task
+    const freshTask = taskStore.getTask(task.id) || task
 
         if (import.meta.env.DEV) {
             console.log('🐛 [BUG-1206] TRIGGER EDIT - description from store:', {
                 taskId: freshTask.id?.slice(0, 8),
                 descLength: freshTask.description?.length,
                 descPreview: freshTask.description?.slice(0, 50),
-                usedFallback: !taskStore.tasks.find(t => t.id === task.id)
+      usedFallback: !taskStore.getTask(task.id)
             })
         }
 
@@ -211,7 +211,7 @@ export function useTaskNodeActions(
     // TASK-289: Move task to a Smart Group with position update
     const moveTaskToSmartGroup = (taskId: string, group: CanvasGroup) => {
         // Skip if already in this group
-        const task = taskStore.tasks.find(t => t.id === taskId)
+    const task = taskStore.getTask(taskId)
         if (!task || task.parentId === group.id) return
 
         // Calculate position inside group (offset from group position)

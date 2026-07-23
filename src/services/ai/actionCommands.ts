@@ -869,7 +869,7 @@ async function applyTaskCreate(command: AITaskCreateCommand, taskStore: TaskStor
 }
 
 async function applyTaskUpdate(command: AITaskUpdateCommand, taskStore: TaskStore, sourceMessageId: string): Promise<AppliedAICommand> {
-  const task = taskStore.tasks.find(task => task.id === command.taskId) ?? null
+  const task = taskStore.getTask(command.taskId) ?? null
   if (!task) throw new Error(`Task ${command.taskId} not found`)
   const decision = decideAITaskUpdate({
     task,
@@ -903,7 +903,7 @@ async function applyTaskUpdate(command: AITaskUpdateCommand, taskStore: TaskStor
 }
 
 async function applyTaskDelete(command: AITaskDeleteCommand, taskStore: TaskStore, sourceMessageId: string): Promise<AppliedAICommand> {
-  const task = taskStore.tasks.find(task => task.id === command.taskId) ?? null
+  const task = taskStore.getTask(command.taskId) ?? null
   const preview = previewCommand(command, {
     tasks: taskStore.tasks,
     lanes: [],
@@ -930,7 +930,7 @@ async function applyTaskDelete(command: AITaskDeleteCommand, taskStore: TaskStor
 }
 
 async function applySubtaskCreate(command: AISubtaskCreateCommand, taskStore: TaskStore, sourceMessageId: string): Promise<AppliedAICommand> {
-  const parentTask = taskStore.tasks.find(task => task.id === command.parentTaskId)
+  const parentTask = taskStore.getTask(command.parentTaskId)
   if (!parentTask) throw new Error(`Parent task ${command.parentTaskId} not found`)
   const decision = decideAISubtaskCreate({
     parentTask,
@@ -1003,7 +1003,7 @@ async function applyLaneCreate(command: AILaneCreateCommand, laneStore: LaneStor
 }
 
 async function applyCalendarScheduleTask(command: AICalendarScheduleTaskCommand, taskStore: TaskStore, sourceMessageId: string): Promise<AppliedAICommand> {
-  const task = taskStore.tasks.find(task => task.id === command.taskId) ?? null
+  const task = taskStore.getTask(command.taskId) ?? null
   if (!task) throw new Error(`Task ${command.taskId} not found`)
   const decision = decideAICalendarScheduleTask({
     task,
@@ -1053,7 +1053,7 @@ async function applyFocusTimerStart(command: AIFocusTimerStartCommand, input: {
   timerStore: TimerStore
   sourceMessageId: string
 }): Promise<AppliedAICommand> {
-  const task = input.taskStore.tasks.find(task => task.id === command.taskId) ?? null
+  const task = input.taskStore.getTask(command.taskId) ?? null
   if (!task && command.taskId !== 'general') throw new Error(`Task ${command.taskId} not found`)
   const durationMinutes = Math.max(1, Math.round(command.durationMinutes || 25))
   const decision = decideAIFocusTimerStart({
@@ -1168,7 +1168,7 @@ async function applyCanvasNodeMove(command: AICanvasNodeMoveCommand, options: {
   sourceMessageId: string
 }): Promise<AppliedAICommand> {
   if (command.nodeType === 'task') {
-    const task = options.taskStore.tasks.find(task => task.id === command.nodeId) ?? null
+  const task = options.taskStore.getTask(command.nodeId) ?? null
     if (!task) throw new Error(`Task ${command.nodeId} not found`)
 
     const decision = decideAICanvasNodeMove({
@@ -1475,7 +1475,7 @@ export async function rollbackAICommandBatch(rollbackPointer: string, options: {
   }
 
   for (const beforeTask of snapshot.tasksBefore) {
-    const existing = options.taskStore.tasks.find(task => task.id === beforeTask.id)
+      const existing = options.taskStore.getTask(beforeTask.id)
     if (existing) {
       await options.taskStore.updateTask(beforeTask.id, cloneTask(beforeTask))
     } else {

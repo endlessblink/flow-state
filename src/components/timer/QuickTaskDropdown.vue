@@ -368,7 +368,7 @@ const handleSearchSelect = async (item: QuickTaskItem) => {
 }
 
 const handlePinFromSearch = async (item: QuickTaskItem) => {
-    const task = taskStore.tasks.find(t => t.id === item.sourceId)
+  const task = taskStore.getTask(item.sourceId)
     if (task) {
         await pinFromTask(task)
         newTaskTitle.value = ''
@@ -381,7 +381,7 @@ const handleUnpin = async (pinId: string) => {
 }
 
 const handlePin = async (item: QuickTaskItem) => {
-    const task = taskStore.tasks.find(t => t.id === item.sourceId)
+  const task = taskStore.getTask(item.sourceId)
     if (task) {
         await pinFromTask(task)
     }

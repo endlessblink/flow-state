@@ -29,7 +29,7 @@ const testTaskId = ref<string>('')
 // Computed properties
 
 
-const hasTestTask = computed(() => !!testTaskId.value && taskStore.tasks.find(t => t.id === testTaskId.value))
+const hasTestTask = computed(() => !!testTaskId.value && taskStore.getTask(testTaskId.value))
 
 // Helper functions
 const createTestTask = async (): Promise<string> => {
@@ -90,7 +90,7 @@ const testShiftDeleteOperation = async (): Promise<boolean> => {
     }
 
     const taskToDelete = selectedTaskId.value
-    const originalTask = taskStore.tasks.find(t => t.id === taskToDelete)
+    const originalTask = taskStore.getTask(taskToDelete)
     if (!originalTask) {
       throw new Error('Selected task not found in store')
     }
@@ -171,7 +171,7 @@ const testDeleteOperation = async (): Promise<boolean> => {
     }
 
     const taskToModify = selectedTaskId.value
-    const originalTask = taskStore.tasks.find(t => t.id === taskToModify)
+    const originalTask = taskStore.getTask(taskToModify)
     if (!originalTask) {
       throw new Error('Selected task not found in store')
     }
@@ -201,7 +201,7 @@ const testDeleteOperation = async (): Promise<boolean> => {
     await nextTick()
 
     // Verify task was modified
-    const modifiedTask = taskStore.tasks.find(t => t.id === taskToModify)
+    const modifiedTask = taskStore.getTask(taskToModify)
     if (!modifiedTask) {
       throw new Error('Task disappeared from store after update')
     }

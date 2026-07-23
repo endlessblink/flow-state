@@ -230,7 +230,7 @@ export function useTaskEditActions(
         try {
             // Debug logging omitted for brevity in refactor, but logic preserved
 
-            const originalTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
+        const originalTask = taskStore.getTask(editedTask.value.id)
             const originalInstances = originalTask ? getTaskInstances(originalTask) : []
             const originalDueDate = originalTask?.dueDate || ''
             const editedDueDate = editedTask.value.dueDate || ''
@@ -374,7 +374,7 @@ export function useTaskEditActions(
                     })
 
                     // Check if should return to inbox
-                    const currentTask = taskStore.tasks.find(t => t.id === editedTask.value.id)
+        const currentTask = taskStore.getTask(editedTask.value.id)
                     if (currentTask) {
                         const hasRemainingInstances = getTaskInstances(currentTask).length > 0
                         if (!hasRemainingInstances && currentTask.isInInbox === false) {

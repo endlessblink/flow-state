@@ -236,7 +236,7 @@ export function useCanvasActions(
                 // Update all selected tasks to have this group as their parent
                 for (const node of taskNodes) {
                     const taskId = node.id
-                    const task = taskStore.tasks.find(t => t.id === taskId)
+        const task = taskStore.getTask(taskId)
 
                     if (task) {
                         // Update task with new parentId

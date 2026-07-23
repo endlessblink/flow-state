@@ -117,7 +117,7 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
     // Calendar shows tasks from calendarFilteredTasks (bypasses smart view filters),
     // but taskStore.tasks applies smart view + status + duration filters.
     // If any smart view is active, the task is visible on the calendar but NOT found
-    // by taskStore.tasks.find() → timer silently fails to start → "doesn't lengthen".
+        // by a filtered task projection lookup → timer silently fails to start → "doesn't lengthen".
     const task = taskStore._rawTasks.find(t => t.id === calEvent.taskId)
     if (!task) {
       console.error('🎯 [CALENDAR-TIMER] Task not found in _rawTasks:', calEvent.taskId,

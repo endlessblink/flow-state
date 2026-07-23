@@ -293,7 +293,7 @@ const showPreview = ref(true)
 // Computed
 const selectedTasks = computed(() => {
   return props.taskIds
-    .map(id => taskStore.tasks.find(t => t.id === id))
+      .map(id => taskStore.getTask(id))
     .filter(t => t !== undefined) as Task[]
 })
 

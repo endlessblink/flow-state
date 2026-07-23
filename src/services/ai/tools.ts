@@ -773,7 +773,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           projectId,
           parentTaskId,
         })
-        const task = taskStore.tasks.find(task => task.id === applied.entityId) ?? {
+            const task = taskStore.getTask(applied.entityId) ?? {
           id: applied.entityId,
           title,
           priority,

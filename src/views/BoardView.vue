@@ -340,7 +340,7 @@ const handleListUpdateTask = (taskId: string, updates: Partial<Task>) => {
 
 // Event handlers for TaskList in list view mode
 const handleToggleComplete = async (taskId: string) => {
-  const task = taskStore.tasks.find(t => t.id === taskId)
+  const task = taskStore.getTask(taskId)
   if (!task) return
   // Recurring tasks use "done for now" to avoid clone-on-complete conflicts
   if (task.status !== 'done' && task.recurrenceRule) {
@@ -394,7 +394,7 @@ const handleAddTask = (payload: { columnKey: string, projectId: string, viewType
 }
 
 const handleEditTask = (taskId: string) => {
-  const task = taskStore.tasks.find(t => t.id === taskId)
+  const task = taskStore.getTask(taskId)
   if (task) {
     openEditModal(task)
   }

@@ -544,7 +544,9 @@ export function useWorkProfile() {
   async function generateObservationsFromWeeklyOutcome(
     plannedTaskIds: string[],
     completedTaskIds: string[],
-    taskStore: { tasks: Array<{ id: string; projectId?: string; status: string }> }
+    taskStore: {
+      getTask: (taskId: string) => { id: string; projectId?: string; status: string } | undefined
+    }
   ): Promise<void> {
     if (plannedTaskIds.length === 0) return
 
@@ -554,7 +556,7 @@ export function useWorkProfile() {
     // Group missed tasks by project
     const projectMissCount = new Map<string, { missed: number; total: number }>()
     for (const taskId of plannedTaskIds) {
-      const task = taskStore.tasks.find(t => t.id === taskId)
+      const task = taskStore.getTask(taskId)
       const projectId = task?.projectId || 'uncategorized'
       if (!projectMissCount.has(projectId)) {
         projectMissCount.set(projectId, { missed: 0, total: 0 })
@@ -582,7 +584,7 @@ export function useWorkProfile() {
     const dayCompletions = new Map<string, number>()
     const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
     for (const taskId of completedTaskIds) {
-      const task = taskStore.tasks.find(t => t.id === taskId)
+      const task = taskStore.getTask(taskId)
       if (task) {
         // Use current day as approximation (tasks may have been completed on different days)
         const today = daysOfWeek[new Date().getDay()]

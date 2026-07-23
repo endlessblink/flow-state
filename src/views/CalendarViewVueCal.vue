@@ -133,7 +133,7 @@ const handleEventDragDrop = async (event: VueCalEvent, _originalEvent: unknown) 
   // Handle recurring task instance modification
   if (event.isRecurring && event.instanceId && event.parentTaskId) {
     // This is a recurring task instance being moved
-    const parentTask = taskStore.tasks.find(t => t.id === event.parentTaskId)
+    const parentTask = taskStore.getTask(event.parentTaskId)
     if (parentTask?.recurrence) {
       // Create exception for this instance
       import('@/utils/recurrenceUtils').then(recurrenceUtils => {

@@ -237,8 +237,6 @@ export function useTaskContextMenuActions(
     const toggleDone = async () => {
         // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
         const taskId = currentTask.value?.id
-        const currentStatus = currentTask.value?.status
-        const currentRecurrenceRule = currentTask.value?.recurrenceRule
         const isBatch = isBatchOperation.value
 
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
@@ -247,6 +245,11 @@ export function useTaskContextMenuActions(
         if (isBatch) {
             emit('setStatus', 'done')
         } else if (taskId) {
+            const canonicalTask = taskStore.getTask(taskId)
+            if (!canonicalTask) return
+            const currentStatus = canonicalTask.status
+            const currentRecurrenceRule = canonicalTask.recurrenceRule
+
             // TASK-1532: Recurring tasks use "done for now" on toggle click
             if (currentStatus !== 'done' && currentRecurrenceRule) {
                 try {

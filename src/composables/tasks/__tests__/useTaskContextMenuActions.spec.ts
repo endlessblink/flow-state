@@ -4,6 +4,7 @@ import type { Task } from '@/types/tasks'
 
 const createTaskWithUndo = vi.fn()
 const updateTaskWithUndo = vi.fn()
+const doneForNow = vi.fn()
 const startTaskNowWithUndo = vi.fn()
 const getTask = vi.fn()
 const requestSync = vi.fn()
@@ -20,6 +21,7 @@ vi.mock('@/stores/tasks', () => ({
   useTaskStore: () => ({
     createTaskWithUndo,
     updateTaskWithUndo,
+    doneForNow,
     startTaskNowWithUndo,
     getTask
   })
@@ -98,6 +100,63 @@ describe('useTaskContextMenuActions duplicateTask', () => {
     })
     expect(typeof payload.instances[0].id).toBe('string')
     expect(emit).toHaveBeenCalledWith('close')
+  })
+})
+
+describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('USER REPRO: right-click Mark done resolves the current canonical task instead of the stale Catalog row', async () => {
+    const staleCatalogTask = {
+      id: 'task-1',
+      title: 'Catalog task',
+      status: 'todo',
+      recurrenceRule: undefined
+    } as unknown as Task
+    const canonicalTask = {
+      ...staleCatalogTask,
+      status: 'done'
+    } as Task
+    getTask.mockReturnValue(canonicalTask)
+    const emit = vi.fn()
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: staleCatalogTask,
+      contextTask: null,
+      selectedCount: 1
+    }, emit)
+    await toggleDone()
+
+    expect(getTask).toHaveBeenCalledWith('task-1')
+    expect(updateTaskWithUndo).toHaveBeenCalledWith('task-1', { status: 'todo' })
+    expect(doneForNow).not.toHaveBeenCalled()
+  })
+
+  it('USER REPRO: right-click Mark done uses canonical recurrence state for Done for now', async () => {
+    const staleCatalogTask = {
+      id: 'task-1',
+      title: 'Recurring Catalog task',
+      status: 'todo',
+      recurrenceRule: undefined
+    } as unknown as Task
+    getTask.mockReturnValue({
+      ...staleCatalogTask,
+      recurrenceRule: { pattern: 'weekly', interval: 1 }
+    } as unknown as Task)
+    const emit = vi.fn()
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: staleCatalogTask,
+      contextTask: null,
+      selectedCount: 1
+    }, emit)
+    await toggleDone()
+
+    expect(getTask).toHaveBeenCalledWith('task-1')
+    expect(doneForNow).toHaveBeenCalledWith('task-1')
+    expect(updateTaskWithUndo).not.toHaveBeenCalled()
   })
 })
 

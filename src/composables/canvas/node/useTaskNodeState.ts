@@ -17,7 +17,7 @@ export function useTaskNodeState(props: { task: Task; isDragging?: boolean }) {
 
     // BUG-291 FIX: Read task from STORE (reactive) instead of PROPS (snapshot)
     // This ensures the node updates instantly when task properties change
-    const task = computed(() => taskStore.tasks.find(t => t.id === props.task?.id) || props.task)
+  const task = computed(() => (props.task?.id ? taskStore.getTask(props.task.id) : undefined) || props.task)
 
     // --- LOD Support ---
     // We use a safe wrapper to avoid breaking Storybook

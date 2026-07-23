@@ -257,7 +257,7 @@ const { isNavItemVisible } = useWorkspaceNavigation()
 const activeTaskProject = computed(() => {
   const taskId = timerStore.currentTaskId
   if (!taskId) return null
-  const task = taskStore.tasks.find((t: any) => t.id === taskId)
+      const task = taskStore.getTask(taskId)
   if (!task?.projectId) return null
   return taskStore.getProjectVisual(task.projectId)
 })

@@ -41,7 +41,7 @@ export function useCanvasConnections(
     const linkTaskToGroup = async (parentTaskId: string, groupNodeId: string) => {
         const { id: groupId } = CanvasIds.parseNodeId(groupNodeId)
         const group = canvasStore.groups.find(g => g.id === groupId)
-        const parentTask = taskStore.tasks.find(t => t.id === parentTaskId)
+        const parentTask = taskStore.getTask(parentTaskId)
         if (!group || !parentTask?.canvasPosition) return
 
         await undoSystem.canvasConnectionWithUndo(
@@ -190,8 +190,8 @@ export function useCanvasConnections(
             return
         }
 
-        const sourceTask = taskStore.tasks.find(t => t.id === source)
-        const targetTask = taskStore.tasks.find(t => t.id === target)
+            const sourceTask = taskStore.getTask(source)
+            const targetTask = taskStore.getTask(target)
         console.log('[BUG-1407:CONNECT] Found tasks:', { sourceTask: !!sourceTask, targetTask: !!targetTask, sourcePos: !!sourceTask?.canvasPosition, targetPos: !!targetTask?.canvasPosition })
 
         if (sourceTask && targetTask && sourceTask.canvasPosition && targetTask.canvasPosition) {
@@ -218,7 +218,7 @@ export function useCanvasConnections(
         if (!state.selectedEdge.value) return
 
         const { source, target, id: edgeId } = state.selectedEdge.value
-        const targetTask = taskStore.tasks.find(t => t.id === target)
+        const targetTask = taskStore.getTask(target)
 
         state.recentlyRemovedEdges.value.add(edgeId)
 
@@ -290,7 +290,7 @@ export function useCanvasConnections(
         if (!edge) return
 
         const { source, target, id: edgeId } = edge
-        const targetTask = taskStore.tasks.find(t => t.id === target)
+        const targetTask = taskStore.getTask(target)
 
         // Add to recently removed to prevent zombie edge reappearing
         state.recentlyRemovedEdges.value.add(edgeId)

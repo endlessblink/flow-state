@@ -107,7 +107,7 @@ const timerStore = useTimerStore()
 const tasksStore = useTaskStore()
 
 const currentTask = computed(() => {
-  return props.taskId ? tasksStore.tasks.find(task => task.id === props.taskId) : null
+  return props.taskId ? tasksStore.getTask(props.taskId) : null
 })
 
 const subtasks = computed(() => {

@@ -150,7 +150,7 @@ const handleStartTimer = async (taskId: string) => {
 }
 
 const handleEditTask = (taskId: string) => {
-  const task = taskStore.tasks.find(t => t.id === taskId)
+  const task = taskStore.getTask(taskId)
   if (task) {
     selectedTask.value = task
     showEditModal.value = true
@@ -169,7 +169,7 @@ const handlePermanentDelete = async (taskId: string) => {
 }
 
 const handleToggleComplete = async (taskId: string) => {
-  const task = taskStore.tasks.find(t => t.id === taskId)
+  const task = taskStore.getTask(taskId)
   if (!task) return
   if (task.status !== 'done' && task.recurrenceRule) {
     await taskStore.doneForNow(taskId)

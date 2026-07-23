@@ -326,7 +326,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
 
         try {
             for (const nodeId of selectedNodeIds) {
-                const task = taskStore.tasks.find(t => t.id === nodeId)
+            const task = taskStore.getTask(nodeId)
                 // TASK-1532: Recurring tasks use doneForNow — creates completion record + advances to next occurrence
                 if (task?.recurrenceRule) {
                     await taskStore.doneForNow(nodeId)
@@ -349,7 +349,7 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
             // advance beyond tomorrow, while non-recurring tasks still use tomorrow.
             const batchPlacedByGroup = new Map<string, Array<{ x: number; y: number }>>()
             for (const nodeId of selectedNodeIds) {
-                const task = taskStore.tasks.find(t => t.id === nodeId)
+            const task = taskStore.getTask(nodeId)
                 if (!task?.dueDate) continue
                 const matchingGroup = findMatchingGroupForDueDate(task.dueDate, canvasStore.groups)
                 if (matchingGroup && task.parentId !== matchingGroup.id) {

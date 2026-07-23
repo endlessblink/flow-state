@@ -160,7 +160,7 @@ const isDragValid = computed(() => {
   if (dragData.value.type === 'task' && dragData.value.taskId) {
     // CRITICAL: Don't allow dropping a task on its current project
     // This prevents confusion about which project the task belongs to
-    const task = taskStore.tasks.find(t => t.id === dragData.value!.taskId)
+    const task = taskStore.getTask(dragData.value!.taskId)
     if (task && task.projectId === props.projectId) {
       return false // Task already in this project - not a valid move
     }

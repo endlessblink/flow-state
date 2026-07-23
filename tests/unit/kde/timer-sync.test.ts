@@ -300,6 +300,60 @@ describe('TASK-1652: KDE Timer Sync', () => {
       expect(MAIN_QML).toContain('function clearActiveSessionState(resetToReady)')
     })
 
+    it('2. BUG-1972: a session already notified for is cleared, not re-checked every poll', () => {
+      const fnStart = MAIN_QML.indexOf('function handleNoActiveSession(')
+      expect(fnStart, 'handleNoActiveSession not found').toBeGreaterThan(-1)
+      const body = MAIN_QML.slice(fnStart, MAIN_QML.indexOf('function fetchLocalCurrentSession('))
+
+      const alreadyCompletedBranch = body.indexOf('root.currentSessionId === root.lastCompletedSessionId')
+      const recheckBranch = body.indexOf('checkSessionCompletion(root.currentSessionId')
+
+      expect(alreadyCompletedBranch, 'no already-completed short circuit').toBeGreaterThan(-1)
+      expect(recheckBranch).toBeGreaterThan(-1)
+      // The short circuit must win, otherwise the widget re-enters onSessionComplete
+      // once per poll and the countdown never stops with the app.
+      expect(alreadyCompletedBranch).toBeLessThan(recheckBranch)
+      expect(body.slice(alreadyCompletedBranch, recheckBranch)).toContain('clearActiveSessionState(true)')
+    })
+
+    it('2. BUG-1972: polling a stopped-but-already-notified session converges to stopped', () => {
+      // Models the QML branch order in handleNoActiveSession. Without the
+      // already-completed short circuit, each poll re-fires the completion check
+      // and the widget stays "running" at 00:00 forever.
+      const state = {
+        hasActiveSession: true,
+        isRunning: true,
+        currentSessionId: 'sess-1',
+        lastCompletedSessionId: 'sess-1',
+        sessionJustCompleted: false,
+        isInTransition: false,
+        checkingCompletion: false,
+      }
+      let completionChecks = 0
+
+      const poll = () => {
+        if (state.sessionJustCompleted || state.isInTransition) return
+        if (state.currentSessionId && state.currentSessionId === state.lastCompletedSessionId) {
+          state.hasActiveSession = false
+          state.isRunning = false
+          state.currentSessionId = ''
+          return
+        }
+        if (state.hasActiveSession && state.isRunning && state.currentSessionId && !state.checkingCompletion) {
+          completionChecks++
+          return
+        }
+        state.hasActiveSession = false
+        state.isRunning = false
+      }
+
+      for (let i = 0; i < 5; i++) poll()
+
+      expect(state.isRunning).toBe(false)
+      expect(state.hasActiveSession).toBe(false)
+      expect(completionChecks).toBe(0)
+    })
+
     it('2. ignores a delayed completion check after a newer session has started', () => {
       const checkFnStart = MAIN_QML.indexOf('function checkSessionCompletion(')
       expect(checkFnStart, 'checkSessionCompletion not found').toBeGreaterThan(-1)

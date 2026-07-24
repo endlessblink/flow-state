@@ -1243,6 +1243,20 @@ export function useTaskOperations(
                 error: error instanceof Error ? error.message : String(error),
             })
             console.error(`❌ Failed to permanently delete ${taskId}:`, error)
+            if (!hardDeleteCompleted && deletedTask.recurrenceRule) {
+                // A remote client can still run the recurrence scheduler while a
+                // queued hard delete is pending. Never acknowledge a local-only
+                // permanent delete for a recurring task: restore it and require
+                // a confirmed retry instead of exposing a resurrection window.
+                if (!_rawTasks.value.some(task => task.id === taskId)) {
+                    _rawTasks.value.splice(Math.min(index, _rawTasks.value.length), 0, deletedTask)
+                }
+                removePendingWrite(taskId)
+                await cacheTasks([..._rawTasks.value])
+                const { showToast } = useToast()
+                showToast('Permanent delete was not confirmed. The recurring task has been restored.', 'error')
+                throw error
+            }
             if (!hardDeleteCompleted && shouldKeepPermanentDeleteLocallyOnRemoteFailure(error)) {
                 logPermanentDeleteTrace(taskId, 'store.remote-delete-failed-keeping-local', {
                     rawTaskCount: _rawTasks.value.length,

@@ -56,6 +56,7 @@ vi.mock('@/composables/useDatabase', () => ({
 
 const mockSaveTasks = vi.fn().mockResolvedValue(undefined)
 const mockDeleteTask = vi.fn().mockResolvedValue(undefined)
+const mockPermanentDeleteTask = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 
 vi.mock('@/composables/useSupabaseDatabase', () => ({
   useSupabaseDatabase: () => ({
@@ -77,6 +78,12 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
 
 vi.mock('@/services/auth/supabase', () => ({
   supabase: null
+}))
+
+vi.mock('@/services/trash/TrashService', () => ({
+  trashService: {
+    permanentlyDeleteTask: mockPermanentDeleteTask,
+  },
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -133,6 +140,7 @@ describe('Task Store — CRUD', () => {
     mockCacheTasks.mockResolvedValue(undefined)
     mockSaveTasks.mockResolvedValue(undefined)
     mockDeleteTask.mockResolvedValue(undefined)
+    mockPermanentDeleteTask.mockResolvedValue(undefined)
     mockAuth.user = { id: '00000000-0000-0000-0000-000000000001' }
     mockAuth.isAuthenticated = true
     localStorage.clear()
@@ -575,6 +583,33 @@ describe('Task Store — CRUD', () => {
         endType: 'never',
       },
     })
+  })
+
+  it('fails recurring permanent delete closed when the server cannot confirm deletion', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Recurring permanent delete must be confirmed',
+      status: 'todo',
+      dueDate: '2026-07-23',
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+    mockPermanentDeleteTask.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+    await expect(store.permanentlyDeleteTask(task.id)).rejects.toThrow('Failed to fetch')
+
+    expect(store._rawTasks.find(candidate => candidate.id === task.id)).toMatchObject({
+      id: task.id,
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+    expect(mockEnqueue).toHaveBeenCalledTimes(1)
   })
 
   it('updates task priority', async () => {

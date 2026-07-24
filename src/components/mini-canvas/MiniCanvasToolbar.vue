@@ -1,7 +1,7 @@
 <template>
   <div class="mini-canvas-toolbar">
     <div class="toolbar-left">
-      <button class="toolbar-btn back-btn" title="Back to canvas (Esc)" @click="$emit('close')">
+      <button class="toolbar-btn back-btn" title="Back to canvas (Esc)" aria-label="Back to canvas (Esc)" @click="$emit('close')">
         <ArrowLeft :size="18" />
       </button>
 
@@ -25,7 +25,7 @@
 
       <div class="toolbar-divider" />
 
-      <button class="toolbar-btn" title="Fit View" @click="$emit('fit-view')">
+      <button class="toolbar-btn" title="Fit View" aria-label="Fit View" @click="$emit('fit-view')">
         <Maximize2 :size="16" />
       </button>
 
@@ -33,6 +33,8 @@
         class="toolbar-btn toggle-btn"
         :class="{ active: hideCompleted }"
         title="Toggle completed subtasks"
+        :aria-label="hideCompleted ? 'Show completed subtasks' : 'Hide completed subtasks'"
+        :aria-pressed="hideCompleted"
         @click="$emit('toggle-completed')"
       >
         <EyeOff v-if="hideCompleted" :size="16" />

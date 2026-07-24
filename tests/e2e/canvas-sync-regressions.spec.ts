@@ -1698,6 +1698,155 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     })
   })
 
+  test('R31 - recurring skip rejection stays visible and preserves the series', async ({ clientA }) => {
+    await gotoBoardReady(clientA)
+
+    const recurringCard = clientA.locator(`.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`)
+    await expect(recurringCard).toBeVisible()
+    const initialTask = await clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        dueDate: task?.dueDate ?? null,
+        recurrenceCount: task?.recurrenceCount ?? null,
+        recurrenceRule: task?.recurrenceRule ?? null,
+      }
+    }, OFFLINE_RECURRING_TASK.id)
+    const writePattern = '**/*'
+    await clientA.route(writePattern, route => {
+      const request = route.request()
+      if (request.method() === 'GET' || !request.url().includes('/rest/v1/tasks')) {
+        return route.continue()
+      }
+      return route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Injected direct persistence rejection' }),
+      })
+    })
+    await clientA.evaluate(() => {
+      const originalAdd = IDBObjectStore.prototype.add
+      ;(window as any).__restoreRecurringSkipQueue = () => {
+        IDBObjectStore.prototype.add = originalAdd
+      }
+      IDBObjectStore.prototype.add = function () {
+        throw new DOMException('Injected durable queue rejection', 'UnknownError')
+      }
+    })
+
+    try {
+      await recurringCard.click({ button: 'right' })
+      await clientA.getByText('Delete', { exact: true }).click()
+      await expect(clientA.getByText('Delete Recurring Task', { exact: true })).toBeVisible()
+      await clientA.getByText('Skip this occurrence', { exact: true }).click()
+
+      await expect(
+        clientA.getByText('Recurring task could not be changed. No changes were saved.', { exact: true }),
+      ).toBeVisible()
+      await expect(recurringCard).toBeVisible()
+      await expect.poll(async () => clientA.evaluate((taskId) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+        return {
+          dueDate: task?.dueDate ?? null,
+          recurrenceCount: task?.recurrenceCount ?? null,
+          recurrenceRule: task?.recurrenceRule ?? null,
+        }
+      }, OFFLINE_RECURRING_TASK.id)).toEqual(initialTask)
+    } finally {
+      await clientA.evaluate(() => (window as any).__restoreRecurringSkipQueue?.())
+      await clientA.unroute(writePattern)
+    }
+  })
+
+  test('R32 - recurring skip works offline and produces exactly one next occurrence', async ({ clientA, clientB }) => {
+    await gotoBoardReady(clientA)
+    await gotoBoardReady(clientB)
+
+    const initialDueDate = await clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.dueDate ?? null
+    }, OFFLINE_RECURRING_TASK.id)
+    expect(initialDueDate).toBeTruthy()
+
+    const recurringCard = clientA.locator(`.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`)
+    await expect(recurringCard).toBeVisible()
+    await clientA.context().setOffline(true)
+    await recurringCard.click({ button: 'right' })
+    await clientA.getByText('Delete', { exact: true }).click()
+    await expect(clientA.getByText('Delete Recurring Task', { exact: true })).toBeVisible()
+    await clientA.getByText('Skip this occurrence', { exact: true }).click()
+    await expect(recurringCard).toBeVisible()
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        dueDate: task?.dueDate ?? null,
+        recurrenceCount: task?.recurrenceCount ?? null,
+        isDeleted: task?.isDeleted ?? false,
+      }
+    }, OFFLINE_RECURRING_TASK.id)).toEqual({
+      dueDate: expect.not.stringMatching(initialDueDate),
+      recurrenceCount: 1,
+      isDeleted: false,
+    })
+
+    await clientA.context().setOffline(false)
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,due_date,recurrence_count,is_deleted')
+        .eq('id', OFFLINE_RECURRING_TASK.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: OFFLINE_RECURRING_TASK.id,
+        recurrence_count: 1,
+        is_deleted: false,
+      }))
+      expect(String(data?.due_date).slice(0, 10)).not.toBe(initialDueDate)
+    }).toPass({ timeout: 20_000 })
+
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        dueDate: task?.dueDate ?? null,
+        recurrenceCount: task?.recurrenceCount ?? null,
+        isDeleted: task?.isDeleted ?? false,
+      }
+    }, OFFLINE_RECURRING_TASK.id), { timeout: 20_000 }).toEqual({
+      dueDate: expect.not.stringMatching(initialDueDate),
+      recurrenceCount: 1,
+      isDeleted: false,
+    })
+    await expect(clientB.locator(`.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`)).toBeVisible()
+    await clientB.reload()
+    await gotoBoardReady(clientB)
+    await expect(async () => {
+      const { data: activeRows, error: activeError } = await admin
+        .from('tasks')
+        .select('id')
+        .eq('recurrence_parent_id', OFFLINE_RECURRING_TASK.id)
+        .eq('is_deleted', false)
+      expect(activeError).toBeNull()
+      expect(activeRows).toEqual([{ id: OFFLINE_RECURRING_TASK.id }])
+      const { data: completions, error: completionsError } = await admin
+        .from('tasks')
+        .select('id')
+        .eq('recurrence_parent_id', OFFLINE_RECURRING_TASK.id)
+        .eq('is_completion_record', true)
+      expect(completionsError).toBeNull()
+      expect(completions).toHaveLength(0)
+    }).toPass({ timeout: 20_000 })
+    await expect(clientB.locator(`.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`)).toBeVisible()
+  })
+
   test('R19 - Board right-click edit works offline, converges, and survives reload', async ({ clientA, clientB }) => {
     await gotoBoardReady(clientA)
     await gotoBoardReady(clientB)

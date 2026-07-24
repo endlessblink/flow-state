@@ -414,6 +414,7 @@ const handleRecurrenceSkip = async () => {
     }
   } catch (error) {
     console.error('[ModalManager] Skip recurring occurrence failed:', error)
+    message.error('Recurring task could not be changed. No changes were saved.')
   }
 }
 
@@ -443,6 +444,7 @@ const handleRecurrenceStop = async () => {
     }
   } catch (error) {
     console.error('[ModalManager] Stop recurrence failed:', error)
+    message.error('Recurring task could not be changed. No changes were saved.')
   }
 }
 
@@ -458,6 +460,7 @@ const handleRecurrenceRemoveFromCanvas = async () => {
     await getUndoSystem().bulkMoveToInboxWithUndo([taskId])
   } catch (error) {
     console.error('[ModalManager] Remove recurring task from canvas failed:', error)
+    message.error('Recurring task could not be changed. No changes were saved.')
   }
 }
 

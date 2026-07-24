@@ -451,7 +451,12 @@ export function useTaskOperations(
      * parentId or canvasPosition changes. If 'SYNC' or 'SMART-GROUP' sources
      * include geometry changes, a warning will be logged.
      */
-    const updateTask = async (taskId: string, updates: Partial<Task>, source: GeometryWriteSource = 'USER') => {
+    const updateTask = async (
+        taskId: string,
+        updates: Partial<Task>,
+        source: GeometryWriteSource = 'USER',
+        options: { throwOnPersistenceFailure?: boolean } = {},
+    ) => {
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
@@ -841,6 +846,7 @@ export function useTaskOperations(
             // This ensures the update persists in IndexedDB even if network fails
             const updatedTask = _rawTasks.value[freshIndex]
             let persisted = false
+            let persistenceError: unknown
             let canonicalTaskPatch: ReturnType<typeof createCanonicalTaskPatchState>
             try {
                 const syncOrchestrator = useSyncOrchestrator()
@@ -1052,6 +1058,7 @@ export function useTaskOperations(
                 })
                 persisted = true
             } catch (queueError) {
+                persistenceError = queueError
                 const errorMsg = queueError instanceof Error ? queueError.message : String(queueError)
                 if (canonicalTaskPatch) {
                     console.error('[CANONICAL-SYNC] Failed to durably queue task patch; rolling back:', errorMsg)
@@ -1071,6 +1078,7 @@ export function useTaskOperations(
                     await saveSpecificTasks([updatedTask], `updateTask-fallback-${taskId}`)
                     persisted = true
                 } catch (saveError) {
+                    persistenceError = saveError
                     console.warn(`[SYNC-QUEUE] Fallback save also failed for ${taskId}:`, saveError)
                 }
             }
@@ -1094,6 +1102,7 @@ export function useTaskOperations(
                     console.error(`❌ [TASK] All persistence paths failed for ${taskId}, rolling back optimistic update`)
                     _rawTasks.value[rollbackIndex] = previousTask
                 }
+                removePendingWrite(taskId)
             }
 
             // TASK-1428: Update IndexedDB read cache so reloads see the acknowledged mutation.
@@ -1103,6 +1112,11 @@ export function useTaskOperations(
             await cacheTasks(cacheSnapshot, { throwOnError: true })
             if (!authStore.user?.id) {
                 await saveTasksToStorage(cacheSnapshot, 'update-task-guest-durability')
+            }
+            if (!persisted && options.throwOnPersistenceFailure) {
+                throw persistenceError instanceof Error
+                    ? persistenceError
+                    : new Error('Task update could not be durably persisted')
             }
         } finally {
             if (!wasManualInProgress) manualOperationInProgress.value = false
@@ -1302,10 +1316,17 @@ export function useTaskOperations(
     }
 
     /**
-     * Skip this recurring occurrence: advance the chain so the scheduler
-     * creates the NEXT occurrence, then delete the current task.
+     * Skip this recurring occurrence by advancing the living chain head in place.
+     * Deleting the only live task leaves the deferred scheduler with no done ancestor
+     * to recreate from, permanently disappearing the series after reload.
      */
+    const recurringSkipInFlight = new Set<string>()
     const skipRecurringOccurrence = async (taskId: string) => {
+        if (recurringSkipInFlight.has(taskId)) {
+            console.warn(`[RECURRENCE-SKIP] Already in flight for ${taskId}, skipping duplicate request`)
+            return
+        }
+
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task || !task.recurrenceRule) {
             // Not recurring — fall through to normal delete
@@ -1313,30 +1334,48 @@ export function useTaskOperations(
             return
         }
 
-        const chainId = task.recurrenceParentId || task.id
-        const chainTasks = _rawTasks.value.filter(t =>
-            t.id === chainId || t.recurrenceParentId === chainId
-        )
-
-        // Find the latest done ancestor (highest recurrenceCount with status 'done')
-        const doneAncestors = chainTasks
-            .filter(t => t.status === 'done' && t.id !== taskId)
-            .sort((a, b) => (b.recurrenceCount || 0) - (a.recurrenceCount || 0))
-
-        const latestDoneAncestor = doneAncestors[0]
-
-        if (latestDoneAncestor) {
-            // Advance the ancestor's recurrenceCount so the scheduler computes
-            // count+1 → next occurrence (skipping the deleted one)
-            const targetCount = task.recurrenceCount || 0
-            if ((latestDoneAncestor.recurrenceCount || 0) < targetCount) {
-                await updateTask(latestDoneAncestor.id, { recurrenceCount: targetCount })
+        recurringSkipInFlight.add(taskId)
+        try {
+            const { computeNextDueDate } = await import('@/utils/recurrenceUtils')
+            const currentDueDate = task.dueDate?.substring(0, 10) || formatDateKey(new Date())
+            const nextCount = (task.recurrenceCount || 0) + 1
+            const nextDueDate = computeNextDueDate(currentDueDate, task.recurrenceRule, nextCount)
+            if (!nextDueDate) {
+                throw new Error('Recurring skip could not compute a next occurrence')
             }
-        }
 
-        // Delete the current occurrence — the recurrence scheduler will create
-        // the next one on app load (useRecurrenceScheduler)
-        await deleteTask(taskId, 'skipRecurringOccurrence:chain')
+            const nextInstances: TaskInstance[] | undefined = task.instances?.length
+                ? [{
+                    id: crypto.randomUUID(),
+                    taskId,
+                    scheduledDate: nextDueDate,
+                    scheduledTime: task.dueTime,
+                    duration: task.estimatedDuration || 25,
+                    status: 'scheduled',
+                }]
+                : task.instances
+
+            await updateTask(
+                taskId,
+                {
+                    status: 'todo',
+                    completedAt: undefined,
+                    dueDate: nextDueDate,
+                    doneForNowUntil: undefined,
+                    recurrenceCount: nextCount,
+                    ...(nextInstances ? { instances: nextInstances } : {}),
+                    subtasks: task.subtasks?.map(subtask => ({
+                        ...subtask,
+                        isCompleted: false,
+                        updatedAt: new Date(),
+                    })) || [],
+                },
+                'USER',
+                { throwOnPersistenceFailure: true },
+            )
+        } finally {
+            recurringSkipInFlight.delete(taskId)
+        }
     }
 
     /**

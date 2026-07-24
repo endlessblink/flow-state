@@ -370,6 +370,117 @@ describe('Task Store — CRUD', () => {
     })
   })
 
+  it('skips the only live recurring guest task in place without creating completion history', async () => {
+    mockAuth.user = null
+    mockAuth.isAuthenticated = false
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Guest recurring skip',
+      status: 'todo',
+      dueDate: '2026-07-23',
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+      instances: [{
+        id: 'guest-skip-instance',
+        taskId: '',
+        scheduledDate: '2026-07-23',
+        scheduledTime: '09:00',
+        duration: 25,
+        status: 'scheduled',
+      }],
+      doneForNowUntil: '2026-07-23',
+    })
+
+    await store.skipRecurringOccurrence(task.id)
+
+    const livingTask = store._rawTasks.find(candidate => candidate.id === task.id)
+    expect(livingTask).toMatchObject({
+      id: task.id,
+      status: 'todo',
+      dueDate: '2026-07-24',
+      doneForNowUntil: undefined,
+      recurrenceCount: 1,
+    })
+    expect(livingTask?.instances).toEqual([
+      expect.objectContaining({
+        scheduledDate: '2026-07-24',
+        duration: 25,
+        status: 'scheduled',
+        taskId: task.id,
+      }),
+    ])
+    expect(store._rawTasks.filter(candidate => candidate.isCompletionRecord)).toHaveLength(0)
+
+    const persisted = JSON.parse(localStorage.getItem('flowstate-guest-tasks') || '[]')
+    expect(persisted.find((candidate: { id: string }) => candidate.id === task.id)).toMatchObject({
+      status: 'todo',
+      dueDate: '2026-07-24',
+      recurrenceCount: 1,
+    })
+  })
+
+  it('rolls recurring skip back when the durable queue rejects it', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Rejected recurring skip',
+      status: 'todo',
+      dueDate: '2026-07-23',
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+    mockEnqueue.mockRejectedValueOnce(new Error('durable queue unavailable'))
+    mockSaveTasks.mockRejectedValueOnce(new Error('direct persistence unavailable'))
+
+    await expect(store.skipRecurringOccurrence(task.id)).rejects.toThrow('direct persistence unavailable')
+
+    expect(store._rawTasks.find(candidate => candidate.id === task.id)).toMatchObject({
+      id: task.id,
+      status: 'todo',
+      dueDate: '2026-07-23',
+    })
+    expect(store._rawTasks.find(candidate => candidate.id === task.id)?.recurrenceCount ?? 0).toBe(0)
+  })
+
+  it('accepts only one recurring skip while the first skip is still in flight', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Double recurring skip',
+      status: 'todo',
+      dueDate: '2026-07-23',
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+    let releaseUpdate!: () => void
+    const updateQueued = new Promise<void>(resolve => {
+      releaseUpdate = resolve
+    })
+    mockEnqueue.mockImplementationOnce(async () => {
+      await updateQueued
+      return { id: 2, status: 'pending' }
+    })
+
+    const firstSkip = store.skipRecurringOccurrence(task.id)
+    const secondSkip = store.skipRecurringOccurrence(task.id)
+    await vi.waitFor(() => expect(mockEnqueue).toHaveBeenCalledTimes(2))
+    releaseUpdate()
+    await Promise.all([firstSkip, secondSkip])
+
+    expect(mockEnqueue).toHaveBeenCalledTimes(2)
+    expect(store._rawTasks.find(candidate => candidate.id === task.id)).toMatchObject({
+      dueDate: '2026-07-24',
+      recurrenceCount: 1,
+    })
+  })
+
   it('updates task priority', async () => {
     const store = useTaskStore()
     const task = await store.createTask({ title: 'Priority Test', priority: 'low' })

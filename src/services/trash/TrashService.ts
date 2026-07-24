@@ -79,6 +79,20 @@ export class TrashService {
             throw error
         }
     }
+
+    /**
+     * Permanently delete a complete task selection in one database transaction.
+     */
+    public async bulkPermanentlyDeleteTasks(taskIds: string[]): Promise<void> {
+        if (taskIds.length === 0) return
+        try {
+            await this.db.bulkPermanentlyDeleteTasks(taskIds)
+            console.log(`🔥 [TRASH] ${taskIds.length} tasks permanently deleted from Supabase`)
+        } catch (error) {
+            console.error('❌ [TRASH] Failed to permanently delete task batch:', error)
+            throw error
+        }
+    }
 }
 
 export const trashService = new TrashService()

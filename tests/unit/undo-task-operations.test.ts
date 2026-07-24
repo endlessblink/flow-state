@@ -2,12 +2,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
 const { mockRpc } = vi.hoisted(() => ({ mockRpc: vi.fn() }))
+const mockCacheTasks = vi.hoisted(() => vi.fn())
 
 const mockEnqueue = vi.fn()
 const mockSaveTasks = vi.fn()
 const mockDeleteTask = vi.fn()
 const mockBulkDeleteTasks = vi.fn()
 const mockPermanentDeleteTask = vi.fn()
+const mockBulkPermanentlyDeleteTasks = vi.fn()
 
 vi.mock('@/composables/sync/useSyncOrchestrator', () => ({
   useSyncOrchestrator: () => ({
@@ -97,8 +99,13 @@ vi.mock('@/stores/canvas/canvasUi', () => ({
 
 vi.mock('@/services/trash/TrashService', () => ({
   trashService: {
-    permanentlyDeleteTask: mockPermanentDeleteTask
+    permanentlyDeleteTask: mockPermanentDeleteTask,
+    bulkPermanentlyDeleteTasks: mockBulkPermanentlyDeleteTasks
   }
+}))
+
+vi.mock('@/services/offline/readCacheDB', () => ({
+  cacheTasks: mockCacheTasks,
 }))
 
 import { useTaskStore } from '@/stores/tasks'
@@ -116,6 +123,8 @@ describe('task operation undo/redo three-cycle invariants', () => {
     mockDeleteTask.mockResolvedValue(undefined)
     mockBulkDeleteTasks.mockResolvedValue(undefined)
     mockPermanentDeleteTask.mockResolvedValue(undefined)
+    mockBulkPermanentlyDeleteTasks.mockResolvedValue(undefined)
+    mockCacheTasks.mockResolvedValue(undefined)
     mockRpc.mockReset()
   })
 
@@ -442,6 +451,51 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }
   })
 
+  it('reports a partial bulk update and compensates every earlier successful task', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const taskA = createMockTask({ id: 'bulk-update-rollback-a', title: 'Rollback A', priority: 'low' })
+    const taskB = createMockTask({ id: 'bulk-update-rollback-b', title: 'Rollback B', priority: 'low' })
+    taskStore._rawTasks.push(taskA, taskB)
+    mockEnqueue
+      .mockResolvedValueOnce({ id: 1, status: 'pending' })
+      .mockRejectedValueOnce(new Error('second queue write failed'))
+      .mockResolvedValueOnce({ id: 2, status: 'pending' })
+    mockSaveTasks.mockRejectedValueOnce(new Error('second direct save failed'))
+
+    await expect(undoSystem.bulkUpdateTasksWithUndo([
+      { id: taskA.id, updates: { priority: 'high' } },
+      { id: taskB.id, updates: { priority: 'high' } },
+    ], 'Set priorities')).rejects.toThrow('second direct save failed')
+
+    expect(taskStore.getTask(taskA.id)?.priority).toBe('low')
+    expect(taskStore.getTask(taskB.id)?.priority).toBe('low')
+    expect(mockEnqueue).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not claim field-only rollback for a partly applied status batch', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const taskA = createMockTask({ id: 'bulk-status-partial-a', title: 'Status A', status: 'todo' })
+    const taskB = createMockTask({ id: 'bulk-status-partial-b', title: 'Status B', status: 'todo' })
+    taskStore._rawTasks.push(taskA, taskB)
+    mockEnqueue
+      .mockResolvedValueOnce({ id: 1, status: 'pending' })
+      .mockRejectedValueOnce(new Error('second status queue failed'))
+    mockSaveTasks.mockRejectedValueOnce(new Error('second status save failed'))
+
+    await expect(undoSystem.bulkUpdateTasksWithUndo([
+      { id: taskA.id, updates: { status: 'done' } },
+      { id: taskB.id, updates: { status: 'done' } },
+    ], 'Mark tasks done')).rejects.toThrow(
+      'stopped after 1 of 2; successful tasks remain changed'
+    )
+
+    expect(taskStore.getTask(taskA.id)?.status).toBe('done')
+    expect(taskStore.getTask(taskB.id)?.status).toBe('todo')
+    expect(mockEnqueue).toHaveBeenCalledTimes(2)
+  })
+
   it('undoes and redoes task deletion three consecutive times with the same restored task id', async () => {
     const taskStore = useTaskStore()
     const undoSystem = getUndoSystem()
@@ -645,10 +699,10 @@ describe('task operation undo/redo three-cycle invariants', () => {
 
     await undoSystem.bulkPermanentlyDeleteTasksWithUndo([taskA.id, taskB.id])
 
-    // Real hard delete per id → trg_task_tombstone writes the tombstone that blocks resurrection.
-    expect(mockPermanentDeleteTask).toHaveBeenCalledTimes(2)
-    expect(mockPermanentDeleteTask).toHaveBeenCalledWith(taskA.id)
-    expect(mockPermanentDeleteTask).toHaveBeenCalledWith(taskB.id)
+    // One transactional RPC hard-deletes the complete selection and writes every tombstone.
+    expect(mockBulkPermanentlyDeleteTasks).toHaveBeenCalledTimes(1)
+    expect(mockBulkPermanentlyDeleteTasks).toHaveBeenCalledWith([taskA.id, taskB.id])
+    expect(mockPermanentDeleteTask).not.toHaveBeenCalled()
     // The soft-delete routing that caused BUG-1850 must NOT be used.
     expect(mockBulkDeleteTasks).not.toHaveBeenCalled()
 
@@ -660,6 +714,55 @@ describe('task operation undo/redo three-cycle invariants', () => {
     await undoSystem.undo()
     expect(taskStore._rawTasks.find(c => c.id === taskA.id)?.title).toBe('Permanent A')
     expect(taskStore._rawTasks.find(c => c.id === taskB.id)?.title).toBe('Permanent B')
+  })
+
+  it('restores the complete permanent-delete batch when the atomic server operation fails', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const taskA = createMockTask({ id: 'permanent-batch-failure-a', title: 'Permanent failure A' })
+    const taskB = createMockTask({ id: 'permanent-batch-failure-b', title: 'Permanent failure B' })
+    taskStore._rawTasks.push(taskA, taskB)
+    mockBulkPermanentlyDeleteTasks.mockRejectedValueOnce(new Error('batch transaction rolled back'))
+
+    await expect(
+      undoSystem.bulkPermanentlyDeleteTasksWithUndo([taskA.id, taskB.id])
+    ).rejects.toThrow('batch transaction rolled back')
+
+    expect(taskStore._rawTasks.map(task => task.id)).toEqual([taskA.id, taskB.id])
+    expect(mockPermanentDeleteTask).not.toHaveBeenCalled()
+  })
+
+  it('disables surviving local recurrence before an atomic permanent-delete request can yield', async () => {
+    const taskStore = useTaskStore()
+    const undoSystem = getUndoSystem()
+    const recurrenceRule = { pattern: 'daily' as const, interval: 1, endType: 'never' as const }
+    const livingTask = createMockTask({
+      id: 'permanent-recurring-living',
+      title: 'Recurring living task',
+      recurrenceRule,
+    })
+    const completedAncestor = createMockTask({
+      id: 'permanent-recurring-history',
+      title: 'Recurring history',
+      status: 'done',
+      recurrenceRule,
+      recurrenceParentId: livingTask.id,
+      isCompletionRecord: true,
+    })
+    taskStore._rawTasks.push(livingTask, completedAncestor)
+
+    let releaseDelete!: () => void
+    mockBulkPermanentlyDeleteTasks.mockImplementationOnce(() => new Promise<void>(resolve => {
+      releaseDelete = resolve
+    }))
+
+    const deletePromise = undoSystem.bulkPermanentlyDeleteTasksWithUndo([livingTask.id])
+    await vi.waitFor(() => expect(mockBulkPermanentlyDeleteTasks).toHaveBeenCalledTimes(1))
+
+    expect(taskStore.getTask(completedAncestor.id)?.recurrenceRule).toBeUndefined()
+
+    releaseDelete()
+    await deletePromise
   })
 
   it('undoes and redoes bulk task deletion three consecutive times with all original ids', async () => {

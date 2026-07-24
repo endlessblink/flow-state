@@ -1043,14 +1043,63 @@ const bulkUpdateTasksWithUndo = async (
     description: description ?? `Bulk update ${uniqueUpdates.length} task${uniqueUpdates.length > 1 ? 's' : ''}`
   })
 
+  const appliedUpdates: typeof uniqueUpdates = []
+  const hasCompletionSideEffects = uniqueUpdates.some(({ updates }) => 'status' in updates)
   try {
     for (const { id, updates } of uniqueUpdates) {
-      await taskStore.updateTask(id, updates)
+      await taskStore.updateTask(id, updates, 'USER', { throwOnPersistenceFailure: true })
+      appliedUpdates.push({ id, updates })
     }
     await nextTick()
     await commitOperation(handle)
   } catch (error) {
+    if (hasCompletionSideEffects) {
+      const partialError = new Error(
+        `Bulk task status change stopped after ${appliedUpdates.length} of ${uniqueUpdates.length}; `
+        + 'successful tasks remain changed'
+      )
+      const { showToast } = useToast()
+      showToast(partialError.message, 'error')
+      console.error('❌ bulkUpdateTasksWithUndo status change partially failed:', error)
+      throw partialError
+    }
+
+    const rollbackErrors: unknown[] = []
+    for (const { id, updates } of [...appliedUpdates].reverse()) {
+      const previousTask = handle.before.tasks.find(task => task.id === id)
+      if (!previousTask) continue
+      const rollbackUpdates = Object.fromEntries(
+        Object.keys(updates).map(key => [
+          key,
+          previousTask[key as keyof Task],
+        ])
+      ) as Partial<Task>
+      try {
+        await taskStore.updateTask(
+          id,
+          rollbackUpdates,
+          'USER',
+          { throwOnPersistenceFailure: true }
+        )
+      } catch (rollbackError) {
+        rollbackErrors.push(rollbackError)
+      }
+    }
+    const { showToast } = useToast()
+    showToast(
+      rollbackErrors.length === 0
+        ? 'The batch change failed. Earlier task changes were rolled back.'
+        : 'The batch change was only partly rolled back. Sync recovery needs attention.',
+      'error'
+    )
     console.error('❌ bulkUpdateTasksWithUndo failed:', error)
+    if (rollbackErrors.length > 0) {
+      const compensationError = new Error(
+        'Bulk task update failed and its compensation was incomplete'
+      ) as Error & { errors: unknown[] }
+      compensationError.errors = [error, ...rollbackErrors]
+      throw compensationError
+    }
     throw error
   }
 }
@@ -1296,8 +1345,8 @@ const bulkDeleteTasksWithUndo = async (taskIds: string[]) => {
 }
 
 // BUG-1850: Batch HARD delete with a single undo operation (canvas Shift+Delete / permanent delete).
-// Mirrors bulkDeleteTasksWithUndo but calls permanentlyDeleteTask, so the DB trigger
-// trg_task_tombstone writes a tombstone and the sync layer cannot resurrect the task.
+// The store uses one transactional database operation so the selection cannot be
+// stranded in a partially deleted state.
 // Uses the same handle-based begin/commit API (the old "corrupts pendingOperation" hazard is gone).
 // Undo restores via the 'task-bulk-delete' case, which clears each tombstone first (TASK-1722).
 const bulkPermanentlyDeleteTasksWithUndo = async (taskIds: string[]) => {
@@ -1322,7 +1371,9 @@ const bulkPermanentlyDeleteTasksWithUndo = async (taskIds: string[]) => {
       logPermanentDeleteTrace(id, 'bulk.before-store-delete', {
         batchSize: taskIds.length,
       })
-      await taskStore.permanentlyDeleteTask(id)
+    }
+    await taskStore.bulkPermanentlyDeleteTasks(taskIds)
+    for (const id of taskIds) {
       logPermanentDeleteTrace(id, 'bulk.after-store-delete', {
         stillInRawTasks: taskStore.rawTasks.some(t => t.id === id),
         rawTaskCount: taskStore.rawTasks.length,

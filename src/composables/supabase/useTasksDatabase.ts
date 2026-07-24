@@ -396,6 +396,54 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         }
     }
 
+    const bulkPermanentlyDeleteTasks = async (taskIds: string[]): Promise<void> => {
+        const uniqueTaskIds = [...new Set(taskIds.filter(Boolean))]
+        if (uniqueTaskIds.length === 0) return
+
+        const userId = getUserIdSafe()
+        if (!userId) {
+            throw new Error('bulkPermanentlyDeleteTasks: authenticated user is required')
+        }
+        const requestId = crypto.randomUUID()
+
+        try {
+            isSyncing.value = true
+            await withRetry(async () => {
+                const { data, error } = await getSupabase().rpc('flowstate_permanently_delete_tasks', {
+                    p_task_ids: uniqueTaskIds,
+                    p_user_id: userId,
+                    p_request_id: requestId,
+                })
+                if (error) throw error
+
+                const receipt = data as {
+                    deleted_ids?: unknown
+                    deleted_count?: unknown
+                } | null
+                const deletedIds = Array.isArray(receipt?.deleted_ids)
+                    ? receipt.deleted_ids.filter((id): id is string => typeof id === 'string')
+                    : []
+                const confirmedIds = new Set(deletedIds)
+                const completeReceipt = Number(receipt?.deleted_count) === uniqueTaskIds.length
+                    && confirmedIds.size === uniqueTaskIds.length
+                    && uniqueTaskIds.every(id => confirmedIds.has(id))
+                if (!completeReceipt) {
+                    throw new Error(
+                        `bulkPermanentlyDeleteTasks: receipt did not confirm every requested task `
+                        + `(${confirmedIds.size}/${uniqueTaskIds.length})`
+                    )
+                }
+            }, 'bulkPermanentlyDeleteTasks')
+            invalidateCache.tasks()
+            lastSyncError.value = null
+        } catch (e: unknown) {
+            handleError(e, 'bulkPermanentlyDeleteTasks')
+            throw e
+        } finally {
+            isSyncing.value = false
+        }
+    }
+
     // TASK-153: Fetch IDs of deleted tasks (for golden backup validation)
     // BUG-1891: optional onError lets the load path detect failure (vs an empty-but-successful
     // result) so it can fail CLOSED — never resurrect deleted tasks when deletion info is unreliable.
@@ -720,6 +768,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
         bulkDeleteTasks,
         restoreTask,
         permanentlyDeleteTask,
+        bulkPermanentlyDeleteTasks,
         fetchDeletedTaskIds,
         safeCreateTask,
         checkTaskIdsAvailability,

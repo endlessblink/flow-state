@@ -1312,6 +1312,54 @@ export function useTaskOperations(
         }
     }
 
+    const bulkPermanentlyDeleteTasks = async (taskIds: string[]) => {
+        const uniqueTaskIds = [...new Set(taskIds.filter(Boolean))]
+        if (uniqueTaskIds.length === 0) return
+
+        const originalTasks = [..._rawTasks.value]
+        const selectedIds = new Set(uniqueTaskIds)
+        const selectedTasks = originalTasks.filter(task => selectedIds.has(task.id))
+        if (selectedTasks.length !== uniqueTaskIds.length) {
+            throw new Error(
+                `Bulk permanent delete refused a stale selection `
+                + `(${selectedTasks.length}/${uniqueTaskIds.length} tasks still exist locally)`
+            )
+        }
+
+        manualOperationInProgress.value = true
+        selectedTasks.forEach(task => addPendingWrite(task.id))
+        const recurrenceChainIds = new Set(
+            selectedTasks
+                .filter(task => Boolean(task.recurrenceRule))
+                .map(task => task.recurrenceParentId || task.id)
+        )
+        _rawTasks.value = originalTasks
+            .map(task => {
+                const chainId = task.recurrenceParentId || task.id
+                return recurrenceChainIds.has(chainId)
+                    ? { ...task, recurrenceRule: undefined }
+                    : task
+            })
+            .filter(task => !selectedIds.has(task.id))
+
+        try {
+            const { trashService } = await import('@/services/trash/TrashService')
+            await trashService.bulkPermanentlyDeleteTasks(uniqueTaskIds)
+            await cacheTasks([..._rawTasks.value])
+        } catch (error) {
+            const originalIds = new Set(originalTasks.map(task => task.id))
+            const tasksAddedWhileDeleting = _rawTasks.value.filter(task => !originalIds.has(task.id))
+            _rawTasks.value = [...originalTasks, ...tasksAddedWhileDeleting]
+            selectedTasks.forEach(task => removePendingWrite(task.id))
+            await cacheTasks([..._rawTasks.value])
+            const { showToast } = useToast()
+            showToast('Permanent delete failed. Every selected task has been restored.', 'error')
+            throw error
+        } finally {
+            manualOperationInProgress.value = false
+        }
+    }
+
     // ================================================================
     // TASK-1520: Recurrence-aware delete operations
     // ================================================================
@@ -2096,6 +2144,7 @@ export function useTaskOperations(
         updateTask,
         deleteTask,
         permanentlyDeleteTask,
+        bulkPermanentlyDeleteTasks,
         skipRecurringOccurrence,
         stopRecurrence,
         bulkDeleteTasks,

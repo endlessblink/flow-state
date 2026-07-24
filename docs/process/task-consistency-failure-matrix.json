@@ -589,6 +589,18 @@
       "liveEvidence": ["2026-07-23: authenticated Chromium R19 used the visible Board right-click Edit action while fully offline, changed the title through the task editor, persisted it after reconnect, converged in an independent client, and retained it after reload in 26.5 seconds. R20 used the visible Board right-click Delete action while fully offline and initially failed because dialog teardown cleared taskToDelete before the deferred callback read it, making confirmed deletion a silent no-op. Capturing the confirmed ID fixed the exact lifecycle failure; the task then disappeared optimistically, persisted as a tombstone after reconnect, stayed absent in an independent client, and did not resurrect after reload in 25.7 seconds. R21 forced the Board delete entrypoint to reject before persistence, proved the old path silently swallowed the failure, then proved the repaired path retained the task and showed an explicit error in the rendered UI in 14.6 seconds. R22 forced an accepted Board title edit to receive a permanent 403 persistence rejection, proved the failed local change appeared in the sync recovery UI, removed the rejection, retried it manually, verified the database readback, observed an independent client converge, and retained the edit after reload. Restore, concurrent-write, and remaining Catalog/Canvas entrypoint permutations remain open."]
     },
     {
+      "id": "bulk-permanent-delete-all-or-none",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["partial-batch-atomicity", "delete-tombstone-and-undo", "recurrence-lifecycle", "write-failure-visibility"],
+      "mutations": ["permanent-delete", "undo", "restore"],
+      "surfaces": ["canvas", "catalog", "board", "task-inventory"],
+      "states": ["visible", "recurring", "offline", "concurrent-write", "tombstoned", "cross-client"],
+      "layers": ["renderer-store", "signed-transaction-boundary", "supabase-rls", "supabase-persistence", "undo"],
+      "automatedEvidence": ["tests/unit/composables/useSupabaseDatabase-delete.test.ts", "tests/unit/undo-task-operations.test.ts", "tests/unit/migrations/atomic-batch-permanent-delete.test.ts", "scripts/db/test-atomic-batch-permanent-delete.sql"],
+      "liveEvidence": []
+    },
+    {
       "id": "canvas-geometry-and-membership-durability",
       "severity": "critical",
       "status": "open",
@@ -723,7 +735,7 @@
       "surfaces": ["all-views", "batch-edit"],
       "states": ["offline", "reconnecting", "workspace-switched", "concurrent-write"],
       "layers": ["sync-queue", "sync-transport", "canonical-receipt", "supabase-rls", "supabase-persistence"],
-      "automatedEvidence": ["tests/unit/sync/sync-orchestrator.test.ts", "tests/unit/sync/write-health.test.ts", "tests/unit/task-rollback.test.ts"],
+      "automatedEvidence": ["tests/unit/sync/sync-orchestrator.test.ts", "tests/unit/sync/write-health.test.ts", "tests/unit/task-rollback.test.ts", "tests/unit/undo-task-operations.test.ts"],
       "liveEvidence": []
     },
     {

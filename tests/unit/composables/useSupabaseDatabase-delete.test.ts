@@ -22,6 +22,7 @@ const authStoreMock = {
 }
 
 const refreshSessionMock = vi.fn().mockResolvedValue({ data: null, error: null })
+const rpcMock = vi.fn()
 const reportMock = vi.fn()
 
 const queueResponse = (table: string, responses: QueryResponse[]): void => {
@@ -57,6 +58,7 @@ const fromMock = vi.fn((table: string) => createQueryBuilder(table))
 vi.mock('@/services/auth/supabase', () => ({
   supabase: {
     from: fromMock,
+    rpc: rpcMock,
     auth: {
       refreshSession: refreshSessionMock
     }
@@ -86,6 +88,7 @@ describe('useSupabaseDatabase permanent task delete', () => {
     responseQueue.clear()
     fromMock.mockClear()
     refreshSessionMock.mockClear()
+    rpcMock.mockReset()
     reportMock.mockClear()
     authStoreMock.user = { id: 'user-1' }
 
@@ -171,5 +174,45 @@ describe('useSupabaseDatabase permanent task delete', () => {
     })
 
     expect(fromMock).not.toHaveBeenCalledWith('tombstones')
+  })
+
+  it('permanently deletes a complete task batch in one transactional RPC', async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        deleted_ids: ['task-a', 'task-b'],
+        deleted_count: 2
+      },
+      error: null
+    })
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+
+    await db.bulkPermanentlyDeleteTasks(['task-a', 'task-b'])
+
+    expect(rpcMock).toHaveBeenCalledTimes(1)
+    expect(rpcMock).toHaveBeenCalledWith('flowstate_permanently_delete_tasks', {
+      p_task_ids: ['task-a', 'task-b'],
+      p_user_id: 'user-1',
+      p_request_id: expect.any(String)
+    })
+    expect(fromMock).not.toHaveBeenCalled()
+  })
+
+  it('fails a permanent-delete batch closed when the receipt is incomplete', async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        deleted_ids: ['task-a'],
+        deleted_count: 1
+      },
+      error: null
+    })
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+
+    await expect(db.bulkPermanentlyDeleteTasks(['task-a', 'task-b'])).rejects.toThrow(
+      'receipt did not confirm every requested task'
+    )
   })
 })

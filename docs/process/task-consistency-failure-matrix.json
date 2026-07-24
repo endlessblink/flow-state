@@ -1797,7 +1797,11 @@
       "surfaces": ["catalog", "board", "canvas", "all-views"],
       "states": ["visible", "filtered-hidden", "stale-snapshot", "offline", "reconnecting", "cross-client", "renderer-reloaded", "electron-restarted"],
       "layers": ["renderer-component", "renderer-selection", "renderer-store", "sync-queue", "supabase-persistence", "supabase-realtime"],
-      "automatedEvidence": [],
+      "automatedEvidence": [
+        "tests/unit/stores/task-filter-invariants.test.ts",
+        "tests/unit/stores/task-store-crud.test.ts",
+        "tests/e2e/canvas-sync-regressions.spec.ts"
+      ],
       "liveEvidence": []
     },
     {

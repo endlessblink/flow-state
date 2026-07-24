@@ -12,6 +12,10 @@ import { useSettingsStore } from '@/stores/settings'
 import { useProjectStore } from '@/stores/projects'
 import type { SavedFilterState, SavedView } from '@/types/savedViews'
 import type { SmartView } from '@/composables/tasks/useTaskFiltering'
+import {
+    areExclusiveTaskFiltersEqual,
+    normalizeExclusiveTaskFilters
+} from '@/stores/tasks/filterInvariants'
 
 export function useSavedViews() {
     const taskStore = useTaskStore()
@@ -47,13 +51,18 @@ export function useSavedViews() {
 
     function applyView(view: SavedView) {
         const f = view.filters
+        const normalizedFilters = normalizeExclusiveTaskFilters({
+            activeSmartView: f.activeSmartView as SmartView,
+            activeStatusFilter: f.activeStatusFilter,
+            activeDurationFilter: f.activeDurationFilter as 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null,
+        })
 
         // Use store actions for dimensions that have setters (they also call persistFilters)
         taskStore.setActiveProject(f.activeProjectId)
-        taskStore.setSmartView(f.activeSmartView as SmartView)
-        taskStore.setActiveStatusFilter(f.activeStatusFilter)
+        taskStore.setSmartView(normalizedFilters.activeSmartView)
+        taskStore.setActiveStatusFilter(normalizedFilters.activeStatusFilter)
         taskStore.setActiveDurationFilter(
-            f.activeDurationFilter as 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
+            normalizedFilters.activeDurationFilter
         )
 
         // For the boolean toggle refs, set directly then persist
@@ -72,9 +81,18 @@ export function useSavedViews() {
         const saved = view.filters
         return (
             current.activeProjectId === saved.activeProjectId &&
-            current.activeSmartView === saved.activeSmartView &&
-            current.activeStatusFilter === saved.activeStatusFilter &&
-            current.activeDurationFilter === saved.activeDurationFilter &&
+            areExclusiveTaskFiltersEqual(
+                {
+                    activeSmartView: current.activeSmartView as SmartView,
+                    activeStatusFilter: current.activeStatusFilter,
+                    activeDurationFilter: current.activeDurationFilter as 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null,
+                },
+                {
+                    activeSmartView: saved.activeSmartView as SmartView,
+                    activeStatusFilter: saved.activeStatusFilter,
+                    activeDurationFilter: saved.activeDurationFilter as 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null,
+                }
+            ) &&
             current.hideBoardDoneTasks === saved.hideBoardDoneTasks &&
             current.hideCanvasDoneTasks === saved.hideCanvasDoneTasks &&
             current.hideCalendarDoneTasks === saved.hideCalendarDoneTasks &&

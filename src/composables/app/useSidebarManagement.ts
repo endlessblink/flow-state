@@ -4,6 +4,7 @@ import { useUIStore } from '@/stores/ui'
 import { useRouter } from 'vue-router'
 import type { Project } from '@/types/tasks'
 import { useSmartViews, type SmartView } from '@/composables/useSmartViews'
+import { shouldHideDoneTasksForStatus } from '@/stores/tasks/filterInvariants'
 
 /**
  * Sidebar Management State Management Composable
@@ -166,7 +167,10 @@ export function useSidebarManagement() {
     })
 
     // Apply the same hideDoneTasks logic as the task store
-    const finalCount = taskStore.hideDoneTasks
+    const finalCount = shouldHideDoneTasksForStatus(
+      taskStore.hideDoneTasks,
+      taskStore.activeStatusFilter
+    )
       ? filteredTasks.filter(task => task.status !== 'done').length
       : filteredTasks.length
 

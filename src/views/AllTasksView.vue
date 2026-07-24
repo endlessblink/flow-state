@@ -135,6 +135,7 @@ import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
+import { shouldHideDoneTasksForStatus } from '@/stores/tasks/filterInvariants'
 import type { Task, GroupByType, TaskGroup } from '@/types/tasks'
 
 type CreateTaskDefaults = {
@@ -214,7 +215,7 @@ const filteredTasks = computed(() => {
   }
 
   // TASK-076: Apply view-specific 'Hide Done' filter locally
-  if (hideDoneTasks.value) {
+  if (shouldHideDoneTasksForStatus(hideDoneTasks.value, taskStore.activeStatusFilter)) {
     tasks = tasks.filter(t => t.status !== 'done')
   }
 

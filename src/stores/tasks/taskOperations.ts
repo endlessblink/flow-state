@@ -2063,6 +2063,10 @@ export function useTaskOperations(
 
     const setSmartView = (view: SmartView) => {
         activeSmartView.value = view
+        if (view) {
+            activeStatusFilter.value = null
+            activeDurationFilter.value = null
+        }
         persistFilters()
     }
 
@@ -2090,7 +2094,10 @@ export function useTaskOperations(
 
     const setActiveStatusFilter = (status: string | null) => {
         activeStatusFilter.value = (status === 'all' || status === null) ? null : status
-        if (status) activeDurationFilter.value = null
+        if (activeStatusFilter.value) {
+            activeSmartView.value = null
+            activeDurationFilter.value = null
+        }
         persistFilters()
     }
 
@@ -2100,7 +2107,10 @@ export function useTaskOperations(
 
     const setActiveDurationFilter = (duration: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null) => {
         activeDurationFilter.value = duration
-        if (duration) activeStatusFilter.value = null
+        if (duration) {
+            activeSmartView.value = null
+            activeStatusFilter.value = null
+        }
         persistFilters()
     }
 

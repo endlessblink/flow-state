@@ -70,6 +70,7 @@
 import { computed } from 'vue'
 import { useTaskStore, type Project } from '@/stores/tasks'
 import BaseNavItem from '@/components/base/BaseNavItem.vue'
+import { shouldHideDoneTasksForStatus } from '@/stores/tasks/filterInvariants'
 
 interface Props {
   project: Project
@@ -168,7 +169,10 @@ const getProjectTaskCount = (projectId: string): number => {
     if (task._soft_deleted) return false
 
     // Respect hideDoneTasks setting for consistency with sidebar counts
-    if (taskStore.hideDoneTasks && task.status === 'done') return false
+    if (
+      shouldHideDoneTasksForStatus(taskStore.hideDoneTasks, taskStore.activeStatusFilter) &&
+      task.status === 'done'
+    ) return false
 
     return true
   })

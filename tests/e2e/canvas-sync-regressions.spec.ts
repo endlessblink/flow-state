@@ -891,6 +891,35 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
     }, task.id), { timeout: 20_000 }).toBe('done')
 
+    await clientA.evaluate(() => {
+      const current = JSON.parse(localStorage.getItem('flowstate-filters') || '{}')
+      localStorage.setItem('flowstate-filters', JSON.stringify({
+        ...current,
+        activeSmartView: 'all_active',
+        activeStatusFilter: 'done',
+        activeDurationFilter: 'quick',
+        hideBoardDoneTasks: true,
+      }))
+    })
+    await clientA.reload()
+    await clientA.waitForSelector('.all-tasks-view', { timeout: 30_000 })
+    await expect.poll(async () => clientA.evaluate(() => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return {
+        activeSmartView: tasks.activeSmartView,
+        activeStatusFilter: tasks.activeStatusFilter,
+        activeDurationFilter: tasks.activeDurationFilter,
+        hideDoneTasks: tasks.hideDoneTasks,
+      }
+    })).toEqual({
+      activeSmartView: null,
+      activeStatusFilter: 'done',
+      activeDurationFilter: null,
+      hideDoneTasks: true,
+    })
+    await expect(clientA.locator('.hierarchical-task-row').filter({ hasText: task.title }).first()).toBeVisible()
+
     await clientA.getByTitle('Toggle filters').click()
     await clientA.locator('.filter-bar .custom-select').nth(2).getByRole('combobox').click()
     await clientA.getByRole('option', { name: 'Done', exact: true }).click()

@@ -3,6 +3,7 @@ import type { Task, Project } from '@/types/tasks'
 import { useSmartViews } from '@/composables/useSmartViews'
 import { formatDateKey } from '@/utils/dateUtils'
 import { useWorkspaceStore } from '@/stores/workspace'
+import { shouldHideDoneTasksForStatus } from '@/stores/tasks/filterInvariants'
 
 
 export type SmartView = 'today' | 'week' | 'uncategorized' | 'unscheduled' | 'in_progress' | 'all_active' | null
@@ -310,7 +311,7 @@ export const useTaskFiltering = (
             baseTasks = baseTasks.filter(task => projectIds.includes(task.projectId))
         }
 
-        if (hideDoneTasks.value) {
+        if (shouldHideDoneTasksForStatus(hideDoneTasks.value, activeStatusFilter.value)) {
             baseTasks = baseTasks.filter(task => task.status !== 'done')
         }
 
@@ -348,7 +349,7 @@ export const useTaskFiltering = (
             projectTasks = projectTasks.filter(task => task.status === activeStatusFilter.value)
         }
 
-        if (hideDoneTasks.value) {
+        if (shouldHideDoneTasksForStatus(hideDoneTasks.value, activeStatusFilter.value)) {
             projectTasks = projectTasks.filter(task => task.status !== 'done')
         }
 

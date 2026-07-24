@@ -10,6 +10,7 @@ import { logPermanentDeleteTraceIfActive } from '@/utils/permanentDeleteTrace'
 // TASK-1215: Tauri dual-write for filter persistence
 import { getTauriStore, isTauriEnv } from '@/composables/usePersistentRef'
 import type { SmartView } from '@/composables/tasks/useTaskFiltering'
+import { normalizeExclusiveTaskFilters, type DurationFilter } from './filterInvariants'
 
 const FALLBACK_TASK_TITLE = 'Untitled Task'
 
@@ -63,7 +64,7 @@ export function useTaskPersistence(
         activeSmartView: SmartView
         activeStatusFilter: string | null
         // TASK-1215: Added missing duration filter persistence
-        activeDurationFilter?: 'quick' | 'short' | 'medium' | 'long' | 'unestimated' | null
+        activeDurationFilter?: DurationFilter
         hideBoardDoneTasks?: boolean
         hideCanvasDoneTasks?: boolean
         hideCalendarDoneTasks?: boolean
@@ -992,11 +993,14 @@ export function useTaskPersistence(
             state.activeProjectId = null
         }
         projectStore.setActiveProject(state.activeProjectId)
-        activeSmartView.value = state.activeSmartView
-        if (state.activeStatusFilter === 'all') state.activeStatusFilter = null
-        activeStatusFilter.value = state.activeStatusFilter
-        // TASK-1215: Restore duration filter
-        activeDurationFilter.value = state.activeDurationFilter ?? null
+        const normalizedFilters = normalizeExclusiveTaskFilters({
+            activeSmartView: state.activeSmartView,
+            activeStatusFilter: state.activeStatusFilter,
+            activeDurationFilter: state.activeDurationFilter ?? null,
+        })
+        activeSmartView.value = normalizedFilters.activeSmartView
+        activeStatusFilter.value = normalizedFilters.activeStatusFilter
+        activeDurationFilter.value = normalizedFilters.activeDurationFilter
         hideBoardDoneTasks.value = state.hideBoardDoneTasks ?? false
         hideCanvasDoneTasks.value = state.hideCanvasDoneTasks ?? true
         hideCalendarDoneTasks.value = state.hideCalendarDoneTasks ?? false

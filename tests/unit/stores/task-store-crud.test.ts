@@ -747,6 +747,58 @@ describe('Task Store — Filtering', () => {
     expect(filtered.some(t => t.id === doneTask.id)).toBe(true)
   })
 
+  it('BUG-1975: explicit Done status clears an incompatible smart view', async () => {
+    const store = useTaskStore()
+    const doneTask = await store.createTask({ title: 'Reopen Me', status: 'done' })
+    await store.createTask({ title: 'Still Active', status: 'todo' })
+
+    store.setSmartView('all_active')
+    store.setActiveStatusFilter('done')
+
+    expect(store.activeSmartView).toBeNull()
+    expect(store.activeStatusFilter).toBe('done')
+    expect(store.filteredTasks.map(task => task.id)).toContain(doneTask.id)
+  })
+
+  it('BUG-1975: selecting All Active clears an incompatible Done status', async () => {
+    const store = useTaskStore()
+    const activeTask = await store.createTask({ title: 'Active Again', status: 'todo' })
+    await store.createTask({ title: 'Already Done', status: 'done' })
+
+    store.setActiveStatusFilter('done')
+    store.setSmartView('all_active')
+
+    expect(store.activeStatusFilter).toBeNull()
+    expect(store.activeSmartView).toBe('all_active')
+    expect(store.filteredTasks.map(task => task.id)).toContain(activeTask.id)
+    expect(store.filteredTasks.every(task => task.status !== 'done')).toBe(true)
+  })
+
+  it('BUG-1975: duration selection cannot retain smart-view or status contradictions', () => {
+    const store = useTaskStore()
+
+    store.setSmartView('all_active')
+    store.setActiveStatusFilter('done')
+    store.setActiveDurationFilter('quick')
+
+    expect(store.activeSmartView).toBeNull()
+    expect(store.activeStatusFilter).toBeNull()
+    expect(store.activeDurationFilter).toBe('quick')
+  })
+
+  it('BUG-1975: Done counts remain visible when hide-done is enabled', async () => {
+    const store = useTaskStore()
+    const project = await store.createProject({ name: 'Completed work' })
+    await store.createTask({ title: 'Visible completed task', projectId: project.id, status: 'done' })
+    await store.createTask({ title: 'Other active task', projectId: project.id, status: 'todo' })
+
+    store.hideDoneTasks = true
+    store.setActiveStatusFilter('done')
+
+    expect(store.smartViewTaskCounts.all).toBe(2)
+    expect(store.getProjectTaskCount(project.id)).toBe(1)
+  })
+
   it('filter by priority: only high priority returned', async () => {
     const store = useTaskStore()
     const high1 = await store.createTask({ title: 'High One', priority: 'high' })

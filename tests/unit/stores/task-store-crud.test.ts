@@ -410,29 +410,50 @@ describe('Task Store — CRUD', () => {
     })
     const persistedBefore = localStorage.getItem('flowstate-guest-tasks')
     const originalSetItem = localStorage.setItem.bind(localStorage)
+    let rejectNextGuestWrite = true
     const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
-      if (key === 'flowstate-guest-tasks') throw new DOMException('quota full', 'QuotaExceededError')
+      if (key === 'flowstate-guest-tasks' && rejectNextGuestWrite) {
+        rejectNextGuestWrite = false
+        throw new DOMException('quota full', 'QuotaExceededError')
+      }
       originalSetItem(key, value)
     })
 
     const completion = store.doneForNow(task.id)
+    const duplicateCompletion = store.doneForNow(task.id)
     await cacheStarted
     const unrelatedIndex = store._rawTasks.findIndex(candidate => candidate.id === unrelatedTask.id)
     store._rawTasks.splice(unrelatedIndex, 1, {
       ...store._rawTasks[unrelatedIndex],
       title: 'Concurrent task after completion started',
     })
+    const concurrentSameTaskEdit = store.updateTask(task.id, {
+      title: 'Recurring task edited while completion was pending',
+      dueDate: '2026-07-24',
+    })
     releaseCache()
 
-    await expect(completion).rejects.toThrow('quota full')
+    const completionResults = await Promise.allSettled([completion, duplicateCompletion])
+    expect(completionResults).toEqual([
+      expect.objectContaining({
+        status: 'rejected',
+        reason: expect.objectContaining({ message: 'quota full' }),
+      }),
+      expect.objectContaining({
+        status: 'rejected',
+        reason: expect.objectContaining({ message: 'quota full' }),
+      }),
+    ])
+    await concurrentSameTaskEdit
     setItem.mockRestore()
 
     const rolledBackTask = store._rawTasks.find(candidate => candidate.id === task.id)
     expect(rolledBackTask).toMatchObject({
       status: 'todo',
-      dueDate: '2026-07-23',
+      dueDate: '2026-07-24',
     })
     expect(rolledBackTask?.recurrenceCount).toBeUndefined()
+    expect(rolledBackTask?.title).toBe('Recurring task edited while completion was pending')
     expect(store._rawTasks.filter(candidate => candidate.isCompletionRecord)).toHaveLength(0)
     expect(store._rawTasks.find(candidate => candidate.id === unrelatedTask.id)?.title)
       .toBe('Concurrent task after completion started')
@@ -445,7 +466,25 @@ describe('Task Store — CRUD', () => {
       ]),
       { throwOnError: true },
     )
-    expect(localStorage.getItem('flowstate-guest-tasks')).toBe(persistedBefore)
+    expect(localStorage.getItem('flowstate-guest-tasks')).not.toBe(persistedBefore)
+    expect(JSON.parse(localStorage.getItem('flowstate-guest-tasks') || '[]')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: task.id,
+          title: 'Recurring task edited while completion was pending',
+          dueDate: '2026-07-24',
+          status: 'todo',
+        }),
+      ]),
+    )
+  })
+
+  it('rejects done-for-now when a stale view targets a task that no longer exists', async () => {
+    const store = useTaskStore()
+
+    await expect(store.doneForNow('missing-task-id')).rejects.toThrow(
+      'Done for now target task no longer exists: missing-task-id',
+    )
   })
 
   it('skips the only live recurring guest task in place without creating completion history', async () => {

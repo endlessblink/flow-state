@@ -1633,7 +1633,7 @@
       "surfaces": ["quick-tasks", "mobile-quick-sort", "focus", "catalog", "board", "canvas"],
       "states": ["visible", "filtered-hidden", "offline", "reconnecting", "renderer-reloaded"],
       "layers": ["renderer-component", "renderer-store", "renderer-selection", "sync-queue", "undo"],
-      "automatedEvidence": ["tests/unit/quick-sort-source-queue.test.ts", "tests/e2e/quicksort-postpone-visual.spec.ts"],
+      "automatedEvidence": ["tests/unit/quick-sort-source-queue.test.ts", "tests/unit/stores/task-store-crud.test.ts", "tests/e2e/quicksort-postpone-visual.spec.ts"],
       "liveEvidence": []
     },
     {
@@ -1826,7 +1826,7 @@
       "surfaces": ["all-views", "electron", "supabase", "task-inventory"],
       "states": ["auth-expired", "offline", "reconnecting", "server-committed-unacked", "renderer-reloaded", "electron-restarted", "stale-snapshot"],
       "layers": ["renderer-store", "sync-queue", "sync-transport", "auth-storage", "supabase-persistence", "task-inventory"],
-      "automatedEvidence": ["tests/unit/sync/write-health.test.ts"],
+      "automatedEvidence": ["tests/unit/sync/write-health.test.ts", "tests/unit/stores/task-store-crud.test.ts"],
       "liveEvidence": []
     },
     {

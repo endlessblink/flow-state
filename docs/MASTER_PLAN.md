@@ -2223,6 +2223,16 @@ _Original plan below._
 
 **Release rule**: no recurring/cardinal issue may be called globally solved because one helper or one view passes. Open critical/high vectors remain machine-readable, and each release records the exact subset proved plus the unresolved risk list.
 
+### BUG-1978: Duplicate or stale recurring actions can report success without a successful operation (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-24) | **Related**: BUG-1976, TASK-1977
+
+**Exact failure modes**: a stale view targeting a task that no longer existed returned success without mutating anything; a second `Done for now` action returned immediately while the first was still pending, so its caller could show success even if the shared durable operation later failed.
+
+**Fix and automated proof**: missing targets now reject explicitly, and duplicate same-task actions join the original promise and receive its exact success or failure. The storage-failure regression proves both callers reject together while the task rolls back and unrelated concurrent task state survives.
+
+**Remaining**: audit every mutation entry point for silent missing-target returns, swallowed errors, optimistic-only acknowledgements, and duplicate-operation success toasts; prove the packaged menus and keyboard/checkbox paths.
+
 ### TASK-1943: Reliable Hermes–FlowState personal-assistant program (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1797, BUG-1942 | **Related**: FEATURE-1943

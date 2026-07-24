@@ -189,6 +189,8 @@ export function useTaskOperations(
         canvasUiSyncRequest.value++
     }
 
+    const doneForNowInFlight = new Map<string, Promise<void>>()
+
     const createTask = async (
         taskData: Partial<Task>,
         _options: { awaitDirectSave?: boolean } = {}
@@ -457,6 +459,11 @@ export function useTaskOperations(
         source: GeometryWriteSource = 'USER',
         options: { throwOnPersistenceFailure?: boolean } = {},
     ) => {
+        const pendingRecurringCompletion = doneForNowInFlight.get(taskId)
+        if (pendingRecurringCompletion) {
+            await pendingRecurringCompletion.catch(() => undefined)
+        }
+
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) return
 
@@ -1562,15 +1569,9 @@ export function useTaskOperations(
     // TASK-1532: "Done for Now" — for recurring tasks, creates a completion record and advances
     // the original task to the next occurrence. For non-recurring tasks, delegates to moveTask.
     // BUG-1536: In-flight guard prevents double-invocation (double-click creating 2 completion records)
-    const doneForNowInFlight = new Set<string>()
-    const doneForNow = async (taskId: string, options: { nextDueDate?: string; requestId?: string } = {}) => {
-        if (doneForNowInFlight.has(taskId)) {
-            console.warn(`[DONE-FOR-NOW] Already in flight for ${taskId}, skipping`)
-            return
-        }
-
+    const performDoneForNow = async (taskId: string, options: { nextDueDate?: string; requestId?: string } = {}) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
-        if (!task) return
+        if (!task) throw new Error(`Done for now target task no longer exists: ${taskId}`)
 
         // Non-recurring: just mark done normally
         if (!task.recurrenceRule) {
@@ -1578,9 +1579,7 @@ export function useTaskOperations(
             return
         }
 
-        doneForNowInFlight.add(taskId)
-        try {
-            const authStore = useAuthStore()
+        const authStore = useAuthStore()
 
         // 1. Stop timer if running on this task
         // BUG-1569: Dynamic import to break circular dependency
@@ -1801,8 +1800,29 @@ export function useTaskOperations(
         } catch { /* localStorage may be unavailable */ }
 
         console.log(`[DONE-FOR-NOW] "${task.title?.slice(0, 30)}" occurrence completed, next: ${next?.dueDate || 'ended'}`)
+    }
+
+    const doneForNow = async (taskId: string, options: { nextDueDate?: string; requestId?: string } = {}) => {
+        const targetTask = _rawTasks.value.find(task => task.id === taskId)
+        if (!targetTask?.recurrenceRule) {
+            await performDoneForNow(taskId, options)
+            return
+        }
+
+        const existingOperation = doneForNowInFlight.get(taskId)
+        if (existingOperation) {
+            console.warn(`[DONE-FOR-NOW] Already in flight for ${taskId}, joining existing operation`)
+            return existingOperation
+        }
+
+        const operation = performDoneForNow(taskId, options)
+        doneForNowInFlight.set(taskId, operation)
+        try {
+            await operation
         } finally {
-            doneForNowInFlight.delete(taskId)
+            if (doneForNowInFlight.get(taskId) === operation) {
+                doneForNowInFlight.delete(taskId)
+            }
         }
     }
 

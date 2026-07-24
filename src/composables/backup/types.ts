@@ -90,7 +90,7 @@ export interface RestoreAnalysis {
     skipped: Array<{
       task: Task
       reason: string
-      status: 'active' | 'soft_deleted' | 'tombstoned'
+      status: 'active' | 'soft_deleted' | 'tombstoned' | 'shared_workspace'
     }>  // Tasks that will be skipped
   }
   projects: {

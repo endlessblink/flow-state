@@ -1560,6 +1560,83 @@
       "liveEvidence": []
     },
     {
+      "id": "mixed-scope-backup-personal-row-recovery-isolation",
+      "severity": "critical",
+      "status": "live-proven",
+      "failureClasses": ["backup-restore-and-inventory", "workspace-scope-isolation", "partial-batch-atomicity"],
+      "mutations": ["backup", "restore"],
+      "surfaces": ["backup", "task-inventory", "workspace-settings", "all-views"],
+      "states": ["shared-workspace-restore", "workspace-switched", "restore-drill", "inventory-mismatch"],
+      "layers": ["backup-artifact", "restore-procedure", "workspace-membership", "signed-transaction-boundary"],
+      "automatedEvidence": [
+        "tests/unit/backup-validation.test.ts",
+        "tests/e2e/backup-restore-live.spec.ts"
+      ],
+      "liveEvidence": [
+        "2026-07-24: a signed-in Chromium drill created one personal and one shared-workspace task, produced one checksummed absolute backup containing both scopes, deleted only the personal row and its disaster-generated tombstone, restored through production backup code, proved the personal row returned with its original owner and fields, proved the shared row retained its workspace and fields unchanged, and found the recovered personal task after renderer reload; after dependency-graph hardening the isolated E2E passed again in 14.3 seconds."
+      ]
+    },
+    {
+      "id": "shared-tombstone-workspace-provenance",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "workspace-scope-isolation", "delete-tombstone-and-undo", "identity-and-field-mapping"],
+      "mutations": ["delete", "permanent-delete", "backup", "restore"],
+      "surfaces": ["backup", "supabase", "task-inventory", "all-views"],
+      "states": ["tombstoned", "shared-workspace-restore", "workspace-deleted", "membership-revoked", "attribution-drift"],
+      "layers": ["backup-artifact", "restore-procedure", "supabase-persistence", "supabase-rls", "workspace-membership"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "shared-restore-membership-transition-race",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "workspace-scope-isolation", "concurrent-conflict-resolution"],
+      "mutations": ["restore", "assign-user"],
+      "surfaces": ["backup", "workspace-settings", "supabase"],
+      "states": ["workspace-owner", "workspace-admin", "workspace-member", "workspace-viewer", "membership-revoked", "concurrent-write"],
+      "layers": ["workspace-membership", "signed-transaction-boundary", "supabase-rls", "canonical-receipt"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "shared-restore-deleted-workspace-orphan-recovery",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "workspace-scope-isolation", "hierarchy-and-project-integrity"],
+      "mutations": ["backup", "restore", "delete"],
+      "surfaces": ["backup", "workspace-settings", "task-inventory", "supabase"],
+      "states": ["workspace-deleted", "shared-workspace-restore", "restore-drill", "inventory-mismatch"],
+      "layers": ["backup-artifact", "restore-procedure", "workspace-membership", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "shared-restore-assignee-and-reference-rebinding",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "workspace-scope-isolation", "hierarchy-and-project-integrity", "identity-and-field-mapping"],
+      "mutations": ["restore", "assign-user", "assign-project", "assign-lane", "reparent"],
+      "surfaces": ["backup", "workspace-settings", "all-views", "supabase"],
+      "states": ["assignee-removed", "membership-revoked", "workspace-deleted", "artifact-from-other-workspace", "attribution-drift"],
+      "layers": ["backup-artifact", "restore-procedure", "workspace-membership", "supabase-rls", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "shared-restore-cross-workspace-id-collision",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["backup-restore-and-inventory", "workspace-scope-isolation", "identity-and-field-mapping", "concurrent-conflict-resolution"],
+      "mutations": ["restore", "create", "reparent"],
+      "surfaces": ["backup", "supabase", "task-inventory", "all-views"],
+      "states": ["id-collision-across-workspaces", "artifact-from-other-workspace", "concurrent-write", "lost-restore-ack"],
+      "layers": ["backup-artifact", "restore-procedure", "signed-transaction-boundary", "canonical-receipt", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
       "id": "shared-restore-owner-attribution-and-role-boundary",
       "severity": "critical",
       "status": "open",

@@ -313,6 +313,124 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       expect(mockRestoreBackupTransaction).not.toHaveBeenCalled()
     })
 
+    it('keeps personal recovery available when an absolute backup also contains shared data', async () => {
+      const backup = createMockBackup(2, Date.now(), {
+        source: { kind: 'account', userId: 'user-1' },
+      } as Partial<BackupData>)
+      backup.tasks[1].workspaceId = 'workspace-1'
+      backup.tasks[0].projectId = 'shared-project'
+      backup.tasks[0].parentTaskId = 'task-2'
+      backup.tasks[0].parentId = 'shared-group'
+      backup.tasks[0].recurrenceParentId = 'task-2'
+      backup.tasks[0].dependsOn = ['task-2']
+      backup.tasks[0].connectionTypes = { 'task-2': 'blocker' }
+      backup.tasks[0].assignedTo = 'former-workspace-member'
+      backup.projects = [{
+        id: 'shared-project',
+        name: 'Shared project',
+        workspaceId: 'workspace-1',
+      }] as any
+      backup.groups = [{
+        id: 'shared-group',
+        name: 'Shared group',
+        workspaceId: 'workspace-1',
+      }] as any
+      backup.tombstones = [{
+        entityType: 'task',
+        entityId: 'unknown-scope-deletion',
+      }]
+      backup.metadata = {
+        ...backup.metadata!,
+        workspaceTaskCount: 1,
+        tombstoneCount: 1,
+        projectCount: 1,
+        groupCount: 1,
+      }
+      backup.checksum = calculateChecksum({
+        source: (backup as BackupData & { source?: unknown }).source,
+        tasks: backup.tasks,
+        projects: backup.projects,
+        groups: backup.groups,
+        tombstones: backup.tombstones,
+      })
+
+      const analysis = await backupSystem.analyzeRestore(backup)
+
+      expect(analysis.canProceed).toBe(true)
+      expect(analysis.tasks.toRestore.map(task => task.id)).toEqual(['task-1'])
+      expect(analysis.tasks.toRestore[0]).toEqual(expect.objectContaining({
+        projectId: '',
+        parentTaskId: null,
+        parentId: undefined,
+        recurrenceParentId: undefined,
+        dependsOn: [],
+        connectionTypes: {},
+        assignedTo: null,
+      }))
+      expect(analysis.projects.toRestore).toBe(0)
+      expect(analysis.groups.toRestore).toBe(0)
+      expect(analysis.tasks.skipped).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          task: expect.objectContaining({ id: 'task-2' }),
+          status: 'shared_workspace',
+        }),
+      ]))
+      expect(analysis.tombstones.toRestore).toBe(0)
+      expect(analysis.warnings.join(' ')).toContain('shared workspace')
+      expect(analysis.warnings.join(' ')).toContain('tombstones')
+      expect(mockCheckTaskIdsAvailability).toHaveBeenCalledWith(['task-1'])
+    })
+
+    it('restores only the personal partition of a checksummed mixed-scope artifact', async () => {
+      const backup = createMockBackup(2, Date.now(), {
+        source: { kind: 'account', userId: 'user-1' },
+      } as Partial<BackupData>)
+      backup.tasks[1].workspaceId = 'workspace-1'
+      backup.tombstones = [{
+        entityType: 'task',
+        entityId: 'unknown-scope-deletion',
+      }]
+      backup.metadata = {
+        ...backup.metadata!,
+        workspaceTaskCount: 1,
+        tombstoneCount: 1,
+      }
+      backup.checksum = calculateChecksum({
+        source: (backup as BackupData & { source?: unknown }).source,
+        tasks: backup.tasks,
+        projects: backup.projects,
+        groups: backup.groups,
+        tombstones: backup.tombstones,
+      })
+      mockRestoreBackupTransaction.mockResolvedValue({
+        ok: true,
+        tasksCreated: 1,
+        tasksExisting: 0,
+        projectsCreated: 0,
+        projectsExisting: 0,
+        groupsCreated: 0,
+        groupsExisting: 0,
+        tombstonesCreated: 0,
+      })
+      mockCheckTaskIdsAvailability.mockResolvedValue([
+        { taskId: 'task-1', status: 'active', reason: 'exists' },
+      ])
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(true)
+      expect(mockRestoreBackupTransaction).toHaveBeenCalledWith(expect.objectContaining({
+        artifactHash: backup.checksum,
+        tasks: [expect.objectContaining({ id: 'task-1' })],
+        projects: [],
+        groups: [],
+        tombstones: [],
+      }))
+      expect(mockSafeCreateTask).not.toHaveBeenCalled()
+      expect(mockRecordTombstone).not.toHaveBeenCalled()
+      expect(backupSystem.state.value.warning).toContain('Shared workspace data')
+    })
+
     it('refuses to claim an emergency backup exists when durable storage rejects it', async () => {
       localStorageMock.setItem.mockImplementation(() => {
         throw new Error('storage unavailable')

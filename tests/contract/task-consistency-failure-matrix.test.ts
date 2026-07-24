@@ -155,6 +155,19 @@ describe('cardinal task consistency failure matrix', () => {
     ]))
   })
 
+  it('tracks shared recovery as distinct ownership and recoverability failure classes', () => {
+    const vectorIds = new Set(loadMatrix().vectors.map(vector => vector.id))
+
+    expect([...vectorIds]).toEqual(expect.arrayContaining([
+      'mixed-scope-backup-personal-row-recovery-isolation',
+      'shared-tombstone-workspace-provenance',
+      'shared-restore-membership-transition-race',
+      'shared-restore-deleted-workspace-orphan-recovery',
+      'shared-restore-assignee-and-reference-rebinding',
+      'shared-restore-cross-workspace-id-collision',
+    ]))
+  })
+
   it('keeps every automated evidence path executable and present', () => {
     const matrix = loadMatrix()
     const missing = matrix.vectors.flatMap(vector => (

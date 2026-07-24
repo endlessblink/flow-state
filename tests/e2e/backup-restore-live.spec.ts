@@ -9,6 +9,9 @@ const TASK_TITLE = 'Absolute Recovery Round Trip'
 const DELETED_TASK_ID = 'bacc0000-0000-4000-8000-000000000002'
 const DELETED_TASK_TITLE = 'Recoverable Trash Inventory'
 const PERMANENT_DELETED_ID = 'bacc0000-0000-4000-8000-000000000003'
+const MIXED_PERSONAL_TASK_ID = 'bacc0000-0000-4000-8000-000000000011'
+const MIXED_SHARED_TASK_ID = 'bacc0000-0000-4000-8000-000000000012'
+const MIXED_WORKSPACE_ID = 'bacc0000-0000-4000-8000-000000000013'
 
 test.describe.serial('absolute task backup and recovery', () => {
   test.skip(!SERVICE_ROLE_KEY, 'requires local Supabase service role key')
@@ -249,6 +252,129 @@ test.describe.serial('absolute task backup and recovery', () => {
     } finally {
       await admin.from('tasks').delete().in('id', [TASK_ID, DELETED_TASK_ID])
       await admin.from('tombstones').delete().in('entity_id', [TASK_ID, DELETED_TASK_ID, PERMANENT_DELETED_ID])
+    }
+  })
+
+  test('restores personal data from a mixed-scope backup without rewriting shared truth', async ({ page }) => {
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const userId = (await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })).id
+
+    await admin.from('tasks').delete().in('id', [MIXED_PERSONAL_TASK_ID, MIXED_SHARED_TASK_ID])
+    await admin.from('workspaces').delete().eq('id', MIXED_WORKSPACE_ID)
+
+    try {
+      const { error: workspaceError } = await admin.from('workspaces').insert({
+        id: MIXED_WORKSPACE_ID,
+        name: 'Mixed Recovery Boundary',
+        owner_id: userId,
+      })
+      expect(workspaceError).toBeNull()
+      const { error: membershipError } = await admin.from('workspace_members').insert({
+        workspace_id: MIXED_WORKSPACE_ID,
+        user_id: userId,
+        role: 'owner',
+      })
+      expect(membershipError).toBeNull()
+      const { error: taskSeedError } = await admin.from('tasks').insert([
+        {
+          id: MIXED_PERSONAL_TASK_ID,
+          user_id: userId,
+          title: 'Mixed recovery personal truth',
+          status: 'planned',
+          priority: 'high',
+        },
+        {
+          id: MIXED_SHARED_TASK_ID,
+          user_id: userId,
+          workspace_id: MIXED_WORKSPACE_ID,
+          title: 'Mixed recovery shared truth',
+          status: 'planned',
+          priority: 'medium',
+        },
+      ])
+      expect(taskSeedError).toBeNull()
+
+      await page.goto('/#/tasks')
+      await page.waitForFunction(() => {
+        const root = document.querySelector('#app') as any
+        return !!root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks')
+      }, { timeout: 30_000 })
+
+      const backupJson = await page.evaluate(async ({ personalId, sharedId }) => {
+        const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
+        const backupSystem = useBackupSystem()
+        const backup = await backupSystem.createBackup('manual')
+        if (!backup) throw new Error(backupSystem.state.value.error ?? 'mixed backup failed')
+        if (!backup.tasks.some(task => task.id === personalId)) {
+          throw new Error('mixed backup omitted personal task')
+        }
+        if (!backup.tasks.some(task => task.id === sharedId && task.workspaceId)) {
+          throw new Error('mixed backup omitted shared task scope')
+        }
+        return JSON.stringify(backup)
+      }, { personalId: MIXED_PERSONAL_TASK_ID, sharedId: MIXED_SHARED_TASK_ID })
+
+      const { error: lossError } = await admin.from('tasks').delete().eq('id', MIXED_PERSONAL_TASK_ID)
+      expect(lossError).toBeNull()
+      const { error: disasterTombstoneLossError } = await admin
+        .from('tombstones')
+        .delete()
+        .eq('entity_id', MIXED_PERSONAL_TASK_ID)
+      expect(disasterTombstoneLossError).toBeNull()
+
+      const restoreResult = await page.evaluate(async (serializedBackup) => {
+        const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
+        const backupSystem = useBackupSystem()
+        const restored = await backupSystem.restoreBackup(serializedBackup, {
+          backupSource: 'playwright-mixed-scope-recovery',
+        })
+        return {
+          restored,
+          error: backupSystem.state.value.error,
+          warning: backupSystem.state.value.warning,
+        }
+      }, backupJson)
+      expect(restoreResult.restored, restoreResult.error ?? undefined).toBe(true)
+      expect(restoreResult.warning).toContain('Shared workspace data')
+
+      const { data: recoveredPersonal, error: personalError } = await admin
+        .from('tasks')
+        .select('id,user_id,workspace_id,title,priority')
+        .eq('id', MIXED_PERSONAL_TASK_ID)
+        .single()
+      expect(personalError).toBeNull()
+      expect(recoveredPersonal).toEqual({
+        id: MIXED_PERSONAL_TASK_ID,
+        user_id: userId,
+        workspace_id: null,
+        title: 'Mixed recovery personal truth',
+        priority: 'high',
+      })
+      const { data: untouchedShared, error: sharedError } = await admin
+        .from('tasks')
+        .select('id,user_id,workspace_id,title,priority')
+        .eq('id', MIXED_SHARED_TASK_ID)
+        .single()
+      expect(sharedError).toBeNull()
+      expect(untouchedShared).toEqual({
+        id: MIXED_SHARED_TASK_ID,
+        user_id: userId,
+        workspace_id: MIXED_WORKSPACE_ID,
+        title: 'Mixed recovery shared truth',
+        priority: 'medium',
+      })
+
+      await page.reload()
+      await page.waitForFunction((taskId) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks')
+        return tasks?.rawTasks.some((task: any) => task.id === taskId)
+      }, MIXED_PERSONAL_TASK_ID, { timeout: 30_000 })
+    } finally {
+      await admin.from('tasks').delete().in('id', [MIXED_PERSONAL_TASK_ID, MIXED_SHARED_TASK_ID])
+      await admin.from('workspaces').delete().eq('id', MIXED_WORKSPACE_ID)
     }
   })
 

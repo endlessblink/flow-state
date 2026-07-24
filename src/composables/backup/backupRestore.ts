@@ -17,6 +17,104 @@ export interface RestoreOperations {
   ) => Promise<boolean | RestoreAnalysis>
 }
 
+type WorkspaceScopedEntity = {
+  workspaceId?: string | null
+  workspace_id?: string | null
+}
+
+function getWorkspaceId(entity: unknown): string | null {
+  const scoped = entity as WorkspaceScopedEntity
+  return scoped.workspaceId || scoped.workspace_id || null
+}
+
+function isSharedEntity(entity: unknown): boolean {
+  return Boolean(getWorkspaceId(entity))
+}
+
+function getSharedWorkspaceIds(backupData: BackupData): Set<string> {
+  return new Set(
+    [
+      ...(backupData.tasks || []),
+      ...(backupData.projects || []),
+      ...(backupData.groups || []),
+    ]
+      .map(entity => getWorkspaceId(entity))
+      .filter((workspaceId): workspaceId is string => Boolean(workspaceId))
+  )
+}
+
+function buildPersonalRecoveryPartition(backupData: BackupData): {
+  tasks: BackupData['tasks']
+  projects: BackupData['projects']
+  groups: BackupData['groups']
+} {
+  const sharedTaskIds = new Set(
+    backupData.tasks.filter(isSharedEntity).map(task => task.id)
+  )
+  const sharedProjectIds = new Set(
+    (backupData.projects || []).filter(isSharedEntity).map(project => project.id)
+  )
+  const sharedGroupIds = new Set(
+    (backupData.groups || []).filter(isSharedEntity).map(group => group.id)
+  )
+  const sourceUserId = backupData.source?.kind === 'account'
+    ? backupData.source.userId
+    : null
+
+  const tasks = backupData.tasks
+    .filter(task => !isSharedEntity(task))
+    .map(task => {
+      const connectionTypes = task.connectionTypes
+        ? Object.fromEntries(
+          Object.entries(task.connectionTypes)
+            .filter(([targetTaskId]) => !sharedTaskIds.has(targetTaskId))
+        )
+        : task.connectionTypes
+      return {
+        ...task,
+        projectId: sharedProjectIds.has(task.projectId) ? '' : task.projectId,
+        parentId: task.parentId && sharedGroupIds.has(task.parentId)
+          ? undefined
+          : task.parentId,
+        parentTaskId: task.parentTaskId && sharedTaskIds.has(task.parentTaskId)
+          ? null
+          : task.parentTaskId,
+        recurrenceParentId: task.recurrenceParentId
+          && sharedTaskIds.has(task.recurrenceParentId)
+          ? undefined
+          : task.recurrenceParentId,
+        dependsOn: task.dependsOn?.filter(taskId => !sharedTaskIds.has(taskId)),
+        connectionTypes,
+        assignedTo: task.assignedTo
+          && task.assignedTo !== sourceUserId
+          ? null
+          : task.assignedTo,
+      }
+    })
+  const projects = (backupData.projects || [])
+    .filter(project => !isSharedEntity(project))
+    .map(project => ({
+      ...project,
+      parentId: project.parentId && sharedProjectIds.has(project.parentId)
+        ? null
+        : project.parentId,
+    }))
+  const groups = (backupData.groups || [])
+    .filter(group => !isSharedEntity(group))
+    .map(group => ({
+      ...group,
+      parentGroupId: group.parentGroupId && sharedGroupIds.has(group.parentGroupId)
+        ? null
+        : group.parentGroupId,
+      linkedParentTaskId: group.linkedParentTaskId
+        && sharedTaskIds.has(group.linkedParentTaskId)
+        ? null
+        : group.linkedParentTaskId,
+    }))
+
+  return { tasks, projects, groups }
+}
+
 export function createRestoreOperations(
   ctx: BackupContext,
   coreOps: CoreOperations,
@@ -41,23 +139,6 @@ export function createRestoreOperations(
       }
     }
 
-    const sharedWorkspaceIds = new Set(
-      [
-        ...(backupData.tasks || []),
-        ...(backupData.projects || []),
-        ...(backupData.groups || []),
-      ]
-        .map(entity => (
-          entity as typeof entity & { workspaceId?: string | null }
-        ).workspaceId)
-        .filter((workspaceId): workspaceId is string => Boolean(workspaceId))
-    )
-    if (sharedWorkspaceIds.size > 0) {
-      return (
-        `Backup contains shared workspace data (${[...sharedWorkspaceIds].join(', ')}); ` +
-        'shared workspace restore requires an explicit authorized recovery policy'
-      )
-    }
     return null
   }
 
@@ -98,8 +179,14 @@ export function createRestoreOperations(
       }
     }
 
-    // Get task IDs to check
-    const taskIds = backupData.tasks.map(t => t.id)
+    const sharedWorkspaceIds = getSharedWorkspaceIds(backupData)
+    const personalPartition = buildPersonalRecoveryPartition(backupData)
+    const personalTasks = personalPartition.tasks
+    const sharedTasks = backupData.tasks.filter(task => isSharedEntity(task))
+
+    // Get personal task IDs to check. Shared data remains in the verified
+    // artifact but needs its own ownership-aware restore transaction.
+    const taskIds = personalTasks.map(t => t.id)
 
     // Check availability using TASK-344 batch check
     const availabilityResults = await ctx.db.checkTaskIdsAvailability(taskIds)
@@ -115,7 +202,7 @@ export function createRestoreOperations(
     let existsDeleted = 0
     let tombstoned = 0
 
-    for (const task of backupData.tasks) {
+    for (const task of personalTasks) {
       const availability = availabilityMap.get(task.id)
       if (!availability || availability.status === 'available') {
         toRestore.push(task)
@@ -138,6 +225,24 @@ export function createRestoreOperations(
         }
       }
     }
+    for (const task of sharedTasks) {
+      skipped.push({
+        task,
+        reason: 'Shared workspace restore requires an explicit authorized recovery policy',
+        status: 'shared_workspace',
+      })
+    }
+    if (sharedWorkspaceIds.size > 0) {
+      warnings.push(
+        `${sharedTasks.length} shared workspace task${sharedTasks.length === 1 ? '' : 's'} ` +
+        `from ${[...sharedWorkspaceIds].join(', ')} will be preserved in the artifact but not restored`
+      )
+      if ((backupData.tombstones?.length || 0) > 0) {
+        warnings.push(
+          `${backupData.tombstones!.length} tombstones have no workspace provenance and will not be restored from a mixed-scope backup`
+        )
+      }
+    }
 
     // Add warnings based on analysis
     if (existsActive > 0) {
@@ -157,11 +262,13 @@ export function createRestoreOperations(
     const projectTombstones = new Set(tombstones.filter((t: any) => t.entityType === 'project').map((t: any) => t.entityId))
     const groupTombstones = new Set(tombstones.filter((t: any) => t.entityType === 'group').map((t: any) => t.entityId))
 
-    const projectsToRestore = (backupData.projects || []).filter(p =>
-      !deletedProjectIds.has(p.id) && !projectTombstones.has(p.id)
+    const projectsToRestore = personalPartition.projects.filter(p =>
+      !deletedProjectIds.has(p.id)
+      && !projectTombstones.has(p.id)
     )
-    const groupsToRestore = (backupData.groups || []).filter(g =>
-      !deletedGroupIds.has(g.id) && !groupTombstones.has(g.id)
+    const groupsToRestore = personalPartition.groups.filter(g =>
+      !deletedGroupIds.has(g.id)
+      && !groupTombstones.has(g.id)
     )
 
     const projectsSkipped = (backupData.projects?.length || 0) - projectsToRestore.length
@@ -197,13 +304,13 @@ export function createRestoreOperations(
       },
       tombstones: {
         total: backupData.tombstones?.length || 0,
-        toRestore: backupData.tombstones?.length || 0,
+        toRestore: sharedWorkspaceIds.size > 0 ? 0 : backupData.tombstones?.length || 0,
       },
       warnings,
       canProceed: toRestore.length > 0
         || projectsToRestore.length > 0
         || groupsToRestore.length > 0
-        || (backupData.tombstones?.length || 0) > 0
+        || (sharedWorkspaceIds.size === 0 && (backupData.tombstones?.length || 0) > 0)
     }
   }
 
@@ -317,10 +424,21 @@ export function createRestoreOperations(
       ctx.state.value.restoreProgress = 10
 
       // TASK-344: Analyze and filter tasks before restore
-      let tasksToRestore = backupData.tasks
+      const sharedWorkspaceIds = getSharedWorkspaceIds(backupData)
+      const personalPartition = buildPersonalRecoveryPartition(backupData)
+      const personalArtifactTasks = personalPartition.tasks
+      let tasksToRestore = personalArtifactTasks
       const existingParentIds = new Set<string>()
-      let projectsToRestore = backupData.projects || []
-      let groupsToRestore = backupData.groups || []
+      let projectsToRestore = personalPartition.projects
+      let groupsToRestore = personalPartition.groups
+      const tombstonesToRestore = sharedWorkspaceIds.size > 0
+        ? []
+        : backupData.tombstones || []
+
+      if (sharedWorkspaceIds.size > 0) {
+        ctx.state.value.warning =
+          `Shared workspace data from ${[...sharedWorkspaceIds].join(', ')} remains in the verified backup but was not restored.`
+      }
 
       if (!options.skipDedupCheck) {
         console.log('[Backup] Analyzing task ID availability (TASK-344 deduplication)...')
@@ -335,7 +453,8 @@ export function createRestoreOperations(
         ctx.state.value.restoreProgress = 20
 
         // Log dedup decisions for audit trail
-        for (const { task, reason } of analysis.tasks.skipped) {
+        for (const { task, reason, status } of analysis.tasks.skipped) {
+          if (status === 'shared_workspace') continue
           await ctx.db.logDedupDecision(
             'restore',
             task.id,
@@ -352,11 +471,13 @@ export function createRestoreOperations(
         const projectTombstones = new Set(tombstones.filter((t: any) => t.entityType === 'project').map((t: any) => t.entityId))
         const groupTombstones = new Set(tombstones.filter((t: any) => t.entityType === 'group').map((t: any) => t.entityId))
 
-        projectsToRestore = (backupData.projects || []).filter(p =>
-          !deletedProjectIds.has(p.id) && !projectTombstones.has(p.id)
+        projectsToRestore = personalPartition.projects.filter(p =>
+          !deletedProjectIds.has(p.id)
+          && !projectTombstones.has(p.id)
         )
-        groupsToRestore = (backupData.groups || []).filter(g =>
-          !deletedGroupIds.has(g.id) && !groupTombstones.has(g.id)
+        groupsToRestore = personalPartition.groups.filter(g =>
+          !deletedGroupIds.has(g.id)
+          && !groupTombstones.has(g.id)
         )
 
         console.log(`[Backup] TASK-344 Deduplication results:`)
@@ -366,10 +487,20 @@ export function createRestoreOperations(
       }
 
       tasksToRestore = validateAndSortTasksForRestore(
-        backupData.tasks,
+        personalArtifactTasks,
         tasksToRestore,
         existingParentIds,
       )
+      if (
+        tasksToRestore.length === 0
+        && projectsToRestore.length === 0
+        && groupsToRestore.length === 0
+        && tombstonesToRestore.length === 0
+      ) {
+        throw new Error(
+          'Backup contains only shared workspace data; shared workspace restore requires an explicit authorized recovery policy'
+        )
+      }
       ctx.state.value.restoreProgress = 30
 
       // Create emergency backup before restore (rollback point)
@@ -389,7 +520,7 @@ export function createRestoreOperations(
             tasks: tasksToRestore,
             projects: projectsToRestore,
             groups: groupsToRestore,
-            tombstones: backupData.tombstones || [],
+            tombstones: tombstonesToRestore,
           })
         : null
 
@@ -495,7 +626,6 @@ export function createRestoreOperations(
 
       // Apply irreversible permanent-deletion markers only after all recoverable
       // entities have been recreated successfully.
-      const tombstonesToRestore = backupData.tombstones || []
       if (!atomicReceipt) {
         for (const tombstone of tombstonesToRestore) {
           await ctx.db.recordTombstone(tombstone.entityType, tombstone.entityId)

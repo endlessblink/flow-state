@@ -378,6 +378,10 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       expect(analysis.tombstones.toRestore).toBe(0)
       expect(analysis.warnings.join(' ')).toContain('shared workspace')
       expect(analysis.warnings.join(' ')).toContain('tombstones')
+      expect(analysis.warnings.join(' ')).toContain('1 shared workspace project')
+      expect(analysis.warnings.join(' ')).toContain('1 shared workspace group')
+      expect(analysis.warnings.join(' ')).not.toContain('projects will be skipped (deleted or tombstoned)')
+      expect(analysis.warnings.join(' ')).not.toContain('groups will be skipped (deleted or tombstoned)')
       expect(mockCheckTaskIdsAvailability).toHaveBeenCalledWith(['task-1'])
     })
 
@@ -429,6 +433,46 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       expect(mockSafeCreateTask).not.toHaveBeenCalled()
       expect(mockRecordTombstone).not.toHaveBeenCalled()
       expect(backupSystem.state.value.warning).toContain('Shared workspace data')
+    })
+
+    it('does not let explicit workspace tombstones block personal project or group recovery', async () => {
+      const backup = createMockBackup(0, Date.now(), {
+        projects: [{ id: 'project-1', name: 'Personal project', workspaceId: null }],
+        groups: [{ id: 'group-1', name: 'Personal group', workspaceId: null }],
+      } as Partial<BackupData>)
+      backup.metadata = {
+        ...backup.metadata!,
+        projectCount: 1,
+        groupCount: 1,
+      }
+      backup.checksum = calculateChecksum({
+        source: (backup as BackupData & { source?: unknown }).source,
+        tasks: backup.tasks,
+        projects: backup.projects,
+        groups: backup.groups,
+        tombstones: backup.tombstones,
+      })
+      mockFetchTombstones.mockResolvedValue([
+        {
+          entityType: 'project',
+          entityId: 'project-1',
+          scopeKind: 'workspace',
+          workspaceId: 'workspace-1',
+        },
+        {
+          entityType: 'group',
+          entityId: 'group-1',
+          scopeKind: 'workspace',
+          workspaceId: 'workspace-1',
+        },
+      ])
+
+      const analysis = await backupSystem.analyzeRestore(backup)
+
+      expect(analysis.projects.toRestore).toBe(1)
+      expect(analysis.groups.toRestore).toBe(1)
+      expect(analysis.warnings).not.toContain('1 projects will be skipped (deleted or tombstoned)')
+      expect(analysis.warnings).not.toContain('1 groups will be skipped (deleted or tombstoned)')
     })
 
     it('refuses to claim an emergency backup exists when durable storage rejects it', async () => {
@@ -912,13 +956,39 @@ describe('TASK-332: Backup Reliability & Verification', () => {
 
     it('reports a tombstone-only artifact as actionable recovery work', async () => {
       const backup = createMockBackup(0)
-      backup.tombstones = [{ entityType: 'task', entityId: 'gone-task' }]
+      backup.tombstones = [{
+        entityType: 'task',
+        entityId: 'gone-task',
+        scopeKind: 'personal',
+        workspaceId: null,
+      }]
       backup.metadata = { ...backup.metadata!, tombstoneCount: 1 }
 
       const analysis = await backupSystem.analyzeRestore(backup)
 
       expect(analysis.tombstones).toEqual({ total: 1, toRestore: 1 })
       expect(analysis.canProceed).toBe(true)
+    })
+
+    it('fails closed for tombstones without explicit personal provenance', async () => {
+      const backup = createMockBackup(0)
+      backup.tombstones = [
+        { entityType: 'task', entityId: 'unknown-task' },
+        { entityType: 'task', entityId: 'missing-null-personal-task', scopeKind: 'personal' },
+        {
+          entityType: 'task',
+          entityId: 'shared-task',
+          scopeKind: 'workspace',
+          workspaceId: 'workspace-1',
+        },
+      ]
+      backup.metadata = { ...backup.metadata!, tombstoneCount: 3 }
+
+      const analysis = await backupSystem.analyzeRestore(backup)
+
+      expect(analysis.tombstones).toEqual({ total: 3, toRestore: 0 })
+      expect(analysis.canProceed).toBe(false)
+      expect(analysis.warnings.join(' ')).toContain('workspace or unknown-scope')
     })
   })
 
@@ -937,7 +1007,12 @@ describe('TASK-332: Backup Reliability & Verification', () => {
           type: 'status',
           position: { x: 0, y: 0, width: 100, height: 100 },
         }] as any[],
-        tombstones: [{ entityType: 'task', entityId: 'gone-task' }],
+        tombstones: [{
+          entityType: 'task',
+          entityId: 'gone-task',
+          scopeKind: 'personal',
+          workspaceId: null,
+        }],
         metadata: {
           taskCount: 1,
           projectCount: 1,
@@ -975,15 +1050,17 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       const restored = await backupSystem.restoreBackup(incoming)
 
       expect(restored).toBe(true)
-      expect(mockRestoreBackupTransaction).toHaveBeenCalledWith({
+      expect(mockRestoreBackupTransaction).toHaveBeenCalledWith(expect.objectContaining({
         operationId: incoming.id,
         artifactHash: incoming.checksum,
         schemaVersion: incoming.version,
-        tasks: incoming.tasks,
-        projects: incoming.projects,
-        groups: incoming.groups,
+        tasks: [expect.objectContaining({ id: 'task-1' })],
+        projects: [expect.objectContaining({ id: 'project-1' })],
+        groups: [expect.objectContaining({
+          id: '00000000-0000-4000-8000-000000000001',
+        })],
         tombstones: incoming.tombstones,
-      })
+      }))
       expect(mockSafeCreateTask).not.toHaveBeenCalled()
       expect(mockSaveProjects).not.toHaveBeenCalled()
       expect(mockSaveGroup).not.toHaveBeenCalled()
@@ -1050,7 +1127,12 @@ describe('TASK-332: Backup Reliability & Verification', () => {
 
     it('does not report failure when committed tombstones are temporarily unreadable', async () => {
       const incoming = createMockBackup(0, Date.now(), {
-        tombstones: [{ entityType: 'task', entityId: 'committed-gone-task' }],
+        tombstones: [{
+          entityType: 'task',
+          entityId: 'committed-gone-task',
+          scopeKind: 'personal',
+          workspaceId: null,
+        }],
         metadata: {
           taskCount: 0,
           projectCount: 0,
@@ -1084,7 +1166,12 @@ describe('TASK-332: Backup Reliability & Verification', () => {
 
     it('reports refresh-needed when committed tombstone verification cannot be fetched', async () => {
       const incoming = createMockBackup(0, Date.now(), {
-        tombstones: [{ entityType: 'task', entityId: 'committed-gone-task' }],
+        tombstones: [{
+          entityType: 'task',
+          entityId: 'committed-gone-task',
+          scopeKind: 'personal',
+          workspaceId: null,
+        }],
         metadata: {
           taskCount: 0,
           projectCount: 0,
@@ -1538,7 +1625,12 @@ describe('TASK-332: Backup Reliability & Verification', () => {
 
     it('restores and verifies permanent-delete tombstones after recoverable entities', async () => {
       const backup = createMockBackup(1)
-      backup.tombstones = [{ entityType: 'task', entityId: 'gone-task' }]
+      backup.tombstones = [{
+        entityType: 'task',
+        entityId: 'gone-task',
+        scopeKind: 'personal',
+        workspaceId: null,
+      }]
       backup.metadata = {
         ...backup.metadata!,
         tombstoneCount: 1,
@@ -1554,12 +1646,58 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
 
       expect(restored).toBe(true)
-      expect(mockRecordTombstone).toHaveBeenCalledWith('task', 'gone-task')
+      expect(mockRecordTombstone).toHaveBeenCalledWith('task', 'gone-task', null)
+    })
+
+    it('restores only explicit personal tombstones during the non-atomic fallback path', async () => {
+      const backup = createMockBackup(0)
+      backup.tombstones = [
+        {
+          entityType: 'task',
+          entityId: 'personal-gone-task',
+          scopeKind: 'personal',
+          workspaceId: null,
+        },
+        {
+          entityType: 'task',
+          entityId: 'workspace-gone-task',
+          scopeKind: 'workspace',
+          workspaceId: 'workspace-1',
+        },
+        {
+          entityType: 'task',
+          entityId: 'unknown-gone-task',
+          scopeKind: 'unknown',
+          workspaceId: null,
+        },
+      ]
+      backup.metadata = { ...backup.metadata!, tombstoneCount: 3 }
+      backup.checksum = calculateChecksum({
+        source: (backup as BackupData & { source?: unknown }).source,
+        tasks: backup.tasks,
+        projects: backup.projects,
+        groups: backup.groups,
+        tombstones: backup.tombstones,
+      })
+      mockFetchTombstones
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ entityType: 'task', entityId: 'personal-gone-task' }])
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(true)
+      expect(mockRecordTombstone).toHaveBeenCalledTimes(1)
+      expect(mockRecordTombstone).toHaveBeenCalledWith('task', 'personal-gone-task', null)
     })
 
     it('does not apply permanent-delete markers when recoverable entity restore fails', async () => {
       const backup = createMockBackup(1)
-      backup.tombstones = [{ entityType: 'task', entityId: 'gone-task' }]
+      backup.tombstones = [{
+        entityType: 'task',
+        entityId: 'gone-task',
+        scopeKind: 'personal',
+        workspaceId: null,
+      }]
       backup.metadata = { ...backup.metadata!, tombstoneCount: 1 }
       backup.checksum = 'checksum_0'
       mockSafeCreateTask.mockResolvedValue({ status: 'error', message: 'Database write failed' })

@@ -12,6 +12,8 @@ const PERMANENT_DELETED_ID = 'bacc0000-0000-4000-8000-000000000003'
 const MIXED_PERSONAL_TASK_ID = 'bacc0000-0000-4000-8000-000000000011'
 const MIXED_SHARED_TASK_ID = 'bacc0000-0000-4000-8000-000000000012'
 const MIXED_WORKSPACE_ID = 'bacc0000-0000-4000-8000-000000000013'
+const MIXED_PERSONAL_TOMBSTONE_ID = 'bacc0000-0000-4000-8000-000000000014'
+const MIXED_SHARED_TOMBSTONE_ID = 'bacc0000-0000-4000-8000-000000000015'
 
 test.describe.serial('absolute task backup and recovery', () => {
   test.skip(!SERVICE_ROLE_KEY, 'requires local Supabase service role key')
@@ -96,6 +98,8 @@ test.describe.serial('absolute task backup and recovery', () => {
         user_id: userId,
         entity_type: 'task',
         entity_id: PERMANENT_DELETED_ID,
+        scope_kind: 'personal',
+        workspace_id: null,
         deleted_at: new Date().toISOString(),
         expires_at: null,
       })
@@ -121,7 +125,12 @@ test.describe.serial('absolute task backup and recovery', () => {
           deletedTaskCount?: number
           tombstoneCount?: number
         }
-        tombstones?: Array<{ entityType: string; entityId: string }>
+        tombstones?: Array<{
+          entityType: string
+          entityId: string
+          scopeKind: string
+          workspaceId: string | null
+        }>
         tasks: Array<Record<string, any>>
       }
       expect(backup.checksum).toBeTruthy()
@@ -141,6 +150,8 @@ test.describe.serial('absolute task backup and recovery', () => {
       expect(backup.tombstones).toContainEqual({
         entityType: 'task',
         entityId: PERMANENT_DELETED_ID,
+        scopeKind: 'personal',
+        workspaceId: null,
       })
 
       await page.reload()
@@ -219,7 +230,7 @@ test.describe.serial('absolute task backup and recovery', () => {
       })
       const { data: restoredTombstone, error: restoredTombstoneError } = await admin
         .from('tombstones')
-        .select('entity_type,entity_id,user_id,expires_at')
+        .select('entity_type,entity_id,user_id,scope_kind,workspace_id,expires_at')
         .eq('entity_id', PERMANENT_DELETED_ID)
         .single()
       expect(restoredTombstoneError).toBeNull()
@@ -227,6 +238,8 @@ test.describe.serial('absolute task backup and recovery', () => {
         entity_type: 'task',
         entity_id: PERMANENT_DELETED_ID,
         user_id: userId,
+        scope_kind: 'personal',
+        workspace_id: null,
         expires_at: null,
       })
 
@@ -262,6 +275,10 @@ test.describe.serial('absolute task backup and recovery', () => {
     const userId = (await ensureAuthUser(admin, { ...TEST_USER, email_confirm: true })).id
 
     await admin.from('tasks').delete().in('id', [MIXED_PERSONAL_TASK_ID, MIXED_SHARED_TASK_ID])
+    await admin.from('tombstones').delete().in('entity_id', [
+      MIXED_PERSONAL_TOMBSTONE_ID,
+      MIXED_SHARED_TOMBSTONE_ID,
+    ])
     await admin.from('workspaces').delete().eq('id', MIXED_WORKSPACE_ID)
 
     try {
@@ -295,6 +312,27 @@ test.describe.serial('absolute task backup and recovery', () => {
         },
       ])
       expect(taskSeedError).toBeNull()
+      const { error: tombstoneSeedError } = await admin.from('tombstones').insert([
+        {
+          user_id: userId,
+          entity_type: 'task',
+          entity_id: MIXED_PERSONAL_TOMBSTONE_ID,
+          scope_kind: 'personal',
+          workspace_id: null,
+          deleted_at: new Date().toISOString(),
+          expires_at: null,
+        },
+        {
+          user_id: userId,
+          entity_type: 'task',
+          entity_id: MIXED_SHARED_TOMBSTONE_ID,
+          scope_kind: 'workspace',
+          workspace_id: MIXED_WORKSPACE_ID,
+          deleted_at: new Date().toISOString(),
+          expires_at: null,
+        },
+      ])
+      expect(tombstoneSeedError).toBeNull()
 
       await page.goto('/#/tasks')
       await page.waitForFunction(() => {
@@ -302,7 +340,13 @@ test.describe.serial('absolute task backup and recovery', () => {
         return !!root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks')
       }, { timeout: 30_000 })
 
-      const backupJson = await page.evaluate(async ({ personalId, sharedId }) => {
+      const backupJson = await page.evaluate(async ({
+        personalId,
+        sharedId,
+        personalTombstoneId,
+        sharedTombstoneId,
+        workspaceId,
+      }) => {
         const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
         const backupSystem = useBackupSystem()
         const backup = await backupSystem.createBackup('manual')
@@ -313,8 +357,28 @@ test.describe.serial('absolute task backup and recovery', () => {
         if (!backup.tasks.some(task => task.id === sharedId && task.workspaceId)) {
           throw new Error('mixed backup omitted shared task scope')
         }
+        if (!backup.tombstones?.some(tombstone =>
+          tombstone.entityId === personalTombstoneId
+          && tombstone.scopeKind === 'personal'
+          && tombstone.workspaceId === null
+        )) {
+          throw new Error('mixed backup omitted personal tombstone provenance')
+        }
+        if (!backup.tombstones?.some(tombstone =>
+          tombstone.entityId === sharedTombstoneId
+          && tombstone.scopeKind === 'workspace'
+          && tombstone.workspaceId === workspaceId
+        )) {
+          throw new Error('mixed backup omitted shared tombstone provenance')
+        }
         return JSON.stringify(backup)
-      }, { personalId: MIXED_PERSONAL_TASK_ID, sharedId: MIXED_SHARED_TASK_ID })
+      }, {
+        personalId: MIXED_PERSONAL_TASK_ID,
+        sharedId: MIXED_SHARED_TASK_ID,
+        personalTombstoneId: MIXED_PERSONAL_TOMBSTONE_ID,
+        sharedTombstoneId: MIXED_SHARED_TOMBSTONE_ID,
+        workspaceId: MIXED_WORKSPACE_ID,
+      })
 
       const { error: lossError } = await admin.from('tasks').delete().eq('id', MIXED_PERSONAL_TASK_ID)
       expect(lossError).toBeNull()
@@ -323,6 +387,11 @@ test.describe.serial('absolute task backup and recovery', () => {
         .delete()
         .eq('entity_id', MIXED_PERSONAL_TASK_ID)
       expect(disasterTombstoneLossError).toBeNull()
+      const { error: provenanceLossError } = await admin
+        .from('tombstones')
+        .delete()
+        .in('entity_id', [MIXED_PERSONAL_TOMBSTONE_ID, MIXED_SHARED_TOMBSTONE_ID])
+      expect(provenanceLossError).toBeNull()
 
       const restoreResult = await page.evaluate(async (serializedBackup) => {
         const { default: useBackupSystem } = await import('/src/composables/useBackupSystem.ts')
@@ -365,6 +434,18 @@ test.describe.serial('absolute task backup and recovery', () => {
         title: 'Mixed recovery shared truth',
         priority: 'medium',
       })
+      const { data: recoveredTombstones, error: recoveredTombstonesError } = await admin
+        .from('tombstones')
+        .select('entity_id,scope_kind,workspace_id')
+        .in('entity_id', [MIXED_PERSONAL_TOMBSTONE_ID, MIXED_SHARED_TOMBSTONE_ID])
+      expect(recoveredTombstonesError).toBeNull()
+      expect(recoveredTombstones).toEqual([
+        {
+          entity_id: MIXED_PERSONAL_TOMBSTONE_ID,
+          scope_kind: 'personal',
+          workspace_id: null,
+        },
+      ])
 
       await page.reload()
       await page.waitForFunction((taskId) => {
@@ -374,6 +455,10 @@ test.describe.serial('absolute task backup and recovery', () => {
       }, MIXED_PERSONAL_TASK_ID, { timeout: 30_000 })
     } finally {
       await admin.from('tasks').delete().in('id', [MIXED_PERSONAL_TASK_ID, MIXED_SHARED_TASK_ID])
+      await admin.from('tombstones').delete().in('entity_id', [
+        MIXED_PERSONAL_TOMBSTONE_ID,
+        MIXED_SHARED_TOMBSTONE_ID,
+      ])
       await admin.from('workspaces').delete().eq('id', MIXED_WORKSPACE_ID)
     }
   })

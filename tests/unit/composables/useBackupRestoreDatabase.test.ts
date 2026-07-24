@@ -182,4 +182,110 @@ describe('atomic backup restore database wrapper', () => {
     expect(rpc).not.toHaveBeenCalled()
     expect(localStorage.length).toBe(0)
   })
+
+  it('serializes explicit tombstone scope provenance into the atomic restore RPC', async () => {
+    const database = useBackupRestoreDatabase({
+      getUserIdSafe: () => '00000000-0000-4000-8000-000000000001',
+    } as any)
+    rpc.mockResolvedValueOnce({
+      data: {
+        ok: true,
+        tasksCreated: 0,
+        tasksExisting: 0,
+        projectsCreated: 0,
+        projectsExisting: 0,
+        groupsCreated: 0,
+        groupsExisting: 0,
+        tombstonesCreated: 2,
+        replayed: false,
+      },
+      error: null,
+    })
+
+    await database.restoreBackupTransaction({
+      operationId: 'scoped-tombstones',
+      artifactHash: 'artifact-hash-3',
+      schemaVersion: '4.0.0',
+      tasks: [],
+      projects: [],
+      groups: [],
+      tombstones: [
+        {
+          entityType: 'task',
+          entityId: 'personal-gone-task',
+          scopeKind: 'personal',
+          workspaceId: null,
+        },
+        {
+          entityType: 'task',
+          entityId: 'workspace-gone-task',
+          scopeKind: 'workspace',
+          workspaceId: '00000000-0000-4000-8000-000000000099',
+        },
+      ],
+    })
+
+    expect(rpc).toHaveBeenCalledWith('flowstate_restore_backup_v1', expect.objectContaining({
+      p_tombstones: [
+        {
+          entity_type: 'task',
+          entity_id: 'personal-gone-task',
+          scope_kind: 'personal',
+          workspace_id: null,
+        },
+        {
+          entity_type: 'task',
+          entity_id: 'workspace-gone-task',
+          scope_kind: 'workspace',
+          workspace_id: '00000000-0000-4000-8000-000000000099',
+        },
+      ],
+    }))
+  })
+
+  it('defaults missing tombstone scope provenance to unknown in the atomic restore RPC', async () => {
+    const database = useBackupRestoreDatabase({
+      getUserIdSafe: () => '00000000-0000-4000-8000-000000000001',
+    } as any)
+    rpc.mockResolvedValueOnce({
+      data: {
+        ok: true,
+        tasksCreated: 0,
+        tasksExisting: 0,
+        projectsCreated: 0,
+        projectsExisting: 0,
+        groupsCreated: 0,
+        groupsExisting: 0,
+        tombstonesCreated: 1,
+        replayed: false,
+      },
+      error: null,
+    })
+
+    await database.restoreBackupTransaction({
+      operationId: 'unknown-tombstones',
+      artifactHash: 'artifact-hash-4',
+      schemaVersion: '4.0.0',
+      tasks: [],
+      projects: [],
+      groups: [],
+      tombstones: [
+        {
+          entityType: 'task',
+          entityId: 'legacy-gone-task',
+        },
+      ],
+    } as any)
+
+    expect(rpc).toHaveBeenCalledWith('flowstate_restore_backup_v1', expect.objectContaining({
+      p_tombstones: [
+        {
+          entity_type: 'task',
+          entity_id: 'legacy-gone-task',
+          scope_kind: 'unknown',
+          workspace_id: null,
+        },
+      ],
+    }))
+  })
 })

@@ -29,7 +29,10 @@ describe('atomic backup restore migration contract', () => {
   })
 
   it('is additive and never overwrites active task, project, or group truth', () => {
-    expect(migration).not.toMatch(/ON CONFLICT[^;]+DO UPDATE/is)
+    const restoreFunction = migration.slice(
+      migration.indexOf('CREATE OR REPLACE FUNCTION public.flowstate_restore_backup_v1'),
+    )
+    expect(restoreFunction).not.toMatch(/INSERT INTO public\.(tasks|projects|groups)[^;]+ON CONFLICT[^;]+DO UPDATE/is)
     expect(migration.match(/UPDATE public\.tasks/g)).toHaveLength(1)
     expect(migration.match(/UPDATE public\.projects/g)).toHaveLength(1)
     expect(migration.match(/UPDATE public\.groups/g)).toHaveLength(1)
@@ -45,7 +48,10 @@ describe('atomic backup restore migration contract', () => {
     const projectInsert = migration.indexOf('INSERT INTO public.projects')
     const taskInsert = migration.indexOf('INSERT INTO public.tasks')
     const groupInsert = migration.indexOf('INSERT INTO public.groups')
-    const tombstoneInsert = migration.indexOf('INSERT INTO public.tombstones')
+    const tombstoneInsert = migration.indexOf(
+      'INSERT INTO public.tombstones',
+      groupInsert,
+    )
     const receiptInsert = migration.indexOf('INSERT INTO public.flowstate_action_receipts')
 
     expect(projectInsert).toBeGreaterThan(-1)
@@ -59,6 +65,19 @@ describe('atomic backup restore migration contract', () => {
   it('fails closed for shared workspace ownership until an explicit policy exists', () => {
     expect(migration).toContain('restore_workspace_scope_requires_explicit_policy')
     expect(migration).toContain("item.value->>'workspace_id' IS NOT NULL")
+  })
+
+  it('records and restores tombstones only with explicit workspace provenance', () => {
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS scope_kind')
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS workspace_id')
+    expect(migration).toContain("scope_kind IN ('personal', 'workspace', 'unknown')")
+    expect(migration).toContain("restore_tombstone_scope_unavailable")
+    expect(migration).toContain("v_item->>'scope_kind' IS DISTINCT FROM 'personal'")
+    expect(migration).toMatch(
+      /INSERT INTO public\.tombstones\s*\(\s*user_id,\s*entity_type,\s*entity_id,\s*scope_kind,\s*workspace_id/,
+    )
+    expect(migration).toContain("'scopeKind', 'personal'")
+    expect(migration).toContain("'workspaceId', NULL")
   })
 
   it('rejects personal-task references outside the authenticated owner scope', () => {

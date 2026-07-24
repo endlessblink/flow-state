@@ -14,7 +14,7 @@
           :filter-status="filterStatus"
           :hide-done-tasks="hideDoneTasks"
           :show-tree-controls="groupBy !== 'none'"
-          @update:filter-status="taskStore.setActiveStatusFilter"
+          @update:filter-status="handleStatusFilterChange"
           @update:hide-done-tasks="handleToggleDoneTasksFromControl"
           @expand-all="handleExpandAll"
           @collapse-all="handleCollapseAll"
@@ -170,6 +170,10 @@ const showAllWeekDays = usePersistentRef<boolean>('flowstate-show-all-week-days'
 const density = usePersistentRef<'compact' | 'comfortable' | 'spacious'>('flowstate:task-list-density', 'comfortable')
 // Use global status filter directly from store (maintains reactivity)
 const filterStatus = computed(() => taskStore.activeStatusFilter || 'all')
+const handleStatusFilterChange = (status: string) => {
+  taskStore.setSmartView(null)
+  taskStore.setActiveStatusFilter(status)
+}
 
 // Component Refs
 const taskListRef = ref<InstanceType<typeof TaskList> | null>(null)

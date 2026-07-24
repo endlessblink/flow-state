@@ -117,6 +117,7 @@ const selectSmartView = (view: string) => {
     // It's a smart view
     taskStore.setSmartView(view as Parameters<typeof taskStore.setSmartView>[0])
     taskStore.setActiveDurationFilter(null)
+    taskStore.setActiveStatusFilter(null)
   }
 
   // BUG-1430: Only navigate to /tasks if current view doesn't support smart view filters

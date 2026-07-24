@@ -520,7 +520,10 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
 
   it('permanently deletes a group and records tombstone', async () => {
     queueResponse('tombstones', [{ error: null }])
-    queueResponse('groups', [{ error: null }])
+    queueResponse('groups', [
+      { data: { workspace_id: 'workspace-1' }, error: null },
+      { error: null },
+    ])
 
     const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
     const db = useSupabaseDatabase()
@@ -530,10 +533,34 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
     expect(queryCalls).toContainEqual({
       table: 'tombstones',
       method: 'upsert',
-      args: [expect.objectContaining({ entity_type: 'group', entity_id: 'group-delete-perm', user_id: 'user-1' }), { onConflict: 'entity_type,entity_id,user_id' }]
+      args: [expect.objectContaining({
+        entity_type: 'group',
+        entity_id: 'group-delete-perm',
+        user_id: 'user-1',
+        scope_kind: 'workspace',
+        workspace_id: 'workspace-1',
+      }), { onConflict: 'entity_type,entity_id,user_id' }]
     })
     expect(queryCalls).toContainEqual({ table: 'groups', method: 'delete', args: [] })
     expect(queryCalls).toContainEqual({ table: 'groups', method: 'eq', args: ['id', 'group-delete-perm'] })
+  })
+
+  it('refuses permanent group deletion when its workspace scope cannot be established', async () => {
+    queueResponse('groups', [{ data: null, error: null }])
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+
+    await expect(db.permanentlyDeleteGroup('missing-group')).rejects.toThrow(
+      'Cannot establish deletion scope',
+    )
+
+    expect(queryCalls).not.toContainEqual({
+      table: 'groups',
+      method: 'delete',
+      args: [],
+    })
+    expect(queryCalls.some(call => call.table === 'tombstones' && call.method === 'upsert')).toBe(false)
   })
 
   // TIMER TESTS

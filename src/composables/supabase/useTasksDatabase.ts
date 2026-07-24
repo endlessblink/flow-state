@@ -375,23 +375,12 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     logPermanentDeleteTrace(taskId, 'supabase-db.visible-but-delete-zero')
                     throw new Error(`permanentlyDeleteTask: row ${taskId} is visible but DELETE affected 0 rows — RLS delete policy is blocking it`)
                 }
-                // (a) absent/inaccessible — treat as already deleted. Best-effort tombstone.
-                console.warn(`[BUG-1850] permanentlyDeleteTask: ${taskId} not present on server — treating as already deleted, recording tombstone`)
-                const userId = getUserIdSafe()
-                if (userId) {
-                    const { error: tombErr } = await sb.from('tombstones').upsert({
-                        user_id: userId, entity_type: 'task', entity_id: taskId,
-                        deleted_at: new Date().toISOString(), expires_at: null
-                    }, { onConflict: 'entity_type,entity_id,user_id' })
-                    logPermanentDeleteTrace(taskId, 'supabase-db.tombstone-upsert', {
-                        userId,
-                        errorCode: tombErr?.code,
-                        errorMessage: tombErr?.message,
-                    })
-                    if (tombErr) console.warn(`[BUG-1850] tombstone upsert failed for ${taskId} (non-fatal):`, tombErr.message)
-                } else {
-                    logPermanentDeleteTrace(taskId, 'supabase-db.no-user-for-tombstone')
-                }
+                // An absent row may be personal, shared, already deleted, or hidden by
+                // membership/RLS. Inventing personal scope here can corrupt recovery truth.
+                logPermanentDeleteTrace(taskId, 'supabase-db.unscoped-zero-row')
+                throw new Error(
+                    `permanentlyDeleteTask: cannot establish deletion scope for ${taskId} after DELETE affected 0 rows`
+                )
             }, 'permanentlyDeleteTask')
             lastSyncError.value = null
             logPermanentDeleteTrace(taskId, 'supabase-db.done')

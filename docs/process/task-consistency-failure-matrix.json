@@ -278,7 +278,7 @@
       {
         "id": "cross-tab-and-startup-session-boundary",
         "issueSignals": ["BUG-1099", "TASK-142", "BUG-1340", "BUG-1533", "BUG-1903"],
-        "vectorIds": ["multi-tab-auth-boundary-and-visibility-parity", "multi-tab-token-refresh-and-realtime-rebind", "startup-empty-state-cache-recovery", "mobile-startup-route-claim-and-task-visibility", "sync-rate-limit-and-queue-throttle-protection", "backup-quota-and-offline-drift-resilience"]
+        "vectorIds": ["multi-tab-auth-boundary-and-visibility-parity", "multi-tab-token-refresh-and-realtime-rebind", "startup-empty-state-cache-recovery", "mobile-startup-route-claim-and-task-visibility", "sync-rate-limit-and-queue-throttle-protection", "backup-quota-and-offline-drift-resilience", "cross-window-completion-and-recurrence-convergence"]
       },
       {
         "id": "quick-action-semantic-and-feedback-regressions",
@@ -675,14 +675,32 @@
     {
       "id": "cross-window-canonical-edit-exclusion",
       "severity": "critical",
-      "status": "live-proven",
+      "status": "open",
       "failureClasses": ["queue-ordering-and-replay", "cross-tab-echo-and-deduplication"],
       "mutations": ["edit-metadata"],
       "surfaces": ["board"],
       "states": ["offline", "reconnecting", "cross-client"],
       "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
       "automatedEvidence": ["tests/unit/services/offline/queue-processor-lock.test.ts", "tests/unit/services/offline/canonical-write-queue.test.ts", "tests/unit/sync/sync-orchestrator.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts"],
-      "liveEvidence": ["2026-07-24: authenticated Chromium R24 kept two FlowState Board windows open in one browser profile, performed a visible right-click title edit while offline, proved the second open window adopted the queued metadata without overwriting its geometry, reconnected both windows together, and proved canonical_revision advanced exactly once while an independent client converged. Cross-window create, completion, fallback platforms, mixed-version live windows, and packaged Electron remain open."]
+      "liveEvidence": [
+        "2026-07-24: authenticated Chromium R24 kept two FlowState Board windows open in one browser profile, performed a visible right-click title edit while offline, proved the second open window adopted the queued metadata without overwriting its geometry, reconnected both windows together, and proved canonical_revision advanced exactly once while an independent client converged. Cross-window create, completion, fallback platforms, mixed-version live windows, and packaged Electron remain open.",
+        "2026-07-24: a later supervised Chromium rerun of R24 did not hold the same proof boundary. Both local windows showed the offline title change, but the post-reconnect canonical Supabase readback for the original task identity returned zero rows within the timeout. Investigation found that the durable canonical catch-up safety net was visibility-gated, so a background renderer that missed Realtime could remain stale indefinitely.",
+        "2026-07-24: after removing the visibility gate and adding a red-green hidden-renderer poller regression, authenticated Chromium R19-R25 passed together in one loaded seven-scenario run. R24 again proved one canonical revision and independent-client convergence. Cross-window create, completion, fallback platforms, mixed-version live windows, and packaged Electron remain open."
+      ]
+    },
+    {
+      "id": "cross-window-completion-and-recurrence-convergence",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["queue-ordering-and-replay", "cross-tab-echo-and-deduplication", "recurrence-lifecycle"],
+      "mutations": ["change-status", "complete", "done-for-now", "done-for-now-next-occurrence", "reopen"],
+      "surfaces": ["board", "canvas", "catalog"],
+      "states": ["offline", "reconnecting", "cross-client", "server-committed-unacked"],
+      "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence", "canonical-change-log"],
+      "automatedEvidence": ["tests/unit/services/offline/canonical-write-queue.test.ts", "tests/unit/sync/sync-orchestrator.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts"],
+      "liveEvidence": [
+        "2026-07-24: authenticated Chromium R14 completed a task through the Catalog right-click menu while offline, drained it after reconnect, proved canonical database status plus independent-client convergence, then exposed and fixed contradictory Done-status plus All-Active filter composition. The same visible Catalog row was reopened through right-click Mark as To Do, mapped to canonical planned status, converged to todo on the independent client, and remained visible after reload. Board and Canvas completion are separately covered; recurring reopen, server-committed-unacked, and packaged Electron permutations remain open."
+      ]
     },
     {
       "id": "unresolved-write-age-retention",
@@ -1585,7 +1603,31 @@
       "surfaces": ["backup", "supabase", "task-inventory", "all-views"],
       "states": ["tombstoned", "shared-workspace-restore", "workspace-deleted", "membership-revoked", "attribution-drift"],
       "layers": ["backup-artifact", "restore-procedure", "supabase-persistence", "supabase-rls", "workspace-membership"],
-      "automatedEvidence": [],
+      "automatedEvidence": [
+        "tests/unit/backup-validation.test.ts",
+        "tests/unit/composables/useSupabaseDatabase.test.ts",
+        "tests/unit/migrations/atomic-backup-restore.test.ts",
+        "scripts/db/verify-atomic-backup-restore.sql",
+        "tests/e2e/backup-restore-live.spec.ts"
+      ],
+      "liveEvidence": []
+    },
+    {
+      "id": "shared-tombstone-active-workspace-provenance",
+      "severity": "critical",
+      "status": "automated",
+      "failureClasses": ["backup-restore-and-inventory", "workspace-scope-isolation", "delete-tombstone-and-undo", "identity-and-field-mapping"],
+      "mutations": ["delete", "permanent-delete", "backup", "restore"],
+      "surfaces": ["backup", "supabase", "task-inventory", "all-views"],
+      "states": ["tombstoned", "shared-workspace-restore", "restore-drill"],
+      "layers": ["backup-artifact", "restore-procedure", "supabase-persistence", "signed-transaction-boundary"],
+      "automatedEvidence": [
+        "tests/unit/backup-validation.test.ts",
+        "tests/unit/composables/useSupabaseDatabase.test.ts",
+        "tests/unit/migrations/atomic-backup-restore.test.ts",
+        "scripts/db/verify-atomic-backup-restore.sql",
+        "tests/e2e/backup-restore-live.spec.ts"
+      ],
       "liveEvidence": []
     },
     {

@@ -228,6 +228,73 @@ $$;
 
 DO $$
 DECLARE
+  v_actor uuid := (SELECT auth.uid());
+  v_probe record;
+  v_failed boolean;
+BEGIN
+  FOR v_probe IN
+    SELECT *
+    FROM (
+      VALUES
+        (
+          'unknown',
+          '[{"entity_type":"task","entity_id":"scope-unknown"}]'::jsonb
+        ),
+        (
+          'workspace',
+          '[{"entity_type":"task","entity_id":"scope-workspace","scope_kind":"workspace","workspace_id":"00000000-0000-4000-8000-000000000199"}]'::jsonb
+        )
+    ) AS probes(name, tombstones)
+  LOOP
+    v_failed := false;
+    BEGIN
+      PERFORM public.flowstate_restore_backup_v1(
+        v_actor,
+        'tombstone-scope-probe-' || v_probe.name,
+        'tombstone-scope-probe-hash',
+        '4.0.0',
+        '[]'::jsonb,
+        '[]'::jsonb,
+        '[]'::jsonb,
+        v_probe.tombstones
+      );
+    EXCEPTION WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%restore_tombstone_scope_unavailable%' THEN
+        RAISE;
+      END IF;
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN
+      RAISE EXCEPTION 'unsafe tombstone scope probe unexpectedly succeeded: %', v_probe.name;
+    END IF;
+  END LOOP;
+
+  PERFORM public.flowstate_restore_backup_v1(
+    v_actor,
+    'tombstone-scope-probe-personal',
+    'tombstone-scope-probe-hash',
+    '4.0.0',
+    '[]'::jsonb,
+    '[]'::jsonb,
+    '[]'::jsonb,
+    '[{"entity_type":"task","entity_id":"scope-personal","scope_kind":"personal","workspace_id":null}]'::jsonb
+  );
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.tombstones
+    WHERE user_id = v_actor
+      AND entity_type = 'task'
+      AND entity_id = 'scope-personal'
+      AND scope_kind = 'personal'
+      AND workspace_id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'personal tombstone scope was not restored exactly';
+  END IF;
+END;
+$$;
+
+DO $$
+DECLARE
   v_first jsonb;
   v_replay jsonb;
   v_conflicted boolean := false;
@@ -296,6 +363,6 @@ BEGIN
 END;
 $$;
 
-\echo 'Atomic backup restore rollback, scope, reference, and replay probes passed'
+\echo 'Atomic backup restore rollback, entity scope, tombstone scope, reference, and replay probes passed'
 
 ROLLBACK;

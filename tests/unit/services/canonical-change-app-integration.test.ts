@@ -39,11 +39,11 @@ describe('TASK-1947 app catch-up integration', () => {
     expect(source).toContain("recoverCanonicalProjectionIfEmpty('post-sign-in')")
   })
 
-  it('starts and stops the bounded foreground convergence poller', () => {
+  it('starts and stops bounded convergence for visible and hidden renderers', () => {
     expect(source).toContain('createCanonicalChangePoller')
     expect(source).toContain('canonicalChangePoller.start()')
     expect(source).toContain('canonicalChangePoller.stop()')
-    expect(source).toContain("document.visibilityState === 'visible'")
+    expect(source).not.toContain("document.visibilityState === 'visible'")
     expect(source).toContain('intervalMs: 5_000')
   })
 })

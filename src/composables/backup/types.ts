@@ -21,6 +21,8 @@ export interface BackupData {
   tombstones?: Array<{
     entityType: 'task' | 'group' | 'project' | 'lane'
     entityId: string
+    scopeKind?: 'personal' | 'workspace' | 'unknown'
+    workspaceId?: string | null
   }>
   /** App settings snapshot (Bug 3 fix). Sensitive fields excluded at capture time. */
   settings?: Record<string, unknown>

@@ -17,6 +17,8 @@ export interface BackupRestoreTransactionInput {
     tombstones: Array<{
         entityType: 'task' | 'project' | 'group' | 'lane'
         entityId: string
+        scopeKind?: 'personal' | 'workspace' | 'unknown'
+        workspaceId?: string | null
     }>
 }
 
@@ -98,6 +100,8 @@ export function useBackupRestoreDatabase(ctx: DatabaseContext) {
             p_tombstones: input.tombstones.map(tombstone => ({
                 entity_type: tombstone.entityType,
                 entity_id: tombstone.entityId,
+                scope_kind: tombstone.scopeKind ?? 'unknown',
+                workspace_id: tombstone.workspaceId ?? null,
             })),
         })
 

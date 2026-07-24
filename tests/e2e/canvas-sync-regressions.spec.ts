@@ -742,7 +742,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     await restartedClient.close()
   })
 
-  test('R14 - Catalog right-click completion works offline, drains after reconnect, reaches another client, and survives reload', async ({ clientA, clientB }) => {
+  test('R14 - Catalog right-click completion and reopen converge offline, cross-client, and after reload', async ({ clientA, clientB }) => {
     await gotoCatalogReady(clientA)
     await gotoCanvasReady(clientB)
 
@@ -782,15 +782,73 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
     }, task.id), { timeout: 20_000 }).toBe('done')
 
+    await clientA.getByTitle('Toggle filters').click()
+    await clientA.locator('.filter-bar .custom-select').nth(2).getByRole('combobox').click()
+    await clientA.getByRole('option', { name: 'Done', exact: true }).click()
+    const showCompleted = clientA.getByTitle('Show completed tasks')
+    if (await showCompleted.count()) await showCompleted.click()
+    const catalogState = await clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return {
+        hash: window.location.hash,
+        activeSmartView: tasks.activeSmartView,
+        activeStatusFilter: tasks.activeStatusFilter,
+        hideDoneTasks: tasks.hideDoneTasks,
+        taskStatus: tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null,
+      }
+    }, task.id)
+    expect(catalogState).toEqual({
+      hash: '#/catalog',
+      activeSmartView: null,
+      activeStatusFilter: 'done',
+      hideDoneTasks: false,
+      taskStatus: 'done',
+    })
+    const completedTaskRow = clientA.locator('.hierarchical-task-row').filter({ hasText: task.title }).first()
+    await expect(completedTaskRow).toBeVisible()
+    await completedTaskRow.click({ button: 'right' })
+    await clientA.getByText('Mark as To Do', { exact: true }).click()
+
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,status,is_deleted')
+        .eq('id', task.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: task.id,
+        status: 'planned',
+        is_deleted: false,
+      }))
+    }).toPass({ timeout: 20_000 })
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, task.id), { timeout: 20_000 }).toBe('todo')
+
     await clientA.reload()
     await clientA.waitForSelector('.all-tasks-view', { timeout: 30_000 })
     await clientA.getByText('All Active', { exact: true }).click()
-    await expect(clientA.locator('.hierarchical-task-row').filter({ hasText: task.title })).toHaveCount(0)
+    await expect.poll(async () => clientA.evaluate(() => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return {
+        activeSmartView: tasks.activeSmartView,
+        activeStatusFilter: tasks.activeStatusFilter,
+      }
+    })).toEqual({
+      activeSmartView: 'all_active',
+      activeStatusFilter: null,
+    })
+    await expect(clientA.locator('.hierarchical-task-row').filter({ hasText: task.title }).first()).toBeVisible()
     await expect.poll(async () => clientA.evaluate((taskId) => {
       const root = document.querySelector('#app') as any
       const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
       return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
-    }, task.id)).toBe('done')
+    }, task.id)).toBe('todo')
   })
 
   test('R25 - Canvas right-click Mark as Done persists, converges, and survives reload', async ({ clientA, clientB }) => {

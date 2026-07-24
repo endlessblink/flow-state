@@ -296,7 +296,7 @@ describe('TASK-1947 foreground catch-up poller', () => {
     vi.useRealTimers()
   })
 
-  it('polls every 60 seconds only while authenticated, online, and visible', async () => {
+  it('polls every 60 seconds while authenticated and online, including hidden renderers', async () => {
     const state = { authenticated: true, online: true, visible: true }
     const run = vi.fn().mockResolvedValue(undefined)
     const poller = createCanonicalChangePoller({
@@ -304,7 +304,6 @@ describe('TASK-1947 foreground catch-up poller', () => {
       getScopes: () => [personalScope],
       isAuthenticated: () => state.authenticated,
       isOnline: () => state.online,
-      isVisible: () => state.visible,
     })
     poller.start()
 
@@ -315,6 +314,8 @@ describe('TASK-1947 foreground catch-up poller', () => {
 
     state.visible = false
     await vi.advanceTimersByTimeAsync(60_000)
+    expect(run).toHaveBeenCalledTimes(2)
+
     state.visible = true
     state.online = false
     await vi.advanceTimersByTimeAsync(60_000)
@@ -322,7 +323,7 @@ describe('TASK-1947 foreground catch-up poller', () => {
     state.authenticated = false
     await vi.advanceTimersByTimeAsync(60_000)
 
-    expect(run).toHaveBeenCalledOnce()
+    expect(run).toHaveBeenCalledTimes(2)
     poller.stop()
   })
 
@@ -334,7 +335,6 @@ describe('TASK-1947 foreground catch-up poller', () => {
       getScopes: () => [personalScope],
       isAuthenticated: () => true,
       isOnline: () => true,
-      isVisible: () => true,
     })
     poller.start()
 
@@ -355,7 +355,6 @@ describe('TASK-1947 foreground catch-up poller', () => {
       getScopes: () => [personalScope],
       isAuthenticated: () => true,
       isOnline: () => true,
-      isVisible: () => true,
     })
 
     poller.start()

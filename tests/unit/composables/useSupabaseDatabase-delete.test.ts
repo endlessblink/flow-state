@@ -126,41 +126,35 @@ describe('useSupabaseDatabase permanent task delete', () => {
     expect(fromMock).not.toHaveBeenCalledWith('tombstones')
   })
 
-  it('treats a zero-row delete as already deleted when the task is absent and records a tombstone', async () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-06-11T12:00:00.000Z'))
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
+  it('fails closed when a zero-row delete cannot establish task ownership scope', async () => {
     queueResponse('tasks', [
       { data: [], error: null },
       { data: null, error: null }
     ])
-    queueResponse('tombstones', [{ error: null }])
 
     const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
     const db = useSupabaseDatabase()
 
-    await db.permanentlyDeleteTask('task-absent')
+    await expect(db.permanentlyDeleteTask('task-absent')).rejects.toThrow(
+      'cannot establish deletion scope'
+    )
 
     expect(queryCalls).toContainEqual({ table: 'tasks', method: 'maybeSingle', args: [] })
-    expect(queryCalls).toContainEqual({
-      table: 'tombstones',
-      method: 'upsert',
-      args: [
-        {
-          user_id: 'user-1',
-          entity_type: 'task',
-          entity_id: 'task-absent',
-          deleted_at: '2026-06-11T12:00:00.000Z',
-          expires_at: null
-        },
-        { onConflict: 'entity_type,entity_id,user_id' }
-      ]
-    })
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('task-absent not present on server'))
+    expect(fromMock).not.toHaveBeenCalledWith('tombstones')
+  })
 
-    warnSpy.mockRestore()
-    vi.useRealTimers()
+  it('does not attempt fallback tombstone persistence after an unscoped zero-row delete', async () => {
+    queueResponse('tasks', [
+      { data: [], error: null },
+      { data: null, error: null }
+    ])
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+
+    await expect(db.permanentlyDeleteTask('task-absent')).rejects.toThrow(
+      'cannot establish deletion scope'
+    )
+    expect(fromMock).not.toHaveBeenCalledWith('tombstones')
   })
 
   it('throws when the fallback visibility check errors and does not create a tombstone', async () => {

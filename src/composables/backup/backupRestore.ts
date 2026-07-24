@@ -43,6 +43,39 @@ function getSharedWorkspaceIds(backupData: BackupData): Set<string> {
   )
 }
 
+function getPersonalTombstones(backupData: BackupData) {
+  return (backupData.tombstones || []).filter(
+    tombstone => tombstone.scopeKind === 'personal' && tombstone.workspaceId === null
+  )
+}
+
+function getUnsafeTombstoneCount(backupData: BackupData): number {
+  return (backupData.tombstones?.length || 0) - getPersonalTombstones(backupData).length
+}
+
+type ScopedTombstone = {
+  entityType: string
+  entityId: string
+  scopeKind?: 'personal' | 'workspace' | 'unknown'
+  workspaceId?: string | null
+}
+
+function isExplicitWorkspaceTombstone(tombstone: ScopedTombstone): boolean {
+  return tombstone.scopeKind === 'workspace' && Boolean(tombstone.workspaceId)
+}
+
+function getRestoreBlockingTombstoneIds(
+  tombstones: ScopedTombstone[],
+  entityType: ScopedTombstone['entityType'],
+): Set<string> {
+  return new Set(
+    tombstones
+      .filter(tombstone => tombstone.entityType === entityType)
+      .filter(tombstone => !isExplicitWorkspaceTombstone(tombstone))
+      .map(tombstone => tombstone.entityId)
+  )
+}
+
 function buildPersonalRecoveryPartition(backupData: BackupData): {
   tasks: BackupData['tasks']
   projects: BackupData['projects']
@@ -181,8 +214,12 @@ export function createRestoreOperations(
 
     const sharedWorkspaceIds = getSharedWorkspaceIds(backupData)
     const personalPartition = buildPersonalRecoveryPartition(backupData)
+    const personalTombstones = getPersonalTombstones(backupData)
+    const unsafeTombstoneCount = getUnsafeTombstoneCount(backupData)
     const personalTasks = personalPartition.tasks
     const sharedTasks = backupData.tasks.filter(task => isSharedEntity(task))
+    const sharedProjects = backupData.projects.filter(project => isSharedEntity(project))
+    const sharedGroups = backupData.groups.filter(group => isSharedEntity(group))
 
     // Get personal task IDs to check. Shared data remains in the verified
     // artifact but needs its own ownership-aware restore transaction.
@@ -237,11 +274,24 @@ export function createRestoreOperations(
         `${sharedTasks.length} shared workspace task${sharedTasks.length === 1 ? '' : 's'} ` +
         `from ${[...sharedWorkspaceIds].join(', ')} will be preserved in the artifact but not restored`
       )
-      if ((backupData.tombstones?.length || 0) > 0) {
-        warnings.push(
-          `${backupData.tombstones!.length} tombstones have no workspace provenance and will not be restored from a mixed-scope backup`
-        )
-      }
+    }
+    if (sharedProjects.length > 0) {
+      warnings.push(
+        `${sharedProjects.length} shared workspace project${sharedProjects.length === 1 ? '' : 's'} ` +
+        'will be preserved in the artifact but not restored'
+      )
+    }
+    if (sharedGroups.length > 0) {
+      warnings.push(
+        `${sharedGroups.length} shared workspace group${sharedGroups.length === 1 ? '' : 's'} ` +
+        'will be preserved in the artifact but not restored'
+      )
+    }
+    if (unsafeTombstoneCount > 0) {
+      warnings.push(
+        `${unsafeTombstoneCount} workspace or unknown-scope tombstones will remain in the verified backup ` +
+        'but will not be restored into personal data'
+      )
     }
 
     // Add warnings based on analysis
@@ -259,8 +309,8 @@ export function createRestoreOperations(
     const deletedProjectIds = new Set(await ctx.db.fetchDeletedProjectIds())
     const deletedGroupIds = new Set(await ctx.db.fetchDeletedGroupIds())
     const tombstones = await ctx.db.fetchTombstones()
-    const projectTombstones = new Set(tombstones.filter((t: any) => t.entityType === 'project').map((t: any) => t.entityId))
-    const groupTombstones = new Set(tombstones.filter((t: any) => t.entityType === 'group').map((t: any) => t.entityId))
+    const projectTombstones = getRestoreBlockingTombstoneIds(tombstones, 'project')
+    const groupTombstones = getRestoreBlockingTombstoneIds(tombstones, 'group')
 
     const projectsToRestore = personalPartition.projects.filter(p =>
       !deletedProjectIds.has(p.id)
@@ -271,8 +321,8 @@ export function createRestoreOperations(
       && !groupTombstones.has(g.id)
     )
 
-    const projectsSkipped = (backupData.projects?.length || 0) - projectsToRestore.length
-    const groupsSkipped = (backupData.groups?.length || 0) - groupsToRestore.length
+    const projectsSkipped = personalPartition.projects.length - projectsToRestore.length
+    const groupsSkipped = personalPartition.groups.length - groupsToRestore.length
 
     if (projectsSkipped > 0) {
       warnings.push(`${projectsSkipped} projects will be skipped (deleted or tombstoned)`)
@@ -304,13 +354,13 @@ export function createRestoreOperations(
       },
       tombstones: {
         total: backupData.tombstones?.length || 0,
-        toRestore: sharedWorkspaceIds.size > 0 ? 0 : backupData.tombstones?.length || 0,
+        toRestore: personalTombstones.length,
       },
       warnings,
       canProceed: toRestore.length > 0
         || projectsToRestore.length > 0
         || groupsToRestore.length > 0
-        || (sharedWorkspaceIds.size === 0 && (backupData.tombstones?.length || 0) > 0)
+        || personalTombstones.length > 0
     }
   }
 
@@ -431,9 +481,7 @@ export function createRestoreOperations(
       const existingParentIds = new Set<string>()
       let projectsToRestore = personalPartition.projects
       let groupsToRestore = personalPartition.groups
-      const tombstonesToRestore = sharedWorkspaceIds.size > 0
-        ? []
-        : backupData.tombstones || []
+      const tombstonesToRestore = getPersonalTombstones(backupData)
 
       if (sharedWorkspaceIds.size > 0) {
         ctx.state.value.warning =
@@ -468,8 +516,8 @@ export function createRestoreOperations(
         const deletedProjectIds = new Set(await ctx.db.fetchDeletedProjectIds())
         const deletedGroupIds = new Set(await ctx.db.fetchDeletedGroupIds())
         const tombstones = await ctx.db.fetchTombstones()
-        const projectTombstones = new Set(tombstones.filter((t: any) => t.entityType === 'project').map((t: any) => t.entityId))
-        const groupTombstones = new Set(tombstones.filter((t: any) => t.entityType === 'group').map((t: any) => t.entityId))
+        const projectTombstones = getRestoreBlockingTombstoneIds(tombstones, 'project')
+        const groupTombstones = getRestoreBlockingTombstoneIds(tombstones, 'group')
 
         projectsToRestore = personalPartition.projects.filter(p =>
           !deletedProjectIds.has(p.id)
@@ -628,7 +676,11 @@ export function createRestoreOperations(
       // entities have been recreated successfully.
       if (!atomicReceipt) {
         for (const tombstone of tombstonesToRestore) {
-          await ctx.db.recordTombstone(tombstone.entityType, tombstone.entityId)
+          await ctx.db.recordTombstone(
+            tombstone.entityType,
+            tombstone.entityId,
+            tombstone.workspaceId ?? null,
+          )
         }
       }
       if (tombstonesToRestore.length > 0) {

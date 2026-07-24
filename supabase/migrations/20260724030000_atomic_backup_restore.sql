@@ -1,6 +1,107 @@
 -- Restore one personal FlowState backup as one idempotent database transaction.
 -- Any uncaught error rolls back every entity and the durable receipt together.
 
+ALTER TABLE public.tombstones
+  ADD COLUMN IF NOT EXISTS scope_kind text NOT NULL DEFAULT 'unknown',
+  ADD COLUMN IF NOT EXISTS workspace_id uuid;
+
+ALTER TABLE public.tombstones
+  DROP CONSTRAINT IF EXISTS tombstones_scope_kind_check;
+ALTER TABLE public.tombstones
+  ADD CONSTRAINT tombstones_scope_kind_check
+  CHECK (scope_kind IN ('personal', 'workspace', 'unknown'));
+ALTER TABLE public.tombstones
+  DROP CONSTRAINT IF EXISTS tombstones_scope_workspace_consistent;
+ALTER TABLE public.tombstones
+  ADD CONSTRAINT tombstones_scope_workspace_consistent
+  CHECK (
+    (scope_kind = 'workspace' AND workspace_id IS NOT NULL)
+    OR (scope_kind IN ('personal', 'unknown') AND workspace_id IS NULL)
+  );
+
+CREATE INDEX IF NOT EXISTS idx_tombstones_workspace
+  ON public.tombstones(workspace_id)
+  WHERE workspace_id IS NOT NULL;
+
+UPDATE public.tombstones AS tombstone
+SET scope_kind = CASE
+      WHEN task.workspace_id IS NULL THEN 'personal'
+      ELSE 'workspace'
+    END,
+    workspace_id = task.workspace_id
+FROM public.tasks AS task
+WHERE tombstone.entity_type = 'task'
+  AND tombstone.entity_id = task.id::text
+  AND tombstone.user_id = task.user_id
+  AND tombstone.scope_kind = 'unknown';
+
+CREATE OR REPLACE FUNCTION public.create_task_tombstone()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.tombstones (
+    user_id, entity_type, entity_id, scope_kind, workspace_id,
+    deleted_at, expires_at
+  ) VALUES (
+    OLD.user_id,
+    'task',
+    OLD.id::text,
+    CASE WHEN OLD.workspace_id IS NULL THEN 'personal' ELSE 'workspace' END,
+    OLD.workspace_id,
+    pg_catalog.now(),
+    NULL
+  )
+  ON CONFLICT (entity_type, entity_id, user_id)
+  DO UPDATE SET
+    scope_kind = EXCLUDED.scope_kind,
+    workspace_id = EXCLUDED.workspace_id,
+    deleted_at = EXCLUDED.deleted_at,
+    expires_at = NULL;
+  RETURN OLD;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.sync_soft_delete_tombstone()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF OLD.is_deleted IS DISTINCT FROM NEW.is_deleted THEN
+    IF NEW.is_deleted = true THEN
+      INSERT INTO public.tombstones (
+        user_id, entity_type, entity_id, scope_kind, workspace_id,
+        deleted_at, expires_at
+      ) VALUES (
+        NEW.user_id,
+        'task',
+        NEW.id::text,
+        CASE WHEN NEW.workspace_id IS NULL THEN 'personal' ELSE 'workspace' END,
+        NEW.workspace_id,
+        COALESCE(NEW.deleted_at, pg_catalog.now()),
+        NULL
+      )
+      ON CONFLICT (entity_type, entity_id, user_id)
+      DO UPDATE SET
+        scope_kind = EXCLUDED.scope_kind,
+        workspace_id = EXCLUDED.workspace_id,
+        deleted_at = EXCLUDED.deleted_at,
+        expires_at = NULL;
+    ELSE
+      DELETE FROM public.tombstones
+      WHERE entity_type = 'task'
+        AND entity_id = NEW.id::text
+        AND user_id = NEW.user_id;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.flowstate_restore_backup_v1(
   p_user_id uuid,
   p_operation_id text,
@@ -354,6 +455,10 @@ BEGIN
        OR nullif(pg_catalog.btrim(v_item->>'entity_id'), '') IS NULL THEN
       RAISE EXCEPTION 'restore_invalid_tombstone';
     END IF;
+    IF v_item->>'scope_kind' IS DISTINCT FROM 'personal'
+       OR v_item->>'workspace_id' IS NOT NULL THEN
+      RAISE EXCEPTION 'restore_tombstone_scope_unavailable';
+    END IF;
     IF (v_item->>'entity_type' = 'task' AND EXISTS (
           SELECT 1 FROM public.tasks
           WHERE id::text = v_item->>'entity_id' AND user_id = v_actor
@@ -373,11 +478,14 @@ BEGIN
       RAISE EXCEPTION 'restore_tombstone_contradicts_live_entity';
     END IF;
     INSERT INTO public.tombstones (
-      user_id, entity_type, entity_id, deleted_at, expires_at
+      user_id, entity_type, entity_id, scope_kind, workspace_id,
+      deleted_at, expires_at
     ) VALUES (
       v_actor,
       v_item->>'entity_type',
       v_item->>'entity_id',
+      'personal',
+      NULL,
       pg_catalog.now(),
       CASE WHEN v_item->>'entity_type' = 'task'
         THEN NULL
@@ -402,6 +510,10 @@ BEGIN
     'groupsCreated', v_groups_created,
     'groupsExisting', v_groups_existing,
     'tombstonesCreated', v_tombstones_created,
+    'tombstoneScope', pg_catalog.jsonb_build_object(
+      'scopeKind', 'personal',
+      'workspaceId', NULL
+    ),
     'replayed', false
   );
 

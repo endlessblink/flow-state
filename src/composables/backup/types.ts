@@ -9,6 +9,12 @@ import type { Ref } from 'vue'
 
 export interface BackupData {
   id: string
+  source: {
+    kind: 'account'
+    userId: string
+  } | {
+    kind: 'guest'
+  }
   tasks: Task[]
   projects: Project[]
   groups: CanvasGroup[]
@@ -136,7 +142,7 @@ export const GOLDEN_BACKUP_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 export const BACKUP_HISTORY_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 // TASK-156: Current backup schema version
-export const BACKUP_SCHEMA_VERSION = '3.3.0'
+export const BACKUP_SCHEMA_VERSION = '3.4.0'
 
 export const DEFAULT_CONFIG: BackupConfig = {
   enabled: true,

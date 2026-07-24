@@ -235,6 +235,7 @@ export function createGoldenOperations(ctx: BackupContext): GoldenOperations {
       }
     }
     filtered.checksum = calculateChecksum({
+      source: filtered.source,
       tasks: filtered.tasks,
       projects: filtered.projects,
       groups: filtered.groups,

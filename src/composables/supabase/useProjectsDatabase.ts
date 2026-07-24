@@ -10,7 +10,10 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
     const { authStore, isSyncing, lastSyncError, getUserIdSafe, withRetry, handleError } = ctx
     const { recordTombstone } = useTombstoneDatabase(ctx)
 
-    const fetchProjects = async (workspaceId?: string | null): Promise<Project[]> => {
+    const fetchProjects = async (
+        workspaceId?: string | null,
+        options?: { forceFresh?: boolean; onError?: (error: unknown) => void },
+    ): Promise<Project[]> => {
         // TASK-1060: Ensure auth is initialized before fetching
         if (!authStore.isInitialized) {
             console.log('🔄 [TASK-1060] Auth not initialized, waiting...')
@@ -23,6 +26,9 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
         // Workspace-aware cache key so switching workspaces invalidates stale results
         const wsKey = workspaceId === undefined ? 'all' : (workspaceId ?? 'personal')
         const cacheKey = `projects:${userId || 'guest'}:ws:${wsKey}`
+        if (options?.forceFresh) {
+            invalidateCache.projects()
+        }
 
         return swrCache.getOrFetch(cacheKey, async () => {
             try {
@@ -50,6 +56,7 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
                 }, 'fetchProjects')
             } catch (e: unknown) {
                 handleError(e, 'fetchProjects')
+                options?.onError?.(e)
                 return []
             }
         })

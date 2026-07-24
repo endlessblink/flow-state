@@ -23,6 +23,8 @@ import {
 const mockFetchDeletedTaskIds = vi.fn()
 const mockFetchTasks = vi.fn()
 const mockFetchTrash = vi.fn()
+const mockFetchProjects = vi.fn()
+const mockFetchGroups = vi.fn()
 const mockFetchDeletedProjectIds = vi.fn()
 const mockFetchDeletedGroupIds = vi.fn()
 const mockFetchTombstones = vi.fn()
@@ -40,6 +42,8 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
     fetchDeletedTaskIds: mockFetchDeletedTaskIds,
     fetchTasks: mockFetchTasks,
     fetchTrash: mockFetchTrash,
+    fetchProjects: mockFetchProjects,
+    fetchGroups: mockFetchGroups,
     fetchDeletedProjectIds: mockFetchDeletedProjectIds,
     fetchDeletedGroupIds: mockFetchDeletedGroupIds,
     fetchTombstones: mockFetchTombstones,
@@ -86,11 +90,14 @@ const mockCanvasStore = {
   groups: [] as any[],
   loadFromDatabase: vi.fn(),
 }
+let mockAuthUserId: string | null = 'user-1'
 
 vi.mock('@/stores/tasks', () => ({ useTaskStore: () => mockTaskStore }))
 vi.mock('@/stores/projects', () => ({ useProjectStore: () => mockProjectStore }))
 vi.mock('@/stores/canvas', () => ({ useCanvasStore: () => mockCanvasStore }))
-vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ user: { id: 'user-1' } }) }))
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({ user: mockAuthUserId ? { id: mockAuthUserId } : null }),
+}))
 
 // Mock localStorage with in-memory store
 let localStorageStore: Record<string, string> = {}
@@ -117,6 +124,7 @@ function createMockBackup(
 
   return {
     id: `backup_${timestamp}`,
+    source: { kind: 'account', userId: 'user-1' },
     tasks,
     projects: [],
     groups: [],
@@ -157,6 +165,8 @@ describe('TASK-332: Backup Reliability & Verification', () => {
     mockFetchDeletedTaskIds.mockResolvedValue([])
     mockFetchTasks.mockResolvedValue([])
     mockFetchTrash.mockResolvedValue([])
+    mockFetchProjects.mockResolvedValue([])
+    mockFetchGroups.mockResolvedValue([])
     mockFetchDeletedProjectIds.mockResolvedValue([])
     mockFetchDeletedGroupIds.mockResolvedValue([])
     mockFetchTombstones.mockResolvedValue([])
@@ -165,6 +175,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
     mockSafeCreateTask.mockResolvedValue({ status: 'created', message: 'Created' })
     mockLogDedupDecision.mockResolvedValue(undefined)
     mockRestoreBackupTransaction.mockResolvedValue(null)
+    mockAuthUserId = 'user-1'
 
     backupSystem = useBackupSystem()
   })
@@ -204,6 +215,104 @@ describe('TASK-332: Backup Reliability & Verification', () => {
   // 2. Data Completeness Tests
   // =========================================================================
   describe('Data Completeness', () => {
+    it('binds an authenticated backup to its source account', async () => {
+      const backup = await backupSystem.createBackup('manual')
+
+      expect((backup as BackupData & { source?: unknown } | null)?.source).toEqual({
+        kind: 'account',
+        userId: 'user-1',
+      })
+    })
+
+    it('captures projects and groups from every accessible remote scope', async () => {
+      mockFetchProjects.mockResolvedValue([
+        { id: 'personal-project', name: 'Personal', workspaceId: null },
+        { id: 'shared-project', name: 'Shared', workspaceId: 'workspace-1' },
+      ])
+      mockFetchGroups.mockResolvedValue([
+        { id: '00000000-0000-4000-8000-000000000001', name: 'Personal group', workspaceId: null },
+        { id: '00000000-0000-4000-8000-000000000002', name: 'Shared group', workspaceId: 'workspace-1' },
+      ])
+      mockProjectStore.projects = [{ id: 'stale-project', name: 'Stale current view' }]
+      mockCanvasStore.groups = [{ id: 'stale-group', name: 'Stale current view' }]
+
+      const backup = await backupSystem.createBackup('manual')
+
+      expect(mockFetchProjects).toHaveBeenCalledWith(undefined, expect.objectContaining({
+        forceFresh: true,
+        onError: expect.any(Function),
+      }))
+      expect(mockFetchGroups).toHaveBeenCalledWith(undefined, expect.objectContaining({
+        forceFresh: true,
+        onError: expect.any(Function),
+      }))
+      expect(backup?.projects.map(project => project.id)).toEqual([
+        'personal-project',
+        'shared-project',
+        'stale-project',
+      ])
+      expect(backup?.groups.map(group => group.id)).toEqual([
+        '00000000-0000-4000-8000-000000000001',
+        '00000000-0000-4000-8000-000000000002',
+        'stale-group',
+      ])
+    })
+
+    it('refuses a current-schema artifact from a different account before any mutation', async () => {
+      const backup = createMockBackup(1, Date.now(), {
+        source: { kind: 'account', userId: 'another-user' },
+      } as Partial<BackupData>)
+      backup.checksum = calculateChecksum({
+        source: (backup as BackupData & { source?: unknown }).source,
+        tasks: backup.tasks,
+        projects: backup.projects,
+        groups: backup.groups,
+      })
+
+      const restored = await backupSystem.restoreBackup(backup)
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('different account')
+      expect(mockCheckTaskIdsAvailability).not.toHaveBeenCalled()
+      expect(mockRestoreBackupTransaction).not.toHaveBeenCalled()
+    })
+
+    it('does not present a different-account artifact as restorable in dry-run analysis', async () => {
+      const backup = createMockBackup(1, Date.now(), {
+        source: { kind: 'account', userId: 'another-user' },
+      })
+
+      const analysis = await backupSystem.analyzeRestore(backup)
+
+      expect(analysis.canProceed).toBe(false)
+      expect(analysis.warnings.join(' ')).toContain('different account')
+      expect(mockCheckTaskIdsAvailability).not.toHaveBeenCalled()
+    })
+
+    it('refuses a shared-workspace artifact before creating an emergency checkpoint', async () => {
+      const backup = createMockBackup(1, Date.now(), {
+        source: { kind: 'account', userId: 'user-1' },
+      } as Partial<BackupData>)
+      backup.tasks[0].workspaceId = 'workspace-1'
+      backup.metadata = {
+        ...backup.metadata!,
+        workspaceTaskCount: 1,
+      }
+      backup.checksum = calculateChecksum({
+        source: (backup as BackupData & { source?: unknown }).source,
+        tasks: backup.tasks,
+        projects: backup.projects,
+        groups: backup.groups,
+      })
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('shared workspace')
+      expect(backupSystem.backupHistory.value).toEqual([])
+      expect(mockRestoreBackupTransaction).not.toHaveBeenCalled()
+    })
+
     it('refuses to claim an emergency backup exists when durable storage rejects it', async () => {
       localStorageMock.setItem.mockImplementation(() => {
         throw new Error('storage unavailable')
@@ -282,6 +391,27 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       expect(backup).toBeNull()
       expect(backupSystem.state.value.error).toContain('deleted-task inventory')
     })
+
+    it.each([
+      ['project', mockFetchProjects],
+      ['group', mockFetchGroups],
+    ] as const)(
+      'refuses to publish an incomplete backup when %s inventory cannot be read',
+      async (entityType, fetchInventory) => {
+        mockTaskStore.tasks = [{ id: 'active-1', title: 'Active', status: 'todo' }]
+        fetchInventory.mockImplementation(
+          async (_workspaceId?: string | null, options?: { onError?: () => void }) => {
+            options?.onError?.()
+            return []
+          },
+        )
+
+        const backup = await backupSystem.createBackup('manual')
+
+        expect(backup).toBeNull()
+        expect(backupSystem.state.value.error).toContain(`${entityType} inventory`)
+      },
+    )
 
     it('includes permanent-delete tombstones in the checksummed inventory', async () => {
       mockTaskStore.tasks = [{ id: 'active-1', title: 'Active', status: 'todo' }]
@@ -698,6 +828,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         },
       })
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -744,6 +875,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
     it('reports refresh-needed instead of claiming a committed atomic restore failed', async () => {
       const incoming = createMockBackup(1)
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -772,6 +904,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
     it('reports refresh-needed when committed task verification cannot be fetched', async () => {
       const incoming = createMockBackup(1)
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -808,6 +941,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         },
       })
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -841,6 +975,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         },
       })
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -891,6 +1026,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         },
       })
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -953,6 +1089,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         },
       })
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -998,6 +1135,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         },
       })
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -1049,6 +1187,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         },
       })
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -1093,6 +1232,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         },
       })
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -1123,6 +1263,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       ])
       const incoming = createMockBackup(1)
       incoming.checksum = calculateChecksum({
+        source: incoming.source,
         tasks: incoming.tasks,
         projects: incoming.projects,
         groups: incoming.groups,
@@ -1146,6 +1287,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
         tombstoneCount: 1,
       }
       backup.checksum = calculateChecksum({
+        source: backup.source,
         tasks: backup.tasks,
         projects: backup.projects,
         groups: backup.groups,
@@ -1320,6 +1462,36 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       expect(mockSafeCreateTask).not.toHaveBeenCalled()
     })
 
+    it('refuses a current-schema artifact with no source-account provenance', async () => {
+      const backup = createMockBackup(1) as BackupData & { source?: BackupData['source'] }
+      delete backup.source
+
+      const restored = await backupSystem.restoreBackup(backup as BackupData, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('source account')
+      expect(mockCheckTaskIdsAvailability).not.toHaveBeenCalled()
+      expect(mockRestoreBackupTransaction).not.toHaveBeenCalled()
+    })
+
+    it('detects source-account provenance tampering through the checksum', async () => {
+      const backup = createMockBackup(1)
+      backup.source = { kind: 'account', userId: 'another-user' }
+      backup.checksum = calculateChecksum({
+        source: backup.source,
+        tasks: backup.tasks,
+        projects: backup.projects,
+        groups: backup.groups,
+      })
+      backup.source = { kind: 'account', userId: 'user-1' }
+
+      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('checksum mismatch')
+      expect(mockRestoreBackupTransaction).not.toHaveBeenCalled()
+    })
+
     it('refuses a current-schema artifact with no count metadata', async () => {
       const backup = createMockBackup(1)
       delete backup.metadata
@@ -1331,28 +1503,46 @@ describe('TASK-332: Backup Reliability & Verification', () => {
       expect(mockSafeCreateTask).not.toHaveBeenCalled()
     })
 
-    it('accepts a structurally valid legacy artifact with its old unstable checksum', async () => {
+    it('does not present a source-less legacy artifact as restorable while signed in', async () => {
       const backup = createMockBackup(1, Date.now(), {
         version: '3.1.0',
         checksum: 'legacy-serialization-checksum',
-      })
+      }) as BackupData & { source?: BackupData['source'] }
+      delete backup.source
+
+      const analysis = await backupSystem.analyzeRestore(backup as BackupData)
+
+      expect(analysis.canProceed).toBe(false)
+      expect(analysis.warnings.join(' ')).toContain('guest mode')
+      expect(mockCheckTaskIdsAvailability).not.toHaveBeenCalled()
+    })
+
+    it('accepts a structurally valid legacy artifact with its old unstable checksum in guest mode', async () => {
+      const backup = createMockBackup(1, Date.now(), {
+        version: '3.1.0',
+        checksum: 'legacy-serialization-checksum',
+      }) as BackupData & { source?: BackupData['source'] }
+      delete backup.source
+      mockAuthUserId = null
       mockCheckTaskIdsAvailability.mockResolvedValue([
         { taskId: 'task-1', status: 'active', reason: 'Task is readable' },
       ])
 
-      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+      const restored = await backupSystem.restoreBackup(backup as BackupData, { skipDedupCheck: true })
 
       expect(restored).toBe(true)
       expect(mockSafeCreateTask).toHaveBeenCalledTimes(1)
     })
 
     it('restores a valid 3.2.0 backup that predates tombstone inventory', async () => {
-      const backup = createMockBackup(1, Date.now(), { version: '3.2.0' })
+      const backup = createMockBackup(1, Date.now(), { version: '3.2.0' }) as BackupData & { source?: BackupData['source'] }
+      delete backup.source
+      mockAuthUserId = null
       mockCheckTaskIdsAvailability.mockResolvedValue([
         { taskId: 'task-1', status: 'active', reason: 'Task is readable' },
       ])
 
-      const restored = await backupSystem.restoreBackup(backup, { skipDedupCheck: true })
+      const restored = await backupSystem.restoreBackup(backup as BackupData, { skipDedupCheck: true })
 
       expect(restored).toBe(true)
       expect(mockSafeCreateTask).toHaveBeenCalledTimes(1)
@@ -1392,6 +1582,7 @@ describe('TASK-332: Backup Reliability & Verification', () => {
           { taskId: 'shadow-task', status: 'active', reason: 'Task is readable' },
         ])
       const shadow = {
+        source: { kind: 'account', userId: 'user-1' },
         tasks: [{ id: 'shadow-task', title: 'Shadow recovery', status: 'todo' }],
         projects: [],
         groups: [],
@@ -1405,6 +1596,25 @@ describe('TASK-332: Backup Reliability & Verification', () => {
 
       expect(restored).toBe(true)
       expect(mockSafeCreateTask).toHaveBeenCalledWith(expect.objectContaining({ id: 'shadow-task' }))
+    })
+
+    it('refuses to relabel a source-less shadow snapshot as the current account', async () => {
+      const shadow = {
+        tasks: [{ id: 'foreign-shadow-task', title: 'Unknown source', status: 'todo' }],
+        projects: [],
+        groups: [],
+        meta: {
+          timestamp: Date.now(),
+          counts: { tasks: 1, projects: 0, groups: 0 },
+        },
+      }
+
+      const restored = await backupSystem.restoreFromShadow(shadow)
+
+      expect(restored).toBe(false)
+      expect(backupSystem.state.value.error).toContain('source account')
+      expect(mockCheckTaskIdsAvailability).not.toHaveBeenCalled()
+      expect(mockRestoreBackupTransaction).not.toHaveBeenCalled()
     })
   })
 

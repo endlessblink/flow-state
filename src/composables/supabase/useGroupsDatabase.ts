@@ -38,7 +38,10 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
     const { authStore, isSyncing, lastSyncError, getUserIdSafe, withRetry, handleError } = ctx
     const { recordTombstone } = useTombstoneDatabase(ctx)
 
-    const fetchGroups = async (workspaceId?: string | null): Promise<CanvasGroup[]> => {
+    const fetchGroups = async (
+        workspaceId?: string | null,
+        options?: { forceFresh?: boolean; onError?: (error: unknown) => void },
+    ): Promise<CanvasGroup[]> => {
         // TASK-1060: Ensure auth is initialized before fetching
         if (!authStore.isInitialized) {
             console.log('🔄 [TASK-1060] Auth not initialized, waiting...')
@@ -51,6 +54,9 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
         // Workspace-aware cache key so switching workspaces invalidates stale results
         const wsKey = workspaceId === undefined ? 'all' : (workspaceId ?? 'personal')
         const cacheKey = `groups:${userId || 'guest'}:ws:${wsKey}`
+        if (options?.forceFresh) {
+            invalidateCache.groups()
+        }
 
         return swrCache.getOrFetch(cacheKey, async () => {
             try {
@@ -85,6 +91,7 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
                 }, 'fetchGroups')
             } catch (e: unknown) {
                 handleError(e, 'fetchGroups')
+                options?.onError?.(e)
                 return []
             }
         })

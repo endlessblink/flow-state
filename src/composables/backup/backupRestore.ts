@@ -22,6 +22,45 @@ export function createRestoreOperations(
   coreOps: CoreOperations,
   _goldenOps: GoldenOperations
 ): RestoreOperations {
+  const getAuthorityBlockReason = async (backupData: BackupData): Promise<string | null> => {
+    const { useAuthStore } = await import('@/stores/auth')
+    const currentUserId = useAuthStore().user?.id ?? null
+
+    if (backupData.version === BACKUP_SCHEMA_VERSION && !backupData.source) {
+      return 'Backup source account is required for the current schema'
+    }
+    if (!backupData.source && currentUserId) {
+      return (
+        'Legacy backups created before source-account provenance cannot be restored while signed in; ' +
+        'recover them from guest mode first'
+      )
+    }
+    if (backupData.source?.kind === 'account') {
+      if (currentUserId !== backupData.source.userId) {
+        return 'Backup belongs to a different account and cannot be restored into this account'
+      }
+    }
+
+    const sharedWorkspaceIds = new Set(
+      [
+        ...(backupData.tasks || []),
+        ...(backupData.projects || []),
+        ...(backupData.groups || []),
+      ]
+        .map(entity => (
+          entity as typeof entity & { workspaceId?: string | null }
+        ).workspaceId)
+        .filter((workspaceId): workspaceId is string => Boolean(workspaceId))
+    )
+    if (sharedWorkspaceIds.size > 0) {
+      return (
+        `Backup contains shared workspace data (${[...sharedWorkspaceIds].join(', ')}); ` +
+        'shared workspace restore requires an explicit authorized recovery policy'
+      )
+    }
+    return null
+  }
+
   /**
    * TASK-344: Analyze a backup before restore (dry-run mode)
    * Checks which tasks can be restored vs skipped due to existing IDs
@@ -33,6 +72,18 @@ export function createRestoreOperations(
       : backup
 
     const warnings: string[] = []
+    const authorityBlockReason = await getAuthorityBlockReason(backupData)
+    if (authorityBlockReason) {
+      return {
+        backup: backupData,
+        tasks: { total: backupData.tasks?.length || 0, available: 0, existsActive: 0, existsDeleted: 0, tombstoned: 0, toRestore: [], skipped: [] },
+        projects: { total: backupData.projects?.length || 0, toRestore: 0, skipped: backupData.projects?.length || 0 },
+        groups: { total: backupData.groups?.length || 0, toRestore: 0, skipped: backupData.groups?.length || 0 },
+        tombstones: { total: backupData.tombstones?.length || 0, toRestore: 0 },
+        warnings: [authorityBlockReason],
+        canProceed: false,
+      }
+    }
 
     // Validate backup structure
     if (!backupData.tasks || !Array.isArray(backupData.tasks)) {
@@ -197,6 +248,10 @@ export function createRestoreOperations(
       if (backupData.version === BACKUP_SCHEMA_VERSION && !backupData.metadata) {
         throw new Error('Backup count metadata is required for the current schema')
       }
+      const authorityBlockReason = await getAuthorityBlockReason(backupData)
+      if (authorityBlockReason) {
+        throw new Error(authorityBlockReason)
+      }
 
       const countChecks = [
         ['task', backupData.metadata?.taskCount, backupData.tasks.length],
@@ -219,6 +274,7 @@ export function createRestoreOperations(
       // Verify checksum if present
       if (backupData.checksum) {
         const checksumPayload = {
+          ...(backupData.source ? { source: backupData.source } : {}),
           tasks: backupData.tasks,
           projects: backupData.projects,
           groups: backupData.groups,

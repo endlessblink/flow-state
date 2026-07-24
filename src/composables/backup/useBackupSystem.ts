@@ -346,10 +346,16 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
     restoreFromShadow: async (shadowData: any) => {
       console.log(`[Backup] Restoring from Shadow Hub: ${shadowData.meta?.counts?.tasks} tasks`)
+      const { useAuthStore } = await import('@/stores/auth')
+      const sourceUserId = useAuthStore().user?.id ?? null
+      const shadowSource = shadowData.source ?? (
+        sourceUserId ? undefined : { kind: 'guest' as const }
+      )
       // TASK-344: Explicitly specify no dry-run to get boolean return
       const shadowBackup = {
         ...shadowData,
         id: `shadow_${shadowData.meta.timestamp}`,
+        ...(shadowSource ? { source: shadowSource } : {}),
         timestamp: shadowData.meta.timestamp,
         type: 'emergency',
         version: BACKUP_SCHEMA_VERSION,
@@ -361,6 +367,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
         }
       } as BackupData
       shadowBackup.checksum = calculateChecksum({
+        ...(shadowBackup.source ? { source: shadowBackup.source } : {}),
         tasks: shadowBackup.tasks,
         projects: shadowBackup.projects,
         groups: shadowBackup.groups,

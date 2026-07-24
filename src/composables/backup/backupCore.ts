@@ -104,7 +104,8 @@ export function createCoreOperations(
       // may hold only the active workspace, while local optimistic rows may be
       // newer than Supabase. Merge all remote scopes, then local intent, then Trash.
       const { useAuthStore } = await import('@/stores/auth')
-      const isAuthenticated = Boolean(useAuthStore().user?.id)
+      const sourceUserId = useAuthStore().user?.id ?? null
+      const isAuthenticated = Boolean(sourceUserId)
       const remoteActiveTasks = isAuthenticated && typeof ctx.db.fetchTasks === 'function'
         ? await ctx.db.fetchTasks(undefined, { forceFresh: true })
         : []
@@ -127,8 +128,34 @@ export function createCoreOperations(
           .map(task => [task.id, task])
       )
       let tasks = [...tasksById.values()]
-      const projects = [...(ctx.projectStore.projects || [])]
-      const groups = [...(ctx.canvasStore.groups || [])]
+      let projectReadFailed = false
+      const remoteProjects = isAuthenticated && typeof ctx.db.fetchProjects === 'function'
+        ? await ctx.db.fetchProjects(undefined, {
+          forceFresh: true,
+          onError: () => { projectReadFailed = true },
+        })
+        : []
+      if (projectReadFailed) {
+        throw new Error('Backup refused because project inventory could not be read')
+      }
+      let groupReadFailed = false
+      const remoteGroups = isAuthenticated && typeof ctx.db.fetchGroups === 'function'
+        ? await ctx.db.fetchGroups(undefined, {
+          forceFresh: true,
+          onError: () => { groupReadFailed = true },
+        })
+        : []
+      if (groupReadFailed) {
+        throw new Error('Backup refused because group inventory could not be read')
+      }
+      const projects = [...new Map(
+        [...remoteProjects, ...(ctx.projectStore.projects || [])]
+          .map(project => [project.id, project])
+      ).values()]
+      const groups = [...new Map(
+        [...remoteGroups, ...(ctx.canvasStore.groups || [])]
+          .map(group => [group.id, group])
+      ).values()]
 
       assertNoTombstoneContradictions({ tasks, projects, groups, tombstones })
 
@@ -171,6 +198,9 @@ export function createCoreOperations(
       // Create backup object
       const backupData: BackupData = {
         id: generateBackupId(),
+        source: sourceUserId
+          ? { kind: 'account', userId: sourceUserId }
+          : { kind: 'guest' },
         tasks,
         projects,
         groups,
@@ -194,6 +224,7 @@ export function createCoreOperations(
 
       // Calculate checksum
       backupData.checksum = calculateChecksum({
+        source: backupData.source,
         tasks: backupData.tasks,
         projects: backupData.projects,
         groups: backupData.groups,

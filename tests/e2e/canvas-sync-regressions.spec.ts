@@ -1058,6 +1058,111 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     }, CALENDAR_TASK.id)).toBe('todo')
   })
 
+  test('R29 - Calendar removal rejection stays visible and leaves the task intact', async ({ clientA }) => {
+    await gotoCalendarReady(clientA)
+
+    const calendarEvent = clientA.locator(`.slot-task[data-task-id="${CALENDAR_TASK.id}"]`)
+    await expect(calendarEvent).toBeVisible()
+    await clientA.evaluate(() => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      tasks.deleteTaskInstance = async () => {
+        throw new Error('Injected durable Calendar removal rejection')
+      }
+    })
+
+    await calendarEvent.click({ button: 'right' })
+    await clientA.getByText('Remove', { exact: true }).click()
+    const confirmation = clientA.getByRole('dialog')
+    await expect(confirmation).toBeVisible()
+    await confirmation.getByText('Delete', { exact: true }).click()
+
+    await expect(
+      clientA.getByText('Task could not be removed from Calendar. No changes were saved.', { exact: true }),
+    ).toBeVisible()
+    await expect(calendarEvent).toBeVisible()
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.some((candidate: any) => candidate.id === taskId && !candidate.isDeleted)
+    }, CALENDAR_TASK.id)).toBe(true)
+  })
+
+  test('R30 - Calendar removal works offline, preserves the task, and converges across views', async ({ clientA, clientB }) => {
+    await gotoCalendarReady(clientA)
+    await gotoCalendarReady(clientB)
+
+    const calendarEvent = clientA.locator(`.slot-task[data-task-id="${CALENDAR_TASK.id}"]`)
+    const clientBCalendarEvent = clientB.locator(`.slot-task[data-task-id="${CALENDAR_TASK.id}"]`)
+    await expect(calendarEvent).toBeVisible()
+    await expect(clientBCalendarEvent).toBeVisible()
+
+    await clientA.context().setOffline(true)
+    await calendarEvent.click({ button: 'right' })
+    await clientA.getByText('Remove', { exact: true }).click()
+    const confirmation = clientA.getByRole('dialog')
+    await expect(confirmation).toBeVisible()
+    await confirmation.getByText('Delete', { exact: true }).click()
+
+    await expect(calendarEvent).toBeHidden()
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        exists: !!task && !task.isDeleted,
+        instanceCount: task?.instances?.length ?? 0,
+        isInInbox: task?.isInInbox ?? false,
+      }
+    }, CALENDAR_TASK.id)).toEqual({
+      exists: true,
+      instanceCount: 0,
+      isInInbox: true,
+    })
+
+    await clientA.context().setOffline(false)
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,instances,is_in_inbox,is_deleted')
+        .eq('id', CALENDAR_TASK.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: CALENDAR_TASK.id,
+        instances: [],
+        is_in_inbox: true,
+        is_deleted: false,
+      }))
+    }).toPass({ timeout: 20_000 })
+
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        exists: !!task && !task.isDeleted,
+        instanceCount: task?.instances?.length ?? 0,
+        isInInbox: task?.isInInbox ?? false,
+      }
+    }, CALENDAR_TASK.id), { timeout: 20_000 }).toEqual({
+      exists: true,
+      instanceCount: 0,
+      isInInbox: true,
+    })
+    await expect(clientBCalendarEvent).toBeHidden()
+
+    await gotoCatalogReady(clientB)
+    await expect(
+      clientB.locator('.hierarchical-task-row').filter({ hasText: CALENDAR_TASK.title }).first(),
+    ).toBeVisible()
+    await clientB.reload()
+    await clientB.waitForSelector('.all-tasks-view', { timeout: 30_000 })
+    await expect(
+      clientB.locator('.hierarchical-task-row').filter({ hasText: CALENDAR_TASK.title }).first(),
+    ).toBeVisible()
+  })
+
   test('R28 - Calendar next-occurrence completion works offline exactly once and survives reload', async ({ clientA, clientB }) => {
     await gotoCalendarReady(clientA)
     await gotoCalendarReady(clientB)

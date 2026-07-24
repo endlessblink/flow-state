@@ -234,6 +234,7 @@ const showConfirmModal = ref(false)
 const confirmAction = ref<() => void | Promise<void>>(() => {})
 const confirmMessage = ref('')
 const confirmDetails = ref<string[]>([])
+const confirmFailureMessage = ref('Action failed. No changes were saved.')
 
 const showSearchModal = ref(false)
 const showQuickTaskCreate = ref(false)
@@ -313,6 +314,7 @@ const handleContextMenuDelete = (taskId: string, instanceId?: string, isCalendar
 
   if (isCalendarEvent && instanceId) {
     confirmMessage.value = `Remove "${task.title}" from calendar?`
+    confirmFailureMessage.value = 'Task could not be removed from Calendar. No changes were saved.'
     confirmAction.value = async () => {
       await taskStore.deleteTaskInstance(taskId, instanceId)
       showTaskContextMenu.value = false
@@ -462,16 +464,19 @@ const handleRecurrenceRemoveFromCanvas = async () => {
 const executeConfirmAction = async () => {
   // Close modal first (optimistic) to ensure it closes even if action fails
   const action = confirmAction.value
+  const failureMessage = confirmFailureMessage.value
   showConfirmModal.value = false
   confirmAction.value = () => {}
   confirmMessage.value = ''
   confirmDetails.value = []
+  confirmFailureMessage.value = 'Action failed. No changes were saved.'
 
   // Execute action after modal is closed
   try {
     await action()
   } catch (error) {
     console.error('[ModalManager] Confirm action failed:', error)
+    message.error(failureMessage)
   }
 }
 
@@ -480,6 +485,7 @@ const cancelConfirmAction = () => {
   confirmAction.value = () => {}
   confirmMessage.value = ''
   confirmDetails.value = []
+  confirmFailureMessage.value = 'Action failed. No changes were saved.'
 }
 
 const handleSearchSelectTask = (task: Task) => {

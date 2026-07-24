@@ -2169,6 +2169,12 @@ _Original plan below._
 
 ## Active Tasks
 
+### BUG-1973: Cancelled Electron quit permanently disables the Local Task API (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-22) | **Depends on**: TASK-1797, TASK-1930 | **Related**: TASK-1943
+
+**Acceptance**: a cancelled ordinary quit restores exactly one authenticated sidecar without killing the live app; genuine final exits keep it stopped; lifecycle, packaged localhost, and Hermes task-read proof must pass.
+
 ### ~~BUG-1974~~: Task state disagrees across filtered views, quick tasks, Canvas, and edit entry points (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-23, Electron 1.4.283) | **Related**: BUG-1925, BUG-1942, TASK-1953
@@ -2182,6 +2188,14 @@ _Original plan below._
 **Release proof**: public `latest-linux.yml` serves version 1.4.283; the AppImage and deb endpoints return HTTP 200 with content lengths matching the manifest. A later byte-different same-version rebuild was correctly rejected by the collision guard instead of overwriting the published release.
 
 **Explicitly not covered**: intentional view filters still produce different visible subsets; the dormant task-operation broadcaster remains unused; no claim is made that future task fields cannot introduce a new projection bug without parity coverage.
+
+### BUG-1975: Catalog completion can become impossible to reopen under contradictory filters (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-24) | **Related**: BUG-1974, TASK-1947
+
+**Exact failure mode**: Done status, All Active, duration, restored state, and saved views could remain active together, hiding a canonically completed task and blocking the visible right-click reopen path.
+
+**Current proof boundary**: mutual exclusivity and explicit-Done visibility are enforced in store, persistence, saved views, lists, project counts, and sidebar badges with focused regressions; packaged Electron and broader recurrence/mixed-version permutations remain open.
 
 ### TASK-1943: Reliable Hermes–FlowState personal-assistant program (🔄 IN PROGRESS)
 
@@ -2200,6 +2214,8 @@ _Original plan below._
 
 **Subtasks**:
 - [x] ~~**BUG-1974 — Keep task identity and current state consistent across views**: move authoritative ID lookups, quick-task pinning, and Canvas edit/context actions onto canonical task state; preserve transient Canvas availability with canonical-first snapshot fallback; ship Electron 1.4.283 with RED/GREEN and updater proof.~~ Completed 2026-07-23.
+- [ ] **BUG-1975 — Keep Catalog completion and reopen reachable under every filter transition**: prove right-click complete/reopen across offline replay, independent-client convergence, reload, and packaged Electron.
+- [ ] **BUG-1973 — Recover the Local Task API after a cancelled Electron quit**: restore one authenticated sidecar after cancelled quit and prove the packaged localhost/Hermes boundary.
 - [ ] **TASK-1944 — Canonical operation, revision, and change-sequence foundation**: recover onto a fresh branch, classify existing work, inventory every production writer, add the signed-user operation ledger and canonical revisions, preserve legacy writers through compatibility triggers, return replayable read-back receipts, and provide durable sequence catch-up.
 - [ ] **TASK-1945 — Canonical Local API task patch adoption**: replace direct sidecar task patches and Hermes HTTP-success inference with the TASK-1944 preview/apply/base-revision contract, validate canonical receipts at both boundaries, and preserve exact replay after response loss.
 - [ ] **TASK-1947 — Deterministic canonical change-sequence catch-up**: persist a signed-user personal/workspace cursor, consume bounded ordered change-log pages as invalidation hints, reconcile exact task IDs authoritatively, and advance only after projection persistence succeeds.
@@ -7875,7 +7891,9 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | ~~**BUG-1967**~~ | **P0** | ✅ **DONE — Electron 1.4.274 requires durable task admission before clearing drafts or showing success** |
 | ~~**TASK-1968**~~ | **P0** | ✅ **DONE — Electron 1.4.275 keeps the signed-in Hermes bridge alive across window close, restart, and updater handoff** |
 | ~~**BUG-1969**~~ | **P0-HIGH** | ✅ **DONE — Electron 1.4.277 and the live Hermes adapter agree on all work-block and subtask-batch contracts** |
+| **BUG-1973** | **P0** | 🔄 **Cancelled Electron quit permanently disables the Local Task API; restore one authenticated sidecar without killing the live app** |
 | ~~**BUG-1974**~~ | **P0** | ✅ **DONE — Electron 1.4.283 resolves hidden, pinned, and Canvas task actions through canonical task identity instead of filtered or copied state** |
+| **BUG-1975** | **P0** | 🔄 **Catalog completion and reopen must remain reachable under every filter transition; packaged Electron proof remains** |
 | **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
 | **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
 | **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |

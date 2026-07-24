@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "flowstate-task-consistency-matrix-v2",
+  "schemaVersion": "flowstate-task-consistency-matrix-v3",
   "requiredMutations": [
     "create",
     "edit-metadata",
@@ -199,6 +199,48 @@
     "large-inventory-pagination",
     "durable-intent-before-success"
   ],
+  "requiredIssueSignals": [
+    "BUG-1973",
+    "BUG-1975",
+    "TASK-1944",
+    "TASK-1945",
+    "TASK-1947",
+    "TASK-1952",
+    "TASK-1956",
+    "TASK-1957",
+    "TASK-1960",
+    "TASK-1961",
+    "TASK-1962",
+    "TASK-1963",
+    "BUG-1913",
+    "BUG-1724",
+    "BUG-1737",
+    "BUG-1743",
+    "BUG-1771",
+    "BUG-1807",
+    "BUG-1808"
+  ],
+  "requiredIssueMappings": {
+    "BUG-1973": ["local-api-sidecar-cancel-quit-recovery-after-replay"],
+    "BUG-1975": ["filtered-status-transition-and-reopen-reachability"],
+    "TASK-1944": ["canonical-operation-receipt-sequence-and-inventory-contract"],
+    "TASK-1945": ["canonical-operation-receipt-sequence-and-inventory-contract"],
+    "TASK-1947": ["canonical-operation-receipt-sequence-and-inventory-contract"],
+    "TASK-1952": ["auth-shell-and-task-visibility-after-update-restart"],
+    "TASK-1956": ["canonical-operation-receipt-sequence-and-inventory-contract"],
+    "TASK-1957": ["canonical-operation-receipt-sequence-and-inventory-contract"],
+    "TASK-1960": ["canonical-operation-receipt-sequence-and-inventory-contract"],
+    "TASK-1961": ["canonical-operation-receipt-sequence-and-inventory-contract"],
+    "TASK-1962": ["canonical-operation-receipt-sequence-and-inventory-contract"],
+    "TASK-1963": ["canonical-operation-receipt-sequence-and-inventory-contract"],
+    "BUG-1913": ["silent-write-drop-detection-and-recovery"],
+    "BUG-1724": ["view-lifecycle-warning-and-action-survival"],
+    "BUG-1737": ["recurring-destructive-lifecycle-chain-integrity"],
+    "BUG-1743": ["pwa-offline-readback-cache-integrity"],
+    "BUG-1771": ["canvas-geometry-and-membership-durability"],
+    "BUG-1807": ["canvas-boot-load-group-viewport-and-lock-fidelity"],
+    "BUG-1808": ["context-menu-due-date-and-instance-repair"]
+  },
   "historyAudit": {
     "reviewedThrough": "2026-07-24",
     "sources": ["docs/MASTER_PLAN.md", "git log --all", "tests"],
@@ -227,7 +269,7 @@
       },
       {
         "id": "canvas-geometry-membership-and-cache",
-        "issueSignals": ["BUG-1804", "BUG-1800", "BUG-1796", "BUG-1792", "BUG-1781", "BUG-1782", "BUG-1780", "BUG-1776", "BUG-1732", "BUG-1736", "BUG-1899", "BUG-1900", "BUG-1902", "BUG-1910", "BUG-1912"],
+        "issueSignals": ["BUG-1804", "BUG-1800", "BUG-1796", "BUG-1792", "BUG-1781", "BUG-1782", "BUG-1780", "BUG-1776", "BUG-1732", "BUG-1736", "BUG-1771", "BUG-1807", "BUG-1808", "BUG-1899", "BUG-1900", "BUG-1902", "BUG-1910", "BUG-1912"],
         "vectorIds": ["canvas-geometry-and-membership-durability", "bulk-and-hidden-selection-consistency", "canvas-boot-load-group-viewport-and-lock-fidelity"]
       },
       {
@@ -257,8 +299,8 @@
       },
       {
         "id": "local-api-and-external-contract-drift",
-        "issueSignals": ["TASK-1797", "TASK-1928", "TASK-1929", "BUG-1933", "BUG-1965"],
-        "vectorIds": ["local-api-canonical-client-contract-parity", "create-existence-readback", "pwa-service-worker-contract-skew", "pwa-offline-readback-cache-integrity"]
+        "issueSignals": ["TASK-1797", "TASK-1928", "TASK-1929", "BUG-1933", "BUG-1965", "TASK-1944", "TASK-1945", "TASK-1947", "TASK-1956", "TASK-1957", "TASK-1960", "TASK-1961", "TASK-1962", "TASK-1963"],
+        "vectorIds": ["local-api-canonical-client-contract-parity", "create-existence-readback", "pwa-service-worker-contract-skew", "pwa-offline-readback-cache-integrity", "canonical-operation-receipt-sequence-and-inventory-contract"]
       },
       {
         "id": "field-completeness-and-editor-recoverability",
@@ -272,7 +314,7 @@
       },
       {
         "id": "runtime-boundary-and-sidecar-recovery",
-        "issueSignals": ["BUG-1870"],
+        "issueSignals": ["BUG-1870", "BUG-1973"],
         "vectorIds": ["local-api-sidecar-cancel-quit-recovery-after-replay", "auth-shell-and-task-visibility-after-update-restart", "canvas-right-click-completion-noop-and-retry"]
       },
       {
@@ -282,8 +324,18 @@
       },
       {
         "id": "quick-action-semantic-and-feedback-regressions",
-        "issueSignals": ["BUG-1907", "BUG-1936", "BUG-1938"],
-        "vectorIds": ["quick-sort-postpone-state-visibility-and-idempotency", "quick-action-visible-outcome-and-retry"]
+        "issueSignals": ["BUG-1907", "BUG-1936", "BUG-1938", "BUG-1975"],
+        "vectorIds": ["quick-sort-postpone-state-visibility-and-idempotency", "quick-action-visible-outcome-and-retry", "filtered-status-transition-and-reopen-reachability"]
+      },
+      {
+        "id": "legacy-view-and-write-lifecycle-regressions",
+        "issueSignals": ["BUG-1913", "BUG-1724", "BUG-1743"],
+        "vectorIds": ["silent-write-drop-detection-and-recovery", "pwa-offline-readback-cache-integrity", "view-lifecycle-warning-and-action-survival"]
+      },
+      {
+        "id": "electron-auth-hydration-and-complete-inventory",
+        "issueSignals": ["TASK-1952"],
+        "vectorIds": ["auth-shell-and-task-visibility-after-update-restart", "canonical-operation-receipt-sequence-and-inventory-contract"]
       }
     ]
   },
@@ -1734,6 +1786,54 @@
         "tests/unit/composables/useBackupRestoreDatabase.test.ts",
         "scripts/db/verify-atomic-backup-restore.sql"
       ],
+      "liveEvidence": []
+    },
+    {
+      "id": "filtered-status-transition-and-reopen-reachability",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["selection-and-filter-scope", "identity-and-field-mapping", "write-failure-visibility", "realtime-gap-recovery"],
+      "mutations": ["complete", "reopen", "change-status", "undo", "redo"],
+      "surfaces": ["catalog", "board", "canvas", "all-views"],
+      "states": ["visible", "filtered-hidden", "stale-snapshot", "offline", "reconnecting", "cross-client", "renderer-reloaded", "electron-restarted"],
+      "layers": ["renderer-component", "renderer-selection", "renderer-store", "sync-queue", "supabase-persistence", "supabase-realtime"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "canonical-operation-receipt-sequence-and-inventory-contract",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["external-contract-drift", "queue-ordering-and-replay", "realtime-gap-recovery", "concurrent-conflict-resolution", "workspace-scope-isolation", "write-failure-visibility"],
+      "mutations": ["create", "edit-metadata", "change-status", "complete", "done-for-now", "subtask-change", "import-external"],
+      "surfaces": ["local-task-api", "external-client", "ai-actions", "task-inventory", "electron", "all-views"],
+      "states": ["server-committed-unacked", "concurrent-write", "realtime-dropped", "electron-restarted", "auth-expired", "scope-transition", "large-inventory"],
+      "layers": ["local-task-api", "sidecar-process", "canonical-receipt", "canonical-change-log", "signed-transaction-boundary", "task-inventory", "pagination", "supabase-persistence"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "silent-write-drop-detection-and-recovery",
+      "severity": "critical",
+      "status": "open",
+      "failureClasses": ["write-failure-visibility", "queue-ordering-and-replay", "auth-expiry-and-recovery", "cache-corruption-and-stale-snapshots", "realtime-gap-recovery"],
+      "mutations": ["edit-metadata", "complete", "reopen", "delete", "move", "schedule"],
+      "surfaces": ["all-views", "electron", "supabase", "task-inventory"],
+      "states": ["auth-expired", "offline", "reconnecting", "server-committed-unacked", "renderer-reloaded", "electron-restarted", "stale-snapshot"],
+      "layers": ["renderer-store", "sync-queue", "sync-transport", "auth-storage", "supabase-persistence", "task-inventory"],
+      "automatedEvidence": [],
+      "liveEvidence": []
+    },
+    {
+      "id": "view-lifecycle-warning-and-action-survival",
+      "severity": "high",
+      "status": "open",
+      "failureClasses": ["identity-and-field-mapping", "write-failure-visibility", "process-lifecycle"],
+      "mutations": ["create", "edit-metadata", "complete", "reopen", "delete"],
+      "surfaces": ["all-views", "pwa", "electron"],
+      "states": ["visible", "renderer-reloaded", "electron-restarted", "update-activating"],
+      "layers": ["renderer-component", "renderer-store", "live-process", "electron-package"],
+      "automatedEvidence": [],
       "liveEvidence": []
     }
   ]

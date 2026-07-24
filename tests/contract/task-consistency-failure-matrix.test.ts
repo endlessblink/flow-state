@@ -24,6 +24,8 @@ interface FailureMatrix {
   requiredLayers: string[]
   requiredFailureClasses: string[]
   requiredDataGuarantees: string[]
+  requiredIssueSignals: string[]
+  requiredIssueMappings: Record<string, string[]>
   historyAudit: {
     reviewedThrough: string
     sources: string[]
@@ -116,7 +118,7 @@ describe('cardinal task consistency failure matrix', () => {
     const coveredLayers = new Set(matrix.vectors.flatMap(vector => vector.layers))
     const coveredFailureClasses = new Set(matrix.vectors.flatMap(vector => vector.failureClasses))
 
-    expect(matrix.schemaVersion).toBe('flowstate-task-consistency-matrix-v2')
+    expect(matrix.schemaVersion).toBe('flowstate-task-consistency-matrix-v3')
     expect([...matrix.requiredMutations].sort()).toEqual([...coveredMutations].sort())
     expect([...matrix.requiredStates].sort()).toEqual([...coveredStates].sort())
     expect([...matrix.requiredSurfaces].sort()).toEqual([...coveredSurfaces].sort())
@@ -194,6 +196,32 @@ describe('cardinal task consistency failure matrix', () => {
       !existsSync(resolve(process.cwd(), path))
     ))).toEqual([])
     expect(missingVectors).toEqual([])
+  })
+
+  it('keeps every trust-critical historical issue linked to an executable vector', () => {
+    const matrix = loadMatrix()
+    const vectorIds = new Set(matrix.vectors.map(vector => vector.id))
+    const masterPlan = readFileSync(resolve(process.cwd(), 'docs/MASTER_PLAN.md'), 'utf8')
+    const programStart = masterPlan.indexOf('### TASK-1943:')
+    const programEnd = masterPlan.indexOf('\n### ', programStart + 1)
+    const openProgramSignals = [...masterPlan.slice(programStart, programEnd).matchAll(
+      /^- \[ \] \*\*((?:BUG|TASK)-\d+)/gm
+    )].map(match => match[1])
+
+    const unlinked = matrix.requiredIssueSignals.flatMap(issueSignal => {
+      const linkedVectors = matrix.requiredIssueMappings[issueSignal] || []
+      if (linkedVectors.length === 0) return [`${issueSignal}: no explicit mapping`]
+      const missingVectors = linkedVectors.filter(vectorId => !vectorIds.has(vectorId))
+      return missingVectors.map(vectorId => `${issueSignal}: missing ${vectorId}`)
+    })
+
+    expect(new Set(matrix.requiredIssueSignals).size).toBe(matrix.requiredIssueSignals.length)
+    expect(matrix.requiredIssueSignals.length).toBeGreaterThanOrEqual(15)
+    expect(Object.keys(matrix.requiredIssueMappings).sort()).toEqual(
+      [...matrix.requiredIssueSignals].sort()
+    )
+    expect(openProgramSignals.filter(signal => !matrix.requiredIssueSignals.includes(signal))).toEqual([])
+    expect(unlinked).toEqual([])
   })
 
   it('does not call a vector automated without executable evidence', () => {

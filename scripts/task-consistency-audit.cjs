@@ -5,6 +5,7 @@ const { resolve } = require('node:path')
 
 const matrixPath = resolve(process.cwd(), 'docs/process/task-consistency-failure-matrix.json')
 const matrix = JSON.parse(readFileSync(matrixPath, 'utf8'))
+const masterPlan = readFileSync(resolve(process.cwd(), 'docs/MASTER_PLAN.md'), 'utf8')
 const openVectors = matrix.vectors.filter(vector => vector.status === 'open')
 
 const dimensionDefinitions = {
@@ -35,9 +36,69 @@ dimensionCoverage.dataGuarantees = {
 }
 
 const vectorIds = matrix.vectors.map(vector => vector.id)
+const vectorIdSet = new Set(vectorIds)
+const vectorsById = new Map(matrix.vectors.map(vector => [vector.id, vector]))
 const duplicateVectorIds = [...new Set(vectorIds.filter((id, index) => vectorIds.indexOf(id) !== index))]
+const hasRequiredIssueSignals = Array.isArray(matrix.requiredIssueSignals)
+const hasRequiredIssueMappings = (
+  matrix.requiredIssueMappings
+  && typeof matrix.requiredIssueMappings === 'object'
+  && !Array.isArray(matrix.requiredIssueMappings)
+)
+const requiredIssueSignals = hasRequiredIssueSignals ? matrix.requiredIssueSignals : []
+const requiredIssueMappings = hasRequiredIssueMappings ? matrix.requiredIssueMappings : {}
+const mappingIssueSignals = Object.keys(requiredIssueMappings)
+const programStart = masterPlan.indexOf('### TASK-1943:')
+const programEnd = masterPlan.indexOf('\n### ', programStart + 1)
+const openProgramSignals = [...masterPlan.slice(programStart, programEnd).matchAll(
+  /^- \[ \] \*\*((?:BUG|TASK)-\d+)/gm
+)].map(match => match[1])
+const unrequiredProgramSignals = openProgramSignals.filter(
+  issueSignal => !requiredIssueSignals.includes(issueSignal)
+)
+const missingIssueSignals = requiredIssueSignals.filter(issueSignal => {
+  const mappedVectorIds = requiredIssueMappings[issueSignal]
+  return !Array.isArray(mappedVectorIds)
+    || mappedVectorIds.length === 0
+    || mappedVectorIds.some(vectorId => !vectorIdSet.has(vectorId))
+})
+const evidenceBackedIssueSignals = requiredIssueSignals.filter(issueSignal => {
+  const mappedVectorIds = requiredIssueMappings[issueSignal] || []
+  return mappedVectorIds.length > 0 && mappedVectorIds.every(vectorId => {
+    const vector = vectorsById.get(vectorId)
+    return vector && (vector.automatedEvidence.length > 0 || vector.liveEvidence.length > 0)
+  })
+})
+const liveProvenIssueSignals = requiredIssueSignals.filter(issueSignal => {
+  const mappedVectorIds = requiredIssueMappings[issueSignal] || []
+  return mappedVectorIds.length > 0 && mappedVectorIds.every(
+    vectorId => vectorsById.get(vectorId)?.status === 'live-proven'
+  )
+})
+const issueCoverage = {
+  required: requiredIssueSignals.length,
+  tracked: requiredIssueSignals.length - missingIssueSignals.length,
+  evidenceBacked: evidenceBackedIssueSignals.length,
+  liveProven: liveProvenIssueSignals.length,
+  missingTracking: missingIssueSignals,
+  unproven: requiredIssueSignals.filter(issueSignal => !liveProvenIssueSignals.includes(issueSignal)),
+}
 const structuralErrors = [
+  ...(matrix.schemaVersion === 'flowstate-task-consistency-matrix-v3' && !hasRequiredIssueSignals
+    ? ['v3 matrix is missing requiredIssueSignals']
+    : []),
+  ...(matrix.schemaVersion === 'flowstate-task-consistency-matrix-v3' && !hasRequiredIssueMappings
+    ? ['v3 matrix is missing requiredIssueMappings']
+    : []),
+  ...requiredIssueSignals
+    .filter((issueSignal, index) => requiredIssueSignals.indexOf(issueSignal) !== index)
+    .map(issueSignal => `duplicate required issue: ${issueSignal}`),
+  ...mappingIssueSignals
+    .filter(issueSignal => !requiredIssueSignals.includes(issueSignal))
+    .map(issueSignal => `mapping exists for non-required issue: ${issueSignal}`),
   ...duplicateVectorIds.map(id => `duplicate vector id: ${id}`),
+  ...unrequiredProgramSignals.map(issueSignal => `open trust-program issue is not required: ${issueSignal}`),
+  ...missingIssueSignals.map(issueSignal => `unlinked required issue: ${issueSignal}`),
   ...Object.entries(dimensionCoverage).flatMap(([dimension, coverage]) =>
     coverage.missing.map(value => `uncovered ${dimension}: ${value}`)
   ),
@@ -72,6 +133,7 @@ const report = {
   automatedOnly: matrix.vectors.filter(vector => vector.status === 'automated').length,
   structuralErrors,
   dimensionCoverage,
+  issueCoverage,
   vectors: matrix.vectors
 }
 

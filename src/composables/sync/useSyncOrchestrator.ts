@@ -722,6 +722,23 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         const isQueuedPermanentTaskDelete = entityType === 'task' && payload.permanentDelete === true
 
         if (isQueuedPermanentTaskDelete) {
+          // A queued hard delete can remain pending across reloads or another
+          // client's recurrence scan. Quarantine the row first so it cannot
+          // recreate the series while permanent deletion is retrying.
+          const quarantineResult = await supabase!
+            .from(tableName)
+            .update({
+              recurrence_rule: null,
+              is_deleted: true,
+              deleted_at: new Date().toISOString(),
+            })
+            .eq('id', entityId)
+            .select()
+
+          if (quarantineResult.error) {
+            throw quarantineResult.error
+          }
+
           result = await supabase!
             .from(tableName)
             .delete()
@@ -759,9 +776,16 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         const softDeleteTables: SyncEntityType[] = ['task', 'group', 'project', 'lane']
 
         if (softDeleteTables.includes(entityType)) {
+          const recurrenceStopPatch = entityType === 'task' && payload.recurrence_rule === null
+            ? { recurrence_rule: null }
+            : {}
           result = await supabase!
             .from(tableName)
-            .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+            .update({
+              ...recurrenceStopPatch,
+              is_deleted: true,
+              deleted_at: new Date().toISOString(),
+            })
             .eq('id', entityId)
             .select()
         } else {

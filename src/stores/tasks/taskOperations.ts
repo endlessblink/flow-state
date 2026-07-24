@@ -1123,7 +1123,11 @@ export function useTaskOperations(
         }
     }
 
-    const deleteTask = async (taskId: string, source: string = 'unknown') => {
+    const deleteTask = async (
+        taskId: string,
+        source: string = 'unknown',
+        durableDeletePatch: Record<string, unknown> = {},
+    ) => {
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
         if (index === -1) {
             console.warn(`⚠️ Task not found for deletion: ${taskId} (source: ${source})`)
@@ -1154,7 +1158,7 @@ export function useTaskOperations(
                 entityType: 'task',
                 operation: 'delete',
                 entityId: taskId,
-                payload: { id: taskId },
+                payload: { id: taskId, ...durableDeletePatch },
                 baseVersion: deletedTask.positionVersion || 0
             })
         } catch (queueError) {
@@ -1200,7 +1204,10 @@ export function useTaskOperations(
         // BUG-1508: Clear recurrenceRule on all chain members BEFORE hard-deleting
         // so the recurrence scheduler cannot find a done ancestor and recreate this task.
         logPermanentDeleteTrace(taskId, 'store.before-clear-recurrence')
-        await clearRecurrenceChain(taskId)
+        await clearRecurrenceChain(taskId, {
+            throwOnPersistenceFailure: true,
+            includeCurrent: false,
+        })
         logPermanentDeleteTrace(taskId, 'store.after-clear-recurrence')
 
         const deletedTask = _rawTasks.value[index]
@@ -1299,7 +1306,13 @@ export function useTaskOperations(
     // (including the task itself). Safe to call even when task has no recurrenceRule.
     // Used by permanentlyDeleteTask and stopRecurrence to prevent the scheduler
     // from finding a done ancestor with recurrenceRule set and recreating the task.
-    const clearRecurrenceChain = async (taskId: string) => {
+    const clearRecurrenceChain = async (
+        taskId: string,
+        options: {
+            throwOnPersistenceFailure?: boolean
+            includeCurrent?: boolean
+        } = {},
+    ) => {
         const task = _rawTasks.value.find(t => t.id === taskId)
         if (!task || !task.recurrenceRule) return
 
@@ -1309,8 +1322,14 @@ export function useTaskOperations(
         )
 
         for (const member of chainMembers) {
+            if (options.includeCurrent === false && member.id === taskId) continue
             if (member.recurrenceRule) {
-                await updateTask(member.id, { recurrenceRule: null as unknown as undefined })
+                await updateTask(
+                    member.id,
+                    { recurrenceRule: null as unknown as undefined },
+                    'USER',
+                    { throwOnPersistenceFailure: options.throwOnPersistenceFailure },
+                )
             }
         }
     }
@@ -1382,18 +1401,32 @@ export function useTaskOperations(
      * Stop all future occurrences: clear recurrenceRule on every task in the
      * chain, then delete the current task.
      */
+    const recurringStopInFlight = new Set<string>()
     const stopRecurrence = async (taskId: string) => {
-        const task = _rawTasks.value.find(t => t.id === taskId)
-        if (!task || !task.recurrenceRule) {
-            await deleteTask(taskId, 'stopRecurrence')
+        if (recurringStopInFlight.has(taskId)) {
+            console.warn(`[RECURRENCE-STOP] Already in flight for ${taskId}, skipping duplicate request`)
             return
         }
 
-        // BUG-1508: Use shared helper to clear the entire chain (includes current task)
-        await clearRecurrenceChain(taskId)
+        recurringStopInFlight.add(taskId)
+        try {
+            const task = _rawTasks.value.find(t => t.id === taskId)
+            if (!task || !task.recurrenceRule) {
+                await deleteTask(taskId, 'stopRecurrence')
+                return
+            }
 
-        // Delete the current task
-        await deleteTask(taskId, 'stopRecurrence:final')
+            // Never delete the live occurrence unless every chain update crossed a
+            // durable persistence boundary. Otherwise an older recurring ancestor
+            // can recreate the supposedly stopped series after reload.
+            await clearRecurrenceChain(taskId, {
+                throwOnPersistenceFailure: true,
+                includeCurrent: false,
+            })
+            await deleteTask(taskId, 'stopRecurrence:final', { recurrence_rule: null })
+        } finally {
+            recurringStopInFlight.delete(taskId)
+        }
     }
 
     // BUG-025 FIX: Atomic local bulk delete; remote sync is queued per task.

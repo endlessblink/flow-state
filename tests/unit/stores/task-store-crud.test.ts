@@ -481,6 +481,102 @@ describe('Task Store — CRUD', () => {
     })
   })
 
+  it('does not delete a recurring task when clearing its recurrence chain cannot be persisted', async () => {
+    const store = useTaskStore()
+    const parent = await store.createTask({
+      title: 'Rejected recurrence ancestor',
+      status: 'done',
+      dueDate: '2026-07-23',
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+    const task = await store.createTask({
+      title: 'Rejected recurrence stop',
+      status: 'todo',
+      dueDate: '2026-07-24',
+      recurrenceParentId: parent.id,
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+    mockEnqueue.mockRejectedValueOnce(new Error('durable queue unavailable'))
+    mockSaveTasks.mockRejectedValueOnce(new Error('direct persistence unavailable'))
+
+    await expect(store.stopRecurrence(task.id)).rejects.toThrow('direct persistence unavailable')
+
+    expect(store._rawTasks.find(candidate => candidate.id === task.id)).toMatchObject({
+      id: task.id,
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+    expect(mockEnqueue).toHaveBeenCalledTimes(3)
+  })
+
+  it('ignores a repeated recurrence stop while the first durable change is in flight', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Double recurrence stop',
+      status: 'todo',
+      dueDate: '2026-07-23',
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+    let rejectFirstUpdate!: () => void
+    mockEnqueue.mockImplementationOnce(async () => {
+      await new Promise<void>(resolve => {
+        rejectFirstUpdate = resolve
+      })
+      throw new Error('durable queue unavailable')
+    })
+
+    const firstStop = store.stopRecurrence(task.id)
+    await vi.waitFor(() => expect(mockEnqueue).toHaveBeenCalledTimes(2))
+    const secondStop = store.stopRecurrence(task.id)
+    rejectFirstUpdate()
+
+    await expect(firstStop).rejects.toThrow('durable queue unavailable')
+    await expect(secondStop).resolves.toBeUndefined()
+    expect(store._rawTasks.find(candidate => candidate.id === task.id)?.recurrenceRule).toBeTruthy()
+    expect(mockEnqueue).toHaveBeenCalledTimes(2)
+  })
+
+  it('restores recurrence when the final delete cannot be durably queued', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Rejected final recurrence delete',
+      status: 'todo',
+      dueDate: '2026-07-23',
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+    mockEnqueue.mockRejectedValueOnce(new Error('delete queue unavailable'))
+
+    await expect(store.stopRecurrence(task.id)).rejects.toThrow('delete queue unavailable')
+
+    expect(store._rawTasks.find(candidate => candidate.id === task.id)).toMatchObject({
+      id: task.id,
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+  })
+
   it('updates task priority', async () => {
     const store = useTaskStore()
     const task = await store.createTask({ title: 'Priority Test', priority: 'low' })

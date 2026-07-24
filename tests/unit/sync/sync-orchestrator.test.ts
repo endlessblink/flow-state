@@ -1746,14 +1746,58 @@ describe('Field name mapping (BUG-1211 regression prevention)', () => {
     await vi.advanceTimersByTimeAsync(0)
     await sync.forceSync()
 
+    expect(tasksChain.update).toHaveBeenCalledWith(expect.objectContaining({
+      recurrence_rule: null,
+      is_deleted: true,
+      deleted_at: expect.any(String),
+    }))
     expect(tasksChain.delete).toHaveBeenCalledTimes(1)
-    expect(tasksChain.update).not.toHaveBeenCalledWith(expect.objectContaining({ is_deleted: true }))
     expect(tombstoneChain.upsert).toHaveBeenCalledWith(expect.objectContaining({
       user_id: 'user-001',
       entity_type: 'task',
       entity_id: op.entityId,
       expires_at: null
     }), { onConflict: 'entity_type,entity_id,user_id' })
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id)
+  })
+
+  it('persists recurrence stop and soft delete as one queued task mutation', async () => {
+    const op = makeOp({
+      id: 1853,
+      operation: 'delete',
+      entityType: 'task',
+      entityId: 'task-stop-recurring',
+      payload: { id: 'task-stop-recurring', recurrence_rule: null },
+      userId: 'user-001',
+    })
+
+    writeQueueMocks.getPendingOperations
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'Single operation',
+    })
+
+    const tasksChain: Record<string, any> = {}
+    tasksChain.update = vi.fn().mockReturnValue(tasksChain)
+    tasksChain.eq = vi.fn().mockReturnValue(tasksChain)
+    tasksChain.select = vi.fn().mockReturnValue({
+      data: [{ id: op.entityId, recurrence_rule: null, is_deleted: true }],
+      error: null,
+    })
+    supabaseMock.fromMock.mockReturnValue(tasksChain)
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(tasksChain.update).toHaveBeenCalledWith(expect.objectContaining({
+      recurrence_rule: null,
+      is_deleted: true,
+      deleted_at: expect.any(String),
+    }))
     expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id)
   })
 

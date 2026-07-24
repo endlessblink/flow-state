@@ -561,7 +561,7 @@
       "states": ["visible", "stale-snapshot", "offline", "reconnecting", "renderer-reloaded", "electron-restarted", "cross-client"],
       "layers": ["renderer-component", "renderer-store", "sync-queue", "canonical-change-log", "indexeddb-read-cache", "supabase-persistence"],
       "automatedEvidence": ["src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts", "tests/e2e/canvas-sync-regressions.spec.ts", "tests/unit/scripts/daily-regression-hunt.test.ts"],
-      "liveEvidence": []
+      "liveEvidence": ["2026-07-24: authenticated Chromium R25 used the visible Canvas right-click Mark as Done action on a non-recurring task, persisted canonical done state, converged in an independent client, and retained done state after renderer reload in 18.7 seconds. Recurring user-data shape, rejected-write recovery, offline replay, and packaged Electron restart remain open."]
     },
     {
       "id": "board-offline-edit-delete-entrypoint-parity",
@@ -669,7 +669,7 @@
       "states": ["offline", "reconnecting", "cross-client"],
       "layers": ["renderer-component", "renderer-store", "sync-queue", "supabase-persistence"],
       "automatedEvidence": ["tests/unit/services/offline/queue-processor-lock.test.ts", "tests/unit/services/offline/canonical-write-queue.test.ts", "tests/unit/sync/sync-orchestrator.test.ts", "tests/e2e/canvas-sync-regressions.spec.ts"],
-      "liveEvidence": ["2026-07-23: authenticated Chromium R24 kept two FlowState Board windows open in one browser profile, performed a visible right-click title edit while offline, reconnected both windows together, and proved canonical_revision advanced exactly once while the title converged in an independent client. Cross-window create, completion, fallback platforms, mixed-version live windows, and packaged Electron remain open."]
+      "liveEvidence": ["2026-07-24: authenticated Chromium R24 kept two FlowState Board windows open in one browser profile, performed a visible right-click title edit while offline, proved the second open window adopted the queued metadata without overwriting its geometry, reconnected both windows together, and proved canonical_revision advanced exactly once while an independent client converged. Cross-window create, completion, fallback platforms, mixed-version live windows, and packaged Electron remain open."]
     },
     {
       "id": "unresolved-write-age-retention",

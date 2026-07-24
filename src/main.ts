@@ -137,6 +137,9 @@ async function initializeApp() {
   });
 
   app.mount('#app')
+
+  const { getCrossTabSync } = await import('./composables/useCrossTabSync')
+  getCrossTabSync().initialize()
 }
 
 // Start the app

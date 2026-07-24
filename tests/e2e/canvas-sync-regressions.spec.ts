@@ -793,6 +793,67 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     }, task.id)).toBe('done')
   })
 
+  test('R25 - Canvas right-click Mark as Done persists, converges, and survives reload', async ({ clientA, clientB }) => {
+    await gotoCanvasReady(clientA)
+    await gotoCanvasReady(clientB)
+
+    const task = ROOT_TASKS[0]
+    await clientA.locator('.vue-flow__transformationpane').evaluate((pane: HTMLElement) => {
+      pane.style.transform = 'translate(-1700px, -1700px) scale(1)'
+    })
+    const taskNode = clientA.locator(`.task-node[data-task-id="${task.id}"]`)
+    await expect(taskNode).toBeVisible()
+    await expect.poll(async () => {
+      const box = await taskNode.boundingBox()
+      const viewport = clientA.viewportSize()
+      return Boolean(
+        box
+        && viewport
+        && box.x >= 0
+        && box.y >= 0
+        && box.x + box.width <= viewport.width
+        && box.y + box.height <= viewport.height
+      )
+    }).toBe(true)
+    await taskNode.click({ button: 'right' })
+    await clientA.getByText('Mark as Done', { exact: true }).click()
+
+    await expect(clientA.getByText('Failed to complete task', { exact: true })).toHaveCount(0)
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, task.id)).toBe('done')
+
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,status,is_deleted')
+        .eq('id', task.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: task.id,
+        status: 'done',
+        is_deleted: false,
+      }))
+    }).toPass({ timeout: 20_000 })
+
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, task.id), { timeout: 20_000 }).toBe('done')
+
+    await clientA.reload()
+    await gotoCanvasReady(clientA)
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, task.id)).toBe('done')
+  })
+
   test('R15 - Canvas next-occurrence completion works offline, commits once, converges, and survives reload', async ({ clientA, clientB }) => {
     const clientAErrors: string[] = []
     const clientBLogs: string[] = []
@@ -1137,7 +1198,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     }, task.id)).toBe(editedTitle)
   })
 
-  test('R24 - two open windows submit one offline Board edit exactly once', async ({ clientA, clientB }) => {
+  test('R24 - two open windows replay one shared offline Board edit exactly once', async ({ clientA, clientB }) => {
     await gotoBoardReady(clientA)
     await gotoBoardReady(clientB)
     const competingWindow = await clientA.context().newPage()
@@ -1164,6 +1225,11 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
     await editModal.locator('input[placeholder="Task title"]').fill(editedTitle)
     await editModal.getByText('Save Changes', { exact: true }).click()
     await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.title ?? null
+    }, task.id)).toBe(editedTitle)
+    await expect.poll(async () => competingWindow.evaluate((taskId) => {
       const root = document.querySelector('#app') as any
       const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
       return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.title ?? null

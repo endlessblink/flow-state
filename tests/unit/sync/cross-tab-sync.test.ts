@@ -213,6 +213,28 @@ describe('useCrossTabSync — handleTaskOperation', () => {
     expect(task.title).toBe('Updated While Hidden')
   })
 
+  it('maps durable snake-case queue payloads into the receiving window task shape', async () => {
+    const task = makeTask({ dueDate: '2026-07-24' })
+    mockRawTasks.value.push(task)
+
+    await fireTaskOperation({
+      operation: 'update',
+      taskId: task.id,
+      taskData: {
+        title: 'Offline edit from another window',
+        due_date: '2026-07-30',
+        updated_at: '2026-07-24T12:00:00.000Z',
+        position_version: 0,
+      },
+      workspaceId: null,
+      timestamp: Date.now(),
+    })
+
+    expect(task.title).toBe('Offline edit from another window')
+    expect(task.dueDate).toBe('2026-07-30')
+    expect(task).not.toHaveProperty('due_date')
+  })
+
   // ── Update: manualOperationInProgress ──
 
   it('blocks update when manualOperationInProgress is true', async () => {
@@ -260,7 +282,7 @@ describe('useCrossTabSync — handleTaskOperation', () => {
 
   // ── Update: version-aware geometry guard ──
 
-  it('blocks update with stale positionVersion', async () => {
+  it('keeps newer metadata while refusing stale geometry', async () => {
     const task = makeTask({ positionVersion: 5 })
     mockTasks.value.push(task)
     mockRawTasks.value.push(task)
@@ -276,7 +298,8 @@ describe('useCrossTabSync — handleTaskOperation', () => {
       timestamp: Date.now(),
     })
 
-    expect(task.title).toBe('Test Task') // Blocked by version check
+    expect(task.title).toBe('Stale Position')
+    expect(task.positionVersion).toBe(5)
   })
 
   // ── Update: geometry stripping ──

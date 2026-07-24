@@ -1340,6 +1340,21 @@ export function useSyncOrchestrator() {
       console.debug(`📝 [SYNC] Queued: ${operation.entityType}:${operation.operation} ${operation.entityId.slice(0, 8)}`)
     }
 
+    if (operation.entityType === 'task') {
+      try {
+        const { getCrossTabSync } = await import('@/composables/useCrossTabSync')
+        await getCrossTabSync().broadcastTaskOperation({
+          operation: operation.operation,
+          taskId: operation.entityId,
+          taskData: operation.payload,
+          timestamp: Date.now(),
+          workspaceId,
+        })
+      } catch (error) {
+        console.warn('[CROSS-TAB] Durable task intent queued, but optimistic broadcast failed:', error)
+      }
+    }
+
     // Update status
     await updateStatus()
 

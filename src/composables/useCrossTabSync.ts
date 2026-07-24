@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useBroadcastChannelSync } from './sync/useBroadcastChannelSync'
 import { useTimerLeaderElection } from './sync/useTimerLeaderElection'
 import { CROSS_TAB_DEDUP_TIMEOUT_MS } from '@/config/timing'
+import { applyPendingTaskPatch } from '@/services/offline/pendingWritePatch'
 
 // Types for cross-tab messages
 export interface CrossTabMessage {
@@ -120,26 +121,35 @@ export function useCrossTabSync() {
             if (taskStore.manualOperationInProgress) return
 
             // Prevent stale data from overwriting newer data
-            const incomingTimestamp = (operation.taskData as TaskUpdateData).updatedAt
+            const incomingData = operation.taskData as TaskUpdateData & Record<string, unknown>
+            const incomingTimestamp = incomingData.updatedAt ?? incomingData.updated_at as string | Date | undefined
             if (incomingTimestamp && task.updatedAt &&
                 new Date(task.updatedAt) > new Date(incomingTimestamp)) {
               return
             }
 
             // CRITICAL FIX: Version-aware update - never overwrite geometry from cross-tab
-            const incomingVersion = (operation.taskData as TaskUpdateData).positionVersion ?? 0
+            const incomingVersion = incomingData.positionVersion
+              ?? (typeof incomingData.position_version === 'number' ? incomingData.position_version : 0)
             const localVersion = task.positionVersion ?? 0
 
-            // Only accept if incoming version is newer
+            // Geometry versions only govern geometry. A stale geometry snapshot
+            // must not suppress a newer title/status/due-date mutation.
             if (incomingVersion < localVersion) {
               if (import.meta.env.DEV) {
-                console.log(`[CROSS-TAB] Skipping stale update for ${operation.taskId.slice(0, 8)} (local v${localVersion} > remote v${incomingVersion})`)
+                console.log(`[CROSS-TAB] Keeping local geometry for ${operation.taskId.slice(0, 8)} (local v${localVersion} > remote v${incomingVersion})`)
               }
-              return
             }
 
             // Strip geometry fields from cross-tab sync - geometry should only come from drag handlers
-            const { canvasPosition: _canvasPosition, parentId: _parentId, positionFormat: _positionFormat, ...safeUpdates } = operation.taskData as TaskUpdateData
+            const mappedTask = applyPendingTaskPatch(task, incomingData)
+            const {
+              canvasPosition: _canvasPosition,
+              parentId: _parentId,
+              positionFormat: _positionFormat,
+              positionVersion: _positionVersion,
+              ...safeUpdates
+            } = mappedTask
 
             // Apply only non-geometry updates
             Object.assign(task, safeUpdates)

@@ -39,6 +39,26 @@ function emitUpdaterError(message) {
     if (win)
         win.webContents.send('updater:error', message);
 }
+async function recoverRunningAppAfterAbortedUpdate() {
+    let lockRecovered = false;
+    try {
+        lockRecovered = electron_1.app.requestSingleInstanceLock();
+    }
+    catch (err) {
+        console.error('[Updater] Failed to reacquire the single-instance lock:', err.message);
+    }
+    if (!lockRecovered) {
+        emitUpdaterError('FlowState could not restore its single-instance protection after the update was aborted.');
+    }
+    try {
+        await (0, localApi_1.resumeLocalApiAfterCancelledShutdown)();
+    }
+    catch (err) {
+        const message = 'FlowState could not restore the local task bridge after the update was aborted.';
+        console.error('[Updater]', message, err.message);
+        emitUpdaterError(message);
+    }
+}
 function launchDetachedAppImageInstaller() {
     if (process.platform !== 'linux')
         return null;
@@ -321,7 +341,7 @@ function registerUpdater() {
         // Return from IPC first, then hand off to the updater on the next tick.
         // Calling quitAndInstall() inline from an invoke handler can leave the
         // renderer stuck in a half-dead state while the app is trying to exit.
-        setImmediate(() => {
+        setImmediate(async () => {
             console.log('[Updater] Starting quitAndInstall handoff');
             if (preparedInstaller && !preparedInstaller.isArmed()) {
                 preparedInstaller = null;
@@ -340,6 +360,7 @@ function registerUpdater() {
             }
             if (relaunch.strategy === 'systemd') {
                 emitUpdaterError('The supervised updater handoff was lost; FlowState will remain open.');
+                await recoverRunningAppAfterAbortedUpdate();
                 return;
             }
             const fallbackTimer = setTimeout(() => {
@@ -363,6 +384,7 @@ function registerUpdater() {
                 const message = err.message;
                 console.error('[Updater] quitAndInstall failed:', message);
                 emitUpdaterError(message);
+                await recoverRunningAppAfterAbortedUpdate();
             }
         });
         return true;

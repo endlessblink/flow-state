@@ -162,6 +162,8 @@ const getEventTooltip = (event: CalendarEvent) => {
             v-for="event in day.events"
             :key="event.id"
             class="month-event"
+            :data-task-id="event.taskId"
+            :data-instance-id="event.instanceId || undefined"
             :class="{
               'timer-active-event': currentTaskId === event.taskId,
               'selected': selectedEventIds?.has(event.id),

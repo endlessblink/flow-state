@@ -925,8 +925,10 @@
       "surfaces": ["mobile-today", "mobile-inbox", "pwa"],
       "states": ["offline", "filtered-hidden", "recurring", "renderer-reloaded"],
       "layers": ["mobile-domain", "renderer-store", "sync-queue", "supabase-persistence"],
-      "automatedEvidence": [],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts"],
+      "liveEvidence": [
+        "2026-07-24: authenticated Chromium R27 used a true mobile browser context and the visible Mobile Inbox checkbox while offline, hid the completed row under the active filter, drained the write after reconnect, converged in an independent desktop client, exposed and reopened the completed row through the mobile filter control, and preserved the reopened task after mobile reload. This proves the Mobile Inbox complete/reopen slice only; mobile create, edit, schedule, delete, recurring, Today, Quick Sort, and packaged PWA slices remain open."
+      ]
     },
     {
       "id": "calendar-instance-and-task-truth-convergence",
@@ -937,8 +939,11 @@
       "surfaces": ["calendar", "board", "canvas"],
       "states": ["recurring", "stale-snapshot", "concurrent-write", "clock-shifted"],
       "layers": ["calendar-instance-projection", "recurrence-engine", "renderer-store", "supabase-persistence"],
-      "automatedEvidence": [],
-      "liveEvidence": []
+      "automatedEvidence": ["tests/e2e/canvas-sync-regressions.spec.ts"],
+      "liveEvidence": [
+        "2026-07-24: authenticated Chromium R26 exercised the Calendar day-view event right-click path while offline, completed the task optimistically, drained the canonical write after reconnect, converged in an independent client, reopened the same event through Mark as To Do, and preserved the reopened task after renderer reload.",
+        "2026-07-24: authenticated Chromium R28 exercised Calendar right-click More > Done for now > Next occurrence while offline, advanced the living task once, created exactly one durable completion row after reconnect, converged in a second visible Calendar, removed the old-day living-task event while retaining the completed occurrence, and preserved the advanced recurrence after renderer reload. Calendar move, resize, delete, restore, clock-shift, concurrent-write, and packaged Electron slices remain open."
+      ]
     },
     {
       "id": "canvas-boot-hydration-writer-serialization",

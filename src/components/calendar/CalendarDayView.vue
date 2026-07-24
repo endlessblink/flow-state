@@ -190,6 +190,8 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
             v-show="isTaskPrimarySlot(slot, calEvent)"
             :key="`${calEvent.id}-${slot.slotIndex}`"
             class="slot-task is-primary"
+            :data-task-id="calEvent.taskId"
+            :data-instance-id="calEvent.instanceId || undefined"
             :class="{
               'timer-active-event': currentTaskId === calEvent.taskId,
               'dragging': isDragging && draggedEventId === calEvent.id,

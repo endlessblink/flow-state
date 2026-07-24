@@ -36,6 +36,12 @@ const ROOT_TASKS = [
 const INBOX_TASK = { id: 'd1000000-0000-4000-8000-000000000004', title: 'Sync Regr Inbox 1' }
 const CREATED_TASK = { id: 'd1000000-0000-4000-8000-000000000006', title: 'Absolute Existence Probe' }
 const OFFLINE_TASK = { id: 'd1000000-0000-4000-8000-000000000007', title: 'Offline Reconnect Probe' }
+const CALENDAR_TASK = { id: 'd1000000-0000-4000-8000-000000000009', title: 'Calendar Completion Probe' }
+const MOBILE_TASK = { id: 'd1000000-0000-4000-8000-000000000011', title: 'Mobile Completion Probe' }
+const CALENDAR_RECURRING_TASK = {
+  id: 'd1000000-0000-4000-8000-000000000012',
+  title: 'Calendar Recurring Completion Probe',
+}
 const OFFLINE_RECURRING_TASK = {
   id: 'd1000000-0000-4000-8000-000000000008',
   title: 'Offline Recurring Completion Probe',
@@ -59,6 +65,9 @@ const ALL_IDS = [
   CHILD_TASK.id,
   CREATED_TASK.id,
   OFFLINE_TASK.id,
+  CALENDAR_TASK.id,
+  MOBILE_TASK.id,
+  CALENDAR_RECURRING_TASK.id,
   OFFLINE_RECURRING_TASK.id,
 ]
 
@@ -89,6 +98,35 @@ async function gotoBoardReady(page: Page) {
   await page.waitForSelector('.task-card[data-task-id]', { timeout: 30_000 })
 }
 
+async function gotoCalendarReady(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('flowstate:calendar-view-mode', 'day')
+  })
+  await page.goto('/#/calendar')
+  await page.waitForSelector('.calendar-layout', { timeout: 30_000 })
+}
+
+async function createMobileTasksClient(sourcePage: Page) {
+  const browser = sourcePage.context().browser()
+  if (!browser) throw new Error('Mobile consistency drill requires a browser context')
+  const context = await browser.newContext({
+    storageState: 'tests/.auth/user.json',
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+  await page.addInitScript(() => {
+    localStorage.setItem('flowstate-onboarding-v2', 'true')
+    localStorage.setItem('flowstate-welcome-seen', 'true')
+    localStorage.setItem('flowstate-last-workspace', 'personal')
+  })
+  const origin = new URL(sourcePage.url()).origin
+  await page.goto(`${origin}/#/tasks`)
+  await page.waitForSelector('.mobile-inbox', { timeout: 30_000 })
+  return { context, page }
+}
+
 test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
   // Serial: every test re-seeds the SAME fixed IDs in beforeEach. Under parallel
   // workers two tests would delete/insert the same rows concurrently and flake.
@@ -105,6 +143,7 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
 
     await admin.from('tasks').delete().in('id', ALL_IDS)
     await admin.from('tasks').delete().eq('recurrence_parent_id', OFFLINE_RECURRING_TASK.id)
+    await admin.from('tasks').delete().eq('recurrence_parent_id', CALENDAR_RECURRING_TASK.id)
     await admin.from('tombstones').delete().eq('entity_id', OFFLINE_RECURRING_TASK.id)
     OFFLINE_RECURRING_TASK.id = randomUUID()
     await admin.from('tasks').delete().eq('user_id', userId).eq('title', OFFLINE_QUICK_CREATE_TITLE)
@@ -127,6 +166,46 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       priority: 'medium', is_in_inbox: true, position_version: 1,
     })
     expect(inboxError, `Failed to seed inbox task: ${inboxError?.message}`).toBeNull()
+    const today = new Date()
+    const localToday = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-')
+    const { error: calendarError } = await admin.from('tasks').insert({
+      id: CALENDAR_TASK.id,
+      user_id: userId,
+      title: CALENDAR_TASK.title,
+      status: 'planned',
+      priority: 'medium',
+      due_date: `${localToday}T09:00:00+03:00`,
+      due_time: '09:00',
+      estimated_duration: 30,
+      instances: [{
+        id: 'd1000000-0000-4000-8000-000000000010',
+        taskId: CALENDAR_TASK.id,
+        scheduledDate: localToday,
+        scheduledTime: '09:00',
+        duration: 30,
+        status: 'scheduled',
+      }],
+      is_in_inbox: false,
+      position_version: 1,
+    })
+    expect(calendarError, `Failed to seed calendar task: ${calendarError?.message}`).toBeNull()
+    const { error: mobileError } = await admin.from('tasks').insert({
+      id: MOBILE_TASK.id,
+      user_id: userId,
+      title: MOBILE_TASK.title,
+      status: 'planned',
+      priority: 'medium',
+      due_date: `${localToday}T12:00:00+03:00`,
+      due_time: '12:00',
+      estimated_duration: 15,
+      is_in_inbox: true,
+      position_version: 1,
+    })
+    expect(mobileError, `Failed to seed mobile task: ${mobileError?.message}`).toBeNull()
     // A group with a child task (for the no-vanish delete test)
     const { error: groupError } = await admin.from('groups').insert({
       id: GROUP_ID, user_id: userId, name: 'Regr Group', type: 'custom', color: '#4ECDC4',
@@ -168,12 +247,42 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       position_version: 1,
     })
     expect(recurringError, `Failed to seed recurring task: ${recurringError?.message}`).toBeNull()
+    const { error: calendarRecurringError } = await admin.from('tasks').insert({
+      id: CALENDAR_RECURRING_TASK.id,
+      user_id: userId,
+      title: CALENDAR_RECURRING_TASK.title,
+      status: 'planned',
+      priority: 'medium',
+      due_date: `${localToday}T10:00:00+03:00`,
+      due_time: '10:00',
+      estimated_duration: 20,
+      recurrence_rule: { pattern: 'daily', interval: 1, endType: 'never' },
+      recurrence_parent_id: CALENDAR_RECURRING_TASK.id,
+      recurrence_count: 0,
+      is_completion_record: false,
+      is_deleted: false,
+      is_in_inbox: false,
+      instances: [{
+        id: 'd1000000-0000-4000-8000-000000000013',
+        taskId: CALENDAR_RECURRING_TASK.id,
+        scheduledDate: localToday,
+        scheduledTime: '10:00',
+        duration: 20,
+        status: 'scheduled',
+      }],
+      position_version: 1,
+    })
+    expect(
+      calendarRecurringError,
+      `Failed to seed calendar recurring task: ${calendarRecurringError?.message}`,
+    ).toBeNull()
   })
 
   test.afterAll(async () => {
     if (!admin) return
     await admin.from('tasks').delete().in('id', ALL_IDS)
     await admin.from('tasks').delete().eq('recurrence_parent_id', OFFLINE_RECURRING_TASK.id)
+    await admin.from('tasks').delete().eq('recurrence_parent_id', CALENDAR_RECURRING_TASK.id)
     await admin.from('tombstones').delete().eq('entity_id', OFFLINE_RECURRING_TASK.id)
     await admin.from('tasks').delete().eq('user_id', userId).eq('title', OFFLINE_QUICK_CREATE_TITLE)
     await admin.from('tasks').delete().eq('user_id', userId).eq('title', CRASH_RECOVERY_QUICK_CREATE_TITLE)
@@ -849,6 +958,288 @@ test.describe('Recurring canvas/sync regressions (TASK-1871)', () => {
       const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
       return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
     }, task.id)).toBe('todo')
+  })
+
+  test('R26 - Calendar right-click completion and reopen converge offline, cross-client, and after reload', async ({ clientA, clientB }) => {
+    await gotoCalendarReady(clientA)
+    await gotoCalendarReady(clientB)
+
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return task
+        ? {
+            status: task.status,
+            dueDate: task.dueDate,
+            instances: task.instances,
+            inCalendarFilteredTasks: tasks.calendarFilteredTasks.some((candidate: any) => candidate.id === taskId),
+            visibleSlotDate: document.querySelector('.time-slot')?.getAttribute('data-slot-date') ?? null,
+            scheduleMatchesVisibleDate: task.instances?.[0]?.scheduledDate
+              === document.querySelector('.time-slot')?.getAttribute('data-slot-date'),
+          }
+        : null
+    }, CALENDAR_TASK.id)).toEqual(expect.objectContaining({
+      status: 'todo',
+      inCalendarFilteredTasks: true,
+      scheduleMatchesVisibleDate: true,
+      instances: [
+        expect.objectContaining({
+          scheduledTime: '09:00',
+        }),
+      ],
+    }))
+    const calendarEvent = clientA.locator(`.slot-task[data-task-id="${CALENDAR_TASK.id}"]`)
+    const clientBCalendarEvent = clientB.locator(`.slot-task[data-task-id="${CALENDAR_TASK.id}"]`)
+    await expect(calendarEvent).toBeVisible()
+    await expect(clientBCalendarEvent).toBeVisible()
+    await clientA.context().setOffline(true)
+    await calendarEvent.click({ button: 'right' })
+    await clientA.getByText('Mark as Done', { exact: true }).click()
+
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, CALENDAR_TASK.id)).toBe('done')
+
+    await clientA.context().setOffline(false)
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,status,is_deleted')
+        .eq('id', CALENDAR_TASK.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: CALENDAR_TASK.id,
+        status: 'done',
+        is_deleted: false,
+      }))
+    }).toPass({ timeout: 20_000 })
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, CALENDAR_TASK.id), { timeout: 20_000 }).toBe('done')
+    await expect(clientBCalendarEvent).toHaveClass(/status-done/)
+
+    await expect(calendarEvent).toBeVisible()
+    await calendarEvent.click({ button: 'right' })
+    await clientA.getByText('Mark as To Do', { exact: true }).click()
+
+    await expect(async () => {
+      const { data, error } = await admin
+        .from('tasks')
+        .select('id,status,is_deleted')
+        .eq('id', CALENDAR_TASK.id)
+        .single()
+      expect(error).toBeNull()
+      expect(data).toEqual(expect.objectContaining({
+        id: CALENDAR_TASK.id,
+        status: 'planned',
+        is_deleted: false,
+      }))
+    }).toPass({ timeout: 20_000 })
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, CALENDAR_TASK.id), { timeout: 20_000 }).toBe('todo')
+    await expect(clientBCalendarEvent).toHaveClass(/status-active/)
+
+    await clientA.reload()
+    await clientA.waitForSelector('.calendar-layout', { timeout: 30_000 })
+    await expect(clientA.locator('.slot-task').filter({ hasText: CALENDAR_TASK.title }).first()).toBeVisible()
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+    }, CALENDAR_TASK.id)).toBe('todo')
+  })
+
+  test('R28 - Calendar next-occurrence completion works offline exactly once and survives reload', async ({ clientA, clientB }) => {
+    await gotoCalendarReady(clientA)
+    await gotoCalendarReady(clientB)
+
+    const initialDueDate = await clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.dueDate ?? null
+    }, CALENDAR_RECURRING_TASK.id)
+    expect(initialDueDate).toBeTruthy()
+
+    const recurringEvent = clientA.locator(`.slot-task[data-task-id="${CALENDAR_RECURRING_TASK.id}"]`)
+    const clientBRecurringEvent = clientB.locator(`.slot-task[data-task-id="${CALENDAR_RECURRING_TASK.id}"]`)
+    await expect(recurringEvent).toBeVisible()
+    await expect(clientBRecurringEvent).toBeVisible()
+    await clientA.context().setOffline(true)
+    await recurringEvent.click({ button: 'right' })
+    await clientA.getByText('More', { exact: true }).click()
+    await clientA.getByText('Done for now', { exact: true }).click()
+    await clientA.getByText('Next occurrence', { exact: true }).click()
+
+    await expect(clientA.getByText('Failed to complete task', { exact: true })).toHaveCount(0)
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        dueDate: task?.dueDate ?? null,
+        recurrenceCount: task?.recurrenceCount ?? null,
+        status: task?.status ?? null,
+      }
+    }, CALENDAR_RECURRING_TASK.id)).toEqual({
+      dueDate: expect.not.stringMatching(initialDueDate),
+      recurrenceCount: 1,
+      status: 'todo',
+    })
+    await expect(recurringEvent).toBeHidden()
+
+    await clientA.context().setOffline(false)
+    let completionRecordId = ''
+    let completionInstanceId = ''
+    await expect(async () => {
+      const { data: livingTask, error: livingError } = await admin
+        .from('tasks')
+        .select('id,due_date,status,recurrence_count,is_completion_record,is_deleted')
+        .eq('id', CALENDAR_RECURRING_TASK.id)
+        .single()
+      expect(livingError).toBeNull()
+      expect(livingTask).toEqual(expect.objectContaining({
+        id: CALENDAR_RECURRING_TASK.id,
+        status: 'planned',
+        recurrence_count: 1,
+        is_completion_record: false,
+        is_deleted: false,
+      }))
+      expect(String(livingTask?.due_date).slice(0, 10)).not.toBe(initialDueDate)
+
+      const { data: completions, error: completionsError } = await admin
+        .from('tasks')
+        .select('id,status,is_completion_record,recurrence_parent_id,instances')
+        .eq('recurrence_parent_id', CALENDAR_RECURRING_TASK.id)
+        .eq('is_completion_record', true)
+      expect(completionsError).toBeNull()
+      expect(completions).toHaveLength(1)
+      expect(completions?.[0]).toEqual(expect.objectContaining({
+        status: 'done',
+        is_completion_record: true,
+        recurrence_parent_id: CALENDAR_RECURRING_TASK.id,
+      }))
+      completionRecordId = completions![0].id
+      completionInstanceId = completions![0].instances[0].id
+    }).toPass({ timeout: 20_000 })
+
+    await expect.poll(async () => clientB.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        dueDate: task?.dueDate ?? null,
+        recurrenceCount: task?.recurrenceCount ?? null,
+        status: task?.status ?? null,
+      }
+    }, CALENDAR_RECURRING_TASK.id), { timeout: 20_000 }).toEqual({
+      dueDate: expect.not.stringMatching(initialDueDate),
+      recurrenceCount: 1,
+      status: 'todo',
+    })
+    await expect(clientBRecurringEvent).toBeHidden()
+    await expect(
+      clientB.locator(
+        `.slot-task[data-task-id="${completionRecordId}"][data-instance-id="${completionInstanceId}"]`,
+      ),
+    ).toBeVisible()
+
+    await clientA.reload()
+    await clientA.waitForSelector('.calendar-layout', { timeout: 30_000 })
+    await expect.poll(async () => clientA.evaluate((taskId) => {
+      const root = document.querySelector('#app') as any
+      const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+      const task = tasks.rawTasks.find((candidate: any) => candidate.id === taskId)
+      return {
+        dueDate: task?.dueDate ?? null,
+        recurrenceCount: task?.recurrenceCount ?? null,
+        status: task?.status ?? null,
+      }
+    }, CALENDAR_RECURRING_TASK.id)).toEqual({
+      dueDate: expect.not.stringMatching(initialDueDate),
+      recurrenceCount: 1,
+      status: 'todo',
+    })
+  })
+
+  test('R27 - Mobile checkbox completion and reopen converge offline, cross-client, and after reload', async ({ clientB }) => {
+    await gotoCanvasReady(clientB)
+    const { context: mobileContext, page: mobileClient } = await createMobileTasksClient(clientB)
+    try {
+      const mobileTask = mobileClient.locator('.swipeable-task-item').filter({ hasText: MOBILE_TASK.title }).first()
+      await expect(mobileTask).toBeVisible()
+      await mobileContext.setOffline(true)
+      await mobileTask.locator('.task-checkbox').click()
+
+      await expect.poll(async () => mobileClient.evaluate((taskId) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+      }, MOBILE_TASK.id)).toBe('done')
+      await expect(mobileTask).toBeHidden()
+
+      await mobileContext.setOffline(false)
+      await expect(async () => {
+        const { data, error } = await admin
+          .from('tasks')
+          .select('id,status,is_deleted')
+          .eq('id', MOBILE_TASK.id)
+          .single()
+        expect(error).toBeNull()
+        expect(data).toEqual(expect.objectContaining({
+          id: MOBILE_TASK.id,
+          status: 'done',
+          is_deleted: false,
+        }))
+      }).toPass({ timeout: 20_000 })
+      await expect.poll(async () => clientB.evaluate((taskId) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+      }, MOBILE_TASK.id), { timeout: 20_000 }).toBe('done')
+
+      await mobileClient.locator('.hide-done-btn').click()
+      await expect(mobileTask).toBeVisible()
+      await mobileTask.locator('.task-checkbox').click()
+
+      await expect(async () => {
+        const { data, error } = await admin
+          .from('tasks')
+          .select('id,status,is_deleted')
+          .eq('id', MOBILE_TASK.id)
+          .single()
+        expect(error).toBeNull()
+        expect(data).toEqual(expect.objectContaining({
+          id: MOBILE_TASK.id,
+          status: 'planned',
+          is_deleted: false,
+        }))
+      }).toPass({ timeout: 20_000 })
+      await expect.poll(async () => clientB.evaluate((taskId) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+      }, MOBILE_TASK.id), { timeout: 20_000 }).toBe('todo')
+
+      await mobileClient.reload()
+      await mobileClient.waitForSelector('.mobile-inbox', { timeout: 30_000 })
+      await expect(mobileClient.locator('.swipeable-task-item').filter({ hasText: MOBILE_TASK.title }).first()).toBeVisible()
+      await expect.poll(async () => mobileClient.evaluate((taskId) => {
+        const root = document.querySelector('#app') as any
+        const tasks = root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks')!
+        return tasks.rawTasks.find((candidate: any) => candidate.id === taskId)?.status ?? null
+      }, MOBILE_TASK.id)).toBe('todo')
+    } finally {
+      await mobileContext.close()
+    }
   })
 
   test('R25 - Canvas right-click Mark as Done persists, converges, and survives reload', async ({ clientA, clientB }) => {

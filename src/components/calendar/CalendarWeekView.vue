@@ -306,6 +306,8 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
                 v-for="event in getEventsForCell(dayIndex, hour)"
                 :key="event.id"
                 class="week-event"
+                :data-task-id="event.taskId"
+                :data-instance-id="event.instanceId || undefined"
                 :class="{
                   'timer-active-event': currentTaskId === event.taskId,
                   'dragging': isDragging && draggedEventId === event.id,

@@ -5939,6 +5939,22 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 
 **Regression added**: `tests/unit/composables/useLocalApiBridge.test.ts` — the pre-existing "clears on expired session" case was inverted to "neither forwards nor clears" (the anti-forward invariant it really protected is preserved), plus a new sign-out-clears case. And a `persistPrimaryAuthSession` assertion on the reconnect-grace path in `tests/unit/stores/auth-flow.test.ts:8e`.
 
+### ~~BUG-1972~~: KDE widget timer keeps running after the app timer stops (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-07-22) | **Opened**: 2026-07-22
+
+**User repro**: FlowState's timer is stopped/finished, but the KDE panel widget stays "active" at 00:00 and keeps re-firing the completion notification.
+
+**Root cause**: `handleNoActiveSession()` in `packages/kde-widget/contents/ui/main.qml` re-ran `checkSessionCompletion()` for a session id the widget had _already_ notified for. That path re-enters `onSessionComplete()`, which short-circuits on the BUG-1892 per-session-id guard. Clearing widget state only happened inside that guard, so any poll where local state was still `hasActiveSession && isRunning` resurrected the loop: check → re-fire → guard → clear → next poll repeats. Live evidence: `journalctl --user -t plasmashell` showed `[SYNC] Active session disappeared` + `already completed - ignoring re-fire` once per second for session `949edb40-…` while `/api/timer/current` and Supabase both reported no active session.
+
+**Implementation**: `handleNoActiveSession()` now short-circuits when `currentSessionId === lastCompletedSessionId` and clears widget state directly, before the completion re-check branch.
+
+**Exact failure mode fixed**: an already-notified session id being re-checked on every poll, which kept the widget countdown alive after the app stopped.
+
+**Explicitly not covered**: manual-stop detection semantics (unchanged), the Vue-side timer store, the Electron local-API snapshot contract, and stale in-memory QML — Plasma keeps the widget's compiled QML in memory, so a `plasmashell` reload is still required for any widget fix to take effect.
+
+**Regression added for reported repro**: `tests/unit/kde/timer-sync.test.ts` — source-contract test pinning branch order + clear call (verified RED with the guard removed), plus a poll-loop simulation asserting convergence to stopped with zero completion re-checks.
+
 ### ~~BUG-1934~~: Regular multi-delete removes tasks sequentially instead of instantly (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-07-10, shipped Electron v1.4.241) | **Opened**: 2026-07-10

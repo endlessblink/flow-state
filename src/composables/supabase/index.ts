@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import {
     type DatabaseContext, type DatabaseDependencies,
@@ -18,6 +18,7 @@ import { useAIMemoryDatabase } from './useAIMemoryDatabase'
 import { useRealtimeSubscription } from './useRealtimeSubscription'
 import { useTaskAuditLog } from './useTaskAuditLog'
 import { useBackupRestoreDatabase } from './useBackupRestoreDatabase'
+import { setWriteHealthScope } from '@/composables/sync/writeHealth'
 
 // Re-export types and singletons used by consumers
 export { invalidateCache } from './_infrastructure'
@@ -33,7 +34,13 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
         return authStore.user?.id || null
     }
 
-    const { withRetry, handleError } = createDatabaseHelpers(lastSyncError)
+    watch(
+        () => authStore.user?.id ?? null,
+        userId => setWriteHealthScope(userId),
+        { immediate: true }
+    )
+
+    const { withRetry, handleError } = createDatabaseHelpers(lastSyncError, getUserIdSafe)
 
     const ctx: DatabaseContext = { authStore, isSyncing, lastSyncError, getUserIdSafe, withRetry, handleError }
 

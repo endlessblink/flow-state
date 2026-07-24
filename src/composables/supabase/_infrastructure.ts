@@ -22,7 +22,7 @@ export interface DatabaseContext {
     isSyncing: Ref<boolean>
     lastSyncError: Ref<string | null>
     getUserIdSafe: () => string | null
-    withRetry: <T>(operation: () => Promise<T>, context: string, maxRetries?: number) => Promise<T>
+    withRetry: <T>(operation: () => Promise<T>, context: string, maxRetries?: number, writeIdentity?: string) => Promise<T>
     handleError: (error: unknown, context: string) => void
 }
 
@@ -214,7 +214,8 @@ export interface TaskIdAvailability {
 // ============================================================================
 
 export function createDatabaseHelpers(
-    lastSyncError: Ref<string | null>
+    lastSyncError: Ref<string | null>,
+    getWriteScope: () => string | null = () => null
 ) {
     const isTransientSyncError = (message: string, status: unknown, context: string): boolean => {
         const lowerMsg = message.toLowerCase()
@@ -241,14 +242,20 @@ export function createDatabaseHelpers(
      * Helper to execute Supabase operations with transient error retries (e.g. clock skew, 401/403 restarts)
      * TASK-329: Added exponential backoff and auth resilience
      */
-    const withRetry = async <T>(operation: () => Promise<T>, context: string, maxRetries = 3): Promise<T> => {
+    const withRetry = async <T>(
+        operation: () => Promise<T>,
+        context: string,
+        maxRetries = 3,
+        writeIdentity?: string
+    ): Promise<T> => {
         let lastErr: unknown = null
+        const writeScope = getWriteScope()
 
         for (let i = 0; i < maxRetries; i++) {
             try {
                 const result = await operation()
                 // TASK-1916: any successful write clears the writes-failing signal
-                reportWriteSuccess(context)
+                reportWriteSuccess(context, Date.now(), writeIdentity, writeScope)
                 return result
             } catch (err: unknown) {
                 lastErr = err
@@ -293,7 +300,7 @@ export function createDatabaseHelpers(
                 // For other errors, don't retry immediately unless they look transient
                 // TASK-1916: surface exhausted/dropped WRITES to the user instead of
                 // failing silently (BUG-1913: hour-long invisible write-dead windows)
-                reportWriteFailure(context, message)
+                reportWriteFailure(context, message, Date.now(), writeIdentity ?? context, writeScope)
                 throw err
             }
         }
@@ -301,7 +308,13 @@ export function createDatabaseHelpers(
         // TASK-1916: retries exhausted — same visibility guarantee as the throw above
         {
             const errObj = lastErr as Record<string, unknown>
-            reportWriteFailure(context, (errObj?.message as string) || String(lastErr))
+            reportWriteFailure(
+                context,
+                (errObj?.message as string) || String(lastErr),
+                Date.now(),
+                writeIdentity ?? context,
+                writeScope
+            )
         }
         throw lastErr
     }

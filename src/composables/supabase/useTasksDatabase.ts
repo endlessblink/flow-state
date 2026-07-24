@@ -141,7 +141,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 if (error) throw error
             }
 
-            await withRetry(() => attemptUpsert(payload), 'saveTask')
+            await withRetry(() => attemptUpsert(payload), 'saveTask', 3, `saveTask:${task.id}`)
 
             // TASK-1083: Invalidate cache after successful write to prevent stale reads
             invalidateCache.tasks()
@@ -231,7 +231,8 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 }
             }
 
-            await withRetry(() => attemptUpsert(payload), 'saveTasks')
+            const writeIdentity = `saveTasks:${tasks.map(task => task.id).sort().join(',')}`
+            await withRetry(() => attemptUpsert(payload), 'saveTasks', 3, writeIdentity)
 
             if (import.meta.env.DEV) {
                 console.log(`[BUG-1451] saveTasks SUCCESS: ${payload.map(t => `${t.id?.slice(0, 8)}:${t.status}`).join(', ')}`)
@@ -271,7 +272,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
                 if (error) throw error
                 return { error, count }
-            }, 'deleteTask')
+            }, 'deleteTask', 3, `deleteTask:${taskId}`)
 
             lastSyncError.value = null
             console.log(`✅ [SUPABASE-DELETE] Task ${taskId} marked as deleted`)
@@ -298,7 +299,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     .single()
                 if (error) throw error
                 if (data) restoredTask = fromSupabaseTask(data as SupabaseTask)
-            }, 'restoreTask')
+            }, 'restoreTask', 3, `restoreTask:${taskId}`)
             // BUG-1891: Defense-in-depth. On a migrated DB the BEFORE UPDATE trigger already drops the
             // tombstone when is_deleted flips true->false, but clear it explicitly so restore also works
             // on a DB that hasn't applied the migration yet and the local client never races a stale
@@ -381,7 +382,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                 throw new Error(
                     `permanentlyDeleteTask: cannot establish deletion scope for ${taskId} after DELETE affected 0 rows`
                 )
-            }, 'permanentlyDeleteTask')
+            }, 'permanentlyDeleteTask', 3, `permanentlyDeleteTask:${taskId}`)
             lastSyncError.value = null
             logPermanentDeleteTrace(taskId, 'supabase-db.done')
         } catch (e: unknown) {
@@ -433,7 +434,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                         + `(${confirmedIds.size}/${uniqueTaskIds.length})`
                     )
                 }
-            }, 'bulkPermanentlyDeleteTasks')
+            }, 'bulkPermanentlyDeleteTasks', 3, `bulkPermanentlyDeleteTasks:${uniqueTaskIds.slice().sort().join(',')}`)
             invalidateCache.tasks()
             lastSyncError.value = null
         } catch (e: unknown) {
@@ -504,7 +505,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
 
                 if (error) throw error
                 return { error, count }
-            }, 'bulkDeleteTasks')
+            }, 'bulkDeleteTasks', 3, `bulkDeleteTasks:${taskIds.slice().sort().join(',')}`)
 
             lastSyncError.value = null
             console.log(`✅ [SUPABASE-BULK-DELETE] ${taskIds.length} tasks marked as deleted atomically`)

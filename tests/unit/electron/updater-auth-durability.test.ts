@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => {
     handlers,
     flushStore: vi.fn<() => Promise<void>>(),
     shutdownLocalApi: vi.fn<() => Promise<void>>(),
+    resumeLocalApiAfterCancelledShutdown: vi.fn<() => Promise<void>>(),
     releaseSingleInstanceLock: vi.fn(),
+    requestSingleInstanceLock: vi.fn(() => true),
     quitAndInstall: vi.fn(),
     exit: vi.fn(),
     quit: vi.fn(),
@@ -31,6 +33,7 @@ vi.mock('../../../electron/ipc/store', () => ({
 
 vi.mock('../../../electron/ipc/localApi', () => ({
   shutdownLocalApi: mocks.shutdownLocalApi,
+  resumeLocalApiAfterCancelledShutdown: mocks.resumeLocalApiAfterCancelledShutdown,
 }))
 
 vi.mock('../../../electron/updater-pending', () => ({
@@ -53,6 +56,7 @@ vi.mock('electron', () => ({
     on: vi.fn(),
     once: vi.fn(),
     releaseSingleInstanceLock: mocks.releaseSingleInstanceLock,
+    requestSingleInstanceLock: mocks.requestSingleInstanceLock,
     exit: mocks.exit,
     quit: mocks.quit,
   },
@@ -85,7 +89,11 @@ describe('Electron updater durable-auth gate', () => {
     mocks.flushStore.mockReset()
     mocks.shutdownLocalApi.mockReset()
     mocks.shutdownLocalApi.mockResolvedValue(undefined)
+    mocks.resumeLocalApiAfterCancelledShutdown.mockReset()
+    mocks.resumeLocalApiAfterCancelledShutdown.mockResolvedValue(undefined)
     mocks.releaseSingleInstanceLock.mockReset()
+    mocks.requestSingleInstanceLock.mockReset()
+    mocks.requestSingleInstanceLock.mockReturnValue(true)
     mocks.quitAndInstall.mockReset()
     mocks.exit.mockReset()
     mocks.quit.mockReset()
@@ -191,5 +199,44 @@ describe('Electron updater durable-auth gate', () => {
     expect(mocks.exit).toHaveBeenCalledWith(1)
     expect(mocks.exit).not.toHaveBeenCalledWith(75)
     expect(mocks.quitAndInstall).not.toHaveBeenCalled()
+  })
+
+  it('restores the bridge and single-instance lock when quitAndInstall throws', async () => {
+    mocks.flushStore.mockResolvedValueOnce(undefined)
+    mocks.quitAndInstall.mockImplementationOnce(() => {
+      throw new Error('installer handoff failed')
+    })
+    const install = mocks.handlers.get('updater:install')!
+
+    await expect(install()).resolves.toBe(true)
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(mocks.shutdownLocalApi).toHaveBeenCalledOnce()
+    expect(mocks.releaseSingleInstanceLock).toHaveBeenCalledOnce()
+    expect(mocks.resumeLocalApiAfterCancelledShutdown).toHaveBeenCalledOnce()
+    expect(mocks.requestSingleInstanceLock).toHaveBeenCalledOnce()
+    expect(mocks.exit).not.toHaveBeenCalled()
+  })
+
+  it('surfaces every failed recovery boundary after an aborted updater handoff', async () => {
+    mocks.flushStore.mockResolvedValueOnce(undefined)
+    mocks.requestSingleInstanceLock.mockReturnValueOnce(false)
+    mocks.resumeLocalApiAfterCancelledShutdown.mockRejectedValueOnce(new Error('bridge restart failed'))
+    mocks.quitAndInstall.mockImplementationOnce(() => {
+      throw new Error('installer handoff failed')
+    })
+    const install = mocks.handlers.get('updater:install')!
+
+    await expect(install()).resolves.toBe(true)
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(mocks.send).toHaveBeenCalledWith(
+      'updater:error',
+      expect.stringContaining('single-instance protection'),
+    )
+    expect(mocks.send).toHaveBeenCalledWith(
+      'updater:error',
+      expect.stringContaining('local task bridge'),
+    )
   })
 })

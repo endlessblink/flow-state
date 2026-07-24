@@ -1423,6 +1423,7 @@
       "automatedEvidence": [
         "tests/unit/electron/local-api-session-replay-runtime.test.ts",
         "tests/unit/electron/local-api-lifecycle.test.ts",
+        "tests/unit/electron/updater-auth-durability.test.ts",
         "tests/unit/scripts/live-boundary-diagnostics.test.ts"
       ],
       "liveEvidence": []

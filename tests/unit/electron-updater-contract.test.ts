@@ -102,7 +102,7 @@ describe('Electron updater restart contract', () => {
       updaterSource.indexOf('app.releaseSingleInstanceLock()'),
     )
     expect(updaterSource).toContain('app.releaseSingleInstanceLock()')
-    expect(updaterSource).toContain('setImmediate(() => {')
+    expect(updaterSource).toContain('setImmediate(async () => {')
     expect(updaterSource).toContain('autoUpdater.quitAndInstall(false, true)')
     expect(updaterSource).toContain('quitAndInstall did not terminate the app within 8s')
     expect(updaterSource).toContain('app.quit()')

@@ -8,7 +8,10 @@ import {
   versionFromUpdateFileName,
 } from './updater-pending'
 import { flushStore } from './ipc/store'
-import { shutdownLocalApi } from './ipc/localApi'
+import {
+  resumeLocalApiAfterCancelledShutdown,
+  shutdownLocalApi,
+} from './ipc/localApi'
 import { SUPERVISED_UPDATE_EXIT_CODE, resolveUpdateRelaunch } from './supervisedUpdate'
 
 // BUG-1874: bound the store flush, but never install/restart unless it actually succeeds. A timeout
@@ -43,6 +46,26 @@ function hasValidAppVersion(version: string): boolean {
 function emitUpdaterError(message: string) {
   const win = BrowserWindow.getAllWindows()[0]
   if (win) win.webContents.send('updater:error', message)
+}
+
+async function recoverRunningAppAfterAbortedUpdate(): Promise<void> {
+  let lockRecovered = false
+  try {
+    lockRecovered = app.requestSingleInstanceLock()
+  } catch (err) {
+    console.error('[Updater] Failed to reacquire the single-instance lock:', (err as Error).message)
+  }
+  if (!lockRecovered) {
+    emitUpdaterError('FlowState could not restore its single-instance protection after the update was aborted.')
+  }
+
+  try {
+    await resumeLocalApiAfterCancelledShutdown()
+  } catch (err) {
+    const message = 'FlowState could not restore the local task bridge after the update was aborted.'
+    console.error('[Updater]', message, (err as Error).message)
+    emitUpdaterError(message)
+  }
 }
 
 interface PreparedAppImageInstaller {
@@ -358,7 +381,7 @@ export function registerUpdater() {
     // Return from IPC first, then hand off to the updater on the next tick.
     // Calling quitAndInstall() inline from an invoke handler can leave the
     // renderer stuck in a half-dead state while the app is trying to exit.
-    setImmediate(() => {
+    setImmediate(async () => {
       console.log('[Updater] Starting quitAndInstall handoff')
       if (preparedInstaller && !preparedInstaller.isArmed()) {
         preparedInstaller = null
@@ -378,6 +401,7 @@ export function registerUpdater() {
 
       if (relaunch.strategy === 'systemd') {
         emitUpdaterError('The supervised updater handoff was lost; FlowState will remain open.')
+        await recoverRunningAppAfterAbortedUpdate()
         return
       }
 
@@ -403,6 +427,7 @@ export function registerUpdater() {
         const message = (err as Error).message
         console.error('[Updater] quitAndInstall failed:', message)
         emitUpdaterError(message)
+        await recoverRunningAppAfterAbortedUpdate()
       }
     })
 

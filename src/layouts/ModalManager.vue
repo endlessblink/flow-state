@@ -560,20 +560,18 @@ const confirmMoveToSection = async (sectionId: string) => {
 
 // TASK-1419: Batch operation handlers for multi-select context menu
 const handleBatchSetPriority = async (priority: 'low' | 'medium' | 'high') => {
-  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
-  const { updateTaskWithUndo } = useUnifiedUndoRedo()
-  for (const taskId of contextMenuSelectedIds.value) {
-    await updateTaskWithUndo(taskId, { priority })
-  }
+  await taskStore.bulkUpdateTasksWithUndo(
+    contextMenuSelectedIds.value.map(id => ({ id, updates: { priority } })),
+    'Set task priorities'
+  )
   canvasStore.requestSync('user:context-menu')
 }
 
 const handleBatchSetStatus = async (status: 'todo' | 'done') => {
-  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
-  const { updateTaskWithUndo } = useUnifiedUndoRedo()
-  for (const taskId of contextMenuSelectedIds.value) {
-    await updateTaskWithUndo(taskId, { status })
-  }
+  await taskStore.bulkUpdateTasksWithUndo(
+    contextMenuSelectedIds.value.map(id => ({ id, updates: { status } })),
+    'Set task statuses'
+  )
   canvasStore.requestSync('user:context-menu')
 }
 
@@ -621,32 +619,35 @@ const handleBatchSetDueDate = async (dateType: string) => {
 
   if (!dueDate) return
   const formattedDate = dueDate.toISOString().split('T')[0]
-  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
-  const { updateTaskWithUndo } = useUnifiedUndoRedo()
-  for (const taskId of contextMenuSelectedIds.value) {
-    await updateTaskWithUndo(taskId, { dueDate: formattedDate })
-  }
+  await taskStore.bulkUpdateTasksWithUndo(
+    contextMenuSelectedIds.value.map(id => ({ id, updates: { dueDate: formattedDate } })),
+    'Set task due dates'
+  )
   canvasStore.requestSync('user:context-menu')
 }
 
 const handleBatchSetDuration = async (duration: number | null) => {
-  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
-  const { updateTaskWithUndo } = useUnifiedUndoRedo()
-  for (const taskId of contextMenuSelectedIds.value) {
-    await updateTaskWithUndo(taskId, { estimatedDuration: duration ?? undefined })
-  }
+  await taskStore.bulkUpdateTasksWithUndo(
+    contextMenuSelectedIds.value.map(id => ({
+      id,
+      updates: { estimatedDuration: duration ?? undefined }
+    })),
+    'Set task durations'
+  )
   canvasStore.requestSync('user:context-menu')
 }
 
 const handleBatchSetProject = async (projectId: string | null) => {
-  const { useUnifiedUndoRedo } = await import('@/composables/useUnifiedUndoRedo')
-  const { updateTaskWithUndo } = useUnifiedUndoRedo()
-  for (const taskId of contextMenuSelectedIds.value) {
-    await updateTaskWithUndo(taskId, {
-      projectId: projectId ?? undefined,
-      isUncategorized: !projectId
-    })
-  }
+  await taskStore.bulkUpdateTasksWithUndo(
+    contextMenuSelectedIds.value.map(id => ({
+      id,
+      updates: {
+        projectId: projectId ?? undefined,
+        isUncategorized: !projectId
+      }
+    })),
+    'Set task projects'
+  )
   canvasStore.requestSync('user:context-menu')
 }
 

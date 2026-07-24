@@ -8,6 +8,7 @@ import { formatDateKey } from '@/utils/dateUtils'
 import { reconcileStaleInstancesForDueDate } from '@/utils/dueDateInstances'
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
+import { useToast } from '@/composables/useToast'
 import type { Task } from '@/stores/tasks'
 
 // Dispatch event to trigger brief flash animation on task card
@@ -24,6 +25,12 @@ export function useTaskContextMenuActions(
     const timerStore = useTimerStore()
     const canvasStore = useCanvasStore()
     const router = useRouter()
+    const { showToast } = useToast()
+
+    const reportMutationFailure = (action: string, error: unknown) => {
+        console.error(`Error ${action}:`, error)
+        showToast(`Task could not be ${action}. Refresh and try again.`, 'error')
+    }
 
     // Lazy-init: only create when actually moving tasks to avoid startup overhead
     let _moveComposable: ReturnType<typeof useMoveToCanvasGroup> | null = null
@@ -111,7 +118,7 @@ export function useTaskContextMenuActions(
                     await getMoveToGroup()(taskId, matchingGroup.id, { skipDueDateInheritance: true })
                 }
             } catch (error) {
-                console.error('Error updating task due date:', error)
+                reportMutationFailure('rescheduled', error)
             }
             return
         }
@@ -182,7 +189,7 @@ export function useTaskContextMenuActions(
                     await getMoveToGroup()(taskId, matchingGroup.id, { skipDueDateInheritance: true })
                 }
             } catch (error) {
-                console.error('Error setting due date:', error)
+                reportMutationFailure('rescheduled', error)
             }
         }
     }
@@ -202,7 +209,7 @@ export function useTaskContextMenuActions(
                 await taskStore.updateTaskWithUndo(taskId, { priority })
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
-                console.error('Error setting priority:', error)
+                reportMutationFailure('updated', error)
             }
         }
     }
@@ -222,7 +229,7 @@ export function useTaskContextMenuActions(
                 await taskStore.updateTaskWithUndo(taskId, { status })
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
-                console.error('Error setting status:', error)
+                reportMutationFailure('updated', error)
             }
         }
     }
@@ -242,7 +249,7 @@ export function useTaskContextMenuActions(
                 await taskStore.updateTaskWithUndo(taskId, { estimatedDuration: duration ?? undefined })
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
-                console.error('Error setting estimated duration:', error)
+                reportMutationFailure('updated', error)
             }
         }
     }
@@ -259,7 +266,10 @@ export function useTaskContextMenuActions(
             emit('setStatus', 'done')
         } else if (taskId) {
             const canonicalTask = taskStore.getTask(taskId)
-            if (!canonicalTask) return
+            if (!canonicalTask) {
+                reportMutationFailure('completed', new Error(`Task update target no longer exists: ${taskId}`))
+                return
+            }
             const currentStatus = canonicalTask.status
             const currentRecurrenceRule = canonicalTask.recurrenceRule
 
@@ -269,7 +279,7 @@ export function useTaskContextMenuActions(
                     await taskStore.doneForNow(taskId)
                     canvasStore.requestSync('user:context-menu')
                 } catch (error) {
-                    console.error('Error in done-for-now:', error)
+                    reportMutationFailure('completed', error)
                 }
                 return
             }
@@ -278,7 +288,7 @@ export function useTaskContextMenuActions(
                 await taskStore.updateTaskWithUndo(taskId, { status: newStatus })
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
-                console.error('Error toggling done status:', error)
+                reportMutationFailure('completed', error)
             }
         }
     }

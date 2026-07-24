@@ -999,8 +999,7 @@ const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
   const taskSource = Array.isArray(taskStore.rawTasks) ? taskStore.rawTasks : taskStore.tasks
   const taskToUpdate = taskSource.find(t => t.id === taskId)
   if (!taskToUpdate) {
-    console.warn('⚠️ Task not found for update:', taskId)
-    return
+    throw new Error(`Task update target no longer exists: ${taskId}`)
   }
 
   // BUG-309-B: Determine operation type based on what's being updated

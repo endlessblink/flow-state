@@ -9,6 +9,7 @@ const startTaskNowWithUndo = vi.fn()
 const getTask = vi.fn()
 const requestSync = vi.fn()
 const startTimer = vi.fn()
+const showToast = vi.fn()
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -49,6 +50,10 @@ vi.mock('@/composables/canvas/useMoveToCanvasGroup', () => ({
   useMoveToCanvasGroup: () => ({
     moveToGroupWithToast: vi.fn()
   })
+}))
+
+vi.mock('@/composables/useToast', () => ({
+  useToast: () => ({ showToast })
 }))
 
 describe('useTaskContextMenuActions duplicateTask', () => {
@@ -186,6 +191,52 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
     expect(getTask).toHaveBeenCalledWith('task-1')
     expect(doneForNow).toHaveBeenCalledWith('task-1')
     expect(updateTaskWithUndo).not.toHaveBeenCalled()
+  })
+
+  it('reports a visible failure when canonical task lookup fails for the target', async () => {
+    const staleTask = {
+      id: 'task-1',
+      status: 'todo',
+      title: 'Missing Task',
+    } as Task
+    getTask.mockReturnValue(undefined)
+    const emit = vi.fn()
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: staleTask,
+      contextTask: null,
+      selectedCount: 1
+    }, emit)
+    await toggleDone()
+
+    expect(getTask).toHaveBeenCalledWith('task-1')
+    expect(doneForNow).not.toHaveBeenCalled()
+    expect(updateTaskWithUndo).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalledWith(
+      'Task could not be completed. Refresh and try again.',
+      'error'
+    )
+    expect(emit).toHaveBeenCalledWith('close')
+  })
+
+  it('does not route a recurring row already marked done through done-for-now', async () => {
+    getTask.mockReturnValue({
+      id: 'task-1',
+      title: 'Recurring Completed Task',
+      status: 'done',
+      recurrenceRule: { pattern: 'weekly', interval: 1 }
+    } as unknown as Task)
+    const emit = vi.fn()
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: { id: 'task-1', status: 'todo' } as Task,
+      contextTask: null,
+      selectedCount: 1
+    }, emit)
+    await toggleDone()
+
+    expect(updateTaskWithUndo).toHaveBeenCalledWith('task-1', { status: 'todo' })
+    expect(doneForNow).not.toHaveBeenCalled()
   })
 })
 

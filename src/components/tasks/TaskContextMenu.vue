@@ -512,6 +512,7 @@ const clearDueDate = async () => {
     canvasStore.requestSync('user:context-menu')
   } catch (error) {
     console.error('Error clearing task due date:', error)
+    useToast().showToast('Failed to clear due date. Refresh and try again.', 'error')
   }
   emit('close')
 }
@@ -524,6 +525,7 @@ const clearPriority = async () => {
     canvasStore.requestSync('user:context-menu')
   } catch (error) {
     console.error('Error clearing task priority:', error)
+    useToast().showToast('Failed to clear priority. Refresh and try again.', 'error')
   }
   emit('close')
 }
@@ -685,7 +687,12 @@ const pinAsQuickTask = async () => {
 // Toggle pin to top
 const togglePin = async () => {
   if (!currentTask.value) return
-  await taskStore.updateTaskWithUndo(currentTask.value.id, { isPinned: !currentTask.value.isPinned })
+  try {
+    await taskStore.updateTaskWithUndo(currentTask.value.id, { isPinned: !currentTask.value.isPinned })
+  } catch (error) {
+    console.error('Error toggling task pin:', error)
+    useToast().showToast('Failed to update pin. Refresh and try again.', 'error')
+  }
   emit('close')
 }
 
@@ -694,12 +701,17 @@ const toggleCalendarLock = async () => {
   if (!currentTask.value) return
   const nextLocked = !currentTask.value.calendarLocked
   const { showToast } = useToast()
-  await taskStore.updateTaskWithUndo(currentTask.value.id, { calendarLocked: nextLocked })
-  showToast(
-    nextLocked ? 'Time locked on calendar' : 'Time unlocked on calendar',
-    'success',
-    { duration: 1800 }
-  )
+  try {
+    await taskStore.updateTaskWithUndo(currentTask.value.id, { calendarLocked: nextLocked })
+    showToast(
+      nextLocked ? 'Time locked on calendar' : 'Time unlocked on calendar',
+      'success',
+      { duration: 1800 }
+    )
+  } catch (error) {
+    console.error('Error toggling calendar lock:', error)
+    showToast('Failed to update calendar lock. Refresh and try again.', 'error')
+  }
   emit('close')
 }
 

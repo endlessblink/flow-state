@@ -487,6 +487,15 @@ describe('Task Store — CRUD', () => {
     )
   })
 
+  it('rejects every central task update when a stale view targets a missing canonical task', async () => {
+    const store = useTaskStore()
+
+    await expect(store.updateTask('missing-task-id', {
+      status: 'done',
+      dueDate: '2026-07-25',
+    })).rejects.toThrow('Task update target no longer exists: missing-task-id')
+  })
+
   it('skips the only live recurring guest task in place without creating completion history', async () => {
     mockAuth.user = null
     mockAuth.isAuthenticated = false
@@ -774,15 +783,6 @@ describe('Task Store — CRUD', () => {
     expect(found?.tags).toEqual(['frontend', 'bug', 'v2'])
   })
 
-  it('updateTask on non-existent taskId is a no-op', async () => {
-    const store = useTaskStore()
-    const before = store._rawTasks.length
-
-    // Should not throw
-    await store.updateTask('nonexistent-id', { title: 'Ghost' })
-
-    expect(store._rawTasks.length).toBe(before)
-  })
 })
 
 // ============================================================================

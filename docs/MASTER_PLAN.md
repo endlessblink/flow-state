@@ -2233,6 +2233,16 @@ _Original plan below._
 
 **Remaining**: audit every mutation entry point for silent missing-target returns, swallowed errors, optimistic-only acknowledgements, and duplicate-operation success toasts; prove the packaged menus and keyboard/checkbox paths.
 
+### BUG-1979: Stale task actions can be acknowledged as successful no-ops (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-24) | **Related**: BUG-1978, TASK-1977
+
+**Exact failure modes fixed**: the central task update and undo-aware wrapper returned successfully when a stale view targeted a task missing from canonical state; right-click actions then hid failures in developer logs. Canvas multi-selection could also mutate earlier tasks before discovering a missing target.
+
+**Fix and automated proof**: missing canonical targets now reject at both shared update boundaries; right-click complete, reopen, due-date, priority, and duration actions show a visible retry message; Canvas completion preflights the whole visible selection and aborts before any write when one target is missing. Focused regressions cover direct updates, undo-aware updates, context-menu visibility, recurring/non-recurring Canvas routing, atomic stale selection, and Calendar canonical dispatch.
+
+**Remaining**: audit every non-menu direct writer and fire-and-forget update for swallowed rejections; add real Electron stale-view and cross-client deletion races; require canonical operation receipts before globally closing silent-write-drop detection.
+
 ### TASK-1943: Reliable Hermes–FlowState personal-assistant program (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1797, BUG-1942 | **Related**: FEATURE-1943

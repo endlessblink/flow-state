@@ -195,6 +195,16 @@ describe('task operation undo/redo three-cycle invariants', () => {
     }
   })
 
+  it('rejects an undo-aware update when a stale view targets a missing task', async () => {
+    const undoSystem = getUndoSystem()
+
+    await expect(
+      undoSystem.updateTaskWithUndo('missing-task-id', { status: 'done' })
+    ).rejects.toThrow('Task update target no longer exists: missing-task-id')
+
+    expect(undoSystem.canUndo.value).toBe(false)
+  })
+
   it('undoes and redoes the public moveTaskWithUndo status wrapper three consecutive times', async () => {
     const taskStore = useTaskStore()
     const undoSystem = getUndoSystem()

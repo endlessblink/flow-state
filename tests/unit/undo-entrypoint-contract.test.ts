@@ -235,6 +235,9 @@ describe('undo-aware modal and context-menu entry points', () => {
 
     expect(contextMenuActions).toContain('await updateDueDateWithCalendarInstance(taskId,')
     expect(contextMenuActions).not.toContain('await taskStore.updateTaskInstance(taskId, calendarInstanceId')
+    expect(contextMenuActions).toContain("showToast(`Task could not be ${action}. Refresh and try again.`, 'error')")
+    expect(contextMenuActions).toContain("reportMutationFailure('completed', error)")
+    expect(contextMenuActions).toContain("reportMutationFailure('rescheduled', error)")
   })
 
   it('keeps drag reorder persistence atomic and undo-aware', () => {

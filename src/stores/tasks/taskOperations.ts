@@ -465,7 +465,7 @@ export function useTaskOperations(
         }
 
         const index = _rawTasks.value.findIndex(t => t.id === taskId)
-        if (index === -1) return
+        if (index === -1) throw new Error(`Task update target no longer exists: ${taskId}`)
 
         const authStore = useAuthStore()
         const task = _rawTasks.value[index]

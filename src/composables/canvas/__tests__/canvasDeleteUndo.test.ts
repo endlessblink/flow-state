@@ -23,6 +23,10 @@ const mockBulkDeleteTasksWithUndo = vi.fn().mockResolvedValue(undefined)
 const mockBulkPermanentlyDeleteTasksWithUndo = vi.fn().mockResolvedValue(undefined)
 const mockUpdateTaskWithUndo = vi.fn().mockResolvedValue(undefined)
 const mockPermanentlyDeleteTaskWithUndo = vi.fn().mockResolvedValue(undefined)
+const mockDoneForNow = vi.fn().mockResolvedValue(undefined)
+const mockGetTask = vi.fn<(id: string) => Record<string, unknown> | undefined>(
+    (id: string) => ({ id, title: `Task ${id}` })
+)
 
 const mockUndoHistory = {
     bulkMoveToInboxWithUndo: mockBulkMoveToInboxWithUndo,
@@ -51,10 +55,12 @@ let canvasImagesValue: Array<{ id: string; position: { x: number; y: number } }>
 
 vi.mock('@/stores/tasks', () => ({
     useTaskStore: () => ({
-        getTask: (id: string) => ({ id, title: `Task ${id}` }),
+        getTask: mockGetTask,
+        doneForNow: mockDoneForNow,
         tasks: [],
         rawTasks: [],
         _rawTasks: [],
+        updateTask: vi.fn(),
     }),
 }))
 
@@ -64,6 +70,7 @@ vi.mock('@/stores/canvas', () => ({
         sections: canvasSectionsValue,
         nodes: [],
         _rawGroups: [],
+        groups: [],
         setSelectedNodes: mockSetSelectedNodes,
         deleteSection: mockDeleteSection,
     }),
@@ -450,5 +457,77 @@ describe('Canvas hidden selection mutation safety', () => {
             'visible-task',
             expect.objectContaining({ doneForNowUntil: expect.any(String) }),
         )
+    })
+
+    it('routes recurring tasks through doneForNow while moving non-recurring to tomorrow', async () => {
+        const { useCanvasTaskActions } = await import('../useCanvasTaskActions')
+        const { formatDateKey } = await import('@/utils/dateUtils')
+        const tomorrow = new Date()
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        selectedNodeIdsValue = ['recurring-task', 'single-task']
+        mockGetNodes.value = [
+            { id: 'recurring-task', type: 'taskNode', position: { x: 0, y: 0 }, data: {} },
+            { id: 'single-task', type: 'taskNode', position: { x: 20, y: 20 }, data: {} },
+        ] as any
+        mockGetTask.mockImplementation((id: string) => {
+            if (id === 'recurring-task') {
+                return {
+                    id,
+                    recurrenceRule: { pattern: 'daily', interval: 1 },
+                    dueDate: '2026-07-20',
+                    status: 'todo',
+                }
+            }
+            return {
+                id,
+                recurrenceRule: undefined,
+                scheduledDate: '2026-07-20',
+                status: 'todo'
+            }
+        })
+        vi.clearAllMocks()
+
+        const actions = useCanvasTaskActions(buildDeps())
+
+        await actions.doneForNowSelectedTasks()
+
+        expect(mockDoneForNow).toHaveBeenCalledOnce()
+        expect(mockDoneForNow).toHaveBeenCalledWith('recurring-task')
+
+        expect(mockUpdateTaskWithUndo).toHaveBeenCalledOnce()
+        expect(mockUpdateTaskWithUndo).toHaveBeenCalledWith(
+            'single-task',
+            expect.objectContaining({
+                dueDate: formatDateKey(tomorrow),
+                doneForNowUntil: formatDateKey(tomorrow),
+                scheduledDate: formatDateKey(tomorrow),
+            }),
+        )
+    })
+
+    it('aborts the whole selection when any visible selected task is missing canonically', async () => {
+        const { useCanvasTaskActions } = await import('../useCanvasTaskActions')
+        selectedNodeIdsValue = ['visible-task', 'missing-task']
+        mockGetNodes.value = [
+            { id: 'visible-task', type: 'taskNode', position: { x: 0, y: 0 }, data: {} },
+            { id: 'missing-task', type: 'taskNode', position: { x: 20, y: 20 }, data: {} },
+        ] as any
+        mockGetTask.mockImplementation((id: string) => {
+            if (id === 'visible-task') {
+                return { id, status: 'todo', scheduledDate: '2026-07-20' }
+            }
+            if (id === 'missing-task') return undefined
+            return undefined
+        })
+        mockDoneForNow.mockClear()
+        mockUpdateTaskWithUndo.mockClear()
+
+        const actions = useCanvasTaskActions(buildDeps())
+
+        await actions.doneForNowSelectedTasks()
+
+        expect(mockDoneForNow).not.toHaveBeenCalled()
+        expect(mockUpdateTaskWithUndo).not.toHaveBeenCalled()
     })
 })

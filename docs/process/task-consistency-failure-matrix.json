@@ -272,7 +272,7 @@
       },
       {
         "id": "runtime-boundary-and-sidecar-recovery",
-        "issueSignals": ["BUG-1870", "BUG-1973"],
+        "issueSignals": ["BUG-1870"],
         "vectorIds": ["local-api-sidecar-cancel-quit-recovery-after-replay", "auth-shell-and-task-visibility-after-update-restart", "canvas-right-click-completion-noop-and-retry"]
       },
       {

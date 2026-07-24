@@ -378,6 +378,76 @@ describe('Task Store — CRUD', () => {
     })
   })
 
+  it('rolls back recurring guest completion when its reload authority cannot be written', async () => {
+    mockAuth.user = null
+    mockAuth.isAuthenticated = false
+    const store = useTaskStore()
+    const task = await store.createTask({
+      title: 'Guest recurring storage failure',
+      status: 'todo',
+      dueDate: '2026-07-23',
+      recurrenceRule: {
+        pattern: 'daily',
+        interval: 1,
+        endType: 'never',
+      },
+    })
+    const unrelatedTask = await store.createTask({
+      title: 'Concurrent task before completion',
+      status: 'todo',
+    })
+    let releaseCache!: () => void
+    let reportCacheStarted!: () => void
+    const cacheStarted = new Promise<void>(resolve => {
+      reportCacheStarted = resolve
+    })
+    const cacheRelease = new Promise<void>(resolve => {
+      releaseCache = resolve
+    })
+    mockCacheTasks.mockImplementationOnce(async () => {
+      reportCacheStarted()
+      await cacheRelease
+    })
+    const persistedBefore = localStorage.getItem('flowstate-guest-tasks')
+    const originalSetItem = localStorage.setItem.bind(localStorage)
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
+      if (key === 'flowstate-guest-tasks') throw new DOMException('quota full', 'QuotaExceededError')
+      originalSetItem(key, value)
+    })
+
+    const completion = store.doneForNow(task.id)
+    await cacheStarted
+    const unrelatedIndex = store._rawTasks.findIndex(candidate => candidate.id === unrelatedTask.id)
+    store._rawTasks.splice(unrelatedIndex, 1, {
+      ...store._rawTasks[unrelatedIndex],
+      title: 'Concurrent task after completion started',
+    })
+    releaseCache()
+
+    await expect(completion).rejects.toThrow('quota full')
+    setItem.mockRestore()
+
+    const rolledBackTask = store._rawTasks.find(candidate => candidate.id === task.id)
+    expect(rolledBackTask).toMatchObject({
+      status: 'todo',
+      dueDate: '2026-07-23',
+    })
+    expect(rolledBackTask?.recurrenceCount).toBeUndefined()
+    expect(store._rawTasks.filter(candidate => candidate.isCompletionRecord)).toHaveLength(0)
+    expect(store._rawTasks.find(candidate => candidate.id === unrelatedTask.id)?.title)
+      .toBe('Concurrent task after completion started')
+    expect(mockCacheTasks).toHaveBeenLastCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: unrelatedTask.id,
+          title: 'Concurrent task after completion started',
+        }),
+      ]),
+      { throwOnError: true },
+    )
+    expect(localStorage.getItem('flowstate-guest-tasks')).toBe(persistedBefore)
+  })
+
   it('skips the only live recurring guest task in place without creating completion history', async () => {
     mockAuth.user = null
     mockAuth.isAuthenticated = false

@@ -1595,6 +1595,7 @@ export function useTaskOperations(
         }
 
         if (!authStore.user?.id) {
+            const taskBeforeCompletion = task
             const { computeNextDueDate } = await import('@/utils/recurrenceUtils')
             const currentDueDate = task.dueDate || formatDateKey(new Date())
             const nextDueDate = options.nextDueDate ?? computeNextDueDate(
@@ -1646,8 +1647,21 @@ export function useTaskOperations(
             const taskIndex = _rawTasks.value.findIndex(candidate => candidate.id === taskId)
             if (taskIndex !== -1) _rawTasks.value.splice(taskIndex, 1, updatedTask)
             _rawTasks.value.push(completionRecord)
-            await cacheTasks([..._rawTasks.value], { throwOnError: true })
-            await saveTasksToStorage([..._rawTasks.value], 'done-for-now-guest-durability')
+            try {
+                await cacheTasks([..._rawTasks.value], { throwOnError: true })
+                await saveTasksToStorage([..._rawTasks.value], 'done-for-now-guest-durability')
+            } catch (error) {
+                const completionIndex = _rawTasks.value.findIndex(candidate => candidate.id === completionRecord.id)
+                if (completionIndex !== -1) _rawTasks.value.splice(completionIndex, 1)
+                const livingTaskIndex = _rawTasks.value.findIndex(candidate => candidate.id === taskId)
+                if (livingTaskIndex !== -1) _rawTasks.value.splice(livingTaskIndex, 1, taskBeforeCompletion)
+                try {
+                    await cacheTasks([..._rawTasks.value], { throwOnError: true })
+                } catch (rollbackError) {
+                    console.error('[DONE-FOR-NOW] Failed to restore guest read cache after persistence failure:', rollbackError)
+                }
+                throw error
+            }
             return
         }
 

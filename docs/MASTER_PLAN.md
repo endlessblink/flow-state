@@ -2197,6 +2197,32 @@ _Original plan below._
 
 **Current proof boundary**: mutual exclusivity and explicit-Done visibility are enforced in store, persistence, saved views, lists, project counts, and sidebar badges with focused regressions; packaged Electron and broader recurrence/mixed-version permutations remain open.
 
+### BUG-1976: Guest recurring completion survives visibly after durable storage rejects it (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-24) | **Related**: BUG-1975, TASK-1977
+
+**Exact failure mode**: `Done for now` advanced the visible recurring task and added an in-memory completion record before the guest reload authority was written. When browser storage rejected the write, the action reported failure but left the task visibly advanced until reload reverted it.
+
+**Fix and automated proof**: snapshot the guest task collection before recurrence mutation, restore it plus the read cache when either durable write fails, and rethrow the original failure. A quota-failure regression proves the original due date and status remain visible, no completion record survives, and the guest reload authority remains unchanged.
+
+**Remaining**: package the desktop release and exercise the failure on the real runtime boundary; authenticated partial-commit, response-loss, and concurrent recurring completion remain separate matrix vectors.
+
+### TASK-1977: Exhaustive historical task-consistency and recoverability sweep (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-24) | **Related**: BUG-1974, BUG-1975, BUG-1976, TASK-1943
+
+**Goal**: Make every known task-consistency failure class explicit and executable across mutation, view, runtime state, persistence boundary, and recovery path. The current matrix contains 115 vectors; 97 critical/high vectors remain open and must stay visible as release risk until each has automated or live evidence appropriate to its boundary.
+
+**Required coverage**:
+
+- Create, edit, complete, reopen, recurrence, move, delete, restore, permanent delete, undo/redo, timer, hierarchy, project, geometry, bulk, backup, and restore.
+- Catalog, Board, Calendar, Canvas, Quick Sort, Quick Tasks, Focus, mobile/PWA, Electron, Local Task API, and external clients.
+- Guest and authenticated accounts, shared workspaces, filtered/hidden rows, offline/reconnect, dropped Realtime, concurrent and stale clients, auth expiry, storage quota, large inventories, renderer reload, crash, Electron restart, mixed versions, and updater replacement.
+- Absolute existence and recoverability through canonical read-back, complete inventory, independent client, reload/restart, backup file validation, restore into an independent failure domain, tombstone provenance, and anti-resurrection checks.
+- Every closeout names the exact fixed failure mode, the executable reproduction, the persistence and recovery proof, and what remains outside the claim.
+
+**Release rule**: no recurring/cardinal issue may be called globally solved because one helper or one view passes. Open critical/high vectors remain machine-readable, and each release records the exact subset proved plus the unresolved risk list.
+
 ### TASK-1943: Reliable Hermes–FlowState personal-assistant program (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1797, BUG-1942 | **Related**: FEATURE-1943

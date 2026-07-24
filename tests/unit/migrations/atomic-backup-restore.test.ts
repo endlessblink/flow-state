@@ -60,4 +60,21 @@ describe('atomic backup restore migration contract', () => {
     expect(migration).toContain('restore_workspace_scope_requires_explicit_policy')
     expect(migration).toContain("item.value->>'workspace_id' IS NOT NULL")
   })
+
+  it('rejects personal-task references outside the authenticated owner scope', () => {
+    expect(migration).toContain('restore_task_project_unavailable')
+    expect(migration).toContain('restore_task_assignee_unavailable')
+    expect(migration).toMatch(
+      /v_task\.project_id IS NOT NULL[\s\S]+public\.projects[\s\S]+user_id = v_actor/,
+    )
+    expect(migration).toMatch(
+      /v_task\.lane_id IS NOT NULL[\s\S]+public\.lanes[\s\S]+user_id = v_actor/,
+    )
+    expect(migration).toMatch(
+      /IF v_task\.lane_id IS NOT NULL[\s\S]+THEN\s+v_task\.lane_id := NULL;/,
+    )
+    expect(migration).toContain(
+      'v_task.assigned_to IS NOT NULL AND v_task.assigned_to IS DISTINCT FROM v_actor',
+    )
+  })
 })

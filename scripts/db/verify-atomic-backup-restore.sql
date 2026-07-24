@@ -97,6 +97,137 @@ DROP TRIGGER flowstate_fail_atomic_restore_group ON public.groups;
 
 DO $$
 DECLARE
+  v_actor uuid := (SELECT auth.uid());
+  v_failed boolean;
+  v_probe record;
+BEGIN
+  FOR v_probe IN
+    SELECT *
+    FROM (
+      VALUES
+        (
+          'shared-task',
+          '[{"id":"00000000-0000-4000-8000-000000000121","title":"shared","status":"planned","workspace_id":"00000000-0000-4000-8000-000000000199"}]'::jsonb,
+          '[]'::jsonb,
+          '[]'::jsonb
+        ),
+        (
+          'shared-project',
+          '[]'::jsonb,
+          '[{"id":"00000000-0000-4000-8000-000000000122","name":"shared","workspace_id":"00000000-0000-4000-8000-000000000199"}]'::jsonb,
+          '[]'::jsonb
+        ),
+        (
+          'shared-group',
+          '[]'::jsonb,
+          '[]'::jsonb,
+          '[{"id":"00000000-0000-4000-8000-000000000123","name":"shared","type":"custom","workspace_id":"00000000-0000-4000-8000-000000000199"}]'::jsonb
+        )
+    ) AS probes(name, tasks, projects, groups)
+  LOOP
+    v_failed := false;
+    BEGIN
+      PERFORM public.flowstate_restore_backup_v1(
+        v_actor,
+        'scope-probe-' || v_probe.name,
+        'scope-probe-hash',
+        '4.0.0',
+        v_probe.tasks,
+        v_probe.projects,
+        v_probe.groups,
+        '[]'::jsonb
+      );
+    EXCEPTION WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%restore_workspace_scope_requires_explicit_policy%' THEN
+        RAISE;
+      END IF;
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN
+      RAISE EXCEPTION 'shared restore scope probe unexpectedly succeeded: %', v_probe.name;
+    END IF;
+  END LOOP;
+
+  IF EXISTS (
+    SELECT 1 FROM public.tasks
+    WHERE id::text IN (
+      '00000000-0000-4000-8000-000000000121',
+      '00000000-0000-4000-8000-000000000124',
+      '00000000-0000-4000-8000-000000000125',
+      '00000000-0000-4000-8000-000000000126'
+    )
+  ) OR EXISTS (
+    SELECT 1 FROM public.projects
+    WHERE id::text = '00000000-0000-4000-8000-000000000122'
+  ) OR EXISTS (
+    SELECT 1 FROM public.groups
+    WHERE id::text = '00000000-0000-4000-8000-000000000123'
+  ) THEN
+    RAISE EXCEPTION 'rejected restore scope probe left durable data';
+  END IF;
+
+  FOR v_probe IN
+    SELECT *
+    FROM (
+      VALUES
+        (
+          'project',
+          '[{"id":"00000000-0000-4000-8000-000000000124","title":"foreign project","status":"planned","project_id":"00000000-0000-4000-8000-000000000198"}]'::jsonb,
+          'restore_task_project_unavailable'
+        ),
+        (
+          'assignee',
+          '[{"id":"00000000-0000-4000-8000-000000000126","title":"foreign assignee","status":"planned","assigned_to":"00000000-0000-4000-8000-000000000196"}]'::jsonb,
+          'restore_task_assignee_unavailable'
+        )
+    ) AS probes(name, tasks, expected_error)
+  LOOP
+    v_failed := false;
+    BEGIN
+      PERFORM public.flowstate_restore_backup_v1(
+        v_actor,
+        'reference-probe-' || v_probe.name,
+        'reference-probe-hash',
+        '4.0.0',
+        v_probe.tasks,
+        '[]'::jsonb,
+        '[]'::jsonb,
+        '[]'::jsonb
+      );
+    EXCEPTION WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%' || v_probe.expected_error || '%' THEN
+        RAISE;
+      END IF;
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN
+      RAISE EXCEPTION 'foreign reference probe unexpectedly succeeded: %', v_probe.name;
+    END IF;
+  END LOOP;
+
+  PERFORM public.flowstate_restore_backup_v1(
+    v_actor,
+    'reference-probe-missing-lane',
+    'reference-probe-hash',
+    '4.0.0',
+    '[{"id":"00000000-0000-4000-8000-000000000125","title":"missing lane","status":"planned","lane_id":"00000000-0000-4000-8000-000000000197"}]'::jsonb,
+    '[]'::jsonb,
+    '[]'::jsonb,
+    '[]'::jsonb
+  );
+  IF NOT EXISTS (
+    SELECT 1 FROM public.tasks
+    WHERE id::text = '00000000-0000-4000-8000-000000000125'
+      AND user_id = v_actor
+      AND lane_id IS NULL
+  ) THEN
+    RAISE EXCEPTION 'missing personal lane was not safely detached during restore';
+  END IF;
+END;
+$$;
+
+DO $$
+DECLARE
   v_first jsonb;
   v_replay jsonb;
   v_conflicted boolean := false;
@@ -165,6 +296,6 @@ BEGIN
 END;
 $$;
 
-\echo 'Atomic backup restore rollback and replay probes passed'
+\echo 'Atomic backup restore rollback, scope, reference, and replay probes passed'
 
 ROLLBACK;

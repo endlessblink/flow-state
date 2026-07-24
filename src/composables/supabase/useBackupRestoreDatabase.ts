@@ -39,6 +39,27 @@ export function useBackupRestoreDatabase(ctx: DatabaseContext) {
         if (!userId) {
             throw new Error('Cannot restore backup without authenticated persistence')
         }
+        const containsSharedWorkspaceData = [
+            ...input.tasks,
+            ...input.projects,
+            ...input.groups,
+        ].some(entity => (
+            (
+                'workspaceId' in entity
+                && typeof entity.workspaceId === 'string'
+                && entity.workspaceId.length > 0
+            )
+            || (
+                'workspace_id' in entity
+                && typeof entity.workspace_id === 'string'
+                && entity.workspace_id.length > 0
+            )
+        ))
+        if (containsSharedWorkspaceData) {
+            throw new Error(
+                'Shared-workspace backups require an ownership-aware restore and cannot use personal recovery'
+            )
+        }
         const pendingKey = [
             'flowstate-atomic-restore-v1',
             userId,

@@ -25,6 +25,7 @@
     "redo",
     "assign-project",
     "assign-lane",
+    "assign-user",
     "resize",
     "reparent",
     "edit-recurrence",
@@ -68,6 +69,16 @@
     "export-interrupted",
     "capacity-limit",
     "shared-workspace-restore",
+    "workspace-owner",
+    "workspace-admin",
+    "workspace-member",
+    "workspace-viewer",
+    "membership-revoked",
+    "workspace-deleted",
+    "assignee-removed",
+    "artifact-from-other-workspace",
+    "id-collision-across-workspaces",
+    "attribution-drift",
     "clock-shifted",
     "storage-unavailable"
   ],
@@ -95,6 +106,7 @@
     "renderer-store",
     "supabase",
     "task-inventory",
+    "workspace-settings",
     "unified-inbox"
   ],
   "requiredLayers": [
@@ -132,6 +144,7 @@
     ,"test-isolation"
     ,"external-provider"
     ,"filesystem-backup"
+    ,"workspace-membership"
   ],
   "requiredFailureClasses": [
     "auth-expiry-and-recovery",
@@ -752,7 +765,11 @@
       "surfaces": ["backup", "task-inventory", "canvas", "all-views"],
       "states": ["backup-restore", "restore-drill", "workspace-switched", "tombstoned", "inventory-mismatch"],
       "layers": ["backup-artifact", "restore-procedure", "task-inventory", "supabase-persistence"],
-      "automatedEvidence": [],
+      "automatedEvidence": [
+        "tests/unit/migrations/atomic-backup-restore.test.ts",
+        "tests/unit/composables/useBackupRestoreDatabase.test.ts",
+        "scripts/db/verify-atomic-backup-restore.sql"
+      ],
       "liveEvidence": []
     },
     {
@@ -1547,11 +1564,39 @@
       "severity": "critical",
       "status": "open",
       "failureClasses": ["backup-restore-and-inventory", "workspace-scope-isolation", "identity-and-field-mapping", "provider-ownership-and-replay"],
-      "mutations": ["backup", "restore", "assign-project", "assign-lane", "reparent"],
-      "surfaces": ["backup", "supabase", "task-inventory", "all-views"],
-      "states": ["shared-workspace-restore", "wrong-account", "scope-transition", "lost-restore-ack", "concurrent-write"],
-      "layers": ["backup-artifact", "restore-procedure", "signed-transaction-boundary", "canonical-receipt", "supabase-rls", "supabase-persistence"],
-      "automatedEvidence": [],
+      "mutations": ["backup", "restore", "assign-project", "assign-lane", "assign-user", "reparent", "delete", "permanent-delete"],
+      "surfaces": ["backup", "supabase", "task-inventory", "workspace-settings", "all-views"],
+      "states": [
+        "shared-workspace-restore",
+        "workspace-owner",
+        "workspace-admin",
+        "workspace-member",
+        "workspace-viewer",
+        "membership-revoked",
+        "workspace-deleted",
+        "assignee-removed",
+        "artifact-from-other-workspace",
+        "wrong-account",
+        "scope-transition",
+        "lost-restore-ack",
+        "concurrent-write",
+        "id-collision-across-workspaces",
+        "attribution-drift"
+      ],
+      "layers": [
+        "backup-artifact",
+        "restore-procedure",
+        "workspace-membership",
+        "signed-transaction-boundary",
+        "canonical-receipt",
+        "supabase-rls",
+        "supabase-persistence"
+      ],
+      "automatedEvidence": [
+        "tests/unit/migrations/atomic-backup-restore.test.ts",
+        "tests/unit/composables/useBackupRestoreDatabase.test.ts",
+        "scripts/db/verify-atomic-backup-restore.sql"
+      ],
       "liveEvidence": []
     }
   ]

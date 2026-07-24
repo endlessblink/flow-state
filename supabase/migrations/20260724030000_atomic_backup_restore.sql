@@ -208,6 +208,21 @@ BEGIN
       v_tasks_existing := v_tasks_existing + 1;
       CONTINUE;
     END IF;
+    IF v_task.project_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM public.projects
+      WHERE id = v_task.project_id AND user_id = v_actor AND is_deleted = false
+    ) THEN
+      RAISE EXCEPTION 'restore_task_project_unavailable';
+    END IF;
+    IF v_task.lane_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM public.lanes
+      WHERE id = v_task.lane_id AND user_id = v_actor AND is_deleted = false
+    ) THEN
+      v_task.lane_id := NULL;
+    END IF;
+    IF v_task.assigned_to IS NOT NULL AND v_task.assigned_to IS DISTINCT FROM v_actor THEN
+      RAISE EXCEPTION 'restore_task_assignee_unavailable';
+    END IF;
     INSERT INTO public.tasks (
       id, user_id, project_id, lane_id, title, description, status, priority,
       progress, total_pomodoros, completed_pomodoros, estimated_pomodoros,

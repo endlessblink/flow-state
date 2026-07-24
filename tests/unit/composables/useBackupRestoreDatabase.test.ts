@@ -111,4 +111,75 @@ describe('atomic backup restore database wrapper', () => {
       vi.restoreAllMocks()
     }
   })
+
+  it.each([
+    ['task', {
+      tasks: [{
+        id: '00000000-0000-4000-8000-000000000002',
+        title: 'Shared task',
+        status: 'todo' as const,
+        workspaceId: '00000000-0000-4000-8000-000000000099',
+      }],
+      projects: [],
+      groups: [],
+    }],
+    ['project', {
+      tasks: [],
+      projects: [{
+        id: '00000000-0000-4000-8000-000000000003',
+        name: 'Shared project',
+        workspaceId: '00000000-0000-4000-8000-000000000099',
+      }],
+      groups: [],
+    }],
+    ['group', {
+      tasks: [],
+      projects: [],
+      groups: [{
+        id: '00000000-0000-4000-8000-000000000004',
+        name: 'Shared group',
+        type: 'custom' as const,
+        workspaceId: '00000000-0000-4000-8000-000000000099',
+      }],
+    }],
+  ])('fails closed before persistence for a shared-workspace %s artifact', async (_kind, entities) => {
+    const database = useBackupRestoreDatabase({
+      getUserIdSafe: () => '00000000-0000-4000-8000-000000000001',
+    } as any)
+
+    await expect(database.restoreBackupTransaction({
+      operationId: 'shared-backup',
+      artifactHash: 'shared-artifact-hash',
+      schemaVersion: '4.0.0',
+      tombstones: [],
+      ...entities,
+    } as any)).rejects.toThrow('Shared-workspace backups require an ownership-aware restore')
+
+    expect(rpc).not.toHaveBeenCalled()
+    expect(localStorage.length).toBe(0)
+  })
+
+  it('also fails closed for a snake-case shared-workspace artifact', async () => {
+    const database = useBackupRestoreDatabase({
+      getUserIdSafe: () => '00000000-0000-4000-8000-000000000001',
+    } as any)
+
+    await expect(database.restoreBackupTransaction({
+      operationId: 'snake-shared-backup',
+      artifactHash: 'snake-shared-artifact-hash',
+      schemaVersion: '4.0.0',
+      tasks: [{
+        id: '00000000-0000-4000-8000-000000000005',
+        title: 'Snake shared task',
+        status: 'todo',
+        workspace_id: '00000000-0000-4000-8000-000000000099',
+      }],
+      projects: [],
+      groups: [],
+      tombstones: [],
+    } as any)).rejects.toThrow('Shared-workspace backups require an ownership-aware restore')
+
+    expect(rpc).not.toHaveBeenCalled()
+    expect(localStorage.length).toBe(0)
+  })
 })

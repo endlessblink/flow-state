@@ -35,7 +35,7 @@
         <span class="user-email" :title="authStore.user?.email || ''">{{ authStore.user?.email || 'Authenticated' }}</span>
         <span class="user-status">{{ $t('common.online') }}</span>
       </div>
-      <button class="settings-mini-btn" :title="$t('common.settings')" @click="uiStore.openSettingsModal()">
+      <button class="settings-mini-btn" :aria-label="$t('common.settings')" :title="$t('common.settings')" @click="uiStore.openSettingsModal()">
         <Settings :size="16" />
       </button>
     </div>

@@ -7,7 +7,7 @@
         <Route :size="16" class="section-icon" />
         Lanes
       </h3>
-      <button class="add-lane-btn" title="Add lane" @click="startCreate">
+      <button class="add-lane-btn" aria-label="Add lane" title="Add lane" @click="startCreate">
         <Plus :size="14" />
       </button>
     </div>
@@ -45,7 +45,7 @@
           </template>
           {{ lane.name }}
         </BaseNavItem>
-        <button class="lane-delete-btn" title="Delete lane" @click.stop="askDelete(lane)">
+        <button class="lane-delete-btn" aria-label="Delete lane" title="Delete lane" @click.stop="askDelete(lane)">
           <Trash2 :size="13" />
         </button>
       </div>

@@ -23,7 +23,17 @@ async function swipeTaskToEdit(page: import("@playwright/test").Page) {
   await page.mouse.move(startX, midY);
   await page.touchscreen.tap(startX, midY); // ensure touch is registered
 
-  // Use a touch drag: touchstart → touchmove → touchend
+  // TASK-1977: synthesise the swipe portably.
+  //
+  // This used to build events with `new TouchEvent(...)` and `new Touch(...)`.
+  // WebKit does not expose a Touch constructor, so on mobile-safari every call
+  // threw "TypeError: Illegal constructor" and took the whole Task Sheets suite
+  // (6 tests) down with it — meaning the mobile Safari surface, i.e. the iPhone
+  // PWA, had no evidence at all while appearing to be covered.
+  //
+  // The component's handlers only read `e.touches[0].clientX/clientY`, so a
+  // plain cancelable Event carrying a `touches`/`changedTouches` array is
+  // sufficient and constructs identically in every engine.
   await page.evaluate(
     ({ startX, endX, midY }) => {
       const el = document.querySelector(
@@ -31,57 +41,37 @@ async function swipeTaskToEdit(page: import("@playwright/test").Page) {
       ) as HTMLElement;
       if (!el) return;
 
-      const touchStart = new TouchEvent("touchstart", {
-        bubbles: true,
-        cancelable: true,
-        touches: [
-          new Touch({
-            identifier: 1,
-            target: el,
-            clientX: startX,
-            clientY: midY,
-          }),
-        ],
-        changedTouches: [
-          new Touch({
-            identifier: 1,
-            target: el,
-            clientX: startX,
-            clientY: midY,
-          }),
-        ],
+      const point = (x: number) => ({
+        identifier: 1,
+        target: el,
+        clientX: x,
+        clientY: midY,
+        pageX: x,
+        pageY: midY,
+        screenX: x,
+        screenY: midY,
       });
-      el.dispatchEvent(touchStart);
+
+      const dispatchTouch = (
+        type: string,
+        touches: unknown[],
+        changed: unknown[],
+      ) => {
+        const event = new Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperty(event, "touches", { value: touches });
+        Object.defineProperty(event, "changedTouches", { value: changed });
+        Object.defineProperty(event, "targetTouches", { value: touches });
+        el.dispatchEvent(event);
+      };
+
+      dispatchTouch("touchstart", [point(startX)], [point(startX)]);
 
       // Move in steps to simulate a realistic swipe
       for (let x = startX; x <= endX; x += 10) {
-        const touchMove = new TouchEvent("touchmove", {
-          bubbles: true,
-          cancelable: true,
-          touches: [
-            new Touch({ identifier: 1, target: el, clientX: x, clientY: midY }),
-          ],
-          changedTouches: [
-            new Touch({ identifier: 1, target: el, clientX: x, clientY: midY }),
-          ],
-        });
-        el.dispatchEvent(touchMove);
+        dispatchTouch("touchmove", [point(x)], [point(x)]);
       }
 
-      const touchEnd = new TouchEvent("touchend", {
-        bubbles: true,
-        cancelable: true,
-        touches: [],
-        changedTouches: [
-          new Touch({
-            identifier: 1,
-            target: el,
-            clientX: endX,
-            clientY: midY,
-          }),
-        ],
-      });
-      el.dispatchEvent(touchEnd);
+      dispatchTouch("touchend", [], [point(endX)]);
     },
     { startX, endX, midY },
   );
@@ -293,7 +283,13 @@ test.describe("Mobile Task Bottom Sheets", () => {
       await expect(editSheet.locator(".pill.pill-low")).toBeVisible();
     });
 
-    test("status pills are visible — To Do, In Progress, Done", async ({
+    // TASK-1977: this asserted an "In Progress" pill that the app does not and
+    // should not have — `Task['status']` is `'todo' | 'done'`, and the only
+    // references to `in_progress` anywhere in src/ are Storybook fixtures. The
+    // test was encoding a status the model never had, so it could only ever
+    // fail. Corrected to the real contract, and strengthened: selecting a pill
+    // must actually mark it active, not merely render.
+    test("status pills are visible and selectable — To Do, Done", async ({
       page,
     }) => {
       await swipeTaskToEdit(page);
@@ -301,15 +297,22 @@ test.describe("Mobile Task Bottom Sheets", () => {
       const editSheet = page.locator(".task-edit-sheet");
       await expect(editSheet).toBeVisible({ timeout: 5000 });
 
-      await expect(
-        editSheet.locator(".pill", { hasText: "To Do" }),
-      ).toBeVisible();
+      const todoPill = editSheet.locator(".pill", { hasText: "To Do" });
+      const donePill = editSheet.locator(".pill", { hasText: "Done" });
+      await expect(todoPill).toBeVisible();
+      await expect(donePill).toBeVisible();
+
+      // The model has exactly two statuses; a third pill would mean the sheet
+      // drifted from Task['status'].
       await expect(
         editSheet.locator(".pill", { hasText: "In Progress" }),
-      ).toBeVisible();
-      await expect(
-        editSheet.locator(".pill", { hasText: "Done" }),
-      ).toBeVisible();
+      ).toHaveCount(0);
+
+      await donePill.click();
+      await expect(donePill).toHaveClass(/active/);
+      await todoPill.click();
+      await expect(todoPill).toHaveClass(/active/);
+      await expect(donePill).not.toHaveClass(/active/);
     });
 
     test("Cancel button closes the edit sheet", async ({ page }) => {

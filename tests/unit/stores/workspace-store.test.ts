@@ -45,20 +45,32 @@ vi.mock("@/stores/auth", () => ({
   }),
 }));
 
-// Mock stores that switchWorkspace loads dynamically
+// Mock stores that switchWorkspace loads dynamically.
+//
+// TASK-1977: these stubs must expose every method switchWorkspace actually
+// calls. They previously omitted clearAll(), so the switch threw before it
+// could be observed — meaning the leaving-workspace data wipe, the exact step
+// that stops one workspace's tasks leaking into the next, was never tested.
+const mockClearTasks = vi.fn();
+const mockClearProjects = vi.fn();
+const mockClearCanvas = vi.fn();
+
 vi.mock("@/stores/tasks", () => ({
   useTaskStore: () => ({
     loadFromDatabase: vi.fn().mockResolvedValue(undefined),
+    clearAll: mockClearTasks,
   }),
 }));
 vi.mock("@/stores/projects", () => ({
   useProjectStore: () => ({
     loadProjectsFromDatabase: vi.fn().mockResolvedValue(undefined),
+    clearAll: mockClearProjects,
   }),
 }));
 vi.mock("@/stores/canvas", () => ({
   useCanvasStore: () => ({
     loadFromDatabase: vi.fn().mockResolvedValue(undefined),
+    clearAll: mockClearCanvas,
   }),
 }));
 vi.mock("@/composables/sync/useSyncOrchestrator", () => ({
@@ -174,6 +186,13 @@ describe("useWorkspaceStore", () => {
 
     expect(store.activeWorkspaceId).toBe("ws-abc");
     expect(store.isPersonalWorkspace).toBe(false);
+
+    // TASK-1977: the outgoing workspace's data must be cleared as part of the
+    // switch. Without this, tasks/projects/canvas from the workspace you just
+    // left stay in memory and render as if they belonged to the new one.
+    expect(mockClearTasks).toHaveBeenCalled();
+    expect(mockClearProjects).toHaveBeenCalled();
+    expect(mockClearCanvas).toHaveBeenCalled();
   });
 
   it("resumes durable writes immediately after a workspace switch completes", async () => {

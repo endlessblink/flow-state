@@ -46,6 +46,7 @@ These are the source of truth for the app's current state. When delegating to ag
 
 **CRITICAL - Marking Tasks Done:**
 Tasks appear in **3 places** in MASTER_PLAN.md. Update ALL of them:
+
 1. **Summary table** (~lines 100-200) - Change `📋 **PLANNED**` to `✅ **DONE**`, add strikethrough to ID
 2. **Subtasks lists** - Add `~~strikethrough~~` and ✅ to bullet point
 3. **Detailed section** - Update `(📋 PLANNED)` to `(✅ DONE)` in the `####` header
@@ -62,21 +63,21 @@ Never begin implementation until the task is documented in MASTER_PLAN.md.
 
 ## Current Status
 
-| Component | Status |
-|-----------|--------|
-| Canvas | ✅ Working |
-| Board | ✅ Working |
-| Calendar | ⚠️ Partial (resize issues) |
-| Supabase Sync | ⚠️ Working (offline-first in progress: TASK-1177) |
-| Backup System | ✅ Hardened (Smart Layers 1-3) |
-| Timer Sync | ✅ Working (cross-device via Supabase Realtime) |
-| KDE Widget | ✅ Working (packages/kde-widget/) |
-| Electron Desktop | ✅ Working (Linux/Win/Mac releases) |
-| VPS Production | ✅ Live (Contabo VPS, set VITE_SITE_URL) |
-| Build/CI | ✅ Passing |
-| AI Chat | ✅ Working (Groq/Ollama) |
-| Gamification | ✅ Working (XP, achievements, shop) |
-| Offline Sync | 🔄 In Progress (TASK-1177) |
+| Component        | Status                                                         |
+| ---------------- | -------------------------------------------------------------- |
+| Canvas           | ✅ Working                                                     |
+| Board            | ✅ Working                                                     |
+| Calendar         | ⚠️ Partial (resize issues)                                     |
+| Supabase Sync    | ⚠️ Working (offline-first in progress: TASK-1177)              |
+| Backup System    | ✅ Hardened (Smart Layers 1-3)                                 |
+| Timer Sync       | ✅ Working (cross-device via Supabase Realtime)                |
+| KDE Widget       | ✅ Working (packages/kde-widget/)                              |
+| Electron Desktop | ✅ Working (Linux/Win/Mac releases)                            |
+| VPS Production   | ✅ Live (Contabo VPS, set VITE_SITE_URL)                       |
+| Build/CI         | ✅ Passing                                                     |
+| AI Chat          | ✅ Working (Groq/Ollama)                                       |
+| Gamification     | ❌ Removed (XP/achievements/shop/credits taken out — too much) |
+| Offline Sync     | 🔄 In Progress (TASK-1177)                                     |
 
 **Full Tracking**: `docs/MASTER_PLAN.md`
 
@@ -106,6 +107,7 @@ npm run electron:build  # Build desktop app (AppImage/deb/exe)
 ## Direct Database Operations (for data actions, cleanup, queries)
 
 **Execute SQL** against local Supabase (no app needed):
+
 ```bash
 # Single query
 docker exec supabase_db_flow-state psql -U postgres -c "SQL_HERE"
@@ -123,6 +125,7 @@ SQL
 **Task columns (most used)**: `id` (uuid), `title`, `status` (planned/in_progress/done/backlog/on_hold), `priority` (low/medium/high/NULL), `project_id` (uuid FK), `due_date` (timestamptz), `is_deleted` (bool), `deleted_at`, `is_in_inbox` (bool), `parent_id` (text, canvas group), `order` (int), `tags` (text[]), `subtasks` (jsonb), `created_at`, `updated_at`
 
 **Safety protocol**:
+
 1. ALWAYS run SELECT first to preview affected rows
 2. Prefer soft-delete: `SET is_deleted = true, deleted_at = now()` over DELETE
 3. On hard delete: also insert tombstone: `INSERT INTO tombstones (user_id, entity_type, entity_id) VALUES ('a0eebc99-...', 'task', 'TASK_UUID')`
@@ -155,9 +158,11 @@ SQL
 **Full SOP:** [SOP-065](docs/sop/SOP-065-electron-desktop-app.md) (builds, updater, deployment)
 
 **Deploy command (MANDATORY after code changes):**
+
 ```bash
 ./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"
 ```
+
 Options: `--skip-deploy` (build only), `--dry-run` (preview).
 
 **Release workflow:** Bump version in 2 files (package.json, electron-builder.yml) → git tag → CI/CD auto-builds.
@@ -182,11 +187,13 @@ User (HTTPS) → Cloudflare (DNS/CDN) → Contabo VPS (Caddy) → Self-hosted Su
 **Local dev setup:** Copy `.env.example` to `.env.local`, run `supabase status` for keys.
 
 **Caching facts** (affects deploy troubleshooting):
+
 - `rsync --delete` removes old chunks immediately
 - Cloudflare caches `/assets/*` for 1 year (immutable). `index.html` and `sw.js` are `no-cache`
 - Workbox SW precaches chunk list at install time
 
 **Chunk Load Failure Runbook (BUG-1184):** When user reports blank page/chunk errors:
+
 1. Check CI/CD: `gh run list --limit 5` — common cause: uncommitted imported file
 2. Three-layer hash comparison: Cloudflare vs VPS filesystem vs SW precache (details in MEMORY.md BUG-1184 section)
 3. Fix: redeploy if stale assets, purge CF cache if CDN mismatch. Router auto-recovery unregisters stale SW.
@@ -204,6 +211,7 @@ Both **VPS (web PWA)** and **Electron (desktop)** distributions are active and p
 **Run specific tests:** `npm run test:e2e -- --grep "Morning Dashboard"`
 
 **Quick Playwright debug session** (authenticated, with seeded data):
+
 ```bash
 # First ensure global-setup has run (creates test user + seeds data):
 npm run test:e2e -- --grep "NEVER_MATCH" 2>/dev/null
@@ -215,22 +223,27 @@ npm run test:e2e -- --grep "NEVER_MATCH" 2>/dev/null
 **What you get:** An authenticated `playwright@test.flowstate` user with 2 projects (Work + Personal), 8 tasks (mixed statuses/priorities), 2 canvas groups, and user settings. All seeded automatically by `tests/global-setup.ts`.
 
 **Test fixtures:**
+
 - `tests/fixtures/auth.ts` — test user credentials, re-exports `test`/`expect`
 - `tests/fixtures/test-ids.ts` — fixed UUIDs for all seeded data (projects, tasks, groups)
 
 **Writing tests or debug scripts:**
-```typescript
-import { test, expect } from '../fixtures/auth'
-import { TEST_TASKS, TEST_PROJECTS } from '../fixtures/test-ids'
 
-test('tasks are visible', async ({ page }) => {
+```typescript
+import { test, expect } from "../fixtures/auth";
+import { TEST_TASKS, TEST_PROJECTS } from "../fixtures/test-ids";
+
+test("tasks are visible", async ({ page }) => {
   // page is already authenticated — storageState is auto-loaded by playwright.config.ts
-  await page.goto('/#/tasks')
-  await expect(page.getByText(TEST_TASKS.designLandingPage.title)).toBeVisible()
-})
+  await page.goto("/#/tasks");
+  await expect(
+    page.getByText(TEST_TASKS.designLandingPage.title),
+  ).toBeVisible();
+});
 ```
 
 **How it works internally:**
+
 1. `global-setup.ts` creates/reuses the test user via Supabase Admin API (like any real user)
 2. Wipes and re-seeds its data each run (clean slate)
 3. Signs in via Supabase REST API, injects session into browser localStorage
@@ -238,6 +251,7 @@ test('tasks are visible', async ({ page }) => {
 5. `playwright.config.ts` auto-loads this storageState for all tests
 
 **Required env vars** (auto-set by `npm run test:e2e`):
+
 - `SUPABASE_SERVICE_ROLE_KEY` — for user creation and data seeding (bypasses RLS)
 - `VITE_SUPABASE_ANON_KEY` — for browser auth
 
@@ -252,12 +266,13 @@ Universal rules (completion, atomic tasks, design tokens, type safety, database 
 5. **Version Bump Protocol** - When releasing: update 2 files (package.json, electron-builder.yml) + create git tag
 6. **Auto-Updater Delivery (MANDATORY)** - After code changes, ALWAYS bump the version in `package.json` (patch increment) AND run `./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"` to build and deploy to VPS. The Electron auto-updater only triggers when the version is higher than the installed one. Never skip the bump. Never just offer `npm run dev` or local install as the final delivery. See [SOP-065](docs/sop/SOP-065-electron-desktop-app.md).
 7. **Electron Build On Every Production Push (MANDATORY)** - Whenever you push to production (CI/CD `master` deploy, manual `rsync` of `dist/`, or any `VITE_SITE_URL` web deploy), you MUST also build and deploy an Electron update in the same release:
-    1. Bump `package.json` and `electron-builder.yml` version (patch increment).
-    2. Run `./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"`.
-    3. Verify `${VITE_SITE_URL}/updates/latest.json` reflects the new version.
+   1. Bump `package.json` and `electron-builder.yml` version (patch increment).
+   2. Run `./scripts/deploy-electron-update.sh --notes "TASK-XXX: description"`.
+   3. Verify `${VITE_SITE_URL}/updates/latest.json` reflects the new version.
 
-    Web PWA and Electron desktop share the same codebase. Shipping web-only leaves desktop users behind and silently breaks auto-update expectations. This extends rule 6 — it applies even when no Electron-specific code changed. Never ship web-only.
-8. **No Client-Side API Keys (BUG-1131)** - Build-time guard (`scripts/check-vite-secrets.cjs`) blocks non-allowlisted VITE_ vars. Cloud API keys go through Supabase Edge Function proxies.
+   Web PWA and Electron desktop share the same codebase. Shipping web-only leaves desktop users behind and silently breaks auto-update expectations. This extends rule 6 — it applies even when no Electron-specific code changed. Never ship web-only.
+
+8. **No Client-Side API Keys (BUG-1131)** - Build-time guard (`scripts/check-vite-secrets.cjs`) blocks non-allowlisted VITE\_ vars. Cloud API keys go through Supabase Edge Function proxies.
 9. **No Images in Project Root** - Save to `.dev/screenshots/` instead. PreToolUse hook enforces this.
 10. **WebKitGTK Parity (legacy, Tauri era)** - Tauri was replaced by Electron. Some patterns (`:force-fallback="true"` on vuedraggable, `dragData` singleton, deep-cloning for IndexedDB) may still be relevant. Full reference: [`docs/sop/SOP-060-webkitgtk-gotchas.md`](docs/sop/SOP-060-webkitgtk-gotchas.md).
 
@@ -275,6 +290,7 @@ Tailwind classes: `.btn-primary` (glass+teal), `.btn-secondary` (surface+border)
 ## Database Safety — See [Constitution](~/.claude/knowledge/constitution.md#database-safety) for universal rules.
 
 **FlowState-specific:**
+
 - `supabase db reset` / `supabase db push --force` -- PERMANENTLY BLOCKED
 - Backup before migration: `supabase db dump > supabase/backups/backup-$(date +%Y%m%d-%H%M%S).sql`
 - Auto-backup every 5 min via `npm run dev`, recovery in Settings > Storage. Details: [`backup-system.md`](docs/claude-md-extension/backup-system.md).
@@ -306,6 +322,7 @@ Local and production use DIFFERENT JWT secrets — never mix them. `npm run dev`
 **DO NOT** add code that causes canvas positions to reset.
 
 **Architecture Rules:**
+
 - `useCanvasSync.ts` is the SINGLE source of sync for canvas nodes (READ-ONLY)
 - NEVER add watchers in `canvas.ts` that call `syncTasksToCanvas()`
 - Vue Flow positions are authoritative for existing nodes
@@ -326,15 +343,16 @@ Full SOP: [CANVAS-POSITION-SYSTEM](docs/sop/canvas/CANVAS-POSITION-SYSTEM.md)
 
 ## MASTER_PLAN.md Task ID Format
 
-| Prefix | Usage |
-|--------|-------|
-| `TASK-XXX` | Active work features/tasks |
-| `BUG-XXX` | Bug fixes |
-| `ROAD-XXX` | Roadmap items |
-| `IDEA-XXX` | Ideas |
-| `ISSUE-XXX` | Known issues |
+| Prefix      | Usage                      |
+| ----------- | -------------------------- |
+| `TASK-XXX`  | Active work features/tasks |
+| `BUG-XXX`   | Bug fixes                  |
+| `ROAD-XXX`  | Roadmap items              |
+| `IDEA-XXX`  | Ideas                      |
+| `ISSUE-XXX` | Known issues               |
 
 **Rules:**
+
 - IDs must be sequential (TASK-001, TASK-002...)
 - Completed items: `~~TASK-001~~` with strikethrough
 - **NEVER reuse IDs** - Always run `./scripts/utils/get-next-task-id.cjs` first
@@ -347,34 +365,34 @@ AI orchestration dashboard at `http://localhost:6010`. Start: `./watchpost.sh`. 
 
 **Watchpost CLI** (installed at `~/.local/bin/watchpost`, works from any project directory):
 
-| Command | Purpose |
-|---------|---------|
-| `watchpost tui` | Terminal kanban board |
-| `watchpost archive` | Archive DONE tasks >14 days old to `MASTER_PLAN_ARCHIVE.md` |
-| `watchpost archive --dry-run` | Preview archive without writing |
-| `watchpost archive --days=30` | Custom age threshold |
+| Command                       | Purpose                                                     |
+| ----------------------------- | ----------------------------------------------------------- |
+| `watchpost tui`               | Terminal kanban board                                       |
+| `watchpost archive`           | Archive DONE tasks >14 days old to `MASTER_PLAN_ARCHIVE.md` |
+| `watchpost archive --dry-run` | Preview archive without writing                             |
+| `watchpost archive --days=30` | Custom age threshold                                        |
 
 ## UI Component Standards (MANDATORY)
 
 **BEFORE creating any UI element**, check `src/components/base/` and `src/components/common/` for an existing component. This project has 20+ reusable primitives with glass morphism, keyboard nav, and cross-platform compatibility built in. **NEVER** reinvent what already exists.
 
-| Need | Use This | NEVER Use |
-|------|----------|-----------|
-| Buttons | `BaseButton` (variant: primary\|secondary\|ghost\|danger\|active) | Ad-hoc `<button>` with inline styles |
-| Icon buttons | `BaseIconButton` (variant: default\|primary\|success\|warning\|danger) | Manual icon `<button>` |
-| Text inputs | `BaseInput` (label, helper text, prefix/suffix slots, RTL) | Native `<input>` without wrapper |
-| Dropdowns | `CustomSelect` (ONLY dropdown — see below) | Native `<select>`, `<NSelect>`, `BaseDropdown` |
-| Context menus | `ContextMenu` | Browser right-click menus |
-| Modals | `BaseModal` (size: sm\|md\|lg\|xl\|full) | Custom modal divs |
-| Delete confirms | `ConfirmationModal` (wraps BaseModal) | Building delete dialogs from scratch |
-| Popovers | `BasePopover` (variant: menu\|tooltip\|dropdown) | Manual positioned divs |
-| Status pills | `BaseBadge` (variant: default\|success\|warning\|danger\|info\|count) | Inline `<span>` for status |
-| Cards | `BaseCard` (glass prop for glass morphism) | Manual `div.glass` CSS |
-| Markdown display | `MarkdownRenderer` | Raw `v-html` or new markdown libs |
-| Markdown editing | `MarkdownEditor` (wraps TipTap) | New rich-text library |
-| Task completion | `DoneToggle` (animated, celebration particles) | Native checkbox for done state |
-| Project icons | `ProjectEmojiIcon` (emoji\|SVG\|gradient) | Plain text emoji rendering |
-| Overflow text | `OverflowTooltip` (tooltip only when text overflows) | Manual text truncation |
+| Need             | Use This                                                               | NEVER Use                                      |
+| ---------------- | ---------------------------------------------------------------------- | ---------------------------------------------- |
+| Buttons          | `BaseButton` (variant: primary\|secondary\|ghost\|danger\|active)      | Ad-hoc `<button>` with inline styles           |
+| Icon buttons     | `BaseIconButton` (variant: default\|primary\|success\|warning\|danger) | Manual icon `<button>`                         |
+| Text inputs      | `BaseInput` (label, helper text, prefix/suffix slots, RTL)             | Native `<input>` without wrapper               |
+| Dropdowns        | `CustomSelect` (ONLY dropdown — see below)                             | Native `<select>`, `<NSelect>`, `BaseDropdown` |
+| Context menus    | `ContextMenu`                                                          | Browser right-click menus                      |
+| Modals           | `BaseModal` (size: sm\|md\|lg\|xl\|full)                               | Custom modal divs                              |
+| Delete confirms  | `ConfirmationModal` (wraps BaseModal)                                  | Building delete dialogs from scratch           |
+| Popovers         | `BasePopover` (variant: menu\|tooltip\|dropdown)                       | Manual positioned divs                         |
+| Status pills     | `BaseBadge` (variant: default\|success\|warning\|danger\|info\|count)  | Inline `<span>` for status                     |
+| Cards            | `BaseCard` (glass prop for glass morphism)                             | Manual `div.glass` CSS                         |
+| Markdown display | `MarkdownRenderer`                                                     | Raw `v-html` or new markdown libs              |
+| Markdown editing | `MarkdownEditor` (wraps TipTap)                                        | New rich-text library                          |
+| Task completion  | `DoneToggle` (animated, celebration particles)                         | Native checkbox for done state                 |
+| Project icons    | `ProjectEmojiIcon` (emoji\|SVG\|gradient)                              | Plain text emoji rendering                     |
+| Overflow text    | `OverflowTooltip` (tooltip only when text overflows)                   | Manual text truncation                         |
 
 **All base components:** `src/components/base/` | **All common components:** `src/components/common/`
 **Storybook:** `🧩 Primitives/*` at http://localhost:6006
@@ -407,8 +425,8 @@ This project has automatic task locking via `task-lock-enforcer.sh` hook to prev
 
 ## Task Archival
 
-| Command | Purpose |
-|---------|---------|
+| Command              | Purpose                                                                |
+| -------------------- | ---------------------------------------------------------------------- |
 | `npm run mp:archive` | Archive DONE tasks >14 days to `MASTER_PLAN_ARCHIVE.md` (also: `:dry`) |
 
 ## Extended Documentation
@@ -419,11 +437,11 @@ This project has automatic task locking via `task-lock-enforcer.sh` hook to prev
 
 ## Skills Maintenance
 
-| Command | Purpose |
-|---------|---------|
-| `npm run skills:sync` | Sync filesystem skills to `.claude/config/skills.json` |
-| `npm run skills:staleness` | Detect stale, broken, or deprecated skills |
-| `npm run docs:validate` | Validate all markdown links in docs |
+| Command                    | Purpose                                                |
+| -------------------------- | ------------------------------------------------------ |
+| `npm run skills:sync`      | Sync filesystem skills to `.claude/config/skills.json` |
+| `npm run skills:staleness` | Detect stale, broken, or deprecated skills             |
+| `npm run docs:validate`    | Validate all markdown links in docs                    |
 
 **Skill Boundaries:** `smart-doc-manager` → docs/, MASTER_PLAN.md | `skill-creator-doctor` → .claude/skills/
 

@@ -1073,6 +1073,13 @@ export function useTaskOperations(
         if (changedKeys.has("isInInbox")) {
           payload.is_in_inbox = updatedTask.isInInbox;
         }
+        // TASK-1977: removing a task from the canvas is an UPDATE that sets
+        // isInInbox and canvasDismissed together. Wiring only the create
+        // mapper would have persisted the flag on new rows but silently
+        // dropped it on the very action that sets it.
+        if (changedKeys.has("canvasDismissed")) {
+          payload.canvas_dismissed = updatedTask.canvasDismissed ?? false;
+        }
         // position_version always included when geometry changed (optimistic locking)
         if (
           changedKeys.has("positionVersion") ||

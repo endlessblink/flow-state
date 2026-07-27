@@ -215,8 +215,16 @@ export async function getPendingOperations(
     .limit(limit)
     .toArray();
 
-  // Sort by createdAt to maintain order
-  return operations.sort((a, b) => a.createdAt - b.createdAt);
+  // TASK-1977 (clock-jump ordering): replay MUST follow enqueue order, not the
+  // wall clock. `createdAt` is Date.now(), so a device clock jumping backward
+  // between two enqueues gave the later operation a SMALLER createdAt and made
+  // it replay first — reverting the user's newest edit. The auto-increment `id`
+  // is strictly monotonic per insertion and immune to clock changes, so it is
+  // the correct FIFO key. `createdAt` is kept only as an informational
+  // tie-break for the (practically impossible) case of equal ids.
+  return operations.sort(
+    (a, b) => (a.id ?? 0) - (b.id ?? 0) || a.createdAt - b.createdAt,
+  );
 }
 
 /**

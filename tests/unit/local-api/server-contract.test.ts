@@ -10,6 +10,14 @@ const README = readFileSync(
   resolve(__dirname, "../../../server/local-api/README.md"),
   "utf-8",
 );
+// TASK-1977: the timer-snapshot decision was extracted from
+// getLocalTimerResponse into this unit-tested helper (see
+// tests/unit/local-api/local-timer-snapshot.test.ts). The structural contracts
+// below now target the helper where the logic actually lives.
+const LOCAL_TIMER_SNAPSHOT_CJS = readFileSync(
+  resolve(__dirname, "../../../server/local-api/localTimerSnapshot.cjs"),
+  "utf-8",
+);
 
 function functionBody(name: string): string {
   const start = SERVER_CJS.indexOf(`function ${name}(`);
@@ -176,16 +184,27 @@ describe("Local API sidecar timer endpoint regression contract", () => {
     expect(body).not.toContain("title");
   });
 
-  it("keeps renderer-owned local snapshots fresh enough for the KDE widget clock", () => {
+  it("delegates the local-snapshot decision to the unit-tested helper", () => {
+    // TASK-1977: getLocalTimerResponse now delegates to resolveLocalTimerSnapshot
+    // (localTimerSnapshot.cjs), which is behaviourally covered by
+    // tests/unit/local-api/local-timer-snapshot.test.ts. The structural
+    // contracts below target the helper where the logic lives.
     const body = functionBody("getLocalTimerResponse");
+    expect(body).toContain("resolveLocalTimerSnapshot(localTimerSnapshot");
+    expect(SERVER_CJS).toContain("require('./localTimerSnapshot.cjs')");
+    expect(SERVER_CJS).toContain("LOCAL_TIMER_INACTIVE_GRACE_MS");
+  });
+
+  it("keeps renderer-owned local snapshots fresh enough for the KDE widget clock", () => {
+    const body = LOCAL_TIMER_SNAPSHOT_CJS;
 
     expect(body).toContain("source: 'local-snapshot'");
-    expect(SERVER_CJS).toContain("LOCAL_TIMER_INACTIVE_GRACE_MS");
-    expect(body).toContain("Date.now() - updatedAt");
+    expect(body).toContain("graceMs");
+    expect(body).toContain("nowMs - updatedAt");
     expect(body).toContain("Math.floor");
     expect(body).toContain("session.is_active && !session.is_paused");
     expect(body).toContain("Math.max(0");
-    expect(body).toContain("remaining_time:");
+    expect(body).toContain("remaining_time");
     expect(body).toContain("session.remaining_time <= 0");
     expect(body).toContain(
       "active: false, session: null, source: 'local-snapshot'",
@@ -193,10 +212,8 @@ describe("Local API sidecar timer endpoint regression contract", () => {
   });
 
   it("does not let stale inactive local snapshots mask signed-in timer lookup", () => {
-    const body = functionBody("getLocalTimerResponse");
-    const staleCheck = body.indexOf(
-      "snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS",
-    );
+    const body = LOCAL_TIMER_SNAPSHOT_CJS;
+    const staleCheck = body.indexOf("ageMs > graceMs");
     const inactiveResponse = body.indexOf(
       "active: false, session: null, source: 'local-snapshot'",
     );
@@ -214,12 +231,9 @@ describe("Local API sidecar timer endpoint regression contract", () => {
   });
 
   it("does not let stale active local snapshots stuck at zero mask signed-in completion lookup", () => {
-    const body = functionBody("getLocalTimerResponse");
+    const body = LOCAL_TIMER_SNAPSHOT_CJS;
     const zeroCheck = body.indexOf("session.remaining_time <= 0");
-    const staleCheckAfterZero = body.indexOf(
-      "snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS",
-      zeroCheck,
-    );
+    const staleCheckAfterZero = body.indexOf("ageMs > graceMs", zeroCheck);
     const inactiveResponse = body.indexOf(
       "active: false, session: null, source: 'local-snapshot'",
       zeroCheck,
@@ -239,6 +253,14 @@ describe("Local API sidecar timer endpoint regression contract", () => {
     expect(staleCheckAfterZero).toBeLessThan(inactiveResponse);
     expect(body.slice(staleCheckAfterZero, inactiveResponse)).toContain(
       "return null",
+    );
+  });
+
+  it("ages out a stale PAUSED active session (TASK-1977 KDE zombie-timer fix)", () => {
+    const body = LOCAL_TIMER_SNAPSHOT_CJS;
+    // The specific new guard: a paused active session past the grace is inactive.
+    expect(body).toContain(
+      "session.is_active && session.is_paused && ageMs > graceMs",
     );
   });
 

@@ -228,6 +228,24 @@ export const useLaneStore = defineStore("lanes", () => {
         );
       }
 
+      // TASK-1977: lane delete + task detachment must be atomic on the
+      // invariant that matters — no task may reference a lane that no
+      // longer exists. The per-task clears above are best-effort, so if
+      // any of them failed the task still points at this lane. Deleting
+      // the lane anyway (the old behaviour) left a dangling reference the
+      // user sees as a task stuck in a phantom lane. Fail closed: if any
+      // task still references the lane, abort so the catch below rolls the
+      // lane list back. The successfully-detached tasks keep laneId=null,
+      // which is harmless (they were losing the lane regardless).
+      const stillReferenced = taskStore._rawTasks.some(
+        (t) => t.laneId === laneId,
+      );
+      if (stillReferenced) {
+        throw new Error(
+          `Lane ${laneId} not deleted: one or more tasks could not be detached`,
+        );
+      }
+
       _rawLanes.value.splice(index, 1);
       saveLanesToLocalStorage();
 

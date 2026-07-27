@@ -58,7 +58,10 @@ describe("layout no-op skip (TASK-1871)", () => {
   let settingsStore: ReturnType<typeof useSettingsStore>;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    // A pinned date is what these assertions need, not a frozen clock. Group
+    // writes now await durable IndexedDB persistence, and IndexedDB cannot
+    // settle while timers are held still — so let real time keep advancing.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(WEDNESDAY);
     setActivePinia(createPinia());
     canvasStore = useCanvasStore();

@@ -216,7 +216,7 @@ export function useMiniCanvas(taskId: () => string | null) {
     actions.removeMiniCanvasEdgesForNode(nodeId);
   };
 
-  const addUserEdge = (
+  const addUserEdge = async (
     source: string,
     target: string,
     sourceHandle?: string | null,
@@ -231,7 +231,7 @@ export function useMiniCanvas(taskId: () => string | null) {
 
     const handles = getRelativeHandles(source, target);
 
-    actions.addMiniCanvasEdge({
+    await actions.addMiniCanvasEdge({
       id: edgeId,
       source,
       target,
@@ -256,7 +256,10 @@ export function useMiniCanvas(taskId: () => string | null) {
   };
 
   /** Create a subtask when a connection is dropped on empty space. */
-  const createConnectedSubtask = (
+  // TASK-1977: the subtask id only exists once its write is durable, so the
+  // connecting edge must wait for it. Drawing the edge against an id from a
+  // failed write would leave an edge pointing at a subtask that was never saved.
+  const createConnectedSubtask = async (
     sourceId: string,
     position: { x: number; y: number },
     sourceHandle?: string | null,
@@ -269,9 +272,9 @@ export function useMiniCanvas(taskId: () => string | null) {
       x: position.x - sourcePos.x,
       y: position.y - sourcePos.y,
     });
-    const newSubtaskId = actions.addSubtask(position);
+    const newSubtaskId = await actions.addSubtask(position);
     if (newSubtaskId) {
-      addUserEdge(
+      await addUserEdge(
         sourceId,
         newSubtaskId,
         sourceHandle || handles.sourceHandle,

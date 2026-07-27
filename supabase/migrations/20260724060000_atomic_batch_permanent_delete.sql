@@ -167,6 +167,14 @@ BEGIN
        OR recurrence_parent_id = ANY(v_chain_ids);
   END IF;
 
+  -- Destructive statement, guarded three ways (TASK-1977):
+  --   * scope was already proven above — the actor can see every requested id,
+  --     or the function raised 42501 before reaching here;
+  --   * all-or-none — the count check below raises and rolls the transaction
+  --     back if the deleted set differs from what was requested;
+  --   * safety backup is automatic — trg_task_tombstone fires BEFORE DELETE on
+  --     public.tasks and records a tombstone per row, so a later sync cannot
+  --     resurrect what was permanently deleted.
   WITH deleted AS (
     DELETE FROM public.tasks
     WHERE id = ANY(p_task_ids)

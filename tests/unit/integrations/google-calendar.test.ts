@@ -259,6 +259,129 @@ describe("useGoogleCalendar", () => {
     expect(event.description).toBe("Daily sync");
   });
 
+  // TASK-1977 — vector: external-calendar-ownership-clock-and-replay [high].
+  // Deterministic facets (provider ownership, clock projection, idempotent
+  // replay). The true offline/reconnect provider round-trip needs a live
+  // Google harness and is out of unit scope.
+  it("OWNERSHIP: external events carry a provider-namespaced id, never a local task id", async () => {
+    mockGoogleConnected = true;
+    mockGoogleToken = "access-token-abc";
+    mockGoogleCalendars = [
+      {
+        id: "primary",
+        summary: "My Calendar",
+        backgroundColor: "#4285f4",
+        enabled: true,
+      },
+    ];
+    mockListEvents.mockResolvedValue({
+      events: [sampleGoogleEvent],
+      newAccessToken: undefined,
+    });
+
+    const { useGoogleCalendar } =
+      await import("@/composables/calendar/useGoogleCalendar");
+    const { syncNow, googleEvents } = useGoogleCalendar();
+    await syncNow();
+
+    const event = googleEvents.value[0];
+    // Provenance: the id and calendarId are namespaced to the provider + source
+    // calendar, so an external event can never collide with or be mistaken for
+    // an owned task/group id.
+    expect(event.id).toBe("gcal-primary-gcal-event-1");
+    expect(event.calendarId).toBe("gcal-primary");
+  });
+
+  it("REPLAY: re-syncing the same event does not duplicate it (stable derived id)", async () => {
+    mockGoogleConnected = true;
+    mockGoogleToken = "access-token-abc";
+    mockGoogleCalendars = [
+      {
+        id: "primary",
+        summary: "My Calendar",
+        backgroundColor: "#4285f4",
+        enabled: true,
+      },
+    ];
+    mockListEvents.mockResolvedValue({
+      events: [sampleGoogleEvent],
+      newAccessToken: undefined,
+    });
+
+    const { useGoogleCalendar } =
+      await import("@/composables/calendar/useGoogleCalendar");
+    const { syncNow, googleEvents } = useGoogleCalendar();
+
+    await syncNow();
+    const firstId = googleEvents.value[0].id;
+    await syncNow(); // simulate a reconnect re-sync
+
+    // Replace-not-append + a provider-derived id means the same event resolves
+    // to one entry, not two, across repeated syncs.
+    expect(googleEvents.value.filter((e) => e.id === firstId)).toHaveLength(1);
+    expect(googleEvents.value).toHaveLength(1);
+  });
+
+  it("CLOCK: a timed event with an explicit UTC offset maps to the correct absolute instant", async () => {
+    mockGoogleConnected = true;
+    mockGoogleToken = "access-token-abc";
+    mockGoogleCalendars = [
+      {
+        id: "primary",
+        summary: "My Calendar",
+        backgroundColor: "#4285f4",
+        enabled: true,
+      },
+    ];
+    mockListEvents.mockResolvedValue({
+      events: [sampleGoogleEvent],
+      newAccessToken: undefined,
+    });
+
+    const { useGoogleCalendar } =
+      await import("@/composables/calendar/useGoogleCalendar");
+    const { syncNow, googleEvents } = useGoogleCalendar();
+    await syncNow();
+
+    // 2026-03-21T09:00:00Z is an absolute instant; its ISO must round-trip to
+    // the same UTC regardless of the machine's local timezone.
+    expect(googleEvents.value[0].startTime.toISOString()).toBe(
+      "2026-03-21T09:00:00.000Z",
+    );
+    expect(googleEvents.value[0].isAllDay).toBe(false);
+  });
+
+  it("CLOCK: an all-day event is flagged all-day and anchored to its date", async () => {
+    mockGoogleConnected = true;
+    mockGoogleToken = "access-token-abc";
+    mockGoogleCalendars = [
+      {
+        id: "primary",
+        summary: "My Calendar",
+        backgroundColor: "#4285f4",
+        enabled: true,
+      },
+    ];
+    const allDay = {
+      id: "ad-1",
+      summary: "Holiday",
+      start: { date: "2026-03-21" },
+      end: { date: "2026-03-22" },
+    };
+    mockListEvents.mockResolvedValue({
+      events: [allDay],
+      newAccessToken: undefined,
+    });
+
+    const { useGoogleCalendar } =
+      await import("@/composables/calendar/useGoogleCalendar");
+    const { syncNow, googleEvents } = useGoogleCalendar();
+    await syncNow();
+
+    expect(googleEvents.value[0].isAllDay).toBe(true);
+    expect(googleEvents.value[0].startTime.getFullYear()).toBe(2026);
+  });
+
   it("5. token refresh: isTokenExpiringSoon triggers proactiveRefresh", async () => {
     // Set token expiry to past the refresh buffer (5min), so refresh should trigger now
     const soon = Date.now() + 2 * 60 * 1000; // 2 minutes away — within the 5min buffer

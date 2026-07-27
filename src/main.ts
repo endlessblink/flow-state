@@ -96,7 +96,7 @@ async function initializeApp() {
   // ROLLBACK: Remove PiniaSharedState plugin and revert to: app.use(createPinia())
   const pinia = createPinia()
   // BUG-1207 Fix 5.2: Disable PiniaSharedState globally.
-  // Stores that handle their own sync (tasks, canvas, projects, timer, gamification)
+  // Stores that handle their own sync (tasks, canvas, projects, timer)
   // must NOT use BroadcastChannel cross-tab sync - it fights with Supabase Realtime
   // and causes state overwrites. Individual UI-only stores can opt in via
   // share: { enable: true } in their store options if needed.

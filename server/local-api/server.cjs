@@ -41,6 +41,7 @@ const { executeSubtaskBatch } = require('./subtask-batch.cjs')
 const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
 const { executeAuditCoverageReport } = require('./audit-coverage-report.cjs')
+const { resolveLocalTimerSnapshot } = require('./localTimerSnapshot.cjs')
 const {
   buildTaskSearchQuery,
   filteredSampleMetadata,
@@ -1197,25 +1198,15 @@ async function handleGetTimerDiagnostics(res) {
 }
 
 function getLocalTimerResponse() {
-  if (!localTimerSnapshot || typeof localTimerSnapshot !== 'object') return null
-  const updatedAt = Number(localTimerSnapshot.updatedAt) || Date.now()
-  const snapshotAgeMs = Math.max(0, Date.now() - updatedAt)
-  if (!localTimerSnapshot.active || !localTimerSnapshot.session) {
-    if (snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS) return null
-    return { active: false, session: null, source: 'local-snapshot' }
-  }
-
-  const session = { ...localTimerSnapshot.session }
-  if (session.is_active && !session.is_paused) {
-    const driftSeconds = Math.max(0, Math.floor(snapshotAgeMs / 1000))
-    session.remaining_time = Math.max(0, Number(session.remaining_time || 0) - driftSeconds)
-    if (session.remaining_time <= 0) {
-      if (snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS) return null
-      return { active: false, session: null, source: 'local-snapshot' }
-    }
-  }
-  session.device_leader_last_seen = new Date().toISOString()
-  return { active: true, session, source: 'local-snapshot' }
+  // TASK-1977: decision extracted to a unit-tested pure helper. The key fix is
+  // that a stale PAUSED active session (app closed/crashed, snapshot no longer
+  // refreshed) is now aged out and reported inactive, instead of being served
+  // as active forever — the KDE-widget zombie paused-timer bug.
+  return resolveLocalTimerSnapshot(localTimerSnapshot, {
+    nowMs: Date.now(),
+    graceMs: LOCAL_TIMER_INACTIVE_GRACE_MS,
+    nowIso: new Date().toISOString(),
+  })
 }
 
 async function handlePostTimerControl(req, res) {

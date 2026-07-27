@@ -328,16 +328,20 @@ describe("undo-aware modal and context-menu entry points", () => {
       "await taskStore.createTask({ title, dueDate: todayStr, status: 'todo' })",
     );
 
+    // TASK-1977: mini-canvas writes now funnel through a single awaited
+    // persist() helper that reports failure, instead of a fire-and-forget call
+    // per action. The contract is unchanged — still undo-aware, still never the
+    // non-undo store method — so assert the seam rather than the old literals.
     expect(miniCanvas).toContain(
-      "taskStore.updateTaskWithUndo(task.id, { subtasks: updated } as Partial<Task>)",
+      "await taskStore.updateTaskWithUndo(id, updates)",
     );
+    expect(miniCanvas).toContain("{ subtasks: updated } as Partial<Task>");
+    expect(miniCanvas).toContain("{ planningNotes: updated } as Partial<Task>");
     expect(miniCanvas).toContain(
-      "taskStore.updateTaskWithUndo(task.id, { planningNotes: updated } as Partial<Task>)",
-    );
-    expect(miniCanvas).toContain(
-      "taskStore.updateTaskWithUndo(task.id, { miniCanvasEdges: [...existing, edge] } as Partial<Task>)",
+      "{ miniCanvasEdges: [...existing, edge] } as Partial<Task>",
     );
     expect(miniCanvas).not.toContain("taskStore.updateTask(task.id,");
+    expect(miniCanvas).not.toContain("taskStore.updateTask(id,");
   });
 
   it("keeps calendar scheduling, resizing, and date moves undo-aware", () => {

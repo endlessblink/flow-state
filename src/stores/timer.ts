@@ -14,6 +14,7 @@ import { useSettingsStore } from "./settings";
 import { formatTime } from "@/utils/timer/formatTime";
 import { getCrossTabSync } from "@/composables/useCrossTabSync";
 import { useWakeLock } from "@/composables/useWakeLock";
+import { useToast } from "@/composables/useToast";
 import i18n from "@/i18n";
 
 // TASK-1406: Extracted composables
@@ -175,10 +176,15 @@ export const useTimerStore = defineStore("timer", () => {
     { deep: true, flush: "post", immediate: true },
   );
 
-  const localApiInactiveHeartbeat = setInterval(() => {
-    if (!currentSession.value) {
-      syncLocalApiTimerSnapshot(null, deviceId);
-    }
+  // TASK-1977: re-push the snapshot every ~10s for ANY current session, not
+  // only when idle. A PAUSED session does not change, so the `currentSession`
+  // watcher above stops firing and its snapshot would go stale — the sidecar
+  // then aged it out and the KDE widget lost a legitimately-paused timer, OR
+  // (before the sidecar fix) served it as a zombie forever. Heartbeating the
+  // active session keeps a live paused timer fresh (age < grace) while a truly
+  // orphaned one (app closed) stops being refreshed and is aged out.
+  const localApiTimerHeartbeat = setInterval(() => {
+    syncLocalApiTimerSnapshot(currentSession.value, deviceId);
   }, LOCAL_API_TIMER_INACTIVE_HEARTBEAT_MS);
 
   // ── Computed ─────────────────────────────────────────────────────
@@ -735,13 +741,30 @@ export const useTimerStore = defineStore("timer", () => {
         const task = taskStore._rawTasks.find((t) => t.id === session.taskId);
         if (task) {
           const newCount = (task.completedPomodoros || 0) + 1;
-          taskStore.updateTask(session.taskId, {
-            completedPomodoros: newCount,
-            progress: Math.min(
-              100,
-              Math.round((newCount / (task.estimatedPomodoros || 1)) * 100),
-            ),
-          });
+          // TASK-1977: this is the user's credit for work they actually did.
+          // It was dispatched fire-and-forget, so a rejected write dropped the
+          // pomodoro count and progress with no sign anything went wrong — the
+          // session looked complete and the count was simply back to its old
+          // value on reload. Await it and say so when it does not stick.
+          try {
+            await taskStore.updateTask(session.taskId, {
+              completedPomodoros: newCount,
+              progress: Math.min(
+                100,
+                Math.round((newCount / (task.estimatedPomodoros || 1)) * 100),
+              ),
+            });
+          } catch (creditError) {
+            console.error(
+              "🍅 [TIMER] Failed to record completed pomodoro on task:",
+              creditError,
+            );
+            const { showToast } = useToast();
+            showToast(
+              "Session finished, but the task progress could not be saved.",
+              "error",
+            );
+          }
         }
       }
 
@@ -862,7 +885,7 @@ export const useTimerStore = defineStore("timer", () => {
   const cleanupAllListeners = () => {
     sync.cleanup();
     notifications.cleanupServiceWorkerListener();
-    clearInterval(localApiInactiveHeartbeat);
+    clearInterval(localApiTimerHeartbeat);
     unsubscribeAuth(); // TASK-1577: Clean up auth watcher
     unsubscribeLocalApiTimer();
   };

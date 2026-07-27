@@ -79,10 +79,15 @@ describe("task sync payload completeness (TASK-1871)", () => {
 
   it("project changes always emit project_id, including clearing to Uncategorized", () => {
     const src = read("src/stores/tasks/taskOperations.ts");
-    const projectPayloadLine =
-      "payload.project_id = isValidUUID(updatedTask.projectId) ? updatedTask.projectId : null";
 
-    expect(src).toContain(projectPayloadLine);
+    // TASK-1977: this asserted one exact single-line string, so the repo
+    // formatter wrapping the ternary across three lines broke it while the
+    // contract was completely unchanged. Match the assignment shape instead of
+    // its line breaks — the contract is "project_id is always emitted, and
+    // clearing to Uncategorized sends null", not "this fits on one line".
+    expect(src).toMatch(
+      /payload\.project_id\s*=\s*isValidUUID\(\s*updatedTask\.projectId\s*\)\s*\?\s*updatedTask\.projectId\s*:\s*null/,
+    );
     expect(src).not.toContain(
       "if (changedKeys.has('projectId') && updatedTask.projectId !== undefined)",
     );

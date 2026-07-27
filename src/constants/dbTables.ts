@@ -17,10 +17,6 @@ export const DB_TABLES = {
   POMODORO_HISTORY: 'pomodoro_history',
   TASK_DEDUP_AUDIT: 'task_dedup_audit',
   QUICK_SORT_SESSIONS: 'quick_sort_sessions',
-  // gamification tables
-  USER_GAMIFICATION: 'user_gamification',
-  USER_CHALLENGES: 'user_challenges',
-  USER_ACHIEVEMENTS: 'user_achievements',
 } as const
 
 export type DbTableName = typeof DB_TABLES[keyof typeof DB_TABLES]

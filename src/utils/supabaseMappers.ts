@@ -184,6 +184,8 @@ export interface SupabaseTask {
   order?: number;
   column_id?: string | null;
   is_in_inbox?: boolean;
+  /** TASK-1977: user explicitly removed this task from the canvas. */
+  canvas_dismissed?: boolean;
 
   // BUG-1051: Add missing scheduled fields
   scheduled_date?: string | null;
@@ -714,6 +716,11 @@ export function toSupabaseTask(task: Task, userId: string): SupabaseTask {
     order: task.order || 0,
     column_id: task.columnId || null,
     is_in_inbox: task.isInInbox || false,
+    // TASK-1977: must persist alongside is_in_inbox. Removing a task from
+    // the canvas sets both; only is_in_inbox used to survive, so canvas
+    // auto-placement (which skips dismissed tasks) put the task straight
+    // back after every reload.
+    canvas_dismissed: task.canvasDismissed || false,
 
     // BUG-1051: Add missing scheduled fields
     scheduled_date: sanitizeTimestamp(task.scheduledDate),
@@ -827,6 +834,9 @@ export function fromSupabaseTask(record: SupabaseTask): Task {
     miniCanvasEdges: record.mini_canvas_edges || [],
 
     isInInbox: record.is_in_inbox || false,
+    // TASK-1977: read back the user's explicit "removed from canvas" so
+    // auto-placement does not re-add the task on the next load.
+    canvasDismissed: record.canvas_dismissed || false,
     order: record.order || 0,
     columnId: record.column_id || undefined,
 

@@ -1,0 +1,2050 @@
+{
+  "schemaVersion": "flowstate-feature-audit-matrix-v1",
+  "purpose": "Living catalog of every user-facing feature/action in FlowState, each with the surfaces it appears on, the behaviour it must hold, the states it must hold under, and an evidence pointer. Audited by scripts/audit-feature-matrix.cjs. This is derived from the real codebase (routes, store operations, component handlers) — add rows as features ship; never invent features that do not exist.",
+  "generatedFrom": [
+    "src/router/index.ts (surfaces)",
+    "src/stores/tasks/taskOperations.ts (task mutations)",
+    "src/stores/timer.ts (timer)",
+    "src/stores/canvas/*.ts + src/composables/canvas/*.ts (canvas geometry)",
+    "src/composables/backup/* (backup/restore)"
+  ],
+  "statusLegend": {
+    "audited": "an automated test asserts this feature's behaviour",
+    "partial": "some facets covered; named gaps remain",
+    "unaudited": "no direct evidence yet — candidate for a regression"
+  },
+  "commonStates": [
+    "visible",
+    "filtered-hidden",
+    "offline",
+    "reconnecting",
+    "renderer-reloaded",
+    "electron-restarted",
+    "cross-client",
+    "concurrent-write",
+    "recurring",
+    "large-inventory",
+    "guest-mode",
+    "auth-expired"
+  ],
+  "surfaces": [
+    "board",
+    "calendar",
+    "canvas",
+    "catalog",
+    "focus",
+    "timer",
+    "quick-sort",
+    "mobile-quick-sort",
+    "inbox",
+    "lane",
+    "morning-dashboard",
+    "today-flow",
+    "ai-chat",
+    "mini-canvas",
+    "local-task-api",
+    "kde-widget"
+  ],
+  "areas": [
+    {
+      "area": "Task lifecycle",
+      "features": [
+        {
+          "id": "task.create",
+          "action": "Create a task (quick-add, form, AI, API)",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas",
+            "calendar",
+            "inbox",
+            "quick-sort",
+            "ai-chat",
+            "local-task-api"
+          ],
+          "expected": "Task exists in store + durable queue with one canonical id; survives reload; no duplicate on cross-client/echo.",
+          "states": [
+            "visible",
+            "offline",
+            "renderer-reloaded",
+            "cross-client",
+            "concurrent-write"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/sync/duplicate-create-convergence.test.ts",
+            "tests/unit/stores/task-store-crud.test.ts",
+            "src/stores/__tests__/tasks.test.ts"
+          ]
+        },
+        {
+          "id": "task.edit.title",
+          "action": "Edit task title",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas",
+            "calendar"
+          ],
+          "expected": "New title persists; blank does not overwrite a real title; failed save warns and keeps the edit.",
+          "states": [
+            "visible",
+            "offline",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/tasks/edit-action-survival.test.ts",
+            "src/stores/__tests__/tasks.test.ts"
+          ]
+        },
+        {
+          "id": "task.edit.description",
+          "action": "Edit task description (rich text)",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas"
+          ],
+          "expected": "Markdown serialised faithfully; a debounced edit is flushed on modal close AND on unmount; failed save warns.",
+          "states": [
+            "visible",
+            "offline",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/tasks/edit-action-survival.test.ts",
+            "project_editor_markdown_and_draft (memory)"
+          ]
+        },
+        {
+          "id": "task.change-status",
+          "action": "Change status / mark done / reopen",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas",
+            "calendar",
+            "focus",
+            "quick-sort",
+            "kde-widget"
+          ],
+          "expected": "Status persists; completion is exactly-once and idempotent; reopen reachable from a filtered view; done at zero handled.",
+          "states": [
+            "visible",
+            "filtered-hidden",
+            "recurring",
+            "offline",
+            "cross-client"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/undo-task-operations.test.ts",
+            "tests/unit/stores/timer-break-popup-loop.test.ts",
+            "tests/unit/canvas-delete-contract.test.ts"
+          ]
+        },
+        {
+          "id": "task.set-priority",
+          "action": "Set priority (low/medium/high/clear)",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas"
+          ],
+          "expected": "Priority persists incl. clearing to null; right-click failure is visible.",
+          "states": [
+            "visible",
+            "offline"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/undo-entrypoint-contract.test.ts",
+            "tests/contract/task-field-roundtrip.test.ts"
+          ]
+        },
+        {
+          "id": "task.set-due-date",
+          "action": "Set / clear due date and time",
+          "surfaces": [
+            "board",
+            "calendar",
+            "catalog",
+            "canvas"
+          ],
+          "expected": "Due date persists incl. null-clear readback; date projection is timezone-stable.",
+          "states": [
+            "visible",
+            "offline",
+            "recurring"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/contract/task-field-roundtrip.test.ts",
+            "tests/unit/sync/clock-jump-queue-ordering.test.ts"
+          ]
+        },
+        {
+          "id": "task.pin",
+          "action": "Pin / unpin a task",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas",
+            "quick-sort"
+          ],
+          "expected": "Pin state persists and is visible; quick-action failure is surfaced.",
+          "states": [
+            "visible",
+            "offline"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/contract/task-field-roundtrip.test.ts"
+          ]
+        },
+        {
+          "id": "task.delete.soft",
+          "action": "Delete a task (soft, undoable)",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas",
+            "calendar"
+          ],
+          "expected": "Optimistic removal; on queue failure the task is restored, pending write cleared, error toasted; writes a tombstone so it cannot resurrect.",
+          "states": [
+            "visible",
+            "offline",
+            "cross-client"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/undo-task-operations.test.ts",
+            "src/stores/__tests__/tasks.test.ts",
+            "project_task_resurrection_tombstone_asymmetry (memory)"
+          ]
+        },
+        {
+          "id": "task.delete.permanent",
+          "action": "Permanently delete (single + bulk, all-or-none)",
+          "surfaces": [
+            "catalog",
+            "canvas"
+          ],
+          "expected": "Atomic: all requested rows deleted or none; tombstones written; rolls back on server failure.",
+          "states": [
+            "visible",
+            "concurrent-write"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/undo-task-operations.test.ts",
+            "supabase/migrations/20260724060000_atomic_batch_permanent_delete.sql"
+          ]
+        },
+        {
+          "id": "task.undo-redo",
+          "action": "Undo / redo any task action",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas",
+            "calendar"
+          ],
+          "expected": "Linear branch: new action after undo discards redo; undo→redo round-trips; rollback on failure.",
+          "states": [
+            "visible",
+            "renderer-reloaded",
+            "concurrent-write"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/undo-action-graph-integrity.test.ts",
+            "tests/unit/undo-task-operations.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Board / Kanban",
+      "features": [
+        {
+          "id": "board.move-between-status-columns",
+          "action": "Drag a card between status columns",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Card moves, status updates, order persists; the drag clone follows the cursor and the drop registers.",
+          "states": [
+            "visible",
+            "offline",
+            "cross-client"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/e2e/board-date-drag.spec.ts"
+          ],
+          "gaps": [
+            "webkit drop intermittently does not register (open product defect)"
+          ]
+        },
+        {
+          "id": "board.move-between-date-columns",
+          "action": "Drag a card between due-date columns (Overdue→Today etc.)",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Card re-buckets by dueDate, not by stale instance; stays in the new column after drop.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/e2e/board-date-drag.spec.ts",
+            "project_sortable_transform_ownership (memory)"
+          ]
+        },
+        {
+          "id": "board.reorder-within-column",
+          "action": "Reorder cards within a column",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Order persists across reload; no card lost.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/undo-task-operations.test.ts"
+          ],
+          "gaps": [
+            "the bulk order-index persistence path is covered via bulk-update; the drag-reorder index computation lives inline in KanbanColumn.vue and needs a component/E2E mount to fully cover"
+          ]
+        },
+        {
+          "id": "board.column-grouping",
+          "action": "Switch board grouping (status/date/priority)",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Grouping choice persists (localStorage) and re-buckets correctly.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/e2e/board-date-drag.spec.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Calendar",
+      "features": [
+        {
+          "id": "calendar.schedule-task",
+          "action": "Schedule a task onto a date/time (create instance)",
+          "surfaces": [
+            "calendar"
+          ],
+          "expected": "Instance created; calendar and task views converge; no stale instance pinning.",
+          "states": [
+            "visible",
+            "recurring",
+            "cross-client"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/e2e/canvas-sync-regressions.spec.ts (R26/R28)",
+            "project_stale_instances_family (memory)"
+          ]
+        },
+        {
+          "id": "calendar.drag-resize-instance",
+          "action": "Drag or resize a calendar instance",
+          "surfaces": [
+            "calendar"
+          ],
+          "expected": "Time/duration updates and persists; ripple-shift respects calendar-locked tasks.",
+          "states": [
+            "visible"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/calendar/rippleShift.test.ts"
+          ],
+          "gaps": [
+            "resize edge cases noted in project status (Calendar ⚠️ Partial)"
+          ]
+        },
+        {
+          "id": "calendar.right-click-complete-reopen",
+          "action": "Right-click complete / reopen on a calendar instance",
+          "surfaces": [
+            "calendar"
+          ],
+          "expected": "Converges offline, cross-client, and after reload; next-occurrence exactly once.",
+          "states": [
+            "offline",
+            "cross-client",
+            "recurring",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/e2e/canvas-sync-regressions.spec.ts (R26/R28/R29)"
+          ]
+        },
+        {
+          "id": "calendar.remove-from-calendar",
+          "action": "Remove a task from the calendar",
+          "surfaces": [
+            "calendar"
+          ],
+          "expected": "Removal rejection stays visible and leaves the task intact.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/e2e/canvas-sync-regressions.spec.ts (R29)"
+          ]
+        },
+        {
+          "id": "calendar.external-events",
+          "action": "Show external (Google) calendar events read-only",
+          "surfaces": [
+            "calendar"
+          ],
+          "expected": "Provider-owned, namespaced ids; idempotent re-sync; timezone-correct; never converted to owned tasks silently.",
+          "states": [
+            "visible",
+            "reconnecting"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/integrations/google-calendar.test.ts"
+          ],
+          "gaps": [
+            "live offline/reconnect provider round-trip needs a live Google harness"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Canvas",
+      "features": [
+        {
+          "id": "canvas.drag-task",
+          "action": "Drag a task node",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Only the dragged task's geometry changes; other nodes do not shift; position persists across reload.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/geometry-invariants.test.ts",
+            "tests/e2e/canvas-geometry-local.spec.ts",
+            "tests/e2e/canvas-sync-regressions.spec.ts (R1)"
+          ]
+        },
+        {
+          "id": "canvas.drag-into-group",
+          "action": "Drag a task into / out of a group",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Only parentId + position change; membership persists; no drift.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/geometry-invariants.test.ts",
+            "tests/unit/canvas/parentChainInheritance.test.ts"
+          ]
+        },
+        {
+          "id": "canvas.create-group",
+          "action": "Create / delete / collapse a group (day column, custom)",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Group persists; collapse hides children; delete reparents children atomically.",
+          "states": [
+            "visible",
+            "renderer-reloaded",
+            "cross-client"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/canvas/merge-group-load.test.ts",
+            "tests/unit/stores/canvas-group-echo-guard.test.ts",
+            "project_canvas_group_collapse (memory)"
+          ],
+          "gaps": [
+            "newly-created group does not propagate live to other clients (open product defect R7)"
+          ]
+        },
+        {
+          "id": "canvas.resize-group",
+          "action": "Resize a group / section",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Position + dimensions update; resize locks released in a finally block.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/geometry-invariants.test.ts",
+            "tests/unit/canvas-resize-test-comprehensive.test.ts",
+            "tests/unit/canvas/lock-manager-resize-adopt.test.ts"
+          ]
+        },
+        {
+          "id": "canvas.tidy-layout",
+          "action": "Tidy / rotate day-group layout",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Idempotent — a second run emits zero moves; no write storm; group height derives from placed tasks.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/canvas/tidy-layout.test.ts",
+            "tests/unit/canvas/layout-noop-skip.test.ts",
+            "tests/unit/canvas/day-group-position-rotation.test.ts"
+          ]
+        },
+        {
+          "id": "canvas.remove-from-canvas",
+          "action": "Remove a task from the canvas",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Stays removed across reload — dismissed flag persists so auto-placement does not re-add it.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/canvas/dismissed-task-stays-off-canvas.test.ts"
+          ]
+        },
+        {
+          "id": "canvas.connect-tasks",
+          "action": "Connect / disconnect task nodes (edges)",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Connection persists; undo/redo consistent.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/canvas-connection-undo.test.ts"
+          ]
+        },
+        {
+          "id": "canvas.boot-hydration",
+          "action": "First canvas load merges cache + remote + realtime",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Sync is read-only; fresh local groups preserved; stale zombies dropped; single-writer holds.",
+          "states": [
+            "renderer-reloaded",
+            "cross-client"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/canvas/merge-group-load.test.ts",
+            "tests/unit/canvas/sync-readonly.test.ts",
+            "tests/unit/geometry-invariants.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Mini Canvas (Thinking Flow)",
+      "features": [
+        {
+          "id": "minicanvas.subtasks",
+          "action": "Add / rename / complete / move / delete subtasks",
+          "surfaces": [
+            "mini-canvas"
+          ],
+          "expected": "Every write is awaited, rolled-back, and reports failure (no silent loss).",
+          "states": [
+            "visible",
+            "offline"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/mini-canvas/write-failure-visibility.test.ts",
+            "tests/unit/mini-canvas/edge-persistence.test.ts"
+          ]
+        },
+        {
+          "id": "minicanvas.notes-edges",
+          "action": "Add planning notes and draw connections",
+          "surfaces": [
+            "mini-canvas"
+          ],
+          "expected": "Notes + user-drawn edges persist on the parent task; survive modal close/reopen.",
+          "states": [
+            "visible",
+            "offline"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/mini-canvas/edge-persistence.test.ts",
+            "tests/unit/mini-canvas/write-failure-visibility.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Timer / Focus / Pomodoro",
+      "features": [
+        {
+          "id": "timer.start-stop-pause",
+          "action": "Start / stop / pause / resume a focus session",
+          "surfaces": [
+            "timer",
+            "focus",
+            "board",
+            "canvas",
+            "kde-widget",
+            "mobile-quick-sort"
+          ],
+          "expected": "Visible timer clears locally first; stop is durable; state machine consistent.",
+          "states": [
+            "visible",
+            "offline",
+            "cross-client"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/timer-state-machine.test.ts",
+            "tests/unit/stores/timer-stop-durability.test.ts",
+            "tests/unit/stores/timer-race-guard.test.ts"
+          ]
+        },
+        {
+          "id": "timer.complete-session",
+          "action": "Complete a session (award credit, history)",
+          "surfaces": [
+            "timer",
+            "focus"
+          ],
+          "expected": "Exactly-once per session id; pomodoro credit awaited + failure surfaced; break popup does not loop.",
+          "states": [
+            "visible",
+            "cross-client",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/timer-break-popup-loop.test.ts",
+            "src/stores/timer.ts (TASK-1977 credit fix)"
+          ]
+        },
+        {
+          "id": "timer.extend",
+          "action": "Add extra time to a running session",
+          "surfaces": [
+            "timer",
+            "focus",
+            "kde-widget"
+          ],
+          "expected": "Extends and re-allows completion (clears completed-id guard).",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/timer-extension-completion.test.ts"
+          ]
+        },
+        {
+          "id": "timer.cross-device",
+          "action": "Cross-device leadership + follower polling",
+          "surfaces": [
+            "timer",
+            "kde-widget"
+          ],
+          "expected": "One leader counts down; followers poll; leadership claim + heartbeat; auth-aware init.",
+          "states": [
+            "cross-client",
+            "auth-expired",
+            "reconnecting"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/timer-sync.test.ts",
+            "tests/unit/composables/timer-realtime-backstop.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Quick Sort / Quick Tasks",
+      "features": [
+        {
+          "id": "quicksort.session",
+          "action": "Start / run / complete a Quick Sort session",
+          "surfaces": [
+            "quick-sort",
+            "mobile-quick-sort"
+          ],
+          "expected": "Session state persists; interrupted session recovers; snapshot isolates new tasks.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/quick-sort-logic.test.ts",
+            "tests/unit/quick-sort-source-queue.test.ts"
+          ]
+        },
+        {
+          "id": "quicksort.postpone",
+          "action": "Postpone the current card",
+          "surfaces": [
+            "quick-sort",
+            "mobile-quick-sort"
+          ],
+          "expected": "Idempotent; double-click guarded; rapid clicks coalesce to one write; only the popup closes; opaque feedback.",
+          "states": [
+            "visible",
+            "offline"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/quick-sort-source-queue.test.ts",
+            "tests/e2e/quicksort-postpone-visual.spec.ts",
+            "tests/e2e/mobile/mobile-quick-sort-flow.spec.ts"
+          ]
+        },
+        {
+          "id": "quicksort.undo-redo",
+          "action": "Undo / redo Quick Sort swipes",
+          "surfaces": [
+            "quick-sort"
+          ],
+          "expected": "Reverses previous swipe; three-cycle consistent across all action types.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/use-quick-sort-undo-redo.test.ts",
+            "tests/unit/stores/quick-sort-logic.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Subtasks & Recurrence",
+      "features": [
+        {
+          "id": "recurrence.complete-clone",
+          "action": "Complete a recurring task → clone next occurrence",
+          "surfaces": [
+            "board",
+            "calendar",
+            "canvas",
+            "catalog"
+          ],
+          "expected": "Advances exactly once; next occurrence anchored to stored date (clock-independent); done-for-now variants.",
+          "states": [
+            "recurring",
+            "offline",
+            "cross-client"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/undo-task-operations.test.ts",
+            "tests/unit/sync/clock-jump-queue-ordering.test.ts",
+            "src/utils/recurrenceUtils.ts"
+          ]
+        },
+        {
+          "id": "recurrence.edit-rule",
+          "action": "Edit / stop a recurrence rule",
+          "surfaces": [
+            "board",
+            "catalog"
+          ],
+          "expected": "Chain not deleted when clearing recurrence cannot persist; repeated stop while in flight ignored.",
+          "states": [
+            "recurring",
+            "offline"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/undo-task-operations.test.ts",
+            "tests/unit/stores/task-store-crud.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Lanes (cross-project goals)",
+      "features": [
+        {
+          "id": "lane.crud",
+          "action": "Create / rename / delete a lane",
+          "surfaces": [
+            "lane",
+            "board",
+            "canvas"
+          ],
+          "expected": "Lane delete detaches every member task atomically — fail closed if any cannot detach (no dangling reference).",
+          "states": [
+            "visible",
+            "concurrent-write"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/lane-delete-atomicity.test.ts"
+          ]
+        },
+        {
+          "id": "lane.membership",
+          "action": "Add / remove a task from a lane",
+          "surfaces": [
+            "lane",
+            "board"
+          ],
+          "expected": "laneId persists; cross-project membership shown; unassigned on lane delete.",
+          "states": [
+            "visible"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/e2e/lanes.spec.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Backup & Restore",
+      "features": [
+        {
+          "id": "backup.auto",
+          "action": "Automatic backup on a timer",
+          "surfaces": [
+            "timer"
+          ],
+          "expected": "Runs every 5 min; a failure is reported once (transition into failure) and recovery re-arms it — never silent.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/backup/auto-backup-failure-visibility.test.ts"
+          ]
+        },
+        {
+          "id": "backup.capture",
+          "action": "Create a backup (manual/auto/golden)",
+          "surfaces": [
+            "timer"
+          ],
+          "expected": "Captures all task fields, projects, groups, settings, tombstones; refuses on a live/tombstone contradiction; checksum.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/backup/backup-comprehensive.test.ts",
+            "tests/unit/backup/tombstone-contradiction-guard.test.ts",
+            "tests/contract/task-field-roundtrip.test.ts",
+            "tests/contract/group-field-roundtrip.test.ts"
+          ]
+        },
+        {
+          "id": "backup.restore",
+          "action": "Restore a backup (full / selective)",
+          "surfaces": [
+            "timer"
+          ],
+          "expected": "Atomic; parent-before-child order; readback verified; refuses corrupt/different-account; fails closed.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/backup-validation.test.ts",
+            "tests/unit/backup/restore-graph-integrity.test.ts",
+            "tests/unit/backup/backup-recovery-engine-parity.test.ts"
+          ]
+        },
+        {
+          "id": "backup.export-import",
+          "action": "Export to file / import from file",
+          "surfaces": [
+            "timer"
+          ],
+          "expected": "Self-sufficient artifact; truncated/non-JSON files refused with no partial restore.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/backup/exported-file-corruption.test.ts",
+            "tests/unit/backup/attachment-recovery-inventory.test.ts"
+          ],
+          "gaps": [
+            "true crash-during-export + Electron-restart + cross-instance restore needs a live filesystem/Electron harness"
+          ]
+        },
+        {
+          "id": "backup.guest-account",
+          "action": "Guest backup + guest→account transition",
+          "surfaces": [
+            "timer"
+          ],
+          "expected": "Guest backup restorable in guest mode and after signing in; account-locked backups blocked across accounts.",
+          "states": [
+            "guest-mode",
+            "auth-expired"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/backup-validation.test.ts (guest source-affinity)"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Sync & Offline",
+      "features": [
+        {
+          "id": "sync.offline-queue",
+          "action": "Queue writes offline, drain on reconnect",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas",
+            "calendar"
+          ],
+          "expected": "Replay in enqueue order (monotonic, clock-jump-immune); no duplicates; survives reload/crash.",
+          "states": [
+            "offline",
+            "reconnecting",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/sync/clock-jump-queue-ordering.test.ts",
+            "tests/unit/services/offline/canonical-write-queue.test.ts"
+          ]
+        },
+        {
+          "id": "sync.realtime",
+          "action": "Receive live changes from other clients",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas",
+            "calendar"
+          ],
+          "expected": "Task changes propagate live; version/timestamp guards prevent echo stomp; scope-filtered.",
+          "states": [
+            "cross-client",
+            "concurrent-write"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/e2e/canvas-sync-regressions.spec.ts (R2/R9)",
+            "tests/unit/stores/canvas-group-echo-guard.test.ts"
+          ],
+          "gaps": [
+            "newly-created GROUPS do not propagate live (open product defect R7)"
+          ]
+        },
+        {
+          "id": "sync.canonical-catchup",
+          "action": "Catch up missed changes via canonical change log",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas",
+            "calendar"
+          ],
+          "expected": "Monotonic sequence paging; scope isolation; reconcile task ids + tombstones; restart baseline.",
+          "states": [
+            "reconnecting",
+            "renderer-reloaded",
+            "electron-restarted"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/services/canonical-change-catchup.test.ts",
+            "tests/unit/services/canonical-empty-projection-recovery.test.ts"
+          ]
+        },
+        {
+          "id": "sync.workspace-switch",
+          "action": "Switch workspace clears + reloads scoped data",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas"
+          ],
+          "expected": "Outgoing workspace data wiped; incoming loaded; no leak; durable writes resume.",
+          "states": [
+            "workspace-switched",
+            "concurrent-write"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/workspace-store.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Inbox / Catalog / Filtering",
+      "features": [
+        {
+          "id": "catalog.filter",
+          "action": "Filter/sort tasks (status, project, priority, smart views)",
+          "surfaces": [
+            "catalog",
+            "board"
+          ],
+          "expected": "Filtered views exclude soft-deleted; reopen reachable from filtered; counts accurate.",
+          "states": [
+            "filtered-hidden",
+            "large-inventory"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/task-store-crud.test.ts",
+            "tests/unit/canvas-hidden-selection.test.ts"
+          ]
+        },
+        {
+          "id": "inbox.move",
+          "action": "Move tasks to/from inbox",
+          "surfaces": [
+            "inbox",
+            "canvas"
+          ],
+          "expected": "isInInbox persists; bulk move to inbox is one undo entry with all ids.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/canvas-delete-contract.test.ts",
+            "tests/unit/undo-race-condition.test.ts"
+          ]
+        },
+        {
+          "id": "catalog.large-inventory",
+          "action": "Load a large task inventory completely",
+          "surfaces": [
+            "catalog",
+            "board",
+            "canvas"
+          ],
+          "expected": "Keyset pagination fetches all rows past the server row cap.",
+          "states": [
+            "large-inventory"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/composables/useTasksDatabase-pagination.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "AI assistant",
+      "features": [
+        {
+          "id": "ai.apply-day-plan",
+          "action": "Apply an AI day plan / smart lanes via command batch",
+          "surfaces": [
+            "ai-chat"
+          ],
+          "expected": "Applied through the command substrate with a durable audit + rollback receipt; confirmation shown; rollback on failure.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/ai-sidebar-first.test.ts",
+            "tests/unit/ai-action-command-substrate.test.ts"
+          ]
+        },
+        {
+          "id": "ai.memory",
+          "action": "AI remembers preferences / context across sessions",
+          "surfaces": [
+            "ai-chat"
+          ],
+          "expected": "Memory retrieved within freshness window (stale dropped); clock-independent fixtures.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/broad-memory-retrieval.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Local Task API (sidecar) & KDE widget",
+      "features": [
+        {
+          "id": "api.task-crud",
+          "action": "Create/read/update/complete tasks via the local API",
+          "surfaces": [
+            "local-task-api"
+          ],
+          "expected": "Canonical receipts; safe subtask normalisation; fails closed on malformed input.",
+          "states": [
+            "visible",
+            "concurrent-write"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/local-api/exact-task-runtime.test.ts",
+            "tests/unit/local-api/canonical-receipt.test.ts",
+            "tests/unit/local-api/canonical-task-patch-handler.test.ts"
+          ]
+        },
+        {
+          "id": "kde.timer-display",
+          "action": "KDE widget shows + controls the timer (follower polling)",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "Follower polls the local timer endpoint every 2s; countdown mirrors the app; leader/follower model holds; stale-active adoption guarded.",
+          "states": [
+            "cross-client",
+            "reconnecting"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/timer-sync.test.ts",
+            "reference_kde_widget_config_and_verify (memory)"
+          ]
+        },
+        {
+          "id": "kde.timer-extend-complete",
+          "action": "KDE widget extends / completes a session",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "Extend re-allows completion; completion is exactly-once and does not double-fire.",
+          "states": [
+            "cross-client"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/timer-extension-completion.test.ts"
+          ]
+        },
+        {
+          "id": "kde.timer-zombie-clear",
+          "action": "A paused timer clears when the app closes (no zombie/stuck timer)",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "A PAUSED active session is served as active only while the app keeps refreshing the snapshot (~10s heartbeat); once the snapshot is stale beyond the 15s grace (app closed/crashed) the sidecar reports it inactive so the widget clears it. A live paused timer stays shown.",
+          "states": [
+            "electron-restarted",
+            "cross-client"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/local-api/local-timer-snapshot.test.ts"
+          ]
+        },
+        {
+          "id": "kde.task-list",
+          "action": "KDE widget builds its task list (grouped, capped)",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "Tasks grouped by project with headers; list length capped; empty state renders cleanly.",
+          "states": [
+            "visible",
+            "large-inventory"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/task-list-building.test.ts"
+          ]
+        },
+        {
+          "id": "kde.today-parity",
+          "action": "KDE widget 'Today' filter matches the app's Today",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "Widget taskMatchesToday matches the Vue isTodayTask, incl. scheduled-today with stale calendar instances (BUG-1908).",
+          "states": [
+            "visible",
+            "recurring"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/today-filter-parity.test.ts"
+          ]
+        },
+        {
+          "id": "kde.nudge-popup",
+          "action": "KDE nudge popup appears with correct dimensions/logic",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "Nudge popup sizing + trigger logic correct; bounded lifetime (watchdog closes it).",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/nudge-popup.test.ts",
+            "tests/unit/kde/popup-watchdog.test.ts"
+          ]
+        },
+        {
+          "id": "kde.pre-end-warning",
+          "action": "KDE pre-end warning fires before session end",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "Warning fires at the configured seconds-before-end; honours the setting.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/pre-end-warning.test.ts"
+          ]
+        },
+        {
+          "id": "kde.fullscreen-overlay",
+          "action": "KDE full-screen break overlay covers the screen",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "Overlay matches screen dimensions; bounded lifetime via the watchdog.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/fullscreen-overlay.test.ts",
+            "tests/unit/kde/popup-watchdog.test.ts"
+          ]
+        },
+        {
+          "id": "kde.nanny-gates",
+          "action": "KDE nanny/quiet gates block notifications when configured",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "nannyQuietToday and related gates correctly suppress notifications.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/nanny-gates.test.ts"
+          ]
+        },
+        {
+          "id": "kde.auth",
+          "action": "KDE widget signs in / maintains its own session",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "Sign-in request shape correct; token handling for the widget's independent session.",
+          "states": [
+            "auth-expired",
+            "reconnecting"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/kde/auth-flow.test.ts"
+          ]
+        },
+        {
+          "id": "kde.config-persist",
+          "action": "KDE widget config toggles persist and reload",
+          "surfaces": [
+            "kde-widget"
+          ],
+          "expected": "Toggles persist via config/main.xml + plasmoid.configuration and survive a widget reload.",
+          "states": [
+            "renderer-reloaded"
+          ],
+          "status": "partial",
+          "evidence": [
+            "reference_kde_widget_config_and_verify (memory)"
+          ],
+          "gaps": [
+            "config persistence is verified live (kwriteconfig6/journal) per the memory SOP, not by an automated unit test"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Auth & Session",
+      "features": [
+        {
+          "id": "auth.signin-persist",
+          "action": "Sign in, persist session across restart",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Session + identity persist; Electron survives update+restart; auth-aware store init.",
+          "states": [
+            "renderer-reloaded",
+            "electron-restarted",
+            "auth-expired"
+          ],
+          "status": "audited",
+          "evidence": [
+            "src/services/auth/__tests__/authStorage.test.ts",
+            "tests/unit/stores/auth-flow.test.ts",
+            "tests/unit/stores/auth-signin-reload.test.ts",
+            "project_electron_auth_persistence (memory)"
+          ]
+        },
+        {
+          "id": "auth.token-refresh",
+          "action": "Refresh token + reconnect grace",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Multi-tab refresh + realtime rebind; offline grace; identity preserved on passive sign-out.",
+          "states": [
+            "reconnecting",
+            "auth-expired",
+            "offline"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/auth-grace-bound.test.ts",
+            "tests/e2e/multi-tab-sync.spec.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Projects",
+      "features": [
+        {
+          "id": "project.create",
+          "action": "Create a project",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas"
+          ],
+          "expected": "Project persists; appears in pickers; survives reload.",
+          "states": [
+            "visible",
+            "offline",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/projects-store-actions.test.ts"
+          ]
+        },
+        {
+          "id": "project.edit",
+          "action": "Rename a project / set icon",
+          "surfaces": [
+            "board",
+            "catalog"
+          ],
+          "expected": "Rename persists; emoji/SVG/gradient icon rendered.",
+          "states": [
+            "visible",
+            "offline"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/projects-store-actions.test.ts"
+          ]
+        },
+        {
+          "id": "project.set-color",
+          "action": "Set project color",
+          "surfaces": [
+            "board",
+            "catalog"
+          ],
+          "expected": "Color persists and is reflected everywhere the project shows.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/projects-store-actions.test.ts"
+          ]
+        },
+        {
+          "id": "project.set-view-type",
+          "action": "Set a project's Kanban view type (status/date/priority)",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "View type persists per project.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/projects-store-actions.test.ts"
+          ]
+        },
+        {
+          "id": "project.delete",
+          "action": "Delete project(s) (single + bulk)",
+          "surfaces": [
+            "board",
+            "catalog"
+          ],
+          "expected": "Tasks re-home to Uncategorized, not lost; deletion persists; tombstoned.",
+          "states": [
+            "visible",
+            "concurrent-write"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/projects-store-actions.test.ts"
+          ]
+        },
+        {
+          "id": "project.set-active-filter",
+          "action": "Select active project (filter views to it)",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas"
+          ],
+          "expected": "Active project filters visible tasks; persists across navigation.",
+          "states": [
+            "visible",
+            "filtered-hidden"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/projects-store-actions.test.ts",
+            "tests/calendar-project-filter.spec.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Notifications & Reminders",
+      "features": [
+        {
+          "id": "notify.schedule-task",
+          "action": "Schedule a task reminder / notification",
+          "surfaces": [
+            "board",
+            "calendar",
+            "catalog"
+          ],
+          "expected": "Notification scheduled for the due date/time; delivered once; cleared when the task changes.",
+          "states": [
+            "visible",
+            "recurring"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/notifications/notification-delivery.test.ts"
+          ]
+        },
+        {
+          "id": "notify.recurring",
+          "action": "Schedule notifications for a recurring task",
+          "surfaces": [
+            "board",
+            "calendar"
+          ],
+          "expected": "Each occurrence notifies; no duplicate/miss across the series.",
+          "states": [
+            "recurring"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/notifications/notification-delivery.test.ts"
+          ]
+        },
+        {
+          "id": "notify.snooze-dismiss",
+          "action": "Snooze / dismiss a notification",
+          "surfaces": [
+            "board",
+            "calendar"
+          ],
+          "expected": "Snooze reschedules; dismiss clears without re-firing.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/notifications/notification-store-actions.test.ts"
+          ]
+        },
+        {
+          "id": "notify.preferences",
+          "action": "Set notification preferences (per task / default)",
+          "surfaces": [
+            "board",
+            "catalog"
+          ],
+          "expected": "Preferences persist and govern future scheduling.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/notifications/notification-store-actions.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Workspace collaboration",
+      "features": [
+        {
+          "id": "workspace.create",
+          "action": "Create a workspace",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Workspace created; user is owner; scoped data isolated.",
+          "states": [
+            "visible"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/stores/workspace-store.test.ts"
+          ]
+        },
+        {
+          "id": "workspace.switch",
+          "action": "Switch active workspace",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas"
+          ],
+          "expected": "Outgoing data wiped, incoming loaded, no leak; durable writes resume.",
+          "states": [
+            "workspace-switched",
+            "concurrent-write"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/workspace-store.test.ts"
+          ]
+        },
+        {
+          "id": "workspace.delete",
+          "action": "Delete a workspace",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Guarded; owner-only; scoped data handled; no cross-scope leak.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/bug-1738-workspace-delete-guard.test.ts"
+          ]
+        },
+        {
+          "id": "workspace.invite",
+          "action": "Generate an invite link / accept an invite",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Invite links resolve; accept adds membership with correct role.",
+          "states": [
+            "visible"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/workspace"
+          ],
+          "gaps": [
+            "end-to-end invite acceptance needs a live multi-member harness (deferred team lane)"
+          ]
+        },
+        {
+          "id": "workspace.membership",
+          "action": "Change member role / remove member / leave",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Role change + removal + leave enforce RLS; no stale-auth writes.",
+          "states": [
+            "auth-expired",
+            "concurrent-write"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/workspace"
+          ],
+          "gaps": [
+            "revocation/owner-transfer under concurrent write is DEFERRED team vector #24"
+          ]
+        },
+        {
+          "id": "workspace.guest-isolation",
+          "action": "Guest data stays isolated from workspace data",
+          "surfaces": [
+            "board",
+            "catalog"
+          ],
+          "expected": "Guest and workspace scopes never bleed into each other.",
+          "states": [
+            "guest-mode",
+            "workspace-switched"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/workspace-guest-isolation.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Settings & Preferences",
+      "features": [
+        {
+          "id": "settings.persist-sync",
+          "action": "Change any setting → persist locally + sync",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Debounced upsert; excludes secrets; local save does not mask a failed remote sync.",
+          "states": [
+            "visible",
+            "offline",
+            "cross-client"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/settings-sync.test.ts",
+            "tests/e2e/settings-storage-layout.spec.ts"
+          ]
+        },
+        {
+          "id": "settings.toggle-done-column",
+          "action": "Toggle Done column / hide-done / done-task visibility",
+          "surfaces": [
+            "board",
+            "canvas",
+            "calendar"
+          ],
+          "expected": "Toggle persists; views re-filter reactively.",
+          "states": [
+            "visible",
+            "filtered-hidden"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/stores/task-store-crud.test.ts"
+          ]
+        },
+        {
+          "id": "settings.toggle-google-events",
+          "action": "Toggle showing Google Calendar events",
+          "surfaces": [
+            "calendar"
+          ],
+          "expected": "External events appear/disappear; no owned-task side effects.",
+          "states": [
+            "visible"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/integrations/google-calendar.test.ts"
+          ]
+        },
+        {
+          "id": "settings.pomodoro-auto",
+          "action": "Toggle auto-start pomodoros / breaks",
+          "surfaces": [
+            "timer",
+            "focus"
+          ],
+          "expected": "Auto-start behaviour follows the setting.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/settings-sync.test.ts"
+          ]
+        },
+        {
+          "id": "settings.day-group-rotation",
+          "action": "Toggle day-group position rotation / suggestions",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Rotation on/off governs layout; no write storm when off.",
+          "states": [
+            "visible"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/canvas/day-group-position-rotation.test.ts"
+          ]
+        },
+        {
+          "id": "settings.language-direction",
+          "action": "Change language / RTL direction",
+          "surfaces": [
+            "board",
+            "ai-chat"
+          ],
+          "expected": "Language + direction apply app-wide and persist.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/ui-store-actions.test.ts"
+          ]
+        },
+        {
+          "id": "settings.auto-update",
+          "action": "Toggle Electron auto-update",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Auto-update check honours the setting.",
+          "states": [
+            "electron-restarted"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/electron-updater-contract.test.ts",
+            "tests/unit/electron/updater-guest-contract.test.ts",
+            "tests/unit/electron/supervised-update-handoff.test.ts"
+          ],
+          "gaps": [
+            "updater version/marker/handoff flow is covered; the autoUpdateEnabled toggle GATING the check is not isolated in a test; auto-update is a per-device local setting, intentionally not synced"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Canvas selection, viewport & images",
+      "features": [
+        {
+          "id": "canvas.multi-select",
+          "action": "Multi-select nodes (click, rubber-band rect)",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Selection tracks nodes; bulk actions operate on the exact selection incl. hidden.",
+          "states": [
+            "visible",
+            "filtered-hidden"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/canvas-hidden-selection.test.ts",
+            "tests/unit/canvas-bulk-visible-boundary.test.ts"
+          ]
+        },
+        {
+          "id": "canvas.viewport",
+          "action": "Pan / zoom / save+restore viewport",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Viewport persists and restores; zoom-out performance bounded.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/e2e/canvas-viewport-restore.spec.ts"
+          ]
+        },
+        {
+          "id": "canvas.images",
+          "action": "Add / move / delete / restore a canvas image",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Image persists at position; delete is undoable; restore returns it.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/e2e/canvas-image.spec.ts",
+            "tests/unit/undo-image-delete.test.ts"
+          ]
+        },
+        {
+          "id": "canvas.hotkeys",
+          "action": "Canvas keyboard shortcuts (delete, group with G, select)",
+          "surfaces": [
+            "canvas"
+          ],
+          "expected": "Hotkeys act on selection; ignored while typing in inputs.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/canvas/canvas-hotkeys.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "AI chat conversations",
+      "features": [
+        {
+          "id": "aichat.send",
+          "action": "Send a message / stream a reply",
+          "surfaces": [
+            "ai-chat"
+          ],
+          "expected": "User + assistant messages persist; streaming completes; error surfaced.",
+          "states": [
+            "visible",
+            "offline"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/ai-chat-activity-message.test.ts"
+          ]
+        },
+        {
+          "id": "aichat.conversations",
+          "action": "Create / switch / rename / delete a conversation",
+          "surfaces": [
+            "ai-chat"
+          ],
+          "expected": "Conversation CRUD persists and syncs; delete does not orphan messages.",
+          "states": [
+            "visible",
+            "cross-client"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/aichat-conversations.test.ts"
+          ]
+        },
+        {
+          "id": "aichat.undo-action",
+          "action": "Undo the AI's last applied action",
+          "surfaces": [
+            "ai-chat"
+          ],
+          "expected": "Reverses the applied command batch via the rollback receipt.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/ai-action-command-substrate.test.ts"
+          ]
+        },
+        {
+          "id": "aichat.panel",
+          "action": "Open / close / toggle the AI panel; set language/direction",
+          "surfaces": [
+            "ai-chat"
+          ],
+          "expected": "Panel state + language/direction persist.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/aichat-conversations.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Navigation, UI & search",
+      "features": [
+        {
+          "id": "ui.sidebars",
+          "action": "Toggle main / secondary sidebar, focus mode",
+          "surfaces": [
+            "board",
+            "catalog",
+            "canvas"
+          ],
+          "expected": "Layout state persists; footer reflects auth state.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/stores/ui-store-actions.test.ts",
+            "tests/unit/components/sidebar-user-footer-auth-state.test.ts"
+          ]
+        },
+        {
+          "id": "ui.modals",
+          "action": "Open / close modals (edit, batch-edit, group, delete, shortcuts, settings, auth)",
+          "surfaces": [
+            "board",
+            "canvas",
+            "catalog"
+          ],
+          "expected": "Modals open/close cleanly; edit modal fails closed on save error; no leaked listeners on unmount.",
+          "states": [
+            "visible"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/tasks/edit-action-survival.test.ts"
+          ]
+        },
+        {
+          "id": "ui.navigate-views",
+          "action": "Navigate between views (Board/Calendar/Canvas/Catalog/Focus/Quick Sort/AI)",
+          "surfaces": [
+            "board",
+            "calendar",
+            "canvas",
+            "catalog",
+            "focus",
+            "quick-sort",
+            "ai-chat"
+          ],
+          "expected": "No critical JS errors across navigations; each view loads authenticated data.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/e2e/view-loading.spec.ts"
+          ],
+          "gaps": [
+            "webkit CORS-in-test-env noise (not product)"
+          ]
+        },
+        {
+          "id": "ui.search",
+          "action": "Search tasks",
+          "surfaces": [
+            "catalog",
+            "board",
+            "local-task-api"
+          ],
+          "expected": "Search returns matching tasks; API search contract stable.",
+          "states": [
+            "visible",
+            "large-inventory"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/local-api/task-search.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "area": "Onboarding & capture (unaudited surface)",
+      "features": [
+        {
+          "id": "capture.brain-dump",
+          "action": "Brain-dump quick capture of many tasks",
+          "surfaces": [
+            "inbox",
+            "quick-sort"
+          ],
+          "expected": "Every captured line becomes a durable task; none dropped.",
+          "states": [
+            "visible",
+            "offline"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/composables/brain-dump.test.ts"
+          ]
+        },
+        {
+          "id": "capture.morning-ritual",
+          "action": "Morning dashboard / Big Three capture",
+          "surfaces": [
+            "morning-dashboard",
+            "today-flow"
+          ],
+          "expected": "Big Three tasks created undo-aware and persist.",
+          "states": [
+            "visible"
+          ],
+          "status": "partial",
+          "evidence": [
+            "tests/unit/undo-entrypoint-contract.test.ts"
+          ]
+        },
+        {
+          "id": "capture.onboarding",
+          "action": "First-run onboarding flow",
+          "surfaces": [
+            "board"
+          ],
+          "expected": "Onboarding completes once and does not re-trigger; no data created unexpectedly.",
+          "states": [
+            "visible",
+            "renderer-reloaded"
+          ],
+          "status": "audited",
+          "evidence": [
+            "tests/unit/composables/onboarding-wizard.test.ts"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -16,6 +16,7 @@ import { useTaskStore } from "@/stores/tasks";
 import { useProjectStore } from "@/stores/projects";
 import { useCanvasStore } from "@/stores/canvas";
 import { useSupabaseDatabase } from "@/composables/useSupabaseDatabase";
+import { useToast } from "@/composables/useToast";
 
 import {
   DEFAULT_CONFIG,
@@ -54,6 +55,8 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     restoreProgress: 0,
     error: null,
     warning: null,
+    autoBackupHealthy: true,
+    autoBackupError: null,
   });
 
   const stats = ref<BackupStats>({
@@ -105,6 +108,55 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
   /**
    * Start automatic backup scheduler
    */
+  /**
+   * TASK-1977: run one scheduled backup and make its outcome observable.
+   *
+   * createBackup signals failure by returning null and parking a reason on
+   * state.error — it does not throw. The scheduler used to await it and discard
+   * the result, so a persistent refusal (contradictory permanent-delete
+   * inventory, a suspiciously small backup, storage errors) silently stopped
+   * producing backups while the user went on believing they were protected.
+   *
+   * Reported on the transition into failure only: a five-minute timer must not
+   * become a five-minute nag, but the user has to be told once that their
+   * safety net is off, and told again when it comes back.
+   */
+  async function runScheduledBackup(): Promise<void> {
+    let failureReason: string | null = null;
+    try {
+      const backup = await coreOps.createBackup("auto");
+      if (!backup) {
+        failureReason =
+          state.value.error || "Automatic backup did not complete.";
+      }
+    } catch (error) {
+      failureReason =
+        error instanceof Error ? error.message : "Automatic backup failed.";
+    }
+
+    if (failureReason) {
+      const wasHealthy = state.value.autoBackupHealthy;
+      state.value.autoBackupHealthy = false;
+      state.value.autoBackupError = failureReason;
+      console.error("[Backup] Automatic backup failed:", failureReason);
+      if (wasHealthy) {
+        const { showToast } = useToast();
+        showToast(
+          `Automatic backup stopped working: ${failureReason}`,
+          "error",
+        );
+      }
+      return;
+    }
+
+    if (!state.value.autoBackupHealthy) {
+      state.value.autoBackupHealthy = true;
+      state.value.autoBackupError = null;
+      const { showToast } = useToast();
+      showToast("Automatic backup is working again.", "success");
+    }
+  }
+
   function startAutoBackup(): void {
     if (autoBackupInterval) {
       stopAutoBackup();
@@ -120,7 +172,7 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
 
     autoBackupInterval = setInterval(async () => {
       if (config.value.enabled) {
-        await coreOps.createBackup("auto");
+        await runScheduledBackup();
       }
     }, config.value.autoSaveInterval);
   }

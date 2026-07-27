@@ -609,7 +609,18 @@ export const useCanvasGroups = (
     // locally from another device's sync). createGroup upserts by id → idempotent/converges.
     for (const old of legacy) {
       const newId = idMap.get(old.id)!;
-      if (_rawGroups.value.some((g) => g.id === newId)) continue;
+      const existing = _rawGroups.value.find((g) => g.id === newId);
+      if (existing) {
+        // TASK-1977: present locally is NOT proof of present in Supabase.
+        // The existing copy may itself be a local-only group whose earlier
+        // write never landed. Skipping outright deleted the legacy copy in
+        // phase 5, enqueued nothing, and still reported the group migrated —
+        // leaving it on this device only while claiming success. Push the
+        // survivor through the queue (the write is an idempotent upsert) so
+        // the reported migration reflects a real durable operation.
+        await updateGroup(newId, { updatedAt: new Date().toISOString() });
+        continue;
+      }
       const newParent =
         old.parentGroupId && idMap.has(old.parentGroupId)
           ? idMap.get(old.parentGroupId)!

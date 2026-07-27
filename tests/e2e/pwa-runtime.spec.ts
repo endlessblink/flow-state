@@ -340,7 +340,17 @@ test.describe("Offline & Background Sync", () => {
   test("10 - Offline: cached assets served from CacheStorage", async ({
     page,
     context,
+    browserName,
   }) => {
+    // TASK-1977: same Chromium-only CDP dependency as test 11. It escaped
+    // notice only because dev mode leaves CacheStorage empty and the test
+    // skipped earlier; with caches present it would fail on webkit for
+    // environment reasons rather than app behaviour.
+    test.skip(
+      browserName !== "chromium",
+      "Network emulation requires a Chromium CDP session",
+    );
+
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
@@ -396,7 +406,20 @@ test.describe("Offline & Background Sync", () => {
   test("11 - Online to Offline to Online: app recovers", async ({
     page,
     context,
+    browserName,
   }) => {
+    // TASK-1977: this drives the network through a CDP session, which only
+    // Chromium exposes. On webkit/firefox it threw "CDP session is only
+    // available in Chromium" and was counted as an app failure — offline
+    // recovery looked broken on Safari when it had simply never been exercised.
+    // Skip explicitly so the gap is visible as a skip, not a false failure.
+    // Offline behaviour on other engines is covered by context.setOffline
+    // elsewhere in this suite.
+    test.skip(
+      browserName !== "chromium",
+      "Network emulation requires a Chromium CDP session",
+    );
+
     await page.goto("/#/tasks");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);

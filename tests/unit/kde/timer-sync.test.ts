@@ -369,9 +369,17 @@ describe("TASK-1652: KDE Timer Sync", () => {
       expect(localBody).toContain("clearActiveSessionState(true)");
       expect(localBody).toContain("fallback()");
       expect(serverSource).toContain("LOCAL_TIMER_INACTIVE_GRACE_MS");
+      // TASK-1977: the age-out logic moved from server.cjs into the unit-tested
+      // helper localTimerSnapshot.cjs (server.cjs delegates to it). Assert the
+      // grace guard at its new home rather than the old inline string.
       expect(serverSource).toContain(
-        "snapshotAgeMs > LOCAL_TIMER_INACTIVE_GRACE_MS",
+        "resolveLocalTimerSnapshot(localTimerSnapshot",
       );
+      const helperSource = readFileSync(
+        resolve(__dirname, "../../../server/local-api/localTimerSnapshot.cjs"),
+        "utf-8",
+      );
+      expect(helperSource).toContain("ageMs > graceMs");
     });
 
     it("2. clears a completed session even when its notification was already delivered", () => {

@@ -199,6 +199,30 @@ async function unusedPort(): Promise<number> {
   return port;
 }
 
+/**
+ * TASK-1977: unusedPort() probes a free port, releases it, and only then hands
+ * it to a spawned sidecar — a time-of-check/time-of-use gap another parallel
+ * worker can win. Under full-suite load the sidecar then died with
+ * "sidecar exited with 1" (EADDRINUSE) and the file failed, while passing when
+ * run alone. A lost race is environmental, not a product failure, so retry it
+ * with a fresh port; a genuinely broken sidecar still fails on the last attempt.
+ */
+async function startWithPortRetry<T>(
+  start: (port: number) => Promise<T>,
+  attempts = 3,
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await start(await unusedPort());
+    } catch (error) {
+      lastError = error;
+      if (!/sidecar exited with/.test(String(error))) throw error;
+    }
+  }
+  throw lastError;
+}
+
 async function waitForHealth(port: number, child: ChildProcess): Promise<void> {
   for (let attempt = 0; attempt < 80; attempt += 1) {
     if (child.exitCode !== null)
@@ -218,7 +242,16 @@ async function waitForHealth(port: number, child: ChildProcess): Promise<void> {
 }
 
 async function startSidecar(entry: string, supabaseUrl: string) {
-  const port = await unusedPort();
+  return startWithPortRetry((port) =>
+    startSidecarOnPort(entry, supabaseUrl, port),
+  );
+}
+
+async function startSidecarOnPort(
+  entry: string,
+  supabaseUrl: string,
+  port: number,
+) {
   const dataDir = mkdtempSync(join(tmpdir(), "flowstate-exact-task-runtime-"));
   const child = spawn(process.execPath, [entry], {
     cwd: dataDir,
@@ -260,7 +293,16 @@ async function startSidecar(entry: string, supabaseUrl: string) {
 }
 
 async function startSignedSidecar(entry: string, supabaseUrl: string) {
-  const port = await unusedPort();
+  return startWithPortRetry((port) =>
+    startSignedSidecarOnPort(entry, supabaseUrl, port),
+  );
+}
+
+async function startSignedSidecarOnPort(
+  entry: string,
+  supabaseUrl: string,
+  port: number,
+) {
   const dataDir = mkdtempSync(
     join(tmpdir(), "flowstate-exact-task-signed-runtime-"),
   );

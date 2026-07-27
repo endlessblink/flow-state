@@ -685,6 +685,17 @@ watch(() => props.isOpen, (open) => {
 
 onMounted(() => document.addEventListener('keydown', handleKeyDown))
 onUnmounted(() => {
+  // TASK-1977 (view-lifecycle-warning-and-action-survival): if the modal is
+  // unmounted by a path other than handleCloseRequest — a parent flipping
+  // isOpen, a route change — a change still sitting in the 500ms autosave
+  // debounce would be dropped, because we only cleared the timer. A live
+  // autosaveTimer means exactly that: a dirty, not-yet-flushed edit. Fire the
+  // save durably (updateTaskWithUndo enqueues, so it survives the unmount)
+  // rather than discard it. handleCloseRequest already clears the timer, so a
+  // normal close cannot reach this branch and there is no double-save.
+  if (autosaveTimer && !isReadOnly.value && isFormDirty.value) {
+    void persistTask({ close: false, showSuccessToast: false })
+  }
   clearAutosaveTimer()
   document.removeEventListener('keydown', handleKeyDown)
 })

@@ -66,6 +66,15 @@ export interface BackupSystemState {
   restoreProgress: number;
   error: string | null;
   warning: string | null;
+  /**
+   * TASK-1977: false once a scheduled auto-backup has failed and stayed failed.
+   * createBackup reports failure by returning null rather than throwing, so
+   * without this the scheduler could stop producing backups indefinitely with
+   * nothing in the UI to show for it. Surfaces "your safety net is off".
+   */
+  autoBackupHealthy: boolean;
+  /** Message from the most recent auto-backup failure, null while healthy. */
+  autoBackupError: string | null;
 }
 
 // TASK-153: Types for golden backup validation

@@ -1,6 +1,17 @@
 /**
  * Capture web baseline screenshots for visual regression.
- * Run: npm run test:e2e -- --grep "baseline" --project=chromium --workers=1
+ * Run: CAPTURE_VISUAL_BASELINES=1 npm run test:e2e -- --grep "baseline" --project=chromium --workers=1
+ *
+ * TASK-1977: this spec WRITES the reference images that visual regression
+ * compares against. It used to run as part of every full E2E run, which meant
+ * each run silently overwrote the references with whatever the app currently
+ * looked like — a visual regression could never be detected, because the
+ * "expected" image was regenerated from the possibly-broken build. It also
+ * churned tracked PNGs in the worktree on every run, which is one of the
+ * things that keeps forcing release provenance to report dirty.
+ *
+ * Capturing is now explicit and opt-in. Updating a baseline should be a
+ * deliberate act with a reviewable diff, never a side effect of running tests.
  */
 import { test } from "../fixtures/auth";
 import path from "path";
@@ -21,6 +32,11 @@ const VIEWS = [
 ];
 
 test.describe("Web Baseline Screenshots", () => {
+  test.skip(
+    !process.env.CAPTURE_VISUAL_BASELINES,
+    "Baseline capture overwrites the committed reference images. Set CAPTURE_VISUAL_BASELINES=1 to intentionally re-record them.",
+  );
+
   for (const view of VIEWS) {
     test(`capture ${view.name} baseline`, async ({ page }) => {
       await page.goto(view.route);

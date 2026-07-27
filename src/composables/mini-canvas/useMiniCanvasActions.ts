@@ -1,4 +1,5 @@
 import { useTaskStore } from "@/stores/tasks";
+import { useToast } from "@/composables/useToast";
 import type {
   Subtask,
   PlanningNote,
@@ -9,9 +10,15 @@ import type {
 /**
  * Mini-canvas CRUD actions for subtasks and planning notes.
  * Both data types live on the parent task (subtasks[] and planningNotes[]).
+ *
+ * TASK-1977: every action below writes through the parent task and must await
+ * that write. Dispatching it fire-and-forget left a rejected write showing on
+ * screen as if it had saved, with the failure visible only as an unhandled
+ * promise — the change was simply gone on the next load.
  */
 export function useMiniCanvasActions(taskId: () => string | null) {
   const taskStore = useTaskStore();
+  const { showToast } = useToast();
 
   const getTask = (): Task | undefined => {
     const id = taskId();
@@ -19,9 +26,29 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     return taskStore._rawTasks.find((t) => t.id === id);
   };
 
+  /**
+   * Persist a change to the parent task, surfacing failure to the user.
+   * Returns whether the write is durable, so callers never treat a failed
+   * edit as applied.
+   */
+  const persist = async (
+    id: string,
+    updates: Partial<Task>,
+    action: string,
+  ): Promise<boolean> => {
+    try {
+      await taskStore.updateTaskWithUndo(id, updates);
+      return true;
+    } catch (error) {
+      console.error(`Error ${action} in mini-canvas:`, error);
+      showToast(`Could not be ${action}. Refresh and try again.`, "error");
+      return false;
+    }
+  };
+
   // ── Subtask Actions ──
 
-  const addSubtask = (position: { x: number; y: number }, title = "") => {
+  const addSubtask = async (position: { x: number; y: number }, title = "") => {
     const task = getTask();
     if (!task) return;
 
@@ -38,13 +65,15 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     };
 
     const updated = [...(task.subtasks || []), subtask];
-    taskStore.updateTaskWithUndo(task.id, {
-      subtasks: updated,
-    } as Partial<Task>);
-    return subtask.id;
+    const saved = await persist(
+      task.id,
+      { subtasks: updated } as Partial<Task>,
+      "added",
+    );
+    return saved ? subtask.id : undefined;
   };
 
-  const updateSubtaskPosition = (
+  const updateSubtaskPosition = async (
     subtaskId: string,
     position: { x: number; y: number },
   ) => {
@@ -56,24 +85,20 @@ export function useMiniCanvasActions(taskId: () => string | null) {
         ? { ...s, canvasPosition: position, updatedAt: new Date() }
         : s,
     );
-    taskStore.updateTaskWithUndo(task.id, {
-      subtasks: updated,
-    } as Partial<Task>);
+    await persist(task.id, { subtasks: updated } as Partial<Task>, "moved");
   };
 
-  const updateSubtaskTitle = (subtaskId: string, title: string) => {
+  const updateSubtaskTitle = async (subtaskId: string, title: string) => {
     const task = getTask();
     if (!task) return;
 
     const updated = (task.subtasks || []).map((s) =>
       s.id === subtaskId ? { ...s, title, updatedAt: new Date() } : s,
     );
-    taskStore.updateTaskWithUndo(task.id, {
-      subtasks: updated,
-    } as Partial<Task>);
+    await persist(task.id, { subtasks: updated } as Partial<Task>, "renamed");
   };
 
-  const toggleSubtaskCompletion = (subtaskId: string) => {
+  const toggleSubtaskCompletion = async (subtaskId: string) => {
     const task = getTask();
     if (!task) return;
 
@@ -82,36 +107,33 @@ export function useMiniCanvasActions(taskId: () => string | null) {
         ? { ...s, isCompleted: !s.isCompleted, updatedAt: new Date() }
         : s,
     );
-    taskStore.updateTaskWithUndo(task.id, {
-      subtasks: updated,
-    } as Partial<Task>);
+    await persist(task.id, { subtasks: updated } as Partial<Task>, "updated");
   };
 
-  const updateSubtaskDescription = (subtaskId: string, description: string) => {
+  const updateSubtaskDescription = async (
+    subtaskId: string,
+    description: string,
+  ) => {
     const task = getTask();
     if (!task) return;
 
     const updated = (task.subtasks || []).map((s) =>
       s.id === subtaskId ? { ...s, description, updatedAt: new Date() } : s,
     );
-    taskStore.updateTaskWithUndo(task.id, {
-      subtasks: updated,
-    } as Partial<Task>);
+    await persist(task.id, { subtasks: updated } as Partial<Task>, "updated");
   };
 
-  const deleteSubtask = (subtaskId: string) => {
+  const deleteSubtask = async (subtaskId: string) => {
     const task = getTask();
     if (!task) return;
 
     const updated = (task.subtasks || []).filter((s) => s.id !== subtaskId);
-    taskStore.updateTaskWithUndo(task.id, {
-      subtasks: updated,
-    } as Partial<Task>);
+    await persist(task.id, { subtasks: updated } as Partial<Task>, "deleted");
   };
 
   // ── Planning Note Actions ──
 
-  const addNote = (
+  const addNote = async (
     position: { x: number; y: number },
     title = "New note",
     description = "",
@@ -131,13 +153,15 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     };
 
     const updated = [...(task.planningNotes || []), note];
-    taskStore.updateTaskWithUndo(task.id, {
-      planningNotes: updated,
-    } as Partial<Task>);
-    return note.id;
+    const saved = await persist(
+      task.id,
+      { planningNotes: updated } as Partial<Task>,
+      "added",
+    );
+    return saved ? note.id : undefined;
   };
 
-  const updateNotePosition = (
+  const updateNotePosition = async (
     noteId: string,
     position: { x: number; y: number },
   ) => {
@@ -153,12 +177,14 @@ export function useMiniCanvasActions(taskId: () => string | null) {
           }
         : n,
     );
-    taskStore.updateTaskWithUndo(task.id, {
-      planningNotes: updated,
-    } as Partial<Task>);
+    await persist(
+      task.id,
+      { planningNotes: updated } as Partial<Task>,
+      "moved",
+    );
   };
 
-  const updateNoteTitle = (noteId: string, title: string) => {
+  const updateNoteTitle = async (noteId: string, title: string) => {
     const task = getTask();
     if (!task) return;
 
@@ -167,12 +193,14 @@ export function useMiniCanvasActions(taskId: () => string | null) {
         ? { ...n, title, updatedAt: new Date().toISOString() }
         : n,
     );
-    taskStore.updateTaskWithUndo(task.id, {
-      planningNotes: updated,
-    } as Partial<Task>);
+    await persist(
+      task.id,
+      { planningNotes: updated } as Partial<Task>,
+      "renamed",
+    );
   };
 
-  const updateNoteDescription = (noteId: string, description: string) => {
+  const updateNoteDescription = async (noteId: string, description: string) => {
     const task = getTask();
     if (!task) return;
 
@@ -181,46 +209,54 @@ export function useMiniCanvasActions(taskId: () => string | null) {
         ? { ...n, description, updatedAt: new Date().toISOString() }
         : n,
     );
-    taskStore.updateTaskWithUndo(task.id, {
-      planningNotes: updated,
-    } as Partial<Task>);
+    await persist(
+      task.id,
+      { planningNotes: updated } as Partial<Task>,
+      "updated",
+    );
   };
 
-  const deleteNote = (noteId: string) => {
+  const deleteNote = async (noteId: string) => {
     const task = getTask();
     if (!task) return;
 
     const updated = (task.planningNotes || []).filter((n) => n.id !== noteId);
-    taskStore.updateTaskWithUndo(task.id, {
-      planningNotes: updated,
-    } as Partial<Task>);
+    await persist(
+      task.id,
+      { planningNotes: updated } as Partial<Task>,
+      "deleted",
+    );
   };
 
   // ── Mini-Canvas User-Drawn Edge Actions ──
 
-  const addMiniCanvasEdge = (edge: MiniCanvasEdge) => {
+  const addMiniCanvasEdge = async (edge: MiniCanvasEdge) => {
     const task = getTask();
     if (!task) return;
 
     const existing = task.miniCanvasEdges ?? [];
     if (existing.some((e) => e.id === edge.id)) return;
 
-    taskStore.updateTaskWithUndo(task.id, {
-      miniCanvasEdges: [...existing, edge],
-    } as Partial<Task>);
+    await persist(
+      task.id,
+      { miniCanvasEdges: [...existing, edge] } as Partial<Task>,
+      "connected",
+    );
   };
 
-  const removeMiniCanvasEdge = (edgeId: string) => {
+  const removeMiniCanvasEdge = async (edgeId: string) => {
     const task = getTask();
     if (!task || !task.miniCanvasEdges?.length) return;
 
     const next = task.miniCanvasEdges.filter((e) => e.id !== edgeId);
-    taskStore.updateTaskWithUndo(task.id, {
-      miniCanvasEdges: next,
-    } as Partial<Task>);
+    await persist(
+      task.id,
+      { miniCanvasEdges: next } as Partial<Task>,
+      "disconnected",
+    );
   };
 
-  const removeMiniCanvasEdgesForNode = (nodeId: string) => {
+  const removeMiniCanvasEdgesForNode = async (nodeId: string) => {
     const task = getTask();
     if (!task || !task.miniCanvasEdges?.length) return;
 
@@ -229,9 +265,11 @@ export function useMiniCanvasActions(taskId: () => string | null) {
     );
     if (next.length === task.miniCanvasEdges.length) return;
 
-    taskStore.updateTaskWithUndo(task.id, {
-      miniCanvasEdges: next,
-    } as Partial<Task>);
+    await persist(
+      task.id,
+      { miniCanvasEdges: next } as Partial<Task>,
+      "disconnected",
+    );
   };
 
   return {

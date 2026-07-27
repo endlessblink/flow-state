@@ -66,6 +66,7 @@ const VALID_TASK_COLUMNS = new Set([
   "order",
   "column_id",
   "is_in_inbox",
+  "canvas_dismissed", // TASK-1977: user explicitly removed the task from the canvas (boolean)
   "scheduled_date",
   "scheduled_time",
   "is_uncategorized",

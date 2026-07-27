@@ -331,6 +331,64 @@ describe("TASK-332: Backup Reliability & Verification", () => {
       expect(mockCheckTaskIdsAvailability).not.toHaveBeenCalled();
     });
 
+    // TASK-1977 — vectors: guest-backup-retention-and-restart [high] and
+    // guest-account-transition-and-source-affinity [critical]. The account
+    // path above is covered; these pin the guest source-affinity contract that
+    // had no evidence: a guest's backup stays restorable in guest mode and does
+    // not become un-restorable (or misattributed) after the guest signs in.
+    it("presents a guest-sourced backup as restorable while in guest mode", async () => {
+      mockAuthUserId = null; // guest: no signed-in user
+      const backup = createMockBackup(2, Date.now(), {
+        source: { kind: "guest" },
+      });
+      mockCheckTaskIdsAvailability.mockResolvedValue(
+        backup.tasks.map((t) => ({
+          taskId: t.id,
+          status: "available",
+          reason: "",
+        })),
+      );
+
+      const analysis = await backupSystem.analyzeRestore(backup);
+
+      expect(analysis.canProceed).toBe(true);
+      expect(analysis.warnings.join(" ")).not.toContain("different account");
+    });
+
+    it("still lets a guest-sourced backup restore after the guest signs into an account (data survives the transition)", async () => {
+      mockAuthUserId = "user-1"; // the guest has now signed in
+      const backup = createMockBackup(2, Date.now(), {
+        source: { kind: "guest" },
+      });
+      mockCheckTaskIdsAvailability.mockResolvedValue(
+        backup.tasks.map((t) => ({
+          taskId: t.id,
+          status: "available",
+          reason: "",
+        })),
+      );
+
+      const analysis = await backupSystem.analyzeRestore(backup);
+
+      // A guest backup is not account-locked, so signing in must not strand it.
+      expect(analysis.canProceed).toBe(true);
+      expect(analysis.warnings.join(" ")).not.toContain("different account");
+    });
+
+    it("blocks a legacy source-less backup while signed in, steering the user to guest recovery", async () => {
+      mockAuthUserId = "user-1";
+      // A genuinely legacy artifact predates source provenance: older schema
+      // version AND no source. (A current-schema backup with no source is a
+      // different, also-blocked case handled elsewhere.)
+      const backup = createMockBackup(1, Date.now(), { version: "3.2.0" });
+      delete (backup as { source?: unknown }).source;
+
+      const analysis = await backupSystem.analyzeRestore(backup);
+
+      expect(analysis.canProceed).toBe(false);
+      expect(analysis.warnings.join(" ").toLowerCase()).toContain("guest");
+    });
+
     it("refuses a shared-workspace artifact before creating an emergency checkpoint", async () => {
       const backup = createMockBackup(1, Date.now(), {
         source: { kind: "account", userId: "user-1" },

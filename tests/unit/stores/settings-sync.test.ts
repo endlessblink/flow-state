@@ -184,6 +184,30 @@ describe("Settings Supabase sync", () => {
     );
   });
 
+  // TASK-1977: feature-matrix settings.pomodoro-auto — the auto-start toggles
+  // must actually reach Supabase, not just live in memory.
+  it("includes the auto-start pomodoro toggle in the synced settings", async () => {
+    const store = useSettingsStore();
+    store.$patch({ autoStartPomodoros: true });
+
+    store.saveToStorage();
+    await flushDebounce();
+
+    const [upsertPayload] = mockUpsert.mock.calls[0];
+    expect(upsertPayload.settings).toHaveProperty("autoStartPomodoros", true);
+  });
+
+  it("includes the auto-start breaks toggle in the synced settings", async () => {
+    const store = useSettingsStore();
+    store.$patch({ autoStartBreaks: true });
+
+    store.saveToStorage();
+    await flushDebounce();
+
+    const [upsertPayload] = mockUpsert.mock.calls[0];
+    expect(upsertPayload.settings).toHaveProperty("autoStartBreaks", true);
+  });
+
   // --------------------------------------------------------------------------
   // 3. Success path — console.log
   // --------------------------------------------------------------------------

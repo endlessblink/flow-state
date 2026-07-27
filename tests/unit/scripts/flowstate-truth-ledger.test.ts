@@ -278,6 +278,12 @@ describe("FlowState source-to-runtime truth ledger", () => {
     const root = resolve(__dirname, "../../..");
     const config = readFileSync(join(root, "playwright.config.ts"), "utf8");
 
-    expect(config).toContain("outputFolder: 'test-results/playwright-report'");
+    // Quote style is owned by the formatter, so match on the value rather than
+    // the exact literal. What matters is that the report folder is one
+    // .gitignore already covers — a report written into a tracked path leaves
+    // the worktree dirty and forces release provenance to report dirty.
+    expect(config).toMatch(
+      /outputFolder:\s*['"]test-results\/playwright-report['"]/,
+    );
   });
 });

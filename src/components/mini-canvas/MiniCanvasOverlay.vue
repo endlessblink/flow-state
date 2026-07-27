@@ -208,15 +208,16 @@ const handleToolbarEdit = () => {
   }
 }
 
-const handleToolbarAddChild = () => {
+const handleToolbarAddChild = async () => {
   const node = miniCanvas.nodes.value.find(n => n.id === selectedNodeId.value)
   const basePos = node?.position ?? getFlowCenter()
   const offsetPos = { x: basePos.x + 220, y: basePos.y + 40 }
   if (selectedNodeType.value === 'subtaskNode') {
-    const id = miniCanvas.createConnectedSubtask(selectedNodeId.value!, offsetPos, null)
+    // Only focus a subtask that actually saved — a failed write returns no id.
+    const id = await miniCanvas.createConnectedSubtask(selectedNodeId.value!, offsetPos, null)
     if (id) pendingFocusSubtaskId.value = id
   } else if (selectedNodeType.value === 'noteNode') {
-    miniCanvas.addNote(offsetPos, 'New note')
+    await miniCanvas.addNote(offsetPos, 'New note')
   }
 }
 
@@ -314,12 +315,13 @@ const handleConnectStart = (event: { nodeId?: string | null; handleId?: string |
 const handleConnectEnd = (event?: MouseEvent | TouchEvent) => {
   const sourceId = pendingConnectionSource.value
 
-  setTimeout(() => {
+  setTimeout(async () => {
     if (sourceId && !connectionWasSuccessful.value) {
       if (!event) return
       const position = getFlowPositionFromEvent(event)
       if (position) {
-        pendingFocusSubtaskId.value = miniCanvas.createConnectedSubtask(sourceId, position, pendingConnectionSourceHandle.value) || null
+        // A failed write yields no id, so nothing is focused as if it saved.
+        pendingFocusSubtaskId.value = (await miniCanvas.createConnectedSubtask(sourceId, position, pendingConnectionSourceHandle.value)) || null
       }
     }
 

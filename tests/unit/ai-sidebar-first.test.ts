@@ -1,9 +1,16 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { createPinia, setActivePinia } from "pinia";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { afterEach, describe, expect, it, beforeEach, vi } from "vitest";
+
+// TASK-1977: these tests mount components that register window listeners in
+// onMounted (BasePopover). Wrappers were never unmounted, so a render queued by
+// the last test could flush after the environment was torn down and throw
+// "window is not defined" as an unhandled rejection — noise that can mask a
+// real failure. Auto-unmount every wrapper when its test ends.
+enableAutoUnmount(afterEach);
 import AIChatPanel from "@/components/ai/AIChatPanel.vue";
 import ChatMessage from "@/components/ai/ChatMessage.vue";
 import { useAIChatStore } from "@/stores/aiChat";
@@ -3697,9 +3704,15 @@ describe("AI sidebar-first desktop experience", () => {
       }),
     );
     expect(commandTaskCreateSpy).toHaveBeenCalledTimes(1);
-    expect(
-      wrapper.find('[data-testid="weekly-followup-create-another"]').exists(),
-    ).toBe(false);
+    // TASK-1977: the override button is withdrawn only after the duplicate
+    // create has been durably recorded, which settles on a macrotask that
+    // flushPromises()/nextTick() do not await. Poll for it — a genuine failure
+    // to withdraw the button still fails here, it just is not raced.
+    await vi.waitFor(() => {
+      expect(
+        wrapper.find('[data-testid="weekly-followup-create-another"]').exists(),
+      ).toBe(false);
+    });
   });
 
   it("shows local candidate cards immediately when clarification is skipped for candidates", async () => {
@@ -4171,6 +4184,13 @@ describe("AI sidebar-first desktop experience", () => {
     expect(wrapper.text()).toContain("Context saved");
     expect(wrapper.text()).not.toContain("This broad plan should stay hidden");
     expect(wrapper.find('[data-testid="weekly-plan"]').exists()).toBe(false);
+    // TASK-1977: the answer is persisted as a memory patch before the chat is
+    // resumed, so continueChat is emitted after that durable write settles —
+    // a macrotask flushPromises()/nextTick() do not await. Poll for the emit
+    // rather than reading `emitted()` while it is still undefined.
+    await vi.waitFor(() => {
+      expect(wrapper.emitted("continueChat")?.[0]?.[0]).toBeDefined();
+    });
     expect(wrapper.emitted("continueChat")?.[0]?.[0]).toContain(
       "Continue planning the week",
     );
@@ -4961,6 +4981,15 @@ describe("AI sidebar-first desktop experience", () => {
     await flushPromises();
     await nextTick();
 
+    // TASK-1977: smart lanes apply in two phases — lanes are created first so
+    // their ids exist, then tasks are assigned to them. Phase two only starts
+    // once phase one's durable audit/rollback write to IndexedDB has settled,
+    // which is a macrotask that flushPromises()/nextTick() do not wait for.
+    // Poll for the final state instead of asserting one microtask flush in.
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("Lanes applied");
+    });
+
     expect(buildPreviewSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         sourceMessageId: "msg-smart-lanes-command",
@@ -5122,7 +5151,13 @@ describe("AI sidebar-first desktop experience", () => {
       taskStore.tasks.find((task) => task.id === "task-day-plan-command")
         ?.dueDate,
     ).toEqual(expect.any(String));
-    expect(wrapper.text()).toContain("Plan applied");
+    // TASK-1977: the confirmation appears only after applyAICommandBatch has
+    // written its durable audit + rollback snapshot to IndexedDB. That settles
+    // on a macrotask, which flushPromises()/nextTick() do not wait for, so this
+    // assertion has to poll rather than assume a microtask flush is enough.
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("Plan applied");
+    });
   });
 
   it("persists broad inline card postponement feedback outside weekly plans", async () => {

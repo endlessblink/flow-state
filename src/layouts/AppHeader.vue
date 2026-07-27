@@ -424,7 +424,7 @@ const startLongBreak = async () => {
   z-index: 5;
 }
 
-/* Raise above .content-header when gamification panel is open
+/* Raise above .content-header when a side panel is open
    so the fixed backdrop blocks clicks on nav tabs */
 .header-section--panel-open {
   z-index: 10;

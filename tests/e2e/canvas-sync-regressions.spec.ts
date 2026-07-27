@@ -492,7 +492,21 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
       ).toBe(true);
     }).toPass({ timeout: 12_000 });
 
-    // And the independent client B receives it live.
+    // And the independent client B receives it LIVE.
+    //
+    // TASK-1977 investigation (2026-07-24): this assertion is the only part of
+    // R7 that fails, and it is a real defect — narrowed as follows.
+    //   * The migration itself is correct: the UUID row reaches Supabase (the
+    //     DB assertion above passes) and unit coverage in
+    //     tests/unit/stores/canvas-legacy-group-migration.test.ts is green.
+    //   * The row is fully readable by client B — reloading client B makes
+    //     "Monday" appear immediately, so RLS, user_id and workspace scope are
+    //     all correct.
+    //   * Live delivery works for tasks on this very fixture: R2 (task update)
+    //     and R9 (task create) both pass and reach client B over Realtime.
+    // So: newly created canvas GROUPS do not propagate live to other clients,
+    // while tasks do. A day column created on one device only shows up on
+    // another after a reload. Do not "fix" this by relaxing the assertion.
     await expect(async () => {
       const hasMonday = await clientB.evaluate(() => {
         const root = document.querySelector("#app") as any;

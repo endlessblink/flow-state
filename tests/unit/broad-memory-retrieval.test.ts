@@ -47,6 +47,14 @@ function contextEntity(
   };
 }
 
+// TASK-1977: memory freshness is time-relative — a snapshot or belief older
+// than 45 days is dropped as an 'old_confirmation'. Every fixture below is
+// dated in June 2026, so any test that let `now` default to the real clock
+// passed when written and silently began failing once wall-clock time drifted
+// past the window. Pin `now` next to the fixtures so these assert the
+// freshness rule rather than the date the suite happens to run.
+const NOW = new Date("2026-06-08T10:00:00.000Z");
+
 describe("retrieveBroadAIMemory", () => {
   it("falls back with bounded diagnostics when broad memory retrieval times out", async () => {
     vi.useFakeTimers();
@@ -165,6 +173,7 @@ describe("retrieveBroadAIMemory", () => {
     const result = await retrieveBroadAIMemory({
       db,
       lang: "en",
+      now: NOW,
       cardTasks: [
         { id: taskId, projectId, title: "Known task" },
         { id: "local-task", projectId: "uncategorized", title: "Loose admin" },
@@ -274,6 +283,7 @@ describe("retrieveBroadAIMemory", () => {
     const result = await retrieveBroadAIMemory({
       db,
       lang: "en",
+      now: NOW,
       cardTasks: [
         { id: "local-a", projectId: "uncategorized", title: "First task" },
         { id: "local-b", projectId: "uncategorized", title: "Second task" },
@@ -378,6 +388,7 @@ describe("retrieveBroadAIMemory", () => {
     const result = await retrieveBroadAIMemory({
       db,
       lang: "en",
+      now: NOW,
       cardTasks: [
         { id: "local-a", projectId: "uncategorized", title: "First task" },
       ],
@@ -487,6 +498,7 @@ describe("retrieveBroadAIMemory", () => {
     const result = await retrieveBroadAIMemory({
       db,
       lang: "en",
+      now: NOW,
       cardTasks: [
         {
           id: "local-task",

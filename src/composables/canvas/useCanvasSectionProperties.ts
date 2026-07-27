@@ -8,6 +8,7 @@ import {
 } from "../useTaskSmartGroups";
 import { resolveDueDate } from "../useGroupSettings";
 import { formatDateKey } from "@/utils/dateUtils";
+import { useToast } from "@/composables/useToast";
 import {
   DURATION_DEFAULTS,
   type DurationCategory,
@@ -212,15 +213,34 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
     return mergedUpdates;
   };
 
+  // TASK-1977: these two helpers write section-inherited metadata onto a task.
+  // They previously dispatched that write fire-and-forget, so a rejected save
+  // showed the inherited due date/status on screen and lost it on reload, with
+  // the failure surfacing only as an unhandled promise. They now await the
+  // write and report failure; the boolean lets a caller avoid treating a
+  // failed inherit as applied.
+  //
+  // Note: no production caller uses these today — every consumer of this
+  // composable imports only getSectionProperties. They are kept correct so
+  // wiring them up later cannot reintroduce a silent writer.
+  const reportInheritFailure = (taskId: string, error: unknown) => {
+    console.error(`Error applying section properties to ${taskId}:`, error);
+    const { showToast } = useToast();
+    showToast(
+      "Group settings could not be applied. Refresh and try again.",
+      "error",
+    );
+  };
+
   // Helper: Apply properties from ALL containing sections (nested group inheritance)
-  const applyAllNestedSectionProperties = (
+  const applyAllNestedSectionProperties = async (
     taskId: string,
     taskX: number,
     taskY: number,
     allGroups?: CanvasGroup[],
-  ) => {
+  ): Promise<boolean> => {
     const containingSections = getAllContainingSections(taskX, taskY);
-    if (containingSections.length === 0) return;
+    if (containingSections.length === 0) return true;
 
     const mergedUpdates: Partial<Task> = {};
 
@@ -231,20 +251,32 @@ export function useCanvasSectionProperties(deps: SectionPropertiesDeps) {
       }
     }
 
-    if (Object.keys(mergedUpdates).length > 0) {
-      taskStore.updateTaskWithUndo(taskId, mergedUpdates);
+    if (Object.keys(mergedUpdates).length === 0) return true;
+
+    try {
+      await taskStore.updateTaskWithUndo(taskId, mergedUpdates);
+      return true;
+    } catch (error) {
+      reportInheritFailure(taskId, error);
+      return false;
     }
   };
 
   // Helper: Apply section properties to task (single section - legacy/manual)
-  const applySectionPropertiesToTask = (
+  const applySectionPropertiesToTask = async (
     taskId: string,
     section: CanvasSection,
-  ) => {
+  ): Promise<boolean> => {
     const updates = getSectionProperties(section);
 
-    if (Object.keys(updates).length > 0) {
-      taskStore.updateTaskWithUndo(taskId, updates);
+    if (Object.keys(updates).length === 0) return true;
+
+    try {
+      await taskStore.updateTaskWithUndo(taskId, updates);
+      return true;
+    } catch (error) {
+      reportInheritFailure(taskId, error);
+      return false;
     }
   };
 

@@ -22,11 +22,11 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  // TASK-1977: report output must land somewhere .gitignore already covers.
+  // 'test-artifacts/' is not ignored, so every E2E run left the worktree dirty —
+  // and a dirty worktree is what forces release provenance to report dirty.
   reporter: [
-    [
-      "html",
-      { outputFolder: "test-artifacts/playwright-report", open: "never" },
-    ],
+    ["html", { outputFolder: "test-results/playwright-report", open: "never" }],
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {

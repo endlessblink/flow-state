@@ -1,7 +1,7 @@
-import { defineConfig, devices } from '@playwright/test';
-import fs from 'node:fs';
+import { defineConfig, devices } from "@playwright/test";
+import fs from "node:fs";
 
-const authFile = 'tests/.auth/user.json';
+const authFile = "tests/.auth/user.json";
 const hasAuth = fs.existsSync(authFile);
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
@@ -10,9 +10,9 @@ const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
  */
 export default defineConfig({
   // TASK-1457: Global setup resets test data and authenticates dev user
-  globalSetup: './tests/global-setup.ts',
-  testDir: './tests/e2e',
-  testMatch: '**/*.spec.ts',
+  globalSetup: "./tests/global-setup.ts",
+  testDir: "./tests/e2e",
+  testMatch: "**/*.spec.ts",
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -22,33 +22,40 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: [['html', { outputFolder: 'test-artifacts/playwright-report', open: 'never' }]],
+  reporter: [
+    [
+      "html",
+      { outputFolder: "test-artifacts/playwright-report", open: "never" },
+    ],
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://127.0.0.1:5547',
+    baseURL: "http://127.0.0.1:5547",
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    trace: "on-first-retry",
 
     /* Take screenshot on failure */
-    screenshot: 'only-on-failure',
+    screenshot: "only-on-failure",
 
     /* Record video on failure */
-    video: 'retain-on-failure',
+    video: "retain-on-failure",
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
-      name: 'chromium',
+      name: "chromium",
       use: {
-        ...devices['Desktop Chrome'],
-        ...(chromiumExecutablePath ? { launchOptions: { executablePath: chromiumExecutablePath } } : {}),
+        ...devices["Desktop Chrome"],
+        ...(chromiumExecutablePath
+          ? { launchOptions: { executablePath: chromiumExecutablePath } }
+          : {}),
         // TASK-1457: Use saved auth state if available (from global-setup)
         ...(hasAuth ? { storageState: authFile } : {}),
       },
-      testIgnore: '**/mobile/**/*.spec.ts',
+      testIgnore: "**/mobile/**/*.spec.ts",
     },
 
     // {
@@ -57,30 +64,30 @@ export default defineConfig({
     // },
 
     {
-      name: 'webkit',
+      name: "webkit",
       use: {
-        ...devices['Desktop Safari'],
+        ...devices["Desktop Safari"],
         ...(hasAuth ? { storageState: authFile } : {}),
       },
-      testIgnore: '**/mobile/**/*.spec.ts',
+      testIgnore: "**/mobile/**/*.spec.ts",
     },
 
     {
-      name: 'mobile-chrome',
+      name: "mobile-chrome",
       use: {
-        ...devices['Pixel 7'],
+        ...devices["Pixel 7"],
         ...(hasAuth ? { storageState: authFile } : {}),
       },
-      testMatch: '**/mobile/**/*.spec.ts',
+      testMatch: "**/mobile/**/*.spec.ts",
     },
 
     {
-      name: 'mobile-safari',
+      name: "mobile-safari",
       use: {
-        ...devices['iPhone 14 Pro Max'],
+        ...devices["iPhone 14 Pro Max"],
         ...(hasAuth ? { storageState: authFile } : {}),
       },
-      testMatch: '**/mobile/**/*.spec.ts',
+      testMatch: "**/mobile/**/*.spec.ts",
     },
   ],
 
@@ -88,8 +95,8 @@ export default defineConfig({
   webServer: {
     // Keep Playwright server startup minimal and deterministic.
     // `npm run dev` includes extra watchers and secret sync that can delay readiness.
-    command: 'npx vite --host 127.0.0.1 --port 5547 --strictPort',
-    url: 'http://127.0.0.1:5547',
+    command: "npx vite --host 127.0.0.1 --port 5547 --strictPort",
+    url: "http://127.0.0.1:5547",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

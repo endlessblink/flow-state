@@ -1,116 +1,118 @@
-import IntegrityService from '@/utils/integrity'
-import type { Task, Project } from '@/types/tasks'
-import type { CanvasGroup } from '@/types/canvas'
-import type { Ref } from 'vue'
+import IntegrityService from "@/utils/integrity";
+import type { Task, Project } from "@/types/tasks";
+import type { CanvasGroup } from "@/types/canvas";
+import type { Ref } from "vue";
 
 // ============================================================================
 // Types & Interfaces
 // ============================================================================
 
 export interface BackupData {
-  id: string
-  source: {
-    kind: 'account'
-    userId: string
-  } | {
-    kind: 'guest'
-  }
-  tasks: Task[]
-  projects: Project[]
-  groups: CanvasGroup[]
+  id: string;
+  source:
+    | {
+        kind: "account";
+        userId: string;
+      }
+    | {
+        kind: "guest";
+      };
+  tasks: Task[];
+  projects: Project[];
+  groups: CanvasGroup[];
   tombstones?: Array<{
-    entityType: 'task' | 'group' | 'project' | 'lane'
-    entityId: string
-    scopeKind?: 'personal' | 'workspace' | 'unknown'
-    workspaceId?: string | null
-  }>
+    entityType: "task" | "group" | "project" | "lane";
+    entityId: string;
+    scopeKind?: "personal" | "workspace" | "unknown";
+    workspaceId?: string | null;
+  }>;
   /** App settings snapshot (Bug 3 fix). Sensitive fields excluded at capture time. */
-  settings?: Record<string, unknown>
-  timestamp: number
-  version: string
-  checksum: string
-  type: 'auto' | 'manual' | 'emergency'
+  settings?: Record<string, unknown>;
+  timestamp: number;
+  version: string;
+  checksum: string;
+  type: "auto" | "manual" | "emergency";
   metadata?: {
-    taskCount: number
-    activeTaskCount?: number
-    deletedTaskCount?: number
-    completionRecordCount?: number
-    workspaceTaskCount?: number
-    tombstoneCount?: number
-    projectCount: number
-    groupCount: number
-    size?: number
-    exportedAt?: string
-  }
+    taskCount: number;
+    activeTaskCount?: number;
+    deletedTaskCount?: number;
+    completionRecordCount?: number;
+    workspaceTaskCount?: number;
+    tombstoneCount?: number;
+    projectCount: number;
+    groupCount: number;
+    size?: number;
+    exportedAt?: string;
+  };
 }
 
 export interface BackupConfig {
-  enabled: boolean
-  autoSaveInterval: number // milliseconds (default: 5 min)
-  maxHistorySize: number   // max backups to keep (default: 10)
-  filterMockTasks: boolean // optional explicit cleanup; disabled by default to preserve user data
+  enabled: boolean;
+  autoSaveInterval: number; // milliseconds (default: 5 min)
+  maxHistorySize: number; // max backups to keep (default: 10)
+  filterMockTasks: boolean; // optional explicit cleanup; disabled by default to preserve user data
 }
 
 export interface BackupStats {
-  lastBackupTime: number | null
-  totalBackups: number
-  isBackupInProgress: boolean
-  historyCount: number
+  lastBackupTime: number | null;
+  totalBackups: number;
+  isBackupInProgress: boolean;
+  historyCount: number;
 }
 
 export interface BackupSystemState {
-  isReady: boolean
-  isRestoring: boolean
-  restoreProgress: number
-  error: string | null
-  warning: string | null
+  isReady: boolean;
+  isRestoring: boolean;
+  restoreProgress: number;
+  error: string | null;
+  warning: string | null;
 }
 
 // TASK-153: Types for golden backup validation
 export interface GoldenBackupValidation {
-  isValid: boolean
-  ageMs: number
-  ageWarning: string | null
+  isValid: boolean;
+  ageMs: number;
+  ageWarning: string | null;
   preview: {
-    tasks: { total: number; filtered: number; toRestore: number }
-    projects: { total: number; filtered: number; toRestore: number }
-    groups: { total: number; filtered: number; toRestore: number }
-  }
-  warnings: string[]
+    tasks: { total: number; filtered: number; toRestore: number };
+    projects: { total: number; filtered: number; toRestore: number };
+    groups: { total: number; filtered: number; toRestore: number };
+  };
+  warnings: string[];
 }
 
 // TASK-344: Dry-run restore analysis result
 export interface RestoreAnalysis {
-  backup: BackupData
+  backup: BackupData;
   tasks: {
-    total: number
-    available: number      // Can be created
-    existsActive: number   // Already exists (active)
-    existsDeleted: number  // Already exists (soft-deleted)
-    tombstoned: number     // Permanently deleted - cannot restore
-    toRestore: Task[]      // Tasks that will be restored
+    total: number;
+    available: number; // Can be created
+    existsActive: number; // Already exists (active)
+    existsDeleted: number; // Already exists (soft-deleted)
+    tombstoned: number; // Permanently deleted - cannot restore
+    toRestore: Task[]; // Tasks that will be restored
     skipped: Array<{
-      task: Task
-      reason: string
-      status: 'active' | 'soft_deleted' | 'tombstoned' | 'shared_workspace'
-    }>  // Tasks that will be skipped
-  }
+      task: Task;
+      reason: string;
+      status: "active" | "soft_deleted" | "tombstoned" | "shared_workspace";
+    }>; // Tasks that will be skipped
+  };
   projects: {
-    total: number
-    toRestore: number
-    skipped: number
-  }
+    total: number;
+    toRestore: number;
+    skipped: number;
+  };
   groups: {
-    total: number
-    toRestore: number
-    skipped: number
-  }
+    total: number;
+    toRestore: number;
+    skipped: number;
+  };
   tombstones: {
-    total: number
-    toRestore: number
-  }
-  warnings: string[]
-  canProceed: boolean
+    total: number;
+    toRestore: number;
+  };
+  warnings: string[];
+  canProceed: boolean;
 }
 
 // ============================================================================
@@ -118,40 +120,40 @@ export interface RestoreAnalysis {
 // ============================================================================
 
 export const STORAGE_KEYS = {
-  HISTORY: 'flowstate-backup-history',
-  LATEST: 'flowstate-backup-latest',
-  STATS: 'flowstate-backup-stats',
+  HISTORY: "flowstate-backup-history",
+  LATEST: "flowstate-backup-latest",
+  STATS: "flowstate-backup-stats",
   // BUG-059 FIX: Golden backup that can NEVER be overwritten by auto-backups
   // Only updated when manually triggered OR when task count reaches new maximum
-  GOLDEN: 'flowstate-backup-golden',
+  GOLDEN: "flowstate-backup-golden",
   // TASK-332: Array of golden backups for rotation (keeps last 3 peaks)
-  GOLDEN_ROTATION: 'flowstate-backup-golden-rotation',
+  GOLDEN_ROTATION: "flowstate-backup-golden-rotation",
   // Tracks the maximum task count ever seen - used to detect data loss
-  MAX_TASK_COUNT: 'flowstate-max-task-count'
-} as const
+  MAX_TASK_COUNT: "flowstate-max-task-count",
+} as const;
 
 // TASK-332: Maximum number of golden backups to keep in rotation
-export const MAX_GOLDEN_BACKUPS = 3
+export const MAX_GOLDEN_BACKUPS = 3;
 
 // BUG-059 FIX: Threshold for detecting suspicious data loss
 // If new backup has less than this % of previous max tasks, block auto-backup
-export const DATA_LOSS_THRESHOLD = 0.5 // 50%
+export const DATA_LOSS_THRESHOLD = 0.5; // 50%
 
 // TASK-153: Maximum age for golden backup before warning (7 days in ms)
-export const GOLDEN_BACKUP_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+export const GOLDEN_BACKUP_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 // TASK-156: Maximum age for backup history entries (30 days in ms)
-export const BACKUP_HISTORY_TTL_MS = 30 * 24 * 60 * 60 * 1000
+export const BACKUP_HISTORY_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 // TASK-156: Current backup schema version
-export const BACKUP_SCHEMA_VERSION = '3.4.0'
+export const BACKUP_SCHEMA_VERSION = "3.4.0";
 
 export const DEFAULT_CONFIG: BackupConfig = {
   enabled: true,
   autoSaveInterval: 5 * 60 * 1000, // 5 minutes
   maxHistorySize: 10,
-  filterMockTasks: false
-}
+  filterMockTasks: false,
+};
 
 // ============================================================================
 // Utility Functions
@@ -161,42 +163,44 @@ export const DEFAULT_CONFIG: BackupConfig = {
  * Calculate simple checksum for data integrity verification
  */
 export function calculateChecksum(data: unknown): string {
-  const serialized = JSON.stringify(data)
-  const jsonStableData = serialized === undefined ? null : JSON.parse(serialized)
-  return IntegrityService.calculateChecksum(jsonStableData)
+  const serialized = JSON.stringify(data);
+  const jsonStableData =
+    serialized === undefined ? null : JSON.parse(serialized);
+  return IntegrityService.calculateChecksum(jsonStableData);
 }
 
 /**
  * Generate unique backup ID
  */
 export function generateBackupId(): string {
-  return `backup_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
+  return `backup_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
 /**
  * Format timestamp to human-readable string
  */
 export function formatTimestamp(timestamp: number): string {
-  const date = new Date(timestamp)
-  return date.toLocaleString()
+  const date = new Date(timestamp);
+  return date.toLocaleString();
 }
 
 export function assertNoTombstoneContradictions(
-  backup: Pick<BackupData, 'tasks' | 'projects' | 'groups' | 'tombstones'>
+  backup: Pick<BackupData, "tasks" | "projects" | "groups" | "tombstones">,
 ): void {
   const recoverableIdsByType = {
-    task: new Set(backup.tasks.map(task => task.id)),
-    project: new Set(backup.projects.map(project => project.id)),
-    group: new Set(backup.groups.map(group => group.id)),
-  }
-  const contradiction = backup.tombstones?.find(tombstone =>
-    tombstone.entityType !== 'lane'
-    && recoverableIdsByType[tombstone.entityType].has(tombstone.entityId)
-  )
+    task: new Set(backup.tasks.map((task) => task.id)),
+    project: new Set(backup.projects.map((project) => project.id)),
+    group: new Set(backup.groups.map((group) => group.id)),
+  };
+  const contradiction = backup.tombstones?.find(
+    (tombstone) =>
+      tombstone.entityType !== "lane" &&
+      recoverableIdsByType[tombstone.entityType].has(tombstone.entityId),
+  );
   if (contradiction) {
     throw new Error(
-      `Backup refused because contradictory permanent-delete inventory contains live ${contradiction.entityType} ${contradiction.entityId}`
-    )
+      `Backup refused because contradictory permanent-delete inventory contains live ${contradiction.entityType} ${contradiction.entityId}`,
+    );
   }
 }
 
@@ -205,50 +209,59 @@ export function validateAndSortTasksForRestore(
   tasksToRestore: Task[] = artifactTasks,
   existingParentIds: ReadonlySet<string> = new Set(),
 ): Task[] {
-  const tasksById = new Map(artifactTasks.map(task => [task.id, task]))
+  const tasksById = new Map(artifactTasks.map((task) => [task.id, task]));
   if (tasksById.size !== artifactTasks.length) {
-    throw new Error('Backup task graph contains duplicate task identities')
+    throw new Error("Backup task graph contains duplicate task identities");
   }
 
-  const state = new Map<string, 'visiting' | 'visited'>()
-  const ordered: Task[] = []
+  const state = new Map<string, "visiting" | "visited">();
+  const ordered: Task[] = [];
   const parentIdOf = (task: Task): string | null => {
-    const legacyParentId = (task as Task & { parent_task_id?: string | null }).parent_task_id
-    return task.parentTaskId ?? legacyParentId ?? null
-  }
+    const legacyParentId = (task as Task & { parent_task_id?: string | null })
+      .parent_task_id;
+    return task.parentTaskId ?? legacyParentId ?? null;
+  };
 
   const visit = (task: Task): void => {
-    const currentState = state.get(task.id)
-    if (currentState === 'visited') return
-    if (currentState === 'visiting') {
-      throw new Error(`Backup task graph contains a parent cycle at ${task.id}`)
-    }
-    state.set(task.id, 'visiting')
-
-    const parentId = parentIdOf(task)
-    if (parentId) {
-      const parent = tasksById.get(parentId)
-      if (!parent) {
-        throw new Error(`Backup task graph has missing parent ${parentId} for ${task.id}`)
-      }
-      visit(parent)
-    }
-
-    state.set(task.id, 'visited')
-    ordered.push(task)
-  }
-
-  for (const task of artifactTasks) visit(task)
-  const selectedIds = new Set(tasksToRestore.map(task => task.id))
-  for (const task of tasksToRestore) {
-    const parentId = parentIdOf(task)
-    if (parentId && !selectedIds.has(parentId) && !existingParentIds.has(parentId)) {
+    const currentState = state.get(task.id);
+    if (currentState === "visited") return;
+    if (currentState === "visiting") {
       throw new Error(
-        `Backup task graph has omitted parent ${parentId} for selected task ${task.id}`
-      )
+        `Backup task graph contains a parent cycle at ${task.id}`,
+      );
+    }
+    state.set(task.id, "visiting");
+
+    const parentId = parentIdOf(task);
+    if (parentId) {
+      const parent = tasksById.get(parentId);
+      if (!parent) {
+        throw new Error(
+          `Backup task graph has missing parent ${parentId} for ${task.id}`,
+        );
+      }
+      visit(parent);
+    }
+
+    state.set(task.id, "visited");
+    ordered.push(task);
+  };
+
+  for (const task of artifactTasks) visit(task);
+  const selectedIds = new Set(tasksToRestore.map((task) => task.id));
+  for (const task of tasksToRestore) {
+    const parentId = parentIdOf(task);
+    if (
+      parentId &&
+      !selectedIds.has(parentId) &&
+      !existingParentIds.has(parentId)
+    ) {
+      throw new Error(
+        `Backup task graph has omitted parent ${parentId} for selected task ${task.id}`,
+      );
     }
   }
-  return ordered.filter(task => selectedIds.has(task.id))
+  return ordered.filter((task) => selectedIds.has(task.id));
 }
 
 // ============================================================================
@@ -256,12 +269,12 @@ export function validateAndSortTasksForRestore(
 // ============================================================================
 
 export interface BackupContext {
-  config: Ref<BackupConfig>
-  state: Ref<BackupSystemState>
-  stats: Ref<BackupStats>
-  backupHistory: Ref<BackupData[]>
-  taskStore: any
-  projectStore: any
-  canvasStore: any
-  db: any
+  config: Ref<BackupConfig>;
+  state: Ref<BackupSystemState>;
+  stats: Ref<BackupStats>;
+  backupHistory: Ref<BackupData[]>;
+  taskStore: any;
+  projectStore: any;
+  canvasStore: any;
+  db: any;
 }

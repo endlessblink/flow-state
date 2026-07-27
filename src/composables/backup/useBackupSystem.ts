@@ -11,41 +11,41 @@
  * @since 2025-12-03
  */
 
-import { ref, computed, onMounted, onUnmounted, getCurrentInstance } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
-import { useProjectStore } from '@/stores/projects'
-import { useCanvasStore } from '@/stores/canvas'
-import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
+import { ref, computed, onMounted, onUnmounted, getCurrentInstance } from "vue";
+import { useTaskStore } from "@/stores/tasks";
+import { useProjectStore } from "@/stores/projects";
+import { useCanvasStore } from "@/stores/canvas";
+import { useSupabaseDatabase } from "@/composables/useSupabaseDatabase";
 
 import {
   DEFAULT_CONFIG,
   BACKUP_SCHEMA_VERSION,
   calculateChecksum,
-  formatTimestamp
-} from './types'
+  formatTimestamp,
+} from "./types";
 import type {
   BackupConfig,
   BackupStats,
   BackupSystemState,
   BackupData,
-  BackupContext
-} from './types'
+  BackupContext,
+} from "./types";
 
-import { createHistoryOperations } from './backupHistory'
-import { createGoldenOperations } from './backupGolden'
-import { createCoreOperations } from './backupCore'
-import { createRestoreOperations } from './backupRestore'
-import { createExportOperations } from './backupExport'
+import { createHistoryOperations } from "./backupHistory";
+import { createGoldenOperations } from "./backupGolden";
+import { createCoreOperations } from "./backupCore";
+import { createRestoreOperations } from "./backupRestore";
+import { createExportOperations } from "./backupExport";
 
 export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
   // Merge user config with defaults
-  const config = ref<BackupConfig>({ ...DEFAULT_CONFIG, ...userConfig })
+  const config = ref<BackupConfig>({ ...DEFAULT_CONFIG, ...userConfig });
 
   // Dependencies
-  const taskStore = useTaskStore()
-  const projectStore = useProjectStore()
-  const canvasStore = useCanvasStore()
-  const db = useSupabaseDatabase()
+  const taskStore = useTaskStore();
+  const projectStore = useProjectStore();
+  const canvasStore = useCanvasStore();
+  const db = useSupabaseDatabase();
 
   // State
   const state = ref<BackupSystemState>({
@@ -54,19 +54,19 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     restoreProgress: 0,
     error: null,
     warning: null,
-  })
+  });
 
   const stats = ref<BackupStats>({
     lastBackupTime: null,
     totalBackups: 0,
     isBackupInProgress: false,
-    historyCount: 0
-  })
+    historyCount: 0,
+  });
 
-  const backupHistory = ref<BackupData[]>([])
+  const backupHistory = ref<BackupData[]>([]);
 
   // Timers
-  let autoBackupInterval: NodeJS.Timeout | null = null
+  let autoBackupInterval: NodeJS.Timeout | null = null;
 
   // ============================================================================
   // Create Shared Context
@@ -80,18 +80,23 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     taskStore,
     projectStore,
     canvasStore,
-    db
-  }
+    db,
+  };
 
   // ============================================================================
   // Compose Operations via Factory Functions
   // ============================================================================
 
-  const historyOps = createHistoryOperations(ctx)
-  const goldenOps = createGoldenOperations(ctx)
-  const coreOps = createCoreOperations(ctx, historyOps, goldenOps)
-  const restoreOps = createRestoreOperations(ctx, coreOps, goldenOps)
-  const exportOps = createExportOperations(ctx, coreOps, restoreOps, historyOps)
+  const historyOps = createHistoryOperations(ctx);
+  const goldenOps = createGoldenOperations(ctx);
+  const coreOps = createCoreOperations(ctx, historyOps, goldenOps);
+  const restoreOps = createRestoreOperations(ctx, coreOps, goldenOps);
+  const exportOps = createExportOperations(
+    ctx,
+    coreOps,
+    restoreOps,
+    historyOps,
+  );
 
   // ============================================================================
   // Auto-Backup
@@ -102,20 +107,22 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
    */
   function startAutoBackup(): void {
     if (autoBackupInterval) {
-      stopAutoBackup()
+      stopAutoBackup();
     }
 
     if (!config.value.enabled || config.value.autoSaveInterval <= 0) {
-      return
+      return;
     }
 
-    console.log(`[Backup] Starting auto-backup every ${config.value.autoSaveInterval / 1000}s`)
+    console.log(
+      `[Backup] Starting auto-backup every ${config.value.autoSaveInterval / 1000}s`,
+    );
 
     autoBackupInterval = setInterval(async () => {
       if (config.value.enabled) {
-        await coreOps.createBackup('auto')
+        await coreOps.createBackup("auto");
       }
-    }, config.value.autoSaveInterval)
+    }, config.value.autoSaveInterval);
   }
 
   /**
@@ -123,9 +130,9 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
    */
   function stopAutoBackup(): void {
     if (autoBackupInterval) {
-      clearInterval(autoBackupInterval)
-      autoBackupInterval = null
-      console.log('[Backup] Auto-backup stopped')
+      clearInterval(autoBackupInterval);
+      autoBackupInterval = null;
+      console.log("[Backup] Auto-backup stopped");
     }
   }
 
@@ -137,9 +144,11 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
    * Check if backup contains Hebrew content
    */
   function hasHebrewContent(backup: BackupData): boolean {
-    if (!backup?.tasks) return false
-    const hebrewRegex = /[\u0590-\u05FF]/
-    return backup.tasks.some(task => task.title && hebrewRegex.test(task.title))
+    if (!backup?.tasks) return false;
+    const hebrewRegex = /[\u0590-\u05FF]/;
+    return backup.tasks.some(
+      (task) => task.title && hebrewRegex.test(task.title),
+    );
   }
 
   /**
@@ -152,13 +161,13 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
       lastBackupTime: stats.value.lastBackupTime,
       formattedLastBackup: stats.value.lastBackupTime
         ? formatTimestamp(stats.value.lastBackupTime)
-        : 'Never',
+        : "Never",
       historyCount: stats.value.historyCount,
       isBackupInProgress: stats.value.isBackupInProgress,
       isRestoring: state.value.isRestoring,
       error: state.value.error,
       warning: state.value.warning,
-    }
+    };
   }
 
   // ============================================================================
@@ -169,61 +178,61 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
    * Initialize backup system
    */
   async function initialize(): Promise<void> {
-    console.log('[Backup] Initializing...')
+    console.log("[Backup] Initializing...");
 
     // Load history
-    historyOps.loadHistory()
+    historyOps.loadHistory();
 
     // Wait for tasks to be available
-    await waitForTasks()
+    await waitForTasks();
 
     // Start auto-backup
-    startAutoBackup()
+    startAutoBackup();
 
     // Create initial backup if none exists
     if (!historyOps.getLatestBackup()) {
-      await coreOps.createBackup('auto')
+      await coreOps.createBackup("auto");
     }
 
-    state.value.isReady = true
-    console.log('[Backup] Initialized successfully')
+    state.value.isReady = true;
+    console.log("[Backup] Initialized successfully");
   }
 
   /**
    * Wait for task store to be ready
    */
   async function waitForTasks(timeout = 10000): Promise<void> {
-    const startTime = Date.now()
+    const startTime = Date.now();
 
     return new Promise((resolve) => {
       const check = () => {
         if (Array.isArray(taskStore.tasks)) {
-          resolve()
-          return
+          resolve();
+          return;
         }
 
         if (Date.now() - startTime > timeout) {
-          console.warn('[Backup] Timeout waiting for tasks')
-          resolve()
-          return
+          console.warn("[Backup] Timeout waiting for tasks");
+          resolve();
+          return;
         }
 
-        setTimeout(check, 100)
-      }
-      check()
-    })
+        setTimeout(check, 100);
+      };
+      check();
+    });
   }
 
   // Lifecycle hooks
   if (getCurrentInstance()) {
     onMounted(() => {
       // Delay initialization to ensure stores are ready
-      setTimeout(initialize, 1500)
-    })
+      setTimeout(initialize, 1500);
+    });
 
     onUnmounted(() => {
-      stopAutoBackup()
-    })
+      stopAutoBackup();
+    });
   }
 
   // ============================================================================
@@ -278,55 +287,75 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     // Restore from golden backup (last known good state)
     // TASK-153: Now filters out items deleted in Supabase before restoring
     restoreFromGoldenBackup: async (skipValidation: boolean = false) => {
-      const golden = goldenOps.getGoldenBackup()
+      const golden = goldenOps.getGoldenBackup();
       if (!golden) {
-        console.error('[Backup] No golden backup available')
-        return false
+        console.error("[Backup] No golden backup available");
+        return false;
       }
 
       // TASK-153: Validate and warn about age/deleted items
       if (!skipValidation) {
-        const validation = await goldenOps.validateGoldenBackup()
+        const validation = await goldenOps.validateGoldenBackup();
         if (validation) {
           if (validation.warnings.length > 0) {
-            console.warn('[Backup] Golden backup validation warnings:', validation.warnings)
+            console.warn(
+              "[Backup] Golden backup validation warnings:",
+              validation.warnings,
+            );
           }
           console.log(`[Backup] Golden backup preview:`, {
             tasks: `${validation.preview.tasks.toRestore}/${validation.preview.tasks.total} (${validation.preview.tasks.filtered} filtered)`,
             projects: `${validation.preview.projects.toRestore}/${validation.preview.projects.total} (${validation.preview.projects.filtered} filtered)`,
-            groups: `${validation.preview.groups.toRestore}/${validation.preview.groups.total} (${validation.preview.groups.filtered} filtered)`
-          })
+            groups: `${validation.preview.groups.toRestore}/${validation.preview.groups.total} (${validation.preview.groups.filtered} filtered)`,
+          });
         }
       }
 
       // TASK-153: Filter out items that are deleted in Supabase
-      const filteredGolden = await goldenOps.filterGoldenBackupData(golden)
+      const filteredGolden = await goldenOps.filterGoldenBackupData(golden);
 
-      console.log(`[Backup] Restoring from golden backup: ${filteredGolden.metadata?.taskCount} tasks (filtered from ${golden.metadata?.taskCount})`)
+      console.log(
+        `[Backup] Restoring from golden backup: ${filteredGolden.metadata?.taskCount} tasks (filtered from ${golden.metadata?.taskCount})`,
+      );
       // TASK-344: Explicitly specify no dry-run to get boolean return
-      const result = await restoreOps.restoreBackup(filteredGolden, { dryRun: false, backupSource: 'golden' })
-      return result === true
+      const result = await restoreOps.restoreBackup(filteredGolden, {
+        dryRun: false,
+        backupSource: "golden",
+      });
+      return result === true;
     },
 
     // TASK-332: Restore from a specific golden backup in the rotation (by index)
-    restoreFromGoldenBackupByIndex: async (index: number, skipValidation: boolean = false) => {
-      const rotation = goldenOps.getGoldenBackups()
+    restoreFromGoldenBackupByIndex: async (
+      index: number,
+      skipValidation: boolean = false,
+    ) => {
+      const rotation = goldenOps.getGoldenBackups();
       if (index < 0 || index >= rotation.length) {
-        console.error(`[Backup] Invalid golden backup index: ${index}. Available: 0-${rotation.length - 1}`)
-        return false
+        console.error(
+          `[Backup] Invalid golden backup index: ${index}. Available: 0-${rotation.length - 1}`,
+        );
+        return false;
       }
 
-      const golden = rotation[index]
+      const golden = rotation[index];
       if (!skipValidation) {
-        console.log(`[Backup] Restoring from golden backup #${index + 1}: ${golden.metadata?.taskCount} tasks`)
+        console.log(
+          `[Backup] Restoring from golden backup #${index + 1}: ${golden.metadata?.taskCount} tasks`,
+        );
       }
 
       // TASK-153: Filter out items that are deleted in Supabase
-      const filteredGolden = await goldenOps.filterGoldenBackupData(golden)
+      const filteredGolden = await goldenOps.filterGoldenBackupData(golden);
 
-      console.log(`[Backup] Restoring from golden backup #${index + 1}: ${filteredGolden.metadata?.taskCount} tasks (filtered from ${golden.metadata?.taskCount})`)
-      const result = await restoreOps.restoreBackup(filteredGolden, { dryRun: false, backupSource: `golden-${index}` })
-      return result === true
+      console.log(
+        `[Backup] Restoring from golden backup #${index + 1}: ${filteredGolden.metadata?.taskCount} tasks (filtered from ${golden.metadata?.taskCount})`,
+      );
+      const result = await restoreOps.restoreBackup(filteredGolden, {
+        dryRun: false,
+        backupSource: `golden-${index}`,
+      });
+      return result === true;
     },
 
     // TASK-153: Get validation info for UI display before restore
@@ -335,52 +364,56 @@ export function useBackupSystem(userConfig: Partial<BackupConfig> = {}) {
     // TASK-154: Shadow Mirror (System 3) Recovery
     fetchShadowBackup: async () => {
       try {
-        const response = await fetch('/shadow-latest.json?t=' + Date.now())
-        if (!response.ok) throw new Error('Shadow snapshot not found')
-        return await response.json()
+        const response = await fetch("/shadow-latest.json?t=" + Date.now());
+        if (!response.ok) throw new Error("Shadow snapshot not found");
+        return await response.json();
       } catch (error) {
-        console.warn('[Backup] Shadow sync info not available:', error)
-        return null
+        console.warn("[Backup] Shadow sync info not available:", error);
+        return null;
       }
     },
 
     restoreFromShadow: async (shadowData: any) => {
-      console.log(`[Backup] Restoring from Shadow Hub: ${shadowData.meta?.counts?.tasks} tasks`)
-      const { useAuthStore } = await import('@/stores/auth')
-      const sourceUserId = useAuthStore().user?.id ?? null
-      const shadowSource = shadowData.source ?? (
-        sourceUserId ? undefined : { kind: 'guest' as const }
-      )
+      console.log(
+        `[Backup] Restoring from Shadow Hub: ${shadowData.meta?.counts?.tasks} tasks`,
+      );
+      const { useAuthStore } = await import("@/stores/auth");
+      const sourceUserId = useAuthStore().user?.id ?? null;
+      const shadowSource =
+        shadowData.source ??
+        (sourceUserId ? undefined : { kind: "guest" as const });
       // TASK-344: Explicitly specify no dry-run to get boolean return
       const shadowBackup = {
         ...shadowData,
         id: `shadow_${shadowData.meta.timestamp}`,
         ...(shadowSource ? { source: shadowSource } : {}),
         timestamp: shadowData.meta.timestamp,
-        type: 'emergency',
+        type: "emergency",
         version: BACKUP_SCHEMA_VERSION,
-        checksum: '',
+        checksum: "",
         metadata: {
           taskCount: shadowData.meta.counts.tasks,
           projectCount: shadowData.meta.counts.projects,
-          groupCount: shadowData.meta.counts.groups
-        }
-      } as BackupData
+          groupCount: shadowData.meta.counts.groups,
+        },
+      } as BackupData;
       shadowBackup.checksum = calculateChecksum({
         ...(shadowBackup.source ? { source: shadowBackup.source } : {}),
         tasks: shadowBackup.tasks,
         projects: shadowBackup.projects,
         groups: shadowBackup.groups,
-        ...(shadowBackup.tombstones ? { tombstones: shadowBackup.tombstones } : {}),
-      })
-      const result = await restoreOps.restoreBackup(
-        shadowBackup,
-        { dryRun: false, backupSource: 'shadow' }
-      )
-      return result === true
-    }
-  }
+        ...(shadowBackup.tombstones
+          ? { tombstones: shadowBackup.tombstones }
+          : {}),
+      });
+      const result = await restoreOps.restoreBackup(shadowBackup, {
+        dryRun: false,
+        backupSource: "shadow",
+      });
+      return result === true;
+    },
+  };
 }
 
 // Default export for convenience
-export default useBackupSystem
+export default useBackupSystem;

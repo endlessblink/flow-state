@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from "vitest";
 import {
   BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS,
   retrieveBroadAIMemory,
   type BroadMemoryDb,
-} from '@/services/ai/pipeline/broadMemoryRetrieval'
+} from "@/services/ai/pipeline/broadMemoryRetrieval";
 import type {
   AIClarificationEvent,
   AIContextEdge,
@@ -13,10 +13,10 @@ import type {
   AIRecommendationFeedback,
   ProjectContext,
   TaskContext,
-} from '@/types/aiMemory'
+} from "@/types/aiMemory";
 
-const taskId = '11111111-1111-4111-8111-111111111111'
-const projectId = '22222222-2222-4222-8222-222222222222'
+const taskId = "11111111-1111-4111-8111-111111111111";
+const projectId = "22222222-2222-4222-8222-222222222222";
 
 function dbStub(overrides: Partial<BroadMemoryDb> = {}): BroadMemoryDb {
   return {
@@ -29,10 +29,13 @@ function dbStub(overrides: Partial<BroadMemoryDb> = {}): BroadMemoryDb {
     fetchAIContextEdges: vi.fn(async () => []),
     fetchAIMemorySnapshots: vi.fn(async () => []),
     ...overrides,
-  }
+  };
 }
 
-function contextEntity(input: Partial<AIContextEntity> & Pick<AIContextEntity, 'entityKey' | 'entityType'>): AIContextEntity {
+function contextEntity(
+  input: Partial<AIContextEntity> &
+    Pick<AIContextEntity, "entityKey" | "entityType">,
+): AIContextEntity {
   return {
     displayName: input.entityKey,
     facts: {},
@@ -41,40 +44,45 @@ function contextEntity(input: Partial<AIContextEntity> & Pick<AIContextEntity, '
     completenessScore: 0.6,
     askCount: 0,
     ...input,
-  }
+  };
 }
 
-describe('retrieveBroadAIMemory', () => {
-  it('falls back with bounded diagnostics when broad memory retrieval times out', async () => {
-    vi.useFakeTimers()
+describe("retrieveBroadAIMemory", () => {
+  it("falls back with bounded diagnostics when broad memory retrieval times out", async () => {
+    vi.useFakeTimers();
     const db = dbStub({
-      fetchProjectContexts: vi.fn(() => new Promise<ProjectContext[]>(resolve => setTimeout(() => resolve([]), 100))),
-    })
+      fetchProjectContexts: vi.fn(
+        () =>
+          new Promise<ProjectContext[]>((resolve) =>
+            setTimeout(() => resolve([]), 100),
+          ),
+      ),
+    });
     const pending = retrieveBroadAIMemory({
       db,
-      lang: 'en',
+      lang: "en",
       timeoutMs: 10,
       cardTasks: [
-        { id: taskId, projectId, title: 'Known task' },
-        { id: 'local-task', projectId: 'uncategorized', title: 'Loose admin' },
+        { id: taskId, projectId, title: "Known task" },
+        { id: "local-task", projectId: "uncategorized", title: "Loose admin" },
       ],
-    })
+    });
 
-    await vi.advanceTimersByTimeAsync(11)
-    const result = await pending
-    vi.useRealTimers()
+    await vi.advanceTimersByTimeAsync(11);
+    const result = await pending;
+    vi.useRealTimers();
 
-    expect(result.summary).toBe('')
-    expect(result.recommendationFeedback).toEqual([])
+    expect(result.summary).toBe("");
+    expect(result.recommendationFeedback).toEqual([]);
     expect(result.entityKeys).toEqual([
       ...BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS,
       `project:${projectId}`,
-      'project:uncategorized',
+      "project:uncategorized",
       `task:${taskId}`,
-      'task:local-task',
-    ])
+      "task:local-task",
+    ]);
     expect(result.diagnostics).toMatchObject({
-      source: 'fallback',
+      source: "fallback",
       timedOut: true,
       entityKeyCount: BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS.length + 4,
       projectContextCount: 0,
@@ -84,64 +92,67 @@ describe('retrieveBroadAIMemory', () => {
       beliefCount: 0,
       feedbackCount: 0,
       graphEdgeCount: 0,
-    })
-    expect(JSON.stringify(result.diagnostics)).not.toContain('Known task')
-  })
+    });
+    expect(JSON.stringify(result.diagnostics)).not.toContain("Known task");
+  });
 
-  it('uses server-backed entity memory and parameter beliefs for broad task answers with synthetic project keys', async () => {
-    const feedback: AIRecommendationFeedback[] = [{
-      id: 'feedback-1',
-      recommendationId: 'inline_task',
-      entityKey: 'project:uncategorized',
-      action: 'postpone',
-      reasonCategory: 'low_energy',
-      implicitPositive: false,
-      revisitAt: '2026-06-15T09:00:00.000Z',
-      createdAt: '2026-06-08T09:00:00.000Z',
-    }]
+  it("uses server-backed entity memory and parameter beliefs for broad task answers with synthetic project keys", async () => {
+    const feedback: AIRecommendationFeedback[] = [
+      {
+        id: "feedback-1",
+        recommendationId: "inline_task",
+        entityKey: "project:uncategorized",
+        action: "postpone",
+        reasonCategory: "low_energy",
+        implicitPositive: false,
+        revisitAt: "2026-06-15T09:00:00.000Z",
+        createdAt: "2026-06-08T09:00:00.000Z",
+      },
+    ];
     const belief: AIParameterBelief = {
-      id: 'belief-1',
-      entityKey: 'project:uncategorized',
-      entityType: 'synthetic_group',
-      parameterKey: 'project_meaning',
+      id: "belief-1",
+      entityKey: "project:uncategorized",
+      entityType: "synthetic_group",
+      parameterKey: "project_meaning",
       beliefJson: {
-        value: 'Small admin bucket unless the user says otherwise',
-        selectedLabel: 'Admin/maintenance',
+        value: "Small admin bucket unless the user says otherwise",
+        selectedLabel: "Admin/maintenance",
       },
       confidence: 0.86,
       impactWeight: 0.85,
-      lastAnsweredAt: '2026-06-08T08:00:00.000Z',
-    }
+      lastAnsweredAt: "2026-06-08T08:00:00.000Z",
+    };
     const answeredEvent: AIClarificationEvent = {
-      id: 'event-1',
-      entityKey: 'project:uncategorized',
-      entityType: 'synthetic_group',
-      questionId: 'project_meaning',
-      eventType: 'answered',
-      selectedLabel: 'Admin/maintenance',
-      freeText: 'This is not strategic work.',
-      createdAt: '2026-06-08T08:00:00.000Z',
-    }
+      id: "event-1",
+      entityKey: "project:uncategorized",
+      entityType: "synthetic_group",
+      questionId: "project_meaning",
+      eventType: "answered",
+      selectedLabel: "Admin/maintenance",
+      freeText: "This is not strategic work.",
+      createdAt: "2026-06-08T08:00:00.000Z",
+    };
     const graphEdge: AIContextEdge = {
-      id: 'edge-1',
-      sourceEntityKey: 'task:local-task',
-      targetEntityKey: 'project:uncategorized',
-      relationType: 'belongs_to',
+      id: "edge-1",
+      sourceEntityKey: "task:local-task",
+      targetEntityKey: "project:uncategorized",
+      relationType: "belongs_to",
       confidence: 0.9,
-      evidence: { source: 'clarification' },
-      createdAt: '2026-06-08T08:15:00.000Z',
-    }
+      evidence: { source: "clarification" },
+      createdAt: "2026-06-08T08:15:00.000Z",
+    };
     const db = dbStub({
       fetchProjectContexts: vi.fn(async (): Promise<ProjectContext[]> => []),
       fetchTaskContexts: vi.fn(async (): Promise<TaskContext[]> => []),
       fetchAIContextEntities: vi.fn(async () => [
         contextEntity({
-          entityKey: 'project:uncategorized',
-          entityType: 'synthetic_group',
+          entityKey: "project:uncategorized",
+          entityType: "synthetic_group",
           facts: {
-            domain: 'admin',
-            whyItMatters: 'Keeps loose tasks from being treated as strategic by name.',
-            currentStakes: 'low',
+            domain: "admin",
+            whyItMatters:
+              "Keeps loose tasks from being treated as strategic by name.",
+            currentStakes: "low",
           },
         }),
       ]),
@@ -149,50 +160,63 @@ describe('retrieveBroadAIMemory', () => {
       fetchAIParameterBeliefs: vi.fn(async () => [belief]),
       fetchAIRecommendationFeedback: vi.fn(async () => feedback),
       fetchAIContextEdges: vi.fn(async () => [graphEdge]),
-    })
+    });
 
     const result = await retrieveBroadAIMemory({
       db,
-      lang: 'en',
+      lang: "en",
       cardTasks: [
-        { id: taskId, projectId, title: 'Known task' },
-        { id: 'local-task', projectId: 'uncategorized', title: 'Loose admin' },
+        { id: taskId, projectId, title: "Known task" },
+        { id: "local-task", projectId: "uncategorized", title: "Loose admin" },
       ],
-      getTaskProjectId: id => id === taskId ? projectId : 'uncategorized',
-      getTaskTitle: id => id === taskId ? 'Known task' : 'Loose admin',
-      getProjectDisplayName: id => id === 'uncategorized' ? 'uncategorized' : 'Client Project',
-    })
+      getTaskProjectId: (id) => (id === taskId ? projectId : "uncategorized"),
+      getTaskTitle: (id) => (id === taskId ? "Known task" : "Loose admin"),
+      getProjectDisplayName: (id) =>
+        id === "uncategorized" ? "uncategorized" : "Client Project",
+    });
 
-    expect(db.fetchProjectContexts).toHaveBeenCalledWith([projectId])
-    expect(db.fetchTaskContexts).toHaveBeenCalledWith([taskId])
+    expect(db.fetchProjectContexts).toHaveBeenCalledWith([projectId]);
+    expect(db.fetchTaskContexts).toHaveBeenCalledWith([taskId]);
     expect(db.fetchAIContextEntities).toHaveBeenCalledWith([
       ...BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS,
       `project:${projectId}`,
-      'project:uncategorized',
+      "project:uncategorized",
       `task:${taskId}`,
-      'task:local-task',
-    ])
-    expect(db.fetchAIClarificationEvents).toHaveBeenCalledWith(result.entityKeys, 30)
-    expect(db.fetchAIParameterBeliefs).toHaveBeenCalledWith({ entityKeys: result.entityKeys, limit: 40 })
+      "task:local-task",
+    ]);
+    expect(db.fetchAIClarificationEvents).toHaveBeenCalledWith(
+      result.entityKeys,
+      30,
+    );
+    expect(db.fetchAIParameterBeliefs).toHaveBeenCalledWith({
+      entityKeys: result.entityKeys,
+      limit: 40,
+    });
     expect(db.fetchAIRecommendationFeedback).toHaveBeenCalledWith({
       taskIds: [taskId],
       entityKeys: result.entityKeys,
       limit: 30,
-    })
+    });
     expect(db.fetchAIContextEdges).toHaveBeenCalledWith({
       entityKeys: result.entityKeys,
       limit: 40,
-    })
-    expect(result.summary).toContain('project uncategorized')
-    expect(result.summary).toContain('domain="admin"')
-    expect(result.summary).toContain('remembered answer for uncategorized')
-    expect(result.summary).toContain('project_meaning')
-    expect(result.summary).toContain('recent clarification for uncategorized')
-    expect(result.summary).toContain('relationship: Loose admin relation=\"belongs_to\" uncategorized')
-    expect(result.summary).toContain('recommendation feedback for uncategorized')
-    expect(result.summary).not.toContain('context unknown for projects: uncategorized')
-    expect(result.recommendationFeedback).toEqual(feedback)
-    expect(result.compactPreference).toBe(false)
+    });
+    expect(result.summary).toContain("project uncategorized");
+    expect(result.summary).toContain('domain="admin"');
+    expect(result.summary).toContain("remembered answer for uncategorized");
+    expect(result.summary).toContain("project_meaning");
+    expect(result.summary).toContain("recent clarification for uncategorized");
+    expect(result.summary).toContain(
+      'relationship: Loose admin relation=\"belongs_to\" uncategorized',
+    );
+    expect(result.summary).toContain(
+      "recommendation feedback for uncategorized",
+    );
+    expect(result.summary).not.toContain(
+      "context unknown for projects: uncategorized",
+    );
+    expect(result.recommendationFeedback).toEqual(feedback);
+    expect(result.compactPreference).toBe(false);
     expect(result.diagnostics).toMatchObject({
       projectContextCount: 1,
       exactEntityCount: 1,
@@ -200,7 +224,7 @@ describe('retrieveBroadAIMemory', () => {
       beliefCount: 1,
       feedbackCount: 1,
       graphEdgeCount: 1,
-    })
+    });
     expect(result.diagnostics.stageTimings).toMatchObject({
       projectContexts: expect.any(Number),
       taskContexts: expect.any(Number),
@@ -210,320 +234,402 @@ describe('retrieveBroadAIMemory', () => {
       recommendationFeedback: expect.any(Number),
       contextEdges: expect.any(Number),
       memorySnapshots: expect.any(Number),
-    })
-  })
+    });
+  });
 
-  it('retrieves global brevity preference for broad task answers and exposes a compact signal', async () => {
+  it("retrieves global brevity preference for broad task answers and exposes a compact signal", async () => {
     const brevityBelief: AIParameterBelief = {
-      id: 'belief-brevity',
-      entityKey: 'preference:brevity',
-      entityType: 'preference',
-      parameterKey: 'preferences',
+      id: "belief-brevity",
+      entityKey: "preference:brevity",
+      entityType: "preference",
+      parameterKey: "preferences",
       beliefJson: {
-        value: 'User marked the previous planning answer as too much; keep future task recommendations shorter and compact.',
+        value:
+          "User marked the previous planning answer as too much; keep future task recommendations shorter and compact.",
       },
       confidence: 0.9,
       impactWeight: 0.65,
-      sourceQuestionId: 'recommendation_feedback:simplify',
-      updatedAt: '2026-06-08T09:00:00.000Z',
-    }
+      sourceQuestionId: "recommendation_feedback:simplify",
+      updatedAt: "2026-06-08T09:00:00.000Z",
+    };
     const db = dbStub({
-      fetchAIContextEntities: vi.fn(async keys => keys.includes('preference:brevity')
-        ? [
-            contextEntity({
-              entityKey: 'preference:brevity',
-              entityType: 'preference',
-              displayName: 'Brevity',
-              facts: {
-                preferences: 'Keep broad planning answers compact after too-much feedback.',
-              },
-            }),
-          ]
-        : []),
+      fetchAIContextEntities: vi.fn(async (keys) =>
+        keys.includes("preference:brevity")
+          ? [
+              contextEntity({
+                entityKey: "preference:brevity",
+                entityType: "preference",
+                displayName: "Brevity",
+                facts: {
+                  preferences:
+                    "Keep broad planning answers compact after too-much feedback.",
+                },
+              }),
+            ]
+          : [],
+      ),
       fetchAIParameterBeliefs: vi.fn(async () => [brevityBelief]),
-    })
+    });
 
     const result = await retrieveBroadAIMemory({
       db,
-      lang: 'en',
+      lang: "en",
       cardTasks: [
-        { id: 'local-a', projectId: 'uncategorized', title: 'First task' },
-        { id: 'local-b', projectId: 'uncategorized', title: 'Second task' },
+        { id: "local-a", projectId: "uncategorized", title: "First task" },
+        { id: "local-b", projectId: "uncategorized", title: "Second task" },
       ],
-    })
+    });
 
-    expect(result.entityKeys).toEqual(expect.arrayContaining(['preference:brevity', 'workflow:task_answer:next_task']))
-    expect(db.fetchAIContextEntities).toHaveBeenCalledWith(expect.arrayContaining(['preference:brevity']))
+    expect(result.entityKeys).toEqual(
+      expect.arrayContaining([
+        "preference:brevity",
+        "workflow:task_answer:next_task",
+      ]),
+    );
+    expect(db.fetchAIContextEntities).toHaveBeenCalledWith(
+      expect.arrayContaining(["preference:brevity"]),
+    );
     expect(db.fetchAIParameterBeliefs).toHaveBeenCalledWith({
       entityKeys: result.entityKeys,
       limit: 40,
-    })
-    expect(result.compactPreference).toBe(true)
-    expect(result.summary).toContain('response preference Brevity')
-    expect(result.summary).toContain('preferences="Keep broad planning answers compact after too-much feedback."')
-    expect(result.summary).toContain('remembered answer for preference:brevity')
-  })
+    });
+    expect(result.compactPreference).toBe(true);
+    expect(result.summary).toContain("response preference Brevity");
+    expect(result.summary).toContain(
+      'preferences="Keep broad planning answers compact after too-much feedback."',
+    );
+    expect(result.summary).toContain(
+      "remembered answer for preference:brevity",
+    );
+  });
 
-  it('does not use stale parameter beliefs as active broad-answer memory', async () => {
+  it("does not use stale parameter beliefs as active broad-answer memory", async () => {
     const staleBrevityBelief: AIParameterBelief = {
-      id: 'belief-stale-brevity',
-      entityKey: 'preference:brevity',
-      entityType: 'preference',
-      parameterKey: 'preferences',
+      id: "belief-stale-brevity",
+      entityKey: "preference:brevity",
+      entityType: "preference",
+      parameterKey: "preferences",
       beliefJson: {
-        value: 'User once said answers were too much; keep everything compact.',
+        value: "User once said answers were too much; keep everything compact.",
       },
       confidence: 0.9,
       impactWeight: 0.65,
-      sourceQuestionId: 'recommendation_feedback:simplify',
-      lastReinforcedAt: '2026-01-01T09:00:00.000Z',
-      staleAfter: '2026-05-01T00:00:00.000Z',
+      sourceQuestionId: "recommendation_feedback:simplify",
+      lastReinforcedAt: "2026-01-01T09:00:00.000Z",
+      staleAfter: "2026-05-01T00:00:00.000Z",
       decayScore: 1,
-    }
+    };
     const db = dbStub({
       fetchAIParameterBeliefs: vi.fn(async () => [staleBrevityBelief]),
-    })
+    });
 
     const result = await retrieveBroadAIMemory({
       db,
-      lang: 'en',
-      now: new Date('2026-06-08T10:00:00.000Z'),
+      lang: "en",
+      now: new Date("2026-06-08T10:00:00.000Z"),
       cardTasks: [
-        { id: 'local-a', projectId: 'uncategorized', title: 'First task' },
-        { id: 'local-b', projectId: 'uncategorized', title: 'Second task' },
+        { id: "local-a", projectId: "uncategorized", title: "First task" },
+        { id: "local-b", projectId: "uncategorized", title: "Second task" },
       ],
-    })
+    });
 
-    expect(result.compactPreference).toBe(false)
-    expect(result.diagnostics.beliefCount).toBe(0)
+    expect(result.compactPreference).toBe(false);
+    expect(result.diagnostics.beliefCount).toBe(0);
     expect(result.diagnostics.lifecycle).toMatchObject({
-      staleParameterBeliefKeys: ['preference:brevity:preferences'],
-      refreshParameterBeliefKeys: ['preference:brevity:preferences'],
-    })
-    expect(result.summary).toContain('belief_refresh_needed')
-    expect(result.summary).not.toContain('User once said answers were too much')
-    expect(result.summary).not.toContain('remembered answer for preference:brevity')
-  })
+      staleParameterBeliefKeys: ["preference:brevity:preferences"],
+      refreshParameterBeliefKeys: ["preference:brevity:preferences"],
+    });
+    expect(result.summary).toContain("belief_refresh_needed");
+    expect(result.summary).not.toContain(
+      "User once said answers were too much",
+    );
+    expect(result.summary).not.toContain(
+      "remembered answer for preference:brevity",
+    );
+  });
 
-  it('fetches aggregate recommendation-feedback preference keys for broad task answers', async () => {
-    expect(BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS).toEqual(expect.arrayContaining([
-      'preference:brevity',
-      'preference:ranking_focus',
-      'preference:energy_fit',
-      'preference:follow_through',
-    ]))
+  it("fetches aggregate recommendation-feedback preference keys for broad task answers", async () => {
+    expect(BROAD_TASK_GLOBAL_MEMORY_ENTITY_KEYS).toEqual(
+      expect.arrayContaining([
+        "preference:brevity",
+        "preference:ranking_focus",
+        "preference:energy_fit",
+        "preference:follow_through",
+      ]),
+    );
 
     const rankingBelief: AIParameterBelief = {
-      id: 'belief-ranking-focus',
-      entityKey: 'preference:ranking_focus',
-      entityType: 'preference',
-      parameterKey: 'rankingFocus',
+      id: "belief-ranking-focus",
+      entityKey: "preference:ranking_focus",
+      entityType: "preference",
+      parameterKey: "rankingFocus",
       beliefJson: {
-        value: 'Repeated feedback says weak-context recommendations should be downranked.',
+        value:
+          "Repeated feedback says weak-context recommendations should be downranked.",
       },
       confidence: 0.82,
       impactWeight: 0.65,
-      sourceQuestionId: 'recommendation_feedback:aggregate:ranking_focus',
-    }
+      sourceQuestionId: "recommendation_feedback:aggregate:ranking_focus",
+    };
     const db = dbStub({
       fetchAIParameterBeliefs: vi.fn(async () => [rankingBelief]),
-    })
+    });
 
     const result = await retrieveBroadAIMemory({
       db,
-      lang: 'en',
-      cardTasks: [{ id: 'local-a', projectId: 'uncategorized', title: 'First task' }],
-    })
+      lang: "en",
+      cardTasks: [
+        { id: "local-a", projectId: "uncategorized", title: "First task" },
+      ],
+    });
 
-    expect(result.entityKeys).toEqual(expect.arrayContaining([
-      'preference:ranking_focus',
-      'preference:energy_fit',
-      'preference:follow_through',
-    ]))
+    expect(result.entityKeys).toEqual(
+      expect.arrayContaining([
+        "preference:ranking_focus",
+        "preference:energy_fit",
+        "preference:follow_through",
+      ]),
+    );
     expect(db.fetchAIParameterBeliefs).toHaveBeenCalledWith({
       entityKeys: result.entityKeys,
       limit: 40,
-    })
-    expect(result.summary).toContain('remembered answer for preference:ranking_focus')
-    expect(result.summary).toContain('weak-context recommendations should be downranked')
-  })
+    });
+    expect(result.summary).toContain(
+      "remembered answer for preference:ranking_focus",
+    );
+    expect(result.summary).toContain(
+      "weak-context recommendations should be downranked",
+    );
+  });
 
-  it('surfaces stale broad memory lifecycle pressure in diagnostics and evidence summary', async () => {
+  it("surfaces stale broad memory lifecycle pressure in diagnostics and evidence summary", async () => {
     const oldEvent: AIClarificationEvent = {
-      id: 'event-old',
-      entityKey: 'project:uncategorized',
-      entityType: 'synthetic_group',
-      questionId: 'project_meaning',
-      eventType: 'answered',
-      selectedLabel: 'Creative work',
-      createdAt: '2025-05-01T09:00:00.000Z',
-    }
+      id: "event-old",
+      entityKey: "project:uncategorized",
+      entityType: "synthetic_group",
+      questionId: "project_meaning",
+      eventType: "answered",
+      selectedLabel: "Creative work",
+      createdAt: "2025-05-01T09:00:00.000Z",
+    };
     const db = dbStub({
       fetchAIContextEntities: vi.fn(async () => [
         contextEntity({
-          entityKey: 'project:uncategorized',
-          entityType: 'synthetic_group',
+          entityKey: "project:uncategorized",
+          entityType: "synthetic_group",
           facts: {
-            domain: 'creative',
-            whyItMatters: 'Old context that should be refreshed before broad ranking.',
+            domain: "creative",
+            whyItMatters:
+              "Old context that should be refreshed before broad ranking.",
           },
-          staleAfter: '2026-05-01T00:00:00.000Z',
-          lastAnsweredAt: '2026-03-01T00:00:00.000Z',
+          staleAfter: "2026-05-01T00:00:00.000Z",
+          lastAnsweredAt: "2026-03-01T00:00:00.000Z",
           confidence: 0.7,
         }),
       ]),
       fetchAIClarificationEvents: vi.fn(async () => [oldEvent]),
-    })
+    });
 
     const result = await retrieveBroadAIMemory({
       db,
-      lang: 'en',
-      now: new Date('2026-06-08T10:00:00.000Z'),
-      cardTasks: [{ id: 'local-task', projectId: 'uncategorized', title: 'Loose creative task' }],
-      getTaskProjectId: () => 'uncategorized',
-      getTaskTitle: () => 'Loose creative task',
-      getProjectDisplayName: () => 'uncategorized',
-    })
+      lang: "en",
+      now: new Date("2026-06-08T10:00:00.000Z"),
+      cardTasks: [
+        {
+          id: "local-task",
+          projectId: "uncategorized",
+          title: "Loose creative task",
+        },
+      ],
+      getTaskProjectId: () => "uncategorized",
+      getTaskTitle: () => "Loose creative task",
+      getProjectDisplayName: () => "uncategorized",
+    });
 
     expect(result.diagnostics.lifecycle).toMatchObject({
-      staleEntityKeys: ['project:uncategorized'],
-      refreshEntityKeys: ['project:uncategorized'],
+      staleEntityKeys: ["project:uncategorized"],
+      refreshEntityKeys: ["project:uncategorized"],
       archiveEventCount: 1,
-    })
-    expect(result.diagnostics.projectContextCount).toBe(0)
-    expect(result.summary).toContain('memory lifecycle')
-    expect(result.summary).toContain('refresh_needed')
-    expect(result.summary).toContain('stale')
-    expect(result.summary).toContain('old_events')
-    expect(result.summary).toContain('context unknown for projects: uncategorized')
-    expect(result.summary).not.toContain('Old context that should be refreshed before broad ranking.')
-    expect(result.summary).not.toContain('Creative work')
-  })
+    });
+    expect(result.diagnostics.projectContextCount).toBe(0);
+    expect(result.summary).toContain("memory lifecycle");
+    expect(result.summary).toContain("refresh_needed");
+    expect(result.summary).toContain("stale");
+    expect(result.summary).toContain("old_events");
+    expect(result.summary).toContain(
+      "context unknown for projects: uncategorized",
+    );
+    expect(result.summary).not.toContain(
+      "Old context that should be refreshed before broad ranking.",
+    );
+    expect(result.summary).not.toContain("Creative work");
+  });
 
-  it('retrieves compact memory snapshots as bounded broad-answer evidence', async () => {
-    const snapshots: AIMemorySnapshot[] = [{
-      snapshotKey: 'project:uncategorized:summary',
-      scope: 'project',
-      entityKeys: ['project:uncategorized'],
-      summaryText: 'Uncategorized is mostly low-stakes admin unless the task note says otherwise.',
-      facts: { domain: 'admin' },
-      sourceEventCount: 18,
-      sourceEntityCount: 1,
-      confidence: 0.84,
-      updatedAt: '2026-06-08T09:00:00.000Z',
-    }]
+  it("retrieves compact memory snapshots as bounded broad-answer evidence", async () => {
+    const snapshots: AIMemorySnapshot[] = [
+      {
+        snapshotKey: "project:uncategorized:summary",
+        scope: "project",
+        entityKeys: ["project:uncategorized"],
+        summaryText:
+          "Uncategorized is mostly low-stakes admin unless the task note says otherwise.",
+        facts: { domain: "admin" },
+        sourceEventCount: 18,
+        sourceEntityCount: 1,
+        confidence: 0.84,
+        updatedAt: "2026-06-08T09:00:00.000Z",
+      },
+    ];
     const db = dbStub({
       fetchAIMemorySnapshots: vi.fn(async () => snapshots),
-    })
+    });
 
     const result = await retrieveBroadAIMemory({
       db,
-      lang: 'en',
-      cardTasks: [{ id: 'local-task', projectId: 'uncategorized', title: 'Loose admin task' }],
-    })
+      lang: "en",
+      cardTasks: [
+        {
+          id: "local-task",
+          projectId: "uncategorized",
+          title: "Loose admin task",
+        },
+      ],
+    });
 
     expect(db.fetchAIMemorySnapshots).toHaveBeenCalledWith({
       entityKeys: result.entityKeys,
-      scopes: ['user', 'project', 'task', 'week', 'workflow'],
+      scopes: ["user", "project", "task", "week", "workflow"],
       limit: 12,
-    })
-    expect(result.diagnostics.snapshotCount).toBe(1)
-    expect(result.summary).toContain('memory snapshot project:uncategorized:summary')
-    expect(result.summary).toContain('summary="Uncategorized is mostly low-stakes admin unless the task note says otherwise."')
-    expect(result.summary).toContain('source_events="18"')
-  })
+    });
+    expect(result.diagnostics.snapshotCount).toBe(1);
+    expect(result.summary).toContain(
+      "memory snapshot project:uncategorized:summary",
+    );
+    expect(result.summary).toContain(
+      'summary="Uncategorized is mostly low-stakes admin unless the task note says otherwise."',
+    );
+    expect(result.summary).toContain('source_events="18"');
+  });
 
-  it('suggests compact snapshots when broad memory lifecycle says an entity needs summarization', async () => {
-    const entityKey = 'project:uncategorized'
+  it("suggests compact snapshots when broad memory lifecycle says an entity needs summarization", async () => {
+    const entityKey = "project:uncategorized";
     const db = dbStub({
       fetchAIContextEntities: vi.fn(async () => [
         contextEntity({
           entityKey,
-          entityType: 'project',
-          displayName: 'Uncategorized',
-          facts: { whyItMatters: 'Mostly admin unless task notes say otherwise.' },
+          entityType: "project",
+          displayName: "Uncategorized",
+          facts: {
+            whyItMatters: "Mostly admin unless task notes say otherwise.",
+          },
           confidence: 0.82,
-          lastAnsweredAt: '2026-06-07T10:00:00.000Z',
+          lastAnsweredAt: "2026-06-07T10:00:00.000Z",
         }),
       ]),
-      fetchAIClarificationEvents: vi.fn(async () => Array.from({ length: 20 }, (_, index) => ({
-        entityKey,
-        entityType: 'project',
-        questionId: `q-${index}`,
-        eventType: 'answered',
-        selectedLabel: `Answer ${index}`,
-        createdAt: `2026-06-${String(Math.max(1, 8 - (index % 5))).padStart(2, '0')}T10:00:00.000Z`,
-      } as AIClarificationEvent))),
-    })
+      fetchAIClarificationEvents: vi.fn(async () =>
+        Array.from(
+          { length: 20 },
+          (_, index) =>
+            ({
+              entityKey,
+              entityType: "project",
+              questionId: `q-${index}`,
+              eventType: "answered",
+              selectedLabel: `Answer ${index}`,
+              createdAt: `2026-06-${String(Math.max(1, 8 - (index % 5))).padStart(2, "0")}T10:00:00.000Z`,
+            }) as AIClarificationEvent,
+        ),
+      ),
+    });
 
     const result = await retrieveBroadAIMemory({
       db,
-      lang: 'en',
-      now: new Date('2026-06-08T10:00:00.000Z'),
-      cardTasks: [{ id: 'local-task', projectId: 'uncategorized', title: 'Loose admin task' }],
-    })
+      lang: "en",
+      now: new Date("2026-06-08T10:00:00.000Z"),
+      cardTasks: [
+        {
+          id: "local-task",
+          projectId: "uncategorized",
+          title: "Loose admin task",
+        },
+      ],
+    });
 
-    expect(result.diagnostics.lifecycle.summarizeEntityKeys).toContain(entityKey)
+    expect(result.diagnostics.lifecycle.summarizeEntityKeys).toContain(
+      entityKey,
+    );
     expect(result.diagnostics.snapshotSuggestions).toEqual([
       expect.objectContaining({
-        snapshotKey: 'project:uncategorized:summary',
-        scope: 'project',
+        snapshotKey: "project:uncategorized:summary",
+        scope: "project",
         entityKeys: [entityKey],
-        summaryText: expect.stringContaining('Mostly admin'),
+        summaryText: expect.stringContaining("Mostly admin"),
         sourceEventCount: 20,
         sourceEntityCount: 1,
       }),
-    ])
-  })
+    ]);
+  });
 
-  it('does not reuse stale or low-confidence snapshots as fresh broad-answer evidence', async () => {
+  it("does not reuse stale or low-confidence snapshots as fresh broad-answer evidence", async () => {
     const snapshots: AIMemorySnapshot[] = [
       {
-        snapshotKey: 'project:uncategorized:old-summary',
-        scope: 'project',
-        entityKeys: ['project:uncategorized'],
-        summaryText: 'Old summary that should not guide current ranking.',
+        snapshotKey: "project:uncategorized:old-summary",
+        scope: "project",
+        entityKeys: ["project:uncategorized"],
+        summaryText: "Old summary that should not guide current ranking.",
         facts: {},
         sourceEventCount: 22,
         sourceEntityCount: 1,
         confidence: 0.9,
-        staleAfter: '2026-06-01T09:00:00.000Z',
-        updatedAt: '2026-05-01T09:00:00.000Z',
+        staleAfter: "2026-06-01T09:00:00.000Z",
+        updatedAt: "2026-05-01T09:00:00.000Z",
       },
       {
-        snapshotKey: 'project:uncategorized:weak-summary',
-        scope: 'project',
-        entityKeys: ['project:uncategorized'],
-        summaryText: 'Weak summary that should not suppress uncertainty.',
+        snapshotKey: "project:uncategorized:weak-summary",
+        scope: "project",
+        entityKeys: ["project:uncategorized"],
+        summaryText: "Weak summary that should not suppress uncertainty.",
         facts: {},
         sourceEventCount: 5,
         sourceEntityCount: 1,
         confidence: 0.3,
-        staleAfter: '2026-07-01T09:00:00.000Z',
-        updatedAt: '2026-06-01T09:00:00.000Z',
+        staleAfter: "2026-07-01T09:00:00.000Z",
+        updatedAt: "2026-06-01T09:00:00.000Z",
       },
-    ]
+    ];
     const db = dbStub({
       fetchAIMemorySnapshots: vi.fn(async () => snapshots),
-    })
+    });
 
     const result = await retrieveBroadAIMemory({
       db,
-      lang: 'en',
-      now: new Date('2026-06-08T10:00:00.000Z'),
-      cardTasks: [{ id: 'local-task', projectId: 'uncategorized', title: 'Loose admin task' }],
-    })
+      lang: "en",
+      now: new Date("2026-06-08T10:00:00.000Z"),
+      cardTasks: [
+        {
+          id: "local-task",
+          projectId: "uncategorized",
+          title: "Loose admin task",
+        },
+      ],
+    });
 
-    expect(result.diagnostics.snapshotCount).toBe(0)
-    expect(result.diagnostics.lifecycle.staleSnapshotKeys).toEqual(['project:uncategorized:old-summary'])
+    expect(result.diagnostics.snapshotCount).toBe(0);
+    expect(result.diagnostics.lifecycle.staleSnapshotKeys).toEqual([
+      "project:uncategorized:old-summary",
+    ]);
     expect(result.diagnostics.lifecycle.refreshSnapshotKeys).toEqual([
-      'project:uncategorized:old-summary',
-      'project:uncategorized:weak-summary',
-    ])
-    expect(result.diagnostics.lifecycle.lowConfidenceSnapshotCount).toBe(1)
-    expect(result.summary).toContain('memory lifecycle')
-    expect(result.summary).toContain('snapshot_refresh_needed')
-    expect(result.summary).not.toContain('Old summary that should not guide current ranking.')
-    expect(result.summary).not.toContain('Weak summary that should not suppress uncertainty.')
-  })
-})
+      "project:uncategorized:old-summary",
+      "project:uncategorized:weak-summary",
+    ]);
+    expect(result.diagnostics.lifecycle.lowConfidenceSnapshotCount).toBe(1);
+    expect(result.summary).toContain("memory lifecycle");
+    expect(result.summary).toContain("snapshot_refresh_needed");
+    expect(result.summary).not.toContain(
+      "Old summary that should not guide current ranking.",
+    );
+    expect(result.summary).not.toContain(
+      "Weak summary that should not suppress uncertainty.",
+    );
+  });
+});

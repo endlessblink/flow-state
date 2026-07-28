@@ -17,6 +17,7 @@
 **Goal**: Evolve FlowState AI from a helpful chat panel into a safe, layered, observable productivity co-pilot across tasks, lanes, calendar, canvas, focus sessions, and long-term memory.
 
 **Research context (2026-06-13)**:
+
 - The useful 2026 pattern is agentic autonomy with long-term memory, proactive intelligence, and human-in-the-loop control, not just better chat prose.
 - Relevant product references include Motion-style auto-scheduling/replanning, Reclaim-style focus and habit defense, Notion AI workspace agents, Sunsama planning rituals, and emerging persistent-memory agent systems.
 - FlowState's differentiator is the combination of spatial canvas, task/lane/project state, calendar/focus context, and personal memory. The roadmap should exploit that full surface.
@@ -24,20 +25,21 @@
 
 **Execution order**:
 
-| Order | Lane | Task | Depends on | Outcome |
-| --- | --- | --- | --- | --- |
-| 1 | Safety and command substrate | TASK-1855 | TASK-1854 | Bot actions become previewable, idempotent, duplicate-aware, auditable, and undoable instead of direct hidden mutations. |
-| 2 | AI command center | TASK-1856 | TASK-1855 | The chat/sidebar becomes an action surface with suggestions, diffs, apply/edit/reject, and visible agent progress. |
-| 3 | Intake and organization | TASK-1857 | TASK-1856 | Messy captures, inbox tasks, and canvas notes can be clustered, deduped, decomposed, and turned into tasks/lanes. |
-| 4 | Daily/weekly planning agent | TASK-1858 | TASK-1856, TASK-1857 | Bot proposes day/week plans using tasks, lanes, calendar, focus capacity, memory, and goals. |
-| 5 | Next-best-action engine | TASK-1859 | TASK-1858 | "What should I do now?" becomes context-aware and personalized instead of a static priority list. |
-| 6 | Calendar and focus defense | TASK-1860 | TASK-1858, TASK-1859 | Bot protects focus blocks, detects overcommitment, and proposes reschedules without silent calendar changes. |
-| 7 | Canvas intelligence | TASK-1861 | TASK-1857, TASK-1858 | Bot can organize selected canvas regions spatially and explain visual grouping decisions. |
-| 8 | Review and risk radar | TASK-1862 | TASK-1858, TASK-1859 | Bot detects blockers, neglected goals, overload, slipping work, and end-of-day/week learning. |
-| 9 | Memory and personalization | TASK-1863 | TASK-1855, TASK-1862 | Bot learns preferences, chronotype, recurring traps, accepted/rejected advice, and project patterns. |
-| 10 | User-defined automations | TASK-1864 | TASK-1855, TASK-1860, TASK-1863 | User can create safe recurring agents/workflows with autonomy levels and circuit breakers. |
+| Order | Lane                         | Task      | Depends on                      | Outcome                                                                                                                  |
+| ----- | ---------------------------- | --------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 1     | Safety and command substrate | TASK-1855 | TASK-1854                       | Bot actions become previewable, idempotent, duplicate-aware, auditable, and undoable instead of direct hidden mutations. |
+| 2     | AI command center            | TASK-1856 | TASK-1855                       | The chat/sidebar becomes an action surface with suggestions, diffs, apply/edit/reject, and visible agent progress.       |
+| 3     | Intake and organization      | TASK-1857 | TASK-1856                       | Messy captures, inbox tasks, and canvas notes can be clustered, deduped, decomposed, and turned into tasks/lanes.        |
+| 4     | Daily/weekly planning agent  | TASK-1858 | TASK-1856, TASK-1857            | Bot proposes day/week plans using tasks, lanes, calendar, focus capacity, memory, and goals.                             |
+| 5     | Next-best-action engine      | TASK-1859 | TASK-1858                       | "What should I do now?" becomes context-aware and personalized instead of a static priority list.                        |
+| 6     | Calendar and focus defense   | TASK-1860 | TASK-1858, TASK-1859            | Bot protects focus blocks, detects overcommitment, and proposes reschedules without silent calendar changes.             |
+| 7     | Canvas intelligence          | TASK-1861 | TASK-1857, TASK-1858            | Bot can organize selected canvas regions spatially and explain visual grouping decisions.                                |
+| 8     | Review and risk radar        | TASK-1862 | TASK-1858, TASK-1859            | Bot detects blockers, neglected goals, overload, slipping work, and end-of-day/week learning.                            |
+| 9     | Memory and personalization   | TASK-1863 | TASK-1855, TASK-1862            | Bot learns preferences, chronotype, recurring traps, accepted/rejected advice, and project patterns.                     |
+| 10    | User-defined automations     | TASK-1864 | TASK-1855, TASK-1860, TASK-1863 | User can create safe recurring agents/workflows with autonomy levels and circuit breakers.                               |
 
 **Non-negotiable constraints across all lanes**:
+
 - AI proposes/enables; the user owns decisions.
 - No non-trivial writes without preview + explicit apply until the command substrate proves low-risk auto-apply policies.
 - Every applied AI change must be reversible and traceable.
@@ -51,6 +53,7 @@
 **Why**: Hermes reported the Local Task API toggle enabled while `127.0.0.1:5577` refused connections and no sidecar process appeared. The existing Electron bridge only set `listening` after a sidecar message and did not expose enough non-secret failure state to tell whether `utilityProcess.fork()` was skipped, threw, spawned then exited, or never found the packaged sidecar. The live-boundary script could also misclassify the lowercase packaged `flowstate` process as not running.
 
 **Acceptance**:
+
 - Electron main records non-secret Local API sidecar lifecycle state for set-enabled, start attempt, resolved sidecar path existence, child pid, spawn, message, error, and exit.
 - `localApi:status` exposes only safe diagnostics: no bearer token, Supabase keys, JWTs, auth headers, refresh tokens, sessions, or request bodies.
 - Live-boundary diagnostics count the packaged lowercase `flowstate` process so a running Electron app is not skipped incorrectly.
@@ -61,17 +64,17 @@
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Toggle enabled plus `127.0.0.1:5577` refusing connections and no visible sidecar process. | Yes, diagnostics and live proof |
-| Data shape / persisted row shape | N/A | No task rows or production data mutated. | N/A |
-| Renderer store/state | Partial | Preload status type updated; settings continues to consume existing `enabled/running/port` fields. | Safe status extension only |
-| Electron main/preload bridge | Yes | `localApi:status` now exposes safe startup failure fields and child lifecycle state. | Yes |
-| Localhost sidecar endpoint | Yes | Fresh local AppImage logged startup and `curl http://127.0.0.1:5577/api/health` returned `{"ok":true}`. | Yes |
-| KDE polling/control path | Partial | Same localhost sidecar boundary now has better diagnostics; KDE code unchanged. | Boundary only |
-| Supabase persistence/realtime | N/A | No Supabase writes or task mutations performed. | N/A |
-| Updater/runtime version | Partial | Local AppImage package rebuilt; public updater deploy not part of this fix. | Local install only |
-| Stale live process/cache state | Yes | Freshly launched local AppImage bound `127.0.0.1:5577`; existing stale/closed process state is now distinguishable. | Yes |
+| Class                            | Checked? | Evidence                                                                                                            | Covered by this fix?            |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| User repro shape                 | Yes      | Toggle enabled plus `127.0.0.1:5577` refusing connections and no visible sidecar process.                           | Yes, diagnostics and live proof |
+| Data shape / persisted row shape | N/A      | No task rows or production data mutated.                                                                            | N/A                             |
+| Renderer store/state             | Partial  | Preload status type updated; settings continues to consume existing `enabled/running/port` fields.                  | Safe status extension only      |
+| Electron main/preload bridge     | Yes      | `localApi:status` now exposes safe startup failure fields and child lifecycle state.                                | Yes                             |
+| Localhost sidecar endpoint       | Yes      | Fresh local AppImage logged startup and `curl http://127.0.0.1:5577/api/health` returned `{"ok":true}`.             | Yes                             |
+| KDE polling/control path         | Partial  | Same localhost sidecar boundary now has better diagnostics; KDE code unchanged.                                     | Boundary only                   |
+| Supabase persistence/realtime    | N/A      | No Supabase writes or task mutations performed.                                                                     | N/A                             |
+| Updater/runtime version          | Partial  | Local AppImage package rebuilt; public updater deploy not part of this fix.                                         | Local install only              |
+| Stale live process/cache state   | Yes      | Freshly launched local AppImage bound `127.0.0.1:5577`; existing stale/closed process state is now distinguishable. | Yes                             |
 
 **Exact failure mode fixed**: Local API sidecar startup could fail silently from the user's point of view, and live diagnostics could incorrectly skip a running packaged `flowstate` process.
 
@@ -90,6 +93,7 @@
 **Why**: After the Local API listener was fixed, `node scripts/diagnose-live-boundary.cjs` correctly saw the running Electron app but failed `missing-renderer-timer-snapshot`, then `stale-inactive-timer-snapshot` after the initial snapshot fix, then `stale-renderer-auth-heartbeat` after a longer live wait. The sidecar had auth and was listening, but diagnostics could not distinguish "renderer is inactive" from "renderer never published timer state" because the timer store only watched future `currentSession` changes. Vue watchers do not fire for the initial `null` value unless `immediate` is set, and the sidecar treats inactive/auth snapshots older than their grace windows as stale.
 
 **Acceptance**:
+
 - FlowState renderer publishes an initial inactive Local API timer snapshot on timer store creation.
 - FlowState renderer refreshes inactive snapshots before the sidecar stale cutoff while no timer is active.
 - FlowState renderer refreshes safe renderer auth-state heartbeat before the watchdog stale cutoff.
@@ -101,17 +105,17 @@
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Live boundary diagnostic failed `missing-renderer-timer-snapshot` after listener fix. | Yes |
-| Data shape / persisted row shape | N/A | No persisted task or timer rows changed. | N/A |
-| Renderer store/state | Yes | Timer store now publishes initial inactive snapshot from `currentSession = null` and refreshes it while idle. | Yes |
-| Electron main/preload bridge | Yes | Existing `setLocalApiTimerSnapshot` bridge receives inactive snapshot. | Existing bridge |
-| Localhost sidecar endpoint | Yes | Sidecar diagnostics consumes the renderer timer/auth snapshots and reports presence/age. | Yes |
-| KDE polling/control path | Yes | KDE-local timer boundary now has renderer-owned inactive timer and auth heartbeats on idle launch and during idle runtime. | Yes |
-| Supabase persistence/realtime | N/A | Fix is renderer-to-sidecar heartbeat only. | N/A |
-| Updater/runtime version | Partial | Local Electron package rebuild/install required for live app proof. | Local install only |
-| Stale live process/cache state | Yes | Live verification requires relaunching updated AppImage. | Yes |
+| Class                            | Checked? | Evidence                                                                                                                   | Covered by this fix? |
+| -------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| User repro shape                 | Yes      | Live boundary diagnostic failed `missing-renderer-timer-snapshot` after listener fix.                                      | Yes                  |
+| Data shape / persisted row shape | N/A      | No persisted task or timer rows changed.                                                                                   | N/A                  |
+| Renderer store/state             | Yes      | Timer store now publishes initial inactive snapshot from `currentSession = null` and refreshes it while idle.              | Yes                  |
+| Electron main/preload bridge     | Yes      | Existing `setLocalApiTimerSnapshot` bridge receives inactive snapshot.                                                     | Existing bridge      |
+| Localhost sidecar endpoint       | Yes      | Sidecar diagnostics consumes the renderer timer/auth snapshots and reports presence/age.                                   | Yes                  |
+| KDE polling/control path         | Yes      | KDE-local timer boundary now has renderer-owned inactive timer and auth heartbeats on idle launch and during idle runtime. | Yes                  |
+| Supabase persistence/realtime    | N/A      | Fix is renderer-to-sidecar heartbeat only.                                                                                 | N/A                  |
+| Updater/runtime version          | Partial  | Local Electron package rebuild/install required for live app proof.                                                        | Local install only   |
+| Stale live process/cache state   | Yes      | Live verification requires relaunching updated AppImage.                                                                   | Yes                  |
 
 **Exact failure mode fixed**: idle Electron launches never sent any Local API timer snapshot because the watcher did not run for the initial `null` session; inactive snapshots could age past the sidecar stale cutoff without a renderer heartbeat; and renderer auth status could age past the diagnostic stale cutoff while the user stayed signed in.
 
@@ -128,6 +132,7 @@
 **Why**: Hermes should act as the chat controller for lightweight scheduling questions, but FlowState must remain the renderer/source of truth for actual time blocks. The Local API can currently read/update simple task fields, but it cannot preview or create calendar task instances with `scheduledDate`, `scheduledTime`, and `duration`.
 
 **Acceptance**:
+
 - Local Task API exposes bearer-protected `GET /api/tasks/:id/instances` and `POST /api/tasks/:id/instances`.
 - `POST` validates task ownership, non-deleted state, `scheduledDate`, `scheduledTime`, `duration`, and `preview`.
 - `preview=true` returns the exact proposed instance and task identity without mutating.
@@ -139,17 +144,17 @@
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Hermes prompt requires chat-controlled preview/apply for FlowState-rendered time blocks. | Yes, API primitive only |
-| Data shape / persisted row shape | Yes | Existing app uses `tasks.instances[]`; `src/stores/__tests__/tasks.test.ts` and AI calendar scheduling tests passed. | Yes |
-| Renderer store/state | Partial | No renderer code changed; existing calendar/store tests passed. | Existing renderer consumes instances |
-| Electron main/preload bridge | N/A | Local API sidecar route only; no preload/main bridge change required. | N/A |
-| Localhost sidecar endpoint | Yes | `server/local-api/server.cjs` exposes bearer-protected GET/POST instance routes. | Yes |
-| KDE polling/control path | N/A | This is calendar scheduling, not KDE timer control. | N/A |
-| Supabase persistence/realtime | Partial | Endpoint updates `tasks.instances` and `updated_at`; live mutation intentionally not run against real tasks. | Code path only |
-| Updater/runtime version | Partial | `npm run electron:build` passed and local AppImage was replaced; updater deploy intentionally skipped. | Local build only |
-| Stale live process/cache state | Partial | Safe live/config probe found FlowState closed; no endpoint mutation attempted. | Not a live mutation proof |
+| Class                            | Checked? | Evidence                                                                                                             | Covered by this fix?                 |
+| -------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| User repro shape                 | Yes      | Hermes prompt requires chat-controlled preview/apply for FlowState-rendered time blocks.                             | Yes, API primitive only              |
+| Data shape / persisted row shape | Yes      | Existing app uses `tasks.instances[]`; `src/stores/__tests__/tasks.test.ts` and AI calendar scheduling tests passed. | Yes                                  |
+| Renderer store/state             | Partial  | No renderer code changed; existing calendar/store tests passed.                                                      | Existing renderer consumes instances |
+| Electron main/preload bridge     | N/A      | Local API sidecar route only; no preload/main bridge change required.                                                | N/A                                  |
+| Localhost sidecar endpoint       | Yes      | `server/local-api/server.cjs` exposes bearer-protected GET/POST instance routes.                                     | Yes                                  |
+| KDE polling/control path         | N/A      | This is calendar scheduling, not KDE timer control.                                                                  | N/A                                  |
+| Supabase persistence/realtime    | Partial  | Endpoint updates `tasks.instances` and `updated_at`; live mutation intentionally not run against real tasks.         | Code path only                       |
+| Updater/runtime version          | Partial  | `npm run electron:build` passed and local AppImage was replaced; updater deploy intentionally skipped.               | Local build only                     |
+| Stale live process/cache state   | Partial  | Safe live/config probe found FlowState closed; no endpoint mutation attempted.                                       | Not a live mutation proof            |
 
 **Exact failure mode fixed**: Hermes had no bearer-protected Local API primitive to preview and apply a FlowState calendar task instance for an approved time block.
 
@@ -168,6 +173,7 @@
 **Why**: Hermes can already read FlowState tasks and timer state through the app-mediated Local Task API, but the personal-assistant workflow needs richer read-only context without dumping raw tables: task pressure, focus/session signals, AI memory/clarification signals, gamification/usage summaries, and project activity. This should let Hermes reason about overload and the next useful block while keeping writes preview-gated.
 
 **Acceptance**:
+
 - Local Task API exposes a bearer-protected `GET /api/assistant/context` endpoint.
 - Endpoint is read-only, RLS/user-scoped, loopback-only, and uses the existing app-mediated Local API auth boundary.
 - Response summarizes task pressure, project signals, focus/timer history, gamification, AI memory/context counts, and recent AI usage without returning raw secrets or full conversation/task dumps.
@@ -186,15 +192,15 @@
 
 **Failure-class coverage**:
 
-| Class | Daily check |
-| --- | --- |
-| Auth/sync and update grace | `npm run guard:electron-sync`, focused sync/auth tests, zero-error Sync Errors popover watchdog |
-| Supabase/realtime warning regressions | guard pack + classifier on failed output |
-| Canvas data/state | focused canvas composable test + Monday/Thursday canvas flows |
-| Permanent delete/undo | focused undo entrypoint test + Wednesday task flows |
-| KDE/local sidecar | `node scripts/diagnose-timer-boundary.cjs`, `node scripts/diagnose-live-boundary.cjs` + Tuesday/Friday timer flows |
-| Electron updater/runtime | live `latest-linux.yml` probe |
-| Stale process/cache | git/process boundary output and timer diagnostic snippets |
+| Class                                 | Daily check                                                                                                        |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Auth/sync and update grace            | `npm run guard:electron-sync`, focused sync/auth tests, zero-error Sync Errors popover watchdog                    |
+| Supabase/realtime warning regressions | guard pack + classifier on failed output                                                                           |
+| Canvas data/state                     | focused canvas composable test + Monday/Thursday canvas flows                                                      |
+| Permanent delete/undo                 | focused undo entrypoint test + Wednesday task flows                                                                |
+| KDE/local sidecar                     | `node scripts/diagnose-timer-boundary.cjs`, `node scripts/diagnose-live-boundary.cjs` + Tuesday/Friday timer flows |
+| Electron updater/runtime              | live `latest-linux.yml` probe                                                                                      |
+| Stale process/cache                   | git/process boundary output and timer diagnostic snippets                                                          |
 
 **Explicitly not covered**: the runner does not mutate production data, clear sync queues, commit, deploy, update snapshots, or auto-install itself. It reports likely failure class, failed command, output snippet, and next repro command so a fix lane can start with evidence.
 
@@ -219,6 +225,7 @@
 **Why**: TASK-1882 makes FlowState choose and call an Android Gemma provider safely, but the native plugin intentionally does not claim local transcription works until FlowState owns a model import/copy path and bundles the MediaPipe/Gemma runtime. Edge Gallery private app storage must not be treated as FlowState-readable.
 
 **Acceptance**:
+
 - FlowState Android can import or bundle a Gemma 3n-compatible model into app-accessible storage.
 - `AndroidGemmaTranscriptionPlugin.getStatus()` returns available only when the runtime and model are loaded.
 - `transcribe()` returns a real Hebrew/English transcript without calling `whisper-transcribe`.
@@ -234,6 +241,7 @@
 **Fix**: Default cloud Whisper to language auto-detect (omit `language` unless explicitly set) and drop the forced Hebrew prompt for auto mode via an optional `language?: 'auto' | 'he' | 'en'` on `WhisperCloudOptions`. Add regression coverage that auto mode sends no `language=he` / no forced Hebrew prompt, and explicit `he`/`en` still sets it.
 
 **Acceptance**:
+
 - `auto` (default) transcription request sends no `language` field and no Hebrew-only prompt.
 - Explicit `he`/`en` selection still forwards the language.
 - Mixed Hebrew/English voice capture no longer transliterates English into Hebrew script (user-verified real capture).
@@ -250,17 +258,17 @@
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | User reported sign-in data loss and provided screenshot showing Electron completion notification while KDE stayed ready. | Yes |
-| Data shape / persisted row shape | Yes | Cache-backed tasks/groups are restored only when not tombstoned/soft-deleted; task IDs and group IDs are preserved. | Yes |
-| Renderer store/state | Yes | `taskPersistence.ts` now repopulates empty local task state from pending-aware cache; `canvas.ts` preserves cached groups. | Yes |
-| Electron main/preload bridge | Partial | Existing local snapshot bridge remains unchanged; Local API server behavior is hardened. | Boundary only |
-| Localhost sidecar endpoint | Yes | `server/local-api/server.cjs` no longer lets stale active-zero snapshots mask signed-in timer lookup. | Yes |
-| KDE polling/control path | Yes | `main.qml` local inactive path now falls through to Supabase/completion handling. | Yes |
-| Supabase persistence/realtime | Partial | Recovered cached tasks are enqueued for create; group pending-write cache is applied. Remote writes still depend on auth/session availability. | Partly |
-| Updater/runtime version | Yes | Electron updater `1.4.232` built/deployed and public manifest verified. | Yes |
-| Stale live process/cache state | Partial | Existing running Electron/KDE processes must update/restart to load the fix. | Not fully |
+| Class                            | Checked? | Evidence                                                                                                                                       | Covered by this fix? |
+| -------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| User repro shape                 | Yes      | User reported sign-in data loss and provided screenshot showing Electron completion notification while KDE stayed ready.                       | Yes                  |
+| Data shape / persisted row shape | Yes      | Cache-backed tasks/groups are restored only when not tombstoned/soft-deleted; task IDs and group IDs are preserved.                            | Yes                  |
+| Renderer store/state             | Yes      | `taskPersistence.ts` now repopulates empty local task state from pending-aware cache; `canvas.ts` preserves cached groups.                     | Yes                  |
+| Electron main/preload bridge     | Partial  | Existing local snapshot bridge remains unchanged; Local API server behavior is hardened.                                                       | Boundary only        |
+| Localhost sidecar endpoint       | Yes      | `server/local-api/server.cjs` no longer lets stale active-zero snapshots mask signed-in timer lookup.                                          | Yes                  |
+| KDE polling/control path         | Yes      | `main.qml` local inactive path now falls through to Supabase/completion handling.                                                              | Yes                  |
+| Supabase persistence/realtime    | Partial  | Recovered cached tasks are enqueued for create; group pending-write cache is applied. Remote writes still depend on auth/session availability. | Partly               |
+| Updater/runtime version          | Yes      | Electron updater `1.4.232` built/deployed and public manifest verified.                                                                        | Yes                  |
+| Stale live process/cache state   | Partial  | Existing running Electron/KDE processes must update/restart to load the fix.                                                                   | Not fully            |
 
 **Exact failure modes fixed**: cache-backed tasks/groups can no longer vanish permanently from the visible canvas solely because sign-in/auth recovery returns an empty or partial remote load; KDE no longer treats an inactive localhost timer response as final when a prior active work session still needs completion/break detection; stale active local snapshots at zero no longer block signed-in fallback.
 
@@ -500,17 +508,17 @@
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Partial | User reported the timer broke again; current live probe showed inactive localhost/KDE state but not a visible active Electron timer at the same moment. | Not directly |
-| Data shape / persisted row shape | Yes | Diagnostics reports only Supabase active-row presence, not row contents. | Yes |
-| Renderer store/state | Yes | Existing watcher still publishes `currentSession`; diagnostics distinguishes missing forwarded snapshot from sidecar/Supabase state. | Yes |
-| Electron main/preload bridge | Yes | `localApi:status` now reports child PID, app version, latest session, latest timer snapshot, active flag, and snapshot age. | Yes |
-| Localhost sidecar endpoint | Yes | `/api/timer/diagnostics` reports branch state beside `/api/timer/current`; routes stay loopback-only and non-secret. | Yes |
-| KDE polling/control path | Partial | Script captures `/tmp/flowstate-active-task.json`; no QML behavior changed in this slice. | Observability only |
-| Supabase persistence/realtime | Partial | Diagnostics checks whether signed-in lookup finds an active row without exposing row contents; no persistence behavior changed. | Observability only |
-| Updater/runtime version | Yes | Script compares package, local release, public updater, and running process evidence. | Yes |
-| Stale live process/cache state | Yes | Script captures matching FlowState/AppImage processes and showed the pre-update runtime returned `401` for the new diagnostics route. | Yes |
+| Class                            | Checked? | Evidence                                                                                                                                                | Covered by this fix? |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| User repro shape                 | Partial  | User reported the timer broke again; current live probe showed inactive localhost/KDE state but not a visible active Electron timer at the same moment. | Not directly         |
+| Data shape / persisted row shape | Yes      | Diagnostics reports only Supabase active-row presence, not row contents.                                                                                | Yes                  |
+| Renderer store/state             | Yes      | Existing watcher still publishes `currentSession`; diagnostics distinguishes missing forwarded snapshot from sidecar/Supabase state.                    | Yes                  |
+| Electron main/preload bridge     | Yes      | `localApi:status` now reports child PID, app version, latest session, latest timer snapshot, active flag, and snapshot age.                             | Yes                  |
+| Localhost sidecar endpoint       | Yes      | `/api/timer/diagnostics` reports branch state beside `/api/timer/current`; routes stay loopback-only and non-secret.                                    | Yes                  |
+| KDE polling/control path         | Partial  | Script captures `/tmp/flowstate-active-task.json`; no QML behavior changed in this slice.                                                               | Observability only   |
+| Supabase persistence/realtime    | Partial  | Diagnostics checks whether signed-in lookup finds an active row without exposing row contents; no persistence behavior changed.                         | Observability only   |
+| Updater/runtime version          | Yes      | Script compares package, local release, public updater, and running process evidence.                                                                   | Yes                  |
+| Stale live process/cache state   | Yes      | Script captures matching FlowState/AppImage processes and showed the pre-update runtime returned `401` for the new diagnostics route.                   | Yes                  |
 
 **Exact failure mode fixed**: recurring timer/KDE investigations could not prove whether the renderer snapshot, Electron bridge, sidecar branch, Supabase active row, KDE bridge file, updater version, or stale runtime was failing before code changes were attempted.
 
@@ -532,17 +540,17 @@
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | User reported Electron timer still active while KDE widget reset; live probe showed `/api/timer/current` returned inactive local snapshot. | Yes |
-| Data shape / persisted row shape | Partial | Fix falls through to signed-in Supabase lookup when local inactive snapshot is stale. | Not directly |
-| Renderer store/state | Yes | Active renderer snapshots remain authoritative; inactive snapshots now expire after short tombstone window. | Yes |
-| Electron main/preload bridge | Yes | Existing lifecycle bridge regressions passed in focused pack. | Yes |
-| Localhost sidecar endpoint | Yes | `server-contract.test.ts` covers stale inactive local snapshot fallback behavior. | Yes |
-| KDE polling/control path | Yes | `timer-sync.test.ts` documents KDE must not treat stale sidecar inactive state as durable truth. | Yes |
-| Supabase persistence/realtime | Partial | Fallback path is preserved; no Supabase write/realtime behavior changed. | Not directly |
-| Updater/runtime version | Yes | Electron updater `1.4.222` deployed and public manifest verified. | Yes |
-| Stale live process/cache state | Partial | Runtime update is shipped; existing running Electron/KDE processes still need to update/restart to load it. | Not fully |
+| Class                            | Checked? | Evidence                                                                                                                                   | Covered by this fix? |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
+| User repro shape                 | Yes      | User reported Electron timer still active while KDE widget reset; live probe showed `/api/timer/current` returned inactive local snapshot. | Yes                  |
+| Data shape / persisted row shape | Partial  | Fix falls through to signed-in Supabase lookup when local inactive snapshot is stale.                                                      | Not directly         |
+| Renderer store/state             | Yes      | Active renderer snapshots remain authoritative; inactive snapshots now expire after short tombstone window.                                | Yes                  |
+| Electron main/preload bridge     | Yes      | Existing lifecycle bridge regressions passed in focused pack.                                                                              | Yes                  |
+| Localhost sidecar endpoint       | Yes      | `server-contract.test.ts` covers stale inactive local snapshot fallback behavior.                                                          | Yes                  |
+| KDE polling/control path         | Yes      | `timer-sync.test.ts` documents KDE must not treat stale sidecar inactive state as durable truth.                                           | Yes                  |
+| Supabase persistence/realtime    | Partial  | Fallback path is preserved; no Supabase write/realtime behavior changed.                                                                   | Not directly         |
+| Updater/runtime version          | Yes      | Electron updater `1.4.222` deployed and public manifest verified.                                                                          | Yes                  |
+| Stale live process/cache state   | Partial  | Runtime update is shipped; existing running Electron/KDE processes still need to update/restart to load it.                                | Not fully            |
 
 **Exact failure mode fixed**: stale inactive renderer-owned local timer snapshots could remain authoritative forever and mask a still-running Electron/Supabase timer from the KDE sidecar endpoint.
 
@@ -581,6 +589,7 @@
 **Why**: Phone/PWA Today mode can feel out of sync with Electron after desktop reschedules because the mobile task view still lets overdue rows win visible ordering in Today mode. The standalone Today route already had a narrow Today-before-Overdue unit guard, but the main PWA task view (`MobileInboxView` / `MobileInboxTaskList`) rendered the ungrouped Today mode as Overdue first, and the composable kept canvas/project/priority ordering inside Today mode instead of pinning tasks due today before overdue tasks.
 
 **Acceptance**:
+
 - In PWA/mobile Today mode, tasks due today appear at the top and overdue tasks appear afterwards.
 - The rule holds for the normal task view and grouped task modes, not only the standalone `/today` route.
 - Regression coverage fails on the old Overdue-first behavior and passes after the fix.
@@ -608,6 +617,7 @@
 **Why**: Recurring sign-out after auto-update+restart. BUG-1870/1865 hardened the renderer grace logic (`src/stores/auth.ts`), but the recurrence lives in the Electron main/preload/storage layer those fixes never touched. Root causes (Perplexity review + two code explorations): (1) **module-eval runtime detection race** — `isElectronRuntime` evaluated at import in `supabase.ts:17`; if the preload bridge isn't present yet, auth storage falls back to volatile localStorage → detection flip between runs loses the session; (2) **no quit-flush during update** — AppImage path `app.exit(0)` (`updater.ts:124`) bypasses before-quit/will-quit and there's no `before-quit-for-update`, so an in-flight `store:set` (just-rotated refresh token) is lost → next launch replays a stale token → "Already Used" → Sign In; (3) **non-atomic write + read-modify-write race** in `electron/ipc/store.ts` (direct `writeFile`, no temp+rename, no mutex) → corruption wipes all auth / concurrent sets clobber. `appId`/`userData` are stable (ruled out).
 
 **Fix (atomic in-place, NOT electron-store — CJS main can't require ESM-only v9+)**:
+
 - Fix 1: lazy runtime detection in the `supabase.ts` storage adapter (resolve backend at call time).
 - Fix 2: atomic `store.json` writes (temp+fsync+rename), `.bak` fallback on corrupt load, write mutex, `flushStore()`.
 - Fix 3: flush auth before update exit — `before-quit-for-update` + bounded renderer flush handshake before `app.exit(0)`/`quitAndInstall`.
@@ -640,14 +650,16 @@
 
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (2026-06-22) — fixed + unit-proven; version bumped to `1.4.204`, awaiting deploy authorization. | **Depends on**: BUG-1874, TASK-1871
 
-**Why**: Recurring Electron sign-out, confirmed pattern: after auto-update and randomly on restart (not while using). Telltale: after sign-out a refresh shows tasks (local IndexedDB cache) but the UI stays signed-out — i.e. the auth-session *rehydration* failed while data rendered from cache.
+**Why**: Recurring Electron sign-out, confirmed pattern: after auto-update and randomly on restart (not while using). Telltale: after sign-out a refresh shows tasks (local IndexedDB cache) but the UI stays signed-out — i.e. the auth-session _rehydration_ failed while data rendered from cache.
 
 **Root causes (confirmed by reading code)**:
-1. The ~62-min stale-backup guard in `restoreAuthSessionFromBackup` (`src/services/auth/supabase.ts`) *refused AND deleted* a recoverable session on restart. GoTrue refresh tokens live far longer server-side, so refusing locally guaranteed the sign-out and erased the only recovery source.
+
+1. The ~62-min stale-backup guard in `restoreAuthSessionFromBackup` (`src/services/auth/supabase.ts`) _refused AND deleted_ a recoverable session on restart. GoTrue refresh tokens live far longer server-side, so refusing locally guaranteed the sign-out and erased the only recovery source.
 2. `isElectronRuntime` was frozen at module-eval (only the storage adapter was de-frozen in BUG-1874). A momentary bridge absence could flip to the web branch → relative Supabase URL resolved against a `file://` origin → broken client.
 3. Updater store-flush timeout (1500 ms) was too tight before `app.exit(0)`, risking loss of a just-rotated refresh token after auto-update.
 
 **Fix**:
+
 1. Always restore the backup and let the SERVER validate the refresh token; the genuine "Already Used" case is already handled in `auth.ts` (clears dead backup, keeps signed-in shell). No local refuse/delete.
 2. `detectElectronRuntime()` now also checks the Electron user-agent / `process.type`; `resolveSupabaseUrl()` refuses to resolve a relative URL against a non-http(s) origin.
 3. Raised `STORE_FLUSH_TIMEOUT_MS` 1500 → 5000 ms in `electron/updater.ts`.
@@ -669,12 +681,14 @@
 **Why**: The FlowState-safe Superpowers router proved useful, but the original Superpowers plugin model requires each agent harness to install or expose skills separately. Codex already sees the project wrappers, while Claude Code and OpenCode need explicit verification so future sessions do not silently miss the router. Keep the solution context-safe: install/expose per harness, keep the FlowState router as the entrypoint, and prove fresh-session behavior with smoke checks instead of loading long upstream instructions into every prompt.
 
 **Acceptance**:
+
 - Codex reports `superpowers@openai-curated` installed/enabled and fresh read-only Codex sessions use `superpowers-flowstate-auto-router`.
 - Claude Code has a Superpowers plugin installed or an explicit documented blocker.
 - OpenCode exposes the FlowState Superpowers wrappers through its configured skill paths.
 - Verification is repeatable with a compact repo script and does not add verbose always-on prompt text.
 
 **Progress**:
+
 - 2026-06-18: Added `scripts/verify-superpowers-routing.sh`, `npm run verify:superpowers` for context-safe static harness checks, and `npm run verify:superpowers:smoke` for fresh Codex routing smokes when model quota is available.
 - 2026-06-18: Installed Claude Code `superpowers@claude-plugins-official` (`6.0.2`), re-added Codex `superpowers@openai-curated` from the local curated snapshot (`015c0dff`), verified OpenCode exposes the FlowState wrapper skill paths, and kept the Claude session-start reminder to two short FlowState-router lines to avoid context bloat.
 - 2026-06-18: Static `npm run verify:superpowers` passed. Earlier full fresh-smoke verification showed Codex planning and bug/fix prompts both reporting `Skills used: superpowers-flowstate-auto-router`; a later rerun of `npm run verify:superpowers:smoke` was blocked by Codex account usage limits before the first smoke completed.
@@ -694,6 +708,7 @@
 **Priority**: P2 | **Status**: ✅ DONE (2026-06-17) — editor moved onto `tiptap-markdown@0.9.0`; guard pile collapsed to one fallback; single local-draft durability fallback added; backup coverage asserted. Typecheck clean; 19 unit/integration + 1 e2e green. | **Depends on**: BUG-1872 (state-layer guard already shipped)
 
 **Shipped**:
+
 - `TiptapEditor.vue` now parses/serializes through the real `tiptap-markdown` extension (`editor.storage.markdown.getMarkdown()`); removed `parseMarkdown`/`htmlToMarkdown` from the edit path. The guard pile (`isInternalUpdate`, `lastEmittedMarkdown`, HTML-diff) collapsed to **one** guard: ignore an incoming value equal to the editor's current markdown.
 - **Single durability fallback** (`useTaskEditState.ts`): in-progress description persisted to `localStorage` (`flowstate:desc-draft:<id>`) the instant it changes, restored on reopen if the app died pre-save (read as dirty so autosave re-persists), cleared on confirmed save. Exactly one fallback, no second path.
 - **Backup coverage**: `backupPreservesDescription.test.ts` asserts the local-backup task transform keeps `description`. VPS pg_dump already includes it (confirmed).
@@ -708,11 +723,13 @@ _Original plan below._
 **Goal**: Keep markdown as the storage format (board, AI, search depend on it) but replace the regex with a real serializer (`tiptap-markdown@0.9.0`, peer `@tiptap/core ^3.0.1` — compatible; `prosemirror-markdown` already present) so `editor ↔ markdown` is byte-stable and idempotent. Collapse the guard pile in `TiptapEditor.vue` down to **exactly one fallback** path.
 
 **Durability requirements (user, 2026-06-17 — "this can't get lost again"):**
+
 - **Can't-lose-again**: in-progress description text must survive a reset, failed save, crash, or reload. Persist a local draft (keyed by task id) the moment the user types; restore it on reopen; clear it only after a confirmed successful save.
 - **Exactly one fallback**: ONE durable fallback layer, not the current stack of guards (`isInternalUpdate`, `lastEmittedMarkdown`, debounce-vs-watch juggling) nor multiple competing draft stores. One serializer + one local-draft fallback. If the serializer ever throws, the single fallback is "treat content as plain text" — no second regex path.
 - **Backup reliably captures it**: the description column must be provably present in BOTH (a) the VPS pg_dump (confirmed — full dump includes `description`) and (b) the app's local auto-backup payload. Add a regression test asserting the local-backup task payload includes `description` so a future field-completeness regression can't silently drop it (the BUG-1872 data loss was never-saved; this guards the saved-but-not-backed-up case).
 
 **Acceptance**:
+
 - `htmlToMarkdown(parseMarkdown(md)) === md` for plain text, Hebrew/RTL, multi-paragraph, **bullet/numbered/task lists**, tables, highlights, links, bold/italic/strike (un-skip the TASK-1873 case in `markdownRoundtrip.test.ts`).
 - Existing stored descriptions (authored by the old regex) render without visible change — verify a sample against prod before/after; migration only if needed.
 - Editor guards collapsed to one fallback; no editor reset, cursor-jump, or RTL regression (Playwright proof on real seeded data).
@@ -727,6 +744,7 @@ _Original plan below._
 **Why**: After an Electron update/restart, FlowState can render cached authenticated tasks and canvas state while the sidebar auth state falls back to `Sign In`. The earlier BUG-1865 fix preserved cached data when auth restore missed, but it did not preserve the signed-in shell itself when Electron's disk-backed auth backup restored yet Supabase still reported no session, or when an expired session could not refresh immediately during restart.
 
 **Acceptance**:
+
 - Electron startup restores a signed-in shell from the disk-backed auth backup even if Supabase has not rehydrated the primary session yet.
 - Expired startup sessions that fail to refresh immediately enter reconnect/offline grace instead of clearing `user`/`session`.
 - Explicit user sign-out remains the only destructive path that clears auth backups and private local stores.
@@ -734,6 +752,7 @@ _Original plan below._
 - Desktop fix ships through the versioned Electron updater flow.
 
 **Progress**:
+
 - 2026-06-16: Added RED regressions for Electron backup restore returning a recoverable session while Supabase still reports null, and expired-session startup refresh failure keeping the signed-in shell.
 - 2026-06-16: Changed the auth backup restore contract to return the recovered session snapshot and keep reconnect-grace auth state instead of showing `Sign In`; guarded the Local API bridge from forwarding expired JWTs.
 - 2026-06-16: Added the missing Electron/KDE recovery regression: reconnect grace retries session refresh and republishes the fresh token to the Electron Local API bridge. Verification: `npm run test -- tests/unit/electron/local-api-lifecycle.test.ts tests/unit/local-api/server-contract.test.ts tests/unit/kde/timer-sync.test.ts tests/unit/kde/auth-flow.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/composables/useLocalApiBridge.test.ts` passed 105/105.
@@ -748,12 +767,14 @@ _Original plan below._
 **Why**: The previous timer-specific fix did not cover the larger sync class. Task edits add a pending-write guard to block stale realtime echoes, but the sync queue was not clearing that guard after successful task writes. Realtime task updates skipped during pending writes, interaction locks, or database loads also had no replay path for non-delete events. That could leave one runtime stuck on local state while the shared Supabase state, localhost, and KDE moved ahead.
 
 **Acceptance**:
+
 - Successful queued task sync clears the task pending-write guard instead of waiting for the five-minute safety timeout.
 - Realtime task events skipped because of pending writes, interaction locks, or database loading invalidate cache and schedule a recovery reload.
 - Delete recovery still works through the same recovery path.
 - Desktop fix ships through the versioned Electron updater flow.
 
 **Progress**:
+
 - 2026-06-15: Added RED regressions for successful queued task sync clearing the pending-write guard and skipped non-delete realtime task events scheduling recovery reload instead of being dropped.
 - 2026-06-15: Cleared task pending-write guards on successful sync queue completion and routed skipped task realtime events through a shared cache invalidation/reload helper across the primary, post-login, and workspace-switch realtime handlers.
 - 2026-06-15: Verified widened sync/timer/KDE regression suite passes 178/178 tests, plus type-check and lint.
@@ -766,12 +787,14 @@ _Original plan below._
 **Why**: Starting a task timer must create an active `timer_sessions` row before the local Electron UI claims the timer is running. If the initial Supabase write fails because the auth token/session is stale or the network rejects the write, the previous path could leave `currentSession` active locally while the Electron sidecar and KDE widget still return no active timer. That creates the exact cross-runtime split the user reported: Electron appears to start a task, but localhost and KDE have nothing to sync.
 
 **Acceptance**:
+
 - `startTimer()` rolls back local active/leader state when the initial timer-session persistence write fails.
 - Timer persistence failures propagate to callers after the sync error is recorded; they are not swallowed as false success.
 - Existing timer state-machine, realtime backstop, Electron local API, and KDE widget wire-contract regressions pass.
 - Desktop fix ships through the versioned Electron updater flow.
 
 **Progress**:
+
 - 2026-06-15: Reproduced the code-level false-success contract with `tests/unit/stores/timer-state-machine.test.ts -t "7b"`; RED showed `currentSession` stayed active after the write threw.
 - 2026-06-15: Propagated `saveActiveTimerSession` failures and rolled back countdown, heartbeat, leadership, wake lock, and `currentSession` when `startTimer()` cannot persist the initial active session. Focused cross-runtime timer verification passes 65/65 tests.
 - 2026-06-15: Shipped desktop updater `1.4.183`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.183`. `FlowState-1.4.183-x86_64.AppImage` returns HTTP 200 with `content-length: 180171239`, and `FlowState_1.4.183_amd64.deb` returns HTTP 200 with `content-length: 131222188`.
@@ -783,6 +806,7 @@ _Original plan below._
 **Why**: A severe desktop regression showed FlowState appearing signed out and rendering an empty Canvas/All Active view even though the Electron profile still had a valid persisted Supabase session and IndexedDB task/cache state. Startup was treating a passive auth restore miss like an explicit sign-out, clearing authenticated task/project/canvas/workspace state and the read cache before auth could recover.
 
 **Acceptance**:
+
 - Passive startup auth misses preserve already-loaded authenticated IndexedDB task, project, and canvas cache instead of clearing stores or read cache.
 - Explicit user sign-out remains the only destructive auth path that clears authenticated stores and IndexedDB read cache.
 - Cacheless unauthenticated startup still loads guest-local data normally.
@@ -790,6 +814,7 @@ _Original plan below._
 - Electron-facing verification includes focused tests and an Electron build before release.
 
 **Progress**:
+
 - 2026-06-13: Reproduced the bad contract with `tests/unit/ai-chat-startup-sync.test.ts`; the RED test failed because app initialization still expected `[AUTH] No restored session; clearing authenticated read cache from signed-out view`.
 - 2026-06-13: Fixed app initialization so a passive auth restore miss preserves usable authenticated IndexedDB task/project/canvas cache while explicit sign-out remains destructive.
 - 2026-06-13: Verified focused regressions with `npm run test -- tests/unit/ai-chat-startup-sync.test.ts tests/unit/stores/auth-flow.test.ts` (30/30 passed), `npm run type-check`, `npm run lint`, and Electron package validation.
@@ -802,6 +827,7 @@ _Original plan below._
 **Why**: Opening Calendar could throw `RangeError: Invalid time value` from the packaged `CalendarView` chunk. The exact minified offset mapped to `CalendarTaskCard.formatDueDateLabel()`, where a malformed or legacy `task.dueDate` reached `Intl.DateTimeFormat.format(new Date(value))` without validation and crashed the full view.
 
 **Acceptance**:
+
 - Calendar inbox cards tolerate malformed due-date values without throwing.
 - Invalid due dates do not render a misleading date badge.
 - Valid local `YYYY-MM-DD` and legacy ISO due dates retain the existing overdue/today/future behavior.
@@ -809,6 +835,7 @@ _Original plan below._
 - The desktop fix ships through a versioned Electron updater release.
 
 **Progress**:
+
 - 2026-06-15: Added RED/green component regression `tests/unit/components/calendar-task-card-invalid-due-date.test.ts`. The RED run reproduced `RangeError: Invalid time value`; the green run passes after normalizing the value with the existing `normalizeDueDate()` utility and omitting the badge when normalization fails.
 - 2026-06-15: Focused calendar tests pass (19/19), `npm run type-check`, `npm run lint`, `git diff --check`, and the canonical Electron build/package validation pass.
 - 2026-06-15: Shipped desktop updater `1.4.181`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.181`. `FlowState-1.4.181-x86_64.AppImage` returns HTTP 200 with `content-length: 180167072`, and `FlowState_1.4.181_amd64.deb` returns HTTP 200 with `content-length: 131220680`.
@@ -821,6 +848,7 @@ _Original plan below._
 **Why**: Electron and localhost use the same Supabase backend, but each runtime has its own IndexedDB read cache and pending-write queue. Startup and background refresh replayed field-level pending updates through full-row Supabase mappers, so a title/status/reminder update could inject mapper defaults such as missing `canvasPosition`, `parentId`, group `position`, or reset `positionVersion`. Separately, group moves queued the post-move position version as their optimistic-lock base, causing immediate conflicts and last-write-wins fallback. Together these paths made layouts diverge or appear to move without the Canvas being open.
 
 **Acceptance**:
+
 - Replaying a non-geometry pending task update preserves cached task position, parent, and position version.
 - Replaying a non-geometry pending group update preserves cached group position, parent, and position version.
 - Startup/background pending-write replay uses the same selective patch contract as cache-first startup.
@@ -829,6 +857,7 @@ _Original plan below._
 - The fix ships through a versioned Electron updater release.
 
 **Progress**:
+
 - 2026-06-15: Added RED/green cache regressions proving partial task/group updates previously erased geometry during pending-write replay.
 - 2026-06-15: Added RED/green group move regression proving the queue previously sent post-move `baseVersion: 5` when the server expected pre-move version `4`.
 - 2026-06-15: Introduced selective Supabase-payload patch helpers and reused them in both IndexedDB startup merge and background refresh replay. Wider canvas/sync verification passes 179/179 tests; `npm run type-check`, `npm run lint`, and `git diff --check` pass.
@@ -842,6 +871,7 @@ _Original plan below._
 **Why**: Every useful bot feature eventually wants to change tasks, lanes, calendar blocks, canvas layout, or memory. Before adding more agentic features, FlowState needs a shared safety layer so AI actions are staged, inspectable, reversible, idempotent, duplicate-aware, and observable. The immediate motivating failure is the weekly-plan follow-up path creating repeated real child tasks like `מעקב: <source task title>`, but the fix must cover the wider class of repeated applies, stale persisted cards, background retries, and future planner/organizer/canvas/calendar agent writes.
 
 **Acceptance**:
+
 - Define a typed AI command/diff model for task, lane, calendar, canvas, focus, and memory proposals.
 - Define an AI action identity/fingerprint model using action kind, source message/run, target entity, normalized payload, and scope.
 - AI-generated changes can be rendered as a preview before mutation.
@@ -855,12 +885,14 @@ _Original plan below._
 - Manual task/project/lane/calendar/canvas creation remains unchanged; duplicate prevention is scoped to AI/proposal/tool writes.
 
 **Relevant context**:
+
 - Reuse existing task/lane/project stores and undo patterns where possible.
 - This lane is the foundation for every later lane; do not build one-off apply buttons that bypass it.
 - Treat "reuse existing" as the default duplicate behavior. Creating another anyway must require explicit secondary user intent.
 - Regression coverage should prove preview-only proposals do not mutate state, apply mutates only selected commands, repeated apply is idempotent, stale cards do not duplicate work, semantic duplicates are reused/skipped, manual duplicate creation still works, and rollback restores state.
 
 **Progress**:
+
 - 2026-06-13: Shipped the first duplicate-aware weekly-plan `add_followup` consumer. `ChatMessage` now detects an existing active same-title follow-up under the same parent task, tells the user it already exists, opens/reuses that task by default, and creates another only after explicit duplicate override. Regression coverage added for default duplicate blocking and explicit duplicate creation. Released via Electron updater `1.4.164`; public `latest-linux.yml`, AppImage, and deb artifact checks passed.
 - 2026-06-13: Extracted the first shared AI action guardrail in `src/services/ai/actionGuardrails.ts` for task/subtask create identity fingerprints and semantic duplicate decisions. `create_task` now reuses an existing active same-title/due-date AI-created target instead of duplicating on double-click/retry/stale-card replay; `create_subtasks` skips existing active same-title subtasks under the parent. Weekly-plan follow-up duplicate detection now calls the shared helper while preserving the explicit "create another" override. Regression proof: `npm run test -- tests/unit/ai-tools-execution.test.ts`, `npm run test -- tests/unit/ai-sidebar-first.test.ts -t "weekly follow-up"`, `npm run type-check`, `npm run lint`, Electron build/package validation, and updater deployment `1.4.167` verified via `https://in-theflow.com/updates/electron/latest-linux.yml`; public artifacts returned HTTP 200 with `FlowState-1.4.167-x86_64.AppImage` `content-length: 180158732` and `FlowState_1.4.167_amd64.deb` `content-length: 262430300`.
 - 2026-06-13: Added the first reusable preview/apply command batch substrate in `src/services/ai/actionCommands.ts`, exported from `src/services/ai/index.ts`. It supports task and subtask create proposals with typed previews/diffs, selected-command apply, low-confidence/high-impact approval blocking, semantic duplicate reuse during apply, local audit trail entries with source prompt/run/message/data plus applied/rejected commands, and rollback pointers that restore the pre-AI task state. Regression proof: `npm run test -- tests/unit/ai-action-command-substrate.test.ts`, `npm run test -- tests/unit/ai-tools-execution.test.ts`, `npm run type-check`, `npm run lint`, and `npm run electron:build`. Shipped desktop updater `1.4.168`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.168`, `FlowState-1.4.168-x86_64.AppImage` returns HTTP 200 with `content-length: 180158867`, and `FlowState_1.4.168_amd64.deb` returns HTTP 200 with `content-length: 131214884`.
@@ -878,6 +910,7 @@ _Original plan below._
 - 2026-06-14: Completed the final TASK-1855 acceptance audit and filled the explicit focus gap. Added `focus.timer.start` and `focus.timer.stop` command families with preview diffs, identity/fingerprint duplicate checks, selected apply through `useTimerStore`, audit snapshots, and rollback for the pre-AI timer state. Routed AI `start_timer` and `stop_timer` tools through command batches instead of direct timer store mutation. Stabilized replay reporting for AI-created subtasks when store-generated subtask ids collide within the same millisecond by matching skipped existing subtasks by normalized command title before id. Acceptance audit now covers task/subtask create/update/delete, lane create, calendar schedule, focus timer start/stop, canvas group create/node move, memory patch, and recommendation feedback; real `ChatMessage` recommendation feedback, memory patch, smart-lane, weekly follow-up override, day-plan, and AI tool consumers route through the substrate. Intentionally out of scope: normal user/manual writes and internal memory adapter persistence after a `memory.patch` command applies. Regression proof: RED/green `npm run test -- tests/unit/ai-action-command-substrate.test.ts -t "focus timer starts"`, RED/green `npm run test -- tests/unit/ai-action-command-substrate.test.ts -t "focus timer stops"`, RED/green `npm run test -- tests/unit/ai-tools-execution.test.ts -t "focus timer starts"`, RED/green `npm run test -- tests/unit/ai-tools-execution.test.ts -t "focus timer stops"`, `npm run test -- tests/unit/ai-action-command-substrate.test.ts` (25/25), `npm run test -- tests/unit/ai-tools-execution.test.ts` (13/13), `npm run type-check`, `npm run lint`, `git diff --check`, direct-write audit `rg -n "laneStore\\.createLane\\(|createTaskWithUndo\\(|bulkUpdateTasksWithUndo\\(|taskStore\\.createTask\\(|taskStore\\.updateTask\\(|taskStore\\.createSubtask\\(|taskStore\\.deleteTask\\(|canvasStore\\.createGroup\\(|timerStore\\.startTimer\\(|timerStore\\.stopTimer\\(" src/components/ai/ChatMessage.vue src/services/ai/tools.ts` returns no matches, broader AI write audit over `src/services/ai`, AI components, and AI composables returns no direct task/lane/canvas/memory writes outside `actionCommands.ts`, and the timer audit shows only command-substrate internals mutate `timerStore.startTimer`/`timerStore.stopTimer`. Built and shipped desktop updater `1.4.180`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves `version: 1.4.180`, `FlowState-1.4.180-x86_64.AppImage` returns HTTP 200 with `content-length: 180171169`, and `FlowState_1.4.180_amd64.deb` returns HTTP 200 with `content-length: 131220976`.
 
 **Next implementation cursor**:
+
 - Start TASK-1856 next. Build the command-center UI around the real converted consumers and command audit records from TASK-1855 rather than a parallel proposal abstraction.
 - The command-center surface should render/edit/reject selected commands from `buildAICommandBatchPreview`, show command diffs and `AIActionIdentity`/duplicate status, expose audit entries from `loadAICommandAuditTrail()`, and reuse rollback pointers for undo.
 - Preserve TASK-1855 boundaries: manual user writes remain unchanged; new AI write consumers must add a typed command family or route through an existing one before mutating stores/services.
@@ -889,6 +922,7 @@ _Original plan below._
 **Why**: The bot needs a consistent visible surface for suggestions, command previews, step progress, confidence, "why", apply/edit/reject controls, and failure recovery. Otherwise each feature becomes a different ad hoc card.
 
 **Acceptance**:
+
 - Chat/sidebar can render AI proposal cards backed by the shared command substrate.
 - Multi-step agent runs show visible progress: reading context, building proposal, validating, waiting for approval, applying, verifying.
 - Users can edit/reject individual proposed commands before apply.
@@ -896,6 +930,7 @@ _Original plan below._
 - Failed agent steps show a recoverable status, not a stuck spinner.
 
 **Relevant context**:
+
 - This should replace single-purpose bot cards over time, not add another parallel UI system.
 - The surface should support later proactive cards like "3 risks detected" or "recommended focus block" without requiring a new component family.
 
@@ -906,6 +941,7 @@ _Original plan below._
 **Why**: A high-value bot can reduce task chaos: messy captures, vague tasks, duplicate tasks, canvas scraps, and unstructured notes should become clean projects, lanes, subtasks, or clarified next actions.
 
 **Acceptance**:
+
 - Bot can analyze selected inbox tasks, selected canvas nodes, or a pasted brain dump.
 - It proposes clusters by theme, project, energy, deadline, risk, or workflow stage.
 - It can propose deduplication, task decomposition, title cleanup, missing next actions, project/lane assignment, and archive/delete candidates.
@@ -913,6 +949,7 @@ _Original plan below._
 - New task/lane creation uses the command substrate from TASK-1855.
 
 **Relevant context**:
+
 - This is broader than "smart lanes". Smart lanes become one mode inside the organizer: a clustering/apply workflow, not the whole product direction.
 - Regression coverage should include apply-selected-only behavior, no mutation on preview, duplicate protection, and vague-task clarification fallback.
 
@@ -923,6 +960,7 @@ _Original plan below._
 **Why**: FlowState already has weekly planning quality work, but the broader co-pilot should generate and revise practical plans from tasks, lanes, projects, calendar availability, focus capacity, memory, and user goals.
 
 **Acceptance**:
+
 - Bot can create a day plan or week plan with proposed task order, focus blocks, lane priorities, tradeoffs, and explicit dropped/deferred work.
 - Plans show load/capacity warnings before apply.
 - User can ask for variants: aggressive, conservative, energy-aware, deadline-first, deep-work-first, admin-batch.
@@ -930,6 +968,7 @@ _Original plan below._
 - Replanning after a change explains what moved and why.
 
 **Relevant context**:
+
 - Build on the existing weekly planner reliability work rather than starting from scratch.
 - Avoid generic "found N tasks" summaries; each plan needs concrete reasoning and bounded output.
 
@@ -940,12 +979,14 @@ _Original plan below._
 **Why**: "What should I work on right now?" should be FlowState's sharpest bot feature. The answer should account for time, energy, deadline risk, calendar, task size, recent focus behavior, active lane, and user preferences.
 
 **Acceptance**:
+
 - Bot ranks a small set of next actions with concrete reasons and uncertainty.
 - Recommendations include "do now", "if low energy", "if blocked", and "safe to ignore" options.
 - User feedback such as accept, skip, too much, not now, or wrong reason updates future recommendations.
 - The engine avoids repeated stale recommendations and explains when it lacks enough context.
 
 **Relevant context**:
+
 - This lane depends on plan quality but should remain usable outside formal daily/weekly planning.
 - It should integrate with focus mode: starting a recommendation can begin a focused work session or create a short next action.
 
@@ -956,12 +997,14 @@ _Original plan below._
 **Why**: Tools like Motion and Reclaim are valuable because they defend time, not because they chat. FlowState should propose calendar/focus changes while keeping the user in control.
 
 **Acceptance**:
+
 - Bot detects overcommitment, missing focus blocks, double-booking risks, and plan/calendar mismatch.
 - Bot proposes reschedules and protected focus blocks with preview.
 - User can set autonomy level: suggest only, auto-apply low-risk focus blocks, or require approval for all calendar changes.
 - Existing calendar/manual planning flows remain unaffected if AI is disabled.
 
 **Relevant context**:
+
 - High-impact scheduling changes must stay human-approved until the command substrate proves rollback and conflict validation.
 - This lane should feed signals back into next-best-action and planning.
 
@@ -972,12 +1015,14 @@ _Original plan below._
 **Why**: FlowState has a unique spatial surface. The bot should be able to "see" selected canvas regions and propose organization, links, clusters, dependencies, and visual layouts.
 
 **Acceptance**:
+
 - User can select a canvas region and ask the bot to organize, summarize, cluster, sequence, or extract tasks.
 - Bot previews visual layout changes before applying.
 - Suggestions can include grouping, lane creation, task decomposition, dependency links, archive candidates, and memory links.
 - Visual explanations identify why nodes belong together.
 
 **Relevant context**:
+
 - Keep canvas layout changes reversible and scoped to selected regions.
 - Avoid global canvas rewrites until selected-region flows are reliable.
 
@@ -988,12 +1033,14 @@ _Original plan below._
 **Why**: A personal chief of staff should notice slipping work, repeated deferrals, overloaded lanes, neglected goals, blocked projects, and mismatches between plan and execution.
 
 **Acceptance**:
+
 - Bot can generate end-of-day, weekly, and project-level reviews.
 - Risk cards cite evidence: overdue tasks, repeated postponements, calendar density, missing next actions, stale lanes, or focus-session mismatch.
 - Bot proposes mitigations such as defer, split, schedule, ask a blocker question, archive, or change lane priority.
 - User can dismiss/snooze risks and the bot remembers that feedback.
 
 **Relevant context**:
+
 - This lane should not become nagging. Sensitivity, snooze, and explanation quality are part of acceptance.
 - The review output should create learning signals for TASK-1863.
 
@@ -1004,12 +1051,14 @@ _Original plan below._
 **Why**: The bot becomes genuinely useful when it learns the user's chronotype, working preferences, recurring traps, rejected advice, successful planning patterns, project semantics, and decision history.
 
 **Acceptance**:
+
 - Memory stores preference facts, decision journal entries, repeated behavior patterns, accepted/rejected recommendations, and project-specific heuristics.
 - User can inspect, correct, delete, or disable memory facts.
 - Recommendations cite memory when used and show uncertainty when memory is stale or weak.
 - Memory retrieval is bounded, prompt-injection-safe, and fail-open.
 
 **Relevant context**:
+
 - Build on existing AI memory work, but aim at product-visible personalization rather than schema completeness alone.
 - Correction and deletion are core UX, not admin-only tooling.
 
@@ -1020,12 +1069,14 @@ _Original plan below._
 **Why**: Once command safety, planning, calendar/focus, and memory are reliable, users should be able to define recurring agents: weekly review, client follow-up, invoice workflow, content publishing, bug triage, or cleanup routines.
 
 **Acceptance**:
+
 - User can create a named automation with trigger, scope, allowed actions, autonomy level, review cadence, and circuit breakers.
 - Automations can run in suggest-only mode before any auto-apply mode.
 - Each run produces an audit log, applied command batch, skipped actions, and rollback path.
 - "Pause all agents" is available globally.
 
 **Relevant context**:
+
 - This is intentionally last. Do not add background autonomous mutation before preview/apply/undo, calendar safety, and memory correction are proven.
 - Start with templates before custom freeform automations.
 
@@ -1036,11 +1087,13 @@ _Original plan below._
 **Why**: Weekly-plan proof alone is not enough. The assistant also acts through FlowState tools and broad non-weekly prompts, so regressions in task creation, completion, subtask creation, destructive confirmation, ReAct card rendering, day-plan/smart-lane features, memory readiness, or broad clarification would still break the product even if weekly planning stayed green.
 
 **Acceptance**:
+
 - Live AI memory substrate readiness is re-verified and the stale "schema missing" lane cursor is corrected.
 - Non-weekly bot action/tool behavior has focused regression coverage.
 - Broad localhost chat proof covers weekly and non-weekly prompts before the next lane starts.
 
 **Progress**:
+
 - 2026-06-13: Added `tests/unit/ai-tools-execution.test.ts` for real AI tool execution against the task store: `create_task` rejects invalid dates and creates real tasks, `mark_task_done` accepts title fragments and default `list_tasks` hides done tasks, `create_subtasks` validates payloads and writes child rows, and `delete_task` requires explicit confirmation before mutating state.
 - 2026-06-13: Re-verified live AI memory substrate with `npm run check:ai-memory-live-readiness` (`OK` for all six AI-memory tables through Supabase REST) and guarded `AI_MEMORY_CRUD_PROBE=1 npm run check:ai-memory-crud` (probe rows inserted, read, and deleted successfully).
 - 2026-06-13: Re-ran broad localhost chat proof with `npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts` → 22/22 passed. This covers weekly planning, Hebrew prompt variants, stream-hang fallback, old follow-up suppression, answer/escape continuation, feedback learning, mechanical overdue list, local memory debug, and targeted clarification/no-repeat behavior for prioritization, next-task, overdue triage, day planning, smart lanes, and task breakdown.
@@ -1053,6 +1106,7 @@ _Original plan below._
 **Why**: TASK-1852 shipped the real Electron fix, but two important guards were still too weak: weekly-plan activity scrubbing was protected mostly by source-shape assertions, and the narrowed FlowState semantic lane needed an explicit positive guard so real FlowState assistant reliability work still keeps its product lane.
 
 **Completion proof (2026-06-13)**:
+
 - Added behavior-level regression coverage for weekly-plan activity messages: English `Found N tasks`, English `Found N tasks matching ...`, English `Found N overdue tasks`, Hebrew `נמצאו N משימות`, Hebrew matching-task counts, and Hebrew overdue-task counts are scrubbed only for `week_plan` read activity.
 - Added negative coverage that task-count messages remain unchanged outside weekly planning and for write activity.
 - Exported the scrub helper as a pure tested display function and kept the live tool-activity path scoped by `activityTypeForTool(call.tool)`.
@@ -1068,6 +1122,7 @@ _Original plan below._
 **Why**: TASK-1851 is shipped and proved in a signed-in packaged Electron debug session, but the next instance must resume from the same real-app verification path after restart. Do not lose the lesson from this session: demo fixtures and unit tests were insufficient; the decisive proof came from a headed, signed-in app flow with real task data.
 
 **Resume snapshot**:
+
 - Last completed commit: `15da970e Keep weekly lane subtitles from leaking buckets`.
 - Shipped Electron updater version: `1.4.158`.
 - Updater manifest proof: `https://in-theflow.com/updates/electron/latest-linux.yml` reports `version: 1.4.158`; AppImage and deb returned HTTP 200.
@@ -1075,12 +1130,14 @@ _Original plan below._
 - Known local dirty file before restart: `stats.html` only; generated noise, do not commit unless intentionally regenerated.
 
 **Required first actions after restart**:
+
 1. Pull/rebase to `origin/master` and confirm the working tree contains no unexpected product-code drift.
 2. Verify the updater manifest still serves `1.4.158`.
 3. Verify the user-installed Electron app updates to, or is already running, `1.4.158`; do not rely only on the local build artifact if the user is checking the installed app.
 4. Re-run a headed signed-in user flow against real tasks, not demo content.
 
 **Headed real-app verification method to preserve**:
+
 - If the normal installed app is hard to inspect, launch the packaged AppImage with Chromium remote debugging:
   `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs ./release/FlowState-1.4.158-x86_64.AppImage --no-sandbox --remote-debugging-port=9333 --class=flow-state`
 - Attach Playwright over CDP to `http://127.0.0.1:9333`.
@@ -1090,6 +1147,7 @@ _Original plan below._
   `[data-testid="weekly-lane-board"]`, `[data-testid="weekly-visual-lane"]`, `[data-testid="weekly-related-chip"]`, and absence of `.weekly-plan-cards`.
 
 **Acceptance before moving on**:
+
 - The prompt `תעזור לי לתכנן את שארית השבוע` in the signed-in app produces either a useful clarification card or a real visual weekly lane board.
 - Wide/expanded chat shows horizontal lanes with readable cards, not a clipped carousel or stacked task list.
 - There are no raw UUIDs, no `מבוסס על Work`, no `עבודה לא מסווגת`, and no generic `Work`/`My Projects` subtitle leaks.
@@ -1097,6 +1155,7 @@ _Original plan below._
 - Evidence is a screenshot plus DOM counts for lane boards, visual lanes, legacy weekly cards, generic labels, and lane widths.
 
 **Completion proof (2026-06-13)**:
+
 - Rebased from `origin/master`; only pre-existing dirty file was generated `stats.html`, stashed before rebase and kept out of the release commit.
 - Live updater pre-check confirmed `https://in-theflow.com/updates/electron/latest-linux.yml` served `version: 1.4.158`; both `FlowState-1.4.158-x86_64.AppImage` and `FlowState_1.4.158_amd64.deb` returned HTTP 200.
 - Installed `~/.local/bin/FlowState.AppImage` was byte-identical to `release/FlowState-1.4.158-x86_64.AppImage` before the fix.
@@ -1107,6 +1166,7 @@ _Original plan below._
 - Electron updater deployment verified at `https://in-theflow.com/updates/electron/latest-linux.yml` with `version: 1.4.159`; both `FlowState-1.4.159-x86_64.AppImage` and `FlowState_1.4.159_amd64.deb` returned HTTP 200.
 
 **Next product slice after this proof**:
+
 - Continue the AI chat quality lane from the first still-red proof gate below. The likely next work is memory/answer-quality continuity: repeated clarification suppression, stronger reasoning from saved context, and better "why this lane/task" explanations across real data.
 - Do not start unrelated architecture work, broad Electron work, or cosmetic redesign until the signed-in weekly-planning flow is visually and behaviorally stable.
 
@@ -1119,6 +1179,7 @@ _Original plan below._
 **Current cursor**: ✅ Localhost proof now covers prompt-class routing, stuck follow-up click, compact continuation output, and no duplicate inline follow-up question after the user answers it.
 
 **Hard rules for this focused lane**:
+
 - Do not add more broad memory architecture work until this lane passes real localhost browser proof.
 - Do not hardcode a single user phrase. Intent handling must recognize categories: planning/organizing/help intent plus future horizon such as this week, rest of week, remaining week, end of week, today, or tomorrow.
 - Ask one question per screen, but not only one question total. Continue the interview while coverage/EVPI says more context is needed.
@@ -1135,12 +1196,14 @@ _Original plan below._
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-08, proved 2026-06-08) | **Depends on**: TASK-1831
 
 **Acceptance**:
+
 - Hebrew and English "plan/organize/help me plan" prompts with rest/remaining/end-of-week horizons route to `week_plan`.
 - The route is category/rule based, not exact-prompt hardcoding.
 - Retrospective requests such as weekly summaries still route to review/summary, not forward planning.
 - User-flow browser proof uses at least one Hebrew "rest of week" prompt and one English flexible prompt.
 
 **Proof**:
+
 - `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts tests/unit/weekly-memory-retrieval.test.ts tests/unit/week-plan-request.test.ts tests/unit/deterministic-pipeline.test.ts` → 215/215 passed.
 - `npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts` → 13/13 passed, including Hebrew `תעזור לי לתכנן את שארית השבוע` routing to weekly planning without a generic task dump.
 - 2026-06-09: Added prompt-class regression proof for `תעזור לי לארגן את שארית השבוע`, `תעזור לי לתכנן את שארית השבוע`, `ארגן לי את שארית השבוע`, and `organize the rest of my week`. The browser assertions require weekly planning or a clarification card, forbid `Found N tasks` / `נמצאו N משימות`, forbid asking `What kind of project is "Work"`, require compact plans to stay at 1-3 sections, and require `[AIChat:WeeklyPlanDecision]` logs.
@@ -1152,12 +1215,14 @@ _Original plan below._
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-08, proved 2026-06-08) | **Depends on**: TASK-1844, TASK-1831A
 
 **Acceptance**:
+
 - The chat may ask multiple questions when needed, but only one question is visible at a time.
 - Answering one clarification does not force a final plan if coverage is still weak.
 - The user can stop the flow or generate with current info at any point.
 - Saved answers become durable/local fallback memory and suppress repeated questions.
 
 **Proof**:
+
 - Clarification answers now await persistence before emitting the continuation, so retrieval can see the saved answer before deciding the next question.
 - Weekly clarification continuation remains iterative; only the explicit generate/current-info escape forces the bounded compact draft.
 - Escape controls remain visible and iconized with accessible labels.
@@ -1168,12 +1233,14 @@ _Original plan below._
 **Priority**: P0-CRITICAL | **Status**: ✅ DONE (filed 2026-06-08, proved 2026-06-08) | **Depends on**: TASK-1844, TASK-1845
 
 **Acceptance**:
+
 - Final weekly plan shows 3-5 recommendations max.
 - Each recommendation has a clear "why this now" grounded in task data, saved context, or explicit uncertainty.
 - No generic task dump, no broad wall of text, no unsupported importance claims, no "found 40 tasks" as the final answer.
 - Playwright/localhost proof checks rendered UI, not only unit contracts.
 
 **Proof**:
+
 - Weekly fallback now uses a bounded quick-draft plan with recommendation cards instead of an empty "not reliable enough" artifact.
 - Weekly plan/clarification metadata clears raw `toolResults`/`cardGroups` so `ChatMessage` does not render `Found N tasks` under planning artifacts.
 - Browser proof checks English weekly planning, Hebrew rest-of-week planning, accept/postpone/simplify feedback controls, no generic task dump, and enabled input/no stuck running state.
@@ -1185,12 +1252,14 @@ _Original plan below._
 **Why**: The real localhost UI could stay on the inline "create follow-up task" card after the user clicked the add-follow-up control, and previous verification missed it because it did not run the headed sidebar flow.
 
 **Acceptance**:
+
 - Clicking the inline follow-up apply control must not wait on task persistence before continuing the chat.
 - The card must show a visible non-stuck status while the follow-up task write runs in the background.
 - Console logs must identify the boundary: child card apply, follow-up create start/success/failure, continuation emit, parent receive/queue/send.
 - Browser proof must run the real sidebar flow in headed localhost before the user is asked to test this path again.
 
 **Proof**:
+
 - `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly inline follow-up click" --headed` → 1/1 passed.
 - `npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly inline follow-up click|weekly planning asks first|weekly bridge stream hang"` → 3/3 passed.
 - `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts -t "continues weekly planning immediately|lets weekly-plan question buttons create"` → 2/2 focused tests passed.
@@ -1203,6 +1272,7 @@ _Original plan below._
 **Why**: After the follow-up click advanced, the next answer could still render like a mini weekly report: source label, multiple prose paragraphs per task, risks, and deferral footer. That made a working continuation still feel useless.
 
 **Acceptance**:
+
 - Post-clarification weekly plans carry an explicit compact presentation mode.
 - The compact continuation path returns at most 2 recommendations.
 - Compact rendering shows title, one grounded reason, next action, controls, and task card only.
@@ -1210,6 +1280,7 @@ _Original plan below._
 - Headed browser proof must check rendered content length and visible section count.
 
 **Proof**:
+
 - `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test -c tests/e2e/playwright.ai-chat-quality-local.config.ts --grep "weekly inline follow-up click" --headed` → 1/1 passed with compact-output assertions.
 - `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts -t "structured artifact|weekly plan quality gate|continues weekly planning immediately|lets weekly-plan question buttons create"` → 3/3 focused tests passed.
 - `npm run type-check` → passed.
@@ -1221,6 +1292,7 @@ _Original plan below._
 **Why**: The real localhost UI could ask the same inline follow-up question again after the user already answered it. The previous proof checked that the chat advanced and got compact, but not that the answered semantic question was recorded and suppressed.
 
 **Acceptance**:
+
 - Generated follow-up questions must be keyed to the related task, not anonymous weekly text.
 - Clicking an inline weekly question answer must record an `ai_clarification_events` answer with `entityKey = task:<taskId>` and `questionId = followup_<taskId>` before the continuation decision reruns.
 - Historical weekly follow-up cards must hydrate from saved clarification events and render as already answered instead of showing active answer controls.
@@ -1229,6 +1301,7 @@ _Original plan below._
 - Console logs must show the old-card hydration boundary: `answered_hydration_started` and `answered_hydration_finished`.
 
 **Proof**:
+
 - `npm run test:unit -- tests/unit/ai-sidebar-first.test.ts` → 66/66 passed.
 - `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --headed --grep "weekly inline follow-up"` → 1/1 passed.
 - `DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_Mqgwcs npx playwright test tests/e2e/ai-chat-quality-local.spec.ts --config=tests/e2e/playwright.ai-chat-quality-local.config.ts --headed --grep "old answered weekly inline"` → 1/1 passed.
@@ -1243,11 +1316,13 @@ _Original plan below._
 **Why**: The real signed-in Electron flow still accepted a structured weekly plan with the Hebrew generic lane `עבודה לא מסווגת`, producing shallow reasoning instead of asking for useful context or falling back to a better grounded draft.
 
 **Acceptance**:
+
 - Weekly plan validation rejects Hebrew/English unclassified-work focus labels as generic.
 - The regression uses the same validator path that accepts/rejects structured model weekly-plan output, not only rendered demo content.
 - Desktop delivery includes a newer Electron updater version so the fix is available to the app under test.
 
 **Proof**:
+
 - Real signed-in Electron smoke on 2026-06-12 reproduced the failure before the fix: prompt `תעזור לי לתכנן את שארית השבוע` rendered a weekly plan containing `עבודה לא מסווגת`.
 - `npm test -- tests/unit/ai-sidebar-first.test.ts -t "rejects shallow weekly plan JSON"` → 1/1 focused test passed.
 - `npm test -- tests/unit/ai-sidebar-first.test.ts` → 77/77 passed.
@@ -1262,12 +1337,14 @@ _Original plan below._
 **Why**: The compact card carousel can still feel like a squeezed stack instead of a visual lane board, especially in the widened AI chat panel. The next product slice should make the lane relationship visible left-to-right rather than relying on semantic labels and clipped task cards.
 
 **Acceptance**:
+
 - Expanded/wide chat mode renders weekly recommendations as real horizontal lanes with all related task cards visible or intentionally paged without clipping.
 - Compact mode does not collapse into a broken carousel or cut off task-card text.
 - Lane titles explain the actual workstream, not generic buckets like `Work` or `עבודה לא מסווגת`.
 - Headed verification uses the signed-in app/browser flow with the user's real task data, plus regression tests guarding against clipped carousel lanes.
 
 **Focused proof gate before user testing**:
+
 - Unit tests for flexible weekly intent, iterative clarification continuation, no blocking memory persistence, and no repeated questions.
 - Playwright localhost user flow with seeded tasks:
   1. Ask in Hebrew for help planning the rest of the week.
@@ -1278,6 +1355,7 @@ _Original plan below._
   6. Repeat with an English flexible prompt and verify it routes to weekly planning.
 
 **Current implementation proof (2026-06-12)**:
+
 - `ChatMessage` now keeps compact weekly-plan artifacts in the visual lane renderer when the chat is widened, instead of falling back to the legacy vertical recommendation-card renderer.
 - Expanded weekly lane board renders as a CSS grid of lane columns; compact mode remains a small preview with a visible wide-open control.
 - Storybook fixture `AI/ChatMessage/Weekly Lane Board` covers Hebrew RTL compact and wide layouts with related task cards.
@@ -1306,6 +1384,7 @@ _Original plan below._
 **Why this lane exists**: This work has too many coupled failure modes to track as isolated fixes. Use this lane as the single source of truth so every change is tied to a phase, a proof gate, and a user-visible quality outcome. If a future session feels lost, resume from the current execution cursor and the first incomplete proof gate below.
 
 **Hard lane rules**:
+
 - Work stages in order. Do not jump to polish, Electron, or broad UI expansion while the current stage lacks localhost proof.
 - Do not ask the user to test until the relevant stage passes automated checks plus a real localhost browser smoke.
 - Default response contract: ask one high-value button-based clarification before broad recommendations when missing context would materially change the answer.
@@ -1315,6 +1394,7 @@ _Original plan below._
 - Electron packaging/update work is deferred until localhost behavior is reliable and the user re-enables Electron for this lane.
 
 **Execution checklist**:
+
 1. Finish the current stage only. Do not start later UI polish or Electron delivery while the stage proof gate is red.
 2. After every code slice, update the relevant task progress note with what changed and what was proven.
 3. Run focused tests for the slice, then the AI-focused suite, then localhost/browser smoke when user-visible behavior changed.
@@ -1322,6 +1402,7 @@ _Original plan below._
 5. Commit and push only after the plan file, tests, and proof evidence match the actual current state.
 
 **Operator board for the active lane**:
+
 - **Current slice**: LANE-3 clarification decision quality. Improve and prove ask/proceed/uncertainty decisions now that the memory substrate is ready and broad localhost flows are covered.
 - **Current proof**: `npm run check:ai-memory-live-readiness` reports all six AI-memory tables visible through Supabase REST; guarded `AI_MEMORY_CRUD_PROBE=1 npm run check:ai-memory-crud` inserted/read/deleted probe rows successfully; the local AI chat suite passes 22/22 across weekly and broad prompts; `tests/unit/ai-tools-execution.test.ts` locks non-weekly bot actions.
 - **Next slice after current proof**: TASK-1840/TASK-1831A/TASK-1831 clarification scoring and durable belief behavior, with special attention to non-weekly bot prompts and action/tool flows.
@@ -1330,43 +1411,44 @@ _Original plan below._
 
 **Authoritative task lane queue**:
 
-| Lane | Status | Task refs | Product outcome | Files/surfaces | Proof gate |
-| --- | --- | --- | --- | --- | --- |
-| LANE-0: Regroup and cursor discipline | ✅ DONE | This top lane + TASK-1842 | One source of truth that prevents scattered fixes and stale "current slice" drift | `docs/MASTER_PLAN.md` | Lane lists all packets, current cursor, blocked work, and user-test gate |
-| LANE-1: VPS-safe memory substrate | ✅ Substrate proof green | TASK-1830, TASK-1839 | Durable memory for real projects, synthetic buckets, preferences, corrections, and events; no UUID failures for `Work`, `My Projects`, or `uncategorized` | Supabase migrations, memory repositories, schema contract tests | Contract/retrieval tests pass; live schema and guarded CRUD pass; missing-schema fallback remains covered |
-| LANE-2: Hybrid retrieval and latency budget | 🔄 In progress | TASK-1838 | Fast exact-key retrieval first; bounded recent events/feedback/edges; optional pgvector later without blocking the hot path | `weeklyMemoryRetrieval`, `broadMemoryRetrieval`, memory diagnostics, timeout/cache helpers | Retrieval tests prove bounded diagnostics, synthetic-key safety, and timeout fallback |
-| LANE-3: Coverage, uncertainty, and EVPI question choice | 🔄 CURRENT | TASK-1840, TASK-1831A, TASK-1831 | Ask the most valuable non-repeated question; do not treat one random button answer as enough context | uncertainty policy, EVPI scoring, parameter beliefs, clarification events | Tests prove high-value question selection, cooldown/dedupe, answer-to-belief update, and no immediate re-ask |
-| LANE-4: Low-overwhelm answer contract | 🔄 In progress | TASK-1831, TASK-1832 | Broad requests start with one concise card or a visible uncertainty escape; no generic plan dump by default | chat pipeline, deterministic fallback, repair/audit helpers, clarification UI | Tests fail overlong first answers, name-only importance, unsupported ranking, and filler prose |
-| LANE-5: Broad-flow coverage beyond weekly planning | ✅ First proof done | TASK-1835 | Same contract for "what should I do", day plan, smart lanes, prioritization, task breakdown, follow-up task suggestions, and general agent help | intent router, deterministic flows, formatter prompts, fallback cards | Non-weekly tests prove ask/proceed/neutral behavior and no hidden task-card barrage while asking |
-| LANE-6: Feedback learning and suppression | ✅ First proof done | TASK-1833, TASK-1836 | Accept/postpone/dismiss/simplify actions immediately change current UI and later retrieval/ranking | inline recommendation cards, feedback store, memory retrieval, cooldown rules | UI/unit tests prove postponed/dismissed items suppress until revisit and accepted/timeblocked items become positive signals |
-| LANE-7: Memory lifecycle and safety | 🔄 First refresh proof done | TASK-1837, TASK-1839 | Memory stays useful over time: stale refresh, confidence decay, summaries, retention, correction audit, prompt-injection-safe evidence | lifecycle policy, retrieval diagnostics, prompt evidence builders | Lifecycle/security tests prove stale facts are refreshed, old/noisy events are flagged, and free text is quoted evidence only |
-| LANE-8: Observability and speed | 🔄 In progress | TASK-1834 | User can see concise phases and debug reasons without reading internal dumps; no duplicate thinking rows or stuck spinner after saving | activity timeline, clarification debug disclosure, phase timing metadata | Activity/UI tests and browser smoke show phase changes, slow-step attribution, and no stuck running row |
-| LANE-9: Answer-quality evaluation rubric | 🔄 In progress | TASK-1841 | Bad/acceptable/excellent scoring becomes executable, not subjective vibe review | eval fixtures, citation audit, adversarial scenarios | Eval fails fake reasoning, repeated questions, excess length, missing evidence, and conflicting-correction misuse |
-| LANE-10: Localhost E2E proof | ✅ Broad-flow proof done | TASK-1842 | Real browser proves the end-to-end loop before the user is asked to test | Playwright/localhost smoke, seeded tasks, bridge stubs, screenshots | Prompt -> one clarification -> answers/follow-ups -> concise plan/uncertainty -> feedback/debug -> no barrage -> no stuck activity -> too-much feedback changes next broad answer |
-| LANE-11: Electron delivery gate | ⏸ Deferred | TASK-1843 | Desktop packaging/updater only after localhost proves behavior and user re-enables Electron | Electron build/update/deploy surfaces | Explicit user re-enable, then Electron build/update verification |
+| Lane                                                    | Status                      | Task refs                        | Product outcome                                                                                                                                           | Files/surfaces                                                                             | Proof gate                                                                                                                                                                        |
+| ------------------------------------------------------- | --------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LANE-0: Regroup and cursor discipline                   | ✅ DONE                     | This top lane + TASK-1842        | One source of truth that prevents scattered fixes and stale "current slice" drift                                                                         | `docs/MASTER_PLAN.md`                                                                      | Lane lists all packets, current cursor, blocked work, and user-test gate                                                                                                          |
+| LANE-1: VPS-safe memory substrate                       | ✅ Substrate proof green    | TASK-1830, TASK-1839             | Durable memory for real projects, synthetic buckets, preferences, corrections, and events; no UUID failures for `Work`, `My Projects`, or `uncategorized` | Supabase migrations, memory repositories, schema contract tests                            | Contract/retrieval tests pass; live schema and guarded CRUD pass; missing-schema fallback remains covered                                                                         |
+| LANE-2: Hybrid retrieval and latency budget             | 🔄 In progress              | TASK-1838                        | Fast exact-key retrieval first; bounded recent events/feedback/edges; optional pgvector later without blocking the hot path                               | `weeklyMemoryRetrieval`, `broadMemoryRetrieval`, memory diagnostics, timeout/cache helpers | Retrieval tests prove bounded diagnostics, synthetic-key safety, and timeout fallback                                                                                             |
+| LANE-3: Coverage, uncertainty, and EVPI question choice | 🔄 CURRENT                  | TASK-1840, TASK-1831A, TASK-1831 | Ask the most valuable non-repeated question; do not treat one random button answer as enough context                                                      | uncertainty policy, EVPI scoring, parameter beliefs, clarification events                  | Tests prove high-value question selection, cooldown/dedupe, answer-to-belief update, and no immediate re-ask                                                                      |
+| LANE-4: Low-overwhelm answer contract                   | 🔄 In progress              | TASK-1831, TASK-1832             | Broad requests start with one concise card or a visible uncertainty escape; no generic plan dump by default                                               | chat pipeline, deterministic fallback, repair/audit helpers, clarification UI              | Tests fail overlong first answers, name-only importance, unsupported ranking, and filler prose                                                                                    |
+| LANE-5: Broad-flow coverage beyond weekly planning      | ✅ First proof done         | TASK-1835                        | Same contract for "what should I do", day plan, smart lanes, prioritization, task breakdown, follow-up task suggestions, and general agent help           | intent router, deterministic flows, formatter prompts, fallback cards                      | Non-weekly tests prove ask/proceed/neutral behavior and no hidden task-card barrage while asking                                                                                  |
+| LANE-6: Feedback learning and suppression               | ✅ First proof done         | TASK-1833, TASK-1836             | Accept/postpone/dismiss/simplify actions immediately change current UI and later retrieval/ranking                                                        | inline recommendation cards, feedback store, memory retrieval, cooldown rules              | UI/unit tests prove postponed/dismissed items suppress until revisit and accepted/timeblocked items become positive signals                                                       |
+| LANE-7: Memory lifecycle and safety                     | 🔄 First refresh proof done | TASK-1837, TASK-1839             | Memory stays useful over time: stale refresh, confidence decay, summaries, retention, correction audit, prompt-injection-safe evidence                    | lifecycle policy, retrieval diagnostics, prompt evidence builders                          | Lifecycle/security tests prove stale facts are refreshed, old/noisy events are flagged, and free text is quoted evidence only                                                     |
+| LANE-8: Observability and speed                         | 🔄 In progress              | TASK-1834                        | User can see concise phases and debug reasons without reading internal dumps; no duplicate thinking rows or stuck spinner after saving                    | activity timeline, clarification debug disclosure, phase timing metadata                   | Activity/UI tests and browser smoke show phase changes, slow-step attribution, and no stuck running row                                                                           |
+| LANE-9: Answer-quality evaluation rubric                | 🔄 In progress              | TASK-1841                        | Bad/acceptable/excellent scoring becomes executable, not subjective vibe review                                                                           | eval fixtures, citation audit, adversarial scenarios                                       | Eval fails fake reasoning, repeated questions, excess length, missing evidence, and conflicting-correction misuse                                                                 |
+| LANE-10: Localhost E2E proof                            | ✅ Broad-flow proof done    | TASK-1842                        | Real browser proves the end-to-end loop before the user is asked to test                                                                                  | Playwright/localhost smoke, seeded tasks, bridge stubs, screenshots                        | Prompt -> one clarification -> answers/follow-ups -> concise plan/uncertainty -> feedback/debug -> no barrage -> no stuck activity -> too-much feedback changes next broad answer |
+| LANE-11: Electron delivery gate                         | ⏸ Deferred                  | TASK-1843                        | Desktop packaging/updater only after localhost proves behavior and user re-enables Electron                                                               | Electron build/update/deploy surfaces                                                      | Explicit user re-enable, then Electron build/update verification                                                                                                                  |
 
 **Current lane cursor**: LANE-3 is the next product slice after live memory substrate proof and broad-flow localhost proof. The latest localhost smoke covers weekly planning, prioritization, next-task, overdue triage, day planning, smart lanes, task breakdown, compact post-clarification planning, debug disclosure, no stuck running row, no-repeat broad clarification, a simplify/too-much feedback loop that changes the next broad answer, and broad postpone feedback suppressing the same task in the next broad answer. Continue with EVPI/uncertainty quality and non-weekly bot action coverage before asking for broad user testing or shipping Electron.
 
 **Resume rule for future agents**: Start from the operator board above, then the first non-green proof gate in the stage table. Do not reinterpret this lane as a weekly-plan copywriting task, a local-only memory hack, or an Electron updater task. The intended product behavior is a durable AI chat quality system that learns useful context, asks the right low-friction questions, avoids overwhelming answers, and proves that behavior locally before desktop delivery.
 
-| Stage | Task(s) | Required outcome | Status | Proof gate before moving on |
-| --- | --- | --- | --- | --- |
-| 0 | This lane + TASK-1842 | Single execution lane, active cursor, localhost-only gate, no vague partial phases | ✅ Done | MASTER_PLAN lane lists all stages, dependencies, proof, and user-test gate |
-| 1 | TASK-1830, TASK-1838, TASK-1839 | VPS-safe memory substrate: server entities/events/edges, synthetic keys, missing-schema fallback, SQL-first retrieval, RLS/prompt-injection safety | ✅ Substrate proof green | Contract tests, retrieval tests, live REST readiness, guarded CRUD, no UUID errors for `Work`/`My Projects`/`uncategorized`, bounded retrieval diagnostics |
-| 2 | TASK-1840, TASK-1831A, TASK-1831 | Clarification decision engine: coverage/materiality policy, heuristic EVPI, one-question ladder, cooldown/dedupe, continue-with-uncertainty escapes | 🔄 CURRENT | Unit + mounted tests prove highest-value non-repeated question appears and answering it does not re-ask or dump content |
-| 3 | TASK-1835 | Apply the same ask-before-answer contract to all broad chat flows, not only weekly planning | ✅ First proof done | Non-weekly tests for day plan, smart lanes, prioritization, "what should I do", and task breakdown prompts |
-| 4 | TASK-1832, TASK-1841 | Answer-quality evaluator: groundedness, brevity, evidence, unsupported-ranking rejection, bad/acceptable/excellent rubric | 🔄 In progress | Eval/tests fail generic prose, name-only importance, repeated templates, missing evidence, and overlong answers |
-| 5 | TASK-1833, TASK-1836 | User feedback loop: accept/postpone/dismiss/simplify controls, reason chips, cooldowns, revisit dates, implicit positives | ✅ First proof done | UI tests prove feedback persists, current suggestions suppress immediately, future ranking respects feedback |
-| 6 | TASK-1834 | Observability and speed: concise phases, timings, path type, slow-step diagnostics, no duplicate thinking rows | 🔄 In progress | Activity-row tests plus localhost smoke show answer phase changes and no stuck spinner after saving clarification |
-| 7 | TASK-1837 | Memory lifecycle: fact promotion, confidence decay, summaries/snapshots, stale confirmations, export/delete policy | 🔄 First refresh proof done | Lifecycle tests prove stale facts refresh, corrections stay auditable, retrieval stays bounded |
-| 8 | TASK-1842 | Localhost end-to-end QA: real browser flow from prompt → clarification → answer/uncertainty → feedback/debug | ✅ First proof done | Playwright/browser evidence proves no content barrage before clarification and no stuck card after answer |
-| 9 | TASK-1843 | Electron packaging/updater gate after localhost stabilization | ⏸ Deferred | Only run Electron build/update when user explicitly re-enables Electron for this lane |
+| Stage | Task(s)                          | Required outcome                                                                                                                                    | Status                      | Proof gate before moving on                                                                                                                                |
+| ----- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | This lane + TASK-1842            | Single execution lane, active cursor, localhost-only gate, no vague partial phases                                                                  | ✅ Done                     | MASTER_PLAN lane lists all stages, dependencies, proof, and user-test gate                                                                                 |
+| 1     | TASK-1830, TASK-1838, TASK-1839  | VPS-safe memory substrate: server entities/events/edges, synthetic keys, missing-schema fallback, SQL-first retrieval, RLS/prompt-injection safety  | ✅ Substrate proof green    | Contract tests, retrieval tests, live REST readiness, guarded CRUD, no UUID errors for `Work`/`My Projects`/`uncategorized`, bounded retrieval diagnostics |
+| 2     | TASK-1840, TASK-1831A, TASK-1831 | Clarification decision engine: coverage/materiality policy, heuristic EVPI, one-question ladder, cooldown/dedupe, continue-with-uncertainty escapes | 🔄 CURRENT                  | Unit + mounted tests prove highest-value non-repeated question appears and answering it does not re-ask or dump content                                    |
+| 3     | TASK-1835                        | Apply the same ask-before-answer contract to all broad chat flows, not only weekly planning                                                         | ✅ First proof done         | Non-weekly tests for day plan, smart lanes, prioritization, "what should I do", and task breakdown prompts                                                 |
+| 4     | TASK-1832, TASK-1841             | Answer-quality evaluator: groundedness, brevity, evidence, unsupported-ranking rejection, bad/acceptable/excellent rubric                           | 🔄 In progress              | Eval/tests fail generic prose, name-only importance, repeated templates, missing evidence, and overlong answers                                            |
+| 5     | TASK-1833, TASK-1836             | User feedback loop: accept/postpone/dismiss/simplify controls, reason chips, cooldowns, revisit dates, implicit positives                           | ✅ First proof done         | UI tests prove feedback persists, current suggestions suppress immediately, future ranking respects feedback                                               |
+| 6     | TASK-1834                        | Observability and speed: concise phases, timings, path type, slow-step diagnostics, no duplicate thinking rows                                      | 🔄 In progress              | Activity-row tests plus localhost smoke show answer phase changes and no stuck spinner after saving clarification                                          |
+| 7     | TASK-1837                        | Memory lifecycle: fact promotion, confidence decay, summaries/snapshots, stale confirmations, export/delete policy                                  | 🔄 First refresh proof done | Lifecycle tests prove stale facts refresh, corrections stay auditable, retrieval stays bounded                                                             |
+| 8     | TASK-1842                        | Localhost end-to-end QA: real browser flow from prompt → clarification → answer/uncertainty → feedback/debug                                        | ✅ First proof done         | Playwright/browser evidence proves no content barrage before clarification and no stuck card after answer                                                  |
+| 9     | TASK-1843                        | Electron packaging/updater gate after localhost stabilization                                                                                       | ⏸ Deferred                  | Only run Electron build/update when user explicitly re-enables Electron for this lane                                                                      |
 
 **Research-backed requirements captured in the stages**:
+
 - Hybrid memory: session, episodic events, semantic facts/summaries, procedural preferences.
 - Server-backed persistence for VPS/localhost parity: `ai_context_entities`, `ai_clarification_events`, `ai_context_edges`, recommendation feedback, and later `ai_parameter_beliefs`.
 - Hybrid retrieval: exact entity key lookup first, structured filters and recent events second, optional pgvector/semantic recall only when needed and timeout-safe.
-- EVPI-inspired clarification selection: information value ~= uncertainty * impact * expected reduction - user cost.
+- EVPI-inspired clarification selection: information value ~= uncertainty _ impact _ expected reduction - user cost.
 - Low-overwhelm UX: one question per turn, 3-5 buttons, optional free text, visible escape hatches, concise output, progressive disclosure.
 - Feedback learning: dismissed/postponed/ignored recommendations affect cooldowns and preference facts; accepted/time-blocked/completed/timer-started actions are positive signals.
 - Lifecycle: confidence decay, stale refresh, summarization/snapshots, retention, export/delete, and correction auditability.
@@ -1378,6 +1460,7 @@ _Original plan below._
 **User-test gate**: The user should only be asked to test after Stage 8 has a passing localhost browser smoke and the final response says exactly what changed, what to try, what should no longer happen, and what is still intentionally not built.
 
 **Not ready for user testing until**:
+
 - Stage 2 proves answering a clarification saves/updates durable belief state and continues without a stuck activity row across weekly and non-weekly prompts.
 - Stage 7 proves stale context/lifecycle behavior and Stage 9 proves answer-quality evals beyond the current smoke matrix.
 - Stage 8 proves the complete localhost flow in a real browser.
@@ -1391,6 +1474,7 @@ _Original plan below._
 **Why**: AI chat quality cannot be fixed by prettier weekly-plan prose or local-only clarification state. The assistant needs a VPS-safe, cross-device system of record for what projects, task groups, recurring workflows, and user preferences mean, including synthetic entities like `Work`, `My Projects`, and `uncategorized`.
 
 **Scope**:
+
 - Add durable server-backed entities for project/task/week/preference/synthetic/workflow context.
 - Store clarification history, answers, dismissals, corrections, and "generate with uncertainty" choices so the assistant does not repeatedly ask the same questions.
 - Support non-UUID entity keys without writing them into UUID-only Supabase columns.
@@ -1404,6 +1488,7 @@ _Original plan below._
 - Research decision update: do not introduce Neo4j/Memgraph/Graphiti as a separate runtime now. Postgres entities/edges plus pgvector keeps RLS, migrations, VPS ops, and localhost parity simpler; revisit only after concrete temporal multi-hop use cases exceed recursive CTE/app-layer traversal.
 
 **Acceptance**:
+
 - Synthetic buckets persist through `ai_context_entities`/`ai_clarification_events`, not localStorage.
 - UUID-only project/task context calls filter non-UUID IDs and never throw `invalid input syntax for type uuid`.
 - Weekly planning can recall saved answers for `Work`, `My Projects`, and `uncategorized` across sessions/devices.
@@ -1413,6 +1498,7 @@ _Original plan below._
 - Entity relationships can be queried server-side without introducing Neo4j/Memgraph deployment complexity.
 
 **Progress**:
+
 - 2026-06-08: Pending AI memory write tests now prove clarification events, recommendation feedback, and parameter beliefs all queue during schema-cache/migration misses and flush after the server schema becomes available. This protects saved clarification answers, postpone/dismiss/simplify learning signals, and EVPI belief updates during VPS rollout timing gaps.
 - 2026-06-08: Broad non-weekly task answers now retrieve server-backed `ai_context_entities`, `ai_clarification_events`, `ai_parameter_beliefs`, and `ai_recommendation_feedback` by text entity key before formatting task-list responses. This closes the gap where weekly planning could recall synthetic bucket context but general "what should I do" answers still ignored durable `Work`/`My Projects`/`uncategorized` memory.
 - 2026-06-08: Ordinary freeform/ReAct prompts and non-task deterministic formatter paths now receive a bounded global memory packet from server-backed workflow/preference entities, recent clarification events, and parameter beliefs. This makes the first Slice 1 requirement closer to true: assistant responses are no longer prompt-only when no task-list tool result is present.
@@ -1462,6 +1548,7 @@ _Original plan below._
 **Why**: The chat should not dump long, generic recommendations when context is missing. This applies broadly to planning, prioritization, task breakdowns, "what should I do", and other agent answers, not only weekly planning.
 
 **Scope**:
+
 - Before producing a broad recommendation, detect missing context that would materially change the answer.
 - Ask one concise button-based clarification with optional free text by default.
 - Provide escape actions: generate with current info, show candidates only, pause/save.
@@ -1474,6 +1561,7 @@ _Original plan below._
 - Research decision update: one button answer is only enough when it resolves a low-EVPI slot or the user chooses to proceed with uncertainty. Complex/cold-start planning may use a short ladder, but still one question per turn with cooldown/dedupe.
 
 **Acceptance**:
+
 - Missing meaning/stakes/success criteria triggers one clarification card, not a full generic plan.
 - The assistant can proceed only when the user explicitly chooses to generate with uncertainty.
 - No answer ranks importance from project/task names alone.
@@ -1482,6 +1570,7 @@ _Original plan below._
 - Clarification events record `coverage_score_at_time`, `uncertainty_dimensions`, and answer path type when available.
 
 **Progress**:
+
 - 2026-06-08: Added server-backed `ai_parameter_beliefs` schema keyed by text `entity_key` rather than UUIDs, so synthetic buckets and workflow entities can store uncertainty slots such as impact, preferences, stakes, dependencies, and success criteria.
 - 2026-06-08: Clarification cards now continue automatically after the first saved answer, so the user never gets stuck in a required follow-up ladder. Additional context questions must be asked later only when they are high-value and non-repeated.
 - 2026-06-08: Added a focused AI memory schema contract test for server-backed entities, clarification events, recommendation feedback, Postgres-native graph edges, RLS, migration order, and missing-schema client fallback before any live Supabase migration step.
@@ -1517,6 +1606,7 @@ _Original plan below._
 **Why**: "Ask one question at a time" is not enough unless the system asks the right question. Clarification should be chosen because it has high expected value for the answer, not because it appears first in a hardcoded list.
 
 **Scope**:
+
 - Define structured planning parameters: project meaning, task context, impact/stakes, stakeholders, dependencies, energy fit, history, preferences, stale context, and later deadline/scope/success criteria.
 - Add heuristic EVPI scoring: uncertainty × task-planning impact × expected reduction − user-cost.
 - Use EVPI scoring to select the highest-value non-repeated clarification question.
@@ -1525,6 +1615,7 @@ _Original plan below._
 - Update belief confidence after user answers and use answer/feedback outcomes to learn impact weights over time.
 
 **Acceptance**:
+
 - When multiple clarification questions are possible, the selected card is the highest-value non-repeated question by EVPI score.
 - The assistant does not ask a lower-value question just because it appears first in the question list.
 - Clarification debug/event context includes targeted parameters and score metadata.
@@ -1532,6 +1623,7 @@ _Original plan below._
 - The heuristic remains local/fast and does not add extra LLM calls to the hot path.
 
 **Progress**:
+
 - 2026-06-08: Added local heuristic EVPI scoring over existing coverage dimensions, including targeted parameters, user cost, selected score, skipped candidates, clarification debug display, and event context metadata. Mounted tests verify project-meaning questions outrank broad week questions when project meaning is the high-value missing context, and recently answered questions are skipped.
 - 2026-06-08: Answered clarification events now derive/update server parameter beliefs with confidence, impact weight, selected label/free text, question evidence, and missing-dimension keys. This keeps EVPI inputs durable for VPS/local parity instead of recalculating only from transient chat state.
 - 2026-06-08: Broad clarification coverage now consumes durable parameter beliefs, not only recent events. Unit tests prove a saved high-confidence `rankingFocus` belief suppresses the response-direction card and lets the assistant proceed without repeating the ladder question.
@@ -1551,6 +1643,7 @@ _Original plan below._
 **Why**: "High quality" must be testable. The current failures are not only bugs; they are answer-quality regressions: filler prose, unsupported importance, overwhelming length, repeated questions, and recommendations that ignore consequences, commitments, dependencies, emotional friction, and project momentum.
 
 **Scope**:
+
 - Add a strict task-ranking rubric with bounded weights: importance/impact, life consequences, commitments, dependencies, project momentum, avoided work, energy/fit, urgency, workload realism, and confidence.
 - Add bad/acceptable/excellent answer criteria for weekly planning and broader chat recommendations.
 - Add automated checks that penalize generic phrases, unsupported ranking, missing evidence, excess length, and repeated clarification questions.
@@ -1561,6 +1654,7 @@ _Original plan below._
 - Research validation update 2: aggregate repeated postpone/dismiss reasons into preference facts, for example "deep work often postponed Friday" or "not important this month."
 
 **Acceptance**:
+
 - Regression tests fail if answers say a task is high stakes or meaningful from a name alone.
 - Tests fail on generic phrases like "looks like meaningful work" without evidence.
 - Tests cover postponed/dismissed suggestions, stale context, correction overrides, and uncertainty handling.
@@ -1568,6 +1662,7 @@ _Original plan below._
 - Tests include cold-start, conflicting corrections, high-uncertainty sets, adversarial free text, and citation audits for unsupported prioritization.
 
 **Progress**:
+
 - 2026-06-08: Added `auditWeeklyPlanQuality()` with bad/acceptable/excellent scoring and validation rejection for unsupported importance, generic substantial-work phrasing, weak consequence coverage, repeated templates, and overlong plans.
 - 2026-06-08: Added shared `auditChatResponseQuality()` for broader deterministic task answers so non-weekly outputs can be repaired when they are verbose, generic, metadata-only, or missing task cards.
 - 2026-06-08: Broad post-clarification answers now fail the chat-quality audit when they do not visibly honor the user's clarification evidence, forcing repair to the concise grounded fallback instead of accepting a plausible but context-ignoring answer.
@@ -1588,6 +1683,7 @@ _Original plan below._
 **Why**: A trustworthy AI planner needs user agency. Suggestions should be reviewable cards with controls, not prose the user has to mentally parse and correct.
 
 **Scope**:
+
 - Render concise recommendation cards with "why now", expected impact, tradeoff, confidence, and inline reasoning disclosure.
 - Add controls for accept/time-block, postpone, dismiss with reason, explain more, and adjust preferences.
 - Save feedback as memory events so dismissed or postponed suggestions do not keep reappearing unchanged.
@@ -1598,6 +1694,7 @@ _Original plan below._
 - Research validation update 2: add reason categories such as too_hard, low_energy, not_important, wrong_context, already_done, needs_more_info, and free-text evidence.
 
 **Acceptance**:
+
 - Dismissed suggestions are downranked or hidden until cooldown/re-engagement.
 - Postponed suggestions respect the chosen revisit window.
 - User feedback changes future recommendations and is visible in memory/event history.
@@ -1605,6 +1702,7 @@ _Original plan below._
 - Postponement uses exponential backoff plus revisit triggers such as deadline proximity, weekly review, or user re-engagement.
 
 **Progress**:
+
 - 2026-06-08: Weekly recommendation controls now collect explicit postpone/dismiss/simplify reasons with button choices, persist `reasonCategory` + `revisitAt`, and immediately hide the rejected recommendation visually so the chat does not keep showing work the user just pushed back on.
 - 2026-06-08: Broad non-weekly inline recommendation cards now persist accept/timeblock/postpone/dismiss feedback directly to `ai_recommendation_feedback` even without a weekly-plan recommendation object, and the new Later control hides the card immediately with a revisit date.
 - 2026-06-08: Guest/localhost inline recommendation feedback now persists to the AI-memory local fallback instead of throwing without auth, so postpone/dismiss reasons can influence later broad answers before Supabase auth or schema availability.
@@ -1619,6 +1717,7 @@ _Original plan below._
 **Why**: The sidebar currently appears to hang while the bridge thinks. The user needs to see what phase is slow and the app needs debug data to explain latency and quality failures.
 
 **Scope**:
+
 - Show concise live phases: reading tasks, retrieving memory, deciding whether to ask, generating answer, formatting.
 - Add timing metadata for each phase and structured fallback reasons.
 - Avoid duplicate "Thinking" rows when a more specific phase is running.
@@ -1628,12 +1727,14 @@ _Original plan below._
 - Research validation update 2: timeline phases should map to the agent loop: Retrieve, score uncertainty, clarify/generate, cite/format, record outcome.
 
 **Acceptance**:
+
 - The activity timeline shows the current phase within one second.
 - Weekly planning has bounded timeouts and a safe reliability fallback instead of spinning.
 - Debug metadata identifies whether the answer was clarification-first, generated with uncertainty, model-planned, or fallback.
 - Slow answers can be attributed to task read, memory retrieval, bridge generation, formatting, or persistence.
 
 **Progress**:
+
 - 2026-06-08: Chat phase activity events now update in place, preserve elapsed timing metadata, and annotate key paths such as clarify-first, structured-model, reliability-fallback, and quality-repair.
 - 2026-06-08: Sidebar activity rows show concise elapsed timing so slow phases are visible without dumping debug prose into the answer.
 - 2026-06-08: Clarification continuations now add a visible "Answer queued" activity row when the user answers while generation is settling, then mark it as accepted when the queued continuation is sent. This prevents the UI from looking inert after saving a clarification answer.
@@ -1655,6 +1756,7 @@ _Original plan below._
 **Why**: The system should improve all FlowState chat answers over time, not only "plan my week." The assistant should remember user preferences, corrections, recurring project meanings, task-selection hints, and answer-quality feedback.
 
 **Scope**:
+
 - Introduce shared context retrieval for planning, prioritization, task breakdown, next-action, grouping, and reflective coaching intents.
 - Add preference memory for concise/detailed mode, question frequency, planning style, and tolerated uncertainty.
 - Promote user corrections into memory and suppress previously rejected framings.
@@ -1665,6 +1767,7 @@ _Original plan below._
 - Research validation update 2: add procedural preferences for concise/detailed mode, question tolerance, planning ritual style, and preferred amount of automation.
 
 **Acceptance**:
+
 - The same project/context answer improves later "what should I do", weekly plan, and task breakdown requests.
 - User corrections stop repeated wrong framing.
 - Stale context prompts are short, button-based, and respect cooldowns.
@@ -1672,6 +1775,7 @@ _Original plan below._
 - Cold-start behavior degrades gracefully to neutral candidates or one lightweight preference question.
 
 **Progress**:
+
 - 2026-06-08: Added a deterministic `response_quality` clarification card before high-materiality non-weekly task recommendations so day plans, smart lanes, and prioritization/overwhelm prompts can ask one button-based direction question instead of dumping broad prose.
 - 2026-06-08: Response-quality clarification answers now route back into the matching deterministic flow (`day_plan`, `smart_lanes`, or general task recommendation) instead of falling through as vague freeform continuation text.
 - 2026-06-08: Broader non-weekly task answers now use the shared uncertainty policy for ask/proceed/neutral decisions instead of a fixed hardcoded ask path. Focused tests cover high-materiality broad recommendations, tiny task sets that proceed with uncertainty, and cold-start neutral candidates.
@@ -1697,6 +1801,7 @@ _Original plan below._
 **Why**: Research validation flagged that plans will keep feeling repetitive unless accept/postpone/dismiss actions become durable learning signals. Postponed work should not reappear every plan unchanged, and accepted work should become evidence of what the user actually follows through on.
 
 **Scope**:
+
 - Add a server-backed `recommendation_feedback` table or equivalent event type.
 - Persist action, reason enum, optional free text, revisit date, recommendation/task IDs, and outcome signals.
 - Downrank or hide postponed/dismissed suggestions until revisit/cooldown.
@@ -1706,11 +1811,13 @@ _Original plan below._
 - Store `implicit_positive` signals from timer start/completion separately from explicit feedback.
 
 **Acceptance**:
+
 - A dismissed recommendation does not immediately reappear as a top suggestion.
 - A postponed recommendation respects the revisit date.
 - Feedback changes ranking evidence in later weekly/next-action responses.
 
 **Progress**:
+
 - 2026-06-08: Added mounted regression coverage that verifies a postponed weekly recommendation saves `generatedPlanId`, `recommendationId`, task/project entity key, reason category, revisit date, and becomes visually suppressed in the current plan.
 - Feedback reason patterns become inspectable preference memory rather than hidden ranking magic.
 - 2026-06-08: Broad non-weekly task-answer memory now retrieves recent `ai_recommendation_feedback` by UUID task IDs and text entity keys (`task:*`, `project:*`), so inline accept/postpone/dismiss signals can affect later broad answers even when task IDs are local or synthetic.
@@ -1733,6 +1840,7 @@ _Original plan below._
 **Why**: Research validation flagged memory bloat and stale facts as the biggest architectural gap. Append-only clarification events are useful for auditability, but without summarization and retention the system will get slower, noisier, and harder to trust.
 
 **Scope**:
+
 - Define fact promotion rules: what becomes durable memory vs. event-only evidence.
 - Add confidence decay and stale confirmation rules.
 - Summarize old events into compact semantic facts while preserving corrections.
@@ -1743,12 +1851,14 @@ _Original plan below._
 - Archive old low-value events after a defined window while keeping corrections and source links auditable.
 
 **Acceptance**:
+
 - Memory retrieval stays bounded as event count grows.
 - Old facts become stale and ask for confirmation instead of being reused as fresh truth.
 - Corrections remain auditable after summarization.
 - Stale facts trigger confirmation when accessed for a materially important recommendation.
 
 **Progress**:
+
 - 2026-06-08: Added a central `memoryLifecycle` policy that computes effective confidence with decay/reinforcement, flags explicit stale dates and old confirmations for refresh, detects noisy event history for summarization, and counts year-old events for retention/archive follow-up.
 - 2026-06-08: Weekly memory retrieval diagnostics now include lifecycle summary fields (`staleEntityKeys`, `refreshEntityKeys`, `summarizeEntityKeys`, `archiveEventCount`, `lowConfidenceEntityCount`) without injecting raw memory text into normal prompts.
 - 2026-06-08: Verified the lifecycle slice with focused lifecycle/retrieval/sidebar tests, the AI regression bundle, `npm run type-check`, and localhost web `npm run build`; Electron packaging remains intentionally deferred for this lane.
@@ -1778,6 +1888,7 @@ _Original plan below._
 **Why**: Research validation flagged retrieval latency as a risk. Server memory improves answer quality but can make the sidebar feel slow unless retrieval is exact, selective, cached, and progressively enhanced.
 
 **Scope**:
+
 - Retrieval order: exact entity keys, structured filters, recent events, semantic/vector recall only when needed.
 - Add cache keys and short TTLs for active conversation/project memory.
 - Track retrieval timings and source counts in debug metadata.
@@ -1786,12 +1897,14 @@ _Original plan below._
 - Support optional pgvector/vector_embedding later, but keep exact key lookup as the primary source of truth.
 
 **Acceptance**:
+
 - Clarify-first path appears quickly even when semantic retrieval is skipped or slow.
 - Memory retrieval has a clear timeout/fallback that does not produce fake certainty.
 - Debug data identifies cache hit/miss and retrieval stage timings.
 - Memory retrieval can return "insufficient coverage" as an intentional state instead of forcing generation.
 
 **Progress**:
+
 - 2026-06-08: Extracted weekly memory retrieval into a bounded SQL-first helper. The helper retrieves UUID-only legacy contexts, server context entities, clarification events, recommendation feedback, and graph edges separately so synthetic buckets never enter UUID-only calls. Semantic/vector recall remains pgvector-ready metadata only until the database function is available. Focused tests cover bounded diagnostics, feedback/event counts, synthetic bucket safety, and timeout fallback.
 - 2026-06-08: Added `broadMemoryRetrieval` for non-weekly task-list answers. The helper keeps UUID-only legacy calls filtered to real UUIDs, sends synthetic/local entities through text keys (`project:uncategorized`, `task:local-task`), includes safe quoted evidence from parameter beliefs and recent clarification answers, and returns concise retrieval diagnostics for future debug display.
 - 2026-06-08: Added `globalChatMemory` for non-task/freeform responses. It exact-fetches workflow/preference entities, recent clarification decisions, and selected parameter beliefs with a 1.5s timeout in the chat pipeline, producing a compact quoted-evidence packet instead of raw memory prose.
@@ -1809,6 +1922,7 @@ _Original plan below._
 **Why**: Research validation flagged privacy and prompt injection risk. User-authored memory can contain private data and arbitrary text, so it must remain tenant-scoped and must not become an instruction channel.
 
 **Scope**:
+
 - Verify RLS for context entities, clarification events, and recommendation feedback.
 - Add cross-user access tests for memory tables.
 - Sanitize/free-text handling: store raw user text as evidence but inject it into prompts only as quoted data.
@@ -1817,12 +1931,14 @@ _Original plan below._
 - Keep raw user text out of system-role instructions; inject as quoted evidence with source labels only.
 
 **Acceptance**:
+
 - One user cannot read or write another user's AI memory rows.
 - Free-text memory cannot override system rules in prompt construction.
 - Memory rows are inspectable and deletable through supported code paths or documented migration follow-up.
 - Prompt-injection-like memory text cannot change output policy or cross-entity retrieval boundaries.
 
 **Progress**:
+
 - 2026-06-08: Added quoted/sanitized prompt evidence handling for AI memory and an explicit policy that saved user free text is evidence only, not an instruction channel.
 - 2026-06-08: Weekly planning now treats stale project/task context as an uncertainty dimension and asks a short refresh question instead of silently ranking from expired memory.
 - 2026-06-08: Settings > AI memory debug now has a Clear action for the new server-backed AI memory layer. It removes user-scoped AI context edges, recommendation feedback, parameter beliefs, clarification events, context entities, pending AI-memory writes, and local fallback rows, with tests covering both guest/local and authenticated server deletion paths.
@@ -1840,6 +1956,7 @@ _Original plan below._
 **Why**: Research validation flagged that "uncertainty score" was too vague to implement consistently. The assistant needs a deterministic policy for ask vs. proceed with uncertainty vs. neutral candidates.
 
 **Scope**:
+
 - Compute coverage across impact, energy fit, stakeholders/commitments, dependencies, history, and preferences.
 - Compute materiality by intent: weekly planning and prioritization are high materiality; mechanical list/show actions are low materiality.
 - Ask one question when coverage is below 0.5 and materiality is high.
@@ -1847,11 +1964,13 @@ _Original plan below._
 - For cold-start, show one lightweight question or neutral candidates without ranking claims.
 
 **Acceptance**:
+
 - The same task set consistently chooses ask/proceed/neutral based on coverage and intent.
 - Low-context weekly planning does not produce a ranked plan unless the user chooses uncertainty.
 - Mechanical actions are not blocked by unnecessary clarification.
 
 **Progress**:
+
 - 2026-06-08: Extracted the ask/proceed/neutral decision rule into a shared uncertainty policy, including high-materiality ask thresholds, medium-coverage proceed-with-uncertainty behavior, and neutral cold-start handling. Focused tests cover high/medium/low materiality, forced missing project/stale context, sufficient context, and cold-start behavior.
 - 2026-06-08: Routed mechanical overdue display requests separately from overdue triage. Unit coverage proves `show overdue` / `list overdue tasks` still retrieve overdue tasks but have no `overdue_triage` response mode, while `triage overdue tasks` remains high-materiality and asks before ranking. Browser coverage proves the visible chat shows data without a clarification gate for `show me overdue tasks`.
 - 2026-06-08: Added a direct uncertainty-policy regression for low-materiality mechanical requests with non-empty candidates and very low coverage. These now proceed with visible uncertainty instead of being blocked behind a clarification question, preserving the distinction between list/show actions and high-materiality ranking.
@@ -1865,12 +1984,14 @@ _Original plan below._
 **Why**: Research validation recommended scoring answer quality across groundedness, brevity, uncertainty, learning, user control, realism, and safety. FlowState needs this as an evaluation suite, not subjective review.
 
 **Scope**:
+
 - Add a bad/acceptable/excellent rubric for groundedness, scannability, uncertainty handling, learning/adaptation, user control, realism, and safety.
 - Add citation audits proving recommendations reference supplied task/memory evidence or explicitly mark unknown.
 - Add LLM-as-judge or scripted checks for filler, unsupported prioritization, repeated questions, and prompt-injection vulnerability.
 - Include human-review scenarios for cold-start and conflicting memory.
 
 **Acceptance**:
+
 - Eval fails on fake reasoning even when prose sounds polished.
 - Eval fails on broad generic plans that exceed the low-overwhelm contract.
 - Eval catches repeated clarification questions inside cooldown.
@@ -1879,6 +2000,7 @@ _Original plan below._
 - Eval fails when recommendation cards lack feedback controls or learning signals.
 
 **Progress**:
+
 - 2026-06-08: Extended `auditChatResponseQuality()` with executable checks for response path, coverage score, high materiality, structured-output failure, deterministic fallback, repeated post-clarification questions, visible uncertainty, feedback controls, escape hatches, debug disclosure, and learning signals.
 - 2026-06-08: Added a structured recommendation citation audit. Recommendations now fail quality checks when they cite only task metadata or project names as context, pass when they explicitly mark project/context evidence unknown, and score excellent only when task evidence is paired with real success/stakes/why/dependency context.
 - 2026-06-08: Wired the structured citation audit into weekly-plan validation and weekly quality scoring. A model weekly plan can no longer satisfy "project understanding" by citing a grounded project label; it must cite real project/task context or explicitly mark context unknown.
@@ -1906,6 +2028,7 @@ _Original plan below._
 **Why**: The user should not be asked to test half-built behavior. Localhost must prove the full chat loop before Electron or user validation: context retrieval, one-question clarification, saved answer continuation, concise output, feedback controls, and slow-phase debug.
 
 **Scope**:
+
 - Run the localhost app and test the chat in browser against the real UI, not only unit tests.
 - Verify the weekly plan path asks before broad output when context is missing.
 - Verify answering a clarification persists locally/server-side when schema exists or continues with quoted answer fallback when schema is missing.
@@ -1914,12 +2037,14 @@ _Original plan below._
 - Capture debug evidence for retrieval, clarification, generation, and persistence phases.
 
 **Acceptance**:
+
 - Browser test evidence shows the user-visible behavior changed.
 - No active test case leaves the sidebar stuck after a clarification answer.
 - No generic plan dump appears before the clarification gate is satisfied or bypassed explicitly.
 - Known missing pieces are listed as lane tasks, not handed to the user as "please test."
 
 **Progress**:
+
 - 2026-06-08: Localhost smoke against `http://127.0.0.1:5546` seeded ambiguous tasks, sent "what should I do next?", verified exactly one clarification card, no recommendation cards/long-plan markers before answering, a second follow-up after a button-only answer, enabled input, and no stuck running activity. Screenshot evidence: `/tmp/flowstate-ai-chat-quality-smoke-pass.png`.
 - 2026-06-08: Added repeatable guest-mode Playwright smoke `tests/e2e/ai-chat-quality-local.spec.ts` plus dedicated localhost config `tests/e2e/playwright.ai-chat-quality-local.config.ts`. The smoke seeds the real `FlowStateReadCache` IndexedDB layer used by the current cache-first app boot, opens the real AI sidebar, sends "Help me plan this week from my tasks", verifies exactly one clarification before any weekly plan/inline cards/candidate-card barrage, answers one clarification, verifies no follow-up gate appears, verifies no running activity row remains, verifies the input is enabled, and captures `/tmp/flowstate-ai-chat-quality-stage8.png`.
 - 2026-06-08: Extended the localhost smoke to cover the post-clarification plan and feedback loop. After the user answers the clarification ladder, structured-model failure now falls back to a compact deterministic quick draft instead of the empty "not reliable enough" plan, no second "quick question before ranking" appears, repeated unknown-stakes wording is suppressed, the "Why ask?" debug disclosure exposes coverage/retrieval/EVPI details, postponing a recommendation opens reason/revisit controls, saving feedback hides the recommendation immediately even in guest mode, and no running activity row remains.
@@ -1951,11 +2076,13 @@ _Original plan below._
 **Why**: The user explicitly paused Electron work for this flow. Electron packaging and updater verification should happen only after localhost proves the behavior is correct.
 
 **Scope**:
+
 - Re-enable Electron build only after localhost AI chat QA passes.
 - Run desktop-specific UI checks for the sidebar and updater delivery.
 - Build Electron, verify update artifacts, then deploy only when explicitly re-enabled.
 
 **Acceptance**:
+
 - `npm run electron:build` is not used as proof for this lane until localhost is stable.
 - Electron updater work resumes only when the user asks to move from localhost to desktop delivery.
 
@@ -1968,6 +2095,7 @@ _Original plan below._
 **Why**: The project/task understanding memory layer is implemented in code, but production still needs the Supabase migration applied and a live chat pass confirming that button answers persist, are recalled, and change future planning evidence.
 
 **Scope**:
+
 - Apply `supabase/migrations/20260607190000_ai_context_memory.sql` to the live Supabase project.
 - In Electron, answer one project-understanding clarification card and verify `project_contexts` plus `memory_events` rows are created.
 - Ask for a weekly plan again and verify recommendations cite `projectContext`/`taskContext` or explicitly mark `missingContext`.
@@ -1981,6 +2109,7 @@ _Original plan below._
 **Why**: `supabase/migrations/20260608090000_ai_clarification_memory.sql` adds a general clarification-memory schema, but the current app still uses the earlier project/task context tables. Keep the additive migration preserved in git, then apply it only when the UI/service path writes and reads these records.
 
 **Scope**:
+
 - Wire the clarification answer flow to `ai_context_entities` and `ai_clarification_events`, or remove the migration before release if the older `project_contexts`/`task_contexts` schema remains the chosen path.
 - Apply the migration to production only after the code path is live-ready.
 - Validate RLS with one user-owned answer and one rejected cross-user access attempt.
@@ -1991,9 +2120,10 @@ _Original plan below._
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-06-06, Electron v1.4.93 deployed) | **Depends on**: TASK-1814 (AI chat now intelligent)
 
-**Why**: The original primary ask. When the user feels overwhelmed, the AI should propose a concrete reordered plan for the day — not just list tasks. TASK-1814 made the chat reason well + render grouped prioritization cards; this turns that reasoning into an *actionable reorder* (sequence + time-blocks the user can accept/apply).
+**Why**: The original primary ask. When the user feels overwhelmed, the AI should propose a concrete reordered plan for the day — not just list tasks. TASK-1814 made the chat reason well + render grouped prioritization cards; this turns that reasoning into an _actionable reorder_ (sequence + time-blocks the user can accept/apply).
 
 **Scope**:
+
 - An "I'm overwhelmed" entry point (button + natural-language trigger) that runs the prioritization brain and returns a sequenced day plan.
 - Reuse the grouped-cards rendering (`cardGroups` metadata, `cardsBlock.ts`) — each group becomes a block of the day, ordered, with the stake reason.
 - "Apply this order" action: write the proposed order back (respect canvas geometry invariants — only via the proper task-order write path, never sync).
@@ -2012,6 +2142,7 @@ _Original plan below._
 **Why**: The second original ask. When creating a task lane, the AI should (a) suggest strong lanes for the user's work, and (b) break a large task down into actionable sub-tasks placed into that lane.
 
 **Scope**:
+
 - "Suggest lanes" — AI proposes lane names/themes from the user's actual tasks + work patterns (reuse rich-data context).
 - "Break this down into the lane" — given a large task, emit a structured breakdown (reuse the `useAITaskAssist` `breakDownTask` JSON contract, already tested) and create the sub-tasks into the chosen lane via TASK-1812's add-to-lane path.
 - Structured output + index-referenced items like the cards block, so results render as reviewable items before commit.
@@ -2039,6 +2170,7 @@ _Original plan below._
 **Why**: Trial the useful parts of `obra/superpowers` inside FlowState without letting its always-on workflow override this repo's existing MASTER_PLAN, OMX, autonomy, Electron release, and push rules.
 
 **Scope**:
+
 - Add only namespaced, project-local Superpowers support skills for debugging, TDD, verification, and code review.
 - Do not install the intrusive always-on `using-superpowers` workflow or branch-completion/worktree flows in v1.
 - Keep the install limited to `.claude/skills` plus the local skill registry; no app runtime files, Codex global install, Electron build, or deploy.
@@ -2173,7 +2305,15 @@ _Original plan below._
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-22) | **Depends on**: TASK-1797, TASK-1930 | **Related**: TASK-1943
 
-**Acceptance**: a cancelled ordinary quit restores exactly one authenticated sidecar without killing the live app; genuine final exits keep it stopped; lifecycle, packaged localhost, and Hermes task-read proof must pass.
+**User evidence**: Hermes planning repeatedly failed its FlowState health check while the FlowState Desktop process remained open. The packaged journal showed a duplicate/cancelled quit stopped the Local Task API sidecar, then every renderer heartbeat was rejected by the permanent final-shutdown latch.
+
+**Acceptance**:
+
+- A cancelled ordinary Electron quit rolls back the Local Task API final-shutdown latch without killing the running app.
+- Exactly one replacement sidecar starts and receives the retained signed-in session, renderer auth state, timer snapshot, and workspace context.
+- A genuine updater/final exit keeps the sidecar permanently stopped.
+- Focused lifecycle tests, Electron type checking, packaged build, localhost health, and a live Hermes task read all pass.
+- The Hermes watchdog remains fail-closed for a generic running-but-unhealthy FlowState app instead of force-killing possible unsaved work.
 
 ### ~~BUG-1974~~: Task state disagrees across filtered views, quick tasks, Canvas, and edit entry points (✅ DONE)
 
@@ -2193,9 +2333,11 @@ _Original plan below._
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-24) | **Related**: BUG-1974, TASK-1947
 
-**Exact failure mode**: Done status, All Active, duration, restored state, and saved views could remain active together, hiding a canonically completed task and blocking the visible right-click reopen path.
+**Exact failure mode**: selecting the explicit Done status left the All Active smart view active, while selecting All Active left the Done status active. Those mutually exclusive filters produced an empty Catalog even though the completed task existed canonically, blocking the visible right-click Mark as To Do path.
 
-**Current proof boundary**: mutual exclusivity and explicit-Done visibility are enforced in store, persistence, saved views, lists, project counts, and sidebar badges with focused regressions; packaged Electron and broader recurrence/mixed-version permutations remain open.
+**Local fix and proof**: explicit Catalog status selection now clears the smart view, and explicit smart-view selection clears the status filter. Authenticated Chromium R14 completed a task offline through the Catalog right-click menu, proved database and independent-client convergence, reopened it through the visible Done filter and right-click Mark as To Do, then proved canonical planned status, independent-client todo state, and reload visibility.
+
+**Remaining**: ship and verify the packaged Electron surface; add batch, recurring, mixed-version, and server-committed-unacknowledged permutations through the cardinal consistency matrix.
 
 ### BUG-1976: Guest recurring completion survives visibly after durable storage rejects it (🔄 IN PROGRESS)
 
@@ -2223,6 +2365,265 @@ _Original plan below._
 
 **Release rule**: no recurring/cardinal issue may be called globally solved because one helper or one view passes. Open critical/high vectors remain machine-readable, and each release records the exact subset proved plus the unresolved risk list.
 
+**Progress — 2026-07-24, unit-suite safety net restored**:
+
+- Baseline measured, not assumed: the full unit suite reported **52 failed tests across 13 files** plus 14 unhandled rejections — not the ~17 previously recorded as test debt.
+- Root cause of the bulk of them was a harness gap, not product code. Durable writes are mandatory (`enqueueOperation` throws `IndexedDB is required for durable queued writes`; the read cache throws `Read cache scope is not configured`), but `tests/setup.ts` provided neither. Every mutation path — delete, move, undo, rollback, subtasks, task instances — aborted during setup, so those tests never reached their assertions and silently guarded nothing.
+- Fixed by giving the default test environment the contract production actually requires: `fake-indexeddb/auto` plus a default read-cache scope in `tests/setup.ts`. No test asserted the absence of either, so nothing depended on the gap.
+- Result: `src/stores/__tests__/tasks.test.ts`, `canvas-delete-contract`, `undo-race-condition`, `task-rollback`, `canvas-geometry-undo`, and `canvas-connection-undo` now run and pass — **80 tests recovered** that were previously inert.
+- Confirmed correct and unchanged: `deleteTask` already fails closed properly — on queue failure it restores the task, clears the pending write, refreshes the read cache, shows an error toast, and rethrows. The old test failure was harness noise masking correct behaviour.
+- One regression was caused and corrected during this work: the first version of the harness hook imported the scope API unconditionally, which broke 17 files that replace `readCacheDB` with a partial `vi.mock` (Vitest throws on reading an undeclared export). The hook now probes defensively and leaves self-mocking suites alone. `layout-noop-skip` additionally needed `shouldAdvanceTime` — group writes await IndexedDB, which cannot settle under a frozen clock.
+
+**Progress — 2026-07-24, silent-write class closed in Mini Canvas and Canvas sections**:
+
+- `useMiniCanvasActions.ts`: all 14 actions (subtasks, planning notes, user-drawn edges) dispatched `updateTaskWithUndo` fire-and-forget — not awaited, no catch, no user feedback. A rejected write left the node on screen as if saved, surfaced only as an unhandled promise, and vanished on reload. All 14 now route through a single awaited `persist()` helper that reports failure via toast and returns durability, so `addSubtask`/`addNote` yield an id only when the write actually landed.
+- Call sites corrected with it: `useMiniCanvas.createConnectedSubtask` and `addUserEdge` are now async, so an edge is never drawn against a subtask id from a failed write; `MiniCanvasOverlay` awaits both creation paths and focuses only a subtask that saved. `vue-tsc` found every one of these — they are exactly the callers that assumed a synchronous save.
+- `useCanvasSectionProperties.ts`: both `applyAllNestedSectionProperties` and `applySectionPropertiesToTask` had the same shape; both now await and report. Noted in-file: neither has a production caller today (every consumer imports only `getSectionProperties`), so they are kept correct rather than left as a trap.
+- Regression added: `tests/unit/mini-canvas/write-failure-visibility.test.ts` — 8 vectors forcing the durable write to reject and asserting the user is told. Verified failing before the fix (0 error toasts) and passing after.
+- `undo-entrypoint-contract` was updated, not weakened: it greps source text, so the new single seam changed the literal while the contract (undo-aware, never the non-undo store method) is unchanged and still asserted.
+
+**Progress — 2026-07-24, three real defects found by re-reading the remaining failures**:
+
+- **Playwright reports were written into a tracked path.** `playwright.config.ts` pointed at `test-artifacts/playwright-report`, which `.gitignore` does not cover, so every E2E run dirtied the worktree — and a dirty worktree is precisely what forces release provenance to report `dirty: true`. Now `test-results/playwright-report`, which is already ignored. Related and still open: `playwright-report/index.html` is _tracked_ in git, so `.gitignore` cannot help it; untracking it needs the owner's go-ahead because it is one of the uncommitted files in the working tree.
+- **The workspace-switch data wipe was never tested.** `tests/unit/stores/workspace-store.test.ts` stubbed the task/project/canvas stores without `clearAll()`, so `switchWorkspace` threw before the wipe could be observed. The stubs now expose it and the test asserts all three stores are cleared — the step that stops one workspace's tasks leaking into the next.
+- **A destructive migration carried no stated safety contract.** `20260724060000_atomic_batch_permanent_delete.sql` hard-deletes from `public.tasks`. It is in fact safe — scope is proven first (raises 42501), the count check makes it all-or-none, and `trg_task_tombstone` fires BEFORE DELETE so tombstones exist and prevent resurrection — but none of that was written down. The contract is now documented at the statement, satisfying the policy check honestly rather than by relaxing it.
+
+**Progress — 2026-07-24, Focus completion silently dropped earned credit**:
+
+- `completeSession()` in `src/stores/timer.ts` dispatched `taskStore.updateTask(...)` fire-and-forget when crediting a finished pomodoro. A rejected write dropped `completedPomodoros` and `progress` with no sign anything failed: the session looked complete, and the count was back to its old value on reload. It is now awaited, and a failure tells the user the session finished but progress was not saved.
+- Left as-is deliberately: the `pomodoro_history` insert above it stays best-effort (it already logs on failure). It feeds AI work-profile analysis rather than user-visible task state, and the canonical writer matrix already tracks durable history/profile writes as W5 work.
+
+**Unit suite: 52 failures → 7 remaining**, all in the AI assistant surface and each still to be classified:
+
+**Progress — 2026-07-24, the AI-assistant failures resolved; both were latent test bugs, not product defects**:
+
+- `broad-memory-retrieval` (3 failures) was a **time bomb**. AI memory is dropped as an `old_confirmation` once it is more than 45 days past its last confirmation. Every fixture in that file is dated June 2026, and four of the retrieval calls let `now` default to the real clock — so the tests passed when written and began failing the day wall-clock time crossed the window. `now` is now pinned to `NOW = 2026-06-08T10:00:00Z` beside the fixtures, so they assert the freshness rule instead of the date the suite happens to run. The staleness filter itself was verified correct and left untouched.
+- `ai-sidebar-first` (4 failures) was a **race, not a behaviour gap**. Applying a day plan, smart lanes, a duplicate follow-up override, or a clarification answer all finish by writing a durable audit + rollback snapshot to IndexedDB. That settles on a macrotask, which `flushPromises()`/`nextTick()` do not wait for, so the assertions ran while the UI was still mid-apply — the button was genuinely still spinning. Smart lanes made this vivid: its second phase (assigning tasks to the lanes just created) only starts after phase one's write lands, so only one of the two expected batches existed at assertion time. All four now use `vi.waitFor`, which still fails on a genuine defect but no longer races the durable write.
+- Verified along the way, by reading the code rather than assuming: the day-plan and smart-lane apply paths already build correct command batches, already set their applied state, and already surface errors through `dayPlanError`/`smartLaneError`.
+
+**Unit suite: 52 failures → 0 in the AI surface.** For the record, the two files' original symptoms and their real causes:
+
+- `tests/unit/ai-sidebar-first.test.ts` (4) — appeared as "cards not applied through command batches" and a missing "Plan applied" confirmation; actually assertions racing an unsettled IndexedDB write.
+- `tests/unit/broad-memory-retrieval.test.ts` (3) — appeared as "remembered answers not returned"; actually fixtures aged past the 45-day freshness window.
+- Separately noted, not a product defect: `tests/unit/local-api/exact-task-runtime.test.ts` fails intermittently under full-suite load and passes alone. Its `unusedPort()` helper has a TOCTOU race — the port is probed, released, then handed to a spawned sidecar, which another parallel worker can claim first.
+
+**Typecheck and lint**: `vue-tsc --noEmit` is clean across all changes. The two ESLint errors touching changed files (`MiniCanvasOverlay` boolean-shorthand, unused `MiniCanvasEdge` type import) were verified to exist identically at HEAD and are pre-existing, not introduced here.
+
+**Unit suite result: 52 failures + 14 unhandled rejections → 0 failures, 0 unhandled errors.** 4286 passing across 332 files, `vue-tsc` clean. The last unhandled rejection was a leaked mount in `ai-sidebar-first`: wrappers were never unmounted, so a render queued by the final test flushed after teardown and threw `window is not defined` from `BasePopover`'s `onMounted` listener registration. `enableAutoUnmount(afterEach)` now retires each wrapper with its test.
+
+**E2E baseline — first honest run**:
+
+- The suite had never been runnable here: no Playwright browser binaries were installed. `chromium`, `webkit`, and `firefox` are now installed. Auth and seeding were healthy throughout (`playwright@test.flowstate`, 2 projects, 8 tasks, 2 groups).
+- The first full attempt is therefore not a valid baseline — its early `webkit` results (83 failures) are all "browser missing", not product failures, and must be discarded. A clean re-run is required before any end-to-end claim.
+- Two real chromium failures did surface and stand on their own:
+  - `canvas-sync-regressions.spec.ts` **R7** — legacy day-group migrating to a UUID and syncing across clients. This one matters beyond itself: the file runs serial, so R7's failure **skipped R1, R2, R9, R10, R13, and R16** — the core canvas/sync, offline-drain, and workspace-switch regressions. Fixing R7 is what unblocks the most reliability-relevant E2E coverage in the repo.
+  - `real-bug-catcher.spec.ts` **27** — date picker popup visibility, timing out at 30s.
+
+**Fourth real defect, found by watching what the E2E run did to the worktree — visual regression could never fail**:
+
+- `tests/e2e/visual-baselines.spec.ts` _writes_ the reference PNGs in `tests/visual/baseline/` that `tests/visual/compare.mjs` compares against. Its own docstring says to run it explicitly, but nothing stopped it, so it ran as part of every full E2E run and overwrote the references with whatever the app looked like at that moment. The "expected" image was regenerated from the possibly-broken build, meaning a visual regression could not be detected — and five tracked PNGs churned on every run, feeding the same dirty-worktree problem that forces release provenance to report dirty.
+- Capture is now opt-in behind `CAPTURE_VISUAL_BASELINES=1`. Re-recording a baseline should be a deliberate act with a reviewable diff, never a side effect of running tests. The baselines this run had already clobbered were restored from git.
+
+**Progress — 2026-07-24, legacy day-group migration given automated evidence (was E2E-only)**:
+
+- Added `tests/unit/stores/canvas-legacy-group-migration.test.ts` — 6 deterministic checks covering the contract R7 exercises in a browser: a legacy `Monday` column is re-minted under a UUID and the unsyncable copy dropped; the migrated group actually reaches the sync queue as a `group/create` (the entire point, since `toSupabaseGroup` refuses non-UUID ids); two devices with different legacy ids derive the _same_ UUID so their copies converge instead of duplicating; tasks parented to the old id are re-pointed rather than orphaned; non-day legacy groups (`Done`, `1`) are deliberately left alone so dedup junk is not resurrected; and a second run is a no-op.
+- The mapper's refusal of non-UUID ids is reproduced in the test rather than stubbed away, since that refusal is the reason the migration exists.
+- **All 6 pass against current code**, which narrows R7 usefully: the migration logic and its enqueue are correct: R7's failure lies past the queue, at the drain-to-Supabase / realtime-propagation boundary that only the browser test covers. That is where to look next, not in the migration itself.
+- This also reduces the blast radius of R7: the migration contract no longer depends solely on a serial E2E spec that takes five other sync regressions down with it when it fails.
+
+**Fifth real defect — the migration reported success while writing nothing (found by the new unit coverage)**:
+
+- `migrateLegacyGroupIds` skipped creating the UUID group whenever one already existed **locally** (`if (_rawGroups.value.some(g => g.id === newId)) continue`). Present locally is not proof of present in Supabase — that copy may itself be a local-only group whose earlier write never landed. In that case phase 5 still deleted the legacy copy, nothing was enqueued, and the function still returned `{ migrated: legacy.length }`. The user was left with a day-column that exists on one device only, and the migration claimed it was migrated.
+- This is the exact cardinal pattern TASK-1977 exists to remove — success reported without a successful operation, the same family as BUG-1978.
+- Fixed: when the survivor already exists, it is now pushed through `updateGroup` (an idempotent upsert) so the reported migration corresponds to a real durable operation. Regression added and verified failing before the fix (`expected [] to include 'c2d8de82-…'`).
+
+**Sixth defect, test-infrastructure — a flaky failure that reads as a product failure**:
+
+- `tests/unit/local-api/exact-task-runtime.test.ts` probes a free port, releases it, then hands it to a spawned sidecar — a time-of-check/time-of-use gap another parallel worker can win. Under full-suite load the sidecar died with `sidecar exited with 1` (EADDRINUSE) and the file failed, while passing when run alone. Start now retries with a fresh port up to three times, and only for that specific signature, so a genuinely broken sidecar still fails.
+
+**R7 narrowed to its exact assertion (first run's error text)**:
+
+- R7 does **not** fail on the migration or on reaching the database. It gets past `no UUID Monday group in DB` — the row lands in Supabase. It fails on the final step: `client B never received the migrated group`, after a 12s `toPass` window.
+- So the failing boundary is live cross-client propagation of a _newly created_ group, not the migration. Read-through of that path shows the machinery is present and correct in principle: `useRealtimeSubscription` subscribes to `groups` with a `user_id`/`workspace_id` filter, and `updateGroupFromSync` explicitly handles the unknown-id case by pushing a new group rather than only updating existing ones.
+- Not yet concluded, deliberately: the first run had two confounders — heavy CPU contention and a webkit browser that did not exist — and a 12s realtime window is timing-sensitive under load. Whether R7 is a genuine propagation defect or an artefact of that run is what the clean re-run is for. No fix has been made to this path on a guess.
+
+**First E2E run totals, for the record and not as a baseline**: 504 passed, 100 failed, 179 skipped (28.8m). The webkit failures are confirmed environmental — the error is literally `browserType.launch: Executable doesn't exist at .../webkit-2227/pw_run.sh`. All three browsers are now installed and a clean run is in progress.
+
+**Clean E2E baseline (all three browsers installed): 564 passed, 18 failed, 204 skipped, 68 did not run (34.2m).** Failures triaged individually below rather than counted.
+
+**Seventh real defect — the backup safety net could fail silently forever (highest severity found so far)**:
+
+- `createBackup` reports failure by returning `null` and parking a reason on `state.error`; it does not throw. The auto-backup scheduler `await`ed it and **discarded the result**. So any persistent refusal — contradictory permanent-delete inventory, a suspiciously small backup, storage errors — stopped backups indefinitely while the UI showed nothing and the user went on believing their data was protected. The next signal would have been a failed restore, i.e. after data was already lost.
+- Not hypothetical: the live E2E run produced a real refusal, `Backup refused because contradictory permanent-delete inventory contains live task 3d853bb6-…`, during an ordinary run.
+- Fixed: scheduled backups now report their outcome. `BackupSystemState` gained `autoBackupHealthy`/`autoBackupError`, the failure is toasted **once on the transition into failure** (a 5-minute timer must not become a 5-minute nag), recovery is reported and re-arms the warning, and a thrown scheduler error is treated the same as a refusal. 5 regressions in `tests/unit/backup/auto-backup-failure-visibility.test.ts`, all verified failing before the fix.
+- Left alone deliberately: whether `assertNoTombstoneContradictions` _should_ refuse outright rather than quarantine the contradiction is a product decision about restore safety, not a bug to flip unilaterally. What was clearly wrong was the silence, and that is what was fixed.
+
+**Eighth — the entire mobile Safari surface had no evidence while appearing covered**:
+
+- `swipeTaskToEdit` built gestures with `new TouchEvent(...)`/`new Touch(...)`. WebKit exposes no `Touch` constructor, so every call threw `TypeError: Illegal constructor` on mobile-safari and took the whole Task Sheets suite down — the iPhone PWA surface was untested while showing as a covered spec.
+- Fixed portably: the component's handlers only read `e.touches[0].clientX/clientY`, so a plain cancelable `Event` carrying `touches`/`changedTouches` works identically in every engine. **12 of 13 mobile-safari tests went from failing to passing.**
+
+**Ninth — a test asserting a status the app never had**:
+
+- "status pills are visible — To Do, In Progress, Done" could only ever fail: `Task['status']` is `'todo' | 'done'`, and the only `in_progress` references in `src/` are Storybook fixtures. The mobile sheet was right; the test was wrong.
+- Corrected to the real contract and **strengthened rather than weakened**: it now asserts there is no third pill (so the sheet cannot drift from `Task['status']`) and that clicking a pill actually marks it active. **All 26 mobile task-sheet tests now pass across mobile-safari and mobile-chrome.**
+
+**E2E triage so far — 7 of 18 failures resolved.** Classified but not yet fixed:
+
+- `R7` (chromium + webkit) — reproduces reliably; fails at live cross-client propagation, past the database write. Genuine, still open.
+- `multi-tab-sync 2` (webkit) — 30s test budget exhausted before a `waitForTimeout(3000)`; webkit slowness, not a sync failure.
+- `view-loading 9` (webkit) — 4 CORS errors against local Supabase (`Origin http://127.0.0.1:5547 is not allowed`). Local test-environment CORS, not product; production CORS/CSP is an edge concern.
+- Still to triage: `backup-restore-live` (webkit), `board-date-drag` (webkit), `pwa-runtime 11` (webkit), `quicksort-postpone` (webkit + mobile-safari), `mobile-timer` (mobile-chrome).
+
+**Full E2E triage complete — every one of the 18 failures classified by re-running it in isolation rather than guessing**:
+
+Load artefacts (pass serially, failed only under `--workers=2` on this machine). These are not app defects, and equally not "fine" — the suite is not trustworthy under parallel load because its timeouts are tight relative to contention:
+
+- `backup-restore-live` (webkit), `multi-tab-sync 2` (webkit), `quicksort-postpone` (webkit) — all pass when run alone. `multi-tab-sync 2` exhausted its 30s budget before a `waitForTimeout(3000)`.
+- `mobile-timer` (mobile-chrome) — all 7 pass alone. Root cause is structural: timer state is a **per-user singleton synced through Supabase**, so parallel workers act as competing devices on one account. The file's `beforeEach` already stops a leftover timer, but that cannot help against a _concurrently_ running timer test in another file. Real fix is per-test users or a timer-exclusive project; not attempted, and not papered over with a cosmetic in-file `serial`.
+
+Chromium-only APIs counted as app failures (fixed):
+
+- `pwa-runtime 11` drives the network through `context.newCDPSession`, which only Chromium exposes — on webkit it threw `CDP session is only available in Chromium`, so **offline recovery looked broken on Safari when it had simply never been exercised**. Now an explicit `test.skip` on non-chromium, so the gap reads as a skip instead of a false failure. `pwa-runtime 10` carries the same latent trap (it escaped only because dev mode leaves CacheStorage empty and it skipped earlier) and was guarded the same way.
+
+Local environment, not product:
+
+- `view-loading 9` (webkit) — 4 CORS errors against the local Supabase (`Origin http://127.0.0.1:5547 is not allowed`). Production CORS/CSP is an edge concern, not in this repo.
+
+**Genuinely open, reproduced serially, cause not yet isolated — recorded rather than guessed at:**
+
+- **`board-date-drag` (webkit): a board card drags but never drops.** Confirmed engine-specific — the same test passes on chromium in 2.5s. The drag itself is fine: the assertion that the fallback clone actually translates passes, so the clone spawns and follows the cursor; it is the _drop_ that never registers, leaving the card in Overdue. Ruled out so far: the board does use SortableJS's mouse-based fallback (`:force-fallback="true"` in `KanbanColumn.vue`), so a synthetic mouse drag is the right driver, and the clone already carries `pointer-events: none !important`, so it is not shadowing `elementFromPoint`. This is a real Safari user-facing risk — on that engine a board drag can silently do nothing — and needs instrumented investigation, not a speculative patch.
+- **`R7` (chromium + webkit)**: reproduces reliably. The migrated group _does_ reach the database; it fails on live cross-client propagation within 12s. Still blocks R1, R2, R9, R10, R13, R16.
+
+**Unit suite after all of the above: 334 files, 4298 passing, 0 failures, 0 unhandled errors.**
+
+**E2E after the above fixes: 18 failures → 9, 564 → 570 passing (32.6m, `--workers=2`).** `board-date-drag` (webkit) did not recur, so it is flaky rather than deterministic — its earlier serial reproduction stands as a real Safari risk, but it is not reliably reproducible and must not be reported as fixed.
+
+**The structural finding behind most remaining flake: the whole E2E suite shares one account.**
+
+`tests/global-setup.ts` provisions a single `playwright@test.flowstate` user, and `tests/fixtures/test-ids.ts` pins fixed UUIDs for its seeded projects/tasks/groups. Every parallel worker therefore drives the _same_ dataset and the same per-user singletons — most sharply the timer, which syncs through Supabase, so two workers act as two competing devices on one account. That is why the same tests pass alone and fail under `--workers=2`.
+
+The proper fix is per-worker accounts, but it is not a small change: task IDs are the primary key, so the shared fixed-UUID fixtures cannot simply be duplicated per user — the whole fixture scheme would need per-worker identities. Not attempted here, and deliberately not faked with a cosmetic in-file `serial` that cannot affect cross-file contention.
+
+**Correction after actually running it — "serial is authoritative" was wrong.**
+
+The `--workers=1` run finished at **611 passed, 17 failed, 139 skipped, 87 did not run (1.1h)** — _more_ failures than the parallel run's 9, and a partly different set (`canvas-geometry-local`, `workblock-interaction`, `canvas-collapse-local`, `self-host-user-flows` appear only serially; several webkit load artefacts disappear). So serialising does not produce a truer answer; it produces a different one.
+
+The real property is worse than flakiness under load: because every test drives **one shared account with accumulating state**, results depend on execution _order_ in either mode. Some failures are load-induced, others are order-induced. Neither run alone can be quoted as "the app is verified end to end", and I am not going to quote one.
+
+`maxFailures` is not configured — the **87 "did not run" are tests suppressed inside serial-mode describes after an earlier failure in the same file**, R7 chief among them. That makes R7 the highest-leverage single failure in the suite: it both fails and hides a large block of sync coverage behind it.
+
+**R7 root-caused to a precise, real defect: newly created canvas groups never propagate live to other clients.**
+
+Narrowed by experiment, not by reading:
+
+1. The migration is not at fault. The UUID row reaches Supabase — R7's database assertion passes; only the final cross-client assertion fails. The new unit coverage for the migration is green.
+2. The row is fully readable by the other client. Reloading client B makes `Monday` appear immediately (`R7-DIAG clientB after reload: [... "Monday/74fc453b"]`). So RLS, `user_id`, and workspace scope are all correct — this is not a permissions or scoping problem.
+3. Realtime itself is healthy on that exact fixture: client B logs `📡 [REALTIME] Connected! 🟢`, and both **R2 (task update)** and **R9 (task create)** pass, reaching client B live. Task inserts propagate; group inserts do not.
+
+So the user-visible bug is: **create a day column on one device and another device will not show it until it reloads.** Ruled out along the way — `groups` is in the `supabase_realtime` publication; its SELECT policy is correct for personal scope; all `postgres_changes` bindings are registered before `subscribe()`; and the payload scope guard accepts a personal group row. The `realtime.subscription` table is empty even with clients connected on this Realtime version, so that probe cannot confirm which bindings the server actually holds — that is where the next investigation should pick up.
+
+R7 has been left failing with this analysis recorded in the spec itself, and the temporary diagnostics removed. **The assertion must not be relaxed to go green.**
+
+**Tenth real defect — "I removed this from the canvas and it came back" (vector: `maximal-task-and-subtask-field-roundtrip`, was MISSING)**:
+
+- Built the proof that did not exist: `tests/contract/task-field-roundtrip.test.ts` drives a task with **every optional field populated** through `toSupabaseTask` → `fromSupabaseTask` and asserts each field individually. The file that appeared to cover this (`backup-restore-field-fidelity.test.ts`) contained a single source-grep about which RPC is used and never checked one field.
+- It immediately found real data loss: **`canvasDismissed` was mapped in neither direction.** Removing a task from the canvas writes `{ isInInbox: true, canvasPosition: undefined, canvasDismissed: true }`; only the first two persisted. Canvas auto-placement treats a task as eligible when it has no position, is _not_ dismissed, has a due date and is not done — so after every reload the flag was gone, the task qualified again, and it was placed straight back. The user's explicit removal was undone by each refresh.
+- Fixed end to end: migration `20260724140000_task_canvas_dismissed.sql` (additive boolean, `NOT NULL DEFAULT false`, so existing rows keep today's meaning), both mapper directions, and the `SupabaseTask` type. Regressions: the field round-trip plus `tests/unit/canvas/dismissed-task-stays-off-canvas.test.ts`, which covers the reload behaviour and legacy rows written before the column existed.
+- 47 fields survive the round-trip. Three are excluded with written justification — `updatedAt`, `positionVersion`, `canonicalRevision` are server-owned by design — and a field-count floor makes the fixture fail if `Task` grows and the vector silently stops covering it.
+- **The suite then caught a real gap in my own fix**, which is the point of having it: `task-sync-payload-completeness` flagged that `canvas_dismissed` synced on CREATE but not on UPDATE — and dismissing a task _is_ an update, so the flag would still have been dropped on the very action that sets it. Wired into the update payload builder. `api-contract` separately required the new column in its known-column allowlist.
+- One collateral repair: `task-sync-payload-completeness`'s project_id check asserted a single exact source line, and the repo formatter wrapping that ternary across three lines broke it while the contract was untouched. Rewritten as a shape-matching regex, negative assertion kept.
+
+**Unit suite after this round: 336 files, 4350 passing, 0 failures, 0 unhandled errors; `vue-tsc` clean.**
+
+**Progress — 2026-07-24, no-evidence backup/restore vectors given real deterministic proofs**:
+
+Four previously-MISSING (or grep-only) critical/high vectors now have real automated evidence, each a passing regression backed by a named test — see the addendum table in `docs/process/flowstate-failure-scenario-audit-ledger.md`:
+
+- **`restore-graph-integrity`** (`tests/unit/backup/restore-graph-integrity.test.ts`, 9 tests) — `validateAndSortTasksForRestore`, the gate every restore passes through, had **zero** coverage. Now proven: parents ordered before children, duplicate-identity/parent-cycle/missing-parent backups refused rather than partially written, legacy `parent_task_id` honoured, and selective restore refusing an orphaned child unless its parent already exists in the target. Covers `restore-existing-id-semantic-conflict` and the hierarchy facet of the maximal-roundtrip vector. No product bug — behaviour was correct but unproven.
+- **`tombstone-contradiction-guard`** (`tests/unit/backup/tombstone-contradiction-guard.test.ts`, 7 tests) — `assertNoTombstoneContradictions` (refuses a backup where a tombstoned entity is also live) had zero direct coverage. Now proven to fire on exactly the contradictory task/project/group cases, ignore lane tombstones, and NOT fire on ordinary backups. Its silent refusal was the auto-backup defect fixed earlier this session.
+- **`group-field-roundtrip`** (`tests/contract/group-field-roundtrip.test.ts`, 23 tests) — canvas groups cross the same Supabase mapping as tasks; every optional `CanvasGroup` field asserted individually through `toSupabaseGroup`→`fromSupabaseGroup`. Lossless (collapse state, nesting, power-keyword, collect filters all survive); four fields excluded with written reasons (`taskCount`, `positionVersion`, `positionFormat`, `updatedAt` — all derived or server-owned); legacy non-UUID ids correctly refused rather than corrupted. No product bug — but groups had no field-level evidence before.
+
+**Session cumulative — unit suite: 4284 tests / 52 failing → 4389 tests / 0 failing, 0 unhandled errors, `vue-tsc` clean.** Ten real defects fixed (harness-inert tests, silent-write class in Mini Canvas / Canvas sections / Focus pomodoro credit, workspace-switch wipe never tested, tracked Playwright report path, undocumented destructive migration, silent auto-backup failure, untested mobile-Safari surface, a test asserting a nonexistent status, migration reporting success while writing nothing, and `canvasDismissed` never persisted). New regression coverage added across mini-canvas, backup/restore, field round-trips, migration, and mobile.
+
+**Honest remaining scope — NOT done, and not claimed done:**
+
+- **R7**: live cross-client propagation of newly-created canvas groups is a confirmed open product defect (root-caused; realtime-infra layer, needs deeper subscription investigation).
+- **`board-date-drag` on webkit**: intermittent, unconfirmed Safari drag-drop risk.
+- **~20 no-evidence vectors remain MISSING**: the shared-workspace restore family (5+ vectors), guest/account-transition restore, external-calendar ownership/replay, canonical-receipt/sequence contracts, and clock-jump ordering. These need real repros, not status flips.
+- **E2E is not order-independent** (single shared account); no parallel or serial run is authoritative until per-worker accounts exist.
+- **Nothing deployed**; the `canvas_dismissed` column is applied to local DB only and needs production approval.
+
+**Progress — 2026-07-24, second no-evidence pass: three more vectors proved, one more real defect fixed**:
+
+- **`duplicate-create-convergence-across-all-writers`** (`tests/unit/sync/duplicate-create-convergence.test.ts`, 5 tests) — the convergence chokepoint `safeCreateTask` (many writers, one immutable id) had no coverage. Proven against a stateful fake Supabase: new id inserts once; a repeat is idempotent ('exists', no second row); a tombstoned id is refused (anti-resurrection); a lost `23505` unique-key race resolves to 'exists' rather than an error or a duplicate; and N concurrent creates of one id converge on a single row. No product bug.
+- **`project-lane-membership-delete-atomicity`** (`tests/unit/stores/lane-delete-atomicity.test.ts`, 2 tests) — **real defect #11.** `deleteLane` cleared each member task's lane best-effort (`.catch(log)`) and then deleted the lane regardless, so a single failed detach left a task pointing at a deleted lane — a phantom-lane dangling reference. Fixed to fail closed: if any task still references the lane after the detach pass, the deletion is refused and the lane list rolls back. Regression verified failing before the fix.
+- **`canvas-geometry-and-membership-durability`** (group field-mapping facet) — `tests/contract/group-field-roundtrip.test.ts`, 23 tests, added in the prior pass and credited here.
+
+**Existing coverage credited, not re-proved**: `completion-side-effect-atomicity-and-exactly-once-undo` (completion-idempotency facet) is already covered by `timer-break-popup-loop.test.ts` (BUG-1892) and `timer-race-guard.test.ts`; `scope-aware-authoritative-load-completeness` (pagination facet) by `useTasksDatabase-pagination.test.ts` (keyset pagination past a server row cap). Neither needed new tests.
+
+**Session cumulative: unit suite 4284/52-failing → 4402/0-failing, 0 unhandled errors, `vue-tsc` clean. Eleven real defects fixed.**
+
+**Honest scope of what remains — 18 no-evidence vectors, split into a deferred team lane and 13 to fix now (2026-07-25, per user direction).**
+
+**Deferred — team-workspace lane (5 critical, NOT being progressed now, documented so they are not lost).** These all require a live multi-member shared workspace (roles, RLS, membership lifecycle, canonical receipts) and cannot be honestly proved with a fast in-memory unit test. Tracked as tasks #20–24:
+
+- `shared-restore-membership-transition-race` — restore while a member's role changes/revokes mid-op.
+- `shared-restore-deleted-workspace-orphan-recovery` — restore tasks whose workspace was deleted.
+- `shared-restore-assignee-and-reference-rebinding` — rebind assignee/project/lane/parent when the referent was removed.
+- `shared-restore-cross-workspace-id-collision` — same id in two workspaces.
+- `authorization-loss-membership-revocation-and-owner-transfer` — fail closed under lost access / ownership transfer.
+
+**To fix now — 13 non-team vectors (tasks #7–19).** Each will get a deterministic proof and any real bug fixed; where a facet genuinely needs a live Electron/filesystem/provider harness, that facet is flagged honestly rather than faked:
+
+1. `view-lifecycle-warning-and-action-survival` (#7)
+2. `general-user-undo-redo-action-graph-integrity` (#8)
+3. `backup-recovery-engine-parity` (#9)
+4. `comments-and-attachment-recovery-inventory` (#10)
+5. `guest-backup-retention-and-restart` (#11)
+6. `guest-account-transition-and-source-affinity` (#12)
+7. `clock-jump-queue-lock-cache-and-recurrence-ordering` (#13)
+8. `canvas-boot-hydration-writer-serialization` (#14)
+9. `quick-sort-focus-and-quick-task-lifecycle` (#15)
+10. `canonical-operation-receipt-sequence-and-inventory-contract` (#16)
+11. `external-calendar-ownership-clock-and-replay` (#17)
+12. `actual-exported-file-close-crash-and-independent-restore` (#18)
+13. `backup-independent-failure-domain` (#19)
+
+R7 (live group propagation) and the webkit board-drag intermittent remain open product defects, tracked separately.
+
+**Progress — 2026-07-27, feature-matrix coverage push (task #25)**: wrote real regressions for the previously untested/partial actions — projects (rename/color/view-type/create/delete/active-filter), UI (sidebars/focus-mode/language-direction/modals), notifications (snooze/dismiss/preferences), AI-chat conversations (create/switch/rename/delete + panel), settings auto-start toggles, brain-dump capture, canvas hotkeys (delete/group/input-guard/recurring-route), and first-run onboarding. Matrix now **110 features: 86 audited / 20 partial / 4 unaudited**; auditor green (164 evidence pointers verified). Full suite **4486 passing, 0 failing**.
+
+Honesty findings this push:
+
+- **Gamification was intentionally removed from the app** (XP/achievements/shop/credits — "too much"), confirmed by the user 2026-07-27. The matrix "Gamification" area has been deleted (no longer a feature) so the matrix is now **0 unaudited (86 audited / 20 partial of 106)**, and the CLAUDE.md status table was corrected from "✅ Working" to "❌ Removed". Harmless residual references remain (NOT dead imports): the `USER_GAMIFICATION` constant in `src/constants/dbTables.ts`, a comment in `main.ts`, a dead CSS comment in `AppHeader.vue`, and cyberpunk flavour text in the AI "Grid Handler" persona (`useAIChat.ts`) still mentioning XP/challenges — cosmetic leftovers flagged for optional cleanup. My earlier matrix had wrongly cited the unrelated Quick-Sort-stats test as gamification evidence — corrected before removal.
+- Remaining `partial` rows carry explicit gap notes (drag-reorder index computation, auto-update toggle-gating, invite/membership E2E, etc.) rather than being over-claimed as audited.
+
+**Progress — 2026-07-26, KDE widget zombie paused-timer FIXED (real defect, user-reported)**:
+
+- Symptom: the KDE widget showed a paused 25:00 timer that would not clear. Confirmed live: `/api/timer/current` served `is_active:true, is_paused:true, remaining_time:1500`, `device_leader_id:"kde-widget"`, with no app running and the heartbeat still advancing.
+- Root cause: the sidecar's `getLocalTimerResponse` only aged out INACTIVE snapshots and RUNNING sessions that drifted to zero. A **PAUSED active session never drifts**, so once the app stopped refreshing the snapshot (closed/crashed) it was served as active **forever** — a zombie the widget could not clear. Compounding it, the renderer's 10s heartbeat only re-pushed the snapshot when idle, never for a paused session, so even a live paused timer's snapshot went stale.
+- Fix, two parts: (1) extracted the decision into a unit-tested pure helper `server/local-api/localTimerSnapshot.cjs` that ages out a stale paused active session (age > the 15s grace → inactive), and (2) changed the renderer heartbeat in `src/stores/timer.ts` to re-push the current active session every ~10s so a _live_ paused timer stays fresh (< grace) while an orphaned one ages out.
+- Evidence: `tests/unit/local-api/local-timer-snapshot.test.ts` (7 tests incl. the exact zombie repro: paused + stale → inactive; paused + fresh → active). The three refactor-fragile source-grep contracts in `server-contract.test.ts` and one in `timer-sync.test.ts` were repointed at the helper (intent preserved, per the "assert the seam" doctrine).
+- Matrix: added feature `kde.timer-zombie-clear` (audited). The KDE area is now 11 audited + 1 partial.
+- **Activation note:** the running sidecar on the machine still has the old code — the current stuck timer clears once the app/sidecar is rebuilt+restarted with this fix (an Electron build+deploy, per rule 6/7, needs explicit approval).
+
+**Progress — 2026-07-25, ALL 13 non-team gaps now have evidence (tasks #7–19 complete).** Seven got new deterministic proofs, four were credited to existing suites after verification, and provider/filesystem live-only facets were flagged rather than faked. Two more real defects fixed:
+
+- **Clock-jump queue ordering (#13):** offline writes were replayed sorted by wall-clock `createdAt`, so a backward device-clock jump replayed writes out of order and reverted the user's newest edit. Fixed to sort by the monotonic insertion id.
+- **Task-edit unmount flush (#7):** `TaskEditModal.onUnmounted` cleared the autosave timer without flushing a pending debounced edit; a parent-driven unmount could drop it. Now flushes durably on unmount.
+  New proofs also cover: edit action-survival (write-failure-visibility), undo/redo action-graph integrity, backup→restore engine parity, attachment recovery + comments boundary, guest backup retention + guest→account transition, and external-calendar ownership/clock/replay. Credited-existing: canvas boot-hydration serialization, quick-sort/focus lifecycle, canonical receipt/sequence/inventory. Full details in `docs/process/flowstate-failure-scenario-audit-ledger.md` (passes 3–4).
+
+**Session cumulative: unit suite 4284/52-failing → 4438/0-failing, 0 unhandled errors, `vue-tsc` clean. Thirteen real defects fixed. Only the 5 DEFERRED team-workspace vectors remain MISSING** (they need a live multi-member workspace harness); R7 and the webkit board-drag intermittent remain the two open product defects.
+
+**Progress — 2026-07-25, safety-tooling gap found + living feature-audit matrix built**:
+
+- **The lint gate was silently disabled.** `npm run lint` was `timeout 180s eslint src || true` — it timed out before finishing AND swallowed its own exit code, so it always "passed" while 427 issues accumulated invisibly. When forced to run fully, all 427 were confirmed **cosmetic** (indentation, attribute wrapping, event-name casing, unused imports) — none were logic/data-loss. Fixed the script to `eslint src` (no mask, no premature timeout) so failures are visible again; added `lint:ci` (errors-only). The 427 cosmetic items are left for a deliberate `npm run lint:fix` rather than a half-applied auto-fix. Honest tradeoff recorded: `no-floating-promises` (which would auto-catch the silent-write class) needs type-aware linting this repo's lint config does not enable and cannot afford project-wide without a large slowdown — not forced.
+- **Codebase-wide silent-write sweep** (independent of the tests): the remaining fire-and-forget writes are all best-effort caches (auth-session backup, AI memory snapshots, a localStorage group cache) — losing one does not lose task data because the durable path handles it. No new acute data-loss writer found. This is grep evidence, not proof.
+- **Feature-audit matrix (new deliverable):** `docs/process/feature-audit-matrix.json` — a machine-readable catalog of **58 features across 15 areas** (task lifecycle, board/kanban, calendar, canvas, mini-canvas, timer/focus, quick-sort, recurrence, lanes, backup/restore, sync/offline, inbox/catalog, AI, local API/KDE, auth), each with surfaces, expected behaviour, states, and an **evidence pointer**. `scripts/audit-feature-matrix.cjs` (`npm run audit:features`) validates structure and **verifies every cited test file exists** so an "audited" claim cannot rot — it caught 4 wrong pointers on its first run. Companion: `docs/process/FEATURE-AUDIT-MATRIX.md`. Current coverage: 51 audited / 6 partial / 1 unaudited. Open items surfaced by it: `board.reorder-within-column` unaudited; board webkit drop + R7 group propagation flagged as open product defects.
+
+**Not yet done**: `R7` remains a confirmed open defect; `board-date-drag` on webkit is an unconfirmed intermittent Safari risk. The 97 open critical/high vectors remain open. Nothing has been deployed.
+
 ### BUG-1978: Duplicate or stale recurring actions can report success without a successful operation (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-24) | **Related**: BUG-1976, TASK-1977
@@ -2243,6 +2644,18 @@ _Original plan below._
 
 **Remaining**: audit every non-menu direct writer and fire-and-forget update for swallowed rejections; add real Electron stale-view and cross-client deletion races; require canonical operation receipts before globally closing silent-write-drop detection.
 
+### ~~BUG-1980~~: Day-group rotation does not catch up after a missed midnight (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (filed + shipped 2026-07-28, v1.4.318)
+
+**Repro shape**: User's task "להכין סרטון על להרים הרמס על שרת VPS" was invisible — parked in the "Wednesday" canvas day-group, off-screen, with a today-dated due date. Day groups (Monday/Tuesday/…) had not rotated to the current day.
+
+**Failure mode**: Automatic day-group rotation runs only via a client-side midnight `setTimeout` (`useDateTransition`) that fires solely while the app is open across 00:00. When the app is closed at midnight, the on-launch catch-up (`runCatchupIfNeeded`) is deliberately metadata-only (BUG-1780 guarded it to avoid clobbering manual layouts on every reload), so group positions and stale-dated task re-homing are NOT applied on launch — only when the user manually clicks the toolbar rotate button.
+
+**Fix**: `runCatchupIfNeeded` now distinguishes a genuine missed-midnight (persisted `lastRotationDate` marker present and older than today) from a same-day reload / first-ever launch. On a genuine crossing it runs the full `rotateDayGroupPositions()` (positions + re-home) in addition to the dueDate metadata rotation; same-day reloads and first-run stay metadata-only, preserving BUG-1780 protection. CanvasView applies the returned group + task moves.
+
+**Regression**: unit tests in `tests/unit/canvas/day-group-catchup.test.ts` for genuine-crossing (moves produced), first-run (metadata only, no group moves), and same-day (idempotent, no moves).
+
 ### TASK-1943: Reliable Hermes–FlowState personal-assistant program (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1797, BUG-1942 | **Related**: FEATURE-1943
@@ -2250,6 +2663,7 @@ _Original plan below._
 **Goal**: Deliver one reliable personal-assistant lane in which VPS Supabase is the canonical signed-user task authority; Hermes dynamically clarifies and decomposes vague work; FlowState mutations are previewed, applied exactly once, and read back; monitor events do not self-interrupt; and Notion is safely writable according to explicit user needs.
 
 **Program scope**:
+
 - Safe branch recovery and complete production-writer inventory.
 - Canonical operation, revision, receipt, replay, and change-sequence contract.
 - Migration of task, subtask, instance, recurrence, timer, focus, project, group, lane, settings, and context writers.
@@ -2259,9 +2673,10 @@ _Original plan below._
 - Regression, fault-injection, watchdog, packaged Electron, PWA, Hermes, and approval-gated production verification.
 
 **Subtasks**:
+
 - [x] ~~**BUG-1974 — Keep task identity and current state consistent across views**: move authoritative ID lookups, quick-task pinning, and Canvas edit/context actions onto canonical task state; preserve transient Canvas availability with canonical-first snapshot fallback; ship Electron 1.4.283 with RED/GREEN and updater proof.~~ Completed 2026-07-23.
-- [ ] **BUG-1975 — Keep Catalog completion and reopen reachable under every filter transition**: prove right-click complete/reopen across offline replay, independent-client convergence, reload, and packaged Electron.
-- [ ] **BUG-1973 — Recover the Local Task API after a cancelled Electron quit**: restore one authenticated sidecar after cancelled quit and prove the packaged localhost/Hermes boundary.
+- [ ] **BUG-1975 — Keep Catalog completion and reopen reachable under every filter transition**: make explicit status and smart-view choices mutually exclusive, prove right-click complete/reopen across offline replay, independent-client convergence, reload, and packaged Electron.
+- [ ] **BUG-1973 — Recover the Local Task API after a cancelled Electron quit**: roll back the permanent sidecar shutdown latch only when the ordinary quit is cancelled, replay retained renderer state into one replacement sidecar, and prove the packaged localhost/Hermes boundary recovers without a watchdog kill.
 - [ ] **TASK-1944 — Canonical operation, revision, and change-sequence foundation**: recover onto a fresh branch, classify existing work, inventory every production writer, add the signed-user operation ledger and canonical revisions, preserve legacy writers through compatibility triggers, return replayable read-back receipts, and provide durable sequence catch-up.
 - [ ] **TASK-1945 — Canonical Local API task patch adoption**: replace direct sidecar task patches and Hermes HTTP-success inference with the TASK-1944 preview/apply/base-revision contract, validate canonical receipts at both boundaries, and preserve exact replay after response loss.
 - [ ] **TASK-1947 — Deterministic canonical change-sequence catch-up**: persist a signed-user personal/workspace cursor, consume bounded ordered change-log pages as invalidation hints, reconcile exact task IDs authoritatively, and advance only after projection persistence succeeds.
@@ -2293,6 +2708,7 @@ _Original plan below._
 - [x] ~~**BUG-1971 — Accept date-only Notion activations outside UTC**: compare canonical due dates as calendar dates so Hermes accepts FlowState's UTC-normalized preview and receipt in Jerusalem, then prove the exact task, work block, completion, and timer switch live.~~ ✅ DONE 2026-07-20 in Hermes Desktop.
 
 **Acceptance**:
+
 - No production surface can claim a canonical mutation from only an optimistic cache write, queued intent, Local API HTTP success, or Realtime delivery.
 - One operation ID replays the original durable receipt after timeout, retry, process restart, or duplicate submission.
 - Hermes exposes a compact editable breakdown and asks only the first unresolved consequential question.
@@ -2309,6 +2725,7 @@ _Original plan below._
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-16) | **Depends on**: TASK-1944, TASK-1945, TASK-1961
 
 **Scope**:
+
 - Recover only the canonical subtask batch contract from the stale H10 history onto a fresh current-main worktree; never merge or cherry-pick the divergent branch wholesale.
 - Replace Local API in-memory/direct JSONB batch writes with the signed-user `flowstate_subtask_batch_v1` preview/apply RPC using operation identity, base revision, preview digest/expiry, request hash, and canonical receipt validation.
 - Return exact ordered subtask reads with workspace, revision, and canonical timestamp metadata through revision-bound pages of at most 100 rows; validate the complete stored array before slicing and fail closed on malformed or duplicate persisted identities.
@@ -2316,6 +2733,7 @@ _Original plan below._
 - Prove normalization, preview non-mutation, exact apply/read-back, replay, stale revision, altered payload, malformed existing rows, cross-scope denial, and concurrent operation safety without touching production data.
 
 **Acceptance**:
+
 - Hermes can preview one exact ordered create/update/delete breakdown, approve that immutable proof, and apply it exactly once against the same parent revision.
 - The Local API cannot report canonical success without verifying the RPC result, primary affected task, canonical receipt, and reflected subtask read-back.
 - Duplicate client IDs, subtask IDs, malformed existing rows, stale revisions, expired previews, and changed payloads return typed errors without partial writes.
@@ -2332,6 +2750,7 @@ _Original plan below._
 **Exact failure mode**: Hermes correctly rejected five tools because the packaged capability manifest advertised no canonical work-block route and advertised the subtask batch under a legacy contract that did not match the already-shipped task-v1 request and response shape. Both apply adapters also omitted the server-issued request hash.
 
 **Acceptance**:
+
 - Work-block create, move, resize, and remove share one preview-first, replay-safe signed-user Local API route with exact receipt validation.
 - Hermes translates its editable subtask input into the existing task-v1 wire contract and validates the exact preview/read-back shape instead of relabeling an incompatible payload.
 - Apply forwards the immutable request hash for both operation families; preview remains non-mutating.
@@ -2339,17 +2758,17 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Hermes capability preflight reproduced the exact Hebrew incompatibility report. | Yes |
-| Data shape / persisted row shape | Yes | Disposable rollback tests cover legacy instance arrays, canonical blocks, malformed data, replay, and subtask ordering. | Yes |
-| Renderer store/state | N/A | This slice exposes assistant routes; shared UI work-block adoption remains FEATURE-1944. | No |
-| Electron main/preload bridge | Yes | Source and bundled-sidecar route tests exercise dispatch and capability advertisement. | Yes |
-| Localhost sidecar endpoint | Yes | Installed 1.4.277 returned the complete 16-route manifest; Hermes produced task-v1 subtask, work-block create, and shipped legacy timed-block move previews without applying them. | Yes |
-| KDE polling/control path | N/A | No timer behavior is changed. | No |
-| Supabase persistence/realtime | Yes | Rollback-only RPC and concurrency suites verify atomic storage and canonical receipts. | Yes |
-| Updater/runtime version | Yes | Public updater and checksum-matched installed AppImage are Electron 1.4.277. | Yes |
-| Stale live process/cache state | Yes | The prior mount was terminated, 1.4.277 relaunched on the existing profile, health returned 200, and Hermes gateway/watchdog reloaded active. | Yes |
+| Class                            | Checked? | Evidence                                                                                                                                                                           | Covered by this fix? |
+| -------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| User repro shape                 | Yes      | Hermes capability preflight reproduced the exact Hebrew incompatibility report.                                                                                                    | Yes                  |
+| Data shape / persisted row shape | Yes      | Disposable rollback tests cover legacy instance arrays, canonical blocks, malformed data, replay, and subtask ordering.                                                            | Yes                  |
+| Renderer store/state             | N/A      | This slice exposes assistant routes; shared UI work-block adoption remains FEATURE-1944.                                                                                           | No                   |
+| Electron main/preload bridge     | Yes      | Source and bundled-sidecar route tests exercise dispatch and capability advertisement.                                                                                             | Yes                  |
+| Localhost sidecar endpoint       | Yes      | Installed 1.4.277 returned the complete 16-route manifest; Hermes produced task-v1 subtask, work-block create, and shipped legacy timed-block move previews without applying them. | Yes                  |
+| KDE polling/control path         | N/A      | No timer behavior is changed.                                                                                                                                                      | No                   |
+| Supabase persistence/realtime    | Yes      | Rollback-only RPC and concurrency suites verify atomic storage and canonical receipts.                                                                                             | Yes                  |
+| Updater/runtime version          | Yes      | Public updater and checksum-matched installed AppImage are Electron 1.4.277.                                                                                                       | Yes                  |
+| Stale live process/cache state   | Yes      | The prior mount was terminated, 1.4.277 relaunched on the existing profile, health returned 200, and Hermes gateway/watchdog reloaded active.                                      | Yes                  |
 
 **Exact failure mode fixed**: FlowState had no truthful canonical work-block route, Hermes nested subtask operations did not match the task-v1 wire contract, apply omitted the server request hash, and production still exposed the pre-current subtask RPC signature. Electron 1.4.277 plus the production migrations and matching Hermes adapter now agree on all 16 registered routes; live preflight reports `compatible: true` with no blocked tools.
 
@@ -2366,6 +2785,7 @@ _Original plan below._
 **Exact failure mode**: The canonical task-lifecycle preview returned a server-issued `requestHash`, and Hermes correctly returned that immutable approval field on apply. The Local API request allowlist omitted `requestHash`, so the exact approved apply was rejected with HTTP 400 `invalid_request` before the canonical RPC ran. The separate multi-action repro also showed that dependent writes against the same task can invalidate a later preview and that expired previews require a fresh operation identity.
 
 **Acceptance**:
+
 - A fresh task-lifecycle preview can be applied with the exact server-issued request hash.
 - A changed request hash is rejected before any persistence call.
 - Regression coverage uses the user's exact create-preview/apply payload shape.
@@ -2378,16 +2798,16 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Exact accepted Hebrew task preview then rejected apply was reconstructed from the live Hermes session. | Yes |
-| Data shape / persisted row shape | Yes | Preview and apply payloads were byte-equivalent except for the server-issued approval fields. | Yes |
-| Renderer state | Yes | Verified committed lifecycle receipts still reconcile through the existing task notification path. | Existing path |
-| Electron main/preload | Yes | Fresh packaged sidecar contains the corrected lifecycle boundary. | Yes |
-| Localhost sidecar | Yes | Packaged signed-in route accepts the approval hash instead of rejecting it as unknown. | Yes |
-| Supabase persistence | Yes | Changed hashes stop before RPC; matching hashes reach the canonical contract. | Yes |
-| Updater/runtime version | Yes | Electron 1.4.280 is the clean-provenance release for this fix. | Yes |
-| Stale live process state | Yes | Supervised runtime is replaced and re-probed after install. | Yes |
+| Class                            | Checked? | Evidence                                                                                               | Covered by this fix? |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------ | -------------------- |
+| User repro shape                 | Yes      | Exact accepted Hebrew task preview then rejected apply was reconstructed from the live Hermes session. | Yes                  |
+| Data shape / persisted row shape | Yes      | Preview and apply payloads were byte-equivalent except for the server-issued approval fields.          | Yes                  |
+| Renderer state                   | Yes      | Verified committed lifecycle receipts still reconcile through the existing task notification path.     | Existing path        |
+| Electron main/preload            | Yes      | Fresh packaged sidecar contains the corrected lifecycle boundary.                                      | Yes                  |
+| Localhost sidecar                | Yes      | Packaged signed-in route accepts the approval hash instead of rejecting it as unknown.                 | Yes                  |
+| Supabase persistence             | Yes      | Changed hashes stop before RPC; matching hashes reach the canonical contract.                          | Yes                  |
+| Updater/runtime version          | Yes      | Electron 1.4.280 is the clean-provenance release for this fix.                                         | Yes                  |
+| Stale live process state         | Yes      | Supervised runtime is replaced and re-probed after install.                                            | Yes                  |
 
 **Regression and verification**: RED reproduced the exact HTTP 400 before RPC when apply added `requestHash`; GREEN covers matching create apply plus mismatched-hash rejection. FlowState's full suite passed 4,007 tests with six intentional skips; type-check, lint, Electron package validation, and the locked Electron build passed. Hermes RED/GREEN coverage proves adjacent and mixed-segment mutations stop after both typed failures, including untrusted-tool negatives; its broader touched suite passed 242 tests with one skip, plus Ruff, focused type-check, compilation, and independent blocker review with no remaining Critical or Important findings.
 
@@ -2401,17 +2821,17 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Replayed the exact Hebrew Notion task, date-only due date, and 30-minute work block from the live Hermes session. | Yes |
-| Data shape / persisted row shape | Yes | Canonical receipt read back one Notion-backed task and one matching work-block instance. | Yes |
-| Renderer store/state | Yes | Completion and activation appeared through fresh signed-in Local API reads after commit. | Existing path |
-| Electron main/preload bridge | N/A | No Electron IPC or preload contract changed. | No |
-| Localhost sidecar endpoint | Yes | Live preview and apply both passed the existing Notion activation endpoint. | Existing path |
-| KDE polling/control path | Yes | Timer snapshot initially retained the old local value, then converged to the new task; diagnostics showed matching local and Supabase state. | Existing path |
-| Supabase persistence/realtime | Yes | Receipts reported committed revisions and the timer control write reconciled through the renderer snapshot. | Existing path |
-| Updater/runtime version | N/A | The defect and fix are in the Hermes Python runtime, not the FlowState Electron package. | No |
-| Stale live process/cache state | Yes | Hermes Desktop was fully restarted and the new office-work process imported the checksum-matched patched source. | Yes |
+| Class                            | Checked? | Evidence                                                                                                                                     | Covered by this fix? |
+| -------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| User repro shape                 | Yes      | Replayed the exact Hebrew Notion task, date-only due date, and 30-minute work block from the live Hermes session.                            | Yes                  |
+| Data shape / persisted row shape | Yes      | Canonical receipt read back one Notion-backed task and one matching work-block instance.                                                     | Yes                  |
+| Renderer store/state             | Yes      | Completion and activation appeared through fresh signed-in Local API reads after commit.                                                     | Existing path        |
+| Electron main/preload bridge     | N/A      | No Electron IPC or preload contract changed.                                                                                                 | No                   |
+| Localhost sidecar endpoint       | Yes      | Live preview and apply both passed the existing Notion activation endpoint.                                                                  | Existing path        |
+| KDE polling/control path         | Yes      | Timer snapshot initially retained the old local value, then converged to the new task; diagnostics showed matching local and Supabase state. | Existing path        |
+| Supabase persistence/realtime    | Yes      | Receipts reported committed revisions and the timer control write reconciled through the renderer snapshot.                                  | Existing path        |
+| Updater/runtime version          | N/A      | The defect and fix are in the Hermes Python runtime, not the FlowState Electron package.                                                     | No                   |
+| Stale live process/cache state   | Yes      | Hermes Desktop was fully restarted and the new office-work process imported the checksum-matched patched source.                             | Yes                  |
 
 **Exact failure mode fixed**: Hermes interpreted a date-only due date as local midnight while FlowState returned UTC midnight, causing a false preview and receipt identity mismatch outside UTC.
 
@@ -2428,6 +2848,7 @@ _Original plan below._
 **Exact failure mode**: Electron 1.4.268 embedded a Supabase public key that production rejected with HTTP 401 during PKCE exchange and refresh. A passive auth-js `SIGNED_OUT` event then erased the renderer account after two seconds, while terminal refresh recovery deleted the token backup without retaining a credential-free identity for the next cold start.
 
 **Acceptance**:
+
 - A valid production public key is recognized before an Electron build starts; rejected, unreachable, redirected, or timed-out credentials fail closed without logging credentials or response bodies.
 - Background refresh, focus, sleep/resume, network recovery, app close/relaunch, and updater restarts cannot erase the remembered account or account-owned cache.
 - A terminal refresh token may be removed, but the credential-free account identity survives cold restart and all remote writes remain gated until a fresh server session exists.
@@ -2436,14 +2857,14 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Packaged Google sign-in returned to FlowState but stayed on the sign-in modal. | Yes |
-| Renderer auth state | Yes | Passive `SIGNED_OUT` cleared user/session after a two-second timer. | Yes |
-| Electron main/preload | Yes | PKCE callback reached the renderer; failure occurred at the backend token exchange. | Release credential boundary |
-| Supabase/auth persistence | Yes | Installed key returned 401; current production key was recognized; terminal backup cleanup lost cold-start identity. | Yes |
-| Updater/runtime version | Yes | Installed runtime remained 1.4.268 and carried the rejected key. | New version and release gate |
-| Stale live process state | Yes | Reproduced twice against the actual packaged profile and callback listener. | Relaunch proof required |
+| Class                     | Checked? | Evidence                                                                                                             | Covered by this fix?         |
+| ------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| User repro shape          | Yes      | Packaged Google sign-in returned to FlowState but stayed on the sign-in modal.                                       | Yes                          |
+| Renderer auth state       | Yes      | Passive `SIGNED_OUT` cleared user/session after a two-second timer.                                                  | Yes                          |
+| Electron main/preload     | Yes      | PKCE callback reached the renderer; failure occurred at the backend token exchange.                                  | Release credential boundary  |
+| Supabase/auth persistence | Yes      | Installed key returned 401; current production key was recognized; terminal backup cleanup lost cold-start identity. | Yes                          |
+| Updater/runtime version   | Yes      | Installed runtime remained 1.4.268 and carried the rejected key.                                                     | New version and release gate |
+| Stale live process state  | Yes      | Reproduced twice against the actual packaged profile and callback listener.                                          | Relaunch proof required      |
 
 **Explicitly not covered**: silently granting remote access with an expired/rejected token. The remembered account shell and local ownership persist, while remote sync remains fail-closed until authentication recovers.
 
@@ -2464,6 +2885,7 @@ _Original plan below._
 **Exact failure mode**: the canonical task backend began requiring the server-issued preview request hash, but the current desktop release persisted only the preview digest and omitted the request hash from apply. Those edits were classified as permanent failures and parked one year out, while Retry All queried only currently due operations and could not unlock them.
 
 **Acceptance**:
+
 - Fresh queued task edits persist the server-issued request hash and send it on apply.
 - Legacy previewed edits without a request hash re-preview with the same durable intent before applying.
 - Retry All selects permanently parked failures regardless of their future retry timestamp.
@@ -2472,15 +2894,15 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Installed Sync Errors popover showed seven task updates rejected with `request_hash_required`. | Yes |
-| Data shape / durable queue | Yes | Preview state had digest and expiry but no server request hash. | Yes |
-| Renderer sync state | Yes | The rejection was classified permanent and parked with a far-future retry time. | Yes |
-| Electron main/preload | Yes | No main/preload transformation participates in canonical renderer RPC arguments. | No change needed |
-| Supabase persistence | Yes | The live canonical apply contract rejects a missing request hash. | Client contract alignment |
-| Updater/runtime version | Yes | Installed Electron 1.4.272 predates the integrated repair. | New desktop release required |
-| Stale live process state | Yes | The installed 1.4.273 profile replayed all seven retained failures, then stayed synced and signed in after close/relaunch. | Yes |
+| Class                      | Checked? | Evidence                                                                                                                   | Covered by this fix?         |
+| -------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| User repro shape           | Yes      | Installed Sync Errors popover showed seven task updates rejected with `request_hash_required`.                             | Yes                          |
+| Data shape / durable queue | Yes      | Preview state had digest and expiry but no server request hash.                                                            | Yes                          |
+| Renderer sync state        | Yes      | The rejection was classified permanent and parked with a far-future retry time.                                            | Yes                          |
+| Electron main/preload      | Yes      | No main/preload transformation participates in canonical renderer RPC arguments.                                           | No change needed             |
+| Supabase persistence       | Yes      | The live canonical apply contract rejects a missing request hash.                                                          | Client contract alignment    |
+| Updater/runtime version    | Yes      | Installed Electron 1.4.272 predates the integrated repair.                                                                 | New desktop release required |
+| Stale live process state   | Yes      | The installed 1.4.273 profile replayed all seven retained failures, then stayed synced and signed in after close/relaunch. | Yes                          |
 
 **Explicitly not covered**: genuine stale-revision, deleted-task, cross-account, or authorization conflicts. Those remain fail-closed and visible instead of being force-applied.
 
@@ -2493,6 +2915,7 @@ _Original plan below._
 **Exact failure modes**: Electron decremented before checking zero and formatted raw negative seconds, so a follower waiting for KDE rendered `-1:-3`. Live production history also proved KDE-owned five-minute extensions took about seven minutes because the widget subtracted one per delayed QML callback instead of deriving remaining time from a wall-clock deadline. Separately, a global Electron completion lock could reject a newer session's completion while an older notification was still pending. The user's later split-state repro exposed a fourth path: KDE's duplicate-completion guard suppressed a repeated alert but returned before clearing the re-adopted completed session, leaving the widget at active `00:00` while Electron was idle at `25:00`.
 
 **Acceptance**:
+
 - No renderer or widget surface can display remaining time below `00:00`.
 - KDE-owned timers complete from elapsed wall time even when Plasma delays callbacks.
 - A new timer completes while an older session's persistence or notification is still pending.
@@ -2501,17 +2924,17 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Electron header showed active `Focus Session` at `-1:-3`. | Yes |
-| Data shape / persisted row | Yes | Latest KDE-led row stayed active until the widget completed it; final row is inactive at zero. | Yes, leader timing |
-| Renderer store/state | Yes | Countdown decremented before zero check; formatter accepted negatives; global completion lock spanned sessions. | Yes |
-| Electron main/preload | Yes | Local snapshot bridge already clamps to zero and reported inactive after completion. | No change needed |
-| Localhost sidecar | Yes | `/api/timer/current` was inactive after the leader completed; it did not create the negative value. | No change needed |
-| KDE polling/control | Yes | Two five-minute extensions each took about seven minutes under QML callback counting. | Yes |
-| Supabase persistence/realtime | Yes | KDE remained authoritative and Electron correctly waited as follower; active row eventually cleared. | Existing authority preserved |
-| Updater/runtime | Yes | Repro occurred on packaged Electron 1.4.273 and the live symlinked widget. | New release required |
-| Stale live process state | Yes | One packaged Electron process was running; renderer, sidecar, DB, and window title later all cleared. | Yes |
+| Class                         | Checked? | Evidence                                                                                                        | Covered by this fix?         |
+| ----------------------------- | -------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| User repro shape              | Yes      | Electron header showed active `Focus Session` at `-1:-3`.                                                       | Yes                          |
+| Data shape / persisted row    | Yes      | Latest KDE-led row stayed active until the widget completed it; final row is inactive at zero.                  | Yes, leader timing           |
+| Renderer store/state          | Yes      | Countdown decremented before zero check; formatter accepted negatives; global completion lock spanned sessions. | Yes                          |
+| Electron main/preload         | Yes      | Local snapshot bridge already clamps to zero and reported inactive after completion.                            | No change needed             |
+| Localhost sidecar             | Yes      | `/api/timer/current` was inactive after the leader completed; it did not create the negative value.             | No change needed             |
+| KDE polling/control           | Yes      | Two five-minute extensions each took about seven minutes under QML callback counting.                           | Yes                          |
+| Supabase persistence/realtime | Yes      | KDE remained authoritative and Electron correctly waited as follower; active row eventually cleared.            | Existing authority preserved |
+| Updater/runtime               | Yes      | Repro occurred on packaged Electron 1.4.273 and the live symlinked widget.                                      | New release required         |
+| Stale live process state      | Yes      | One packaged Electron process was running; renderer, sidecar, DB, and window title later all cleared.           | Yes                          |
 
 **Regression added for reported repro**: store state-machine coverage reproduces a newer timer expiring while an older notification hangs; KDE coverage proves delayed callbacks catch up to a fixed deadline; formatter coverage rejects negative and non-finite inputs.
 
@@ -2526,26 +2949,28 @@ _Original plan below._
 **Exact failure modes**: the Canvas sidebar dispatched asynchronous creation, immediately cleared the draft, and showed success without receiving a result. The Canvas modal also closed synchronously before its async owner finished. At the store boundary, queue failure was swallowed and cache persistence was fire-and-forget, so both durable stores could fail while the optimistic task was still returned as successful. Finally, a server create response with no error but no returned row was marked completed and lost its pending-write guard.
 
 **Acceptance**:
+
 - No task-creation surface shows success or clears its draft before the task reaches the durable queue or restart-safe cache.
 - If the account queue or true guest store fails, creation rejects visibly, removes the transient row, preserves the user's draft, and leaves no stale pending-write guard; the read cache alone never counts as durable intent.
 
 **Completion proof (2026-07-19)**: RED/GREEN regressions cover authenticated queue failure despite cache success, guest-store persistence failure, empty server create acknowledgement, Canvas acknowledgement failure/timeout, duplicate submission, modal dismissal during persistence, attachment preservation, and editing a newer sidebar draft before the first acknowledgement returns. Independent durability review found no remaining Critical or Important issue. The same 3,943-test full suite, type-check, focused lint, Electron package validation, locked ship gate, public updater validation, exact installed-AppImage checksum, and signed-in packaged-app relaunch passed for Electron 1.4.274. The original disappeared title was not recoverable because live inventory, audit history, and queue evidence proved it never crossed the renderer-to-durable boundary.
+
 - A queued create remains retryable unless the server returns a saved row or a pre-existing tombstone proves deletion authority.
 - The Canvas modal and sidebar cover the user's exact apparent-success-then-disappearance repro.
 - Focused regressions, full quality gates, Electron packaging, updater publication, and signed-in live create/relaunch proof pass before completion.
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Sidebar/modal could clear or close before asynchronous durable creation completed. | Yes |
-| Data shape / durable queue | Yes | Live queue contained zero task operations and the task was absent from restart-safe state. | Yes |
-| Renderer state | Yes | Optimistic create was treated as success even after both durability paths failed. | Yes |
-| Electron main/preload | Yes | No task-create acknowledgement is synthesized by main/preload. | No change needed |
-| Localhost sidecar | Yes | Fresh complete inventory showed 71 tasks and no new task. | No change needed |
-| Supabase persistence | Yes | Tasks, immutable audit history, and canonical change history contained no create, update, move, completion, or delete for the reported task. | Yes, fail closed on empty create response |
-| Updater/runtime | Yes | Repro occurred in packaged Electron 1.4.273. | New release required |
-| Stale live process state | Yes | Fresh authenticated personal scope and complete inventory ruled out workspace/account mismatch. | Yes |
+| Class                      | Checked? | Evidence                                                                                                                                     | Covered by this fix?                      |
+| -------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| User repro shape           | Yes      | Sidebar/modal could clear or close before asynchronous durable creation completed.                                                           | Yes                                       |
+| Data shape / durable queue | Yes      | Live queue contained zero task operations and the task was absent from restart-safe state.                                                   | Yes                                       |
+| Renderer state             | Yes      | Optimistic create was treated as success even after both durability paths failed.                                                            | Yes                                       |
+| Electron main/preload      | Yes      | No task-create acknowledgement is synthesized by main/preload.                                                                               | No change needed                          |
+| Localhost sidecar          | Yes      | Fresh complete inventory showed 71 tasks and no new task.                                                                                    | No change needed                          |
+| Supabase persistence       | Yes      | Tasks, immutable audit history, and canonical change history contained no create, update, move, completion, or delete for the reported task. | Yes, fail closed on empty create response |
+| Updater/runtime            | Yes      | Repro occurred in packaged Electron 1.4.273.                                                                                                 | New release required                      |
+| Stale live process state   | Yes      | Fresh authenticated personal scope and complete inventory ruled out workspace/account mismatch.                                              | Yes                                       |
 
 **Regression added for reported repro**: Canvas sidebar failure and acknowledgement timeout retain the typed draft and withhold success; the real modal preserves all entered state and blocks duplicate submits; task-store coverage rejects a cache-only authenticated create; guest creation persists through the true guest store; sync coverage keeps an empty server create response pending.
 
@@ -2558,6 +2983,7 @@ _Original plan below._
 **Scope**: Keep one supervised Electron process running in the graphical user session with the canonical signed-in profile. Closing the window hides it; launching FlowState again reveals that same instance. The renderer remains the sole Supabase refresh owner and continues feeding one serialized, bearer-protected Local API sidecar for Hermes. Explicit Sign Out still clears account authority. Updater handoff must flush auth/store state, drain the sidecar, reserve a supervisor exit code, atomically swap the AppImage, and restart or roll back the service without creating a second profile or writer.
 
 **Acceptance**:
+
 - Closing the desktop window or ending a visible FlowState session does not stop the authenticated Local API; Hermes can still read the protected aggregate/task boundaries.
 - Login persistence survives graphical-session restart and Electron update using the same `flow-state` profile; only explicit Sign Out removes the durable identity.
 - Exactly one renderer owns auth refresh and exactly one sidecar owns port 5577, including crash recovery, rapid lifecycle calls, and updater handoff.
@@ -2566,17 +2992,17 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this change? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | FlowState showed Sign In or session-expired UI after close/relaunch/update; Hermes lost the localhost bridge. | Yes |
-| Data shape / persisted state | Yes | Canonical Electron auth backup and Local API config already live under one `flow-state` profile. | Yes, one fixed profile |
-| Renderer store/state | Yes | Auth refresh and renderer heartbeats require a living renderer; closing the last window previously ended that owner. | Yes, hidden renderer retained |
-| Electron main/preload | Yes | Window close, second-instance routing, quit, sidecar shutdown, and updater exit were separate unsupervised lifecycle paths. | Yes |
-| Localhost sidecar | Yes | Multiple rapid starts/exits could race port ownership and crash restart timing. | Yes, serialized generation-safe lifecycle |
-| KDE polling/control | Yes | KDE consumes the same bearer-protected 5577 timer boundary. | Existing boundary retained |
-| Supabase persistence/realtime | Yes | The renderer keeps the existing signed-user RLS/session path; service-role bypass is rejected. | Existing authority retained |
-| Updater/runtime | Yes | AppImage swap previously relaunched independently of a durable background supervisor. | Yes, reserved handoff and rollback |
-| Stale live process state | Yes | An older unsupervised app can still own port 5577 during rollout. | Live rollout must replace it and prove one PID |
+| Class                         | Checked? | Evidence                                                                                                                    | Covered by this change?                        |
+| ----------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| User repro shape              | Yes      | FlowState showed Sign In or session-expired UI after close/relaunch/update; Hermes lost the localhost bridge.               | Yes                                            |
+| Data shape / persisted state  | Yes      | Canonical Electron auth backup and Local API config already live under one `flow-state` profile.                            | Yes, one fixed profile                         |
+| Renderer store/state          | Yes      | Auth refresh and renderer heartbeats require a living renderer; closing the last window previously ended that owner.        | Yes, hidden renderer retained                  |
+| Electron main/preload         | Yes      | Window close, second-instance routing, quit, sidecar shutdown, and updater exit were separate unsupervised lifecycle paths. | Yes                                            |
+| Localhost sidecar             | Yes      | Multiple rapid starts/exits could race port ownership and crash restart timing.                                             | Yes, serialized generation-safe lifecycle      |
+| KDE polling/control           | Yes      | KDE consumes the same bearer-protected 5577 timer boundary.                                                                 | Existing boundary retained                     |
+| Supabase persistence/realtime | Yes      | The renderer keeps the existing signed-user RLS/session path; service-role bypass is rejected.                              | Existing authority retained                    |
+| Updater/runtime               | Yes      | AppImage swap previously relaunched independently of a durable background supervisor.                                       | Yes, reserved handoff and rollback             |
+| Stale live process state      | Yes      | An older unsupervised app can still own port 5577 during rollout.                                                           | Live rollout must replace it and prove one PID |
 
 **Exact failure mode fixed**: Closing or updating the visible Electron window could terminate the only authenticated renderer and Local API owner, so Hermes lost its bridge and the next launch could fall back to sign-in recovery despite durable auth material still existing.
 
@@ -2591,6 +3017,7 @@ _Original plan below._
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1943, TASK-1797, BUG-1942 | **Related**: FEATURE-1943
 
 **Scope**:
+
 - Recover compatible work onto a fresh branch from current `origin/master`; never merge the divergent stale branch or discard the dirty worktree.
 - Produce an exhaustive writer matrix for web, PWA/offline queue, Electron, Local API, recurrence, subtasks, instances, timers, Canvas, and Hermes.
 - Add an RLS-scoped durable operation ledger keyed by user and operation ID.
@@ -2600,6 +3027,7 @@ _Original plan below._
 - Prove duplicate replay, dropped responses, restart recovery, stale-base conflicts, cross-user denial, and missed-Realtime catch-up.
 
 **Acceptance**:
+
 - A committed response always names the canonical revision, sequence, timestamp, read-back projection, and read-back hash.
 - A repeated operation ID with the same request returns the original receipt; a changed payload returns a typed conflict.
 - Legacy writers remain functional while being marked as legacy and emitting canonical revisions/change events.
@@ -2613,6 +3041,7 @@ _Original plan below._
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1944, TASK-1797
 
 **Scope**:
+
 - Add failing Local API and Hermes adapter tests that reject HTTP-only, queued, malformed, mismatched-operation, or incomplete receipt responses.
 - Make task patch preview the default and require the exact issued operation ID, preview digest/expiry, base canonical revision, and normalized payload for apply.
 - Call `flowstate_patch_task_v1` under the renderer user's signed-in Supabase session instead of updating `tasks` directly.
@@ -2621,6 +3050,7 @@ _Original plan below._
 - Prove preview zero-write, apply receipt, dropped-response replay, stale base, altered payload, unauthenticated/offline, and renderer reconciliation behavior.
 
 **Acceptance**:
+
 - Local API task patches cannot return canonical success without a validated TASK-1944 receipt.
 - Hermes never mutates from a plain-language task update without first returning an exact preview for approval.
 - Repeating an approved operation after a lost response returns the original receipt with `replayed=true` and no second revision.
@@ -2634,25 +3064,33 @@ _Original plan below._
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-13) | **Depends on**: TASK-1944, TASK-1945
 
 **Scope**:
+
 - Add a durable cursor keyed by signed-in user and exact personal/workspace scope; never let one visible scope advance another scope's cursor.
 - Read `canonical_change_log` under RLS in ascending bounded pages after the persisted sequence and treat rows only as invalidation evidence, not as mutation authority.
 - Batch exact task IDs and tombstones into authoritative task reconciliation while preserving unrelated pending local writes.
 - Advance and persist the cursor only after the corresponding authoritative projection update succeeds; failed reads or reconciliation retain the prior cursor for retry.
 - Establish a race-safe first-run baseline by reading the visible high-water sequence before the full authoritative load and persisting it only after that reload succeeds.
-- Trigger serialized/coalesced catch-up on sign-in, reconnect, visibility recovery, Realtime subscription recovery, and workspace switch, plus a single-flight 60-second foreground backstop while authenticated, online, and visible.
+- Trigger serialized/coalesced catch-up on sign-in, reconnect, visibility recovery, Realtime subscription recovery, and workspace switch, plus a single-flight bounded backstop for every authenticated online renderer, including hidden tabs and background Electron windows.
 - Prove personal/workspace isolation, removed-member denial, pagination, tombstones, duplicate invocation, concurrent triggers, failed reconciliation, and deliberately dropped Realtime.
 
 **Progress (2026-07-13)**:
+
 - Implemented signed-user personal/workspace cursors, high-water baselines and rollback recovery, ordered bounded change pages, exact task/tombstone reconciliation, single-flight execution, and the 60-second authenticated foreground backstop.
 - Authoritative reloads now reject and rerun across scope changes, use count-aware immutable-ID keyset pages beyond server row caps, overlay exact-scope durable offline operations after restart, refuse ambiguous unscoped intent, capture workspace queue scope through the packaged ESM boundary, and await strict IndexedDB projection persistence before cursor advancement.
 - Repo-local verification is green: 197 convergence/realtime/cache/queue/Local-API tests, TypeScript type-check, source lint with no errors, and diff whitespace validation. Packaged signed-in and production rollout proof remain approval-gated and outstanding.
 
+**Progress (2026-07-24)**:
+
+- A loaded seven-scenario signed-in Chromium run reproduced an independent renderer remaining stale after a two-window offline edit even though the canonical row committed exactly once. The durable catch-up poller was incorrectly visibility-gated, so a background renderer that missed Realtime had no deterministic recovery.
+- Hidden and visible authenticated online renderers now run the same bounded single-flight catch-up. A red-green unit regression and the loaded R19-R25 user-surface batch prove the corrected boundary; packaged Electron and mixed-version windows remain open.
+
 **Acceptance**:
+
 - A client that misses every Realtime notification converges deterministically through its durable sequence cursor.
 - Cursor advancement cannot outrun authoritative projection persistence or cross user/workspace scope.
 - Tombstoned task IDs remove missing/deleted visible rows while unrelated optimistic pending writes remain protected.
 - Clearing local cursor state causes a safe full-load baseline, not history replay from an untrusted sequence.
-- A continuously visible client with silently missed Realtime converges within the bounded foreground interval without overlapping catch-up runs.
+- Any authenticated online renderer, visible or hidden, with silently missed Realtime converges within the bounded interval without overlapping catch-up runs.
 - Realtime and Electron IPC remain fast invalidation hints and are never treated as canonical proof.
 - Production remains unchanged until signed-in packaged/web verification and deployment are separately approved.
 
@@ -2661,6 +3099,7 @@ _Original plan below._
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-13) | **Depends on**: TASK-1944, TASK-1945, TASK-1947
 
 **Scope**:
+
 - Carry canonical task revisions through Supabase task mapping and visible renderer state.
 - Give eligible title, description, priority, due-date, and progress edits a stable operation ID that survives Dexie persistence, retry, restart, reconnect, and response loss.
 - Route those queued operations through signed-user `flowstate_patch_task_v1` preview/apply, persist the issued digest/expiry and validated receipt before queue completion, and replay the same apply after transport ambiguity.
@@ -2670,6 +3109,7 @@ _Original plan below._
 - Represent stale revision, altered approval, malformed response, missing authentication, and unsupported mutation as durable pending/conflict/quarantine states rather than false success.
 
 **Implementation progress (2026-07-13)**:
+
 - Web/PWA scalar task edits now retain a signed-user/workspace-scoped operation through Dexie preview, apply, receipt persistence, authoritative projection, restart-safe replay, and deterministic same-task ordering across canonical and compatibility operations.
 - Preview normalization and committed receipts are schema-validated; malformed success, missing rows/auth, response loss, cross-account proof collisions, viewer writes, unsupported fields, and unavailable IndexedDB cannot become false completion. Date/timestamp receipts project through the app's date-only/status contract.
 - Successful compatibility updates now atomically retain the returned canonical revision before completion, so a later unpreviewed canonical edit rebases across the same or a later queue pass. Shared-workspace member updates preserve the task owner instead of attempting an immutable ownership transfer. A predecessor receipt/server echo cannot clear or overwrite a later durable optimistic edit while that successor remains unresolved.
@@ -2677,17 +3117,17 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Online, reconnect, response-loss, same-task successor, mixed compatibility/canonical, and shared-member update regressions | Yes, for eligible scalar web/PWA edits |
-| Data shape / persisted row shape | Yes | Disposable SQL preview/apply/read-back, revision, sequence, RLS, rollback, and race tests | Yes |
-| Renderer store/state | Yes | Canonical projection, date/status normalization, restart ledger, and later-optimistic-edit preservation tests | Yes |
-| Electron main/preload bridge | Yes | Main/preload/sidecar TypeScript and bundle compilation | No behavior change in this slice |
-| Localhost sidecar endpoint | N/A | TASK-1945 owns canonical Local API adoption | No |
-| KDE polling/control path | N/A | No timer or KDE control behavior changed | No |
-| Supabase persistence/realtime | Yes | Canonical receipt SQL, scoped change-log read policy, and deterministic catch-up contract tests | Persistence covered; Realtime remains an invalidation hint |
-| Updater/runtime version | No | Production package and updater were intentionally not changed | No |
-| Stale live process/cache state | Yes | Dexie v4-to-v5 migration, restart replay, missed-response, cache invalidation, and durable cursor regressions | Repository/disposable coverage only |
+| Class                            | Checked? | Evidence                                                                                                                   | Covered by this fix?                                       |
+| -------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| User repro shape                 | Yes      | Online, reconnect, response-loss, same-task successor, mixed compatibility/canonical, and shared-member update regressions | Yes, for eligible scalar web/PWA edits                     |
+| Data shape / persisted row shape | Yes      | Disposable SQL preview/apply/read-back, revision, sequence, RLS, rollback, and race tests                                  | Yes                                                        |
+| Renderer store/state             | Yes      | Canonical projection, date/status normalization, restart ledger, and later-optimistic-edit preservation tests              | Yes                                                        |
+| Electron main/preload bridge     | Yes      | Main/preload/sidecar TypeScript and bundle compilation                                                                     | No behavior change in this slice                           |
+| Localhost sidecar endpoint       | N/A      | TASK-1945 owns canonical Local API adoption                                                                                | No                                                         |
+| KDE polling/control path         | N/A      | No timer or KDE control behavior changed                                                                                   | No                                                         |
+| Supabase persistence/realtime    | Yes      | Canonical receipt SQL, scoped change-log read policy, and deterministic catch-up contract tests                            | Persistence covered; Realtime remains an invalidation hint |
+| Updater/runtime version          | No       | Production package and updater were intentionally not changed                                                              | No                                                         |
+| Stale live process/cache state   | Yes      | Dexie v4-to-v5 migration, restart replay, missed-response, cache invalidation, and durable cursor regressions              | Repository/disposable coverage only                        |
 
 **Exact failure mode fixed**: Eligible web/PWA scalar task edits could be reported locally successful without a durable canonical receipt, lose operation identity across retry/restart, replay against a stale predecessor revision, overwrite a later optimistic edit, or attempt to replace a shared task owner.
 
@@ -2698,6 +3138,7 @@ _Original plan below._
 **Live boundary proof**: Repository builds and disposable database fixtures pass. Signed-in packaged/web and production mutation proof remain deliberately pending exact approval.
 
 **Acceptance**:
+
 - Online and reconnect scalar edits are called committed only after a complete TASK-1944 receipt is durably stored.
 - Preview and apply reuse the same operation ID, base revision, normalized patch, server digest, and expiry; retry after a lost response returns the replayed receipt without a second revision.
 - Browser/PWA restart cannot discard or coalesce away an unresolved canonical operation or its receipt.
@@ -2711,6 +3152,7 @@ _Original plan below._
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: TASK-1943, TASK-1944, TASK-1945
 
 **Scope**:
+
 - Add stable Notion page provenance to tasks with per-user active uniqueness, without introducing a second receipt ledger.
 - Preview and apply under the signed-in user through `canonical_operation_previews`, `canonical_operations`, task revisions, and `canonical_change_log`.
 - Preserve one global operation identity across preview, commit, response-loss replay, and process restart; reject altered payload reuse.
@@ -2719,6 +3161,7 @@ _Original plan below._
 - Expose a dedicated Local API adapter and route that validate the complete canonical response before notifying the renderer.
 
 **Acceptance**:
+
 - Preview performs no task or instance mutation and its digest/expiry are durable and exact-request bound.
 - Apply after preview expiry rejects unless the exact operation was already committed, in which case it replays the original receipt without a second task or work block.
 - Concurrent or repeated activation of one Notion page cannot produce duplicate active FlowState tasks for the same user.
@@ -2731,6 +3174,7 @@ _Original plan below._
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-14) | **Depends on**: TASK-1943, TASK-1944, TASK-1945, TASK-1947, TASK-1948
 
 **Scope**:
+
 - Create an executable disposable database harness that clones schema only, applies the ordered TASK-1944 and TASK-1948 migrations, runs both rollback-only SQL suites, and always drops its temporary database.
 - Add a multi-session Notion activation race/fault probe covering identical operation replay, changed-payload conflict, exact work-block duplicate safety, and transaction rollback without orphaned tasks, operations, changes, or consumed previews.
 - Expose the harness as a package command and keep the canonical contract, Local API adapter, convergence, and database proof in the fixed daily regression lane.
@@ -2738,6 +3182,7 @@ _Original plan below._
 - Emit explicit query-failure anomaly types without task titles, Notion page contents, credentials, or other private payloads.
 
 **Acceptance**:
+
 - One command runs the complete repository-local canonical assistant database proof against a unique disposable database and removes it after success or failure.
 - Concurrent identical Notion submissions produce one committed operation, one active task, one exact block, and one canonical change; altered reuse fails closed without extra state.
 - Daily regression cannot pass by exercising only source-shape tests while the executable SQL contract is broken.
@@ -2750,17 +3195,17 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Failure class | Checked | Evidence | Covered by this fix |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Duplicate, altered, concurrent, and trigger-failure activation submissions are executable fixtures | Yes |
-| Data shape / persisted row shape | Yes | Rollback suites and watchdog assertions cover operations, previews, tasks, work blocks, changes, revisions, and provenance | Yes |
-| Renderer store/state | N/A | This slice verifies the canonical database and Local API contract, not renderer projection | No |
-| Electron main/preload bridge | N/A | No Electron bridge behavior changed | No |
-| Localhost sidecar endpoint | Yes | Fixed daily cohort includes the canonical task and Notion activation Local API adapters | Yes |
-| KDE polling/control path | N/A | No timer or KDE behavior changed | No |
-| Supabase persistence/realtime | Partial | Disposable PostgreSQL proves atomic persistence and revision/change evidence; live Realtime delivery is not exercised | Persistence only |
-| Updater/runtime version | N/A | No package or production deployment occurred | No |
-| Stale live process/cache state | N/A | Disposable database isolation intentionally excludes live process and cache state | No |
+| Failure class                    | Checked | Evidence                                                                                                                   | Covered by this fix |
+| -------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| User repro shape                 | Yes     | Duplicate, altered, concurrent, and trigger-failure activation submissions are executable fixtures                         | Yes                 |
+| Data shape / persisted row shape | Yes     | Rollback suites and watchdog assertions cover operations, previews, tasks, work blocks, changes, revisions, and provenance | Yes                 |
+| Renderer store/state             | N/A     | This slice verifies the canonical database and Local API contract, not renderer projection                                 | No                  |
+| Electron main/preload bridge     | N/A     | No Electron bridge behavior changed                                                                                        | No                  |
+| Localhost sidecar endpoint       | Yes     | Fixed daily cohort includes the canonical task and Notion activation Local API adapters                                    | Yes                 |
+| KDE polling/control path         | N/A     | No timer or KDE behavior changed                                                                                           | No                  |
+| Supabase persistence/realtime    | Partial | Disposable PostgreSQL proves atomic persistence and revision/change evidence; live Realtime delivery is not exercised      | Persistence only    |
+| Updater/runtime version          | N/A     | No package or production deployment occurred                                                                               | No                  |
+| Stale live process/cache state   | N/A     | Disposable database isolation intentionally excludes live process and cache state                                          | No                  |
 
 **Exact failure mode fixed**: the canonical assistant and Notion activation contracts could regress across SQL ordering, concurrent submissions, rollback, or watchdog coverage while source-shape unit tests still passed; the fixed daily lane now executes those joined database failure classes and the production watchdog can report redacted integrity drift.
 
@@ -2777,12 +3222,14 @@ _Original plan below._
 **Failure-class matrix**: documented with the exact failure mode, uncovered boundaries, regression proof, and live observation below.
 
 **Scope**:
+
 - Use the renderer auth heartbeat as the authority for why the Local API has no usable auth context instead of collapsing every state into `not signed in`.
 - Preserve the security boundary: never forward an expired access token and never let the sidecar race the renderer for a single-use refresh token.
 - Return stable protected-route responses for re-authentication required, bounded reconnect recovery, and actual signed-out state.
 - Teach the live-boundary diagnostic to report re-authentication as actionable, refresh grace as a warning, and renderer-to-sidecar blindness only when the renderer says remote sync is available.
 
 **Acceptance**:
+
 - A cached signed-in shell with an exhausted session is not misreported as a renderer-to-sidecar delivery failure.
 - A renderer inside bounded refresh recovery does not raise a hard incident while waiting for a fresh session.
 - A renderer that can sync remotely while the sidecar has no context still fails as a genuine bridge fault.
@@ -2794,17 +3241,17 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Failure class | Checked | Evidence | Covered by this fix |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Signed-in renderer heartbeat plus absent sidecar auth context is covered in re-auth, reconnect, and bridge-fault variants | Yes |
-| Data shape / persisted row shape | N/A | No task or database row changes | No |
-| Renderer store/state | Yes | Existing redacted heartbeat fields drive the classifier fixtures | Classification only |
-| Electron main/preload bridge | Partial | Existing heartbeat delivery is exercised through diagnostics; IPC transport code is unchanged | Classification only |
-| Localhost sidecar endpoint | Yes | Protected-route contract and pure response classifier cover all missing-context states | Yes |
-| KDE polling/control path | N/A | Timer route ordering and KDE behavior are unchanged | No |
-| Supabase persistence/realtime | N/A | No persistence or Realtime behavior changes | No |
-| Updater/runtime version | Partial | The active packaged runtime was observed recovering its auth context; this source change is not packaged or deployed | No |
-| Stale live process/cache state | Yes | Cached signed-in shell with unusable session is the exact classified state | Yes |
+| Failure class                    | Checked | Evidence                                                                                                                  | Covered by this fix |
+| -------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| User repro shape                 | Yes     | Signed-in renderer heartbeat plus absent sidecar auth context is covered in re-auth, reconnect, and bridge-fault variants | Yes                 |
+| Data shape / persisted row shape | N/A     | No task or database row changes                                                                                           | No                  |
+| Renderer store/state             | Yes     | Existing redacted heartbeat fields drive the classifier fixtures                                                          | Classification only |
+| Electron main/preload bridge     | Partial | Existing heartbeat delivery is exercised through diagnostics; IPC transport code is unchanged                             | Classification only |
+| Localhost sidecar endpoint       | Yes     | Protected-route contract and pure response classifier cover all missing-context states                                    | Yes                 |
+| KDE polling/control path         | N/A     | Timer route ordering and KDE behavior are unchanged                                                                       | No                  |
+| Supabase persistence/realtime    | N/A     | No persistence or Realtime behavior changes                                                                               | No                  |
+| Updater/runtime version          | Partial | The active packaged runtime was observed recovering its auth context; this source change is not packaged or deployed      | No                  |
+| Stale live process/cache state   | Yes     | Cached signed-in shell with unusable session is the exact classified state                                                | Yes                 |
 
 **Exact failure mode fixed**: a cached signed-in renderer shell without a usable JWT was reported as a blind sidecar, and every protected Local API request returned the same `not signed in` 503 even when the renderer was reconnecting or required explicit re-authentication.
 
@@ -2821,6 +3268,7 @@ _Original plan below._
 **Failure class**: The disposable development schema stores task/project IDs as text, while production stores them as UUID. The merged RPCs, rollback fixtures, and two watchdog joins compared or inserted text IDs directly, so repository proof passed but the approved live rollback suites failed before exercising the contract.
 
 **Scope**:
+
 - Add production-UUID regression fixtures that still run on text-ID development schemas.
 - Make RPC lookup, insert, operation/change evidence, and provenance guards compare IDs through stable text projections while preserving typed task/project columns.
 - Add an idempotent forward migration; do not rewrite production history as the only repair.
@@ -2828,6 +3276,7 @@ _Original plan below._
 - Re-run both rollback-only SQL suites against production and verify zero retained fixture rows before enabling Hermes writers.
 
 **Acceptance**:
+
 - Canonical task preview/apply and Notion activation work with UUID task/project columns and retain string IDs at external/ledger boundaries.
 - Both production rollback suites reach `ROLLBACK` with no failures and leave no fixture users, tasks, projects, previews, operations, or changes.
 - The production watchdog reports `OK` without query-failure suppression.
@@ -2837,17 +3286,17 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Protected canonical and Notion mutations exercised through preview/apply/read-back contracts | Yes |
-| Data shape / persisted row shape | Yes | Text-ID disposable schema and UUID production schema both pass; typed task/project keys and text ledger IDs verified | Yes |
-| Renderer store/state | N/A | This repair changes database contracts and watchdog queries only | No |
-| Electron main/preload bridge | N/A | Covered by the separate authenticated sidecar release lane | No |
-| Localhost sidecar endpoint | N/A | Covered by TASK-1945 and TASK-1950 | No |
-| KDE polling/control path | N/A | No timer or KDE behavior changed | No |
-| Supabase persistence/realtime | Yes | Production transaction proof, revision/change evidence, RLS checks, and zero-residue rollback read-back | Yes |
-| Updater/runtime version | Not yet | Electron packaging remains in the parent TASK-1943 release lane | No |
-| Stale live process/cache state | Yes | Installed VPS watchdog rerun after migration and reported `OK` | Yes |
+| Class                            | Checked? | Evidence                                                                                                             | Covered by this fix? |
+| -------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| User repro shape                 | Yes      | Protected canonical and Notion mutations exercised through preview/apply/read-back contracts                         | Yes                  |
+| Data shape / persisted row shape | Yes      | Text-ID disposable schema and UUID production schema both pass; typed task/project keys and text ledger IDs verified | Yes                  |
+| Renderer store/state             | N/A      | This repair changes database contracts and watchdog queries only                                                     | No                   |
+| Electron main/preload bridge     | N/A      | Covered by the separate authenticated sidecar release lane                                                           | No                   |
+| Localhost sidecar endpoint       | N/A      | Covered by TASK-1945 and TASK-1950                                                                                   | No                   |
+| KDE polling/control path         | N/A      | No timer or KDE behavior changed                                                                                     | No                   |
+| Supabase persistence/realtime    | Yes      | Production transaction proof, revision/change evidence, RLS checks, and zero-residue rollback read-back              | Yes                  |
+| Updater/runtime version          | Not yet  | Electron packaging remains in the parent TASK-1943 release lane                                                      | No                   |
+| Stale live process/cache state   | Yes      | Installed VPS watchdog rerun after migration and reported `OK`                                                       | Yes                  |
 
 **Exact failure mode fixed**: Canonical RPCs, SQL proofs, and watchdog joins assumed text task/project primary keys and failed against production UUID columns.
 
@@ -2864,12 +3313,14 @@ _Original plan below._
 **Failure class**: The packaged renderer can load a durable backup identity while the primary auth key is null, but copying that backup into the async store after auth-js initializes does not hydrate auth-js memory. A second `getSession()` can therefore remain null, restore the primary key to null, and leave the Local API protected routes at 503.
 
 **Scope**:
+
 - Reproduce the already-initialized-client failure in the auth-store regression suite.
 - Hydrate the recovered token pair through Supabase auth's supported session API instead of assuming a storage write triggers a reread.
 - Preserve stale/already-used refresh-token cleanup and bounded reconnect behavior.
 - Ship a new Electron updater version and require live diagnostics to show a durable primary session, remote sync, protected assistant context, and no failures.
 
 **Acceptance**:
+
 - A valid backup session makes the initialized auth client authenticated and persists the refreshed primary session.
 - A rejected backup remains write-blocked, clears only the dead backup, and keeps the user shell available for explicit reconnect.
 - Focused auth tests, type-check, release gates, package validation, and public updater proof pass.
@@ -2884,12 +3335,14 @@ _Original plan below._
 **Failure class**: A Realtime task update can reach the second client's Pinia store while Canvas is dragging, resizing, editing, or settling. The one-shot projection request is then rejected by the interaction guard and never retried, leaving the rendered Vue Flow node permanently at stale geometry until another refresh or unrelated sync.
 
 **Scope**:
+
 - Keep interaction guards authoritative; never force remote geometry through an active local operation.
 - Coalesce blocked node and edge reconciliation requests and replay them from the latest store state when Canvas returns idle.
 - Flush queued work for both settling completion and explicit reset-to-idle transitions.
 - Preserve the existing no-nudge and no-feedback-loop projection invariants.
 
 **Acceptance**:
+
 - Blocked remote projection work does not mutate rendered geometry during the protected operation.
 - Returning to idle applies the latest store geometry exactly once even when several triggers arrived while blocked.
 - Focused state-machine regressions and repeated two-independent-client R5 propagation pass.
@@ -2897,16 +3350,16 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Failure class | Checked | Evidence | Covered by this fix |
-|---|---:|---|---:|
-| Realtime / canonical store delivery | Yes | R5 proves client B receives `{2850,2850}` in Pinia before render reconciliation | Existing path retained |
-| Interaction guard behavior | Yes | State-machine regressions prove no queued work runs during drag/settling | Yes |
-| Deferred renderer projection | Yes | Keyed queue keeps only the latest projection and flushes on settle or explicit reset to idle | Yes |
-| Canvas node geometry | Yes | R5 rendered-node propagation passed 10/10 repeated independent-client runs | Yes |
-| Canvas edge projection | Yes | Node and edge requests use separate coalescing keys and read latest store state on replay | Yes |
-| No-nudge / structural Canvas behavior | Yes | Full R1–R8 independent-client suite passed 8/8 | Yes |
-| Broader Canvas/sync contracts | Yes | Focused cohort passed 32 files / 362 tests; type-check passed | Yes |
-| Electron package/runtime | Not yet | Release remains held until this merged repair is included in the next package | Covered by TASK-1952 release |
+| Failure class                         | Checked | Evidence                                                                                     |          Covered by this fix |
+| ------------------------------------- | ------: | -------------------------------------------------------------------------------------------- | ---------------------------: |
+| Realtime / canonical store delivery   |     Yes | R5 proves client B receives `{2850,2850}` in Pinia before render reconciliation              |       Existing path retained |
+| Interaction guard behavior            |     Yes | State-machine regressions prove no queued work runs during drag/settling                     |                          Yes |
+| Deferred renderer projection          |     Yes | Keyed queue keeps only the latest projection and flushes on settle or explicit reset to idle |                          Yes |
+| Canvas node geometry                  |     Yes | R5 rendered-node propagation passed 10/10 repeated independent-client runs                   |                          Yes |
+| Canvas edge projection                |     Yes | Node and edge requests use separate coalescing keys and read latest store state on replay    |                          Yes |
+| No-nudge / structural Canvas behavior |     Yes | Full R1–R8 independent-client suite passed 8/8                                               |                          Yes |
+| Broader Canvas/sync contracts         |     Yes | Focused cohort passed 32 files / 362 tests; type-check passed                                |                          Yes |
+| Electron package/runtime              | Not yet | Release remains held until this merged repair is included in the next package                | Covered by TASK-1952 release |
 
 **Exact failure mode fixed**: A protected Canvas interaction could reject the only store-to-render projection trigger after Realtime updated client B, leaving Pinia correct while Vue Flow stayed permanently at the old position.
 
@@ -2928,15 +3381,15 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Failure class | Checked | Evidence | Covered by this fix |
-|---|---:|---|---:|
-| Task data persistence | Yes | Canonical awaited task-store due-date write remains intact | Yes |
-| Renderer / Quick Sort session state | Yes | Regression proves current task/progress remain unchanged and active-session storage is not rewritten | Yes |
-| Undo/redo | Yes | Non-advancing in-memory action remains available for immediate Undo | Yes |
-| Electron main / preload | Yes | v1.4.246 package validation passed; no bridge change required | No change required |
-| Localhost sidecar / KDE | N/A | Quick Sort postpone does not use these boundaries | Not applicable |
-| Updater / runtime version | Yes | Public manifest, local release artifact, and installed launcher AppImage match v1.4.246 size and SHA-512 | Yes |
-| Stale live process | Yes | v1.4.245 was terminated; the v1.4.246 AppImage is mounted and running normally | Yes |
+| Failure class                       | Checked | Evidence                                                                                                 | Covered by this fix |
+| ----------------------------------- | ------: | -------------------------------------------------------------------------------------------------------- | ------------------: |
+| Task data persistence               |     Yes | Canonical awaited task-store due-date write remains intact                                               |                 Yes |
+| Renderer / Quick Sort session state |     Yes | Regression proves current task/progress remain unchanged and active-session storage is not rewritten     |                 Yes |
+| Undo/redo                           |     Yes | Non-advancing in-memory action remains available for immediate Undo                                      |                 Yes |
+| Electron main / preload             |     Yes | v1.4.246 package validation passed; no bridge change required                                            |  No change required |
+| Localhost sidecar / KDE             |     N/A | Quick Sort postpone does not use these boundaries                                                        |      Not applicable |
+| Updater / runtime version           |     Yes | Public manifest, local release artifact, and installed launcher AppImage match v1.4.246 size and SHA-512 |                 Yes |
+| Stale live process                  |     Yes | v1.4.245 was terminated; the v1.4.246 AppImage is mounted and running normally                           |                 Yes |
 
 **Exact failure mode fixed**: `rescheduleCurrentTask()` explicitly called `persistSession()` after the due-date mutation, serializing the Quick Sort undo stack and active application state even though postpone is a task edit that must not commit session state.
 
@@ -2953,6 +3406,7 @@ _Original plan below._
 **Required behavior**: Persist the selected due date, close only the quick-edit popup, keep the same task active with unchanged progress, preserve undo/redo, and render the confirmation on a fully opaque surface on desktop and mobile.
 
 **Subtasks**:
+
 - [x] ~~BUG-1938 — lock the user's exact behavior with a failing current-task/progress regression and opaque-feedback source contract.~~
 - [x] ~~Keep reschedule actions undoable without counting or advancing the task; update desktop/mobile copy to stop promising the next task.~~
 - [x] ~~Replace translucent feedback glass with the opaque primary surface on desktop and mobile.~~
@@ -2964,15 +3418,15 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Failure class | Checked | Evidence | Covered by this fix |
-|---|---:|---|---:|
-| Data shape / persistence | Yes | Awaited task-store due-date update; packaged Undo restored the original live due date | Yes |
-| Renderer state | Yes | Direct v1.4.245 X11 capture shows popup dismissal, same card, unchanged progress, and opaque feedback | Yes |
-| Undo/redo snapshot ownership | Yes | Regressions cover unsaved fields, immediate undo/redo, and returning from another task with distinct project/priority | Yes |
-| Electron main / preload | Yes | Canonical package validation passed for renderer, main, preload, and sidecar | No change required |
-| Localhost sidecar | Yes | Fresh packaged process reported the v1.4.245 sidecar listening on port 5577 | No change required |
-| Updater / runtime version | Yes | Live manifest, local artifact, installed AppImage, and generated Electron metadata all match v1.4.245 | Yes |
-| Stale live process | Yes | v1.4.244 mount and wrapper were terminated before the v1.4.245 launch | Yes |
+| Failure class                | Checked | Evidence                                                                                                              | Covered by this fix |
+| ---------------------------- | ------: | --------------------------------------------------------------------------------------------------------------------- | ------------------: |
+| Data shape / persistence     |     Yes | Awaited task-store due-date update; packaged Undo restored the original live due date                                 |                 Yes |
+| Renderer state               |     Yes | Direct v1.4.245 X11 capture shows popup dismissal, same card, unchanged progress, and opaque feedback                 |                 Yes |
+| Undo/redo snapshot ownership |     Yes | Regressions cover unsaved fields, immediate undo/redo, and returning from another task with distinct project/priority |                 Yes |
+| Electron main / preload      |     Yes | Canonical package validation passed for renderer, main, preload, and sidecar                                          |  No change required |
+| Localhost sidecar            |     Yes | Fresh packaged process reported the v1.4.245 sidecar listening on port 5577                                           |  No change required |
+| Updater / runtime version    |     Yes | Live manifest, local artifact, installed AppImage, and generated Electron metadata all match v1.4.245                 |                 Yes |
+| Stale live process           |     Yes | v1.4.244 mount and wrapper were terminated before the v1.4.245 launch                                                 |                 Yes |
 
 **Outside this fix**: Authenticated Playwright remains unavailable in this shell because `SUPABASE_SERVICE_ROLE_KEY` is not present. The stronger packaged Electron proof covers the user's actual surface. BUG-1939 separately removes the active-session persistence side effect from postpone clicks.
 
@@ -2987,6 +3441,7 @@ _Original plan below._
 **Exact failure mode**: Two independent same-day release lanes published different AppImages as v1.4.243. The correct Quick Sort artifact was live first, then the Board due-date lane overwrote the same manifest/version two minutes later. Electron installed the later checksum correctly, but the version label could not reveal that the renderer contents had changed.
 
 **Subtasks**:
+
 - [x] ~~BUG-1937 — prove the running executable, installed AppImage, pending updater file, and live manifest all shared the later checksum while differing from the first v1.4.243 artifact.~~
 - [x] ~~Merge the committed Board due-date lane and Quick Sort lane so the recovery release preserves both fixes.~~
 - [x] ~~Add a deploy preflight that rejects downgrades and same-version/different-checksum artifacts before upload.~~
@@ -2996,15 +3451,15 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Failure class | Checked | Evidence | Covered by this fix |
-|---|---:|---|---:|
-| Data shape / Supabase persistence | Yes | The symptom reproduced before any task mutation; installed renderer contents, not task data, selected the old controls | No change required |
-| Renderer state | Yes | Direct packaged-window capture after restart shows the explicit destination controls and task-pool picker | Yes |
-| Electron main / preload | Yes | v1.4.244 packaged and validated main, preload, renderer, and sidecar resources | Yes |
-| Localhost sidecar | Yes | Fresh packaged process reported the v1.4.244 sidecar listening on port 5577 | No change required |
-| KDE polling / control | Yes | Not involved in due-date rendering; desktop relaunch and X11 window capture succeeded | No change required |
-| Updater / runtime version | Yes | The live v1.4.243 checksum had been overwritten by another v1.4.243 artifact; v1.4.244 is unique, and locked manifest-last promotion now rejects collisions/downgrades while validating every staged artifact | Yes |
-| Stale live process | Yes | The surviving mounted v1.4.243 process was terminated before the v1.4.244 AppImage launch | Yes |
+| Failure class                     | Checked | Evidence                                                                                                                                                                                                      | Covered by this fix |
+| --------------------------------- | ------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------: |
+| Data shape / Supabase persistence |     Yes | The symptom reproduced before any task mutation; installed renderer contents, not task data, selected the old controls                                                                                        |  No change required |
+| Renderer state                    |     Yes | Direct packaged-window capture after restart shows the explicit destination controls and task-pool picker                                                                                                     |                 Yes |
+| Electron main / preload           |     Yes | v1.4.244 packaged and validated main, preload, renderer, and sidecar resources                                                                                                                                |                 Yes |
+| Localhost sidecar                 |     Yes | Fresh packaged process reported the v1.4.244 sidecar listening on port 5577                                                                                                                                   |  No change required |
+| KDE polling / control             |     Yes | Not involved in due-date rendering; desktop relaunch and X11 window capture succeeded                                                                                                                         |  No change required |
+| Updater / runtime version         |     Yes | The live v1.4.243 checksum had been overwritten by another v1.4.243 artifact; v1.4.244 is unique, and locked manifest-last promotion now rejects collisions/downgrades while validating every staged artifact |                 Yes |
+| Stale live process                |     Yes | The surviving mounted v1.4.243 process was terminated before the v1.4.244 AppImage launch                                                                                                                     |                 Yes |
 
 **Outside this fix**: This guard protects the canonical `deploy-electron-update.sh` path. Direct manual writes to the VPS release directory remain an operational bypass and must not be used.
 
@@ -3019,6 +3474,7 @@ _Original plan below._
 **Exact failure mode**: Date shortcuts were implemented as ordinary field edits instead of Quick Sort decisions. Desktop and mobile duplicated their date math, several presets never rendered an active state, and the compact desktop row hid later actions behind an invisible horizontal scroll.
 
 **Implementation**:
+
 - [x] ~~BUG-1936 — add a single `rescheduleCurrentTask` action that persists the selected due date and records the Quick Sort undo action (initially advancing; BUG-1938 now keeps the task open).~~
 - [x] Share local-date preset resolution across desktop and mobile, including next-Saturday weekend semantics.
 - [x] Replace offset-only copy with explicit destinations, put Next weekend among the first three actions, and wrap desktop actions. (BUG-1938 removed the later-superseded next-task promise.)
@@ -3029,17 +3485,17 @@ _Original plan below._
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Authenticated desktop/mobile E2E clicks Next weekend, sees confirmation, and advances | Yes |
-| Data shape / persisted row shape | Yes | Regressions preserve empty-string/no-date transitions through Quick Sort undo/redo | Yes, for due-date actions |
-| Renderer store/state | Yes | Single-flight and competing-action tests cover processed IDs, current card, undo, redo, and completion preview | Yes |
-| Electron main/preload bridge | N/A | Renderer-only interaction; packaged Electron contents validated | No bridge change required |
-| Localhost sidecar endpoint | N/A | Quick Sort postponement does not use the sidecar | Not applicable |
-| KDE polling/control path | N/A | Quick Sort postponement does not use KDE integration | Not applicable |
-| Supabase persistence/realtime | Yes | Canonical task-store update path is awaited before the Quick Sort action advances | Yes, through existing task persistence |
-| Updater/runtime version | Yes | Public manifest serves the effective combined v1.4.244 release; installed AppImage checksum and size match | Yes |
-| Stale live process/cache state | Yes | Captured-queue semantics remain stable and the final action stays undoable until explicit session finalization | Yes, for Quick Sort state |
+| Class                            | Checked? | Evidence                                                                                                       | Covered by this fix?                   |
+| -------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| User repro shape                 | Yes      | Authenticated desktop/mobile E2E clicks Next weekend, sees confirmation, and advances                          | Yes                                    |
+| Data shape / persisted row shape | Yes      | Regressions preserve empty-string/no-date transitions through Quick Sort undo/redo                             | Yes, for due-date actions              |
+| Renderer store/state             | Yes      | Single-flight and competing-action tests cover processed IDs, current card, undo, redo, and completion preview | Yes                                    |
+| Electron main/preload bridge     | N/A      | Renderer-only interaction; packaged Electron contents validated                                                | No bridge change required              |
+| Localhost sidecar endpoint       | N/A      | Quick Sort postponement does not use the sidecar                                                               | Not applicable                         |
+| KDE polling/control path         | N/A      | Quick Sort postponement does not use KDE integration                                                           | Not applicable                         |
+| Supabase persistence/realtime    | Yes      | Canonical task-store update path is awaited before the Quick Sort action advances                              | Yes, through existing task persistence |
+| Updater/runtime version          | Yes      | Public manifest serves the effective combined v1.4.244 release; installed AppImage checksum and size match     | Yes                                    |
+| Stale live process/cache state   | Yes      | Captured-queue semantics remain stable and the final action stays undoable until explicit session finalization | Yes, for Quick Sort state              |
 
 **Exact failure mode fixed**: Quick Sort date buttons acted like silent field edits, so postponing required a second Save and ambiguous offset labels did not communicate the result. They now perform one atomic, explicit postpone-and-next decision.
 
@@ -3060,6 +3516,7 @@ _Original plan below._
 **Implementation**: Added a shared responsive source picker, due-date-only local-date predicates with OR/deduplication semantics, captured session queues, remembered source selection, crash-safe source/queue persistence, legacy session recovery, and explicit restart confirmation before changing active pools. Assigned and uncategorized tasks can coexist in one session; done, pinned, and soft-deleted tasks remain excluded.
 
 **Subtasks**:
+
 - [x] FEATURE-1935 — lock task-pool boundaries, combinations, captured queues, recovery, and desktop/mobile picker behavior with regressions.
 - [x] Verify responsive rendering and mobile internal scrolling so the Start action remains reachable.
 - [ ] Build, deploy, and verify Electron updater v1.4.242; then close all tracking entries.
@@ -3079,13 +3536,15 @@ _Original plan below._
 **Approach**: Add a subscription-based brain via a tiny auth-gated **AI bridge** on the VPS that wraps the local `claude` / `codex` CLIs (no per-token API billing). Claude and Codex are equal, switchable per AI action. New router provider `'bridge'`, auto-selected when reachable, transparent **Groq-free fallback** when a brain's token is dead so AI never hard-fails. Then deepen prompts + build the two flagship flows.
 
 **Architecture (decided + verified)**:
+
 - VPS has `claude` 2.1.111 + `codex` 0.133 installed; 16GB RAM free.
 - Claude re-authed via `claude setup-token` → `CLAUDE_CODE_OAUTH_TOKEN` stored root-only at `/root/.flowstate-ai-bridge.env` (verified: `claude -p` → OK).
 - Codex existing `~/.codex/auth.json` still valid (verified: `codex exec` → OK, model gpt-5.5). No re-login needed.
 - Bridge auth: Supabase HS256 JWT, CORS-locked to app origin, per-user rate limit, binds 127.0.0.1 behind Caddy `/ai-bridge`.
 
 **Progress (2026-06-04) — Phase 1 COMPLETE (deployed, untested end-to-end)**:
-- Bridge server `infra/ai-bridge/server.mjs` (zero-dep Node): HS256 *or* Supabase `/auth/v1/user` token validation, multi-origin CORS (prod same-origin + localhost dev + Electron `null`), per-user rate limit, Groq-fallback on dead brain. Local-tested with stub brain (no quota): health/routing/400/401/rate-limit all pass.
+
+- Bridge server `infra/ai-bridge/server.mjs` (zero-dep Node): HS256 _or_ Supabase `/auth/v1/user` token validation, multi-origin CORS (prod same-origin + localhost dev + Electron `null`), per-user rate limit, Groq-fallback on dead brain. Local-tested with stub brain (no quota): health/routing/400/401/rate-limit all pass.
 - **Deployed to VPS**: systemd `ai-bridge.service` active, env at `/root/.flowstate-ai-bridge.env`, Caddy route `in-theflow.com/ai-bridge/*` → `127.0.0.1:8788` (validated + reloaded). Public verified: `/ai-bridge/health` → both brains; unauth `/v1/chat` → 401; CORS echo for localhost + null confirmed.
 - **App wired**: `bridgeClient.ts` + `bridgeProvider.ts`, `'bridge'` added to `AIProviderType`/`RouterProviderType`, router creates+prefers bridge (incl. complex-tier), settings `aiUseSubscription`/`aiBrain` + Settings UI brain-selector (Claude default, Codex switchable). vue-tsc clean on touched files; full unit suite **2348 pass**.
 - **NOT yet verified**: a real authenticated `claude -p`/`codex exec --json` round-trip through the bridge (avoided burning subscription quota — validates on first in-app use; codex JSON parser is tolerant + has plain-text fallback).
@@ -3123,7 +3582,7 @@ Reuses `computeCanonicalLayout` scoped to one group (`useTidyLayout.reorderColum
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-06-04) — shipped to production (prod Supabase migrated + verified; Electron v1.4.84 deployed, `latest-linux.yml` live)
 
-**Goal**: Add a new first-class **Lane** entity — a sprint-like path toward a goal that pulls in tasks from *different* projects. A task belongs to at most one lane (nullable `laneId` FK, not a join table). v1 is a named bucket + view: `Lane = { id, name, color }` (no dates/progress/lifecycle yet). Lane is orthogonal to project (a task keeps its single `projectId`).
+**Goal**: Add a new first-class **Lane** entity — a sprint-like path toward a goal that pulls in tasks from _different_ projects. A task belongs to at most one lane (nullable `laneId` FK, not a join table). v1 is a named bucket + view: `Lane = { id, name, color }` (no dates/progress/lifecycle yet). Lane is orthogonal to project (a task keeps its single `projectId`).
 
 **Approach**: `Lane` mirrors `Project` through the whole stack (type → mapper → DB module → store → sync queue → realtime → UI). Lane is **pure metadata** — never touches canvas geometry (`canvasPosition`/`parentId`/`position_version`); rides the normal task-update sync path and plain `updated_at` LWW (not the position-version path). Highest risk: `lane_id` must round-trip in both `toSupabaseTask`/`fromSupabaseTask` or realtime echo nulls it every save (same class as the documented `parentId` bug, `supabaseMappers.ts:532-539`).
 
@@ -3162,11 +3621,12 @@ Reuses `computeCanonicalLayout` scoped to one group (`useTidyLayout.reorderColum
 **Goal**: Let users reorder a task inside a day/smart canvas column by holding **Shift** while dragging. On a Shift-drop, the column restacks cleanly from the header down — the dragged card takes the slot its drop-Y lands in and the rest shift down (insert-and-shift). Non-Shift drops keep today's free placement, unchanged.
 
 **Approach**: Reuse the tested `computeCanonicalLayout` primitive (`useCanonicalDayGroupLayout.ts`) scoped to a single group. Tasks already order by Y, so the dropped card's new Y decides its slot.
+
 - `useTidyLayout.ts`: add pure `planReorderColumn(groupId)` + `reorderColumn(groupId)` (store writes + position locks + undo snapshot, mirrors `tidyDayGroups`).
 - `CanvasView.vue`: window keydown/keyup/blur listeners track `reorderKeyHeld` (F2); wrap `@node-drag-stop` — if held, run `reorderColumn` on the dropped task's group via `applyCanonicalMoves` + `syncNodes({force})`.
 - Stays inside the single sanctioned geometry writer (drag handler + Tidy primitive) → no sync-loop/invariant violation.
 
-**Perf (TASK-1809b — instant paint)**: First version awaited the drag handler's Supabase write (~1–2s on VPS, BUG-1051) *before* painting the restack → 2–4s lag. Fixed by splitting `reorderColumn` into a synchronous part (plan + group geometry + moves) and a deferred `commit()` (task `updateTask` writes + PositionManager + undo). The wrapper now: starts the drag save without awaiting (its sync prefix passes the `canvasSyncInProgress` guard first), runs `reorderColumn` + `applyCanonicalMoves` **synchronously** (instant paint), then `await dragDone` → `commit()` so reorder's writes land last and win LWW (a refresh keeps the reordered slot). Same-column drops use this instant path (detected via `getDeepestContainingGroup`); rare cross-group drops fall back to await-then-reorder. Covered by `tidy-layout.test.ts` reorderColumn tests.
+**Perf (TASK-1809b — instant paint)**: First version awaited the drag handler's Supabase write (~1–2s on VPS, BUG-1051) _before_ painting the restack → 2–4s lag. Fixed by splitting `reorderColumn` into a synchronous part (plan + group geometry + moves) and a deferred `commit()` (task `updateTask` writes + PositionManager + undo). The wrapper now: starts the drag save without awaiting (its sync prefix passes the `canvasSyncInProgress` guard first), runs `reorderColumn` + `applyCanonicalMoves` **synchronously** (instant paint), then `await dragDone` → `commit()` so reorder's writes land last and win LWW (a refresh keeps the reordered slot). Same-column drops use this instant path (detected via `getDeepestContainingGroup`); rare cross-group drops fall back to await-then-reorder. Covered by `tidy-layout.test.ts` reorderColumn tests.
 
 ### ~~TASK-1871~~: Stop recurring canvas/sync regressions — root-cause campaign (✅ DONE)
 
@@ -3193,6 +3653,7 @@ Reuses `computeCanonicalLayout` scoped to one group (`useTidyLayout.reorderColum
 **API rate-limit write storm (the "won't STAY in sync" root cause)**: localhost console showed `[TIDY] Wrote 10 group moves + 31 task moves` repeating, with `[CANONICAL-LAYOUT:VF] x=1616 -> 1616` (moving to the SAME position) → hundreds of `Save Group Error: API rate limit exceeded`. Cause: `useTidyLayout`/`useDayGroupRotation` emit a move for EVERY group/task and wrote them ALL unconditionally, so every canvas load/sync re-wrote identical positions → flooded the self-hosted API → rate-limit → cascaded into token-refresh failures, 406s, sign-outs across clients. Fix (v1.4.193): both paths now filter NO-OP moves (target within 0.5px of current, and unchanged parent) before writing → idempotent re-runs write nothing → no storm. Lint clean, 21 day-group unit tests pass. Follow-up test to add: assert tidy/rotation produce zero writes when positions are already canonical.
 
 **Durable prevention guardrails (so the class can't return) — all 3 done v1.4.194**:
+
 1. **Systemic no-op write guard + write-storm tripwire** — `updateGroup` now drops position writes that don't change anything (skips the write entirely if it's a pure no-op), so ANY caller (not just tidy/rotation) is storm-proof. `recordWrite` (`src/utils/sync/writeRateGuard.ts`) is wired into `updateGroup`/`updateTask`: keyed per-(entity), it THROWS in tests/CI when the same row is written >15×/s (a feedback loop) and console.errors in the app (never throws in dev/prod — must not break the user's app). Test: `tests/unit/sync/write-rate-guard.test.ts`.
 2. **Two-client harness wired into CI** — new `canvas-sync` job in `.github/workflows/ci.yml` boots local Supabase and runs the R1–R7 two-independent-client Realtime e2e + canvas/sync unit suites on every PR.
 3. **Schema-vs-payload completeness test** — `tests/unit/sync/task-sync-payload-completeness.test.ts` fails the build when a column syncs on CREATE but not UPDATE (the field-completeness trap), with an explicit create-only allowlist. 333 unit tests + R1–R7 e2e green.
@@ -3392,6 +3853,7 @@ Reuses `computeCanonicalLayout` scoped to one group (`useTidyLayout.reorderColum
 **Problem**: Life OS Advisor (separate local app) needs to read FlowState tasks for context and create/update them on explicit user approval, over a tiny localhost API.
 
 **Approach**: Node `http` sidecar (`server/local-api/server.cjs`, zero new runtime deps — reuses `@supabase/supabase-js`) over the same Supabase `tasks` table. Additive; UI keeps syncing via realtime. Two modes:
+
 - **Token mode (shipped)**: Electron auto-spawns the sidecar via `utilityProcess` when enabled in Settings; renderer forwards the logged-in session (anon key + user JWT) so all queries are RLS-scoped. No service-role key shipped. Off by default; random per-machine bearer shown in Settings.
 - **Service-role mode (standalone)**: `doppler run -- npm run api` for headless/app-closed use on your own machine; never bundled.
 
@@ -3414,6 +3876,7 @@ preview-first, idempotent `Done for now` action shared by the renderer and Local
 Task API, with exact read-back and authoritative renderer reconciliation.
 
 **Personal-assistant reliability follow-up**:
+
 - [ ] **TASK-1943 — reliable Hermes–FlowState personal-assistant program**, beginning with dependency-linked **TASK-1944** for the canonical operation, revision, receipt, replay, and change-sequence boundary.
 
 ---
@@ -3423,6 +3886,7 @@ Task API, with exact read-back and authoritative renderer reconciliation.
 **Priority**: P2 | **Status**: ✅ DONE (2026-05-25) — shipped to production. Rebased onto master and merged via PR #157, deployed to in-theflow.com (web) + Electron auto-updater (1.4.50). Follow-up PR #158 self-hosted the Clash Display font (was blocked by the edge CSP). Restore tag `pre-design-overhaul-2026-05-21`.
 
 **Phases (all ✅ implemented, each its own commit):**
+
 - ✅ Phase 1: text contrast — `--text-muted` 0.45→0.55, `--text-subtle` 0.35→0.45 (WCAG AA)
 - ✅ Phase 2: project-color left accent on board cards (project identity in mixed-project views)
 - ✅ Phase 3: quick-add elevated to primary (brand accent), Create project demoted to ghost
@@ -3434,6 +3898,7 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 **Problem**: Whole-app design critique flagged 5 priority issues: (1) low-contrast actionable text (dates/estimates at 35-45% opacity), (2) color double-encoding (priority shown as both dots and pills; teal overloaded across brand/active/status/project), (3) no clear primary action (Create project louder than quick-add), (4) unlabeled 7-icon header soup with clock+timer jammed together, (5) weak/possibly-buggy empty states (Calendar filter-empty hides seeded tasks; canvas partially-populated groups have no add prompt).
 
 **Approach**: Safe phased overhaul, each phase checkpointed + screenshot-diffed against baseline. Restore via `git reset --hard pre-design-overhaul-2026-05-21`.
+
 - Phase 1: text contrast tokens (design-tokens.css)
 - Phase 2: color semantics — pills as single priority encoding, project identity on cards, teal=brand only (TaskCardStatus.vue, TaskRowPriority.vue, TaskRowProject.vue)
 - Phase 3: primary action — quick-add loudest, demote Create project (SidebarQuickTaskInput.vue, SidebarProjectsSection.vue)
@@ -3450,13 +3915,13 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 
 **Problem**: After v1.4.48, the app loaded but the Canvas was completely empty (no nodes, no groups) for users with parented canvas data, while the inbox panel listed tasks normally.
 
-**Root cause**: `src/composables/canvas/useCanvasSync.ts` calls `toRelativePosition(...)` at lines 302 (group nodes) and 457 (task nodes) but never imported it (exported from `src/utils/canvas/coordinates.ts:50`). Introduced by BUG-1792 (commit 9c92acc3). Both call sites only run for a node with a *visible parent*, so a nested group / task-in-group triggered `ReferenceError: toRelativePosition is not defined`. `syncStoreToCanvas` is `try { …build… setNodes() } finally {}` with no `catch`, so the throw skipped `setNodes()` entirely → empty canvas. Surfaced via Vue's effect error handler (logged, non-fatal) so no white screen.
+**Root cause**: `src/composables/canvas/useCanvasSync.ts` calls `toRelativePosition(...)` at lines 302 (group nodes) and 457 (task nodes) but never imported it (exported from `src/utils/canvas/coordinates.ts:50`). Introduced by BUG-1792 (commit 9c92acc3). Both call sites only run for a node with a _visible parent_, so a nested group / task-in-group triggered `ReferenceError: toRelativePosition is not defined`. `syncStoreToCanvas` is `try { …build… setNodes() } finally {}` with no `catch`, so the throw skipped `setNodes()` entirely → empty canvas. Surfaced via Vue's effect error handler (logged, non-fatal) so no white screen.
 
-**Why it slipped through**: `npm run build` (Vite/esbuild) doesn't type-check; CI type-check is disabled by TASK-1789 (~160 errors). `vue-tsc` *does* flag it (`TS2304: Cannot find name 'toRelativePosition'`), ESLint does not (typescript-eslint disables `no-undef`). The e2e harness can't reproduce it: in-memory seeded groups get wiped by the DB realtime reload, so seeded parented nodes lose their parent before sync.
+**Why it slipped through**: `npm run build` (Vite/esbuild) doesn't type-check; CI type-check is disabled by TASK-1789 (~160 errors). `vue-tsc` _does_ flag it (`TS2304: Cannot find name 'toRelativePosition'`), ESLint does not (typescript-eslint disables `no-undef`). The e2e harness can't reproduce it: in-memory seeded groups get wiped by the DB realtime reload, so seeded parented nodes lose their parent before sync.
 
 **Fix**: Add `toRelativePosition` to the existing `@/utils/canvas/coordinates` import in `useCanvasSync.ts`.
 
-**Regression test**: `tests/unit/canvas/useCanvasSync-imports.test.ts` statically asserts every coordinates helper *called* in `useCanvasSync.ts` is imported. Verified it fails pre-fix (names `toRelativePosition`) and passes after. `geometry-invariants` + `sync-readonly` suites still green (54 tests).
+**Regression test**: `tests/unit/canvas/useCanvasSync-imports.test.ts` statically asserts every coordinates helper _called_ in `useCanvasSync.ts` is imported. Verified it fails pre-fix (names `toRelativePosition`) and passes after. `geometry-invariants` + `sync-readonly` suites still green (54 tests).
 
 **Follow-up**: TASK-1789 (re-enable CI type-check) is the systemic guard for this class of bug.
 
@@ -3495,6 +3960,7 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 **Regression tests**: Added `tests/e2e/canvas-geometry-local.spec.ts` coverage for both group and task idle drift. The tests create canvas geometry, trigger unrelated idle sync activity, refresh, and assert positions are unchanged with no geometry write logs.
 
 **Verification**:
+
 - `./scripts/run-e2e.sh tests/e2e/canvas-geometry-local.spec.ts -g "idle sync activity and refresh do not persist (group|task) position changes" --project=chromium` passed.
 - `npm test -- --run tests/unit/geometry-invariants.test.ts tests/unit/sync-readonly.test.ts tests/unit/smartgroup-metadata.test.ts` passed.
 - `npm test -- --run tests/unit/stores/task-store-crud.test.ts tests/unit/geometry-invariants.test.ts tests/unit/sync-readonly.test.ts tests/unit/smartgroup-metadata.test.ts` passed.
@@ -3516,6 +3982,7 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 **Why now**: TASK-1785 (calendar ripple + lock) landed clean type-wise and dropped 4 errors. Every fix from here should keep the bar green. Letting CI stay red trains the team to ignore the gate.
 
 **Top files by error count** (npm run type-check, 2026-05-18):
+
 - src/views/CanvasView.vue — 13
 - src/views/PerformanceView.vue — 12
 - src/stores/auth.ts — 12
@@ -3539,6 +4006,7 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 **Root cause**: Commit `f616303a` ("accumulated fixes — timer sync") removed `resumeFollowerPoll()` from two idle-transition sites in `src/stores/timer.ts` and made the no-active-session branch of `initializeSync()` in `src/composables/timer/useTimerSync.ts` rely **solely** on Supabase Realtime to detect sessions started by other devices. The same file (`src/composables/supabase/useRealtimeSubscription.ts:168`) explicitly handles `CLOSED`/`TIMED_OUT`/`CHANNEL_ERROR` as expected runtime conditions (BUG-1320). Any missed Realtime INSERT (cold-start race, WS drop, replication hiccup) leaves Vue permanently deaf — verified against VPS DB: matching session existed in `timer_sessions` with the right `user_id` and `task_id` while Vue showed idle.
 
 **Fix**:
+
 - `useTimerSync.ts:17` — bump `FOLLOWER_POLL_INTERVAL_MS` from 3000 to 15000 so continuous polling is cheap (~4 queries/min) and BUG-1085's anti-spam intent is preserved.
 - `useTimerSync.ts:~159` — don't auto-pause the poll on no-session; the poll IS the backstop.
 - `useTimerSync.ts:~640` — resume follower poll in init's no-session branch.
@@ -3559,6 +4027,7 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 **Goal**: Add a Shift modifier on calendar drag. Hold Shift + drag a task to a later time → every later task on the same day shifts forward by the same delta. Locked tasks are skipped. Crossing midnight spills into the next day. One drag = one undo step.
 
 **User-confirmed scope (v1)**:
+
 - Same day, all later tasks (not just colliders)
 - Spill into next day past midnight
 - Per-task `calendarLocked` field; ripple skips locked tasks (Push 2)
@@ -3566,6 +4035,7 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 - Negative delta (drag earlier) explicitly out of scope for v1
 
 **Status**:
+
 - **Push 1 + 1.5** (PR #149, shipped v1.4.37): pure ripple math + 15 unit tests, day + week view wiring (handlers shared via CalendarView), live ghost preview via `rippleGhostOffsets` map.
 - **Push 2** (PR #152, shipped v1.4.41): per-task `calendarLocked` field. Migration `20260520000000_add_calendar_locked_to_tasks.sql` applied to local + production Supabase (682 rows defaulted false). Mapper round-trip + ripple skip-protect (`if (task.calendarLocked) continue`). "Lock time on calendar" toggle in calendar context menu only (gated by `context` prop in ModalManager). 🔒 corner indicator in day + week view. Tests: mapper round-trip + api-contract allowlist.
 
@@ -3582,6 +4052,7 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 **Problem**: The mini planning canvas has the core graph interactions now, but the creation flow still feels mechanical: cable-dropped nodes do not immediately enter edit mode, selected nodes lack an obvious local action surface, and messy sessions need a lightweight tidy affordance.
 
 **Planned slices**:
+
 1. ~~Auto-focus the title field when cable-drop creates a connected subtask.~~ ✅ DONE (commit `98d5b5df`)
 2. ~~Add a selected-node floating toolbar for add/edit/delete actions.~~ ✅ DONE (2026-05-03, v1.4.9 — `MiniCanvasFloatingToolbar.vue` via `@vue-flow/node-toolbar`)
 3. Add a mini-canvas Tidy action that cleans up subtask/note spacing. 📋 PLANNED
@@ -3634,6 +4105,7 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 **Cause**: prior styling commits (5 in total since the modal was added) progressively reduced background opacity and used fractional-alpha border colours (`rgba(78,205,196,0.8)`) that read as washed-out against the modal's dark surface. The current outlined-only design didn't visually communicate "primary action".
 
 **Fix**: subtle CSS contrast bump in `RecurrenceDeleteModal.vue` scoped style:
+
 - Border switched from `rgba(*, 0.8)` to full-saturation `var(--brand-primary)` / `var(--color-danger)`.
 - Default background gains a tinted gradient (`linear-gradient(180deg, rgba(*, 0.12), rgba(*, 0.06))`) plus a 1px inset shadow ring so the brand colour reads at a glance.
 - Hover deepens the gradient + adds a coloured drop-shadow halo.
@@ -3690,15 +4162,17 @@ Type-check: 0 new errors introduced (GroupNodeSimple's 9 pre-existing errors tra
 
 **Problem**: 7 tasks in VPS production Supabase have `title = ""` / NULL. They reach the Electron app because `fromSupabaseTask` at `src/utils/supabaseMappers.ts:584` passes `record.title` through unchanged, and `updateTaskFromSync` at `src/stores/tasks.ts:217` only rejected `title === undefined` — empty strings slipped through. The load-time `repairTaskTitles` relabels them "Untitled Task" and is supposed to move them to Inbox, but the user's screenshot on v1.3.70 still shows them on the Canvas "Today" column.
 
-**Root cause (verified)**: `taskValidation.ts:108` treats blank title as a *warning*, so `sanitizeLoadedTasks` passes blanks through. `updateTaskFromSync` guard missed empty strings. Source of the 7 blank rows predates 1.3.69's preventive sanitization.
+**Root cause (verified)**: `taskValidation.ts:108` treats blank title as a _warning_, so `sanitizeLoadedTasks` passes blanks through. `updateTaskFromSync` guard missed empty strings. Source of the 7 blank rows predates 1.3.69's preventive sanitization.
 
 **Fix**:
+
 1. `src/stores/tasks.ts:217` — replace `title === undefined` guard with `sanitizeTaskTitle()` call. Empty/whitespace/non-string titles become "Untitled Task" at the sync-ingress chokepoint.
 2. Deliberately NOT touching `fromSupabaseTask` — the existing `repairTaskTitles` on load depends on seeing blank titles to trigger its inbox-move side effect.
 3. VPS recovery: pull original titles from `public.task_audit_log` (indexed by `task_id, event_at DESC`), `UPDATE tasks SET title = … WHERE id = … AND (title IS NULL OR title = '')`. Realtime propagates the restored titles to all clients.
 4. Version bump 1.3.70 → 1.3.71 + `./scripts/deploy-electron-update.sh` (CLAUDE.md rules 6 & 7).
 
 **Tests added**:
+
 - `src/utils/__tests__/taskValidation.test.ts` — 10 cases covering `sanitizeTaskTitle` for ''/null/undefined/whitespace/non-string and `repairTaskTitles` counts + side effects (canvasPosition/parentId cleared, isInInbox=true).
 - `src/stores/__tests__/tasks.test.ts` — 4 cases on `updateTaskFromSync`: sanitizes '', sanitizes whitespace, still drops missing-id updates, passes valid titles through.
 
@@ -3715,26 +4189,30 @@ All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskV
 **Priority**: P0 | **Status**: ✅ DONE (2026-05-04, v1.4.16)
 
 **Problem**: The Canvas "Tidy day-group layout" button (and the "Rotate day groups" auto/manual path) still produces visually broken state in production despite 10 shipped versions of fixes. Symptoms across v1.3.55 → v1.3.64:
-  - Day-groups render at inconsistent widths despite `updateNode({ width, height, style })` in v1.3.64.
-  - Adjacent day-groups overlap horizontally (Monday visually collides with Wednesday).
-  - Tasks tear out of their parent group and float below it (BUG-1203 `isNodeCompletelyInside` zero-padding detach path).
-  - Orphan-recovery pass added in v1.3.64 doesn't visibly rehome previously-detached tasks.
-  - Clicking Tidy repeatedly doesn't converge — layout stays wrong.
+
+- Day-groups render at inconsistent widths despite `updateNode({ width, height, style })` in v1.3.64.
+- Adjacent day-groups overlap horizontally (Monday visually collides with Wednesday).
+- Tasks tear out of their parent group and float below it (BUG-1203 `isNodeCompletelyInside` zero-padding detach path).
+- Orphan-recovery pass added in v1.3.64 doesn't visibly rehome previously-detached tasks.
+- Clicking Tidy repeatedly doesn't converge — layout stays wrong.
 
 **What's already shipped (NOT enough)**:
-  - v1.3.57: removed xSpread gate + wired catchup on `isVueFlowReady`.
-  - v1.3.59: removed `<Teleport to="body">` wrapper from CanvasToolbar (previous "button does nothing" fix).
-  - v1.3.60–61: fixed right-click reschedule (`skipDueDateInheritance`, strict exact-date matching).
-  - v1.3.62: canonical layout primitive, Tidy button, uniform widths/heights.
-  - v1.3.63: bumped `DAY_GROUP_HEIGHT` 920 → 1000 (fixed off-by-40 that overflowed 8th task past parent).
-  - v1.3.64: added `width`/`height` top-level fields to `updateNode` (not just style), double `nextTick` before sync release, orphan-rehome pre-pass.
+
+- v1.3.57: removed xSpread gate + wired catchup on `isVueFlowReady`.
+- v1.3.59: removed `<Teleport to="body">` wrapper from CanvasToolbar (previous "button does nothing" fix).
+- v1.3.60–61: fixed right-click reschedule (`skipDueDateInheritance`, strict exact-date matching).
+- v1.3.62: canonical layout primitive, Tidy button, uniform widths/heights.
+- v1.3.63: bumped `DAY_GROUP_HEIGHT` 920 → 1000 (fixed off-by-40 that overflowed 8th task past parent).
+- v1.3.64: added `width`/`height` top-level fields to `updateNode` (not just style), double `nextTick` before sync release, orphan-rehome pre-pass.
 
 **Perplexity research (external, 2026-04-20)** confirmed Vue Flow 1.48+ internals:
-  - `updateNode({ style: { width: '350px' } })` is fragile — must use top-level `width`/`height` fields too. ✅ Applied in v1.3.64.
-  - Single `nextTick` lags Vue Flow's dimension bookkeeping. Double `nextTick` or `setTimeout(r, 0)` required. ✅ Applied in v1.3.64.
-  - **Unverified suspicion**: when a node has `parentNode` set, its `position` must be RELATIVE to parent. My rotation/tidy writes absolute to store; `useCanvasSync.ts:89` claims to translate abs→rel for parented nodes during sync — but never verified live under the tidy batch conditions. Could still be the root cause.
+
+- `updateNode({ style: { width: '350px' } })` is fragile — must use top-level `width`/`height` fields too. ✅ Applied in v1.3.64.
+- Single `nextTick` lags Vue Flow's dimension bookkeeping. Double `nextTick` or `setTimeout(r, 0)` required. ✅ Applied in v1.3.64.
+- **Unverified suspicion**: when a node has `parentNode` set, its `position` must be RELATIVE to parent. My rotation/tidy writes absolute to store; `useCanvasSync.ts:89` claims to translate abs→rel for parented nodes during sync — but never verified live under the tidy batch conditions. Could still be the root cause.
 
 **Resolution (v1.4.11-v1.4.16)**:
+
 - `useCanvasInteractions.ts` now persists group drags together with descendant task/group absolute positions.
 - `useNodeSync.ts` persists nested Vue Flow nodes from relative positions instead of stale `computedPosition`.
 - `useCanonicalDayGroupLayout.ts` centralizes group width/height/spacing and task placement.
@@ -3743,6 +4221,7 @@ All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskV
 - `CanvasView.vue` forces Vue Flow node refresh after explicit canonical layout writes to clear stale internal `computedPosition` state.
 
 **Regression coverage**:
+
 - `tests/e2e/canvas-geometry-local.spec.ts` covers real toolbar clicks for compact Tidy, today-first Tidy order, Today/Tomorrow rotation, weekday-only rotation, visible DOM order, group widths, and task spacing.
 - `tests/e2e/playwright.canvas-local.config.ts` runs those canvas checks without the Supabase auth global setup.
 - `tests/unit/canvas/tidy-layout.test.ts` covers today's semantic order and vertical task stack positions.
@@ -3750,6 +4229,7 @@ All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskV
 - `tests/unit/canvas/canonical-layout.test.ts` covers canonical spacing/size math.
 
 **Verification**:
+
 - `npx playwright test --config tests/e2e/playwright.canvas-local.config.ts` passed 4/4.
 - `npx vitest run --maxWorkers=4 tests/unit/canvas/tidy-layout.test.ts tests/unit/canvas/canonical-layout.test.ts tests/unit/canvas/day-group-position-rotation.test.ts` passed 32/32.
 - `npm run electron:build` passed.
@@ -3758,17 +4238,19 @@ All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskV
 **User confirmation**: User reported the Tidy button looks like it is working after v1.4.16.
 
 **Files to revisit** (DON'T blindly re-edit):
-  - `src/composables/canvas/useCanonicalDayGroupLayout.ts` — pure layout math (verified correct in 10 unit tests).
-  - `src/composables/canvas/useDayGroupRotation.ts` — rotation entry + sort order.
-  - `src/composables/canvas/useTidyLayout.ts` — tidy entry + orphan rehome.
-  - `src/views/CanvasView.vue::applyCanonicalLayoutMoves` — the updateNode bridge.
-  - `src/composables/canvas/useCanvasSync.ts:89` — claims to translate abs→rel for parented nodes. VERIFY THIS ACTUALLY RUNS inside the tidy batch, given `canvasSyncInProgress=true` suppresses sync.
+
+- `src/composables/canvas/useCanonicalDayGroupLayout.ts` — pure layout math (verified correct in 10 unit tests).
+- `src/composables/canvas/useDayGroupRotation.ts` — rotation entry + sort order.
+- `src/composables/canvas/useTidyLayout.ts` — tidy entry + orphan rehome.
+- `src/views/CanvasView.vue::applyCanonicalLayoutMoves` — the updateNode bridge.
+- `src/composables/canvas/useCanvasSync.ts:89` — claims to translate abs→rel for parented nodes. VERIFY THIS ACTUALLY RUNS inside the tidy batch, given `canvasSyncInProgress=true` suppresses sync.
 
 **Risk note**: Do not reintroduce horizontal Tidy task layout for day groups. That was the cause of stretched groups and insufficient vertical spacing.
 
 **Related artifacts**:
-  - [SOP-069](./sop/SOP-069-teleport-async-mount-trap.md) — Teleport + async-mount trap (fixed in v1.3.59, still relevant).
-  - `src/constants/canvas.ts::DAY_GROUP_*` — canonical layout constants.
+
+- [SOP-069](./sop/SOP-069-teleport-async-mount-trap.md) — Teleport + async-mount trap (fixed in v1.3.59, still relevant).
+- `src/constants/canvas.ts::DAY_GROUP_*` — canonical layout constants.
 
 ---
 
@@ -3777,6 +4259,7 @@ All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskV
 **Priority**: P2 | **Status**: ✅ DONE (2026-04-19)
 
 **What was done**:
+
 - Renamed `packages/whatsapp-bot/` → `packages/botty/` (package name, log prefixes, docker-compose service name)
 - Deployed Botty to VPS (`/opt/botty/`) — built Docker image, runs on `supabase_default` network, WAHA webhook updated to point to Botty
 - Deployed World's Greatest Bot (`/opt/worlds-greatest-bot/`) — Discord bot with voice join notifications, AI posts, activity tracking; registered 17 slash commands; dashboard at `http://84.46.253.137:3049`
@@ -3795,6 +4278,7 @@ All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskV
 **Goal**: Left-align tasks at the group's padding edge, always stack subsequent tasks vertically with a consistent gap, even across batch placements where reactivity may lag.
 
 **Fix**:
+
 1. `useSmartGroupMatcher.ts::calculatePositionInGroup` — dropped the `+20` empty-group nudge; replaced center-fallback (overlap source) with continued below-stack; added optional `alreadyPlacedPositions` param so batch callers stay immune to reactivity timing
 2. `useCanvasAutoPlacement.ts::autoPlaceEligibleTasks` — maintains a local `Map<groupId, positions[]>` across the loop and passes into the helper
 3. `useCanvasTaskActions.ts` Move-to-Tomorrow multi-select — same local tracker pattern
@@ -3814,6 +4298,7 @@ All 43 store tests + 10 validation tests pass. (Pre-existing circular dep `taskV
 **Goal**: Add a per-user "hide from Frequent" action that persists locally and filters the list immediately.
 
 **Fix**:
+
 1. `useQuickTasks.ts` — module-scoped `dismissedFrequentIds` Set hydrated from `localStorage['flowstate:dismissed-frequent']`, `dismissFromFrequent(id)` action, `restoreFrequentDismissals()` escape hatch, filter applied in `frequentTasks` computed
 2. `QuickTaskDropdown.vue` — X button in the Frequent `v-for` row (before the Pin button), wired via `handleHideFrequent`
 
@@ -3854,6 +4339,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: One unified pinned list backed by `task.isPinned`. Every pinned item is a real task editable/removable from any surface.
 
 **Approach**:
+
 1. Rewrite `useQuickTasks.ts` pinned source to computed over `taskStore.tasks.filter(t => t.isPinned)`
 2. Rewire pin/unpin/pinFromTask to `taskStore.createTask/updateTask`
 3. Rewire KDE widget `main.qml` 3 REST endpoints from `/pinned_tasks` to `/tasks?is_pinned=eq.true`
@@ -3875,6 +4361,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Use the existing collision-aware `calculatePositionInGroup` helper on the menu path and add two DEV-gated logs that expose the placement decision.
 
 **Approach**:
+
 1. In `createTaskInGroup` else-branch, call `calculatePositionInGroup(group, taskStore._rawTasks)` instead of centering
 2. Add `[TASK-CREATE]` log before `finalPosition` compose (group, entry path, sibling count, chosen pos)
 3. Add `[TASK-CREATE]` log before `createTaskWithUndo` call (parentId, canvasPosition, isDefaultPosition)
@@ -3893,6 +4380,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Extend FlowState into a unified action + knowledge system where tasks remain the execution layer, notes become the thinking/reference layer, and custom lists become the lightweight execution layer.
 
 **Approach**:
+
 1. Add a shared content taxonomy and visibility rules first
 2. Turn `/catalog` into a real knowledge surface
 3. Add note/page workflows optimized for capture and retrieval
@@ -3912,6 +4400,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Introduce a minimal content taxonomy so the app can distinguish task, note, and list behavior without splitting into multiple disconnected systems.
 
 **Approach**:
+
 1. Add a content-kind field and shared display rules
 2. Define where each kind appears: inbox, board, calendar, catalog, AI context
 3. Ensure note/list entities do not pollute scheduling/task-focused views by default
@@ -3930,6 +4419,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Make Catalog the home for knowledge browsing and capture across tasks, notes, and lists.
 
 **Approach**:
+
 1. Add content-type filters and segmented views
 2. Add quick capture entry points for note and list creation
 3. Support browsing by project/container/tag/type
@@ -3948,6 +4438,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Ship a first useful note/page system without introducing a fully separate note architecture.
 
 **Approach**:
+
 1. Reuse the task-based model for note/page entities
 2. Use existing markdown/Tiptap editor and attachment support
 3. Support tags and project/container placement
@@ -3967,6 +4458,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Add list containers with lightweight list items and grouped sections that feel native and fast.
 
 **Approach**:
+
 1. Add list entities and lightweight list items
 2. Support grouped sections like Produce, Pantry, Household
 3. Support fast add, check/uncheck, drag reorder, regroup, clear completed
@@ -3985,6 +4477,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Allow a list to be reused or regenerated on demand and optionally on a recurring schedule.
 
 **Approach**:
+
 1. Add list template/reset behavior
 2. Support duplicate-from-template and clear-completed reset
 3. Add optional recurrence for list regeneration
@@ -4003,6 +4496,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Make search a cross-content retrieval surface for tasks, notes, lists, and list items where appropriate.
 
 **Approach**:
+
 1. Extend search indexing/filtering across content kinds
 2. Search title, body, tags, project/container, and list/group names
 3. Add content-type and scope filters
@@ -4021,6 +4515,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Let users promote lightweight knowledge/list content into full tasks with minimal friction.
 
 **Approach**:
+
 1. Add "Convert to task" or "Promote to task" actions
 2. Preserve source context and backlinks/reference where useful
 3. Optionally prefill project, due date, tags, and metadata
@@ -4039,6 +4534,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Let AI search notes/lists, summarize them, and convert them into useful actions or plans.
 
 **Approach**:
+
 1. Expose notes/lists to AI retrieval tools and user context building
 2. Add flows like summarize note, extract actions, build grocery list, regroup list items
 3. Feed note/list interactions into existing work-profile and memory graph systems
@@ -4076,6 +4572,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Add simple explicit links/backlinks without committing to a heavy graph feature too early.
 
 **Approach**:
+
 1. Support explicit references between tasks, notes, and lists
 2. Show related items in detail views
 3. Track backlinks automatically where practical
@@ -4131,6 +4628,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 4. **onMoves / Vue Flow bridge** — confirmed `applyDayGroupMoves` in `CanvasView.vue:362` calls `updateNode` with `section-`-prefixed IDs, wiring the rotation to the Vue Flow node layout. Added `tests/unit/canvas/day-group-onmoves.test.ts` (5 tests) pinning: return payload uses `section-<id>`, midnight callback fires with correct payload, feature-flag off suppresses callback, no-op when already sorted, `getNodePosition` overrides stale store positions.
 
 **Test coverage** (all green as of 2026-04-17):
+
 - `tests/unit/canvas/day-group-date-suffix.test.ts` (7 tests)
 - `tests/unit/composables/useCurrentDay.test.ts` (3 tests)
 - `tests/unit/canvas/day-group-onmoves.test.ts` (5 tests)
@@ -4138,16 +4636,19 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 - Total: 77 canvas + composables tests green, no new TS errors.
 
 **Live verification** (dev server, Friday 2026-04-17 14:18):
+
 - "Friday" group header reads `17.4.26` (today). "Monday" reads `20.4.26` (+3 days).
 - "Rotate day groups" toolbar button fires `[DAY-ROTATION]` logs with correct sort order (Friday first as today).
 - "2 day groups updated for today" banner shown after rotation.
 
 **Symptoms to verify in-app** (Friday 2026-04-17):
+
 - Day-of-week group for today's weekday shows next week's date (e.g. Friday group shows 24.4 instead of 17.4) when no Today/Tomorrow smart group exists — **should be fixed** by formula change.
 - Visual position rotation still pending from prior pass (Vue Flow controlled-mode blocker).
 - Possible regression interacting with BUG-1757 fix (dueDate edit leaving task in old group).
 
 **Previous scope (2026-04-11, now partial; corrected by BUG-1794 on 2026-05-29)**:
+
 - Today/Tomorrow smart groups show dynamic date suffixes (e.g., "Today / 11.4.26")
 - Day-of-week groups no longer skip dates covered by Today/Tomorrow; placement priority handles overlaps.
 - Rotation button (CalendarClock icon) in canvas toolbar
@@ -4177,6 +4678,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Problem**: Core documentation (system-architecture.md, design-system.md, SOPs, CLAUDE.md) had significant staleness — wrong values, missing features, dead Tauri references — causing AI agents to make incorrect decisions.
 
 **Changes**:
+
 - Fixed CLAUDE.md: all Tauri→Electron refs (13 locations), table count 19→32
 - Fixed design-system.md: 5 wrong glass-bg opacity values, 12 missing BaseModal props, 7 new token subsystems
 - Fixed system-architecture.md: version, counts, 5 missing directories
@@ -4195,6 +4697,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Summary**: Replaced the multi-row sort buttons + filter chips (consuming ~40% viewport) with a single 32px compact toolbar. Sort dropdown collapses 5 buttons into 1, filter popover organizes all options in sections, active filter pills show only enabled filters as removable pills. ~60% vertical space reduction.
 
 **Files**:
+
 - `src/components/inbox/unified/InboxSortDropdown.vue` (new)
 - `src/components/inbox/unified/InboxFilterPopover.vue` (new)
 - `src/components/inbox/unified/ActiveFilterPills.vue` (new)
@@ -4211,6 +4714,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Summary**: Architect-driven gap analysis identified the top 5 untested critical systems. Wrote 71 regression tests across 5 new files covering: supabase mappers (28 tests, guards BUG-1211/1286/1562), smart merge algorithm (12 tests, guards BUG-1738), timer race guard (5 tests, guards BUG-TIMER-RACE), recurrence scheduler (12 tests), and cross-tab sync (10 tests). Also fixed all 14 pre-existing test failures caused by stale Tauri assertions after TASK-1718 Electron migration, version drift, and missing allow-list entries.
 
 **Files**:
+
 - `tests/unit/utils/supabaseMappers.test.ts` (new, 28 tests)
 - `tests/unit/stores/smart-merge.test.ts` (new, 12 tests)
 - `tests/unit/stores/timer-race-guard.test.ts` (new, 5 tests)
@@ -4241,11 +4745,13 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Problem**: PWA shows blank screen when opened offline with expired JWT. Auth `refreshSession()` blocks the entire init chain — no timeout, no fallback to cached data.
 
 **Root causes**:
+
 1. `useAppInitialization.ts:57` — Cache load (Phase A) gated behind `await authStore.initialize()` which makes network calls
 2. `auth.ts:210` — `refreshSession()` has no timeout; hangs indefinitely on flaky networks
 3. `auth.ts:263-269` — Failed refresh wipes session (`user.value = null`), preventing cached data load even when IndexedDB has data
 
 **Fixes**:
+
 1. Add 5s AbortController timeout to `refreshSession()` in auth.ts
 2. Reorder init: load IndexedDB cache BEFORE auth (cache doesn't need auth)
 3. Keep expired session when refresh fails and IndexedDB has cached data (extend grace period)
@@ -4261,12 +4767,14 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Problem**: Three calendar issues prevented scheduling tasks at half-hour boundaries (e.g. 3:30-4:30 PM). Also fixed a crash in AllTasksView and useMobileInboxLogic when sorting by title on tasks with undefined title.
 
 **Root causes**:
+
 1. QuickTaskCreate end time input was cosmetic — ignored by duration dropdown, no bidirectional binding
 2. Week view drag-to-create hardcoded `minute: 0` for calculated end time
 3. Week view double-click to create hardcoded `minute: 0` for calculated end time
 4. Sort by title crashed on undefined title in AllTasksView and useMobileInboxLogic
 
 **Fixes**:
+
 - QuickTaskCreate end time input now wired bidirectionally with duration dropdown
 - Week view drag-to-create and double-click now respect half-hour precision
 - Sort comparators now handle undefined title gracefully
@@ -4310,6 +4818,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Problem**: Switching workspaces triggers a cascade that soft-deletes real tasks from the production database. Affects all users with multiple workspaces.
 
 **Root Cause Chain** (verified from production logs 2026-03-31):
+
 1. User switches workspace (`personal → other-workspace`)
 2. Other workspace loads with 0 groups, 2 tasks
 3. Canvas sync (BUG-1203 stale parentId cleanup) sees tasks with `parentId` pointing to groups from the **previous** workspace → clears their `parentId` because groups "don't exist" in current workspace
@@ -4336,6 +4845,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
    - File: `src/composables/supabase/useTasksDatabase.ts`
 
 **Testing**:
+
 - [ ] Switch workspaces back and forth 5 times — zero task count changes
 - [ ] Switch to empty workspace and back — all tasks preserved
 - [ ] Canvas parentIds survive workspace round-trip
@@ -4399,6 +4909,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Problem**: `signInWithGoogle()` in `src/stores/auth.ts` has branches for Tauri and Capacitor but no branch for Electron. It falls through to the PWA path which calls `supabase.auth.signInWithOAuth()` with `redirectTo: window.location.origin` — which in Electron's `file://` context navigates the window to the production website, losing app context and the electronStorage adapter.
 
 **Fix**:
+
 1. Add Electron branch in `signInWithGoogle()` using `skipBrowserRedirect: true` + `openExternal()` to open OAuth URL in system browser
 2. Add `will-navigate` interceptor in `electron/main.ts` to catch the OAuth callback and inject the auth code into the renderer
 3. Add `electron-auth-code` event listener in auth.ts to exchange the code for a session
@@ -4413,6 +4924,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-28)
 
 **Problems fixed**:
+
 1. `tasks_parent_id_fkey` FK violation — orphaned constraint on production DB blocks task sync
 2. `/src/assets/styles.css` 404 in production — hardcoded dev path in preload
 3. `permanentlyDeleteTaskWithUndo` SyntaxError — `safeClone()` returns Vue reactive proxies
@@ -4509,6 +5021,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Problem**: Electron's `file://` protocol didn't reliably persist localStorage across app restarts. Auth tokens were lost and users were logged out after closing and reopening the app.
 
 **Fix**:
+
 1. **electronStorage adapter** — IPC-backed storage adapter that routes auth tokens through `electron-store` disk-backed store (survives restarts)
 2. **localhost HTTP OAuth server** — Same pattern as Tauri: start `http://localhost:3001` server in Electron main process to capture OAuth callback (since `file://` can't handle redirects)
 3. **Settings > Account Updates section** — Added in Electron to show auto-updater status (parallel to Tauri)
@@ -4530,6 +5043,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Scope**: Replace all Tauri detection with Electron detection.
 
 **Tasks**:
+
 1. Update `src/utils/platform.ts`: add `isElectron()` using `window.electronAPI !== undefined`
 2. Update all 9 raw `window.__TAURI__` / `window.__TAURI_INTERNALS__` checks across the codebase
 3. Update `src/main.ts`: swap `.tauri-app` class → `.electron-app` (or remove entirely since Electron = Chromium)
@@ -4547,6 +5061,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Scope**: Create Electron IPC handlers to replace Tauri's 13 `invoke()` commands and 10 plugins.
 
 **Tasks**:
+
 1. Create `electron/ipc/shell.ts` — `shell.openExternal()` for URLs, `child_process.exec()` for Docker/Supabase
 2. Create `electron/ipc/store.ts` — `electron-store` for settings persistence (replaces `@tauri-apps/plugin-store`)
 3. Create `electron/ipc/fs.ts` — Node.js `fs` for auth token file at `~/.config/flowstate`
@@ -4566,6 +5081,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Scope**: Set up `electron-updater` and deploy pipeline to VPS.
 
 **Tasks**:
+
 1. Install `electron-updater`
 2. Create `electron/updater.ts` — check/download/install flow
 3. Rewrite `scripts/deploy-tauri-update.sh` → `scripts/deploy-electron-update.sh`
@@ -4583,6 +5099,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Scope**: Clean up Tauri remnants and set up CI/CD for Electron.
 
 **Tasks**:
+
 1. Remove `src-tauri/` from active development (keep in git history at `tauri-archive-v1.3.28` tag)
 2. Remove all `@tauri-apps/*` npm dependencies
 3. Update `.github/workflows/` for Electron builds
@@ -4601,18 +5118,21 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Scope**: Replace Tauri shell only. Vue 3 + Vite frontend stays identical.
 
 **Phase 1: Electron Setup (Foundation)** ✅
+
 - [x] Install electron, electron-builder, electron-updater
 - [x] Create `electron/main.ts` (main process), `electron/preload.ts`
 - [x] Configure Vite for Electron (manual, `base: './'`)
 - [x] Basic window opens with the Vue app
 
 **Phase 2: Platform Detection Swap** ✅ (TASK-1718)
+
 - [x] Update `src/utils/platform.ts`: `isElectron()` via `window.electronAPI`, `isTauri()` returns false
 - [x] Update all 3 raw `window.__TAURI__` checks
 - [x] Delete 38 `.tauri-app` CSS rule blocks — Electron uses Chromium, no workarounds needed
 - [x] Add `.electron-app` class in `main.ts`
 
 **Phase 3+4: IPC Handlers + Plugin Replacements** ✅ (TASK-1719)
+
 - [x] `electron/ipc/shell.ts` — `shell.openExternal()`
 - [x] `electron/ipc/store.ts` — JSON key-value store (replaces `@tauri-apps/plugin-store`)
 - [x] `electron/ipc/fs.ts` — Node.js `fs` via IPC
@@ -4622,10 +5142,12 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 - [x] All handlers registered in `electron/main.ts`
 
 **Remaining (separate tasks):**
+
 - Phase 5: Auto-updater → TASK-1720
 - Phase 6: Build & Deploy → TASK-1721
 
 **Files to modify:**
+
 - `src/utils/platform.ts` — swap detection
 - `src/main.ts` — swap `.tauri-app` → `.electron-app`
 - `src/assets/styles.css` — delete 186 `.tauri-app` rules
@@ -4642,6 +5164,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Goal**: Install Epiphany (GNOME Web) as a fast WebKitGTK testing environment. Same engine as Tauri's wry — point at `localhost:5546` to test CSS without building Tauri.
 
 **Tasks**:
+
 - Install `epiphany-browser` (uses system WebKitGTK)
 - Verify it reproduces the sidebar clipping bug
 - Document workflow in CLAUDE.md
@@ -4653,11 +5176,13 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Priority**: P0 | **Status**: ✅ DONE | **Depends on**: ~~BUG-1706~~
 
 **Root Cause Analysis** (confirmed via Perplexity research):
+
 - `.sidebar` has redundant `width: 100%; min-width: 240px; max-width: 340px` PLUS the grid track `minmax(240px, 340px)` — double-constraining causes WebKitGTK to miscalculate
 - `overflow: hidden` on `.sidebar` + nested flex with `min-width: 0` triggers known cross-engine shrinkage bugs
 - `contain: style` may have side effects in WebKitGTK despite spec saying it shouldn't
 
 **Fix order** (test each in Epiphany):
+
 1. Change `.sidebar` to `width: auto; min-width: 0` — let grid track own the width
 2. If still broken: remove `overflow: hidden` from `.sidebar`
 3. If still broken: remove `contain: style`
@@ -4714,6 +5239,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-18)
 
 **Problem**: Canvas viewport `{x, y, zoom}` existed in 3 separate locations with no sync:
+
 1. `canvasUi.ts` — duplicate `viewport` ref with its own localStorage + Supabase watcher
 2. `canvasViewport.ts` — the actual owner, used by `canvas.ts`
 3. `settings.ts` — `canvasViewport` field in `AppSettings` (data transport vessel for DB mapper)
@@ -4817,6 +5343,7 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 **Priority**: P0 | **Status**: ✅ DONE (2026-03-18)
 
 **Problem**: `viewport: {x, y, zoom}` exists in 3 independent places with NO sync mechanism between them:
+
 1. `canvasUi.ts → viewport` (in-memory only)
 2. `canvasViewport.ts → viewport` (persisted to localStorage + Supabase `user_settings.canvas_viewport`)
 3. `settings.ts → canvasViewport` (inside settings blob, goes through settings save path)
@@ -4846,6 +5373,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-18)
 
 **Problem**: Three fields are independently maintained in both `ui.ts` and `settings.ts` with NO sync:
+
 - `theme`: `ui.ts` uses `'auto'`, `settings.ts` uses `'system'` — different type strings, `uiStore.theme` is NOT persisted
 - `locale`/`language`: written to `flowstate-app-locale` by `ui.ts` AND embedded inside `flowstate-settings-v2` by `settings.ts` — two code paths, no reconciliation
 - `sidebarCollapsed`: in `settings.ts` blob but never written (orphaned field)
@@ -4861,6 +5389,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-18)
 
 **Problem**: The "hide done tasks" concept has 7 independent, unsynchronized copies:
+
 1. `hideBoardDoneTasks` (task store, persisted)
 2. `hideCanvasDoneTasks` (task store, persisted)
 3. `hideCalendarDoneTasks` (task store, persisted)
@@ -4880,6 +5409,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-18)
 
 **Problem**: Magic strings scattered throughout the codebase with no single source of truth:
+
 - Task status strings (`'todo'`, `'done'`) in 120 files — TypeScript type exists but no runtime constant
 - Priority strings (`'high'`, `'medium'`, `'low'`) in 144 files — same
 - ~40 localStorage `flowstate-*` keys — only backup keys have a `STORAGE_KEYS` object; `flowstate-canvas-viewport` written by 2 independent files, `flowstate-recurrence-lock-{date}` generated in 3 places
@@ -4887,6 +5417,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 - Route paths as string literals in ~15 `router.push()` call sites
 
 **Fix**:
+
 1. `src/constants/taskConstants.ts` — `TASK_STATUS` and `TASK_PRIORITY` `as const` objects
 2. `src/constants/storageKeys.ts` — all `flowstate-*` keys, extending backup system's pattern
 3. `src/constants/dbTables.ts` — all Supabase table name strings
@@ -4903,6 +5434,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Problem**: `timerStore.completedSessions` starts empty on every page load. Supabase has `pomodoro_history` table but it's only written to (never read). Code in `ai/tools.ts` reads `completedSessions.length` to count "sessions today" — always returns 0 after reload, giving wrong AI context.
 
 **Fix**: Added `loadTodaySessionsFromDB()` async function to timer store that:
+
 1. Queries `pomodoro_history` using `fetchPomodoroHistory(0)` from `useWorkProfileDatabase`
 2. Maps DB records to `PomodoroSession` shape (generates UUIDs for session IDs which DB doesn't store)
 3. Populates `completedSessions.value` with loaded records
@@ -4919,6 +5451,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-18)
 
 **Problem**: Design token violations where CSS variables should be used:
+
 - `useDragAndDrop.ts:71` — ghost element CSS string contains `rgba(78,205,196,0.4)` (brand teal hardcoded in JavaScript, completely outside token system)
 - `KanbanColumn.vue:291-293` — priority color map with `#ef4444`, `#f59e0b`, `#3b82f6` (should use `--color-priority-*` tokens)
 - `FlowTaskCard.vue:281-292` — hardcoded `#f59e0b`, `#4ade80` for status colors
@@ -4979,6 +5512,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Root cause**: the authenticated renderer starts with an empty read cache and performs one fire-and-forget core-data load. If that load rejects while `navigator.onLine` is already true, recovery waits only for a future `online` event that never occurs. The persisted personal canonical cursor then reports no new changes and skips its authoritative baseline, so unchanged remote tasks remain absent indefinitely. Separately, the Canvas empty-state card uses a weak glass background even though global flat mode disables blur, making the columns behind it bleed through.
 
 **Acceptance**:
+
 - A failed authenticated load with an empty renderer projection invalidates only the still-active personal/workspace cursor and immediately attempts an authoritative baseline.
 - A failed baseline leaves the cursor empty so the existing bounded foreground poll retries; a successful baseline persists high-water only after tasks are visible.
 - Auth or workspace changes cannot clear/reload another scope.
@@ -5000,6 +5534,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Root cause**: PR #207 introduced the detailed serializer call without its helper definition, and the 1.4.255 release faithfully bundled that incomplete committed source. Existing coverage asserted source text but never executed the detailed route from source or the packaged sidecar, so the runtime crash passed every release gate.
 
 **Acceptance**:
+
 - The detailed exact-task path executes with subtasks absent, null, empty, or containing null/malformed entries and always returns a safe array.
 - Runtime coverage executes the same detailed serializer in source and freshly generated Electron bundle; source-text presence and syntax-only checks are insufficient.
 - User scoping and deleted-task exclusion remain intact, expected detailed fields remain present, and auth/session/token secrets remain absent.
@@ -5010,17 +5545,17 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Installed 1.4.255 exact-task read returned HTTP 500; installed 1.4.256 returned HTTP 200 for the reported task | Yes |
-| Data shape / persisted row shape | Yes | Runtime fixtures execute absent, null, empty, scalar, object, mixed, and valid subtask shapes; the live row returned normalized arrays | Yes |
-| Renderer store/state | N/A | The crash occurred in the sidecar serializer before a response reached Hermes; the renderer was not the failing boundary | No |
-| Electron main/preload bridge | Yes | The extracted public AppImage executes the bundled sidecar regression and package validation confirms the main/preload/sidecar payload | Yes, for packaged sidecar inclusion |
-| Localhost sidecar endpoint | Yes | Authenticated live `GET /api/tasks/:id` returned HTTP 200 with the expected safe detailed shape | Yes |
-| KDE polling/control path | N/A | No KDE timer or control path participates in exact-task serialization | No |
-| Supabase persistence/realtime | Read path only | The signed-in sidecar read the canonical live row under user/workspace/deleted filters; no mutation or Realtime behavior changed | No |
-| Updater/runtime version | Yes | Public manifest and artifacts report 1.4.256; public checksum matches the installed AppImage and live diagnostics report 1.4.256 | Yes |
-| Stale live process/cache state | Yes | The running real-profile process reports fresh renderer auth, remote-sync capability, and zero live-boundary failures | Yes, for the reported installed-runtime repro |
+| Class                            | Checked?       | Evidence                                                                                                                               | Covered by this fix?                          |
+| -------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| User repro shape                 | Yes            | Installed 1.4.255 exact-task read returned HTTP 500; installed 1.4.256 returned HTTP 200 for the reported task                         | Yes                                           |
+| Data shape / persisted row shape | Yes            | Runtime fixtures execute absent, null, empty, scalar, object, mixed, and valid subtask shapes; the live row returned normalized arrays | Yes                                           |
+| Renderer store/state             | N/A            | The crash occurred in the sidecar serializer before a response reached Hermes; the renderer was not the failing boundary               | No                                            |
+| Electron main/preload bridge     | Yes            | The extracted public AppImage executes the bundled sidecar regression and package validation confirms the main/preload/sidecar payload | Yes, for packaged sidecar inclusion           |
+| Localhost sidecar endpoint       | Yes            | Authenticated live `GET /api/tasks/:id` returned HTTP 200 with the expected safe detailed shape                                        | Yes                                           |
+| KDE polling/control path         | N/A            | No KDE timer or control path participates in exact-task serialization                                                                  | No                                            |
+| Supabase persistence/realtime    | Read path only | The signed-in sidecar read the canonical live row under user/workspace/deleted filters; no mutation or Realtime behavior changed       | No                                            |
+| Updater/runtime version          | Yes            | Public manifest and artifacts report 1.4.256; public checksum matches the installed AppImage and live diagnostics report 1.4.256       | Yes                                           |
+| Stale live process/cache state   | Yes            | The running real-profile process reports fresh renderer auth, remote-sync capability, and zero live-boundary failures                  | Yes, for the reported installed-runtime repro |
 
 **Exact failure mode fixed**: the committed detailed-task serializer called an undefined subtask normalizer, so the packaged Electron Local Task API crashed only on `GET /api/tasks/:id` even though health and other routes remained available.
 
@@ -5033,6 +5568,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **User repro**: Hermes can see a healthy packaged Local Task API while protected reads are signed out or limited to one 25-row page. It then falls back to stale snapshots or ledger-file parsing and can present a partial count as the complete live FlowState backlog.
 
 **Acceptance**:
+
 - A valid remotely syncable renderer session reaches or deterministically repairs a blind sidecar after Electron restart; cached/offline shells return `reauth_required`, genuine sign-out returns `signed_out`, and expired backups are never replayed.
 - A bearer-protected read-only inventory returns all open visible tasks with stable keyset pagination, exact UUID deduplication, receipt metadata, one authenticated scope, and `complete=true` only after every page succeeds.
 - Partial pages, failed later pages, and cached fallbacks cannot emit an exact current total; cached evidence is explicitly `fresh=false` and `complete=false`.
@@ -5053,6 +5589,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **User repro**: Hermes reviewed a representative subset of tasks (or capability classes, or screenshot-visible rows without exact identity) and then summarized the work as "reviewed everything". No durable evidence distinguished full coverage from sampled coverage, so the over-broad claim could not be caught.
 
 **Acceptance**:
+
 - A durable, machine-checkable `audit-coverage-v2` receipt records audit scope, source surface, snapshot time, expected item count/IDs when known, exact reviewed item IDs with per-item evidence class AND per-item provenance (`server-read` vs `declared`), declared-only reviewed IDs, weak title-only candidate IDs, ambiguous candidates with all candidate IDs, exact unreviewed IDs, unresolved observations, an `evidenceBasis`, and a completeness class of `full` / `declared_full` / `partial` / `representative_sample` / `unknown`.
 - The trust boundary is server-side: the route re-reads claimed records itself (RLS/workspace scoped). Completeness `full` and claim level `verified` are only reachable when every expected ID was reviewed with exact evidence the server re-read at audit time; caller-declared evidence classes, caller `knownTasks`, and caller `liveVerified` can never produce `full`/`verified`/"Live workflow verified" (declared coverage caps at `declared_full` → claim level `declared`). The digest proves integrity, not provenance; provenance is a recorded server-assigned class.
 - A claim guardrail classifies summaries as verified/declared/partial/inferred/blocked/unknown and enforces semantically, not by wording blacklist: universal-completeness claims (all/every/entire/whole/each/fully/complete/"nothing was missed"-class negated omission over the audit domain) are blocked below `verified`, and every non-verified summary must explicitly disclose incomplete/declared/unknown coverage (default-deny). Capability audits must say so; live blockers must survive into the wording; live-verified wording requires server-owned live proof, which does not exist in this API shape.
@@ -5064,17 +5601,17 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Regression: a representative-sample/subset receipt blocks "I reviewed everything in FlowState." with 422 `broad_claim_blocked` and a safe rewording | Yes |
-| Data shape / persisted row shape | Yes | `audit-coverage-v2` receipts are digest-bound; JSONL receipt + blocked-attempt ledgers re-validate offline via `validAuditCoverageReceipt()` | Yes |
-| Renderer store/state | N/A | No renderer surface changed | No |
-| Electron main/preload bridge | N/A | No bridge change; sidecar route only | No |
-| Localhost sidecar endpoint | Yes | `POST /api/audit/coverage` registered behind bearer token + auth context; source-order contract test | Yes |
-| KDE polling/control path | N/A | Untouched | No |
-| Supabase persistence/realtime | Yes | `server-read` provenance re-reads claimed records RLS/workspace-scoped at audit time | Yes, for provenance lookups |
-| Updater/runtime version | Not yet | Isolated tree builds with electron-builder; no version bump or updater deploy in this commit | No |
-| Stale live process/cache state | Not yet | A running older sidecar serves this route only after update/restart | No |
+| Class                            | Checked? | Evidence                                                                                                                                            | Covered by this fix?        |
+| -------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| User repro shape                 | Yes      | Regression: a representative-sample/subset receipt blocks "I reviewed everything in FlowState." with 422 `broad_claim_blocked` and a safe rewording | Yes                         |
+| Data shape / persisted row shape | Yes      | `audit-coverage-v2` receipts are digest-bound; JSONL receipt + blocked-attempt ledgers re-validate offline via `validAuditCoverageReceipt()`        | Yes                         |
+| Renderer store/state             | N/A      | No renderer surface changed                                                                                                                         | No                          |
+| Electron main/preload bridge     | N/A      | No bridge change; sidecar route only                                                                                                                | No                          |
+| Localhost sidecar endpoint       | Yes      | `POST /api/audit/coverage` registered behind bearer token + auth context; source-order contract test                                                | Yes                         |
+| KDE polling/control path         | N/A      | Untouched                                                                                                                                           | No                          |
+| Supabase persistence/realtime    | Yes      | `server-read` provenance re-reads claimed records RLS/workspace-scoped at audit time                                                                | Yes, for provenance lookups |
+| Updater/runtime version          | Not yet  | Isolated tree builds with electron-builder; no version bump or updater deploy in this commit                                                        | No                          |
+| Stale live process/cache state   | Not yet  | A running older sidecar serves this route only after update/restart                                                                                 | No                          |
 
 **Exact failure mode fixed**: FlowState-side over-claiming — a subset, sample, capability-class, declared-only, or screenshot-title review being summarized as full/verified item coverage through the Local API audit surface.
 
@@ -5084,7 +5621,6 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Live boundary proof**: local vitest packs (local-api + electron) and an isolated-tree `electron-builder` build only; the packaged live sidecar route and Hermes end-to-end use are not yet proven and remain the tracked follow-up.
 
-
 ### TASK-1957: Atomic recurrence-aware duplicate merge for Hermes (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-15) | **Depends on**: TASK-1943, FEATURE-1943
@@ -5092,6 +5628,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **User repro**: after the user confirmed that two tasks are duplicates and supplied the intended cadence, Hermes called the merge operation, received `incompatible_recurrence`, then continued with separate task updates. The duplicate remained unresolved and the separate writes were not one approved, atomic merge.
 
 **Acceptance**:
+
 - A merge without an explicit recurrence resolution remains non-mutating and returns a typed stop-and-clarify action.
 - A preview may select one validated canonical recurrence rule only when both rows are living root tasks and neither task participates in recurrence parents, children, completion history, legacy generated recurrence state, or another series identity.
 - The selected recurrence is included in the preview version, idempotency payload, exact approval UI, apply receipt, and read-back; apply updates the survivor and archives the duplicate in one transaction.
@@ -5107,6 +5644,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **User repro**: several real non-recurring tasks are complete in reality but still show as todo, and Hermes had no dedicated safe completion capability — only the generic canonical patch, which is not a completion command and bypasses completion semantics.
 
 **Shipped**:
+
 - `flowstate_complete_task_v1` (`supabase/migrations/20260715020000_complete_task_rpc.sql`): preview/approval-digest/apply/receipt contract cloned from `flowstate_patch_task_v1`; apply sets `status='done'` and stamps `completed_at` in one transaction; receipt `action='complete'` with read-back and `readBackHash`.
 - Recurring identity fails closed with typed `recurring_task` (recurrence rule, chain parent, or completion record); already-done tasks return `already_completed`; workspace scoping including exact personal `null` scope preserved.
 - Local API route `POST /api/tasks/:id/complete` via `server/local-api/complete-task.cjs`; renderer notification only after a verified committed receipt.
@@ -5116,17 +5654,17 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Four real non-recurring tasks stuck as todo; representative IDs recorded in the 2026-07-15 reconciliation source-of-truth note | Capability exists; the four live tasks still need the shipped endpoint plus an approved apply |
-| Data shape / persisted row shape | Yes | Disposable-DB contract proves `status='done'`, `completed_at` stamped, `canonical_revision` incremented, change-log row written | Yes |
-| Renderer store/state | Partial | `notifyTaskMutation('update', id)` fires only after receipt verification, reusing the existing reconciliation path; no new renderer UI | Yes for reconciliation; no dedicated completion UI added |
-| Electron main/preload bridge | N/A | No bridge change; the sidecar route is reached through the existing supervised utility process | N/A |
-| Localhost sidecar endpoint | Yes | `POST /api/tasks/:id/complete` + `complete-task.cjs`; 12 handler unit tests, route contract test, esbuild bundle verified to include the route | Yes |
-| KDE polling/control path | N/A | No timer involvement | N/A |
-| Supabase persistence/realtime | Yes | Single-transaction RPC with idempotency ledger and canonical change log, proven in the disposable-DB harness | Yes |
-| Updater/runtime version | No | Electron build/deploy intentionally not run in this change | Not covered; ship step pending |
-| Stale live process/cache state | No | The live sidecar keeps the old bundle until the next packaged ship/restart | Not covered; ship step pending |
+| Class                            | Checked? | Evidence                                                                                                                                       | Covered by this fix?                                                                          |
+| -------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| User repro shape                 | Yes      | Four real non-recurring tasks stuck as todo; representative IDs recorded in the 2026-07-15 reconciliation source-of-truth note                 | Capability exists; the four live tasks still need the shipped endpoint plus an approved apply |
+| Data shape / persisted row shape | Yes      | Disposable-DB contract proves `status='done'`, `completed_at` stamped, `canonical_revision` incremented, change-log row written                | Yes                                                                                           |
+| Renderer store/state             | Partial  | `notifyTaskMutation('update', id)` fires only after receipt verification, reusing the existing reconciliation path; no new renderer UI         | Yes for reconciliation; no dedicated completion UI added                                      |
+| Electron main/preload bridge     | N/A      | No bridge change; the sidecar route is reached through the existing supervised utility process                                                 | N/A                                                                                           |
+| Localhost sidecar endpoint       | Yes      | `POST /api/tasks/:id/complete` + `complete-task.cjs`; 12 handler unit tests, route contract test, esbuild bundle verified to include the route | Yes                                                                                           |
+| KDE polling/control path         | N/A      | No timer involvement                                                                                                                           | N/A                                                                                           |
+| Supabase persistence/realtime    | Yes      | Single-transaction RPC with idempotency ledger and canonical change log, proven in the disposable-DB harness                                   | Yes                                                                                           |
+| Updater/runtime version          | No       | Electron build/deploy intentionally not run in this change                                                                                     | Not covered; ship step pending                                                                |
+| Stale live process/cache state   | No       | The live sidecar keeps the old bundle until the next packaged ship/restart                                                                     | Not covered; ship step pending                                                                |
 
 **Exact failure mode fixed**: absence of a dedicated, receipt-backed non-recurring completion command — the generic canonical patch could not complete a task with proof of `status`/`completedAt`, and Hermes had no safe completion surface at all.
 
@@ -5143,6 +5681,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Why**: A green source test or local bundle check does not prove which commit, version, updater manifest, installed AppImage, or Local API sidecar is actually active. Repeated release and packaging failures have shown that these surfaces can diverge while each isolated probe looks healthy.
 
 **Acceptance**:
+
 - One script emits a versioned JSON ledger with explicit source, build, public, installed, and sidecar sections plus machine-readable mismatches.
 - Output contains no tokens, auth headers, task content, user identity, home paths, query strings, or environment values.
 - Non-live mode performs no network, installed-app, or localhost probes and can be generated safely during Electron packaging.
@@ -5167,6 +5706,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Why**: The complete inventory endpoint already traverses stable pages, but capped list and search responses do not identify themselves as filtered samples. Inventory rows also expose `revision` while the canonical Hermes receipt validator requires `canonicalRevision`, causing a complete FlowState receipt to fail at the integration boundary.
 
 **Acceptance**:
+
 - Successful capped list and search responses explicitly return `complete=false`, `scope=filtered_sample`, their effective `limit`, and conservative `hasMore=true`; they never expose an exact total or fresh complete-inventory receipt.
 - Complete inventory rows expose positive `canonicalRevision` values under the same field name used by exact reads and Hermes validation.
 - Regression coverage proves more than 100 rows traverse all pages, repeated mid-read sequence changes fail closed without a total, and a cursor cannot cross personal/workspace scope.
@@ -5185,6 +5725,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Why**: task patch and non-recurring completion duplicated a receipt shape check that accepted any well-shaped SHA-256 string without recomputing the read-back hash. Recurring completion and duplicate merge treated any Local API HTTP response with `ok=true` as committed and notified the renderer without canonical operation, revision, sequence, timestamp, or read-back proof.
 
 **Acceptance**:
+
 - One sidecar validator recomputes SHA-256 over the existing FlowState canonical JSON format and binds operation ID, request hash, positive canonical revision/change sequence, aware commit timestamp, exact read-back, and committed/replayed status.
 - Patch and non-recurring completion use the shared validator instead of duplicated permissive checks.
 - Recurring completion and duplicate merge reject legacy or malformed success envelopes before renderer notification; operation-specific read-back validation proves every affected task identity and state.
@@ -5202,6 +5743,7 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 **Why**: Hermes health and search succeeded while all canonical task-creation previews returned HTTP 404. Live package inspection proved FlowState Electron 1.4.264 was serving an older sidecar bundle with no task lifecycle route even though dirty local source contained the handler. A health-only availability check therefore let work begin against an incomplete runtime and discovered contract drift only at the first blocked mutation.
 
 **Acceptance**:
+
 - The canonical task lifecycle route, handler, database migration, preview/apply validation, receipt verification, exact read-back, idempotency, conflict handling, and legacy-create refusal are committed together on current master history.
 - One safe capability contract identifies every Hermes-required Local API method/path family and canonical contract version without exposing tokens, user identity, task content, or private configuration.
 - Hermes or the redacted runtime audit compares its required capabilities with the live packaged sidecar before exposing write work and returns a typed contract/version mismatch instead of a late generic 404.
@@ -5241,17 +5783,17 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Account cache visible with a false Sign In footer while session validation was delayed. | Yes |
-| Data shape / persisted row shape | Yes | Named task row remains valid and was already proven visible after authoritative account reload in BUG-1942. | No change needed |
-| Renderer store/state | Yes | Startup previously classified the unresolved state as guest and could load/retain the wrong ownership namespace. | Yes |
-| Electron main/preload bridge | Yes | Durable auth primary/backup reads use the existing lazy Electron storage adapter; no token is exposed to the UI. | Yes |
-| Localhost sidecar endpoint | Yes | Renderer sends a null Local API session until validation, then the validated account session. | Yes |
-| KDE polling/control path | N/A | Task ownership restoration does not use KDE timer polling. | N/A |
-| Supabase persistence/realtime | Yes | Auth-js remains authoritative; the durable candidate never enables network operations. | Yes |
-| Updater/runtime version | Yes | v1.4.252 Electron package and live updater are required closeout evidence. | Yes |
-| Stale live process/cache state | Yes | Confirmed guest/sign-out clears every account store before guest data loads. | Yes |
+| Class                            | Checked? | Evidence                                                                                                         | Covered by this fix? |
+| -------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------- | -------------------- |
+| User repro shape                 | Yes      | Account cache visible with a false Sign In footer while session validation was delayed.                          | Yes                  |
+| Data shape / persisted row shape | Yes      | Named task row remains valid and was already proven visible after authoritative account reload in BUG-1942.      | No change needed     |
+| Renderer store/state             | Yes      | Startup previously classified the unresolved state as guest and could load/retain the wrong ownership namespace. | Yes                  |
+| Electron main/preload bridge     | Yes      | Durable auth primary/backup reads use the existing lazy Electron storage adapter; no token is exposed to the UI. | Yes                  |
+| Localhost sidecar endpoint       | Yes      | Renderer sends a null Local API session until validation, then the validated account session.                    | Yes                  |
+| KDE polling/control path         | N/A      | Task ownership restoration does not use KDE timer polling.                                                       | N/A                  |
+| Supabase persistence/realtime    | Yes      | Auth-js remains authoritative; the durable candidate never enables network operations.                           | Yes                  |
+| Updater/runtime version          | Yes      | v1.4.252 Electron package and live updater are required closeout evidence.                                       | Yes                  |
+| Stale live process/cache state   | Yes      | Confirmed guest/sign-out clears every account store before guest data loads.                                     | Yes                  |
 
 **Exact failure mode fixed**: an unresolved persisted Electron session being presented and persisted as a confirmed guest during slow or failed startup validation.
 
@@ -5273,17 +5815,17 @@ On a new device, all three can restore to different positions. On pan/zoom, only
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Approval handler ran and canonical store emptied while the Vue Flow image node remained. | Yes |
-| Data shape / persisted row shape | Yes | Image record and id were valid in the dedicated local image store. | No change needed |
-| Renderer store/state | Yes | `deletable:false` caused incremental projection removal to be ignored. | Yes |
-| Electron main/preload bridge | N/A | Image deletion is renderer/local-store behavior. | N/A |
-| Localhost sidecar endpoint | N/A | Canvas images are not Local Task API entities. | N/A |
-| KDE polling/control path | N/A | Canvas images do not use KDE integration. | N/A |
-| Supabase persistence/realtime | Yes | Image metadata is local-only; the backing blob is retained so undo cannot restore a broken URL. | Yes |
-| Updater/runtime version | Yes | v1.4.252 Electron package and live updater are required closeout evidence. | Yes |
-| Stale live process/cache state | Yes | Delete/undo/redo assertions cover canonical storage and rendered projection together. | Yes |
+| Class                            | Checked? | Evidence                                                                                        | Covered by this fix? |
+| -------------------------------- | -------- | ----------------------------------------------------------------------------------------------- | -------------------- |
+| User repro shape                 | Yes      | Approval handler ran and canonical store emptied while the Vue Flow image node remained.        | Yes                  |
+| Data shape / persisted row shape | Yes      | Image record and id were valid in the dedicated local image store.                              | No change needed     |
+| Renderer store/state             | Yes      | `deletable:false` caused incremental projection removal to be ignored.                          | Yes                  |
+| Electron main/preload bridge     | N/A      | Image deletion is renderer/local-store behavior.                                                | N/A                  |
+| Localhost sidecar endpoint       | N/A      | Canvas images are not Local Task API entities.                                                  | N/A                  |
+| KDE polling/control path         | N/A      | Canvas images do not use KDE integration.                                                       | N/A                  |
+| Supabase persistence/realtime    | Yes      | Image metadata is local-only; the backing blob is retained so undo cannot restore a broken URL. | Yes                  |
+| Updater/runtime version          | Yes      | v1.4.252 Electron package and live updater are required closeout evidence.                      | Yes                  |
+| Stale live process/cache state   | Yes      | Delete/undo/redo assertions cover canonical storage and rendered projection together.           | Yes                  |
 
 **Exact failure mode fixed**: approved deletion of a protected Canvas image node being ignored by Vue Flow's incremental removal guard.
 
@@ -5308,6 +5850,7 @@ Recurrence date calculation lived in client utilities and the multi-write
 sequence was not transactional or retry-safe.
 
 **Canonical call paths after the fix**:
+
 - UI: context menu → task-store `doneForNow` → shared domain adapter →
   `flowstate_done_for_now` transaction → receipt projected locally + realtime.
 - Local API: authenticated POST → validation/workspace context → same RPC →
@@ -5316,6 +5859,7 @@ sequence was not transactional or retry-safe.
   with request/preview IDs → exact receipt/read-back.
 
 **Ranked falsifiable hypotheses**:
+
 1. Missing Local API operation — confirmed: no recurring action route existed,
    while the UI had a separate action.
 2. Generic completion bypasses occurrence state — confirmed: PATCH touched the
@@ -5341,6 +5885,7 @@ Hermes connector and 24-hour approval-form input; migration/docs/build/release.
 use rollback-only disposable fixtures and do not print auth/session secrets.
 
 **Completed foundational slices (2026-07-14)**:
+
 - Exact user-scoped task read and search are exposed through the signed-in
   Local API and dedicated Hermes tools; reads remain non-mutating and preserve
   personal/shared-workspace boundaries.
@@ -5363,6 +5908,7 @@ and removing a specific task instance/work block. The UI and Local API must use
 the same command rather than independently editing embedded instance arrays.
 
 **Acceptance**:
+
 - Preview identifies the exact task/instance, before/after interval, due-date or
   inbox effects, and non-blocking overlap warnings without mutation.
 - Apply is atomic, idempotent, scoped to the signed-in user/workspace, and
@@ -5388,6 +5934,7 @@ history reads plus preview/apply commands to edit cadence, pause, resume, or end
 a series without rewriting historical occurrences.
 
 **Acceptance**:
+
 - Exact reads distinguish the living recurring definition, completed history,
   current occurrence, and calculated next occurrence.
 - Cadence edits, pause/resume, and end-series operations are atomic,
@@ -5414,6 +5961,7 @@ preview/apply assignment and removal commands that preserve workspace scope and
 existing project/group invariants.
 
 **Acceptance**:
+
 - Reads return stable IDs and user-visible names only for the authenticated
   personal or active shared workspace.
 - Assignment previews show source/destination and downstream visibility effects;
@@ -5438,6 +5986,7 @@ preview/apply commands while preserving single-session leadership, offline stop
 tombstones, elapsed time, and Electron/KDE synchronization.
 
 **Acceptance**:
+
 - Exact current-timer read includes stable session/task state without exposing
   credentials; start/pause/resume/stop previews describe the precise transition.
 - Apply is idempotent, leadership-aware, and rejects stale session IDs,
@@ -5462,6 +6011,7 @@ task, group/ungroup selected tasks, and remove placement without deleting the
 underlying task or bypassing Canvas write ordering.
 
 **Acceptance**:
+
 - Reads return bounded user-scoped placement/group state with stable IDs and a
   revision suitable for preview conflict detection.
 - Apply uses exact task/group IDs, preserves locked/group geometry invariants,
@@ -5486,6 +6036,7 @@ soft-delete restore, bounded batch actions, and exact context/audit reads using
 the same authenticated, preview-first, idempotent command substrate.
 
 **Acceptance**:
+
 - List/search endpoints use stable cursors and deterministic ordering with
   explicit limits; no unbounded task, history, Canvas, or audit dumps.
 - Restore and batch writes preview every affected stable ID, reject mixed
@@ -5512,6 +6063,7 @@ receipts match visible state and a packaged build smoke proves the running seam.
 **Evidence so far**: the production row is non-deleted, personal-workspace, `is_in_inbox=true`, `status=planned`, `priority=high`, due 2026-07-13, with no project or canvas position. A cold Electron restart loaded the same unchanged row and immediately rendered it in Canvas Inbox. This rules out persisted shape, workspace scope, project/status/date filters, and stale updater version for the reported incident. The remaining confirmed failure class is the missing deterministic sidecar-to-renderer reconciliation after a successful mutation; current code relies entirely on Supabase Realtime.
 
 **Acceptance**:
+
 - A successful Local Task API create/update/delete emits a non-secret mutation notice from sidecar to Electron main and the renderer.
 - The renderer invalidates task read cache and reloads the active workspace so the mutation becomes visible even when realtime delivery is missed.
 - Mutation notices contain only operation and task id; no task body, bearer token, session, or Supabase credentials.
@@ -5526,17 +6078,17 @@ receipts match visible state and a packaged build smoke proves the running seam.
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | PWA-created `לשלוח כביסה` existed in API/DB but not Electron Search or Inbox; Hermes status transitions were replayed live. | Yes |
-| Data shape / persisted row shape | Yes | Correct owner, personal workspace, planned/high, due 2026-07-13, inbox true, non-deleted. | No change needed |
-| Renderer store/state | Yes | Exact global Search returned no result until authoritative reload; sidebar counts changed with the reload. | Yes |
-| Electron main/preload bridge | Yes | v1.4.249 Local API mutation signal made the task appear without restart. | Yes, Local API writes |
-| Localhost sidecar endpoint | Yes | Authenticated GET returned the row; reversible status PATCH calls returned 200 and changed visible Electron state. | Yes |
-| KDE polling/control path | N/A | Task visibility does not use KDE timer polling/control. | N/A |
-| Supabase persistence/realtime | Yes | Electron's exact Supabase query included the row while a healthy-looking realtime channel had missed it. | Yes, visible-resume backstop |
-| Updater/runtime version | Yes | Installed v1.4.250 and public manifest/artifacts verified. | Yes |
-| Stale live process/cache state | Yes | Authoritative reload recovered the row and corrected stale counts without restart. | Yes |
+| Class                            | Checked? | Evidence                                                                                                                    | Covered by this fix?         |
+| -------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| User repro shape                 | Yes      | PWA-created `לשלוח כביסה` existed in API/DB but not Electron Search or Inbox; Hermes status transitions were replayed live. | Yes                          |
+| Data shape / persisted row shape | Yes      | Correct owner, personal workspace, planned/high, due 2026-07-13, inbox true, non-deleted.                                   | No change needed             |
+| Renderer store/state             | Yes      | Exact global Search returned no result until authoritative reload; sidebar counts changed with the reload.                  | Yes                          |
+| Electron main/preload bridge     | Yes      | v1.4.249 Local API mutation signal made the task appear without restart.                                                    | Yes, Local API writes        |
+| Localhost sidecar endpoint       | Yes      | Authenticated GET returned the row; reversible status PATCH calls returned 200 and changed visible Electron state.          | Yes                          |
+| KDE polling/control path         | N/A      | Task visibility does not use KDE timer polling/control.                                                                     | N/A                          |
+| Supabase persistence/realtime    | Yes      | Electron's exact Supabase query included the row while a healthy-looking realtime channel had missed it.                    | Yes, visible-resume backstop |
+| Updater/runtime version          | Yes      | Installed v1.4.250 and public manifest/artifacts verified.                                                                  | Yes                          |
+| Stale live process/cache state   | Yes      | Authoritative reload recovered the row and corrected stale counts without restart.                                          | Yes                          |
 
 **Exact failure mode fixed**: PWA task INSERT/UPDATE events missed while Electron realtime still reports `joined`, plus direct Local API mutations in the running Electron process.
 
@@ -5552,17 +6104,17 @@ receipts match visible state and a packaged build smoke proves the running seam.
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | ✅ | typed Quick Task pin clicked from the visible create row | ✅ component regression: quick-task-dropdown-pin.test.ts |
-| Data shape / persisted row shape | ✅ | existing task vs new task vs pinned task are distinct outcomes | ✅ `PinTaskResult` contract |
-| Renderer store/state | ✅ | `pinTask()` previously returned `undefined` for no-op branches | ✅ explicit statuses + visible feedback |
-| Electron main/preload bridge | ✅ | renderer-only task action; no bridge change | N/A |
-| Localhost sidecar endpoint | ✅ | not involved | N/A |
-| KDE polling/control path | ✅ | not involved | N/A |
-| Supabase persistence/realtime | ✅ | task create/update paths unchanged | ✅ existing store APIs still own writes |
-| Updater/runtime version | ✅ | desktop-facing renderer change built as v1.4.229; live manifest still 1.4.228 until VPS upload is approved | pending deploy |
-| Stale live process state | ✅ | old build keeps old silent behavior until update | noted |
+| Class                            | Checked? | Evidence                                                                                                   | Covered by this fix?                                     |
+| -------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| User repro shape                 | ✅       | typed Quick Task pin clicked from the visible create row                                                   | ✅ component regression: quick-task-dropdown-pin.test.ts |
+| Data shape / persisted row shape | ✅       | existing task vs new task vs pinned task are distinct outcomes                                             | ✅ `PinTaskResult` contract                              |
+| Renderer store/state             | ✅       | `pinTask()` previously returned `undefined` for no-op branches                                             | ✅ explicit statuses + visible feedback                  |
+| Electron main/preload bridge     | ✅       | renderer-only task action; no bridge change                                                                | N/A                                                      |
+| Localhost sidecar endpoint       | ✅       | not involved                                                                                               | N/A                                                      |
+| KDE polling/control path         | ✅       | not involved                                                                                               | N/A                                                      |
+| Supabase persistence/realtime    | ✅       | task create/update paths unchanged                                                                         | ✅ existing store APIs still own writes                  |
+| Updater/runtime version          | ✅       | desktop-facing renderer change built as v1.4.229; live manifest still 1.4.228 until VPS upload is approved | pending deploy                                           |
+| Stale live process state         | ✅       | old build keeps old silent behavior until update                                                           | noted                                                    |
 
 **Exact failure mode fixed**: the header Quick Tasks create row no longer silently clears/refocuses or appears inert when `pinTask()` hits an existing pinned task, existing unpinned task, unauthenticated state, or create failure. `pinTask()` now returns an explicit result and `QuickTaskDropdown` surfaces no-op/error states with toasts.
 **Explicitly not covered**: KDE widget Quick Task controls and broader pinned-task sync behavior; this fix is limited to the Electron/web header dropdown pin-create path.
@@ -5574,17 +6126,17 @@ receipts match visible state and a packaged build smoke proves the running seam.
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | ✅ | stop → failed save → poll re-adopts within 15s | ✅ regression: timer-stop-durability.test.ts (a) |
-| Data shape / persisted row shape | ✅ | timer_sessions row stays is_active=true on failed save | ✅ correction op enqueued (is_active=false) |
-| Renderer store/state | ✅ | completedSessionIds guard added to poll adoption + stale-leader claim (useTimerSync.ts) | ✅ |
-| Electron main/preload bridge | ✅ | unchanged; snapshot push unchanged | N/A (no bridge change needed) |
-| Localhost sidecar endpoint | ✅ | 15s inactive grace then Supabase fallback | ✅ indirectly — server row now corrected via queue |
-| KDE polling/control path | ✅ | KDE re-adopted via sidecar Supabase fallback | ✅ indirectly (server correction); KDE code unchanged |
-| Supabase persistence/realtime | ✅ | Realtime path already had BUG-1318 guard | ✅ poll now mirrors it |
-| Updater/runtime version | ✅ | fix ships v1.4.227 | pending user update/restart |
-| Stale live process state | ✅ | running v1.4.226 keeps old behavior until restart | noted |
+| Class                            | Checked? | Evidence                                                                                | Covered by this fix?                                  |
+| -------------------------------- | -------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| User repro shape                 | ✅       | stop → failed save → poll re-adopts within 15s                                          | ✅ regression: timer-stop-durability.test.ts (a)      |
+| Data shape / persisted row shape | ✅       | timer_sessions row stays is_active=true on failed save                                  | ✅ correction op enqueued (is_active=false)           |
+| Renderer store/state             | ✅       | completedSessionIds guard added to poll adoption + stale-leader claim (useTimerSync.ts) | ✅                                                    |
+| Electron main/preload bridge     | ✅       | unchanged; snapshot push unchanged                                                      | N/A (no bridge change needed)                         |
+| Localhost sidecar endpoint       | ✅       | 15s inactive grace then Supabase fallback                                               | ✅ indirectly — server row now corrected via queue    |
+| KDE polling/control path         | ✅       | KDE re-adopted via sidecar Supabase fallback                                            | ✅ indirectly (server correction); KDE code unchanged |
+| Supabase persistence/realtime    | ✅       | Realtime path already had BUG-1318 guard                                                | ✅ poll now mirrors it                                |
+| Updater/runtime version          | ✅       | fix ships v1.4.227                                                                      | pending user update/restart                           |
+| Stale live process state         | ✅       | running v1.4.226 keeps old behavior until restart                                       | noted                                                 |
 
 **Exact failure mode fixed**: follower-poll re-adoption (normal + stale-leader-claim branches) of a session this device already stopped, and the missing durable is_active=false correction when the direct save fails.
 **Explicitly not covered**: another device legitimately re-starting the same task (new session id — unaffected by design); sidecar restart mid-window (falls back to corrected server row once queue drains).
@@ -5599,17 +6151,17 @@ Regression from 196b171a: `stopTimer` clears local state first and swallows remo
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | ✅ | stop during grace → neither saved nor queued | ✅ regression: timer-stop-durability (grace test) |
-| Data shape / persisted row shape | ✅ | server row stays is_active=true through grace | ✅ stop enqueued whenever user exists; queue's auth gate defers drain |
-| Renderer store/state | ✅ | grace lifecycle centralized (enter/clearOfflineGrace); reauthRequired exposed | ✅ auth-grace-bound.test.ts (4 tests) |
-| Electron main/preload bridge | ✅ | unchanged | N/A |
-| Localhost sidecar endpoint | ✅ | KDE polls Supabase past 15s grace | ✅ via queued correction after auth recovery |
-| KDE polling/control path | ✅ | same as above | ✅ indirectly |
-| Supabase persistence/realtime | ✅ | a49cf3f1's direct-write gate PRESERVED (no RLS-failing writes) | ✅ |
-| Updater/runtime version | ✅ | ships v1.4.227 | pending restart |
-| Stale live process state | ✅ | old build unbounded-grace until update | noted |
+| Class                            | Checked? | Evidence                                                                      | Covered by this fix?                                                  |
+| -------------------------------- | -------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| User repro shape                 | ✅       | stop during grace → neither saved nor queued                                  | ✅ regression: timer-stop-durability (grace test)                     |
+| Data shape / persisted row shape | ✅       | server row stays is_active=true through grace                                 | ✅ stop enqueued whenever user exists; queue's auth gate defers drain |
+| Renderer store/state             | ✅       | grace lifecycle centralized (enter/clearOfflineGrace); reauthRequired exposed | ✅ auth-grace-bound.test.ts (4 tests)                                 |
+| Electron main/preload bridge     | ✅       | unchanged                                                                     | N/A                                                                   |
+| Localhost sidecar endpoint       | ✅       | KDE polls Supabase past 15s grace                                             | ✅ via queued correction after auth recovery                          |
+| KDE polling/control path         | ✅       | same as above                                                                 | ✅ indirectly                                                         |
+| Supabase persistence/realtime    | ✅       | a49cf3f1's direct-write gate PRESERVED (no RLS-failing writes)                | ✅                                                                    |
+| Updater/runtime version          | ✅       | ships v1.4.227                                                                | pending restart                                                       |
+| Stale live process state         | ✅       | old build unbounded-grace until update                                        | noted                                                                 |
 
 **Exact failure mode fixed**: stop-op dropped during reconnect-grace (userId gated on canSyncRemotely) + grace period with NO recovery on some entry paths and NO upper bound (dead refresh token = silent permanent write-block).
 **Explicitly not covered**: UI surface for `reauthRequired` (flag is exposed and set; a banner/prompt wiring is follow-up UX).
@@ -5634,17 +6186,17 @@ Two mechanisms in one subsystem (BUG-1799 residue): (a) group realtime applies h
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | ✅ | live console wall: `Unauthorized release attempt … by user-resize (owned by user-drag)` during group resize | ✅ acquireOrAdopt + child exclusion |
-| Data shape / persisted row shape | ✅ | no row change — lock state is in-memory only | N/A |
-| Renderer store/state | ✅ | BUG-1492 stale-handler skip leaks 15s user-drag locks; resize ignored acquire() result | ✅ adopt-if-no-drag / exclude-if-drag |
-| Electron main/preload bridge | ✅ | not involved | N/A |
-| Localhost sidecar endpoint | ✅ | not involved | N/A |
-| KDE polling/control path | ✅ | not involved | N/A |
-| Supabase persistence/realtime | ✅ | downstream effect only (rejected updates → later sync snap-back) | ✅ children now actually locked during resize |
-| Updater/runtime version | ✅ | shipped v1.4.227/228 | user on 1.4.228 ✅ |
-| Stale live process state | ✅ | pre-update builds keep old behavior | resolved by user's 1.4.228 restart |
+| Class                            | Checked? | Evidence                                                                                                    | Covered by this fix?                          |
+| -------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| User repro shape                 | ✅       | live console wall: `Unauthorized release attempt … by user-resize (owned by user-drag)` during group resize | ✅ acquireOrAdopt + child exclusion           |
+| Data shape / persisted row shape | ✅       | no row change — lock state is in-memory only                                                                | N/A                                           |
+| Renderer store/state             | ✅       | BUG-1492 stale-handler skip leaks 15s user-drag locks; resize ignored acquire() result                      | ✅ adopt-if-no-drag / exclude-if-drag         |
+| Electron main/preload bridge     | ✅       | not involved                                                                                                | N/A                                           |
+| Localhost sidecar endpoint       | ✅       | not involved                                                                                                | N/A                                           |
+| KDE polling/control path         | ✅       | not involved                                                                                                | N/A                                           |
+| Supabase persistence/realtime    | ✅       | downstream effect only (rejected updates → later sync snap-back)                                            | ✅ children now actually locked during resize |
+| Updater/runtime version          | ✅       | shipped v1.4.227/228                                                                                        | user on 1.4.228 ✅                            |
+| Stale live process state         | ✅       | pre-update builds keep old behavior                                                                         | resolved by user's 1.4.228 restart            |
 
 **Exact failure mode fixed**: silent acquire() failure at resize-start + asymmetric release. **Explicitly not covered**: the underlying BUG-1492 stale-handler lock leak itself (locks still auto-expire at 15s; adoption papers over it) — belongs to the BUG-1899 write-path architecture follow-up.
 
@@ -5656,17 +6208,17 @@ Two mechanisms in one subsystem (BUG-1799 residue): (a) group realtime applies h
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | ✅ | screenshot 2026-07-02: card "Overdue Jul 1" while menu shows Aug 2 | ✅ dueStatus.spec.ts encodes it |
-| Data shape / persisted row shape | ✅ | stale `instances[]` entry + newer `dueDate` on same task | ✅ badge rule; instance intentionally NOT moved |
-| Renderer store/state | ✅ | both surfaces read same store — split was field-level, not staleness | ✅ |
-| Electron main/preload bridge | ✅ | not involved | N/A |
-| Localhost sidecar endpoint | ✅ | not involved | N/A |
-| KDE polling/control path | ✅ | not involved | N/A |
-| Supabase persistence/realtime | ✅ | ruled out (LWW logs were a separate issue — BUG-1899) | N/A |
-| Updater/runtime version | ✅ | shipped v1.4.227/228 | ✅ |
-| Stale live process state | ✅ | old build until restart | resolved |
+| Class                            | Checked? | Evidence                                                             | Covered by this fix?                            |
+| -------------------------------- | -------- | -------------------------------------------------------------------- | ----------------------------------------------- |
+| User repro shape                 | ✅       | screenshot 2026-07-02: card "Overdue Jul 1" while menu shows Aug 2   | ✅ dueStatus.spec.ts encodes it                 |
+| Data shape / persisted row shape | ✅       | stale `instances[]` entry + newer `dueDate` on same task             | ✅ badge rule; instance intentionally NOT moved |
+| Renderer store/state             | ✅       | both surfaces read same store — split was field-level, not staleness | ✅                                              |
+| Electron main/preload bridge     | ✅       | not involved                                                         | N/A                                             |
+| Localhost sidecar endpoint       | ✅       | not involved                                                         | N/A                                             |
+| KDE polling/control path         | ✅       | not involved                                                         | N/A                                             |
+| Supabase persistence/realtime    | ✅       | ruled out (LWW logs were a separate issue — BUG-1899)                | N/A                                             |
+| Updater/runtime version          | ✅       | shipped v1.4.227/228                                                 | ✅                                              |
+| Stale live process state         | ✅       | old build until restart                                              | resolved                                        |
 
 **Exact failure mode fixed**: badge/anchor/format paths for one-off tasks. **Explicitly not covered**: reconciling (moving/clearing) the stored calendar instance on due-date edit — calendar-view placement of the stale instance is unchanged by design; revisit if users report calendar-side confusion.
 
@@ -5678,17 +6230,17 @@ User repro (2026-07-02 screenshot): card badge shows "Overdue Jul 1" forever whi
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | ✅ | canvas always reopened at origin regardless of saved viewport (probe: transform stayed translate(0,0)) | ✅ canvas-viewport-restore.spec.ts |
-| Data shape / persisted row shape | ✅ | localStorage vs cloud (user_settings.canvas_viewport) could diverge; cloud wins on load | ✅ chosen value reconciled to both |
-| Renderer store/state | ✅ | :default-viewport captured pre-load; no setViewport call existed anywhere | ✅ applySavedViewportOnce on load+paneReady |
-| Electron main/preload bridge | ✅ | not involved | N/A |
-| Localhost sidecar endpoint | ✅ | not involved | N/A |
-| KDE polling/control path | ✅ | not involved | N/A |
-| Supabase persistence/realtime | ✅ | cloud copy is preferred source on load | ✅ reconcile keeps stores converged |
-| Updater/runtime version | ✅ | shipped v1.4.227/228 | ✅ user-confirmed live (canvas restored zoomed-out after re-login) |
-| Stale live process state | ✅ | old build until restart | resolved |
+| Class                            | Checked? | Evidence                                                                                               | Covered by this fix?                                               |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| User repro shape                 | ✅       | canvas always reopened at origin regardless of saved viewport (probe: transform stayed translate(0,0)) | ✅ canvas-viewport-restore.spec.ts                                 |
+| Data shape / persisted row shape | ✅       | localStorage vs cloud (user_settings.canvas_viewport) could diverge; cloud wins on load                | ✅ chosen value reconciled to both                                 |
+| Renderer store/state             | ✅       | :default-viewport captured pre-load; no setViewport call existed anywhere                              | ✅ applySavedViewportOnce on load+paneReady                        |
+| Electron main/preload bridge     | ✅       | not involved                                                                                           | N/A                                                                |
+| Localhost sidecar endpoint       | ✅       | not involved                                                                                           | N/A                                                                |
+| KDE polling/control path         | ✅       | not involved                                                                                           | N/A                                                                |
+| Supabase persistence/realtime    | ✅       | cloud copy is preferred source on load                                                                 | ✅ reconcile keeps stores converged                                |
+| Updater/runtime version          | ✅       | shipped v1.4.227/228                                                                                   | ✅ user-confirmed live (canvas restored zoomed-out after re-login) |
+| Stale live process state         | ✅       | old build until restart                                                                                | resolved                                                           |
 
 **Exact failure mode fixed**: apply-never-happens + heal-unreachable + stale-localStorage-divergence. **Explicitly not covered**: transient empty canvas while data hydrates after login (render lag, not viewport — BUG-1899 boot-load residual).
 
@@ -5700,17 +6252,17 @@ Probe-proven: no code ever calls Vue Flow `setViewport` — the saved viewport i
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | ✅ | every mobile deep-link/reload (/#/timer, /#/today) landed on /tasks | ✅ mobile-deeplink-survives.spec.ts (3/3) |
-| Data shape / persisted row shape | ✅ | no data involved — pure routing | N/A |
-| Renderer store/state | ✅ | route was unresolved '/' at MobileLayout mount → replace('/tasks') stomped deep-link | ✅ awaits router.isReady() |
-| Electron main/preload bridge | ✅ | mobile PWA path; Electron unaffected | N/A |
-| Localhost sidecar endpoint | ✅ | not involved | N/A |
-| KDE polling/control path | ✅ | not involved | N/A |
-| Supabase persistence/realtime | ✅ | not involved (auth-init await was the delay source, not a data issue) | N/A |
-| Updater/runtime version | ✅ | web PWA ships with next master deploy; Electron v1.4.227/228 | ✅ |
-| Stale live process state | ✅ | old PWA SW until refresh | standard SW update cycle |
+| Class                            | Checked? | Evidence                                                                             | Covered by this fix?                      |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------ | ----------------------------------------- |
+| User repro shape                 | ✅       | every mobile deep-link/reload (/#/timer, /#/today) landed on /tasks                  | ✅ mobile-deeplink-survives.spec.ts (3/3) |
+| Data shape / persisted row shape | ✅       | no data involved — pure routing                                                      | N/A                                       |
+| Renderer store/state             | ✅       | route was unresolved '/' at MobileLayout mount → replace('/tasks') stomped deep-link | ✅ awaits router.isReady()                |
+| Electron main/preload bridge     | ✅       | mobile PWA path; Electron unaffected                                                 | N/A                                       |
+| Localhost sidecar endpoint       | ✅       | not involved                                                                         | N/A                                       |
+| KDE polling/control path         | ✅       | not involved                                                                         | N/A                                       |
+| Supabase persistence/realtime    | ✅       | not involved (auth-init await was the delay source, not a data issue)                | N/A                                       |
+| Updater/runtime version          | ✅       | web PWA ships with next master deploy; Electron v1.4.227/228                         | ✅                                        |
+| Stale live process state         | ✅       | old PWA SW until refresh                                                             | standard SW update cycle                  |
 
 **Exact failure mode fixed**: /tasks default racing initial route resolution. **Explicitly not covered**: none known — all mobile routes go through the same gate.
 
@@ -5732,27 +6284,28 @@ All 17 failing unit tests are stale, not product bugs: 7 AI date-bombs (fixed Ju
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Live widget config `todayOnly=true` (appletsrc) vs app Today; parity test on scheduled-today + stale-instances row RED→GREEN | Yes |
-| Data shape / persisted row shape | Yes | `instances` jsonb camelCase `scheduledDate` verified against mappers + initial schema; stale past instances are a real prod population (BUG-1901/1909 lineage) | Yes (ordering) |
-| Renderer store/state | N/A | Vue `isTodayTask` untouched — it is the reference side of the parity test | — |
-| Electron main/preload bridge | N/A | Widget fetches tasks from Supabase REST directly | — |
-| Localhost sidecar endpoint | N/A | Sidecar serves timer only; task list never touches :5577 | — |
-| KDE polling/control path | Yes | `fetchTasks()` URL audited — limit caps + `neq.done` NULL exclusion found | No — listed below |
-| Supabase persistence/realtime | Partial | REST query semantics audited; no mutation involved | No (NULL-status class) |
-| Updater/runtime version | Yes | Plasmoid dir symlinks to the repo working tree — Electron updater irrelevant for QML | Yes after reload |
-| Stale live process/cache state | Yes | qmlcache can serve stale compiled QML; needs `rm -rf ~/.cache/plasmashell/qmlcache/*` + plasmashell restart (user declined mid-session; command provided) | Pending reload |
+| Class                            | Checked? | Evidence                                                                                                                                                       | Covered by this fix?   |
+| -------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| User repro shape                 | Yes      | Live widget config `todayOnly=true` (appletsrc) vs app Today; parity test on scheduled-today + stale-instances row RED→GREEN                                   | Yes                    |
+| Data shape / persisted row shape | Yes      | `instances` jsonb camelCase `scheduledDate` verified against mappers + initial schema; stale past instances are a real prod population (BUG-1901/1909 lineage) | Yes (ordering)         |
+| Renderer store/state             | N/A      | Vue `isTodayTask` untouched — it is the reference side of the parity test                                                                                      | —                      |
+| Electron main/preload bridge     | N/A      | Widget fetches tasks from Supabase REST directly                                                                                                               | —                      |
+| Localhost sidecar endpoint       | N/A      | Sidecar serves timer only; task list never touches :5577                                                                                                       | —                      |
+| KDE polling/control path         | Yes      | `fetchTasks()` URL audited — limit caps + `neq.done` NULL exclusion found                                                                                      | No — listed below      |
+| Supabase persistence/realtime    | Partial  | REST query semantics audited; no mutation involved                                                                                                             | No (NULL-status class) |
+| Updater/runtime version          | Yes      | Plasmoid dir symlinks to the repo working tree — Electron updater irrelevant for QML                                                                           | Yes after reload       |
+| Stale live process/cache state   | Yes      | qmlcache can serve stale compiled QML; needs `rm -rf ~/.cache/plasmashell/qmlcache/*` + plasmashell restart (user declined mid-session; command provided)      | Pending reload         |
 
 **Exact failure mode fixed**: today-filter parity — `scheduled_date`/instances ordering in the widget's `taskMatchesToday`.
 **Regression added for reported repro**: `tests/unit/kde/today-filter-parity.test.ts` extracts the live QML date/filter functions and compares them against Vue `useSmartViews().isTodayTask()` for the stale-instance scheduled-today row.
 **Live boundary proof**: widget runs the repo QML via symlink — live after plasmashell reload (pending user action). Prod REST probe of the exact widget query was prepared but denied by the permission gate (production reads need explicit approval); probe script retained in session scratchpad.
 
 **Explicitly not covered** (other classes that can also make the widget show fewer tasks):
+
 - Non-today mode fetch cap `limit=100` (`fetchTasks()`), app has no such cap — >100 non-done tasks truncate oldest-first.
 - Today-mode fetch cap `limit=1000`.
 - `status=neq.done` excludes NULL-status rows in PostgREST (schema CHECK permits NULL); app maps/shows them.
-- Widget sync silently stopping (token-refresh class, BUG-1490 lineage) — makes *new* tasks missing until restart.
+- Widget sync silently stopping (token-refresh class, BUG-1490 lineage) — makes _new_ tasks missing until restart.
 
 ### BUG-1910: Canvas groups disappeared after restart into v1.4.229 (BUG-1899 boot-load class recurrence) (🔄 IN PROGRESS)
 
@@ -5768,17 +6321,17 @@ User: "events I deleted are returning for no reason" (both calendar blocks AND w
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | "Deleted events return" reproduced as lost-write, not resurrection — prod histogram dead windows align with reports | Reclassified → BUG-1913 |
-| Data shape / persisted row shape | Yes | 0 alive-with-tombstone, 0 undelete flips, 1 created-today, 3 tombstones (morning only) | N/A — no bad data to fix |
-| Renderer store/state | Partial | Client showed deletions applied locally then re-synced server truth | BUG-1913 scope |
-| Electron main/preload bridge | Not checked | — | BUG-1913 scope |
-| Localhost sidecar endpoint | N/A | Task CRUD doesn't use :5577 | — |
-| KDE polling/control path | N/A | Not involved | — |
-| Supabase persistence/realtime | Yes | Server never received the writes; nothing to resurrect | N/A |
-| Updater/runtime version | Yes | Genuine v1.4.229 confirmed via asar-root package.json | N/A |
-| Stale live process/cache state | Partial | Old instance killed/relaunched during window; write silence spans both | BUG-1913 scope |
+| Class                            | Checked?    | Evidence                                                                                                            | Covered by this fix?     |
+| -------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| User repro shape                 | Yes         | "Deleted events return" reproduced as lost-write, not resurrection — prod histogram dead windows align with reports | Reclassified → BUG-1913  |
+| Data shape / persisted row shape | Yes         | 0 alive-with-tombstone, 0 undelete flips, 1 created-today, 3 tombstones (morning only)                              | N/A — no bad data to fix |
+| Renderer store/state             | Partial     | Client showed deletions applied locally then re-synced server truth                                                 | BUG-1913 scope           |
+| Electron main/preload bridge     | Not checked | —                                                                                                                   | BUG-1913 scope           |
+| Localhost sidecar endpoint       | N/A         | Task CRUD doesn't use :5577                                                                                         | —                        |
+| KDE polling/control path         | N/A         | Not involved                                                                                                        | —                        |
+| Supabase persistence/realtime    | Yes         | Server never received the writes; nothing to resurrect                                                              | N/A                      |
+| Updater/runtime version          | Yes         | Genuine v1.4.229 confirmed via asar-root package.json                                                               | N/A                      |
+| Stale live process/cache state   | Partial     | Old instance killed/relaunched during window; write silence spans both                                              | BUG-1913 scope           |
 
 **Exact failure mode fixed**: none — no product change; report reclassified as duplicate of BUG-1913 (silent write-drop). No "resurrection" fix should be built from this report.
 **Explicitly not covered**: everything in BUG-1913 (the actual write-drop root cause, still open).
@@ -5792,6 +6345,7 @@ User: "events I deleted are returning for no reason" (both calendar blocks AND w
 **Prod evidence (read-only queries, user-approved, all times local=UTC+3)**: user's task-write histogram for 2026-07-03 shows activity 10-12h (22 writes incl. 3 persisted deletions at 11:52), a **dead window 12:00-13:00 (0 writes)** matching the "dates not fixed / groups gone" reports, sparse 13-14h (2), burst 14:00-14:34 (34), then **total silence after 14:34:46** while the user was demonstrably interacting (edge-drag attempts at 14:31+, deletions that later "returned"). Nothing the user did in dead windows produced tombstones, soft-deletes, or updates — the client dropped writes silently and later re-synced server truth (perceived as resurrection, BUG-1911).
 
 **Candidate mechanisms (Phase-1 shortlist, not yet isolated)**:
+
 1. Auth reconnect-grace write-gating — BUG-1898 added GRACE_MAX_MS=10min + reauthRequired prompt, but dead windows exceeded 60min with no re-login prompt reported → either grace re-enters cyclically (each entry resets the deadline), the prompt UI never surfaces, or the gate is entered without the BUG-1898 path.
 2. Task writes failing (401/RLS/network) and being swallowed without enqueue — TASK-1177 offline queue is half-built; hunt 2026-07 item 2 documents skip-both-save-AND-enqueue during grace for the timer stop path; task CRUD path needs the same audit.
 3. Realtime/visibility retry storms (BUG-1799 lineage) starving the write path in Electron.
@@ -5799,9 +6353,10 @@ User: "events I deleted are returning for no reason" (both calendar blocks AND w
 **Next steps**: reproduce with live client + `max(updated_at)` sentinel probe; audit useSupabaseDatabase error paths for silent catch; verify reauthRequired actually reaches a visible UI in Electron; add a write-outcome toast/telemetry so dropped writes are USER-VISIBLE (defense regardless of root cause).
 
 **2026-07-03 evening update (v1.4.231)**: mechanism chain isolated in code and two links fixed:
+
 1. `processQueue` auth-gate (`useSyncOrchestrator.ts`) skipped SILENTLY (debug-only log) whenever `supabase.auth.getSession()` had no session — with a dead session under the BUG-1874 signed-in shell, the queue stranded forever behind a green/amber indicator. **Fixed**: ≥2 consecutive auth-gate skips with pending operations now set queue status `error` + `lastError` ("Sign-in expired — …sign in again") and report into writeHealth (red indicator + toast). Never touches RLS. Regression: `sync-orchestrator.test.ts` "BUG-1913: repeated auth-gate skips…".
 2. `reauthRequired` (BUG-1898's 10-min grace cap) had **zero UI consumers** — the cap fired into the void. **Fixed**: setting it now also fires a direct 15s error toast telling the user to sign out/in.
-Live evidence same evening: user's fresh v1.4.230 session showed amber "2 pending" stuck; prod sentinel `max(updated_at)` frozen at 11:34Z for 3+ hours; upgraded watchdog fired `write-gap … 192min` on first run. **Still open**: WHY the session dies under the shell (suspect: multi-instance refresh-token rotation collisions from today's parallel app instances), and recovery UX (re-login currently manual).
+   Live evidence same evening: user's fresh v1.4.230 session showed amber "2 pending" stuck; prod sentinel `max(updated_at)` frozen at 11:34Z for 3+ hours; upgraded watchdog fired `write-gap … 192min` on first run. **Still open**: WHY the session dies under the shell (suspect: multi-instance refresh-token rotation collisions from today's parallel app instances), and recovery UX (re-login currently manual).
 
 **2026-07-04 00:19 — recovery confirmed end-to-end**: user signed out/in after a ~9.5h stranded-queue window (watchdog logged the gap up to 565min); 33 queued task writes flushed to prod within seconds of re-auth (sentinel `max(updated_at)` jumped to 21:19:33Z). Mechanism chain fully validated: dead session under signed-in shell → silent queue strand → re-auth → immediate flush. Remaining: session-death root cause + refresh-free recovery UX (BUG-1918).
 
@@ -5823,24 +6378,24 @@ Nightly scheduled agent (repo is on GitHub → cloud-clonable) that runs the hun
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-03, shipped Electron v1.4.230 — live manifest verified AND packaged asar-root version verified 1.4.230) | **Opened**: 2026-07-03
 
-BUG-1913's core harm was silence: the app dropped deletions/edits without telling the user. **Shipped**: `src/composables/sync/writeHealth.ts` fed by the `withRetry` funnel in `supabase/_infrastructure.ts` (covers ALL direct DB writes; queue writes were already visible) — 2 consecutive write failures turn the header SyncStatusIndicator red ("Changes aren't saving — retrying") + rate-limited toast; any successful write clears it with a recovery toast. `stores/syncStatus.ts` overlays the signal on the existing indicator. Regression: `tests/unit/sync/write-health.test.ts` (6 tests: threshold, toast cooldown, read-context immunity, withRetry wiring both directions). Precise scope: this makes BUG-1913 *visible*, it does not fix the drop root cause (still open under BUG-1913); writes that bypass `withRetry` are not covered.
+BUG-1913's core harm was silence: the app dropped deletions/edits without telling the user. **Shipped**: `src/composables/sync/writeHealth.ts` fed by the `withRetry` funnel in `supabase/_infrastructure.ts` (covers ALL direct DB writes; queue writes were already visible) — 2 consecutive write failures turn the header SyncStatusIndicator red ("Changes aren't saving — retrying") + rate-limited toast; any successful write clears it with a recovery toast. `stores/syncStatus.ts` overlays the signal on the existing indicator. Regression: `tests/unit/sync/write-health.test.ts` (6 tests: threshold, toast cooldown, read-context immunity, withRetry wiring both directions). Precise scope: this makes BUG-1913 _visible_, it does not fix the drop root cause (still open under BUG-1913); writes that bypass `withRetry` are not covered.
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | BUG-1913 silent hour: direct writes died, indicator stayed green — now 2 consecutive failures turn it red + toast (unit-proven) | Yes (visibility only) |
-| Data shape / persisted row shape | N/A | No data written by this feature | — |
-| Renderer store/state | Yes | syncStatus overlays writeHealth on status/failedCount/lastError/statusText; indicator consumes `status` | Yes |
-| Electron main/preload bridge | N/A | Renderer-only | — |
-| Localhost sidecar endpoint | N/A | Not involved | — |
-| KDE polling/control path | No | Widget has no writeHealth equivalent — widget write failures still silent | No — future work |
-| Supabase persistence/realtime | Yes | Fed from `withRetry`, the funnel all supabase/* modules use; bypassing writes uncovered | Partial |
-| Updater/runtime version | Yes | v1.4.230 live manifest + packaged asar-root version both verified | Yes |
-| Stale live process/cache state | Yes | User's running app needs update/restart to v1.4.230 to gain the signal | Pending user restart |
+| Class                            | Checked? | Evidence                                                                                                                        | Covered by this fix?  |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| User repro shape                 | Yes      | BUG-1913 silent hour: direct writes died, indicator stayed green — now 2 consecutive failures turn it red + toast (unit-proven) | Yes (visibility only) |
+| Data shape / persisted row shape | N/A      | No data written by this feature                                                                                                 | —                     |
+| Renderer store/state             | Yes      | syncStatus overlays writeHealth on status/failedCount/lastError/statusText; indicator consumes `status`                         | Yes                   |
+| Electron main/preload bridge     | N/A      | Renderer-only                                                                                                                   | —                     |
+| Localhost sidecar endpoint       | N/A      | Not involved                                                                                                                    | —                     |
+| KDE polling/control path         | No       | Widget has no writeHealth equivalent — widget write failures still silent                                                       | No — future work      |
+| Supabase persistence/realtime    | Yes      | Fed from `withRetry`, the funnel all supabase/\* modules use; bypassing writes uncovered                                        | Partial               |
+| Updater/runtime version          | Yes      | v1.4.230 live manifest + packaged asar-root version both verified                                                               | Yes                   |
+| Stale live process/cache state   | Yes      | User's running app needs update/restart to v1.4.230 to gain the signal                                                          | Pending user restart  |
 
 **Exact failure mode fixed**: invisibility of exhausted direct-write failures (defense for BUG-1913, not its root cause).
-**Explicitly not covered**: the write-drop root cause itself (BUG-1913 open); writes bypassing `withRetry`; grace-gated writes that never *attempt* (no failure event fires — only the VPS watchdog write-gap check catches those); KDE widget write failures.
+**Explicitly not covered**: the write-drop root cause itself (BUG-1913 open); writes bypassing `withRetry`; grace-gated writes that never _attempt_ (no failure event fires — only the VPS watchdog write-gap check catches those); KDE widget write failures.
 **Regression added for reported repro**: `tests/unit/sync/write-health.test.ts` — withRetry failure→red, success→clear, read-context immunity.
 **Live boundary proof**: `https://in-theflow.com/updates/electron/latest-linux.yml` serves 1.4.230; packaged asar-root `package.json` verified 1.4.230 (the BUG-1908-era probe pitfall avoided).
 
@@ -5864,17 +6419,17 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Live zombie row matches extension arithmetic exactly (1500+300, 0 remaining, active, widget-leader heartbeats) | Yes |
-| Data shape / persisted row shape | Yes | Fixed widget re-adopts the expired-active row and completes it — self-heal, no manual DB write | Yes after reload |
-| Renderer store/state | Yes | Vue `addExtraTime` already clears its guard (BUG-1892) — Vue unaffected | N/A |
-| Electron main/preload bridge | N/A | Widget-side state machine | — |
-| Localhost sidecar endpoint | Yes | Sidecar faithfully reported the zombie (active, 0 remaining) — transport healthy | N/A |
-| KDE polling/control path | Yes | Guard interplay traced: applyFetchedSession clears the boolean guard (:4371); only the id-guard blocked | Yes |
-| Supabase persistence/realtime | Yes | Heartbeats succeeded throughout (token fine) — completion PATCH was never attempted, not failing | Yes |
-| Updater/runtime version | Yes | QML ships via repo symlink; needs qmlcache clear + plasmashell restart | Pending reload |
-| Stale live process/cache state | Yes | CONFIRMED live: running shell predates fix; second user report was stale-process, not regression | Pending reload |
+| Class                            | Checked? | Evidence                                                                                                       | Covered by this fix? |
+| -------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------- | -------------------- |
+| User repro shape                 | Yes      | Live zombie row matches extension arithmetic exactly (1500+300, 0 remaining, active, widget-leader heartbeats) | Yes                  |
+| Data shape / persisted row shape | Yes      | Fixed widget re-adopts the expired-active row and completes it — self-heal, no manual DB write                 | Yes after reload     |
+| Renderer store/state             | Yes      | Vue `addExtraTime` already clears its guard (BUG-1892) — Vue unaffected                                        | N/A                  |
+| Electron main/preload bridge     | N/A      | Widget-side state machine                                                                                      | —                    |
+| Localhost sidecar endpoint       | Yes      | Sidecar faithfully reported the zombie (active, 0 remaining) — transport healthy                               | N/A                  |
+| KDE polling/control path         | Yes      | Guard interplay traced: applyFetchedSession clears the boolean guard (:4371); only the id-guard blocked        | Yes                  |
+| Supabase persistence/realtime    | Yes      | Heartbeats succeeded throughout (token fine) — completion PATCH was never attempted, not failing               | Yes                  |
+| Updater/runtime version          | Yes      | QML ships via repo symlink; needs qmlcache clear + plasmashell restart                                         | Pending reload       |
+| Stale live process/cache state   | Yes      | CONFIRMED live: running shell predates fix; second user report was stale-process, not regression               | Pending reload       |
 
 **Exact failure mode fixed**: extension-path guard leak — legitimate re-completion after "+5 min" swallowed.
 **Explicitly not covered**: any future path resuming a completed session id (none exist in QML today).
@@ -5892,9 +6447,9 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 
 **Fix**: `groupTasksByDate` buckets each task exactly once on an effective date (dueDate wins; instances are a fallback for calendar-only tasks). Drop patch extracted to `src/composables/board/dateColumnUpdates.ts` — it now also rebases past instances onto the target day (preserving time), clears `recurringInstances` on the `noDate` drop, and returns `null` for `overdue`, which `dragGroup` mirrors as `put: false`. All `transform: … !important` rules on SortableJS-controlled elements removed (`.sortable-fallback`, `.chosen-card`, `.ghost-card`, and the `:hover`/`:active` rules that match the dragged card for the whole drag), along with the `transform` transition that eased every pointer move and the `transition: all` on `.task-item` that fought SortableJS's reflow. `backdrop-filter` dropped from the moving clone (BUG-1807 class).
 
-**Explicitly not covered**: `dueDate` now overrides a *future* calendar instance for column placement — a task scheduled tomorrow but due today shows in Today. That is the intended semantics of a Due Date grouping; the Calendar is unaffected.
+**Explicitly not covered**: `dueDate` now overrides a _future_ calendar instance for column placement — a task scheduled tomorrow but due today shows in Today. That is the intended semantics of a Due Date grouping; the Calendar is unaffected.
 
-**Regressions added for reported repro**: `tests/e2e/board-date-drag.spec.ts` drives a real pointer drag (Overdue→Today), asserts the clone's computed transform actually translates, that the card lands and survives a reload, and that the DB row's `due_date` and instance both moved. Verified RED on the pre-fix tree — the clone's translation was ~0px, proving it never left its origin. Plus `tests/board-date-grouping.test.ts` (+4), `tests/board-date-column-updates.test.ts` (new, 9), and three CSS invariants in `tests/safety/css-syntax.test.ts` that fail if a `transform`/`!important` or transform-transition is reintroduced on a drag element. That safety test previously *pinned the buggy values* (`transform 120ms`, `tolerance 8`) and was rewritten to assert the invariant.
+**Regressions added for reported repro**: `tests/e2e/board-date-drag.spec.ts` drives a real pointer drag (Overdue→Today), asserts the clone's computed transform actually translates, that the card lands and survives a reload, and that the DB row's `due_date` and instance both moved. Verified RED on the pre-fix tree — the clone's translation was ~0px, proving it never left its origin. Plus `tests/board-date-grouping.test.ts` (+4), `tests/board-date-column-updates.test.ts` (new, 9), and three CSS invariants in `tests/safety/css-syntax.test.ts` that fail if a `transform`/`!important` or transform-transition is reintroduced on a drag element. That safety test previously _pinned the buggy values_ (`transform 120ms`, `tolerance 8`) and was rewritten to assert the invariant.
 
 **Live boundary proof**: pending — `npm run build` clean, Electron deploy not run (`VPS_HOST` unset in this shell).
 
@@ -5940,7 +6495,7 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 
 **Explicitly NOT covered** (separate, intentional — do not touch): single-use refresh-token rotation / "Already Used" handling; `restoreAuthSessionFromBackup` always restoring and letting the server validate (BUG-1881); lazy Electron-runtime detection (`createLazyAuthStorage`, `detectElectronRuntime`); atomic `store.json` writes + flush-before-exit (BUG-1874).
 
-**Key subtlety**: for `HOME`, containment is not enough — agent sandboxes nest their profile *inside* the real home, so a `startsWith` check passes while still yielding an empty profile. Only exact equality means "not hijacked". `XDG_CONFIG_HOME` still uses containment (a legitimate user preference). Linux-only; macOS/Windows use Application Support/APPDATA and are never rewritten.
+**Key subtlety**: for `HOME`, containment is not enough — agent sandboxes nest their profile _inside_ the real home, so a `startsWith` check passes while still yielding an empty profile. Only exact equality means "not hijacked". `XDG_CONFIG_HOME` still uses containment (a legitimate user preference). Linux-only; macOS/Windows use Application Support/APPDATA and are never rewritten.
 
 **Escape hatch**: `FLOWSTATE_ALLOW_HOME_OVERRIDE=1` for deliberate profile isolation. A pin is never silent — main logs it and the renderer shows a warning toast (`app:getHomeOverride`).
 
@@ -5952,7 +6507,7 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 
 **Two independent faults, one symptom** (UI signed in, but `store.json` auth = null and sidecar `hasAuthContext: false`, so KDE widget + agent tools 401):
 
-1. **Primary key never rewritten.** When a refresh fails, supabase-js calls `removeItem` on the storage adapter, which in Electron writes `flowstate-supabase-auth: null` (`authStorage.ts:85-90`). `keepSessionForReconnect` then kept the session in memory and re-persisted only the *backup* key — never the primary. Fix: new `persistPrimaryAuthSession()` in `src/services/auth/supabase.ts`, called from `keepSessionForReconnect`.
+1. **Primary key never rewritten.** When a refresh fails, supabase-js calls `removeItem` on the storage adapter, which in Electron writes `flowstate-supabase-auth: null` (`authStorage.ts:85-90`). `keepSessionForReconnect` then kept the session in memory and re-persisted only the _backup_ key — never the primary. Fix: new `persistPrimaryAuthSession()` in `src/services/auth/supabase.ts`, called from `keepSessionForReconnect`.
 2. **Sidecar cleared on a stale token.** `syncLocalApiSession` (`useLocalApiBridge.ts`) sent `clear` whenever the access token was within 30s of expiry — including a freshly restored backup session whose refresh was still in flight. Fix: only a real sign-out (no session / no user id) clears; a stale-but-present session holds the last good context and waits for the watcher to re-fire with refreshed tokens.
 
 **Explicitly NOT covered**: the sidecar does not read auth from disk (it receives it over IPC) — fault 1 affects the next launch and any disk reader, fault 2 affects the live sidecar. They were fixed together because one symptom masked the other.
@@ -5984,6 +6539,7 @@ BUG-1913's core harm was silence: the app dropped deletions/edits without tellin
 **Root cause**: Board and Unified Inbox bypass the existing `bulkDeleteTasksWithUndo(taskIds)` path and invoke `deleteTaskWithUndo(id)` once per selected task. Each call creates a separate undo operation and performs a separate optimistic splice/cache/queue cycle, so the UI visibly drains instead of applying one local batch.
 
 **Acceptance**:
+
 - Board, Unified Inbox, and All Tasks route regular multi-delete through one bulk undo operation.
 - All selected tasks leave reactive local state together before remote queue processing completes.
 - One Ctrl/Cmd+Z restores the entire batch; redo removes the entire batch again.
@@ -6032,17 +6588,17 @@ User screenshot: dragging a connection line makes the entire screen glitch for a
 
 **Failure-class matrix**:
 
-| Class | Checked? | Evidence | Covered by this fix? |
-| --- | --- | --- | --- |
-| User repro shape | Yes | Recurring-shaped task, stale May 30 instance, pick Tomorrow/Next Week — end-to-end badge test (`Overdue May 30` → `Tomorrow`) + writer payload regression RED→GREEN | Yes |
-| Data shape / persisted row shape | Yes | `instances` jsonb; reconcile only past ≠ picked date; `instances` omitted from payload when unchanged (BUG-1799 double-write lesson) | Yes |
-| Renderer store/state | Yes | Single `updateTaskWithUndo` write carries dueDate + reconciled instances atomically | Yes |
-| Electron main/preload bridge | N/A | Pure renderer logic | — |
-| Localhost sidecar endpoint | N/A | Not involved | — |
-| KDE polling/control path | Yes | Sibling BUG-1908 covers the widget read side; reconciled instances also unpin widget filters | Via BUG-1908 |
-| Supabase persistence/realtime | Yes | Write goes through the normal updateTask queue path; no new writer introduced | Yes |
-| Updater/runtime version | Yes | User was on v1.4.228 (contains BUG-1901 read fix — confirmed NOT stale-runtime); fix ships v1.4.229, manifest verified live | Yes after app update/restart |
-| Stale live process/cache state | Yes | Running app must auto-update/restart to v1.4.229 to pick up the fix | Pending user restart |
+| Class                            | Checked? | Evidence                                                                                                                                                            | Covered by this fix?         |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| User repro shape                 | Yes      | Recurring-shaped task, stale May 30 instance, pick Tomorrow/Next Week — end-to-end badge test (`Overdue May 30` → `Tomorrow`) + writer payload regression RED→GREEN | Yes                          |
+| Data shape / persisted row shape | Yes      | `instances` jsonb; reconcile only past ≠ picked date; `instances` omitted from payload when unchanged (BUG-1799 double-write lesson)                                | Yes                          |
+| Renderer store/state             | Yes      | Single `updateTaskWithUndo` write carries dueDate + reconciled instances atomically                                                                                 | Yes                          |
+| Electron main/preload bridge     | N/A      | Pure renderer logic                                                                                                                                                 | —                            |
+| Localhost sidecar endpoint       | N/A      | Not involved                                                                                                                                                        | —                            |
+| KDE polling/control path         | Yes      | Sibling BUG-1908 covers the widget read side; reconciled instances also unpin widget filters                                                                        | Via BUG-1908                 |
+| Supabase persistence/realtime    | Yes      | Write goes through the normal updateTask queue path; no new writer introduced                                                                                       | Yes                          |
+| Updater/runtime version          | Yes      | User was on v1.4.228 (contains BUG-1901 read fix — confirmed NOT stale-runtime); fix ships v1.4.229, manifest verified live                                         | Yes after app update/restart |
+| Stale live process/cache state   | Yes      | Running app must auto-update/restart to v1.4.229 to pick up the fix                                                                                                 | Pending user restart         |
 
 **Exact failure mode fixed**: due-date picks (quick options + date picker) now reschedule stale PAST calendar instances onto the picked date.
 **Explicitly not covered**: "Clear date" (stale instances remain → recurring badge stays pinned after clearing); "Done for now" flows (`handleDoneForNowTomorrow`/`handleDoneForNowPickDate` stamp dueDate/scheduledDate/doneForNowUntil but not instances; recurring path goes through `doneForNow()` with its own occurrence semantics); task edit modal due-date path; batch multi-select path (delegates to parent handler).
@@ -6070,6 +6626,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Root cause (3-agent trace + live DB):** The break notification is a fire-and-forget side effect of `completeSession()` (`src/stores/timer.ts:560`). `completeSession` is NOT idempotent per session id — its only top guard is the concurrency lock `isCompleting` (`:469`); it never checks `completedSessionIds`, and that set self-deleted after 2 min (`:484`, `PENDING_WRITE_TIMEOUT_MS`). When the 15s follower poll / resync (`useTimerSync.ts:139,235-244,570-588`) re-adopts an expired-but-still-`is_active=true` session row (completion DB write failed/offline, or a remote leader/KDE widget keeps heart-beating it), `onCountdownComplete → completeSession` runs again for the SAME session and re-fires the OS notification — looping until the poll stops (app closed). The KDE widget had the same class of bug: its only guard is a single boolean `sessionJustCompleted` that `applyFetchedSession` resets whenever a poll sees an active row (`packages/kde-widget/contents/ui/main.qml:4371,4777`).
 
 **Fix:**
+
 - `src/stores/timer.ts`: idempotency guard at the top of `completeSession` (skip + clear local session if id already in `completedSessionIds`); made `completedSessionIds` durable for the store lifetime (removed the 2-min self-delete). `addExtraTime` still clears the id to allow legitimate re-completion.
 - `packages/kde-widget/contents/ui/main.qml`: per-session-id guard in `onSessionComplete` (`currentSessionId === lastCompletedSessionId` → ignore re-fire), independent of the resettable boolean.
 
@@ -6082,6 +6639,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Root cause (proven by 3 code traces + live DB diagnostics):** Two sources of "deleted" truth. A SOFT delete (normal delete) only set `is_deleted=true` and **never wrote a tombstone**, while every resurrection guard (sync CREATE guard, `safe_create_task`, load-merge) keys off the tombstones table. Local DB showed **153/153 soft-deleted tasks had zero tombstone protection** and 8 live rows already carried a tombstone (resurrection captured in data). Two vectors: (1) load-merge fail-open — `fetchTombstones`/`fetchDeletedTaskIds` silently return `[]` on error → merge re-CREATEs every in-memory deleted task with `is_deleted:false`; (2) stale queued CREATE passes the tombstone-only guard and flips `is_deleted` back.
 
 **Fix:** Enforce the invariant server-side + harden app:
+
 - Migration `20260625000000_unify_soft_delete_tombstones.sql`: BEFORE UPDATE trigger on `tasks` — `is_deleted` false→true writes a permanent tombstone, true→false removes it (makes Trash-restore safe automatically); backfills tombstones for existing soft-deleted rows; reports (does not auto-resolve) existing zombies.
 - `taskPersistence.ts`: fail CLOSED — when deletion markers don't load reliably, do not re-enqueue ambiguous local-only tasks as CREATE.
 - `useTasksDatabase.restoreTask`: explicit tombstone clear (defense-in-depth for un-migrated DBs).
@@ -6098,6 +6656,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Problem**: On the Canvas (Electron), permanently deleting a task did nothing — the task stayed put. Root cause: both canvas delete paths (`useCanvasTaskActions.confirmBulkDelete` and `ModalManager.canvasSafeDeleteTaskWithUndo`) were rerouted to a **soft delete** (`bulkDeleteTasksWithUndo`) by a now-stale workaround ("permanentlyDeleteTaskWithUndo corrupts shared pendingOperation state"). Soft delete writes `is_deleted=true` but **no tombstone**, so the sync layer's CREATE-upsert (BUG-1509 force-clears `is_deleted:false`; BUG-1534 guard only blocks when a tombstone exists) resurrected the task immediately → net "nothing happens."
 
 **Fix**:
+
 - Added `bulkPermanentlyDeleteTasksWithUndo` to `src/composables/undoSingleton.ts` (mirrors `bulkDeleteTasksWithUndo` but calls `permanentlyDeleteTask`, type `task-bulk-delete` → single-press undo; exported via `useUnifiedUndoRedo`). The old `pendingOperation` hazard is gone — `beginOperation`/`commitOperation` is now handle-based.
 - Canvas Shift+Delete (`useCanvasTaskActions.ts`) now calls `bulkPermanentlyDeleteTasksWithUndo`; context-menu Permanent Delete (`ModalManager.canvasSafeDeleteTaskWithUndo`) now calls `permanentlyDeleteTaskWithUndo`. Both write a real tombstone (DB trigger `trg_task_tombstone`), so the deletion can't be resurrected and propagates across views/devices. Undo restores via `clearTombstoneForUndo` (already in place).
 - Hardened `useTasksDatabase.permanentlyDeleteTask` to `.select('id')` and throw on a 0-row delete (RLS/already-gone) instead of a silent fake success.
@@ -6116,6 +6675,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Fix**: Pure refactor — extracted `applyCanonicalLayoutMoves`, `applyCanonicalTaskMoves` (with BUG-1787 null-retry), `refreshRenderedNodesFromModel`, `releaseOnDoubleNextTick`, `getVisualNodePosition`, `getRenderedNodeSize`, `getRenderedCanvasZoom`, `handleRotateDayGroups` (with BUG-1787 sync-lock pre-acquire), `handleTidyLayout`, `runDayGroupCatchup`, plus `useDayGroupRotation`/`useTidyLayout` initialization into new composable `src/composables/canvas/useCanvasRotationLayout.ts`. CanvasView.vue net diff: -249 lines. Added 7 new unit tests covering the previously-uncovered paths.
 
 **Files**:
+
 - New: `src/composables/canvas/useCanvasRotationLayout.ts` (~360 lines, moved from CanvasView.vue)
 - Modified: `src/views/CanvasView.vue` (-249 net lines)
 - New: `tests/unit/canvas/canvas-rotation-layout.test.ts` (7 cases)
@@ -6189,6 +6749,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-28)
 
 **Problems fixed**:
+
 1. `tasks_parent_id_fkey` FK violation — orphaned constraint on production DB blocks task sync
 2. `/src/assets/styles.css` 404 in production — hardcoded dev path in preload
 3. `permanentlyDeleteTaskWithUndo` SyntaxError — `safeClone()` returns Vue reactive proxies
@@ -6232,7 +6793,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 
 **Problem**: When a recurring task is permanently deleted, the deferred recurrence scheduler (`useRecurrenceScheduler.ts`) finds an older `done` ancestor with `recurrenceRule` still set, sees no active successor (deleted task is gone from `_rawTasks`), and creates a new clone — effectively resurrecting the deleted task. This loops infinitely: delete → scheduler recreates → delete → recreates.
 
-**Fix approach**: When permanently deleting a recurring task, advance the recurrence chain first (bump `recurrenceCount`/`lastRecurrenceDate` on the ancestor) so the scheduler creates the *next* occurrence, not the same one again. This preserves the recurring series while respecting the deletion.
+**Fix approach**: When permanently deleting a recurring task, advance the recurrence chain first (bump `recurrenceCount`/`lastRecurrenceDate` on the ancestor) so the scheduler creates the _next_ occurrence, not the same one again. This preserves the recurring series while respecting the deletion.
 
 ---
 
@@ -6265,6 +6826,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Problem**: Timer leadership is claimed by writing `device_leader_id` without checking if someone else already claimed it. Two devices can both become leader → timer counts at 2x speed → session completes twice → double XP (BUG-1513).
 
 **Fix implemented**:
+
 - `supabase/migrations/20260313210000_atomic_timer_leadership.sql`: `claim_timer_leadership` RPC with conditional UPDATE
 - `src/composables/supabase/useTimerDatabase.ts`: added `claimLeadership()` wrapper
 - `src/composables/timer/useTimerSync.ts`: all 3 leadership-claim sites + heartbeat now use atomic RPC; heartbeat demotes itself if lease lost
@@ -6351,6 +6913,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Root cause**: `handleContextMenu` in AllTasksView.vue/TaskList.vue never cleared the multi-selection when right-clicking a task outside the current selection. The stale `selectedTaskIds` persisted, inflating the count shown in the menu.
 
 **Fix applied (2026-03-24)**:
+
 - `AllTasksView.vue` handleContextMenu: clear selection when right-clicked task is not in current selection
 - `TaskList.vue` handleContextMenu: same guard before emitting contextMenu event
 - `BoardView.vue` onUnmounted: call `taskStore.clearSelection()` to prevent phantom selections across view switches
@@ -6410,6 +6973,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Root cause**: TASK-1412 added `canvasOrder` sort which bypasses the scheduling check in `useUnifiedInboxState.ts`. When a task is dragged to the calendar and assigned a date, the inbox filter should remove it (task is now scheduled), but the inbox still displays it due to the filter logic being skipped.
 
 **Fix** (in progress):
+
 1. `useUnifiedInboxState.ts`: Restore scheduling check in filter logic even when using `canvasOrder` sort
 2. Verify inbox filter properly excludes scheduled tasks regardless of sort mode
 3. Test drag-drop from inbox to calendar grid doesn't leave duplicate entries
@@ -6423,6 +6987,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Problem**: `fetchActiveTimerSession` polls every ~10s. When VPS/network is slow, each call times out at `supabase.ts:105` (`AbortError`), spawning 3 retries (500ms → 1s → 2s). Before retries finish, the next poll fires — creating overlapping retry cascades.
 
 **Fix** (7 files changed + 1 new):
+
 1. **Timer poll guards** (`useTimerSync.ts`): `isSaving` mutex on heartbeat, `isPolling` mutex on follower poll, consecutive failure backoff (30s after 3 failures)
 2. **Fetch timeout 10s → 30s** (`supabase.ts`): VPS can be slow under load, 10s was too aggressive
 3. **Offline-first read cache** (`readCacheDB.ts` NEW): Dexie IndexedDB database caches tasks/groups/projects after every successful Supabase fetch
@@ -6443,6 +7008,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Root causes**: (1) Auto-archive didn't increment `positionVersion`, so sync could restore old position. (2) Sync handler restored canvas positions for done tasks. (3) No UI toggle to control `hideCanvasDoneTasks` on canvas.
 
 **Fix**: 4 changes across 3 files:
+
 1. `taskOperations.ts`: Auto-archive now increments `positionVersion`; merge respects it via `syncedUpdates.positionVersion ?? newVersion`
 2. `tasks.ts`: Sync handler skips position restoration for `status === 'done'` tasks (2 locations)
 3. `CanvasToolbar.vue`: Added "Show/Hide done tasks" toggle button
@@ -6476,6 +7042,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Problem**: The Calendar inbox `canvasOrder` sort used simple group X position (left→right), without connection-aware DFS for nested tasks and with no way to reverse the order. Users wanted right-to-left ordering (rightmost canvas columns first) and a toggle to flip any sort direction.
 
 **Fix**:
+
 1. `useUnifiedInboxState.ts`: Added `SortDirection` type + `sortDirection` persistent state. `canvasOrder` now sorts groups by descending X (right-to-left), then DFS within each group using `parentTaskId` tree structure. Other sort modes multiplied by `dir` to support asc/desc.
 2. `UnifiedInboxPanel.vue`: Destructures and passes `sortDirection` down to header.
 3. `UnifiedInboxHeader.vue`: Imports `SortDirection`, adds prop + emit, passes to `InboxFilters`.
@@ -6490,15 +7057,18 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Problem/Opportunity**: When a Pomodoro timer is running on a task, the user wants to see the active task name at a glance — both in the web app header and in the KDE Plasma panel next to the timer widget.
 
 **Approach**: Two-part implementation:
+
 1. **Web app**: Glass-morphism pill in `AppHeader.vue` next to the timer, showing project color dot + task name with smooth enter/leave transitions
 2. **KDE Plasma widget**: Separate companion widget (`com.pomoflow.activetask`) that reads task state from `/tmp/flowstate-active-task.json` written by the main timer widget via a temp file bridge
 
 **Key decisions**:
+
 - Temp file bridge avoids duplicating Supabase auth in the companion widget
 - Main widget resolves task name inline in `writeActiveTaskFile()` for reliable reactivity
 - Companion widget uses `Plasma5Support.DataSource` with shell `cat` command (not XMLHttpRequest, which is sandboxed in Plasma widgets)
 
 **Steps**:
+
 - [x] ~~AppHeader.vue: add glass pill with project dot + task name + transitions~~ ✅
 - [x] ~~Main KDE widget: add `currentTaskName` property + `writeActiveTaskFile()` bridge~~ ✅
 - [x] ~~New KDE widget: `packages/kde-widget-active-task/` with compact pill + full popup~~ ✅
@@ -6515,6 +7085,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Research findings**: Clockify/Toggl Track model is best practice — schedule-gated, low-frequency, invitation-framed. Guilt framing (Duolingo-style) backfires long-term. Key: reminders should feel like a friendly assistant, not a boss.
 
 **Approach** (evidence-based):
+
 1. **Settings**: opt-in (default OFF), configurable work hours (Mon-Fri 9am-6pm default), trigger threshold (30/60/90 min of no active session), intensity/tone preference
 2. **Trigger logic**: `IF (current day in active_days) AND (current time in work_hours) AND (no timer running for >= threshold) THEN notify`
 3. **Notification**: KDE system notification with positive framing, rotating message bank (5-10 variants), one-click "Start Session" action
@@ -6523,6 +7094,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 6. **Cap**: max 1 notification per hour
 
 **Steps**:
+
 - [ ] Add nanny notification settings to KDE widget config UI (enable/disable, work hours, days, interval, tone)
 - [ ] Implement idle detection timer in widget (poll timer status, track idle duration)
 - [ ] Create message bank with 5-10 positive-framed rotation variants
@@ -6541,6 +7113,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Approach**: Add `drive.file` scope to existing OAuth, create `google-drive-proxy` edge function (mirrors calendar proxy pattern), add `attachments` JSONB column to tasks table, build drag-drop upload UI in task editor. Client-side image compression (max 1920px, JPEG 0.8). Files stored in auto-created `FlowState/` Drive folder. Client-side thumbnail generation for instant preview.
 
 **Steps**:
+
 - [x] ~~Add `drive.file` scope to OAuth in `auth.ts`~~ ✅
 - [x] ~~Rename calendar-specific token keys to generic (`googleCalendarToken` → `googleProviderToken`)~~ ✅
 - [x] ~~Create `google-drive-proxy` edge function~~ ✅
@@ -6568,6 +7141,7 @@ All E2E specs share ONE test user (`playwright@test.flowstate`); under `fullyPar
 **Problem**: Weekly Plan AI used LLM (Llama 3.3 70B via Groq) to assign tasks to days. Even with detailed MANDATORY RULES prompts, the LLM ignored routine preferences, misplaced tasks, and produced generic reasoning.
 
 **Fix**: Replaced Step 1 (LLM distribution) with a deterministic 4-tier algorithm:
+
 - **Tier 1**: Hard constraints (due dates, routine keyword matches from memory graph)
 - **Tier 2**: Urgency (overdue spread via round-robin across Mon-Wed, in-progress early)
 - **Tier 3**: Priority (high-priority on peak days, top-priority project batching)
@@ -6614,6 +7188,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Root Cause**: Z-index layering. SearchModal overlay is `z-index: 1400` (`--z-popover`). TaskContextMenu is `z-index: 9999` (above overlay ✅). But submenus are Teleported to `<body>` with `z-index: calc(--z-dropdown + 1) = 1001` — below the search overlay (1400) ❌.
 
 **Fix**:
+
 1. All 4 submenu components: Changed `z-index` from `calc(var(--z-dropdown) + 1)` to `10001` (above search overlay)
 2. `SectionSelector.vue`: Added missing `class="select-dropdown"` + `ref="dropdownRef"` on Teleported div, fixed click-outside handler with `capture: true`, fixed CSS syntax error
 3. `useAppShortcuts.ts`: Added `event.code === 'KeyF'` for Hebrew keyboard layout compatibility
@@ -6631,6 +7206,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Root Cause**: Z-index layering issue. SearchModal used `--z-modal: 1300` and ConfirmationModal (BaseModal) also used `--z-modal: 1300`. Since both have the same z-index in ModalManager, and ConfirmationModal is rendered first in the DOM (line 65-73 before SearchModal at 76-81), the SearchModal appeared on top, blocking the confirmation dialog.
 
 **Fix**:
+
 1. `ConfirmationModal.vue`: Added `class="confirmation-modal-override"` to BaseModal wrapper
 2. Added CSS rule `:deep(.confirmation-modal-override .modal-overlay) { z-index: var(--z-toast); }` to elevate ConfirmationModal to `--z-toast: 1450` (above SearchModal's 1300)
 3. Result: Confirmation dialogs now always appear on top of search modals, and users can interact with them properly
@@ -6646,11 +7222,13 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Problem**: KDE widget silently stops syncing with the main app after some period. Tasks, pinned tasks, and projects stop updating and require a manual widget restart to recover.
 
 **Root Cause**: Three compounding bugs in `main.qml`:
+
 1. **Token refresh timer chain break**: `tokenRefreshTimer` has `repeat: false`. On network errors or non-200/non-401 responses, `refreshAccessToken()` never restarts the timer → token eventually expires → all polling silently fails with auth errors.
 2. **Missing 401 handling in fetch functions**: Only `fetchCurrentSession` handled 401 by calling `refreshAccessToken()`. `fetchTasks`, `fetchPinnedTasks`, and `fetchProjects` just logged and silently failed when the token expired mid-session.
 3. **`isRefreshingToken` deadlock**: If an XHR hangs (network issue), `isRefreshingToken` stays `true` forever, blocking all future refresh attempts permanently.
 
 **Fix**:
+
 1. Added fallback `else` branch in `refreshAccessToken()` for non-200/non-400/401 statuses: restarts timer with 60s retry interval. Also restores normal interval on success.
 2. Added `401 → refreshAccessToken()` handling to all three fetch functions.
 3. Added `refreshTokenStartTime` property + timestamp-based stuck detection: if `isRefreshingToken` is true for >30s, forces reset and proceeds.
@@ -6670,6 +7248,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Root Cause B — Containment padding gap causes flip-flop**: The "still inside parent" early-exit used `padding=2` while `getDeepestContainingGroup` used `padding=10`. A task with center 2–10px from the group edge failed the early-exit check, fell through, failed containment detection, and was assigned as root. Next drag with 16px grid snap shifted it back in → assigned to group. This cycled on every drag.
 
 **Fix**:
+
 1. **BUG-1191 handler**: Removed position restoration and `continue`. Now only fixes `node.parentNode` alignment and falls through to the normal path which uses the snapshotted absolute position (always the correct visual position).
 2. **Hysteresis padding**: Changed both containment checks from `padding=2` to `padding=-20`. Negative padding expands the parent boundary outward by 20px — a task only detaches when dragged >20px outside the boundary. The 16px grid snap can never cause a flip-flop across a 20px hysteresis zone.
 
@@ -6682,6 +7261,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Priority**: P2 | **Status**: ✅ DONE (2026-03-09)
 
 **Problems**:
+
 1. `expandedGroups` in `TaskList.vue` is a plain `ref<Set>` — resets to all-expanded on every remount (navigation away and back).
 2. `expandAll()`/`collapseAll()` work momentarily but reset on next reactive update or remount.
 3. Cross-group drag in Catalog view (e.g., Overdue → Today with dueDate grouping) may be broken.
@@ -6697,6 +7277,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: Production console (in-theflow.com) flooded with 5 categories of noise:
+
 1. Hundreds of `[WakeLock] Failed to request wake lock: DOMException` when tab is hidden
 2. `[SYNC] LWW: Server wins` on every sync cycle (echo from direct save + sync queue race)
 3. `[SUPABASE-MAPPER] Invalid UUID detected` on every sync for legacy group "Today"
@@ -6704,6 +7285,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 5. Transient CORS/network failures from ServiceWorker during tab sleep (handled by existing retry)
 
 **Fix**: 4 targeted changes:
+
 - `useWakeLock.ts`: Guard `requestWakeLock()` with `document.visibilityState === 'hidden'` check
 - `useSyncOrchestrator.ts`: Downgrade LWW echo logs (delta < 2s) from `warn` to `debug`
 - `supabaseMappers.ts`: Deduplicate warnings via `Set` — legacy group/UUID warnings fire once per session
@@ -6720,6 +7302,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Goal**: Review and streamline every Storybook story to use the project's design system consistently. Replace all non-design-system elements with proper project components and tokens.
 
 **What "Streamlining" Means**:
+
 - Native `<select>` → `CustomSelect.vue`
 - Native checkboxes → project checkbox components
 - Hardcoded colors → design tokens from `design-tokens.css`
@@ -6730,6 +7313,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Progress Tracker**: `.claude/storybook-review-progress.md` (163 stories, 18 categories)
 
 **Categories** (in review order):
+
 - [ ] ai (4 stories)
 - [ ] auth (8 stories)
 - [ ] calendar (5 stories)
@@ -6776,6 +7360,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Problem**: The Calendar-specific QuickTaskCreate dialog and the header timer task name don't support RTL/Hebrew text, while the rest of the app does. Hebrew text in the calendar task title input shows LTR cursor position. Timer task name in the header bar doesn't auto-detect Hebrew direction.
 
 **Fix**:
+
 1. Add `useHebrewAlignment` to `QuickTaskCreate.vue` (Calendar variant) — matches `QuickTaskCreateModal.vue`
 2. Fix `.timer-task` CSS in `AppHeader.vue` — use `unicode-bidi: plaintext` unconditionally instead of `:dir(rtl)` selector that never matches in LTR documents
 
@@ -6786,6 +7371,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Priority**: P1-HIGH | **Status**: ✅ DONE (2026-03-13)
 
 **Goal**: When user drags the screen down in any mobile view, reveal a command center panel with:
+
 - Search existing tasks
 - Create a new task (spacious input with keyboard)
 - Record a task with audio (voice-to-text via Whisper)
@@ -6806,12 +7392,14 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Root Cause**: `MobileTodayView.vue` extracted time from `dueDate` (a date-only field) instead of checking the explicit `dueTime` field. Date-only strings like "2026-02-08" are parsed by `new Date()` as UTC midnight, which becomes 2:00 AM in Israel (UTC+2). The untimed task filter used `getHours() === 0` which only works in UTC+0 and fails in other timezones.
 
 **Fix Applied (2026-02-08)**:
+
 1. **Changed `getTaskHour()`** — Now uses `task.dueTime` instead of parsing time from `dueDate`
 2. **Fixed untimed task filter** — Changed from `getHours() === 0` to `getTaskHour() === null`, making it timezone-agnostic
 3. **Replaced `formatDueTime()`** — Now uses `getDueBadge()` which only shows time when explicit `dueTime` is set
 4. **Fixed `sanitizeTimestamp()` in supabaseMappers.ts** — Preserves date-only strings (YYYY-MM-DD) instead of converting to UTC ISO
 
 **Files Changed**:
+
 - `src/mobile/views/MobileTodayView.vue` — Display and grouping fixes
 - `src/utils/supabaseMappers.ts` — Preserve date-only strings
 
@@ -6830,6 +7418,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Additional Issue Found**: Two conflicting migration files existed (`20260206070234` and `20260206163002`) creating the same tables with different schemas. Code expected columns from both (e.g., `created_at`/`updated_at` from older, computed `completion_rate` from newer).
 
 **Fix Applied (2026-02-07)**:
+
 1. Merged both migrations into single canonical file (`20260206163002_challenges.sql`)
 2. Deleted duplicate migration (`20260206070234_challenges.sql`)
 3. Applied merged migration directly to VPS via SSH (`docker exec -i supabase-db psql`)
@@ -6842,6 +7431,7 @@ Added `recurrence_rule`, `recurrence_parent_id`, `recurrence_count` columns to t
 **Known Remaining Issue**: `updateChallengeCounters()` uses `supabase.rpc('increment')` which doesn't exist — but the function is scaffolded MVP code that just logs (line 680). Not blocking.
 
 **Errors**:
+
 - `Failed to load resource: 404 (Not Found) (user_challenges)` — **FIXED**
 - `[Challenges] Initialization failed` — **FIXED** (pending user verification)
 
@@ -6864,6 +7454,7 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 **Problem**: User lost significant work on production (in-theflow.com) due to silent sync failures.
 
 **Root Causes Identified** (6 agents investigated):
+
 1. **Silent error swallowing** (`taskOperations.ts:290-301`) - Save failures logged but not retried
 2. **Smart merge drops tasks** (`taskPersistence.ts:272-287`) - Local-only tasks dropped after 5 min
 3. **No write queue** - Failed writes lost forever
@@ -6899,6 +7490,7 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
    - Warn user before closing tab with unsaved changes
 
 **Files to Create**:
+
 - `src/types/sync.ts` - WriteOperation, WriteConflict, SyncStatus types
 - `src/services/offline/writeQueueDB.ts` - Dexie.js IndexedDB schema
 - `src/services/offline/operationSorter.ts` - Create→Update→Delete ordering
@@ -6911,12 +7503,14 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 - `src/composables/useBeforeUnload.ts` - Page close protection
 
 **Files to Modify**:
+
 - `src/stores/tasks/taskOperations.ts` - Use sync queue, add rollback
 - `src/stores/tasks/taskPersistence.ts` - Fix smart merge, extend protection
 - `src/stores/tasks.ts` - Fix 5s pending timeout
 - `src/layouts/AppHeader.vue` - Add SyncStatusIndicator
 
 **Success Criteria**:
+
 - [x] User NEVER loses data, even with network failures
 - [x] User ALWAYS sees current sync status
 - [x] User CANNOT close tab with unsaved changes (without warning)
@@ -6931,6 +7525,7 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 **Root Cause**: After sleep/wake, the JWT token expires but `withRetry()` retries 401 errors with the same stale token (all 3 attempts fail). The save failure was silently swallowed in `saveTasksToStorage()`, causing data loss.
 
 **Fix (3 layers)**:
+
 1. Token refresh in `withRetry()` before retrying on 401/403 (`useSupabaseDatabase.ts`)
 2. Proactive token refresh on visibility change / wake-up (`useSupabaseDatabase.ts`)
 3. Surface save failures when authenticated — re-throw instead of silently swallowing (`taskPersistence.ts`)
@@ -6938,6 +7533,7 @@ Add a "Today" button/filter option to the KDE Plasma widget's task list that fil
 **Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-13)
 
 **Problem**: After realtime connection drops (BUG-1179), task save operations fail:
+
 ```
 i@.../index-CAXNPz-Z.js:144:4526
 saveTasks@.../index-CAXNPz-Z.js:144:14019
@@ -6950,11 +7546,13 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 **Priority**: P2-MEDIUM | **Status**: ✅ DONE (2026-03-13)
 
 **Feature**: When multiple tasks are selected on canvas, right-click should show "Add to New Group" option that:
+
 1. Creates a new group at the bounding box location of selected tasks
 2. Automatically parents all selected tasks to the new group
 3. Sizes the group to contain all selected tasks with padding
 
 **Implementation**:
+
 - [x] Add context menu option when `selectedNodes.length > 1`
 - [x] Calculate bounding box of selected nodes
 - [x] Create group with appropriate position and dimensions
@@ -6963,6 +7561,7 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 **Awaiting**: User verification
 
 **Files Changed**:
+
 - `src/components/canvas/CanvasContextMenu.vue` - Added "Add to New Group" menu option
 - `src/components/canvas/CanvasContextMenus.vue` - Event forwarding
 - `src/composables/canvas/useCanvasActions.ts` - `createGroupFromSelection()` implementation
@@ -6975,6 +7574,7 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 **Priority**: P1-HIGH | **Status**: ✅ DONE (2026-01-28)
 
 **Problem**: In local development, when user has two browser tabs open:
+
 1. Sign in on first tab - works
 2. Open second tab and try to sign in
 3. Both tabs get signed out
@@ -6982,6 +7582,7 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 **Symptoms**: Auth session not persisting across multiple browser tab instances during local development.
 
 **Likely Causes**:
+
 1. Session token overwrite/conflict between tabs
 2. `onAuthStateChange` listener firing logout event to all tabs
 3. Supabase local storage key collision
@@ -7018,6 +7619,7 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 **Problem**: Tasks created before TASK-1403 use `recurrence: TaskRecurrence` (old format) but not `recurrenceRule: SimpleRecurrenceRule` (new format). Recurring badge, delete dialog, and scheduler all depend on `recurrenceRule`, so old tasks appeared non-recurring.
 
 **Solution**: Created `src/composables/useRecurrenceMigration.ts` with:
+
 - `convertOldToNew(oldRecurrence)` — converts `TaskRecurrence` → `SimpleRecurrenceRule` for patterns `daily`/`weekly`/`monthly`/`yearly` (skips `none` and `custom`)
 - `migrateIfNeeded()` — iterates `taskStore._rawTasks`, skips tasks that already have `recurrenceRule`, updates via `taskStore.updateTask()` (hits Supabase), marks done in localStorage key `flowstate-recurrence-migration-v1`
 - Migration is idempotent, runs once per device, preserves old `recurrence` field
@@ -7025,6 +7627,7 @@ saveTasks@.../index-CAXNPz-Z.js:144:14019
 Wired into `src/composables/app/useAppInitialization.ts` — runs after tasks load (Phase B background refresh), before recurrence scheduler (`useRecurrenceScheduler`).
 
 **Files changed**:
+
 - `src/composables/useRecurrenceMigration.ts` (new)
 - `src/composables/app/useAppInitialization.ts` (added migration call)
 
@@ -7037,6 +7640,7 @@ Wired into `src/composables/app/useAppInitialization.ts` — runs after tasks lo
 **Problem**: The `_startEventDrag` (day view) and `_startWeekDrag` (week view) handlers called `taskStore.updateTask()` inside the mousemove handler on every slot change. This caused excessive DB writes and had no undo support.
 
 **Fix**: Applied preview-then-commit pattern (mirrors the existing resize handler):
+
 - Added `dragPreview` ref in `useCalendarDayView.ts` and `weekDragPreview` ref in `useCalendarWeekView.ts`
 - `getEventStyle` / `getWeekEventStyle` use the preview slot/dayIndex during drag for visual feedback
 - `mousemove` only updates the local preview refs — zero store writes
@@ -7045,6 +7649,7 @@ Wired into `src/composables/app/useAppInitialization.ts` — runs after tasks lo
 - Duplicate-mode (Alt+drag) still creates a task on mouseup only
 
 **Files changed**:
+
 - `src/composables/calendar/useCalendarDayView.ts`
 - `src/composables/calendar/useCalendarWeekView.ts`
 
@@ -7057,6 +7662,7 @@ Wired into `src/composables/app/useAppInitialization.ts` — runs after tasks lo
 **What**: Added a small `Repeat` icon badge (teal, `var(--brand-primary)`) to task cards in all views when `task.recurrenceRule` is set. Tooltip shows `describeRecurrenceRule()` output (e.g., "Repeats every day").
 
 **Files changed**:
+
 - `src/components/kanban/card/TaskCardBadges.vue` — recurring badge after attachments badge
 - `src/components/canvas/node/TaskNodeMeta.vue` — recurring badge with "Recurring" text label + new `recurrenceRule` prop
 - `src/components/canvas/TaskNode.vue` — passes `task?.recurrenceRule` to `TaskNodeMeta`
@@ -7069,6 +7675,7 @@ Wired into `src/composables/app/useAppInitialization.ts` — runs after tasks lo
 **Priority**: P1 | **Status**: ✅ DONE (2026-03-14)
 
 **What**: Phase 1 of recurring task management. When deleting a recurring task, shows a dialog with three options:
+
 - **Skip this occurrence** — advances recurrence chain to next date (calls `skipRecurringOccurrence()`)
 - **Stop all future occurrences** — clears `recurrenceRule` chain-wide (calls `stopRecurrence()`)
 - **Cancel** — do nothing
@@ -7076,6 +7683,7 @@ Wired into `src/composables/app/useAppInitialization.ts` — runs after tasks lo
 All 11 delete paths in the app now route through the recurrence-aware dialog globally via CustomEvent pattern.
 
 **Files changed**:
+
 - `src/components/modals/RecurrenceDeleteModal.vue` — modal dialog with Skip/Stop/Cancel buttons, shows recurrence preview
 - `src/composables/useRecurrenceAwareDelete.ts` — composable that intercepts all delete operations, shows dialog if task is recurring
 - `src/stores/tasks/taskOperations.ts` — `skipRecurringOccurrence()` and `stopRecurrence()` operations
@@ -7095,11 +7703,13 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 **Problem**: Three places use native `confirm()` / `window.confirm()` which silently fails in Tauri's WebKitGTK webview — the dialog never appears and the call returns `false`, making task deletion impossible from the canvas.
 
 **Files**:
+
 1. `src/composables/canvas/useCanvasTaskActions.ts:321` — `deleteSelectedTasks()` uses `confirm()`
 2. `src/components/canvas/MultiSelectionOverlay.vue:214` — `bulkDelete()` uses `confirm()`
 3. `src/components/sidebar/SidebarWorkspaceSwitcher.vue:364` — `handleDeleteWorkspace()` uses `window.confirm()`
 
 **Fix**:
+
 1. `useCanvasTaskActions.ts`: Populate `bulkDeleteItems` + open `isBulkDeleteModalOpen` (same pattern as `useCanvasHotkeys.ts`)
 2. `MultiSelectionOverlay.vue`: Route through same canvas bulk delete modal (emit to parent or use modals store)
 3. `SidebarWorkspaceSwitcher.vue`: Add `ConfirmationModal` component with reactive state
@@ -7131,6 +7741,7 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 **Problem**: The Pomodoro timer shows the task name as a small muted text inside the timer display. This lacks visual prominence and doesn't match the glass morphism design system.
 
 **Scope**:
+
 1. Remove old `.timer-task` inline text from timer display
 2. Add a separate glass pill component after the timer in `.control-panel`
 3. Pill shows project color dot (or emoji) + task name with fade+slide transition
@@ -7146,6 +7757,7 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 **Problem**: Intermittent sync failures across Web, Tauri, PWA, KDE Widget - 0 tasks shown, WebSocket 403 errors, SIGTERM exits.
 
 **Root Causes Found**:
+
 1. CI/CD `deploy.yml` was killing System Caddy, starting Docker Caddy (conflict)
 2. SWR cache not invalidated on auth change (fixed in BUG-1056)
 3. Silent session refresh failure didn't set error state (fixed 2026-01-30)
@@ -7155,24 +7767,29 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 7. Circular dependency causing TDZ error in production build (BUG-1099, fixed 2026-01-30)
 
 **Infrastructure Fixes Applied** (2026-01-24):
+
 - Docker stack stopped, System Caddy re-enabled
 - Fixed `deploy.yml` - static files only, graceful Caddy reload
 
 **Phase 2 Fixes Applied** (2026-01-30):
+
 - Mark `initializationFailed` when session refresh fails (`auth.ts`)
 - Add retry wrapper (3x with backoff) for initial database load (`useAppInitialization.ts`)
 - Add auth initialization guard to `fetchTasks`, `fetchProjects`, `fetchGroups` (`useSupabaseDatabase.ts`)
 
 **Phase 3 Fixes Applied** (2026-01-30):
+
 - Replace `.expect()` panic with graceful error handling + helpful messages (`lib.rs`)
 
 **Phase 4 Audit Findings** (2026-01-30):
+
 - Offline database (`useOfflineDatabase.ts`) is a shell - NOT integrated with Supabase
 - Notification fallback lacks action buttons when SW unavailable
 - SWR cache 3s stale window acceptable but may cause brief position flash
 - Added Caddy systemd auto-restart config
 
 **Remaining Phases** (condensed):
+
 - [ ] Phase 1.3: Verify JWT keys in `/opt/supabase/docker/.env` (requires VPS SSH)
 - [x] Phase 2: Auth flow audit + fixes (DONE 2026-01-30)
 - [x] Phase 3: Tauri debug + panic fix (DONE 2026-01-30)
@@ -7195,6 +7812,7 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 **Expected Behavior**: Task dropped into child group → inherits date from parent group + any properties from child group (child overrides parent for conflicts).
 
 **Solution Implemented**:
+
 1. Added `getParentChain()` utility in `storeHelpers.ts` - traverses from child to parent groups
 2. Modified `getSectionProperties()` to traverse parent chain and merge properties (root → child order)
 3. Updated `useCanvasInteractions.ts` to pass `allGroups` for inheritance
@@ -7202,6 +7820,7 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 **Current Status**: Implementation verified with 16 unit tests. Debug logging cleaned up. `applyAllNestedSectionProperties` fixed to thread `allGroups` param.
 
 **Key Files**:
+
 - `src/utils/canvas/storeHelpers.ts` - `getParentChain()` function (cycle-safe, depth-limited)
 - `src/composables/canvas/useCanvasSectionProperties.ts` - Parent chain traversal + merge (root→child)
 - `src/composables/canvas/useCanvasInteractions.ts` - Passes allGroups to enable inheritance
@@ -7226,11 +7845,13 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 **Priority**: P0-CRITICAL | **Status**: ✅ Phase 1 COMPLETE
 
 **Phase 1 Done**:
+
 - [x] SQL migration for `position_version` auto-increment triggers
 - [x] `src/utils/canvas/coordinates.ts` - position conversion source of truth
 - [x] `src/composables/canvas/useCanvasOperationState.ts` - state machine
 
 **Phase 2 Pending**:
+
 - [ ] Run SQL migration in Supabase Dashboard
 - [ ] Wire state machine into `useCanvasOrchestrator`
 - [ ] Test: drag → refresh → verify position persists
@@ -7282,7 +7903,7 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 - [ ] **TASK-1298**: Context menu AI Assist — ✨ button in TaskContextMenu with AI popover
 - [ ] **TASK-1299**: Edit modal AI Assist — ✨ button in TaskEditModal footer, auto-populate form fields
 - [ ] **TASK-1300**: Quick create AI Assist — ✨ button in QuickTaskCreate next to title input
-  **Progress (2026-02-12):** All 5 files implemented + integrated. Hebrew/RTL language detection added. Sticky bar translucency fixed. Awaiting user testing.
+      **Progress (2026-02-12):** All 5 files implemented + integrated. Hebrew/RTL language detection added. Sticky bar translucency fixed. Awaiting user testing.
 
 #### Phase 5: AI Chat Intelligence Improvements (P1 — ONGOING)
 
@@ -7294,6 +7915,7 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 - [x] ~~**BUG-1374**~~: ✅ AI Chat 4-bug combo — (1) English input → Hebrew response (task data context overrides language), (2) Hebrew text renders LTR (Step indicator breaks `dir="auto"`), (3) fluffy generic advice instead of concise analysis, (4) wrong tasks returned (`list_tasks` has no date/priority filter). Pipeline + prompt-level fixes all applied 2026-02-21. (✅ DONE 2026-02-21)
 
 **Key Files**:
+
 - `src/components/ai/ChatMessage.vue` — message rendering, task list items, inline actions, RTL CSS
 - `src/components/ai/AIChatPanel.vue` — panel layout, settings, quick actions, full-screen nav
 - `src/components/ai/AITaskAssistPopover.vue` — AI assist popover with context-aware actions + results (Phase 4)
@@ -7314,6 +7936,7 @@ All 11 delete paths in the app now route through the recurrence-aware dialog glo
 **Goal:** Move AI chat from prompt-engineering-dependent to code-enforced reliability. Pre/post-processing pipeline between user input and LLM output ensures language, quality, and formatting are enforced deterministically — not hoped for via prompts.
 
 **Architecture:**
+
 ```
 User Input → [Pre-Processing] → LLM (ReAct loop) → [Post-Processing] → Render
 ```
@@ -7321,22 +7944,26 @@ User Input → [Pre-Processing] → LLM (ReAct loop) → [Post-Processing] → R
 **New file structure:** `src/services/ai/pipeline/` (types, preprocess, postprocess, languageDetector, contextOptimizer, responseValidator)
 
 **Infrastructure:**
+
 - [x] ~~**TASK-1375**~~: ✅ Pipeline orchestrator + types — create `src/services/ai/pipeline/` with `types.ts` (PreProcessResult, PostProcessResult, Guardrail, PipelineConfig interfaces) and `index.ts` (createPipeline, runPreProcess, runPostProcess). Pure function composition, fully testable.
 - [x] ~~**TASK-1376**~~: ✅ Language detector — `languageDetector.ts` with `detectLanguage(text)` using Unicode range analysis (extract from qualityAssessment.ts:468-483) and `detectLanguageMismatch(input, output)`. No LLM calls — deterministic.
 - [x] ~~**TASK-1377**~~: ✅ Context optimizer — `contextOptimizer.ts` to replace inline task injection in `buildSystemPrompt` (lines 360-418). Separate Hebrew titles from English metadata labels, character budget (3000 chars), date-relative filtering (today/overdue first). **Highest single ROI fix** — reduces language contamination at the source.
 
 **Post-Processing Guardrails:**
+
 - [x] ~~**TASK-1378**~~: ✅ Response validator — consolidate ALL response cleanup from 3 locations (stripToolBlocks, stripTextToolCalls, ChatMessage.vue renderedContent regex) into one `responseValidator.ts`. Add UUID stripping, reuse `runRuleChecks` from qualityAssessment.ts.
 - [x] ~~**TASK-1379**~~: ✅ Language enforcer — post-processing guardrail using TASK-1376's `detectLanguageMismatch()`. V1: detect + flag in metadata (`languageMismatch: true`) for UI indicator. V2 (future): re-call LLM for translation.
 - [x] ~~**TASK-1380**~~: ✅ Response length enforcer — cap responses by intent (greetings: 200 chars, tool summaries: 500 chars, analytical: warn on >2000 chars without structure).
 
 **Integration:**
+
 - [x] ~~**TASK-1381**~~: ✅ Wire pre-processing into useAIChat — call `runPreProcess()` before ReAct loop, replace inline `buildSystemPrompt` task injection with contextOptimizer, pass `PreProcessResult` through loop. Depends: TASK-1375, 1376, 1377.
 - [x] ~~**TASK-1382**~~: ✅ Wire post-processing into useAIChat — run `runPostProcess()` after ReAct loop (before `completeStreamingMessage`), replace inline cleanup. Depends: TASK-1378, 1379, 1380, 1381.
 - [x] ~~**TASK-1383**~~: ✅ Simplify ChatMessage.vue renderedContent — remove redundant regex stripping (now handled by pipeline). `renderedContent` becomes: sanitize + markdown render only. Depends: TASK-1382.
 - [x] ~~**TASK-1384**~~: ✅ Unit tests for pipeline — test each guardrail independently (language detection, response cleaning, context optimization, pipeline composition). Depends: TASK-1375–1380.
 
 **Dependency graph:**
+
 ```
 Wave 1: TASK-1375, TASK-1376 (no deps)
 Wave 2: TASK-1377, TASK-1378, TASK-1379, TASK-1380 (depend on Wave 1)
@@ -7352,25 +7979,30 @@ Wave 5: TASK-1383 (cleanup, depends on Wave 4)
 **Research basis (2025-2026):** Linear AI / Cursor pattern: compute reasoning in code, LLM only writes prose. Groq Llama 3.3 70B tool calling is documented as intermittent (Agno #4090). uFuzzy outperforms Fuse.js for short string matching. Rule-based validation before LLM-as-judge is the cost-effective quality gate.
 
 **Pillar 1: Pre-Digested Reasoning (highest ROI)**
+
 - [x] ~~**TASK-1388**~~: ✅ Pre-digested reasoning engine — instead of sending raw JSON tool results and hoping the LLM reasons, compute the analysis IN CODE (days overdue, subtask progress %, project context, priority ranking) and send pre-written facts the LLM only needs to format naturally. Pattern: `"Task X: 3 days overdue, 0/5 subtasks, high priority in Project Auth"` → LLM writes connecting prose. Inject into tool result follow-up prompt in `useAIChat.ts`. Key insight from Cursor/Linear: minimize what the LLM invents, maximize what deterministic code computes.
 - [x] ~~**TASK-1389**~~: ✅ Skeleton prompting for agent chains — refactor `useAgentChains.ts` chain prompts to use skeleton pattern: code generates structured sections (overdue analysis, today's priorities, progress summary), LLM fills only 1-sentence natural language bridges between sections. Eliminates "wall of generic text" from plan_my_day and end_of_day_review chains.
 
 **Pillar 2: Generic Response Detection + Retry**
+
 - [x] ~~**TASK-1390**~~: ✅ Fluff detector guardrail — `src/services/ai/pipeline/fluffDetector.ts`. Heuristic scoring: check if response references actual task titles from context (0.3 weight), contains specific data points like dates/numbers (0.15), has no generic advisory phrases like "consider", "it's essential", "you might want to" (0.05 each). Score 0-1, threshold 0.5 = retry. Based on 2025 "Detecting Prompt Knowledge Gaps" paper specificity dimensions. Zero-cost, runs client-side.
 - [x] ~~**TASK-1391**~~: ✅ Validation + retry loop — when fluff detector score < 0.5 after tool results, retry once with stricter prompt: append the validation feedback ("your response referenced no specific tasks, try again naming actual tasks from the results"). Max 1 retry to avoid latency. If retry also fails, return best attempt with post-processing cleanup. Wire into `useAIChat.ts` post-ReAct section.
 
 **Pillar 3: Tool Hints + Intent Routing**
+
 - [x] ~~**TASK-1392**~~: ✅ Keyword-based tool hints — `src/services/ai/pipeline/toolHints.ts`. Deterministic keyword → tool mapping: "overdue" → `get_overdue_tasks`, "plan my week" → `generate_weekly_plan`, "timer" → `get_timer_status`/`start_timer`, "what should I" → `suggest_next_task`. Inject hint into system prompt: "Consider using `get_overdue_tasks` for this query." Reduces ReAct steps from 2-3 to 1. Supports Hebrew keywords too.
 - [x] ~~**TASK-1393**~~: ✅ `projectId` filter on `list_tasks` — add optional `projectId` parameter to `list_tasks` tool definition and execution. Already has project data accessible. 15-minute quick win.
 - [x] ~~**TASK-1394**~~: ✅ Counting vs listing system prompt clarification — add explicit rule: "For COUNTING questions (how many, what's total), answer from context — do NOT call tools. For LISTING questions (show me, what are my tasks), use tools to show interactive cards." Prevents unnecessary tool calls.
 
 **Pillar 4: Fuzzy Title Resolution**
+
 - [x] ~~**TASK-1395**~~: ✅ Install uFuzzy + `resolveTask()` helper — `npm install @leeoniya/ufuzzy`. Create `src/services/ai/entityResolver.ts` with `resolveTask(idOrTitle, tasks)`: (1) exact UUID match, (2) exact TASK-XXX ID match, (3) uFuzzy title search. Returns best match or top-3 candidates if ambiguous. uFuzzy chosen over Fuse.js: 7.5KB, ~1ms for 1k items, better quality on short strings without tuning.
 - [x] ~~**TASK-1396**~~: ✅ Wire `resolveTask()` into write tools — modify `validateTaskExists()` in `tools.ts` to fall through to `resolveTask()` when UUID lookup fails. Affects: `update_task`, `update_task_status`, `delete_task`, `start_timer`, `stop_timer`. User says "mark the video as done" → LLM passes title fragment → `resolveTask` finds the task.
 - [x] ~~**TASK-1397**~~: ✅ `mark_task_done` convenience tool — new tool alias that accepts `taskTitle` (string) instead of requiring UUID. Internally calls `resolveTask()` + `taskStore.updateTask(id, { status: 'done' })`. Most common user action shouldn't depend on UUID resolution.
 - [x] ~~**TASK-1398**~~: ✅ Conversation entity memory — track recently-mentioned task IDs in conversation metadata. When user says "it", "that task", "the last one", resolve to most recently mentioned entity. Store in `aiChat` store alongside messages. Enables multi-turn: "show overdue tasks" → "mark the first one as done."
 
 **Dependency graph:**
+
 ```
 Wave 1 (no deps):     TASK-1388, TASK-1390, TASK-1392, TASK-1393, TASK-1394, TASK-1395
 Wave 2 (dep Wave 1):  TASK-1389, TASK-1391, TASK-1396, TASK-1397
@@ -7390,6 +8022,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 **Sub-Tasks (ordered by priority)**:
 
 #### P0 — Security & Broken Functionality
+
 - [x] **~~TASK-1250~~**: ✅ Fix API key storage — removed plaintext localStorage inputs since proxy handles keys server-side (`AIChatPanel.vue`)
 - [x] **~~TASK-1251~~**: ✅ Fix direct API calls bypassing proxy — route model-listing through `aiChatProxy.ts` instead of direct fetch to groq.com/openrouter.ai (`AIChatPanel.vue:275,290`)
 - [x] **~~TASK-1252~~**: ✅ Remove or gate `/keyboard-test` debug route — ships without auth, exposes task creation/deletion debug panel (`router/index.ts:105-108`)
@@ -7400,6 +8033,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 - [x] **~~TASK-1257~~**: ✅ Fix `productionLogger.ts` — now uses Supabase session token via `supabase.auth.getSession()`
 
 #### P1 — Production Quality
+
 - [x] **~~TASK-1258~~**: ✅ Replace httpbin.org with self-hosted endpoint — production code now uses `in-theflow.com` (`performanceBenchmark.ts`, `useNetworkOptimizer.ts`)
 - [x] **~~TASK-1259~~**: ✅ Remove unconditional `%c[DEBUG]` styled log from `useCanvasOrchestrator.ts`
 - [x] **~~TASK-1260~~**: ✅ Remove ~30 bug-specific debug tags across 10 files (`[BUG-339-DEBUG]`, `[TASK-288-DEBUG]`, `[DELETE-DEBUG]`, `[BUG-1116:DRAG-DEBUG]`, `[KEYBOARD]` etc.)
@@ -7410,6 +8044,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 - [x] **~~TASK-1265~~**: ✅ Fix AI proxy health check consuming real API tokens every 60s — switched to OPTIONS request instead of chat completion (`aiChatProxy.ts:412-421`)
 
 #### P2 — Code Quality & Design System
+
 - [x] **~~TASK-1266~~**: ✅ CSS design token migration — top offending files migrated. Original: 1,420 raw rgba + 434 hex across 129 files. Migrated 15 top-offending component files (MultiSelectToggle, DragHandleVisuals, BaseCard, TaskRow, KanbanColumn.css, KanbanSwimlane.css, TaskCard.css, GroupModal, EmojiPicker, AccountSettingsTab, useToast, errorHandler, GamificationPanel, DoneToggleVisuals, AchievementToast). True violations reduced to ~101 rgba + ~170 hex (long tail of 2-7 per file across many components).
 - [x] **~~TASK-1267~~**: ✅ Standardize localStorage key prefixes — settings.ts migrated with migration logic for old keys
 - [x] **~~TASK-1268~~**: ✅ Extract magic timeout numbers to named constants — created `src/config/timing.ts` with PENDING_WRITE_TIMEOUT_MS, DRAG_SETTLE_TIMEOUT_MS, FILE_DIALOG_TIMEOUT_MS, CROSS_TAB_DEDUP_TIMEOUT_MS, RESIZE_SETTLE_TIMEOUT_MS
@@ -7421,6 +8056,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 - [x] **~~TASK-1274~~**: ✅ Migrate `'uncategorized'` sentinel to constant — created UNCATEGORIZED_PROJECT_ID in taskOperations.ts, used in supabaseMappers + useSupabaseDatabase
 
 #### P3 — Backlog / Polish
+
 - [x] **~~TASK-1275~~**: ✅ Remove 5 obsolete verification scripts in `scripts/` (verify-shadow-layer, verify-auth-user, verify-backup-system, verify-bug339-migration, verify-restore)
 - [x] **~~TASK-1276~~**: ✅ Remove Storybook `title: 'PLACEHOLDER'` duplicate key (`OverflowTooltip.stories.ts:4`)
 - [x] **~~TASK-1277~~**: ✅ Standardize z-index usage — replaced ~60 hardcoded values across 50 files with `var(--z-*)` tokens (dropdown, modal, popover, tooltip layers)
@@ -7445,11 +8081,13 @@ Wave 3 (dep Wave 2):  TASK-1398
 **Problem/Opportunity**: Morning dashboard was a forced full-page takeover that interrupted users during onboarding. Users need an opt-in ritual that fits into their morning workflow — suggested during the "golden window" (06:00-11:00) but always dismissible.
 
 **Solution**: Redesigned as a lightweight, non-blocking ritual with two-step flow:
+
 1. **Step 1**: Pick focus tasks (up to 3) from prioritized candidates (overdue, high-priority, active)
 2. **Step 2**: Schedule them via auto-placement or manual time-blocking
 3. **Summary chip**: Shows completion status throughout the day
 
 **Architecture**:
+
 - **`useMorningRitual.ts`**: State machine (idle → picking → scheduling → done/dismissed) + time window gating (06:00-11:00) + one-time-per-day enforcement via localStorage
 - **UI Components**:
   - `MorningBanner.vue`: Dismissible banner with call-to-action, only shows during golden window
@@ -7459,10 +8097,12 @@ Wave 3 (dep Wave 2):  TASK-1398
 - **Reuse**: CustomSelect (time picker), TaskContextMenu (priority/due date quick edits), TaskEditModal (full edit), BaseBadge (priority indicators)
 
 **Integration**:
+
 - `App.vue`: Mount banner + panel + summary chip globally (always available)
 - `MorningDashboardView.vue`: Auto-open ritual on `/morning` route, show summary chip in header
 
 **New Files**:
+
 - `src/composables/useMorningRitual.ts`
 - `src/components/morning-dashboard/MorningBanner.vue`
 - `src/components/morning-dashboard/MorningRitualPanel.vue`
@@ -7470,6 +8110,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 - `src/components/morning-dashboard/MorningSummaryChip.vue`
 
 **Modified Files**:
+
 - `src/App.vue`
 - `src/views/MorningDashboardView.vue`
 
@@ -7492,6 +8133,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 **Goal**: Add a mobile-optimized calendar view to the PWA bottom navigation. Replace the AI Chat tab with Calendar in the nav bar; move AI Chat into the Menu overlay instead.
 
 **Implementation**:
+
 - Created `MobileCalendarView.vue` — day view with time grid (6AM-11PM), task cards color-coded by priority, date navigation, current time indicator, unscheduled tasks section, RTL support
 - Added mobile route `/mobile-calendar` in router with desktop redirect to `/calendar`
 - Replaced AI nav tab with Calendar tab in `MobileNav.vue` (Calendar icon)
@@ -7506,6 +8148,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 **Goal**: Remove AI Chat from the mobile bottom navigation bar (currently 4th tab) and add it as an item in the hamburger Menu overlay instead. This frees the nav slot for Calendar.
 
 **Changes**:
+
 - `MobileNav.vue`: Removed AI `router-link`, added menu item with Sparkles icon that navigates to `/mobile-ai-chat`
 - AI Chat view works when accessed from menu
 
@@ -7518,6 +8161,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 **Goal**: Add `refreshIfStale()` to `useWorkProfile.ts` that only runs `computeCapacityMetrics()` when observations are >24h old (instead of always on startup). Wire into app initialization. Verify AISettingsTab already has memory health UI.
 
 **Changes**:
+
 - `src/composables/useWorkProfile.ts`: Added `refreshIfStale()` — checks `memoryGraph` timestamps, skips refresh if freshest observation is <24h old, generates initial observations if none exist
 - `src/composables/app/useAppInitialization.ts`: Replaced unconditional `computeCapacityMetrics()` call with `refreshIfStale()` (fire-and-forget, respects `aiLearningEnabled` setting)
 - `AISettingsTab.vue`: Already had full Memory Health section (TASK-1356) — grade badge, section dots, progress, "Run Quick Check" button, hint to full dashboard. No changes needed.
@@ -7531,6 +8175,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 **Question**: Is FlowState ready to share with the open-source community? Users should be able to connect their own Supabase instance and use all features — no paid tiers, no locked features.
 
 **Audit Areas**:
+
 - Hardcoded secrets, API keys, VPS IPs in committed code
 - Supabase setup documentation (schema, migrations, RLS policies)
 - Environment variable documentation (.env.example completeness)
@@ -7549,6 +8194,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 **Concept**: WhatsApp bot that receives forwarded messages, parses them with Groq AI, and creates tasks in FlowState automatically.
 
 **Implementation**: Built complete bot at `packages/whatsapp-bot/` (~375 LOC):
+
 - `src/index.ts` — Express webhook server, WAHA event handler, chat ID allowlist security
 - `src/groqParser.ts` — Llama 3.3 70B via Groq API, extracts title/priority/dueDate/duration from Hebrew/English messages
 - `src/supabaseClient.ts` — Direct REST insert to FlowState tasks table, sets `is_in_inbox: true` for triage
@@ -7556,6 +8202,7 @@ Wave 3 (dep Wave 2):  TASK-1398
 - `docker-compose.yml` — WAHA (NOWEB engine) + bot, ready to deploy
 
 **Architecture**:
+
 ```
 WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supabase Edge Function
                                                                           ↓
@@ -7567,6 +8214,7 @@ WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supab
 **Estimated Cost**: $0/month (all free tiers)
 
 **Deployment steps** (user manual):
+
 - [x] ~~Build webhook handler (Node.js/TypeScript)~~ ✅
 - [x] ~~Integrate Groq for message parsing~~ ✅
 - [x] ~~Connect to FlowState Supabase via REST API~~ ✅
@@ -7585,12 +8233,14 @@ WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supab
 **Blocked on**: Dedicated phone number (SIM card purchase)
 
 **What's done**:
+
 - WAHA container deployed on VPS (port 3050, `supabase_default` network)
 - Doppler secrets configured (`WAHA_API_KEY`, `WAHA_DASHBOARD_USERNAME/PASSWORD`, `GROQ_API_KEY`)
 - Restart script at `/opt/waha/restart-waha.sh` pulls fresh secrets from Doppler
 - Dashboard accessible at `http://84.46.253.137:3050/dashboard`
 
 **Remaining**:
+
 - [ ] Buy dedicated SIM card
 - [ ] Start session in WAHA dashboard, scan QR with new number
 - [ ] Test: send WhatsApp message → verify task appears in FlowState inbox
@@ -7613,12 +8263,14 @@ WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supab
 **Problem/Opportunity**: FlowState needs to display Google Calendar events in the calendar views without exposing OAuth tokens or making Google API calls from the client.
 
 **Scope**: Create `supabase/functions/google-calendar-proxy/index.ts` — a Supabase Edge Function that:
+
 - Validates the caller via Supabase JWT before proxying to Google
 - Supports `list-calendars` and `list-events` actions
 - Performs automatic token refresh on Google 401 and returns `newAccessToken` to client
 - Follows the same CORS/auth pattern as `ai-chat-proxy`
 
 **Implementation**:
+
 - [x] Create `supabase/functions/google-calendar-proxy/index.ts`
 - [x] CORS headers matching ai-chat-proxy (ALLOWED_ORIGINS, getCorsHeaders)
 - [x] Supabase JWT validation via `createClient` + `getUser()`
@@ -7628,6 +8280,7 @@ WhatsApp (dedicated number) → WAHA (Docker, Contabo VPS) → Webhook → Supab
 - [x] `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` from `Deno.env.get()`
 
 **Files**:
+
 - `supabase/functions/google-calendar-proxy/index.ts` (new)
 
 ---
@@ -7647,6 +8300,7 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
 **Priority**: P3-LOW | **Status**: ✅ DONE (2026-03-13)
 
 **Rationale**: Web Speech API has poor quality compared to Whisper:
+
 - Browser-dependent (different results on Chrome/Firefox/Safari)
 - Poor Hebrew support
 - No mixed-language (code-switching) support
@@ -7655,6 +8309,7 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
 **Scope**: Mobile only (desktop components still use browser speech as fallback)
 
 **Changes Made**:
+
 1. Removed Browser/AI mode toggle from MobileInboxView
 2. Made Whisper (via Groq) the only voice input method for mobile
 3. Simplified voice UI - single mic button, no mode selection
@@ -7662,6 +8317,7 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
 5. Removed all `voiceMode`, `voiceLanguage`, `toggleVoiceMode` references
 
 **Files Modified**:
+
 - `src/mobile/views/MobileInboxView.vue` - Whisper-only voice UI
 
 **Note**: `useSpeechRecognition.ts` kept for desktop components (UnifiedInboxInput, QuickCaptureTab, AppSidebar)
@@ -7679,6 +8335,7 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
 **Solution**: Save audio blob to IndexedDB, show badge, auto-transcribe when back online.
 
 **Implementation Complete**:
+
 1. Created `useOfflineVoiceQueue.ts` composable
    - Saves audio blob to IndexedDB when offline
    - Uses VueUse `useOnline()` for connectivity detection
@@ -7695,6 +8352,7 @@ Batch capture mode: `Ctrl+.` opens Quick Capture modal, type titles + Enter, Tab
    - Haptic feedback on queue save
 
 **Files Created/Modified**:
+
 - `src/composables/useOfflineVoiceQueue.ts` (CREATE) - IndexedDB queue management
 - `src/composables/useWhisperSpeech.ts` (MODIFY) - Offline callback support
 - `src/mobile/views/MobileInboxView.vue` (MODIFY) - UI integration
@@ -7719,12 +8377,12 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ### Stress Test Suite (📋 PLANNED)
 
-| Task | Description |
-|------|-------------|
+| Task     | Description                                                                |
+| -------- | -------------------------------------------------------------------------- |
 | TASK-362 | Sync conflict resolution (2 tabs editing, offline+online, race conditions) |
-| TASK-363 | Auth edge cases (expired JWT, session timeout, concurrent sessions) |
-| TASK-364 | WebSocket stability (disconnect, reconnect, subscribe cycles) |
-| TASK-366 | Redundancy assessment (SPOF mapping, fallback testing) |
+| TASK-363 | Auth edge cases (expired JWT, session timeout, concurrent sessions)        |
+| TASK-364 | WebSocket stability (disconnect, reconnect, subscribe cycles)              |
+| TASK-366 | Redundancy assessment (SPOF mapping, fallback testing)                     |
 
 ---
 
@@ -7739,6 +8397,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Fix Applied**: Added `event.button !== 0` early return in `handleTaskClick()` so only left-clicks trigger selection logic. Right-clicks now only fire the `@contextmenu` handler.
 
 **Files Changed**:
+
 - `src/composables/inbox/useUnifiedInboxActions.ts` - Added button check (1 line)
 
 ---
@@ -7753,6 +8412,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 2. **Auto-expand to fullscreen**: When typing a long task title that exceeds the input width, automatically open a fullscreen task creator popup/modal so the user has more space to write.
 
 **Requirements**:
+
 - [x] Add `dir="auto"` or RTL detection to quick add input — ✅ Done by TASK-1324 (`quickTaskDirection` computed in AppSidebar.vue)
 - [x] RTL-aware placeholder text and icons — ✅ Done by TASK-1324 (Hebrew translations in `he.json`)
 - [x] Character/width threshold to trigger fullscreen expansion — ✅ Auto-opens at 20+ words or 150+ chars
@@ -7761,6 +8421,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 - [x] Fullscreen creator should also be fully RTL-aware — ✅ Uses `useHebrewAlignment` composable
 
 **Implementation**:
+
 - `AppSidebar.vue`: Expand button (Maximize2 icon) on textarea + auto-trigger at high threshold + `QuickTaskCreateModal` integration
 - `QuickTaskCreateModal.vue`: Added `initialTitle` prop for text carry-over
 - RTL: `quickTaskDirection` computed (regex on first char), Hebrew i18n placeholders, `useHebrewAlignment` in modal
@@ -7776,11 +8437,13 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Design Pivot**: Initially built as 4-step wizard, then pivoted to single screen based on UX research showing multi-step wizards have ~10-19% completion rates with 72% user abandonment. Linear (most admired productivity UX) uses zero wizards. Single screen gets users to first task faster.
 
 **Design Decisions (Resolved)**:
+
 - [x] What to show: Logo, 3 feature highlights, "Get Started" CTA, optional sign-up link for guests
 - [x] Format: Single welcome screen (research-backed — "quick win" retains 80% more users)
 - [x] Reappear: No — dismissed permanently via localStorage (`flowstate-onboarding-v2`)
 
 **Implementation**:
+
 - [x] `useOnboardingWizard.ts` composable — visibility, dismiss, keyboard, localStorage persistence
 - [x] `OnboardingWizard.vue` — single-screen modal with Teleport, glass morphism, auth-aware sign-up CTA
 - [x] Moved from MainLayout to App.vue — now shows on both desktop and mobile
@@ -7801,6 +8464,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Feature**: Add a plugin/settings option to connect Google Calendar. Once connected, display Google Calendar events alongside FlowState tasks in the Calendar view.
 
 **Requirements**:
+
 - [ ] Google OAuth must include `calendar.readonly` scope (extends FEATURE-1202)
 - [ ] Settings UI: "Connect Google Calendar" toggle in Settings > Integrations
 - [ ] Fetch events from Google Calendar API (read-only)
@@ -7809,6 +8473,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 - [ ] Graceful degradation when offline or token expired
 
 **Key Decisions Needed**:
+
 - Read-only vs read-write (create FlowState tasks from calendar events?)
 - Which calendars to sync (primary only vs user-selectable)
 - Event display style (overlay, side-by-side, merged timeline)
@@ -7822,6 +8487,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Task**: When a Pomodoro timer is running on task A and user clicks play on task B, reassign the running timer session to task B instead of creating a new session.
 
 **Implementation**:
+
 1. Added `switchTaskForSession()` method to KDE widget backend
 2. Implemented 3-state play icon:
    - Stopped state: play icon
@@ -7839,6 +8505,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Priority**: P0 | **Status**: ✅ DONE (2026-03-07)
 
 **Two issues reported:**
+
 1. Production CSS preload failure (`MorningDashboardView-7ECQeecR.css`)
 2. Mobile PWA Quick Sort card swipe/drag not working (user says "used to work")
 
@@ -7847,6 +8514,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Root cause**: `SITE_URL` and `API_URL` GitHub Actions repository variables were deleted (between Mar 3-4). This broke the Cloudflare cache purge step in `.github/workflows/deploy.yml`, causing 18 consecutive deploy failures. VPS got new assets via rsync but Cloudflare CDN served stale `index.html` referencing old CSS/JS hashes that no longer existed on VPS.
 
 **Fixes applied (3 commits pushed):**
+
 - Restored `SITE_URL` (`https://in-theflow.com`) and `API_URL` (`https://api.in-theflow.com`) via `gh variable set`
 - Made CF purge step resilient: guards against empty SITE_URL with graceful skip instead of `exit 1`
 - Fixed 6 pre-existing CI type/lint errors in ChatMessage.vue, BaseModal.vue, AIQualityDashboard.vue, QuickSortCard.vue
@@ -7863,6 +8531,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 3. **Overflow clipping on mobile**: Ancestor containers (`.mobile-content`, `.sort-phase`, `.qs-main`) had `overflow: hidden/auto` which clips the card's `translateX` displacement. CSS doesn't allow `overflow-x: visible` with `overflow-y: auto` (browsers force both to `auto`). **Fix: Card switches to `position: fixed` during swipe**, capturing `getBoundingClientRect()` on swipe start and pinning to viewport coordinates. This escapes ALL ancestor overflow clipping. Also removed `perspective: 1000px` from `.card-stack` (CSS spec: perspective creates containing block for fixed descendants).
 
 **Additional improvements:**
+
 - Mobile-friendly edit bottom sheet with toggle pills, project picker with emoji icons
 - Overlay dead zone (50px before showing, max 0.7 opacity)
 - Velocity-based swipe minimum distance (40% threshold) to prevent accidental triggers
@@ -7870,6 +8539,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 - `.github/workflows/deploy.yml` — deploy pipeline (fixed)
 
 **Relevant commits:**
+
 - `072eea6c` — batch update (useSwipeGestures refactor + user's QuickSortCard rewrite)
 - `3a149cb6` — last known working version of useSwipeGestures
 - `af3a63b7` — mobile QuickSort visual fixes
@@ -7878,6 +8548,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Files**: `packages/kde-widget/contents/ui/main.qml`
 
 **Architecture**:
+
 - Reuses existing session management (`timer_sessions` table)
 - Updates `task_id` on running session instead of creating duplicate
 - Preserves elapsed time, start time, pomodoro count
@@ -7889,390 +8560,390 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ### Other Planned Tasks
 
-| Task | Priority | Description |
-|------|----------|-------------|
-| ~~**BUG-1897**~~ | **P0** | ✅ **Stopped timer resurrects on app + KDE when remote save fails (poll re-adoption unguarded)** (✅ DONE 2026-07-02, v1.4.227) |
-| ~~**BUG-1898**~~ | **P0** | ✅ **Timer stop lost during auth reconnect-grace; grace period unbounded** (✅ DONE 2026-07-02, v1.4.227) |
-| **BUG-1899** | **P0** | 🔄 **Canvas group echo-stomp + dual-writer LWW discards (BUG-1799 residue, Tidy 3-rows)** (4 modes fixed v1.4.227; boot-load serialization residual) |
-| ~~**BUG-1900**~~ | **P1** | ✅ **Group resize silently ignores lock acquire failures (children snap back)** (✅ DONE 2026-07-02, v1.4.227) |
-| ~~**BUG-1901**~~ | **P1** | ✅ **Due-date edit leaves stale calendar instance; +1mo anchors on today** (✅ DONE 2026-07-02, v1.4.227) |
-| ~~**BUG-1902**~~ | **P1** | ✅ **Saved canvas viewport never applied at startup (no setViewport after load)** (✅ DONE 2026-07-02, v1.4.227) |
-| ~~**BUG-1903**~~ | **P1** | ✅ **Mobile deep-links stomped by /tasks default before router ready** (✅ DONE 2026-07-02, v1.4.227) |
-| ~~**TASK-1904**~~ | **P1** | ✅ **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** (✅ DONE 2026-07-02 — unit 3113/3113; chromium E2E residual = TASK-1906 interference) |
-| ~~**BUG-1908**~~ | **P1** | ✅ **KDE widget Today list hides scheduled-today tasks with stale calendar instances (Vue parity)** (✅ DONE 2026-07-03, v1.4.229 shipped; widget live after plasmashell reload) |
-| ~~**BUG-1909**~~ | **P1** | ✅ **Due-date quick-set looks like no-op when stale past instances pin badge** (✅ DONE 2026-07-03, v1.4.229 shipped, live manifest verified) |
-| **BUG-1910** | **P0** | 🔄 **Canvas groups disappeared after restart into v1.4.229 (BUG-1899 boot-load class; DB rows intact, display-side)** |
-| ~~**BUG-1911**~~ | **P0** | ✅ **"Deleted events resurrect" — disproven by prod forensics; deletions never persisted → duplicate of BUG-1913** |
-| **BUG-1913** | **P0** | 🔄 **Silent write-drop windows — client drops writes without error; server re-sync looks like resurrection** |
-| ~~**TASK-1914**~~ | **P0** | ✅ **VPS DB write-watchdog — cron invariant checks + ntfy alerts** (✅ DONE 2026-07-03, live on VPS) |
-| ~~**TASK-1915**~~ | **P1** | ✅ **Nightly automated regression hunt as scheduled cloud agent** (✅ DONE 2026-07-03, first run tonight) |
-| ~~**TASK-1916**~~ | **P0** | ✅ **In-app write-failure visibility — indicator + toast when saves fail** (✅ DONE 2026-07-03, v1.4.230 shipped) |
-| **BUG-1917** | **P0** | 🔄 **Updater Restart quits but never swaps/relaunches — silent installer handoff (instrumented+hardened v1.4.231)** |
-| ~~**BUG-1919**~~ | **P0** | ✅ **KDE timer zombie after +5min extension — BUG-1892 guard swallowed re-completion** (✅ DONE 2026-07-04, widget reload pending) |
-| ~~**BUG-1932**~~ | **P0** | ✅ **Phantom sign-out when a launcher rewrites HOME — pin Electron userData to passwd home** (✅ DONE 2026-07-10) |
-| ~~**BUG-1933**~~ | **P0** | ✅ **Restored session never re-persisted; stale token blinded Local API sidecar** (✅ DONE 2026-07-10) |
-| ~~**BUG-1934**~~ | **P1** | ✅ **Regular multi-delete is atomic locally across task lists and redo** (✅ DONE 2026-07-10, v1.4.241 shipped) |
-| ~~**FEATURE-1935**~~ | **P1** | ✅ **Combinable Quick Sort task pools — overdue, today, next 3/7 days, no date, and Uncategorized** (✅ DONE 2026-07-10, v1.4.242 shipped) |
-| ~~**BUG-1936**~~ | **P1** | ✅ **Quick Sort postpone shortcuts use explicit destinations and persist in one click** (✅ DONE 2026-07-10, superseded behavior refined in BUG-1938) |
-| ~~**BUG-1937**~~ | **P0** | ✅ **Same-version Electron release collision replaced the Quick Sort renderer** (✅ DONE 2026-07-10, v1.4.244 deployed and locally verified) |
-| ~~**BUG-1938**~~ | **P0** | ✅ **Postpone keeps the task open and shows feedback on an opaque surface** (✅ DONE 2026-07-10, v1.4.245 deployed and locally verified) |
-| ~~**BUG-1939**~~ | **P0** | ✅ **Postpone changes only the task due date without saving Quick Sort app/session state** (✅ DONE 2026-07-10, v1.4.246 deployed and locally installed) |
-| ~~**BUG-1918**~~ | **P1** | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10) |
-| ~~**BUG-1935**~~ | **P0** | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, v1.4.243 shipped) |
-| ~~**BUG-1940**~~ | **P0** | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.247 shipped) |
-| **BUG-1941** | **P0** | ✅ **Failed permanent-delete/done persistence now rolls back visibly instead of returning as false success** (shipped v1.4.248, 2026-07-12) |
-| ~~**BUG-1942**~~ | **P0** | ✅ **PWA-created task and Hermes status changes now reconcile visibly in Electron; v1.4.250 shipped** |
-| ~~**BUG-1944**~~ | **P0** | ✅ **Persisted Electron identity stays account-owned while auth validation is pending; remote writes remain gated** |
-| ~~**BUG-1945**~~ | **P1** | ✅ **Confirmed Canvas image deletion now removes the canonical record and rendered node; undo/redo verified** |
-| ~~**BUG-1946**~~ | **P1** | ✅ **Daily regression hunt now tests a clean current-master worktree without touching active development changes** |
-| **TASK-1943** | **P0** | 🔄 **Reliable Hermes–FlowState personal-assistant program: canonical sync, dynamic decomposition, monitor reliability, writable Notion, watchdogs, and packaged proof** |
-| **TASK-1944** | **P0** | 🔄 **Canonical operation/revision/change-sequence foundation with safe branch recovery, signed-user receipts, replay, compatibility triggers, and deterministic catch-up** |
-| **TASK-1945** | **P0** | 🔄 **Canonical Local API task patch adoption with preview/apply approval binding, receipt validation, and exact replay** |
-| **TASK-1947** | **P0** | 🔄 **Deterministic canonical change-sequence catch-up with scoped durable cursors, ordered invalidation pages, and persistence-gated advancement** |
-| **TASK-1946** | **P0** | ✅ **Canonical web/PWA offline scalar task-patch adoption with durable operation identity, receipts, restart-safe replay, and conflict quarantine** |
-| **TASK-1948** | **P0** | ✅ **Canonical Notion task activation with stable provenance, exact optional work blocks, replayable canonical receipts, and Local API verification** |
-| ~~**TASK-1949**~~ | **P0** | ✅ **Canonical assistant disposable DB harness, race/fault injection, fixed daily regression coverage, and redacted VPS integrity watchdog** |
-| ~~**TASK-1950**~~ | **P0** | ✅ **Renderer-to-sidecar auth recovery classification with actionable protected-route errors and false-incident suppression** |
-| ~~**TASK-1951**~~ | **P0** | ✅ **Production UUID compatibility for canonical task/Notion RPCs, rollback suites, and VPS watchdog** |
-| **TASK-1952** | **P0** | 🔄 **Hydrate Electron auth backup into the live Supabase client and restore protected sidecar reads after restart** |
-| ~~**TASK-1953**~~ | **P0** | ✅ **Preserve blocked remote Canvas projection updates and replay latest store geometry after interaction guards clear** |
-| ~~**BUG-1954**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.255; authenticated empty projections recover and the real Canvas empty state is opaque** |
-| ~~**BUG-1955**~~ | **P0** | ✅ **DONE — shipped Electron 1.4.256 with executable source/package coverage and live Hermes exact-task read-back** |
-| **TASK-1956** | **P0** | 🔄 **Reliable complete FlowState inventory with restart-safe sidecar auth, typed freshness/completeness, stable pagination, and packaged proof** |
-| **TASK-1957** | **P0** | 🔄 **Atomic recurrence-aware duplicate merge with preview-bound cadence resolution and stop-on-conflict assistant behavior** |
-| ~~**TASK-1959**~~ | **P0** | ✅ **Receipt-backed audit coverage with completeness classes, broad-claim guardrails, and screenshot-row reconciliation for Hermes summaries** |
-| ~~**TASK-1958**~~ | **P1** | ✅ **Canonical non-recurring task completion with approval digest, committed receipt, completedAt read-back, and recurring fail-closed rejection** |
-| ~~**TASK-1959**~~ | **P0** | ✅ **Redacted source/build/public/installed/sidecar truth ledger with embedded non-live package provenance and mismatch evidence** |
-| **TASK-1960** | **P0** | 🔄 **Make complete inventory the only exhaustive assistant task boundary with typed samples and fail-closed large scans** |
-| **TASK-1961** | **P0** | 🔄 **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications** |
-| **TASK-1962** | **P0** | 🔄 **Preflight every Hermes-to-FlowState route, package the canonical task lifecycle, and reject incomplete runtimes before work starts** |
-| **TASK-1963** | **P0** | 🔄 **Canonical atomic subtask breakdown with immutable preview approval, parent revisions, replay-safe receipts, and validated ordered read-back** |
-| **BUG-1964** | **P0** | ✅ **DONE 2026-07-18 — Sign in once and retain the account through refresh failures, close/relaunch, and updates until explicit Sign Out** |
-| ~~**BUG-1965**~~ | **P0** | ✅ **DONE — Electron 1.4.273 recovered all seven request-hash-rejected queued edits and remained synced after relaunch** |
-| ~~**BUG-1966**~~ | **P0** | ✅ **DONE — Electron 1.4.274 keeps KDE/Electron at the same non-negative timer state and clears completed-ID loops** |
-| ~~**BUG-1967**~~ | **P0** | ✅ **DONE — Electron 1.4.274 requires durable task admission before clearing drafts or showing success** |
-| ~~**TASK-1968**~~ | **P0** | ✅ **DONE — Electron 1.4.275 keeps the signed-in Hermes bridge alive across window close, restart, and updater handoff** |
-| ~~**BUG-1969**~~ | **P0-HIGH** | ✅ **DONE — Electron 1.4.277 and the live Hermes adapter agree on all work-block and subtask-batch contracts** |
-| **BUG-1973** | **P0** | 🔄 **Cancelled Electron quit permanently disables the Local Task API; restore one authenticated sidecar without killing the live app** |
-| ~~**BUG-1974**~~ | **P0** | ✅ **DONE — Electron 1.4.283 resolves hidden, pinned, and Canvas task actions through canonical task identity instead of filtered or copied state** |
-| **BUG-1975** | **P0** | 🔄 **Catalog completion and reopen must remain reachable under every filter transition; packaged Electron proof remains** |
-| **FEATURE-1943** | **P0** | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation** |
-| **FEATURE-1944** | **P0** | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes** |
-| **FEATURE-1945** | **P0** | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions** |
-| **FEATURE-1946** | **P1** | 📋 **Authenticated project/group reads and previewed exact-ID assignment** |
-| **FEATURE-1947** | **P0** | 🔄 **Leadership-safe timer start/pause/resume/stop through the signed-in Local API** |
-| **FEATURE-1948** | **P1** | 📋 **Bounded Canvas read plus move/group/ungroup/remove-placement actions** |
-| **FEATURE-1949** | **P1** | 📋 **Cursor pagination, restore, bounded batch actions, and context/audit reads** |
-| **BUG-1912** | **P1** | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)** |
-| **TASK-1905** | **P2** | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)** |
-| **TASK-1906** | **P2** | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)** |
-| ~~**BUG-1907**~~ | **P1** | ✅ **Quick Tasks typed pin can look like a no-op — explicit result contract + visible feedback** (✅ DONE 2026-07-03) |
-| ~~**BUG-1892**~~ | **P0** | ✅ **"Time for a break" popup loops endlessly until app close — make completion idempotent per session id (durable guard) + KDE per-session-id guard** (✅ DONE 2026-06-25 — shipped Electron v1.4.218 + web; KDE guard needs widget-reinstall verify) |
-| ~~**BUG-1891**~~ | **P0** | ✅ **Deleted tasks keep resurfacing — unify deletion truth on tombstones (soft-delete writes/removes tombstone via DB trigger + fail-closed load merge)** (✅ DONE 2026-06-25 — DB trigger live on prod 319→0, 7 zombies healed, Electron v1.4.217 shipped, web JS pushed) |
-| ~~**BUG-1869**~~ | **P0** | ✅ **Skipped realtime task updates can leave Electron, localhost, and KDE out of sync** (✅ DONE 2026-06-15, shipped v1.4.184) |
-| ~~**BUG-1868**~~ | **P0** | ✅ **Timer start can look active locally while Electron, localhost, and KDE see no synced session** (✅ DONE 2026-06-15, shipped v1.4.183) |
-| ~~**BUG-1867**~~ | **P0** | ✅ **Canvas geometry drifts across Electron and localhost while idle** (✅ DONE 2026-06-15, shipped v1.4.182) |
-| ~~**BUG-1866**~~ | **P0** | ✅ **Malformed due date crashes Calendar view in Electron** (✅ DONE 2026-06-15, shipped v1.4.181) |
-| ~~**TASK-1289**~~ | **P0** | ✅ **Investigate severe task position drift episode** |
-| ~~**TASK-1285**~~ | **P0** | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10) |
-| ~~**FEATURE-1293**~~ | **P2** | ✅ **Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage** |
-| ~~BUG-1199~~ | P1 | ✅ Canvas inbox right-click acts as Ctrl+Click |
-| ~~BUG-1206~~ | P0 | ✅ Task details not saved when pressing Save in canvas (3-layer fix: pending write guard + extended isVeryRecent + modal-aware recovery) |
-| ~~BUG-1208~~ | P1 | ✅ Task edit modal closes on text selection release |
-| ~~BUG-1212~~ | P0 | ✅ Sync queue CREATE retry causes "duplicate key" corruption |
-| ~~BUG-1286~~ | P2 | ✅ PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing |
-| ~~**BUG-1291**~~ | **P0** | ✅ **Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu** |
-| ~~**BUG-1292**~~ | **P1** | ✅ **KDE Widget intermittently fails to start break timer (30s polling gap after session complete)** |
-| ~~**TASK-1292**~~ | **P0** | ✅ **Quick task creation in KDE widget — quick-add input (+ / play buttons) + pinned task chips (monorepo)** |
-| ~~**BUG-1293**~~ | **P1** | ✅ **Canvas CSS tokenization damage — broken shadows, phantom tokens, debug elements** |
-| ~~**BUG-1294**~~ | **P1** | ✅ **Calendar play button shouldn't reset timer or create new instances when timer is already running for that task** |
-| ~~**BUG-1296**~~ | **P1** | ✅ **Time block notifications never fire — _rawTasks → rawTasks property name mismatch** |
-| ~~**BUG-1302**~~ | **P1** | **✅ Time block notifications still not firing — milestones silently missed despite BUG-1296 fix** |
-| ~~**BUG-1303**~~ | **P2** | ✅ **Mark Done doesn't stop active timer running on that task** (✅ DONE — fix in taskOperations.ts:431) |
-| ~~**BUG-1304**~~ | **P2** | ✅ **Done tasks in calendar view have no visual done indicator** (✅ DONE — visual indicator in all 3 calendar views) |
-| ~~**BUG-1305**~~ | **P2** | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue** |
-| ~~**TASK-1337**~~ | **P3** | ✅ **Storybook Design Streamlining — align all stories with design system** |
-| ~~**TASK-1338**~~ | **P0** | ✅ **Configurable PWA Push Notifications — per-category controls, quiet hours, server-side push service** |
-| ~~**BUG-1311**~~ | **P3** | ✅ **Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)** |
-| ~~**TASK-1311**~~ | **P2** | ✅ **Add date picker to Quick Sort** |
-| ~~**TASK-1312**~~ | **P2** | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)** |
-| ~~**TASK-1313**~~ | **P3** | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir** |
-| ~~**FEATURE-1314**~~ | **P2** | ✅ **AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups** |
-| **TASK-1326** | **P2** | **👀 Weekly Plan AI Enhancements (Batching, Theme, Feedback Loop)** |
-| ~~**TASK-1385**~~ | **P2** | ✅ **Weekly Plan AI — deterministic rebalancer + smarter model routing + prompt quality** |
-| ~~**TASK-1399**~~ | **P2** | ✅ **Weekly Plan — model/provider selector connected to centralized AI model registry** |
-| ~~**TASK-1400**~~ | **P2** | ✅ **SOP-045 Tauri AppImage Update Workflow + fix stale binary — created SOP, fixed user's stale v1.2.18 AppImage, removed debug logging from canvas drag** |
-| ~~**FEATURE-1317**~~ | **P3** | ✅ **AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans** |
-| ~~**TASK-1316**~~ | **P2** | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals** |
-| ~~**TASK-1341**~~ | **P2** | ✅ **Quick Sort UX Polish — left sidebar action buttons, arrow key shortcuts, action feedback overlays, swipe fix** (✅ DONE 2026-02-16) |
-| **FEATURE-1342** | **P2** | **🔄 AI Task Suggestions — per-task/group button to auto-suggest priority, due date, status based on user data** |
-| ~~**BUG-1343**~~ | **P2** | ✅ **Quick Sort exits when swiping right on PWA mobile** (✅ DONE 2026-02-17) |
-| ~~**BUG-1350**~~ | **P0** | ✅ **New Task transcription page closes prematurely — transcription doesn't appear on PWA mobile** (✅ DONE 2026-02-18) |
-| ~~**BUG-1352**~~ | **P1** | ✅ **Calendar inbox filtered by board smart view — only shows 4 tasks instead of all unscheduled** (✅ DONE 2026-02-17) |
-| ~~**BUG-1353**~~ | **P0** | ✅ **Sidebar quick task: metadata buttons disappear on click + no save confirmation** (✅ DONE 2026-02-17) |
-| ~~**BUG-1355**~~ | **P1** | ✅ **Can't log out — Supabase signOut fails silently, session re-establishes. Buttons squashed. Post-logout UI stuck** (✅ DONE 2026-02-17) |
-| ~~**BUG-1357**~~ | **P0** | ✅ **Mobile PWA timer sync broken with web app** (✅ DONE 2026-02-18) |
-| ~~**TASK-1354**~~ | **P2** | ✅ **AI quality assessment + timer fixes + CSS cleanup** (✅ DONE 2026-02-18) |
-| ~~**BUG-1351**~~ | **P0** | ✅ **Calendar drag ghost stuck after inbox→day drop** (✅ DONE 2026-02-17) |
-| ~~**BUG-1349**~~ | **P2** | ✅ **QuickSort progress bar jumps when pressing number keys to assign project** (✅ DONE 2026-02-17) |
-| ~~**BUG-1359**~~ | **P0** | ✅ **vue-i18n version mismatch causing $t() SyntaxErrors — upgraded vue-i18n 9→11, re-applied i18n translations across 11 files (EN+HE)** (✅ DONE 2026-02-19) |
-| ~~**BUG-1348**~~ | **P0** | ✅ **Priority badge color mismatch — medium badge gray instead of orange** (✅ DONE 2026-02-17) |
-| ~~**TASK-1356**~~ | **P2** | ✅ **AI Memory Assessment System — test/evaluate memory effectiveness for user context + AI usage across app, CLI + admin settings UI** (✅ DONE 2026-02-18) |
-| **TASK-1358** | **P2** | **🔄 Rewrite 28 canvas todo tests — replace over-designed Vue Flow mocking with direct store/handler unit tests using real data shapes** |
-| ~~**BUG-1347**~~ | **P0** | ✅ **KDE Plasma widget freeze — gated 40+ console.log behind debug flag, staggered concurrent XHR with Qt.callLater(), reactive transition timer, throttled canvas repaints** (✅ DONE 2026-02-19) |
-| ~~**BUG-1365**~~ | **P0** | ✅ **Calendar day view — task disappears after editing and saving (false positive scheduleExplicitlyRemoved for instance-based tasks)** (✅ DONE 2026-02-19) |
-| ~~**BUG-1360**~~ | **P0** | ✅ **Canvas long task cards cut off when zooming — removed LOD content hiding, overflow:hidden chain, title 3-line clamp** (✅ DONE 2026-02-20) |
-| ~~**BUG-1567**~~ | **P2** | ✅ **Deleted projects still appear in QuickSort CategorySelector — project store `projects` computed doesn't filter soft-deleted projects (is_deleted=true)** (✅ DONE 2026-03-18) |
-| ~~**TASK-1571**~~ | **P2** | ✅ **Edit Task modal RTL support — added dir="auto" to 7 inputs across TaskEditHeader, QuickTaskCreate, QuickTaskCreateModal, TaskEditSubtasks, TaskTable** (✅ DONE 2026-03-18) |
-| ~~**TASK-1692**~~ | **P2** | ✅ **Desktop task list RTL + chat Hebrew paragraphs — reversed TaskRow/TaskTable grid in [dir="rtl"], fixed priority indicator logical props, added unicode-bidi:plaintext to markdown block elements** (✅ DONE 2026-03-23) |
-| **TASK-1693** | **P2** | 🔄 **Calendar virtual timer block — inject virtual CalendarEvent for the currently-timed task when it has no real instance for today, so it always appears on the day view** |
-| ~~**BUG-1361**~~ | **P1** | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19) |
-| **FEATURE-1363** | **P2** | **📋 Add reminders & notifications to all platforms (PWA, Electron, KDE widget)** |
-| ~~**BUG-1346**~~ | **P1** | ✅ **Mobile Inbox tab broken in PWA on mobile — layout/design broken** (✅ DONE 2026-03-04) |
-| ~~**TASK-1362**~~ | **P0** | ✅ **Calendar task selection, multi-select & keyboard actions — click to select, Ctrl+click multi-select, Delete→inbox, Shift+Delete→remove, drag-back to inbox** (✅ DONE 2026-02-20) |
-| ~~**BUG-1366**~~ | **P1** | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20) |
-| ~~**BUG-1367**~~ | **P2** | ✅ **Canvas inbox panel on wrong side — parent CSS overrode is-right-side to left, flipped to right** (✅ DONE 2026-02-20) |
-| ~~**BUG-1368**~~ | **P2** | ✅ **? keyboard shortcut broken on Hebrew layout — event.key check fails on non-Latin layouts, added event.code fallback** (✅ DONE 2026-02-20) |
-| ~~**BUG-1374**~~ | **P1** | ✅ **AI Chat 4-bug combo — Hebrew response on English input, LTR for Hebrew text, fluffy advice, wrong tasks returned (all fixed 2026-02-21)** |
-| ~~**TASK-1375**~~ | **P1** | ✅ **AI Pipeline orchestrator + types — create pipeline/ with guardrail interfaces and function composition** (✅ DONE 2026-02-21) |
-| ~~**TASK-1376**~~ | **P1** | ✅ **Language detector — deterministic Unicode-range detection, detectLanguageMismatch()** (✅ DONE 2026-02-21) |
-| ~~**TASK-1377**~~ | **P1** | ✅ **Context optimizer — separate task titles from metadata, character budget, date-relative filtering** (✅ DONE 2026-02-21) |
-| ~~**TASK-1378**~~ | **P1** | ✅ **Response validator — consolidate 3 cleanup locations into one, add UUID stripping, reuse qualityAssessment rules** (✅ DONE 2026-02-21) |
-| ~~**TASK-1379**~~ | **P1** | ✅ **Language enforcer — post-processing guardrail, detect mismatch + flag in metadata** (✅ DONE 2026-02-21) |
-| ~~**TASK-1380**~~ | **P1** | ✅ **Response length enforcer — cap by intent (greetings, tool summaries, analytical)** (✅ DONE 2026-02-21) |
-| ~~**TASK-1381**~~ | **P1** | ✅ **Wire pre-processing into useAIChat — call runPreProcess before ReAct, use contextOptimizer** (✅ DONE 2026-02-21) |
-| ~~**TASK-1382**~~ | **P1** | ✅ **Wire post-processing into useAIChat — runPostProcess after ReAct, replace inline cleanup** (✅ DONE 2026-02-21) |
-| ~~**TASK-1383**~~ | **P1** | ✅ **Simplify ChatMessage.vue renderedContent — remove redundant regex, pipeline handles cleanup** (✅ DONE 2026-02-21) |
-| ~~**TASK-1384**~~ | **P1** | ✅ **Unit tests for pipeline — guardrails, language detection, context optimization, composition** (✅ DONE 2026-02-21) |
-| ~~**TASK-1388**~~ | **P1** | **✅ Pre-digested reasoning engine — compute task analysis in code, LLM formats facts naturally** (✅ DONE) |
-| ~~**TASK-1389**~~ | **P1** | **✅ Skeleton prompting for agent chains — code generates sections, LLM writes bridges** (✅ DONE) |
-| ~~**TASK-1390**~~ | **P1** | **✅ Fluff detector guardrail — heuristic scoring: task name references, data points, no generic phrases** (✅ DONE) |
-| ~~**TASK-1391**~~ | **P1** | **✅ Validation + retry loop — retry once with feedback when fluff score < 0.5** (✅ DONE) |
-| ~~**TASK-1392**~~ | **P1** | **✅ Keyword-based tool hints — deterministic keyword→tool mapping injected into system prompt** (✅ DONE) |
-| ~~**TASK-1393**~~ | **P1** | **✅ `projectId` filter on `list_tasks` — quick win, 15 minutes** (✅ DONE) |
-| ~~**TASK-1394**~~ | **P1** | **✅ Counting vs listing clarification — system prompt rule to prevent unnecessary tool calls** (✅ DONE) |
-| ~~**TASK-1395**~~ | **P1** | **✅ Install uFuzzy + `resolveTask()` helper — fuzzy title matching for entity resolution** (✅ DONE) |
-| ~~**TASK-1396**~~ | **P1** | **✅ Wire `resolveTask()` into write tools — title-based resolution fallback in `validateTaskExists()`** (✅ DONE) |
-| ~~**TASK-1397**~~ | **P1** | **✅ `mark_task_done` convenience tool — accepts title string, most common user action** (✅ DONE) |
-| ~~**TASK-1398**~~ | **P1** | **✅ Conversation entity memory — track mentioned tasks, resolve pronouns ("it", "that one")** (✅ DONE) |
-| **TASK-1386** | **P2** | **✅ Google Calendar proxy Edge Function — list-calendars, list-events, token refresh on 401** |
-| ~~**BUG-1417**~~ | **P1** | ✅ **Canvas nodes nearly invisible — undefined `--shadow-color-sm` token + near-identical bg = no depth** (✅ DONE 2026-02-27) |
-| ~~**TASK-1420**~~ | **P1** | ✅ **Add project selector to task edit modal — TaskEditMetadata missing project field** (✅ DONE 2026-02-27) |
-| ~~**TASK-1419**~~ | **P1** | ✅ **Inbox multi-select bulk property updates — context menu actions apply to all selected tasks** (✅ DONE 2026-02-27) |
-| ~~**TASK-1418**~~ | **P1** | ✅ **Too many buttons on calendar dashboard — consolidate into dropdown or settings** (✅ DONE 2026-02-27) |
-| ~~**TASK-1435**~~ | **P2** | ✅ **Active task glass pill — KDE companion widget + AppHeader pill showing current Pomodoro task** (✅ DONE 2026-03-03) |
-| ~~**TASK-1424**~~ | **P2** | ✅ **KDE widget nanny notifications — schedule-gated idle reminders when no Pomodoro active** (✅ DONE 2026-03-03) |
-| ~~**TASK-1423**~~ | **P2** | ✅ **KDE widget: add button to open Tauri or web app** (✅ DONE 2026-03-03) |
-| ~~**TASK-1431**~~ | **P2** | ✅ **KDE widget "Today" toggle button — standalone chip in pinned row, composable with any dropdown filter** (✅ DONE 2026-03-02) |
-| ~~**TASK-1429**~~ | **P0** | ✅ **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link + perm delete + duration presets** (✅ DONE 2026-03-03) |
-| ~~**TASK-1428**~~ | **P0** | ✅ **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (✅ DONE 2026-03-03) |
-| ~~**TASK-1440**~~ | **P1** | ✅ **Gamification offline resilience — local-first state updates + try/catch wrapping for all Supabase writes** (✅ DONE 2026-03-03) |
-| ~~**TASK-1441**~~ | **P2** | ✅ **Graceful offline UX for non-cacheable features — AI chat, file uploads, Drive show informative messages instead of failing silently** (✅ DONE 2026-03-03) |
-| ~~**BUG-1442**~~ | **P1** | ✅ **timer_sessions.position_version column does not exist — DB schema mismatch** (✅ DONE 2026-03-04 — code already guards correctly, no path queries this column) |
-| ~~**TASK-1443**~~ | **P2** | ✅ **Calendar Delete key shows confirmation dialog before unscheduling event (instead of silent action)** (✅ DONE 2026-03-04) |
-| ~~**TASK-1448**~~ | **P2** | ✅ **KDE Widget quick-add due date dropdown — default "Today" so tasks appear in today views** (✅ DONE 2026-03-05) |
-| ~~**TASK-1450**~~ | **P2** | ✅ **Integrate Quick Sort sessions into offline sync queue for full PWA offline support** (✅ DONE 2026-03-05) |
-| ~~**TASK-1451**~~ | **P2** | ✅ **Auto-inherit filter context when creating tasks — useFilterDefaults composable** (✅ DONE 2026-03-05) |
-| ~~**TASK-1452**~~ | **P2** | ✅ **KDE Widget — Switch Active Timer to Different Task** (✅ DONE 2026-03-05) |
-| ~~**TASK-1460**~~ | **P2** | ✅ **KDE Widget — Bump task limit to 100 + group by project** (✅ DONE 2026-03-06) |
-| ~~**BUG-1461**~~ | **P1** | ✅ **KDE widget hard-DELETE caused ghost tasks in web app — changed to soft-delete + smart merge fix** (✅ DONE 2026-03-06) |
-| ~~**BUG-1806**~~ | **P1** | ✅ **Mark-done can still trigger phantom nudge state** (✅ DONE 2026-05-28, shipped v1.4.78) |
-| ~~**BUG-1805**~~ | **P1** | ✅ **KDE nanny nudge resurfaced after marking a task done** (✅ DONE 2026-05-27) |
-| ~~**TASK-1484**~~ | **P3** | ✅ **Escape key closes TaskContextMenu** (✅ DONE 2026-03-08) |
-| ~~**TASK-1496**~~ | **P2** | ✅ **Non-obstructive overflow tooltips on all truncated text app-wide** (✅ DONE 2026-03-09) |
-| **BUG-1498** | **P2** | 🔄 **Taskbar nanny not triggering after 5min idle without active task (INQUIRY-1489 regression)** |
-| **BUG-1497** | **P2** | 📋 **CSS safety test failing due to missing fileURLToPath import** |
-| ~~**BUG-1732**~~ | **P2** | ✅ **Canvas group badge counts task not rendered — parentId without canvasPosition** (✅ DONE 2026-03-26) |
-| ~~**TASK-1487**~~ | **P2** | ✅ **Search modal: delete fix + filter pills (Today, Hide Done, High Priority, No Date)** (✅ DONE 2026-03-08) |
-| ~~**BUG-1490**~~ | **P2** | ✅ **KDE widget stops syncing — token refresh chain break, missing 401 handling, isRefreshingToken deadlock** (✅ DONE 2026-03-09) |
-| ~~**BUG-1530**~~ | **P2** | ✅ **Dragging task to Today canvas group doesn't update Calendar inbox** (✅ DONE 2026-03-14) |
-| **BUG-1491** | **P0** | 🔄 **Canvas duplicate tasks appear sporadically across views** (🔄 IN PROGRESS 2026-03-09) |
-| ~~**INQUIRY-1489**~~ | **P2** | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09) |
-| ~~**TASK-1501**~~ | **P3** | ✅ **AI tools audit: fix byStatus stale keys, add undo to update_task and create_group** (✅ DONE 2026-03-10) |
-| ~~**BUG-1504**~~ | **P2** | ✅ **Canvas inbox: left-click multi-selects tasks unexpectedly, can't deselect** (✅ DONE 2026-03-12) |
-| ~~**BUG-1521**~~ | **P2** | ✅ **KDE Widget: pinned task chip click does nothing — searches only filtered tasks, misses match** (✅ DONE 2026-03-14) |
-| ~~**BUG-1506**~~ | **P0** | ✅ **Edit Task: description loses bullet points on save — htmlToMarkdown regex truncation** (✅ DONE 2026-03-14) |
-| ~~**BUG-1505**~~ | **P2** | ✅ **KDE Widget: Nanny popup only shows ~2 tasks — increase limit and sort by due date** (✅ DONE 2026-03-13) |
-| **TASK-1499** | **P2** | 📋 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (📋 PLANNED) |
-| ~~**TASK-1500**~~ | **P2** | ✅ **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (✅ DONE 2026-03-13) |
-| ~~**TASK-1486**~~ | **P2** | ✅ **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (✅ DONE 2026-03-13) |
-| ~~**TASK-1485**~~ | **P2** | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09) |
-| ~~**TASK-1457**~~ | **P2** | ✅ **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (✅ DONE 2026-03-13) |
-| ~~**TASK-1456**~~ | **P0** | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06) |
-| ~~**TASK-1455**~~ | **P2** | ✅ **Catalog view: show uncategorized tasks so they can be categorized in-place** (✅ DONE 2026-03-09) |
-| ~~**TASK-1454**~~ | **P2** | ✅ **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (✅ DONE 2026-03-09) |
-| ~~**BUG-1472**~~ | **P1** | ✅ **Canvas and Calendar inbox filters synced — persistence keys not context-scoped** (✅ DONE 2026-03-07) |
-| ~~**BUG-1453**~~ | **P0** | ✅ **Production CSS preload + mobile Quick Sort swipe broken** (✅ DONE 2026-03-07) |
-| ~~**BUG-1477**~~ | **P1** | ✅ **Zombie tasks reappear after permanent delete — tombstone/delete ordering + DB trigger conflict** (✅ DONE 2026-03-07) |
-| ~~**BUG-1479**~~ | **P2** | ✅ **Date picker calendar closes when moving cursor to it — NPopover mouseleave** (✅ DONE 2026-03-07) |
-| ~~**BUG-1447**~~ | **P2** | ✅ **Pin task disappears on Enter + task search + widget sync** (✅ DONE 2026-03-05) |
-| **TASK-1446** | **P2** | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04) |
-| ~~**TASK-1445**~~ | **P2** | ✅ **Fix focus mode dropdown closing on hover + overlapping menus — UX research & redesign** (✅ DONE 2026-03-05) |
-| ~~**TASK-1459**~~ | **P2** | ✅ **Storybook story quality pass — fix broken/unclear stories for Teleport components and PWA Screens** (✅ DONE 2026-03-07) |
-| ~~**TASK-1444**~~ | **P1** | ✅ **Tauri desktop app design parity — investigate and fix visual discrepancies vs web/Storybook** (✅ DONE — Obsolete) **Archived**: Superseded by TASK-1715 (Electron migration) |
-| **INQUIRY-1438** | **P0** | 📋 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (📋 PLANNED) |
-| ~~**BUG-1451**~~ | **P1** | ✅ **Task done/deleted state inconsistent across views — Board hideDoneTasks coupled to Canvas/Calendar** (✅ DONE 2026-03-05) |
-| ~~**BUG-1449**~~ | **P1** | ✅ **KDE widget notification barrage + popup dismiss + nanny task selection** (✅ DONE 2026-03-05) |
-| ~~**TASK-1434**~~ | **P0** | ✅ **Calendar drag-to-create — click and drag on time slots to create a new task** (✅ DONE 2026-03-03) |
-| ~~**TASK-1433**~~ | **P0** | ✅ **Right-click task context menu UX overhaul — reduce bloat, fix hierarchy, progressive disclosure** (✅ DONE 2026-03-03) |
-| ~~**BUG-1432**~~ | **P1** | ✅ **Overdue tasks display today's date instead of actual due date** (✅ DONE 2026-03-05) |
-| ~~**TASK-1427**~~ | **P0** | ✅ **Offline: merge write queue into read cache on offline load** (✅ DONE 2026-03-04) |
-| ~~**TASK-1426**~~ | **P0** | ✅ **Offline: auth grace period — keep expired session for local ops** (✅ DONE 2026-03-04) |
-| ~~**TASK-1425**~~ | **P0** | ✅ **Offline: fast startup — skip Supabase when navigator.onLine=false** (✅ DONE 2026-03-04) |
-| **TASK-1422** | **P0** | 🔄 **Full offline mobile support — PWA works E2E without network** (🔄 IN PROGRESS 2026-03-02) |
-| ~~**TASK-1421**~~ | **P0** | ✅ **Investigate & fix sluggish localhost performance** (✅ DONE 2026-03-02) |
-| ~~**BUG-1416**~~ | **P0** | ✅ **Calendar inbox "today" filter shows wrong tasks — dueDate format mismatch (ISO vs YYYY-MM-DD)** (✅ DONE 2026-03-13) |
-| ~~**BUG-1415**~~ | **P0** | ✅ **Catalog drag doesn't move task to target group — drops on task rows make subtasks instead of transferring between groups** (✅ DONE 2026-02-25) |
-| ~~**TASK-1405**~~ | **P1** | ✅ **Replace LLM Distribution with Deterministic Algorithm in Weekly Plan** (✅ DONE 2026-03-13) |
-| ~~**TASK-1403**~~ | **P2** | ✅ **Recurring Tasks — Clone-on-Complete with recurrence_rule column** (✅ DONE 2026-02-22) |
-| ~~**TASK-1402**~~ | **P1** | ✅ **Decouple canvas/calendar inbox filtering — isInInbox now user-controlled, placement uses position-based filtering** (✅ DONE 2026-02-22) |
-| ~~**TASK-1387**~~ | **P1** | **✅ Centralize all AI model references to single source of truth** (✅ DONE 2026-02-21) |
-| ~~**TASK-1372**~~ | **P1** | **✅ Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** (✅ DONE 2026-03-13) |
-| ~~**BUG-1371**~~ | **P0** | ✅ **Connected canvas node persists after deletion — deleting a node with edges leaves it visible on canvas** (✅ DONE 2026-02-20) |
-| ~~**BUG-1370**~~ | **P0** | ✅ **Canvas inbox drag broken — can't drag tasks from canvas inbox to canvas (Tauri + possibly local dev)** (✅ DONE 2026-02-20) |
-| ~~**BUG-1369**~~ | **P0** | ✅ **Canvas tasks persist after marked done — completed tasks remain visible on canvas instead of being removed** (✅ DONE 2026-02-21) |
-| ~~**TASK-1345**~~ | **P2** | ✅ **Perfect Hebrew Whisper Transcription on Mobile PWA — language param, Hebrew prompt, temperature=0, iOS Safari .m4a fix, verbose_json confidence filtering** |
-| ~~**TASK-1344**~~ | **P2** | ✅ **AI Feature Parity Desktop→PWA + API Pricing/Usage Settings Sync — code done, useAISync.ts implemented** |
-| **FEATURE-1345** | **P2** | **🔄 Capacitor Android App — wrap Vue PWA for Play Store distribution (config + build scaffold done)** |
-| ~~**TASK-1339**~~ | **P0** | ✅ **Tasks must persist over refresh in guest mode** (✅ DONE 2026-02-17) |
-| ~~**BUG-1340**~~ | **P0** | ✅ **Kanban drag-drop broken — Vue 3 $attrs boolean bug (forceFallback/delayOnTouchOnly passed as empty string)** |
-| ~~**TASK-1327**~~ | **P0** | ✅ **Centralized LLM Model Registry — single source of truth for all AI model lists, updating one place updates all dropdowns** (✅ DONE 2026-02-17) |
-| ~~**TASK-1324**~~ | **P0** | ✅ **URL Display Truncation — shorten long pasted URLs/links across all views (CSS ellipsis, full URL preserved)** (✅ DONE 2026-02-17) |
-| ~~**BUG-1333**~~ | **P0** | ✅ **Calendar inbox shows only 2 tasks — stale auto-instances + wrong filter source** |
-| ~~**TASK-1323**~~ | **P1** | ✅ **Console Log Cleanup — reduce verbose/debug logging noise across app** (✅ DONE 2026-02-14) |
-| ~~**TASK-1322**~~ | **P1** | ✅ **Calendar Month View Fixes — remove dueDate pollution, vertical event layout, drag-move fix, hover tooltips** (✅ DONE 2026-02-17) |
-| ~~**TASK-1319**~~ | **P0** | ✅ **Keyboard Shortcuts Help Panel — ? button + Shift+? shortcut, organized categories, blurred backdrop** (✅ DONE 2026-02-14) |
-| ~~**TASK-1320**~~ | **P1** | ✅ **Quick Sort UX Redesign — Edit-in-Place with Explicit Advancement (pin-by-ID, Save button, swipe swap)** |
-| ~~**BUG-1309**~~ | **P0** | ✅ **Remove corruption overlay, arena, and all gamification UI — visual noise and disconnected UX** |
-| ~~**BUG-1301**~~ | **P0** | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover** |
-| ~~TASK-1215~~ | P0 | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage |
-| ~~TASK-1246~~ | P2 | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence |
-| ~~TASK-1247~~ | P2 | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown) |
-| ~~TASK-1248~~ | P1 | ✅ Design token audit & cleanup — all 7 phases complete, ~100+ violations fixed across 30 files |
-| ~~TASK-1249~~ | P0 | ✅ Codebase Hygiene Audit — placeholders, hardcoded values, debug leftovers (33/33 sub-tasks done) |
-| ~~TASK-1250~~ | P0 | ✅ Fix API key storage — removed plaintext localStorage (proxy handles keys server-side) |
-| ~~TASK-1251~~ | P0 | ✅ Fix direct API calls bypassing proxy (AIChatPanel.vue) |
-| ~~TASK-1252~~ | P0 | ✅ Remove/gate /keyboard-test debug route (ships without auth) |
-| ~~TASK-1253~~ | P0 | ✅ Gate window.__flowstate_tauri_debug behind DEV |
-| ~~TASK-1254~~ | P0 | ✅ Fix CORS wildcard on Edge Functions — restricted to allowed origins |
-| ~~TASK-1255~~ | P0 | ✅ Fix WelcomeModal — removed dead buttons and stubbed stats |
-| ~~TASK-1256~~ | P0 | ✅ Fix stale flowstate.app → in-theflow.com origins |
-| ~~TASK-1257~~ | P0 | ✅ Fix productionLogger — now uses Supabase session token |
-| ~~TASK-1258~~ | P1 | ✅ Replace httpbin.org with self-hosted endpoint |
-| ~~TASK-1259~~ | P1 | ✅ Remove unconditional %c[DEBUG] styled canvas log |
-| ~~TASK-1260~~ | P1 | ✅ Remove ~30 bug-specific debug tags across 10 files |
-| ~~TASK-1261~~ | P1 | ✅ Fix silent no-op stubs — now throw or warn |
-| ~~TASK-1262~~ | P1 | ✅ Re-enable CI lint & unit tests |
-| ~~TASK-1263~~ | P1 | ✅ Add Open Graph + Twitter Card meta tags |
-| ~~TASK-1264~~ | P1 | ✅ Update stale AI model references |
-| ~~TASK-1265~~ | P1 | ✅ Fix AI proxy health check consuming real API tokens (OPTIONS request) |
-| ~~TASK-1266~~ | P2 | ✅ CSS design token migration — ~305 values migrated in 20+ files, remaining violations still exist |
-| ~~TASK-1267~~ | P2 | ✅ Standardize localStorage key prefixes |
-| ~~TASK-1268~~ | P2 | ✅ Extract magic timeout numbers to named constants (src/config/timing.ts) |
-| ~~TASK-1269~~ | P2 | ✅ Create centralized src/config/urls.ts |
-| ~~TASK-1270~~ | P2 | ✅ Fix hardcoded i18n defaults (ui.ts, SignupForm.vue) |
-| ~~TASK-1271~~ | P2 | ✅ Improve Cyberflow empty states (terse text) |
-| ~~TASK-1272~~ | P2 | ✅ Mobile design token compliance |
-| ~~TASK-1273~~ | P2 | ✅ Update PWA manifest description |
-| ~~TASK-1274~~ | P2 | ✅ Migrate 'uncategorized' sentinel to constant |
-| ~~TASK-1275~~ | P3 | ✅ Remove 5 obsolete verification scripts |
-| ~~TASK-1276~~ | P3 | ✅ Remove Storybook PLACEHOLDER duplicate key |
-| ~~TASK-1277~~ | P3 | ✅ Standardize z-index usage (~60 values in 50 files) |
-| ~~TASK-1278~~ | P3 | ✅ Standardize font-size usage (~100 values in 32 files) |
-| ~~TASK-1279~~ | P3 | ✅ Add missing package.json metadata fields |
-| ~~TASK-1280~~ | P3 | ✅ Add copyright to Tauri bundle config |
-| ~~TASK-1281~~ | P3 | ✅ Adopt build-time console.log stripping (esbuild pure config) |
-| ~~TASK-1282~~ | P3 | ✅ Stop filtering console.error/warn in consoleFilter.ts |
-| ~~FEATURE-1200~~ | P2 | ✅ Quick Add full RTL support + auto-expand for long tasks (✅ DONE 2026-02-27) |
-| ~~FEATURE-1201~~ | P2 | ✅ Single-screen welcome modal — research-backed, auth-aware, replaces WelcomeModal |
-| ~~FEATURE-1202~~ | P1 | ✅ Google Auth sign-in (OAuth) |
-| ~~TASK-1283~~ | P1 | ✅ Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202) |
-| ~~**TASK-1284**~~ | **P0** | ✅ **Add quick task creation to KDE Plasma widget (monorepo)** |
-| ~~**BUG-1793**~~ | **P2** | ✅ **KDE widget "Today" filter reset on reload (todayOnly not persisted)** |
-| ~~**BUG-1794**~~ | **P1** | ✅ **Electron app flickers signed-out then back in on window focus changes** |
-| TASK-292 | P3 | Canvas connection edge visuals (animations, gradients) |
-| TASK-310 | P2 | Automated SQL backup to cloud storage |
-| TASK-293 | P2 | Canvas viewport - center on Today + persist position |
-| TASK-313 | P2 | Canvas multi-select batch status change |
-| TASK-179 | P2 | Refactor TaskEditModal.vue (~1800 lines) |
-| TASK-123 | P2 | Consolidate network status implementations |
-| TASK-139 | P3 | Undo state persistence to localStorage |
-| TASK-125 | P3 | Remove debug console.log (reduced scope) |
-| TASK-065 | P3 | GitHub release (remove hardcoded creds, Docker guide) |
-| ~~TASK-079~~ | P3 | ✅ ~~Tauri mobile (Android/iOS)~~ — Archived: Tauri replaced by Electron (TASK-1715). Mobile strategy TBD. |
-| TASK-157 | P3 | ADHD-Friendly view redesign (Phases 2-4 pending) |
-| TASK-1120 | P2 | 🔄 Deep UX/UI analysis and enhancement of catalog views |
-| ~~**FEATURE-1443**~~ | **P0** | ✅ ~~**Morning Dashboard — removed route/auto-redirect (Morning Ritual banner kept)**~~ (✅ DONE 2026-03-18) |
-| **TASK-1464** | **P1** | **Break Timer On-Screen Overlay — full-screen pomodoro overlay during break with countdown, minimize/stop/+5min controls, glass morphism** |
-| ~~**TASK-1465**~~ | **P2** | ✅ ~~**AI Features Audit — review all AI features, decide what to keep vs ditch (broken/no value)**~~ |
-| ~~**TASK-1466**~~ | **P2** | ✅ **Start task without resetting timer — allow switching active task while timer runs (web + pinned), add reset option to KDE widget** |
-| ~~**BUG-1462**~~ | **P1** | ✅ **Notification spam — clicking any action (Start Work/Break/+5min) should dismiss ALL notification types** (✅ DONE) |
-| ~~**TASK-1469**~~ | **P2** | ✅ **AI Chat anti-spam fix — fix ReAct loop spam, limit tool calls per turn, rewrite system prompt to be concise, add output truncation** |
-| **TASK-1470** | **P2** | **Task Assist UX resurface — Ctrl+. shortcut hint, smart inline hint, 28-test AI effectiveness suite** | 👀 REVIEW |
-| ~~**BUG-1467**~~ | **P2** | ~~**Tasks auto-appear on calendar at 9:00 AM when dragged to Board date columns — moveTaskToDate created calendar instances instead of only setting dueDate**~~ (✅ DONE 2026-03-07) |
-| **TASK-1473** | **P0** | **KDE Widget: Add task search/filter — search box to find tasks without scrolling through long lists** |
-| ~~**TASK-1475**~~ | **P1** | ~~**KDE Widget: Nanny popup show recent tasks — show commonly used tasks alongside pinned tasks, not only pinned**~~ (✅ DONE 2026-03-07) |
-| **TASK-1476** | **P2** | **Catalog: drag tasks to collapsed project groups — allow dropping on closed categories, remove darkening overlay during drag** |
-| ~~**TASK-1478**~~ | **P1** | ~~**KDE Widget: Unify dropdown & overlay styling — replace PlasmaComponents.ComboBox with QQC2 glass morphism popups for Sort/Filter; replace Kirigami.Icon with styled emoji in fullscreen overlay**~~ (✅ DONE 2026-03-07) |
-| ~~**BUG-1481**~~ | **P2** | ~~**Calendar inbox hides canvas tasks with non-canvasOrder sorts — isInInbox gate too restrictive**~~ (✅ DONE 2026-03-07) |
-| ~~**TASK-1480**~~ | **P2** | ~~**Remove beads dependency — MASTER_PLAN.md as single source of truth, delete .beads/, sync scripts, hooks, update docs**~~ (✅ DONE 2026-03-09) |
-| ~~**BUG-1483**~~ | **P2** | ~~**PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section**~~ (✅ DONE 2026-03-09) |
-| ~~**BUG-1492**~~ | **P2** | **✅ Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** (✅ DONE 2026-03-13) |
-| ~~**BUG-1493**~~ | **P2** | ~~**Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression**~~ (✅ DONE 2026-03-09) |
-| ~~**TASK-1492**~~ | **P2** | ~~**Fix Due Date kanban view — flat layout (no per-project rows) + dateless tasks route to No Date column**~~ (✅ DONE 2026-03-09) |
-| ~~**BUG-1503**~~ | **P2** | ~~**Tauri desktop: tasks not updating when adding/deleting on canvas or canvas inbox — WebKitGTK dataTransfer.getData() returns empty, needed dragData singleton fallback**~~ (✅ DONE 2026-03-12) |
-| ~~**TASK-1507**~~ | **P2** | ~~**Quick Sort swipe UX polish — center approval notification with fun animation + add "nothing set" reminder popup on accidental swipe**~~ (✅ DONE 2026-03-14) |
-| ~~**TASK-1518**~~ | **P2** | ✅ **Catalogue view: context menu can't dismiss by clicking away + category drag lag** (✅ DONE 2026-03-13) |
-| ~~**BUG-1519**~~ | **P2** | ~~**Date picker calendar blurry — stacked backdrop-filter blur on context menu + submenu + NDatePicker panel**~~ (✅ DONE 2026-03-13) |
-| **TASK-1520** | **P2** | **Add recurring indicator badge to task cards (Kanban, Canvas, Table views)** (✅ DONE 2026-03-14) |
-| **~~TASK-1525~~** | **P1** | **Recurring task delete dialog — Skip/Stop/Cancel with global recurrence-aware delete** (✅ DONE 2026-03-14) |
-| ~~**TASK-1521**~~ | **P1** | **Calendar day/week view drag deferred to mouseup — preview-then-commit pattern, adds undo support** (✅ DONE 2026-03-24) |
-| ~~**TASK-1522**~~ | **P2** | ~~**Blank screen on refresh — add loading animation to index.html**~~ (✅ DONE 2026-03-14) |
-| **TASK-1523** | **P1** | **Undo/sync race fix — cancel stale sync queue ops when undo/redo restores task create/delete** (✅ DONE 2026-03-14) |
-| **~~TASK-1524~~** | **P1** | **Migrate old `recurrence` field to new `recurrenceRule` format on app init** (✅ DONE) |
-| **IDEA-1482** | **P3** | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext** |
-| ~~**BUG-1526**~~ | **P1** | ~~**Push notification click actions dead — SW posts NAVIGATE_TO_TASK/NAVIGATE_TO/SNOOZE_NOTIFICATION but no client handler existed; added SW message listener in useAppInitialization.ts**~~ (✅ DONE 2026-03-14) |
-| ~~**TASK-1527**~~ | **P2** | ~~**Remove entire gamification system (XP, achievements, challenges, shop, Cyberflow RPG) — ~23,700 lines removed, DB tables left dormant**~~ (✅ DONE 2026-03-14) |
-| ~~**TASK-1531**~~ | **P2** | ~~**KDE dock: show current scheduled calendar block next to pomodoro timer — always-visible context of what's planned now, with toggle in KDE widget settings**~~ (✅ DONE) |
-| **TASK-1532** | **P1** | **"Done for Now" vs "Done Fully" for recurring tasks — Hybrid clone model: "done for now" creates completion record + advances original to next occurrence; "done fully" stops recurrence (current behavior). DoneToggle click = done-for-now for recurring, context menu offers both options.** (🔄 IN PROGRESS) |
-| **FEATURE-1759** | **P1** | **📋 Unified Knowledge + Custom Lists roadmap foundation** |
-| **TASK-1760** | **P1** | **📋 Content taxonomy: task, note, list + shared visibility rules** |
-| **TASK-1761** | **P1** | **📋 Catalog -> Knowledge Hub MVP with type filters and capture entry** |
-| **TASK-1762** | **P1** | **📋 Note/Page MVP using task-based content, markdown, tags, attachments** |
-| **TASK-1763** | **P1** | **📋 Custom Lists MVP: lightweight items, groups, reorder, check off** |
-| **TASK-1764** | **P2** | **📋 Recurring list templates and reset/reuse workflow** |
-| **TASK-1765** | **P1** | **📋 Unified search across tasks, notes, and lists** |
-| **TASK-1766** | **P2** | **📋 Promote note or list item into full task flow** |
-| **TASK-1767** | **P2** | **📋 AI can read notes/lists and turn them into useful actions** |
-| ~~**TASK-1768**~~ | **P2** | ✅ **Persist mini-canvas planning notes for knowledge workflows** (✅ DONE (2026-05-02)) |
-| **TASK-1769** | **P3** | **📋 Lightweight links/backlinks between notes and tasks** |
-| ~~**TASK-1533**~~ | **P0** | ✅ **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (✅ DONE (2026-04-02)) |
-| ~~**TASK-1534**~~ | **P0** | **DB migration: Create workspace tables (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity)** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1535**~~ | **P0** | **DB migration: Add workspace_id to tasks, projects, groups + assigned_to on tasks** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1536**~~ | **P0** | **DB migration: SECURITY DEFINER function user_workspace_ids() for RLS performance** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1537**~~ | **P0** | **DB migration: Rewrite 32+ RLS policies to be workspace-aware** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1538**~~ | **P0** | **DB migration: Add new tables to supabase_realtime publication** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1539**~~ | **P1** | **Pinia store: workspaces.ts — activeWorkspaceId, CRUD, switchWorkspace** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1540**~~ | **P1** | **Update supabaseMappers.ts with workspace_id** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1541**~~ | **P1** | ✅ **Update useTaskFiltering.ts with workspace filter** (✅ DONE (2026-04-01)) |
-| ~~**TASK-1542**~~ | **P1** | **Update taskPersistence.ts + useTasksDatabase.ts for workspace context** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1543**~~ | **P1** | **Update projects.ts store for workspace filtering** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1544**~~ | **P1** | **Update canvas store (groups) for workspace filtering** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1545**~~ | **P1** | **UI: Workspace switcher component in sidebar** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1546**~~ | **P1** | **Update auth.ts: fetch workspaces on login** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1547**~~ | **P0** | **Offline sync queue: inject workspace_id into queued payloads** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1548**~~ | **P0** | **Realtime subscriptions: workspace_id filtering + workspace switch handling** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1549**~~ | **P0** | **Cross-tab sync: add workspaceId to protocol** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1550**~~ | **P1** | ✅ **Guest mode isolation for workspace feature** (✅ DONE (2026-04-01)) |
-| ~~**TASK-1551**~~ | **P1** | **Invite flow: generate link, accept via Edge Function, /#/invite/:token route** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1552**~~ | **P1** | ✅ **Task assignment UI: assigned_to dropdown, avatar badges, filters** (✅ DONE (2026-04-01)) |
-| ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD + realtime + UI** (✅ DONE (2026-03-31)) |
-| ~~**TASK-1554**~~ | **P2** | **Activity feed: logging + display** (✅ DONE (2026-04-01)) |
-| ~~**TASK-1555**~~ | **P1** | **Partner-friendly UX: hide complexity for single-workspace users** (✅ DONE (2026-04-01)) |
-| ~~**TASK-1556**~~ | **P1** | **Hebrew translations for all workspace strings** (✅ DONE (2026-03-17)) |
-| ~~**TASK-1557**~~ | **P2** | ✅ **Member management UI** (✅ DONE (2026-04-02)) |
-| ~~**TASK-1558**~~ | **P2** | **Empty states for workspaces** (✅ DONE (2026-04-01)) |
-| ~~**TASK-1559**~~ | **P3** | ✅ **Member presence (v2 nice-to-have)** (✅ DONE (2026-04-02)) |
+| Task                 | Priority    | Description                                                                                                                                                                                                                                                                                                       |
+| -------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| ~~**BUG-1897**~~     | **P0**      | ✅ **Stopped timer resurrects on app + KDE when remote save fails (poll re-adoption unguarded)** (✅ DONE 2026-07-02, v1.4.227)                                                                                                                                                                                   |
+| ~~**BUG-1898**~~     | **P0**      | ✅ **Timer stop lost during auth reconnect-grace; grace period unbounded** (✅ DONE 2026-07-02, v1.4.227)                                                                                                                                                                                                         |
+| **BUG-1899**         | **P0**      | 🔄 **Canvas group echo-stomp + dual-writer LWW discards (BUG-1799 residue, Tidy 3-rows)** (4 modes fixed v1.4.227; boot-load serialization residual)                                                                                                                                                              |
+| ~~**BUG-1900**~~     | **P1**      | ✅ **Group resize silently ignores lock acquire failures (children snap back)** (✅ DONE 2026-07-02, v1.4.227)                                                                                                                                                                                                    |
+| ~~**BUG-1901**~~     | **P1**      | ✅ **Due-date edit leaves stale calendar instance; +1mo anchors on today** (✅ DONE 2026-07-02, v1.4.227)                                                                                                                                                                                                         |
+| ~~**BUG-1902**~~     | **P1**      | ✅ **Saved canvas viewport never applied at startup (no setViewport after load)** (✅ DONE 2026-07-02, v1.4.227)                                                                                                                                                                                                  |
+| ~~**BUG-1903**~~     | **P1**      | ✅ **Mobile deep-links stomped by /tasks default before router ready** (✅ DONE 2026-07-02, v1.4.227)                                                                                                                                                                                                             |
+| ~~**TASK-1904**~~    | **P1**      | ✅ **Test-suite truthfulness sweep (17 stale unit tests, dead E2E specs, trace noise)** (✅ DONE 2026-07-02 — unit 3113/3113; chromium E2E residual = TASK-1906 interference)                                                                                                                                     |
+| ~~**BUG-1908**~~     | **P1**      | ✅ **KDE widget Today list hides scheduled-today tasks with stale calendar instances (Vue parity)** (✅ DONE 2026-07-03, v1.4.229 shipped; widget live after plasmashell reload)                                                                                                                                  |
+| ~~**BUG-1909**~~     | **P1**      | ✅ **Due-date quick-set looks like no-op when stale past instances pin badge** (✅ DONE 2026-07-03, v1.4.229 shipped, live manifest verified)                                                                                                                                                                     |
+| **BUG-1910**         | **P0**      | 🔄 **Canvas groups disappeared after restart into v1.4.229 (BUG-1899 boot-load class; DB rows intact, display-side)**                                                                                                                                                                                             |
+| ~~**BUG-1911**~~     | **P0**      | ✅ **"Deleted events resurrect" — disproven by prod forensics; deletions never persisted → duplicate of BUG-1913**                                                                                                                                                                                                |
+| **BUG-1913**         | **P0**      | 🔄 **Silent write-drop windows — client drops writes without error; server re-sync looks like resurrection**                                                                                                                                                                                                      |
+| ~~**TASK-1914**~~    | **P0**      | ✅ **VPS DB write-watchdog — cron invariant checks + ntfy alerts** (✅ DONE 2026-07-03, live on VPS)                                                                                                                                                                                                              |
+| ~~**TASK-1915**~~    | **P1**      | ✅ **Nightly automated regression hunt as scheduled cloud agent** (✅ DONE 2026-07-03, first run tonight)                                                                                                                                                                                                         |
+| ~~**TASK-1916**~~    | **P0**      | ✅ **In-app write-failure visibility — indicator + toast when saves fail** (✅ DONE 2026-07-03, v1.4.230 shipped)                                                                                                                                                                                                 |
+| **BUG-1917**         | **P0**      | 🔄 **Updater Restart quits but never swaps/relaunches — silent installer handoff (instrumented+hardened v1.4.231)**                                                                                                                                                                                               |
+| ~~**BUG-1919**~~     | **P0**      | ✅ **KDE timer zombie after +5min extension — BUG-1892 guard swallowed re-completion** (✅ DONE 2026-07-04, widget reload pending)                                                                                                                                                                                |
+| ~~**BUG-1932**~~     | **P0**      | ✅ **Phantom sign-out when a launcher rewrites HOME — pin Electron userData to passwd home** (✅ DONE 2026-07-10)                                                                                                                                                                                                 |
+| ~~**BUG-1933**~~     | **P0**      | ✅ **Restored session never re-persisted; stale token blinded Local API sidecar** (✅ DONE 2026-07-10)                                                                                                                                                                                                            |
+| ~~**BUG-1934**~~     | **P1**      | ✅ **Regular multi-delete is atomic locally across task lists and redo** (✅ DONE 2026-07-10, v1.4.241 shipped)                                                                                                                                                                                                   |
+| ~~**FEATURE-1935**~~ | **P1**      | ✅ **Combinable Quick Sort task pools — overdue, today, next 3/7 days, no date, and Uncategorized** (✅ DONE 2026-07-10, v1.4.242 shipped)                                                                                                                                                                        |
+| ~~**BUG-1936**~~     | **P1**      | ✅ **Quick Sort postpone shortcuts use explicit destinations and persist in one click** (✅ DONE 2026-07-10, superseded behavior refined in BUG-1938)                                                                                                                                                             |
+| ~~**BUG-1937**~~     | **P0**      | ✅ **Same-version Electron release collision replaced the Quick Sort renderer** (✅ DONE 2026-07-10, v1.4.244 deployed and locally verified)                                                                                                                                                                      |
+| ~~**BUG-1938**~~     | **P0**      | ✅ **Postpone keeps the task open and shows feedback on an opaque surface** (✅ DONE 2026-07-10, v1.4.245 deployed and locally verified)                                                                                                                                                                          |
+| ~~**BUG-1939**~~     | **P0**      | ✅ **Postpone changes only the task due date without saving Quick Sort app/session state** (✅ DONE 2026-07-10, v1.4.246 deployed and locally installed)                                                                                                                                                          |
+| ~~**BUG-1918**~~     | **P1**      | ✅ **Sign-in needs manual refresh — SIGNED_IN loaded tasks before workspaces** (✅ DONE 2026-07-10)                                                                                                                                                                                                               |
+| ~~**BUG-1935**~~     | **P0**      | ✅ **Board due-date column drops don't register; drag clone frozen at origin** (✅ DONE 2026-07-10, v1.4.243 shipped)                                                                                                                                                                                             |
+| ~~**BUG-1940**~~     | **P0**      | ✅ **Planning-canvas bubble titles preserve spaces while autosaving** (✅ DONE 2026-07-12, v1.4.247 shipped)                                                                                                                                                                                                      |
+| **BUG-1941**         | **P0**      | ✅ **Failed permanent-delete/done persistence now rolls back visibly instead of returning as false success** (shipped v1.4.248, 2026-07-12)                                                                                                                                                                       |
+| ~~**BUG-1942**~~     | **P0**      | ✅ **PWA-created task and Hermes status changes now reconcile visibly in Electron; v1.4.250 shipped**                                                                                                                                                                                                             |
+| ~~**BUG-1944**~~     | **P0**      | ✅ **Persisted Electron identity stays account-owned while auth validation is pending; remote writes remain gated**                                                                                                                                                                                               |
+| ~~**BUG-1945**~~     | **P1**      | ✅ **Confirmed Canvas image deletion now removes the canonical record and rendered node; undo/redo verified**                                                                                                                                                                                                     |
+| ~~**BUG-1946**~~     | **P1**      | ✅ **Daily regression hunt now tests a clean current-master worktree without touching active development changes**                                                                                                                                                                                                |
+| **TASK-1943**        | **P0**      | 🔄 **Reliable Hermes–FlowState personal-assistant program: canonical sync, dynamic decomposition, monitor reliability, writable Notion, watchdogs, and packaged proof**                                                                                                                                           |
+| **TASK-1944**        | **P0**      | 🔄 **Canonical operation/revision/change-sequence foundation with safe branch recovery, signed-user receipts, replay, compatibility triggers, and deterministic catch-up**                                                                                                                                        |
+| **TASK-1945**        | **P0**      | 🔄 **Canonical Local API task patch adoption with preview/apply approval binding, receipt validation, and exact replay**                                                                                                                                                                                          |
+| **TASK-1947**        | **P0**      | 🔄 **Deterministic canonical change-sequence catch-up with scoped durable cursors, ordered invalidation pages, and persistence-gated advancement**                                                                                                                                                                |
+| **TASK-1946**        | **P0**      | ✅ **Canonical web/PWA offline scalar task-patch adoption with durable operation identity, receipts, restart-safe replay, and conflict quarantine**                                                                                                                                                               |
+| **TASK-1948**        | **P0**      | ✅ **Canonical Notion task activation with stable provenance, exact optional work blocks, replayable canonical receipts, and Local API verification**                                                                                                                                                             |
+| ~~**TASK-1949**~~    | **P0**      | ✅ **Canonical assistant disposable DB harness, race/fault injection, fixed daily regression coverage, and redacted VPS integrity watchdog**                                                                                                                                                                      |
+| ~~**TASK-1950**~~    | **P0**      | ✅ **Renderer-to-sidecar auth recovery classification with actionable protected-route errors and false-incident suppression**                                                                                                                                                                                     |
+| ~~**TASK-1951**~~    | **P0**      | ✅ **Production UUID compatibility for canonical task/Notion RPCs, rollback suites, and VPS watchdog**                                                                                                                                                                                                            |
+| **TASK-1952**        | **P0**      | 🔄 **Hydrate Electron auth backup into the live Supabase client and restore protected sidecar reads after restart**                                                                                                                                                                                               |
+| ~~**TASK-1953**~~    | **P0**      | ✅ **Preserve blocked remote Canvas projection updates and replay latest store geometry after interaction guards clear**                                                                                                                                                                                          |
+| ~~**BUG-1954**~~     | **P0**      | ✅ **DONE — shipped Electron 1.4.255; authenticated empty projections recover and the real Canvas empty state is opaque**                                                                                                                                                                                         |
+| ~~**BUG-1955**~~     | **P0**      | ✅ **DONE — shipped Electron 1.4.256 with executable source/package coverage and live Hermes exact-task read-back**                                                                                                                                                                                               |
+| **TASK-1956**        | **P0**      | 🔄 **Reliable complete FlowState inventory with restart-safe sidecar auth, typed freshness/completeness, stable pagination, and packaged proof**                                                                                                                                                                  |
+| **TASK-1957**        | **P0**      | 🔄 **Atomic recurrence-aware duplicate merge with preview-bound cadence resolution and stop-on-conflict assistant behavior**                                                                                                                                                                                      |
+| ~~**TASK-1959**~~    | **P0**      | ✅ **Receipt-backed audit coverage with completeness classes, broad-claim guardrails, and screenshot-row reconciliation for Hermes summaries**                                                                                                                                                                    |
+| ~~**TASK-1958**~~    | **P1**      | ✅ **Canonical non-recurring task completion with approval digest, committed receipt, completedAt read-back, and recurring fail-closed rejection**                                                                                                                                                                |
+| ~~**TASK-1959**~~    | **P0**      | ✅ **Redacted source/build/public/installed/sidecar truth ledger with embedded non-live package provenance and mismatch evidence**                                                                                                                                                                                |
+| **TASK-1960**        | **P0**      | 🔄 **Make complete inventory the only exhaustive assistant task boundary with typed samples and fail-closed large scans**                                                                                                                                                                                         |
+| **TASK-1961**        | **P0**      | 🔄 **Shared canonical assistant receipt validation with recomputed hashes and fail-closed mutation notifications**                                                                                                                                                                                                |
+| **TASK-1962**        | **P0**      | 🔄 **Preflight every Hermes-to-FlowState route, package the canonical task lifecycle, and reject incomplete runtimes before work starts**                                                                                                                                                                         |
+| **TASK-1963**        | **P0**      | 🔄 **Canonical atomic subtask breakdown with immutable preview approval, parent revisions, replay-safe receipts, and validated ordered read-back**                                                                                                                                                                |
+| **BUG-1964**         | **P0**      | ✅ **DONE 2026-07-18 — Sign in once and retain the account through refresh failures, close/relaunch, and updates until explicit Sign Out**                                                                                                                                                                        |
+| ~~**BUG-1965**~~     | **P0**      | ✅ **DONE — Electron 1.4.273 recovered all seven request-hash-rejected queued edits and remained synced after relaunch**                                                                                                                                                                                          |
+| ~~**BUG-1966**~~     | **P0**      | ✅ **DONE — Electron 1.4.274 keeps KDE/Electron at the same non-negative timer state and clears completed-ID loops**                                                                                                                                                                                              |
+| ~~**BUG-1967**~~     | **P0**      | ✅ **DONE — Electron 1.4.274 requires durable task admission before clearing drafts or showing success**                                                                                                                                                                                                          |
+| ~~**TASK-1968**~~    | **P0**      | ✅ **DONE — Electron 1.4.275 keeps the signed-in Hermes bridge alive across window close, restart, and updater handoff**                                                                                                                                                                                          |
+| ~~**BUG-1969**~~     | **P0-HIGH** | ✅ **DONE — Electron 1.4.277 and the live Hermes adapter agree on all work-block and subtask-batch contracts**                                                                                                                                                                                                    |
+| **BUG-1973**         | **P0**      | 🔄 **Cancelled Electron quit permanently disables the Local Task API; restore one authenticated sidecar without killing the live app**                                                                                                                                                                            |
+| ~~**BUG-1974**~~     | **P0**      | ✅ **DONE — Electron 1.4.283 resolves hidden, pinned, and Canvas task actions through canonical task identity instead of filtered or copied state**                                                                                                                                                               |
+| **BUG-1975**         | **P0**      | 🔄 **Catalog Done and All Active filters can contradict each other and hide the canonical task; local right-click complete/reopen proof passes, packaged Electron remains**                                                                                                                                       |
+| **FEATURE-1943**     | **P0**      | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation**                                                                                                                                                                               |
+| **FEATURE-1944**     | **P0**      | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes**                                                                                                                                                                                                                 |
+| **FEATURE-1945**     | **P0**      | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions**                                                                                                                                                                                                               |
+| **FEATURE-1946**     | **P1**      | 📋 **Authenticated project/group reads and previewed exact-ID assignment**                                                                                                                                                                                                                                        |
+| **FEATURE-1947**     | **P0**      | 🔄 **Leadership-safe timer start/pause/resume/stop through the signed-in Local API**                                                                                                                                                                                                                              |
+| **FEATURE-1948**     | **P1**      | 📋 **Bounded Canvas read plus move/group/ungroup/remove-placement actions**                                                                                                                                                                                                                                       |
+| **FEATURE-1949**     | **P1**      | 📋 **Cursor pagination, restore, bounded batch actions, and context/audit reads**                                                                                                                                                                                                                                 |
+| **BUG-1912**         | **P1**      | 📋 **Canvas edge can't be disconnected; edge drag glitches whole screen (software compositing)**                                                                                                                                                                                                                  |
+| **TASK-1905**        | **P2**      | 📋 **Rewrite 19 AI-chat E2E specs for the sidebar UX (full-page /#/ai removed in d0f90130)**                                                                                                                                                                                                                      |
+| **TASK-1906**        | **P2**      | 📋 **Per-worker E2E test users (cross-file canvas interference under parallel workers)**                                                                                                                                                                                                                          |
+| ~~**BUG-1907**~~     | **P1**      | ✅ **Quick Tasks typed pin can look like a no-op — explicit result contract + visible feedback** (✅ DONE 2026-07-03)                                                                                                                                                                                             |
+| ~~**BUG-1892**~~     | **P0**      | ✅ **"Time for a break" popup loops endlessly until app close — make completion idempotent per session id (durable guard) + KDE per-session-id guard** (✅ DONE 2026-06-25 — shipped Electron v1.4.218 + web; KDE guard needs widget-reinstall verify)                                                            |
+| ~~**BUG-1891**~~     | **P0**      | ✅ **Deleted tasks keep resurfacing — unify deletion truth on tombstones (soft-delete writes/removes tombstone via DB trigger + fail-closed load merge)** (✅ DONE 2026-06-25 — DB trigger live on prod 319→0, 7 zombies healed, Electron v1.4.217 shipped, web JS pushed)                                        |
+| ~~**BUG-1869**~~     | **P0**      | ✅ **Skipped realtime task updates can leave Electron, localhost, and KDE out of sync** (✅ DONE 2026-06-15, shipped v1.4.184)                                                                                                                                                                                    |
+| ~~**BUG-1868**~~     | **P0**      | ✅ **Timer start can look active locally while Electron, localhost, and KDE see no synced session** (✅ DONE 2026-06-15, shipped v1.4.183)                                                                                                                                                                        |
+| ~~**BUG-1867**~~     | **P0**      | ✅ **Canvas geometry drifts across Electron and localhost while idle** (✅ DONE 2026-06-15, shipped v1.4.182)                                                                                                                                                                                                     |
+| ~~**BUG-1866**~~     | **P0**      | ✅ **Malformed due date crashes Calendar view in Electron** (✅ DONE 2026-06-15, shipped v1.4.181)                                                                                                                                                                                                                |
+| ~~**TASK-1289**~~    | **P0**      | ✅ **Investigate severe task position drift episode**                                                                                                                                                                                                                                                             |
+| ~~**TASK-1285**~~    | **P0**      | ✅ **Commit deploy safeguards & clean up 20 dead Claude hooks** (2026-02-10)                                                                                                                                                                                                                                      |
+| ~~**FEATURE-1293**~~ | **P2**      | ✅ **Catalog View UX/UI Redesign — bulk ops, scanning, inline editing, review/triage**                                                                                                                                                                                                                            |
+| ~~BUG-1199~~         | P1          | ✅ Canvas inbox right-click acts as Ctrl+Click                                                                                                                                                                                                                                                                    |
+| ~~BUG-1206~~         | P0          | ✅ Task details not saved when pressing Save in canvas (3-layer fix: pending write guard + extended isVeryRecent + modal-aware recovery)                                                                                                                                                                          |
+| ~~BUG-1208~~         | P1          | ✅ Task edit modal closes on text selection release                                                                                                                                                                                                                                                               |
+| ~~BUG-1212~~         | P0          | ✅ Sync queue CREATE retry causes "duplicate key" corruption                                                                                                                                                                                                                                                      |
+| ~~BUG-1286~~         | P2          | ✅ PWA Today View shows 2:00 AM on all tasks due to UTC timezone parsing                                                                                                                                                                                                                                          |
+| ~~**BUG-1291**~~     | **P0**      | ✅ **Timer not starting from calendar play btn / context menu Start btn / canvas; Calendar has no right-click context menu**                                                                                                                                                                                      |
+| ~~**BUG-1292**~~     | **P1**      | ✅ **KDE Widget intermittently fails to start break timer (30s polling gap after session complete)**                                                                                                                                                                                                              |
+| ~~**TASK-1292**~~    | **P0**      | ✅ **Quick task creation in KDE widget — quick-add input (+ / play buttons) + pinned task chips (monorepo)**                                                                                                                                                                                                      |
+| ~~**BUG-1293**~~     | **P1**      | ✅ **Canvas CSS tokenization damage — broken shadows, phantom tokens, debug elements**                                                                                                                                                                                                                            |
+| ~~**BUG-1294**~~     | **P1**      | ✅ **Calendar play button shouldn't reset timer or create new instances when timer is already running for that task**                                                                                                                                                                                             |
+| ~~**BUG-1296**~~     | **P1**      | ✅ **Time block notifications never fire — \_rawTasks → rawTasks property name mismatch**                                                                                                                                                                                                                         |
+| ~~**BUG-1302**~~     | **P1**      | **✅ Time block notifications still not firing — milestones silently missed despite BUG-1296 fix**                                                                                                                                                                                                                |
+| ~~**BUG-1303**~~     | **P2**      | ✅ **Mark Done doesn't stop active timer running on that task** (✅ DONE — fix in taskOperations.ts:431)                                                                                                                                                                                                          |
+| ~~**BUG-1304**~~     | **P2**      | ✅ **Done tasks in calendar view have no visual done indicator** (✅ DONE — visual indicator in all 3 calendar views)                                                                                                                                                                                             |
+| ~~**BUG-1305**~~     | **P2**      | ✅ **TaskQuickEditPopover renders behind AI Chat panel — z-index stacking issue**                                                                                                                                                                                                                                 |
+| ~~**TASK-1337**~~    | **P3**      | ✅ **Storybook Design Streamlining — align all stories with design system**                                                                                                                                                                                                                                       |
+| ~~**TASK-1338**~~    | **P0**      | ✅ **Configurable PWA Push Notifications — per-category controls, quiet hours, server-side push service**                                                                                                                                                                                                         |
+| ~~**BUG-1311**~~     | **P3**      | ✅ **Storybook: 3 story files fail to import (ReloadPrompt, CalendarDayView, CalendarWeekView)**                                                                                                                                                                                                                  |
+| ~~**TASK-1311**~~    | **P2**      | ✅ **Add date picker to Quick Sort**                                                                                                                                                                                                                                                                              |
+| ~~**TASK-1312**~~    | **P2**      | ✅ **Quick Sort context panel — date/day, priority, project info (desktop + PWA responsive)**                                                                                                                                                                                                                     |
+| ~~**TASK-1313**~~    | **P3**      | ✅ **UI polish: FocusView pause & leave, kanban tooltips, date picker popover, RTL dir**                                                                                                                                                                                                                          |
+| ~~**FEATURE-1314**~~ | **P2**      | ✅ **AI Weekly Quick Sort — sort week's tasks with AI + push to canvas date groups**                                                                                                                                                                                                                              |
+| **TASK-1326**        | **P2**      | **👀 Weekly Plan AI Enhancements (Batching, Theme, Feedback Loop)**                                                                                                                                                                                                                                               |
+| ~~**TASK-1385**~~    | **P2**      | ✅ **Weekly Plan AI — deterministic rebalancer + smarter model routing + prompt quality**                                                                                                                                                                                                                         |
+| ~~**TASK-1399**~~    | **P2**      | ✅ **Weekly Plan — model/provider selector connected to centralized AI model registry**                                                                                                                                                                                                                           |
+| ~~**TASK-1400**~~    | **P2**      | ✅ **SOP-045 Tauri AppImage Update Workflow + fix stale binary — created SOP, fixed user's stale v1.2.18 AppImage, removed debug logging from canvas drag**                                                                                                                                                       |
+| ~~**FEATURE-1317**~~ | **P3**      | ✅ **AI Work Profile / Persistent Memory — learn user work patterns for smarter weekly plans**                                                                                                                                                                                                                    |
+| ~~**TASK-1316**~~    | **P2**      | ✅ **AI Provider Usage & Cost Tracking — new Settings tab with per-provider token/cost totals**                                                                                                                                                                                                                   |
+| ~~**TASK-1341**~~    | **P2**      | ✅ **Quick Sort UX Polish — left sidebar action buttons, arrow key shortcuts, action feedback overlays, swipe fix** (✅ DONE 2026-02-16)                                                                                                                                                                          |
+| **FEATURE-1342**     | **P2**      | **🔄 AI Task Suggestions — per-task/group button to auto-suggest priority, due date, status based on user data**                                                                                                                                                                                                  |
+| ~~**BUG-1343**~~     | **P2**      | ✅ **Quick Sort exits when swiping right on PWA mobile** (✅ DONE 2026-02-17)                                                                                                                                                                                                                                     |
+| ~~**BUG-1350**~~     | **P0**      | ✅ **New Task transcription page closes prematurely — transcription doesn't appear on PWA mobile** (✅ DONE 2026-02-18)                                                                                                                                                                                           |
+| ~~**BUG-1352**~~     | **P1**      | ✅ **Calendar inbox filtered by board smart view — only shows 4 tasks instead of all unscheduled** (✅ DONE 2026-02-17)                                                                                                                                                                                           |
+| ~~**BUG-1353**~~     | **P0**      | ✅ **Sidebar quick task: metadata buttons disappear on click + no save confirmation** (✅ DONE 2026-02-17)                                                                                                                                                                                                        |
+| ~~**BUG-1355**~~     | **P1**      | ✅ **Can't log out — Supabase signOut fails silently, session re-establishes. Buttons squashed. Post-logout UI stuck** (✅ DONE 2026-02-17)                                                                                                                                                                       |
+| ~~**BUG-1357**~~     | **P0**      | ✅ **Mobile PWA timer sync broken with web app** (✅ DONE 2026-02-18)                                                                                                                                                                                                                                             |
+| ~~**TASK-1354**~~    | **P2**      | ✅ **AI quality assessment + timer fixes + CSS cleanup** (✅ DONE 2026-02-18)                                                                                                                                                                                                                                     |
+| ~~**BUG-1351**~~     | **P0**      | ✅ **Calendar drag ghost stuck after inbox→day drop** (✅ DONE 2026-02-17)                                                                                                                                                                                                                                        |
+| ~~**BUG-1349**~~     | **P2**      | ✅ **QuickSort progress bar jumps when pressing number keys to assign project** (✅ DONE 2026-02-17)                                                                                                                                                                                                              |
+| ~~**BUG-1359**~~     | **P0**      | ✅ **vue-i18n version mismatch causing $t() SyntaxErrors — upgraded vue-i18n 9→11, re-applied i18n translations across 11 files (EN+HE)** (✅ DONE 2026-02-19)                                                                                                                                                    |
+| ~~**BUG-1348**~~     | **P0**      | ✅ **Priority badge color mismatch — medium badge gray instead of orange** (✅ DONE 2026-02-17)                                                                                                                                                                                                                   |
+| ~~**TASK-1356**~~    | **P2**      | ✅ **AI Memory Assessment System — test/evaluate memory effectiveness for user context + AI usage across app, CLI + admin settings UI** (✅ DONE 2026-02-18)                                                                                                                                                      |
+| **TASK-1358**        | **P2**      | **🔄 Rewrite 28 canvas todo tests — replace over-designed Vue Flow mocking with direct store/handler unit tests using real data shapes**                                                                                                                                                                          |
+| ~~**BUG-1347**~~     | **P0**      | ✅ **KDE Plasma widget freeze — gated 40+ console.log behind debug flag, staggered concurrent XHR with Qt.callLater(), reactive transition timer, throttled canvas repaints** (✅ DONE 2026-02-19)                                                                                                                |
+| ~~**BUG-1365**~~     | **P0**      | ✅ **Calendar day view — task disappears after editing and saving (false positive scheduleExplicitlyRemoved for instance-based tasks)** (✅ DONE 2026-02-19)                                                                                                                                                      |
+| ~~**BUG-1360**~~     | **P0**      | ✅ **Canvas long task cards cut off when zooming — removed LOD content hiding, overflow:hidden chain, title 3-line clamp** (✅ DONE 2026-02-20)                                                                                                                                                                   |
+| ~~**BUG-1567**~~     | **P2**      | ✅ **Deleted projects still appear in QuickSort CategorySelector — project store `projects` computed doesn't filter soft-deleted projects (is_deleted=true)** (✅ DONE 2026-03-18)                                                                                                                                |
+| ~~**TASK-1571**~~    | **P2**      | ✅ **Edit Task modal RTL support — added dir="auto" to 7 inputs across TaskEditHeader, QuickTaskCreate, QuickTaskCreateModal, TaskEditSubtasks, TaskTable** (✅ DONE 2026-03-18)                                                                                                                                  |
+| ~~**TASK-1692**~~    | **P2**      | ✅ **Desktop task list RTL + chat Hebrew paragraphs — reversed TaskRow/TaskTable grid in [dir="rtl"], fixed priority indicator logical props, added unicode-bidi:plaintext to markdown block elements** (✅ DONE 2026-03-23)                                                                                      |
+| **TASK-1693**        | **P2**      | 🔄 **Calendar virtual timer block — inject virtual CalendarEvent for the currently-timed task when it has no real instance for today, so it always appears on the day view**                                                                                                                                      |
+| ~~**BUG-1361**~~     | **P1**      | ✅ **Calendar inbox drag ghost pills stuck on screen — endGlobalDrag() never called when source element removed by reactive filtering** (✅ DONE 2026-02-19)                                                                                                                                                      |
+| **FEATURE-1363**     | **P2**      | **📋 Add reminders & notifications to all platforms (PWA, Electron, KDE widget)**                                                                                                                                                                                                                                 |
+| ~~**BUG-1346**~~     | **P1**      | ✅ **Mobile Inbox tab broken in PWA on mobile — layout/design broken** (✅ DONE 2026-03-04)                                                                                                                                                                                                                       |
+| ~~**TASK-1362**~~    | **P0**      | ✅ **Calendar task selection, multi-select & keyboard actions — click to select, Ctrl+click multi-select, Delete→inbox, Shift+Delete→remove, drag-back to inbox** (✅ DONE 2026-02-20)                                                                                                                            |
+| ~~**BUG-1366**~~     | **P1**      | ✅ **i18n locale desync — UI stays Hebrew when English selected, store locale hardcoded to 'en' ignoring localStorage** (✅ DONE 2026-02-20)                                                                                                                                                                      |
+| ~~**BUG-1367**~~     | **P2**      | ✅ **Canvas inbox panel on wrong side — parent CSS overrode is-right-side to left, flipped to right** (✅ DONE 2026-02-20)                                                                                                                                                                                        |
+| ~~**BUG-1368**~~     | **P2**      | ✅ **? keyboard shortcut broken on Hebrew layout — event.key check fails on non-Latin layouts, added event.code fallback** (✅ DONE 2026-02-20)                                                                                                                                                                   |
+| ~~**BUG-1374**~~     | **P1**      | ✅ **AI Chat 4-bug combo — Hebrew response on English input, LTR for Hebrew text, fluffy advice, wrong tasks returned (all fixed 2026-02-21)**                                                                                                                                                                    |
+| ~~**TASK-1375**~~    | **P1**      | ✅ **AI Pipeline orchestrator + types — create pipeline/ with guardrail interfaces and function composition** (✅ DONE 2026-02-21)                                                                                                                                                                                |
+| ~~**TASK-1376**~~    | **P1**      | ✅ **Language detector — deterministic Unicode-range detection, detectLanguageMismatch()** (✅ DONE 2026-02-21)                                                                                                                                                                                                   |
+| ~~**TASK-1377**~~    | **P1**      | ✅ **Context optimizer — separate task titles from metadata, character budget, date-relative filtering** (✅ DONE 2026-02-21)                                                                                                                                                                                     |
+| ~~**TASK-1378**~~    | **P1**      | ✅ **Response validator — consolidate 3 cleanup locations into one, add UUID stripping, reuse qualityAssessment rules** (✅ DONE 2026-02-21)                                                                                                                                                                      |
+| ~~**TASK-1379**~~    | **P1**      | ✅ **Language enforcer — post-processing guardrail, detect mismatch + flag in metadata** (✅ DONE 2026-02-21)                                                                                                                                                                                                     |
+| ~~**TASK-1380**~~    | **P1**      | ✅ **Response length enforcer — cap by intent (greetings, tool summaries, analytical)** (✅ DONE 2026-02-21)                                                                                                                                                                                                      |
+| ~~**TASK-1381**~~    | **P1**      | ✅ **Wire pre-processing into useAIChat — call runPreProcess before ReAct, use contextOptimizer** (✅ DONE 2026-02-21)                                                                                                                                                                                            |
+| ~~**TASK-1382**~~    | **P1**      | ✅ **Wire post-processing into useAIChat — runPostProcess after ReAct, replace inline cleanup** (✅ DONE 2026-02-21)                                                                                                                                                                                              |
+| ~~**TASK-1383**~~    | **P1**      | ✅ **Simplify ChatMessage.vue renderedContent — remove redundant regex, pipeline handles cleanup** (✅ DONE 2026-02-21)                                                                                                                                                                                           |
+| ~~**TASK-1384**~~    | **P1**      | ✅ **Unit tests for pipeline — guardrails, language detection, context optimization, composition** (✅ DONE 2026-02-21)                                                                                                                                                                                           |
+| ~~**TASK-1388**~~    | **P1**      | **✅ Pre-digested reasoning engine — compute task analysis in code, LLM formats facts naturally** (✅ DONE)                                                                                                                                                                                                       |
+| ~~**TASK-1389**~~    | **P1**      | **✅ Skeleton prompting for agent chains — code generates sections, LLM writes bridges** (✅ DONE)                                                                                                                                                                                                                |
+| ~~**TASK-1390**~~    | **P1**      | **✅ Fluff detector guardrail — heuristic scoring: task name references, data points, no generic phrases** (✅ DONE)                                                                                                                                                                                              |
+| ~~**TASK-1391**~~    | **P1**      | **✅ Validation + retry loop — retry once with feedback when fluff score < 0.5** (✅ DONE)                                                                                                                                                                                                                        |
+| ~~**TASK-1392**~~    | **P1**      | **✅ Keyword-based tool hints — deterministic keyword→tool mapping injected into system prompt** (✅ DONE)                                                                                                                                                                                                        |
+| ~~**TASK-1393**~~    | **P1**      | **✅ `projectId` filter on `list_tasks` — quick win, 15 minutes** (✅ DONE)                                                                                                                                                                                                                                       |
+| ~~**TASK-1394**~~    | **P1**      | **✅ Counting vs listing clarification — system prompt rule to prevent unnecessary tool calls** (✅ DONE)                                                                                                                                                                                                         |
+| ~~**TASK-1395**~~    | **P1**      | **✅ Install uFuzzy + `resolveTask()` helper — fuzzy title matching for entity resolution** (✅ DONE)                                                                                                                                                                                                             |
+| ~~**TASK-1396**~~    | **P1**      | **✅ Wire `resolveTask()` into write tools — title-based resolution fallback in `validateTaskExists()`** (✅ DONE)                                                                                                                                                                                                |
+| ~~**TASK-1397**~~    | **P1**      | **✅ `mark_task_done` convenience tool — accepts title string, most common user action** (✅ DONE)                                                                                                                                                                                                                |
+| ~~**TASK-1398**~~    | **P1**      | **✅ Conversation entity memory — track mentioned tasks, resolve pronouns ("it", "that one")** (✅ DONE)                                                                                                                                                                                                          |
+| **TASK-1386**        | **P2**      | **✅ Google Calendar proxy Edge Function — list-calendars, list-events, token refresh on 401**                                                                                                                                                                                                                    |
+| ~~**BUG-1417**~~     | **P1**      | ✅ **Canvas nodes nearly invisible — undefined `--shadow-color-sm` token + near-identical bg = no depth** (✅ DONE 2026-02-27)                                                                                                                                                                                    |
+| ~~**TASK-1420**~~    | **P1**      | ✅ **Add project selector to task edit modal — TaskEditMetadata missing project field** (✅ DONE 2026-02-27)                                                                                                                                                                                                      |
+| ~~**TASK-1419**~~    | **P1**      | ✅ **Inbox multi-select bulk property updates — context menu actions apply to all selected tasks** (✅ DONE 2026-02-27)                                                                                                                                                                                           |
+| ~~**TASK-1418**~~    | **P1**      | ✅ **Too many buttons on calendar dashboard — consolidate into dropdown or settings** (✅ DONE 2026-02-27)                                                                                                                                                                                                        |
+| ~~**TASK-1435**~~    | **P2**      | ✅ **Active task glass pill — KDE companion widget + AppHeader pill showing current Pomodoro task** (✅ DONE 2026-03-03)                                                                                                                                                                                          |
+| ~~**TASK-1424**~~    | **P2**      | ✅ **KDE widget nanny notifications — schedule-gated idle reminders when no Pomodoro active** (✅ DONE 2026-03-03)                                                                                                                                                                                                |
+| ~~**TASK-1423**~~    | **P2**      | ✅ **KDE widget: add button to open Tauri or web app** (✅ DONE 2026-03-03)                                                                                                                                                                                                                                       |
+| ~~**TASK-1431**~~    | **P2**      | ✅ **KDE widget "Today" toggle button — standalone chip in pinned row, composable with any dropdown filter** (✅ DONE 2026-03-02)                                                                                                                                                                                 |
+| ~~**TASK-1429**~~    | **P0**      | ✅ **KDE Widget Task Editing — inline edit panel (status/priority/due date) + "Open in App" deep link + perm delete + duration presets** (✅ DONE 2026-03-03)                                                                                                                                                     |
+| ~~**TASK-1428**~~    | **P0**      | ✅ **Auto-inherit group properties when creating task in a group (e.g. "Today" → today's due date)** (✅ DONE 2026-03-03)                                                                                                                                                                                         |
+| ~~**TASK-1440**~~    | **P1**      | ✅ **Gamification offline resilience — local-first state updates + try/catch wrapping for all Supabase writes** (✅ DONE 2026-03-03)                                                                                                                                                                              |
+| ~~**TASK-1441**~~    | **P2**      | ✅ **Graceful offline UX for non-cacheable features — AI chat, file uploads, Drive show informative messages instead of failing silently** (✅ DONE 2026-03-03)                                                                                                                                                   |
+| ~~**BUG-1442**~~     | **P1**      | ✅ **timer_sessions.position_version column does not exist — DB schema mismatch** (✅ DONE 2026-03-04 — code already guards correctly, no path queries this column)                                                                                                                                               |
+| ~~**TASK-1443**~~    | **P2**      | ✅ **Calendar Delete key shows confirmation dialog before unscheduling event (instead of silent action)** (✅ DONE 2026-03-04)                                                                                                                                                                                    |
+| ~~**TASK-1448**~~    | **P2**      | ✅ **KDE Widget quick-add due date dropdown — default "Today" so tasks appear in today views** (✅ DONE 2026-03-05)                                                                                                                                                                                               |
+| ~~**TASK-1450**~~    | **P2**      | ✅ **Integrate Quick Sort sessions into offline sync queue for full PWA offline support** (✅ DONE 2026-03-05)                                                                                                                                                                                                    |
+| ~~**TASK-1451**~~    | **P2**      | ✅ **Auto-inherit filter context when creating tasks — useFilterDefaults composable** (✅ DONE 2026-03-05)                                                                                                                                                                                                        |
+| ~~**TASK-1452**~~    | **P2**      | ✅ **KDE Widget — Switch Active Timer to Different Task** (✅ DONE 2026-03-05)                                                                                                                                                                                                                                    |
+| ~~**TASK-1460**~~    | **P2**      | ✅ **KDE Widget — Bump task limit to 100 + group by project** (✅ DONE 2026-03-06)                                                                                                                                                                                                                                |
+| ~~**BUG-1461**~~     | **P1**      | ✅ **KDE widget hard-DELETE caused ghost tasks in web app — changed to soft-delete + smart merge fix** (✅ DONE 2026-03-06)                                                                                                                                                                                       |
+| ~~**BUG-1806**~~     | **P1**      | ✅ **Mark-done can still trigger phantom nudge state** (✅ DONE 2026-05-28, shipped v1.4.78)                                                                                                                                                                                                                      |
+| ~~**BUG-1805**~~     | **P1**      | ✅ **KDE nanny nudge resurfaced after marking a task done** (✅ DONE 2026-05-27)                                                                                                                                                                                                                                  |
+| ~~**TASK-1484**~~    | **P3**      | ✅ **Escape key closes TaskContextMenu** (✅ DONE 2026-03-08)                                                                                                                                                                                                                                                     |
+| ~~**TASK-1496**~~    | **P2**      | ✅ **Non-obstructive overflow tooltips on all truncated text app-wide** (✅ DONE 2026-03-09)                                                                                                                                                                                                                      |
+| **BUG-1498**         | **P2**      | 🔄 **Taskbar nanny not triggering after 5min idle without active task (INQUIRY-1489 regression)**                                                                                                                                                                                                                 |
+| **BUG-1497**         | **P2**      | 📋 **CSS safety test failing due to missing fileURLToPath import**                                                                                                                                                                                                                                                |
+| ~~**BUG-1732**~~     | **P2**      | ✅ **Canvas group badge counts task not rendered — parentId without canvasPosition** (✅ DONE 2026-03-26)                                                                                                                                                                                                         |
+| ~~**TASK-1487**~~    | **P2**      | ✅ **Search modal: delete fix + filter pills (Today, Hide Done, High Priority, No Date)** (✅ DONE 2026-03-08)                                                                                                                                                                                                    |
+| ~~**BUG-1490**~~     | **P2**      | ✅ **KDE widget stops syncing — token refresh chain break, missing 401 handling, isRefreshingToken deadlock** (✅ DONE 2026-03-09)                                                                                                                                                                                |
+| ~~**BUG-1530**~~     | **P2**      | ✅ **Dragging task to Today canvas group doesn't update Calendar inbox** (✅ DONE 2026-03-14)                                                                                                                                                                                                                     |
+| **BUG-1491**         | **P0**      | 🔄 **Canvas duplicate tasks appear sporadically across views** (🔄 IN PROGRESS 2026-03-09)                                                                                                                                                                                                                        |
+| ~~**INQUIRY-1489**~~ | **P2**      | ✅ **Nanny activation for unchosen tasks idle >5min in taskbar** (✅ DONE 2026-03-09)                                                                                                                                                                                                                             |
+| ~~**TASK-1501**~~    | **P3**      | ✅ **AI tools audit: fix byStatus stale keys, add undo to update_task and create_group** (✅ DONE 2026-03-10)                                                                                                                                                                                                     |
+| ~~**BUG-1504**~~     | **P2**      | ✅ **Canvas inbox: left-click multi-selects tasks unexpectedly, can't deselect** (✅ DONE 2026-03-12)                                                                                                                                                                                                             |
+| ~~**BUG-1521**~~     | **P2**      | ✅ **KDE Widget: pinned task chip click does nothing — searches only filtered tasks, misses match** (✅ DONE 2026-03-14)                                                                                                                                                                                          |
+| ~~**BUG-1506**~~     | **P0**      | ✅ **Edit Task: description loses bullet points on save — htmlToMarkdown regex truncation** (✅ DONE 2026-03-14)                                                                                                                                                                                                  |
+| ~~**BUG-1505**~~     | **P2**      | ✅ **KDE Widget: Nanny popup only shows ~2 tasks — increase limit and sort by due date** (✅ DONE 2026-03-13)                                                                                                                                                                                                     |
+| **TASK-1499**        | **P2**      | 📋 **KDE widget: fix canvas sort/filter — wrong column + missing Y-position sorting** (📋 PLANNED)                                                                                                                                                                                                                |
+| ~~**TASK-1500**~~    | **P2**      | ✅ **Smart model routing: complexity classifier + hybrid pricing (free for simple, premium for complex)** (✅ DONE 2026-03-13)                                                                                                                                                                                    |
+| ~~**TASK-1486**~~    | **P2**      | ✅ **Pinned/persistent tasks — always-visible utility tasks (e.g. "General Dev", "Organize Tasks") separate from regular task list** (✅ DONE 2026-03-13)                                                                                                                                                         |
+| ~~**TASK-1485**~~    | **P2**      | ✅ **Move AI Assist to More submenu + teal Mark Done line** (✅ DONE 2026-03-09)                                                                                                                                                                                                                                  |
+| ~~**TASK-1457**~~    | **P2**      | ✅ **Demo test user + Playwright fixtures — seeded user with tasks, groups, and data for E2E testing** (✅ DONE 2026-03-13)                                                                                                                                                                                       |
+| ~~**TASK-1456**~~    | **P0**      | ✅ **Add permanent delete button to right-click context menu** (✅ DONE 2026-03-06)                                                                                                                                                                                                                               |
+| ~~**TASK-1455**~~    | **P2**      | ✅ **Catalog view: show uncategorized tasks so they can be categorized in-place** (✅ DONE 2026-03-09)                                                                                                                                                                                                            |
+| ~~**TASK-1454**~~    | **P2**      | ✅ **Quick Sort: match PWA look/behavior on desktop + confirm permanent delete** (✅ DONE 2026-03-09)                                                                                                                                                                                                             |
+| ~~**BUG-1472**~~     | **P1**      | ✅ **Canvas and Calendar inbox filters synced — persistence keys not context-scoped** (✅ DONE 2026-03-07)                                                                                                                                                                                                        |
+| ~~**BUG-1453**~~     | **P0**      | ✅ **Production CSS preload + mobile Quick Sort swipe broken** (✅ DONE 2026-03-07)                                                                                                                                                                                                                               |
+| ~~**BUG-1477**~~     | **P1**      | ✅ **Zombie tasks reappear after permanent delete — tombstone/delete ordering + DB trigger conflict** (✅ DONE 2026-03-07)                                                                                                                                                                                        |
+| ~~**BUG-1479**~~     | **P2**      | ✅ **Date picker calendar closes when moving cursor to it — NPopover mouseleave** (✅ DONE 2026-03-07)                                                                                                                                                                                                            |
+| ~~**BUG-1447**~~     | **P2**      | ✅ **Pin task disappears on Enter + task search + widget sync** (✅ DONE 2026-03-05)                                                                                                                                                                                                                              |
+| **TASK-1446**        | **P2**      | ✅ **BUG-1137: Add Guest Session ID for migration tracking — explicit UUID links guest data to new account on sign-up** (✅ DONE 2026-03-04)                                                                                                                                                                      |
+| ~~**TASK-1445**~~    | **P2**      | ✅ **Fix focus mode dropdown closing on hover + overlapping menus — UX research & redesign** (✅ DONE 2026-03-05)                                                                                                                                                                                                 |
+| ~~**TASK-1459**~~    | **P2**      | ✅ **Storybook story quality pass — fix broken/unclear stories for Teleport components and PWA Screens** (✅ DONE 2026-03-07)                                                                                                                                                                                     |
+| ~~**TASK-1444**~~    | **P1**      | ✅ **Tauri desktop app design parity — investigate and fix visual discrepancies vs web/Storybook** (✅ DONE — Obsolete) **Archived**: Superseded by TASK-1715 (Electron migration)                                                                                                                                |
+| **INQUIRY-1438**     | **P0**      | 📋 **Assess open-source self-hosting readiness — what's needed for GitHub sharing (Win/Mac/Linux)** (📋 PLANNED)                                                                                                                                                                                                  |
+| ~~**BUG-1451**~~     | **P1**      | ✅ **Task done/deleted state inconsistent across views — Board hideDoneTasks coupled to Canvas/Calendar** (✅ DONE 2026-03-05)                                                                                                                                                                                    |
+| ~~**BUG-1449**~~     | **P1**      | ✅ **KDE widget notification barrage + popup dismiss + nanny task selection** (✅ DONE 2026-03-05)                                                                                                                                                                                                                |
+| ~~**TASK-1434**~~    | **P0**      | ✅ **Calendar drag-to-create — click and drag on time slots to create a new task** (✅ DONE 2026-03-03)                                                                                                                                                                                                           |
+| ~~**TASK-1433**~~    | **P0**      | ✅ **Right-click task context menu UX overhaul — reduce bloat, fix hierarchy, progressive disclosure** (✅ DONE 2026-03-03)                                                                                                                                                                                       |
+| ~~**BUG-1432**~~     | **P1**      | ✅ **Overdue tasks display today's date instead of actual due date** (✅ DONE 2026-03-05)                                                                                                                                                                                                                         |
+| ~~**TASK-1427**~~    | **P0**      | ✅ **Offline: merge write queue into read cache on offline load** (✅ DONE 2026-03-04)                                                                                                                                                                                                                            |
+| ~~**TASK-1426**~~    | **P0**      | ✅ **Offline: auth grace period — keep expired session for local ops** (✅ DONE 2026-03-04)                                                                                                                                                                                                                       |
+| ~~**TASK-1425**~~    | **P0**      | ✅ **Offline: fast startup — skip Supabase when navigator.onLine=false** (✅ DONE 2026-03-04)                                                                                                                                                                                                                     |
+| **TASK-1422**        | **P0**      | 🔄 **Full offline mobile support — PWA works E2E without network** (🔄 IN PROGRESS 2026-03-02)                                                                                                                                                                                                                    |
+| ~~**TASK-1421**~~    | **P0**      | ✅ **Investigate & fix sluggish localhost performance** (✅ DONE 2026-03-02)                                                                                                                                                                                                                                      |
+| ~~**BUG-1416**~~     | **P0**      | ✅ **Calendar inbox "today" filter shows wrong tasks — dueDate format mismatch (ISO vs YYYY-MM-DD)** (✅ DONE 2026-03-13)                                                                                                                                                                                         |
+| ~~**BUG-1415**~~     | **P0**      | ✅ **Catalog drag doesn't move task to target group — drops on task rows make subtasks instead of transferring between groups** (✅ DONE 2026-02-25)                                                                                                                                                              |
+| ~~**TASK-1405**~~    | **P1**      | ✅ **Replace LLM Distribution with Deterministic Algorithm in Weekly Plan** (✅ DONE 2026-03-13)                                                                                                                                                                                                                  |
+| ~~**TASK-1403**~~    | **P2**      | ✅ **Recurring Tasks — Clone-on-Complete with recurrence_rule column** (✅ DONE 2026-02-22)                                                                                                                                                                                                                       |
+| ~~**TASK-1402**~~    | **P1**      | ✅ **Decouple canvas/calendar inbox filtering — isInInbox now user-controlled, placement uses position-based filtering** (✅ DONE 2026-02-22)                                                                                                                                                                     |
+| ~~**TASK-1387**~~    | **P1**      | **✅ Centralize all AI model references to single source of truth** (✅ DONE 2026-02-21)                                                                                                                                                                                                                          |
+| ~~**TASK-1372**~~    | **P1**      | **✅ Calendar delete should warn tasks will return to inbox — left-click + Delete on calendar needs confirmation dialog** (✅ DONE 2026-03-13)                                                                                                                                                                    |
+| ~~**BUG-1371**~~     | **P0**      | ✅ **Connected canvas node persists after deletion — deleting a node with edges leaves it visible on canvas** (✅ DONE 2026-02-20)                                                                                                                                                                                |
+| ~~**BUG-1370**~~     | **P0**      | ✅ **Canvas inbox drag broken — can't drag tasks from canvas inbox to canvas (Tauri + possibly local dev)** (✅ DONE 2026-02-20)                                                                                                                                                                                  |
+| ~~**BUG-1369**~~     | **P0**      | ✅ **Canvas tasks persist after marked done — completed tasks remain visible on canvas instead of being removed** (✅ DONE 2026-02-21)                                                                                                                                                                            |
+| ~~**TASK-1345**~~    | **P2**      | ✅ **Perfect Hebrew Whisper Transcription on Mobile PWA — language param, Hebrew prompt, temperature=0, iOS Safari .m4a fix, verbose_json confidence filtering**                                                                                                                                                  |
+| ~~**TASK-1344**~~    | **P2**      | ✅ **AI Feature Parity Desktop→PWA + API Pricing/Usage Settings Sync — code done, useAISync.ts implemented**                                                                                                                                                                                                      |
+| **FEATURE-1345**     | **P2**      | **🔄 Capacitor Android App — wrap Vue PWA for Play Store distribution (config + build scaffold done)**                                                                                                                                                                                                            |
+| ~~**TASK-1339**~~    | **P0**      | ✅ **Tasks must persist over refresh in guest mode** (✅ DONE 2026-02-17)                                                                                                                                                                                                                                         |
+| ~~**BUG-1340**~~     | **P0**      | ✅ **Kanban drag-drop broken — Vue 3 $attrs boolean bug (forceFallback/delayOnTouchOnly passed as empty string)**                                                                                                                                                                                                 |
+| ~~**TASK-1327**~~    | **P0**      | ✅ **Centralized LLM Model Registry — single source of truth for all AI model lists, updating one place updates all dropdowns** (✅ DONE 2026-02-17)                                                                                                                                                              |
+| ~~**TASK-1324**~~    | **P0**      | ✅ **URL Display Truncation — shorten long pasted URLs/links across all views (CSS ellipsis, full URL preserved)** (✅ DONE 2026-02-17)                                                                                                                                                                           |
+| ~~**BUG-1333**~~     | **P0**      | ✅ **Calendar inbox shows only 2 tasks — stale auto-instances + wrong filter source**                                                                                                                                                                                                                             |
+| ~~**TASK-1323**~~    | **P1**      | ✅ **Console Log Cleanup — reduce verbose/debug logging noise across app** (✅ DONE 2026-02-14)                                                                                                                                                                                                                   |
+| ~~**TASK-1322**~~    | **P1**      | ✅ **Calendar Month View Fixes — remove dueDate pollution, vertical event layout, drag-move fix, hover tooltips** (✅ DONE 2026-02-17)                                                                                                                                                                            |
+| ~~**TASK-1319**~~    | **P0**      | ✅ **Keyboard Shortcuts Help Panel — ? button + Shift+? shortcut, organized categories, blurred backdrop** (✅ DONE 2026-02-14)                                                                                                                                                                                   |
+| ~~**TASK-1320**~~    | **P1**      | ✅ **Quick Sort UX Redesign — Edit-in-Place with Explicit Advancement (pin-by-ID, Save button, swipe swap)**                                                                                                                                                                                                      |
+| ~~**BUG-1309**~~     | **P0**      | ✅ **Remove corruption overlay, arena, and all gamification UI — visual noise and disconnected UX**                                                                                                                                                                                                               |
+| ~~**BUG-1301**~~     | **P0**      | ✅ **Sync indicator stuck on "Syncing 1 changes..." — orphaned 'syncing' ops in IndexedDB never recover**                                                                                                                                                                                                         |
+| ~~TASK-1215~~        | P0          | ✅ Persist full UI state across restarts (filters, view prefs, canvas toggles) via useStorage                                                                                                                                                                                                                     |
+| ~~TASK-1246~~        | P2          | ✅ Multi-select filters for inbox (priority, project, duration) with checkboxes + persistence                                                                                                                                                                                                                     |
+| ~~TASK-1247~~        | P2          | ✅ Add "Next 3 Days" filter to inbox (canvas icon bar + unified inbox dropdown)                                                                                                                                                                                                                                   |
+| ~~TASK-1248~~        | P1          | ✅ Design token audit & cleanup — all 7 phases complete, ~100+ violations fixed across 30 files                                                                                                                                                                                                                   |
+| ~~TASK-1249~~        | P0          | ✅ Codebase Hygiene Audit — placeholders, hardcoded values, debug leftovers (33/33 sub-tasks done)                                                                                                                                                                                                                |
+| ~~TASK-1250~~        | P0          | ✅ Fix API key storage — removed plaintext localStorage (proxy handles keys server-side)                                                                                                                                                                                                                          |
+| ~~TASK-1251~~        | P0          | ✅ Fix direct API calls bypassing proxy (AIChatPanel.vue)                                                                                                                                                                                                                                                         |
+| ~~TASK-1252~~        | P0          | ✅ Remove/gate /keyboard-test debug route (ships without auth)                                                                                                                                                                                                                                                    |
+| ~~TASK-1253~~        | P0          | ✅ Gate window.\_\_flowstate_tauri_debug behind DEV                                                                                                                                                                                                                                                               |
+| ~~TASK-1254~~        | P0          | ✅ Fix CORS wildcard on Edge Functions — restricted to allowed origins                                                                                                                                                                                                                                            |
+| ~~TASK-1255~~        | P0          | ✅ Fix WelcomeModal — removed dead buttons and stubbed stats                                                                                                                                                                                                                                                      |
+| ~~TASK-1256~~        | P0          | ✅ Fix stale flowstate.app → in-theflow.com origins                                                                                                                                                                                                                                                               |
+| ~~TASK-1257~~        | P0          | ✅ Fix productionLogger — now uses Supabase session token                                                                                                                                                                                                                                                         |
+| ~~TASK-1258~~        | P1          | ✅ Replace httpbin.org with self-hosted endpoint                                                                                                                                                                                                                                                                  |
+| ~~TASK-1259~~        | P1          | ✅ Remove unconditional %c[DEBUG] styled canvas log                                                                                                                                                                                                                                                               |
+| ~~TASK-1260~~        | P1          | ✅ Remove ~30 bug-specific debug tags across 10 files                                                                                                                                                                                                                                                             |
+| ~~TASK-1261~~        | P1          | ✅ Fix silent no-op stubs — now throw or warn                                                                                                                                                                                                                                                                     |
+| ~~TASK-1262~~        | P1          | ✅ Re-enable CI lint & unit tests                                                                                                                                                                                                                                                                                 |
+| ~~TASK-1263~~        | P1          | ✅ Add Open Graph + Twitter Card meta tags                                                                                                                                                                                                                                                                        |
+| ~~TASK-1264~~        | P1          | ✅ Update stale AI model references                                                                                                                                                                                                                                                                               |
+| ~~TASK-1265~~        | P1          | ✅ Fix AI proxy health check consuming real API tokens (OPTIONS request)                                                                                                                                                                                                                                          |
+| ~~TASK-1266~~        | P2          | ✅ CSS design token migration — ~305 values migrated in 20+ files, remaining violations still exist                                                                                                                                                                                                               |
+| ~~TASK-1267~~        | P2          | ✅ Standardize localStorage key prefixes                                                                                                                                                                                                                                                                          |
+| ~~TASK-1268~~        | P2          | ✅ Extract magic timeout numbers to named constants (src/config/timing.ts)                                                                                                                                                                                                                                        |
+| ~~TASK-1269~~        | P2          | ✅ Create centralized src/config/urls.ts                                                                                                                                                                                                                                                                          |
+| ~~TASK-1270~~        | P2          | ✅ Fix hardcoded i18n defaults (ui.ts, SignupForm.vue)                                                                                                                                                                                                                                                            |
+| ~~TASK-1271~~        | P2          | ✅ Improve Cyberflow empty states (terse text)                                                                                                                                                                                                                                                                    |
+| ~~TASK-1272~~        | P2          | ✅ Mobile design token compliance                                                                                                                                                                                                                                                                                 |
+| ~~TASK-1273~~        | P2          | ✅ Update PWA manifest description                                                                                                                                                                                                                                                                                |
+| ~~TASK-1274~~        | P2          | ✅ Migrate 'uncategorized' sentinel to constant                                                                                                                                                                                                                                                                   |
+| ~~TASK-1275~~        | P3          | ✅ Remove 5 obsolete verification scripts                                                                                                                                                                                                                                                                         |
+| ~~TASK-1276~~        | P3          | ✅ Remove Storybook PLACEHOLDER duplicate key                                                                                                                                                                                                                                                                     |
+| ~~TASK-1277~~        | P3          | ✅ Standardize z-index usage (~60 values in 50 files)                                                                                                                                                                                                                                                             |
+| ~~TASK-1278~~        | P3          | ✅ Standardize font-size usage (~100 values in 32 files)                                                                                                                                                                                                                                                          |
+| ~~TASK-1279~~        | P3          | ✅ Add missing package.json metadata fields                                                                                                                                                                                                                                                                       |
+| ~~TASK-1280~~        | P3          | ✅ Add copyright to Tauri bundle config                                                                                                                                                                                                                                                                           |
+| ~~TASK-1281~~        | P3          | ✅ Adopt build-time console.log stripping (esbuild pure config)                                                                                                                                                                                                                                                   |
+| ~~TASK-1282~~        | P3          | ✅ Stop filtering console.error/warn in consoleFilter.ts                                                                                                                                                                                                                                                          |
+| ~~FEATURE-1200~~     | P2          | ✅ Quick Add full RTL support + auto-expand for long tasks (✅ DONE 2026-02-27)                                                                                                                                                                                                                                   |
+| ~~FEATURE-1201~~     | P2          | ✅ Single-screen welcome modal — research-backed, auth-aware, replaces WelcomeModal                                                                                                                                                                                                                               |
+| ~~FEATURE-1202~~     | P1          | ✅ Google Auth sign-in (OAuth)                                                                                                                                                                                                                                                                                    |
+| ~~TASK-1283~~        | P1          | ✅ Google Calendar plugin — show events in Calendar view (depends on FEATURE-1202)                                                                                                                                                                                                                                |
+| ~~**TASK-1284**~~    | **P0**      | ✅ **Add quick task creation to KDE Plasma widget (monorepo)**                                                                                                                                                                                                                                                    |
+| ~~**BUG-1793**~~     | **P2**      | ✅ **KDE widget "Today" filter reset on reload (todayOnly not persisted)**                                                                                                                                                                                                                                        |
+| ~~**BUG-1794**~~     | **P1**      | ✅ **Electron app flickers signed-out then back in on window focus changes**                                                                                                                                                                                                                                      |
+| TASK-292             | P3          | Canvas connection edge visuals (animations, gradients)                                                                                                                                                                                                                                                            |
+| TASK-310             | P2          | Automated SQL backup to cloud storage                                                                                                                                                                                                                                                                             |
+| TASK-293             | P2          | Canvas viewport - center on Today + persist position                                                                                                                                                                                                                                                              |
+| TASK-313             | P2          | Canvas multi-select batch status change                                                                                                                                                                                                                                                                           |
+| TASK-179             | P2          | Refactor TaskEditModal.vue (~1800 lines)                                                                                                                                                                                                                                                                          |
+| TASK-123             | P2          | Consolidate network status implementations                                                                                                                                                                                                                                                                        |
+| TASK-139             | P3          | Undo state persistence to localStorage                                                                                                                                                                                                                                                                            |
+| TASK-125             | P3          | Remove debug console.log (reduced scope)                                                                                                                                                                                                                                                                          |
+| TASK-065             | P3          | GitHub release (remove hardcoded creds, Docker guide)                                                                                                                                                                                                                                                             |
+| ~~TASK-079~~         | P3          | ✅ ~~Tauri mobile (Android/iOS)~~ — Archived: Tauri replaced by Electron (TASK-1715). Mobile strategy TBD.                                                                                                                                                                                                        |
+| TASK-157             | P3          | ADHD-Friendly view redesign (Phases 2-4 pending)                                                                                                                                                                                                                                                                  |
+| TASK-1120            | P2          | 🔄 Deep UX/UI analysis and enhancement of catalog views                                                                                                                                                                                                                                                           |
+| ~~**FEATURE-1443**~~ | **P0**      | ✅ ~~**Morning Dashboard — removed route/auto-redirect (Morning Ritual banner kept)**~~ (✅ DONE 2026-03-18)                                                                                                                                                                                                      |
+| **TASK-1464**        | **P1**      | **Break Timer On-Screen Overlay — full-screen pomodoro overlay during break with countdown, minimize/stop/+5min controls, glass morphism**                                                                                                                                                                        |
+| ~~**TASK-1465**~~    | **P2**      | ✅ ~~**AI Features Audit — review all AI features, decide what to keep vs ditch (broken/no value)**~~                                                                                                                                                                                                             |
+| ~~**TASK-1466**~~    | **P2**      | ✅ **Start task without resetting timer — allow switching active task while timer runs (web + pinned), add reset option to KDE widget**                                                                                                                                                                           |
+| ~~**BUG-1462**~~     | **P1**      | ✅ **Notification spam — clicking any action (Start Work/Break/+5min) should dismiss ALL notification types** (✅ DONE)                                                                                                                                                                                           |
+| ~~**TASK-1469**~~    | **P2**      | ✅ **AI Chat anti-spam fix — fix ReAct loop spam, limit tool calls per turn, rewrite system prompt to be concise, add output truncation**                                                                                                                                                                         |
+| **TASK-1470**        | **P2**      | **Task Assist UX resurface — Ctrl+. shortcut hint, smart inline hint, 28-test AI effectiveness suite**                                                                                                                                                                                                            | 👀 REVIEW |
+| ~~**BUG-1467**~~     | **P2**      | ~~**Tasks auto-appear on calendar at 9:00 AM when dragged to Board date columns — moveTaskToDate created calendar instances instead of only setting dueDate**~~ (✅ DONE 2026-03-07)                                                                                                                              |
+| **TASK-1473**        | **P0**      | **KDE Widget: Add task search/filter — search box to find tasks without scrolling through long lists**                                                                                                                                                                                                            |
+| ~~**TASK-1475**~~    | **P1**      | ~~**KDE Widget: Nanny popup show recent tasks — show commonly used tasks alongside pinned tasks, not only pinned**~~ (✅ DONE 2026-03-07)                                                                                                                                                                         |
+| **TASK-1476**        | **P2**      | **Catalog: drag tasks to collapsed project groups — allow dropping on closed categories, remove darkening overlay during drag**                                                                                                                                                                                   |
+| ~~**TASK-1478**~~    | **P1**      | ~~**KDE Widget: Unify dropdown & overlay styling — replace PlasmaComponents.ComboBox with QQC2 glass morphism popups for Sort/Filter; replace Kirigami.Icon with styled emoji in fullscreen overlay**~~ (✅ DONE 2026-03-07)                                                                                      |
+| ~~**BUG-1481**~~     | **P2**      | ~~**Calendar inbox hides canvas tasks with non-canvasOrder sorts — isInInbox gate too restrictive**~~ (✅ DONE 2026-03-07)                                                                                                                                                                                        |
+| ~~**TASK-1480**~~    | **P2**      | ~~**Remove beads dependency — MASTER_PLAN.md as single source of truth, delete .beads/, sync scripts, hooks, update docs**~~ (✅ DONE 2026-03-09)                                                                                                                                                                 |
+| ~~**BUG-1483**~~     | **P2**      | ~~**PWA Today mode shows overdue tasks mixed with today's tasks without visual separation — add distinct Overdue section**~~ (✅ DONE 2026-03-09)                                                                                                                                                                 |
+| ~~**BUG-1492**~~     | **P2**      | **✅ Canvas position drift when dragging multiple tasks consecutively — race between lock release, settling state, and realtime echoes** (✅ DONE 2026-03-13)                                                                                                                                                     |
+| ~~**BUG-1493**~~     | **P2**      | ~~**Catalog view: collapsed categories reset on navigation, expand/collapse buttons broken, cross-group drag regression**~~ (✅ DONE 2026-03-09)                                                                                                                                                                  |
+| ~~**TASK-1492**~~    | **P2**      | ~~**Fix Due Date kanban view — flat layout (no per-project rows) + dateless tasks route to No Date column**~~ (✅ DONE 2026-03-09)                                                                                                                                                                                |
+| ~~**BUG-1503**~~     | **P2**      | ~~**Tauri desktop: tasks not updating when adding/deleting on canvas or canvas inbox — WebKitGTK dataTransfer.getData() returns empty, needed dragData singleton fallback**~~ (✅ DONE 2026-03-12)                                                                                                                |
+| ~~**TASK-1507**~~    | **P2**      | ~~**Quick Sort swipe UX polish — center approval notification with fun animation + add "nothing set" reminder popup on accidental swipe**~~ (✅ DONE 2026-03-14)                                                                                                                                                  |
+| ~~**TASK-1518**~~    | **P2**      | ✅ **Catalogue view: context menu can't dismiss by clicking away + category drag lag** (✅ DONE 2026-03-13)                                                                                                                                                                                                       |
+| ~~**BUG-1519**~~     | **P2**      | ~~**Date picker calendar blurry — stacked backdrop-filter blur on context menu + submenu + NDatePicker panel**~~ (✅ DONE 2026-03-13)                                                                                                                                                                             |
+| **TASK-1520**        | **P2**      | **Add recurring indicator badge to task cards (Kanban, Canvas, Table views)** (✅ DONE 2026-03-14)                                                                                                                                                                                                                |
+| **~~TASK-1525~~**    | **P1**      | **Recurring task delete dialog — Skip/Stop/Cancel with global recurrence-aware delete** (✅ DONE 2026-03-14)                                                                                                                                                                                                      |
+| ~~**TASK-1521**~~    | **P1**      | **Calendar day/week view drag deferred to mouseup — preview-then-commit pattern, adds undo support** (✅ DONE 2026-03-24)                                                                                                                                                                                         |
+| ~~**TASK-1522**~~    | **P2**      | ~~**Blank screen on refresh — add loading animation to index.html**~~ (✅ DONE 2026-03-14)                                                                                                                                                                                                                        |
+| **TASK-1523**        | **P1**      | **Undo/sync race fix — cancel stale sync queue ops when undo/redo restores task create/delete** (✅ DONE 2026-03-14)                                                                                                                                                                                              |
+| **~~TASK-1524~~**    | **P1**      | **Migrate old `recurrence` field to new `recurrenceRule` format on app init** (✅ DONE)                                                                                                                                                                                                                           |
+| **IDEA-1482**        | **P3**      | **Try CodeGraphContext for codebase graph analysis — Python tool that indexes code into a graph DB for relationship queries (callers/callees/call chains) across 130+ composables. Could help navigate complex canvas/ dependencies. Repo: github.com/CodeGraphContext/CodeGraphContext**                         |
+| ~~**BUG-1526**~~     | **P1**      | ~~**Push notification click actions dead — SW posts NAVIGATE_TO_TASK/NAVIGATE_TO/SNOOZE_NOTIFICATION but no client handler existed; added SW message listener in useAppInitialization.ts**~~ (✅ DONE 2026-03-14)                                                                                                 |
+| ~~**TASK-1527**~~    | **P2**      | ~~**Remove entire gamification system (XP, achievements, challenges, shop, Cyberflow RPG) — ~23,700 lines removed, DB tables left dormant**~~ (✅ DONE 2026-03-14)                                                                                                                                                |
+| ~~**TASK-1531**~~    | **P2**      | ~~**KDE dock: show current scheduled calendar block next to pomodoro timer — always-visible context of what's planned now, with toggle in KDE widget settings**~~ (✅ DONE)                                                                                                                                       |
+| **TASK-1532**        | **P1**      | **"Done for Now" vs "Done Fully" for recurring tasks — Hybrid clone model: "done for now" creates completion record + advances original to next occurrence; "done fully" stops recurrence (current behavior). DoneToggle click = done-for-now for recurring, context menu offers both options.** (🔄 IN PROGRESS) |
+| **FEATURE-1759**     | **P1**      | **📋 Unified Knowledge + Custom Lists roadmap foundation**                                                                                                                                                                                                                                                        |
+| **TASK-1760**        | **P1**      | **📋 Content taxonomy: task, note, list + shared visibility rules**                                                                                                                                                                                                                                               |
+| **TASK-1761**        | **P1**      | **📋 Catalog -> Knowledge Hub MVP with type filters and capture entry**                                                                                                                                                                                                                                           |
+| **TASK-1762**        | **P1**      | **📋 Note/Page MVP using task-based content, markdown, tags, attachments**                                                                                                                                                                                                                                        |
+| **TASK-1763**        | **P1**      | **📋 Custom Lists MVP: lightweight items, groups, reorder, check off**                                                                                                                                                                                                                                            |
+| **TASK-1764**        | **P2**      | **📋 Recurring list templates and reset/reuse workflow**                                                                                                                                                                                                                                                          |
+| **TASK-1765**        | **P1**      | **📋 Unified search across tasks, notes, and lists**                                                                                                                                                                                                                                                              |
+| **TASK-1766**        | **P2**      | **📋 Promote note or list item into full task flow**                                                                                                                                                                                                                                                              |
+| **TASK-1767**        | **P2**      | **📋 AI can read notes/lists and turn them into useful actions**                                                                                                                                                                                                                                                  |
+| ~~**TASK-1768**~~    | **P2**      | ✅ **Persist mini-canvas planning notes for knowledge workflows** (✅ DONE (2026-05-02))                                                                                                                                                                                                                          |
+| **TASK-1769**        | **P3**      | **📋 Lightweight links/backlinks between notes and tasks**                                                                                                                                                                                                                                                        |
+| ~~**TASK-1533**~~    | **P0**      | ✅ **Epic: Workspace Collaboration — multi-user workspace layer for FlowState (26 sub-tasks across 4 phases)** (✅ DONE (2026-04-02))                                                                                                                                                                             |
+| ~~**TASK-1534**~~    | **P0**      | **DB migration: Create workspace tables (workspaces, workspace_members, workspace_invites, task_comments, workspace_activity)** (✅ DONE (2026-03-17))                                                                                                                                                            |
+| ~~**TASK-1535**~~    | **P0**      | **DB migration: Add workspace_id to tasks, projects, groups + assigned_to on tasks** (✅ DONE (2026-03-17))                                                                                                                                                                                                       |
+| ~~**TASK-1536**~~    | **P0**      | **DB migration: SECURITY DEFINER function user_workspace_ids() for RLS performance** (✅ DONE (2026-03-17))                                                                                                                                                                                                       |
+| ~~**TASK-1537**~~    | **P0**      | **DB migration: Rewrite 32+ RLS policies to be workspace-aware** (✅ DONE (2026-03-17))                                                                                                                                                                                                                           |
+| ~~**TASK-1538**~~    | **P0**      | **DB migration: Add new tables to supabase_realtime publication** (✅ DONE (2026-03-17))                                                                                                                                                                                                                          |
+| ~~**TASK-1539**~~    | **P1**      | **Pinia store: workspaces.ts — activeWorkspaceId, CRUD, switchWorkspace** (✅ DONE (2026-03-17))                                                                                                                                                                                                                  |
+| ~~**TASK-1540**~~    | **P1**      | **Update supabaseMappers.ts with workspace_id** (✅ DONE (2026-03-17))                                                                                                                                                                                                                                            |
+| ~~**TASK-1541**~~    | **P1**      | ✅ **Update useTaskFiltering.ts with workspace filter** (✅ DONE (2026-04-01))                                                                                                                                                                                                                                    |
+| ~~**TASK-1542**~~    | **P1**      | **Update taskPersistence.ts + useTasksDatabase.ts for workspace context** (✅ DONE (2026-03-17))                                                                                                                                                                                                                  |
+| ~~**TASK-1543**~~    | **P1**      | **Update projects.ts store for workspace filtering** (✅ DONE (2026-03-17))                                                                                                                                                                                                                                       |
+| ~~**TASK-1544**~~    | **P1**      | **Update canvas store (groups) for workspace filtering** (✅ DONE (2026-03-17))                                                                                                                                                                                                                                   |
+| ~~**TASK-1545**~~    | **P1**      | **UI: Workspace switcher component in sidebar** (✅ DONE (2026-03-17))                                                                                                                                                                                                                                            |
+| ~~**TASK-1546**~~    | **P1**      | **Update auth.ts: fetch workspaces on login** (✅ DONE (2026-03-17))                                                                                                                                                                                                                                              |
+| ~~**TASK-1547**~~    | **P0**      | **Offline sync queue: inject workspace_id into queued payloads** (✅ DONE (2026-03-17))                                                                                                                                                                                                                           |
+| ~~**TASK-1548**~~    | **P0**      | **Realtime subscriptions: workspace_id filtering + workspace switch handling** (✅ DONE (2026-03-17))                                                                                                                                                                                                             |
+| ~~**TASK-1549**~~    | **P0**      | **Cross-tab sync: add workspaceId to protocol** (✅ DONE (2026-03-17))                                                                                                                                                                                                                                            |
+| ~~**TASK-1550**~~    | **P1**      | ✅ **Guest mode isolation for workspace feature** (✅ DONE (2026-04-01))                                                                                                                                                                                                                                          |
+| ~~**TASK-1551**~~    | **P1**      | **Invite flow: generate link, accept via Edge Function, /#/invite/:token route** (✅ DONE (2026-03-17))                                                                                                                                                                                                           |
+| ~~**TASK-1552**~~    | **P1**      | ✅ **Task assignment UI: assigned_to dropdown, avatar badges, filters** (✅ DONE (2026-04-01))                                                                                                                                                                                                                    |
+| ~~**TASK-1553**~~    | **P1**      | **Task comments: CRUD + realtime + UI** (✅ DONE (2026-03-31))                                                                                                                                                                                                                                                    |
+| ~~**TASK-1554**~~    | **P2**      | **Activity feed: logging + display** (✅ DONE (2026-04-01))                                                                                                                                                                                                                                                       |
+| ~~**TASK-1555**~~    | **P1**      | **Partner-friendly UX: hide complexity for single-workspace users** (✅ DONE (2026-04-01))                                                                                                                                                                                                                        |
+| ~~**TASK-1556**~~    | **P1**      | **Hebrew translations for all workspace strings** (✅ DONE (2026-03-17))                                                                                                                                                                                                                                          |
+| ~~**TASK-1557**~~    | **P2**      | ✅ **Member management UI** (✅ DONE (2026-04-02))                                                                                                                                                                                                                                                                |
+| ~~**TASK-1558**~~    | **P2**      | **Empty states for workspaces** (✅ DONE (2026-04-01))                                                                                                                                                                                                                                                            |
+| ~~**TASK-1559**~~    | **P3**      | ✅ **Member presence (v2 nice-to-have)** (✅ DONE (2026-04-02))                                                                                                                                                                                                                                                   |
 
 ---
 
@@ -8285,50 +8956,50 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ### Phase 1: Foundation
 
-| ID | Priority | Description | Status | Depends On |
-|----|----------|-------------|--------|------------|
-| ~~**TASK-1533**~~ | **P0** | ✅ **Epic: Workspace Collaboration — tracking parent for all sub-tasks** | ✅ DONE (2026-04-02) | — |
-| ~~**TASK-1534**~~ | **P0** | **DB migration: Create workspaces, workspace_members, workspace_invites, task_comments, workspace_activity tables** | ✅ DONE (2026-03-17) | — |
-| ~~**TASK-1535**~~ | **P0** | **DB migration: Add workspace_id (NULLABLE) to tasks, projects, groups tables + assigned_to on tasks** | ✅ DONE (2026-03-17) | TASK-1534 |
-| ~~**TASK-1536**~~ | **P0** | **DB migration: Create `user_workspace_ids()` SECURITY DEFINER function for RLS performance** | ✅ DONE (2026-03-17) | TASK-1534 |
-| ~~**TASK-1537**~~ | **P0** | **DB migration: Rewrite ALL RLS policies to be workspace-aware (32+ policies across 8+ tables). Must handle workspace_id IS NULL for personal tasks. TEST AGAINST PRODUCTION DATA COPY.** | ✅ DONE (2026-03-17) | TASK-1535, TASK-1536 |
-| ~~**TASK-1538**~~ | **P0** | **DB migration: Add workspace_id to supabase_realtime publication for task_comments and workspace_activity** | ✅ DONE (2026-03-17) | TASK-1534 |
-| ~~**TASK-1539**~~ | **P1** | **Pinia store: Create src/stores/workspaces.ts — activeWorkspaceId, workspaces[], members[], switchWorkspace(), createWorkspace(), inviteMember(), acceptInvite(), removeMember()** | ✅ DONE (2026-03-17) | TASK-1537 |
-| ~~**TASK-1540**~~ | **P1** | **Update supabaseMappers.ts: Add workspace_id to toSupabaseTask(), toSupabaseProject(), toSupabaseGroup() mappers** | ✅ DONE (2026-03-17) | TASK-1535 |
-| ~~**TASK-1541**~~ | **P1** | ✅ **Update useTaskFiltering.ts: Add workspace_id filter predicate so board/canvas/calendar/inbox respect active workspace** | ✅ DONE (2026-04-01) | TASK-1539, TASK-1540 |
-| ~~**TASK-1542**~~ | **P1** | **Update taskPersistence.ts + useTasksDatabase.ts: Pass workspace context to fetchTasks, add .eq('workspace_id', ...) filter** | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
-| ~~**TASK-1543**~~ | **P1** | **Update projects.ts store: Filter projects by activeWorkspaceId, same pattern as tasks** | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
-| ~~**TASK-1544**~~ | **P1** | **Update canvas store (groups): Filter groups by activeWorkspaceId, validate workspace match on parentId assignment** | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
-| ~~**TASK-1545**~~ | **P1** | **UI: Workspace switcher component in sidebar — dropdown with "Personal" + shared workspaces + "Create Workspace" action** | ✅ DONE (2026-03-17) | TASK-1539 |
-| ~~**TASK-1546**~~ | **P1** | **Update auth.ts: On login, fetch workspaces via workspace_members join, restore last-used workspace from localStorage** | ✅ DONE (2026-03-17) | TASK-1539 |
+| ID                | Priority | Description                                                                                                                                                                               | Status               | Depends On           |
+| ----------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------- |
+| ~~**TASK-1533**~~ | **P0**   | ✅ **Epic: Workspace Collaboration — tracking parent for all sub-tasks**                                                                                                                  | ✅ DONE (2026-04-02) | —                    |
+| ~~**TASK-1534**~~ | **P0**   | **DB migration: Create workspaces, workspace_members, workspace_invites, task_comments, workspace_activity tables**                                                                       | ✅ DONE (2026-03-17) | —                    |
+| ~~**TASK-1535**~~ | **P0**   | **DB migration: Add workspace_id (NULLABLE) to tasks, projects, groups tables + assigned_to on tasks**                                                                                    | ✅ DONE (2026-03-17) | TASK-1534            |
+| ~~**TASK-1536**~~ | **P0**   | **DB migration: Create `user_workspace_ids()` SECURITY DEFINER function for RLS performance**                                                                                             | ✅ DONE (2026-03-17) | TASK-1534            |
+| ~~**TASK-1537**~~ | **P0**   | **DB migration: Rewrite ALL RLS policies to be workspace-aware (32+ policies across 8+ tables). Must handle workspace_id IS NULL for personal tasks. TEST AGAINST PRODUCTION DATA COPY.** | ✅ DONE (2026-03-17) | TASK-1535, TASK-1536 |
+| ~~**TASK-1538**~~ | **P0**   | **DB migration: Add workspace_id to supabase_realtime publication for task_comments and workspace_activity**                                                                              | ✅ DONE (2026-03-17) | TASK-1534            |
+| ~~**TASK-1539**~~ | **P1**   | **Pinia store: Create src/stores/workspaces.ts — activeWorkspaceId, workspaces[], members[], switchWorkspace(), createWorkspace(), inviteMember(), acceptInvite(), removeMember()**       | ✅ DONE (2026-03-17) | TASK-1537            |
+| ~~**TASK-1540**~~ | **P1**   | **Update supabaseMappers.ts: Add workspace_id to toSupabaseTask(), toSupabaseProject(), toSupabaseGroup() mappers**                                                                       | ✅ DONE (2026-03-17) | TASK-1535            |
+| ~~**TASK-1541**~~ | **P1**   | ✅ **Update useTaskFiltering.ts: Add workspace_id filter predicate so board/canvas/calendar/inbox respect active workspace**                                                              | ✅ DONE (2026-04-01) | TASK-1539, TASK-1540 |
+| ~~**TASK-1542**~~ | **P1**   | **Update taskPersistence.ts + useTasksDatabase.ts: Pass workspace context to fetchTasks, add .eq('workspace_id', ...) filter**                                                            | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
+| ~~**TASK-1543**~~ | **P1**   | **Update projects.ts store: Filter projects by activeWorkspaceId, same pattern as tasks**                                                                                                 | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
+| ~~**TASK-1544**~~ | **P1**   | **Update canvas store (groups): Filter groups by activeWorkspaceId, validate workspace match on parentId assignment**                                                                     | ✅ DONE (2026-03-17) | TASK-1539, TASK-1540 |
+| ~~**TASK-1545**~~ | **P1**   | **UI: Workspace switcher component in sidebar — dropdown with "Personal" + shared workspaces + "Create Workspace" action**                                                                | ✅ DONE (2026-03-17) | TASK-1539            |
+| ~~**TASK-1546**~~ | **P1**   | **Update auth.ts: On login, fetch workspaces via workspace_members join, restore last-used workspace from localStorage**                                                                  | ✅ DONE (2026-03-17) | TASK-1539            |
 
 ### Phase 2: Sync Safety (CRITICAL — must be done before enabling workspaces)
 
-| ID | Priority | Description | Status | Depends On |
-|----|----------|-------------|--------|------------|
-| ~~**TASK-1547**~~ | **P0** | **Offline sync queue: Inject workspace_id into queued payloads in useSyncOrchestrator.ts. Defense-in-depth for ops created before migration (existing IndexedDB queue entries lack workspace_id)** | ✅ DONE (2026-03-17) | TASK-1540 |
-| ~~**TASK-1548**~~ | **P0** | **Realtime subscriptions: Update useRealtimeSubscription.ts to filter by workspace_id instead of user_id. Handle workspace switch (teardown old channel, create new). Add isWorkspaceSwitching flag to prevent reconnect logic from fighting intentional disconnects.** | ✅ DONE (2026-03-17) | TASK-1538, TASK-1539 |
-| ~~**TASK-1549**~~ | **P0** | **Cross-tab sync: Add workspaceId to CrossTabMessage and TaskOperation interfaces in useCrossTabSync.ts. Handler must ignore messages from different workspace. Broadcast workspace switch events.** | ✅ DONE (2026-03-17) | TASK-1539 |
-| ~~**TASK-1550**~~ | **P1** | ✅ **Guest mode isolation: Ensure workspace store returns empty/disabled state when !isAuthenticated. Verify migrateGuestData() targets personal workspace (NULL workspace_id) only.** | ✅ DONE (2026-04-01) | TASK-1539 |
+| ID                | Priority | Description                                                                                                                                                                                                                                                             | Status               | Depends On           |
+| ----------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------- |
+| ~~**TASK-1547**~~ | **P0**   | **Offline sync queue: Inject workspace_id into queued payloads in useSyncOrchestrator.ts. Defense-in-depth for ops created before migration (existing IndexedDB queue entries lack workspace_id)**                                                                      | ✅ DONE (2026-03-17) | TASK-1540            |
+| ~~**TASK-1548**~~ | **P0**   | **Realtime subscriptions: Update useRealtimeSubscription.ts to filter by workspace_id instead of user_id. Handle workspace switch (teardown old channel, create new). Add isWorkspaceSwitching flag to prevent reconnect logic from fighting intentional disconnects.** | ✅ DONE (2026-03-17) | TASK-1538, TASK-1539 |
+| ~~**TASK-1549**~~ | **P0**   | **Cross-tab sync: Add workspaceId to CrossTabMessage and TaskOperation interfaces in useCrossTabSync.ts. Handler must ignore messages from different workspace. Broadcast workspace switch events.**                                                                    | ✅ DONE (2026-03-17) | TASK-1539            |
+| ~~**TASK-1550**~~ | **P1**   | ✅ **Guest mode isolation: Ensure workspace store returns empty/disabled state when !isAuthenticated. Verify migrateGuestData() targets personal workspace (NULL workspace_id) only.**                                                                                  | ✅ DONE (2026-04-01) | TASK-1539            |
 
 ### Phase 3: Collaboration Features
 
-| ID | Priority | Description | Status | Depends On |
-|----|----------|-------------|--------|------------|
-| ~~**TASK-1551**~~ | **P1** | **Invite flow: Generate invite link (workspace_invites table), copy/share UI, route /#/invite/:token, accept-invite Edge Function (SECURITY DEFINER — must add user to workspace_members server-side, chicken-and-egg problem)** | ✅ DONE (2026-03-17) | TASK-1539 |
-| ~~**TASK-1552**~~ | **P1** | ✅ **Task assignment: Add assigned_to dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, "My tasks" / "All" / "Unassigned" filter** | ✅ DONE (2026-04-01) | TASK-1539, TASK-1551 |
-| ~~**TASK-1553**~~ | **P1** | **Task comments: CRUD for task_comments, real-time via Supabase Realtime, comment thread UI in task detail panel + simplified workspace edit modal** | ✅ DONE (2026-03-31) | TASK-1548 |
-| ~~**TASK-1554**~~ | **P2** | **Activity feed: Log writes to workspace_activity (task_created, task_completed, comment_added, member_joined), sidebar panel or view with feed UI** | ✅ DONE (2026-04-01) | TASK-1539 |
+| ID                | Priority | Description                                                                                                                                                                                                                      | Status               | Depends On           |
+| ----------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------- |
+| ~~**TASK-1551**~~ | **P1**   | **Invite flow: Generate invite link (workspace_invites table), copy/share UI, route /#/invite/:token, accept-invite Edge Function (SECURITY DEFINER — must add user to workspace_members server-side, chicken-and-egg problem)** | ✅ DONE (2026-03-17) | TASK-1539            |
+| ~~**TASK-1552**~~ | **P1**   | ✅ **Task assignment: Add assigned_to dropdown in task detail showing workspace members, avatar badge on Board/Kanban cards, "My tasks" / "All" / "Unassigned" filter**                                                          | ✅ DONE (2026-04-01) | TASK-1539, TASK-1551 |
+| ~~**TASK-1553**~~ | **P1**   | **Task comments: CRUD for task_comments, real-time via Supabase Realtime, comment thread UI in task detail panel + simplified workspace edit modal**                                                                             | ✅ DONE (2026-03-31) | TASK-1548            |
+| ~~**TASK-1554**~~ | **P2**   | **Activity feed: Log writes to workspace_activity (task_created, task_completed, comment_added, member_joined), sidebar panel or view with feed UI**                                                                             | ✅ DONE (2026-04-01) | TASK-1539            |
 
 ### Phase 4: Partner UX & Polish
 
-| ID | Priority | Description | Status | Depends On |
-|----|----------|-------------|--------|------------|
-| ~~**TASK-1555**~~ | **P1** | **Partner-friendly UX: Hide workspace switcher when user has exactly 1 workspace. Invite-only onboarding path (sign up → land directly in shared workspace). Auto-assign tasks to default workspace for single-workspace users.** | ✅ DONE (2026-04-01) | TASK-1545, TASK-1551 |
-| ~~**TASK-1556**~~ | **P1** | **Hebrew translations: Add workspaces namespace to he.json — workspace, members, invite, comments, activity feed, all new UI strings** | ✅ DONE (2026-03-17) | TASK-1545 |
-| ~~**TASK-1557**~~ | **P2** | ✅ **Member management UI: Remove member, transfer ownership, role display (owner/admin/member)** | ✅ DONE (2026-04-02) | TASK-1539 |
-| ~~**TASK-1558**~~ | **P2** | **Empty states: New workspace welcome, no tasks yet, no members yet, pending invite states** | ✅ DONE (2026-04-01) | TASK-1545 |
-| ~~**TASK-1559**~~ | **P3** | ✅ **Member presence: Show who's online in workspace using Supabase Realtime Presence (nice-to-have v2)** | ✅ DONE (2026-04-02) | TASK-1548 |
+| ID                | Priority | Description                                                                                                                                                                                                                       | Status               | Depends On           |
+| ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------- |
+| ~~**TASK-1555**~~ | **P1**   | **Partner-friendly UX: Hide workspace switcher when user has exactly 1 workspace. Invite-only onboarding path (sign up → land directly in shared workspace). Auto-assign tasks to default workspace for single-workspace users.** | ✅ DONE (2026-04-01) | TASK-1545, TASK-1551 |
+| ~~**TASK-1556**~~ | **P1**   | **Hebrew translations: Add workspaces namespace to he.json — workspace, members, invite, comments, activity feed, all new UI strings**                                                                                            | ✅ DONE (2026-03-17) | TASK-1545            |
+| ~~**TASK-1557**~~ | **P2**   | ✅ **Member management UI: Remove member, transfer ownership, role display (owner/admin/member)**                                                                                                                                 | ✅ DONE (2026-04-02) | TASK-1539            |
+| ~~**TASK-1558**~~ | **P2**   | **Empty states: New workspace welcome, no tasks yet, no members yet, pending invite states**                                                                                                                                      | ✅ DONE (2026-04-01) | TASK-1545            |
+| ~~**TASK-1559**~~ | **P3**   | ✅ **Member presence: Show who's online in workspace using Supabase Realtime Presence (nice-to-have v2)**                                                                                                                         | ✅ DONE (2026-04-02) | TASK-1548            |
 
 ### Key Architecture Decisions
 
@@ -8341,19 +9012,19 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 
 ### Risk Register
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| RLS policy rewrite (32+ policies) — wrong policy = data leakage or lockout | CRITICAL | Test against production data copy. Deploy schema-only first, let sync queue drain. |
-| Offline sync queue — existing IndexedDB ops lack workspace_id | HIGH | workspace_id NULLABLE + inject at processing time |
-| Realtime filter change — breaking for existing subscriptions | HIGH | Workspace switch tears down old channel cleanly |
-| Cross-tab workspace mismatch — Tab A workspace A, Tab B workspace B | MEDIUM | Add workspaceId to cross-tab protocol, ignore mismatches |
-| Invite chicken-and-egg — user can't join workspace they're not in | MEDIUM | Edge Function with service_role key |
-| Canvas parentId cross-workspace — task in workspace B references group in workspace A | LOW | App-level validation in drag handlers |
+| Risk                                                                                  | Severity | Mitigation                                                                         |
+| ------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------- |
+| RLS policy rewrite (32+ policies) — wrong policy = data leakage or lockout            | CRITICAL | Test against production data copy. Deploy schema-only first, let sync queue drain. |
+| Offline sync queue — existing IndexedDB ops lack workspace_id                         | HIGH     | workspace_id NULLABLE + inject at processing time                                  |
+| Realtime filter change — breaking for existing subscriptions                          | HIGH     | Workspace switch tears down old channel cleanly                                    |
+| Cross-tab workspace mismatch — Tab A workspace A, Tab B workspace B                   | MEDIUM   | Add workspaceId to cross-tab protocol, ignore mismatches                           |
+| Invite chicken-and-egg — user can't join workspace they're not in                     | MEDIUM   | Edge Function with service_role key                                                |
+| Canvas parentId cross-workspace — task in workspace B references group in workspace A | LOW      | App-level validation in drag handlers                                              |
 
 #### ~~BUG-1793~~: KDE widget "Today" filter reset on reload (✅ DONE)
 
 **Priority**: P2 | **Status**: ✅ DONE (2026-05-23) | **Depends On**: —
-**Description**: The widget's "Today" toggle (`todayOnly`) was a runtime-only QML property, not backed by `plasmoid.configuration`. It silently reset to `false` on every widget reload / plasmashell restart, so the list showed ALL non-done tasks (~59) instead of just tasks due today — appearing as a "completely different set" than the Electron app. The filter *logic* (`filterTasksForToday`/`taskMatchesToday`) was already correct and matches the app's `useSmartViews.isTodayTask` (verified against live production data: shows exactly the due-today tasks, overdue excluded by design).
+**Description**: The widget's "Today" toggle (`todayOnly`) was a runtime-only QML property, not backed by `plasmoid.configuration`. It silently reset to `false` on every widget reload / plasmashell restart, so the list showed ALL non-done tasks (~59) instead of just tasks due today — appearing as a "completely different set" than the Electron app. The filter _logic_ (`filterTasksForToday`/`taskMatchesToday`) was already correct and matches the app's `useSmartViews.isTodayTask` (verified against live production data: shows exactly the due-today tasks, overdue excluded by design).
 **Fix**: Added persisted `todayOnly` Bool key to `contents/config/main.xml`; initialize `property bool todayOnly: plasmoid.configuration.todayOnly` and write back on toggle in `main.qml`. Bumped widget `metadata.json` 1.1.0→1.1.1. Verified live via journal: Today-on fetch uses `limit=1000` + client filter and loads only the due-today count; choice now survives restarts.
 
 ---
@@ -8361,7 +9032,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 #### ~~BUG-1794~~: Electron app flickers signed-out then back in on window focus changes (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-05-23) | **Depends On**: —
-**Description**: On the Electron desktop app, the UI intermittently flashed the login screen and then re-signed-in a few seconds later — a transient flicker, not a real logout. Root cause: `useRealtimeSubscription.ts` called `auth.refreshSession()` *unconditionally* on every `visibilitychange → visible` (BUG-1182). Electron fires focus/visibility changes far more often than a browser tab (window focus/blur/occlusion, OS notifications), so this redundant refresh ran on top of Supabase `autoRefreshToken` + the scheduled refresh in `auth.ts`. The resulting auth-event churn produced spurious `SIGNED_OUT` events, and the UI reads `isAuthenticated = !!user.value` with no debounce, so it flashed logged-out until the next refresh recovered the session.
+**Description**: On the Electron desktop app, the UI intermittently flashed the login screen and then re-signed-in a few seconds later — a transient flicker, not a real logout. Root cause: `useRealtimeSubscription.ts` called `auth.refreshSession()` _unconditionally_ on every `visibilitychange → visible` (BUG-1182). Electron fires focus/visibility changes far more often than a browser tab (window focus/blur/occlusion, OS notifications), so this redundant refresh ran on top of Supabase `autoRefreshToken` + the scheduled refresh in `auth.ts`. The resulting auth-event churn produced spurious `SIGNED_OUT` events, and the UI reads `isAuthenticated = !!user.value` with no debounce, so it flashed logged-out until the next refresh recovered the session.
 **Fix**: (A) Expiry-gate the wake-up refresh in `src/composables/supabase/useRealtimeSubscription.ts` — only `refreshSession()` when a real session is missing-expiry or within 120s of expiry; `autoRefreshToken` covers the rest. (B) Defense-in-depth in `src/stores/auth.ts`: a non-explicit `SIGNED_OUT` with no recoverable session now defers clearing `user`/`session` behind a 2s grace timer; a valid session re-appearing (SIGNED_IN/TOKEN_REFRESHED) cancels it, so no login-screen flash. Explicit user sign-out (`isSigningOut`) still clears immediately. Tests: `tests/unit/stores/auth-flow.test.ts` updated (#24 grace-period clear) + new #24b (transient SIGNED_OUT→SIGNED_IN stays signed in); 30/30 pass.
 
 ---
@@ -8628,6 +9299,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Root Cause**: `handleSave()` and `handleMarkDone()` both create `setTimeout` for celebration overlay (600ms) without tracking or clearing on unmount. If component unmounts before timeout fires, stale refs are set.
 
 **Fix**:
+
 1. Added `celebrationTimers` array to track all setTimeout IDs
 2. Updated `handleSave()` and `handleMarkDone()` to push timer IDs to tracking array
 3. Added `onUnmounted()` hook to clear all pending timers
@@ -8647,6 +9319,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Root Cause**: The `MobileQuickSortFilters.vue` thumb zone padding-bottom didn't account for the 64px mobile bottom nav bar. The sort phase had `overflow: hidden` preventing scroll to bottom controls.
 
 **Fix**:
+
 1. ✅ Added `var(--space-16)` (64px nav) + `var(--space-6)` + `env(safe-area-inset-bottom)` to thumb zone padding-bottom
 2. ✅ Changed sort phase from `overflow: hidden` to `overflow-y: auto` so all controls are reachable
 3. ✅ Verified Assign button visible and wired to project sheet via `openProjectSheet`
@@ -8662,6 +9335,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Problem**: File is 2518 lines, exceeding 500-line limit. Hard to maintain and test.
 
 **Solution**: Extract into composables and sub-components:
+
 - `useMobileQuickSortLogic.ts` - business logic
 - `MobileQuickSortCard.vue` - card component
 - `MobileQuickSortFilters.vue` - filter UI
@@ -8701,6 +9375,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Problem**: 199 instances of `any` type across 90 files weaken type safety.
 
 **Solution**: Audited and replaced all remaining `any` types with proper TypeScript interfaces. Key changes:
+
 - Added `isVirtual?: boolean` to `CalendarEvent` interface, eliminating 31 `as any` casts across 3 calendar views
 - Replaced markdown-it `any` params with `Token`, `Renderer`, `MarkdownIt.Options` types in ChatMessage.vue
 - Added `TaskListItem`, `CalendarHelpers`, `WeekDay` type definitions to replace unsafe casts
@@ -8719,6 +9394,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 **Problem**: Timer store was 1328 lines with mixed concerns.
 
 **Solution**: Split into focused services:
+
 - `src/stores/timer.ts` — slim orchestrator (456 lines)
 - `src/composables/timer/useTimerSync.ts` — intervals, leadership, DB, Realtime (763 lines)
 - `src/composables/timer/useTimerNotifications.ts` — browser/SW notifications (163 lines)
@@ -8823,6 +9499,7 @@ Public API unchanged — zero consumer migration needed.
 **Feature**: Allow users to save filter combinations as named views.
 
 **Implementation**:
+
 1. ~~Create `saved_filters` Supabase table~~ → Stored in settings JSONB (syncs via existing pipeline)
 2. ✅ SavedViewsDropdown component with glass-morphism design
 3. ✅ Quick access bookmark dropdown in FilterControls + InboxFilters
@@ -8908,14 +9585,13 @@ Public API unchanged — zero consumer migration needed.
 ### System Review Summary
 
 **Metrics**:
+
 - Tests: 587 passed, 28 todo (615 total)
 - Linter: 349 errors, 292 warnings
 - npm audit: 16 vulnerabilities (0 critical, 2 high)
 - Codebase: 585 files, 136,067 lines of code
 
-
 ---
-
 
 ## Roadmaps
 
@@ -8944,6 +9620,7 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 **Parent Feature**: FEATURE-1118
 
 **Sub-Features**:
+
 - FEATURE-1132: AI Game Master Challenge System (🔄 IN PROGRESS)
   - Database migration: `user_challenges`, `challenge_history` tables
   - Types: `src/types/challenges.ts`
@@ -8969,21 +9646,25 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 **Goal**: Complete cyberpunk visual overhaul of the gamification system with dedicated Cyberflow command center, Anti-Chore game design, and system interconnections.
 
 **Phase 1: Visual Foundation** ✅
+
 - Installed augmented-ui, added cyberpunk fonts (Rajdhani, Orbitron, Space Mono)
 - Created `src/assets/cyberflow-tokens.css` (neon palette, glow effects, clip-paths, animations)
 - Created `src/composables/useCyberflowTheme.ts` (intensity-aware theme composable)
 
 **Phase 2: Cyberflow Hub Page** ✅
+
 - New `/cyberflow` route with 5-tab navigation (Overview/Missions/Boss/Upgrades/Trophies)
 - Created 12 new cyber components (CyberDashboardHub, CyberMissionBriefing, CyberBossFight, CyberCharacterProfile, CyberSkillTree, CyberAchievements, CyberShop, etc.)
 - Hub-and-spoke layout: Overview cards → drill into tabs
 
 **Phase 3: Header Widget Redesign + Intensity Levels** ✅
+
 - Restyled LevelBadge, XpBar, StreakCounter with cyberpunk aesthetics
 - Intensity filtering wired up (minimal/moderate/intense)
 - Exposure toast system (shielded/exposed) with proper icon rendering
 
 **Phase P0: Anti-Chore Game Mechanics** ✅
+
 - Created `docs/game-mechanics.md` — authoritative game design reference
 - Removed exposed penalty (timer = invitation, not obligation)
 - Removed XP decay (earned XP permanent forever)
@@ -8993,6 +9674,7 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 **Progress (2026-02-08):** Phases 1-3 complete + P0 anti-chore constants applied. 624 tests passing, zero TS errors. Next: P1 items (streak multiplier, corruption XP modifier, partial boss credit).
 
 **Phase 4: RPG HUD Header Redesign** (TASK-1305, 🔄 IN PROGRESS)
+
 - Created `GamificationHUD.vue` — single RPG-styled component replacing inline header widgets
 - 4 visual states: unauth CTA ("CONNECT TO THE GRID"), minimal (text only), moderate (full bar), intense (glow + shine + narrative)
 - Uses cyberflow design tokens: corner-cut-sm clip-path, cf-dark-3 bg, cf-cyan border/glow, Space Mono typography
@@ -9013,6 +9695,7 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 **Problem**: Despite BUG-1296 fix (`_rawTasks` → `rawTasks`), time block notifications are still not firing. User has a 120-min calendar block scheduled and received no milestone alerts (halfway, 1-min-before, ended).
 
 **Root Causes Found** (multi-agent investigation):
+
 1. **Late tolerance too tight** (2 min) — desktop apps sleep/background, `setInterval` skips ticks, milestones silently missed
 2. **Singleton guard fragile** — module-level `isInitialized` survives but interval could die, `start()` refuses to restart
 3. **Silent notification delivery** — `deliverNotification()` had no error handling, no logging, failed invisibly
@@ -9021,12 +9704,14 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 6. **Toast too short** — 5s duration easy to miss
 
 **Fixes Applied** (4 files):
+
 1. `useTimeBlockNotifications.ts` — Late tolerance 2min→10min, resilient singleton (restarts if interval died), delivery logging, toast duration 5s→8s, skip completed/soft-deleted tasks
 2. `notificationDelivery.ts` — Added try-catch, logging on permission denied/API unavailable/delivery success, returns boolean
 3. `useAppInitialization.ts` — Explicit `Notification.requestPermission()` before starting time block polling
 4. `taskOperations.ts` — Added `instances` to sync queue payload for offline backup
 
 **Files**:
+
 - `src/composables/useTimeBlockNotifications.ts` — Core composable (polling, milestone detection, delivery)
 - `src/utils/notificationDelivery.ts` — Browser Notification API wrapper
 - `src/composables/app/useAppInitialization.ts` — Where composable is mounted
@@ -9043,10 +9728,12 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 **Root Cause**: CSS `.week-event { left: var(--space-1); right: var(--space-1); }` overrode the JS-computed percentage-based `left`/`width` from `getWeekEventStyle()`. The fixed CSS values clamped all events to the same position regardless of day column.
 
 **Fix Applied**:
+
 - [x] Removed CSS `left`/`right` overrides from `.week-event` in `CalendarWeekView.vue`
 - [x] Added 2px inset padding via `calc()` in `getWeekEventStyle()` for column gap
 
 **Files Changed**:
+
 - `src/components/calendar/CalendarWeekView.vue` — Removed conflicting CSS left/right
 - `src/composables/calendar/useCalendarWeekView.ts` — `calc()` padding in left/width
 
@@ -9061,10 +9748,12 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 **Root Cause**: Template had no weekday header component. CSS grid was correct (`repeat(7, 1fr)`) and 42 cells were generated correctly, but without header labels the layout appeared broken.
 
 **Fix Applied**:
+
 - [x] Added `month-weekday-header` row with Mon-Sun labels above the grid
 - [x] Added CSS for header grid matching 7-column layout
 
 **Files Changed**:
+
 - `src/components/calendar/CalendarMonthView.vue` — Added weekday header row + CSS
 
 ---
@@ -9100,6 +9789,7 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 **Goal**: Verify a fresh self-hosted installation works end-to-end before sharing repo publicly.
 
 **Bugs found & fixed (committed)**:
+
 - [x] Kong `rate-limiting` plugin not declared in `KONG_PLUGINS` — added
 - [x] `init-db.sh` had wrong filename (`fix_id_types.sql` → `20260106000000_fix_id_types.sql`) and was missing 12 of 24 migrations — fixed
 - [x] `.env.self-host` / `.env.self-host.test` not gitignored — added
@@ -9107,6 +9797,7 @@ Implemented "Triple Shield" Drag/Resize Locks. Multi-device E2E moved to TASK-28
 - [x] Created `scripts/test-self-host.sh` with 6 E2E tests + `--keep` flag for browser testing
 
 **Remaining**:
+
 - [ ] Run `./scripts/test-self-host.sh --keep` — builds full Docker stack and runs 6 E2E tests
 - [ ] Once tests pass, verify in browser at `http://localhost:13050`
 - [ ] To tear down: `docker compose -p flowstate-test -f docker-compose.self-host.yml --env-file .env.self-host.test down -v`
@@ -9138,6 +9829,7 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 **Strategy**: Local-first state updates — update Pinia state BEFORE Supabase writes. Wrap all Supabase writes in try/catch with `console.warn`. On failure, local state stays updated; server reconciles on next load.
 
 **Changes** (`src/stores/gamification.ts`):
+
 - `awardXp`: Local XP/level update first, notifications fire immediately, Supabase write in try/catch, reconcile from server on success
 - `recordDailyActivity`: Local streak update first (streak loss is critical UX), Supabase write in try/catch + warn on failure; streak freeze deduction also local-first via fire-and-forget
 - `incrementStat`: Local stat update first, Supabase write in try/catch
@@ -9157,6 +9849,7 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 **Problem**: Project root has 141 debug PNG screenshots, tracked temp reports/scripts, stale lockfiles, and other clutter that doesn't belong at the root level.
 
 **Cleanup plan**:
+
 1. Delete 141 debug PNG screenshots from root (all untracked)
 2. Remove tracked temp files: `full_report.txt`, `lint_report.txt`, `ts_errors.txt`, `unused_vars_report.txt`, `console-task-1348.txt`, `current-state.md`, `snapshot-*.md`, `bulk_replace*.js`, `components_lint_report.json`, `lint_report.json`, `lint_output.log`, `test_output.log`, `typecheck_output.txt`, `any_files.txt`
 3. Remove stale `pnpm-lock.yaml` (project uses npm), `.cursorrules`
@@ -9174,6 +9867,7 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 **Scope**: Review all AI features and decide what to keep vs ditch.
 
 **Findings**:
+
 - Weekly Plan AI: LLM distribution replaced with deterministic algorithm (TASK-1405). LLM used only for week theme (Step 3) — keep.
 - ARIA Game Master: Challenge generation broken. Template fallback preserved. AI rebuild removed from scope.
 - AI Chat (Groq/Ollama): Working but ReAct loop dumps walls of tool result data (→ TASK-1469).
@@ -9192,6 +9886,7 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 **Problem**: AI Chat ReAct loop dumps walls of raw tool result data into the conversation instead of answering questions concisely. Users see JSON blobs, long lists, and repeated tool calls before getting an answer.
 
 **Fix**:
+
 1. Limit tool calls per turn (max 3-5 before forcing a synthesis step)
 2. Rewrite system prompt to emphasize concise, conversational responses — tool results are context, not output
 3. Add output truncation for tool results shown in UI (collapse long results with "show more")
@@ -9210,6 +9905,7 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 **Problem**: AI chat conversations and usage log entries were stored in localStorage only, meaning no cross-device sync.
 
 **Fix**:
+
 - Created `src/services/ai/chatPersistence.ts` — Supabase CRUD (load/save/delete) for `ai_conversations` table. Uses existing `supabase` client from `@/services/auth/supabase`. Silently fails on error.
 - Created `src/services/ai/usageSync.ts` — 60s interval flush of accumulated usage entries to `ai_usage_log` via `upsert_ai_usage_log` RPC. Aggregates by date/provider/model before upserting.
 - Modified `src/stores/aiChat.ts` — `initialize()` now async; tries Supabase first (VPS-first), falls back to localStorage. Debounced Supabase save wired into `debouncedSaveConversations`. Delete mirrors to Supabase. `startUsageSync()` called on init. Added `syncStatus` ref.
@@ -9225,6 +9921,7 @@ All blocking tasks (TASK-118, 119, 120, 121, 122) completed. See archive for det
 **Problem**: AI Task Assist is functional but buried in a context menu popover. Most users never discover it. It provides real value (AI suggestions for task breakdown, priority, time estimates) but zero discoverability.
 
 **Implemented**:
+
 1. ✅ AI Assist button with `Ctrl+.` shortcut hint in TaskEditModal toolbar
 2. ✅ `Ctrl+.` keyboard shortcut registered in KeyboardShortcutsPanel (searchable)
 3. ✅ Smart inline suggestion prompt — persistent for new users, re-triggers for incomplete tasks (completeness < 0.5)
@@ -9282,35 +9979,35 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 > **Goal**: Fix all real bugs discovered by the E2E test suite.
 > **Priority**: P0-P1 | **Status**: 📋 PLANNED
 
-| ID | Task | Priority | Status |
-|----|------|----------|--------|
-| ~~BUG-1671~~ | Fix workspace migration — `workspace_id` column missing from tasks/projects/groups, `workspace_members` table missing. Migration exists but fails due to `projects.id` type conflict (uuid vs text). Fix migration or drop FK constraint first. | P0 | ✅ **DONE** — Obsolete (Tauri removed). Note: workspace migration schema issue (projects.id type conflict) may still need fixing independently. |
-| ~~BUG-1672~~ | Fix sidebar clipping in Tauri — sidebar text cut off, only icons visible. CSS grid `minmax(240px, 340px)` not respected in WebKitGTK. | P1 | ✅ **DONE** |
-| ~~BUG-1673~~ | Fix Catalog view empty — status filter 'all' treated as literal match + WebKitGTK Realtime desync. Fixed in browser, Tauri deferred to Electron migration. | P0 | ✅ **DONE** (2026-03-24) |
-| ~~BUG-1674~~ | Fix Inbox dropdown behind sidebar — calendar dropdown z-index lower than sidebar stacking context. | P1 | ✅ **DONE** |
-| ~~BUG-1675~~ | Fix Canvas view empty in E2E — Vue Flow nodes don't render for test user. Workspace query errors prevent task loading. | P0 | ✅ **DONE** — Obsolete (dependency on BUG-1671) |
-| ~~BUG-1676~~ | Fix Board view empty — kanban columns render but no task cards. Same workspace root cause. | P0 | ✅ **DONE** — Obsolete (dependency on BUG-1671) |
-| ~~BUG-1677~~ | Fix context menu positioning — right-click menu not appearing or appearing outside viewport bounds. | P2 | ✅ **DONE** — Obsolete (Tauri removed) |
-| ~~BUG-1678~~ | Fix tooltip z-index — tooltips render with z-index 'auto' instead of explicit value, may appear behind content. | P2 | ✅ **DONE** — Obsolete (Tauri removed) |
-| ~~BUG-1679~~ | Fix PWA manifest not linked in dev mode — `<link rel="manifest">` missing when devOptions.enabled=false. | P2 | ✅ **DONE** |
-| ~~BUG-1680~~ | Fix card border-radius not rendering — task cards missing rounded corners in some views. | P3 | ✅ **DONE** — Obsolete (Tauri removed) |
-| ~~BUG-1681~~ | Fix Inbox panel shows no content — inbox collapsed by default, badge/content not accessible. | P2 | ✅ **DONE** — Obsolete (Tauri removed). Note: inbox empty state should be verified in Electron. |
-| ~~BUG-1682~~ | Fix sidebar project names not loading — seeded project data not reaching sidebar due to workspace query errors. | P0 | ✅ **DONE** — Obsolete (dependency on BUG-1671) |
-| ~~BUG-1691~~ | Fix tasks turning untitled (empty title saved) | P0 | ✅ **DONE** |
-| ~~BUG-1696~~ | Tauri: Project names clipped to 24px in sidebar (WebKitGTK confirmed) | P1 | ✅ **DONE** |
-| ~~BUG-1697~~ | Tauri: overflow:clip hides scrollable content in WebKitGTK | P1 | ✅ **DONE** |
-| ~~BUG-1698~~ | Tauri: Views render blank pages when navigating (WebDriver test confirmed) | P1 | ✅ **DONE** |
-| ~~BUG-1699~~ | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance) | P1 | ✅ **DONE** |
-| ~~BUG-1700~~ | E2E: Initial render takes 12.7s (performance test expects <3s FCP) | P1 | ✅ **DONE** |
-| ~~BUG-1701~~ | E2E: Memory growth >20MB across create/delete cycles | P2 | ✅ **DONE** — Obsolete (Tauri removed). Note: memory growth on create/delete cycles is a general concern, not Tauri-specific. |
-| ~~BUG-1709~~ | Tauri: Inbox task cards — left done-toggle icons unclear + right action icons cover RTL text | P2 | ✅ **DONE** |
-| ~~BUG-1710~~ | ✅ Tauri: "Unhandled promise rejection" error on launch (Promise:undefined:undefined) | P1 | ✅ **DONE** |
-| ~~BUG-1711~~ | Tauri: Task completion celebration overlay is see-through (should be opaque) | P2 | ✅ **DONE** — Obsolete (Tauri removed) |
-| ~~TASK-1712~~ | Tauri visual parity: task cards/UI degrade vs web app — need automated WebKitGTK visual regression | P1 | ✅ **DONE** (Tauri archived) |
-| ~~BUG-1702~~ | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs | P2 | ✅ **DONE** |
-| ~~BUG-1703~~ | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif" | P3 | ✅ **DONE** |
-| ~~BUG-1704~~ | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML | P2 | ✅ **DONE** |
-| ~~BUG-1705~~ | CSS: 2 unannotated overflow:clip usages in MobileQuickSortView.vue (unit test failing) | P2 | ✅ **DONE** |
+| ID            | Task                                                                                                                                                                                                                                            | Priority | Status                                                                                                                                          |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~BUG-1671~~  | Fix workspace migration — `workspace_id` column missing from tasks/projects/groups, `workspace_members` table missing. Migration exists but fails due to `projects.id` type conflict (uuid vs text). Fix migration or drop FK constraint first. | P0       | ✅ **DONE** — Obsolete (Tauri removed). Note: workspace migration schema issue (projects.id type conflict) may still need fixing independently. |
+| ~~BUG-1672~~  | Fix sidebar clipping in Tauri — sidebar text cut off, only icons visible. CSS grid `minmax(240px, 340px)` not respected in WebKitGTK.                                                                                                           | P1       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1673~~  | Fix Catalog view empty — status filter 'all' treated as literal match + WebKitGTK Realtime desync. Fixed in browser, Tauri deferred to Electron migration.                                                                                      | P0       | ✅ **DONE** (2026-03-24)                                                                                                                        |
+| ~~BUG-1674~~  | Fix Inbox dropdown behind sidebar — calendar dropdown z-index lower than sidebar stacking context.                                                                                                                                              | P1       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1675~~  | Fix Canvas view empty in E2E — Vue Flow nodes don't render for test user. Workspace query errors prevent task loading.                                                                                                                          | P0       | ✅ **DONE** — Obsolete (dependency on BUG-1671)                                                                                                 |
+| ~~BUG-1676~~  | Fix Board view empty — kanban columns render but no task cards. Same workspace root cause.                                                                                                                                                      | P0       | ✅ **DONE** — Obsolete (dependency on BUG-1671)                                                                                                 |
+| ~~BUG-1677~~  | Fix context menu positioning — right-click menu not appearing or appearing outside viewport bounds.                                                                                                                                             | P2       | ✅ **DONE** — Obsolete (Tauri removed)                                                                                                          |
+| ~~BUG-1678~~  | Fix tooltip z-index — tooltips render with z-index 'auto' instead of explicit value, may appear behind content.                                                                                                                                 | P2       | ✅ **DONE** — Obsolete (Tauri removed)                                                                                                          |
+| ~~BUG-1679~~  | Fix PWA manifest not linked in dev mode — `<link rel="manifest">` missing when devOptions.enabled=false.                                                                                                                                        | P2       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1680~~  | Fix card border-radius not rendering — task cards missing rounded corners in some views.                                                                                                                                                        | P3       | ✅ **DONE** — Obsolete (Tauri removed)                                                                                                          |
+| ~~BUG-1681~~  | Fix Inbox panel shows no content — inbox collapsed by default, badge/content not accessible.                                                                                                                                                    | P2       | ✅ **DONE** — Obsolete (Tauri removed). Note: inbox empty state should be verified in Electron.                                                 |
+| ~~BUG-1682~~  | Fix sidebar project names not loading — seeded project data not reaching sidebar due to workspace query errors.                                                                                                                                 | P0       | ✅ **DONE** — Obsolete (dependency on BUG-1671)                                                                                                 |
+| ~~BUG-1691~~  | Fix tasks turning untitled (empty title saved)                                                                                                                                                                                                  | P0       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1696~~  | Tauri: Project names clipped to 24px in sidebar (WebKitGTK confirmed)                                                                                                                                                                           | P1       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1697~~  | Tauri: overflow:clip hides scrollable content in WebKitGTK                                                                                                                                                                                      | P1       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1698~~  | Tauri: Views render blank pages when navigating (WebDriver test confirmed)                                                                                                                                                                      | P1       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1699~~  | E2E: 126 of 602 Playwright tests failing (CRUD, morning dashboard, multi-tab sync, mobile, PWA, performance)                                                                                                                                    | P1       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1700~~  | E2E: Initial render takes 12.7s (performance test expects <3s FCP)                                                                                                                                                                              | P1       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1701~~  | E2E: Memory growth >20MB across create/delete cycles                                                                                                                                                                                            | P2       | ✅ **DONE** — Obsolete (Tauri removed). Note: memory growth on create/delete cycles is a general concern, not Tauri-specific.                   |
+| ~~BUG-1709~~  | Tauri: Inbox task cards — left done-toggle icons unclear + right action icons cover RTL text                                                                                                                                                    | P2       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1710~~  | ✅ Tauri: "Unhandled promise rejection" error on launch (Promise:undefined:undefined)                                                                                                                                                           | P1       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1711~~  | Tauri: Task completion celebration overlay is see-through (should be opaque)                                                                                                                                                                    | P2       | ✅ **DONE** — Obsolete (Tauri removed)                                                                                                          |
+| ~~TASK-1712~~ | Tauri visual parity: task cards/UI degrade vs web app — need automated WebKitGTK visual regression                                                                                                                                              | P1       | ✅ **DONE** (Tauri archived)                                                                                                                    |
+| ~~BUG-1702~~  | Tauri: WebDriver test infra — view navigation uses localhost:1420 instead of embedded URLs                                                                                                                                                      | P2       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1703~~  | Tauri: WebDriver font test false positive — "serif" substring matches "sans-serif"                                                                                                                                                              | P3       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1704~~  | HTML: `<button>` nested inside `<button>` in SavedViewsDropdown.vue — invalid HTML                                                                                                                                                              | P2       | ✅ **DONE**                                                                                                                                     |
+| ~~BUG-1705~~  | CSS: 2 unannotated overflow:clip usages in MobileQuickSortView.vue (unit test failing)                                                                                                                                                          | P2       | ✅ **DONE**                                                                                                                                     |
 
 #### ~~BUG-1671~~: Workspace Migration Failure (✅ DONE)
 
@@ -9322,11 +10019,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Fix**: Either fix the migration chain order, or manually drop the FK constraint before running migrations.
 
 #### ~~BUG-1672~~: Sidebar Clipping in Tauri (✅ DONE)
+
 - **Priority**: P1-HIGH
 - **Root Cause**: CSS `grid-template-columns: minmax(240px, 340px) 1fr` in MainLayout.vue not respected by WebKitGTK. Sidebar renders at icon-only width. Fixed by removing `contain: layout`, CSP fix via `dangerousDisableAssetCspModification`, and OverflowTooltip inline-flex→flex.
 - **Files**: `src/layouts/MainLayout.vue`, `src/layouts/AppSidebar.vue`
 
 #### ~~BUG-1673~~: Catalog View Empty (✅ DONE)
+
 - **Priority**: P0 | **Fixed**: 2026-03-24
 - **Root Cause**: (1) Status filter `'all'` from ViewControls stored literally — `filteredTasks` matched `task.status === 'all'` (nothing). Persisted in localStorage, making bug permanent. (2) In Tauri/WebKitGTK, Supabase Realtime CHANNEL_ERROR drops likely cause data desync where rawTasks has data but filteredTasks empties.
 - **Fix**: Normalized 'all' → null in setActiveStatusFilter + applyFilterState migration + defense-in-depth guard in useTaskFiltering. TaskTable groups watcher gets immediate:true. Diagnostic logging added for Tauri desync detection.
@@ -9341,6 +10040,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Dependency**: BUG-1671
 
 #### ~~BUG-1674~~: Inbox Dropdown Behind Sidebar (✅ DONE)
+
 - **Priority**: P1-HIGH
 - **Root Cause**: Inbox panel's NPopover dropdowns rendered inside a stacking context trapped by sidebar z-index.
 - **Fix**: Already resolved in BUG-1582 — `to="body"` added to both NPopover components in UnifiedInboxHeader.vue. No NDatePicker exists in inbox components.
@@ -9355,6 +10055,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Problem**: Tasks lose their titles and become "untitled" after editing. Users save tasks with content but the title field becomes empty.
 
 **Root Causes**:
+
 1. **TaskTable.vue** `saveEdit()` — no empty-string guard allowed blank titles to be saved on blur when user edits and clears the field
 2. **tasks.ts** realtime sync — operator precedence bug (`!taskDoc.title === undefined` always false due to `!` binding tighter than `===`) disabled title validation, allowing empty strings through sync
 3. **AllTasksView.vue** `handleUpdateTask()` — added guard blocking empty title updates to prevent user-triggered saves
@@ -9370,6 +10071,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 > **Priority**: P1-P2 | **Status**: 📋 PLANNED
 
 #### ~~BUG-1696~~: Tauri Project Names Clipped to 24px (✅ DONE)
+
 - **Priority**: P1 | **Confirmed by**: WebDriver test against real WebKitGTK (wry 0.54.1)
 - **Symptom**: Project items in sidebar render at 24px width instead of >100px. Only icons visible, names clipped.
 - **Related**: BUG-1672 (broader sidebar clipping). This is a specific sub-issue — project name elements are narrower than the sidebar itself.
@@ -9378,18 +10080,21 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Files**: `src/layouts/AppSidebar.vue`, `src/components/base/BaseNavItem.vue`, `src/components/sidebar/SidebarProjectsSection.vue`
 
 #### ~~BUG-1697~~: overflow:clip Hides Content in WebKitGTK (✅ DONE)
+
 - **Priority**: P1 | **Confirmed by**: WebDriver test + Vitest css-syntax safety test
 - **Symptom**: 1 element using `overflow:clip` with scrollable content — content vanishes in WebKitGTK.
 - **Fix**: Replace `overflow: clip` with `overflow: hidden` per SOP-060. Also fix 2 unannotated usages in MobileQuickSortView.vue (BUG-1705).
 - **Reference**: `docs/sop/SOP-060-webkitgtk-gotchas.md`
 
 #### ~~BUG-1698~~: Tauri Views Render Blank on Navigation (✅ DONE)
+
 - **Priority**: P1 | **Confirmed by**: WebDriver test + screenshot showing "Could not connect to localhost"
 - **Root Cause**: Tests navigate to `http://localhost:1420/` but the debug build embeds the frontend — no dev server running. App loads initially (first test page works) but subsequent `browser.url()` calls fail.
 - **Fix**: WebDriver tests should navigate using relative paths or detect the embedded base URL from the initial page.
 - **Screenshot**: `.dev/screenshots/webdriver/view-canvas-*.png` shows "Could not connect to localhost: Connection refused"
 
 #### ~~BUG-1699~~: 126 Playwright E2E Tests Failing (✅ DONE)
+
 - **Priority**: P1 | **Scope**: 126 of 602 tests across chromium + webkit + tauri-simulation
 - **Breakdown**:
   - CRUD Workflows: 6 failures (TimeoutError on task edit modal selectors)
@@ -9405,6 +10110,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Note**: These were previously invisible because the entire E2E suite crashed before running (Vitest/Playwright `Symbol($$jest-matchers-object)` collision). Fixed by changing `testDir` in `playwright.config.ts`.
 
 #### ~~BUG-1700~~: Initial Render Takes 12.7s (✅ DONE)
+
 - **Priority**: P1 | **Confirmed by**: Playwright memory-perf test
 - **Resolution**: FCP is actually ~1s (Chromium) / ~1.8s (WebKit). The 12.7s was from broken test infra. Verified 2026-03-24.
 - ~~**Symptom**: Performance test expects FCP under 3 seconds, actual initial render took 12.7s~~
@@ -9426,11 +10132,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Files**: `src/components/tasks/` (DoneToggle celebration overlay)
 
 #### ~~BUG-1710~~: Tauri Unhandled Promise Rejection on Launch (✅ DONE)
+
 - **Priority**: P1 | **Confirmed by**: User report in Tauri production app (v1.3.25)
 - **Error**: `Error: Unhandled promise rejection` at `Promise:undefined:undefined`
 - **Impact**: Error dialog on app launch, may block functionality
 
 #### ~~BUG-1713~~: DnD to specific day group in Catalog fails (Unknown dueDate group key) (✅ DONE)
+
 - **Priority**: P2 | **Status**: ✅ DONE (2026-03-24)
 - **Problem**: Dragging a task to a per-day group (e.g., Wednesday) in the Catalog view's dueDate grouping failed silently. The `applyGroupTransfer` function in TaskList.vue only recognized generic bucket keys (today, tomorrow, thisWeek, etc.) but not the `day-YYYY-MM-DD` keys generated for individual weekday groups.
 - **Root Cause**: Missing handler for per-day group keys in the dueDate assignment logic. Only generic bucket grouping was supported, not individual calendar days.
@@ -9438,6 +10146,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Files**: `src/components/tasks/TaskList.vue`
 
 #### ~~BUG-1714~~: RTL: Project names with mixed Hebrew/Latin text render in wrong direction (✅ DONE)
+
 - **Priority**: P2 | **Status**: ✅ DONE (2026-03-24)
 - **Problem**: Project names containing both Hebrew and Latin characters (e.g., "פרויקטים עם קבוצת AI מעצבים ב") displayed in wrong text direction (LTR instead of RTL) in sidebar nav items, app header subtitle, and canvas group headers.
 - **Root Cause**: Text-rendering elements lacked proper directionality hints, causing the browser to default to LTR for mixed-direction text.
@@ -9460,29 +10169,34 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - **Files**: `scripts/webkit-test.py`, `scripts/deploy-tauri-update.sh`, `tests/webdriver/`
 
 #### ~~BUG-1709~~: Tauri Inbox Task Cards — Icons Unclear + Text Overlap (✅ DONE)
+
 - **Priority**: P2 | **Confirmed by**: User screenshot in Tauri production app
 - **Issue 1**: ~~Left done-toggle icons appear as unclear blobs instead of recognizable checkmark circles~~ — Fixed: size 14→16, added `background: var(--success-bg-subtle)` + 20px circle behind icon in `.done-indicator`
 - **Issue 2**: ~~Right-side action icons overlap Hebrew RTL task title text~~ — Fixed: all physical `right`/`left` properties on `.task-actions`, `.timer-indicator`, `.done-indicator` replaced with `inset-inline-end`/`inset-inline-start`; added `padding-inline-end: var(--space-8)` to task content in both cards
 - **Files**: `src/components/inbox/unified/UnifiedInboxTaskCard.vue`, `src/components/inbox/calendar/CalendarTaskCard.vue`
 
 #### ~~BUG-1702~~: WebDriver Test Navigation Uses Wrong URLs (✅ DONE)
+
 - **Priority**: P2 | **Type**: Test infrastructure
 - **Problem**: `webkitgtk-layout-bugs.ts` tests 4 & 5 navigate to `http://localhost:1420/` which is the Tauri dev server port. Debug builds embed the frontend, so no dev server is running.
 - **Fix**: Use the initial page URL as base, or navigate via JS (`window.location.hash = '#/board'`) instead of `browser.url()`
 - **File**: `tests/webdriver/specs/webkitgtk-layout-bugs.ts`
 
 #### ~~BUG-1703~~: WebDriver Font Test False Positive (✅ DONE)
+
 - **Priority**: P3 | **Type**: Test infrastructure
 - **Problem**: Font test checks `fontFamily.not.toContain('serif')` but actual value `"v-sans, system-ui, ... sans-serif"` matches because "sans-serif" contains "serif"
 - **Fix**: Use regex `/(?<!sans-)serif/` or check for exact "serif" as standalone font name
 - **File**: `tests/webdriver/specs/webkitgtk-layout-bugs.ts:351`
 
 #### ~~BUG-1704~~: Nested `<button>` in SavedViewsDropdown (✅ DONE)
+
 - **Priority**: P2 | **Confirmed by**: Vite build warning
 - **Problem**: `<button>` element nested inside another `<button>` at lines 45-51 of `SavedViewsDropdown.vue`. Invalid HTML per spec, causes click handling issues.
 - **File**: `src/components/filters/SavedViewsDropdown.vue:45-51`
 
 #### ~~BUG-1705~~: Unannotated overflow:clip in MobileQuickSortView (✅ DONE)
+
 - **Priority**: P2 | **Confirmed by**: Vitest css-syntax safety test (1 of 1812 failing)
 - **Problem**: 2 usages of `overflow: hidden` with SOP-060 comment but missing `/* WebKitGTK-safe */` annotation on lines 13 and 280
 - **Fix**: Add `/* WebKitGTK-safe */` annotation or verify the fallback is correct
@@ -9495,53 +10209,60 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 > **Goal**: Fix all 388 `tsc --noEmit` errors to achieve strict type safety. Build passes (Vite skips these) but they mask real bugs.
 > **Priority**: P2 | **Status**: 📋 PLANNED
 
-| ID | Task | Priority | Status |
-|----|------|----------|--------|
-| ~~TASK-1683~~ | ✅ Fix Supabase database composable types (85 errors, 11 files) | P2 | ✅ **DONE** (2026-04-02) |
-| ~~TASK-1684~~ | ✅ Fix Canvas composable types (120 errors, 9 files) | P2 | ✅ **DONE** (2026-04-02) |
-| ~~TASK-1685~~ | ✅ Fix App initialization & sidebar types (40 errors, 2 files) | P2 | ✅ **DONE** (2026-04-02) |
-| ~~TASK-1686~~ | ✅ Fix Calendar composable types (22 errors, 4 files) | P2 | ✅ **DONE** (2026-04-02) |
-| ~~TASK-1687~~ | ✅ Fix Sync & timer types (29 errors, 3 files) | P2 | ✅ **DONE** (2026-04-02) |
-| ~~TASK-1688~~ | ✅ Fix AI, board, and cross-tab types (41 errors, 8 files) | P2 | ✅ **DONE** (2026-04-02) |
-| TASK-1689 | Fix miscellaneous type errors (51 errors, 18 files) | P3 | 📋 PLANNED |
+| ID            | Task                                                            | Priority | Status                   |
+| ------------- | --------------------------------------------------------------- | -------- | ------------------------ |
+| ~~TASK-1683~~ | ✅ Fix Supabase database composable types (85 errors, 11 files) | P2       | ✅ **DONE** (2026-04-02) |
+| ~~TASK-1684~~ | ✅ Fix Canvas composable types (120 errors, 9 files)            | P2       | ✅ **DONE** (2026-04-02) |
+| ~~TASK-1685~~ | ✅ Fix App initialization & sidebar types (40 errors, 2 files)  | P2       | ✅ **DONE** (2026-04-02) |
+| ~~TASK-1686~~ | ✅ Fix Calendar composable types (22 errors, 4 files)           | P2       | ✅ **DONE** (2026-04-02) |
+| ~~TASK-1687~~ | ✅ Fix Sync & timer types (29 errors, 3 files)                  | P2       | ✅ **DONE** (2026-04-02) |
+| ~~TASK-1688~~ | ✅ Fix AI, board, and cross-tab types (41 errors, 8 files)      | P2       | ✅ **DONE** (2026-04-02) |
+| TASK-1689     | Fix miscellaneous type errors (51 errors, 18 files)             | P3       | 📋 PLANNED               |
 
 #### ~~TASK-1683~~: Supabase Database Composable Types (✅ DONE)
+
 - **Priority**: P2
 - **Error count**: 85 errors across 11 files in `src/composables/supabase/`
 - **Root patterns**: (1) `supabase` client imported as possibly null — needs non-null assertion or guard. (2) Supabase `.select('*')` returns `{}` type — needs explicit type parameter or cast. (3) `Record<string, unknown>` vs concrete interface mismatches in `.forEach()` callbacks.
 - **Fix approach**: Add `supabase!` non-null assertion in `_infrastructure.ts` or add null guards. Add type parameters to `.select<T>()` calls. Type callback parameters with concrete interfaces.
 
 #### ~~TASK-1684~~: Canvas Composable Types (✅ DONE)
+
 - **Priority**: P2
 - **Error count**: 120 errors across 9 files in `src/composables/canvas/`
 - **Root patterns**: (1) Vue Flow `findNode()` returns `unknown` — needs type assertion. (2) `NodeChange[]` vs `unknown[]` in `onNodesChange` handlers. (3) Untyped `payload` in Realtime event handlers. (4) `undoHistory` ref typed as `unknown`.
 - **Fix approach**: Add proper Vue Flow type imports (`GraphNode`, `NodeChange`). Type the Realtime payload handlers. Fix `undoHistory` ref generic parameter.
 
 #### ~~TASK-1685~~: App Initialization & Sidebar Types (✅ DONE)
+
 - **Priority**: P2
 - **Error count**: 40 errors across 2 files
 - **Root patterns**: Supabase Realtime `.on('postgres_changes')` callback payload is typed as `{}`. Properties like `id`, `is_deleted`, `title`, `name` accessed on it.
 - **Fix approach**: Type the Realtime payload with `RealtimePostgresChangesPayload<{[key: string]: unknown}>` and cast `.new`/`.old` to task/project/group interfaces.
 
 #### ~~TASK-1686~~: Calendar Composable Types (✅ DONE)
+
 - **Priority**: P2
 - **Error count**: 22 errors across 4 files
 - **Root patterns**: (1) `instance` callbacks typed as `Record<string, unknown>` instead of `TaskInstance | RecurringTaskInstance`. (2) Catch clause `e` is `unknown` — needs `instanceof Error` guard. (3) Property destructuring from `unknown` objects.
 - **Fix approach**: Change callback parameter types to use proper interfaces. Add error guards in catch blocks.
 
 #### ~~TASK-1687~~: Sync & Timer Types (✅ DONE)
+
 - **Priority**: P2
 - **Error count**: 29 errors across 3 files
 - **Root patterns**: (1) `useTimerLeaderElection.ts` — `handleLeaderMessage(sync: unknown)` uses `sync.action`, `sync.leaderId` etc. without narrowing. (2) `useSyncOrchestrator.ts` — various payload types.
 - **Fix approach**: Define a `LeaderMessage` discriminated union type. Type sync operation payloads.
 
 #### ~~TASK-1688~~: AI, Board, and Cross-Tab Types (✅ DONE)
+
 - **Priority**: P2
 - **Error count**: 41 errors across 8 files
 - **Root patterns**: Mixed — `Record<string, unknown>` vs concrete types, `unknown` assertions, missing generics.
 - **Fix approach**: Add proper type annotations file by file. Most are simple type parameter additions.
 
 #### TASK-1689: Miscellaneous Type Errors (📋 PLANNED)
+
 - **Priority**: P3
 - **Error count**: 51 errors across 18 files
 - **Root patterns**: Scattered minor type issues — `unknown` catch variables, missing properties, test mock types.
@@ -9570,6 +10291,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Parent**: TASK-1690 follow-up
 
 **Issues fixed**:
+
 1. ✅ Right-click context menu overlap — added `.image-node` guard to `handleCanvasRightClick`
 2. ✅ Delete + Ctrl+Z undo — fixed global keydown listener (was skipping Delete), replaced broken `permanentlyDeleteTaskWithUndo` with `bulkDeleteTasksWithUndo`, always push image deletes to undo stack
 3. ✅ Lightbox focus return — already working from TASK-1690
@@ -9587,12 +10309,14 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Problem**: Realtime WebSocket connection repeatedly drops with `CHANNEL_ERROR` and `CLOSED` events (unknown reason), then reconnects. This causes unnecessary data reloads, duplicate PROJECT event floods (6 projects × multiple reconnects), and potential missed events during the disconnect window.
 
 **Symptoms from console**:
+
 - `📡 [REALTIME] Connection dropped (CHANNEL_ERROR): unknown reason`
 - `📡 [REALTIME] Connection dropped (CLOSED): unknown reason`
 - Duplicate `removeChannel` calls (recursion guard catches them)
 - After reconnect: full recovery reload + PROJECT event storm (all 6 projects re-emitted multiple times)
 
 **Investigation areas**:
+
 1. Check Supabase Realtime server health / connection limits on VPS
 2. Review channel subscription cleanup — recursion guard suggests double-teardown
 3. Check if tab visibility changes trigger disconnects
@@ -9612,6 +10336,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Root cause**: `BaseModal` renders a fragment (multiple root nodes) or uses `<Teleport>` as root, so Vue can't auto-inherit the `class` attribute from parent components like `ConfirmationModal`.
 
 **Fix options**:
+
 1. Wrap `BaseModal` template in a single root element
 2. Use `inheritAttrs: false` and manually bind `$attrs` to the correct element
 3. Remove `class` pass-through from `ConfirmationModal` wrapper
@@ -9629,6 +10354,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Root cause**: Vue 3 requires lifecycle hooks to be registered synchronously during `setup()`. If a composable uses `async setup()` or calls `onMounted`/`onUnmounted` after an `await`, the hooks won't bind to any component instance.
 
 **Investigation**:
+
 1. Search for `onMounted` / `onUnmounted` calls inside async functions or after `await` in composables
 2. Check `useAppInitialization.ts` — it orchestrates many async operations during startup
 3. Check Realtime subscription setup — connection happens async
@@ -9646,11 +10372,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Problem**: Electron's `file://` protocol didn't reliably persist `localStorage` across app restarts. Auth tokens were lost whenever users closed and reopened the app, forcing re-authentication.
 
 **Root cause**:
+
 1. Electron's `file://` scheme doesn't support persistent storage across restarts (localStorage is ephemeral)
 2. OAuth callback couldn't be captured in Electron's `file://` context (no HTTP server to receive redirects)
 3. Settings > Account section didn't show update status for Electron users
 
 **Fix**:
+
 1. **electronStorage adapter** (`src/services/auth/electronStorage.ts`) — IPC-backed storage adapter that routes auth tokens through `electron-store` (disk-persisted key-value store)
 2. **localhost OAuth server** (`electron/ipc/auth.ts`) — Start `http://localhost:3001` in main process to capture OAuth callback (same pattern as Tauri)
 3. **Electron-aware auth flow** (`src/composables/useElectronAuth.ts`) — Routes Electron through `skipBrowserRedirect: true` + `openExternal()` for browser-based OAuth
@@ -9667,10 +10395,12 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Problem**: Canvas group badge showed inflated task count — tasks with `parentId` but no `canvasPosition` were counted in the group's task total but never rendered as Vue Flow nodes. Additionally, the task edit modal's section selector would change the `canvasPosition` but forget to set `parentId`, causing tasks assigned to canvas sections via the modal to render as root nodes instead of being contained inside their assigned groups.
 
 **Root cause**:
+
 1. `canvasGroups.ts` badge count computed property counted all tasks with a `parentId` without verifying they also had a valid `canvasPosition`
 2. `useTaskEditActions.ts` section change logic set `canvasPosition` (for rendering) but didn't set `parentId` (for group membership), creating orphaned visual nodes
 
 **Fix**:
+
 1. **canvasGroups.ts**: Updated badge count to require BOTH `parentId` AND `canvasPosition` to be present — tasks missing geometry are excluded from the count
 2. **useTaskEditActions.ts**: Section change now atomically sets both `parentId` and `canvasPosition` together, ensuring task becomes a proper group child on save
 
@@ -9685,11 +10415,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Problem**: After deleting a task on canvas and pressing Ctrl+Z, the task sometimes reappears briefly then vanishes again. Undo is unreliable.
 
 **Root cause**: Three race conditions in the dual-write delete architecture:
-1. **Realtime echo re-delete (primary)**: `deleteTask()` both enqueues a sync queue DELETE *and* directly soft-deletes in Supabase. Undo cancels the queue DELETE but the direct soft-delete already triggered a realtime echo that re-splices the restored task.
+
+1. **Realtime echo re-delete (primary)**: `deleteTask()` both enqueues a sync queue DELETE _and_ directly soft-deletes in Supabase. Undo cancels the queue DELETE but the direct soft-delete already triggered a realtime echo that re-splices the restored task.
 2. **Sync queue DELETE-cancels-CREATE**: The sync orchestrator's DELETE handler proactively cancels pending CREATEs for the same entity — including the CREATE that undo just enqueued.
 3. **`deleteOperationsByType` not status-aware**: If the sync queue DELETE is already `syncing` (in-flight HTTP), deleting it from IndexedDB doesn't cancel the request.
 
 **Recommended fixes** (prioritized):
+
 1. Suppress realtime DELETE echoes for 5s after undo restore (`addPendingWrite` window)
 2. Make `deleteOperationsByType` status-aware (warn on `syncing` operations)
 3. Consider single-write path for DELETEs (sync queue only, no direct save)
@@ -9705,6 +10437,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Problem**: Playwright E2E test `crud-workflows.spec.ts:429` ("create task in Canvas → node appears") intermittently fails on WebKit. Likely a timing issue — Vue Flow node mounting is slower in WebKit, or canvas ready state isn't properly awaited.
 
 **Potential fixes**:
+
 1. Add `waitForSelector` with longer timeout for the Vue Flow node
 2. Wait for canvas `isCanvasReady` state before interacting
 3. Skip on WebKit if it's a known platform limitation
@@ -9724,6 +10457,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Existing foundation**: Workspace tables/RLS/invites/members, workspace switcher, task assignment, presence, activity feed, workspace-aware task/project/group queries, and realtime filters already exist. The work is to harden and complete the shared-workspace experience.
 
 **Non-goals for first release**:
+
 - Full Notion-style page/database/block editor
 - Public team/organization product surface
 - Shared Canvas as the first milestone
@@ -9734,6 +10468,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Priority**: P1 | **Target**: 2-4 weeks
 
 **Scope**:
+
 - Verify workspace create/invite/accept/switch flows end-to-end in Electron.
 - Ensure task/project loads, writes, realtime updates, and offline queue operations are always scoped by `workspaceId`.
 - Make Board usable for shared workspaces: create/edit/delete/move tasks, project grouping, assignment filter, and partner visibility.
@@ -9741,6 +10476,7 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - Add focused RLS, sync-queue, realtime, and workspace-switch regression coverage.
 
 **Acceptance criteria**:
+
 - User and partner can both see and mutate the same shared workspace tasks.
 - Personal tasks never appear in shared workspace, and shared tasks never appear in personal workspace.
 - Simultaneous edits do not duplicate, resurrect, or silently discard tasks in normal Board workflows.
@@ -9751,12 +10487,14 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Priority**: P1 | **Target**: 2-3 weeks after Phase 1
 
 **Scope**:
+
 - Make Calendar safe and useful in shared workspaces.
 - Support assignment, unassigned work, and "mine/all" filters across Board and Calendar.
 - Add task comments and activity feed polish for real partner handoff.
 - Add notifications or visible badges for partner changes where low-risk.
 
 **Acceptance criteria**:
+
 - Both users can plan shared work on Board and Calendar without losing updates.
 - Comments/activity make it clear who changed what recently.
 - Shared planning remains reliable through reloads, Electron restarts, and realtime reconnects.
@@ -9766,12 +10504,14 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Priority**: P1 | **Target**: 2-3 weeks after Phase 2
 
 **Scope**:
+
 - Stress-test sync, offline recovery, conflict behavior, workspace switching, tombstones, and undo/redo in shared workspaces.
 - Add regression tests around the historically risky paths: LWW conflicts, deletion/undo, realtime reconnect, cached stale data, and workspace cache isolation.
 - Tighten role behavior: owner/admin/member/viewer permissions should match RLS and UI affordances.
 - Build and deploy through the Electron updater flow.
 
 **Acceptance criteria**:
+
 - Shared task OS is safe enough for daily use by two people.
 - Known sync/realtime failure modes have direct regression coverage.
 - `npm run electron:build` passes and updater manifest is verified after release.
@@ -9781,11 +10521,13 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 **Priority**: P2 | **Status**: 📋 PLANNED, defer until Phases 1-3 are stable
 
 **Scope**:
+
 - Decide whether shared Canvas is actually needed after daily task collaboration is working.
 - If needed, design shared Canvas around explicit workspace geometry ownership, conflict handling, and realtime update safety.
 - Do not enable shared Canvas by default until geometry sync has strong tests.
 
 **Acceptance criteria**:
+
 - A clear go/no-go decision exists for shared Canvas.
 - If implemented, Canvas group/task positions do not jump, overwrite, or cross-leak between users/workspaces.
 
@@ -9809,4 +10551,4 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 ---
 
-*Condensed January 27, 2026 - Reduced from ~2,300 lines to ~380 lines (84% reduction)*
+_Condensed January 27, 2026 - Reduced from ~2,300 lines to ~380 lines (84% reduction)_

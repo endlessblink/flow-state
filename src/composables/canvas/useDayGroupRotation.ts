@@ -434,22 +434,46 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
    * visibility regain — the persisted `lastRotationDate` guard inside
    * `rotateDayGroups()` makes repeated calls no-ops until the day changes.
    *
-   * Automatic catch-up must be metadata-only. Calling rotateDayGroupPositions()
-   * here writes canonical group positions into the store before CanvasView can
-   * choose not to apply them visually, which resets manually arranged spacing on
-   * app reload/update. Geometry changes are reserved for explicit user actions.
+   * BUG-1980: catch-up must tell a genuine missed-midnight apart from a same-day
+   * reload / first-ever launch. On a *same-day* reload the marker already equals
+   * today → early return (metadata already current, geometry untouched). On the
+   * *first ever* launch the marker is empty → metadata-only, so we never clobber
+   * a manually-arranged layout on first load (the BUG-1780 protection).
+   *
+   * Only when the persisted marker is present AND older than today (a real day
+   * boundary was crossed while the app was closed) do we also run the full
+   * physical rotation — group positions + stale-dated task re-homing — exactly
+   * as the open-at-midnight path would have. This is a discrete once-per-real-day
+   * write, not a per-reload one, so it does not reintroduce BUG-1780.
    */
   function runCatchupIfNeeded(): {
     groupMoves: GroupMove[]
     taskMoves: TaskMove[]
+    pendingWrites?: Promise<void>
     release: () => void
   } {
     const todayStr = toDateString(useCurrentDay().value)
-    if (lastRotationDate.value === todayStr) {
+    const prevMarker = lastRotationDate.value
+    if (prevMarker === todayStr) {
       return { groupMoves: [], taskMoves: [], release: () => {} }
     }
+    // A genuine midnight crossing = we have a prior record that is older than
+    // today. Empty marker = first run on this device → metadata-only.
+    const crossedRealMidnight = prevMarker !== '' && prevMarker < todayStr
+
+    // rotateDayGroups() also stamps lastRotationDate = today as a side effect,
+    // so the decision above must be captured before calling it.
     rotateDayGroups()
-    return { groupMoves: [], taskMoves: [], release: () => {} }
+
+    if (!crossedRealMidnight) {
+      return { groupMoves: [], taskMoves: [], release: () => {} }
+    }
+
+    // Real missed-midnight: apply the physical rotation too. rotateDayGroups()
+    // above already re-dated tasks inside day groups, so re-homing here reads
+    // the freshly-updated dueDates.
+    const { groupMoves, taskMoves, pendingWrites, release } = rotateDayGroupPositions()
+    return { groupMoves, taskMoves, pendingWrites, release }
   }
 
   // Hook into midnight transition — fires automatically at 00:00 each day

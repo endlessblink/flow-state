@@ -1090,16 +1090,21 @@ async function handleNodeDragStopWithReorder(event: NodeDragEvent) {
 // on cold starts and leaves applyDayGroupMoves with NOT FOUND for every id.
 const currentDay = useCurrentDay()
 function runDayGroupCatchup() {
-  // BUG-1780: do NOT apply canonical group-moves here. Historically the catchup
-  // applied groupMoves on every Vue Flow ready (app launch / reload / update)
-  // which silently overwrote the user's manually-arranged group positions and
-  // sizes with canonical values. That's the "rearrange reverts on restart"
-  // regression. Metadata-only work (task re-homing on dueDate rotation) is
-  // preserved. The explicit Tidy button (handleTidyLayout) still applies full
-  // canonical layout on user request.
-  const { taskMoves, release } = dayRotation.runCatchupIfNeeded()
-  if (taskMoves.length > 0) applyCanonicalMoves([], taskMoves)
-  releaseOnDoubleNextTick(release)
+  // BUG-1780 / BUG-1980: runCatchupIfNeeded only returns group-moves on a
+  // genuine missed-midnight (persisted marker older than today) — never on a
+  // same-day reload / app update / first-ever launch, so it does NOT reintroduce
+  // the "rearrange reverts on restart" regression. On that once-per-real-day
+  // crossing we apply the full physical rotation (positions + re-home) so a
+  // closed-at-midnight app self-corrects on open, exactly as the open-at-midnight
+  // path would. Same-day reloads stay metadata-only (empty moves here).
+  const { groupMoves, taskMoves, pendingWrites, release } = dayRotation.runCatchupIfNeeded()
+  const hasMoves = groupMoves.length > 0 || taskMoves.length > 0
+  if (hasMoves) applyCanonicalMoves(groupMoves, taskMoves)
+  releaseOnDoubleNextTick(
+    release,
+    groupMoves.length > 0 ? () => syncNodes(undefined, { force: true }) : undefined,
+    pendingWrites
+  )
 }
 watch(isVueFlowReady, (ready) => { if (ready) runDayGroupCatchup() }, { immediate: true })
 watch(currentDay, runDayGroupCatchup)

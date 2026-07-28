@@ -241,4 +241,76 @@ describe('useDayGroupRotation — catch-up guard', () => {
     expect(second.groupMoves).toEqual([])
     expect(second.taskMoves).toEqual([])
   })
+
+  // BUG-1980: after a missed midnight (app closed at 00:00), the on-launch
+  // catch-up must fully re-align — group positions AND task re-homing — not
+  // just dueDate metadata. A genuine day boundary is "marker present and older
+  // than today"; same-day reloads and first-ever launches stay metadata-only.
+
+  it('7: genuine missed-midnight → catch-up returns position group moves', () => {
+    __setLastRotationDateForTest(YESTERDAY_STR)
+
+    const updateGroup = vi.fn()
+    vi.spyOn(canvasStore, 'updateGroup').mockImplementation(updateGroup)
+
+    // Two day groups placed out of canonical order so rotation produces moves.
+    // Today = Wednesday → Wed should take the leftmost slot.
+    const mon = makeGroup({ name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const wed = makeGroup({ name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, wed])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
+
+    const { runCatchupIfNeeded } = useDayGroupRotation()
+    const result = runCatchupIfNeeded()
+    result.release()
+
+    expect(result.groupMoves.length).toBeGreaterThan(0)
+    expect(updateGroup).toHaveBeenCalled()
+  })
+
+  it('8: genuine missed-midnight → stale-dated task re-homed to its matching group', () => {
+    __setLastRotationDateForTest(YESTERDAY_STR)
+    vi.spyOn(canvasStore, 'updateGroup').mockImplementation(vi.fn())
+
+    // Today = Wednesday. A task dated today but parked in the Thursday group
+    // must be re-homed into the Today group during the launch catch-up.
+    const today = makeGroup({ name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const tomorrow = makeGroup({ name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })
+    const thursday = makeGroup({ name: 'Thursday', position: { x: 832, y: 0, width: 350, height: 600 } })
+    const staleChild = makeTask({
+      id: 'stale-child',
+      parentId: thursday.id,
+      dueDate: WEDNESDAY_STR,
+      canvasPosition: { x: 852, y: 160 },
+    })
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow, thursday])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([staleChild])
+
+    const { runCatchupIfNeeded } = useDayGroupRotation()
+    const result = runCatchupIfNeeded()
+    result.release()
+
+    const rehome = result.taskMoves.find((m) => m.taskId === 'stale-child')
+    expect(rehome?.parentId).toBe(today.id)
+  })
+
+  it('9: first-ever launch (empty marker) stays metadata-only — no group moves', () => {
+    __setLastRotationDateForTest('')
+
+    const updateGroup = vi.fn()
+    vi.spyOn(canvasStore, 'updateGroup').mockImplementation(updateGroup)
+
+    const mon = makeGroup({ name: 'Monday', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const wed = makeGroup({ name: 'Wednesday', position: { x: 350, y: 0, width: 350, height: 600 } })
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([mon, wed])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
+
+    const { runCatchupIfNeeded } = useDayGroupRotation()
+    const result = runCatchupIfNeeded()
+    result.release()
+
+    // First run must not clobber manually-arranged group positions.
+    expect(result.groupMoves).toEqual([])
+    expect(updateGroup).not.toHaveBeenCalled()
+  })
 })

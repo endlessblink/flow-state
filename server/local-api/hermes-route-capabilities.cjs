@@ -11,6 +11,7 @@ const HERMES_ROUTE_CAPABILITIES = Object.freeze([
   { method: 'GET', path: '/api/tasks', contractVersion: 'task-list-v1', available: true },
   { method: 'GET', path: '/api/tasks/search', contractVersion: 'task-search-v1', available: true },
   { method: 'GET', path: '/api/tasks/inventory', contractVersion: 'task-inventory-v1', available: true },
+  { method: 'GET', path: '/api/sync/devices', contractVersion: 'device-sync-receipts-v1', available: true },
   { method: 'GET', path: '/api/tasks/:id', contractVersion: 'task-read-v1', available: true },
   { method: 'POST', path: '/api/tasks/lifecycle', contractVersion: 'task-lifecycle-v1', available: true },
   { method: 'PATCH', path: '/api/tasks/:id', contractVersion: 'task-v1', available: true },

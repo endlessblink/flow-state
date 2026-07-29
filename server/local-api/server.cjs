@@ -616,6 +616,30 @@ async function handleGetTaskInventory(url, res) {
   return send(res, result.error ? 502 : 200, result)
 }
 
+async function handleGetDeviceSyncReceipts(res) {
+  const { data, error } = await ctx.supabase
+    .from('device_sync_receipts')
+    .select('device_id,runtime,app_version,status,is_online,last_sync_at,queue,operations,last_seen_at')
+    .order('last_seen_at', { ascending: false })
+
+  if (error) return send(res, 500, { error: 'device sync receipts could not be read' })
+
+  return send(res, 200, {
+    schemaVersion: 'device-sync-receipts-v1',
+    devices: (data || []).map(row => ({
+      deviceId: row.device_id,
+      runtime: row.runtime,
+      appVersion: row.app_version,
+      status: row.status,
+      isOnline: row.is_online,
+      lastSyncAt: row.last_sync_at,
+      queue: row.queue,
+      operations: row.operations,
+      lastSeenAt: row.last_seen_at,
+    })),
+  })
+}
+
 function toSafeTask(record, detailed = false) {
   const task = {
     id: record.id,
@@ -1540,6 +1564,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && path === '/api/tasks/inventory') {
       return await handleGetTaskInventory(url, res)
+    }
+    if (req.method === 'GET' && path === '/api/sync/devices') {
+      return await handleGetDeviceSyncReceipts(res)
     }
     if (req.method === 'GET' && path === '/api/assistant/context') {
       return await handleGetAssistantContext(res)

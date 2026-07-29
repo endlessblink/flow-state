@@ -122,6 +122,7 @@ import { useRouter } from 'vue-router'
 import { initCapacitorStatusBar } from '@/composables/useCapacitorStatusBar'
 import { initCapacitorLifecycle } from '@/composables/useCapacitorLifecycle'
 import { initCapacitorNotifications } from '@/services/notifications/capacitorNotifications'
+import { useDeviceSyncDiagnostics } from '@/composables/sync/useDeviceSyncDiagnostics'
 
 // Refs for child components
 const mainLayout = ref<InstanceType<typeof MainLayout> | null>(null)
@@ -162,6 +163,7 @@ const onStartupReady = () => {
 // Initialize App Logic
 // BUG-1339: Capture isDataReady to gate view rendering until tasks are loaded
 const { isDataReady } = useAppInitialization()
+useDeviceSyncDiagnostics()
 
 // Intercept external link clicks so they open in the system browser (Electron)
 // or a new tab (PWA/browser) instead of replacing the app view.

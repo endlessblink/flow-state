@@ -212,6 +212,15 @@ describe('daily regression hunt script', () => {
     expect(packageJson.scripts['preelectron:build']).toContain('test:offline-reconnect-flows')
   })
 
+  it('allows the full offline convergence pack to finish before timing out', () => {
+    const source = readFileSync(scriptPath, 'utf8')
+    const offlineCheck = source.match(
+      /id: 'offline-reconnect-convergence'[\s\S]*?timeoutMs: ([\d_]+)/,
+    )
+
+    expect(offlineCheck?.[1]).toBe('360_000')
+  })
+
   it('keeps rotated flow scripts pointed at existing test targets', () => {
     const packageJson = JSON.parse(readFileSync('package.json', 'utf8'))
     const rotatedScripts = [

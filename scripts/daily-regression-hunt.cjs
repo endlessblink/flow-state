@@ -108,7 +108,7 @@ const FIXED_DAILY_CHECKS = [
     title: 'Offline create, edit, completion, and delete convergence',
     command: ['npm', 'run', 'test:offline-reconnect-flows'],
     failureClass: 'task consistency/offline sync queue',
-    timeoutMs: 240_000,
+    timeoutMs: 360_000,
   },
   {
     id: 'canonical-assistant-contract',

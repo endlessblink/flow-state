@@ -69,7 +69,7 @@ export async function buildDeviceSyncReceipt(input: BuildDeviceSyncReceiptInput)
   }
 }
 
-function getOrCreateDeviceId(): string {
+export function getDeviceSyncDeviceId(): string {
   const existing = localStorage.getItem(DEVICE_ID_KEY)
   if (existing) return existing
   const created = crypto.randomUUID()
@@ -97,7 +97,7 @@ export async function publishDeviceSyncReceipt(input: {
     .anyOf(['pending', 'syncing', 'failed', 'conflict'])
     .toArray()
   const receipt = await buildDeviceSyncReceipt({
-    deviceId: getOrCreateDeviceId(),
+    deviceId: getDeviceSyncDeviceId(),
     runtime: detectRuntime(),
     appVersion: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'unknown',
     status: input.status,

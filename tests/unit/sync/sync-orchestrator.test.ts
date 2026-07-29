@@ -2160,6 +2160,24 @@ describe('useSyncOrchestrator composable return shape', () => {
     })
   })
 
+  it('remote repair retries only the requested failed entity ids', async () => {
+    const requested = makeOp({ id: 302, entityId: 'requested-task', status: 'failed' })
+    const unrelated = makeOp({ id: 303, entityId: 'unrelated-task', status: 'failed' })
+    writeQueueMocks.getFailedOperations.mockResolvedValue([requested, unrelated])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    writeQueueMocks.updateOperation.mockClear()
+
+    await sync.retryFailedByEntityIds(['requested-task'])
+
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledTimes(1)
+    expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(302, {
+      status: 'pending',
+      nextRetryAt: undefined,
+    })
+  })
+
   it('returns all expected reactive state properties', async () => {
     const sync = useSyncOrchestrator()
 

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { buildDeviceSyncReceipt } from '@/services/sync/deviceSyncDiagnostics'
+import { executeDeviceSyncRepair } from '@/services/sync/deviceSyncRepair'
 
 describe('device sync diagnostics', () => {
   it('publishes enough queue identity to trace a missing task without task content', async () => {
@@ -77,5 +78,37 @@ describe('device sync diagnostics', () => {
     expect(receipt.operations).toHaveLength(20)
     expect(receipt.operations[0].errorCode).toBe('auth')
     expect(receipt.queue.failed).toBe(30)
+  })
+})
+
+describe('device sync repair', () => {
+  it('retries only the entity ids requested for this device', async () => {
+    const retried: string[][] = []
+
+    const result = await executeDeviceSyncRepair({
+      entityIds: ['task-a', 'task-b'],
+      requestedAt: '2026-07-29T13:30:00.000Z',
+      completedAt: null,
+    }, async entityIds => {
+      retried.push(entityIds)
+    })
+
+    expect(result).toBe('completed')
+    expect(retried).toEqual([['task-a', 'task-b']])
+  })
+
+  it('does not rerun an already completed repair request', async () => {
+    let calls = 0
+
+    const result = await executeDeviceSyncRepair({
+      entityIds: ['task-a'],
+      requestedAt: '2026-07-29T13:30:00.000Z',
+      completedAt: '2026-07-29T13:31:00.000Z',
+    }, async () => {
+      calls += 1
+    })
+
+    expect(result).toBe('skipped')
+    expect(calls).toBe(0)
   })
 })

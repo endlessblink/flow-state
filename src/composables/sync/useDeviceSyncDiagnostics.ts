@@ -2,6 +2,8 @@ import { onScopeDispose, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSyncStatusStore } from '@/stores/syncStatus'
 import { publishDeviceSyncReceipt } from '@/services/sync/deviceSyncDiagnostics'
+import { consumeDeviceSyncRepair } from '@/services/sync/deviceSyncRepair'
+import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 
 const HEARTBEAT_MS = 30_000
 const CHANGE_DEBOUNCE_MS = 1_000
@@ -9,7 +11,9 @@ const CHANGE_DEBOUNCE_MS = 1_000
 export function useDeviceSyncDiagnostics() {
   const auth = useAuthStore()
   const sync = useSyncStatusStore()
+  const orchestrator = useSyncOrchestrator()
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
+  let repairInFlight = false
 
   const publish = () => {
     if (!auth.user?.id || !auth.canSyncRemotely) return
@@ -18,6 +22,17 @@ export function useDeviceSyncDiagnostics() {
       status: sync.status,
       isOnline: sync.isOnline,
       lastSyncAt: sync.lastSyncAt,
+    }).then(async () => {
+      if (repairInFlight) return
+      repairInFlight = true
+      try {
+        await consumeDeviceSyncRepair({
+          userId: auth.user!.id,
+          retry: orchestrator.retryFailedByEntityIds,
+        })
+      } finally {
+        repairInFlight = false
+      }
     }).catch(error => {
       console.warn('[SYNC-DIAGNOSTICS] Receipt publish failed', {
         code: typeof error?.code === 'string' ? error.code : 'unknown',

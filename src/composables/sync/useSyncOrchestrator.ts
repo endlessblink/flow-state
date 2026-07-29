@@ -1416,6 +1416,24 @@ export function useSyncOrchestrator() {
     await processQueue()
   }
 
+  const retryFailedByEntityIds = async (entityIds: string[]): Promise<void> => {
+    const requested = new Set(entityIds)
+    const failed = await getFailedOperations()
+
+    for (const op of failed) {
+      if (op.id && requested.has(op.entityId)) {
+        await import('@/services/offline/writeQueueDB').then(({ updateOperation }) =>
+          updateOperation(op.id!, {
+            status: 'pending',
+            nextRetryAt: undefined
+          })
+        )
+      }
+    }
+
+    await processQueue()
+  }
+
   /**
    * Get current sync stats
    */
@@ -1453,6 +1471,7 @@ export function useSyncOrchestrator() {
     // Actions
     enqueue,
     retryFailed,
+    retryFailedByEntityIds,
     clearFailed: clearFailedOperations,
     getQueueStats,
     forceSync: processQueue,

@@ -111,4 +111,16 @@ describe('device sync repair', () => {
     expect(result).toBe('skipped')
     expect(calls).toBe(0)
   })
+
+  it('marks a failed repair attempt handled instead of hot-looping it', async () => {
+    const result = await executeDeviceSyncRepair({
+      entityIds: ['task-a'],
+      requestedAt: '2026-07-29T13:30:00.000Z',
+      completedAt: null,
+    }, async () => {
+      throw new Error('private server failure')
+    })
+
+    expect(result).toBe('failed')
+  })
 })

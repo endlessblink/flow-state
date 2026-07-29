@@ -10,7 +10,7 @@ interface DeviceSyncRepairRequest {
 export async function executeDeviceSyncRepair(
   request: DeviceSyncRepairRequest,
   retry: (entityIds: string[]) => Promise<void>,
-): Promise<'completed' | 'skipped'> {
+): Promise<'completed' | 'failed' | 'skipped'> {
   if (
     request.entityIds.length === 0
     || !request.requestedAt
@@ -19,8 +19,12 @@ export async function executeDeviceSyncRepair(
     return 'skipped'
   }
 
-  await retry(request.entityIds)
-  return 'completed'
+  try {
+    await retry(request.entityIds)
+    return 'completed'
+  } catch {
+    return 'failed'
+  }
 }
 
 export async function consumeDeviceSyncRepair(input: {
@@ -32,13 +36,13 @@ export async function consumeDeviceSyncRepair(input: {
   const deviceId = getDeviceSyncDeviceId()
   const { data, error } = await supabase
     .from('device_sync_receipts')
-    .select('repair_entity_ids,repair_requested_at,repair_completed_at')
+    .select('repair_request_id,repair_entity_ids,repair_requested_at,repair_completed_at')
     .eq('user_id', input.userId)
     .eq('device_id', deviceId)
     .maybeSingle()
 
   if (error) throw error
-  if (!data) return
+  if (!data?.repair_request_id) return
 
   const result = await executeDeviceSyncRepair({
     entityIds: Array.isArray(data.repair_entity_ids) ? data.repair_entity_ids : [],
@@ -51,10 +55,11 @@ export async function consumeDeviceSyncRepair(input: {
     .from('device_sync_receipts')
     .update({
       repair_completed_at: new Date().toISOString(),
-      repair_error_code: null,
+      repair_error_code: result === 'failed' ? 'retry_failed' : null,
     })
     .eq('user_id', input.userId)
     .eq('device_id', deviceId)
+    .eq('repair_request_id', data.repair_request_id)
 
   if (updateError) throw updateError
 }

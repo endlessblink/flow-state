@@ -39,6 +39,7 @@ import {
 } from '@/services/sync/canonicalChangeCatchup'
 import { createCanonicalChangeSupabaseReader } from '@/services/sync/canonicalChangeSupabase'
 import { realtimeRowMatchesScope } from '@/services/sync/realtimeScopeGuard'
+import { startServiceWorkerUpdateRecovery } from '@/services/pwa/serviceWorkerUpdateRecovery'
 
 export function useAppInitialization() {
     const router = useRouter()
@@ -52,6 +53,7 @@ export function useAppInitialization() {
     const authStore = useAuthStore()
     const workspaceStore = useWorkspaceStore()
     const itpProtection = useSafariITPProtection()
+    let stopServiceWorkerUpdateRecovery = () => {}
     // BUG-1725: Must be called synchronously during setup(), not inside async onMounted
     useBeforeUnload()
     const activeChannel = ref<{ unsubscribe: () => Promise<void> } | null>(null)
@@ -244,6 +246,10 @@ export function useAppInitialization() {
                 if (refreshing) return
                 refreshing = true
                 window.location.reload()
+            })
+            stopServiceWorkerUpdateRecovery = startServiceWorkerUpdateRecovery({
+                ready: navigator.serviceWorker.ready,
+                visibility: document,
             })
         }
 
@@ -1321,6 +1327,7 @@ export function useAppInitialization() {
     }
 
     onUnmounted(() => {
+        stopServiceWorkerUpdateRecovery()
         canonicalChangePoller.stop()
         stopLocalApiMutationSubscription()
         stopLocalApiWorkspaceContextSync()

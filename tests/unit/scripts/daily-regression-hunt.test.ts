@@ -154,6 +154,30 @@ describe('daily regression hunt script', () => {
     expect(report.checks[0].commandLine).toContain('tests/unit/sync/task-sync-payload-completeness.test.ts')
   })
 
+  it('keeps mobile-to-desktop convergence regressions in the fixed daily watchdog', () => {
+    const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
+    const output = runHunt([
+      '--dry-run',
+      '--json',
+      '--only',
+      'device-sync-convergence',
+      '--report-dir',
+      reportDir,
+    ])
+
+    const report = JSON.parse(output)
+    expect(report.checks).toHaveLength(1)
+    expect(report.checks[0]).toMatchObject({
+      id: 'device-sync-convergence',
+      failureClass: 'task consistency/device convergence',
+    })
+    expect(report.checks[0].commandLine).toContain('tests/unit/sync/device-convergence-regression.test.ts')
+    expect(report.checks[0].commandLine).toContain('tests/unit/sync/device-sync-diagnostics.test.ts')
+    expect(report.checks[0].commandLine).toContain('tests/unit/sync/sync-orchestrator.test.ts')
+    expect(report.checks[0].commandLine).toContain('tests/unit/pwa/service-worker-update-recovery.test.ts')
+    expect(report.checks[0].commandLine).toContain('tests/unit/pwa-offline-regression.test.ts')
+  })
+
   it('keeps executable canonical assistant proof in the fixed daily watchdog', () => {
     const reportDir = mkdtempSync(join(tmpdir(), 'flowstate-regression-'))
     const output = runHunt([

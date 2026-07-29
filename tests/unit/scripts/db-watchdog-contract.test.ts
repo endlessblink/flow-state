@@ -40,6 +40,24 @@ describe('production DB lifecycle watchdog contract', () => {
     expect(watchdog).not.toContain('receipt->>\'title\'')
   })
 
+  it('detects stale device versions and unresolved mobile task writes without task content', () => {
+    expect(watchdog).toContain("to_regclass('public.device_sync_receipts')")
+    expect(watchdog).toContain('device-sync-query-failed=')
+    expect(watchdog).toContain('device-runtime-version-drift=')
+    expect(watchdog).toContain('device-task-writes-unresolved=')
+    expect(watchdog).toContain("receipt.runtime='pwa'")
+    expect(watchdog).toContain("receipt.runtime='electron'")
+    expect(watchdog).toContain('CROSS JOIN')
+    expect(watchdog).toContain("receipt.last_seen_at > now()-interval '30 minutes'")
+    expect(watchdog).toContain("operation->>'entityType'='task'")
+    expect(watchdog).toContain("operation->>'status' IN ('pending','syncing','failed','conflict')")
+    expect(watchdog).toContain("(now()-interval '15 minutes')")
+    expect(watchdog).toContain("(now()-interval '30 minutes')")
+    expect(watchdog).not.toContain("(operation->>'createdAt')::timestamptz")
+    expect(watchdog).not.toContain("operation->>'title'")
+    expect(watchdog).not.toContain('titleSha256')
+  })
+
   it('ships a rollback-only database smoke for the full lifecycle sequence', () => {
     expect(databaseSmoke).toContain("ARRAY['CREATED','STATUS_CHANGED','SOFT_DELETED','RESTORED','HARD_DELETED']")
     expect(databaseSmoke).toContain('gen_random_uuid() AS tid')

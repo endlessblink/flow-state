@@ -104,6 +104,22 @@ const FIXED_DAILY_CHECKS = [
     timeoutMs: 240_000,
   },
   {
+    id: 'device-sync-convergence',
+    title: 'Mobile and desktop task convergence guard',
+    command: [
+      'npm',
+      'test',
+      '--',
+      'tests/unit/sync/device-convergence-regression.test.ts',
+      'tests/unit/sync/device-sync-diagnostics.test.ts',
+      'tests/unit/sync/sync-orchestrator.test.ts',
+      'tests/unit/pwa/service-worker-update-recovery.test.ts',
+      'tests/unit/pwa-offline-regression.test.ts',
+    ],
+    failureClass: 'task consistency/device convergence',
+    timeoutMs: 240_000,
+  },
+  {
     id: 'offline-reconnect-convergence',
     title: 'Offline create, edit, completion, and delete convergence',
     command: ['npm', 'run', 'test:offline-reconnect-flows'],

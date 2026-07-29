@@ -200,6 +200,62 @@ if [ "$canonical_ready" = true ]; then
   fi
 fi
 
+# (0c) Cross-device sync health. Fresh PWA and Electron receipts must agree on
+# the app version, and recent unresolved task writes must not sit in a device
+# queue. Only counts leave the VPS; task titles and hashes remain private.
+if ! device_receipt_table=$(q_checked "SELECT COALESCE(to_regclass('public.device_sync_receipts')::text,'')"); then
+  ANOMALIES+=("device-sync-query-failed=schema")
+elif [ -z "${device_receipt_table:-}" ]; then
+  ANOMALIES+=("device-sync-receipts-missing")
+else
+  if ! device_version_count=$(q_checked "SELECT count(*)
+    FROM (
+      SELECT app_version FROM public.device_sync_receipts AS receipt
+      WHERE receipt.user_id='$MAIN_USER_ID' AND receipt.runtime='pwa'
+        AND receipt.is_online=true
+        AND receipt.last_seen_at > now()-interval '30 minutes'
+      ORDER BY receipt.last_seen_at DESC LIMIT 1
+    ) AS pwa
+    CROSS JOIN (
+      SELECT app_version FROM public.device_sync_receipts AS receipt
+      WHERE receipt.user_id='$MAIN_USER_ID' AND receipt.runtime='electron'
+        AND receipt.is_online=true
+        AND receipt.last_seen_at > now()-interval '30 minutes'
+      ORDER BY receipt.last_seen_at DESC LIMIT 1
+    ) AS electron
+    WHERE pwa.app_version IS DISTINCT FROM electron.app_version"); then
+    ANOMALIES+=("device-sync-query-failed=runtime-version")
+  elif [ "${device_version_count:-0}" -gt 1 ]; then
+    ANOMALIES+=("device-runtime-version-drift=$device_version_count")
+  fi
+
+  if ! unresolved_device_task_writes=$(q_checked "SELECT count(*)
+    FROM public.device_sync_receipts AS receipt
+    CROSS JOIN LATERAL jsonb_array_elements(receipt.operations) AS operation
+    WHERE receipt.user_id='$MAIN_USER_ID'
+      AND receipt.runtime IN ('pwa','electron')
+      AND receipt.last_seen_at > now()-interval '30 minutes'
+      AND operation->>'entityType'='task'
+      AND operation->>'status' IN ('pending','syncing','failed','conflict')
+      AND (
+        (operation->>'status' IN ('pending','syncing')
+          AND operation->>'createdAt' < to_char(
+            (now()-interval '15 minutes') AT TIME ZONE 'UTC',
+            'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'
+          ))
+        OR
+        (operation->>'status' IN ('failed','conflict')
+          AND operation->>'createdAt' < to_char(
+            (now()-interval '30 minutes') AT TIME ZONE 'UTC',
+            'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'
+          ))
+      )"); then
+    ANOMALIES+=("device-sync-query-failed=task-writes")
+  elif [ "${unresolved_device_task_writes:-0}" != "0" ]; then
+    ANOMALIES+=("device-task-writes-unresolved=$unresolved_device_task_writes")
+  fi
+fi
+
 # (a) BUG-1891 asymmetry: soft-deleted tasks (last 24h) missing a tombstone
 missing_ts=$(q "SELECT count(*) FROM tasks t WHERE t.is_deleted=true AND t.deleted_at > now()-interval '24 hours'
   AND NOT EXISTS (SELECT 1 FROM tombstones ts WHERE ts.entity_type='task' AND ts.entity_id::text=t.id::text)")

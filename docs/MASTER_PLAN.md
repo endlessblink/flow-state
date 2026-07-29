@@ -46,6 +46,38 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### ~~BUG-1982~~: Keep mobile PWA and Electron tasks continuously converged (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-07-29) | **Related**: TASK-1927, BUG-1974
+
+**User repro**: Tasks created in the installed mobile PWA were absent from Electron even though neither surface showed a useful error. The PWA had remained on an older service worker, and the existing watchdog did not inspect device versions or fresh queued task writes.
+
+**Fix**: Installed PWAs now check for and activate an available service worker on startup and every foreground resume. Redacted per-device receipts expose runtime version and unresolved queue identity, targeted repair replays exact task IDs once, the fixed daily hunt runs the PWA-update/device-receipt/reconnect cohort, and the production database watchdog alerts when recently active PWA/Electron runtimes disagree on version or a new task write remains unresolved.
+
+**Regression and live proof**: Test-first watchdog contracts failed before the new daily lane and production probes existed, then passed 25/25 including the stale-PWA → foreground update → task queue drain → Electron-version convergence sequence. Mobile PWA and Electron both reported 1.4.322; the two repaired Hebrew tasks and a fresh PWA-created task persisted in canonical storage, the fresh queue drained, and Electron remained online with an empty queue. Historical unrelated failures and writes still inside the watchdog grace window do not alert.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Missing Hebrew PWA tasks repaired; a fresh PWA-created task persisted and drained. | Yes |
+| Data shape / persisted row shape | Yes | Exact task IDs, titles, active status, and deletion state re-read from canonical storage. | Yes |
+| Renderer store/state | Partial | Queue drain and receipt projection covered by focused tests; every filtered view was not exercised. | Queue boundary only |
+| Electron main/preload bridge | N/A | No main/preload change was required for this failure. | N/A |
+| Localhost sidecar endpoint | Partial | Electron device receipt stayed live; Local API was unavailable during the live proof. | Receipt boundary only |
+| KDE polling/control path | N/A | No timer or KDE path was involved. | N/A |
+| Supabase persistence/realtime | Yes | Repaired and fresh task rows survived repeated canonical reads. | Yes |
+| Updater/runtime version | Yes | Public PWA and Electron 1.4.322 deployed; both device receipts reported 1.4.322. | Yes |
+| Stale live process/cache state | Yes | Foreground service-worker update is automatic and regression-tested. | Installed PWA worker only |
+
+**Exact failure mode fixed**: An installed PWA could remain on an old service worker, leaving its task writes invisible to the current Electron runtime without enough cross-device evidence to diagnose or repair them.
+
+**Explicitly not covered**: Historical unrelated failed operations; view-specific filtering mistakes after canonical convergence; a phone that never opens or reports a receipt; Local API downtime; failures inside the 15/30-minute watchdog grace windows.
+
+**Regression added for reported repro**: A stale PWA receipt with a pending Hebrew task create advances through foreground worker activation, completed queue drain, and matching Electron version/status; the fixed daily lane runs it.
+
+**Live boundary proof**: Both missing tasks plus a fresh PWA-created task are active in canonical storage after repeated reads; PWA and Electron report 1.4.322, and Electron reports an empty queue.
+
 ### TASK-1981: Restore recurring-task completion and make sync alerts opaque (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-29) | **Related**: TASK-1977
@@ -225,6 +257,8 @@
 **Tests**: RED first failed in `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts` because `scripts/daily-regression-hunt.cjs` and the npm scripts did not exist. Follow-up RED failed because `--notify` and installer notification wiring did not exist. Green proof: `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts`; `npm run regression:daily -- --dry-run --date 2026-07-06 --report-dir /tmp/flowstate-regression-hunt-smoke --json`; `npm run regression:daily -- --dry-run --notify --date 2026-07-06 --report-dir /tmp/flowstate-regression-hunt-notify-smoke --json`; `npm run regression:report -- --report-dir /tmp/flowstate-regression-hunt-smoke`; `npm test -- tests/unit/sync/sync-orchestrator.test.ts tests/unit/stores/auth-flow.test.ts tests/unit/canvas/canvas-composables.test.ts tests/unit/undo-entrypoint-contract.test.ts tests/unit/kde/timer-sync.test.ts`; `npm run guard:electron-sync`; `npm run type-check`; `npm run lint`; `npm run electron:build`. 2026-07-08 watchdog hardening added `tests/unit/sync/sync-status-popover.test.ts` to the focused recurring pack so `0 errors` plus stale sign-in-expired UI cannot regress silently. 2026-07-08 live-boundary hardening added a non-secret renderer auth heartbeat and `scripts/diagnose-live-boundary.cjs`; the daily watchdog now fails when the app is running but renderer auth disagrees with sidecar auth, the renderer timer snapshot is missing, or the timer heartbeat is stale. 2026-07-09 rotation hardening retargeted stale canvas/timer flow scripts from deleted user-flow specs to maintained Playwright packs and added a package-script existence guard; proof: RED then green `npm test -- tests/unit/scripts/daily-regression-hunt.test.ts`, `npm run test:canvas-flows` 16/16, `npm run test:timer-flows` 7/7, Tuesday/Thursday dry-run rotations, `npm run type-check`, `npm run guard:electron-sync`, and `npm run electron:build`. Live updater manifest probe passed outside sandbox DNS and served `version: 1.4.236`. Activation proof: `bash scripts/install-daily-regression-hunt.sh`; `systemctl --user status flowstate-daily-regression-hunt.timer --no-pager` showed `active (waiting)` and next trigger `Wed 2026-07-08 09:30:00 IDT`.
 
 **2026-07-14 clean-runner follow-up**: ~~**BUG-1946**~~ makes the installed timer fetch and test a dedicated detached `origin/master` worktree while keeping reports and notifications in the primary checkout. This prevents stale or uncommitted development changes from being reported as released-code regressions without hiding real master failures.
+
+**2026-07-29 device-convergence follow-up**: ~~**BUG-1982**~~ adds a fixed `device-sync-convergence` daily lane covering device receipts, successful queue drain, PWA foreground service-worker recovery, and offline/reconnect behavior. The VPS database watchdog now reports only counts when recently active PWA/Electron versions diverge or a task write created in the last 24 hours remains unresolved; it never emits titles or title hashes.
 
 ### ~~TASK-1882~~: Add Android Gemma transcription provider contract and safe Whisper fallback (DONE)
 
@@ -2724,6 +2758,7 @@ Honesty findings this push:
 - [x] ~~**BUG-1969 — Restore full Hermes route compatibility**: expose canonical work-block lifecycle operations, align Hermes subtask batches with the live task-v1 contract, forward immutable approval hashes on apply, and prove capability preflight plus preview behavior against the packaged signed-in bridge.~~ ✅ DONE 2026-07-19 in Electron 1.4.277.
 - [x] ~~**BUG-1970 — Accept the server-issued lifecycle request hash on apply**: align the canonical lifecycle validator with its own preview receipt, reject changed hashes before persistence, and prove Hermes can apply an approved task creation without losing the task.~~ ✅ DONE 2026-07-20 in Electron 1.4.280.
 - [x] ~~**BUG-1971 — Accept date-only Notion activations outside UTC**: compare canonical due dates as calendar dates so Hermes accepts FlowState's UTC-normalized preview and receipt in Jerusalem, then prove the exact task, work block, completion, and timer switch live.~~ ✅ DONE 2026-07-20 in Hermes Desktop.
+- [x] ~~**BUG-1982 — Keep mobile PWA and Electron tasks continuously converged**: refresh installed PWAs on foreground, publish redacted device receipts, repair exact queued task IDs, and alert on fresh runtime-version drift or unresolved task writes.~~ ✅ DONE 2026-07-29 in PWA/Electron 1.4.322.
 
 **Acceptance**:
 

@@ -51,6 +51,7 @@ describe('production DB lifecycle watchdog contract', () => {
     expect(watchdog).toContain("receipt.last_seen_at > now()-interval '30 minutes'")
     expect(watchdog).toContain("operation->>'entityType'='task'")
     expect(watchdog).toContain("operation->>'status' IN ('pending','syncing','failed','conflict')")
+    expect(watchdog).toContain("(now()-interval '24 hours')")
     expect(watchdog).toContain("(now()-interval '15 minutes')")
     expect(watchdog).toContain("(now()-interval '30 minutes')")
     expect(watchdog).not.toContain("(operation->>'createdAt')::timestamptz")

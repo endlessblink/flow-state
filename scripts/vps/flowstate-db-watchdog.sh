@@ -237,6 +237,10 @@ else
       AND receipt.last_seen_at > now()-interval '30 minutes'
       AND operation->>'entityType'='task'
       AND operation->>'status' IN ('pending','syncing','failed','conflict')
+      AND operation->>'createdAt' > to_char(
+        (now()-interval '24 hours') AT TIME ZONE 'UTC',
+        'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'
+      )
       AND (
         (operation->>'status' IN ('pending','syncing')
           AND operation->>'createdAt' < to_char(

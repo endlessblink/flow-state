@@ -78,6 +78,14 @@
 
 **Live boundary proof**: Both missing tasks plus a fresh PWA-created task are active in canonical storage after repeated reads; PWA and Electron report 1.4.322, and Electron reports an empty queue.
 
+**2026-07-29 second failure class**: After the repaired mobile writes reached canonical storage, the installed PWA could still render only its two cached rows while Electron and the server held the complete Today set. The realtime subscription registered a visibility listener but did not reconcile when initialized while the document was already visible, and its recovery timestamp made the first minute ineligible. Version 1.4.323 performs one protected authoritative reconciliation immediately on visible initialization, then retains the existing cooldown for later visibility events.
+
+**Regression added for the second repro**: `tests/unit/sync/websocket-resilience.test.ts` now fails unless an already-visible startup invokes the authoritative recovery callback exactly once. The `device-sync-convergence` daily watchdog lane runs this startup-baseline regression alongside service-worker, receipt, queue-drain, and offline/reconnect coverage.
+
+**Second exact failure mode fixed**: A non-empty but incomplete PWA cache could survive startup because healthy realtime and an advanced change cursor did not prove that the local baseline contained every canonical task.
+
+**Still explicitly not covered**: View-specific hidden-filter mistakes after the complete renderer store is loaded; a phone that remains closed; historical unrelated failed operations; Local API downtime.
+
 ### TASK-1981: Restore recurring-task completion and make sync alerts opaque (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-29) | **Related**: TASK-1977

@@ -113,6 +113,7 @@ const FIXED_DAILY_CHECKS = [
       'tests/unit/sync/device-convergence-regression.test.ts',
       'tests/unit/sync/device-sync-diagnostics.test.ts',
       'tests/unit/sync/sync-orchestrator.test.ts',
+      'tests/unit/sync/websocket-resilience.test.ts',
       'tests/unit/pwa/service-worker-update-recovery.test.ts',
       'tests/unit/pwa-offline-regression.test.ts',
     ],

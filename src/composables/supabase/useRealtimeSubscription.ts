@@ -352,7 +352,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         // BUG-1207 FIX: Track last user interaction to prevent recovery from clobbering recent edits.
         let lastUserInteraction = Date.now()
         const RECOVERY_COOLDOWN_MS = 60000 // 60 seconds
-        let lastAuthoritativeRecovery = Date.now()
+        let lastAuthoritativeRecovery = 0
         const trackUserInteraction = () => { lastUserInteraction = Date.now() }
         document.addEventListener('click', trackUserInteraction, { passive: true })
         document.addEventListener('keydown', trackUserInteraction, { passive: true })
@@ -426,6 +426,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
             }
         }
         document.addEventListener('visibilitychange', onVisibilityChange)
+        void onVisibilityChange()
 
         // ONLINE RESUME
         // BUG-1209: Add same cooldown as visibility handler to prevent clobbering in-flight drags

@@ -360,6 +360,25 @@ describe('WebSocket Resilience — useRealtimeSubscription', () => {
     expect(source.slice(recoveryCheck, recoveryCheck + 500)).not.toContain('isDead')
   })
 
+  it('reconciles authoritative data when initialized while already visible', async () => {
+    const onRecovery = vi.fn().mockResolvedValue(undefined)
+    const ctx = buildCtx()
+    const { initRealtimeSubscription } = useRealtimeSubscription(ctx as never)
+
+    initRealtimeSubscription(
+      vi.fn(),
+      vi.fn(),
+      undefined,
+      undefined,
+      undefined,
+      onRecovery
+    )
+    await flushAll()
+
+    expect(document.visibilityState).toBe('visible')
+    expect(onRecovery).toHaveBeenCalledTimes(1)
+  })
+
   // 16. TASK-1871: no auth token yet → reschedule + connect (no silent death).
   // Without the fix, the no-token branch returned with no retry → realtime never started.
   it('reschedules setup when no auth token yet, then connects', async () => {

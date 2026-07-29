@@ -46,6 +46,24 @@
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
 
+### TASK-1981: Restore recurring-task completion and make sync alerts opaque (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-29) | **Related**: TASK-1977
+
+**User repro**: Completing the recurring overdue task `ab5c14ed...` showed “Task could not be completed,” while Sync Errors reported that `tasks.canvas_dismissed` was missing from the production schema cache. The sync alert was translucent over the timer controls.
+
+**Acceptance**:
+
+- Production `tasks` exposes the additive `canvas_dismissed boolean NOT NULL DEFAULT false` column and PostgREST reloads its schema cache.
+- The pending task update can be retried without discarding local changes.
+- Toast/status alerts use an opaque shared surface while retaining severity-specific borders.
+- A DOM regression covers the exact task-failure alert surface.
+- Electron build, updater deployment, manifest verification, commit, and push complete.
+
+**Failure-class finding**: The task row was not malformed. The renderer and mapper already emitted `canvas_dismissed`; production Supabase had not received the existing additive migration, so PostgREST rejected the whole update before completion could persist.
+
+**2026-07-29 progress**: Production was backed up, migrated, and its PostgREST schema cache reloaded. The opaque toast regression, focused lint, type-check, and packaged Electron 1.4.319 build passed. The canonical Electron command's preflight remains flaky from its shared Playwright server/fixture (`duplicate tasks_pkey`, then localhost `5547` handoff refusal), while the restore flow and packaging command pass independently. Updater artifacts are validated locally; VPS artifact upload remains blocked by the active shell transfer policy, so TASK-1981 stays in progress.
+
 ### ~~TASK-1930~~: Local API sidecar startup diagnostics and live-boundary process detection (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-07-08) — added redacted Electron-main sidecar lifecycle diagnostics and fixed packaged-process detection for the live boundary probe. | **Depends on**: TASK-1797, TASK-1927, TASK-1928
@@ -2552,7 +2570,7 @@ Four previously-MISSING (or grep-only) critical/high vectors now have real autom
 - **`board-date-drag` on webkit**: intermittent, unconfirmed Safari drag-drop risk.
 - **~20 no-evidence vectors remain MISSING**: the shared-workspace restore family (5+ vectors), guest/account-transition restore, external-calendar ownership/replay, canonical-receipt/sequence contracts, and clock-jump ordering. These need real repros, not status flips.
 - **E2E is not order-independent** (single shared account); no parallel or serial run is authoritative until per-worker accounts exist.
-- **Nothing deployed**; the `canvas_dismissed` column is applied to local DB only and needs production approval.
+- **2026-07-29 production follow-up (TASK-1981)**: after the user surfaced the exact rejected update, a fresh 2.9 MB VPS database backup was taken, the existing additive `canvas_dismissed` migration was applied, and PostgREST confirmed a successful schema-cache reload. No task row was mutated during verification.
 
 **Progress — 2026-07-24, second no-evidence pass: three more vectors proved, one more real defect fixed**:
 

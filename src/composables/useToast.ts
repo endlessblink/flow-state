@@ -43,17 +43,14 @@ export function useToast() {
         switch (type) {
             case 'success':
                 icon = '✓'
-                bgColor = 'var(--success-bg-subtle)' // Dark green tint
                 borderColor = 'var(--color-success)'
                 break
             case 'error':
                 icon = '✕'
-                bgColor = 'var(--danger-bg-subtle)' // Dark red tint
                 borderColor = 'var(--color-danger)'
                 break
             case 'warning':
                 icon = '⚠️'
-                bgColor = 'var(--amber-bg-light)' // Dark amber tint
                 borderColor = 'var(--color-warning)'
                 break
             case 'info':
@@ -80,7 +77,6 @@ export function useToast() {
       min-width: 240px;
       max-width: 400px;
       pointer-events: auto; /* Allow clicking the toast itself */
-      backdrop-filter: blur(8px);
     `
 
         // Create content

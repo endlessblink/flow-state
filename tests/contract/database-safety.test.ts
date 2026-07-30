@@ -148,6 +148,7 @@ describe('Database Migration Safety', () => {
       'arena_runs',          // arena session table
       'workspace_members',   // membership table uses joined_at
       'task_audit_log',      // immutable audit log uses event_at instead of created_at
+      'device_sync_receipts', // sync tracking table uses last_synced_at instead of created_at
     ])
     const unexpectedMissing = missing.filter(t => !knownExceptions.has(t.toLowerCase()))
     expect(unexpectedMissing).toEqual([])

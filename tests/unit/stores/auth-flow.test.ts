@@ -34,9 +34,17 @@ const {
   mockReadPersistedAuthIdentity,
   mockClearPersistedAuthIdentity,
   mockClearPrimaryAuthSession,
+  mockClearTaskStore,
+  mockClearCanvasStore,
+  mockClearWorkspaceStore,
   mockClearProjectStore,
   mockClearLaneStore,
   mockClearCanvasImages,
+  mockLoadWorkspaces,
+  mockLoadProjectsFromDatabase,
+  mockLoadTasksFromDatabase,
+  mockLoadCanvasFromDatabase,
+  mockLoadLanesFromDatabase,
   mockClearWriteQueue,
   mockDeleteReadCacheScopesForUser,
   mockSyncLocalApiSession,
@@ -77,9 +85,17 @@ const {
     mockReadPersistedAuthIdentity: vi.fn(),
     mockClearPersistedAuthIdentity: vi.fn(),
     mockClearPrimaryAuthSession: vi.fn(),
+    mockClearTaskStore: vi.fn(),
+    mockClearCanvasStore: vi.fn(),
+    mockClearWorkspaceStore: vi.fn(),
     mockClearProjectStore: vi.fn(),
     mockClearLaneStore: vi.fn(),
     mockClearCanvasImages: vi.fn(),
+    mockLoadWorkspaces: vi.fn(),
+    mockLoadProjectsFromDatabase: vi.fn(),
+    mockLoadTasksFromDatabase: vi.fn(),
+    mockLoadCanvasFromDatabase: vi.fn(),
+    mockLoadLanesFromDatabase: vi.fn(),
     mockClearWriteQueue: vi.fn(),
     mockDeleteReadCacheScopesForUser: vi.fn(),
     mockSyncLocalApiSession: vi.fn(),
@@ -159,34 +175,37 @@ vi.mock('@/utils/platform', () => ({
 vi.mock('@/stores/tasks', () => ({
   useTaskStore: () => ({
     _rawTasks: [],
-    loadFromDatabase: vi.fn().mockResolvedValue(undefined),
-    clearAll: vi.fn(),
+    loadFromDatabase: mockLoadTasksFromDatabase,
+    clearAll: mockClearTaskStore,
   }),
 }))
 
 vi.mock('@/stores/canvas', () => ({
   useCanvasStore: () => ({
-    loadFromDatabase: vi.fn().mockResolvedValue(undefined),
-    clearAll: vi.fn(),
+    loadFromDatabase: mockLoadCanvasFromDatabase,
+    clearAll: mockClearCanvasStore,
   }),
 }))
 
 vi.mock('@/stores/workspace', () => ({
   useWorkspaceStore: () => ({
-    loadWorkspaces: vi.fn().mockResolvedValue(undefined),
-    clearAll: vi.fn(),
+    loadWorkspaces: mockLoadWorkspaces,
+    clearAll: mockClearWorkspaceStore,
   }),
 }))
 
 vi.mock('@/stores/projects', () => ({
   useProjectStore: () => ({
-    loadProjectsFromDatabase: vi.fn().mockResolvedValue(undefined),
+    loadProjectsFromDatabase: mockLoadProjectsFromDatabase,
     clearAll: mockClearProjectStore,
   }),
 }))
 
 vi.mock('@/stores/lanes', () => ({
-  useLaneStore: () => ({ clearAll: mockClearLaneStore }),
+  useLaneStore: () => ({
+    loadLanesFromDatabase: mockLoadLanesFromDatabase,
+    clearAll: mockClearLaneStore,
+  }),
 }))
 
 vi.mock('@/stores/canvasImages', () => ({
@@ -775,6 +794,58 @@ describe('Auth Flow — signInWithPassword', () => {
 
     expect(store.isAuthenticated).toBe(false)
   })
+
+  it('12b. SIGNED_IN can replace a remembered recovery account without inheriting its local data', async () => {
+    const rememberedUser = buildMockUser({
+      id: 'remembered-user-001',
+      email: 'old-account@flowstate.app',
+    })
+    const newUser = buildMockUser({
+      id: 'new-user-002',
+      email: 'new-account@flowstate.app',
+    })
+    const newSession = buildMockSession({
+      access_token: 'new-account-access-token',
+      refresh_token: 'new-account-refresh-token',
+      user: newUser,
+    })
+    mockReadPersistedAuthSessionCandidate.mockResolvedValue(null)
+    mockReadPersistedAuthIdentity.mockResolvedValue(rememberedUser)
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockRestoreAuthSessionFromBackup.mockResolvedValue(null)
+    mockSignOut.mockResolvedValue({ error: null })
+    mockLoadWorkspaces.mockResolvedValue(undefined)
+    mockLoadProjectsFromDatabase.mockResolvedValue(undefined)
+    mockLoadTasksFromDatabase.mockResolvedValue(undefined)
+    mockLoadCanvasFromDatabase.mockResolvedValue(undefined)
+    mockLoadLanesFromDatabase.mockResolvedValue(undefined)
+
+    const store = useAuthStore()
+    await store.initialize()
+
+    expect(store.user?.id).toBe('remembered-user-001')
+    expect(store.isRestoringSession).toBe(true)
+    expect(store.reauthRequired).toBe(true)
+
+    await fireAuthStateChange('SIGNED_IN', newSession)
+    await flushPromises()
+
+    expect(mockSignOut).not.toHaveBeenCalled()
+    expect(mockClearTaskStore).toHaveBeenCalledOnce()
+    expect(mockClearCanvasStore).toHaveBeenCalledOnce()
+    expect(mockClearWorkspaceStore).toHaveBeenCalledOnce()
+    expect(mockClearProjectStore).toHaveBeenCalledOnce()
+    expect(mockClearLaneStore).toHaveBeenCalledOnce()
+    expect(mockClearCanvasImages).toHaveBeenCalledOnce()
+    expect(mockClearWriteQueue).toHaveBeenCalledOnce()
+    expect(store.user?.id).toBe('new-user-002')
+    expect(store.session?.access_token).toBe('new-account-access-token')
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.isRestoringSession).toBe(false)
+    expect(store.reauthRequired).toBe(false)
+    await vi.waitFor(() => expect(mockLoadWorkspaces).toHaveBeenCalledOnce())
+    expect(mockLoadTasksFromDatabase).toHaveBeenCalledOnce()
+  })
 })
 
 // ============================================================================
@@ -1157,7 +1228,7 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     expect(mockInvalidateAuthCache).not.toHaveBeenCalledWith(null)
   })
 
-  it('24a4. reconnect cannot silently switch the remembered account', async () => {
+  it('24a4. passive reconnect cannot silently switch the remembered account', async () => {
     const remembered = buildMockUser({ id: 'account-a' })
     mockReadPersistedAuthIdentity.mockResolvedValue(remembered)
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
@@ -1167,7 +1238,7 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     await store.initialize()
     const otherSession = buildMockSession({ user: buildMockUser({ id: 'account-b' }) })
 
-    await fireAuthStateChange('SIGNED_IN', otherSession)
+    await fireAuthStateChange('TOKEN_REFRESHED', otherSession)
 
     expect(store.user?.id).toBe('account-a')
     expect(store.session).toBeNull()

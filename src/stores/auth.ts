@@ -390,6 +390,45 @@ export const useAuthStore = defineStore('auth', () => {
     ])
   }
 
+  const clearAccountScopedLocalStateForSwitch = async (previousUserId: string) => {
+    const [
+      { useTaskStore },
+      { useCanvasStore },
+      { useWorkspaceStore },
+      { useProjectStore },
+      { useLaneStore },
+      { useCanvasImagesStore },
+    ] = await Promise.all([
+      import('@/stores/tasks'),
+      import('@/stores/canvas'),
+      import('@/stores/workspace'),
+      import('@/stores/projects'),
+      import('@/stores/lanes'),
+      import('@/stores/canvasImages'),
+    ])
+
+    useTaskStore().clearAll()
+    useCanvasStore().clearAll()
+    useWorkspaceStore().clearAll()
+    useProjectStore().clearAll()
+    useLaneStore().clearAll()
+    useCanvasImagesStore().clearAll()
+
+    try {
+      const { deleteReadCacheScopesForUser } = await import('@/services/offline/readCacheDB')
+      await deleteReadCacheScopesForUser(previousUserId)
+    } catch (_e) {
+      // Non-critical; authenticated reload below replaces the visible state.
+    }
+
+    try {
+      const { clearAll: clearWriteQueue } = await import('@/services/offline/writeQueueDB')
+      await clearWriteQueue()
+    } catch (_e) {
+      // Non-critical in environments without IndexedDB.
+    }
+  }
+
   const preserveReconnectShellAfterFailedRefresh = (
     recoverableSession: Session,
     logMessage: string,
@@ -701,9 +740,16 @@ export const useAuthStore = defineStore('auth', () => {
           // and queued writes across accounts. Account switching requires the
           // explicit sign-out path that clears that ownership first.
           if (newSession && user.value?.id && user.value.id !== newSession.user.id) {
-            console.warn(`👤 [AUTH:${currentTabId}] Rejected session for a different account; sign out before switching accounts`)
-            await supabase.auth.signOut({ scope: 'local' })
-            return
+            if (_event !== 'SIGNED_IN') {
+              console.warn(`👤 [AUTH:${currentTabId}] Rejected passive session for a different account; sign out before switching accounts`)
+              await supabase.auth.signOut({ scope: 'local' })
+              return
+            }
+            const previousUserId = user.value.id
+            console.warn(`👤 [AUTH:${currentTabId}] SIGNED_IN switched accounts; clearing previous local account state before reload`)
+            await clearAccountScopedLocalStateForSwitch(previousUserId)
+            handledSignInForUserId = null
+            appInitLoadComplete = false
           }
 
           // Any auth-js event carrying a valid session completes restoration,

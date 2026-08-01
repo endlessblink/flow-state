@@ -86,6 +86,47 @@
 
 **Still explicitly not covered**: View-specific hidden-filter mistakes after the complete renderer store is loaded; a phone that remains closed; historical unrelated failed operations; Local API downtime.
 
+### ~~BUG-1983~~: Permanent task deletion rejected by workspace authorization (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-08-01) | **Release**: Electron 1.4.325
+
+**User repro**: Permanently deleting a task surfaced `permission denied for function flowstate_can_write_workspace_v1` and left the task undeleted.
+
+**Acceptance**:
+
+- Single-task permanent deletion uses the authorized atomic delete RPC and does not issue a direct RLS-protected `DELETE` from the client.
+- Authenticated owners, admins, and members can delete eligible tasks; viewers and stale sessions fail closed.
+- Recurrence cleanup, tombstone creation, receipt validation, undo rollback, and incomplete-receipt handling remain covered by regression tests.
+- The privilege-repair migration is applied, the Electron build is shipped, and the live updater manifest is verified.
+
+**Fix**: Single-task permanent deletion now uses the existing atomic delete RPC, so recurrence cleanup, authorization, tombstones, and hard deletion occur in one server transaction. The live database privilege repair restores `authenticated` execution of the workspace-write helper while keeping `anon` denied.
+
+**Tests and proof**: Focused delete, undo, migration, and contract checks passed (35 tests in the final focused pack); type-check passed; the Electron 1.4.325 AppImage and Debian package were built and validated. The full suite remains red on two unrelated remote-baseline contracts: missing `created_at` metadata for `device_sync_receipts` and a Hermes route-count expectation of 17 versus 18 actual routes.
+
+**Live proof**: Production grants report `authenticated=t` and `anon=f`; `https://in-theflow.com/updates/electron/latest-linux.yml` serves version 1.4.325 and the AppImage endpoint returns HTTP 200.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Permanent delete reached the workspace-write helper and surfaced the reported permission error. | Yes, direct delete replaced with the authorized RPC |
+| Data shape / persisted row shape | Partial | Atomic RPC receipt and tombstone contracts are covered; no production task was deleted for this proof. | RPC transaction and receipt only |
+| Renderer store/state | Yes | Single-delete composable and undo tests pass; rollback remains covered. | Yes |
+| Electron main/preload bridge | N/A | The failure occurs in renderer-to-Supabase deletion, not the Electron bridge. | N/A |
+| Localhost sidecar endpoint | N/A | Permanent task deletion does not use the local API sidecar. | N/A |
+| KDE polling/control path | N/A | No KDE timer or polling path is involved. | N/A |
+| Supabase persistence/realtime | Yes | Live grant probe reports `authenticated=t`, `anon=f`; atomic delete migration and receipt contracts pass. | Yes |
+| Updater/runtime version | Yes | Public updater serves 1.4.325 and the AppImage endpoint returns HTTP 200. | Yes |
+| Stale live process/cache state | Partial | Client no longer issues the failing direct delete; a headed installed-app deletion repro remains not run. | RPC route only |
+
+**Exact failure mode fixed**: A client-side direct hard delete invoked an RLS policy whose workspace-write helper was not executable for the current request, producing the permission error instead of deleting.
+
+**Explicitly not covered**: The two unrelated full-suite baseline failures, a viewer authorization UX audit, and a headed installed-Electron manual deletion screenshot.
+
+**Regression added for reported repro**: Single permanent deletion now asserts the atomic RPC call, permission-error propagation, incomplete-receipt fail-closed behavior, and no direct table delete.
+
+**Live boundary proof**: The live database reports the intended function grants, the updater manifest serves 1.4.325, and the published AppImage returns HTTP 200.
+
 ### TASK-1981: Restore recurring-task completion and make sync alerts opaque (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-29) | **Related**: TASK-1977

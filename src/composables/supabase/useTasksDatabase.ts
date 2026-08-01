@@ -7,7 +7,6 @@ import {
     getSupabase, swrCache, invalidateCache,
     type DatabaseContext, type SafeCreateTaskResult, type TaskIdAvailability
 } from './_infrastructure'
-import { logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 export function useTasksDatabase(ctx: DatabaseContext) {
     const { authStore, isSyncing, lastSyncError, getUserIdSafe, withRetry, handleError } = ctx
 
@@ -325,76 +324,7 @@ export function useTasksDatabase(ctx: DatabaseContext) {
     }
 
     const permanentlyDeleteTask = async (taskId: string): Promise<void> => {
-        try {
-            logPermanentDeleteTrace(taskId, 'supabase-db.start', {
-                userId: getUserIdSafe(),
-                isAuthenticated: authStore.isAuthenticated,
-            })
-            isSyncing.value = true
-            // BUG-1477: Just hard-delete. The DB trigger `trg_task_tombstone`
-            // (BEFORE DELETE on tasks) auto-creates the tombstone in the same
-            // transaction. No need for a separate recordTombstone() call.
-            await withRetry(async () => {
-                // BUG-1850: Request the deleted rows so a silent 0-row delete is detected instead
-                // of a fake success that lets the optimistic local removal get resurrected.
-                const sb = getSupabase()
-                const { data, error } = await sb
-                    .from('tasks')
-                    .delete()
-                    .eq('id', taskId)
-                    .select('id')
-                logPermanentDeleteTrace(taskId, 'supabase-db.delete-result', {
-                    rowCount: data?.length ?? 0,
-                    errorCode: error?.code,
-                    errorMessage: error?.message,
-                })
-                if (error) throw error
-                if (data && data.length > 0) {
-                    logPermanentDeleteTrace(taskId, 'supabase-db.delete-affected-row')
-                    return // normal path — row hard-deleted, trigger wrote tombstone
-                }
-
-                // BUG-1850b: 0 rows deleted. Two very different causes — distinguish them:
-                //  (a) the row genuinely isn't on the server / not visible to this session
-                //      (the mass "not found on server / 406" case) → there is nothing to delete,
-                //      so the delete has effectively succeeded. Record a tombstone so the local
-                //      copy can't be resurrected, and let the local removal stand (no throw).
-                //  (b) the row IS visible (SELECT/UPDATE see it) but DELETE was blocked → a real
-                //      RLS DELETE-policy failure we must surface, or the task would silently persist.
-                const { data: stillThere, error: visibilityError } = await sb
-                    .from('tasks')
-                    .select('id')
-                    .eq('id', taskId)
-                    .maybeSingle()
-                logPermanentDeleteTrace(taskId, 'supabase-db.visibility-check', {
-                    stillVisible: Boolean(stillThere),
-                    errorCode: visibilityError?.code,
-                    errorMessage: visibilityError?.message,
-                })
-                if (visibilityError) throw visibilityError
-                if (stillThere) {
-                    logPermanentDeleteTrace(taskId, 'supabase-db.visible-but-delete-zero')
-                    throw new Error(`permanentlyDeleteTask: row ${taskId} is visible but DELETE affected 0 rows — RLS delete policy is blocking it`)
-                }
-                // An absent row may be personal, shared, already deleted, or hidden by
-                // membership/RLS. Inventing personal scope here can corrupt recovery truth.
-                logPermanentDeleteTrace(taskId, 'supabase-db.unscoped-zero-row')
-                throw new Error(
-                    `permanentlyDeleteTask: cannot establish deletion scope for ${taskId} after DELETE affected 0 rows`
-                )
-            }, 'permanentlyDeleteTask', 3, `permanentlyDeleteTask:${taskId}`)
-            lastSyncError.value = null
-            logPermanentDeleteTrace(taskId, 'supabase-db.done')
-        } catch (e: unknown) {
-            logPermanentDeleteTrace(taskId, 'supabase-db.error', {
-                error: e instanceof Error ? e.message : String(e),
-            })
-            handleError(e, 'permanentlyDeleteTask')
-            throw e
-        } finally {
-            isSyncing.value = false
-            logPermanentDeleteTrace(taskId, 'supabase-db.finally')
-        }
+        await bulkPermanentlyDeleteTasks([taskId])
     }
 
     const bulkPermanentlyDeleteTasks = async (taskIds: string[]): Promise<void> => {

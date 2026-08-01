@@ -96,75 +96,76 @@ describe('useSupabaseDatabase permanent task delete', () => {
     invalidateCache.all()
   })
 
-  it('hard deletes a visible task and relies on the database trigger for tombstone creation', async () => {
-    queueResponse('tasks', [{ data: [{ id: 'task-1' }], error: null }])
+  it('permanently deletes a single task through the authorized atomic RPC', async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: { deleted_ids: ['task-1'], deleted_count: 1 },
+      error: null
+    })
 
     const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
     const db = useSupabaseDatabase()
 
     await db.permanentlyDeleteTask('task-1')
 
-    expect(queryCalls).toEqual([
-      { table: 'tasks', method: 'delete', args: [] },
-      { table: 'tasks', method: 'eq', args: ['id', 'task-1'] },
-      { table: 'tasks', method: 'select', args: ['id'] }
-    ])
-    expect(fromMock).not.toHaveBeenCalledWith('tombstones')
+    expect(rpcMock).toHaveBeenCalledWith('flowstate_permanently_delete_tasks', {
+      p_task_ids: ['task-1'],
+      p_user_id: 'user-1',
+      p_request_id: expect.any(String)
+    })
+    expect(fromMock).not.toHaveBeenCalled()
   })
 
-  it('throws when a task is visible but delete affects zero rows', async () => {
-    queueResponse('tasks', [
-      { data: [], error: null },
-      { data: { id: 'task-visible' }, error: null }
-    ])
+  it('surfaces an atomic RPC permission failure without issuing a direct delete', async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'permission denied for function flowstate_can_write_workspace_v1' }
+    })
 
     const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
     const db = useSupabaseDatabase()
 
     await expect(db.permanentlyDeleteTask('task-visible')).rejects.toThrow(
-      'row task-visible is visible but DELETE affected 0 rows'
+      'permission denied for function flowstate_can_write_workspace_v1'
     )
 
-    expect(queryCalls).toContainEqual({ table: 'tasks', method: 'maybeSingle', args: [] })
-    expect(fromMock).not.toHaveBeenCalledWith('tombstones')
+    expect(fromMock).not.toHaveBeenCalled()
   })
 
-  it('fails closed when a zero-row delete cannot establish task ownership scope', async () => {
-    queueResponse('tasks', [
-      { data: [], error: null },
-      { data: null, error: null }
-    ])
+  it('fails closed when the atomic receipt does not confirm the requested task', async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: { deleted_ids: [], deleted_count: 0 },
+      error: null
+    })
 
     const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
     const db = useSupabaseDatabase()
 
     await expect(db.permanentlyDeleteTask('task-absent')).rejects.toThrow(
-      'cannot establish deletion scope'
+      'receipt did not confirm every requested task'
     )
 
-    expect(queryCalls).toContainEqual({ table: 'tasks', method: 'maybeSingle', args: [] })
-    expect(fromMock).not.toHaveBeenCalledWith('tombstones')
+    expect(fromMock).not.toHaveBeenCalled()
   })
 
-  it('does not attempt fallback tombstone persistence after an unscoped zero-row delete', async () => {
-    queueResponse('tasks', [
-      { data: [], error: null },
-      { data: null, error: null }
-    ])
+  it('does not attempt fallback tombstone persistence after an incomplete RPC receipt', async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: { deleted_ids: [], deleted_count: 0 },
+      error: null
+    })
     const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
     const db = useSupabaseDatabase()
 
     await expect(db.permanentlyDeleteTask('task-absent')).rejects.toThrow(
-      'cannot establish deletion scope'
+      'receipt did not confirm every requested task'
     )
-    expect(fromMock).not.toHaveBeenCalledWith('tombstones')
+    expect(fromMock).not.toHaveBeenCalled()
   })
 
-  it('throws when the fallback visibility check errors and does not create a tombstone', async () => {
-    queueResponse('tasks', [
-      { data: [], error: null },
-      { data: null, error: { message: 'PostgREST unavailable' } }
-    ])
+  it('does not issue a direct delete when the atomic RPC is unavailable', async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'PostgREST unavailable' }
+    })
 
     const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
     const db = useSupabaseDatabase()
@@ -173,7 +174,7 @@ describe('useSupabaseDatabase permanent task delete', () => {
       message: 'PostgREST unavailable'
     })
 
-    expect(fromMock).not.toHaveBeenCalledWith('tombstones')
+    expect(fromMock).not.toHaveBeenCalled()
   })
 
   it('permanently deletes a complete task batch in one transactional RPC', async () => {

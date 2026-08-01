@@ -1485,15 +1485,6 @@ export function useTaskOperations(
       return;
     }
 
-    // BUG-1508: Clear recurrenceRule on all chain members BEFORE hard-deleting
-    // so the recurrence scheduler cannot find a done ancestor and recreate this task.
-    logPermanentDeleteTrace(taskId, "store.before-clear-recurrence");
-    await clearRecurrenceChain(taskId, {
-      throwOnPersistenceFailure: true,
-      includeCurrent: false,
-    });
-    logPermanentDeleteTrace(taskId, "store.after-clear-recurrence");
-
     const deletedTask = _rawTasks.value[index];
     manualOperationInProgress.value = true;
     addPendingWrite(taskId);

@@ -86,6 +86,46 @@
 
 **Still explicitly not covered**: View-specific hidden-filter mistakes after the complete renderer store is loaded; a phone that remains closed; historical unrelated failed operations; Local API downtime.
 
+### ~~TASK-1982~~: Preserve due dates when creating grouped tasks (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-01) — grouped task creation now keeps source and explicit due dates through the Board flow.
+
+**User repro**: Creating a task from a Board category/date column could lose the source due date because the creation modal was not given the column default and the Board save handler dropped the modal date.
+
+**Acceptance**:
+
+- Board-created tasks retain the source date column's due date across date, priority, category, and list views.
+- An explicit date selected in the creation modal wins over source/filter defaults; No Date remains undated.
+- Regression coverage, type-check, targeted lint, Electron packaging, updater deployment, manifest verification, commit, and push complete.
+
+**Implementation**: The Board passes date-column defaults into `QuickTaskCreateModal`; `useBoardActions` preserves explicit modal dates while applying view defaults and clears inherited dates for the No Date column.
+
+**Regression added**: `src/composables/board/__tests__/useBoardActions.spec.ts` covers explicit modal dates, source date columns, and No Date behavior.
+
+**Verification**: Focused regression tests, `npm run type-check`, targeted ESLint, import validation, and Electron 1.4.324 packaging passed. The full unit suite still has two unrelated baseline failures (`hermes-route-capabilities` route count and `database-safety` `device_sync_receipts` metadata); the full ESLint run timed out without reporting a violation.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Board action regression submits a task from a grouped source with an explicit and inherited date. | Yes |
+| Data shape / persisted row shape | Yes | The regression asserts the `createTaskWithUndo` payload due date. | Yes, creation payload only |
+| Renderer store/state | Yes | `BoardView` now passes the modal date into `useBoardActions`; type-check passes. | Yes, Board creation path |
+| Electron main/preload bridge | N/A | No bridge code is involved in task creation. | N/A |
+| Localhost sidecar endpoint | N/A | No sidecar route is involved. | N/A |
+| KDE polling/control path | N/A | No KDE behavior is involved. | N/A |
+| Supabase persistence/realtime | Partial | Electron package and contract checks passed; no live task mutation was performed. | Payload handoff only |
+| Updater/runtime version | Yes | Electron 1.4.324 package validated and public manifest serves 1.4.324. | Yes, release delivery |
+| Stale live process/cache state | Partial | Fresh package was built and promoted; no headed app session was run. | Package freshness only |
+
+**Exact failure mode fixed**: Board task creation discarded the modal/source due date and allowed an active filter date to replace the intended value.
+
+**Explicitly not covered**: Existing unrelated full-suite failures, full-lint timeout, live headed UI interaction, or task persistence against production data.
+
+**Regression added for reported repro**: `src/composables/board/__tests__/useBoardActions.spec.ts` covers explicit modal dates, date-column defaults, and No Date clearing.
+
+**Live boundary proof**: Electron 1.4.324 packaging and public updater manifest verification passed; no production task mutation was attempted.
+
 ### TASK-1981: Restore recurring-task completion and make sync alerts opaque (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-29) | **Related**: TASK-1977

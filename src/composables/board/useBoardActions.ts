@@ -13,7 +13,7 @@ interface BoardActionsDependencies {
 /**
  * Convert date column keys to actual date strings
  */
-function getDateFromColumnKey(key: string): string | undefined {
+export function getDateFromColumnKey(key: string): string | undefined {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -100,7 +100,8 @@ export function useBoardActions(deps: BoardActionsDependencies) {
         columnKey: string,
         viewType: BoardViewType,
         projectId?: string,
-        attachments?: TaskAttachment[]  // FEATURE-1414
+        attachments?: TaskAttachment[],  // FEATURE-1414
+        dueDate?: string
     ) => {
         const taskData: Partial<Task> = {
             ...filterDefaults.value,
@@ -111,6 +112,11 @@ export function useBoardActions(deps: BoardActionsDependencies) {
             attachments
         }
 
+        // An explicit date from the modal wins over the active filter and column default.
+        if (dueDate !== undefined || viewType === 'date') {
+            taskData.dueDate = dueDate ?? getDateFromColumnKey(columnKey)
+        }
+
         // Set correct field based on view type
         if (viewType === 'category') {
             // FEATURE-1336: Category view - columnKey is the projectId
@@ -119,8 +125,6 @@ export function useBoardActions(deps: BoardActionsDependencies) {
             taskData.status = columnKey as Task['status']
         } else if (viewType === 'priority') {
             taskData.priority = columnKey === 'no_priority' ? undefined : columnKey as Task['priority']
-        } else if (viewType === 'date') {
-            taskData.dueDate = getDateFromColumnKey(columnKey)
         }
 
         return handleWithError(

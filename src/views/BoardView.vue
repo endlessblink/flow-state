@@ -149,6 +149,7 @@
     <QuickTaskCreateModal
       :is-open="showQuickTaskCreate"
       :loading="false"
+      :inherited-props="quickTaskInheritedProps"
       @cancel="closeQuickTaskCreate"
       @create="handleQuickTaskCreate"
     />
@@ -194,7 +195,7 @@ import { useSettingsStore } from '@/stores/settings'
 // Composables
 import { useBoardModals } from '@/composables/board/useBoardModals'
 import { useBoardContextMenu } from '@/composables/board/useBoardContextMenu'
-import { useBoardActions } from '@/composables/board/useBoardActions'
+import { getDateFromColumnKey, useBoardActions } from '@/composables/board/useBoardActions'
 import { useBoardState } from '@/composables/board/useBoardState'
 import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 
@@ -393,6 +394,11 @@ const handleAddTask = (payload: { columnKey: string, projectId: string, viewType
   openQuickTaskCreate(payload.columnKey, payload.projectId, payload.viewType)
 }
 
+const quickTaskInheritedProps = computed(() => {
+  if (pendingTaskViewType.value !== 'date') return null
+  return { dueDate: getDateFromColumnKey(pendingTaskColumnKey.value) }
+})
+
 const handleEditTask = (taskId: string) => {
   const task = taskStore.getTask(taskId)
   if (task) {
@@ -420,7 +426,8 @@ const handleQuickTaskCreate = async (data: {
     pendingTaskColumnKey.value,
     pendingTaskViewType.value,
     data.projectId || pendingTaskProjectId.value,
-    data.attachments
+    data.attachments,
+    data.dueDate
   )
   if (newTask) {
     closeQuickTaskCreate()

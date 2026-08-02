@@ -86,6 +86,38 @@
 
 **Still explicitly not covered**: View-specific hidden-filter mistakes after the complete renderer store is loaded; a phone that remains closed; historical unrelated failed operations; Local API downtime.
 
+### ~~BUG-1985~~: Calendar occurrence completion and timer duration drift (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-02) | **Release**: Electron 1.4.336
+
+**User repro**: Choosing “Done for today” from a calendar task moved the visible block to tomorrow without leaving today completed or consistently updating the task date; starting a timer from a calendar task ignored that block’s configured duration.
+
+**Scope**: Preserve the completed calendar instance, create tomorrow’s instance, synchronize due/scheduled dates, render completion from instance status, and pass calendar duration through both timer entry points.
+
+**Verification**: Focused calendar/context-menu tests pass (18/18), type-check passes, focused ESLint passes, Vite production build passes, Electron main/sidecar compilation passes, AppImage and Debian artifacts for 1.4.336 were produced, and Electron package validation passes. The standard Electron prebuild remains blocked by the existing restore E2E reporter-folder collision and live restore assertion.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Calendar occurrence helper, context-menu duration, and calendar context-menu dispatch regressions pass. | Yes |
+| Data shape / persisted row shape | Yes | `TaskInstance.status`, date, time, and duration fields are preserved in the update payload. | Yes for renderer mutation shape; live row round-trip not covered |
+| Renderer store/state | Yes | Focused tests, type-check, and production build pass; calendar views now consume `instanceStatus`. | Yes |
+| Electron main/preload bridge | N/A | The fix is renderer/task-store state and does not cross the Electron bridge. | N/A |
+| Localhost sidecar endpoint | N/A | Timer start and task mutation do not use the Local API boundary. | N/A |
+| KDE polling/control path | N/A | No KDE control path is involved. | N/A |
+| Supabase persistence/realtime | Not live-checked | Writes continue through the existing task-store mutation/sync path; no production task was changed during verification. | Existing path retained; live round-trip not covered |
+| Updater/runtime version | Yes | Electron 1.4.336 package validation passed and the public manifest serves 1.4.336. | Yes |
+| Stale live process/cache state | Not live-checked | No installed headed app interaction was performed in this turn. | No |
+
+**Exact failure mode fixed**: Calendar “Done for today” moved the only instance instead of completing today and creating tomorrow, calendar styling ignored completed instance status, and timer entry points used the default duration instead of the calendar block duration.
+
+**Explicitly not covered**: Live headed calendar click-through, production task persistence round-trip, and stale installed-process state.
+
+**Regression added for reported repro**: Calendar occurrence transformation, calendar context-menu duration propagation, and context-menu timer duration tests.
+
+**Live boundary proof**: Public Electron updater manifest verified at `https://in-theflow.com/updates/electron/latest-linux.yml` for 1.4.336; no live task mutation performed.
+
 ### ~~BUG-1984~~: Catalog completion races the canonical task snapshot (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-08-02) | **Release**: Electron 1.4.335

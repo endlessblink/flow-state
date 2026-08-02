@@ -81,7 +81,8 @@ export function useCalendarInteractionHandlers(
                 event: mouseEvent,
                 task,
                 instanceId: calendarEvent.instanceId,
-                isCalendarEvent: true
+                isCalendarEvent: true,
+                calendarDuration: calendarEvent.duration
             }
         }))
     }

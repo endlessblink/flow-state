@@ -177,7 +177,7 @@ export function useCalendarTimerIntegration(_currentDate: Ref<Date>) {
 
     // Start the timer (wrap in try/catch)
     try {
-      await timerStore.startTimer(calEvent.taskId)
+      await timerStore.startTimer(calEvent.taskId, targetDuration, false)
       console.log('🎯 [CALENDAR-TIMER] Timer started successfully for task:', calEvent.taskId)
     } catch (error) {
       console.error('🎯 [CALENDAR-TIMER] Failed to start timer:', error)

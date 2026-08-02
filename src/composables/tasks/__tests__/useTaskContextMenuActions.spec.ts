@@ -109,6 +109,27 @@ describe('useTaskContextMenuActions duplicateTask', () => {
     expect(typeof payload.instances[0].id).toBe('string')
     expect(emit).toHaveBeenCalledWith('close')
   })
+
+  it('starts a calendar context-menu timer with the selected instance duration', async () => {
+    const emit = vi.fn()
+
+    const { startTimer: startContextTimer } = useTaskContextMenuActions({
+      task: {
+        id: 'task-1',
+        title: 'Calendar Task',
+        status: 'todo',
+        instanceId: 'inst-1',
+        isCalendarEvent: true,
+        calendarDuration: 45
+      } as unknown as Task,
+      contextTask: null,
+      selectedCount: 1
+    }, emit)
+
+    await startContextTimer()
+
+    expect(startTimer).toHaveBeenCalledWith('task-1', 45, false)
+  })
 })
 
 describe('useTaskContextMenuActions toggleDone canonical resolution', () => {

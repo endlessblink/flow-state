@@ -818,7 +818,7 @@ const handleOpenTaskEdit = (event: Event) => {
 
 const handleTaskContextMenu = (event: Event) => {
   const customEvent = event as CustomEvent
-  const { event: mouseEvent, task, taskId, instanceId, isCalendarEvent, selectedIds, selectedCount, context } = customEvent.detail
+  const { event: mouseEvent, task, taskId, instanceId, isCalendarEvent, calendarDuration, selectedIds, selectedCount, context } = customEvent.detail
   const resolvedTaskId = typeof taskId === 'string' ? taskId : task?.id
   const currentTask = resolvedTaskId ? taskStore.getTask(resolvedTaskId) ?? task : task
   if (!currentTask) return
@@ -827,7 +827,8 @@ const handleTaskContextMenu = (event: Event) => {
     contextMenuTask.value = {
       ...currentTask,
       instanceId,
-      isCalendarEvent
+      isCalendarEvent,
+      ...(typeof calendarDuration === 'number' ? { calendarDuration } : {})
     } as Task & { instanceId: string; isCalendarEvent: boolean }
   } else {
     contextMenuTask.value = currentTask

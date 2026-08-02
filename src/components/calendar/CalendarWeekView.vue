@@ -312,8 +312,8 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
                   'timer-active-event': currentTaskId === event.taskId,
                   'dragging': isDragging && draggedEventId === event.id,
                   'selected': selectedEventIds?.has(event.id),
-                  'status-done': getTaskStatus(event) === 'done',
-                  'status-active': getTaskStatus(event) === 'todo',
+                  'status-done': event.instanceStatus === 'completed' || getTaskStatus(event) === 'done',
+                  'status-active': event.instanceStatus !== 'completed' && getTaskStatus(event) === 'todo',
                   'week-event--virtual': event.isVirtual,
                   'is-locked': event.calendarLocked
                 }"

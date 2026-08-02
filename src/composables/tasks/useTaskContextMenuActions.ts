@@ -82,11 +82,12 @@ export function useTaskContextMenuActions(
         const canonicalTask = taskStore.getTask(snapshot.id)
         if (!canonicalTask) return snapshot
 
-        const transient = snapshot as unknown as { instanceId?: string; isCalendarEvent?: boolean }
+        const transient = snapshot as unknown as { instanceId?: string; isCalendarEvent?: boolean; calendarDuration?: number }
         return {
             ...canonicalTask,
             ...(transient.instanceId ? { instanceId: transient.instanceId } : {}),
-            ...(transient.isCalendarEvent !== undefined ? { isCalendarEvent: transient.isCalendarEvent } : {})
+            ...(transient.isCalendarEvent !== undefined ? { isCalendarEvent: transient.isCalendarEvent } : {}),
+            ...(transient.calendarDuration !== undefined ? { calendarDuration: transient.calendarDuration } : {})
         } as Task
     })
     const isBatchOperation = computed(() => (props.selectedCount || 0) > 1)
@@ -410,7 +411,8 @@ export function useTaskContextMenuActions(
         const taskId = currentTask.value?.id
         const taskTitle = currentTask.value?.title
         const isBatch = isBatchOperation.value
-        const workDuration = timerStore.settings.workDuration
+        const workDuration = (currentTask.value as (Task & { calendarDuration?: number }) | null)?.calendarDuration
+            ?? timerStore.settings.workDuration
 
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')

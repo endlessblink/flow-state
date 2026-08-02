@@ -277,6 +277,7 @@ import { useQuickTasks } from '@/composables/useQuickTasks'
 import { useToast } from '@/composables/useToast'
 import { beginPermanentDeleteTrace, logPermanentDeleteTrace } from '@/utils/permanentDeleteTrace'
 import { reconcileStaleInstancesForDueDate } from '@/utils/dueDateInstances'
+import { buildCalendarDoneForTodayUpdate } from '@/utils/calendar/completeCalendarOccurrence'
 import DueDateSubmenu from './context-menu/DueDateSubmenu.vue'
 import PrioritySubmenu from './context-menu/PrioritySubmenu.vue'
 import DurationSubmenu from './context-menu/DurationSubmenu.vue'
@@ -555,18 +556,14 @@ const handleDoneForNowTomorrow = async () => {
 
   try {
     // BUG-1429: Without updating scheduledDate, isTodayTask still matches on the old date
-    const updatePayload: Record<string, string> = {
-      dueDate: tomorrowStr,
-      doneForNowUntil: tomorrowStr
-    }
-    if (task?.scheduledDate) {
-      updatePayload.scheduledDate = tomorrowStr
-    }
+    const updatePayload = isCalendarEvent && calendarInstanceId && task
+      ? buildCalendarDoneForTodayUpdate(task, calendarInstanceId, tomorrowStr)
+      : {
+        dueDate: tomorrowStr,
+        doneForNowUntil: tomorrowStr,
+        ...(task?.scheduledDate ? { scheduledDate: tomorrowStr } : {})
+      }
     await taskStore.updateTaskWithUndo(taskId, updatePayload)
-    // TASK-1362: Also move calendar instance to tomorrow
-    if (isCalendarEvent && calendarInstanceId) {
-      await taskStore.updateTaskInstance(taskId, calendarInstanceId, { scheduledDate: tomorrowStr })
-    }
     canvasStore.requestSync('user:context-menu')
     showToast('Moved to tomorrow', 'success', { duration: 2000 })
   } catch (error) {

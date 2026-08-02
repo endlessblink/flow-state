@@ -72,6 +72,7 @@ describe('useCalendarInteractionHandlers context menu dispatch', () => {
         })
         expect(received?.detail.instanceId).toBe('instance-1')
         expect(received?.detail.isCalendarEvent).toBe(true)
+        expect(received?.detail.calendarDuration).toBe(30)
     })
 
     it('does not dispatch when the canonical task lookup fails', () => {

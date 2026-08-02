@@ -199,8 +199,8 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
               'selected': selectedEventIds?.has(calEvent.id),
               'has-overlap': calEvent.totalColumns > 1,
               'is-compact': calEvent.duration <= 30,
-              'status-done': getTaskStatus(calEvent) === 'done',
-              'status-active': getTaskStatus(calEvent) === 'todo',
+              'status-done': calEvent.instanceStatus === 'completed' || getTaskStatus(calEvent) === 'done',
+              'status-active': calEvent.instanceStatus !== 'completed' && getTaskStatus(calEvent) === 'todo',
               'slot-task--virtual': calEvent.isVirtual,
               'is-locked': calEvent.calendarLocked
             }"

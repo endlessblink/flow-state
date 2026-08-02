@@ -3,16 +3,15 @@ import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore, type Task } from '@/stores/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
-import { useSmartViews } from '@/composables/useSmartViews'
 import { useDirection } from '@/i18n/useDirection'
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
+import { isCalendarInboxTaskDueToday } from '@/utils/calendar/inboxTodayFilter'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
 export function useCalendarInboxState() {
     const taskStore = useTaskStore()
     const canvasStore = useCanvasStore()
     const { groupsWithCounts, filterTasksByGroup } = useCanvasGroupMembership()
-    const { isTodayTask } = useSmartViews()
     const { isRTL } = useDirection()
 
     // --- State ---
@@ -90,20 +89,9 @@ export function useCalendarInboxState() {
     const isSubtaskCard = (task: Task): boolean =>
         Boolean(task.parentTaskId) || embeddedSubtaskIds.value.has(task.id)
 
-    // Helper: Check if task is due today (status-agnostic, with proper date normalization)
-    // Uses isTodayTask from useSmartViews but also handles done tasks (isTodayTask excludes them)
+    // Calendar inbox Today is due-date-only; event schedules can be a different day.
     const isTaskDueToday = (task: Task): boolean => {
-        // isTodayTask handles normalization, instances, and legacy scheduledDate
-        // but excludes done tasks — so we also check done tasks with dueDate
-        if (task.status !== 'done') return isTodayTask(task)
-
-        // For done tasks: normalize dueDate manually
-        const todayStr = getTodayStr()
-        if (task.dueDate) {
-            const normalized = task.dueDate.trim().substring(0, 10)
-            return normalized === todayStr
-        }
-        return false
+        return isCalendarInboxTaskDueToday(task)
     }
 
     // Base Inbox Tasks — BUG-1333: Use calendarFilteredTasks (project + hide-done only)

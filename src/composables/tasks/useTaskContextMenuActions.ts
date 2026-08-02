@@ -2,6 +2,7 @@
 import { computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
+import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
 import { formatDateKey } from '@/utils/dateUtils'
@@ -45,26 +46,6 @@ export function useTaskContextMenuActions(
             // Logging must never change the mutation failure behavior.
         }
         showToast(`Task could not be ${action}. Refresh and try again.`, 'error')
-    }
-
-    const isAlreadyCompletedOccurrence = (error: unknown): boolean => {
-        const code = error && typeof error === 'object' && 'code' in error
-            ? String((error as { code?: unknown }).code ?? '')
-            : ''
-        const objectMessage = error && typeof error === 'object' && 'message' in error
-            ? String((error as { message?: unknown }).message ?? '')
-            : ''
-        const message = error instanceof Error ? error.message : objectMessage || String(error)
-        let serialized = ''
-        try {
-            serialized = JSON.stringify(error)
-        } catch {
-            // Some database/client errors cannot be serialized.
-        }
-        return code === 'occurrence_already_completed'
-            || message.includes('current recurring occurrence is already completed')
-            || String(error).includes('current recurring occurrence is already completed')
-            || serialized.includes('current recurring occurrence is already completed')
     }
 
     // The undo wrapper performs its own canonical-task lookup. A catalog refresh
@@ -341,7 +322,7 @@ export function useTaskContextMenuActions(
                     await taskStore.doneForNow(taskId)
                     canvasStore.requestSync('user:context-menu')
                 } catch (error) {
-                    if (isAlreadyCompletedOccurrence(error)) {
+                    if (isDoneForNowAlreadyCompletedError(error)) {
                         try {
                             await taskStore.initializeFromDatabase()
                             canvasStore.requestSync('user:context-menu')

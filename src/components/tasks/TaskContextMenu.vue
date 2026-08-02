@@ -247,6 +247,7 @@
 import { ref, computed, onUnmounted, watch, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
+import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import { useCanvasStore } from '@/stores/canvas'
 import { useProjectStore } from '@/stores/projects'
 import {
@@ -591,7 +592,16 @@ const handleDoneForNowNextOccurrence = async () => {
     showToast('Completed for today, next occurrence scheduled', 'success', { duration: 2000 })
   } catch (error) {
     console.error('Error in done-for-now (next occurrence):', error)
-    showToast('Failed to complete task', 'error')
+    if (isDoneForNowAlreadyCompletedError(error)) {
+      try {
+        await taskStore.initializeFromDatabase()
+        canvasStore.requestSync('user:context-menu')
+      } catch (refreshError) {
+        console.warn('[Tasks] Already-completed occurrence refresh failed:', refreshError)
+      }
+    } else {
+      showToast('Failed to complete task', 'error')
+    }
   }
 }
 
@@ -649,7 +659,16 @@ const handleDoneForNowPickDate = async (timestamp: number) => {
     }
   } catch (error) {
     console.error('Error in done-for-now pick date:', error)
-    showToast('Failed to reschedule task', 'error')
+    if (isDoneForNowAlreadyCompletedError(error)) {
+      try {
+        await taskStore.initializeFromDatabase()
+        canvasStore.requestSync('user:context-menu')
+      } catch (refreshError) {
+        console.warn('[Tasks] Already-completed occurrence refresh failed:', refreshError)
+      }
+    } else {
+      showToast('Failed to reschedule task', 'error')
+    }
   }
 }
 

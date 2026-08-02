@@ -88,15 +88,15 @@
 
 ### ~~BUG-1984~~: Catalog completion races the canonical task snapshot (✅ DONE)
 
-**Priority**: P1 | **Status**: ✅ DONE (2026-08-02) | **Release**: Electron 1.4.334
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-02) | **Release**: Electron 1.4.335
 
 **User repro**: Marking a visible Catalog task complete could show “Task could not be completed” during a realtime refresh.
 
-**Exact failure modes fixed**: The completion action could lose a task between its initial canonical lookup and the second lookup inside the undo mutation wrapper. Separately, a recurring task could already be completed by another writer while the visible row still looked active; the canonical RPC returned `occurrence_already_completed`, which was incorrectly shown as a failure. Completion now retries the stale-target race and treats the idempotent already-completed response as a successful refresh. The recurring desktop failure was also traced to an installed 1.4.328 runtime, orphaned downloaded AppImages with missing `update-info.json`, and competing stale/dev Local API processes on port 5577; the updater now recovers the newest pending AppImage by filename, removes obsolete downloads, and logs the authoritative installed runtime.
+**Exact failure modes fixed**: The completion action could lose a task between its initial canonical lookup and the second lookup inside the undo mutation wrapper. Separately, a recurring task could already be completed by another writer while the visible row still looked active; the canonical RPC returned `occurrence_already_completed`, which was incorrectly shown as a failure. Completion now retries the stale-target race and treats the idempotent already-completed response as a successful refresh across the context menu, list, board, lane, and direct Done-for-now controls. The recurring desktop failure was also traced to an installed 1.4.328 runtime, orphaned downloaded AppImages with missing `update-info.json`, and competing stale/dev Local API processes on port 5577; the updater now recovers the newest pending AppImage by filename, removes obsolete downloads, and logs the authoritative installed runtime.
 
-**Regression added**: `useTaskContextMenuActions.spec.ts` covers one-tick, multi-tick, and undo-wrapper target-loss refresh gaps, plus an already-completed recurring occurrence; all confirm completion proceeds without a false error toast. Updater tests cover failed-pending cleanup, installer diagnostics, authoritative notification version, and recovery when downloaded AppImage metadata is missing.
+**Regression added**: `useTaskContextMenuActions.spec.ts` covers one-tick, multi-tick, and undo-wrapper target-loss refresh gaps, plus serialized and refresh-failing already-completed recurring occurrences; all confirm completion proceeds without a false error toast. Updater tests cover failed-pending cleanup, installer diagnostics, authoritative notification version, and recovery when downloaded AppImage metadata is missing.
 
-**Verification**: Focused task-action and Done for now tests pass (16/16), type-check, the 70-test Electron prebuild contract set, and Electron 1.4.334 locked package validation. The public updater manifest serves 1.4.334 and its AppImage returns HTTP 200. The default Electron prebuild remains blocked by an unrelated backup-restore live fixture; deployment used the explicit hotfix path after package validation.
+**Verification**: Focused task-action/updater tests pass (40/40), type-check, the task-consistency guard, and Electron 1.4.335 locked package validation. The exact installed headed AppImage was launched with renderer diagnostics, a recurring Done-for-now control was clicked through Electron CDP, the resulting headed screenshot showed no failure toast, the app log recorded no generic completion error, and live provenance reported 1.4.335. The public updater manifest serves 1.4.335. The default Electron prebuild remains blocked by an unrelated backup-restore live fixture (`PGRST116` while seeding the recovery task); deployment used the explicit hotfix path after the focused and package gates passed.
 
 **Failure-class matrix**:
 
@@ -109,7 +109,7 @@
 | Localhost sidecar endpoint | N/A | The renderer calls Supabase directly for this action. | N/A |
 | KDE polling/control path | N/A | No KDE control path is involved. | N/A |
 | Supabase persistence/realtime | Yes | The live RPC returned the domain code `occurrence_already_completed`; the recovery treats that result as idempotent and reloads canonical state. | Yes |
-| Updater/runtime version | Yes | Electron 1.4.334 package validation passed and the public manifest serves 1.4.334. | Yes |
+| Updater/runtime version | Yes | Electron 1.4.335 package validation passed, live provenance reports 1.4.335, and the public manifest serves 1.4.335. | Yes |
 | Stale live process/cache state | Yes | The installed 1.4.333 runtime log exposed the stale visible recurring row; the new release refreshes state after the idempotent response. | Yes, for this stale-row class |
 
 **Exact failure mode fixed**: A recurring task could already be completed by another writer while the visible row still looked active; the canonical RPC returned `occurrence_already_completed`, and the UI incorrectly showed a generic completion failure instead of reconciling state.
@@ -118,7 +118,7 @@
 
 **Regression added for reported repro**: The task context-menu regression simulates `occurrence_already_completed` and requires canonical reload, canvas refresh, and no false error toast.
 
-**Live boundary proof**: The installed-app log captured the exact domain response; Electron 1.4.334 was package-validated, promoted, and verified through the public updater manifest and AppImage HTTP 200 check.
+**Live boundary proof**: The installed 1.4.335 headed app was verified through Electron CDP against a real recurring Done-for-now control; the post-click screenshot had no failure toast, the runtime log had no generic completion error, live provenance reported 1.4.335, and the promoted public manifest serves the same version and checksum.
 
 ### ~~TASK-1982~~: Preserve due dates when creating grouped tasks (✅ DONE)
 

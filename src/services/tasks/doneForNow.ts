@@ -64,6 +64,19 @@ export class DoneForNowError extends Error {
   }
 }
 
+export function isDoneForNowAlreadyCompletedError(error: unknown): boolean {
+  const code = error && typeof error === 'object' && 'code' in error
+    ? String((error as { code?: unknown }).code ?? '')
+    : ''
+  const message = error instanceof Error
+    ? error.message
+    : error && typeof error === 'object' && 'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : String(error)
+  return code === 'occurrence_already_completed'
+    || message.includes('current recurring occurrence is already completed')
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }

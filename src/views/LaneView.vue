@@ -76,6 +76,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft, Route, Plus } from 'lucide-vue-next'
 import { useTaskStore } from '@/stores/tasks'
+import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import { useLaneStore } from '@/stores/lanes'
 import { useTimerStore } from '@/stores/timer'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
@@ -172,7 +173,12 @@ const handleToggleComplete = async (taskId: string) => {
   const task = taskStore.getTask(taskId)
   if (!task) return
   if (task.status !== 'done' && task.recurrenceRule) {
-    await taskStore.doneForNow(taskId)
+    try {
+      await taskStore.doneForNow(taskId)
+    } catch (error) {
+      if (!isDoneForNowAlreadyCompletedError(error)) throw error
+      await taskStore.initializeFromDatabase()
+    }
     return
   }
   const newStatus = task.status === 'done' ? 'todo' : 'done'

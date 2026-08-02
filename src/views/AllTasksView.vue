@@ -117,6 +117,7 @@ import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
+import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import { useLaneStore } from '@/stores/lanes'
 import { useTimerStore } from '@/stores/timer'
 import { useSettingsStore } from '@/stores/settings'
@@ -668,7 +669,12 @@ const handleToggleComplete = async (taskId: string) => {
   if (task) {
     // TASK-1532: Recurring tasks use "done for now" on toggle click
     if (task.status !== 'done' && task.recurrenceRule) {
-      await taskStore.doneForNow(taskId)
+      try {
+        await taskStore.doneForNow(taskId)
+      } catch (error) {
+        if (!isDoneForNowAlreadyCompletedError(error)) throw error
+        await taskStore.initializeFromDatabase()
+      }
       return
     }
     const newStatus = task.status === 'done' ? 'todo' : 'done'

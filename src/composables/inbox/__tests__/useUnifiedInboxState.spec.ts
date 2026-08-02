@@ -90,7 +90,7 @@ describe('useUnifiedInboxState', () => {
     expect(state.doneTaskCount.value).toBe(0)
   })
 
-  it('keeps due-today tasks visible in calendar inbox when scheduled on another day', async () => {
+  it('hides due-today tasks from calendar inbox when scheduled on another day', async () => {
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     const tomorrow = new Date(today)
@@ -121,12 +121,11 @@ describe('useUnifiedInboxState', () => {
     const { useUnifiedInboxState } = await import('@/composables/inbox/useUnifiedInboxState')
     const state = useUnifiedInboxState({ context: 'calendar' })
 
-    expect(state.baseInboxTasks.value).toHaveLength(1)
-    expect(state.inboxTasks.value).toHaveLength(1)
-    expect(state.inboxTasks.value[0].id).toBe(task.id)
+    expect(state.baseInboxTasks.value).toHaveLength(0)
+    expect(state.inboxTasks.value).toHaveLength(0)
   })
 
-  it('keeps due-today tasks visible when calendar inbox Today filter is active', async () => {
+  it('hides scheduled tasks when calendar inbox Today filter is active', async () => {
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     const tomorrow = new Date(today)
@@ -159,11 +158,10 @@ describe('useUnifiedInboxState', () => {
     state.activeTimeFilter.value = 'today'
     await nextTick()
 
-    expect(state.inboxTasks.value).toHaveLength(1)
-    expect(state.inboxTasks.value[0].id).toBe(task.id)
+    expect(state.inboxTasks.value).toHaveLength(0)
   })
 
-  it('keeps due-today canvas tasks visible even when not marked inbox', async () => {
+  it('hides scheduled canvas tasks even when not marked inbox', async () => {
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     const otherDay = new Date(today)
@@ -197,8 +195,7 @@ describe('useUnifiedInboxState', () => {
     state.activeTimeFilter.value = 'today'
     await nextTick()
 
-    expect(state.baseInboxTasks.value).toHaveLength(1)
-    expect(state.inboxTasks.value).toHaveLength(1)
-    expect(state.inboxTasks.value[0].id).toBe(task.id)
+    expect(state.baseInboxTasks.value).toHaveLength(0)
+    expect(state.inboxTasks.value).toHaveLength(0)
   })
 })

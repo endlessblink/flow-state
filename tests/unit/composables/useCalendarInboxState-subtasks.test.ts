@@ -108,4 +108,31 @@ describe('useCalendarInboxState subtask filtering', () => {
       'Standalone task',
     ])
   })
+
+  it('keeps scheduled canvas tasks out of the calendar inbox when sorted by canvas order', () => {
+    mockTaskStore.calendarFilteredTasks = [
+      task({
+        id: 'scheduled-canvas-task',
+        title: 'Scheduled canvas task',
+        canvasPosition: { x: 10, y: 20 },
+        instances: [{ scheduledDate: '2026-08-02', scheduledTime: '12:00' }],
+      }),
+      task({ id: 'unscheduled-task', title: 'Unscheduled task' }),
+    ]
+
+    const state = useCalendarInboxState()
+    state.sortBy.value = 'canvasOrder'
+
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['unscheduled-task'])
+  })
+
+  it('keeps due-date-only tasks in the calendar inbox', () => {
+    mockTaskStore.calendarFilteredTasks = [
+      task({ id: 'due-date-only-task', title: 'Due date only', dueDate: '2026-08-02' }),
+    ]
+
+    const state = useCalendarInboxState()
+
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['due-date-only-task'])
+  })
 })

@@ -202,30 +202,11 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             // 4. Context Specific Rules (cross-context independent)
             // Canvas inbox does NOT filter by calendar scheduling, and vice versa
             if (props.context === 'calendar') {
-                // BUG-1530: Canvas tasks that are also scheduled on the calendar are included
-                // in baseInboxTasks when canvas-related filters are active (Canvas group filter,
-                // Canvas sort, or time filter like "Today"). This lets users see their canvas
-                // tasks via these filters. Without canvas filters, scheduled canvas tasks stay
-                // hidden (they're already on the calendar grid).
                 const isScheduledOnCalendar = task.instances &&
                     task.instances.length > 0 &&
                     task.instances.some(inst => inst.scheduledDate)
 
-                // Keep due-today tasks visible in the default calendar inbox even when they
-                // have a calendar instance elsewhere. Otherwise they disappear from both the
-                // inbox and today's calendar, which makes "set for today" feel broken.
-                if (isScheduledOnCalendar && shouldShowDueTodayTaskInCalendarInbox(task)) {
-                    return true
-                }
-
-                if (isOnCanvas && isScheduledOnCalendar) {
-                    // Include if any canvas-related filter is active
-                    const hasCanvasFilter = selectedCanvasGroups.value.size > 0
-                    const hasCanvasSort = sortBy.value === 'canvasOrder'
-                    const hasTimeFilter = activeTimeFilter.value !== 'all'
-                    return hasCanvasFilter || hasCanvasSort || hasTimeFilter
-                }
-
+                // Scheduled tasks are represented by calendar events, not calendar inbox cards.
                 return !isScheduledOnCalendar
             } else {
                 // CANVAS INBOX: Hide tasks already placed on the canvas

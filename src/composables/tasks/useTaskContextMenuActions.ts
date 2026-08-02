@@ -1,5 +1,5 @@
 
-import { computed } from 'vue'
+import { computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -265,7 +265,14 @@ export function useTaskContextMenuActions(
         if (isBatch) {
             emit('setStatus', 'done')
         } else if (taskId) {
-            const canonicalTask = taskStore.getTask(taskId)
+            // Catalog rows can render one tick ahead of the canonical task
+            // snapshot during a realtime refresh. Give that snapshot a chance
+            // to settle before treating the visible row as stale.
+            let canonicalTask = taskStore.getTask(taskId)
+            if (!canonicalTask) {
+                await nextTick()
+                canonicalTask = taskStore.getTask(taskId)
+            }
             if (!canonicalTask) {
                 reportMutationFailure('completed', new Error(`Task update target no longer exists: ${taskId}`))
                 return

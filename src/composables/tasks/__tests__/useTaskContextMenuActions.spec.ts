@@ -219,6 +219,30 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
     expect(emit).toHaveBeenCalledWith('close')
   })
 
+  it('USER REPRO: retries one tick when the Catalog row leads the canonical task snapshot', async () => {
+    const visibleCatalogTask = {
+      id: 'task-1',
+      status: 'todo',
+      title: 'Visible Catalog task',
+    } as Task
+    const canonicalTask = { ...visibleCatalogTask, status: 'todo' } as Task
+    getTask
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce(canonicalTask)
+    const emit = vi.fn()
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: visibleCatalogTask,
+      contextTask: null,
+      selectedCount: 1
+    }, emit)
+    await toggleDone()
+
+    expect(getTask).toHaveBeenCalledTimes(2)
+    expect(updateTaskWithUndo).toHaveBeenCalledWith('task-1', { status: 'done' })
+    expect(showToast).not.toHaveBeenCalled()
+  })
+
   it('does not route a recurring row already marked done through done-for-now', async () => {
     getTask.mockReturnValue({
       id: 'task-1',

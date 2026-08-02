@@ -86,6 +86,18 @@
 
 **Still explicitly not covered**: View-specific hidden-filter mistakes after the complete renderer store is loaded; a phone that remains closed; historical unrelated failed operations; Local API downtime.
 
+### ~~BUG-1984~~: Catalog completion races the canonical task snapshot (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-02)
+
+**User repro**: Marking a visible Catalog task complete could show “Task could not be completed” during a realtime refresh.
+
+**Exact failure mode fixed**: The completion action treated a one-tick renderer/store snapshot gap as a missing task; it now re-reads the canonical task once before reporting a real missing-target failure.
+
+**Regression added**: `useTaskContextMenuActions.spec.ts` covers the visible Catalog row leading the canonical snapshot and confirms completion proceeds without an error toast.
+
+**Verification**: Focused task-action tests pass (10/10), type-check and targeted ESLint pass, and Electron 1.4.329 is packaged and live at the updater manifest with AppImage/deb HTTP 200 proofs. The full release suite still reports three unrelated baseline failures: `database-safety`, Hermes route count, and an existing Board date assertion.
+
 ### ~~TASK-1982~~: Preserve due dates when creating grouped tasks (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-08-01) — grouped task creation now keeps source and explicit due dates through the Board flow.

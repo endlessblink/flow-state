@@ -92,11 +92,11 @@
 
 **User repro**: Marking a visible Catalog task complete could show “Task could not be completed” during a realtime refresh.
 
-**Exact failure mode under repair**: The completion action can lose the task between its initial canonical lookup and the second lookup inside the undo mutation wrapper. It now retries that specific stale-target failure across a bounded settling window; genuine persistence errors remain visible.
+**Exact failure mode under repair**: The completion action can lose the task between its initial canonical lookup and the second lookup inside the undo mutation wrapper. It now retries that specific stale-target failure across a bounded settling window; genuine persistence errors remain visible. A second recurring desktop failure was traced to a failed AppImage pending marker and an updater notification reading an undefined renderer version; failed pending updates are now quarantined with an installer log, and update events carry the authoritative Electron version.
 
-**Regression added**: `useTaskContextMenuActions.spec.ts` covers one-tick, multi-tick, and undo-wrapper target-loss refresh gaps and confirms completion proceeds without an error toast.
+**Regression added**: `useTaskContextMenuActions.spec.ts` covers one-tick, multi-tick, and undo-wrapper target-loss refresh gaps and confirms completion proceeds without an error toast. Updater contract tests cover failed-pending cleanup, installer diagnostics, and the authoritative version shown in the notification.
 
-**Verification**: Focused task-action tests pass (12/12), type-check, targeted ESLint, and task-consistency guard (28/28). The remaining live Electron proof is the R17 offline completion baseline (`status: planned` received instead of `done`) plus validation of the new 1.4.331 package and updater artifact.
+**Verification**: Focused task-action and updater tests pass (25/25), type-check, and Electron 1.4.332 packaging. The public manifest still needs promotion and the remaining live Electron proof is the R17 offline completion baseline (`status: planned` received instead of `done`) plus checking the installed updater log after a real restart.
 
 ### ~~TASK-1982~~: Preserve due dates when creating grouped tasks (✅ DONE)
 

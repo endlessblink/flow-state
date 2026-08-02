@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -45,6 +45,48 @@ export function pendingAppImagePath(cacheHome?: string): string | null {
   return existsSync(updateFilePath) ? updateFilePath : null
 }
 
+export function pendingUpdateFailurePath(cacheHome = process.env.XDG_CACHE_HOME || join(homedir(), '.cache')): string {
+  return `${pendingUpdateInfoPath(cacheHome)}.failed`
+}
+
+export function clearBlockedPendingUpdate(
+  appVersion: string,
+  cacheHome?: string,
+): PendingUpdateClearResult {
+  const updateInfoPath = pendingUpdateInfoPath(cacheHome)
+  const failurePath = pendingUpdateFailurePath(cacheHome)
+  if (!existsSync(updateInfoPath) || !existsSync(failurePath)) {
+    return { cleared: false, pendingVersion: null, updateInfoPath }
+  }
+
+  const info = readFileSync(updateInfoPath, 'utf8')
+  const fileName = (info.match(/"fileName"\s*:\s*"([^"]+)"/)?.[1] ?? '')
+  const pendingVersion = versionFromUpdateFileName(fileName)
+  const failure = readFileSync(failurePath, 'utf8')
+  const blocked = fileName.length > 0 && failure.split('\n', 1)[0] === fileName
+  if (blocked && pendingVersion && compareVersions(pendingVersion, appVersion) > 0) {
+    rmSync(updateInfoPath, { force: true })
+    rmSync(failurePath, { force: true })
+    rmSync(join(dirname(updateInfoPath), fileName), { force: true })
+    return { cleared: true, pendingVersion, updateInfoPath }
+  }
+
+  return { cleared: false, pendingVersion, updateInfoPath }
+}
+
+export function recordPendingUpdateFailure(reason: string, cacheHome?: string): void {
+  const updateInfoPath = pendingUpdateInfoPath(cacheHome)
+  if (!existsSync(updateInfoPath)) return
+  const info = readFileSync(updateInfoPath, 'utf8')
+  const fileName = info.match(/"fileName"\s*:\s*"([^"]+)"/)?.[1]
+  if (!fileName) return
+  writeFileSync(
+    pendingUpdateFailurePath(cacheHome),
+    `${fileName}\n${reason.replace(/[\r\n]/g, ' ')}\n${new Date().toISOString()}\n`,
+    'utf8',
+  )
+}
+
 export function clearStalePendingUpdate(
   appVersion: string,
   cacheHome?: string,
@@ -56,10 +98,13 @@ export function clearStalePendingUpdate(
 
   const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string }
   const pendingVersion = versionFromUpdateFileName(info.fileName)
+  const fileName = info.fileName
   const shouldClear = !pendingVersion || compareVersions(pendingVersion, appVersion) <= 0
 
   if (shouldClear) {
     rmSync(updateInfoPath, { force: true })
+    if (fileName) rmSync(join(dirname(updateInfoPath), fileName), { force: true })
+    rmSync(pendingUpdateFailurePath(cacheHome), { force: true })
   }
 
   return {

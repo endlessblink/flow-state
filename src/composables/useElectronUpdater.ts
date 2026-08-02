@@ -36,10 +36,19 @@ interface ElectronUpdaterApi {
   checkForUpdates?: () => Promise<unknown>
   downloadUpdate?: () => Promise<void>
   installUpdate?: () => Promise<void>
+  getVersion?: () => Promise<string>
 }
 
 function getElectronAPI(): ElectronUpdaterApi | null {
   return ((window as unknown as { electronAPI?: ElectronUpdaterApi }).electronAPI) ?? null
+}
+
+export function resolveCurrentVersion(info: Record<string, unknown> | null | undefined): string {
+  const eventVersion = info?.currentVersion
+  if (typeof eventVersion === 'string' && eventVersion.trim()) return eventVersion
+
+  const buildVersion = (window as any).__APP_VERSION__
+  return typeof buildVersion === 'string' && buildVersion.trim() ? buildVersion : 'unknown'
 }
 
 export function useElectronUpdater() {
@@ -62,7 +71,7 @@ export function useElectronUpdater() {
       status.value = 'available'
       updateInfo.value = {
         version: info?.version || 'unknown',
-        currentVersion: (window as any).__APP_VERSION__ || 'unknown',
+        currentVersion: resolveCurrentVersion(info),
         body: info?.releaseNotes || info?.releaseName || null,
         date: info?.releaseDate || null,
       }

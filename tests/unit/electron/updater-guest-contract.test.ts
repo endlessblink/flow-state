@@ -34,6 +34,15 @@ describe('Electron updater guest-mode contract', () => {
     expect(composable).toContain("status.value = 'error'")
   })
 
+  it('passes the authoritative Electron version to update notifications', () => {
+    const updater = read('electron/updater.ts')
+    const composable = read('src/composables/useElectronUpdater.ts')
+
+    expect(updater).toContain("currentVersion: appVersion")
+    expect(composable).toContain('resolveCurrentVersion(info)')
+    expect(composable).toContain("return typeof buildVersion === 'string' && buildVersion.trim() ? buildVersion : 'unknown'")
+  })
+
   it('does not let updater console EPIPE writes crash the main process', () => {
     const main = read('electron/main.ts')
 

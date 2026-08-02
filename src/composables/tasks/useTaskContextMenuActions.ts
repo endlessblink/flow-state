@@ -28,7 +28,22 @@ export function useTaskContextMenuActions(
     const { showToast } = useToast()
 
     const reportMutationFailure = (action: string, error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error)
         console.error(`Error ${action}:`, error)
+        try {
+            const key = 'flowstate-task-mutation-errors'
+            const previous = JSON.parse(localStorage.getItem(key) || '[]')
+            const entries = Array.isArray(previous) ? previous : []
+            entries.push({
+                action,
+                message,
+                timestamp: new Date().toISOString(),
+                path: window.location.pathname,
+            })
+            localStorage.setItem(key, JSON.stringify(entries.slice(-20)))
+        } catch {
+            // Logging must never change the mutation failure behavior.
+        }
         showToast(`Task could not be ${action}. Refresh and try again.`, 'error')
     }
 

@@ -94,7 +94,7 @@ function launchDetachedAppImageInstaller() {
     // FlowState-launch.sh (TASK-1871) — a bare relaunch can die on chrome-sandbox
     // SUID / GPU init and look exactly like "nothing happened".
     const script = `
-LOG="\${TMPDIR:-/tmp}/flowstate-appimage-install.log"
+LOG="$(dirname "$2")/update-install.log"
 exec >> "$LOG" 2>&1
 echo "=== $(date -u +%FT%TZ) installer start target=$1 pending=$2 parent=$4 ==="
 target="$1"
@@ -113,6 +113,7 @@ restart_supervised_on_failure() {
 }
 fail_install() {
   echo "FAIL $1"
+  printf '%s\\n%s\\n%s\\n' "$(basename "$pending")" "$1" "$(date -u +%FT%TZ)" > "$info.failed"
   rm -f "$tmp"
   restart_supervised_on_failure
   exit 1
@@ -133,6 +134,7 @@ restore_known_good() {
 }
 fail_after_swap() {
   echo "FAIL $1"
+  printf '%s\\n%s\\n%s\\n' "$(basename "$pending")" "$1" "$(date -u +%FT%TZ)" > "$info.failed"
   restore_known_good
   exit 1
 }
@@ -286,6 +288,10 @@ function registerUpdater() {
     const canUseUpdater = !isDev && hasValidAppVersion(appVersion);
     if (!isDev && hasValidAppVersion(appVersion)) {
         try {
+            const blockedPendingUpdate = (0, updater_pending_1.clearBlockedPendingUpdate)(appVersion);
+            if (blockedPendingUpdate.cleared) {
+                console.warn('[Updater] Cleared a failed pending update to prevent an install loop', blockedPendingUpdate);
+            }
             const stalePendingUpdate = (0, updater_pending_1.clearStalePendingUpdate)(appVersion);
             if (stalePendingUpdate.cleared) {
                 console.warn('[Updater] Cleared stale pending update marker', {
@@ -427,8 +433,12 @@ function registerUpdater() {
     // Forward events to renderer via IPC
     electron_updater_1.autoUpdater.on('update-available', (info) => {
         const win = electron_1.BrowserWindow.getAllWindows()[0];
-        if (win)
-            win.webContents.send('updater:available', info);
+        if (win) {
+            win.webContents.send('updater:available', {
+                ...info,
+                currentVersion: appVersion,
+            });
+        }
     });
     electron_updater_1.autoUpdater.on('download-progress', (progress) => {
         const win = electron_1.BrowserWindow.getAllWindows()[0];

@@ -59,6 +59,7 @@ vi.mock('@/composables/useToast', () => ({
 describe('useTaskContextMenuActions duplicateTask', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
   })
 
   it('duplicates the active calendar instance when invoked from calendar context menu', async () => {
@@ -215,6 +216,14 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
     expect(showToast).toHaveBeenCalledWith(
       'Task could not be completed. Refresh and try again.',
       'error'
+    )
+    expect(JSON.parse(localStorage.getItem('flowstate-task-mutation-errors') || '[]')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: 'completed',
+          message: 'Task update target no longer exists: task-1'
+        })
+      ])
     )
     expect(emit).toHaveBeenCalledWith('close')
   })

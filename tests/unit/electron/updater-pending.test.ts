@@ -5,6 +5,8 @@ import { join } from 'node:path'
 import {
   clearBlockedPendingUpdate,
   clearStalePendingUpdate,
+  clearObsoletePendingAppImages,
+  pendingAppImagePath,
   pendingUpdateFailurePath,
   recordPendingUpdateFailure,
 } from '../../../electron/updater-pending'
@@ -55,5 +57,18 @@ describe('Electron pending update recovery', () => {
       pendingVersion: '1.4.331',
     })
     expect(existsSync(join(cacheHome, 'flow-state-updater', 'pending', fileName))).toBe(false)
+  })
+
+  it('recovers the newest downloaded AppImage when updater metadata is missing', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    writeFileSync(join(pending, 'FlowState-1.4.331-x86_64.AppImage'), 'old')
+    writeFileSync(join(pending, 'FlowState-1.4.332-x86_64.AppImage'), 'new')
+
+    expect(pendingAppImagePath(cacheHome)).toBe(join(pending, 'FlowState-1.4.332-x86_64.AppImage'))
+    expect(clearObsoletePendingAppImages('1.4.331', cacheHome)).toEqual([
+      join(pending, 'FlowState-1.4.331-x86_64.AppImage'),
+    ])
+    expect(existsSync(join(pending, 'FlowState-1.4.332-x86_64.AppImage'))).toBe(true)
   })
 })

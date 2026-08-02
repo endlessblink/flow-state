@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -34,15 +34,43 @@ export function pendingUpdateInfoPath(cacheHome = process.env.XDG_CACHE_HOME || 
   return join(cacheHome, 'flow-state-updater', 'pending', 'update-info.json')
 }
 
+function pendingDirectory(cacheHome?: string): string {
+  return dirname(pendingUpdateInfoPath(cacheHome))
+}
+
+function pendingAppImageCandidates(cacheHome?: string): Array<{ path: string; version: string }> {
+  const directory = pendingDirectory(cacheHome)
+  if (!existsSync(directory)) return []
+
+  return readdirSync(directory)
+    .filter((fileName) => fileName.endsWith('.AppImage'))
+    .map((fileName) => ({ path: join(directory, fileName), version: versionFromUpdateFileName(fileName) }))
+    .filter((candidate): candidate is { path: string; version: string } => Boolean(candidate.version))
+    .sort((a, b) => compareVersions(b.version, a.version))
+}
+
 export function pendingAppImagePath(cacheHome?: string): string | null {
   const updateInfoPath = pendingUpdateInfoPath(cacheHome)
-  if (!existsSync(updateInfoPath)) return null
+  if (existsSync(updateInfoPath)) {
+    const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string }
+    if (typeof info.fileName === 'string' && info.fileName.endsWith('.AppImage')) {
+      const updateFilePath = join(dirname(updateInfoPath), info.fileName)
+      if (existsSync(updateFilePath)) return updateFilePath
+    }
+  }
 
-  const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string }
-  if (typeof info.fileName !== 'string' || !info.fileName.endsWith('.AppImage')) return null
+  return pendingAppImageCandidates(cacheHome)[0]?.path ?? null
+}
 
-  const updateFilePath = join(dirname(updateInfoPath), info.fileName)
-  return existsSync(updateFilePath) ? updateFilePath : null
+export function clearObsoletePendingAppImages(appVersion: string, cacheHome?: string): string[] {
+  const removed: string[] = []
+  for (const candidate of pendingAppImageCandidates(cacheHome)) {
+    if (compareVersions(candidate.version, appVersion) <= 0) {
+      rmSync(candidate.path, { force: true })
+      removed.push(candidate.path)
+    }
+  }
+  return removed
 }
 
 export function pendingUpdateFailurePath(cacheHome = process.env.XDG_CACHE_HOME || join(homedir(), '.cache')): string {

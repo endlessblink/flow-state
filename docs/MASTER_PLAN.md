@@ -92,11 +92,11 @@
 
 **User repro**: Marking a visible Catalog task complete could show “Task could not be completed” during a realtime refresh.
 
-**Exact failure mode under repair**: The completion action can lose the task between its initial canonical lookup and the second lookup inside the undo mutation wrapper. It now retries that specific stale-target failure across a bounded settling window; genuine persistence errors remain visible. A second recurring desktop failure was traced to a failed AppImage pending marker and an updater notification reading an undefined renderer version; failed pending updates are now quarantined with an installer log, and update events carry the authoritative Electron version.
+**Exact failure mode under repair**: The completion action can lose the task between its initial canonical lookup and the second lookup inside the undo mutation wrapper. It now retries that specific stale-target failure across a bounded settling window; genuine persistence errors remain visible. The recurring desktop failure was traced to an installed 1.4.328 runtime, orphaned downloaded AppImages with missing `update-info.json`, and competing stale/dev Local API processes on port 5577; the updater now recovers the newest pending AppImage by filename, removes obsolete downloads, and logs the authoritative installed runtime.
 
-**Regression added**: `useTaskContextMenuActions.spec.ts` covers one-tick, multi-tick, and undo-wrapper target-loss refresh gaps and confirms completion proceeds without an error toast. Updater contract tests cover failed-pending cleanup, installer diagnostics, and the authoritative version shown in the notification.
+**Regression added**: `useTaskContextMenuActions.spec.ts` covers one-tick, multi-tick, and undo-wrapper target-loss refresh gaps and confirms completion proceeds without an error toast. Updater tests cover failed-pending cleanup, installer diagnostics, authoritative notification version, and recovery when downloaded AppImage metadata is missing.
 
-**Verification**: Focused task-action and updater tests pass (25/25), type-check, and Electron 1.4.332 packaging. The public manifest still needs promotion and the remaining live Electron proof is the R17 offline completion baseline (`status: planned` received instead of `done`) plus checking the installed updater log after a real restart.
+**Verification**: Focused task-action and updater tests pass (26/26), type-check, and Electron 1.4.333 packaging. Headed installed-app verification confirmed the mounted package and Local API both report 1.4.333, obsolete pending downloads were removed, the app remained alive beyond one minute without `EADDRINUSE`, and the public manifest serves 1.4.333. The remaining unrelated live proof is the R17 offline completion baseline (`status: planned` received instead of `done`).
 
 ### ~~TASK-1982~~: Preserve due dates when creating grouped tasks (✅ DONE)
 

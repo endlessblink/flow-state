@@ -300,6 +300,10 @@ function registerUpdater() {
                     updateInfoPath: stalePendingUpdate.updateInfoPath,
                 });
             }
+            const obsoletePendingAppImages = (0, updater_pending_1.clearObsoletePendingAppImages)(appVersion);
+            if (obsoletePendingAppImages.length > 0) {
+                console.warn('[Updater] Removed obsolete pending AppImages', { count: obsoletePendingAppImages.length });
+            }
         }
         catch (err) {
             console.warn('[Updater] Failed to inspect pending update marker:', err.message);

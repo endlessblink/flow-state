@@ -7,6 +7,7 @@ import {
   pendingAppImagePath,
   versionFromUpdateFileName,
   clearBlockedPendingUpdate,
+  clearObsoletePendingAppImages,
 } from './updater-pending'
 import { flushStore } from './ipc/store'
 import {
@@ -332,6 +333,10 @@ export function registerUpdater() {
           appVersion,
           updateInfoPath: stalePendingUpdate.updateInfoPath,
         })
+      }
+      const obsoletePendingAppImages = clearObsoletePendingAppImages(appVersion)
+      if (obsoletePendingAppImages.length > 0) {
+        console.warn('[Updater] Removed obsolete pending AppImages', { count: obsoletePendingAppImages.length })
       }
     } catch (err) {
       console.warn('[Updater] Failed to inspect pending update marker:', (err as Error).message)

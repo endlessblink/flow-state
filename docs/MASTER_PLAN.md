@@ -86,17 +86,17 @@
 
 **Still explicitly not covered**: View-specific hidden-filter mistakes after the complete renderer store is loaded; a phone that remains closed; historical unrelated failed operations; Local API downtime.
 
-### ~~BUG-1984~~: Catalog completion races the canonical task snapshot (✅ DONE)
+### BUG-1984: Catalog completion races the canonical task snapshot (🔧 IN PROGRESS)
 
-**Priority**: P1 | **Status**: ✅ DONE (2026-08-02)
+**Priority**: P1 | **Status**: 🔧 IN PROGRESS (2026-08-02)
 
 **User repro**: Marking a visible Catalog task complete could show “Task could not be completed” during a realtime refresh.
 
-**Exact failure mode fixed**: The completion action treated a short renderer/store snapshot gap as a missing task; it now re-reads the canonical task across a bounded three-tick settling window before reporting a real missing-target failure.
+**Exact failure mode under repair**: The completion action can lose the task between its initial canonical lookup and the second lookup inside the undo mutation wrapper. It now retries that specific stale-target failure across a bounded settling window; genuine persistence errors remain visible.
 
-**Regression added**: `useTaskContextMenuActions.spec.ts` covers both one-tick and multi-tick Catalog refresh gaps and confirms completion proceeds without an error toast.
+**Regression added**: `useTaskContextMenuActions.spec.ts` covers one-tick, multi-tick, and undo-wrapper target-loss refresh gaps and confirms completion proceeds without an error toast.
 
-**Verification**: Focused task-action tests pass (11/11), type-check, targeted ESLint, task-consistency guard (27/27), and Electron 1.4.330 package validation pass. The standard Electron preflight is blocked by the unrelated R17 offline completion baseline (`status: planned` received instead of `done`); 12 of its 25 selected scenarios passed before that failure, so no updater deployment is claimed here.
+**Verification**: Focused task-action tests pass (12/12), type-check, targeted ESLint, and task-consistency guard (28/28). The remaining live Electron proof is the R17 offline completion baseline (`status: planned` received instead of `done`) plus validation of the new 1.4.331 package and updater artifact.
 
 ### ~~TASK-1982~~: Preserve due dates when creating grouped tasks (✅ DONE)
 

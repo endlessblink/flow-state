@@ -32,6 +32,26 @@ export function useTaskContextMenuActions(
         showToast(`Task could not be ${action}. Refresh and try again.`, 'error')
     }
 
+    // The undo wrapper performs its own canonical-task lookup. A catalog refresh
+    // can finish between our lookup above and that second lookup, so retry only
+    // the known stale-target failure after allowing the store to settle.
+    const runTaskMutationWithSettling = async <T>(taskId: string, mutation: () => Promise<T>): Promise<T> => {
+        let lastError: unknown
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+            try {
+                return await mutation()
+            } catch (error) {
+                lastError = error
+                const message = error instanceof Error ? error.message : String(error)
+                if (!message.includes(`Task update target no longer exists: ${taskId}`) || attempt === 3) {
+                    throw error
+                }
+                await nextTick()
+            }
+        }
+        throw lastError instanceof Error ? lastError : new Error(String(lastError))
+    }
+
     // Lazy-init: only create when actually moving tasks to avoid startup overhead
     let _moveComposable: ReturnType<typeof useMoveToCanvasGroup> | null = null
     const getMoveToGroup = () => {
@@ -292,7 +312,7 @@ export function useTaskContextMenuActions(
             }
             const newStatus = currentStatus === 'done' ? 'todo' : 'done'
             try {
-                await taskStore.updateTaskWithUndo(taskId, { status: newStatus })
+                await runTaskMutationWithSettling(taskId, () => taskStore.updateTaskWithUndo(taskId, { status: newStatus }))
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
                 reportMutationFailure('completed', error)

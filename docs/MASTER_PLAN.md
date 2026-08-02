@@ -92,11 +92,11 @@
 
 **User repro**: Marking a visible Catalog task complete could show “Task could not be completed” during a realtime refresh.
 
-**Exact failure mode fixed**: The completion action treated a one-tick renderer/store snapshot gap as a missing task; it now re-reads the canonical task once before reporting a real missing-target failure.
+**Exact failure mode fixed**: The completion action treated a short renderer/store snapshot gap as a missing task; it now re-reads the canonical task across a bounded three-tick settling window before reporting a real missing-target failure.
 
-**Regression added**: `useTaskContextMenuActions.spec.ts` covers the visible Catalog row leading the canonical snapshot and confirms completion proceeds without an error toast.
+**Regression added**: `useTaskContextMenuActions.spec.ts` covers both one-tick and multi-tick Catalog refresh gaps and confirms completion proceeds without an error toast.
 
-**Verification**: Focused task-action tests pass (10/10), type-check and targeted ESLint pass, and Electron 1.4.329 is packaged and live at the updater manifest with AppImage/deb HTTP 200 proofs. The full release suite still reports three unrelated baseline failures: `database-safety`, Hermes route count, and an existing Board date assertion.
+**Verification**: Focused task-action tests pass (11/11), type-check, targeted ESLint, task-consistency guard (27/27), and Electron 1.4.330 package validation pass. The standard Electron preflight is blocked by the unrelated R17 offline completion baseline (`status: planned` received instead of `done`); 12 of its 25 selected scenarios passed before that failure, so no updater deployment is claimed here.
 
 ### ~~TASK-1982~~: Preserve due dates when creating grouped tasks (✅ DONE)
 

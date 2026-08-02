@@ -265,11 +265,11 @@ export function useTaskContextMenuActions(
         if (isBatch) {
             emit('setStatus', 'done')
         } else if (taskId) {
-            // Catalog rows can render one tick ahead of the canonical task
-            // snapshot during a realtime refresh. Give that snapshot a chance
-            // to settle before treating the visible row as stale.
+            // Catalog rows can render ahead of the canonical task snapshot
+            // while an async refresh is merging its results. Wait briefly for
+            // that snapshot to settle before treating the visible row as stale.
             let canonicalTask = taskStore.getTask(taskId)
-            if (!canonicalTask) {
+            for (let attempt = 0; !canonicalTask && attempt < 3; attempt += 1) {
                 await nextTick()
                 canonicalTask = taskStore.getTask(taskId)
             }

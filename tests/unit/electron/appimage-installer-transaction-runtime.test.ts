@@ -77,6 +77,11 @@ exec /bin/mv "$@"
 }
 
 describe('supervised AppImage installer transaction runtime', () => {
+  it('verifies a direct replacement before clearing the pending marker', () => {
+    expect(installerScript).toContain('wait_for_direct_health()')
+    expect(installerScript).toContain('fail_after_swap "direct replacement readiness"')
+  })
+
   it('removes the backup and pending marker only after replacement provenance matches', () => {
     const fixture = makeFixture()
 

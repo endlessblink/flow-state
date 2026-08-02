@@ -119,12 +119,17 @@ fail_install() {
 }
 restore_known_good() {
   echo "restoring known-good AppImage"
-  systemctl --user stop flowstate-background.service || true
+  if [ "$strategy" = "systemd" ]; then
+    systemctl --user stop flowstate-background.service || true
+  fi
   mv -f "$backup" "$target" || {
     echo "FAIL restore known-good AppImage"
     exit 1
   }
   restart_supervised_on_failure
+  if [ "$strategy" != "systemd" ]; then
+    "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
+  fi
 }
 fail_after_swap() {
   echo "FAIL $1"
@@ -137,6 +142,18 @@ wait_for_supervised_health() {
     if systemctl --user is-active --quiet flowstate-background.service && \
       curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
         grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
+      return 0
+    fi
+    health_attempt=$((health_attempt + 1))
+    sleep 0.2
+  done
+  return 1
+}
+wait_for_direct_health() {
+  health_attempt=0
+  while [ "$health_attempt" -lt 100 ]; do
+    if curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
+      grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
       return 0
     fi
     health_attempt=$((health_attempt + 1))
@@ -170,10 +187,19 @@ if [ "$strategy" = "systemd" ]; then
   echo "supervised replacement is healthy"
   exit 0
 fi
-mv -f "$tmp" "$target" || fail_install "swap target"
+rm -f "$backup"
+cp -p "$target" "$backup" || fail_install "backup known-good target"
+mv -f "$tmp" "$target" || fail_after_swap "swap target"
+echo "swap complete, relaunching direct replacement"
+"$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
+replacement_pid=$!
+if ! wait_for_direct_health; then
+  kill "$replacement_pid" 2>/dev/null || true
+  fail_after_swap "direct replacement readiness"
+fi
+rm -f "$backup"
 rm -f "$info"
-echo "swap complete, relaunching"
-exec "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state
+echo "direct replacement is healthy"
 `;
     const installerArgs = [
         '-c',

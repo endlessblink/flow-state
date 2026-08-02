@@ -126,6 +126,31 @@
 
 **Live boundary proof**: Electron 1.4.324 packaging and public updater manifest verification passed; no production task mutation was attempted.
 
+### ~~BUG-1984~~: Electron AppImage update repeats after install (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-08-02)
+
+**User repro**: Installing the 1.4.326 desktop update appeared to complete, but FlowState offered 1.4.326 again on every launch.
+
+**Root cause**: The installed AppImage was byte-for-byte 1.4.323 while the pending cache and public manifest were 1.4.326; the direct installer path could replace the target and clear its marker without proving that the replacement became healthy.
+
+**Acceptance**:
+
+- Direct AppImage replacement keeps a known-good rollback copy until the new version reports the expected Local API provenance.
+- Failed replacement readiness restores the old AppImage and retains the pending marker for retry.
+- Electron 1.4.328 is built, deployed, and verified through the public updater manifest.
+- The dock-launched app reports 1.4.328 and does not repeatedly offer 1.4.326.
+
+**Regression added**: The AppImage transaction test requires direct replacement readiness verification in addition to supervised replacement rollback coverage.
+
+**Implementation**: Direct AppImage replacement now keeps a rollback copy, starts the replacement, waits for matching Local API provenance before clearing the pending marker, and relaunches the known-good copy if readiness fails. Electron 1.4.328 was packaged and promoted using the validated release collision guard.
+
+**Verification**: Focused updater coverage passed 28/28; type-check passed; Electron 1.4.328 packaging and package validation passed; local and public AppImage manifest hashes matched; the dock-launched installed artifact reported `appVersion: 1.4.328`; and the 1.4.326 pending marker was cleared. The full unit suite retains three unrelated baseline failures: Hermes route count, `device_sync_receipts` migration metadata, and an existing Board date assertion. Repository-wide lint timed out, while direct ESLint on Electron/test files is incompatible with the current project-reference configuration.
+
+**Exact failure mode fixed**: The installed AppImage could remain on an older version after an apparent update, leaving a newer pending marker that triggered the same update prompt on every launch.
+
+**Explicitly not covered**: The unrelated full-suite failures, repository-wide lint timeout, or a fresh interactive click-through of the updater UI after the manual bootstrap.
+
 ### TASK-1981: Restore recurring-task completion and make sync alerts opaque (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (filed 2026-07-29) | **Related**: TASK-1977

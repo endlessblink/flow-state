@@ -5,6 +5,7 @@ import type { Task } from '@/types/tasks'
 const createTaskWithUndo = vi.fn()
 const updateTaskWithUndo = vi.fn()
 const doneForNow = vi.fn()
+const initializeFromDatabase = vi.fn()
 const startTaskNowWithUndo = vi.fn()
 const getTask = vi.fn()
 const requestSync = vi.fn()
@@ -23,6 +24,7 @@ vi.mock('@/stores/tasks', () => ({
     createTaskWithUndo,
     updateTaskWithUndo,
     doneForNow,
+    initializeFromDatabase,
     startTaskNowWithUndo,
     getTask
   })
@@ -192,6 +194,57 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
     expect(getTask).toHaveBeenCalledWith('task-1')
     expect(doneForNow).toHaveBeenCalledWith('task-1')
     expect(updateTaskWithUndo).not.toHaveBeenCalled()
+  })
+
+  it('treats an already-completed recurring occurrence as a successful refresh', async () => {
+    const recurringTask = {
+      id: 'task-1',
+      title: 'Recurring task already completed elsewhere',
+      status: 'todo',
+      recurrenceRule: { pattern: 'weekly', interval: 1 }
+    } as unknown as Task
+    getTask.mockReturnValue(recurringTask)
+    doneForNow.mockRejectedValueOnce(Object.assign(
+      new Error('The current recurring occurrence is already completed'),
+      { code: 'occurrence_already_completed' }
+    ))
+    initializeFromDatabase.mockResolvedValueOnce(undefined)
+    const emit = vi.fn()
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: recurringTask,
+      contextTask: null,
+      selectedCount: 1
+    }, emit)
+    await toggleDone()
+
+    expect(initializeFromDatabase).toHaveBeenCalledTimes(1)
+    expect(requestSync).toHaveBeenCalledWith('user:context-menu')
+    expect(showToast).not.toHaveBeenCalled()
+  })
+
+  it('does not show a failure toast when the idempotent refresh also fails', async () => {
+    const recurringTask = {
+      id: 'task-1',
+      title: 'Recurring task completed by another view',
+      status: 'todo',
+      recurrenceRule: { pattern: 'weekly', interval: 1 }
+    } as unknown as Task
+    getTask.mockReturnValue(recurringTask)
+    doneForNow.mockRejectedValueOnce({
+      name: 'DoneForNowError',
+      message: 'The current recurring occurrence is already completed',
+    })
+    initializeFromDatabase.mockRejectedValueOnce(new Error('temporary refresh failure'))
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: recurringTask,
+      contextTask: null,
+      selectedCount: 1
+    }, vi.fn())
+    await toggleDone()
+
+    expect(showToast).not.toHaveBeenCalled()
   })
 
   it('reports a visible failure when canonical task lookup fails for the target', async () => {

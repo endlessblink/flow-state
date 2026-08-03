@@ -1,5 +1,11 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2001: Offline reconnect create does not drain to canonical storage
+
+**Priority**: P1 | **Status**: IN PROGRESS (2026-08-03)
+
+The R10 offline-create E2E still times out after reconnect: the task remains local but no canonical `tasks` row appears within 20 seconds. Reproduce with `./scripts/run-e2e.sh tests/e2e/canvas-sync-regressions.spec.ts --project=chromium --workers=1 -g 'R10 -'`; trace the create queue admission, IndexedDB pending operation, online event, and remote write before closing this failure class.
+
 ## 🔁 Restart Cursor — Android Gemma Voice E2E WIP (2026-06-23)
 
 **Task**: TASK-1883 remains IN PROGRESS. Do not mark complete until Android Gemma is proven on device with a readable Gemma 3n `.task`/`.litertlm` model, real microphone capture, native MediaPipe inference, and a transcript returned without `whisper-transcribe`.
@@ -45,6 +51,18 @@
 - Every applied AI change must be reversible and traceable.
 - Manual task/project/lane/calendar/canvas flows must keep working without AI.
 - Each lane needs regression coverage for the selected behavior and a real localhost/browser proof before Electron release.
+
+### BUG-1986: Electron AppImage update handoff leaves the installed app on the old version
+
+**Priority**: P0 | **Status**: IN PROGRESS | **Opened**: 2026-08-03
+
+**User repro**: After downloading the desktop update, FlowState still reports the old version and offers the same update again.
+
+**Root-cause evidence**: The public feed serves 1.4.336 while the live Local API reports 1.4.335; the installer log records two 1.4.336 direct-replacement readiness failures and multiple AppImage processes were present during the failed handoff. A second cleanup gap leaves a failed marker behind when electron-updater has already removed `update-info.json`.
+
+**Fix in progress**: Keep the single-instance lock held for prepared AppImage exits so a competing launcher cannot acquire it between shutdown and replacement startup; recover failed markers from their filename when metadata is missing.
+
+**Regression coverage**: Focused updater tests cover the lock/installer contract, direct replacement rollback, and metadata-less failed-marker cleanup.
 
 ### ~~BUG-1982~~: Keep mobile PWA and Electron tasks continuously converged (✅ DONE)
 

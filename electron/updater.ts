@@ -413,9 +413,10 @@ export function registerUpdater() {
       throw new Error(message, { cause: err })
     }
 
-    // Release single-instance lock before restart, otherwise the new process
-    // can't acquire the lock and immediately exits (appears as a crash).
-    app.releaseSingleInstanceLock()
+    // A prepared AppImage handoff keeps the lock until this process exits; the
+    // fallback updater still needs the lock released before quitAndInstall.
+    if (!preparedInstaller) app.releaseSingleInstanceLock()
+
     // Return from IPC first, then hand off to the updater on the next tick.
     // Calling quitAndInstall() inline from an invoke handler can leave the
     // renderer stuck in a half-dead state while the app is trying to exit.

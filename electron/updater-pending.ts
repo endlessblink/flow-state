@@ -83,19 +83,21 @@ export function clearBlockedPendingUpdate(
 ): PendingUpdateClearResult {
   const updateInfoPath = pendingUpdateInfoPath(cacheHome)
   const failurePath = pendingUpdateFailurePath(cacheHome)
-  if (!existsSync(updateInfoPath) || !existsSync(failurePath)) {
+  if (!existsSync(failurePath)) {
     return { cleared: false, pendingVersion: null, updateInfoPath }
   }
 
-  const info = readFileSync(updateInfoPath, 'utf8')
+  const info = existsSync(updateInfoPath) ? readFileSync(updateInfoPath, 'utf8') : ''
   const fileName = (info.match(/"fileName"\s*:\s*"([^"]+)"/)?.[1] ?? '')
-  const pendingVersion = versionFromUpdateFileName(fileName)
+  const failedFileName = readFileSync(failurePath, 'utf8').split('\n', 1)[0]
+  const resolvedFileName = fileName || failedFileName
+  const pendingVersion = versionFromUpdateFileName(resolvedFileName)
   const failure = readFileSync(failurePath, 'utf8')
-  const blocked = fileName.length > 0 && failure.split('\n', 1)[0] === fileName
+  const blocked = resolvedFileName.length > 0 && failure.split('\n', 1)[0] === resolvedFileName
   if (blocked && pendingVersion && compareVersions(pendingVersion, appVersion) > 0) {
     rmSync(updateInfoPath, { force: true })
     rmSync(failurePath, { force: true })
-    rmSync(join(dirname(updateInfoPath), fileName), { force: true })
+    rmSync(join(dirname(updateInfoPath), resolvedFileName), { force: true })
     return { cleared: true, pendingVersion, updateInfoPath }
   }
 

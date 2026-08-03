@@ -71,4 +71,19 @@ describe('Electron pending update recovery', () => {
     ])
     expect(existsSync(join(pending, 'FlowState-1.4.332-x86_64.AppImage'))).toBe(true)
   })
+
+  it('clears a failed marker even after electron-updater removed its metadata', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const fileName = 'FlowState-1.4.336-x86_64.AppImage'
+    writeFileSync(join(pending, fileName), 'failed-app-image')
+    writeFileSync(pendingUpdateFailurePath(cacheHome), `${fileName}\ndirect replacement readiness\n`)
+
+    expect(clearBlockedPendingUpdate('1.4.335', cacheHome)).toMatchObject({
+      cleared: true,
+      pendingVersion: '1.4.336',
+    })
+    expect(existsSync(join(pending, fileName))).toBe(false)
+    expect(existsSync(pendingUpdateFailurePath(cacheHome))).toBe(false)
+  })
 })

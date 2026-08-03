@@ -49,10 +49,12 @@ export function useTaskContextMenuActions(
     }
 
     // The undo wrapper performs its own canonical-task lookup. A catalog refresh
-    // can finish between our lookup above and that second lookup, so retry only
-    // the known stale-target failure after allowing the store to settle.
+    // can finish between our lookup above and that second lookup, so rehydrate
+    // once before retrying the known stale-target failure. This preserves the
+    // undo path while recovering a task that briefly disappeared from Pinia.
     const runTaskMutationWithSettling = async <T>(taskId: string, mutation: () => Promise<T>): Promise<T> => {
         let lastError: unknown
+        let refreshed = false
         for (let attempt = 0; attempt < 4; attempt += 1) {
             try {
                 return await mutation()
@@ -61,6 +63,14 @@ export function useTaskContextMenuActions(
                 const message = error instanceof Error ? error.message : String(error)
                 if (!message.includes(`Task update target no longer exists: ${taskId}`) || attempt === 3) {
                     throw error
+                }
+                if (!refreshed) {
+                    refreshed = true
+                    try {
+                        await taskStore.initializeFromDatabase()
+                    } catch (refreshError) {
+                        console.warn('[Tasks] Catalog completion refresh before retry failed:', refreshError)
+                    }
                 }
                 await nextTick()
             }

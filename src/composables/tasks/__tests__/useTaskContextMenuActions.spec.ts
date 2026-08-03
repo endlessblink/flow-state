@@ -375,6 +375,29 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
     expect(showToast).not.toHaveBeenCalled()
   })
 
+  it('USER REPRO: refreshes the Catalog before retrying a missing undo target', async () => {
+    const visibleCatalogTask = {
+      id: 'task-1',
+      status: 'todo',
+      title: 'Visible while Catalog refreshes',
+    } as Task
+    getTask.mockReturnValue(visibleCatalogTask)
+    updateTaskWithUndo
+      .mockRejectedValueOnce(new Error('Task update target no longer exists: task-1'))
+      .mockResolvedValueOnce(undefined)
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: visibleCatalogTask,
+      contextTask: null,
+      selectedCount: 1
+    }, vi.fn())
+    await toggleDone()
+
+    expect(initializeFromDatabase).toHaveBeenCalledTimes(1)
+    expect(updateTaskWithUndo).toHaveBeenCalledTimes(2)
+    expect(showToast).not.toHaveBeenCalled()
+  })
+
   it('does not route a recurring row already marked done through done-for-now', async () => {
     getTask.mockReturnValue({
       id: 'task-1',

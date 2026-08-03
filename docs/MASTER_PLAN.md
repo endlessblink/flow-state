@@ -54,7 +54,7 @@ The R10 offline-create E2E still times out after reconnect: the task remains loc
 
 ### BUG-1986: Electron AppImage update handoff leaves the installed app on the old version
 
-**Priority**: P0 | **Status**: IN PROGRESS | **Opened**: 2026-08-03
+**Priority**: P0 | **Status**: ✅ DONE (2026-08-03) | **Release**: Electron 1.4.337
 
 **User repro**: After downloading the desktop update, FlowState still reports the old version and offers the same update again.
 
@@ -63,6 +63,30 @@ The R10 offline-create E2E still times out after reconnect: the task remains loc
 **Fix in progress**: Keep the single-instance lock held for prepared AppImage exits so a competing launcher cannot acquire it between shutdown and replacement startup; recover failed markers from their filename when metadata is missing.
 
 **Regression coverage**: Focused updater tests cover the lock/installer contract, direct replacement rollback, and metadata-less failed-marker cleanup.
+
+**Release proof**: Clean 1.4.337 Electron packaging and package validation passed; the public updater manifest serves 1.4.337 and both published artifacts return HTTP 200 with manifest-matching sizes and hashes. Installed-runtime replacement still requires the user's next update click-through; the old 1.4.335 process was not force-killed during this investigation.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | 1.4.335 kept offering the valid 1.4.336 feed after two failed direct handoffs. | Prepared-handoff loop covered; final click-through remains pending. |
+| Data shape / persisted row shape | Yes | `update-info.json.failed` named 1.4.336 while `update-info.json` was absent. | Metadata-less failed-marker cleanup covered. |
+| Renderer store/state | N/A | The prompt correctly reflected the running 1.4.335 version. | N/A |
+| Electron main/preload bridge | Yes | Installer readiness is checked through Local API provenance; the prepared path released the lock too early. | Lock ordering covered. |
+| Localhost sidecar endpoint | Yes | Readiness failed because 1.4.336 provenance never became available; 1.4.335 was the only live provenance observed. | Expected-version health gate retained. |
+| KDE polling/control path | N/A | No KDE control path participates in updater installation. | N/A |
+| Supabase persistence/realtime | N/A | No cloud data mutation is involved. | N/A |
+| Updater/runtime version | Yes | Public manifest and published artifacts now serve 1.4.337; installed 1.4.335 was not force-replaced. | Release path covered; installed click-through pending. |
+| Stale live process/cache state | Yes | Multiple AppImage mains were observed during failed handoff and the pending failure marker persisted. | Competing-instance gap and stale marker cleanup covered. |
+
+**Exact failure mode fixed**: A prepared direct AppImage update released the single-instance lock before the old process exited, allowing a competing FlowState launch to win the lock while the replacement was starting; a failed marker could also survive after its metadata disappeared.
+
+**Explicitly not covered**: A fresh user-facing 1.4.337 update click-through on the installed desktop process, unrelated full-lint timeout/project-reference errors, and the prebuild restore E2E failure.
+
+**Regression added for reported repro**: The updater suite now exercises direct replacement readiness/rollback and clears a failed newer AppImage from its failure marker even without `update-info.json`.
+
+**Live boundary proof**: `latest-linux.yml` serves 1.4.337; the AppImage and Debian artifact endpoints return HTTP 200 with matching manifest sizes, and the clean package validated successfully.
 
 ### ~~BUG-1982~~: Keep mobile PWA and Electron tasks continuously converged (✅ DONE)
 

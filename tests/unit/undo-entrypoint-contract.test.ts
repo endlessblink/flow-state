@@ -82,7 +82,7 @@ describe("undo-aware modal and context-menu entry points", () => {
       "detail: { taskId: task.id, permanent: permanentDelete, context: 'canvas' }",
     );
     expect(modalManager).toContain(
-      "const { event: mouseEvent, task, taskId, instanceId, isCalendarEvent, selectedIds, selectedCount, context } = customEvent.detail",
+      "const { event: mouseEvent, task, taskId, instanceId, isCalendarEvent, calendarDuration, selectedIds, selectedCount, context } = customEvent.detail",
     );
     expect(modalManager).toContain(
       "const resolvedTaskId = typeof taskId === 'string' ? taskId : task?.id",

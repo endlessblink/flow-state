@@ -26,7 +26,7 @@ export default defineConfig({
   // 'test-artifacts/' is not ignored, so every E2E run left the worktree dirty —
   // and a dirty worktree is what forces release provenance to report dirty.
   reporter: [
-    ["html", { outputFolder: "test-results/playwright-report", open: "never" }],
+    ["html", { outputFolder: "playwright-report/regression", open: "never" }],
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {

@@ -283,7 +283,7 @@ describe("FlowState source-to-runtime truth ledger", () => {
     // .gitignore already covers — a report written into a tracked path leaves
     // the worktree dirty and forces release provenance to report dirty.
     expect(config).toMatch(
-      /outputFolder:\s*['"]test-results\/playwright-report['"]/,
+      /outputFolder:\s*['"]playwright-report\/regression['"]/,
     );
   });
 });

@@ -548,21 +548,17 @@ export function useCanvasOrchestrator() {
                 return
             }
 
-            const centered = centerOnTodayGroup(true)
+            // Startup recovery must settle synchronously so the healed viewport is
+            // persisted before the next Electron restart can reuse stale storage.
+            const centered = centerOnTodayGroup(true, 0)
             if (!centered && hasRenderedNodes) {
-                fitCanvas()
+                fitCanvas(0)
             }
             if (centered || hasRenderedNodes) {
-                // BUG-1902: persist the healed viewport so the next launch does
-                // not reopen to empty space. Persist the post-pan transform
-                // unconditionally once the animation completes — the previous
-                // visibility-gated one-shot silently skipped the heal whenever
-                // rendering lagged the 400ms check, leaving the broken viewport
-                // in storage.
-                setTimeout(() => {
-                    const recoveredViewport = getViewport()
-                    canvasStore.setViewport(recoveredViewport.x, recoveredViewport.y, recoveredViewport.zoom)
-                }, CANVAS.NAVIGATION_ANIMATION_MS + 100)
+                // BUG-1902: persist the healed viewport immediately; animated
+                // navigation is appropriate for user actions, not startup repair.
+                const recoveredViewport = getViewport()
+                canvasStore.setViewport(recoveredViewport.x, recoveredViewport.y, recoveredViewport.zoom)
             }
 
             if (import.meta.env.DEV) {

@@ -112,6 +112,19 @@ restart_supervised_on_failure() {
     systemctl --user start flowstate-background.service || true
   fi
 }
+cleanup_competing_flowstate_processes() {
+  for pid in $(ps -eo pid=,args= | awk -v self="$$" -v target="$target" '
+    $1 != self && ($0 ~ target || $0 ~ /\\/\\.mount_FlowSt[^ ]*\\/flowstate( |$)/) { print $1 }
+  '); do
+    kill -TERM "$pid" 2>/dev/null || true
+  done
+  sleep 1
+  for pid in $(ps -eo pid=,args= | awk -v self="$$" -v target="$target" '
+    $1 != self && ($0 ~ target || $0 ~ /\\/\\.mount_FlowSt[^ ]*\\/flowstate( |$)/) { print $1 }
+  '); do
+    kill -KILL "$pid" 2>/dev/null || true
+  done
+}
 fail_install() {
   echo "FAIL $1"
   printf '%s\\n%s\\n%s\\n' "$(basename "$pending")" "$1" "$(date -u +%FT%TZ)" > "$info.failed"
@@ -128,6 +141,7 @@ restore_known_good() {
     echo "FAIL restore known-good AppImage"
     exit 1
   }
+  cleanup_competing_flowstate_processes
   restart_supervised_on_failure
   if wait_for_direct_health_version "$known_good_version"; then
     echo "known-good app is already healthy after rollback"
@@ -181,6 +195,7 @@ if kill -0 "$parent" 2>/dev/null; then
   fail_install "parent did not exit before update deadline"
 fi
 echo "parent gone after $i ticks"
+cleanup_competing_flowstate_processes
 chmod 755 "$pending" || fail_install "chmod pending"
 cp -f "$pending" "$tmp" || fail_install "copy pending"
 chmod 755 "$tmp" || fail_install "chmod temporary target"
@@ -298,6 +313,9 @@ function registerUpdater() {
     const canUseUpdater = !isDev && hasValidAppVersion(appVersion);
     if (!isDev && hasValidAppVersion(appVersion)) {
         try {
+            if ((0, updater_pending_1.clearResolvedPendingUpdateFailure)(appVersion)) {
+                console.warn('[Updater] Cleared a resolved update failure marker', { appVersion });
+            }
             const stalePendingUpdate = (0, updater_pending_1.clearStalePendingUpdate)(appVersion);
             if (stalePendingUpdate.cleared) {
                 console.warn('[Updater] Cleared stale pending update marker', {

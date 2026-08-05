@@ -83,6 +83,14 @@ export function pendingUpdateFailureVersion(cacheHome?: string): string | null {
   return versionFromUpdateFileName(readFileSync(failurePath, 'utf8').split('\n', 1)[0])
 }
 
+export function clearResolvedPendingUpdateFailure(appVersion: string, cacheHome?: string): boolean {
+  const failurePath = pendingUpdateFailurePath(cacheHome)
+  const failureVersion = pendingUpdateFailureVersion(cacheHome)
+  if (!failureVersion || compareVersions(failureVersion, appVersion) > 0) return false
+  rmSync(failurePath, { force: true })
+  return true
+}
+
 export function clearBlockedPendingUpdate(
   appVersion: string,
   cacheHome?: string,

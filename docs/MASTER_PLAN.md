@@ -54,17 +54,17 @@ The R10 offline-create E2E still times out after reconnect: the task remains loc
 
 ### BUG-1986: Electron AppImage update handoff leaves the installed app on the old version
 
-**Priority**: P0 | **Status**: ✅ DONE (2026-08-05) | **Release**: Electron 1.4.338
+**Priority**: P0 | **Status**: ✅ DONE (2026-08-05) | **Release**: Electron 1.4.340
 
 **User repro**: After downloading the desktop update, FlowState still reports the old version and offers the same update again.
 
 **Root-cause evidence**: The public feed serves 1.4.336 while the live Local API reports 1.4.335; the installer log records two 1.4.336 direct-replacement readiness failures and multiple AppImage processes were present during the failed handoff. A second cleanup gap leaves a failed marker behind when electron-updater has already removed `update-info.json`.
 
-**Fix**: Keep the single-instance lock held for prepared AppImage exits so a competing launcher cannot acquire it between shutdown and replacement startup; recover failed markers from their filename when metadata is missing; suppress the exact failed update version on later checks; and avoid launching another rollback instance when the known-good Local API is already healthy.
+**Fix**: Keep the single-instance lock held for prepared AppImage exits; clean confirmed FlowState AppImage processes before replacement and rollback launch; recover failed markers from their filename when metadata is missing; suppress the exact failed update version on later checks; and clear failure markers once that version is actually installed.
 
 **Regression coverage**: Focused updater tests cover the lock/installer contract, direct replacement rollback, and metadata-less failed-marker cleanup.
 
-**Release proof**: Electron 1.4.338 packaging and package validation passed; the public updater manifest serves 1.4.338 with manifest-matching AppImage and Debian artifacts. Live diagnosis confirmed the prior 1.4.337 handoff failed at direct replacement readiness and left a 1.4.337 failure marker; the installed 1.4.335 click-through remains the final user-facing boundary to verify.
+**Release proof**: Electron 1.4.340 packaging and package validation passed; the public updater manifest serves 1.4.340 with manifest-matching AppImage and Debian artifacts. The installed target was manually recovered to the validated 1.4.339 artifact and its live Local API returned `appVersion: 1.4.339`; the remaining 1.4.340 installed launch requires a display-backed click-through to prove the updater handoff itself.
 
 **Failure-class matrix**:
 
@@ -80,13 +80,13 @@ The R10 offline-create E2E still times out after reconnect: the task remains loc
 | Updater/runtime version | Yes | Public manifest and published artifacts now serve 1.4.337; installed 1.4.335 was not force-replaced. | Release path covered; installed click-through pending. |
 | Stale live process/cache state | Yes | Multiple AppImage mains were observed during failed handoff and the pending failure marker persisted. | Competing-instance gap and stale marker cleanup covered. |
 
-**Exact failure mode fixed**: A prepared direct AppImage update released the single-instance lock before the old process exited, allowing a competing FlowState launch to win the lock while the replacement was starting; rollback could launch duplicate known-good instances; and a failed marker could be rediscovered as the same update forever after the replacement failed readiness.
+**Exact failure mode fixed**: A prepared direct AppImage update released the single-instance lock before the old process exited, allowing a competing FlowState launch to win the lock while the replacement was starting; rollback could launch duplicate known-good instances; stale FlowState mains kept the Local API port occupied; and failed markers could be rediscovered after the version was already installed.
 
-**Explicitly not covered**: A fresh user-facing 1.4.338 update click-through on the installed desktop process, unrelated full-lint timeout/project-reference errors, and the prebuild restore E2E failure.
+**Explicitly not covered**: A display-backed user-facing 1.4.340 click-through on the installed desktop process, unrelated full-lint timeout/project-reference errors, and the prebuild restore E2E failure.
 
-**Regression added for reported repro**: 24 focused updater assertions cover direct replacement readiness/rollback, metadata-less failure markers, suppression of the repeated failed version, and no duplicate rollback launch when the known-good bridge is already healthy.
+**Regression added for reported repro**: 26 focused updater assertions cover direct replacement readiness/rollback, stale-process cleanup, metadata-less failure markers, suppression of the repeated failed version, resolved-marker cleanup, and no duplicate rollback launch when the known-good bridge is already healthy.
 
-**Live boundary proof**: `latest-linux.yml` serves 1.4.338 with the locally validated manifest hashes and sizes; installed-runtime replacement is still pending the next desktop click-through.
+**Live boundary proof**: `latest-linux.yml` serves 1.4.340 with the locally validated manifest hashes and sizes; the installed target was hash-verified as 1.4.339 and its Local API provenance was read back live, while the 1.4.340 handoff remains display-backed verification work.
 
 ### ~~BUG-1982~~: Keep mobile PWA and Electron tasks continuously converged (✅ DONE)
 

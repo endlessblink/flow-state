@@ -9,6 +9,7 @@ import {
   pendingAppImagePath,
   pendingUpdateFailurePath,
   pendingUpdateFailureVersion,
+  clearResolvedPendingUpdateFailure,
   recordPendingUpdateFailure,
 } from '../../../electron/updater-pending'
 
@@ -88,5 +89,13 @@ describe('Electron pending update recovery', () => {
     })
     expect(existsSync(join(pending, fileName))).toBe(false)
     expect(existsSync(pendingUpdateFailurePath(cacheHome))).toBe(false)
+  })
+
+  it('clears a failure marker once the installed app has reached that version', () => {
+    const cacheHome = makeCacheHome()
+    writeFileSync(pendingUpdateFailurePath(cacheHome), 'FlowState-1.4.331-x86_64.AppImage\nreadiness\n')
+
+    expect(clearResolvedPendingUpdateFailure('1.4.331', cacheHome)).toBe(true)
+    expect(pendingUpdateFailureVersion(cacheHome)).toBeNull()
   })
 })

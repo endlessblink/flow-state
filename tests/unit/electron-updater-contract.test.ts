@@ -281,4 +281,13 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('known-good app is already healthy after rollback')
     expect(updaterSource).toContain('wait_for_direct_health_version "$known_good_version"')
   })
+
+  it('cleans only confirmed FlowState AppImage processes before replacement', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain('cleanup_competing_flowstate_processes()')
+    expect(updaterSource).toContain('target="$target"')
+    expect(updaterSource).toContain('.mount_FlowSt')
+    expect(updaterSource).toContain('cleanup_competing_flowstate_processes\nchmod 755')
+  })
 })

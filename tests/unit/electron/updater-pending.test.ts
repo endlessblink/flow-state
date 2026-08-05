@@ -8,6 +8,7 @@ import {
   clearObsoletePendingAppImages,
   pendingAppImagePath,
   pendingUpdateFailurePath,
+  pendingUpdateFailureVersion,
   recordPendingUpdateFailure,
 } from '../../../electron/updater-pending'
 
@@ -37,6 +38,8 @@ describe('Electron pending update recovery', () => {
     writePending(join(cacheHome, 'flow-state-updater', 'pending'), fileName)
 
     recordPendingUpdateFailure('sidecar readiness mismatch', cacheHome)
+
+    expect(pendingUpdateFailureVersion(cacheHome)).toBe('1.4.331')
 
     expect(readFileSync(pendingUpdateFailurePath(cacheHome), 'utf8')).toContain(fileName)
     expect(clearBlockedPendingUpdate('1.4.330', cacheHome)).toMatchObject({

@@ -6,8 +6,9 @@ import {
   clearStalePendingUpdate,
   pendingAppImagePath,
   versionFromUpdateFileName,
-  clearBlockedPendingUpdate,
+  pendingUpdateFailureVersion,
   clearObsoletePendingAppImages,
+  compareVersions,
 } from './updater-pending'
 import { flushStore } from './ipc/store'
 import {
@@ -128,6 +129,7 @@ info="$3"
 parent="$4"
 strategy="$5"
 expected_version="$6"
+known_good_version="$7"
 tmp="$target.flowstate-update-tmp"
 backup="$target.flowstate-update-backup"
 restart_supervised_on_failure() {
@@ -153,6 +155,10 @@ restore_known_good() {
     exit 1
   }
   restart_supervised_on_failure
+  if wait_for_direct_health_version "$known_good_version"; then
+    echo "known-good app is already healthy after rollback"
+    return 0
+  fi
   if [ "$strategy" != "systemd" ]; then
     "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
   fi
@@ -177,10 +183,14 @@ wait_for_supervised_health() {
   return 1
 }
 wait_for_direct_health() {
+  wait_for_direct_health_version "$expected_version"
+}
+wait_for_direct_health_version() {
+  expected_health_version="$1"
   health_attempt=0
   while [ "$health_attempt" -lt 100 ]; do
     if curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
-      grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
+      grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
       return 0
     fi
     health_attempt=$((health_attempt + 1))
@@ -239,6 +249,7 @@ echo "direct replacement is healthy"
     String(process.pid),
     relaunch.strategy,
     expectedVersion,
+    app.getVersion(),
   ]
   const installerEnv = {
     ...process.env,
@@ -322,10 +333,6 @@ export function registerUpdater() {
   const canUseUpdater = !isDev && hasValidAppVersion(appVersion)
   if (!isDev && hasValidAppVersion(appVersion)) {
     try {
-      const blockedPendingUpdate = clearBlockedPendingUpdate(appVersion)
-      if (blockedPendingUpdate.cleared) {
-        console.warn('[Updater] Cleared a failed pending update to prevent an install loop', blockedPendingUpdate)
-      }
       const stalePendingUpdate = clearStalePendingUpdate(appVersion)
       if (stalePendingUpdate.cleared) {
         console.warn('[Updater] Cleared stale pending update marker', {
@@ -486,6 +493,13 @@ export function registerUpdater() {
 
   // Forward events to renderer via IPC
   autoUpdater.on('update-available', (info) => {
+    const blockedVersion = pendingUpdateFailureVersion()
+    if (blockedVersion && compareVersions(blockedVersion, appVersion) > 0 && blockedVersion === info.version) {
+      console.warn('[Updater] Suppressing a previously failed update to prevent a notification loop', {
+        blockedVersion,
+      })
+      return
+    }
     const win = BrowserWindow.getAllWindows()[0]
     if (win) {
       win.webContents.send('updater:available', {

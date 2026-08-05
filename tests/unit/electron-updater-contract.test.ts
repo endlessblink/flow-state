@@ -264,4 +264,21 @@ describe('Electron updater restart contract', () => {
       composableSource.indexOf('await api.installUpdate()'),
     )
   })
+
+  it('suppresses a previously failed update version instead of redisplaying it forever', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain('pendingUpdateFailureVersion()')
+    expect(updaterSource).toContain('Suppressing a previously failed update')
+    expect(updaterSource).toContain('blockedVersion === info.version')
+    expect(updaterSource).not.toContain('clearBlockedPendingUpdate(appVersion)')
+  })
+
+  it('does not launch a second rollback instance when the known-good bridge is already healthy', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain('known_good_version="$7"')
+    expect(updaterSource).toContain('known-good app is already healthy after rollback')
+    expect(updaterSource).toContain('wait_for_direct_health_version "$known_good_version"')
+  })
 })

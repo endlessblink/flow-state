@@ -77,6 +77,12 @@ export function pendingUpdateFailurePath(cacheHome = process.env.XDG_CACHE_HOME 
   return `${pendingUpdateInfoPath(cacheHome)}.failed`
 }
 
+export function pendingUpdateFailureVersion(cacheHome?: string): string | null {
+  const failurePath = pendingUpdateFailurePath(cacheHome)
+  if (!existsSync(failurePath)) return null
+  return versionFromUpdateFileName(readFileSync(failurePath, 'utf8').split('\n', 1)[0])
+}
+
 export function clearBlockedPendingUpdate(
   appVersion: string,
   cacheHome?: string,

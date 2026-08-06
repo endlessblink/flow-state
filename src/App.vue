@@ -209,7 +209,7 @@ onMounted(async () => {
   if (isElectronApp.value) {
     void (async () => {
       try {
-        const override = await (window as Window & typeof globalThis & { electronAPI?: { getHomeOverride?: () => Promise<string | undefined> } }).electronAPI?.getHomeOverride?.()
+        const override = await (window as Window & typeof globalThis & { electronAPI?: { getHomeOverride?: () => Promise<{ home: string; pinnedTo: string } | undefined> } }).electronAPI?.getHomeOverride?.()
         if (!override) return
         console.warn('[App] HOME override:', override)
         useToast().showToast(

@@ -201,7 +201,7 @@ onMounted(async () => {
   // Check for Tauri/Capacitor AFTER mount - globals should be injected by now
   isTauriApp.value = isTauriFn()
   isCapacitorApp.value = isCapacitorFn()
-  isElectronApp.value = !!(window as any).electronAPI?.isElectron
+  isElectronApp.value = !!(window as Window & typeof globalThis & { electronAPI?: { isElectron: boolean } }).electronAPI?.isElectron
   initialized.value = true
 
   // BUG-1932: a launcher rewrote HOME, so Electron would have opened an empty profile (phantom
@@ -209,7 +209,7 @@ onMounted(async () => {
   if (isElectronApp.value) {
     void (async () => {
       try {
-        const override = await (window as any).electronAPI?.getHomeOverride?.()
+        const override = await (window as Window & typeof globalThis & { electronAPI?: { getHomeOverride?: () => Promise<string | undefined> } }).electronAPI?.getHomeOverride?.()
         if (!override) return
         console.warn('[App] HOME override:', override)
         useToast().showToast(

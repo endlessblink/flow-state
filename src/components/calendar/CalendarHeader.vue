@@ -84,6 +84,7 @@ const toggleViewOptions = () => {
         ref="viewOptionsTriggerRef"
         class="view-options-trigger"
         :class="{ active: showViewOptions || showFilters || hideCalendarDoneTasks || showFutureRecurring }"
+        :aria-expanded="showViewOptions"
         aria-label="View options"
         title="View options"
         @click="toggleViewOptions"
@@ -98,7 +99,7 @@ const toggleViewOptions = () => {
         :y="popoverY"
         position="bottom"
         variant="menu"
-        :close-on-click-outside="true"
+        close-on-click-outside
         @close="showViewOptions = false"
       >
         <div class="view-options-menu">
@@ -106,6 +107,7 @@ const toggleViewOptions = () => {
           <button
             class="view-option-item"
             :class="{ active: showFilters }"
+            :aria-pressed="showFilters"
             @click="showFilters = !showFilters"
           >
             <SlidersHorizontal :size="16" :stroke-width="1.5" class="option-icon" />
@@ -117,6 +119,7 @@ const toggleViewOptions = () => {
           <button
             class="view-option-item"
             :class="{ active: hideCalendarDoneTasks }"
+            :aria-pressed="hideCalendarDoneTasks"
             @click="$emit('toggleDoneTasks')"
           >
             <EyeOff
@@ -139,6 +142,7 @@ const toggleViewOptions = () => {
           <button
             class="view-option-item"
             :class="{ active: showFutureRecurring }"
+            :aria-pressed="showFutureRecurring"
             @click="$emit('toggleFutureRecurring')"
           >
             <Repeat :size="16" :stroke-width="1.5" class="option-icon" />
@@ -167,6 +171,7 @@ const toggleViewOptions = () => {
             v-if="googleConnected"
             class="view-option-item"
             :class="{ active: showGoogleEvents }"
+            :aria-pressed="showGoogleEvents"
             @click="$emit('toggleGoogleEvents')"
           >
             <Eye

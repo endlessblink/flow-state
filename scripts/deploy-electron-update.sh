@@ -105,7 +105,7 @@ else
     mv "$PROJECT_DIR/.env.production" "$HIDDEN_ENV_PRODUCTION"
     trap restore_env_production EXIT
   fi
-  NODE_ENV=test npm run test -- --maxWorkers=1
+  NODE_ENV=test npx vitest run --maxWorkers=1
   restore_env_production
   trap - EXIT
   echo -e "${GREEN}  ✓ Ship gate green${NC}"

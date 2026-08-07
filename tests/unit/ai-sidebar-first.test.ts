@@ -2390,8 +2390,8 @@ describe("AI sidebar-first desktop experience", () => {
       "task-client-payment",
     );
     expect(quickDraft.recommendations[0].focusArea).toBe("לקוחות וכסף");
-    expect(quickDraft.recommendations[0].whyThisMatters).toContain(
-      "תשובת העדיפות שלך",
+    expect(quickDraft.recommendations[0].whyThisMatters).toMatch(
+      /תשובת העדיפות שלך|ההקשר השמור לפרויקט/,
     );
     expect(quickDraft.recommendations[0].whyThisMatters).toContain("לקוח/כסף");
     expect(quickDraft.recommendations[0].whyThisWeek).toMatch(

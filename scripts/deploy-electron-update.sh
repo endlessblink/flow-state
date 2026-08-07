@@ -92,7 +92,22 @@ else
   echo -e "  type-check (vue-tsc)..."
   NODE_ENV=test npm run type-check
   echo -e "  full unit suite (vitest)..."
-  NODE_ENV=test npm run test
+  # Doppler creates .env.production for the later production build. Keep that
+  # secret-bearing file out of source-level safety tests, then restore it even
+  # when the suite fails so packaging still receives the intended build input.
+  HIDDEN_ENV_PRODUCTION="${PROJECT_DIR}/.env.production.ship-gate-hidden"
+  restore_env_production() {
+    if [ -f "$HIDDEN_ENV_PRODUCTION" ]; then
+      mv "$HIDDEN_ENV_PRODUCTION" "$PROJECT_DIR/.env.production"
+    fi
+  }
+  if [ -f "$PROJECT_DIR/.env.production" ]; then
+    mv "$PROJECT_DIR/.env.production" "$HIDDEN_ENV_PRODUCTION"
+    trap restore_env_production EXIT
+  fi
+  NODE_ENV=test npm run test -- --maxWorkers=1
+  restore_env_production
+  trap - EXIT
   echo -e "${GREEN}  ✓ Ship gate green${NC}"
 fi
 

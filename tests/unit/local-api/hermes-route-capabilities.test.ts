@@ -17,8 +17,8 @@ const { HERMES_ROUTE_CAPABILITIES, SCHEMA_VERSION } = require(
 describe('Hermes route capability manifest', () => {
   it('enumerates every Hermes route family with a versioned semantic contract', () => {
     expect(SCHEMA_VERSION).toBe('flowstate-hermes-capabilities-v1')
-    expect(HERMES_ROUTE_CAPABILITIES).toHaveLength(17)
-    expect(new Set(HERMES_ROUTE_CAPABILITIES.map(({ method, path }) => `${method} ${path}`)).size).toBe(17)
+    expect(HERMES_ROUTE_CAPABILITIES).toHaveLength(18)
+    expect(new Set(HERMES_ROUTE_CAPABILITIES.map(({ method, path }) => `${method} ${path}`)).size).toBe(18)
     for (const route of HERMES_ROUTE_CAPABILITIES) {
       expect(route).toEqual({
         method: expect.stringMatching(/^(GET|POST|PATCH)$/),

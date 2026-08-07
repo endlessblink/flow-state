@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -28,5 +28,13 @@ describe('production deployment convergence gates', () => {
     const missing = join(mkdtempSync(join(tmpdir(), 'flowstate-manifest-')), 'manifest.webmanifest')
 
     expect(run('scripts/deploy/validate-manifest.sh', missing)).not.toBe(0)
+  })
+
+  it('serializes the full ship gate and restores Doppler build input afterward', () => {
+    const script = readFileSync('scripts/deploy-electron-update.sh', 'utf8')
+
+    expect(script).toContain('npm run test -- --maxWorkers=1')
+    expect(script).toContain('HIDDEN_ENV_PRODUCTION')
+    expect(script).toContain('trap restore_env_production EXIT')
   })
 })

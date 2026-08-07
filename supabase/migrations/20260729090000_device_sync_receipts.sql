@@ -8,6 +8,7 @@ create table if not exists public.device_sync_receipts (
   last_sync_at timestamptz,
   queue jsonb not null default '{}'::jsonb,
   operations jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now(),
   primary key (user_id, device_id),
   constraint device_sync_receipts_operations_array

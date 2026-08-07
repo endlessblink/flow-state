@@ -73,7 +73,7 @@ jobs:
       # The script stages and promotes artifacts under a remote lock, then the
       # web files below are published from this exact checkout as well.
       - name: Build and deploy Electron update
-        run: ./scripts/deploy-electron-update.sh --notes "PWA and Electron convergence: $GITHUB_SHA"
+        run: ./scripts/deploy-electron-update.sh --notes "PWA and Electron convergence - $GITHUB_SHA"
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}

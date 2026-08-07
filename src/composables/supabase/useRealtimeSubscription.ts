@@ -353,6 +353,22 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
         let lastUserInteraction = Date.now()
         const RECOVERY_COOLDOWN_MS = 60000 // 60 seconds
         let lastAuthoritativeRecovery = 0
+        let authoritativeRecoveryInFlight: Promise<void> | null = null
+        const runAuthoritativeRecovery = async () => {
+            if (!onRecovery || authoritativeRecoveryInFlight) return
+            const now = Date.now()
+            if (now - lastAuthoritativeRecovery <= RECOVERY_COOLDOWN_MS) return
+            lastAuthoritativeRecovery = now
+            authoritativeRecoveryInFlight = (async () => {
+                invalidateCache.all()
+                await onRecovery().catch(e => console.error('Authoritative recovery failed:', e))
+            })()
+            try {
+                await authoritativeRecoveryInFlight
+            } finally {
+                authoritativeRecoveryInFlight = null
+            }
+        }
         const trackUserInteraction = () => { lastUserInteraction = Date.now() }
         document.addEventListener('click', trackUserInteraction, { passive: true })
         document.addEventListener('keydown', trackUserInteraction, { passive: true })
@@ -413,16 +429,7 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                 // BUG-1942: A PWA write can be missed while Supabase still reports this
                 // channel as joined. Reconcile authoritative data on a genuine visible
                 // resume even for a healthy-looking channel; realtime remains the fast path.
-                const now = Date.now()
-                const timeSinceInteraction = now - lastUserInteraction
-                const timeSinceRecovery = now - lastAuthoritativeRecovery
-                if (onRecovery && timeSinceRecovery > RECOVERY_COOLDOWN_MS) {
-                    lastAuthoritativeRecovery = now
-                    invalidateCache.all()
-                    await onRecovery().catch(e => console.error('Visibility recovery failed:', e))
-                } else if (onRecovery) {
-                    console.debug(`👀 [REALTIME] Skipping recovery reload - last authoritative refresh was ${Math.round(timeSinceRecovery / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s, last interaction: ${Math.round(timeSinceInteraction / 1000)}s)`)
-                }
+                await runAuthoritativeRecovery()
             }
         }
         document.addEventListener('visibilitychange', onVisibilityChange)
@@ -452,9 +459,9 @@ export function useRealtimeSubscription(ctx: DatabaseContext) {
                     }
                 } catch { /* continue */ }
 
-                // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data
-                invalidateCache.all()
-                onRecovery()
+                // CRITICAL FIX: Invalidate ALL caches before recovery to prevent stale data.
+                // The shared single-flight guard also coalesces online + visibility bursts.
+                void runAuthoritativeRecovery()
             } else if (onRecovery) {
                 console.debug(`🌐 [REALTIME] Skipping online recovery reload - user was active ${Math.round(timeSinceInteraction / 1000)}s ago (cooldown: ${RECOVERY_COOLDOWN_MS / 1000}s)`)
             }

@@ -36,8 +36,8 @@ err() {
 if [ ! -f "$MANIFEST" ]; then
   err "Manifest not found at $MANIFEST"
   echo ""
-  echo "PWA not yet implemented. This is expected until PWA setup is complete."
-  exit 0
+  echo "Production deployment requires a PWA manifest."
+  exit 1
 fi
 
 echo "Manifest file: $MANIFEST"

@@ -45,6 +45,14 @@ jobs:
         env:
           NODE_ENV: production
 
+      # Production must contain the complete PWA release surface; treating the
+      # worker/manifest as optional allows an Electron-shaped build to reach the
+      # VPS and strand installed PWAs on old code.
+      - name: Verify PWA convergence artifacts
+        run: |
+          ./scripts/deploy/verify-build.sh dist
+          ./scripts/deploy/validate-manifest.sh dist/manifest.webmanifest
+
       # Setup SSH
       - name: Prepare SSH Key
         run: |
@@ -58,6 +66,17 @@ jobs:
               ServerAliveCountMax=20
               TCPKeepAlive=yes
             EOF
+            cp ~/.ssh/id_rsa ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+
+      # Keep the desktop updater on the same source/version as the PWA deploy.
+      # The script stages and promotes artifacts under a remote lock, then the
+      # web files below are published from this exact checkout as well.
+      - name: Build and deploy Electron update
+        run: ./scripts/deploy-electron-update.sh --notes "PWA and Electron convergence: $GITHUB_SHA"
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
 
       # Deploy static files to production (NOT Docker!)
       # System Caddy serves from /var/www/flowstate

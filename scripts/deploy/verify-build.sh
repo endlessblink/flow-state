@@ -5,7 +5,7 @@
 
 set -e
 
-BUILD_DIR="dist"
+BUILD_DIR="${1:-dist}"
 MAX_SIZE_MB=5
 ERRORS=0
 
@@ -47,7 +47,8 @@ REQUIRED_FILES=(
   "$BUILD_DIR/index.html"
 )
 
-# Optional PWA files (will be added when PWA is implemented)
+# PWA files are required for production convergence: the installed PWA must
+# receive the same release worker and manifest as the Electron runtime.
 PWA_FILES=(
   "$BUILD_DIR/sw.js"
   "$BUILD_DIR/manifest.webmanifest"
@@ -62,14 +63,14 @@ for file in "${REQUIRED_FILES[@]}"; do
 done
 
 echo ""
-echo "2. PWA Files (Expected after PWA implementation)"
-echo "------------------------------------------------"
+echo "2. PWA Files"
+echo "-------------"
 
 for file in "${PWA_FILES[@]}"; do
   if [ -f "$file" ]; then
     ok "$file exists"
   else
-    warn "$file not found (expected for PWA)"
+    err "$file missing"
   fi
 done
 

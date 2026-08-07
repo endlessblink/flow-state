@@ -79,6 +79,30 @@ describe('device sync diagnostics', () => {
     expect(receipt.operations[0].errorCode).toBe('auth')
     expect(receipt.queue.failed).toBe(30)
   })
+
+  it('keeps concurrent receipt projections bounded and redacted under stress', async () => {
+    const receipts = await Promise.all(Array.from({ length: 100 }, (_, deviceIndex) => buildDeviceSyncReceipt({
+      deviceId: `0d619ffe-a177-4f6a-b890-c38f985d9${String(deviceIndex).padStart(3, '0')}`,
+      runtime: deviceIndex % 2 === 0 ? 'pwa' : 'electron',
+      appVersion: '1.4.341',
+      status: 'pending',
+      isOnline: true,
+      operations: Array.from({ length: 25 }, (_, operationIndex) => ({
+        id: operationIndex,
+        entityType: 'task' as const,
+        operation: 'update' as const,
+        entityId: `task-${deviceIndex}-${operationIndex}`,
+        payload: { title: `private-${deviceIndex}-${operationIndex}` },
+        status: 'pending' as const,
+        retryCount: 0,
+        createdAt: Date.now(),
+      })),
+    })))
+
+    expect(receipts).toHaveLength(100)
+    expect(receipts.every(receipt => receipt.operations.length <= 20)).toBe(true)
+    expect(JSON.stringify(receipts)).not.toContain('private-')
+  })
 })
 
 describe('device sync repair', () => {

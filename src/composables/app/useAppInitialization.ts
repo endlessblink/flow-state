@@ -40,6 +40,7 @@ import {
 import { createCanonicalChangeSupabaseReader } from '@/services/sync/canonicalChangeSupabase'
 import { realtimeRowMatchesScope } from '@/services/sync/realtimeScopeGuard'
 import { startServiceWorkerUpdateRecovery } from '@/services/pwa/serviceWorkerUpdateRecovery'
+import { useDeviceSyncDiagnostics } from '@/composables/sync/useDeviceSyncDiagnostics'
 
 export function useAppInitialization() {
     const router = useRouter()
@@ -56,6 +57,9 @@ export function useAppInitialization() {
     let stopServiceWorkerUpdateRecovery = () => {}
     // BUG-1725: Must be called synchronously during setup(), not inside async onMounted
     useBeforeUnload()
+    // TASK-2002: Keep the VPS convergence watchdog supplied with live runtime,
+    // version, and unresolved-queue evidence; also consume repair requests.
+    useDeviceSyncDiagnostics()
     const activeChannel = ref<{ unsubscribe: () => Promise<void> } | null>(null)
     const realtimeInitialized = ref(false)
     let realtimeSubscriptionGeneration = 0

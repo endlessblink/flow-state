@@ -1,5 +1,13 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2002: Keep PWA, Electron, and VPS continuously converged (P0)
+
+**Priority**: P0 | **Status**: IN PROGRESS (2026-08-07)
+
+Investigate and close the remaining cross-surface convergence failure classes across the installed PWA, Electron runtime, Supabase/VPS, service-worker release state, durable write queue, realtime recovery, and updater provenance. Acceptance requires a reproducible regression for each discovered boundary, stress coverage for offline/reconnect/concurrent writers/stale runtimes, fresh PWA and Electron builds from one version, live VPS and updater manifest checks, and an explicit list of conditions that cannot be guaranteed while a device is closed or offline.
+
+**Initial failure-class checklist**: data shape and ownership; IndexedDB queue admission/drain; renderer cache and visibility recovery; Supabase realtime and authoritative reads; Electron main/preload/Local API provenance; service-worker activation and cache invalidation; updater artifact/version/hash alignment; stale processes and runtime identity; deployment atomicity and rollback; long-running stress and recovery.
+
 ### BUG-2001: Offline reconnect create does not drain to canonical storage
 
 **Priority**: P1 | **Status**: IN PROGRESS (2026-08-03)

@@ -352,12 +352,12 @@ describe('WebSocket Resilience — useRealtimeSubscription', () => {
       'utf8'
     )
     const healthCheck = source.indexOf("const isDead = !currentChannel || state === 'closed' || state === 'errored'")
-    const recoveryCheck = source.indexOf('if (onRecovery && timeSinceRecovery > RECOVERY_COOLDOWN_MS)')
+    const recoveryCheck = source.lastIndexOf('await runAuthoritativeRecovery()')
 
     expect(healthCheck).toBeGreaterThan(-1)
     expect(recoveryCheck).toBeGreaterThan(healthCheck)
     expect(source.slice(healthCheck, recoveryCheck)).toContain('if (isDead')
-    expect(source.slice(recoveryCheck, recoveryCheck + 500)).not.toContain('isDead')
+    expect(source.slice(recoveryCheck, recoveryCheck + 200)).not.toContain('isDead')
   })
 
   it('reconciles authoritative data when initialized while already visible', async () => {
@@ -377,6 +377,18 @@ describe('WebSocket Resilience — useRealtimeSubscription', () => {
 
     expect(document.visibilityState).toBe('visible')
     expect(onRecovery).toHaveBeenCalledTimes(1)
+  })
+
+  it('coalesces online and visibility recovery signals into one authoritative reload', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src/composables/supabase/useRealtimeSubscription.ts'),
+      'utf8',
+    )
+
+    expect(source).toContain('let authoritativeRecoveryInFlight: Promise<void> | null = null')
+    expect(source).toContain('if (!onRecovery || authoritativeRecoveryInFlight) return')
+    expect(source).toContain('await runAuthoritativeRecovery()')
+    expect(source).toContain('void runAuthoritativeRecovery()')
   })
 
   // 16. TASK-1871: no auth token yet → reschedule + connect (no silent death).

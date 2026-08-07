@@ -1,8 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { startServiceWorkerUpdateRecovery } from '@/services/pwa/serviceWorkerUpdateRecovery'
 import { buildDeviceSyncReceipt } from '@/services/sync/deviceSyncDiagnostics'
 
 describe('mobile PWA to Electron convergence regression', () => {
+  it('mounts the device receipt heartbeat and repair consumer in app initialization', () => {
+    const initializer = readFileSync(resolve(process.cwd(), 'src/composables/app/useAppInitialization.ts'), 'utf8')
+
+    expect(initializer).toContain("import { useDeviceSyncDiagnostics } from '@/composables/sync/useDeviceSyncDiagnostics'")
+    expect(initializer).toMatch(/useDeviceSyncDiagnostics\(\)/)
+  })
+
   it('refreshes a stale installed PWA, drains its task write, and converges with Electron', async () => {
     let pwaVersion = '1.4.321'
     const operation = {

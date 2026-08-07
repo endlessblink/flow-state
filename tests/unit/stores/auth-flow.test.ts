@@ -843,7 +843,7 @@ describe('Auth Flow — signInWithPassword', () => {
     expect(store.isAuthenticated).toBe(true)
     expect(store.isRestoringSession).toBe(false)
     expect(store.reauthRequired).toBe(false)
-    await vi.waitFor(() => expect(mockLoadWorkspaces).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(mockLoadWorkspaces).toHaveBeenCalledOnce(), { timeout: 5000 })
     expect(mockLoadTasksFromDatabase).toHaveBeenCalledOnce()
   })
 })

@@ -2347,6 +2347,15 @@ describe("AI sidebar-first desktop experience", () => {
             impactWeight: 0.85,
             updatedAt: "2026-06-07T08:30:00.000Z",
           },
+          ...["stakeholders", "dependencies", "history", "preferences", "task_context"].map(parameterKey => ({
+            entityKey: "week:2026-06-06",
+            entityType: "week" as const,
+            parameterKey,
+            beliefJson: { value: "known", selectedLabel: "Known" },
+            confidence: 0.9,
+            impactWeight: 0.8,
+            updatedAt: "2026-06-07T08:30:00.000Z",
+          })),
         ],
         projectContexts: [
           {

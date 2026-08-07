@@ -1,10 +1,16 @@
 # FlowState MASTER_PLAN.md
 
-### TASK-2002: Keep PWA, Electron, and VPS continuously converged (P0)
+### ~~TASK-2002~~: Keep PWA, Electron, and VPS continuously converged (✅ DONE)
 
-**Priority**: P0 | **Status**: IN PROGRESS (2026-08-07)
+**Priority**: P0 | **Status**: ✅ DONE (2026-08-07) | **Release**: PWA + Electron 1.4.342
 
-Investigate and close the remaining cross-surface convergence failure classes across the installed PWA, Electron runtime, Supabase/VPS, service-worker release state, durable write queue, realtime recovery, and updater provenance. Acceptance requires a reproducible regression for each discovered boundary, stress coverage for offline/reconnect/concurrent writers/stale runtimes, fresh PWA and Electron builds from one version, live VPS and updater manifest checks, and an explicit list of conditions that cannot be guaranteed while a device is closed or offline.
+**Exact failure modes fixed**: device diagnostics were implemented but never mounted, realtime online/visibility recovery could overlap, production gates allowed missing PWA artifacts, the release gate was nondeterministic around secrets and shallow history, and Electron packaging overwrote the PWA `dist` surface before static deployment. Supabase schema preflight also raced PostgREST schema-cache readiness, and immutable updater promotion correctly rejected same-version different-byte artifacts.
+
+**Fix and proof**: runtime receipts/repair admission now mount at app startup; authoritative recovery is single-flight; PWA worker/manifest gates are mandatory; schema preflight retries transient cache responses; the release ship gate is deterministic; Electron packaging uses the locked builder; and the PWA is rebuilt and verified after Electron packaging. Focused convergence tests pass 64 assertions (including 100-way receipt projection stress), the full release gate passed 366 files / 4,547 tests with 3 skipped, backup stress passed 34 tests with 45 intentional skips, and the green VPS workflow `31176509519` deployed PWA + Electron 1.4.342 from one checkout.
+
+**Live boundary proof**: `https://in-theflow.com/updates/electron/latest-linux.yml` serves 1.4.342 with manifest-matching AppImage/Debian sizes and SHA-512 values; both artifacts return HTTP 200; the public PWA manifest is present; `sw.js` returns JavaScript and the Workbox payload rather than the previous HTML fallback; the public app and API health checks pass; and all 163 referenced production chunks verify.
+
+**Explicitly not covered**: literal zero-time drift while a device is closed, offline, suspended, or unable to report a receipt; an already-open renderer can retain old code until its service worker/update cycle runs; Electron cannot expose Local API state while fully closed; and the repository-wide generic lint job still reports its pre-existing 961-problem baseline, separate from the green release ship gate.
 
 **Initial failure-class checklist**: data shape and ownership; IndexedDB queue admission/drain; renderer cache and visibility recovery; Supabase realtime and authoritative reads; Electron main/preload/Local API provenance; service-worker activation and cache invalidation; updater artifact/version/hash alignment; stale processes and runtime identity; deployment atomicity and rollback; long-running stress and recovery.
 

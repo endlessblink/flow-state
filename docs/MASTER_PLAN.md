@@ -78,29 +78,29 @@ The R10 offline-create E2E still times out after reconnect: the task remains loc
 
 **Regression coverage**: Focused updater tests cover the lock/installer contract, direct replacement rollback, and metadata-less failed-marker cleanup.
 
-**Release proof**: Electron 1.4.340 packaging and package validation passed; the public updater manifest serves 1.4.340 with manifest-matching AppImage and Debian artifacts. The installed target was manually recovered to the validated 1.4.339 artifact and its live Local API returned `appVersion: 1.4.339`; the remaining 1.4.340 installed launch requires a display-backed click-through to prove the updater handoff itself.
+**Release proof**: Electron 1.4.340 packaging and package validation passed; the public updater manifest serves 1.4.340 with manifest-matching AppImage and Debian artifacts. The installed target was hash-verified against the published 1.4.340 AppImage, launched on the desktop display, and its live Local API returned `appVersion: 1.4.340`.
 
 **Failure-class matrix**:
 
 | Class | Checked? | Evidence | Covered by this fix? |
 | --- | --- | --- | --- |
-| User repro shape | Yes | 1.4.335 kept offering the valid 1.4.336 feed after two failed direct handoffs. | Prepared-handoff loop covered; final click-through remains pending. |
+| User repro shape | Yes | 1.4.335 kept offering the valid 1.4.336 feed after two failed direct handoffs. | Prepared-handoff loop covered; installed 1.4.340 runtime verified. |
 | Data shape / persisted row shape | Yes | `update-info.json.failed` named 1.4.336 while `update-info.json` was absent. | Metadata-less failed-marker cleanup covered. |
 | Renderer store/state | N/A | The prompt correctly reflected the running 1.4.335 version. | N/A |
 | Electron main/preload bridge | Yes | Installer readiness is checked through Local API provenance; the prepared path released the lock too early. | Lock ordering covered. |
 | Localhost sidecar endpoint | Yes | Readiness failed because 1.4.336 provenance never became available; 1.4.335 was the only live provenance observed. | Expected-version health gate retained. |
 | KDE polling/control path | N/A | No KDE control path participates in updater installation. | N/A |
 | Supabase persistence/realtime | N/A | No cloud data mutation is involved. | N/A |
-| Updater/runtime version | Yes | Public manifest and published artifacts now serve 1.4.337; installed 1.4.335 was not force-replaced. | Release path covered; installed click-through pending. |
+| Updater/runtime version | Yes | Public manifest and published artifacts serve 1.4.340; installed target hash matches the published AppImage and live runtime reports 1.4.340. | Yes |
 | Stale live process/cache state | Yes | Multiple AppImage mains were observed during failed handoff and the pending failure marker persisted. | Competing-instance gap and stale marker cleanup covered. |
 
 **Exact failure mode fixed**: A prepared direct AppImage update released the single-instance lock before the old process exited, allowing a competing FlowState launch to win the lock while the replacement was starting; rollback could launch duplicate known-good instances; stale FlowState mains kept the Local API port occupied; and failed markers could be rediscovered after the version was already installed.
 
-**Explicitly not covered**: A display-backed user-facing 1.4.340 click-through on the installed desktop process, unrelated full-lint timeout/project-reference errors, and the prebuild restore E2E failure.
+**Explicitly not covered**: A repeated user-triggered download through the desktop popup after this release, unrelated full-lint timeout/project-reference errors, and the prebuild restore E2E failure.
 
 **Regression added for reported repro**: 26 focused updater assertions cover direct replacement readiness/rollback, stale-process cleanup, metadata-less failure markers, suppression of the repeated failed version, resolved-marker cleanup, and no duplicate rollback launch when the known-good bridge is already healthy.
 
-**Live boundary proof**: `latest-linux.yml` serves 1.4.340 with the locally validated manifest hashes and sizes; the installed target was hash-verified as 1.4.339 and its Local API provenance was read back live, while the 1.4.340 handoff remains display-backed verification work.
+**Live boundary proof**: `latest-linux.yml` serves 1.4.340 with the locally validated manifest hashes and sizes; the installed target hash matches the published AppImage and its Local API provenance was read back live as `appVersion: 1.4.340`.
 
 ### ~~BUG-1982~~: Keep mobile PWA and Electron tasks continuously converged (✅ DONE)
 

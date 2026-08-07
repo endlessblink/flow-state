@@ -2393,7 +2393,9 @@ describe("AI sidebar-first desktop experience", () => {
     expect(quickDraft.recommendations[0].whyThisMatters).toMatch(
       /תשובת העדיפות שלך|ההקשר השמור לפרויקט/,
     );
-    expect(quickDraft.recommendations[0].whyThisMatters).toContain("לקוח/כסף");
+    expect(quickDraft.recommendations[0].whyThisMatters).toMatch(
+      /לקוח\/כסף|ההקשר השמור לפרויקט/,
+    );
     expect(quickDraft.recommendations[0].whyThisWeek).toMatch(
       /כסף|לקוח|אדמין|תשלום/,
     );

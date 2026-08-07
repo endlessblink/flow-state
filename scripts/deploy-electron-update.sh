@@ -111,12 +111,14 @@ else
   echo -e "${GREEN}  ✓ Ship gate green${NC}"
 fi
 
-# Step 2: Build and package Electron app through the canonical release command
+# Step 2: Build and package Electron app through the canonical release command.
+# The full ship gate above owns release regression coverage; the locked packaging
+# command avoids re-running the interactive restore/offline E2E prehook in CI.
 echo -e "\n${YELLOW}[2/3] Building and packaging Electron app...${NC}"
 if [ "$DRY_RUN" = true ]; then
-  echo -e "${CYAN}  [DRY RUN] Would run: npm run electron:build${NC}"
+  echo -e "${CYAN}  [DRY RUN] Would run: npm run electron:build:locked${NC}"
 else
-  npm run electron:build
+  npm run electron:build:locked
 fi
 
 # Check artifacts exist

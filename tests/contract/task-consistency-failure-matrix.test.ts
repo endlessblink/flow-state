@@ -96,12 +96,13 @@ function readGitHistoryFallback(repoRoot: string): string[] {
 
 function readGitHistory(repoRoot: string): { commits: string[]; complete: boolean } {
   try {
+    const gitDir = resolveGitDir(repoRoot)
     return {
       commits: execFileSync('git', ['log', '--all', '--format=%H'], {
         cwd: repoRoot,
         encoding: 'utf8',
       }).split('\n').filter(Boolean),
-      complete: true,
+      complete: Boolean(gitDir && !existsSync(resolve(gitDir, 'shallow'))),
     }
   } catch {
     return { commits: readGitHistoryFallback(repoRoot), complete: false }

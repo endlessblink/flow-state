@@ -32,11 +32,20 @@ describe('production deployment convergence gates', () => {
 
   it('serializes the full ship gate and restores Doppler build input afterward', () => {
     const script = readFileSync('scripts/deploy-electron-update.sh', 'utf8')
+    const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8')
 
     expect(script).toContain('npx vitest run --maxWorkers=1')
     expect(script).toContain('HIDDEN_ENV_PRODUCTION')
     expect(script).toContain('trap restore_env_production EXIT')
     expect(script).toContain('npm run electron:build:locked')
     expect(script).not.toContain('npm run electron:build\n')
+
+    const electronStep = workflow.indexOf('Build and deploy Electron update')
+    const pwaStep = workflow.indexOf('Rebuild PWA release surface after Electron packaging')
+    const staticStep = workflow.indexOf('Deploy Static Files')
+    expect(electronStep).toBeGreaterThanOrEqual(0)
+    expect(pwaStep).toBeGreaterThan(electronStep)
+    expect(staticStep).toBeGreaterThan(pwaStep)
+    expect(workflow.slice(pwaStep, staticStep)).toContain('./scripts/deploy/verify-build.sh dist')
   })
 })

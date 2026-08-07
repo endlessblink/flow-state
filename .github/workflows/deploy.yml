@@ -78,6 +78,17 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
 
+      # Electron packaging performs its own build and may replace dist with the
+      # desktop-shaped output. Rebuild the PWA from this same checkout last so
+      # static deployment cannot publish an Electron-shaped surface or lose sw.js.
+      - name: Rebuild PWA release surface after Electron packaging
+        run: |
+          npm run build
+          ./scripts/deploy/verify-build.sh dist
+          ./scripts/deploy/validate-manifest.sh dist/manifest.webmanifest
+        env:
+          NODE_ENV: production
+
       # Deploy static files to production (NOT Docker!)
       # System Caddy serves from /var/www/flowstate
       - name: Deploy Static Files

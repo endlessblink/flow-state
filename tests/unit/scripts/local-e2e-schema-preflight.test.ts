@@ -42,4 +42,12 @@ describe('local E2E canonical schema preflight', () => {
       reason: 'Local Supabase has a stale done-for-now receipt contract; apply current migrations before E2E'
     })
   })
+
+  it('marks transient schema-cache responses as retryable by the preflight', () => {
+    const source = require('node:fs').readFileSync(modulePath, 'utf8') as string
+
+    expect(source).toContain("body.includes('PGRST205')")
+    expect(source).toContain('attempt <= 10')
+    expect(source).toContain('setTimeout(resolve, 1000)')
+  })
 })

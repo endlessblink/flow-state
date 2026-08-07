@@ -2348,6 +2348,23 @@ describe("AI sidebar-first desktop experience", () => {
             updatedAt: "2026-06-07T08:30:00.000Z",
           },
         ],
+        projectContexts: [
+          {
+            projectId: "client-renewals",
+            summary: "Keep client renewals moving through clear payment follow-up.",
+            domain: "work",
+            whyItMatters: "Delayed payment follow-up directly affects cash flow.",
+            successCriteria: ["Client payment follow-up is sent this week."],
+            failureRisks: [],
+            currentStakes: "high",
+            urgencyWindow: "this_week",
+            taskSelectionHints: [],
+            nonGoals: [],
+            userCorrections: [],
+            confidence: 0.95,
+            completenessScore: 0.9,
+          },
+        ],
       },
     );
 

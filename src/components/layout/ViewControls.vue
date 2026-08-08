@@ -6,6 +6,8 @@
       class="filter-toggle"
       :class="{ active: showFilters }"
       title="Toggle filters"
+      :aria-label="showFilters ? 'Hide filters' : 'Show filters'"
+      :aria-expanded="showFilters"
       @click="showFilters = !showFilters"
     >
       <SlidersHorizontal :size="20" :stroke-width="1.5" />
@@ -17,6 +19,8 @@
       class="done-toggle"
       :class="{ active: hideDoneTasks }"
       :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+      :aria-label="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+      :aria-pressed="hideDoneTasks"
       @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
     >
       <EyeOff v-if="hideDoneTasks" :size="20" :stroke-width="1.5" />

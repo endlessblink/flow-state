@@ -82,6 +82,11 @@ describe('supervised AppImage installer transaction runtime', () => {
     expect(installerScript).toContain('fail_after_swap "direct replacement readiness"')
   })
 
+  it('terminates the old AppImage process group so its sidecar cannot hold the health port', () => {
+    expect(installerScript).toContain('ps -o pgid= -p "$pid"')
+    expect(installerScript).toContain('kill "$signal" -- "-$pgid"')
+  })
+
   it('removes the backup and pending marker only after replacement provenance matches', () => {
     const fixture = makeFixture()
 

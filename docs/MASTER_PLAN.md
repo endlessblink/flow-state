@@ -8,6 +8,8 @@ The local authenticated browser boundary currently passes the complete offline/r
 
 The first fix is an active recovery pulse: every authenticated PWA receipt heartbeat now forces the single-flight queue processor before publishing its snapshot, covering missed online/auth lifecycle events and proving the receipt reflects a current drain attempt. Close this issue only after deploying that fix, observing the real PWA receipt return to zero unresolved writes, and completing a production-authenticated mutation/readback with receipt evidence from both PWA and Electron plus a repeated offline/reconnect stress run. The fresh live PWA probe also observed the normal first-install window before the service worker controls the initial page; later reloads were controlled and passed, so this remains a separate runtime-activation check.
 
+The follow-up production probe narrowed the remaining client mismatch: PWA 1.4.344 drained its pending queue to zero, while Electron stayed on 1.4.340. The local updater transaction log shows repeated 1.4.343/1.4.344 downloads followed by `FAIL direct replacement readiness` and rollback to the known-good AppImage; the old Electron process group kept the local sidecar alive during replacement. The updater fix now terminates the complete old AppImage process group before relaunch, with a regression covering the sidecar-port handoff.
+
 ### ~~TASK-2002~~: Keep PWA, Electron, and VPS continuously converged (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-08-07) | **Release**: PWA + Electron 1.4.342

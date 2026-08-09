@@ -113,17 +113,27 @@ restart_supervised_on_failure() {
   fi
 }
 cleanup_competing_flowstate_processes() {
-  for pid in $(ps -eo pid=,args= | awk -v self="$$" -v target="$target" '
-    $1 != self && ($0 ~ target || $0 ~ /\\/\\.mount_FlowSt[^ ]*\\/flowstate( |$)/) { print $1 }
-  '); do
-    kill -TERM "$pid" 2>/dev/null || true
-  done
+  flowstate_pids() {
+    ps -eo pid=,args= | awk -v self="$$" -v target="$target" '
+      $1 != self && (
+        (index($0, "/.mount_FlowSt") > 0 && index($0, "/flowstate") > 0)
+        || $0 ~ ("^" target "([[:space:]]|$)")
+      ) { print $1 }'
+  }
+  terminate_flowstate_process_groups() {
+    signal="$1"
+    for pid in $(flowstate_pids); do
+      pgid=$(ps -o pgid= -p "$pid" | tr -d ' ')
+      if [ -n "$pgid" ] && [ "$pgid" != "1" ] && [ "$pgid" != "$$" ]; then
+        kill "$signal" -- "-$pgid" 2>/dev/null || true
+      else
+        kill "$signal" "$pid" 2>/dev/null || true
+      fi
+    done
+  }
+  terminate_flowstate_process_groups -TERM
   sleep 1
-  for pid in $(ps -eo pid=,args= | awk -v self="$$" -v target="$target" '
-    $1 != self && ($0 ~ target || $0 ~ /\\/\\.mount_FlowSt[^ ]*\\/flowstate( |$)/) { print $1 }
-  '); do
-    kill -KILL "$pid" 2>/dev/null || true
-  done
+  terminate_flowstate_process_groups -KILL
 }
 fail_install() {
   echo "FAIL $1"

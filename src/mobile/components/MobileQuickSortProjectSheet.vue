@@ -34,7 +34,9 @@ const localSearch = computed({
       <div v-if="show" class="sheet-overlay" @click="$emit('close')">
         <div class="project-sheet" @click.stop>
           <div class="sheet-handle" />
-          <h3 class="sheet-title">Where does this belong?</h3>
+          <h3 class="sheet-title">
+            Where does this belong?
+          </h3>
 
           <!-- Search Input (sticky) -->
           <div class="project-search-wrapper">

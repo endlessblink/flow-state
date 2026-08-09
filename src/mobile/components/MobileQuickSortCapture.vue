@@ -27,8 +27,9 @@ defineExpose({ inputRef })
   <div class="capture-phase">
     <div class="capture-input-area">
       <div class="capture-card">
-        <input dir="auto"
+        <input
           ref="inputRef"
+          dir="auto"
           :value="title"
           type="text"
           class="capture-input"
@@ -79,7 +80,9 @@ defineExpose({ inputRef })
 
     <!-- Recently Added -->
     <div v-if="recentlyAdded.length > 0" class="recently-added">
-      <h3 class="section-title">Just Added</h3>
+      <h3 class="section-title">
+        Just Added
+      </h3>
       <TransitionGroup name="task-list" tag="ul" class="recent-list">
         <li
           v-for="task in recentlyAdded"

@@ -1,7 +1,8 @@
 import type { Mastra } from '@mastra/core/mastra'
 import type { ChatDecisionRuntimeInput } from './chatDecisionRuntime'
+import type {
+  clarificationResumeSchema} from './mastraChatDecisionWorkflow';
 import {
-  clarificationResumeSchema,
   clarificationSuspendSchema,
   clarificationWorkflowOutputSchema,
   createClarificationGateWorkflow,

@@ -7,8 +7,12 @@
         <PartyPopper :size="80" />
       </div>
 
-      <h2 class="celebration-title">All Sorted!</h2>
-      <p class="celebration-subtitle">You've processed all your tasks</p>
+      <h2 class="celebration-title">
+        All Sorted!
+      </h2>
+      <p class="celebration-subtitle">
+        You've processed all your tasks
+      </p>
 
       <div v-if="sessionSummary" class="session-summary">
         <div class="summary-stat">

@@ -7,6 +7,7 @@ import { useSyncOrchestrator } from '@/composables/sync/useSyncOrchestrator'
 
 const HEARTBEAT_MS = 30_000
 const CHANGE_DEBOUNCE_MS = 1_000
+const FORCE_SYNC_TIMEOUT_MS = 10_000
 
 export function useDeviceSyncDiagnostics() {
   const auth = useAuthStore()
@@ -22,7 +23,19 @@ export function useDeviceSyncDiagnostics() {
       // processor before sampling it so a renderer that missed the online or
       // auth-ready event cannot report a healthy connection while durable work
       // is still stranded in IndexedDB.
-      await orchestrator.forceSync()
+      await Promise.race([
+        orchestrator.forceSync(),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('forceSync timed out')), FORCE_SYNC_TIMEOUT_MS)
+        }),
+      ])
+    } catch (error) {
+      const code = error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code)
+        : error instanceof Error ? error.message : 'unknown'
+      console.warn('[SYNC-DIAGNOSTICS] Queue pass failed before receipt', { code })
+    }
+    try {
       await publishDeviceSyncReceipt({
         userId: auth.user.id,
         status: sync.status,

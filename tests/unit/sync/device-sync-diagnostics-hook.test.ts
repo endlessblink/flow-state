@@ -63,4 +63,14 @@ describe('device sync diagnostics heartbeat', () => {
       publishDeviceSyncReceipt.mock.invocationCallOrder[0],
     )
   })
+
+  it('publishes a receipt when the queue pass fails', async () => {
+    forceSync.mockRejectedValueOnce(new Error('queue unavailable'))
+
+    useDeviceSyncDiagnostics()
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    expect(forceSync).toHaveBeenCalledTimes(1)
+    expect(publishDeviceSyncReceipt).toHaveBeenCalledTimes(1)
+  })
 })

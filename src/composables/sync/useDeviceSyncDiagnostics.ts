@@ -15,14 +15,20 @@ export function useDeviceSyncDiagnostics() {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   let repairInFlight = false
 
-  const publish = () => {
+  const publish = async () => {
     if (!auth.user?.id || !auth.canSyncRemotely) return
-    void publishDeviceSyncReceipt({
-      userId: auth.user.id,
-      status: sync.status,
-      isOnline: sync.isOnline,
-      lastSyncAt: sync.lastSyncAt,
-    }).then(async () => {
+    try {
+      // A receipt is also a liveness pulse. Re-enter the single-flight queue
+      // processor before sampling it so a renderer that missed the online or
+      // auth-ready event cannot report a healthy connection while durable work
+      // is still stranded in IndexedDB.
+      await orchestrator.forceSync()
+      await publishDeviceSyncReceipt({
+        userId: auth.user.id,
+        status: sync.status,
+        isOnline: sync.isOnline,
+        lastSyncAt: sync.lastSyncAt,
+      })
       if (repairInFlight) return
       repairInFlight = true
       try {
@@ -33,11 +39,14 @@ export function useDeviceSyncDiagnostics() {
       } finally {
         repairInFlight = false
       }
-    }).catch(error => {
+    } catch (error) {
+      const code = error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code)
+        : 'unknown'
       console.warn('[SYNC-DIAGNOSTICS] Receipt publish failed', {
-        code: typeof error?.code === 'string' ? error.code : 'unknown',
+        code,
       })
-    })
+    }
   }
 
   const schedule = () => {

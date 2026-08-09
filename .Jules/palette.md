@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility When Hiding Elements Visually Responsively
+**Learning:** When using CSS rules like `display: none` to hide text labels within buttons responsively (e.g. shrinking tabs to icon-only on mobile screens), screen readers will also fail to read the inner text, effectively turning them into inaccessible icon-only buttons for visually impaired users.
+**Action:** Always ensure that buttons which may have their visual text label hidden dynamically via CSS also have a corresponding dynamic `aria-label` or `title` bound to the parent button element to guarantee persistent accessibility across all screen sizes.

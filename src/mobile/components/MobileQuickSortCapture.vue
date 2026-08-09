@@ -14,7 +14,7 @@ defineEmits<{
   (e: 'update:title', value: string): void
   (e: 'update:priority', value: 'low' | 'medium' | 'high' | undefined): void
   (e: 'update:due', value: 'today' | 'tomorrow' | undefined): void
-  (e: 'quick-add'): void
+  (e: 'quickAdd'): void
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -36,7 +36,7 @@ defineExpose({ inputRef })
           placeholder="What needs to be done?"
           autofocus
           @input="$emit('update:title', ($event.target as HTMLInputElement).value)"
-          @keydown.enter="$emit('quick-add')"
+          @keydown.enter="$emit('quickAdd')"
         >
 
         <!-- Quick Actions -->
@@ -70,7 +70,7 @@ defineExpose({ inputRef })
         <button
           class="add-task-btn"
           :disabled="!title.trim()"
-          @click="$emit('quick-add')"
+          @click="$emit('quickAdd')"
         >
           <Plus :size="20" />
           Add Task

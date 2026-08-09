@@ -30,7 +30,7 @@ function dismiss() {
     <div class="morning-content">
       <div class="morning-header">
         <MorningGreeting />
-        <button class="morning-dismiss" @click="dismiss" aria-label="Close morning dashboard">
+        <button class="morning-dismiss" aria-label="Close morning dashboard" @click="dismiss">
           <X :size="20" />
         </button>
       </div>

@@ -26,6 +26,8 @@
             :key="tab.id"
             class="tab-btn"
             :class="{ active: activeTab === tab.id }"
+            :title="tab.label"
+            :aria-label="tab.label"
             @click="activeTab = tab.id"
           >
             <component :is="tab.icon" :size="18" />

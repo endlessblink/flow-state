@@ -17,7 +17,8 @@ import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import type { Task } from '@/types/tasks'
 import type { OpenAITool } from './types'
 import { resolveTask } from './entityResolver'
-import { decideAISubtaskCreate, decideAITaskCreate, normalizeAIActionText, type AITaskUpdateFields } from './actionGuardrails'
+import type { decideAISubtaskCreate} from './actionGuardrails';
+import { decideAITaskCreate, normalizeAIActionText, type AITaskUpdateFields } from './actionGuardrails'
 import * as aiActionCommands from './actionCommands'
 
 // ============================================================================

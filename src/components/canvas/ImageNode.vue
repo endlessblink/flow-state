@@ -1,13 +1,13 @@
 <template>
   <div class="image-node" :class="{ 'is-selected': selected }">
-    <Handle type="target" :position="Position.Top" id="top" />
-    <Handle type="target" :position="Position.Right" id="right" />
-    <Handle type="target" :position="Position.Bottom" id="bottom" />
-    <Handle type="target" :position="Position.Left" id="left" />
-    <Handle type="source" :position="Position.Top" id="source-top" />
-    <Handle type="source" :position="Position.Right" id="source-right" />
-    <Handle type="source" :position="Position.Bottom" id="source-bottom" />
-    <Handle type="source" :position="Position.Left" id="source-left" />
+    <Handle id="top" type="target" :position="Position.Top" />
+    <Handle id="right" type="target" :position="Position.Right" />
+    <Handle id="bottom" type="target" :position="Position.Bottom" />
+    <Handle id="left" type="target" :position="Position.Left" />
+    <Handle id="source-top" type="source" :position="Position.Top" />
+    <Handle id="source-right" type="source" :position="Position.Right" />
+    <Handle id="source-bottom" type="source" :position="Position.Bottom" />
+    <Handle id="source-left" type="source" :position="Position.Left" />
 
     <img
       :src="data.imageUrl"
@@ -15,21 +15,21 @@
       draggable="false"
       alt="Pasted image"
       @dblclick.stop="showLightbox = true"
-    />
+    >
 
     <Teleport to="body">
       <div
         v-if="showLightbox"
         ref="lightboxRef"
         class="image-lightbox"
-        @click="closeLightbox"
-        @keydown.escape="closeLightbox"
         role="dialog"
         aria-modal="true"
         aria-label="Image preview"
         tabindex="-1"
+        @click="closeLightbox"
+        @keydown.escape="closeLightbox"
       >
-        <img :src="data.imageUrl" class="lightbox-img" alt="Full size preview" />
+        <img :src="data.imageUrl" class="lightbox-img" alt="Full size preview">
       </div>
     </Teleport>
   </div>
@@ -56,7 +56,7 @@ const lightboxRef = ref<HTMLElement | null>(null)
 function closeLightbox() {
   showLightbox.value = false
   nextTick(() => {
-    ;(document.querySelector('.canvas-container') as HTMLElement)?.focus()
+    (document.querySelector('.canvas-container') as HTMLElement)?.focus()
   })
 }
 

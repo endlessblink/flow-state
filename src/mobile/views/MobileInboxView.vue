@@ -1,5 +1,5 @@
 <template>
-  <div class="mobile-inbox" ref="inboxEl">
+  <div ref="inboxEl" class="mobile-inbox">
     <!-- Debug Banner (tap to toggle) - dev user only -->
     <template v-if="false">
       <div v-if="showDebug" class="debug-banner" @click="showDebug = false">

@@ -101,9 +101,6 @@
 </template>
 
 <script setup lang="ts">
-// BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
-defineOptions({ inheritAttrs: false })
-
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
@@ -162,13 +159,17 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  close: []
-  cancel: []
-  confirm: []
-  open: []
-  afterOpen: []
-  afterClose: []
+  (e: 'update:isOpen', value: boolean): void
+  (e: 'close'): void
+  (e: 'confirm'): void
+  (e: 'cancel'): void
+  (e: 'open'): void
+  (e: 'afterOpen'): void
+  (e: 'afterClose'): void
 }>()
+
+// BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
+defineOptions({ inheritAttrs: false })
 
 const { t } = useI18n()
 

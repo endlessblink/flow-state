@@ -2,6 +2,7 @@
   <div ref="wrapperRef" class="quick-task-wrapper">
     <button
       class="quick-task-trigger"
+      :aria-expanded="isOpen"
       aria-label="Quick Tasks"
       title="Quick Tasks"
       @click="toggleDropdown"

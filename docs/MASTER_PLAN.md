@@ -1,5 +1,13 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2003: Production-authenticated PWA sync remains unproven after local convergence passes
+
+**Priority**: P0 | **Status**: IN PROGRESS (2026-08-09)
+
+The local authenticated browser boundary currently passes the complete offline/reconnect matrix (25 scenarios), including canonical Supabase readback, independent-client realtime convergence, crash recovery, deletes, completions, recurring actions, and reload recovery. The live PWA shell also survives offline reload, repeated reloads, and a persistent browser profile, but those live checks are unauthenticated and cannot prove that the user's production PWA mutation reaches the VPS and is read back by Electron.
+
+Close this issue only with a production-authenticated mutation/readback using a disposable or user-approved account, receipt evidence from both PWA and Electron, and a repeated offline/reconnect stress run. The fresh live PWA probe also observed the normal first-install window before the service worker controls the initial page; later reloads were controlled and passed, so this must remain a separate runtime-activation check rather than being misreported as data-sync proof.
+
 ### ~~TASK-2002~~: Keep PWA, Electron, and VPS continuously converged (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-08-07) | **Release**: PWA + Electron 1.4.342

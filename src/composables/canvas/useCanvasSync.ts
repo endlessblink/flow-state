@@ -14,6 +14,7 @@ import { positionManager } from '@/services/canvas/PositionManager'
 import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
 import { traceCanvasDone, traceCanvasDoneNodes, traceCanvasDoneTasks } from '@/utils/canvas/doneTrace'
+import { computeVisibleTaskCompaction } from './useCanonicalDayGroupLayout'
 
 // =============================================================================
 // MODULE-LEVEL HELPERS (defined before composable to ensure availability)
@@ -25,6 +26,15 @@ import { traceCanvasDone, traceCanvasDoneNodes, traceCanvasDoneTasks } from '@/u
 interface HierarchicalGroup {
     id: string
     parentGroupId?: string | null
+}
+
+function isOverdue(dueDate?: string | null): boolean {
+    if (!dueDate) return false
+    const due = new Date(dueDate)
+    if (!Number.isFinite(due.getTime())) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return due < today
 }
 
 /**
@@ -184,6 +194,42 @@ export function useCanvasSync() {
                 .filter(t => t.canvasPosition)
             const groups = canvasStore.groups || []
             const currentNodes = getNodes.value
+
+            // A filtered task remains in the store at its original slot. Compact
+            // the surviving siblings in the render projection so completing a
+            // task does not leave a blank card-sized hole in its group.
+            const compactedTaskPositions = new Map<string, { x: number; y: number }>()
+            if (shouldHideDone || taskStore.hideCanvasOverdueTasks) {
+                const currentNodeById = new Map(currentNodes.map((node: any) => [node.id, node]))
+                for (const group of groups) {
+                    const groupTasks = tasksToSync.filter((task) => task.parentId === group.id && task.canvasPosition)
+                    const visibleGroupTasks = groupTasks.filter((task) => {
+                        const hiddenByFilter = (shouldHideDone && task.status === 'done') ||
+                            (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate))
+                        return !hiddenByFilter
+                    })
+                    if (visibleGroupTasks.length === groupTasks.length || visibleGroupTasks.length === 0) continue
+
+                    const taskSizes = new Map<string, { width: number; height: number }>()
+                    const taskPositions = new Map<string, { x: number; y: number }>()
+                    for (const task of groupTasks) {
+                        const node = currentNodeById.get(task.id)
+                        const dimensions = node?.dimensions
+                        if (dimensions?.width && dimensions?.height) {
+                            taskSizes.set(task.id, { width: dimensions.width, height: dimensions.height })
+                        }
+                        taskPositions.set(task.id, task.canvasPosition!)
+                    }
+                    const compacted = computeVisibleTaskCompaction({
+                        group,
+                        visualPos: { x: group.position.x, y: group.position.y },
+                        tasks: visibleGroupTasks,
+                        taskSizes,
+                        taskPositions,
+                    })
+                    compacted.forEach((position, taskId) => compactedTaskPositions.set(taskId, position))
+                }
+            }
 
             traceCanvasDoneTasks('syncStoreToCanvas:input-store', tasksToSync)
             traceCanvasDoneNodes('syncStoreToCanvas:before-build-current-vueflow', currentNodes)
@@ -481,6 +527,13 @@ export function useCanvasSync() {
                     vueFlowPos = toRelativePosition(absolutePos, parentAbsolute)
                 }
 
+                const compactedAbsolutePos = compactedTaskPositions.get(task.id)
+                if (compactedAbsolutePos) {
+                    absolutePos = compactedAbsolutePos
+                    vueFlowPos = parentId && visibleGroupIds.has(parentId)
+                        ? toRelativePosition(absolutePos, getGroupAbsolutePosition(parentId, groups))
+                        : absolutePos
+                }
                 const displayPos = sanitizePosition(vueFlowPos, { x: 200, y: 200 })
 
                 // SAFETY: Cycle Detection
@@ -620,14 +673,18 @@ export function useCanvasSync() {
                     const taskA = nodeA.data?.task
                     const taskB = nodeB.data?.task
                     return Boolean(taskA && taskB) &&
-                        samePosition(taskA.canvasPosition, taskB.canvasPosition) &&
+                        // The task object can be shared with Vue Flow and mutated in
+                        // place by a realtime store update. Compare the rendered
+                        // geometry as well, otherwise both data objects appear equal
+                        // and the remote node keeps its stale screen position.
+                        samePosition(nodeA.position, nodeB.position) &&
                         (taskA.parentId ?? null) === (taskB.parentId ?? null)
                 }
 
                 if (nodeA.type === 'sectionNode') {
                     const storePositionA = nodeA.data?.storePosition
                     const storePositionB = nodeB.data?.storePosition
-                    return samePosition(storePositionA ?? nodeA.position, storePositionB ?? nodeB.position) &&
+                    return samePosition(nodeA.position, nodeB.position) &&
                         (storePositionA?.width ?? nodeA.data?.width) === (storePositionB?.width ?? nodeB.data?.width) &&
                         (storePositionA?.height ?? nodeA.data?.height) === (storePositionB?.height ?? nodeB.data?.height) &&
                         nodeA.data?.width === nodeB.data?.width &&

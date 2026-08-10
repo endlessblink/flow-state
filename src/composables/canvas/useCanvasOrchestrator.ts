@@ -832,9 +832,9 @@ export function useCanvasOrchestrator() {
     let isSyncingFromWatcher = false
 
     // CRITICAL FIX: Watch for task data changes (e.g. after async load)
-    // BUG-1210: Watch task IDs, not just length — smart view switches swap which tasks
-    // are visible without necessarily changing the count
-    watch(() => tasksWithCanvasPosition.value.map(t => t.id).join(','), () => {
+    // BUG-1210: Watch the rendered task signature, not just IDs — realtime
+    // geometry updates keep the same task list but still need a new projection.
+    watch(() => tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|'), () => {
         // Skip during initialization - onMounted handles initial sync
         if (!isInitialized.value) return
         if (isSyncingFromWatcher) return
@@ -876,12 +876,12 @@ export function useCanvasOrchestrator() {
         }
     })
 
-    // Collapse fix: re-sync when any group's collapsed state flips. updateGroup
-    // does not bump syncTrigger and the groups watcher above only fires on
-    // length change, so without this a collapse/expand never refreshes node data
-    // (child task/group nodes would never hide). Mirrors the task-signature
-    // watcher pattern above.
-    watch(() => canvasStore.groups.map(g => `${g.id}:${g.isCollapsed ? 1 : 0}`).join('|'), () => {
+    // Re-sync when group geometry, topology, or collapsed state changes. A
+    // remote group move keeps the same group count and must still reach Vue
+    // Flow's rendered projection.
+    watch(() => canvasStore.groups.map(g =>
+        `${g.id}:${g.isCollapsed ? 1 : 0}:${g.parentGroupId ?? 'root'}:${g.position?.x ?? ''},${g.position?.y ?? ''},${g.position?.width ?? ''},${g.position?.height ?? ''}`
+    ).join('|'), () => {
         if (!isInitialized.value) return
         if (isSyncingFromWatcher) return
         isSyncingFromWatcher = true

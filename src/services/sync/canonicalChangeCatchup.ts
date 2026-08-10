@@ -190,6 +190,7 @@ interface CanonicalChangePollerOptions {
   isAuthenticated(): boolean
   isOnline(): boolean
   intervalMs?: number
+  afterRun?(scope: CanonicalChangeScope): Promise<void> | void
   onError?(error: unknown): void
 }
 
@@ -200,7 +201,11 @@ export function createCanonicalChangePoller(options: CanonicalChangePollerOption
     if (busy || !options.isAuthenticated() || !options.isOnline()) return
     busy = true
     try {
-      await Promise.all(options.getScopes().map(scope => options.run(scope)))
+      const scopes = options.getScopes()
+      await Promise.all(scopes.map(scope => options.run(scope)))
+      if (options.afterRun) {
+        await Promise.all(scopes.map(scope => options.afterRun!(scope)))
+      }
     } catch (error) {
       options.onError?.(error)
     } finally {

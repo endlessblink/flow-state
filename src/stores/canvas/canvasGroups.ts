@@ -569,7 +569,14 @@ export const useCanvasGroups = (
     // Only migrate legacy DAY-COLUMN groups. Migrating arbitrary legacy groups
     // ("Done"/"1"/custom) would mint UUID copies and resurrect junk after cleanup.
     const legacy = _rawGroups.value.filter(
-      (g) => !isUuidGroupId(g.id) && isMigratableDayGroup(g.name),
+      (g) => {
+        if (isUuidGroupId(g.id) || !isMigratableDayGroup(g.name)) return false
+        // Bare three-letter weekday keys are also common in test fixtures and
+        // user-created custom groups; they are not the historical persisted
+        // identifiers that this migration is meant to repair.
+        const bareWeekdayKey = /^(mon|tue|wed|thu|fri|sat|sun)$/i.test(g.id)
+        return !bareWeekdayKey
+      },
     );
     if (legacy.length === 0) return { migrated: 0 };
 

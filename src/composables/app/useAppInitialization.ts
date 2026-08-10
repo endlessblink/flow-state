@@ -199,6 +199,24 @@ export function useAppInitialization() {
         isAuthenticated: () => authStore.isAuthenticated && !!authStore.user?.id,
         isOnline: () => typeof navigator === 'undefined' || navigator.onLine !== false,
         intervalMs: 5_000,
+        // BUG-2009: canonical change log currently covers tasks, while a missed
+        // groups INSERT has no websocket replay path. Re-read the authoritative
+        // group projection after each foreground catch-up tick so a second
+        // client converges without requiring a manual reload.
+      afterRun: async scope => {
+        if (!scopeMatchesActiveWorkspace(scope)) return
+        const canvas = useCanvasStore()
+        const tasks = useTaskStore()
+        if (canvas.isDragging || tasks.manualOperationInProgress) return
+        // A local layout action may still be queued for persistence. Let that
+        // write settle before canonical recovery compares the two projections;
+        // otherwise the recovery read can erase a freshly seeded/tidied canvas.
+        if (Date.now() - canvas.lastLocalSyncAt < 30_000) return
+        invalidateCache.groups()
+            if (await canvas.hasRemoteGroupChanges()) {
+                await canvasStore.loadFromDatabase()
+            }
+        },
         onError: error => console.warn('[CANONICAL-CATCHUP] Foreground retry deferred:', error instanceof Error ? error.message : 'unknown error'),
     })
 

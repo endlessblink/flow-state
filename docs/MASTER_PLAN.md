@@ -48,11 +48,11 @@
 
 **User repro**: The user reports that the Tidy day-group command broke in the same release family as the recurring-task failure. The exact installed-surface result is not yet captured; the command must be verified by its visible post-action layout and persistence, not by a click or console message.
 
-**Current evidence**: The focused layout unit suite and custom-group toolbar regression pass, but the full authenticated geometry path still fails: seeded day groups disappear before the assertion, and the custom-group geometry is replaced by extra persisted default groups. The installed 1.4.356 surface showed a visible geometry change after the Tidy control region was clicked and that geometry survived reload, but the exact control/action boundary is not yet trusted proof. A readiness-gate hardening change is present locally, but the focused geometry repro still fails, so this issue is not solved.
+**Current evidence**: The focused layout unit suite, custom-group toolbar regression, authenticated compact-group geometry repro, and today-first day-group geometry repro now pass. The fix prevents late canonical hydration from overwriting a recent local layout and prevents bare three-letter custom keys from being mistaken for legacy day IDs. Installed Electron and production-authenticated PWA visible-action proof remain open, so this issue is not closed.
 
 **Required proof before closeout**: In the one running installed Electron instance and the authenticated PWA, click Tidy with visible day/custom groups and tasks, verify the groups become one row and tasks restack, reload, confirm the geometry persists, and repeat with done/overdue filters and a realtime/offline transition. Add the smallest repro-focused regression for the observed failure before marking done.
 
-**Exact failure mode fixed**: Not fixed yet; the user-visible Tidy result remains unverified.
+**Exact failure mode fixed**: Late store hydration could replace the in-memory Tidy projection, and legacy migration could rename synthetic/custom three-letter weekday keys before the visible result was asserted. The local authenticated repro now shows Tidy moving groups into one row and stacking tasks with positive gaps.
 
 **Explicitly not covered**: The recurring completion transaction itself, tracked separately in BUG-2007.
 
@@ -62,11 +62,11 @@
 
 **User repro**: A day group created or migrated on one authenticated client reaches Supabase, but another authenticated client does not show it until reload.
 
-**Current evidence**: The R7 two-client regression still fails after both clients report `SUBSCRIBED`; task realtime passes in the same fixture, the local and VPS publications both contain `groups`, and no group INSERT callback is observed. Restarting the local Realtime container did not change the result. This is an unresolved Supabase/Realtime delivery or group-write boundary, not a renderer-only assertion failure.
+**Current evidence**: The raw group INSERT/UPDATE callback is still absent after both clients report `SUBSCRIBED`; task realtime passes in the same fixture, the local and VPS publications both contain `groups`, and restarting the local Realtime container did not change the result. Foreground canonical catch-up now compares group geometry and makes the isolated R6 group-move regression pass, while geometry-signature projection repair makes R5 pass. The full 34-case canvas suite and production receipt audit remain open.
 
 **Required proof before closeout**: Capture the actual group write response and Realtime payload at the local and production boundaries, fix the delivery or replay path, pass R7 plus the full canvas sync regression suite, and verify an authenticated cross-device group create/migration survives reload without relying on a manual refresh.
 
-**Exact failure mode fixed**: Not fixed yet; group INSERT convergence remains broken in the two-client test.
+**Exact failure mode fixed**: Missed group INSERT/UPDATE events no longer strand the second client indefinitely; foreground catch-up reloads authoritative groups when IDs or geometry differ, while the renderer reacts when task or group geometry changes without an ID change. Direct Realtime delivery and full-suite stability are not closed yet.
 
 ### BUG-2004: Completed canvas cards leave gaps inside groups
 

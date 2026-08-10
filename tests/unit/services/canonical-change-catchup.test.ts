@@ -348,6 +348,26 @@ describe('TASK-1947 foreground catch-up poller', () => {
     poller.stop()
   })
 
+  it('runs the projection recovery hook after canonical catch-up completes', async () => {
+    const run = vi.fn().mockResolvedValue(undefined)
+    const afterRun = vi.fn().mockResolvedValue(undefined)
+    const poller = createCanonicalChangePoller({
+      run,
+      afterRun,
+      getScopes: () => [personalScope],
+      isAuthenticated: () => true,
+      isOnline: () => true,
+    })
+
+    poller.start()
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(run).toHaveBeenCalledOnce()
+    expect(afterRun).toHaveBeenCalledWith(personalScope)
+    expect(afterRun.mock.invocationCallOrder[0]).toBeGreaterThan(run.mock.invocationCallOrder[0])
+    poller.stop()
+  })
+
   it('stops the foreground interval cleanly', async () => {
     const run = vi.fn().mockResolvedValue(undefined)
     const poller = createCanonicalChangePoller({

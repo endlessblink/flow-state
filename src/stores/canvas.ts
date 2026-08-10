@@ -88,10 +88,24 @@ export const useCanvasStore = defineStore('canvas', () => {
     taskStoreRef
   )
 
+  const updateGroup = async (...args: Parameters<typeof groupsModule.updateGroup>) => {
+    lastLocalSyncAt.value = Date.now()
+    return groupsModule.updateGroup(...args)
+  }
+
+  const setGroups = (...args: Parameters<typeof groupsModule.setGroups>) => {
+    lastLocalSyncAt.value = Date.now()
+    return groupsModule.setGroups(...args)
+  }
+
   // 5. Shared Canvas State
   const nodes = ref<Node[]>([])
   const edges = ref<Edge[]>([])
   const isDragging = ref(false)
+  // Keep a short local-mutation grace period so canonical recovery cannot
+  // overwrite an authenticated user's just-applied layout before its queued
+  // write reaches Supabase.
+  const lastLocalSyncAt = ref(0)
   const nodeVersionMap = ref<Map<string, number>>(new Map())
   const showGroupGuides = ref(true)
   const snapToGroups = ref(true)
@@ -146,6 +160,9 @@ export const useCanvasStore = defineStore('canvas', () => {
       const workspaceId = wsStore.activeWorkspaceId
       const loadedGroups = await fetchGroups(workspaceId)
       assertScope()
+      // The request may have started before a local Tidy/seed/layout action.
+      // Do not commit that stale snapshot over the newer in-memory projection.
+      if (Date.now() - lastLocalSyncAt.value < 30_000) return
 
       // Electron updates/restarts can happen before the queued remote group
       // geometry write finishes. In that case Supabase may still contain the
@@ -281,6 +298,32 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
+  // BUG-2009: Realtime can miss a group INSERT even while task events continue
+  // normally. Check canonical group identity without replacing the renderer
+  // projection; callers reload only when a group is actually missing locally.
+  const hasRemoteGroupChanges = async (): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    const { useWorkspaceStore } = await import('@/stores/workspace')
+    const workspaceId = useWorkspaceStore().activeWorkspaceId ?? null
+    const remoteGroups = await fetchGroups(workspaceId)
+    const localGroups = groupsModule._rawGroups.value
+    if (remoteGroups.length !== localGroups.length) return true
+
+    const localById = new Map(localGroups.map(group => [group.id, group]))
+      return remoteGroups.some(remote => {
+        const local = localById.get(remote.id)
+        if (!local) return true
+        const remotePosition = remote.position
+        const localPosition = local.position
+        return (remote.parentGroupId ?? null) !== (local.parentGroupId ?? null) ||
+          remotePosition?.x !== localPosition?.x ||
+          remotePosition?.y !== localPosition?.y ||
+          remotePosition?.width !== localPosition?.width ||
+          remotePosition?.height !== localPosition?.height
+      })
+  }
+
   // 7. Initialize
   // BUG-1045 FIX: REMOVED auto-init on store creation
   // The canvas store was initializing BEFORE auth was ready, causing it to load
@@ -376,13 +419,14 @@ export const useCanvasStore = defineStore('canvas', () => {
   const requestSync = async (source: string = 'unknown') => {
     const USER_ACTION_SOURCES = ['user:drag-drop', 'user:create', 'user:delete', 'user:undo', 'user:redo', 'user:resize', 'user:connect', 'user:context-menu', 'user:manual']
     if (USER_ACTION_SOURCES.includes(source)) {
+      lastLocalSyncAt.value = Date.now()
       groupsModule.syncTrigger.value++
     }
   }
 
   return {
     // State
-    viewport, zoomConfig,
+    viewport, zoomConfig, lastLocalSyncAt,
     groups: groupsModule.visibleGroups,
     _rawGroups: groupsModule._rawGroups,
     activeGroupId: groupsModule.activeGroupId,
@@ -397,10 +441,11 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     // Actions
     loadFromDatabase,
+    hasRemoteGroupChanges,
     createGroup: groupsModule.createGroup,
-    updateGroup: groupsModule.updateGroup,
+    updateGroup,
     deleteGroup: groupsModule.deleteGroup,
-    setGroups: groupsModule.setGroups,
+    setGroups,
     patchGroups: groupsModule.patchGroups,
     updateGroupFromSync: groupsModule.updateGroupFromSync,
     removeGroupFromSync: groupsModule.removeGroupFromSync,
@@ -476,6 +521,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     },
     // Clear all canvas data (used on sign-out to reset to guest mode)
     clearAll: () => {
+      lastLocalSyncAt.value = Date.now()
       groupsModule._rawGroups.value = []
       nodes.value = []
       edges.value = []

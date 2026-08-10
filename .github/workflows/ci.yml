@@ -91,6 +91,10 @@ jobs:
       - name: Boot Supabase + run two-client Realtime e2e (R1–R7)
         run: |
           supabase start
+          # The hosted runner can finish migrations before PostgREST refreshes
+          # its schema cache; reset once after boot to publish the current
+          # canonical tables/functions to the disposable test instance.
+          supabase db reset --local
           ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2
 
       - name: Stop Supabase

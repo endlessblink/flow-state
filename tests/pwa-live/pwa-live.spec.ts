@@ -53,6 +53,13 @@ function attachFailureCollectors(page: Page) {
 async function readAppState(page: Page) {
   return await page.evaluate(async () => {
     const registration = await navigator.serviceWorker?.ready.catch(() => null)
+    const manifestHref = document.querySelector('link[rel="manifest"]')?.getAttribute('href') ?? null
+    const [manifestResponse, serviceWorkerResponse] = await Promise.all([
+      manifestHref ? fetch(manifestHref, { cache: 'no-store' }).catch(() => null) : Promise.resolve(null),
+      fetch('/sw.js', { cache: 'no-store' }).catch(() => null),
+    ])
+    const manifestText = manifestResponse ? await manifestResponse.text().catch(() => '') : ''
+    const serviceWorkerText = serviceWorkerResponse ? await serviceWorkerResponse.text().catch(() => '') : ''
     return {
       href: location.href,
       route: location.hash,
@@ -62,9 +69,29 @@ async function readAppState(page: Page) {
       isStandalone: document.documentElement.classList.contains('pwa-app'),
       hasController: !!navigator.serviceWorker?.controller,
       scope: registration?.scope ?? null,
-      manifestHref: document.querySelector('link[rel="manifest"]')?.getAttribute('href') ?? null,
+      manifestHref,
+      manifestStatus: manifestResponse?.status ?? null,
+      manifestContentType: manifestResponse?.headers.get('content-type') ?? null,
+      manifestIsJson: manifestText.trimStart().startsWith('{'),
+      serviceWorkerStatus: serviceWorkerResponse?.status ?? null,
+      serviceWorkerContentType: serviceWorkerResponse?.headers.get('content-type') ?? null,
+      serviceWorkerHasWorkbox: /workbox/i.test(serviceWorkerText),
+      serviceWorkerScriptUrl: registration?.active?.scriptURL ?? null,
     }
   })
+}
+
+function expectRuntimeAssets(state: Awaited<ReturnType<typeof readAppState>>) {
+  expect(state.manifestHref).toBeTruthy()
+  expect(state.manifestStatus).toBe(200)
+  expect(state.manifestContentType).toBeTruthy()
+  expect(state.manifestIsJson).toBe(true)
+  if (state.serviceWorkerStatus === 200) {
+    expect(state.serviceWorkerContentType).toBeTruthy()
+    expect(state.serviceWorkerHasWorkbox).toBe(true)
+  } else {
+    expect(state.serviceWorkerScriptUrl).toContain('/sw.js')
+  }
 }
 
 test('live site boots in browser, standalone simulation, and offline reload', async ({ browser }) => {
@@ -84,6 +111,7 @@ test('live site boots in browser, standalone simulation, and offline reload', as
   expect(initialState.isStandalone).toBe(true)
   expect(initialState.hasController).toBe(true)
   expect(initialState.bodyText).toContain('FlowState')
+  expectRuntimeAssets(initialState)
 
   await context.setOffline(true)
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -95,6 +123,7 @@ test('live site boots in browser, standalone simulation, and offline reload', as
   expect(offlineState.hasController).toBe(true)
   expect(offlineState.bodyText).toContain('FlowState')
   expect(offlineState.route).toBe(initialState.route)
+  expectRuntimeAssets(offlineState)
 
   console.log(JSON.stringify({ initialState, offlineState, pageErrors, failedRequests }, null, 2))
 
@@ -122,6 +151,7 @@ test('mobile standalone route boots and survives offline reload', async ({ brows
   expect(initialState.hasController).toBe(true)
   expect(initialState.bodyText).toContain('FlowState')
   expect(initialState.bodyText).toContain('Tasks')
+  expectRuntimeAssets(initialState)
 
   await context.setOffline(true)
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -133,6 +163,7 @@ test('mobile standalone route boots and survives offline reload', async ({ brows
   expect(offlineState.hasLoader).toBe(false)
   expect(offlineState.hasController).toBe(true)
   expect(offlineState.bodyText).toContain('Tasks')
+  expectRuntimeAssets(offlineState)
 
   console.log(JSON.stringify({ initialState, offlineState, pageErrors, failedRequests }, null, 2))
 
@@ -164,6 +195,7 @@ test('repeated standalone reloads keep service worker control', async ({ browser
     expect(state.hasController).toBe(true)
     expect(state.isStandalone).toBe(true)
     expect(state.bodyText).toContain('FlowState')
+    expectRuntimeAssets(state)
   }
 
   expect(new Set(snapshots.map(snapshot => snapshot.route)).size).toBe(1)
@@ -219,6 +251,8 @@ test('persistent profile keeps service worker and manifest across sessions', asy
     expect(secondState.manifestHref).toBeTruthy()
     expect(secondState.hasLoader).toBe(false)
     expect(secondState.bodyText).toContain('FlowState')
+    expectRuntimeAssets(firstState)
+    expectRuntimeAssets(secondState)
 
     console.log(JSON.stringify({ firstState, secondState }, null, 2))
   } finally {

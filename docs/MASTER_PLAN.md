@@ -48,11 +48,11 @@
 
 **User repro**: The user reports that the Tidy day-group command broke in the same release family as the recurring-task failure. The exact installed-surface result is not yet captured; the command must be verified by its visible post-action layout and persistence, not by a click or console message.
 
-**Current evidence**: The focused layout unit suite, custom-group toolbar regression, authenticated compact-group geometry repro, and today-first day-group geometry repro now pass. The fix prevents late canonical hydration from overwriting a recent local layout and prevents bare three-letter custom keys from being mistaken for legacy day IDs. Installed Electron and production-authenticated PWA visible-action proof remain open, so this issue is not closed.
+**Current evidence**: The focused layout unit suite, custom-group toolbar regression, authenticated compact-group geometry repro, and today-first day-group geometry repro now pass. The fix prevents late canonical hydration from overwriting a recent local layout and prevents bare three-letter custom keys from being mistaken for legacy day IDs. The toolbar handler now proceeds as soon as usable rendered geometry exists instead of waiting on initialization flags that can remain stale, and returns explicitly when no geometry exists. Installed Electron and production-authenticated PWA visible-action proof remain open, so this issue is not closed.
 
 **Required proof before closeout**: In the one running installed Electron instance and the authenticated PWA, click Tidy with visible day/custom groups and tasks, verify the groups become one row and tasks restack, reload, confirm the geometry persists, and repeat with done/overdue filters and a realtime/offline transition. Add the smallest repro-focused regression for the observed failure before marking done.
 
-**Exact failure mode fixed**: Late store hydration could replace the in-memory Tidy projection, and legacy migration could rename synthetic/custom three-letter weekday keys before the visible result was asserted. The local authenticated repro now shows Tidy moving groups into one row and stacking tasks with positive gaps.
+**Exact failure mode fixed**: Late store hydration could replace the in-memory Tidy projection, legacy migration could rename synthetic/custom three-letter weekday keys before the visible result was asserted, and the click handler could wait on stale initialization flags despite usable canvas geometry. The local authenticated repro now shows Tidy moving groups into one row and stacking tasks with positive gaps.
 
 **Explicitly not covered**: The recurring completion transaction itself, tracked separately in BUG-2007.
 

@@ -604,10 +604,15 @@ async function handleTidyLayout() {
     canvasStore.groups.some((group) => !!group.position)
     || taskStore.rawTasks.some((task) => !!task.canvasPosition)
   while (
-    (!taskStore._hasInitializedOnce || !canvasStore._hasInitializedOnce || !hasUsableCanvasData()) &&
+    !hasUsableCanvasData() &&
     Date.now() - tidyWaitStart < 10_000
   ) {
     await new Promise(resolve => setTimeout(resolve, 100))
+  }
+
+  if (!hasUsableCanvasData()) {
+    console.warn('[TIDY] No usable canvas geometry after waiting for initialization')
+    return
   }
 
   // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row

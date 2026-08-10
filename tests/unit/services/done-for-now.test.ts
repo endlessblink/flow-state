@@ -71,4 +71,40 @@ describe('recurring Done for now domain adapter', () => {
       p_request_hash: null,
     }))
   })
+
+  it('promotes a nested committed receipt so the renderer does not report a false failure', async () => {
+    const completedOccurrence = {
+      id: 'completion-1',
+      status: 'done' as const,
+      dueDate: '2026-08-07',
+      completedAt: '2026-08-10T12:15:19.515Z',
+    }
+    const nestedReceipt = {
+      ok: true,
+      preview: false,
+      requestId: 'request-nested',
+      taskId: 'task-1',
+      receipt: {
+        completedOccurrence,
+        nextOccurrence: {
+          id: 'next-1',
+          taskId: 'task-1',
+          status: 'todo' as const,
+          dueDate: '2026-08-08',
+          duration: 120,
+        },
+      },
+    }
+    const client = { rpc: vi.fn().mockResolvedValue({ data: nestedReceipt, error: null }) }
+
+    await expect(runDoneForNow(client, {
+      taskId: 'task-1',
+      preview: false,
+      requestId: 'request-nested',
+    })).resolves.toMatchObject({
+      ok: true,
+      completedOccurrence,
+      nextOccurrence: nestedReceipt.receipt.nextOccurrence,
+    })
+  })
 })

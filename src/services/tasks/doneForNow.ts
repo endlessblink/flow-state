@@ -114,5 +114,14 @@ export async function runDoneForNow(client: DoneForNowClient, input: DoneForNowI
     )
   }
 
+  // PostgREST deployments can expose the committed canonical payload inside
+  // `receipt` while keeping only the transaction envelope at the top level.
+  // Promote those fields before taskOperations projects the receipt locally;
+  // otherwise a committed server mutation is shown as a generic failure.
+  const nestedReceipt = isRecord(data.receipt) ? data.receipt : null
+  if (nestedReceipt && data.completedOccurrence === undefined) {
+    return { ...data, ...nestedReceipt } as unknown as DoneForNowResult
+  }
+
   return data as unknown as DoneForNowResult
 }

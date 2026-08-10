@@ -56,7 +56,7 @@ describe('local E2E canonical schema preflight', () => {
 
     expect(source).toContain("body.includes('PGRST205')")
     expect(source).toContain('attempt <= 30')
-    expect(source).toContain('setTimeout(resolve, 2000)')
+    expect(source).toContain('setTimeout(resolve, 1000)')
   })
 
   it('retries a first-start table response that names the canonical table without PGRST205', () => {

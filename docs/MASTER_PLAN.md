@@ -1,5 +1,25 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2006: Electron renderer can remain on the loading screen forever
+
+**Priority**: P0 | **Status**: IN PROGRESS (2026-08-10)
+
+**User repro**: The installed Electron shell opens to a dark FlowState window with the animated loading mark and never shows the workspace.
+
+**Root cause under investigation**: `isDataReady` was gated behind unbounded durable auth and IndexedDB startup reads. A stalled Electron store IPC call or cache open could prevent the renderer from ever reaching its ready state, even while the window and Local API sidecar were alive.
+
+**Current fix**: Startup auth-identity, auth-session, and cached task/group/project reads now have bounded five-second fallbacks, with a regression contract preventing an infinite loading screen. Installed verification remains INCOMPLETE until a rebuilt release visibly reaches the workspace and completes an authenticated sync action.
+
+### BUG-2004: Completed canvas cards leave gaps inside groups
+
+**Priority**: P1 | **Status**: IN PROGRESS (2026-08-10)
+
+**User repro**: Marking a card as done while completed canvas tasks are hidden leaves a blank card-sized gap between the remaining cards in its group.
+
+**Root cause**: The canvas projection hid the completed node but kept visible siblings at their persisted vertical slots. The render-only projection now compacts visible siblings from the group header while preserving persisted geometry for hidden tasks.
+
+**Regression and verification**: `tests/unit/canvas/canonical-layout.test.ts`, `tests/unit/canvas/sync-readonly.test.ts`, and `src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts` pass; `npx vue-tsc --noEmit` passes. Electron packaging and headed visual verification remain UNVERIFIED because the working tree contains an unrelated user-modified `package.json` with the project scripts removed.
+
 ### BUG-2003: Production-authenticated PWA sync remains unproven after local convergence passes
 
 **Priority**: P0 | **Status**: IN PROGRESS (2026-08-09)

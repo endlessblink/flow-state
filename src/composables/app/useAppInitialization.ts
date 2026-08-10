@@ -43,6 +43,31 @@ import { startServiceWorkerUpdateRecovery } from '@/services/pwa/serviceWorkerUp
 import { useDeviceSyncDiagnostics } from '@/composables/sync/useDeviceSyncDiagnostics'
 
 export function useAppInitialization() {
+    const STARTUP_READ_TIMEOUT_MS = 5000
+    const withStartupReadTimeout = async <T>(
+        operation: Promise<T>,
+        label: string,
+        fallback: T,
+    ): Promise<T> => {
+        let timeoutId: ReturnType<typeof setTimeout> | null = null
+        try {
+            return await Promise.race([
+                operation,
+                new Promise<T>((resolve) => {
+                    timeoutId = setTimeout(() => {
+                        console.warn(`[STARTUP] ${label} timed out; continuing with local fallback`)
+                        resolve(fallback)
+                    }, STARTUP_READ_TIMEOUT_MS)
+                }),
+            ])
+        } catch (error) {
+            console.warn(`[STARTUP] ${label} failed; continuing with local fallback:`, error)
+            return fallback
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId)
+        }
+    }
+
     const router = useRouter()
     const timerStore = useTimerStore()
     const taskStore = useTaskStore()
@@ -270,8 +295,18 @@ export function useAppInitialization() {
         // The cache must be scoped before it is opened. A credential-free
         // durable identity is sufficient to select account-owned local data;
         // an unknown identity fails closed and shows no authenticated cache.
-        const persistedIdentity = await readPersistedAuthIdentity()
-        const persistedSession = await readPersistedAuthSessionCandidate()
+        const [persistedIdentity, persistedSession] = await Promise.all([
+            withStartupReadTimeout(
+                readPersistedAuthIdentity(),
+                'durable auth identity read',
+                null,
+            ),
+            withStartupReadTimeout(
+                readPersistedAuthSessionCandidate(),
+                'durable auth session read',
+                null,
+            ),
+        ])
         const persistedWorkspace = localStorage.getItem('flowstate-last-workspace')
         const preAuthScope = persistedIdentity?.id
             && persistedSession?.user?.id === persistedIdentity.id
@@ -286,9 +321,21 @@ export function useAppInitialization() {
         let hasCache = false
         try {
             const [cachedTasks, cachedGroups, cachedProjects] = await Promise.all([
-                getCachedTasksWithPendingWrites(),
-                getCachedGroupsWithPendingWrites(),
-                getCachedProjects()
+                withStartupReadTimeout(
+                    getCachedTasksWithPendingWrites(),
+                    'cached task read',
+                    [],
+                ),
+                withStartupReadTimeout(
+                    getCachedGroupsWithPendingWrites(),
+                    'cached group read',
+                    [],
+                ),
+                withStartupReadTimeout(
+                    getCachedProjects(),
+                    'cached project read',
+                    [],
+                ),
             ])
 
             hasCache = !!(cachedTasks && cachedTasks.length > 0) ||

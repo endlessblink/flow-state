@@ -35,4 +35,18 @@ describe('AI chat startup sync contract', () => {
     expect(src).toContain('projectStore.loadProjectsFromDatabase()')
     expect(src).toContain('canvasStore.loadFromDatabase()')
   })
+
+  it('does not leave the Electron renderer on an infinite loading screen when startup storage stalls', () => {
+    const src = readFileSync(
+      resolve(process.cwd(), 'src/composables/app/useAppInitialization.ts'),
+      'utf-8',
+    )
+
+    expect(src).toContain('STARTUP_READ_TIMEOUT_MS = 5000')
+    expect(src).toContain('withStartupReadTimeout(')
+    expect(src).toContain("'durable auth identity read'")
+    expect(src).toContain("'durable auth session read'")
+    expect(src).toContain("'cached task read'")
+    expect(src).toContain('continuing with local fallback')
+  })
 })

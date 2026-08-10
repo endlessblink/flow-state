@@ -125,7 +125,7 @@
                     :key="currentTaskId ?? undefined"
                     :task="currentTask"
                     class="stack-active"
-                    @swipe-right="handleSave"
+                    @swipeRight="handleSave"
                     @swipe-left="requestDelete"
                     @swipe-up="handleEditTask"
                     @swipe-down="handleSkip"

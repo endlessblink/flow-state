@@ -28,4 +28,15 @@ describe('Done for now UI entrypoint contracts', () => {
     expect(body).toContain('findMatchingGroupForDueDate(task.dueDate, canvasStore.groups)')
     expect(body).not.toContain('findMatchingGroupForDueDate(tomorrowStr, canvasStore.groups)')
   })
+
+  it('retries an authenticated Catalog completion after a canonical state conflict', () => {
+    const source = readFileSync(resolve(__dirname, '../../src/views/AllTasksView.vue'), 'utf8')
+    const start = source.indexOf('const handleToggleComplete')
+    const end = source.indexOf('\nconst handleUpdateTask', start)
+    const body = source.slice(start, end)
+
+    expect(body).toContain("if (code !== 'state_conflict' && code !== 'request_hash_mismatch') throw error")
+    expect(body).toContain('await taskStore.initializeFromDatabase()')
+    expect(body).toContain('await taskStore.doneForNow(taskId)')
+  })
 })

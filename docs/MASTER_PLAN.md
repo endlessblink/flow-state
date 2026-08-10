@@ -10,6 +10,38 @@
 
 **Current fix**: Startup reads now have bounded five-second fallbacks plus an eight-second renderer recovery boundary, and the Electron build is explicitly generated with relative asset URLs. Focused tests, Electron package validation, and installed headed verification now pass: release 1.4.351 visibly rendered the authenticated workspace and a UI-created task changed the visible totals from 50 to 51. Production updater/PWA deployment and canonical server readback remain open for the full sync goal.
 
+### BUG-2007: Recurring Catalog tasks stay overdue instead of advancing after completion
+
+**Priority**: P0 | **Status**: IN PROGRESS (2026-08-10)
+
+**User repro**: In the authenticated Catalog workspace, recurring tasks remain in the Overdue group with their old due dates. Selecting completion produces `Task could not be completed. Refresh and try again.` instead of moving the living task to its next occurrence and recording the completed occurrence.
+
+**Current evidence**: The workspace visibly renders and is usable, but this recurring completion boundary is still failing in the installed app. The Catalog completion handler correctly routes recurring tasks through the canonical `done for now` transaction; the production database currently exposes the seven-argument RPC including `p_request_hash`, so the failure must be traced through the authenticated request, receipt, renderer projection, and reload/readback before claiming resolution. The Catalog path now retries one fresh canonical transaction after a `state_conflict` or `request_hash_mismatch`, with focused contract coverage, but live proof is still missing.
+
+**Required proof before closeout**: A real authenticated recurring task must move from an overdue date to the computed next date without an error toast, create exactly one completed occurrence, survive reload, converge through realtime/offline recovery, and be verified in both the installed Electron app and production PWA. Add a repro-focused regression for the visible Catalog action and complete the failure-class matrix below before marking done.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Authenticated Catalog screenshot shows overdue recurring rows and completion failure toast | No — active investigation |
+| Data shape / persisted row shape | Pending | Must verify recurrence rule, living row, completion record, and next due date | No |
+| Renderer store/state | Pending | Must verify receipt projection and Catalog grouping after completion | No |
+| Electron main/preload bridge | Pending | Must verify installed app action path and runtime version | No |
+| Localhost sidecar endpoint | N/A until evidence requires it | Recurring completion uses the authenticated Supabase path | No |
+| KDE polling/control path | N/A | Not involved in the Catalog completion repro | No |
+| Supabase persistence/realtime | Pending | Must verify RPC apply, receipt, canonical rows, and realtime catch-up | No |
+| Updater/runtime version | Pending | Current installed and public versions must be identified during live proof | No |
+| Stale live process/cache state | Pending | Must rule out stale Electron renderer/service-worker state | No |
+
+**Exact failure mode fixed**: Not fixed yet; the recurring completion still fails in the user-visible authenticated surface.
+
+**Explicitly not covered**: Electron loading-screen recovery, which is a separate verified failure class.
+
+**Regression added for reported repro**: `tests/unit/done-for-now-ui-contract.test.ts` now guards the Catalog retry path; the authenticated live recurring-task scenario remains required.
+
+**Live boundary proof**: Not yet complete; the screenshot proves the failure remains.
+
 ### BUG-2004: Completed canvas cards leave gaps inside groups
 
 **Priority**: P1 | **Status**: IN PROGRESS (2026-08-10)

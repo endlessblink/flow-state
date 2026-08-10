@@ -700,8 +700,20 @@ const handleToggleComplete = async (taskId: string) => {
         try {
           await taskStore.doneForNow(taskId)
         } catch (error) {
-          if (!isDoneForNowAlreadyCompletedError(error)) throw error
+          if (isDoneForNowAlreadyCompletedError(error)) {
+            await taskStore.initializeFromDatabase()
+            return
+          }
+
+          // A realtime refresh can change the occurrence between the
+          // preview and apply calls. Refresh the canonical row and retry one
+          // fresh transaction before showing a failure toast.
+          const code = error && typeof error === 'object' && 'code' in error
+            ? String((error as { code?: unknown }).code ?? '')
+            : ''
+          if (code !== 'state_conflict' && code !== 'request_hash_mismatch') throw error
           await taskStore.initializeFromDatabase()
+          await taskStore.doneForNow(taskId)
         }
         return
       }

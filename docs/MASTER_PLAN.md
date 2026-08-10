@@ -48,13 +48,25 @@
 
 **User repro**: The user reports that the Tidy day-group command broke in the same release family as the recurring-task failure. The exact installed-surface result is not yet captured; the command must be verified by its visible post-action layout and persistence, not by a click or console message.
 
-**Current evidence**: The toolbar still emits the Tidy action and the focused layout unit suite passes, but the authenticated browser suite could not run in this environment because its service-role test credential is unavailable. The working tree also contains an uncommitted render-only compaction change that can overlap with Tidy's forced canvas resynchronization and must remain preserved while this failure class is isolated.
+**Current evidence**: The focused layout unit suite and custom-group toolbar regression pass, but the full authenticated geometry path still fails: seeded day groups disappear before the assertion, and the custom-group geometry is replaced by extra persisted default groups. The installed 1.4.356 surface showed a visible geometry change after the Tidy control region was clicked and that geometry survived reload, but the exact control/action boundary is not yet trusted proof. A readiness-gate hardening change is present locally, but the focused geometry repro still fails, so this issue is not solved.
 
 **Required proof before closeout**: In the one running installed Electron instance and the authenticated PWA, click Tidy with visible day/custom groups and tasks, verify the groups become one row and tasks restack, reload, confirm the geometry persists, and repeat with done/overdue filters and a realtime/offline transition. Add the smallest repro-focused regression for the observed failure before marking done.
 
 **Exact failure mode fixed**: Not fixed yet; the user-visible Tidy result remains unverified.
 
 **Explicitly not covered**: The recurring completion transaction itself, tracked separately in BUG-2007.
+
+### BUG-2009: Newly-created canvas groups do not reach another client over Realtime
+
+**Priority**: P0 | **Status**: IN PROGRESS (2026-08-10)
+
+**User repro**: A day group created or migrated on one authenticated client reaches Supabase, but another authenticated client does not show it until reload.
+
+**Current evidence**: The R7 two-client regression still fails after both clients report `SUBSCRIBED`; task realtime passes in the same fixture, the local and VPS publications both contain `groups`, and no group INSERT callback is observed. Restarting the local Realtime container did not change the result. This is an unresolved Supabase/Realtime delivery or group-write boundary, not a renderer-only assertion failure.
+
+**Required proof before closeout**: Capture the actual group write response and Realtime payload at the local and production boundaries, fix the delivery or replay path, pass R7 plus the full canvas sync regression suite, and verify an authenticated cross-device group create/migration survives reload without relying on a manual refresh.
+
+**Exact failure mode fixed**: Not fixed yet; group INSERT convergence remains broken in the two-client test.
 
 ### BUG-2004: Completed canvas cards leave gaps inside groups
 

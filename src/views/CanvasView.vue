@@ -604,8 +604,7 @@ async function handleTidyLayout() {
     canvasStore.groups.some((group) => !!group.position)
     || taskStore.rawTasks.some((task) => !!task.canvasPosition)
   while (
-    (!taskStore._hasInitializedOnce || !canvasStore._hasInitializedOnce) &&
-    !hasUsableCanvasData() &&
+    (!taskStore._hasInitializedOnce || !canvasStore._hasInitializedOnce || !hasUsableCanvasData()) &&
     Date.now() - tidyWaitStart < 10_000
   ) {
     await new Promise(resolve => setTimeout(resolve, 100))

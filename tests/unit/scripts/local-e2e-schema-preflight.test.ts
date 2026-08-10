@@ -72,4 +72,11 @@ describe('local E2E canonical schema preflight', () => {
     expect(source.indexOf('status_value SERVICE_ROLE_KEY'))
       .toBeLessThan(source.indexOf('status_value SECRET_KEY'))
   })
+
+  it('retries done-for-now responses that still reference the warming canonical schema', () => {
+    const source = require('node:fs').readFileSync(modulePath, 'utf8') as string
+
+    expect(source).toContain("doneForNowBody.includes('PGRST202') || doneForNowBody.includes('canonical_change_log')")
+    expect(source).toContain('doneForNowContractNotReady')
+  })
 })

@@ -58,4 +58,11 @@ describe('local E2E canonical schema preflight', () => {
     expect(source).toContain('attempt <= 30')
     expect(source).toContain('setTimeout(resolve, 2000)')
   })
+
+  it('retries a first-start table response that names the canonical table without PGRST205', () => {
+    const source = require('node:fs').readFileSync(modulePath, 'utf8') as string
+
+    expect(source).toContain("body.includes('PGRST205') || body.includes('canonical_change_log')")
+    expect(source).toContain('canonicalSchemaNotReady')
+  })
 })

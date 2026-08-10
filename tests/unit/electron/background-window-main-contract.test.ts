@@ -5,17 +5,17 @@ import { describe, expect, it } from 'vitest'
 const source = readFileSync(resolve(process.cwd(), 'electron/main.ts'), 'utf8')
 
 describe('Electron main background-window integration', () => {
-  it('keeps the authenticated renderer alive for supervised background launches', () => {
+  it('keeps the authenticated renderer alive for supervised visible launches', () => {
     expect(source).toContain("from './backgroundWindowLifecycle'")
     expect(source).toContain('createBackgroundWindowLifecycle({')
-    expect(source).toContain("process.env.FLOWSTATE_SUPERVISED === '1'")
+    expect(source).toContain('isBackgroundLaunch(process.argv)')
     expect(source).toContain('backgroundLifecycle.handleReadyToShow(window, process.argv)')
     expect(source).toContain("window.on('close', (event) => {")
     expect(source).toContain('backgroundLifecycle.handleClose(event, window)')
     expect(source).toContain('backgroundThrottling: false')
   })
 
-  it('shows the same hidden window for activate and second-instance', () => {
+  it('shows the same managed window for activate and second-instance', () => {
     const activateStart = source.indexOf("app.on('activate'")
     const secondStart = source.indexOf("app.on('second-instance'")
     expect(source.slice(activateStart, activateStart + 220)).toContain(

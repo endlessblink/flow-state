@@ -104,7 +104,7 @@ if (!gotLock) {
 
 let mainWindow: BrowserWindow | null = null
 const backgroundEnabled =
-  isBackgroundLaunch(process.argv) || process.env.FLOWSTATE_SUPERVISED === '1'
+  isBackgroundLaunch(process.argv)
 const backgroundLifecycle = createBackgroundWindowLifecycle({
   getWindow: () => mainWindow,
   createWindow,

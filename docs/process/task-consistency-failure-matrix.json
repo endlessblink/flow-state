@@ -164,6 +164,7 @@
     "recurrence-lifecycle",
     "selection-and-filter-scope",
     "service-worker-cache-skew",
+    "stale-renderer-projection",
     "timer-cross-runtime-coordination",
     "timezone-and-date-projection",
     "updater-artifact-and-live-runtime",
@@ -5322,6 +5323,49 @@
       ],
       "automatedEvidence": [
         "tests/unit/tasks/edit-action-survival.test.ts"
+      ],
+      "liveEvidence": []
+    },
+    {
+      "id": "completion-action-canonical-projection-race",
+      "severity": "high",
+      "status": "automated",
+      "failureClasses": [
+        "stale-renderer-projection",
+        "write-failure-visibility",
+        "realtime-gap-recovery"
+      ],
+      "mutations": [
+        "complete",
+        "reopen",
+        "done-for-now"
+      ],
+      "surfaces": [
+        "catalog",
+        "all-views",
+        "pwa",
+        "electron",
+        "renderer-store",
+        "supabase"
+      ],
+      "states": [
+        "visible",
+        "stale-snapshot",
+        "reconnecting",
+        "realtime-dropped",
+        "renderer-reloaded",
+        "electron-restarted"
+      ],
+      "layers": [
+        "renderer-component",
+        "renderer-store",
+        "sync-queue",
+        "supabase-realtime",
+        "supabase-persistence",
+        "live-process"
+      ],
+      "automatedEvidence": [
+        "src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts"
       ],
       "liveEvidence": []
     }

@@ -1,0 +1,3 @@
+## 2026-08-10 - Added ARIA attributes to view selector role
+**Learning:** When using custom UI components acting as a segmented control or radio group, apply appropriate semantic ARIA roles like `role="group"` on the container and `:aria-pressed` on the toggle buttons (since it's a group of toggle buttons changing the view mode) to ensure screen readers correctly interpret the state. Note that if `role="radiogroup"` was used, children would need `role="radio"` and `aria-checked`.
+**Action:** Always add semantic roles and state attributes (`aria-pressed` or `aria-checked`) dynamically bound to their boolean properties for view mode selectors and segment controls.

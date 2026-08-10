@@ -74,6 +74,7 @@ export function isDoneForNowAlreadyCompletedError(error: unknown): boolean {
       ? String((error as { message?: unknown }).message ?? '')
       : String(error)
   return code === 'occurrence_already_completed'
+    || code === 'already_completed'
     || message.includes('current recurring occurrence is already completed')
 }
 
@@ -93,10 +94,16 @@ export async function runDoneForNow(client: DoneForNowClient, input: DoneForNowI
   })
 
   if (error || !isRecord(data)) {
+    const errorCode = error && typeof error === 'object' && 'code' in error
+      ? String((error as { code?: unknown }).code ?? '')
+      : ''
     if (import.meta.env.DEV) {
       console.error('[DONE-FOR-NOW] Canonical transaction failed', error)
     }
-    throw new DoneForNowError('recurrence_transaction_failed', 'Done for now could not be completed')
+    throw new DoneForNowError(
+      errorCode || 'recurrence_transaction_failed',
+      'Done for now could not be completed',
+    )
   }
 
   if (data.ok !== true) {

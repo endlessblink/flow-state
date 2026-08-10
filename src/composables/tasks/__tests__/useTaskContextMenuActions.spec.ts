@@ -244,6 +244,33 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
     expect(showToast).not.toHaveBeenCalled()
   })
 
+  it('treats the canonical already_completed code as a successful refresh', async () => {
+    const recurringTask = {
+      id: 'task-1',
+      title: 'Recurring task already completed by the server',
+      status: 'todo',
+      recurrenceRule: { pattern: 'weekly', interval: 1 }
+    } as unknown as Task
+    getTask.mockReturnValue(recurringTask)
+    doneForNow.mockRejectedValueOnce(Object.assign(
+      new Error('The current recurring occurrence is already completed'),
+      { code: 'already_completed' }
+    ))
+    initializeFromDatabase.mockResolvedValueOnce(undefined)
+    const emit = vi.fn()
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: recurringTask,
+      contextTask: null,
+      selectedCount: 1
+    }, emit)
+    await toggleDone()
+
+    expect(initializeFromDatabase).toHaveBeenCalledTimes(1)
+    expect(requestSync).toHaveBeenCalledWith('user:context-menu')
+    expect(showToast).not.toHaveBeenCalled()
+  })
+
   it('does not show a failure toast when the idempotent refresh also fails', async () => {
     const recurringTask = {
       id: 'task-1',
@@ -300,6 +327,34 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
       ])
     )
     expect(emit).toHaveBeenCalledWith('close')
+  })
+
+  it('refreshes the canonical store before failing when a visible task is temporarily missing', async () => {
+    const visibleTask = {
+      id: 'task-1',
+      status: 'todo',
+      title: 'Visible while sync catches up',
+    } as Task
+    const canonicalTask = { ...visibleTask, status: 'todo' } as Task
+    getTask
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce(undefined)
+    initializeFromDatabase.mockImplementationOnce(async () => {
+      getTask.mockReturnValue(canonicalTask)
+    })
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: visibleTask,
+      contextTask: null,
+      selectedCount: 1,
+    }, vi.fn())
+    await toggleDone()
+
+    expect(initializeFromDatabase).toHaveBeenCalledTimes(1)
+    expect(updateTaskWithUndo).toHaveBeenCalledWith('task-1', { status: 'done' })
+    expect(showToast).not.toHaveBeenCalled()
   })
 
   it('USER REPRO: retries one tick when the Catalog row leads the canonical task snapshot', async () => {

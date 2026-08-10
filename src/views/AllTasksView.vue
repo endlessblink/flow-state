@@ -134,6 +134,7 @@ import BatchEditModal from '@/components/tasks/BatchEditModal.vue'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
+import { useToast } from '@/composables/useToast'
 import { runTaskMutationWithSettling } from '@/composables/tasks/settleTaskMutation'
 
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
@@ -159,6 +160,25 @@ const timerStore = useTimerStore()
 const settingsStore = useSettingsStore()
 const { bulkDeleteTasksWithUndo, createTaskWithUndo, updateTaskWithUndo } = useUnifiedUndoRedo()
 const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
+const { showToast } = useToast()
+
+const reportCompletionFailure = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error)
+  const code = error && typeof error === 'object' && 'code' in error
+    ? String((error as { code?: unknown }).code ?? '')
+    : undefined
+  console.error('[Tasks] Catalog completion failed:', error)
+  try {
+    const key = 'flowstate-task-mutation-errors'
+    const previous = JSON.parse(localStorage.getItem(key) || '[]')
+    const entries = Array.isArray(previous) ? previous : []
+    entries.push({ action: 'completed', message, ...(code ? { code } : {}), timestamp: new Date().toISOString(), path: window.location.pathname })
+    localStorage.setItem(key, JSON.stringify(entries.slice(-20)))
+  } catch {
+    // Diagnostics must never change completion behavior.
+  }
+  showToast('Task could not be completed. Refresh and try again.', 'error')
+}
 
 // Extract only reactive state refs, not computed properties
 // Computed properties stay on the store to maintain full reactivity chain
@@ -666,7 +686,8 @@ const closeContextMenu = () => {
 }
 
 const handleToggleComplete = async (taskId: string) => {
-  await runTaskMutationWithSettling(
+  try {
+    await runTaskMutationWithSettling(
     taskId,
     () => taskStore.getTask(taskId),
     () => taskStore.initializeFromDatabase(),
@@ -688,7 +709,10 @@ const handleToggleComplete = async (taskId: string) => {
       // BUG-1051: AWAIT to ensure persistence
       await updateTaskWithUndo(taskId, { status: newStatus })
     },
-  )
+    )
+  } catch (error) {
+    reportCompletionFailure(error)
+  }
 }
 
 const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {

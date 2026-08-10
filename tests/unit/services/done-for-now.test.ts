@@ -46,14 +46,14 @@ describe('recurring Done for now domain adapter', () => {
   it('preserves typed domain failures without exposing raw database errors', async () => {
     const typed = { ok: false, error: { code: 'not_recurring', message: 'task is not recurring' } }
     const typedClient = { rpc: vi.fn().mockResolvedValue({ data: typed, error: null }) }
-    const failedClient = { rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'private database detail' } }) }
+    const failedClient = { rpc: vi.fn().mockResolvedValue({ data: null, error: { code: 'PGRST301', message: 'private database detail' } }) }
 
     await expect(runDoneForNow(typedClient, { taskId: 'task-1', preview: true })).rejects.toMatchObject({
       code: 'not_recurring',
       message: 'task is not recurring',
     })
     await expect(runDoneForNow(failedClient, { taskId: 'task-1', preview: true })).rejects.toMatchObject({
-      code: 'recurrence_transaction_failed',
+      code: 'PGRST301',
       message: 'Done for now could not be completed',
     })
   })

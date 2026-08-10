@@ -30,6 +30,9 @@ export function useTaskContextMenuActions(
 
     const reportMutationFailure = (action: string, error: unknown) => {
         const message = error instanceof Error ? error.message : String(error)
+        const code = error && typeof error === 'object' && 'code' in error
+            ? String((error as { code?: unknown }).code ?? '')
+            : undefined
         console.error(`Error ${action}:`, error)
         try {
             const key = 'flowstate-task-mutation-errors'
@@ -38,6 +41,7 @@ export function useTaskContextMenuActions(
             entries.push({
                 action,
                 message,
+                ...(code ? { code } : {}),
                 timestamp: new Date().toISOString(),
                 path: window.location.pathname,
             })
@@ -319,6 +323,17 @@ export function useTaskContextMenuActions(
             for (let attempt = 0; !canonicalTask && attempt < 3; attempt += 1) {
                 await nextTick()
                 canonicalTask = taskStore.getTask(taskId)
+            }
+            if (!canonicalTask) {
+                // A visible row can outlive the task-store projection during a
+                // realtime/cache reconciliation. Refresh the authoritative task
+                // snapshot once before reporting a false completion failure.
+                try {
+                    await taskStore.initializeFromDatabase()
+                    canonicalTask = taskStore.getTask(taskId)
+                } catch (refreshError) {
+                    console.warn('[Tasks] Canonical refresh before completion failed:', refreshError)
+                }
             }
             if (!canonicalTask) {
                 reportMutationFailure('completed', new Error(`Task update target no longer exists: ${taskId}`))

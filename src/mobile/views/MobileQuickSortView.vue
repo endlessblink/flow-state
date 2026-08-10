@@ -162,10 +162,10 @@
           <MobileQuickSortCard
             v-if="currentTask"
             :task="currentTask"
-            @swipe-right="onSwipeRight"
-            @swipe-left="onSwipeLeft"
-            @swipe-up="onSwipeUp"
-            @swipe-down="onSwipeDown"
+            @swipeRight="onSwipeRight"
+            @swipeLeft="onSwipeLeft"
+            @swipeUp="onSwipeUp"
+            @swipeDown="onSwipeDown"
           />
         </div>
 

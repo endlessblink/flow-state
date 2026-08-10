@@ -95,6 +95,10 @@ jobs:
           # its schema cache; reset once after boot to publish the current
           # canonical tables/functions to the disposable test instance.
           supabase db reset --local
+          # Recreate the API process after the reset so its initial schema
+          # snapshot includes the canonical tables and RPCs.
+          supabase stop
+          supabase start
           ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2
 
       - name: Stop Supabase

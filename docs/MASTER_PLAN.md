@@ -8,7 +8,7 @@
 
 **Root cause**: Two independent Electron startup failures combined: `isDataReady` was gated behind durable auth and IndexedDB reads that could stall, and the desktop build was sometimes produced without `ELECTRON_BUILD=1`, leaving `file://` pages pointing at absolute `/assets/...` URLs. The latter made every renderer chunk fail with `ERR_FILE_NOT_FOUND` while the shell remained on the loading mark.
 
-**Current fix**: Startup reads now have bounded five-second fallbacks plus an eight-second renderer recovery boundary, and the Electron build is explicitly generated with relative asset URLs. Focused tests, Electron package validation, and installed headed verification now pass: release 1.4.351 visibly rendered the authenticated workspace and a UI-created task changed the visible totals from 50 to 51. Production updater/PWA deployment and canonical server readback remain open for the full sync goal.
+**Current fix**: Startup reads now have bounded five-second fallbacks plus an eight-second renderer recovery boundary, and the Electron build is explicitly generated with relative asset URLs. Release 1.4.357 is publicly published with manifest-matching artifacts, and the installed single-instance app visibly renders the authenticated workspace with the signed-in account and Online status. Production authenticated mutation/readback remains open for the full sync goal.
 
 ### BUG-2007: Recurring Catalog tasks stay overdue instead of advancing after completion
 
@@ -76,7 +76,7 @@
 
 **Root cause**: The canvas projection hid the completed node but kept visible siblings at their persisted vertical slots. The render-only projection now compacts visible siblings from the group header while preserving persisted geometry for hidden tasks.
 
-**Regression and verification**: `tests/unit/canvas/canonical-layout.test.ts`, `tests/unit/canvas/sync-readonly.test.ts`, and `src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts` pass; `npx vue-tsc --noEmit` passes. Electron packaging and headed visual verification remain UNVERIFIED because the working tree contains an unrelated user-modified `package.json` with the project scripts removed.
+**Regression and verification**: `tests/unit/canvas/canonical-layout.test.ts`, `tests/unit/canvas/sync-readonly.test.ts`, and `src/composables/tasks/__tests__/useTaskContextMenuActions.spec.ts` pass; `npx vue-tsc --noEmit` passes. The complete 34-case canvas sync suite passes, and installed 1.4.357 headed OCR confirms the authenticated workspace is visible; a real installed Tidy mutation/readback remains unverified.
 
 ### BUG-2003: Production-authenticated PWA sync remains unproven after local convergence passes
 

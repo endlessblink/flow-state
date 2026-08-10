@@ -57,4 +57,11 @@ describe('local E2E canonical schema preflight', () => {
     expect(source).toContain("body.includes('PGRST205') || body.includes('canonical_change_log')")
     expect(source).toContain('canonicalSchemaNotReady')
   })
+
+  it('uses the explicit service-role key before the gateway secret key', () => {
+    const source = require('node:fs').readFileSync(resolve(process.cwd(), 'scripts/run-e2e.sh'), 'utf8') as string
+
+    expect(source.indexOf("grep '^SERVICE_ROLE_KEY='"))
+      .toBeLessThan(source.indexOf("grep '^SECRET_KEY='"))
+  })
 })

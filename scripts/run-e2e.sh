@@ -9,11 +9,13 @@ set -euo pipefail
 SUPABASE_STATUS_ENV="${SUPABASE_STATUS_ENV:-$(supabase status -o env 2>&1 || true)}"
 
 if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-  # Try new-format secret key first (Supabase v2.x uses sb_secret_* instead of HS256 JWT)
-  SUPABASE_SERVICE_ROLE_KEY=$(printf '%s\n' "$SUPABASE_STATUS_ENV" | grep '^SECRET_KEY=' | sed 's/^SECRET_KEY="//' | sed 's/"$//')
-  # Fall back to classic JWT SERVICE_ROLE_KEY if secret key not present
+  # Prefer the explicit service-role JWT for PostgREST schema probes.
+  # The new sb_secret key is a gateway credential and may not expose the
+  # service-role schema under every local Supabase CLI version.
+  SUPABASE_SERVICE_ROLE_KEY=$(printf '%s\n' "$SUPABASE_STATUS_ENV" | grep '^SERVICE_ROLE_KEY=' | sed 's/^SERVICE_ROLE_KEY="//' | sed 's/"$//')
+  # Fall back to the new-format secret key when the classic key is unavailable.
   if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-    SUPABASE_SERVICE_ROLE_KEY=$(printf '%s\n' "$SUPABASE_STATUS_ENV" | grep '^SERVICE_ROLE_KEY=' | sed 's/^SERVICE_ROLE_KEY="//' | sed 's/"$//')
+    SUPABASE_SERVICE_ROLE_KEY=$(printf '%s\n' "$SUPABASE_STATUS_ENV" | grep '^SECRET_KEY=' | sed 's/^SECRET_KEY="//' | sed 's/"$//')
   fi
 fi
 

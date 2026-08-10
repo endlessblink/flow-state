@@ -34,7 +34,7 @@ async function main() {
   let response
   let body
   let result
-  for (let attempt = 1; attempt <= 10; attempt += 1) {
+  for (let attempt = 1; attempt <= 30; attempt += 1) {
     response = await fetch(
       `${baseUrl}/rest/v1/canonical_change_log?select=change_sequence&limit=1`,
       { headers }
@@ -48,7 +48,7 @@ async function main() {
   if (!result.ok) throw new Error(result.reason)
 
   let doneForNowResult
-  for (let attempt = 1; attempt <= 10; attempt += 1) {
+  for (let attempt = 1; attempt <= 30; attempt += 1) {
     const doneForNowResponse = await fetch(
       `${baseUrl}/rest/v1/rpc/flowstate_done_for_now`,
       {

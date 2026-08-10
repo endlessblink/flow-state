@@ -47,7 +47,7 @@ describe('local E2E canonical schema preflight', () => {
     const source = require('node:fs').readFileSync(modulePath, 'utf8') as string
 
     expect(source).toContain("body.includes('PGRST205')")
-    expect(source).toContain('attempt <= 10')
+    expect(source).toContain('attempt <= 30')
     expect(source).toContain('setTimeout(resolve, 1000)')
   })
 

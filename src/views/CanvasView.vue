@@ -600,8 +600,12 @@ async function handleTidyLayout() {
   // still in flight, it lays out a partial store (recorder-proven "3 rows" /
   // groups-skipped flake). Wait briefly for both stores' first load to settle.
   const tidyWaitStart = Date.now()
+  const hasUsableCanvasData = () =>
+    canvasStore.groups.some((group) => !!group.position)
+    || taskStore.rawTasks.some((task) => !!task.canvasPosition)
   while (
     (!taskStore._hasInitializedOnce || !canvasStore._hasInitializedOnce) &&
+    !hasUsableCanvasData() &&
     Date.now() - tidyWaitStart < 10_000
   ) {
     await new Promise(resolve => setTimeout(resolve, 100))

@@ -18,6 +18,13 @@ function lineNumber(source: string, index: number): number {
 }
 
 describe('cardinal task consistency renderer authority', () => {
+  it('exposes the canonical task ID on the completion control', () => {
+    const source = readFileSync(join(sourceRoot, 'components/tasks/HierarchicalTaskRowContent.vue'), 'utf8')
+
+    expect(source).toContain('data-testid="task-completion-toggle"')
+    expect(source).toContain(':data-task-id="task.id"')
+  })
+
   it('never resolves an authoritative task identity from the filtered view projection', () => {
     const violations = sourceFiles(sourceRoot).flatMap(path => {
       const source = readFileSync(path, 'utf8')

@@ -37,7 +37,12 @@
     @touchend="$emit('touchend', $event)"
   >
     <!-- Done Toggle / Selection Checkbox column -->
-    <div class="task-row__done-toggle" @click.stop="handleCheckboxClick($event)">
+    <div
+      class="task-row__done-toggle"
+      data-testid="task-completion-toggle"
+      :data-task-id="task.id"
+      @click.stop="handleCheckboxClick($event)"
+    >
       <DoneToggle
         v-if="!selectionMode"
         :completed="task.status === 'done'"

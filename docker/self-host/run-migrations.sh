@@ -108,11 +108,31 @@ run_migrations() {
     log "All ${total} migrations applied successfully."
 }
 
+# Existing self-hosted databases were initialized before the migration runner
+# learned about the atomic backup/restore schema. Keep this late migration
+# idempotent and run it on every already-initialized database so a restart can
+# repair schema drift instead of silently skipping it.
+run_post_init_migrations() {
+    local migration="20260724030000_atomic_backup_restore.sql"
+    local filepath="${MIGRATIONS_DIR}/${migration}"
+
+    if [ ! -f "$filepath" ]; then
+        log "WARNING: Post-init migration file not found, skipping: ${migration}"
+        return
+    fi
+
+    log "Running post-init migration: ${migration}"
+    psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
+        -v ON_ERROR_STOP=1 -f "$filepath" > /dev/null
+    log "Post-init migration OK: ${migration}"
+}
+
 # Main
 wait_for_auth
 
 if check_already_migrated; then
-    log "Database already initialized (public.tasks exists). Skipping."
+    log "Database already initialized (public.tasks exists). Applying post-init migrations."
+    run_post_init_migrations
     exit 0
 fi
 

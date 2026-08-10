@@ -42,6 +42,20 @@
 
 **Live boundary proof**: Not yet complete; the screenshot proves the failure remains.
 
+### BUG-2008: Tidy day-group command does not leave a trusted visible result
+
+**Priority**: P0 | **Status**: IN PROGRESS (2026-08-10)
+
+**User repro**: The user reports that the Tidy day-group command broke in the same release family as the recurring-task failure. The exact installed-surface result is not yet captured; the command must be verified by its visible post-action layout and persistence, not by a click or console message.
+
+**Current evidence**: The toolbar still emits the Tidy action and the focused layout unit suite passes, but the authenticated browser suite could not run in this environment because its service-role test credential is unavailable. The working tree also contains an uncommitted render-only compaction change that can overlap with Tidy's forced canvas resynchronization and must remain preserved while this failure class is isolated.
+
+**Required proof before closeout**: In the one running installed Electron instance and the authenticated PWA, click Tidy with visible day/custom groups and tasks, verify the groups become one row and tasks restack, reload, confirm the geometry persists, and repeat with done/overdue filters and a realtime/offline transition. Add the smallest repro-focused regression for the observed failure before marking done.
+
+**Exact failure mode fixed**: Not fixed yet; the user-visible Tidy result remains unverified.
+
+**Explicitly not covered**: The recurring completion transaction itself, tracked separately in BUG-2007.
+
 ### BUG-2004: Completed canvas cards leave gaps inside groups
 
 **Priority**: P1 | **Status**: IN PROGRESS (2026-08-10)

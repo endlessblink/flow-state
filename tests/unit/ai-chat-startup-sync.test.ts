@@ -50,5 +50,7 @@ describe('AI chat startup sync contract', () => {
     expect(src).toContain("'persisted filter read'")
     expect(src).toContain("'cache statistics read'")
     expect(src).toContain('continuing with local fallback')
+    expect(src).toContain('STARTUP_READY_WATCHDOG_MS = 8_000')
+    expect(src).toContain("'[STARTUP] Local startup boundary stalled; rendering recovery shell'")
   })
 })

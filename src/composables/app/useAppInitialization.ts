@@ -92,6 +92,11 @@ export function useAppInitialization() {
     // BUG-1339: Signal that initial data load has completed (tasks, projects, canvas)
     // Views should NOT render content until this is true to prevent blank-on-first-load
     const isDataReady = ref(false)
+    // BUG-2006: A renderer-side startup operation can stall without rejecting, so
+    // never leave the installed app on an infinite loading screen. Auth and remote
+    // hydration continue after the local recovery shell becomes usable.
+    const STARTUP_READY_WATCHDOG_MS = 8_000
+    let startupReadyWatchdog: ReturnType<typeof setTimeout> | null = null
 
     const canonicalChangeCursorStore = createCanonicalChangeCursorStore()
     const canonicalChangeReader = createCanonicalChangeSupabaseReader(supabase)
@@ -260,6 +265,12 @@ export function useAppInitialization() {
     }
 
     onMounted(async () => {
+        startupReadyWatchdog = setTimeout(() => {
+            if (isDataReady.value) return
+            console.error('[STARTUP] Local startup boundary stalled; rendering recovery shell')
+            authStore.markAppInitLoadComplete()
+            isDataReady.value = true
+        }, STARTUP_READY_WATCHDOG_MS)
         canonicalChangePoller.start()
         // MARK: SESSION START for stability guards
         if (typeof window !== 'undefined') {
@@ -419,6 +430,7 @@ export function useAppInitialization() {
         }
 
         // Mark data as ready — UI can render with cached data (or empty state)
+        if (startupReadyWatchdog) clearTimeout(startupReadyWatchdog)
         authStore.markAppInitLoadComplete()
         isDataReady.value = true
 

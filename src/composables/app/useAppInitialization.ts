@@ -383,7 +383,12 @@ export function useAppInitialization() {
                 try {
                     const { useSyncStatusStore } = await import('@/stores/syncStatus')
                     const syncStatusStore = useSyncStatusStore()
-                    const stats = await getCacheStats()
+                    const stats = await withStartupReadTimeout(
+                        getCacheStats(),
+                        'cache statistics read',
+                        null,
+                    )
+                    if (!stats) throw new Error('cache statistics unavailable')
                     syncStatusStore.markLoadedFromCache(stats.tasks?.updatedAt)
                 } catch (e) {
                     console.warn('[CACHE-FIRST] Failed to mark cache mode:', e)
@@ -395,8 +400,14 @@ export function useAppInitialization() {
             console.warn('[CACHE-FIRST] IndexedDB cache read failed:', cacheError)
         }
 
-        // Load persisted filters (applies regardless of cache hit)
-        await taskStore.loadPersistedFilters()
+        // Load persisted filters (applies regardless of cache hit). A corrupted
+        // IndexedDB transaction must not strand the whole renderer before the
+        // ready flag is published.
+        await withStartupReadTimeout(
+            taskStore.loadPersistedFilters(),
+            'persisted filter read',
+            undefined,
+        )
 
         // DEBUG: Check for duplicates after cache load
         {

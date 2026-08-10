@@ -47,6 +47,8 @@ describe('AI chat startup sync contract', () => {
     expect(src).toContain("'durable auth identity read'")
     expect(src).toContain("'durable auth session read'")
     expect(src).toContain("'cached task read'")
+    expect(src).toContain("'persisted filter read'")
+    expect(src).toContain("'cache statistics read'")
     expect(src).toContain('continuing with local fallback')
   })
 })

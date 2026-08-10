@@ -9,6 +9,8 @@ function createWindow(overrides: Partial<BackgroundWindow> = {}): BackgroundWind
   return {
     isDestroyed: vi.fn(() => false),
     isMinimized: vi.fn(() => false),
+    getBounds: vi.fn(() => ({ width: 1400, height: 900 })),
+    setBounds: vi.fn(),
     restore: vi.fn(),
     show: vi.fn(),
     focus: vi.fn(),
@@ -100,6 +102,25 @@ describe('Electron background window lifecycle', () => {
     expect(window.show).toHaveBeenCalledOnce()
     expect(window.focus).toHaveBeenCalledOnce()
     expect(create).not.toHaveBeenCalled()
+  })
+
+  it('repairs a collapsed background window before showing it', () => {
+    const setBounds = vi.fn()
+    const window = createWindow({
+      getBounds: vi.fn(() => ({ width: 10, height: 28 })),
+      setBounds,
+    })
+    const lifecycle = createBackgroundWindowLifecycle({
+      getWindow: () => window,
+      createWindow: vi.fn(() => window),
+      isBackgroundEnabled: () => true,
+    })
+
+    lifecycle.showOrCreate()
+
+    expect(setBounds).toHaveBeenCalledWith({ width: 1400, height: 900 })
+    expect(window.show).toHaveBeenCalledOnce()
+    expect(window.focus).toHaveBeenCalledOnce()
   })
 
   it('creates one visible window when activate finds no live window', () => {

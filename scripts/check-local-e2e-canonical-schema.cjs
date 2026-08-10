@@ -41,7 +41,8 @@ async function main() {
     )
     body = await response.text()
     result = evaluateCanonicalSchemaResponse(response.status, body)
-    if (result.ok || !body.includes('PGRST205')) break
+    const canonicalSchemaNotReady = body.includes('PGRST205') || body.includes('canonical_change_log')
+    if (result.ok || !canonicalSchemaNotReady) break
     await new Promise(resolve => setTimeout(resolve, 1000))
   }
   if (!result.ok) throw new Error(result.reason)

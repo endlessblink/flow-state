@@ -53,4 +53,14 @@ describe('AI chat startup sync contract', () => {
     expect(src).toContain('STARTUP_READY_WATCHDOG_MS = 8_000')
     expect(src).toContain("'[STARTUP] Local startup boundary stalled; rendering recovery shell'")
   })
+
+  it('keeps Electron asset URLs relative for file-based packaged startup', () => {
+    const viteConfig = readFileSync(
+      resolve(process.cwd(), 'vite.config.ts'),
+      'utf-8',
+    )
+
+    expect(viteConfig).toContain("base: isElectron ? './' : '/'")
+    expect(viteConfig).toContain("process.env.ELECTRON_BUILD !== undefined")
+  })
 })

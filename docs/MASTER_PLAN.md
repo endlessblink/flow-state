@@ -6,9 +6,9 @@
 
 **User repro**: The installed Electron shell opens to a dark FlowState window with the animated loading mark and never shows the workspace.
 
-**Root cause under investigation**: `isDataReady` was gated behind unbounded durable auth and IndexedDB startup reads. A stalled Electron store IPC call or cache open could prevent the renderer from ever reaching its ready state, even while the window and Local API sidecar were alive.
+**Root cause**: Two independent Electron startup failures combined: `isDataReady` was gated behind durable auth and IndexedDB reads that could stall, and the desktop build was sometimes produced without `ELECTRON_BUILD=1`, leaving `file://` pages pointing at absolute `/assets/...` URLs. The latter made every renderer chunk fail with `ERR_FILE_NOT_FOUND` while the shell remained on the loading mark.
 
-**Current fix**: Startup auth-identity, auth-session, and cached task/group/project reads now have bounded five-second fallbacks, with a regression contract preventing an infinite loading screen. Installed verification remains INCOMPLETE until a rebuilt release visibly reaches the workspace and completes an authenticated sync action.
+**Current fix**: Startup reads now have bounded five-second fallbacks plus an eight-second renderer recovery boundary, and the Electron build is explicitly generated with relative asset URLs. Focused tests, Electron package validation, and installed headed verification now pass: release 1.4.351 visibly rendered the authenticated workspace and a UI-created task changed the visible totals from 50 to 51. Production updater/PWA deployment and canonical server readback remain open for the full sync goal.
 
 ### BUG-2004: Completed canvas cards leave gaps inside groups
 

@@ -91,11 +91,20 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
   const taskStore = useTaskStore()
   const settingsStore = useSettingsStore()
 
+  function getPersistedVisibleGroups() {
+    // Tidy is a recovery action: when the renderer projection is empty or
+    // temporarily stale, use the authenticated raw store projection so a
+    // saved off-canvas layout can still be repaired by the user.
+    const rawGroups = canvasStore._rawGroups ?? []
+    const sourceGroups = rawGroups.length > 0 ? rawGroups : canvasStore.groups
+    return sourceGroups.filter((group) => group.position && group.isVisible !== false)
+  }
+
   function planTidyDayGroups(): TidyPlan {
     // Collect every visible group with a position. Day-of-week / smart / custom
     // all get the canonical single-row treatment so the Tidy button always does
     // something visible regardless of the user's group naming.
-    const visibleGroups = canvasStore.groups.filter((group) => group.position && group.isVisible !== false)
+    const visibleGroups = getPersistedVisibleGroups()
 
     // Tidy should not move already-parented tasks between groups by due date or
     // geometry. It can safely repair loose canvas tasks that are visibly inside
@@ -236,7 +245,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     // into auth/sync failures. Skipping unchanged moves makes re-runs write nothing.
     const EPS = 0.5
     const groupMoves = allGroupMoves.filter((gm) => {
-      const p = canvasStore.groups.find((g) => g.id === gm.groupId)?.position
+      const p = getPersistedVisibleGroups().find((g) => g.id === gm.groupId)?.position
       if (!p) return true
       return Math.abs((p.x ?? 0) - gm.position.x) > EPS
         || Math.abs((p.y ?? 0) - gm.position.y) > EPS
@@ -265,7 +274,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       ...taskMoves.map((move) => move.taskId),
     ])]
     const undoSystem = getUndoSystem()
-    const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+    const snapshotBefore = cloneCanvasGeometrySnapshot(taskStore.rawTasks, getPersistedVisibleGroups(), affectedIds)
 
     // Apply store + PositionManager writes synchronously. Caller applies Vue
     // Flow moves immediately after this function returns.
@@ -307,7 +316,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
 
     const pendingWritesWithUndo = Promise.all(pendingWrites).then(() => {
       if (groupMoves.length > 0 || taskMoves.length > 0) {
-        const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, canvasStore.groups, affectedIds)
+        const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, getPersistedVisibleGroups(), affectedIds)
         undoSystem.pushCanvasGeometryUndoSnapshot(
           `Tidy ${affectedIds.length} canvas item${affectedIds.length === 1 ? '' : 's'}`,
           affectedIds,

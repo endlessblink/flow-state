@@ -163,6 +163,27 @@ describe('useTidyLayout', () => {
     expect(updateGroup).not.toHaveBeenCalled()
   })
 
+  it('repairs persisted groups when the visible renderer projection is empty', () => {
+    const monday = makeGroup('Monday', -405, -273)
+    const nested = {
+      ...makeGroup('Tuesday', 11, -273),
+      parentGroupId: monday.id,
+    }
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([])
+    vi.spyOn(canvasStore, '_rawGroups', 'get').mockReturnValue([monday, nested])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([])
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { groupMoves, release } = tidyDayGroups()
+    release()
+
+    expect(groupMoves.map((move) => move.groupId)).toEqual([monday.id, nested.id])
+    expect(updateGroup).toHaveBeenCalledWith(
+      nested.id,
+      expect.objectContaining({ parentGroupId: null })
+    )
+  })
+
   it('holds canvasSyncInProgress true until release() is called', () => {
     const mon = makeGroup('Monday', 0)
     const tue = makeGroup('Tuesday', 500)

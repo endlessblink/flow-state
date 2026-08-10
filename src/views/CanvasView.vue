@@ -601,7 +601,7 @@ async function handleTidyLayout() {
   // groups-skipped flake). Wait briefly for both stores' first load to settle.
   const tidyWaitStart = Date.now()
   const hasUsableCanvasData = () =>
-    canvasStore.groups.some((group) => !!group.position)
+    (canvasStore._rawGroups ?? canvasStore.groups).some((group) => !!group.position)
     || taskStore.rawTasks.some((task) => !!task.canvasPosition)
   while (
     !hasUsableCanvasData() &&

@@ -134,6 +134,7 @@ import BatchEditModal from '@/components/tasks/BatchEditModal.vue'
 import { getViewportCoordinates } from '@/utils/contextMenuCoordinates'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
+import { runTaskMutationWithSettling } from '@/composables/tasks/settleTaskMutation'
 
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import { shouldHideDoneTasksForStatus } from '@/stores/tasks/filterInvariants'
@@ -665,22 +666,29 @@ const closeContextMenu = () => {
 }
 
 const handleToggleComplete = async (taskId: string) => {
-  const task = taskStore.getTask(taskId)
-  if (task) {
-    // TASK-1532: Recurring tasks use "done for now" on toggle click
-    if (task.status !== 'done' && task.recurrenceRule) {
-      try {
-        await taskStore.doneForNow(taskId)
-      } catch (error) {
-        if (!isDoneForNowAlreadyCompletedError(error)) throw error
-        await taskStore.initializeFromDatabase()
+  await runTaskMutationWithSettling(
+    taskId,
+    () => taskStore.getTask(taskId),
+    () => taskStore.initializeFromDatabase(),
+    async () => {
+      const task = taskStore.getTask(taskId)
+      if (!task) throw new Error(`Task update target no longer exists: ${taskId}`)
+
+      // TASK-1532: Recurring tasks use "done for now" on toggle click
+      if (task.status !== 'done' && task.recurrenceRule) {
+        try {
+          await taskStore.doneForNow(taskId)
+        } catch (error) {
+          if (!isDoneForNowAlreadyCompletedError(error)) throw error
+          await taskStore.initializeFromDatabase()
+        }
+        return
       }
-      return
-    }
-    const newStatus = task.status === 'done' ? 'todo' : 'done'
-    // BUG-1051: AWAIT to ensure persistence
-    await updateTaskWithUndo(taskId, { status: newStatus })
-  }
+      const newStatus = task.status === 'done' ? 'todo' : 'done'
+      // BUG-1051: AWAIT to ensure persistence
+      await updateTaskWithUndo(taskId, { status: newStatus })
+    },
+  )
 }
 
 const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {

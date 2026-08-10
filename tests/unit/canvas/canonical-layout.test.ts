@@ -8,6 +8,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   computeCanonicalLayout,
+  computeVisibleTaskCompaction,
   type DayGroupInput,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
 import { CANVAS } from '@/constants/canvas'
@@ -33,6 +34,21 @@ function tk(id: string, parentId: string, y = 100): Task {
 }
 
 describe('computeCanonicalLayout', () => {
+  it('compacts visible siblings from the group header after a filtered task is hidden', () => {
+    const group = grp('a', 'A', 100, 200)
+    const tasks = [tk('t1', 'a', 280), tk('t3', 'a', 520)]
+    const positions = computeVisibleTaskCompaction({
+      group,
+      visualPos: { x: 100, y: 200 },
+      tasks,
+      taskPositions: new Map(tasks.map((task) => [task.id, task.canvasPosition!])),
+    })
+
+    expect(positions.get('t1')).toEqual({ x: 120, y: 270 })
+    expect(positions.get('t3')!.y).toBeGreaterThan(positions.get('t1')!.y)
+    expect(positions.get('t3')!.y).toBeLessThan(520)
+  })
+
   it('returns empty arrays when no inputs are given', () => {
     const { groupMoves, taskMoves } = computeCanonicalLayout([], [])
     expect(groupMoves).toEqual([])

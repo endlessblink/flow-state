@@ -64,6 +64,20 @@ export interface CanonicalLayoutOptions {
 }
 
 /**
+ * Re-stack only the tasks that remain visible in one group.
+ * The caller can use these positions for a filtered render without changing
+ * the persisted task geometry (hidden tasks keep their original positions).
+ */
+export function computeVisibleTaskCompaction(input: DayGroupInput): Map<string, { x: number; y: number }> {
+  const { taskMoves } = computeCanonicalLayout([input], [input.group.id], {
+    taskPositioning: 'fromHeader',
+    maxTasksPerColumn: null,
+    taskSpacing: 'contentGap',
+  })
+  return new Map(taskMoves.map((move) => [move.taskId, move.position]))
+}
+
+/**
  * Compute canonical layout for day/smart groups.
  *
  * @param dayGroups   Inputs: (group, visualPos, tasks). Assumes custom

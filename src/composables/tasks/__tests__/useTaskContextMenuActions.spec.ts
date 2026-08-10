@@ -352,6 +352,34 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
     expect(showToast).not.toHaveBeenCalled()
   })
 
+  it('USER REPRO: refreshes the canonical store before failing when a visible task is temporarily missing', async () => {
+    const visibleCatalogTask = {
+      id: 'task-1',
+      status: 'todo',
+      title: 'Visible during realtime reconciliation'
+    } as Task
+    const canonicalTask = { ...visibleCatalogTask, status: 'todo' } as Task
+    getTask
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce(undefined)
+    initializeFromDatabase.mockImplementationOnce(async () => {
+      getTask.mockReturnValue(canonicalTask)
+    })
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: visibleCatalogTask,
+      contextTask: null,
+      selectedCount: 1
+    }, vi.fn())
+    await toggleDone()
+
+    expect(initializeFromDatabase).toHaveBeenCalledTimes(1)
+    expect(updateTaskWithUndo).toHaveBeenCalledWith('task-1', { status: 'done' })
+    expect(showToast).not.toHaveBeenCalled()
+  })
+
   it('USER REPRO: retries when the undo wrapper loses the target after the first lookup', async () => {
     const visibleCatalogTask = {
       id: 'task-1',

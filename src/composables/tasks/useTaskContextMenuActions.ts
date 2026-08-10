@@ -321,6 +321,17 @@ export function useTaskContextMenuActions(
                 canonicalTask = taskStore.getTask(taskId)
             }
             if (!canonicalTask) {
+                // A visible row can outlive the task-store projection during a
+                // realtime/cache reconciliation. Refresh the authoritative task
+                // snapshot once before reporting a false completion failure.
+                try {
+                    await taskStore.initializeFromDatabase()
+                    canonicalTask = taskStore.getTask(taskId)
+                } catch (refreshError) {
+                    console.warn('[Tasks] Canonical refresh before completion failed:', refreshError)
+                }
+            }
+            if (!canonicalTask) {
                 reportMutationFailure('completed', new Error(`Task update target no longer exists: ${taskId}`))
                 return
             }

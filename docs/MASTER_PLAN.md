@@ -1,5 +1,17 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2005: Completion action can race a stale renderer task projection
+
+**Priority**: P0 | **Status**: IN PROGRESS (2026-08-10)
+
+**User repro**: In the desktop task list, right-clicking a visible task and choosing Mark done can show `Task could not be completed. Refresh and try again.` even though the row is still visible and the task is present in canonical storage.
+
+**Failure class**: The renderer row can temporarily outlive the task-store projection during realtime/cache reconciliation. The action previously treated three empty canonical lookups as a permanent missing task and surfaced a false failure.
+
+**Fix and regression**: The action now performs one authoritative task-store refresh before reporting a missing target. A repro-focused unit test proves the transient projection gap completes without a failure toast while the genuine missing-target test remains covered. The authenticated local R10 E2E also passes: offline create drains to canonical Supabase, reaches an independent client, and survives reload.
+
+**Remaining proof**: The fix is not yet shipped; public PWA and Electron versions are not converged, and the production authenticated completion/readback plus installed desktop verification remain UNVERIFIED.
+
 ### BUG-2003: Production-authenticated PWA sync remains unproven after local convergence passes
 
 **Priority**: P0 | **Status**: IN PROGRESS (2026-08-09)

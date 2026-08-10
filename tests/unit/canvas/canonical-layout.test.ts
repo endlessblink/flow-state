@@ -70,6 +70,20 @@ describe('computeCanonicalLayout', () => {
     expect(groupMoves[2].position).toEqual({ x: 50 + 2 * CANVAS.DAY_GROUP_SPACING, y: 300 })
   })
 
+  it('anchors a negative off-canvas cluster at the visible canvas origin', () => {
+    const inputs: DayGroupInput[] = [
+      { group: grp('a', 'A', -405, -274), visualPos: { x: -405, y: -274 }, tasks: [] },
+      { group: grp('b', 'B', 11, -274), visualPos: { x: 11, y: -274 }, tasks: [] },
+    ]
+
+    const { groupMoves } = computeCanonicalLayout(inputs, ['a', 'b'])
+
+    expect(groupMoves.map((move) => move.position)).toEqual([
+      { x: 0, y: 0 },
+      { x: CANVAS.DAY_GROUP_SPACING, y: 0 },
+    ])
+  })
+
   it('assigns groups to slots in the orderedIds sequence, not the input array order', () => {
     const inputs: DayGroupInput[] = [
       { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: [] },

@@ -281,6 +281,11 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
             width: gm.size.width,
             height: gm.size.height,
           },
+          // The canonical tidy row is an absolute sibling layout. Keeping a
+          // nested parent here would reinterpret the absolute slot as a
+          // parent-relative position on the next load and put the group back
+          // off-canvas.
+          ...(input.group.parentGroupId ? { parentGroupId: null } : {}),
         })
         positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
       }

@@ -99,8 +99,11 @@ export function computeCanonicalLayout(
 
   // Anchor the canonical row at the top-left of the current cluster so users
   // aren't jarred by a big jump. Min X / min Y of the input groups.
-  const originX = Math.min(...dayGroups.map((dg) => dg.visualPos.x))
-  const originY = Math.min(...dayGroups.map((dg) => dg.visualPos.y))
+  // A canvas can retain negative seed coordinates after a viewport-centered
+  // create. Tidy must bring that cluster back into the visible canvas instead
+  // of preserving an off-canvas anchor that looks like a no-op after reload.
+  const originX = Math.max(0, Math.min(...dayGroups.map((dg) => dg.visualPos.x)))
+  const originY = Math.max(0, Math.min(...dayGroups.map((dg) => dg.visualPos.y)))
 
   // Index inputs by group id for fast lookup during iteration.
   const byId = new Map<string, DayGroupInput>()

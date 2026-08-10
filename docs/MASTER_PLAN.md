@@ -92,9 +92,31 @@ The follow-up production probe narrowed the remaining client mismatch: PWA 1.4.3
 
 ### BUG-2001: Offline reconnect create does not drain to canonical storage
 
-**Priority**: P1 | **Status**: IN PROGRESS (2026-08-03)
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-10) | **Release**: Electron/PWA 1.4.356
 
-The R10 offline-create E2E still times out after reconnect: the task remains local but no canonical `tasks` row appears within 20 seconds. Reproduce with `./scripts/run-e2e.sh tests/e2e/canvas-sync-regressions.spec.ts --project=chromium --workers=1 -g 'R10 -'`; trace the create queue admission, IndexedDB pending operation, online event, and remote write before closing this failure class.
+The R10 offline-create E2E now passes end-to-end with the local canonical schema: the task is created offline, drains after reconnect, reaches the second client, and survives reload. Verified with `./scripts/run-e2e.sh tests/e2e/canvas-sync-regressions.spec.ts --project=chromium --workers=1 -g 'R10 -'` (1 passed, 16.7s). Keep the broader production-authenticated receipt audit in BUG-2003 open.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | R10 offline create now reaches canonical storage after reconnect. | Yes |
+| Data shape / persisted row shape | Yes | R10 asserts the canonical task row and reload state. | Yes |
+| Renderer store/state | Yes | R10 asserts the created task appears after reconnect and reload. | Yes |
+| Electron main/preload bridge | N/A | This is a PWA/local browser queue path. | N/A |
+| Localhost sidecar endpoint | N/A | No Electron sidecar is involved. | N/A |
+| KDE polling/control path | N/A | Not involved in task creation sync. | N/A |
+| Supabase persistence/realtime | Yes | R10 asserts canonical storage and second-client convergence. | Yes for local schema; production receipts remain in BUG-2003 |
+| Updater/runtime version | N/A | Not an updater failure. | N/A |
+| Stale live process/cache state | Yes | R10 survives reload after reconnect. | Yes for this repro; production service-worker audit remains open |
+
+**Exact failure mode fixed**: Offline-created tasks now drain through the pending queue after reconnect and converge to canonical storage and another client.
+
+**Explicitly not covered**: Production-authenticated PWA receipt health, cross-device production mutation/readback, and service-worker activation timing.
+
+**Regression added for reported repro**: Existing R10 authenticated browser regression passed against the local canonical schema.
+
+**Live boundary proof**: Local authenticated E2E passed; production-authenticated PWA proof remains tracked in BUG-2003.
 
 ## 🔁 Restart Cursor — Android Gemma Voice E2E WIP (2026-06-23)
 

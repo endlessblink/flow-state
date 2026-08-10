@@ -71,7 +71,8 @@ async function main() {
       doneForNowBody,
       'done-for-now receipt'
     )
-    if (doneForNowResult.ok || !doneForNowBody.includes('PGRST202')) break
+    const doneForNowContractNotReady = doneForNowBody.includes('PGRST202') || doneForNowBody.includes('canonical_change_log')
+    if (doneForNowResult.ok || !doneForNowContractNotReady) break
     await new Promise(resolve => setTimeout(resolve, 1000))
   }
   if (!doneForNowResult.ok) throw new Error(doneForNowResult.reason)

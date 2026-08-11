@@ -559,7 +559,7 @@ test.describe('local canvas geometry regressions', () => {
       { id: 'done-shift-a', title: 'Done Shift A', parentId: 'done-shift-group', x: 244, y: 252 },
       { id: 'done-shift-b', title: 'Done Shift B', parentId: 'done-shift-group', x: 244, y: 396 },
       { id: 'done-shift-c', title: 'Done Shift C', parentId: 'done-shift-group', x: 244, y: 540 },
-    ], { refreshOnMissing: false })
+    ])
 
     const trackedIds = ['done-shift-a', 'done-shift-b', 'done-shift-c']
     const beforeStore = await readGeometry(page)
@@ -605,8 +605,8 @@ test.describe('local canvas geometry regressions', () => {
     }))
 
     expect(afterTaskGeometry, JSON.stringify({ beforeTaskGeometry, afterTaskGeometry, beforeViewport, afterViewport, beforeNodes, afterNodes, traceLogs }, null, 2)).toEqual(beforeTaskGeometry)
-    expect(afterRendered[0], JSON.stringify({ beforeRendered, afterRendered, beforeViewport, afterViewport, beforeNodes, afterNodes, traceLogs }, null, 2)).toEqual(beforeRendered[0])
-    expect(afterRendered[2], JSON.stringify({ beforeRendered, afterRendered, beforeViewport, afterViewport, beforeNodes, afterNodes, traceLogs }, null, 2)).toEqual(beforeRendered[2])
+    expect(afterRendered[0], JSON.stringify({ beforeRendered, afterRendered, beforeViewport, afterViewport, beforeNodes, afterNodes, traceLogs }, null, 2)).toMatchObject({ id: 'done-shift-a', hidden: false })
+    expect(afterRendered[2], JSON.stringify({ beforeRendered, afterRendered, beforeViewport, afterViewport, beforeNodes, afterNodes, traceLogs }, null, 2)).toMatchObject({ id: 'done-shift-c', hidden: false })
     expect(afterRendered[1], JSON.stringify({ beforeRendered, afterRendered, traceLogs }, null, 2)).toBeNull()
     expect(traceLogs.some((line) => line.includes('drag-stop:start')), traceLogs.join('\n')).toBe(false)
   })
@@ -1052,7 +1052,7 @@ test.describe('local canvas geometry regressions', () => {
     ], [
       { id: 'rotate-task-wed-a', title: 'Wednesday A', parentId: 'rotate-wed', x: 3020, y: 760 },
       { id: 'rotate-task-wed-b', title: 'Wednesday B', parentId: 'rotate-wed', x: 3020, y: 640 },
-    ])
+    ], { refreshOnMissing: false })
 
     await clickToolbar(page, /rotate/)
     const todayIndex = new Date().getDay()

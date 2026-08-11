@@ -108,6 +108,8 @@ The follow-up production probe narrowed the remaining client mismatch: PWA 1.4.3
 
 **Live-proof authorization boundary (2026-08-11)**: The remaining production mutation and receipt checks must use a disposable authenticated fixture or credentials explicitly authorized for that exact production account. Reusing `tests/.auth/user.json` against `https://in-theflow.com` is intentionally rejected because it would copy stored session material into a production-origin browser context. Until that boundary is supplied, local regressions, public release checks, and the already completed installed 1.4.364/catalog proofs remain valid but cannot close the live Tidy/offline/realtime requirements.
 
+**Guarded live Tidy entry point (2026-08-11)**: `npm run test:pwa-live:tidy` now provides the executable production check. It is skipped unless `FLOWSTATE_LIVE_ALLOW_MUTATION=I_UNDERSTAND_DISPOSABLE_FIXTURE`; when enabled it requires explicit `FLOWSTATE_LIVE_EMAIL`, `FLOWSTATE_LIVE_PASSWORD`, and an anon key, creates only UUID-named disposable rows, authenticates the browser through the supplied credentials, verifies the visible Tidy action and renderer reload persistence, and deletes the fixture rows in `finally`.
+
 ### ~~TASK-2002~~: Keep PWA, Electron, and VPS continuously converged (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-08-07) | **Release**: PWA + Electron 1.4.342

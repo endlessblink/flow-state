@@ -58,6 +58,8 @@
 
 ### BUG-2009: Newly-created canvas groups do not reach another client over Realtime
 
+**Local canvas suite evidence (2026-08-11)**: R7 legacy day-group migration passed in isolation and the full 34-case canvas suite passed serially. An earlier run had one R17 failure after preceding tests, but R17 passed alone and in a three-repeat stress run; the remaining risk is production cross-client group delivery and authenticated production proof, not a currently reproducible local regression.
+
 **Priority**: P0 | **Status**: IN PROGRESS (2026-08-10)
 
 **User repro**: A day group created or migrated on one authenticated client reaches Supabase, but another authenticated client does not show it until reload.
@@ -91,6 +93,8 @@ The follow-up production probe narrowed the remaining client mismatch: PWA 1.4.3
 **Current live receipt evidence (2026-08-11)**: The installed authenticated Electron 1.4.362 receipt is `synced` with `pending: 0`, `failed: 0`, `conflict: 0`, and `syncing: 0`, with no repair request. The same account still has an old PWA receipt at 1.4.345 marked `error` with two historical failed writes (one network and one auth) and a completed repair request from July; that device has not reported since 2026-08-10. This is an identified stale-device/version-convergence failure class, not evidence that the current Electron device is unsynced; it remains open until a current authenticated PWA receipt is observed at the released version or the supported repair/expiry behavior is verified.
 
 **Fresh PWA receipt evidence (2026-08-11)**: An authenticated production PWA session for the dedicated test account reported version 1.4.362, `synced`, and zero pending/failed/syncing/conflict operations, with no repair request. The current PWA service-worker/runtime boundary is therefore converged for that account; the old same-account receipt above remains a stale-device lifecycle case.
+
+**Receipt lifecycle verification (2026-08-11)**: The supported repair path is covered by focused tests: completed requests are not replayed, outstanding requests retry exact entity IDs once, and failed retries record `retry_failed`. Historical device rows have no supported expiry or deletion operation, so the old 1.4.345 row remains diagnostic history rather than a live queue failure.
 
 ### ~~TASK-2002~~: Keep PWA, Electron, and VPS continuously converged (✅ DONE)
 

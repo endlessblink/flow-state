@@ -5,36 +5,40 @@
         <component :is="iconComponent" :size="48" :stroke-width="1.2" />
       </div>
 
-      <h3 class="empty-title">{{ $t(`workspaces.empty.${variant}.title`) }}</h3>
-      <p class="empty-description">{{ $t(`workspaces.empty.${variant}.description`) }}</p>
+      <h3 class="empty-title">
+        {{ $t(`workspaces.empty.${variant}.title`) }}
+      </h3>
+      <p class="empty-description">
+        {{ $t(`workspaces.empty.${variant}.description`) }}
+      </p>
 
       <div v-if="hasPendingInvites" class="pending-invite-badge">
-        <BaseBadge variant="info" size="sm" :rounded="true">
+        <BaseBadge variant="info" size="sm" rounded>
           {{ $t('workspaces.empty.pendingInvite', pendingInviteCount) }}
         </BaseBadge>
       </div>
 
       <div class="empty-actions">
         <template v-if="variant === 'welcome'">
-          <button class="empty-btn primary" @click="$emit('create-task')">
+          <button class="empty-btn primary" @click="$emit('createTask')">
             <ListChecks :size="16" />
             {{ $t('workspaces.empty.createTask') }}
           </button>
-          <button class="empty-btn secondary" @click="$emit('invite-member')">
+          <button class="empty-btn secondary" @click="$emit('inviteMember')">
             <Users :size="16" />
             {{ $t('workspaces.empty.inviteTeam') }}
           </button>
         </template>
 
         <template v-else-if="variant === 'noTasks'">
-          <button class="empty-btn primary" @click="$emit('create-task')">
+          <button class="empty-btn primary" @click="$emit('createTask')">
             <ListChecks :size="16" />
             {{ $t('workspaces.empty.createTask') }}
           </button>
         </template>
 
         <template v-else-if="variant === 'noMembers'">
-          <button class="empty-btn secondary" @click="$emit('invite-member')">
+          <button class="empty-btn secondary" @click="$emit('inviteMember')">
             <Users :size="16" />
             {{ $t('workspaces.empty.inviteTeam') }}
           </button>
@@ -50,6 +54,16 @@ import { useI18n } from 'vue-i18n'
 import { Rocket, ListChecks, Users } from 'lucide-vue-next'
 import BaseBadge from '@/components/base/BaseBadge.vue'
 
+const props = withDefaults(defineProps<Props>(), {
+  hasPendingInvites: false,
+  pendingInviteCount: 0,
+})
+
+defineEmits<{
+  'createTask': []
+  'inviteMember': []
+}>()
+
 const { t: _t } = useI18n()
 
 interface Props {
@@ -57,16 +71,6 @@ interface Props {
   hasPendingInvites?: boolean
   pendingInviteCount?: number
 }
-
-const props = withDefaults(defineProps<Props>(), {
-  hasPendingInvites: false,
-  pendingInviteCount: 0,
-})
-
-defineEmits<{
-  'create-task': []
-  'invite-member': []
-}>()
 
 const iconComponent = computed(() => {
   switch (props.variant) {

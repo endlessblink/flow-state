@@ -87,7 +87,6 @@ export function useNodeSync(
             }
         }
 
-        const versionMap = nodeVersionMapRef.value as Map<string, number>
 
         if (!nodeId) {
             console.error('[NODE-SYNC] nodeId is required for sync')

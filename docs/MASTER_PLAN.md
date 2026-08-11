@@ -16,7 +16,7 @@
 
 **User repro**: In the authenticated Catalog workspace, recurring tasks remain in the Overdue group with their old due dates. Selecting completion produces `Task could not be completed. Refresh and try again.` instead of moving the living task to its next occurrence and recording the completed occurrence.
 
-**Current evidence**: The Catalog row handler and right-click context-menu handler both route recurring tasks through the canonical `done for now` transaction; both now retry one fresh canonical transaction after a `state_conflict` or `request_hash_mismatch`, with focused contract coverage. On 2026-08-11, the authenticated production PWA enabled recurrence on a real task, completed it through the visible Catalog switch, advanced it to Tomorrow with no error toast, and after reload still showed the authenticated Online workspace and the advanced due date. A second real completion returned HTTP 200 from the production RPC with `result: committed`, one completed occurrence, the living task at the next due date, canonical revisions/change sequences, and an operation receipt. Installed Electron 1.4.362 now visibly renders the authenticated workspace; a recurring completion through that installed surface remains open.
+**Current evidence**: The Catalog row handler and right-click context-menu handler both route recurring tasks through the canonical `done for now` transaction; both now retry one fresh canonical transaction after a `state_conflict` or `request_hash_mismatch`, with focused contract coverage. On 2026-08-11, the authenticated production PWA enabled recurrence on a real task, completed it through the visible Catalog switch, advanced it to Tomorrow with no error toast, and after reload still showed the authenticated Online workspace and the advanced due date. A second real completion returned HTTP 200 from the production RPC with `result: committed`, one completed occurrence, the living task at the next due date, canonical revisions/change sequences, and an operation receipt. Installed Electron 1.4.362 then completed a disposable recurring probe through the visible Catalog context menu with no failure toast; authenticated readback showed the living row advanced and exactly one completed occurrence. Both disposable probe rows were deleted after verification.
 
 **Required proof before closeout**: A real authenticated recurring task must move from an overdue date to the computed next date without an error toast, create exactly one completed occurrence, survive reload, converge through realtime/offline recovery, and be verified in both the installed Electron app and production PWA. Add a repro-focused regression for the visible Catalog action and complete the failure-class matrix below before marking done.
 
@@ -25,14 +25,14 @@
 | Class | Checked? | Evidence | Covered by this fix? |
 | --- | --- | --- | --- |
 | User repro shape | Yes | Authenticated Catalog screenshot shows overdue recurring rows and completion failure toast | No — active investigation |
-| Data shape / persisted row shape | Pending | Must verify recurrence rule, living row, completion record, and next due date | No |
-| Renderer store/state | Pending | Must verify receipt projection and Catalog grouping after completion | No |
-| Electron main/preload bridge | Pending | Must verify installed app action path and runtime version | No |
+| Data shape / persisted row shape | Yes | Production and installed probes read back the recurrence rule, living row, one completion record, and next due date | Partial — recurring path proven |
+| Renderer store/state | Yes | PWA and installed Catalog actions remained usable with no failure toast and reloaded advanced due dates | Partial — broader projection matrix remains |
+| Electron main/preload bridge | Yes | Installed 1.4.362 authenticated Catalog context-menu action completed the recurring probe | Partial — broader bridge classes remain |
 | Localhost sidecar endpoint | N/A until evidence requires it | Recurring completion uses the authenticated Supabase path | No |
 | KDE polling/control path | N/A | Not involved in the Catalog completion repro | No |
-| Supabase persistence/realtime | Pending | Must verify RPC apply, receipt, canonical rows, and realtime catch-up | No |
-| Updater/runtime version | Pending | Current installed and public versions must be identified during live proof | No |
-| Stale live process/cache state | Pending | Must rule out stale Electron renderer/service-worker state | No |
+| Supabase persistence/realtime | Yes | Production RPC and REST readback returned committed living/completion rows and receipt metadata | Partial — cross-client realtime remains |
+| Updater/runtime version | Yes | Public manifest and installed CDP runtime both report 1.4.362 | Yes for this release |
+| Stale live process/cache state | Yes | One installed process was replaced with the manifest-matching artifact and visibly reloaded authenticated workspace | Partial — service-worker stress remains |
 
 **Exact failure mode fixed**: Not fixed yet; the recurring completion still fails in the user-visible authenticated surface.
 
@@ -40,7 +40,7 @@
 
 **Regression added for reported repro**: `useTaskContextMenuActions.spec.ts` now guards stale canonical recurrence resolution, idempotent completion, and one-time retry after a realtime conflict; the authenticated live Catalog action remains required.
 
-**Live boundary proof**: Production PWA UI mutation, canonical RPC readback, and reload proof passed on 2026-08-11; installed Electron recurring mutation remains required.
+**Live boundary proof**: Production PWA UI mutation, canonical RPC readback, reload proof, and installed Electron recurring context-menu mutation/readback passed on 2026-08-11. Broader device-receipt/offline/realtime stress closeout remains required.
 
 ### BUG-2008: Tidy day-group command does not leave a trusted visible result
 

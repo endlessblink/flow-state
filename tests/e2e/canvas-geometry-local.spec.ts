@@ -45,7 +45,7 @@ const setupCanvas = async (page: Page) => {
   }, { timeout: 30_000 })
 }
 
-const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[]) => {
+const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], options: { refreshOnMissing?: boolean } = {}) => {
   await page.evaluate(async ({ groups, tasks }) => {
     const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
     const pinia = root.__vue_app__._context.config.globalProperties.$pinia
@@ -93,17 +93,17 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[]) =>
 
   await expect.poll(async () => {
     try {
-      return await page.evaluate(({ groups, tasks }) => {
+      return await page.evaluate(({ groups, tasks, refreshOnMissing }) => {
         const hasNodes = groups.every((group) => document.querySelector(`[data-id="section-${group.id}"]`))
           && tasks.every((task) => document.querySelector(`[data-id="${task.id}"]`))
-        if (!hasNodes) {
+        if (!hasNodes && refreshOnMissing !== false) {
           const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } } | null
           const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
           pinia?._s.get('canvas')?.requestSync?.('user:manual')
           pinia?._s.get('canvasUi')?.requestSync?.('user:manual')
         }
         return hasNodes
-      }, { groups, tasks })
+      }, { groups, tasks, refreshOnMissing: options.refreshOnMissing })
     } catch (error) {
       if (String(error).includes('Execution context was destroyed')) return false
       throw error
@@ -559,7 +559,7 @@ test.describe('local canvas geometry regressions', () => {
       { id: 'done-shift-a', title: 'Done Shift A', parentId: 'done-shift-group', x: 244, y: 252 },
       { id: 'done-shift-b', title: 'Done Shift B', parentId: 'done-shift-group', x: 244, y: 396 },
       { id: 'done-shift-c', title: 'Done Shift C', parentId: 'done-shift-group', x: 244, y: 540 },
-    ])
+    ], { refreshOnMissing: false })
 
     const trackedIds = ['done-shift-a', 'done-shift-b', 'done-shift-c']
     const beforeStore = await readGeometry(page)
@@ -1044,43 +1044,47 @@ test.describe('local canvas geometry regressions', () => {
 
   test('rotate and tidy complement each other without resetting order', async ({ page }) => {
     await seedCanvas(page, [
-      { id: 'wed', name: 'Wednesday', x: 3000, y: 200 },
-      { id: 'mon', name: 'Monday', x: 1400, y: 200 },
-      { id: 'today', name: 'Today', x: 900, y: 200 },
-      { id: 'tomorrow', name: 'Tomorrow', x: 2200, y: 200 },
-      { id: 'thu', name: 'Thursday', x: 100, y: 200 },
+      { id: 'rotate-wed', name: 'Wednesday', x: 3000, y: 200 },
+      { id: 'rotate-mon', name: 'Monday', x: 1400, y: 200 },
+      { id: 'rotate-today', name: 'Today', x: 900, y: 200 },
+      { id: 'rotate-tomorrow', name: 'Tomorrow', x: 2200, y: 200 },
+      { id: 'rotate-thu', name: 'Thursday', x: 100, y: 200 },
     ], [
-      { id: 'task-wed-a', title: 'Wednesday A', parentId: 'wed', x: 3020, y: 760 },
-      { id: 'task-wed-b', title: 'Wednesday B', parentId: 'wed', x: 3020, y: 640 },
+      { id: 'rotate-task-wed-a', title: 'Wednesday A', parentId: 'rotate-wed', x: 3020, y: 760 },
+      { id: 'rotate-task-wed-b', title: 'Wednesday B', parentId: 'rotate-wed', x: 3020, y: 640 },
     ])
 
     await clickToolbar(page, /rotate/)
     const todayIndex = new Date().getDay()
-    const expectedAfterSmart = expectedWeekdayIds(['wed', 'mon', 'thu'], (todayIndex + 2) % 7)
-    await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'mon', 'today', 'tomorrow', 'thu']))
-      .toEqual(['today', 'tomorrow', ...expectedAfterSmart])
+    const expectedAfterSmart = expectedWeekdayNames(['Wednesday', 'Monday', 'Thursday'], (todayIndex + 2) % 7)
+    const readVisibleGroupNames = async () => {
+      const geometry = await readGeometry(page)
+      return [...geometry.groups].sort((a, b) => a.x - b.x).map((group) => group.name)
+    }
+    await expect.poll(readVisibleGroupNames)
+      .toEqual(['Today', 'Tomorrow', ...expectedAfterSmart])
 
     await clickToolbar(page, /tidy|layout/)
-    await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'mon', 'today', 'tomorrow', 'thu']))
-      .toEqual(['today', 'tomorrow', ...expectedAfterSmart])
+    await expect.poll(readVisibleGroupNames)
+      .toEqual(['Today', 'Tomorrow', ...expectedAfterSmart])
 
     let geometry = await readGeometry(page)
-    let wednesday = geometry.groups.find((group) => group.id === 'wed')!
+    let wednesday = geometry.groups.find((group) => group.name === 'Wednesday')!
     expect(wednesday.width, JSON.stringify(geometry, null, 2)).toBe(400)
     await expect.poll(async () => {
-      const gaps = await readTaskEdgeGaps(page, ['task-wed-a', 'task-wed-b'])
+      const gaps = await readTaskEdgeGaps(page, ['rotate-task-wed-a', 'rotate-task-wed-b'])
       return gaps.gaps[0] > 0
     }).toBe(true)
 
     await clickToolbar(page, /rotate/)
-    await expect.poll(async () => readVisibleGroupOrder(page, ['wed', 'mon', 'today', 'tomorrow', 'thu']))
-      .toEqual(['today', 'tomorrow', ...expectedAfterSmart])
+    await expect.poll(readVisibleGroupNames)
+      .toEqual(['Today', 'Tomorrow', ...expectedAfterSmart])
 
     geometry = await readGeometry(page)
-    wednesday = geometry.groups.find((group) => group.id === 'wed')!
+    wednesday = geometry.groups.find((group) => group.name === 'Wednesday')!
     expect(wednesday.width, JSON.stringify(geometry, null, 2)).toBe(400)
     await expect.poll(async () => {
-      const gaps = await readTaskEdgeGaps(page, ['task-wed-a', 'task-wed-b'])
+      const gaps = await readTaskEdgeGaps(page, ['rotate-task-wed-a', 'rotate-task-wed-b'])
       return gaps.gaps[0] > 0
     }).toBe(true)
   })

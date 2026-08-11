@@ -1,23 +1,35 @@
 <template>
   <div
+    ref="containerRef"
     class="today-flow"
     tabindex="0"
-    ref="containerRef"
     @keydown="handleKeydown"
   >
     <div class="flow-content">
       <!-- All done celebration -->
       <Transition name="fade-up" appear>
         <div v-if="allSlotsCompleted" class="flow-celebration">
-          <div class="celebration-icon">🎉</div>
-          <h2 class="celebration-title">All tasks complete!</h2>
-          <p class="celebration-subtitle">Great day! You crushed your Big 3.</p>
-          <router-link to="/" class="flow-link">View full board →</router-link>
+          <div class="celebration-icon">
+            🎉
+          </div>
+
+          <h2 class="celebration-title">
+            All tasks complete!
+          </h2>
+
+          <p class="celebration-subtitle">
+            Great day! You crushed your Big 3.
+          </p>
+
+          <router-link to="/" class="flow-link">
+            View full board →
+          </router-link>
         </div>
       </Transition>
 
       <template v-if="!allSlotsCompleted">
         <!-- Active task card -->
+
         <div class="flow-active">
           <TransitionGroup name="card-swap">
             <FlowTaskCard
@@ -37,6 +49,7 @@
         </div>
 
         <!-- Queued/completed cards -->
+
         <div class="flow-queue">
           <TransitionGroup name="card-fade">
             <FlowTaskCard
@@ -52,7 +65,10 @@
           </TransitionGroup>
         </div>
 
-        <router-link to="/" class="flow-link">View full board →</router-link>
+
+        <router-link to="/" class="flow-link">
+          View full board →
+        </router-link>
       </template>
     </div>
   </div>

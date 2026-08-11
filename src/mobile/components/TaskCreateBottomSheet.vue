@@ -25,7 +25,7 @@
               class="title-input"
               placeholder="Task name"
               @paste="handlePaste"
-            />
+            >
 
             <!-- Description label + textarea -->
             <span class="field-label">Description <span class="field-optional">optional</span></span>

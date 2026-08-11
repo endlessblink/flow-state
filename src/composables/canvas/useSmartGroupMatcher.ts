@@ -36,20 +36,7 @@ export interface GroupMatchResult {
  * Get next occurrence of a day of week from today
  * @param dayIndex - 0=Sunday through 6=Saturday
  */
-function getNextDayOfWeekDate(dayIndex: number): string {
-  const today = new Date()
-  const currentDay = today.getDay()
-  let daysUntil = dayIndex - currentDay
 
-  // If the day is today or in the past this week, get next week's occurrence
-  if (daysUntil <= 0) {
-    daysUntil += 7
-  }
-
-  const result = new Date(today)
-  result.setDate(today.getDate() + daysUntil)
-  return formatDateKey(result)
-}
 
 /**
  * Check if a task's due date matches a group's power keyword
@@ -216,7 +203,6 @@ export function calculatePositionInGroup(
   const groupX = group.position?.x || 0
   const groupY = group.position?.y || 0
   const groupWidth = group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH
-  const groupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
 
   const taskWidth = CANVAS.DEFAULT_TASK_WIDTH
   const taskHeight = CANVAS.DEFAULT_TASK_HEIGHT

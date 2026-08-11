@@ -1,5 +1,11 @@
 <template>
-  <div class="app-layout" :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }" :dir="direction" @dragover.prevent @dragenter.prevent>
+  <div
+    class="app-layout"
+    :class="{ 'sidebar-hidden': !uiStore.mainSidebarVisible }"
+    :dir="direction"
+    @dragover.prevent
+    @dragenter.prevent
+  >
     <!-- LEFT SIDEBAR NAVIGATION -->
     <AppSidebar ref="appSidebar" class="sidebar" />
 
@@ -93,7 +99,7 @@ onUnmounted(() => {
 })
 
 // Gently remind user to pick a task after 5 min without a Pomodoro
-const { unchosenMinutes, shouldNudge, resetNanny } = useTaskbarNanny()
+const { unchosenMinutes, shouldNudge } = useTaskbarNanny()
 
 // Nanny reminder state
 const nannyDismissed = ref(false)

@@ -371,15 +371,9 @@ function weeklyPlanTaskIds(rec: WeeklyPlanRecommendation): string[] {
     .filter(taskId => !dismissedCardTaskIds.value.has(taskId))
 }
 
-function weeklyPlanPrimaryTaskIds(rec: WeeklyPlanRecommendation): string[] {
-  return rec.primaryTaskId && !dismissedCardTaskIds.value.has(rec.primaryTaskId) ? [rec.primaryTaskId] : []
-}
 
-function weeklyPlanRelatedChipIds(rec: WeeklyPlanRecommendation): string[] {
-  return [...new Set(rec.relatedTaskIds ?? [])]
-    .filter(taskId => taskId !== rec.primaryTaskId && !dismissedCardTaskIds.value.has(taskId))
-    .slice(0, 4)
-}
+
+
 
 function weeklyLaneTitle(rec: WeeklyPlanRecommendation): string {
   const locale = weeklyPlan.value?.locale ?? 'en'
@@ -2586,13 +2580,17 @@ async function saveSchedule() {
         data-testid="ai-clarification"
       >
         <header class="ai-clarification-header">
-          <div class="weekly-plan-source">{{ clarification.progressLabel }}</div>
+          <div class="weekly-plan-source">
+            {{ clarification.progressLabel }}
+          </div>
           <h2>{{ clarification.locale === 'he' ? 'שאלה קצרה לפני התכנון' : 'Quick question before planning' }}</h2>
           <p>{{ clarification.summary }}</p>
           <details v-if="clarificationDebugLines(clarification).length" class="ai-debug-details">
             <summary>{{ clarification.locale === 'he' ? 'למה אני שואל?' : 'Why ask?' }}</summary>
             <ul>
-              <li v-for="line in clarificationDebugLines(clarification)" :key="line">{{ line }}</li>
+              <li v-for="line in clarificationDebugLines(clarification)" :key="line">
+                {{ line }}
+              </li>
             </ul>
           </details>
         </header>
@@ -2781,7 +2779,9 @@ async function saveSchedule() {
           </div>
           <h2>{{ weeklyPlan.headline }}</h2>
           <p>{{ weeklyPlan.weekRead.summary }}</p>
-          <p v-if="weeklyPlan.weekRead.mainTradeoff && !isCompactWeeklyPlan" class="weekly-plan-muted">{{ weeklyPlan.weekRead.mainTradeoff }}</p>
+          <p v-if="weeklyPlan.weekRead.mainTradeoff && !isCompactWeeklyPlan" class="weekly-plan-muted">
+            {{ weeklyPlan.weekRead.mainTradeoff }}
+          </p>
         </header>
 
         <section
@@ -2904,8 +2904,12 @@ async function saveSchedule() {
                 <div class="weekly-plan-focus" dir="auto">
                   {{ weeklyPlan.locale === 'he' ? 'נתיב' : 'Lane' }}
                 </div>
-                <h3 dir="auto">{{ weeklyLaneTitle(rec) }}</h3>
-                <p dir="auto">{{ weeklyLaneSubtitle(rec) }}</p>
+                <h3 dir="auto">
+                  {{ weeklyLaneTitle(rec) }}
+                </h3>
+                <p dir="auto">
+                  {{ weeklyLaneSubtitle(rec) }}
+                </p>
               </div>
               <button
                 v-if="!props.wideMode"
@@ -3077,12 +3081,18 @@ async function saveSchedule() {
         >
           <div class="weekly-plan-focus" dir="auto">
             {{ isCompactWeeklyPlan && weeklyPlan.locale === 'he' ? 'נתיב' : isCompactWeeklyPlan ? 'Lane' : rec.focusArea }}
-            <template v-if="isCompactWeeklyPlan">: {{ rec.focusArea }}</template>
+            <template v-if="isCompactWeeklyPlan">
+              : {{ rec.focusArea }}
+            </template>
           </div>
           <h3>{{ rec.rank }}. {{ rec.title }}</h3>
-          <p v-if="!isCompactWeeklyPlan">{{ rec.whyThisMatters }}</p>
+          <p v-if="!isCompactWeeklyPlan">
+            {{ rec.whyThisMatters }}
+          </p>
           <p>{{ rec.whyThisWeek }}</p>
-          <p v-if="rec.riskIfIgnored && !isCompactWeeklyPlan" class="weekly-plan-muted">{{ rec.riskIfIgnored }}</p>
+          <p v-if="rec.riskIfIgnored && !isCompactWeeklyPlan" class="weekly-plan-muted">
+            {{ rec.riskIfIgnored }}
+          </p>
           <p class="weekly-next-action">
             <strong>{{ weeklyPlan.locale === 'he' ? 'הצעד הבא' : 'Next action' }}:</strong>
             {{ rec.nextAction }}
@@ -3255,7 +3265,9 @@ async function saveSchedule() {
         <footer v-if="weeklyPlan.deferrals.length && !isCompactWeeklyPlan" class="weekly-plan-footer">
           <div v-if="weeklyPlan.deferrals.length">
             <strong>{{ weeklyPlan.locale === 'he' ? 'לדחות בכוונה' : 'Intentional deferrals' }}</strong>
-            <p v-for="defer in weeklyPlan.deferrals" :key="defer.taskId">{{ defer.reason }}</p>
+            <p v-for="defer in weeklyPlan.deferrals" :key="defer.taskId">
+              {{ defer.reason }}
+            </p>
           </div>
         </footer>
       </article>

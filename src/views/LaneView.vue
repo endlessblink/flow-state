@@ -6,7 +6,10 @@
         <ArrowLeft :size="18" />
       </button>
       <span class="lane-color-dot" :style="{ background: laneColor }" />
-      <h1 class="lane-title">{{ lane?.name || 'Lane' }}</h1>
+
+      <h1 class="lane-title">
+        {{ lane?.name || 'Lane' }}
+      </h1>
       <span class="lane-count">{{ laneTasks.length }} {{ laneTasks.length === 1 ? 'task' : 'tasks' }}</span>
     </div>
 
@@ -14,7 +17,10 @@
     <div v-if="!lane" class="lane-missing">
       <Route :size="40" />
       <p>This lane no longer exists.</p>
-      <button class="btn-secondary" @click="goBack">Back to all tasks</button>
+
+      <button class="btn-secondary" @click="goBack">
+        Back to all tasks
+      </button>
     </div>
 
     <template v-else>

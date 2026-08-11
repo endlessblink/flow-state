@@ -14,7 +14,7 @@ defineEmits<{
   (e: 'update:title', value: string): void
   (e: 'update:priority', value: 'low' | 'medium' | 'high' | undefined): void
   (e: 'update:due', value: 'today' | 'tomorrow' | undefined): void
-  (e: 'quick-add'): void
+  (e: 'quickAdd'): void
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -27,15 +27,16 @@ defineExpose({ inputRef })
   <div class="capture-phase">
     <div class="capture-input-area">
       <div class="capture-card">
-        <input dir="auto"
+        <input
           ref="inputRef"
+          dir="auto"
           :value="title"
           type="text"
           class="capture-input"
           placeholder="What needs to be done?"
           autofocus
           @input="$emit('update:title', ($event.target as HTMLInputElement).value)"
-          @keydown.enter="$emit('quick-add')"
+          @keydown.enter="$emit('quickAdd')"
         >
 
         <!-- Quick Actions -->
@@ -69,7 +70,7 @@ defineExpose({ inputRef })
         <button
           class="add-task-btn"
           :disabled="!title.trim()"
-          @click="$emit('quick-add')"
+          @click="$emit('quickAdd')"
         >
           <Plus :size="20" />
           Add Task
@@ -79,7 +80,9 @@ defineExpose({ inputRef })
 
     <!-- Recently Added -->
     <div v-if="recentlyAdded.length > 0" class="recently-added">
-      <h3 class="section-title">Just Added</h3>
+      <h3 class="section-title">
+        Just Added
+      </h3>
       <TransitionGroup name="task-list" tag="ul" class="recent-list">
         <li
           v-for="task in recentlyAdded"

@@ -1000,6 +1000,41 @@ test.describe('local canvas geometry regressions', () => {
     expect(fridayGaps.gaps.every((gap) => gap > 0), JSON.stringify(fridayGaps, null, 2)).toBe(true)
   })
 
+  test('tidy geometry survives a renderer reload', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'tidy-reload-alpha', name: 'Tidy Reload Alpha', x: 900, y: 200, width: 400, height: 1000 },
+      { id: 'tidy-reload-beta', name: 'Tidy Reload Beta', x: 100, y: 200, width: 400, height: 1000 },
+    ], [
+      { id: 'tidy-reload-a', title: 'Tidy Reload A', parentId: 'tidy-reload-alpha', x: 920, y: 900 },
+      { id: 'tidy-reload-b', title: 'Tidy Reload B', parentId: 'tidy-reload-alpha', x: 920, y: 600 },
+      { id: 'tidy-reload-c', title: 'Tidy Reload C', parentId: 'tidy-reload-beta', x: 120, y: 560 },
+    ])
+
+    await clickToolbar(page, /tidy|layout/)
+    const readTidyGeometry = async () => {
+      const geometry = await readGeometry(page)
+      return {
+        groups: geometry.groups
+          .filter((group) => group.id.startsWith('tidy-reload-'))
+          .sort((a, b) => a.id.localeCompare(b.id)),
+        tasks: geometry.tasks
+          .filter((task) => task.id.startsWith('tidy-reload-'))
+          .sort((a, b) => a.id.localeCompare(b.id)),
+      }
+    }
+
+    await expect.poll(async () => {
+      const geometry = await readTidyGeometry()
+      return geometry.groups.every((group) => group.width === 400)
+        && geometry.tasks.every((task) => Number.isFinite(task.x) && Number.isFinite(task.y))
+    }).toBe(true)
+    const afterTidy = await readTidyGeometry()
+
+    await page.reload()
+    await setupCanvas(page)
+    await expect.poll(readTidyGeometry).toEqual(afterTidy)
+  })
+
   test('tidy stacks variable-height cards without overlap', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'thu', name: 'Thursday', x: 100, y: 200 },

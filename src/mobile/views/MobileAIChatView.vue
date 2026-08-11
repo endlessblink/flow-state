@@ -16,6 +16,7 @@
         >
           <Trash2 :size="18" />
         </button>
+
         <button
           class="header-btn"
           :class="{ active: showSettings }"
@@ -41,6 +42,7 @@
             >
               Auto
             </button>
+
             <button
               class="provider-option"
               :class="{ active: selectedProvider === 'groq' }"
@@ -48,6 +50,7 @@
             >
               Groq
             </button>
+
             <button
               class="provider-option"
               :class="{ active: selectedProvider === 'openrouter' }"
@@ -55,6 +58,7 @@
             >
               OpenRouter
             </button>
+
             <button
               class="provider-option"
               :class="{ active: selectedProvider === 'ollama' }"
@@ -80,9 +84,17 @@
         <div class="settings-group">
           <label class="settings-label">Text Direction</label>
           <div class="provider-options">
-            <button class="provider-option" :class="{ active: chatDirection === 'auto' }" @click="setChatDirection('auto')">Auto</button>
-            <button class="provider-option" :class="{ active: chatDirection === 'ltr' }" @click="setChatDirection('ltr')">LTR</button>
-            <button class="provider-option" :class="{ active: chatDirection === 'rtl' }" @click="setChatDirection('rtl')">RTL</button>
+            <button class="provider-option" :class="{ active: chatDirection === 'auto' }" @click="setChatDirection('auto')">
+              Auto
+            </button>
+
+            <button class="provider-option" :class="{ active: chatDirection === 'ltr' }" @click="setChatDirection('ltr')">
+              LTR
+            </button>
+
+            <button class="provider-option" :class="{ active: chatDirection === 'rtl' }" @click="setChatDirection('rtl')">
+              RTL
+            </button>
           </div>
         </div>
       </div>
@@ -93,8 +105,14 @@
       <!-- Empty State -->
       <div v-if="visibleMessages.length === 0" class="empty-state">
         <Sparkles class="empty-icon" :size="40" />
-        <p class="empty-title">Ask me anything about your tasks!</p>
-        <p class="empty-hint">Try: "Plan my day" or "What's overdue?"</p>
+
+        <p class="empty-title">
+          Ask me anything about your tasks!
+        </p>
+
+        <p class="empty-hint">
+          Try: "Plan my day" or "What's overdue?"
+        </p>
 
         <!-- Quick Actions (shown in empty state) -->
         <div class="quick-actions-grid">
@@ -121,11 +139,19 @@
       <div v-if="friendlyError" class="error-message">
         <div class="error-content">
           <AlertTriangle :size="14" />
-          <p>{{ friendlyError.message }}</p>
+
+          <p>
+            {{ friendlyError.message }}
+          </p>
         </div>
         <div class="error-actions">
-          <button v-if="lastUserMessage" class="error-retry" @click="retryLastMessage">Retry</button>
-          <button class="error-dismiss" @click="clearError">Dismiss</button>
+          <button v-if="lastUserMessage" class="error-retry" @click="retryLastMessage">
+            Retry
+          </button>
+
+          <button class="error-dismiss" @click="clearError">
+            Dismiss
+          </button>
         </div>
       </div>
     </div>
@@ -134,8 +160,13 @@
     <div v-if="pendingConfirmation" class="confirmation-banner">
       <span>Confirm: {{ pendingConfirmation.tool.replace(/_/g, ' ') }}?</span>
       <div class="confirmation-actions">
-        <button class="confirm-yes" @click="confirmPendingAction()">Confirm</button>
-        <button class="confirm-no" @click="cancelPendingAction()">Cancel</button>
+        <button class="confirm-yes" @click="confirmPendingAction()">
+          Confirm
+        </button>
+
+        <button class="confirm-no" @click="cancelPendingAction()">
+          Cancel
+        </button>
       </div>
     </div>
 
@@ -154,6 +185,7 @@
             @keydown="handleKeydown"
             @input="autoResize"
           />
+
           <button
             class="send-btn"
             :disabled="!canSend"

@@ -79,7 +79,7 @@ export function useAISync() {
   async function loadSettings(): Promise<void> {
     const remoteSettings = await db.fetchAISettings()
     if (remoteSettings) {
-      ;(store as any).saveSettings(remoteSettings)
+      (store as any).saveSettings(remoteSettings)
     }
   }
 

@@ -1,6 +1,7 @@
 <template>
   <div class="mobile-calendar">
     <!-- Calendar Header -->
+
     <div class="calendar-header">
       <div class="date-nav">
         <button class="nav-btn" @click="previousDay">
@@ -14,12 +15,14 @@
           <ChevronRight :size="20" />
         </button>
       </div>
+
       <div class="header-meta">
         <span class="task-count">{{ dayTasks.length }} task{{ dayTasks.length !== 1 ? 's' : '' }}</span>
       </div>
     </div>
 
     <!-- Time Grid -->
+
     <div ref="timeGridRef" class="time-grid">
       <div
         v-for="hour in hours"
@@ -28,8 +31,10 @@
         @click="handleTimeSlotClick(hour)"
       >
         <span class="time-label">{{ formatHour(hour) }}</span>
+
         <div class="time-slot">
           <!-- Tasks in this hour -->
+
           <div
             v-for="task in getTasksAtHour(hour)"
             :key="task.id"
@@ -41,7 +46,10 @@
             :style="{ height: getTaskHeight(task) + 'px' }"
             @click.stop="openTask(task)"
           >
-            <div class="event-title" dir="auto">{{ task.title }}</div>
+            <div class="event-title" dir="auto">
+              {{ task.title }}
+            </div>
+
             <div class="event-time">
               {{ task.scheduledTime }}
               <span v-if="task.estimatedDuration"> &middot; {{ task.estimatedDuration }}min</span>
@@ -51,17 +59,20 @@
       </div>
 
       <!-- Current Time Indicator -->
+
       <div
         v-if="isToday"
         class="time-indicator"
         :style="{ top: timeIndicatorTop + 'px' }"
       >
         <div class="indicator-dot" />
+
         <div class="indicator-line" />
       </div>
     </div>
 
     <!-- Unscheduled Tasks Section -->
+
     <div v-if="unscheduledTasks.length > 0" class="unscheduled-section">
       <button class="unscheduled-header" @click="showUnscheduled = !showUnscheduled">
         <span>Unscheduled ({{ unscheduledTasks.length }})</span>

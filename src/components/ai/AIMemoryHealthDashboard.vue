@@ -6,6 +6,7 @@
         <h1>Memory Health Assessment</h1>
         <p>Evaluate how effectively the AI memory system captures and uses your data</p>
       </div>
+
       <div class="actions">
         <button
           class="btn btn-ghost"
@@ -25,55 +26,78 @@
     </header>
 
     <!-- Progress bar -->
+
     <div v-if="isRunning" class="progress-section glass">
       <div class="progress-info">
         <span>{{ currentCheck || 'Initializing...' }}</span>
         <span>{{ progress }}%</span>
       </div>
+
       <div class="progress-track">
         <div class="progress-fill" :style="{ width: progress + '%' }" />
       </div>
     </div>
 
     <!-- Error -->
-    <div v-if="error" class="error-banner glass">{{ error }}</div>
+
+    <div v-if="error" class="error-banner glass">
+      {{ error }}
+    </div>
 
     <!-- Summary Cards -->
+
     <div v-if="report" class="summary-cards">
       <div class="card glass score-card" :class="gradeClass">
         <h3>Memory Grade</h3>
-        <div class="grade-display">{{ report.grade }}</div>
+
+        <div class="grade-display">
+          {{ report.grade }}
+        </div>
         <p>{{ gradeLabel }}</p>
       </div>
 
+
       <div class="card glass stat-card">
         <h3>Overall Score</h3>
+
         <div class="stat-value" :class="scoreColorClass(report.overallScore)">
           {{ report.overallScore }}
         </div>
         <p>out of 100</p>
       </div>
 
+
       <div class="card glass stat-card">
         <h3>Sections</h3>
-        <div class="stat-value">{{ report.sections.length }}</div>
+
+        <div class="stat-value">
+          {{ report.sections.length }}
+        </div>
         <p>{{ report.mode === 'full' ? 'Full assessment' : 'Quick check' }}</p>
       </div>
 
+
       <div class="card glass stat-card">
         <h3>Duration</h3>
-        <div class="stat-value stat-value--small">{{ formatDuration(report.durationMs) }}</div>
+
+        <div class="stat-value stat-value--small">
+          {{ formatDuration(report.durationMs) }}
+        </div>
         <p>{{ formatTime(report.timestamp) }}</p>
       </div>
     </div>
 
     <!-- Empty State -->
+
     <div v-else-if="!isRunning" class="empty-state glass">
       <p>No assessment results yet.</p>
-      <p class="empty-hint">"Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).</p>
+      <p class="empty-hint">
+        "Quick Check" runs heuristic tests instantly. "Full Assessment" adds LLM-as-judge context utilization tests (~30s).
+      </p>
     </div>
 
     <!-- Sections -->
+
     <div v-if="report" class="sections-list">
       <div
         v-for="section in report.sections"
@@ -87,12 +111,14 @@
             </span>
             <h3>{{ section.name }}</h3>
           </div>
+
           <div class="section-score" :class="scoreColorClass(section.score)">
             {{ section.score }}%
           </div>
         </div>
 
         <!-- Section progress bar -->
+
         <div class="section-bar-track">
           <div
             class="section-bar-fill"
@@ -102,6 +128,7 @@
         </div>
 
         <!-- Checks (expanded) -->
+
         <div v-if="expandedSections.has(section.id)" class="checks-list">
           <div
             v-for="check in section.checks"
@@ -115,10 +142,15 @@
               <span class="check-name">{{ check.name }}</span>
               <span class="check-score" :class="scoreColorClass(check.score)">{{ check.score }}%</span>
             </div>
-            <div class="check-value">{{ check.value }}</div>
+
+            <div class="check-value">
+              {{ check.value }}
+            </div>
+
             <div v-if="check.recommendation" class="check-recommendation">
               {{ check.recommendation }}
             </div>
+
             <div v-if="check.details?.length" class="check-details">
               <span v-for="(detail, i) in check.details" :key="i" class="detail-tag">
                 {{ detail }}
@@ -130,8 +162,10 @@
     </div>
 
     <!-- Recommendations -->
+
     <div v-if="report && report.recommendations.length > 0" class="recommendations-section">
       <h2>Recommendations</h2>
+
       <div class="recommendations-list">
         <div
           v-for="(rec, i) in report.recommendations"
@@ -146,8 +180,10 @@
     </div>
 
     <!-- History -->
+
     <div v-if="history.length > 1" class="history-section">
       <h2>Previous Assessments</h2>
+
       <div class="history-list">
         <div
           v-for="h in history.slice(1, 6)"
@@ -160,7 +196,9 @@
           <span class="history-time">{{ formatTime(h.timestamp) }}</span>
         </div>
       </div>
-      <button class="btn btn-ghost" @click="handleClearHistory">Clear History</button>
+      <button class="btn btn-ghost" @click="handleClearHistory">
+        Clear History
+      </button>
     </div>
   </div>
 </template>

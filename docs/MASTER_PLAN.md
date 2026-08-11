@@ -90,6 +90,8 @@ The follow-up production probe narrowed the remaining client mismatch: PWA 1.4.3
 
 **Current live receipt evidence (2026-08-11)**: The installed authenticated Electron 1.4.362 receipt is `synced` with `pending: 0`, `failed: 0`, `conflict: 0`, and `syncing: 0`, with no repair request. The same account still has an old PWA receipt at 1.4.345 marked `error` with two historical failed writes (one network and one auth) and a completed repair request from July; that device has not reported since 2026-08-10. This is an identified stale-device/version-convergence failure class, not evidence that the current Electron device is unsynced; it remains open until a current authenticated PWA receipt is observed at the released version or the supported repair/expiry behavior is verified.
 
+**Fresh PWA receipt evidence (2026-08-11)**: An authenticated production PWA session for the dedicated test account reported version 1.4.362, `synced`, and zero pending/failed/syncing/conflict operations, with no repair request. The current PWA service-worker/runtime boundary is therefore converged for that account; the old same-account receipt above remains a stale-device lifecycle case.
+
 ### ~~TASK-2002~~: Keep PWA, Electron, and VPS continuously converged (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-08-07) | **Release**: PWA + Electron 1.4.342

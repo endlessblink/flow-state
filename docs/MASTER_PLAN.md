@@ -106,6 +106,8 @@ The follow-up production probe narrowed the remaining client mismatch: PWA 1.4.3
 
 **Receipt lifecycle verification (2026-08-11)**: The supported repair path is covered by focused tests: completed requests are not replayed, outstanding requests retry exact entity IDs once, and failed retries record `retry_failed`. Historical device rows have no supported expiry or deletion operation, so the old 1.4.345 row remains diagnostic history rather than a live queue failure.
 
+**Live-proof authorization boundary (2026-08-11)**: The remaining production mutation and receipt checks must use a disposable authenticated fixture or credentials explicitly authorized for that exact production account. Reusing `tests/.auth/user.json` against `https://in-theflow.com` is intentionally rejected because it would copy stored session material into a production-origin browser context. Until that boundary is supplied, local regressions, public release checks, and the already completed installed 1.4.364/catalog proofs remain valid but cannot close the live Tidy/offline/realtime requirements.
+
 ### ~~TASK-2002~~: Keep PWA, Electron, and VPS continuously converged (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-08-07) | **Release**: PWA + Electron 1.4.342

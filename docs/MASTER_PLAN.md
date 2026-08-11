@@ -110,6 +110,8 @@ The follow-up production probe narrowed the remaining client mismatch: PWA 1.4.3
 
 **Guarded live Tidy entry point (2026-08-11)**: `npm run test:pwa-live:tidy` now provides the executable production check. It is skipped unless `FLOWSTATE_LIVE_ALLOW_MUTATION=I_UNDERSTAND_DISPOSABLE_FIXTURE`; when enabled it requires explicit `FLOWSTATE_LIVE_EMAIL`, `FLOWSTATE_LIVE_PASSWORD`, and an anon key, creates only UUID-named disposable rows, authenticates the browser through the supplied credentials, verifies the visible Tidy action and renderer reload persistence, and deletes the fixture rows in `finally`.
 
+**Fresh unauthenticated PWA runtime proof (2026-08-11)**: `tests/pwa-live/pwa-live.spec.ts` passed all 4 cases against `https://in-theflow.com`: standalone boot, offline reload, four repeated reloads, and persistent-profile restart. Each case visibly rendered FlowState without the loader, had a service-worker controller and Workbox script, and returned a JSON-parsable manifest; the run reported no page errors. This proves runtime/service-worker convergence only, not authenticated data mutation or receipt convergence.
+
 ### ~~TASK-2002~~: Keep PWA, Electron, and VPS continuously converged (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-08-07) | **Release**: PWA + Electron 1.4.342

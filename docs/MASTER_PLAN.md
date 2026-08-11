@@ -88,6 +88,8 @@ The first fix is an active recovery pulse: every authenticated PWA receipt heart
 
 The follow-up production probe narrowed the remaining client mismatch: PWA 1.4.344 drained its pending queue to zero, while Electron stayed on 1.4.340. The local updater transaction log shows repeated 1.4.343/1.4.344 downloads followed by `FAIL direct replacement readiness` and rollback to the known-good AppImage; the old Electron process group kept the local sidecar alive during replacement. The updater fix now terminates the complete old AppImage process group before relaunch, with a regression covering the sidecar-port handoff.
 
+**Current live receipt evidence (2026-08-11)**: The installed authenticated Electron 1.4.362 receipt is `synced` with `pending: 0`, `failed: 0`, `conflict: 0`, and `syncing: 0`, with no repair request. The same account still has an old PWA receipt at 1.4.345 marked `error` with two historical failed writes (one network and one auth) and a completed repair request from July; that device has not reported since 2026-08-10. This is an identified stale-device/version-convergence failure class, not evidence that the current Electron device is unsynced; it remains open until a current authenticated PWA receipt is observed at the released version or the supported repair/expiry behavior is verified.
+
 ### ~~TASK-2002~~: Keep PWA, Electron, and VPS continuously converged (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-08-07) | **Release**: PWA + Electron 1.4.342

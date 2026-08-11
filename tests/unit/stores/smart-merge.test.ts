@@ -185,6 +185,19 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     expect(mockEnqueue).not.toHaveBeenCalled()
   })
 
+  it('canonical authority load bypasses the SWR task cache', async () => {
+    const store = useTaskStore()
+    const remoteTask = makeTask({ title: 'Canonical task' })
+    mockFetchTasks.mockResolvedValue([remoteTask])
+
+    await store.loadFromDatabase({
+      requireRemoteAuthority: true,
+      authorityScope: { userId: 'test-user-id', workspaceId: null },
+    })
+
+    expect(mockFetchTasks).toHaveBeenCalledWith(null, { forceFresh: true })
+  })
+
   it('canonical workspace authority removes an absent collaborator task without relying on user tombstones', async () => {
     const store = useTaskStore()
     const localTask = makeTask({ title: 'Shared task deleted by owner' })

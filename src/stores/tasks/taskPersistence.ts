@@ -407,7 +407,9 @@ export function useTaskPersistence(
             let deletionInfoReliable = true
             const markDeletionInfoUnreliable = () => { deletionInfoReliable = false }
             const [fetchedTasks, softDeletedTaskIds, tombstones] = await Promise.all([
-                fetchTasks(workspaceId),
+                requireRemoteAuthority
+                    ? fetchTasks(workspaceId, { forceFresh: true })
+                    : fetchTasks(workspaceId),
                 fetchDeletedTaskIds({ onError: markDeletionInfoUnreliable }),
                 fetchTombstones({ onError: markDeletionInfoUnreliable })
             ])

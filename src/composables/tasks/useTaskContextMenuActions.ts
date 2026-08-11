@@ -52,6 +52,13 @@ export function useTaskContextMenuActions(
         showToast(`Task could not be ${action}. Refresh and try again.`, 'error')
     }
 
+    const isRetryableDoneForNowConflict = (error: unknown): boolean => {
+        const code = error && typeof error === 'object' && 'code' in error
+            ? String((error as { code?: unknown }).code ?? '')
+            : ''
+        return code === 'state_conflict' || code === 'request_hash_mismatch'
+    }
+
     // The undo wrapper performs its own canonical-task lookup. A catalog refresh
     // can finish between our lookup above and that second lookup, so rehydrate
     // once before retrying the known stale-target failure. This preserves the
@@ -354,6 +361,17 @@ export function useTaskContextMenuActions(
                             canvasStore.requestSync('user:context-menu')
                         } catch (refreshError) {
                             console.warn('[Tasks] Occurrence was already completed; refresh after idempotent completion failed:', refreshError)
+                        }
+                    } else if (isRetryableDoneForNowConflict(error)) {
+                        // The canonical preview can become stale while a realtime
+                        // refresh lands between preview and apply. Rehydrate and
+                        // retry the transaction once before showing a false failure.
+                        try {
+                            await taskStore.initializeFromDatabase()
+                            await taskStore.doneForNow(taskId)
+                            canvasStore.requestSync('user:context-menu')
+                        } catch (retryError) {
+                            reportMutationFailure('completed', retryError)
                         }
                     } else {
                         reportMutationFailure('completed', error)

@@ -271,6 +271,32 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
     expect(showToast).not.toHaveBeenCalled()
   })
 
+  it('retries a stale recurring completion conflict before showing a failure', async () => {
+    const recurringTask = {
+      id: 'task-1',
+      title: 'Recurring task with a realtime race',
+      status: 'todo',
+      recurrenceRule: { pattern: 'weekly', interval: 1 }
+    } as unknown as Task
+    getTask.mockReturnValue(recurringTask)
+    doneForNow
+      .mockRejectedValueOnce(Object.assign(new Error('stale preview'), { code: 'state_conflict' }))
+      .mockResolvedValueOnce(undefined)
+    initializeFromDatabase.mockResolvedValueOnce(undefined)
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: recurringTask,
+      contextTask: null,
+      selectedCount: 1
+    }, vi.fn())
+    await toggleDone()
+
+    expect(initializeFromDatabase).toHaveBeenCalledTimes(1)
+    expect(doneForNow).toHaveBeenCalledTimes(2)
+    expect(requestSync).toHaveBeenCalledWith('user:context-menu')
+    expect(showToast).not.toHaveBeenCalled()
+  })
+
   it('does not show a failure toast when the idempotent refresh also fails', async () => {
     const recurringTask = {
       id: 'task-1',

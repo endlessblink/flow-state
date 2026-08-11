@@ -16,7 +16,7 @@
 
 **User repro**: In the authenticated Catalog workspace, recurring tasks remain in the Overdue group with their old due dates. Selecting completion produces `Task could not be completed. Refresh and try again.` instead of moving the living task to its next occurrence and recording the completed occurrence.
 
-**Current evidence**: The workspace visibly renders and is usable, but this recurring completion boundary is still failing in the installed app. The Catalog completion handler correctly routes recurring tasks through the canonical `done for now` transaction; the production database currently exposes the seven-argument RPC including `p_request_hash`, so the failure must be traced through the authenticated request, receipt, renderer projection, and reload/readback before claiming resolution. The Catalog path now retries one fresh canonical transaction after a `state_conflict` or `request_hash_mismatch`, with focused contract coverage, but live proof is still missing.
+**Current evidence**: The workspace visibly renders and is usable, but this recurring completion boundary is still failing in the installed app. The Catalog row handler and right-click context-menu handler both route recurring tasks through the canonical `done for now` transaction; both now retry one fresh canonical transaction after a `state_conflict` or `request_hash_mismatch`, with focused contract coverage. Live proof of the reported Catalog action remains missing.
 
 **Required proof before closeout**: A real authenticated recurring task must move from an overdue date to the computed next date without an error toast, create exactly one completed occurrence, survive reload, converge through realtime/offline recovery, and be verified in both the installed Electron app and production PWA. Add a repro-focused regression for the visible Catalog action and complete the failure-class matrix below before marking done.
 
@@ -38,7 +38,7 @@
 
 **Explicitly not covered**: Electron loading-screen recovery, which is a separate verified failure class.
 
-**Regression added for reported repro**: `tests/unit/done-for-now-ui-contract.test.ts` now guards the Catalog retry path; the authenticated live recurring-task scenario remains required.
+**Regression added for reported repro**: `useTaskContextMenuActions.spec.ts` now guards stale canonical recurrence resolution, idempotent completion, and one-time retry after a realtime conflict; the authenticated live Catalog action remains required.
 
 **Live boundary proof**: Not yet complete; the screenshot proves the failure remains.
 

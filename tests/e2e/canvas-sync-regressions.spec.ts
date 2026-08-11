@@ -520,6 +520,24 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
         true,
       );
     }).toPass({ timeout: 12_000 });
+
+    // The production repro was stronger than live delivery: the observer
+    // rendered the group, but a reload replaced it with the pre-insert cache.
+    await clientB.reload();
+    await gotoCanvasReady(clientB);
+    await expect(async () => {
+      const hasMonday = await clientB.evaluate(() => {
+        const root = document.querySelector("#app") as any;
+        const canvas =
+          root.__vue_app__._context.config.globalProperties.$pinia._s.get(
+            "canvas",
+          )!;
+        return canvas.groups.some((g: any) => g.name === "Monday");
+      });
+      expect(hasMonday, "reloaded client B lost the canonical migrated group").toBe(
+        true,
+      );
+    }).toPass({ timeout: 20_000 });
   });
 
   // ── R1: dropping one task onto the canvas must not move the others ──────────

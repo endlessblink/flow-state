@@ -93,9 +93,16 @@ export const useCanvasStore = defineStore('canvas', () => {
     return groupsModule.updateGroup(...args)
   }
 
-  const setGroups = (...args: Parameters<typeof groupsModule.setGroups>) => {
-    lastLocalSyncAt.value = Date.now()
-    return groupsModule.setGroups(...args)
+  const setGroups = (
+    newGroups: CanvasGroup[],
+    forceEmpty = false,
+    markLocalMutation = true,
+  ) => {
+    // Hydration and cache recovery are projections, not user mutations. They
+    // must not start the local-write grace period or block the canonical read
+    // that follows startup.
+    if (markLocalMutation) lastLocalSyncAt.value = Date.now()
+    return groupsModule.setGroups(newGroups, forceEmpty)
   }
 
   // 5. Shared Canvas State
@@ -133,7 +140,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       if (!authStore.isAuthenticated) {
         const localGroups = loadGroupsFromLocalStorage()
-        groupsModule.setGroups(breakGroupCycles(localGroups))
+        setGroups(breakGroupCycles(localGroups), false, false)
         return
       }
 
@@ -259,7 +266,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         throwOnError: true,
       })
       assertScope()
-      groupsModule.setGroups(cleanedGroups, isWorkspaceSwitch)
+      setGroups(cleanedGroups, isWorkspaceSwitch, false)
 
       // Persist fixes
       cleanedGroups.forEach((g: CanvasGroup, i: number) => {
@@ -286,11 +293,11 @@ export const useCanvasStore = defineStore('canvas', () => {
       const cachedGroups = await getCachedGroups()
       if (cachedGroups && cachedGroups.length > 0) {
         console.log(`📦 [OFFLINE] Loaded ${cachedGroups.length} groups from IndexedDB cache`)
-        groupsModule.setGroups(breakGroupCycles(cachedGroups))
+        setGroups(breakGroupCycles(cachedGroups), false, false)
       } else {
         // Fallback to localStorage (legacy, limited data)
         const localGroups = loadGroupsFromLocalStorage()
-        if (localGroups.length > 0) groupsModule.setGroups(breakGroupCycles(localGroups))
+        if (localGroups.length > 0) setGroups(breakGroupCycles(localGroups), false, false)
       }
     } finally {
       // BUG-1084 v5: Mark initialization complete (even on error)

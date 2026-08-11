@@ -60,7 +60,7 @@
 
 **Local canvas suite evidence (2026-08-11)**: R7 legacy day-group migration passed in isolation and the full 34-case canvas suite passed serially. An earlier run had one R17 failure after preceding tests, but R17 passed alone and in a three-repeat stress run; the remaining risk is production cross-client group delivery and authenticated production proof, not a currently reproducible local regression.
 
-**Production cross-client probe (2026-08-11)**: Two independent authenticated PWA contexts were used. A disposable group insert returned 201; the observer visibly rendered the group before reload, and its authenticated canonical read returned 200 with the row. After the observer reloaded, the visible group node disappeared despite the row remaining canonical; the disposable row was then soft-deleted with 204. This is now a reproducible reload-projection failure, not a claim of production convergence.
+**Production cross-client probe (2026-08-11)**: Two independent authenticated PWA contexts were used. A disposable group insert returned 201; the observer visibly rendered the group before reload, and its authenticated canonical read returned 200 with the row. After the observer reloaded, the visible group node disappeared despite the row remaining canonical; the disposable row was then soft-deleted with 204. Root cause is now fixed locally: cache hydration was incorrectly stamped as a local mutation, causing the following canonical group refresh to abort inside its 30-second write-protection window. The exact R7 migration-plus-reload regression and the full 34-case canvas suite pass locally; production proof after the new release remains required.
 
 **Priority**: P0 | **Status**: IN PROGRESS (2026-08-10)
 

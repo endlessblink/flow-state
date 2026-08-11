@@ -400,7 +400,9 @@ export function useAppInitialization() {
                     }
                 }
                 if (cachedGroups && cachedGroups.length > 0) {
-                    canvasStore.setGroups(cachedGroups)
+                    // Cache hydration is not a local mutation; do not block
+                    // the authoritative group refresh that follows startup.
+                    canvasStore.setGroups(cachedGroups, false, false)
                     console.log(`📦 [CACHE-FIRST] Loaded ${cachedGroups.length} groups from IndexedDB cache`)
                 }
                 if (cachedProjects && cachedProjects.length > 0) {

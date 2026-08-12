@@ -180,8 +180,7 @@ async function testConcurrentCreation() {
   ).length
 
   if (rlsBlocked === concurrency) {
-    pass('RLS enforcement', 'All writes blocked (correct - no auth)')
-    log('    To test actual sync conflicts, use authenticated session', 'yellow')
+    skip('RLS enforcement', 'All writes blocked; authenticated sync conflicts were not exercised')
     return true
   }
 
@@ -227,7 +226,7 @@ async function testRapidUpdates() {
   })
 
   if (createResult.rlsBlocked) {
-    pass('RLS enforcement', 'Write blocked (correct - no auth)')
+    skip('RLS enforcement', 'Write blocked; authenticated rapid-update handling was not exercised')
     return true
   }
 
@@ -295,7 +294,7 @@ async function testDuplicateIdPrevention() {
   })
 
   if (result1.rlsBlocked) {
-    pass('RLS enforcement', 'Write blocked (correct - no auth)')
+    skip('RLS enforcement', 'Write blocked; authenticated duplicate-ID handling was not exercised')
     return true
   }
 
@@ -530,8 +529,10 @@ function printSummary() {
 
   // Sync-specific recommendations
   log('\n--- SYNC RECOMMENDATIONS ---', 'cyan')
-  if (results.failed.length === 0) {
+  if (results.failed.length === 0 && results.skipped.length === 0) {
     log('  ✅ Sync conflict handling is working correctly', 'green')
+  } else if (results.failed.length === 0) {
+    log('  ⚠️  RLS smoke only; authenticated sync conflict handling remains unverified', 'yellow')
   } else {
     log('  • Review RLS policies for conflict handling', 'yellow')
     log('  • Consider implementing optimistic locking', 'yellow')

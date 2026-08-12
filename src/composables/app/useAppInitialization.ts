@@ -243,6 +243,32 @@ export function useAppInitialization() {
         })
     }
 
+    // BUG-2012: A foregrounded PWA/Electron window can miss realtime events while
+    // suspended, and the canonical cursor only replays rows present in the change
+    // log. Always reconcile the full active task projection when the client returns
+    // to the foreground so existing tasks converge without requiring a new edit.
+    let foregroundReloadPromise: Promise<void> | null = null
+    let lastForegroundReloadAt = 0
+    const reloadAuthoritativeOnForeground = () => {
+        if (!authStore.isAuthenticated || !getInitialOnlineState()) return
+        if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+        const now = Date.now()
+        if (now - lastForegroundReloadAt < 3000) return
+        lastForegroundReloadAt = now
+        if (foregroundReloadPromise) return
+        foregroundReloadPromise = (async () => {
+            try {
+                invalidateCache.all()
+                await reloadCoreData()
+                await runCanonicalChangeCatchup()
+            } catch (error) {
+                console.warn('[FOREGROUND-SYNC] Authoritative reload deferred:', error instanceof Error ? error.message : error)
+            } finally {
+                foregroundReloadPromise = null
+            }
+        })()
+    }
+
     const recoverSkippedTaskChange = () => {
         invalidateCache.all()
         window.setTimeout(async () => {
@@ -294,6 +320,9 @@ export function useAppInitialization() {
         if (typeof window !== 'undefined') {
             window.FlowStateSessionStart = Date.now()
         }
+
+        document.addEventListener('visibilitychange', reloadAuthoritativeOnForeground)
+        window.addEventListener('focus', reloadAuthoritativeOnForeground)
 
         // BUG-1743: When a new SW activates (after deploy), force reload to get fresh index.html
         // with matching CSS chunk hashes. Without this, the old page references old hashes that
@@ -1426,6 +1455,8 @@ export function useAppInitialization() {
         stopLocalApiMutationSubscription()
         stopLocalApiWorkspaceContextSync()
         if (localApiReloadTimer !== null) window.clearTimeout(localApiReloadTimer)
+        document.removeEventListener('visibilitychange', reloadAuthoritativeOnForeground)
+        window.removeEventListener('focus', reloadAuthoritativeOnForeground)
         if (activeChannel.value) {
 
             activeChannel.value.unsubscribe()

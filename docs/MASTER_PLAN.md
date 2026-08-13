@@ -6,6 +6,14 @@
 
 The public PWA 1.4.374 runtime, Electron 1.4.374 artifact, local offline/reconnect matrix, and canonical RPC surface are now independently verified. The VPS watchdog had been reporting `canonical-authority-missing=3/1` because it checked the obsolete 10-argument patch RPC signature; production has the current 11-argument wrapper, and the corrected read-only watchdog is deployed. This removes a false alert only; the required authenticated PWA↔Electron mutation/readback proof remains open, as does proving the installed user-facing close/minimize behavior.
 
+**Release 1.4.375 work (2026-08-13)**: A real installed 1.4.374 service launch kept the Electron window at its hidden 10x10 initial bounds when renderer readiness was delayed. Normal production launches now present the managed window immediately after document load begins, preserving hidden background launches; focused lifecycle and integration regressions pass. Installed 1.4.375 visibility and authenticated workspace usability remain required before closeout.
+
+**Release 1.4.376 work (2026-08-13)**: The installed 1.4.375 service still exposed the supervisor's 10x10 geometry, so the normal ready-to-show lifecycle now repairs collapsed bounds immediately before showing. The new regression passes locally; installed 1.4.376 visibility remains the next live gate.
+
+**Release 1.4.377 work (2026-08-13)**: The window manager continued reporting the retained 10x10 supervisor geometry after conditional repair, so normal ready-to-show now writes the canonical 1400x900 bounds unconditionally before showing; explicit background launches remain hidden. The live installed 1.4.377 window must still be checked before this lifecycle gate can close.
+
+**Release 1.4.378 work (2026-08-13)**: The WM can reapply its collapsed geometry after the first map, so the normal lifecycle repeats the canonical bounds and show operation after one WM turn. This remains an installed live gate.
+
 ### BUG-2018: Electron restarts and reopens after a normal window close
 
 **Priority**: P1 | **Status**: IN PROGRESS (2026-08-13)

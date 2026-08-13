@@ -32,6 +32,10 @@ export function createBackgroundWindowLifecycle(options: BackgroundWindowLifecyc
     window.setBounds({ width: 1400, height: 900 })
   }
 
+  const setNormalLaunchBounds = (window: BackgroundWindow): void => {
+    window.setBounds({ width: 1400, height: 900 })
+  }
+
   const showOrCreate = (): BackgroundWindow => {
     let window = options.getWindow()
     if (!window || window.isDestroyed()) window = options.createWindow()
@@ -48,7 +52,18 @@ export function createBackgroundWindowLifecycle(options: BackgroundWindowLifecyc
     },
 
     handleReadyToShow(window: BackgroundWindow, argv: readonly string[]): void {
-      if (!isBackgroundLaunch(argv)) window.show()
+      if (isBackgroundLaunch(argv)) return
+      // KDE can retain the hidden supervisor geometry across a normal launch;
+      // repair it at the last point before the window becomes user-visible.
+      setNormalLaunchBounds(window)
+      window.show()
+      // KDE may apply its saved AppImage rule after the first map and collapse
+      // the window again; repeat the user-visible bounds after that WM turn.
+      setTimeout(() => {
+        if (window.isDestroyed()) return
+        setNormalLaunchBounds(window)
+        window.show()
+      }, 500)
     },
 
     handleClose(event: WindowCloseEvent, window: BackgroundWindow): boolean {

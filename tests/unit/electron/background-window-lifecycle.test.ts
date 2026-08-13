@@ -43,6 +43,7 @@ describe('Electron background window lifecycle', () => {
 
   it('shows a normal first-launch window when ready', () => {
     const window = createWindow()
+    const setBounds = window.setBounds as ReturnType<typeof vi.fn>
     const lifecycle = createBackgroundWindowLifecycle({
       getWindow: () => window,
       createWindow: vi.fn(() => window),
@@ -51,6 +52,25 @@ describe('Electron background window lifecycle', () => {
 
     lifecycle.handleReadyToShow(window, ['flow-state'])
 
+    expect(window.show).toHaveBeenCalledOnce()
+    expect(setBounds).toHaveBeenCalledWith({ width: 1400, height: 900 })
+  })
+
+  it('repairs hidden supervisor geometry before showing a normal launch', () => {
+    const setBounds = vi.fn()
+    const window = createWindow({
+      getBounds: vi.fn(() => ({ width: 10, height: 10 })),
+      setBounds,
+    })
+    const lifecycle = createBackgroundWindowLifecycle({
+      getWindow: () => window,
+      createWindow: vi.fn(() => window),
+      isBackgroundEnabled: () => false,
+    })
+
+    lifecycle.handleReadyToShow(window, ['flow-state'])
+
+    expect(setBounds).toHaveBeenCalledWith({ width: 1400, height: 900 })
     expect(window.show).toHaveBeenCalledOnce()
   })
 

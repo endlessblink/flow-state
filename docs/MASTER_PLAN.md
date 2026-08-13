@@ -4,7 +4,7 @@
 
 **Status**: IN PROGRESS (2026-08-13)
 
-The public PWA 1.4.374 runtime, Electron 1.4.378 artifact, local offline/reconnect matrix, and canonical RPC surface are now independently verified. The VPS watchdog had been reporting `canonical-authority-missing=3/1` because it checked the obsolete 10-argument patch RPC signature; production has the current 11-argument wrapper, and the corrected read-only watchdog is deployed. The installed Electron lifecycle is now live-proven on 1.4.378; the required authenticated PWA↔Electron mutation/readback proof remains open, and 1.4.378 is not yet public.
+The public PWA and Electron 1.4.378 artifacts, local offline/reconnect matrix, and canonical RPC surface are now independently verified. The VPS watchdog had been reporting `canonical-authority-missing=3/1` because it checked the obsolete 10-argument patch RPC signature; production has the current 11-argument wrapper, and the corrected read-only watchdog is deployed. Installed Electron lifecycle proof passes on 1.4.378, and the public PWA boot/standalone/offline suite passes 4/4. The required authenticated PWA↔Electron mutation/readback proof remains open because the authorized live credential gate is not configured.
 
 **Release 1.4.375 work (2026-08-13)**: A real installed 1.4.374 service launch kept the Electron window at its hidden 10x10 initial bounds when renderer readiness was delayed. Normal production launches now present the managed window immediately after document load begins, preserving hidden background launches; focused lifecycle and integration regressions pass. Installed 1.4.375 visibility and authenticated workspace usability remain required before closeout.
 

@@ -613,7 +613,11 @@ async function handleGetTaskInventory(url, res) {
   const result = parsed.mode === 'page'
     ? await readTaskInventoryPage(ctx, input)
     : await readCompleteTaskInventory(ctx, input)
-  return send(res, result.error ? 502 : 200, result)
+   return send(
+     res,
+     result.error?.code === 'inventory_auth_required' ? 401 : (result.error ? 502 : 200),
+     result,
+   )
 }
 
 async function handleGetDeviceSyncReceipts(res) {

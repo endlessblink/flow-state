@@ -10,6 +10,18 @@ const MAX_CONSISTENCY_RETRIES = 3
 const INVENTORY_SCOPE = 'all open tasks visible to the authenticated user'
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+function isAuthFailure(error) {
+  const code = String(error?.code || '').toLowerCase()
+  const message = String(error?.message || error || '').toLowerCase()
+  return error?.status === 401
+    || error?.status === 403
+    || code === 'pgrst301'
+    || code.includes('jwt')
+    || message.includes('jwt')
+    || message.includes('refresh token')
+    || message.includes('not signed in')
+}
+
 function scopeKey(context) {
   return context.activeWorkspaceId == null
     ? `personal:${context.userId}`
@@ -229,7 +241,12 @@ async function readCompleteTaskInventory(context, input, deps = {}) {
         complete: false,
         items: [],
         page: { limit: input.limit, nextCursor: null, hasMore: false },
-        error: { code: 'inventory_consistency_unavailable', message: 'inventory change sequence is unavailable' },
+        error: {
+          code: isAuthFailure(before.error) ? 'inventory_auth_required' : 'inventory_consistency_unavailable',
+          message: isAuthFailure(before.error)
+            ? 'authenticated session must be renewed before inventory can be read'
+            : 'inventory change sequence is unavailable',
+        },
       }
     }
     const invalid = await findInvalidRow(context)
@@ -240,9 +257,13 @@ async function readCompleteTaskInventory(context, input, deps = {}) {
         items: [],
         page: { limit: input.limit, nextCursor: null, hasMore: false },
         error: {
-          code: invalid.error ? 'inventory_consistency_unavailable' : 'invalid_inventory_row',
+          code: invalid.error
+            ? (isAuthFailure(invalid.error) ? 'inventory_auth_required' : 'inventory_consistency_unavailable')
+            : 'invalid_inventory_row',
           message: invalid.error
-            ? 'inventory validity check is unavailable'
+            ? (isAuthFailure(invalid.error)
+              ? 'authenticated session must be renewed before inventory can be read'
+              : 'inventory validity check is unavailable')
             : 'inventory contains legacy rows with missing membership fields',
         },
       }
@@ -291,7 +312,12 @@ async function readCompleteTaskInventory(context, input, deps = {}) {
         complete: false,
         items: [...itemsById.values()],
         page: terminalPage.page,
-        error: { code: 'inventory_consistency_unavailable', message: 'inventory change sequence is unavailable' },
+        error: {
+          code: isAuthFailure(after.error) ? 'inventory_auth_required' : 'inventory_consistency_unavailable',
+          message: isAuthFailure(after.error)
+            ? 'authenticated session must be renewed before inventory can be read'
+            : 'inventory change sequence is unavailable',
+        },
       }
     }
     if (before.value !== after.value) continue

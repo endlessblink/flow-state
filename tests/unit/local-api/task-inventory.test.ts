@@ -123,6 +123,23 @@ describe('Local API complete task inventory', () => {
     expect(result.error.code).toBe('inventory_page_failed')
   })
 
+  it('classifies an expired authenticated session separately from an unavailable sequence', async () => {
+    const { readCompleteTaskInventory } = loadInventoryModule()
+    const result = await readCompleteTaskInventory(
+      { userId: 'user-1', activeWorkspaceId: null },
+      { limit: 25, appVersion: '1.4.367', capturedAt: '2026-08-13T09:00:00.000Z' },
+      stableDeps(async () => ({ data: [], error: { code: 'PGRST301', message: 'JWT expired' } }), {
+        readSequence: async () => ({ value: null, error: { code: 'PGRST301', message: 'JWT expired' } }),
+      }),
+    )
+
+    expect(result.complete).toBe(false)
+    expect(result.error).toEqual({
+      code: 'inventory_auth_required',
+      message: 'authenticated session must be renewed before inventory can be read',
+    })
+  })
+
   it('returns a truthful page receipt when more rows exist', async () => {
     const { readTaskInventoryPage } = loadInventoryModule()
     const data = Array.from({ length: 26 }, (_, index) => row(index))

@@ -13,6 +13,7 @@ describe('Electron main background-window integration', () => {
     expect(source).toContain("window.on('close', (event) => {")
     expect(source).toContain('backgroundLifecycle.handleClose(event, window)')
     expect(source).toContain('backgroundThrottling: false')
+    expect(source).toContain('if (!backgroundEnabled) window.show()')
   })
 
   it('shows the same managed window for activate and second-instance', () => {

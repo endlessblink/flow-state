@@ -292,6 +292,7 @@ function createWindow(): BrowserWindow {
     const indexPath = join(__dirname, '../dist/index.html')
     if (existsSync(indexPath)) {
       window.loadFile(indexPath)
+      if (!backgroundEnabled) window.show()
     } else {
       console.error('dist/index.html not found — run npm run build first')
       app.quit()

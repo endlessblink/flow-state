@@ -24,6 +24,23 @@ describe('production deployment convergence gates', () => {
     expect(run('scripts/deploy/verify-build.sh', build)).not.toBe(0)
   })
 
+  it('fails when a stale worker does not precache the current index bundle', () => {
+    const build = mkdtempSync(join(tmpdir(), 'flowstate-stale-worker-'))
+    mkdirSync(join(build, 'assets'))
+    writeFileSync(join(build, 'index.html'), '<script src="assets/index-current.js"></script>')
+    writeFileSync(join(build, 'assets', 'index-current.js'), '')
+    writeFileSync(join(build, 'sw.js'), 'precacheAndRoute([{url:"assets/index-previous.js"}])')
+    writeFileSync(join(build, 'manifest.webmanifest'), JSON.stringify({
+      name: 'FlowState',
+      short_name: 'FlowState',
+      start_url: '/',
+      display: 'standalone',
+      icons: [],
+    }))
+
+    expect(run('scripts/deploy/verify-build.sh', build)).not.toBe(0)
+  })
+
   it('fails manifest validation when the production manifest is absent', () => {
     const missing = join(mkdtempSync(join(tmpdir(), 'flowstate-manifest-')), 'manifest.webmanifest')
 

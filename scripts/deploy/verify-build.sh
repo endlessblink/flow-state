@@ -87,6 +87,18 @@ else
   err "No JavaScript bundles found in $BUILD_DIR/assets/"
 fi
 
+# The worker must belong to this exact build, not merely exist beside it. An
+# additive upload can otherwise publish fresh index.html while leaving an old
+# worker that precaches a previous hashed entrypoint and hangs first boot.
+MAIN_JS=$(grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' "$BUILD_DIR/index.html" | head -1 || true)
+if [ -z "$MAIN_JS" ]; then
+  err "index.html does not reference a hashed index JavaScript bundle"
+elif grep -Fq "$MAIN_JS" "$BUILD_DIR/sw.js"; then
+  ok "Service worker references the current index bundle: $MAIN_JS"
+else
+  err "Service worker does not reference the current index bundle: $MAIN_JS"
+fi
+
 echo ""
 
 # Check CSS bundles

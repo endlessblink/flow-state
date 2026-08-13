@@ -86,7 +86,7 @@ if (!gotLock) {
     process.exit(0);
 }
 let mainWindow = null;
-const backgroundEnabled = (0, backgroundWindowLifecycle_1.isBackgroundLaunch)(process.argv) || process.env.FLOWSTATE_SUPERVISED === '1';
+const backgroundEnabled = (0, backgroundWindowLifecycle_1.isBackgroundLaunch)(process.argv);
 const backgroundLifecycle = (0, backgroundWindowLifecycle_1.createBackgroundWindowLifecycle)({
     getWindow: () => mainWindow,
     createWindow,

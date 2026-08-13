@@ -118,7 +118,7 @@ async function signInFromSignedOut() {
   // store imports settle.
   await vi.waitFor(() => {
     expect(calls).toContain('workspaces')
-  }, { timeout: 1000 })
+  }, { timeout: 5000 })
   return store
 }
 

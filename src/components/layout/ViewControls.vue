@@ -5,6 +5,7 @@
     <button
       class="filter-toggle"
       :class="{ active: showFilters }"
+      :aria-label="showFilters ? 'Hide filters' : 'Show filters'"
       title="Toggle filters"
       @click="showFilters = !showFilters"
     >
@@ -16,6 +17,7 @@
       v-if="hideDoneTasks !== undefined"
       class="done-toggle"
       :class="{ active: hideDoneTasks }"
+      :aria-label="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
       :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
       @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
     >

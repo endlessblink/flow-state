@@ -313,7 +313,7 @@ describe('cacheTasks / getCachedTasks', () => {
     expect(projection.pendingTaskIds).toEqual(new Set([task.id]))
   })
 
-  it('fails closed when a durable task operation has no exact owner scope', async () => {
+  it('quarantines an unowned durable task operation without crashing the projection', async () => {
     const task = makeTask({ id: 'task-unscoped' })
     await getWriteQueueDB().operations.add({
       status: 'pending',
@@ -325,9 +325,18 @@ describe('cacheTasks / getCachedTasks', () => {
       payload: { title: 'Unknown owner edit' },
     })
 
-    await expect(overlayPendingTaskWrites([task], {
+    const projection = await overlayPendingTaskWrites([task], {
       scope: { userId: 'user-1', workspaceId: null },
-    })).rejects.toThrow('unscoped durable task operation')
+    })
+
+    expect(projection.tasks).toEqual([task])
+    expect(projection.pendingTaskIds).toEqual(new Set())
+    await expect(getWriteQueueDB().operations.toArray()).resolves.toEqual([
+      expect.objectContaining({
+        status: 'conflict',
+        lastError: 'Operation quarantined because its owner or workspace is unknown',
+      }),
+    ])
   })
 
   it('repairs a legacy personal task operation for the matching authenticated user', async () => {

@@ -579,7 +579,10 @@ export function useAppInitialization() {
             try {
                 const { getWriteQueueDB } = await import('@/services/offline/writeQueueDB')
                 const queueDB = getWriteQueueDB()
-                const { repairLegacyOperationScope } = await import('@/services/offline/writeQueueDB')
+                const {
+                    repairLegacyOperationScope,
+                    quarantineUnscopedOperations,
+                } = await import('@/services/offline/writeQueueDB')
                 const pendingOps = await queueDB.operations
                     .where('status')
                     .anyOf(['pending', 'failed', 'syncing'])
@@ -592,15 +595,17 @@ export function useAppInitialization() {
                     userId: scope.userId,
                     workspaceId: scope.kind === 'workspace' ? scope.workspaceId : null,
                 })
+                await quarantineUnscopedOperations({
+                    userId: scope.userId,
+                    workspaceId: scope.kind === 'workspace' ? scope.workspaceId : null,
+                })
                 const repairedPendingOps = await queueDB.operations
                     .where('status')
                     .anyOf(['pending', 'failed', 'syncing'])
                     .toArray()
                 pendingOps.splice(0, pendingOps.length, ...repairedPendingOps)
                 const scopedPendingOps = pendingOps.filter((op) => {
-                    if (!op.userId || op.workspaceId === undefined) {
-                        throw new Error('Reconnect recovery found an unscoped durable operation')
-                    }
+                    if (!op.userId || op.workspaceId === undefined) return false
                     return op.userId === scope.userId
                         && op.workspaceId === (scope.kind === 'workspace' ? scope.workspaceId : null)
                 })

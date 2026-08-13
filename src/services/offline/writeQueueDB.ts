@@ -236,6 +236,40 @@ export async function repairLegacyOperationScope(scope: {
 }
 
 /**
+ * Keep legacy operations that still lack a provable scope out of the active
+ * replay/projection path without deleting the user's durable intent.
+ */
+export async function quarantineUnscopedOperations(scope: {
+  userId: string
+  workspaceId: string | null
+}): Promise<number> {
+  const table = getWriteQueueDB().operations;
+  const candidates = await table
+    .where("status")
+    .anyOf(["pending", "failed", "syncing"])
+    .toArray();
+  let quarantined = 0;
+
+  for (const operation of candidates) {
+    if (!operation.id) continue;
+    if (operation.userId && operation.userId !== scope.userId) continue;
+    if (operation.userId && operation.workspaceId !== undefined) continue;
+
+    await markConflict(operation.id, 0, {
+      code: "unscoped_durable_operation",
+      userId: operation.userId ?? null,
+      workspaceId: operation.workspaceId ?? null,
+    });
+    await updateOperation(operation.id, {
+      lastError: "Operation quarantined because its owner or workspace is unknown",
+    });
+    quarantined++;
+  }
+
+  return quarantined;
+}
+
+/**
  * Get all pending operations ready for sync
  *
  * Returns operations that are:

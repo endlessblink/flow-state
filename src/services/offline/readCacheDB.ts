@@ -324,8 +324,8 @@ export interface PendingTaskProjection {
 
 /**
  * Apply the durable task write queue over an arbitrary canonical projection.
- * Exact-scope mode fails closed for legacy/unscoped operations: catch-up must
- * never advance past local intent whose owner or workspace cannot be proven.
+ * Exact-scope mode fails closed for legacy/unscoped operations: ambiguous rows
+ * are quarantined as conflicts so catch-up never replays unknown local intent.
  */
 export async function overlayPendingTaskWrites(
   baseTasks: Task[],
@@ -336,8 +336,13 @@ export async function overlayPendingTaskWrites(
 ): Promise<PendingTaskProjection> {
   const { getWriteQueueDB } = await import('@/services/offline/writeQueueDB')
   if (options.scope) {
-    await import('@/services/offline/writeQueueDB').then(({ repairLegacyOperationScope }) =>
-      repairLegacyOperationScope(options.scope!))
+    await import('@/services/offline/writeQueueDB').then(async ({
+      repairLegacyOperationScope,
+      quarantineUnscopedOperations,
+    }) => {
+      await repairLegacyOperationScope(options.scope!)
+      await quarantineUnscopedOperations(options.scope!)
+    })
   }
   const allUnsynced = await getWriteQueueDB().operations
     .where('status')
@@ -348,9 +353,7 @@ export async function overlayPendingTaskWrites(
     .filter((op): op is WriteOperation => op.entityType === 'task')
     .filter((op) => {
       if (!options.scope) return true
-      if (!op.userId || op.workspaceId === undefined) {
-        throw new Error('Canonical authority found an unscoped durable task operation')
-      }
+      if (!op.userId || op.workspaceId === undefined) return false
       return op.userId === options.scope.userId
         && op.workspaceId === options.scope.workspaceId
     })

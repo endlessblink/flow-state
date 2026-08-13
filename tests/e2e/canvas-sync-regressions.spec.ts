@@ -198,6 +198,14 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
       .from("tasks")
       .delete()
       .eq("recurrence_parent_id", CALENDAR_RECURRING_TASK.id);
+    // The recurring probe parent receives a fresh UUID below. Remove the
+    // previous randomized parent by its scoped fixture identity as well, or
+    // serial tests can load stale duplicate series state.
+    await admin
+      .from("tasks")
+      .delete()
+      .eq("user_id", userId)
+      .eq("title", OFFLINE_RECURRING_TASK.title);
     await admin
       .from("tombstones")
       .delete()

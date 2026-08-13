@@ -101,40 +101,11 @@
 </template>
 
 <script setup lang="ts">
-// BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
-defineOptions({ inheritAttrs: false })
-
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import BaseButton from './BaseButton.vue'
 import { isTextAreaOrContentEditable } from '@/utils/dom'
-
-interface Props {
-  isOpen: boolean
-  title?: string
-  description?: string
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
-  variant?: 'default' | 'danger' | 'warning' | 'success'
-  closeOnOverlayClick?: boolean
-  closeOnEscape?: boolean
-  submitOnEnter?: boolean
-  showHeader?: boolean
-  showFooter?: boolean
-  showCloseButton?: boolean
-  showCancelButton?: boolean
-  showConfirmButton?: boolean
-  cancelText?: string
-  confirmText?: string
-  closeAriaLabel?: string
-  loading?: boolean
-  confirmDisabled?: boolean
-  titleClass?: string
-  descriptionClass?: string
-  bodyClass?: string
-  footerClass?: string
-  trapFocus?: boolean
-}
 
 const props = withDefaults(defineProps<Props>(), {
   title: undefined,
@@ -170,6 +141,35 @@ const emit = defineEmits<{
   afterClose: []
 }>()
 
+// BUG-1724: Teleport root can't auto-inherit attrs (class) — disable to suppress Vue warning
+defineOptions({ inheritAttrs: false })
+
+interface Props {
+  isOpen: boolean
+  title?: string
+  description?: string
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
+  variant?: 'default' | 'danger' | 'warning' | 'success'
+  closeOnOverlayClick?: boolean
+  closeOnEscape?: boolean
+  submitOnEnter?: boolean
+  showHeader?: boolean
+  showFooter?: boolean
+  showCloseButton?: boolean
+  showCancelButton?: boolean
+  showConfirmButton?: boolean
+  cancelText?: string
+  confirmText?: string
+  closeAriaLabel?: string
+  loading?: boolean
+  confirmDisabled?: boolean
+  titleClass?: string
+  descriptionClass?: string
+  bodyClass?: string
+  footerClass?: string
+  trapFocus?: boolean
+}
+
 const { t } = useI18n()
 
 // I18n defaults (if props not provided)
@@ -201,7 +201,6 @@ const handleOverlayClick = () => {
     handleClose()
   }
 }
-
 
 // Handle keyboard events (Escape and Enter)
 const handleEscapeKey = (event: KeyboardEvent) => {

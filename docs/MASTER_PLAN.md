@@ -1,5 +1,11 @@
 # FlowState MASTER_PLAN.md
 
+### SYNC-REMAINING: Cross-client convergence is still not user-closed
+
+**Status**: IN PROGRESS (2026-08-13)
+
+The public PWA 1.4.374 runtime, Electron 1.4.374 artifact, local offline/reconnect matrix, and canonical RPC surface are now independently verified. The VPS watchdog had been reporting `canonical-authority-missing=3/1` because it checked the obsolete 10-argument patch RPC signature; production has the current 11-argument wrapper, and the corrected read-only watchdog is deployed. This removes a false alert only; the required authenticated PWA↔Electron mutation/readback proof remains open, as does proving the installed user-facing close/minimize behavior.
+
 ### BUG-2018: Electron restarts and reopens after a normal window close
 
 **Priority**: P1 | **Status**: IN PROGRESS (2026-08-13)

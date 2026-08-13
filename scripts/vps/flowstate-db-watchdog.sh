@@ -96,7 +96,7 @@ if ! canonical_authority=$(q_checked "SELECT
    + (to_regclass('public.canonical_operation_previews') IS NOT NULL)::int
    + (to_regclass('public.canonical_change_log') IS NOT NULL)::int)::text
   || '/'
-  || ((to_regprocedure('public.flowstate_patch_task_v1(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid)') IS NOT NULL)::int
+  || ((to_regprocedure('public.flowstate_patch_task_v1(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid,text)') IS NOT NULL)::int
    + (to_regprocedure('public.flowstate_activate_notion_task_v1(text,jsonb,jsonb,jsonb,boolean,text,timestamptz)') IS NOT NULL)::int)::text"); then
   ANOMALIES+=("canonical-schema-query-failed=authority")
   canonical_ready=false

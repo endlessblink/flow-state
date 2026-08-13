@@ -74,7 +74,7 @@ describe('production DB lifecycle watchdog contract', () => {
     expect(watchdog).toContain("to_regclass('public.canonical_operations')")
     expect(watchdog).toContain("to_regclass('public.canonical_operation_previews')")
     expect(watchdog).toContain("to_regclass('public.canonical_change_log')")
-    expect(watchdog).toContain("to_regprocedure('public.flowstate_patch_task_v1(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid)')")
+    expect(watchdog).toContain("to_regprocedure('public.flowstate_patch_task_v1(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid,text)')")
     expect(watchdog).toContain("to_regprocedure('public.flowstate_activate_notion_task_v1(text,jsonb,jsonb,jsonb,boolean,text,timestamptz)')")
     expect(watchdog).toContain('canonical-authority-missing=')
     expect(watchdog).toContain('canonical-triggers-missing=')

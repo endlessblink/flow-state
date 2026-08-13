@@ -335,6 +335,10 @@ export async function overlayPendingTaskWrites(
   } = {},
 ): Promise<PendingTaskProjection> {
   const { getWriteQueueDB } = await import('@/services/offline/writeQueueDB')
+  if (options.scope) {
+    await import('@/services/offline/writeQueueDB').then(({ repairLegacyOperationScope }) =>
+      repairLegacyOperationScope(options.scope!))
+  }
   const allUnsynced = await getWriteQueueDB().operations
     .where('status')
     .anyOf(['pending', 'failed', 'syncing'])

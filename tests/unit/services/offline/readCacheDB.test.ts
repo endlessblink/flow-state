@@ -330,6 +330,25 @@ describe('cacheTasks / getCachedTasks', () => {
     })).rejects.toThrow('unscoped durable task operation')
   })
 
+  it('repairs a legacy personal task operation for the matching authenticated user', async () => {
+    const task = makeTask({ id: 'task-legacy-personal' })
+    await getWriteQueueDB().operations.add({
+      status: 'pending', retryCount: 0, createdAt: Date.now(),
+      entityType: 'task', operation: 'update', entityId: task.id,
+      payload: { title: 'Legacy personal edit', user_id: 'user-1' },
+      userId: 'user-1',
+    })
+
+    const projection = await overlayPendingTaskWrites([task], {
+      scope: { userId: 'user-1', workspaceId: null },
+    })
+
+    expect(projection.tasks[0]?.title).toBe('Legacy personal edit')
+    await expect(getWriteQueueDB().operations.toArray()).resolves.toEqual([
+      expect.objectContaining({ userId: 'user-1', workspaceId: null }),
+    ])
+  })
+
   it('applies pending canvas geometry writes over the read cache', async () => {
     const cachedTask = makeTask({
       id: 'task-pending-geometry',

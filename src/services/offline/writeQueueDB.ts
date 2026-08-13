@@ -192,6 +192,49 @@ export async function enqueueOperation(
   return { ...cloned, id };
 }
 
+/** Repair legacy queue rows without weakening cross-account or workspace isolation. */
+export async function repairLegacyOperationScope(scope: {
+  userId: string
+  workspaceId: string | null
+}): Promise<number> {
+  const table = getWriteQueueDB().operations;
+  const candidates = await table
+    .where("status")
+    .anyOf(["pending", "failed", "syncing"])
+    .toArray();
+  let repaired = 0;
+
+  for (const operation of candidates) {
+    const payloadUserId = typeof operation.payload?.user_id === "string"
+      ? operation.payload.user_id
+      : undefined;
+    const payloadWorkspaceId = Object.prototype.hasOwnProperty.call(operation.payload ?? {}, "workspace_id")
+      ? (operation.payload.workspace_id as string | null)
+      : undefined;
+    const userId = operation.userId ?? (payloadUserId === scope.userId ? scope.userId : undefined);
+    if (!operation.id || userId !== scope.userId) continue;
+
+    let workspaceId = operation.workspaceId;
+    if (workspaceId === undefined && payloadWorkspaceId !== undefined) {
+      workspaceId = payloadWorkspaceId;
+    } else if (workspaceId === undefined && scope.workspaceId === null) {
+      // Legacy personal operations had no workspace column; personal scope is
+      // safe to restore only while the matching user is authenticated.
+      workspaceId = null;
+    }
+    if (workspaceId === undefined) continue;
+
+    const updates: Partial<WriteOperation> = {};
+    if (!operation.userId) updates.userId = userId;
+    if (operation.workspaceId === undefined) updates.workspaceId = workspaceId;
+    if (Object.keys(updates).length > 0) {
+      await table.update(operation.id, updates);
+      repaired++;
+    }
+  }
+  return repaired;
+}
+
 /**
  * Get all pending operations ready for sync
  *

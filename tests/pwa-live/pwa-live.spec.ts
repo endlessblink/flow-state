@@ -51,12 +51,22 @@ function attachFailureCollectors(page: Page) {
 }
 
 async function readAppState(page: Page) {
-  return await page.evaluate(async () => {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      return await page.evaluate(async () => {
     const registration = await navigator.serviceWorker?.ready.catch(() => null)
     const manifestHref = document.querySelector('link[rel="manifest"]')?.getAttribute('href') ?? null
+    const fetchWithRetry = async (url: string) => {
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const response = await fetch(url, { cache: 'no-store' }).catch(() => null)
+        if (response?.ok) return response
+        await new Promise(resolve => setTimeout(resolve, 250))
+      }
+      return null
+    }
     const [manifestResponse, serviceWorkerResponse] = await Promise.all([
-      manifestHref ? fetch(manifestHref, { cache: 'no-store' }).catch(() => null) : Promise.resolve(null),
-      fetch('/sw.js', { cache: 'no-store' }).catch(() => null),
+      manifestHref ? fetchWithRetry(manifestHref) : Promise.resolve(null),
+      fetchWithRetry('/sw.js'),
     ])
     const manifestText = manifestResponse ? await manifestResponse.text().catch(() => '') : ''
     const serviceWorkerText = serviceWorkerResponse ? await serviceWorkerResponse.text().catch(() => '') : ''
@@ -78,7 +88,13 @@ async function readAppState(page: Page) {
       serviceWorkerHasWorkbox: /workbox/i.test(serviceWorkerText),
       serviceWorkerScriptUrl: registration?.active?.scriptURL ?? null,
     }
-  })
+      })
+    } catch (error) {
+      if (attempt === 3) throw error
+      await page.waitForTimeout(500)
+    }
+  }
+  throw new Error('Unable to read stable PWA runtime state')
 }
 
 function expectRuntimeAssets(state: Awaited<ReturnType<typeof readAppState>>) {

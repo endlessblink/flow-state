@@ -14,7 +14,8 @@ Environment=FLOWSTATE_UPDATE_EXIT_CODE=75
 # Keep the supervised renderer visible on login. The background flag creates a
 # 10x10 hidden window under KDE, so the user sees a running process but no app.
 ExecStart=%h/.local/bin/FlowState-launch.sh --user-data-dir=%h/.config/flow-state
-Restart=always
+# A normal user close exits successfully and must stay closed; crashes still restart.
+Restart=on-failure
 RestartPreventExitStatus=75
 RestartSec=5s
 TimeoutStopSec=20s

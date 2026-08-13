@@ -23,12 +23,13 @@ describe('FlowState Electron background service', () => {
     expect(service).not.toContain('ExecStart=%h/.local/bin/flowstate ')
   })
 
-  it('restarts crashes with a bound while reserving a distinct update handoff exit', () => {
+  it('restarts crashes while leaving a normal user close closed', () => {
     const service = readFileSync(servicePath, 'utf8')
 
     expect(service).toContain('Environment=FLOWSTATE_SUPERVISED=1')
     expect(service).toContain('Environment=FLOWSTATE_UPDATE_EXIT_CODE=75')
-    expect(service).toContain('Restart=always')
+    expect(service).toContain('Restart=on-failure')
+    expect(service).not.toContain('Restart=always')
     expect(service).toContain('RestartPreventExitStatus=75')
     expect(service).toMatch(/RestartSec=\d+s/)
     expect(service).toMatch(/StartLimitIntervalSec=\d+s/)

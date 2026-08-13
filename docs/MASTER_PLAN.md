@@ -1,5 +1,15 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2018: Electron restarts and reopens after a normal window close
+
+**Priority**: P1 | **Status**: IN PROGRESS (2026-08-13)
+
+**User repro**: Pressing the FlowState window close control, or trying to minimize the desktop app, causes FlowState to appear again instead of remaining closed or minimized.
+
+**Root cause**: The always-on Electron systemd service used `Restart=always`, so a normal successful user exit was treated like a crash and immediately launched a new visible instance.
+
+**Current fix**: The supervised service now uses `Restart=on-failure`, preserving crash recovery while allowing a normal user close to remain closed; the service contract and Electron lifecycle tests cover the behavior. Installed-service and real window close/minimize verification remain open for release 1.4.370.
+
 ### BUG-2006: Electron renderer can remain on the loading screen forever
 
 **Priority**: P0 | **Status**: IN PROGRESS (2026-08-10)

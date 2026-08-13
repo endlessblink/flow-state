@@ -44,6 +44,8 @@ describe('production DB lifecycle watchdog contract', () => {
     expect(watchdog).toContain("to_regclass('public.device_sync_receipts')")
     expect(watchdog).toContain('device-sync-query-failed=')
     expect(watchdog).toContain('device-runtime-version-drift=')
+    expect(watchdog).toContain('device-sync-runtime-missing=')
+    expect(watchdog).toContain('count(DISTINCT receipt.runtime)')
     expect(watchdog).toContain('device-task-writes-unresolved=')
     expect(watchdog).toContain("receipt.runtime='pwa'")
     expect(watchdog).toContain("receipt.runtime='electron'")

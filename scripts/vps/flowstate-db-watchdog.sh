@@ -208,6 +208,17 @@ if ! device_receipt_table=$(q_checked "SELECT COALESCE(to_regclass('public.devic
 elif [ -z "${device_receipt_table:-}" ]; then
   ANOMALIES+=("device-sync-receipts-missing")
 else
+  if ! active_device_runtime_count=$(q_checked "SELECT count(DISTINCT receipt.runtime)
+    FROM public.device_sync_receipts AS receipt
+    WHERE receipt.user_id='$MAIN_USER_ID'
+      AND receipt.runtime IN ('pwa','electron')
+      AND receipt.is_online=true
+      AND receipt.last_seen_at > now()-interval '30 minutes'"); then
+    ANOMALIES+=("device-sync-query-failed=runtime-presence")
+  elif [ "${active_device_runtime_count:-0}" -lt 2 ]; then
+    ANOMALIES+=("device-sync-runtime-missing=$active_device_runtime_count")
+  fi
+
   if ! device_version_count=$(q_checked "SELECT count(*)
     FROM (
       SELECT app_version FROM public.device_sync_receipts AS receipt

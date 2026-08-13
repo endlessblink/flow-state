@@ -4,7 +4,7 @@
 
 **Status**: IN PROGRESS (2026-08-13)
 
-The public PWA 1.4.374 runtime, Electron 1.4.374 artifact, local offline/reconnect matrix, and canonical RPC surface are now independently verified. The VPS watchdog had been reporting `canonical-authority-missing=3/1` because it checked the obsolete 10-argument patch RPC signature; production has the current 11-argument wrapper, and the corrected read-only watchdog is deployed. This removes a false alert only; the required authenticated PWA↔Electron mutation/readback proof remains open, as does proving the installed user-facing close/minimize behavior.
+The public PWA 1.4.374 runtime, Electron 1.4.378 artifact, local offline/reconnect matrix, and canonical RPC surface are now independently verified. The VPS watchdog had been reporting `canonical-authority-missing=3/1` because it checked the obsolete 10-argument patch RPC signature; production has the current 11-argument wrapper, and the corrected read-only watchdog is deployed. The installed Electron lifecycle is now live-proven on 1.4.378; the required authenticated PWA↔Electron mutation/readback proof remains open, and 1.4.378 is not yet public.
 
 **Release 1.4.375 work (2026-08-13)**: A real installed 1.4.374 service launch kept the Electron window at its hidden 10x10 initial bounds when renderer readiness was delayed. Normal production launches now present the managed window immediately after document load begins, preserving hidden background launches; focused lifecycle and integration regressions pass. Installed 1.4.375 visibility and authenticated workspace usability remain required before closeout.
 
@@ -22,7 +22,7 @@ The public PWA 1.4.374 runtime, Electron 1.4.374 artifact, local offline/reconne
 
 **Root cause**: The always-on Electron systemd service used `Restart=always`, so a normal successful user exit was treated like a crash and immediately launched a new visible instance.
 
-**Current fix**: The supervised service now uses `Restart=on-failure`, preserving crash recovery while allowing a normal user close to remain closed; the service contract and Electron lifecycle tests cover the behavior. Installed-service and real window close/minimize verification remain open for release 1.4.370.
+**Current fix**: The supervised service now uses `Restart=on-failure`, preserving crash recovery while allowing a normal user close to remain closed; the service contract and Electron lifecycle tests cover the behavior. Installed 1.4.378 was then verified live: the authenticated workspace window rendered at 1400x900, minimized and restored correctly, and a PID-confirmed close left the service inactive with no automatic reopen. The release remains unpushed pending the external release gate.
 
 ### BUG-2006: Electron renderer can remain on the loading screen forever
 

@@ -29,7 +29,10 @@ const isTauri =
 const isCapacitor = process.env.CAPACITOR_PLATFORM !== undefined
 
 // TASK-1715: Check if building for Electron (file:// needs relative base)
-const isElectron = process.env.ELECTRON_BUILD !== undefined
+// Treat only the explicit build flag as Electron. CI/deploy shells may carry
+// ELECTRON_BUILD=false while rebuilding the web/PWA surface after packaging;
+// presence-only detection would silently disable the service-worker build.
+const isElectron = process.env.ELECTRON_BUILD === 'true'
 
 // FEATURE-1194: Read version from package.json for injection into app
 const packageVersion = JSON.parse(

@@ -61,6 +61,6 @@ describe('AI chat startup sync contract', () => {
     )
 
     expect(viteConfig).toContain("base: isElectron ? './' : '/'")
-    expect(viteConfig).toContain("process.env.ELECTRON_BUILD !== undefined")
+    expect(viteConfig).toContain("process.env.ELECTRON_BUILD === 'true'")
   })
 })

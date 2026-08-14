@@ -140,7 +140,9 @@ export function useCanvasOrchestrator() {
     // --- END ZOOM PERF INSTRUMENTATION ---
 
     // --- 2. Computed Data ---
-    const canvasSourceTasks = computed(() => taskStore.tasksWithCanvasPosition)
+    // Feed the projection the full task store. Date-smart groups must be able
+    // to render Board tasks that do not have a persisted canvas position yet.
+    const canvasSourceTasks = computed(() => taskStore.tasks)
 
     // Pass the live Pinia taskStore reference (not a plain-object getter wrapper)
     // so consumer computeds get native Pinia tracking on `hideCanvasDoneTasks` /

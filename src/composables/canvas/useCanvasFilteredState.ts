@@ -1,7 +1,10 @@
 import { computed, type Ref } from 'vue'
 import type { Task } from '@/types/tasks'
+import type { CanvasGroup } from '@/types/canvas'
 
 import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
+import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
+import { CANVAS } from '@/constants/canvas'
 
 // Accept any object exposing the two reactive booleans. Pass the live Pinia
 // taskStore here (not a plain-object getter wrapper) so reads inside the
@@ -9,11 +12,6 @@ import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 interface TaskStoreSettings {
     hideCanvasDoneTasks: boolean
     hideCanvasOverdueTasks: boolean
-}
-
-interface CanvasGroup {
-    id: string
-    position: { x: number; y: number; width: number; height: number }
 }
 
 interface CanvasStore {
@@ -68,16 +66,44 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
         // causing Vue Flow to not receive updated parentNode, breaking group dragging
         // BUG-1365: Added t.status to hash — without it, status changes (e.g. marking done → auto-archive)
         // might not invalidate the cache, causing stale canvas nodes to linger
-        const currentHash = tasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}:${t.parentId || ''}:${t.status || ''}:${t.updatedAt ? new Date(t.updatedAt).getTime() : ''}`).join('|')
+        const groupHash = (canvasStore.groups || [])
+            .map(group => `${group.id}:${group.name}:${group.isVisible}:${group.position?.x || ''}:${group.position?.y || ''}`)
+            .join('|')
+        const currentHash = `${tasks.map(t => `${t.id}:${t.title}:${t.description || ''}:${t.dueDate || ''}:${t.canvasPosition?.x || ''}:${t.canvasPosition?.y || ''}:${t.parentId || ''}:${t.status || ''}:${t.updatedAt ? new Date(t.updatedAt).getTime() : ''}`).join('|')}##${groupHash}`
 
         if (currentHash === lastCanvasTasksHash && lastCanvasTasks.length > 0) {
             return lastCanvasTasks
         }
 
-        const result = tasks.filter(task => {
-            const pos = task.canvasPosition
-            return pos && typeof pos.x === 'number' && typeof pos.y === 'number'
-        })
+        const result = tasks
+            .map(task => {
+                if (task.canvasPosition) {
+                    const matchingGroup = task.dueDate
+                        ? findMatchingGroupForDueDate(task.dueDate, canvasStore.groups || [])
+                        : null
+                    if (!matchingGroup || task.parentId === matchingGroup.id) return task
+
+                    return {
+                        ...task,
+                        parentId: matchingGroup.id,
+                    }
+                }
+
+                const matchingGroup = task.dueDate
+                    ? findMatchingGroupForDueDate(task.dueDate, canvasStore.groups || [])
+                    : null
+                if (!matchingGroup?.position) return null
+
+                return {
+                    ...task,
+                    parentId: matchingGroup.id,
+                    canvasPosition: {
+                        x: matchingGroup.position.x + CANVAS.GROUP_PADDING,
+                        y: matchingGroup.position.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
+                    },
+                }
+            })
+            .filter((task): task is Task => task !== null && !!task.canvasPosition)
 
         // ================================================================
         // DUPLICATE DETECTION - Canvas Selector Layer (AUTHORITATIVE)

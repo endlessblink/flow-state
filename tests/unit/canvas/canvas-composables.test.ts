@@ -232,10 +232,25 @@ describe('useCanvasFilteredState — dynamicNodeExtent & filtering', () => {
     expect(tasksWithCanvasPosition.value[0].id).toBe(withPos.id)
   })
 
-  it('11: Canvas orchestrator reads raw canvas-position tasks, not cross-view filteredTasks', () => {
+  it('10b: due-today tasks without canvasPosition project into the Today group', () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const task = makeTask({ id: 'today-task', dueDate: today, canvasPosition: undefined })
+    const todayGroup = makeGroup({ id: 'today-group', name: 'Today' })
+    const tasks = ref<Task[]>([task])
+    const store = makeCanvasStore([todayGroup])
+
+    const { tasksWithCanvasPosition } = useCanvasFilteredState(tasks, store as never)
+    const projected = tasksWithCanvasPosition.value[0]
+
+    expect(projected.id).toBe(task.id)
+    expect(projected.parentId).toBe(todayGroup.id)
+    expect(projected.canvasPosition).toEqual({ x: 20, y: 70 })
+  })
+
+  it('11: Canvas orchestrator reads the raw task store, not cross-view filteredTasks', () => {
     const source = readSource('src/composables/canvas/useCanvasOrchestrator.ts')
 
-    expect(source).toContain('const canvasSourceTasks = computed(() => taskStore.tasksWithCanvasPosition)')
+    expect(source).toContain('const canvasSourceTasks = computed(() => taskStore.tasks)')
     expect(source).toContain('useCanvasFilteredState(canvasSourceTasks, canvasStoreWithTaskStore)')
     expect(source).not.toContain('const filteredTasks = computed(() => taskStore.filteredTasks)')
     expect(source).not.toContain('useCanvasFilteredState(filteredTasks, canvasStoreWithTaskStore)')

@@ -1,5 +1,17 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2024: Keep Today synchronized across Board, Canvas, and Catalogue
+
+**Priority**: P0 | **Status**: IN PROGRESS (2026-08-14) | **Electron target**: 1.4.383
+
+**Goal**: Use one canonical Today task projection so all three views show the exact same task set and shared top-to-bottom order; Canvas uses row-major placement (left to right, then top to bottom), and the installed Electron runtime must pass the same structural and visual gate.
+
+**Completed evidence**: Canonical projection wired into Board, Canvas, and Catalogue; 372 unit files / 4,583 tests pass; type-check, source lint, task-consistency guards, Electron package validation, and the Chromium visual gate pass. The visual gate seeds Today tasks, compares IDs/order in all three views, and saves screenshots.
+
+**Open final gate**: Electron 1.4.383 launches under Xvfb but the temporary packaged runtime crashes after its local sidecar starts; the installed app owns port 5577. Do not mark this task DONE until a user-authenticated Electron run passes the three-view visual gate and the user performs the final verification.
+
+**Failure-class coverage**: data shape, renderer projection, Canvas source hydration, Catalogue grouping, unit regressions, browser visual proof, package build, and updater delivery are covered; installed Electron runtime and production authenticated readback remain open.
+
 ### ~~TASK-2022~~: Synchronize Board and Canvas task ordering (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-08-14) | **Electron build**: 1.4.379

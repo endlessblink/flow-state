@@ -139,6 +139,7 @@ import { runTaskMutationWithSettling } from '@/composables/tasks/settleTaskMutat
 
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import { shouldHideDoneTasksForStatus } from '@/stores/tasks/filterInvariants'
+import { getCanonicalTodayTasks } from '@/utils/todayTaskProjection'
 import type { Task, GroupByType, TaskGroup } from '@/types/tasks'
 
 type CreateTaskDefaults = {
@@ -538,6 +539,10 @@ const groupedTasks = computed((): TaskGroup[] => {
       }
       else buckets.later.push(task)
     })
+
+    // Today is canonical across Board, Canvas, and Catalogue. Keep the other
+    // Catalogue buckets local, but never derive a second Today membership/order.
+    buckets.today = getCanonicalTodayTasks(tasks, hideDoneTasks.value)
 
     const bucketConfig: { key: string; title: string }[] = [
       { key: 'overdue', title: 'Overdue' },

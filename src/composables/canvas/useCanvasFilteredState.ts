@@ -4,7 +4,9 @@ import type { CanvasGroup } from '@/types/canvas'
 
 import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { CANVAS } from '@/constants/canvas'
+import { getCanonicalTodayTaskIds } from '@/utils/todayTaskProjection'
 
 // Accept any object exposing the two reactive booleans. Pass the live Pinia
 // taskStore here (not a plain-object getter wrapper) so reads inside the
@@ -75,8 +77,28 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
             return lastCanvasTasks
         }
 
+        const todayTaskIds = getCanonicalTodayTaskIds(
+            tasks,
+            !!canvasStore.taskStore?.hideCanvasDoneTasks,
+        )
         const result = tasks
             .map(task => {
+                const todayGroup = (canvasStore.groups || []).find(group => {
+                    const keyword = detectPowerKeyword(group.name)
+                    return group.isVisible && keyword?.category === 'date' && keyword.keyword === 'today'
+                })
+                if (todayGroup && todayTaskIds.has(task.id)) {
+                    const projectedPosition = task.canvasPosition ?? {
+                        x: todayGroup.position.x + CANVAS.GROUP_PADDING,
+                        y: todayGroup.position.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
+                    }
+                    return {
+                        ...task,
+                        parentId: todayGroup.id,
+                        canvasPosition: projectedPosition,
+                    }
+                }
+
                 if (task.canvasPosition) {
                     const matchingGroup = task.dueDate
                         ? findMatchingGroupForDueDate(task.dueDate, canvasStore.groups || [])

@@ -45,6 +45,28 @@ export interface TaskMove {
   position: { x: number; y: number }
 }
 
+export interface LayoutRect {
+  left: number
+  top: number
+  right: number
+  bottom: number
+}
+
+/** Return true when any two rendered cards occupy the same visible pixels. */
+export function hasOverlappingRects(rects: LayoutRect[]): boolean {
+  for (let i = 0; i < rects.length; i++) {
+    for (let j = i + 1; j < rects.length; j++) {
+      const first = rects[i]
+      const second = rects[j]
+      if (first.left < second.right && first.right > second.left &&
+          first.top < second.bottom && first.bottom > second.top) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
 export interface CanonicalLayoutResult {
   groupMoves: GroupMove[]
   taskMoves: TaskMove[]

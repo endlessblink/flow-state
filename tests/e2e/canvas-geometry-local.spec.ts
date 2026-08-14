@@ -1054,6 +1054,21 @@ test.describe('local canvas geometry regressions', () => {
     }).toBe(true)
   })
 
+  test('repairs overlapping saved cards when Canvas opens', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'startup-repair-group', name: 'Today', x: 100, y: 200, width: 400, height: 1000 },
+    ], [
+      { id: 'startup-repair-a', title: 'Startup repair A', parentId: 'startup-repair-group', x: 120, y: 320 },
+      { id: 'startup-repair-b', title: 'Startup repair B', parentId: 'startup-repair-group', x: 120, y: 320 },
+      { id: 'startup-repair-c', title: 'Startup repair C', parentId: 'startup-repair-group', x: 120, y: 320 },
+    ])
+
+    await expect.poll(async () => {
+      const gaps = await readTaskEdgeGaps(page, ['startup-repair-a', 'startup-repair-b', 'startup-repair-c'])
+      return gaps.gaps.length === 2 && gaps.gaps.every((gap) => gap > 0)
+    }, { timeout: 12_000 }).toBe(true)
+  })
+
   test('rotate orders Today, Tomorrow, then the day after tomorrow on Monday', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'wed', name: 'Wednesday', x: 3000, y: 200 },

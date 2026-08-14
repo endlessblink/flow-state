@@ -353,6 +353,7 @@ import { getClipboardImage, compressImage, uploadCanvasImage } from '@/services/
 import { CanvasIds } from '@/utils/canvas/canvasIds'
 import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
 import { lockManager } from '@/services/canvas/LockManager'
+import { hasOverlappingRects } from '@/composables/canvas/useCanonicalDayGroupLayout'
 
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
@@ -427,10 +428,15 @@ function applyCanonicalMoves(
   const updatedNodes = currentNodes.map((node) => {
     const groupMove = groupMovesByNodeId.get(node.id)
     if (groupMove) {
+      const persistedGroup = canvasStore.groups.find((group) => group.id === groupMove.groupId)
+      const nextParentNode = persistedGroup?.parentGroupId
+        ? CanvasIds.groupNodeId(persistedGroup.parentGroupId)
+        : undefined
       console.log(`[CANONICAL-LAYOUT:VF] ${node.id}: x=${Math.round(node.position?.x ?? 0)} -> ${Math.round(groupMove.position.x)}, w=${Math.round(groupMove.size.width)}, h=${Math.round(groupMove.size.height)}`)
       return {
         ...node,
         position: groupMove.position,
+        parentNode: nextParentNode,
         width: groupMove.size.width,
         height: groupMove.size.height,
         dimensions: {
@@ -490,6 +496,43 @@ function applyCanonicalMoves(
   })
 
   setNodes(updatedNodes.map(toPublicVueFlowNode) as Parameters<typeof setNodes>[0])
+}
+
+let startupLayoutRepairAttempted = false
+let startupLayoutRepairAttempts = 0
+function hasOverlappingRenderedTasks() {
+  const canvasNodes = getNodes.value as unknown as CanvasNodeRecord[]
+  const taskRectsByParent = new Map<string, Array<{ left: number; top: number; right: number; bottom: number }>>()
+  for (const node of canvasNodes) {
+    if (node.type !== 'taskNode' || node.hidden) continue
+    const element = document.querySelector(`.vue-flow__node[data-id="${CSS.escape(node.id)}"]`) as HTMLElement | null
+    const rect = element?.getBoundingClientRect()
+    if (!rect || rect.width <= 0 || rect.height <= 0) continue
+    const parent = node.parentNode ?? '__root__'
+    const list = taskRectsByParent.get(parent) ?? []
+    list.push({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom })
+    taskRectsByParent.set(parent, list)
+  }
+  return [...taskRectsByParent.values()].some((rects) => hasOverlappingRects(rects))
+}
+
+async function repairOverlappingStartupLayout() {
+  if (startupLayoutRepairAttempted) return
+  await nextTick()
+  await nextTick()
+  const renderedTaskCount = (getNodes.value as unknown as CanvasNodeRecord[])
+    .filter((node) => node.type === 'taskNode' && !node.hidden).length
+  if (renderedTaskCount === 0) {
+    startupLayoutRepairAttempts++
+    if (startupLayoutRepairAttempts < 40) {
+      window.setTimeout(() => { void repairOverlappingStartupLayout() }, 250)
+    }
+    return
+  }
+  startupLayoutRepairAttempted = true
+  if (!hasOverlappingRenderedTasks()) return
+  console.warn('[CANVAS:STARTUP-REPAIR] Overlapping task cards detected; applying canonical Tidy layout')
+  await handleTidyLayout()
 }
 
 const dayRotation = useDayGroupRotation({
@@ -1309,6 +1352,8 @@ onMounted(() => {
   window.addEventListener('keydown', onReorderKeyDown)
   window.addEventListener('keyup', onReorderKeyUp)
   window.addEventListener('blur', onWindowBlurResetReorderKey)
+  const repairTimer = window.setTimeout(() => { void repairOverlappingStartupLayout() }, 750)
+  window.addEventListener('beforeunload', () => window.clearTimeout(repairTimer), { once: true })
 })
 onUnmounted(() => {
   document.removeEventListener('paste', handleCanvasPaste)

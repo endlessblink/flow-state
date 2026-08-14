@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest'
 import {
   computeCanonicalLayout,
   computeVisibleTaskCompaction,
+  hasOverlappingRects,
   type DayGroupInput,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
 import { CANVAS } from '@/constants/canvas'
@@ -34,6 +35,29 @@ function tk(id: string, parentId: string, y = 100): Task {
 }
 
 describe('computeCanonicalLayout', () => {
+  it('detects overlapping rendered cards but allows touching edges', () => {
+    expect(hasOverlappingRects([
+      { left: 0, top: 0, right: 100, bottom: 100 },
+      { left: 100, top: 0, right: 200, bottom: 100 },
+    ])).toBe(false)
+    expect(hasOverlappingRects([
+      { left: 0, top: 0, right: 100, bottom: 100 },
+      { left: 80, top: 20, right: 200, bottom: 120 },
+    ])).toBe(true)
+  })
+
+  it('restacks a changed shared order into distinct vertical slots', () => {
+    const group = grp('ordered', 'Today', 0, 0)
+    const tasks = [
+      { ...tk('first', group.id, 600), order: 2 },
+      { ...tk('second', group.id, 300), order: 0 },
+      { ...tk('third', group.id, 300), order: 1 },
+    ]
+    const { taskMoves } = computeCanonicalLayout([{ group, visualPos: { x: 0, y: 0 }, tasks }], [group.id])
+
+    expect(taskMoves.map((move) => move.taskId)).toEqual(['second', 'third', 'first'])
+    expect(taskMoves.map((move) => move.position.y)).toEqual([70, 182, 294])
+  })
   it('compacts visible siblings from the group header after a filtered task is hidden', () => {
     const group = grp('a', 'A', 100, 200)
     const tasks = [tk('t1', 'a', 280), tk('t3', 'a', 520)]

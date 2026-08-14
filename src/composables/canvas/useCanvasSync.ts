@@ -14,7 +14,7 @@ import { positionManager } from '@/services/canvas/PositionManager'
 import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
 import { traceCanvasDone, traceCanvasDoneNodes, traceCanvasDoneTasks } from '@/utils/canvas/doneTrace'
-import { computeVisibleTaskCompaction } from './useCanonicalDayGroupLayout'
+import { computeCanonicalLayout, computeVisibleTaskCompaction } from './useCanonicalDayGroupLayout'
 
 // =============================================================================
 // MODULE-LEVEL HELPERS (defined before composable to ensure availability)
@@ -194,6 +194,40 @@ export function useCanvasSync() {
                 .filter(t => t.canvasPosition)
             const groups = canvasStore.groups || []
             const currentNodes = getNodes.value
+
+            // Board order is the shared sequence. Project it into each canvas
+            // group as row-major positions without persisting geometry from the
+            // read path. Canvas drag remains the only geometry writer.
+            const orderedTaskPositions = new Map<string, { x: number; y: number }>()
+            for (const group of groups) {
+                const groupTasks = tasksToSync.filter((task) => task.parentId === group.id && task.canvasPosition)
+                if (groupTasks.length < 2 || !groupTasks.some((task) => Number.isFinite(task.order))) continue
+
+                const taskSizes = new Map<string, { width: number; height: number }>()
+                const taskPositions = new Map<string, { x: number; y: number }>()
+                for (const task of groupTasks) {
+                    const node = currentNodes.find((candidate: any) => candidate.id === task.id)
+                    if (node?.dimensions?.width && node?.dimensions?.height) {
+                        taskSizes.set(task.id, { width: node.dimensions.width, height: node.dimensions.height })
+                    }
+                    if (task.canvasPosition) taskPositions.set(task.id, task.canvasPosition)
+                }
+
+                const layout = computeCanonicalLayout([{
+                    group,
+                    visualPos: { x: group.position.x, y: group.position.y },
+                    tasks: groupTasks,
+                    taskSizes,
+                    taskPositions,
+                }], [group.id], { taskPositioning: 'fromHeader' })
+                const groupMove = layout.groupMoves[0]
+                for (const move of layout.taskMoves) {
+                    orderedTaskPositions.set(move.taskId, {
+                        x: move.position.x + group.position.x - groupMove.position.x,
+                        y: move.position.y + group.position.y - groupMove.position.y,
+                    })
+                }
+            }
 
             // A filtered task remains in the store at its original slot. Compact
             // the surviving siblings in the render projection so completing a
@@ -492,7 +526,10 @@ export function useCanvasSync() {
                 // PositionManager can be stale outside active interactions.
                 let absolutePos: { x: number; y: number }
                 if (task.canvasPosition) {
-                    absolutePos = { x: task.canvasPosition.x, y: task.canvasPosition.y }
+                    absolutePos = orderedTaskPositions.get(task.id) ?? {
+                        x: task.canvasPosition.x,
+                        y: task.canvasPosition.y,
+                    }
                 } else {
                     continue // Already checked canvasPosition at loop start, but safety first
                 }

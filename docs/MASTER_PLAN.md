@@ -1,14 +1,35 @@
 # FlowState MASTER_PLAN.md
 
-### TASK-2022: Synchronize Board and Canvas task ordering (IN PROGRESS)
+### ~~TASK-2022~~: Synchronize Board and Canvas task ordering (✅ DONE)
 
-**Priority**: P1 | **Status**: IN PROGRESS (2026-08-14)
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-14) | **Electron build**: 1.4.379
 
 **Goal**: Make Board and Canvas share one per-status task order. Canvas groups render that order top-to-bottom and physical left-to-right across rows; Board reorders and Canvas drags update the same order.
 
-**Required proof before closeout**: shared-order unit coverage, row-major canvas layout coverage, focused tests, typecheck/lint for changed source, and an Electron build.
+**Verified**: Shared-order tests (4), canonical canvas layout tests (22), canvas sync read-only tests (6), typecheck, changed-source lint, Electron package validation, and Electron 1.4.379 AppImage/deb build.
 
-**Explicitly not covered**: changing task status semantics, changing canvas group membership rules, or production deployment.
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Row-major and shared-order regressions reproduce the Board/Canvas mismatch in pure layout/order tests | Yes |
+| Data shape / persisted row shape | Yes | Existing `Task.order` field and Board order persistence were reused | Yes |
+| Renderer store/state | Yes | Canvas sync remains read-only; focused sync-readonly suite passes | Yes |
+| Electron main/preload bridge | N/A | Ordering is renderer/store behavior; no bridge path is involved | N/A |
+| Localhost sidecar endpoint | N/A | Ordering does not use the sidecar | N/A |
+| KDE polling/control path | N/A | Ordering does not use KDE integration | N/A |
+| Supabase persistence/realtime | Partial | Existing task update persistence is reused; no live authenticated round-trip was run | No |
+| Updater/runtime version | Yes | Electron 1.4.379 package validation passed | Yes for packaging |
+| Stale live process/cache state | N/A | No live runtime mutation was attempted | No |
+
+**Exact failure mode fixed**: Board used persisted per-column order while Canvas layout sorted by geometry and overflowed column-first, causing the two views to disagree.
+
+**Explicitly not covered**: Live authenticated cross-client persistence, production deployment, or unrelated canvas group membership and geometry recovery failures.
+
+**Regression added for reported repro**: Shared-order helper tests and row-major canonical-layout tests.
+
+**Live boundary proof**: Electron package validation passed; authenticated live mutation/readback remains unverified.
+
 
 ### FEATURE-2021: Start a quiet Pomodoro after returning from a long absence
 

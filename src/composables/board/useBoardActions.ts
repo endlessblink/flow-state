@@ -4,6 +4,7 @@ import type { useTimerStore } from '@/stores/timer'
 import type { BoardViewType } from './useBoardModals'
 import { useFilterDefaults } from '@/composables/tasks/useFilterDefaults'
 import { useToast } from '@/composables/useToast'
+import { getNextTaskOrder } from '@/utils/taskOrdering'
 
 interface BoardActionsDependencies {
     taskStore: ReturnType<typeof useTaskStore>
@@ -126,6 +127,9 @@ export function useBoardActions(deps: BoardActionsDependencies) {
         } else if (viewType === 'priority') {
             taskData.priority = columnKey === 'no_priority' ? undefined : columnKey as Task['priority']
         }
+
+        const existingTasks = taskStore.rawTasks || taskStore.tasks
+        taskData.order = getNextTaskOrder(existingTasks, taskData.status as Task['status'])
 
         return handleWithError(
             () => taskStore.createTaskWithUndo(taskData),

@@ -24,6 +24,7 @@ import { lockManager } from '@/services/canvas/LockManager'
 import { getPlatformDiagnostics } from '@/utils/contextMenuCoordinates'
 import { traceCanvasDoneDragStop, traceCanvasDoneNodes } from '@/utils/canvas/doneTrace'
 import { getUndoSystem } from '@/composables/undoSingleton'
+import { orderTasksByCanvasPosition } from '@/utils/taskOrdering'
 
 // =============================================================================
 // DESCENDANT COLLECTION HELPERS (BUG #1 FIX)
@@ -943,6 +944,23 @@ export function useCanvasInteractions(deps?: {
                         // SINGLE atomic save with all updates
                         await taskStore.updateTask(task.id, dragUpdates, 'DRAG') // BUG-1051: AWAIT to ensure persistence
                         persistedGeometry = true
+
+                        // Keep the Board's per-status sequence aligned with the
+                        // task's new row-major canvas position.
+                        const statusTasks = (taskStore.rawTasks || taskStore.tasks)
+                            .filter((candidate) => candidate.status === task.status)
+                            .map((candidate) => candidate.id === task.id
+                                ? { ...candidate, canvasPosition: absolutePos }
+                                : candidate)
+                        const orderUpdates = orderTasksByCanvasPosition(statusTasks)
+                            .map((candidate, index) => ({ id: candidate.id, updates: { order: index } }))
+                            .filter(({ id, updates }) => {
+                                const current = statusTasks.find((candidate) => candidate.id === id)
+                                return current?.order !== updates.order
+                            })
+                        if (orderUpdates.length > 0) {
+                            await taskStore.bulkUpdateTasksWithUndo(orderUpdates, 'Reorder canvas tasks')
+                        }
                     } finally {
                         // BUG-1209: Delay clearing pendingWrite by 3s so the Supabase realtime echo
                         // (arriving 100ms-2s later) is still blocked by isPendingWrite().

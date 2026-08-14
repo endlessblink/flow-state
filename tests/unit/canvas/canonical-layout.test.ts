@@ -117,19 +117,17 @@ describe('computeCanonicalLayout', () => {
     expect(groupMoves.find((m) => m.groupId === 'b')!.size.width).toBe(CANVAS.DAY_GROUP_WIDTH_1COL)
   })
 
-  it('stacks first 8 tasks in column 0 and tasks 9+ in column 1 with correct X offsets', () => {
+  it('fills overflow rows left-to-right before moving to the next row', () => {
     const ten = Array.from({ length: 10 }, (_, i) => tk(`t${i}`, 'a', i * 10))
     const inputs: DayGroupInput[] = [
       { group: grp('a', 'A', 0, 0), visualPos: { x: 0, y: 0 }, tasks: ten },
     ]
     const { taskMoves } = computeCanonicalLayout(inputs, ['a'])
 
-    // Col 0: x = 0 + PADDING(20) = 20
-    // Col 1: x = 0 + PADDING(20) + TASK_WIDTH(220) + COLUMN_GAP(20) = 260
-    const col0Xs = taskMoves.slice(0, 8).map((t) => t.position.x)
-    const col1Xs = taskMoves.slice(8).map((t) => t.position.x)
-    expect(col0Xs.every((x) => x === 20)).toBe(true)
-    expect(col1Xs.every((x) => x === 260)).toBe(true)
+    expect(taskMoves.slice(0, 2).map((t) => t.position.x)).toEqual([20, 260])
+    expect(taskMoves.slice(0, 2).map((t) => t.position.y)).toEqual([70, 70])
+    expect(taskMoves.slice(2, 4).map((t) => t.position.x)).toEqual([20, 260])
+    expect(taskMoves.slice(2, 4).map((t) => t.position.y)).toEqual([182, 182])
   })
 
   it('can arrange tasks horizontally for the toolbar tidy action without changing default rotation layout', () => {

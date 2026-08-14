@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import type { Task, TaskInstance, useTaskStore } from '@/stores/tasks'
 import { parseDateKey, getTaskInstances } from '@/stores/tasks'
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
+import { sortTasksBySharedOrder } from '@/utils/taskOrdering'
 
 interface BoardStateDependencies {
     taskStore: ReturnType<typeof useTaskStore>
@@ -122,12 +123,7 @@ export const getNextMonday = (base: Date) => {
 
 /** Sort tasks by order (ascending), then by createdAt as tiebreaker */
 function sortByOrder(tasks: Task[]): Task[] {
-    return tasks.sort((a, b) => {
-        const orderA = a.order ?? Number.MAX_SAFE_INTEGER
-        const orderB = b.order ?? Number.MAX_SAFE_INTEGER
-        if (orderA !== orderB) return orderA - orderB
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    })
+    return sortTasksBySharedOrder(tasks)
 }
 
 export function groupTasksByStatus(tasks: Task[]) {

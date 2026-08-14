@@ -18,6 +18,7 @@
 import { CANVAS } from '@/constants/canvas'
 import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
+import { sortTasksBySharedOrder } from '@/utils/taskOrdering'
 
 export interface DayGroupInput {
   group: CanvasGroup
@@ -115,12 +116,6 @@ export function computeCanonicalLayout(
   const groupGutter = CANVAS.DAY_GROUP_SPACING - CANVAS.DAY_GROUP_WIDTH_1COL
   const snapToGridFrom = (value: number, origin: number) =>
     origin + Math.ceil((value - origin) / CANVAS.GRID_SNAP_SIZE) * CANVAS.GRID_SNAP_SIZE
-  const getCreatedTime = (task: Task) => {
-    if (!task.createdAt) return 0
-    return task.createdAt instanceof Date
-      ? task.createdAt.getTime()
-      : Date.parse(task.createdAt)
-  }
   let nextGroupX = originX
 
   for (let i = 0; i < orderedIds.length; i++) {
@@ -130,14 +125,7 @@ export function computeCanonicalLayout(
 
     const taskLayout = options.taskLayout ?? 'vertical'
     const taskPositioning = options.taskPositioning ?? 'fromHeader'
-    const sortedTasks = [...dg.tasks].sort((a, b) => {
-      const ay = dg.taskPositions?.get(a.id)?.y ?? a.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
-      const by = dg.taskPositions?.get(b.id)?.y ?? b.canvasPosition?.y ?? Number.MAX_SAFE_INTEGER
-      if (ay !== by) return ay - by
-      const at = getCreatedTime(a)
-      const bt = getCreatedTime(b)
-      return at - bt
-    })
+    const sortedTasks = sortTasksBySharedOrder(dg.tasks, dg.taskPositions)
     const taskCount = sortedTasks.length
     const maxPerColumn = options.maxTasksPerColumn === null
       ? Number.POSITIVE_INFINITY
@@ -186,7 +174,16 @@ export function computeCanonicalLayout(
     const firstTaskY = taskPositioning === 'compactFromCurrentTop'
       ? groupY + compactStartRelativeY
       : defaultFirstTaskY
-    const nextTaskYByColumn = Array.from({ length: columnCount }, () => firstTaskY)
+    const rowCount = Math.ceil(sortedTasks.length / columnCount)
+    const rowHeights = Array.from({ length: rowCount }, (_, row) => {
+      const rowTasks = sortedTasks.slice(row * columnCount, (row + 1) * columnCount)
+      return Math.max(...rowTasks.map((task) => taskHeights.get(task.id) ?? CANVAS.DEFAULT_TASK_HEIGHT), CANVAS.DEFAULT_TASK_HEIGHT)
+    })
+    const rowTops = rowHeights.reduce<number[]>((tops, height, row) => {
+      tops.push(row === 0 ? firstTaskY : tops[row - 1] + rowHeights[row - 1] + CANVAS.TASK_MARGIN)
+      return tops
+    }, [])
+    let nextSingleColumnY = firstTaskY
 
     let maxTaskBottomRelative = 0
     for (let t = 0; t < sortedTasks.length; t++) {
@@ -211,26 +208,27 @@ export function computeCanonicalLayout(
         continue
       }
 
-      const column = taskLayout === 'horizontal'
-        ? t % columnCount
-        : hasOverflow ? Math.min(columnCount - 1, Math.floor(t / maxPerColumn)) : 0
+      const column = columnCount > 1 ? t % columnCount : 0
+      const row = columnCount > 1 ? Math.floor(t / columnCount) : t
 
       const taskX =
         groupX +
         CANVAS.GROUP_PADDING +
         column * (measuredTaskWidth + CANVAS.DAY_GROUP_COLUMN_GAP)
       const taskY = options.taskSpacing === 'equalRows'
-        ? firstTaskY + rowPitch * (taskLayout === 'horizontal' ? Math.floor(t / columnCount) : hasOverflow ? t % maxPerColumn : t)
-        : snapToGridFrom(nextTaskYByColumn[column], firstTaskY)
+        ? firstTaskY + rowPitch * row
+        : columnCount === 1
+          ? snapToGridFrom(nextSingleColumnY, firstTaskY)
+          : snapToGridFrom(rowTops[row] ?? firstTaskY, firstTaskY)
 
       taskMoves.push({
         taskId: task.id,
         parentId: dg.group.id,
         position: { x: taskX, y: taskY },
       })
-      nextTaskYByColumn[column] = options.taskSpacing === 'equalRows'
-        ? taskY + rowPitch
-        : taskY + taskHeight + CANVAS.TASK_MARGIN
+      if (columnCount === 1 && options.taskSpacing !== 'equalRows') {
+        nextSingleColumnY = taskY + taskHeight + CANVAS.TASK_MARGIN
+      }
       maxTaskBottomRelative = Math.max(maxTaskBottomRelative, taskY - groupY + taskHeight)
     }
 

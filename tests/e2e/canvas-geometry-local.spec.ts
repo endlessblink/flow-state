@@ -920,11 +920,11 @@ test.describe('local canvas geometry regressions', () => {
       { id: 'f2-reorder-c', title: 'F2 Reorder C', parentId: 'f2-reorder-group', x: 244, y: 540 },
     ])
 
-    await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true })))
+    await page.keyboard.down('F2')
     try {
       await dragRenderedNode(page, 'f2-reorder-b', 0, -180)
     } finally {
-      await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'F2', bubbles: true })))
+      await page.keyboard.up('F2')
     }
 
     await page.waitForTimeout(1200)

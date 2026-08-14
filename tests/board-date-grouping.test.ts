@@ -311,6 +311,17 @@ describe('groupTasksByDate', () => {
     expect(result.later.map(t => t.id)).toContain('d')
   })
 
+  it('keeps Today tasks in shared order even when input order differs', () => {
+    mockToday(2026, 3, 6)
+    const tasks = [
+      makeTask({ id: 'later', dueDate: '2026-03-06', order: 2 }),
+      makeTask({ id: 'first', dueDate: '2026-03-06', order: 0 }),
+      makeTask({ id: 'middle', dueDate: '2026-03-06', order: 1 }),
+    ]
+
+    expect(groupTasksByDate(tasks).today.map(task => task.id)).toEqual(['first', 'middle', 'later'])
+  })
+
   // ---- THIS WEEK ----
 
   it('places task due later this week in thisWeek bucket', () => {

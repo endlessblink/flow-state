@@ -137,7 +137,7 @@ export function groupTasksByStatus(tasks: Task[]) {
         }
     })
     for (const key of Object.keys(result)) {
-        sortByOrder(result[key])
+        result[key] = sortByOrder(result[key])
     }
     return result
 }
@@ -156,7 +156,7 @@ export function groupTasksByPriority(tasks: Task[]) {
         }
     })
     for (const key of Object.keys(result)) {
-        sortByOrder(result[key])
+        result[key] = sortByOrder(result[key])
     }
     return result
 }
@@ -245,7 +245,7 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
     })
 
     for (const key of Object.keys(result)) {
-        sortByOrder(result[key])
+        result[key] = sortByOrder(result[key])
     }
 
     return result

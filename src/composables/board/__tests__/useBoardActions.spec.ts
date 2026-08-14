@@ -47,6 +47,7 @@ describe('useBoardActions task creation', () => {
 
     expect(createTaskWithUndo).toHaveBeenCalledWith(expect.objectContaining({
       dueDate: '2026-08-12',
+      order: 0,
       priority: 'high',
       projectId: 'project-1'
     }))
@@ -58,7 +59,8 @@ describe('useBoardActions task creation', () => {
     await createTaskForColumn('Task for today', '', 'today', 'date')
 
     expect(createTaskWithUndo).toHaveBeenCalledWith(expect.objectContaining({
-      dueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+      dueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      order: 0
     }))
     expect(createTaskWithUndo.mock.calls[0][0].dueDate).not.toBe('2026-08-01')
   })
@@ -69,7 +71,8 @@ describe('useBoardActions task creation', () => {
     await createTaskForColumn('Undated task', '', 'noDate', 'date')
 
     expect(createTaskWithUndo).toHaveBeenCalledWith(expect.objectContaining({
-      dueDate: undefined
+      dueDate: undefined,
+      order: 0
     }))
   })
 })

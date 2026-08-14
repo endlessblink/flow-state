@@ -128,7 +128,7 @@ export function useBoardActions(deps: BoardActionsDependencies) {
             taskData.priority = columnKey === 'no_priority' ? undefined : columnKey as Task['priority']
         }
 
-        const existingTasks = taskStore.rawTasks || taskStore.tasks
+        const existingTasks = taskStore.rawTasks || taskStore.tasks || []
         taskData.order = getNextTaskOrder(existingTasks, taskData.status as Task['status'])
 
         return handleWithError(

@@ -41,6 +41,7 @@ import { createCanonicalChangeSupabaseReader } from '@/services/sync/canonicalCh
 import { realtimeRowMatchesScope } from '@/services/sync/realtimeScopeGuard'
 import { startServiceWorkerUpdateRecovery } from '@/services/pwa/serviceWorkerUpdateRecovery'
 import { useDeviceSyncDiagnostics } from '@/composables/sync/useDeviceSyncDiagnostics'
+import { createElectronAutoStartMonitor, getElectronAutoStartApi, shouldStartAutomaticPomodoro } from '@/composables/timer/useElectronAutoStart'
 
 export function useAppInitialization() {
     const STARTUP_READ_TIMEOUT_MS = 5000
@@ -80,6 +81,7 @@ export function useAppInitialization() {
     const workspaceStore = useWorkspaceStore()
     const itpProtection = useSafariITPProtection()
     let stopServiceWorkerUpdateRecovery = () => {}
+    let stopElectronAutoStart = () => {}
     // BUG-1725: Must be called synchronously during setup(), not inside async onMounted
     useBeforeUnload()
     // TASK-2002: Keep the VPS convergence watchdog supplied with live runtime,
@@ -309,6 +311,30 @@ export function useAppInitialization() {
     }
 
     onMounted(async () => {
+        const electronApi = getElectronAutoStartApi()
+        if (electronApi) {
+            const monitor = createElectronAutoStartMonitor({
+                absenceSeconds: timerStore.settings.autoStartAfterIdleMinutes * 60,
+                getSystemIdleSeconds: async () => Number(await electronApi.getSystemIdleTime()) || 0,
+                onReturn: () => {
+                    if (!shouldStartAutomaticPomodoro({
+                        enabled: timerStore.settings.autoStartPomodoros,
+                        isTimerActive: timerStore.isTimerActive,
+                    })) return
+                    void timerStore.resyncFromDatabase(true).then(() => {
+                        if (!shouldStartAutomaticPomodoro({
+                            enabled: timerStore.settings.autoStartPomodoros,
+                            isTimerActive: timerStore.isTimerActive,
+                        })) return
+                        void timerStore.startTimer('general', timerStore.settings.workDuration, false, { silent: true })
+                    }).catch((error) => {
+                        console.warn('[TIMER] Automatic return start resync failed:', error)
+                    })
+                },
+            })
+            monitor.start()
+            stopElectronAutoStart = monitor.stop
+        }
         startupReadyWatchdog = setTimeout(() => {
             if (isDataReady.value) return
             console.error('[STARTUP] Local startup boundary stalled; rendering recovery shell')
@@ -1466,6 +1492,7 @@ export function useAppInitialization() {
 
     onUnmounted(() => {
         stopServiceWorkerUpdateRecovery()
+        stopElectronAutoStart()
         canonicalChangePoller.stop()
         stopLocalApiMutationSubscription()
         stopLocalApiWorkspaceContextSync()

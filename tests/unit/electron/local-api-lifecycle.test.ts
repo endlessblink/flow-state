@@ -10,6 +10,10 @@ const PRELOAD_TS = readFileSync(
   resolve(__dirname, '../../../electron/preload.ts'),
   'utf-8',
 )
+const MAIN_TS = readFileSync(
+  resolve(__dirname, '../../../electron/main.ts'),
+  'utf-8',
+)
 
 function handlerBody(channel: string): string {
   const marker = `ipcMain.handle('${channel}'`
@@ -111,6 +115,13 @@ describe('Electron local API lifecycle regression contract', () => {
   it('exposes the workspace context IPC through the isolated preload', () => {
     expect(PRELOAD_TS).toContain("setLocalApiWorkspaceContext: (state: unknown) => ipcRenderer.invoke('localApi:setWorkspaceContext', state)")
     expect(PRELOAD_TS).toContain('setLocalApiWorkspaceContext: (state: unknown) => Promise<{ ok: boolean }>')
+  })
+
+  it('exposes system idle time through the Electron main/preload bridge', () => {
+    expect(MAIN_TS).toContain("powerMonitor.getSystemIdleTime()")
+    expect(MAIN_TS).toContain("ipcMain.handle('app:getSystemIdleTime'")
+    expect(PRELOAD_TS).toContain("getSystemIdleTime: () => ipcRenderer.invoke('app:getSystemIdleTime')")
+    expect(PRELOAD_TS).toContain('getSystemIdleTime: () => Promise<number>')
   })
 
   it('does not report KDE-only background sidecar activity as an enabled task API', () => {

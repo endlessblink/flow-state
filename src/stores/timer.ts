@@ -99,6 +99,12 @@ export const useTimerStore = defineStore("timer", () => {
     set autoStartPomodoros(val) {
       settingsStore.updateSetting("autoStartPomodoros", val);
     },
+    get autoStartAfterIdleMinutes() {
+      return settingsStore.autoStartAfterIdleMinutes;
+    },
+    set autoStartAfterIdleMinutes(val) {
+      settingsStore.updateSetting("autoStartAfterIdleMinutes", val);
+    },
     get playNotificationSounds() {
       return settingsStore.playNotificationSounds;
     },
@@ -368,6 +374,7 @@ export const useTimerStore = defineStore("timer", () => {
     taskId: string,
     duration?: number,
     isBreak: boolean = false,
+    options: { silent?: boolean } = {},
   ) => {
     if (import.meta.env.DEV) {
       console.log("🍅 [TIMER] startTimer called:", {
@@ -444,7 +451,7 @@ export const useTimerStore = defineStore("timer", () => {
       sync.resumeHeartbeat();
       sync.broadcastSession();
       await sync.saveTimerSessionWithLeadership();
-      audio.playStartSound();
+      if (!options.silent) audio.playStartSound();
       sync.resumeCountdown();
       await requestWakeLock(); // Keep screen on - ROAD-004
     } catch (error) {

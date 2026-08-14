@@ -1,5 +1,29 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2022: Synchronize Board and Canvas task ordering (IN PROGRESS)
+
+**Priority**: P1 | **Status**: IN PROGRESS (2026-08-14)
+
+**Goal**: Make Board and Canvas share one per-status task order. Canvas groups render that order top-to-bottom and physical left-to-right across rows; Board reorders and Canvas drags update the same order.
+
+**Required proof before closeout**: shared-order unit coverage, row-major canvas layout coverage, focused tests, typecheck/lint for changed source, and an Electron build.
+
+**Explicitly not covered**: changing task status semantics, changing canvas group membership rules, or production deployment.
+
+### FEATURE-2021: Start a quiet Pomodoro after returning from a long absence
+
+**Priority**: P1 | **Status**: IN PROGRESS (2026-08-14)
+
+After 25 minutes without computer activity, the Electron app should start a standard work Pomodoro on the first return activity when no timer is working. The session is task-free and silent so returning to work does not trigger task-selection popups or a sound; timer completion keeps the existing flow.
+
+**Required proof before closeout**: focused idle-return regression coverage, Electron bridge/type coverage, timer/settings coverage, typecheck, lint for changed source, Electron build, and a live installed-app check of long absence, no active timer, no task prompt, and existing-timer protection.
+
+**Local evidence (2026-08-14)**: The focused Electron/timer suite passes 63 tests, typecheck passes, the locked Electron package build passes for 1.4.379, and the local updater manifest names 1.4.379 artifacts. The full unit suite and canonical preflight still expose unrelated existing failures in board task ordering and recurring R33 sync; VPS publication and installed-app proof remain externally blocked.
+
+**Exact failure mode fixed**: There is currently no Electron return-from-away trigger; the existing auto-start work preference is not connected to system activity and is explicitly ignored by the timer completion notification path.
+
+**Explicitly not covered**: Browser/PWA clients, automatic task selection, or changes to the existing break/completion policy.
+
 ### SYNC-REMAINING: Cross-client convergence is still not user-closed
 
 **Status**: IN PROGRESS (2026-08-13)

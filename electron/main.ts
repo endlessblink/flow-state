@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, Menu, globalShortcut } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Menu, globalShortcut, powerMonitor } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { userInfo } from 'os'
@@ -316,7 +316,8 @@ registerWindowHandlers()
 registerOAuthHandlers()
 registerLocalApiHandlers()
 registerDiagnosticsHandlers()
-ipcMain.handle('app:getVersion', () => app.getVersion())
+  ipcMain.handle('app:getVersion', () => app.getVersion())
+  ipcMain.handle('app:getSystemIdleTime', () => powerMonitor.getSystemIdleTime())
 // BUG-1932: null unless a launcher's HOME was overridden. Renderer surfaces it so a deliberate
 // sandbox run is never silently redirected to the real profile.
 ipcMain.handle('app:getHomeOverride', () => homeOverride)

@@ -23,8 +23,9 @@ const {
   mockRequestWakeLock,
   mockReleaseWakeLock,
   mockEnqueue,
-  mockSyncLocalApiTimerSnapshot,
-  mockShowTimerNotification,
+   mockSyncLocalApiTimerSnapshot,
+   mockShowTimerNotification,
+   mockPlayStartSound,
   mockAuthState,
 } = vi.hoisted(() => ({
   mockFetchActiveTimerSession: vi.fn(),
@@ -37,7 +38,8 @@ const {
   mockReleaseWakeLock: vi.fn(),
   mockEnqueue: vi.fn().mockResolvedValue({ id: 1, status: 'pending' }),
   mockSyncLocalApiTimerSnapshot: vi.fn(),
-  mockShowTimerNotification: vi.fn().mockResolvedValue(undefined),
+   mockShowTimerNotification: vi.fn().mockResolvedValue(undefined),
+   mockPlayStartSound: vi.fn(),
   mockAuthState: {
     isAuthenticated: true,
     canSyncRemotely: true,
@@ -148,7 +150,7 @@ vi.mock('@/composables/timer/useTimerNotifications', () => ({
 
 vi.mock('@/composables/timer/useTimerAudio', () => ({
   useTimerAudio: () => ({
-    playStartSound: vi.fn(),
+    playStartSound: mockPlayStartSound,
     playEndSound: vi.fn(),
   }),
 }))
@@ -352,6 +354,18 @@ describe('Timer State Machine — startTimer', () => {
 
     expect(store.currentSession?.taskId).toBe('general')
     expect(store.isTimerActive).toBe(true)
+  })
+
+  it('9b. silent automatic starts do not play the start sound', async () => {
+    const store = useTimerStore()
+    await flushPromises()
+    mockPlayStartSound.mockClear()
+
+    await store.startTimer('general', 1500, false, { silent: true })
+    await flushPromises()
+
+    expect(store.currentSession?.taskId).toBe('general')
+    expect(mockPlayStartSound).not.toHaveBeenCalled()
   })
 
   it('10. startTimer respects custom duration', async () => {

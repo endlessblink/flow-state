@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // App info
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  getSystemIdleTime: () => ipcRenderer.invoke('app:getSystemIdleTime'),
 
   // BUG-1932: `{ home, pinnedTo }` when a launcher rewrote HOME and userData was pinned back to the
   // real home; null otherwise.
@@ -102,6 +103,7 @@ declare global {
       platform: string
       isElectron: boolean
       getVersion: () => Promise<string>
+      getSystemIdleTime: () => Promise<number>
       openExternal: (url: string) => Promise<void>
       showSaveDialog: (options: unknown) => Promise<unknown>
       showOpenDialog: (options: unknown) => Promise<unknown>

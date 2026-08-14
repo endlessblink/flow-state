@@ -37,6 +37,7 @@ export interface AppSettings {
     longBreakDuration: number
     autoStartBreaks: boolean
     autoStartPomodoros: boolean
+    autoStartAfterIdleMinutes: number
     playNotificationSounds: boolean
 
     // Workflow
@@ -240,7 +241,8 @@ export const useSettingsStore = defineStore('settings', {
         shortBreakDuration: 5 * 60,
         longBreakDuration: 15 * 60,
         autoStartBreaks: false,
-        autoStartPomodoros: false,
+        autoStartPomodoros: true,
+        autoStartAfterIdleMinutes: 25,
         playNotificationSounds: true,
 
         // Workflow defaults

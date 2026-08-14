@@ -14,6 +14,8 @@ import { positionManager } from '@/services/canvas/PositionManager'
 import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { CANVAS } from '@/constants/canvas'
 import { traceCanvasDone, traceCanvasDoneNodes, traceCanvasDoneTasks } from '@/utils/canvas/doneTrace'
+import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+import { getCanonicalTodayTaskIds } from '@/utils/todayTaskProjection'
 import { computeCanonicalLayout, computeVisibleTaskCompaction } from './useCanonicalDayGroupLayout'
 
 // =============================================================================
@@ -189,10 +191,29 @@ export function useCanvasSync() {
         try {
             // BUG-1176 FIX: Filter out done tasks when hideCanvasDoneTasks is enabled
             // This prevents done tasks from appearing on canvas even if they have canvasPosition
-            const shouldHideDone = taskStore.hideCanvasDoneTasks
-            const tasksToSync = (tasks || taskStore.tasks)
-                .filter(t => t.canvasPosition)
             const groups = canvasStore.groups || []
+            const shouldHideDone = taskStore.hideCanvasDoneTasks
+            const todayGroup = groups.find(group => {
+                const keyword = detectPowerKeyword(group.name)
+                return group.isVisible && keyword?.category === 'date' && keyword.keyword === 'today'
+            })
+            const todayTaskIds = getCanonicalTodayTaskIds(
+                tasks || taskStore.tasks,
+                shouldHideDone,
+            )
+            const tasksToSync = (tasks || taskStore.tasks)
+                .map(task => {
+                    if (task.canvasPosition || !todayGroup || !todayTaskIds.has(task.id)) return task
+                    return {
+                        ...task,
+                        parentId: todayGroup.id,
+                        canvasPosition: {
+                            x: todayGroup.position.x + CANVAS.GROUP_PADDING,
+                            y: todayGroup.position.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
+                        },
+                    }
+                })
+                .filter(t => t.canvasPosition)
             const currentNodes = getNodes.value
 
             // Board order is the shared sequence. Project it into each canvas

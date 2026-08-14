@@ -2,15 +2,15 @@
 
 ### TASK-2024: Keep Today synchronized across Board, Canvas, and Catalogue
 
-**Priority**: P0 | **Status**: IN PROGRESS (2026-08-14) | **Electron target**: 1.4.384
+**Priority**: P0 | **Status**: IN PROGRESS (2026-08-14) | **Electron target**: 1.4.385
 
 **Goal**: Use one canonical Today task projection so all three views show the exact same task set and shared top-to-bottom order; Canvas uses row-major placement (left to right, then top to bottom), and the installed Electron runtime must pass the same structural and visual gate.
 
-**Completed evidence**: Canonical projection wired into Board, Canvas, and Catalogue; 372 unit files / 4,583 tests pass; type-check, source lint, task-consistency guards, Electron package validation, and the Chromium visual gate pass. The visual gate seeds Today tasks, compares IDs/order in all three views, and saves screenshots.
+**Completed evidence**: Canonical projection wired into Board, Canvas, and Catalogue; 372 unit files / 4,585 tests pass; type-check, focused sync contracts, task-consistency guards, Electron package validation, and the Chromium visual gate pass. The visual gate seeds Today tasks, compares IDs/order in all three views, and saves screenshots. Electron 1.4.385 adds a read-path fallback for Today tasks without persisted Canvas geometry.
 
-**Open final gate**: The authenticated 1.4.383 runtime exposed a real equal-order tie divergence; the tie-breaker is now fixed and 1.4.384 is built. Do not mark this task DONE until the authenticated 1.4.384 Electron run passes the three-view visual gate and the user performs the final verification.
+**Open final gate**: The authenticated 1.4.383 runtime exposed a real equal-order tie divergence, and 1.4.384 exposed a missing-position Canvas projection; both fixes are now in 1.4.385. Do not mark this task DONE until the authenticated 1.4.385 Electron run passes the three-view visual gate and the user performs the final verification.
 
-**Failure-class coverage**: data shape, renderer projection, Canvas source hydration, Catalogue grouping, unit regressions, browser visual proof, package build, and updater delivery are covered; installed Electron runtime and production authenticated readback remain open.
+**Failure-class coverage**: data shape, renderer projection, Canvas source hydration, missing-position projection, Catalogue grouping, unit regressions, browser visual proof, package build, and updater delivery are covered; installed Electron 1.4.385 runtime and production authenticated readback remain open.
 
 ### ~~TASK-2022~~: Synchronize Board and Canvas task ordering (✅ DONE)
 

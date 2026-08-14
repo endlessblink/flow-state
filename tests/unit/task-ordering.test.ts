@@ -57,6 +57,12 @@ describe('shared task ordering', () => {
     ])
   })
 
+  it('places positioned tasks before unpositioned tasks when persisted orders tie', () => {
+    const tasks = [task('unpositioned', 0), task('positioned', 0, { x: 10, y: 10 })]
+
+    expect(sortTasksBySharedOrder(tasks).map(({ id }) => id)).toEqual(['positioned', 'unpositioned'])
+  })
+
   it('appends a newly created task after the matching status group', () => {
     expect(getNextTaskOrder([
       task('a', 0),

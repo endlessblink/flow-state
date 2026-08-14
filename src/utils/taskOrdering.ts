@@ -25,6 +25,8 @@ export function compareTasksBySharedOrder(
   // is the shared deterministic tie-breaker for those legacy rows.
   const firstPosition = taskPosition(first, positions)
   const secondPosition = taskPosition(second, positions)
+  if (firstPosition && !secondPosition) return -1
+  if (!firstPosition && secondPosition) return 1
   if (firstPosition && secondPosition) {
     if (firstPosition.y !== secondPosition.y) return firstPosition.y - secondPosition.y
     if (firstPosition.x !== secondPosition.x) return firstPosition.x - secondPosition.x

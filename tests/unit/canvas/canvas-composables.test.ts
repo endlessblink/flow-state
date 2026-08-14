@@ -240,6 +240,15 @@ describe('useCanvasFilteredState — dynamicNodeExtent & filtering', () => {
     expect(source).not.toContain('const filteredTasks = computed(() => taskStore.filteredTasks)')
     expect(source).not.toContain('useCanvasFilteredState(filteredTasks, canvasStoreWithTaskStore)')
   })
+
+  it('12: task geometry signature is cached and observed once', () => {
+    const source = readSource('src/composables/canvas/useCanvasOrchestrator.ts')
+
+    expect(source).toContain('const taskGeometryStatusSignature = computed(() =>')
+    expect(source).toContain('watch(taskGeometryStatusSignature, (taskSignature) =>')
+    expect(source.match(/watch\(taskGeometryStatusSignature/g)).toHaveLength(1)
+    expect(source).not.toContain("watch(() => tasksWithCanvasPosition.value.map(t =>")
+  })
 })
 
 // ---------------------------------------------------------------------------

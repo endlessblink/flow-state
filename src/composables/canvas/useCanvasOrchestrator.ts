@@ -159,6 +159,12 @@ export function useCanvasOrchestrator() {
         hasInboxTasks
     } = useCanvasFilteredState(canvasSourceTasks, canvasStoreWithTaskStore)
 
+    // Keep the rendered-task signature cached so every watcher shares one
+    // O(task count) computation instead of rebuilding it independently.
+    const taskGeometryStatusSignature = computed(() => tasksWithCanvasPosition.value
+        .map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`)
+        .join('|'))
+
     // --- 3. Feature Initialization ---
 
     // Persistence (Sync)
@@ -834,12 +840,12 @@ export function useCanvasOrchestrator() {
     // CRITICAL FIX: Watch for task data changes (e.g. after async load)
     // BUG-1210: Watch the rendered task signature, not just IDs — realtime
     // geometry updates keep the same task list but still need a new projection.
-    watch(() => tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|'), () => {
+    watch(taskGeometryStatusSignature, (taskSignature) => {
         // Skip during initialization - onMounted handles initial sync
         if (!isInitialized.value) return
         if (isSyncingFromWatcher) return
         traceCanvasDone('watcher:taskIds', {
-            taskSignature: tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|')
+            taskSignature,
         })
         isSyncingFromWatcher = true
         try {
@@ -851,13 +857,6 @@ export function useCanvasOrchestrator() {
         } finally {
             isSyncingFromWatcher = false
         }
-    })
-
-    watch(() => tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|'), () => {
-        if (!isInitialized.value) return
-        traceCanvasDone('watcher:taskGeometryStatusSignature', {
-            taskSignature: tasksWithCanvasPosition.value.map(t => `${t.id}:${t.status}:${t.parentId ?? 'root'}:${t.canvasPosition?.x ?? ''},${t.canvasPosition?.y ?? ''}`).join('|')
-        })
     })
 
     // CRITICAL FIX: Watch for group changes (e.g. creation/deletion/remote sync)

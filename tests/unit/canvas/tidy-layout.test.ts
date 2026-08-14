@@ -436,6 +436,34 @@ describe('useTidyLayout', () => {
     expect(updateTask).not.toHaveBeenCalledWith('task-due-today', { parentId: today.id }, 'DRAG')
   })
 
+  it('repairs a stale parent claim from the task visual position', () => {
+    const today = makeGroup('Today', 0)
+    const monday = makeGroup('Monday', 500)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, monday])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'stale-parent-task',
+        parentId: monday.id,
+        canvasPosition: { x: 30, y: 100 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout({
+      getNodePosition: (nodeId) => nodeId === 'stale-parent-task' ? { x: 30, y: 100 } : undefined,
+    })
+    const { taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(taskMoves).toHaveLength(1)
+    expect(taskMoves[0].parentId).toBe(today.id)
+    expect(updateTask).toHaveBeenCalledWith(
+      'stale-parent-task',
+      expect.objectContaining({ parentId: today.id }),
+      'DRAG'
+    )
+  })
+
   it('spatially adopts loose tasks sitting inside visible groups during tidy', () => {
     // A loose task visibly sitting inside a group needs membership before Tidy
     // can stack it with the group. Already-parented tasks are covered by the

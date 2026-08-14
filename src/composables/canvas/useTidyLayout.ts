@@ -106,10 +106,10 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     // something visible regardless of the user's group naming.
     const visibleGroups = getPersistedVisibleGroups()
 
-    // Tidy should not move already-parented tasks between groups by due date or
-    // geometry. It can safely repair loose canvas tasks that are visibly inside
-    // a group, because otherwise the user sees them in the group but Tidy has no
-    // membership to stack.
+    // Tidy must repair stale parent claims as well as loose tasks. A persisted
+    // parentId can survive a group reorder while the task's absolute visual
+    // position now belongs to a different group; preserving that claim leaves
+    // the card outside the column that the user sees it in.
     const layoutTasks = taskStore.rawTasks.filter((task) => {
       if (!task.canvasPosition) return false
       if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
@@ -120,8 +120,6 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
 
     const adoptedParents = new Map<string, string>()
     for (const task of layoutTasks) {
-      if (task.parentId) continue
-
       const absPos = options.getNodePosition?.(task.id) ?? task.canvasPosition
       if (!absPos) continue
       const size = options.getNodeSize?.(task.id)
@@ -129,7 +127,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       const containing =
         getDeepestContainingGroup(spatialTask, visibleGroups) ??
         findColumnContainingGroup(spatialTask, visibleGroups)
-      if (containing) adoptedParents.set(task.id, containing.id)
+      if (containing && containing.id !== task.parentId) adoptedParents.set(task.id, containing.id)
     }
     if (adoptedParents.size > 0) {
       console.log('[TIDY] Adopted', adoptedParents.size, 'loose tasks into containing groups')

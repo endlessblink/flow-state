@@ -502,18 +502,15 @@ let startupLayoutRepairAttempted = false
 let startupLayoutRepairAttempts = 0
 function hasOverlappingRenderedTasks() {
   const canvasNodes = getNodes.value as unknown as CanvasNodeRecord[]
-  const taskRectsByParent = new Map<string, Array<{ left: number; top: number; right: number; bottom: number }>>()
+  const taskRects: Array<{ left: number; top: number; right: number; bottom: number }> = []
   for (const node of canvasNodes) {
     if (node.type !== 'taskNode' || node.hidden) continue
     const element = document.querySelector(`.vue-flow__node[data-id="${CSS.escape(node.id)}"]`) as HTMLElement | null
     const rect = element?.getBoundingClientRect()
     if (!rect || rect.width <= 0 || rect.height <= 0) continue
-    const parent = node.parentNode ?? '__root__'
-    const list = taskRectsByParent.get(parent) ?? []
-    list.push({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom })
-    taskRectsByParent.set(parent, list)
+    taskRects.push({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom })
   }
-  return [...taskRectsByParent.values()].some((rects) => hasOverlappingRects(rects))
+  return hasOverlappingRects(taskRects)
 }
 
 async function repairOverlappingStartupLayout() {

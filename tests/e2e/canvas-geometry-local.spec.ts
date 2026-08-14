@@ -1139,6 +1139,37 @@ test.describe('local canvas geometry regressions', () => {
     }).toBe(true)
   })
 
+  test('tidy repairs cross-group cards with stale saved parents', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'cross-group-today', name: 'Today', x: 100, y: 200 },
+      { id: 'cross-group-tomorrow', name: 'Tomorrow', x: 700, y: 200 },
+    ], [
+      { id: 'cross-group-today-card', title: 'Today card', parentId: 'cross-group-today', x: 120, y: 320 },
+      { id: 'cross-group-stale-card', title: 'Stale parent card', parentId: 'cross-group-today', x: 720, y: 320 },
+      { id: 'cross-group-tomorrow-card', title: 'Tomorrow card', parentId: 'cross-group-tomorrow', x: 720, y: 320 },
+    ])
+
+    await clickToolbar(page, /tidy|layout/)
+
+    await expect.poll(async () => {
+      const geometry = await readGeometry(page)
+      return geometry.tasks.find((task) => task.id === 'cross-group-stale-card')?.parentId
+    }).toBe('cross-group-tomorrow')
+
+    await expect.poll(async () => {
+      const rendered = await page.evaluate(() => {
+        const rects = ['cross-group-today-card', 'cross-group-stale-card', 'cross-group-tomorrow-card']
+          .map((id) => document.querySelector(`[data-task-id="${id}"]`)?.getBoundingClientRect())
+          .filter((rect): rect is DOMRect => !!rect)
+        return rects.map((rect) => ({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }))
+      })
+      return rendered.some((first, index) => rendered.slice(index + 1).some((second) =>
+        first.left < second.right && first.right > second.left
+        && first.top < second.bottom && first.bottom > second.top
+      ))
+    }, { timeout: 5_000 }).toBe(false)
+  })
+
   test('rotate weekday-only groups starts from the current weekday', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'wed', name: 'Wednesday', x: 3000, y: 200 },

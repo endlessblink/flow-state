@@ -21,6 +21,7 @@ const makeTask = (overrides: Partial<Task>): Task => ({
   projectId: overrides.projectId ?? null,
   createdAt: overrides.createdAt ?? new Date('2026-06-01T08:00:00Z'),
   updatedAt: overrides.updatedAt ?? new Date('2026-06-01T08:00:00Z'),
+  order: overrides.order,
   canvasPosition: overrides.canvasPosition,
   parentId: overrides.parentId,
 })
@@ -112,6 +113,7 @@ describe('PWA mobile Today task ordering', () => {
         projectId: 'project-1',
         canvasPosition: { x: 0, y: 10 },
         parentId: 'today-group',
+        order: 1,
       }),
       makeTask({
         id: 'rescheduled-today',
@@ -120,6 +122,7 @@ describe('PWA mobile Today task ordering', () => {
         projectId: 'project-1',
         canvasPosition: { x: 0, y: 80 },
         parentId: 'today-group',
+        order: 0,
       }),
     ]
   })
@@ -170,6 +173,23 @@ describe('PWA mobile Today task ordering', () => {
     const vm = wrapper.vm as unknown as ReturnType<typeof useMobileInboxLogic>
 
     vm.setViewMode('today')
+    expect(vm.filteredTasks.map(task => task.id)).toEqual([
+      'rescheduled-today',
+      'overdue-first-on-canvas',
+    ])
+  })
+
+  it('uses persisted shared order instead of stale canvas geometry', () => {
+    const Host = defineComponent({
+      setup() {
+        return useMobileInboxLogic()
+      },
+      template: '<div />',
+    })
+
+    const wrapper = mount(Host)
+    const vm = wrapper.vm as unknown as ReturnType<typeof useMobileInboxLogic>
+
     expect(vm.filteredTasks.map(task => task.id)).toEqual([
       'rescheduled-today',
       'overdue-first-on-canvas',

@@ -4,10 +4,9 @@ import { useMobileFilters } from '@/composables/mobile/useMobileFilters'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useOfflineVoiceQueue } from '@/composables/useOfflineVoiceQueue'
 import { useHaptics } from '@/composables/useHaptics'
-import { useCanvasStore } from '@/stores/canvas'
-import { useDirection } from '@/i18n/useDirection'
 import { useSettingsStore } from '@/stores/settings'
 import { createTranscriptionService } from '@/services/transcription/provider'
+import { sortTasksBySharedOrder } from '@/utils/taskOrdering'
 
 export type ViewMode = 'tasks' | 'today'
 export type TimeFilterType = 'all' | 'today' | 'week' | 'overdue'
@@ -15,9 +14,7 @@ export type TimeFilterType = 'all' | 'today' | 'week' | 'overdue'
 export function useMobileInboxLogic() {
     const taskStore = useTaskStore()
     const settingsStore = useSettingsStore()
-    const canvasStore = useCanvasStore()
     const { triggerHaptic } = useHaptics()
-    const { isRTL } = useDirection()
 
     const {
         groupBy,
@@ -212,72 +209,9 @@ export function useMobileInboxLogic() {
         }
 
         if (sortBy.value === 'canvasOrder') {
-            // TASK-1412 + BUG-1758: Direction-aware canvas-order sort — group X sort and
-            // task-row X tiebreaker both honor isRTL. Without the X tiebreaker, grid rows
-            // (tasks sharing the same Y) come out in arbitrary array order.
-            const groups = canvasStore.groups || []
-
-            // Reading-order comparator: Y ascending primary (top→bottom),
-            // X direction-aware secondary (LTR: left→right, RTL: right→left).
-            const byReadingOrder = (a: Task, b: Task) => {
-                const ay = a.canvasPosition?.y ?? 0
-                const by = b.canvasPosition?.y ?? 0
-                if (ay !== by) return ay - by
-                const ax = a.canvasPosition?.x ?? 0
-                const bx = b.canvasPosition?.x ?? 0
-                return isRTL.value ? bx - ax : ax - bx
-            }
-
-            // Build a map of parentId → tasks for DFS bucketing
-            const buckets = new Map<string | null, Task[]>()
-            for (const task of tasks) {
-                const key = task.parentId ?? null
-                if (!buckets.has(key)) buckets.set(key, [])
-                buckets.get(key)!.push(task)
-            }
-
-            // Group order: LTR = leftmost first (ASC), RTL = rightmost first (DESC)
-            const sortedGroups = [...groups].sort((a, b) => {
-                const ax = a.position?.x ?? 0
-                const bx = b.position?.x ?? 0
-                return isRTL.value ? bx - ax : ax - bx
-            })
-
-            const result: Task[] = []
-            const visited = new Set<string>()
-
-            const dfs = (task: Task) => {
-                if (visited.has(task.id)) return
-                visited.add(task.id)
-                result.push(task)
-                const siblings = buckets.get(task.parentId ?? null) ?? []
-                const children = siblings
-                    .filter(t => t.parentTaskId === task.id && !visited.has(t.id))
-                    .sort(byReadingOrder)
-                for (const child of children) dfs(child)
-            }
-
-            for (const group of sortedGroups) {
-                const bucket = buckets.get(group.id) ?? []
-                const bucketIds = new Set(bucket.map(t => t.id))
-                const roots = bucket
-                    .filter(t => !t.parentTaskId || !bucketIds.has(t.parentTaskId))
-                    .sort(byReadingOrder)
-                for (const root of roots) dfs(root)
-                for (const t of bucket) dfs(t)
-            }
-
-            const ungroupedBucket = buckets.get(null) ?? []
-            const ungroupedIds = new Set(ungroupedBucket.map(t => t.id))
-            const ungroupedRoots = ungroupedBucket
-                .filter(t => !t.parentTaskId || !ungroupedIds.has(t.parentTaskId))
-                .sort(byReadingOrder)
-            for (const root of ungroupedRoots) dfs(root)
-            for (const t of ungroupedBucket) dfs(t)
-
-            for (const t of tasks) dfs(t)
-
-            tasks = result
+            // Today, Board, Catalogue, and Canvas share persisted task order.
+            // Canvas geometry is a layout projection, not a second ordering source.
+            tasks = sortTasksBySharedOrder(tasks)
         } else {
             switch (sortBy.value) {
                 case 'priority': {

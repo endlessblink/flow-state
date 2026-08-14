@@ -19,13 +19,15 @@ export function compareTasksBySharedOrder(
     if (firstOrder === null) return 1
     if (secondOrder === null) return -1
     if (firstOrder !== secondOrder) return firstOrder - secondOrder
-  } else {
-    const firstPosition = taskPosition(first, positions)
-    const secondPosition = taskPosition(second, positions)
-    if (firstPosition && secondPosition) {
-      if (firstPosition.y !== secondPosition.y) return firstPosition.y - secondPosition.y
-      if (firstPosition.x !== secondPosition.x) return firstPosition.x - secondPosition.x
-    }
+  }
+
+  // Existing data can contain equal/default orders. Canvas row-major position
+  // is the shared deterministic tie-breaker for those legacy rows.
+  const firstPosition = taskPosition(first, positions)
+  const secondPosition = taskPosition(second, positions)
+  if (firstPosition && secondPosition) {
+    if (firstPosition.y !== secondPosition.y) return firstPosition.y - secondPosition.y
+    if (firstPosition.x !== secondPosition.x) return firstPosition.x - secondPosition.x
   }
 
   const firstCreated = Date.parse(String(first.createdAt ?? '')) || 0

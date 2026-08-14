@@ -43,6 +43,20 @@ describe('shared task ordering', () => {
     expect(compareTasksBySharedOrder(task('b', 1), task('a', 1))).toBeGreaterThan(0)
   })
 
+  it('uses row-major Canvas position when persisted orders tie', () => {
+    const tasks = [
+      task('bottom', 0, { x: 10, y: 200 }),
+      task('top-right', 0, { x: 200, y: 10 }),
+      task('top-left', 0, { x: 10, y: 10 }),
+    ]
+
+    expect(sortTasksBySharedOrder(tasks).map(({ id }) => id)).toEqual([
+      'top-left',
+      'top-right',
+      'bottom',
+    ])
+  })
+
   it('appends a newly created task after the matching status group', () => {
     expect(getNextTaskOrder([
       task('a', 0),

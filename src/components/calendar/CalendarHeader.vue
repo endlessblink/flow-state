@@ -86,6 +86,7 @@ const toggleViewOptions = () => {
         :class="{ active: showViewOptions || showFilters || hideCalendarDoneTasks || showFutureRecurring }"
         aria-label="View options"
         title="View options"
+        :aria-expanded="showViewOptions"
         @click="toggleViewOptions"
       >
         <MoreVertical :size="16" :stroke-width="1.5" />
@@ -98,7 +99,7 @@ const toggleViewOptions = () => {
         :y="popoverY"
         position="bottom"
         variant="menu"
-        :close-on-click-outside="true"
+        close-on-click-outside
         @close="showViewOptions = false"
       >
         <div class="view-options-menu">

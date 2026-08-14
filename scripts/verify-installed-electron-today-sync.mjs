@@ -41,7 +41,8 @@ async function extractToday(view) {
       : viewName === 'catalogue'
         ? document.querySelector('[data-group-key="today"]')
         : document
-    const rendered = [...(scope || document).querySelectorAll('[data-task-id]')]
+    const selector = viewName === 'canvas' ? '.vue-flow__node [data-task-id]' : '[data-task-id]'
+    const rendered = [...(scope || document).querySelectorAll(selector)]
       .map((element) => ({ id: element.getAttribute('data-task-id'), top: element.getBoundingClientRect().top, left: element.getBoundingClientRect().left }))
       .filter((item) => item.id && allowed.has(item.id))
       .sort((a, b) => a.top - b.top || a.left - b.left)

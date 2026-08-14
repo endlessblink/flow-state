@@ -6,7 +6,7 @@ import { assertNoDuplicateIds } from '@/utils/canvas/invariants'
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { CANVAS } from '@/constants/canvas'
-import { getCanonicalTodayTaskIds } from '@/utils/todayTaskProjection'
+import { getCanonicalTodayTaskIds, getCanonicalTodayTasks } from '@/utils/todayTaskProjection'
 
 // Accept any object exposing the two reactive booleans. Pass the live Pinia
 // taskStore here (not a plain-object getter wrapper) so reads inside the
@@ -81,6 +81,23 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
             tasks,
             !!canvasStore.taskStore?.hideCanvasDoneTasks,
         )
+        const canonicalTodayTasks = getCanonicalTodayTasks(
+            tasks,
+            !!canvasStore.taskStore?.hideCanvasDoneTasks,
+        )
+        const todayPositionedTasks = canonicalTodayTasks.filter(task => task.canvasPosition)
+        const fallbackTodayY = new Map<string, number>()
+        let previousTodayY = todayPositionedTasks[0]?.canvasPosition?.y
+        for (const task of canonicalTodayTasks) {
+            if (task.canvasPosition) {
+                previousTodayY = task.canvasPosition.y
+                continue
+            }
+            if (previousTodayY !== undefined) {
+                previousTodayY += 160
+                fallbackTodayY.set(task.id, previousTodayY)
+            }
+        }
         const result = tasks
             .map(task => {
                 const todayGroup = (canvasStore.groups || []).find(group => {
@@ -90,7 +107,8 @@ export function useCanvasFilteredState(filteredTasks: Ref<Task[]>, canvasStore: 
                 if (todayGroup && todayTaskIds.has(task.id)) {
                     const projectedPosition = task.canvasPosition ?? {
                         x: todayGroup.position.x + CANVAS.GROUP_PADDING,
-                        y: todayGroup.position.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
+                        y: fallbackTodayY.get(task.id) ??
+                            todayGroup.position.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
                     }
                     return {
                         ...task,

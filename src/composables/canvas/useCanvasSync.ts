@@ -15,7 +15,7 @@ import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/inva
 import { CANVAS } from '@/constants/canvas'
 import { traceCanvasDone, traceCanvasDoneNodes, traceCanvasDoneTasks } from '@/utils/canvas/doneTrace'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
-import { getCanonicalTodayTaskIds } from '@/utils/todayTaskProjection'
+import { getCanonicalTodayTaskIds, getCanonicalTodayTasks } from '@/utils/todayTaskProjection'
 import { computeCanonicalLayout, computeVisibleTaskCompaction } from './useCanonicalDayGroupLayout'
 
 // =============================================================================
@@ -201,6 +201,19 @@ export function useCanvasSync() {
                 tasks || taskStore.tasks,
                 shouldHideDone,
             )
+            const canonicalTodayTasks = getCanonicalTodayTasks(tasks || taskStore.tasks, shouldHideDone)
+            const fallbackTodayY = new Map<string, number>()
+            let previousTodayY = canonicalTodayTasks.find(task => task.canvasPosition)?.canvasPosition?.y
+            for (const task of canonicalTodayTasks) {
+                if (task.canvasPosition) {
+                    previousTodayY = task.canvasPosition.y
+                    continue
+                }
+                if (previousTodayY !== undefined) {
+                    previousTodayY += 160
+                    fallbackTodayY.set(task.id, previousTodayY)
+                }
+            }
             const tasksToSync = (tasks || taskStore.tasks)
                 .map(task => {
                     if (task.canvasPosition || !todayGroup || !todayTaskIds.has(task.id)) return task
@@ -209,7 +222,8 @@ export function useCanvasSync() {
                         parentId: todayGroup.id,
                         canvasPosition: {
                             x: todayGroup.position.x + CANVAS.GROUP_PADDING,
-                            y: todayGroup.position.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
+                            y: fallbackTodayY.get(task.id) ??
+                                todayGroup.position.y + CANVAS.DAY_GROUP_HEADER_HEIGHT + CANVAS.GROUP_PADDING,
                         },
                     }
                 })

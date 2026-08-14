@@ -4,6 +4,7 @@
       class="quick-task-trigger"
       aria-label="Quick Tasks"
       title="Quick Tasks"
+      :aria-expanded="isOpen"
       @click="toggleDropdown"
     >
       <Zap :size="16" />

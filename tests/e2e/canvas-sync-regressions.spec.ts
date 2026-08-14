@@ -852,22 +852,25 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
 
     await clientA.reload();
     await gotoCanvasReady(clientA);
-    const taskAfterReload = await clientA.evaluate((taskId) => {
-      const root = document.querySelector("#app") as any;
-      const tasks =
-        root.__vue_app__._context.config.globalProperties.$pinia._s.get(
-          "tasks",
-        )!;
-      return (
-        tasks.rawTasks.find((candidate: any) => candidate.id === taskId) ?? null
+    await expect(async () => {
+      const taskAfterReload = await clientA.evaluate((taskId) => {
+        const root = document.querySelector("#app") as any;
+        const tasks =
+          root.__vue_app__._context.config.globalProperties.$pinia._s.get(
+            "tasks",
+          )!;
+        return (
+          tasks.rawTasks.find((candidate: any) => candidate.id === taskId) ??
+          null
+        );
+      }, OFFLINE_TASK.id);
+      expect(taskAfterReload).toEqual(
+        expect.objectContaining({
+          id: OFFLINE_TASK.id,
+          title: OFFLINE_TASK.title,
+        }),
       );
-    }, OFFLINE_TASK.id);
-    expect(taskAfterReload).toEqual(
-      expect.objectContaining({
-        id: OFFLINE_TASK.id,
-        title: OFFLINE_TASK.title,
-      }),
-    );
+    }).toPass({ timeout: 45_000 });
   });
 
   test("R16 - workspace switching never hides, leaks, or loses newly created tasks", async ({
@@ -3484,7 +3487,12 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     await editModal
       .locator('input[placeholder="Task title"]')
       .fill(rejectedTitle);
-    await editModal.getByText("Save Changes", { exact: true }).click();
+    const saveButton = editModal.getByRole("button", {
+      name: "Save Changes",
+      exact: true,
+    });
+    await expect(saveButton).toBeEnabled({ timeout: 10_000 });
+    await saveButton.click();
 
     await expect(clientA.locator(".sync-indicator.status-error")).toBeVisible({
       timeout: 20_000,

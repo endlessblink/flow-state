@@ -626,9 +626,9 @@ async function repairOverlappingStartupLayout() {
     }
     return
   }
-  // DOM cards can overlap transiently while Vue Flow resolves parent transforms.
-  // Only repair when the persisted absolute geometry is itself overlapping;
-  // otherwise startup must not rewrite valid user positions.
+  // DOM cards can remain overlapped after Vue Flow resolves parent transforms
+  // even when persisted absolute geometry is valid.  Treat stable rendered
+  // overlap as a repair trigger so stale parent transforms cannot remain visible.
   const persistedOverlap = hasOverlappingPersistedTaskGeometry()
   if (persistedOverlap === null) {
     startupLayoutRepairAttempts++
@@ -637,9 +637,10 @@ async function repairOverlappingStartupLayout() {
     }
     return
   }
+  const renderedOverlap = hasOverlappingRenderedTasks()
   startupLayoutRepairAttempted = true
-  if (!persistedOverlap) return
-  if (!hasOverlappingRenderedTasks()) return
+  if (!persistedOverlap && !renderedOverlap) return
+  if (!renderedOverlap) return
   console.warn('[CANVAS:STARTUP-REPAIR] Overlapping task cards detected; applying canonical Tidy layout')
   await handleTidyLayout()
 }

@@ -50,5 +50,8 @@ describe('TASK-1947 app catch-up integration', () => {
     expect(source).toContain("window.removeEventListener('focus', reloadAuthoritativeOnForeground)")
     expect(source).toContain('invalidateCache.all()\n                await reloadCoreData()')
     expect(source).toContain('intervalMs: 5_000')
+    expect(source).toContain('TASK_PROJECTION_RECOVERY_INTERVAL_MS = 15_000')
+    expect(source).toContain('requireRemoteAuthority: true')
+    expect(source).toContain('lastTaskProjectionRecoveryAt')
   })
 })

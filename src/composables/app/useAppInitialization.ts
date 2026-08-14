@@ -192,6 +192,11 @@ export function useAppInitialization() {
             ),
         })
     }
+    // BUG-2012: A healthy-looking realtime channel can still miss a remote
+    // write. Keep a slow authoritative projection heartbeat as a bounded
+    // backstop; realtime and the change cursor remain the fast paths.
+    let lastTaskProjectionRecoveryAt = 0
+    const TASK_PROJECTION_RECOVERY_INTERVAL_MS = 15_000
     const canonicalChangePoller = createCanonicalChangePoller({
         run: scope => canonicalChangeCatchup.run(scope),
         getScopes: () => {
@@ -214,6 +219,18 @@ export function useAppInitialization() {
         // write settle before canonical recovery compares the two projections;
         // otherwise the recovery read can erase a freshly seeded/tidied canvas.
         if (Date.now() - canvas.lastLocalSyncAt < 30_000) return
+        const now = Date.now()
+        if (now - lastTaskProjectionRecoveryAt >= TASK_PROJECTION_RECOVERY_INTERVAL_MS) {
+          lastTaskProjectionRecoveryAt = now
+          invalidateCache.tasks()
+          await taskStore.loadFromDatabase({
+            requireRemoteAuthority: true,
+            authorityScope: {
+              userId: scope.userId,
+              workspaceId: scope.kind === 'workspace' ? scope.workspaceId : null,
+            },
+          })
+        }
         invalidateCache.groups()
             if (await canvas.hasRemoteGroupChanges()) {
                 await canvasStore.loadFromDatabase()

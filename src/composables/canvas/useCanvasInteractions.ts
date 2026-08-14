@@ -442,22 +442,13 @@ export function useCanvasInteractions(deps?: {
         // If startDrag() returned false, we are already dragging - ignore duplicate event
     }
 
-    const onNodeDrag = (event: NodeDragEvent) => {
+    const onNodeDrag = (_event: NodeDragEvent) => {
         // Vue Flow updates node.position automatically (Visuals)
         dragDiagFrameCount++
-
-        // TASK-213: Update PositionManager (Truth)
-        const allGroups = canvasStore._rawGroups || canvasStore.groups || []
-        event.nodes.forEach(node => {
-            const absPos = computeNodeAbsolutePosition(node, allGroups)
-            const parentId = node.parentNode
-                ? (node.parentNode.startsWith('section-') ? node.parentNode.replace('section-', '') : node.parentNode)
-                : null
-
-            // FIX: Use raw ID (not Vue Flow node ID) to match PositionManager's key format
-            const { id: rawId } = CanvasIds.parseNodeId(node.id)
-            positionManager.updatePosition(rawId, absPos, 'user-drag', parentId)
-        })
+        // Keep pointer movement renderer-local. PositionManager is reactive and
+        // drag-stop is the single geometry writer; updating it for every pointer
+        // event adds work to the frame path and lets read-sync observers race the
+        // in-progress gesture.
     }
 
     // useNodeSync expects Ref<Map> from storeToRefs for proper reactivity

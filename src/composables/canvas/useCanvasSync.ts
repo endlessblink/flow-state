@@ -112,6 +112,12 @@ export function useCanvasSync() {
     const { nodeVersionMap, aggregatedTaskCountByGroupId, taskCountByGroupId } = storeToRefs(canvasStore)
     const taskStore = useTaskStore()
     const canvasImagesStore = useCanvasImagesStore()
+    // Board order is projected into Canvas only when the persisted order of
+    // canvas tasks actually changes. Recomputing it on every read sync lets an
+    // unrelated write (including a Canvas drag) overwrite fresh geometry with
+    // an older order-derived layout.
+    let lastCanvasOrderSignature: string | null = null
+    let lastCanvasGeometrySignature: string | null = null
     const { getNodes, setNodes, updateNode, addNodes, removeNodes } = useVueFlow()
 
     // Alias to module-level ref for backward compatibility
@@ -214,7 +220,7 @@ export function useCanvasSync() {
                     fallbackTodayY.set(task.id, previousTodayY)
                 }
             }
-            const tasksToSync = (tasks || taskStore.tasks)
+            const tasksToSync = (tasks || taskStore.rawTasks || taskStore.tasks)
                 .map(task => {
                     if (task.canvasPosition || !todayGroup || !todayTaskIds.has(task.id)) return task
                     return {
@@ -230,11 +236,29 @@ export function useCanvasSync() {
                 .filter(t => t.canvasPosition)
             const currentNodes = getNodes.value
 
+            const canvasOrderSignature = tasksToSync
+                .filter((task) => !!task.canvasPosition)
+                .map((task) => `${task.id}:${task.parentId ?? ''}:${task.order ?? ''}`)
+                .sort()
+                .join('|')
+            const canvasGeometrySignature = tasksToSync
+                .filter((task) => !!task.canvasPosition)
+                .map((task) => `${task.id}:${task.parentId ?? ''}:${task.canvasPosition!.x}:${task.canvasPosition!.y}`)
+                .sort()
+                .join('|')
+            const shouldProjectBoardOrder =
+                lastCanvasOrderSignature !== null &&
+                lastCanvasGeometrySignature === canvasGeometrySignature &&
+                lastCanvasOrderSignature !== canvasOrderSignature
+            lastCanvasOrderSignature = canvasOrderSignature
+            lastCanvasGeometrySignature = canvasGeometrySignature
+
             // Board order is the shared sequence. Project it into each canvas
-            // group as row-major positions without persisting geometry from the
-            // read path. Canvas drag remains the only geometry writer.
+            // group as row-major positions only when that sequence changed.
+            // Canvas geometry remains authoritative for ordinary read syncs,
+            // including drag, inbox, realtime, and startup hydration paths.
             const orderedTaskPositions = new Map<string, { x: number; y: number }>()
-            for (const group of groups) {
+            if (shouldProjectBoardOrder) for (const group of groups) {
                 const groupTasks = tasksToSync.filter((task) => task.parentId === group.id && task.canvasPosition)
                 if (groupTasks.length < 2 || !groupTasks.some((task) => Number.isFinite(task.order))) continue
 

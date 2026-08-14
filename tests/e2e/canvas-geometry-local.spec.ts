@@ -786,7 +786,7 @@ test.describe('local canvas geometry regressions', () => {
     expect(movedTask!.x % 16, JSON.stringify(movedTask, null, 2)).toBe(0)
     expect(movedTask!.y % 16, JSON.stringify(movedTask, null, 2)).toBe(0)
     expect(afterViewport, JSON.stringify({ beforeViewport, afterViewport }, null, 2)).toEqual(beforeViewport)
-    expect(afterRendered, JSON.stringify({ beforeRendered, afterRendered, beforeViewport, afterViewport }, null, 2)).toEqual(beforeRendered)
+    expect(afterRendered).toEqual(beforeRendered)
   })
 
   test('dragging one group does not nudge unrelated canvas nodes', async ({ page }) => {
@@ -866,6 +866,7 @@ test.describe('local canvas geometry regressions', () => {
     }))
     expect(movedTask!.x % 16, JSON.stringify(movedTask, null, 2)).toBe(0)
     expect(movedTask!.y % 16, JSON.stringify(movedTask, null, 2)).toBe(0)
+    const movedPosition = { x: movedTask!.x, y: movedTask!.y }
 
     await page.evaluate(async () => {
       const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
@@ -883,9 +884,65 @@ test.describe('local canvas geometry regressions', () => {
     })
     await page.waitForTimeout(1200)
 
+    const afterSyncStore = await readGeometry(page)
+    const movedTaskAfterSync = afterSyncStore.tasks.find((task) => task.id === 'nudge-sync-b')
+    expect(movedTaskAfterSync, JSON.stringify(afterSyncStore, null, 2)).toEqual(expect.objectContaining(movedPosition))
     const afterRendered = (await readRenderedNodePositions(page, stableIds))
       .map((node) => node ? { id: node.id, transform: node.transform } : node)
     expect(afterRendered, JSON.stringify({ beforeRendered, afterRendered }, null, 2)).toEqual(beforeRendered)
+  })
+
+  test('drag frames do not write PositionManager until drop', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'drag-frame-g1', name: 'Drag Frame G1', x: 180, y: 160, width: 420, height: 900 },
+    ], [
+      { id: 'drag-frame-task', title: 'Drag Frame Task', parentId: 'drag-frame-g1', x: 244, y: 252 },
+    ])
+
+    let positionManagerUpdates = 0
+    const onConsole = (message: { type: () => string; text: () => string }) => {
+      if (message.type() === 'log' && message.text().includes('[PM-UPDATE]')) positionManagerUpdates++
+    }
+    page.on('console', onConsole)
+    await dragRenderedNode(page, 'drag-frame-task', 160, 48)
+    await page.waitForTimeout(400)
+    page.off('console', onConsole)
+
+    expect(positionManagerUpdates).toBeLessThanOrEqual(2)
+  })
+
+  test('F2 drag reorders a task and persists the new slot after sync', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'f2-reorder-group', name: 'F2 Reorder Group', x: 180, y: 160, width: 420, height: 900 },
+    ], [
+      { id: 'f2-reorder-a', title: 'F2 Reorder A', parentId: 'f2-reorder-group', x: 244, y: 252 },
+      { id: 'f2-reorder-b', title: 'F2 Reorder B', parentId: 'f2-reorder-group', x: 244, y: 396 },
+      { id: 'f2-reorder-c', title: 'F2 Reorder C', parentId: 'f2-reorder-group', x: 244, y: 540 },
+    ])
+
+    await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true })))
+    try {
+      await dragRenderedNode(page, 'f2-reorder-b', 0, -180)
+    } finally {
+      await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'F2', bubbles: true })))
+    }
+
+    await page.waitForTimeout(1200)
+    const geometry = await readGeometry(page)
+    const tasks = geometry.tasks
+      .filter((task) => task.id.startsWith('f2-reorder-'))
+      .sort((a, b) => a.y - b.y)
+    expect(tasks.map((task) => task.id), JSON.stringify(geometry, null, 2)).toEqual(['f2-reorder-b', 'f2-reorder-a', 'f2-reorder-c'])
+
+    await page.reload()
+    await setupCanvas(page)
+    await expect.poll(async () => {
+      const reloaded = await readGeometry(page)
+      return reloaded.tasks
+        .filter((task) => task.id.startsWith('f2-reorder-'))
+        .sort((a, b) => a.y - b.y)
+        .map((task) => task.id)
+    }).toEqual(['f2-reorder-b', 'f2-reorder-a', 'f2-reorder-c'])
   })
 
   test('dragging an inbox task onto the canvas does not nudge existing nodes', async ({ page }) => {

@@ -500,6 +500,8 @@ function applyCanonicalMoves(
 
 let startupLayoutRepairAttempted = false
 let startupLayoutRepairAttempts = 0
+let startupRepairTaskSignature: string | null = null
+let startupRepairStableSignaturePasses = 0
 function hasOverlappingRenderedTasks() {
   const canvasNodes = getNodes.value as unknown as CanvasNodeRecord[]
   const taskRects: Array<{ left: number; top: number; right: number; bottom: number }> = []
@@ -511,6 +513,48 @@ function hasOverlappingRenderedTasks() {
     taskRects.push({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom })
   }
   return hasOverlappingRects(taskRects)
+}
+
+function hasOverlappingPersistedTaskGeometry(): boolean | null {
+  const tasksByParent = new Map<string, Array<{ left: number; top: number; right: number; bottom: number }>>()
+  const canvasNodes = getNodes.value as unknown as CanvasNodeRecord[]
+  for (const task of taskStore.rawTasks) {
+    if (!task.canvasPosition) continue
+    const node = canvasNodes.find((candidate) => candidate.id === task.id)
+    // Tasks filtered out of the current Canvas projection are not part of the
+    // rendered overlap problem and must not block startup measurement.
+    if (!node || node.type !== 'taskNode' || node.hidden) continue
+    const element = document.querySelector(`[data-task-id="${CSS.escape(task.id)}"]`) as HTMLElement | null
+    const renderedRect = element?.getBoundingClientRect()
+    const renderedZoom = getRenderedCanvasZoom()
+    const measuredWidth = node.dimensions?.width ?? (renderedRect && renderedRect.width > 0 ? renderedRect.width / renderedZoom : undefined) ?? node.width
+    const measuredHeight = node.dimensions?.height ?? (renderedRect && renderedRect.height > 0 ? renderedRect.height / renderedZoom : undefined) ?? node.height
+    // Vue Flow can mount task wrappers before it has measured every card.  A
+    // false result here permanently skipped startup repair on the real canvas.
+    if (typeof measuredWidth !== 'number' || typeof measuredHeight !== 'number' || !Number.isFinite(measuredWidth) || !Number.isFinite(measuredHeight) || measuredWidth <= 0 || measuredHeight <= 0) return null
+    const width = measuredWidth
+    const height = measuredHeight
+    const rects = tasksByParent.get(task.parentId ?? '__root__') ?? []
+    rects.push({
+      left: task.canvasPosition.x,
+      top: task.canvasPosition.y,
+      right: task.canvasPosition.x + width,
+      bottom: task.canvasPosition.y + height,
+    })
+    tasksByParent.set(task.parentId ?? '__root__', rects)
+  }
+  return Array.from(tasksByParent.values()).some((rects) => {
+    for (let index = 0; index < rects.length; index++) {
+      for (let otherIndex = index + 1; otherIndex < rects.length; otherIndex++) {
+        const first = rects[index]
+        const second = rects[otherIndex]
+        const overlapX = Math.min(first.right, second.right) - Math.max(first.left, second.left)
+        const overlapY = Math.min(first.bottom, second.bottom) - Math.max(first.top, second.top)
+        if (overlapX > 32 && overlapY > 32) return true
+      }
+    }
+    return false
+  })
 }
 
 async function repairOverlappingStartupLayout() {
@@ -526,7 +570,75 @@ async function repairOverlappingStartupLayout() {
     }
     return
   }
+  const hasSmartDayGroup = canvasStore.groups.some((group) =>
+    /^(today|tomorrow|yesterday|sunday|monday|tuesday|wednesday|thursday|friday|saturday)$/i.test(group.name.trim()),
+  )
+  // Tasks can hydrate before the group query.  An empty group list is still
+  // loading; do not consume the one-shot startup repair before day groups are
+  // available to classify the persisted task geometry.
+  if (canvasStore.groups.length === 0) {
+    startupLayoutRepairAttempts++
+    if (startupLayoutRepairAttempts < 40) {
+      window.setTimeout(() => { void repairOverlappingStartupLayout() }, 250)
+    }
+    return
+  }
+  if (!hasSmartDayGroup) {
+    startupLayoutRepairAttempted = true
+    return
+  }
+  const taskSignature = (getNodes.value as unknown as CanvasNodeRecord[])
+    .filter((node) => node.type === 'taskNode' && !node.hidden)
+    .map((node) => node.id)
+    .sort()
+    .join('|')
+  if (startupRepairTaskSignature === null) {
+    startupRepairTaskSignature = taskSignature
+    startupRepairStableSignaturePasses = 0
+  } else if (startupRepairTaskSignature !== taskSignature) {
+    // Task hydration can complete in waves.  Replace the provisional
+    // signature and wait for it to settle before treating a change as a real
+    // post-startup add/drop.
+    startupRepairTaskSignature = taskSignature
+    startupRepairStableSignaturePasses = 0
+    startupLayoutRepairAttempts++
+    if (startupLayoutRepairAttempts < 40) {
+      window.setTimeout(() => { void repairOverlappingStartupLayout() }, 250)
+    }
+    return
+  }
+  startupRepairStableSignaturePasses++
+  if (startupRepairStableSignaturePasses < 2) {
+    startupLayoutRepairAttempts++
+    if (startupLayoutRepairAttempts < 40) {
+      window.setTimeout(() => { void repairOverlappingStartupLayout() }, 250)
+    }
+    return
+  }
+  // Do not classify a just-finished sync as a broken startup layout.  Seeded
+  // tasks, realtime hydration, and inbox drops can render intermediate cards
+  // before Vue Flow has settled their parent transforms.
+  const lastLocalSyncAt = canvasStore.lastLocalSyncAt
+  if (lastLocalSyncAt && Date.now() - lastLocalSyncAt < 1_500) {
+    startupLayoutRepairAttempts++
+    if (startupLayoutRepairAttempts < 40) {
+      window.setTimeout(() => { void repairOverlappingStartupLayout() }, 250)
+    }
+    return
+  }
+  // DOM cards can overlap transiently while Vue Flow resolves parent transforms.
+  // Only repair when the persisted absolute geometry is itself overlapping;
+  // otherwise startup must not rewrite valid user positions.
+  const persistedOverlap = hasOverlappingPersistedTaskGeometry()
+  if (persistedOverlap === null) {
+    startupLayoutRepairAttempts++
+    if (startupLayoutRepairAttempts < 40) {
+      window.setTimeout(() => { void repairOverlappingStartupLayout() }, 250)
+    }
+    return
+  }
   startupLayoutRepairAttempted = true
+  if (!persistedOverlap) return
   if (!hasOverlappingRenderedTasks()) return
   console.warn('[CANVAS:STARTUP-REPAIR] Overlapping task cards detected; applying canonical Tidy layout')
   await handleTidyLayout()
@@ -1361,7 +1473,8 @@ onUnmounted(() => {
 })
 
 // Expose for testing purposes (Fundamental Stability)
-if (process.env.NODE_ENV === 'development' || (window as unknown as Record<string, unknown>).PLAYWRIGHT_TEST) {
+const canvasDebugEnabled = new URLSearchParams(window.location.search).has('canvas-debug')
+if (process.env.NODE_ENV === 'development' || (window as unknown as Record<string, unknown>).PLAYWRIGHT_TEST || canvasDebugEnabled) {
   (window as unknown as Record<string, unknown>).__POMO_FLOW_DEBUG__ = {
     orchestrator,
     canvasStore,

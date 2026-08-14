@@ -240,7 +240,11 @@ export function useCanvasOrchestrator() {
 
         try {
             const t0 = performance.now()
-            const tasksToSync = tasks || tasksWithCanvasPosition.value
+            // The sync layer owns Canvas projection and must read raw task geometry.
+            // The filtered selector may return a render-only Today/group projection;
+            // feeding that projection back into sync can rewrite stored coordinates
+            // during an unrelated metadata refresh.
+            const tasksToSync = tasks || taskStore.rawTasks || taskStore.tasks
             traceCanvasDone('orchestrator:syncNodes:before', {
                 force: options?.force === true,
                 taskCount: tasksToSync.length,

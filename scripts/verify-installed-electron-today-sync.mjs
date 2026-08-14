@@ -22,6 +22,9 @@ async function ready(route, storage = {}) {
   if (Object.keys(storage).length) await page.reload()
   await page.waitForFunction(() => !!document.querySelector('#app')?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks'), null, { timeout: 30_000 })
   await page.waitForTimeout(2_000)
+  if (route === 'canvas') {
+    await page.waitForFunction(() => document.querySelectorAll('.vue-flow__node [data-task-id]').length > 0, null, { timeout: 30_000 })
+  }
 }
 
 async function extractToday(view) {
@@ -61,10 +64,15 @@ async function extractToday(view) {
 
 await ready('board', { 'flowstate:board-view-type': 'date' })
 const board = await extractToday('board')
+await page.locator('.kanban-column').filter({ has: page.locator('.column-title', { hasText: 'Today' }) }).scrollIntoViewIfNeeded()
+await page.screenshot({ path: 'test-results/installed-electron-today-board.png', fullPage: true })
 await ready('catalog', { 'flowstate:all-tasks-group-by': 'dueDate', 'flowstate:all-tasks-sort-by': 'manual' })
 const catalogue = await extractToday('catalogue')
+await page.locator('.task-group[data-group-key="today"]').scrollIntoViewIfNeeded()
+await page.screenshot({ path: 'test-results/installed-electron-today-catalogue.png', fullPage: true })
 await ready('canvas')
 const canvas = await extractToday('canvas')
+await page.screenshot({ path: 'test-results/installed-electron-today-canvas.png', fullPage: true })
 console.log(JSON.stringify({ url: page.url(), board, catalogue, canvas }, null, 2))
 if (!board.todayCount || !catalogue.todayCount || !canvas.todayCount) throw new Error('Today gate was empty or unauthenticated')
 for (const [name, result] of Object.entries({ board, catalogue, canvas })) {

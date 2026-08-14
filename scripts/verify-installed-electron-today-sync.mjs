@@ -42,7 +42,7 @@ async function extractToday(view) {
     const scope = viewName === 'board'
       ? [...document.querySelectorAll('.kanban-column')].find((column) => column.querySelector('.column-title')?.textContent?.trim() === 'Today')
       : viewName === 'catalogue'
-        ? document.querySelector('[data-group-key="today"]')
+        ? [...document.querySelectorAll('.task-group')].find((group) => group.querySelector('.group-name')?.textContent?.trim() === 'Today')
         : document
     const selector = viewName === 'canvas' ? '.vue-flow__node [data-task-id]' : '[data-task-id]'
     const rendered = [...(scope || document).querySelectorAll(selector)]
@@ -68,7 +68,7 @@ await page.locator('.kanban-column').filter({ has: page.locator('.column-title',
 await page.screenshot({ path: 'test-results/installed-electron-today-board.png', fullPage: true })
 await ready('catalog', { 'flowstate:all-tasks-group-by': 'dueDate', 'flowstate:all-tasks-sort-by': 'manual' })
 const catalogue = await extractToday('catalogue')
-await page.locator('.task-group[data-group-key="today"]').scrollIntoViewIfNeeded()
+  await page.locator('.task-group').filter({ has: page.locator('.group-name', { hasText: 'Today' }) }).scrollIntoViewIfNeeded()
 await page.screenshot({ path: 'test-results/installed-electron-today-catalogue.png', fullPage: true })
 await ready('canvas')
 const canvas = await extractToday('canvas')

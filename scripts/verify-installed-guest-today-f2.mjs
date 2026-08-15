@@ -75,7 +75,11 @@ async function readView(route, view) {
     localStorage.setItem('flowstate:all-tasks-group-by', 'dueDate')
     localStorage.setItem('flowstate:all-tasks-sort-by', 'manual')
   })
-  await page.goto(`${appOrigin}/#/${route}`)
+  if (process.env.ELECTRON_USE_NAV_TABS === '1') {
+    await page.locator(`a.view-tab[href="/${route}"]`).click()
+  } else {
+    await page.goto(`${appOrigin}/#/${route}`)
+  }
   await page.waitForTimeout(1_500)
   return page.evaluate((viewName) => {
     const scope = viewName === 'board'

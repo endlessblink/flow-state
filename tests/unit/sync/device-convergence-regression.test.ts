@@ -92,5 +92,8 @@ describe('mobile PWA to Electron convergence regression', () => {
     expect(verifier).toContain('offlineMs')
     expect(verifier).toContain('finally')
     expect(verifier).toContain('restored: true')
+    expect(verifier).toContain('FLOWSTATE_LIVE_ALLOW_MUTATION')
+    expect(verifier).toContain('signInWithPassword')
+    expect(verifier).not.toContain('window.electronAPI?.storeGet')
   })
 })

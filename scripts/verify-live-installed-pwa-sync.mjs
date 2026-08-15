@@ -1,8 +1,19 @@
 import { chromium } from 'playwright'
+import { createClient } from '@supabase/supabase-js'
 
 const electronCdpUrl = process.env.ELECTRON_CDP_URL || 'http://127.0.0.1:9229'
 const pwaUrl = process.env.FLOWSTATE_PWA_URL || 'https://in-theflow.com/#/catalog'
 const browserExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '/usr/bin/chromium'
+const liveEmail = process.env.FLOWSTATE_LIVE_EMAIL || ''
+const livePassword = process.env.FLOWSTATE_LIVE_PASSWORD || ''
+const liveAnonKey = process.env.FLOWSTATE_LIVE_ANON_KEY || ''
+const liveSupabaseUrl = process.env.FLOWSTATE_LIVE_SUPABASE_URL || 'https://api.in-theflow.com'
+const liveMutationConfirmation = 'I_UNDERSTAND_DISPOSABLE_FIXTURE'
+const hasExplicitLiveAuth = Boolean(liveEmail && livePassword && liveAnonKey)
+
+if (hasExplicitLiveAuth && process.env.FLOWSTATE_LIVE_ALLOW_MUTATION !== liveMutationConfirmation) {
+  throw new Error(`Explicit live credentials require FLOWSTATE_LIVE_ALLOW_MUTATION=${liveMutationConfirmation}`)
+}
 
 const electronBrowser = await chromium.connectOverCDP(electronCdpUrl)
 const electronPage = electronBrowser.contexts()[0]?.pages().find(page =>
@@ -11,6 +22,15 @@ const electronPage = electronBrowser.contexts()[0]?.pages().find(page =>
 if (!electronPage) throw new Error('No authenticated Electron page available')
 
 const authStorage = await electronPage.evaluate(() => Object.entries(localStorage))
+let liveClient = null
+if (hasExplicitLiveAuth) {
+  liveClient = createClient(liveSupabaseUrl, liveAnonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const { data, error } = await liveClient.auth.signInWithPassword({ email: liveEmail, password: livePassword })
+  if (error || !data.session) throw new Error(`Explicit live fixture authentication failed: ${error?.message || 'missing session'}`)
+  authStorage.push(['flowstate-supabase-auth', JSON.stringify(data.session)])
+}
 const pwaBrowser = await chromium.launch({ headless: true, executablePath: browserExecutable })
 const pwaContext = await pwaBrowser.newContext()
 await pwaContext.addInitScript(entries => {
@@ -97,11 +117,13 @@ try {
   await waitForTaskTitle(electronPage, sourceTask.id, offlineMarker)
   offlineMs = Date.now() - offlineStartedAt
 } finally {
-  if (modified) {
+if (modified) {
     await updateTask(electronPage, sourceTask.id, sourceTask.title)
     await waitForTaskTitle(pwaPage, sourceTask.id, sourceTask.title)
   }
 }
+
+if (liveClient) await liveClient.auth.signOut()
 
 console.log(JSON.stringify({
   electronVersion: await electronPage.evaluate(() => navigator.userAgent.match(/flow-state\/([^ ]+)/)?.[1] || null),

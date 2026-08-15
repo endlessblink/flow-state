@@ -63,6 +63,7 @@ if (!pwaTask || pwaTask.id !== sourceTask.id) {
 const marker = `${sourceTask.title} [sync-proof-${Date.now()}]`
 let forwardMs = null
 let reverseMs = null
+let offlineMs = null
 let modified = false
 try {
   const startedAt = Date.now()
@@ -80,6 +81,19 @@ try {
   modified = true
   await waitForTaskTitle(pwaPage, sourceTask.id, reverseMarker)
   reverseMs = Date.now() - reverseStartedAt
+
+  const offlineMarker = `${sourceTask.title} [offline-sync-proof-${Date.now()}]`
+  await pwaContext.setOffline(true)
+  try {
+    await updateTask(pwaPage, sourceTask.id, offlineMarker)
+    await waitForTaskTitle(pwaPage, sourceTask.id, offlineMarker)
+  } finally {
+    await pwaContext.setOffline(false)
+  }
+  modified = true
+  const offlineStartedAt = Date.now()
+  await waitForTaskTitle(electronPage, sourceTask.id, offlineMarker)
+  offlineMs = Date.now() - offlineStartedAt
 } finally {
   if (modified) {
     await updateTask(electronPage, sourceTask.id, sourceTask.title)
@@ -94,6 +108,7 @@ console.log(JSON.stringify({
   propagatedWithoutReload: true,
   forwardMs,
   reverseMs,
+  offlineMs,
   restored: true,
 }, null, 2))
 

@@ -84,6 +84,8 @@ describe('mobile PWA to Electron convergence regression', () => {
     expect(verifier).toContain('https://in-theflow.com/#/catalog')
     expect(verifier).toContain('waitForFunction')
     expect(verifier).toContain('propagatedWithoutReload: true')
+    expect(verifier).toContain('electron-sync-proof-')
+    expect(verifier).toContain('reverseMs')
     expect(verifier).toContain('finally')
     expect(verifier).toContain('restored: true')
   })

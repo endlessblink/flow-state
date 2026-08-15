@@ -38,6 +38,13 @@ const updateTask = (page, taskId, title) => page.evaluate(async ({ taskId: id, t
   await store.updateTask(id, { title: nextTitle }, 'USER')
 }, { taskId, title })
 
+const waitForTaskTitle = (page, taskId, title) => page.waitForFunction(({ id, expectedTitle }) => {
+  const root = document.querySelector('#app')
+  const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
+  const store = pinia?._s.get('tasks')
+  return (store?.rawTasks || []).some(task => task.id === id && task.title === expectedTitle)
+}, { id: taskId, expectedTitle: title }, { timeout: 30_000 })
+
 await pwaPage.goto(pwaUrl, { waitUntil: 'domcontentloaded' })
 await pwaPage.waitForFunction(() => !!document.querySelector('#app')?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks'), null, { timeout: 30_000 })
 await pwaPage.waitForFunction(() => {
@@ -55,27 +62,28 @@ if (!pwaTask || pwaTask.id !== sourceTask.id) {
 
 const marker = `${sourceTask.title} [sync-proof-${Date.now()}]`
 let forwardMs = null
+let reverseMs = null
 let modified = false
 try {
   const startedAt = Date.now()
   await updateTask(pwaPage, sourceTask.id, marker)
   modified = true
-  await electronPage.waitForFunction(({ taskId, title }) => {
-    const root = document.querySelector('#app')
-    const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
-    const store = pinia?._s.get('tasks')
-    return (store?.rawTasks || []).some(task => task.id === taskId && task.title === title)
-  }, { taskId: sourceTask.id, title: marker }, { timeout: 30_000 })
+  await waitForTaskTitle(electronPage, sourceTask.id, marker)
   forwardMs = Date.now() - startedAt
+  await updateTask(electronPage, sourceTask.id, sourceTask.title)
+  await waitForTaskTitle(pwaPage, sourceTask.id, sourceTask.title)
+  modified = false
+
+  const reverseMarker = `${sourceTask.title} [electron-sync-proof-${Date.now()}]`
+  const reverseStartedAt = Date.now()
+  await updateTask(electronPage, sourceTask.id, reverseMarker)
+  modified = true
+  await waitForTaskTitle(pwaPage, sourceTask.id, reverseMarker)
+  reverseMs = Date.now() - reverseStartedAt
 } finally {
   if (modified) {
-    await updateTask(pwaPage, sourceTask.id, sourceTask.title)
-    await electronPage.waitForFunction(({ taskId, title }) => {
-      const root = document.querySelector('#app')
-      const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
-      const store = pinia?._s.get('tasks')
-      return (store?.rawTasks || []).some(task => task.id === taskId && task.title === title)
-    }, { taskId: sourceTask.id, title: sourceTask.title }, { timeout: 30_000 })
+    await updateTask(electronPage, sourceTask.id, sourceTask.title)
+    await waitForTaskTitle(pwaPage, sourceTask.id, sourceTask.title)
   }
 }
 
@@ -85,6 +93,7 @@ console.log(JSON.stringify({
   taskId: sourceTask.id,
   propagatedWithoutReload: true,
   forwardMs,
+  reverseMs,
   restored: true,
 }, null, 2))
 

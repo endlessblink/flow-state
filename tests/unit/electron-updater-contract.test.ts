@@ -193,6 +193,13 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('whose parser rejects the multiline parenthesized expression')
   })
 
+  it('allows a slow but healthy AppImage replacement to finish starting', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource.match(/while \[ "\$health_attempt" -lt 300 \]; do/g)).toHaveLength(2)
+    expect(updaterSource).toContain('cold Electron/AppImage start can take over 20 seconds')
+  })
+
   it('prepares the supervised detached handoff before stopping the local bridge', () => {
     const updaterSource = readSource('electron/updater.ts')
     const installHandlerStart = updaterSource.indexOf("ipcMain.handle('updater:install'")

@@ -195,7 +195,10 @@ fail_after_swap() {
 }
 wait_for_supervised_health() {
   health_attempt=0
-  while [ "$health_attempt" -lt 100 ]; do
+  # A cold Electron/AppImage start can take over 20 seconds while the local
+  # bridge and renderer initialize; do not roll back a valid replacement too
+  # early when the process is still starting normally.
+  while [ "$health_attempt" -lt 300 ]; do
     if systemctl --user is-active --quiet flowstate-background.service && \
       curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
         grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
@@ -212,7 +215,7 @@ wait_for_direct_health() {
 wait_for_direct_health_version() {
   expected_health_version="$1"
   health_attempt=0
-  while [ "$health_attempt" -lt 100 ]; do
+  while [ "$health_attempt" -lt 300 ]; do
     if curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
       grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
       return 0

@@ -225,7 +225,9 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('mv -f "$backup" "$target"')
     expect(updaterSource).toContain('wait_for_supervised_health()')
     expect(updaterSource).toContain('curl -fsS http://127.0.0.1:5577/api/provenance')
-    expect(updaterSource).toContain('grep -F "\\\"appVersion\\\":\\\"$expected_version\\\""')
+    expect(updaterSource).toContain(
+      String.raw`grep -F "\\\"appVersion\\\":\\\"$expected_version\\\""`,
+    )
     expect(updaterSource).toContain('fail_after_swap "supervised readiness"')
     expect(updaterSource.indexOf('wait_for_supervised_health')).toBeLessThan(
       updaterSource.lastIndexOf('rm -f "$backup"'),

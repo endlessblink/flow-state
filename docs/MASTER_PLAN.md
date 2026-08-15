@@ -81,6 +81,8 @@ The public PWA and Electron 1.4.378 artifacts, local offline/reconnect matrix, a
 
 **Updater readiness fix (2026-08-15)**: Clean runtime evidence showed the restored installed bridge needed roughly 30–40 seconds to become healthy, exceeding the updater's 20-second readiness window. Both direct and supervised readiness loops now allow 60 seconds, with a regression asserting both loops use the longer bound; this requires a new versioned Electron release and clean single-instance handoff verification.
 
+**Updater readiness matcher fix (2026-08-15)**: The generated installer shell had another independent defect: JavaScript template escaping removed the quote characters from its `grep` pattern, so it searched for an unquoted `appVersion:1.4.x` string that could never match the JSON response. The generated matcher now preserves the JSON quotes and the updater contract test guards that exact command shape; release 1.4.404 and a clean installed handoff remain required.
+
 **Release 1.4.375 work (2026-08-13)**: A real installed 1.4.374 service launch kept the Electron window at its hidden 10x10 initial bounds when renderer readiness was delayed. Normal production launches now present the managed window immediately after document load begins, preserving hidden background launches; focused lifecycle and integration regressions pass. Installed 1.4.375 visibility and authenticated workspace usability remain required before closeout.
 
 **Release 1.4.376 work (2026-08-13)**: The installed 1.4.375 service still exposed the supervisor's 10x10 geometry, so the normal ready-to-show lifecycle now repairs collapsed bounds immediately before showing. The new regression passes locally; installed 1.4.376 visibility remains the next live gate.

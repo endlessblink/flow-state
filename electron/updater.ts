@@ -201,7 +201,7 @@ wait_for_supervised_health() {
   while [ "$health_attempt" -lt 300 ]; do
     if systemctl --user is-active --quiet flowstate-background.service && \
       curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
-        grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
+        grep -F "\\\"appVersion\\\":\\\"$expected_version\\\"" >/dev/null; then
       return 0
     fi
     health_attempt=$((health_attempt + 1))
@@ -217,7 +217,7 @@ wait_for_direct_health_version() {
   health_attempt=0
   while [ "$health_attempt" -lt 300 ]; do
     if curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
-      grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
+      grep -F "\\\"appVersion\\\":\\\"$expected_health_version\\\"" >/dev/null; then
       return 0
     fi
     health_attempt=$((health_attempt + 1))

@@ -76,4 +76,15 @@ describe('mobile PWA to Electron convergence regression', () => {
     expect(pwaReceipt.appVersion).toBe(electronReceipt.appVersion)
     expect(electronReceipt.status).toBe('synced')
   })
+
+  it('keeps a real installed PWA-to-Electron mutation proof on the no-reload path', () => {
+    const verifier = readFileSync(resolve(process.cwd(), 'scripts/verify-live-installed-pwa-sync.mjs'), 'utf8')
+
+    expect(verifier).toContain('chromium.connectOverCDP')
+    expect(verifier).toContain('https://in-theflow.com/#/catalog')
+    expect(verifier).toContain('waitForFunction')
+    expect(verifier).toContain('propagatedWithoutReload: true')
+    expect(verifier).toContain('finally')
+    expect(verifier).toContain('restored: true')
+  })
 })

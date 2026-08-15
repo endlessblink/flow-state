@@ -184,6 +184,15 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('mv -f "$tmp" "$target" || fail_after_swap "swap target"')
   })
 
+  it('uses a mawk-safe single-line process predicate during AppImage handoff', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain(
+      `awk -v self="$$" -v target="$target" '$1 != self && ((index($0, "/.mount_FlowSt") > 0 && index($0, "/flowstate") > 0) || $0 ~ ("^" target "([[:space:]]|$)")) { print $1 }'`,
+    )
+    expect(updaterSource).toContain('whose parser rejects the multiline parenthesized expression')
+  })
+
   it('prepares the supervised detached handoff before stopping the local bridge', () => {
     const updaterSource = readSource('electron/updater.ts')
     const installHandlerStart = updaterSource.indexOf("ipcMain.handle('updater:install'")

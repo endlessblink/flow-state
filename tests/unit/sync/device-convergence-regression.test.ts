@@ -82,6 +82,7 @@ describe('mobile PWA to Electron convergence regression', () => {
 
     expect(verifier).toContain('chromium.connectOverCDP')
     expect(verifier).toContain('https://in-theflow.com/#/catalog')
+    expect(verifier).toContain("page.url().startsWith('file://')")
     expect(verifier).toContain('waitForFunction')
     expect(verifier).toContain('propagatedWithoutReload: true')
     expect(verifier).toContain('electron-sync-proof-')

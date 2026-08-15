@@ -5,7 +5,9 @@ const pwaUrl = process.env.FLOWSTATE_PWA_URL || 'https://in-theflow.com/#/catalo
 const browserExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '/usr/bin/chromium'
 
 const electronBrowser = await chromium.connectOverCDP(electronCdpUrl)
-const electronPage = electronBrowser.contexts()[0]?.pages().find(page => page.url().includes('in-theflow.com'))
+const electronPage = electronBrowser.contexts()[0]?.pages().find(page =>
+  page.url().includes('in-theflow.com') || page.url().startsWith('file://')
+)
 if (!electronPage) throw new Error('No authenticated Electron page available')
 
 const authStorage = await electronPage.evaluate(() => Object.entries(localStorage))

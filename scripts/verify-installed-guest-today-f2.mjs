@@ -42,6 +42,7 @@ await page.keyboard.down('F2')
 try {
   const startX = box.x + box.width / 2
   const startY = box.y + Math.min(box.height / 2, 60)
+  await dragTarget.hover()
   await page.mouse.move(startX, startY)
   await page.mouse.down()
   await page.mouse.move(startX, startY - 180, { steps: 16 })

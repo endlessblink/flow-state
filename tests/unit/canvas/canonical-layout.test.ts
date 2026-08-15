@@ -58,6 +58,24 @@ describe('computeCanonicalLayout', () => {
     expect(taskMoves.map((move) => move.taskId)).toEqual(['second', 'third', 'first'])
     expect(taskMoves.map((move) => move.position.y)).toEqual([70, 182, 294])
   })
+
+  it('uses the live canvas drop position for an F2 reorder despite stale shared order', () => {
+    const group = grp('f2', 'Today', 0, 0)
+    const tasks = [
+      { ...tk('top', group.id, 400), order: 0 },
+      { ...tk('middle', group.id, 250), order: 1 },
+      { ...tk('dropped', group.id, 110), order: 2 },
+    ]
+    const { taskMoves } = computeCanonicalLayout([{
+      group,
+      visualPos: { x: 0, y: 0 },
+      tasks,
+      taskPositions: new Map(tasks.map((task) => [task.id, task.canvasPosition!])),
+    }], [group.id], { taskOrdering: 'canvasPosition' })
+
+    expect(taskMoves.map((move) => move.taskId)).toEqual(['dropped', 'middle', 'top'])
+  })
+
   it('compacts visible siblings from the group header after a filtered task is hidden', () => {
     const group = grp('a', 'A', 100, 200)
     const tasks = [tk('t1', 'a', 280), tk('t3', 'a', 520)]

@@ -27,6 +27,7 @@ type SeedTask = {
   parentId: string
   x: number
   y: number
+  order?: number
 }
 
 const setupCanvas = async (page: Page) => {
@@ -85,6 +86,7 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
         parentId: task.parentId,
         canvasPosition: { x: task.x, y: task.y },
         positionFormat: 'absolute',
+        ...(task.order === undefined ? {} : { order: task.order }),
       })
     }
 
@@ -915,9 +917,9 @@ test.describe('local canvas geometry regressions', () => {
     await seedCanvas(page, [
       { id: 'f2-reorder-group', name: 'F2 Reorder Group', x: 180, y: 160, width: 420, height: 900 },
     ], [
-      { id: 'f2-reorder-a', title: 'F2 Reorder A', parentId: 'f2-reorder-group', x: 244, y: 252 },
-      { id: 'f2-reorder-b', title: 'F2 Reorder B', parentId: 'f2-reorder-group', x: 244, y: 396 },
-      { id: 'f2-reorder-c', title: 'F2 Reorder C', parentId: 'f2-reorder-group', x: 244, y: 540 },
+      { id: 'f2-reorder-a', title: 'F2 Reorder A', parentId: 'f2-reorder-group', x: 244, y: 252, order: 0 },
+      { id: 'f2-reorder-b', title: 'F2 Reorder B', parentId: 'f2-reorder-group', x: 244, y: 396, order: 1 },
+      { id: 'f2-reorder-c', title: 'F2 Reorder C', parentId: 'f2-reorder-group', x: 244, y: 540, order: 2 },
     ])
 
     await page.keyboard.down('F2')

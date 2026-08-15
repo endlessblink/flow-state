@@ -18,7 +18,7 @@
 import { CANVAS } from '@/constants/canvas'
 import type { CanvasGroup } from '@/types/canvas'
 import type { Task } from '@/types/tasks'
-import { sortTasksBySharedOrder } from '@/utils/taskOrdering'
+import { orderTasksByCanvasPosition, sortTasksBySharedOrder } from '@/utils/taskOrdering'
 
 export interface DayGroupInput {
   group: CanvasGroup
@@ -84,6 +84,8 @@ export interface CanonicalLayoutOptions {
   maxTasksPerColumn?: number | null
   /** Maximum overflow columns for dense vertical layouts. Default preserves legacy 2-column behavior. */
   maxColumns?: number
+  /** Use live canvas positions for an explicit drag reorder; shared order remains the default. */
+  taskOrdering?: 'shared' | 'canvasPosition'
 }
 
 /**
@@ -147,7 +149,9 @@ export function computeCanonicalLayout(
 
     const taskLayout = options.taskLayout ?? 'vertical'
     const taskPositioning = options.taskPositioning ?? 'fromHeader'
-    const sortedTasks = sortTasksBySharedOrder(dg.tasks, dg.taskPositions)
+    const sortedTasks = options.taskOrdering === 'canvasPosition'
+      ? orderTasksByCanvasPosition(dg.tasks, dg.taskPositions)
+      : sortTasksBySharedOrder(dg.tasks, dg.taskPositions)
     const taskCount = sortedTasks.length
     const maxPerColumn = options.maxTasksPerColumn === null
       ? Number.POSITIVE_INFINITY

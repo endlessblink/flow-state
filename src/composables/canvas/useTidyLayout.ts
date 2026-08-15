@@ -337,7 +337,10 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
    * computeCanonicalLayout but scoped to the single group, so neither the group
    * nor its siblings move on X — only the group's height grows to fit.
    */
-  function planReorderColumn(groupId: string): {
+  function planReorderColumn(
+    groupId: string,
+    positionOverrides?: Map<string, { x: number; y: number }>,
+  ): {
     input: DayGroupInput | null
     groupMoves: GroupMove[]
     taskMoves: TaskMove[]
@@ -364,7 +367,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     for (const task of layoutTasks) {
       const size = options.getNodeSize?.(task.id)
       if (size) taskSizes.set(task.id, size)
-      const position = options.getNodePosition?.(task.id)
+      const position = positionOverrides?.get(task.id) ?? options.getNodePosition?.(task.id)
       if (position) taskPositions.set(task.id, position)
     }
 
@@ -373,6 +376,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       taskPositioning: 'fromHeader',
       maxTasksPerColumn: null,
       taskSpacing: 'contentGap',
+      taskOrdering: 'canvasPosition',
     })
     return { input, groupMoves, taskMoves }
   }
@@ -391,7 +395,10 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
    * write, so reorder's `updated_at` lands last and wins the last-write-wins race
    * — otherwise a refresh would revert the card to its raw drop position.
    */
-  function reorderColumn(groupId: string): {
+  function reorderColumn(
+    groupId: string,
+    positionOverrides?: Map<string, { x: number; y: number }>,
+  ): {
     groupMoves: GroupMove[]
     taskMoves: TaskMove[]
     commit: () => Promise<void>
@@ -413,7 +420,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       canvasSyncInProgress.value = false
     }
 
-    const { input, groupMoves, taskMoves } = planReorderColumn(groupId)
+    const { input, groupMoves, taskMoves } = planReorderColumn(groupId, positionOverrides)
     pendingGroupMoves = groupMoves
     pendingTaskMoves = taskMoves
 

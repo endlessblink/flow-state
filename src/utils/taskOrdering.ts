@@ -42,10 +42,10 @@ export function sortTasksBySharedOrder(tasks: Task[], positions?: Map<string, Po
   return [...tasks].sort((first, second) => compareTasksBySharedOrder(first, second, positions))
 }
 
-export function orderTasksByCanvasPosition(tasks: Task[]): Task[] {
+export function orderTasksByCanvasPosition(tasks: Task[], positions?: Map<string, Position>): Task[] {
   return [...tasks].sort((first, second) => {
-    const firstPosition = taskPosition(first)
-    const secondPosition = taskPosition(second)
+    const firstPosition = taskPosition(first, positions)
+    const secondPosition = taskPosition(second, positions)
     if (!firstPosition && !secondPosition) return compareTasksBySharedOrder(first, second)
     if (!firstPosition) return 1
     if (!secondPosition) return -1

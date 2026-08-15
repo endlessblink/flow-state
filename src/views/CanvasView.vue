@@ -1202,7 +1202,11 @@ async function handleNodeDragStopWithReorder(event: NodeDragEvent) {
     await handleNodeDragStop(event)
     const destGroupId = taskStore.getTask(droppedTaskNode?.id ?? '')?.parentId
     if (!destGroupId) return
-    const result = tidyLayout.reorderColumn(destGroupId)
+    const dropPosition = droppedTaskNode?.computedPosition ?? droppedTaskNode?.position
+    const positionOverrides = droppedTaskNode && dropPosition
+      ? new Map([[droppedTaskNode.id, { x: dropPosition.x, y: dropPosition.y }]])
+      : undefined
+    const result = tidyLayout.reorderColumn(destGroupId, positionOverrides)
     if (result.taskMoves.length === 0) {
       result.release()
       return
@@ -1221,7 +1225,11 @@ async function handleNodeDragStopWithReorder(event: NodeDragEvent) {
   // MUST run after handleNodeDragStop has started.
   const dragDone = handleNodeDragStop(event)
 
-  const result = tidyLayout.reorderColumn(currentParentId)
+  const dropPosition = droppedTaskNode.computedPosition ?? droppedTaskNode.position
+  const result = tidyLayout.reorderColumn(
+    currentParentId,
+    new Map([[droppedTaskNode.id, { x: dropPosition.x, y: dropPosition.y }]]),
+  )
   if (result.taskMoves.length === 0) {
     result.release()
     await dragDone

@@ -3,16 +3,17 @@ import { chromium } from 'playwright'
 const browser = await chromium.connectOverCDP(process.env.ELECTRON_CDP_URL || 'http://127.0.0.1:9260')
 const page = browser.contexts()[0].pages()[0]
 if (!page) throw new Error('No Electron window available')
+const appOrigin = process.env.ELECTRON_APP_URL || 'https://in-theflow.com'
 
-const group = { id: 'installed-f2-today', name: 'Today', x: 180, y: 160, width: 420, height: 900 }
+const group = { id: 'installed-f2-today', name: 'Today', x: 180, y: 20, width: 420, height: 900 }
 const tasks = [
-  { id: 'installed-f2-a', title: 'Installed F2 A', x: 244, y: 252 },
-  { id: 'installed-f2-b', title: 'Installed F2 B', x: 244, y: 396 },
-  { id: 'installed-f2-c', title: 'Installed F2 C', x: 244, y: 540 },
+  { id: 'installed-f2-a', title: 'Installed F2 A', x: 244, y: 100, order: 0 },
+  { id: 'installed-f2-b', title: 'Installed F2 B', x: 244, y: 220, order: 1 },
+  { id: 'installed-f2-c', title: 'Installed F2 C', x: 244, y: 340, order: 2 },
 ]
 const today = new Date().toISOString().slice(0, 10)
 
-await page.goto('https://in-theflow.com/#/canvas')
+await page.goto(`${appOrigin}/#/canvas`)
 await page.waitForFunction(() => {
   const pinia = document.querySelector('#app')?.__vue_app__?._context.config.globalProperties.$pinia
   return !!pinia?._s.get('tasks') && !!pinia?._s.get('canvas') && !!document.querySelector('.vue-flow__pane')
@@ -25,19 +26,25 @@ await page.evaluate(async ({ group, tasks, today }) => {
   canvasStore.clearAll()
   canvasStore.setGroups([{ id: group.id, name: group.name, type: 'custom', isVisible: true, isCollapsed: false, parentGroupId: null, positionVersion: 1, positionFormat: 'absolute', position: { x: group.x, y: group.y, width: group.width, height: group.height } }], true)
   for (const task of tasks) {
-    await taskStore.createTask({ id: task.id, title: task.title, status: 'todo', priority: 'medium', isInInbox: false, parentId: group.id, dueDate: today, canvasPosition: { x: task.x, y: task.y }, positionFormat: 'absolute' })
+    await taskStore.createTask({ id: task.id, title: task.title, status: 'todo', priority: 'medium', isInInbox: false, parentId: group.id, dueDate: today, canvasPosition: { x: task.x, y: task.y }, positionFormat: 'absolute', order: task.order })
   }
 }, { group, tasks, today })
 await page.waitForFunction((ids) => ids.every((id) => document.querySelector(`.vue-flow__node[data-id="${id}"]`)), tasks.map((task) => task.id), { timeout: 30_000 })
+await page.waitForTimeout(2_000)
 
 const node = page.locator('.vue-flow__node[data-id="installed-f2-b"]')
-const box = await node.boundingBox()
+const dragTarget = node.locator('.task-node')
+await dragTarget.scrollIntoViewIfNeeded()
+await page.bringToFront()
+const box = await dragTarget.boundingBox()
 if (!box) throw new Error('F2 target node was not rendered')
 await page.keyboard.down('F2')
 try {
-  await page.mouse.move(box.x + box.width / 2, box.y + Math.min(box.height / 2, 60))
+  const startX = box.x + box.width / 2
+  const startY = box.y + Math.min(box.height / 2, 60)
+  await page.mouse.move(startX, startY)
   await page.mouse.down()
-  await page.mouse.move(box.x + box.width / 2, box.y + Math.min(box.height / 2, 60) - 180, { steps: 16 })
+  await page.mouse.move(startX, startY - 180, { steps: 16 })
   await page.mouse.up()
 } finally {
   await page.keyboard.up('F2')
@@ -65,7 +72,7 @@ async function readView(route, view) {
     localStorage.setItem('flowstate:all-tasks-group-by', 'dueDate')
     localStorage.setItem('flowstate:all-tasks-sort-by', 'manual')
   })
-  await page.goto(`https://in-theflow.com/#/${route}`)
+  await page.goto(`${appOrigin}/#/${route}`)
   await page.waitForTimeout(1_500)
   return page.evaluate((viewName) => {
     const scope = viewName === 'board'

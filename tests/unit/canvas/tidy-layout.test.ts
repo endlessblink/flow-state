@@ -562,7 +562,7 @@ describe('useTidyLayout', () => {
       expect(updateTask).toHaveBeenCalledTimes(2)
       expect(updateTask).toHaveBeenCalledWith(
         'b',
-        { canvasPosition: result.taskMoves[0].position, positionFormat: 'absolute' },
+        { order: 0, canvasPosition: result.taskMoves[0].position, positionFormat: 'absolute' },
         'DRAG'
       )
 

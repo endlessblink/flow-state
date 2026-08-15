@@ -462,10 +462,10 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       if (committed) return Promise.resolve()
       committed = true
       const pendingWrites: Promise<unknown>[] = []
-      for (const tm of taskMoves) {
+      for (const [index, tm] of taskMoves.entries()) {
         pendingWrites.push(taskStore.updateTask(
           tm.taskId,
-          { canvasPosition: tm.position, positionFormat: 'absolute' },
+          { order: index, canvasPosition: tm.position, positionFormat: 'absolute' },
           'DRAG'
         ))
         // PositionManager updated here (after the drag handler's write) so the

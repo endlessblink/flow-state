@@ -1,19 +1,21 @@
 import { chromium } from 'playwright'
 
 const browser = await chromium.connectOverCDP(process.env.ELECTRON_CDP_URL || 'http://127.0.0.1:9260')
-const page = browser.contexts()[0].pages()[0]
+const page = browser.contexts()[0].pages().find((candidate) => !candidate.url().startsWith('devtools://'))
 if (!page) throw new Error('No Electron window available')
 const appOrigin = process.env.ELECTRON_APP_URL || 'https://in-theflow.com'
 
-const group = { id: 'installed-f2-today', name: 'Today', x: 180, y: 20, width: 420, height: 900 }
+const group = { id: 'installed-f2-today', name: 'Today', x: 0, y: 20, width: 420, height: 900 }
 const tasks = [
-  { id: 'installed-f2-a', title: 'Installed F2 A', x: 244, y: 100, order: 0 },
-  { id: 'installed-f2-b', title: 'Installed F2 B', x: 244, y: 220, order: 1 },
-  { id: 'installed-f2-c', title: 'Installed F2 C', x: 244, y: 340, order: 2 },
+  { id: 'installed-f2-a', title: 'F2-A', x: 40, y: 100, order: 0 },
+  { id: 'installed-f2-b', title: 'F2-B', x: 40, y: 220, order: 1 },
+  { id: 'installed-f2-c', title: 'F2-C', x: 40, y: 340, order: 2 },
 ]
 const today = new Date().toISOString().slice(0, 10)
 
 await page.goto(`${appOrigin}/#/canvas`)
+const onboarding = page.locator('.onboarding-overlay .primary-btn')
+if (await onboarding.isVisible().catch(() => false)) await onboarding.click()
 await page.waitForFunction(() => {
   const pinia = document.querySelector('#app')?.__vue_app__?._context.config.globalProperties.$pinia
   return !!pinia?._s.get('tasks') && !!pinia?._s.get('canvas') && !!document.querySelector('.vue-flow__pane')
@@ -84,6 +86,8 @@ async function readView(route, view) {
       .map((element) => ({ id: element.getAttribute('data-task-id'), top: element.getBoundingClientRect().top, left: element.getBoundingClientRect().left }))
       .sort((a, b) => a.top - b.top || a.left - b.left)
       .map((item) => item.id)
+    const firstTask = (scope || document).querySelector('[data-task-id^="installed-f2-"]')
+    firstTask?.scrollIntoView({ block: 'center', inline: 'center' })
     return { scopeFound: !!scope, order: [...new Set(rendered)] }
   }, view)
 }

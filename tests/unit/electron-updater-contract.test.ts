@@ -188,7 +188,7 @@ describe('Electron updater restart contract', () => {
     const updaterSource = readSource('electron/updater.ts')
 
     expect(updaterSource).toContain(
-      `awk -v self="$$" -v target="$target" '$1 != self && ((index($0, "/.mount_FlowSt") > 0 && index($0, "/flowstate") > 0) || $0 ~ ("^" target "([[:space:]]|$)")) { print $1 }'`,
+      `awk -v self="$$" -v target="$target" '$1 != self && ((index($0, "/.mount_FlowSt") > 0 && index($0, "/flowstate") > 0) || index($0, target) > 0) { print $1 }'`,
     )
     expect(updaterSource).toContain('whose parser rejects the multiline parenthesized expression')
   })

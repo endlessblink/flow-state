@@ -368,6 +368,27 @@ describe('TASK-1947 foreground catch-up poller', () => {
     poller.stop()
   })
 
+  it('runs projection recovery even when canonical catch-up fails', async () => {
+    const run = vi.fn().mockRejectedValue(new Error('cursor read failed'))
+    const afterRun = vi.fn().mockResolvedValue(undefined)
+    const onError = vi.fn()
+    const poller = createCanonicalChangePoller({
+      run,
+      afterRun,
+      onError,
+      getScopes: () => [personalScope],
+      isAuthenticated: () => true,
+      isOnline: () => true,
+    })
+
+    poller.start()
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(afterRun).toHaveBeenCalledWith(personalScope)
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'cursor read failed' }))
+    poller.stop()
+  })
+
   it('stops the foreground interval cleanly', async () => {
     const run = vi.fn().mockResolvedValue(undefined)
     const poller = createCanonicalChangePoller({

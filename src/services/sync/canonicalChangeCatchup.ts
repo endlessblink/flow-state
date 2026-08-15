@@ -202,9 +202,18 @@ export function createCanonicalChangePoller(options: CanonicalChangePollerOption
     busy = true
     try {
       const scopes = options.getScopes()
-      await Promise.all(scopes.map(scope => options.run(scope)))
+      // A cursor/readback failure must not prevent the authoritative projection
+      // recovery hook from running; that hook is the fallback for exactly the
+      // missed-event and stale-renderer cases this poller is meant to repair.
+      const runResults = await Promise.allSettled(scopes.map(scope => options.run(scope)))
+      for (const result of runResults) {
+        if (result.status === 'rejected') options.onError?.(result.reason)
+      }
       if (options.afterRun) {
-        await Promise.all(scopes.map(scope => options.afterRun!(scope)))
+        const recoveryResults = await Promise.allSettled(scopes.map(scope => options.afterRun!(scope)))
+        for (const result of recoveryResults) {
+          if (result.status === 'rejected') options.onError?.(result.reason)
+        }
       }
     } catch (error) {
       options.onError?.(error)

@@ -76,7 +76,8 @@ async function readView(route, view) {
     localStorage.setItem('flowstate:all-tasks-sort-by', 'manual')
   })
   if (process.env.ELECTRON_USE_NAV_TABS === '1') {
-    await page.locator(`a.view-tab[href="/${route}"]`).click()
+    const tabLabel = view === 'board' ? 'Board' : 'Catalog'
+    await page.locator('a.view-tab').filter({ hasText: tabLabel }).first().click()
   } else {
     await page.goto(`${appOrigin}/#/${route}`)
   }

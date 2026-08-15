@@ -30,6 +30,14 @@ describe('Canvas Tidy Vue Flow application', () => {
     expect(handleTidyLayout).toContain('}, pendingWrites)')
   })
 
+  it('waits for group persistence as part of the Tidy completion barrier', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/composables/canvas/useTidyLayout.ts'), 'utf8')
+    const tidy = source.slice(source.indexOf('function tidyDayGroups'), source.indexOf('function planReorderColumn'))
+
+    expect(tidy).toContain('pendingWrites.push(canvasStore.updateGroup')
+    expect(tidy).toContain('const pendingWritesWithUndo = Promise.all(pendingWrites)')
+  })
+
   it('publishes a new controlled nodes array after Vue Flow applies node changes', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/composables/canvas/useCanvasOrchestrator.ts'), 'utf8')
     const handleNodesChange = source.slice(

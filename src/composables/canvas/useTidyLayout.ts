@@ -280,7 +280,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       for (const gm of groupMoves) {
         const input = inputs.find((i) => i.group.id === gm.groupId)
         if (!input?.group.position) continue
-        canvasStore.updateGroup(gm.groupId, {
+        pendingWrites.push(canvasStore.updateGroup(gm.groupId, {
           position: {
             ...input.group.position,
             x: gm.position.x,
@@ -293,7 +293,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
           // parent-relative position on the next load and put the group back
           // off-canvas.
           ...(input.group.parentGroupId ? { parentGroupId: null } : {}),
-        })
+        }))
         positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
       }
       for (const tm of taskMoves) {

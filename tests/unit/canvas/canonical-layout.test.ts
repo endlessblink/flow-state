@@ -76,6 +76,31 @@ describe('computeCanonicalLayout', () => {
     expect(taskMoves.map((move) => move.taskId)).toEqual(['dropped', 'middle', 'top'])
   })
 
+  it('keeps F2 overflow rows in live canvas order before assigning left-to-right slots', () => {
+    const group = grp('f2-overflow', 'Today', 0, 0)
+    const tasks = Array.from({ length: 10 }, (_, index) => ({
+      ...tk(`task-${index}`, group.id, (9 - index) * 10),
+      order: index,
+    }))
+    const { taskMoves } = computeCanonicalLayout([{
+      group,
+      visualPos: { x: 0, y: 0 },
+      tasks,
+      taskPositions: new Map(tasks.map((task) => [task.id, task.canvasPosition!])),
+    }], [group.id], { taskOrdering: 'canvasPosition' })
+
+    expect(taskMoves.map((move) => move.taskId)).toEqual([
+      'task-9', 'task-8', 'task-7', 'task-6', 'task-5',
+      'task-4', 'task-3', 'task-2', 'task-1', 'task-0',
+    ])
+    expect(taskMoves.slice(0, 4).map((move) => move.position)).toEqual([
+      { x: 20, y: 70 },
+      { x: 260, y: 70 },
+      { x: 20, y: 182 },
+      { x: 260, y: 182 },
+    ])
+  })
+
   it('compacts visible siblings from the group header after a filtered task is hidden', () => {
     const group = grp('a', 'A', 100, 200)
     const tasks = [tk('t1', 'a', 280), tk('t3', 'a', 520)]

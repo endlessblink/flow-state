@@ -85,10 +85,11 @@ async function readView(route, view) {
       .filter((element) => element.getAttribute('data-task-id')?.startsWith('installed-f2-'))
       .map((element) => ({ id: element.getAttribute('data-task-id'), top: element.getBoundingClientRect().top, left: element.getBoundingClientRect().left }))
       .sort((a, b) => a.top - b.top || a.left - b.left)
-      .map((item) => item.id)
+    const order = [...new Set(rendered.map((item) => item.id))]
+    const labels = order.map((id) => ({ id, title: (scope || document).querySelector(`[data-task-id="${id}"] .task-row__title-text, [data-task-id="${id}"] .task-title`)?.textContent?.trim() || '' }))
     const firstTask = (scope || document).querySelector('[data-task-id^="installed-f2-"]')
     firstTask?.scrollIntoView({ block: 'center', inline: 'center' })
-    return { scopeFound: !!scope, order: [...new Set(rendered)] }
+    return { scopeFound: !!scope, order, labels }
   }, view)
 }
 
@@ -99,5 +100,11 @@ await page.screenshot({ path: 'test-results/installed-guest-f2-catalogue.png', f
 if (!board.scopeFound || !catalogue.scopeFound) throw new Error(`Today group was not rendered in a required view: ${JSON.stringify({ board, catalogue })}`)
 if (JSON.stringify(board.order) !== JSON.stringify(persistedOrder)) throw new Error(`Board order mismatch: ${JSON.stringify(board)}`)
 if (JSON.stringify(catalogue.order) !== JSON.stringify(persistedOrder)) throw new Error(`Catalogue order mismatch: ${JSON.stringify(catalogue)}`)
+const expectedLabels = { 'installed-f2-b': 'F2-B', 'installed-f2-a': 'F2-A', 'installed-f2-c': 'F2-C' }
+for (const [view, result] of [['board', board], ['catalogue', catalogue]]) {
+  const actualLabels = result.labels.map((item) => item.title)
+  const expected = result.order.map((id) => expectedLabels[id])
+  if (JSON.stringify(actualLabels) !== JSON.stringify(expected)) throw new Error(`${view} visible labels mismatch: ${JSON.stringify(result)}`)
+}
 console.log(JSON.stringify({ canvasOrder, persistedOrder, board, catalogue }, null, 2))
 await browser.close()

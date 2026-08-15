@@ -13,7 +13,7 @@ const tasks = [
 ]
 const today = new Date().toISOString().slice(0, 10)
 
-await page.goto(`${appOrigin}/#/canvas`)
+if (process.env.ELECTRON_SKIP_NAVIGATION !== '1') await page.goto(`${appOrigin}/#/canvas`)
 const onboarding = page.locator('.onboarding-overlay .primary-btn')
 if (await onboarding.isVisible().catch(() => false)) await onboarding.click()
 await page.waitForFunction(() => {

@@ -357,6 +357,16 @@ const handleStartTimer = async (task: Task) => {
   align-items: center;
 }
 
+/* Canvas cards beneath the collapsed right rail must remain draggable. */
+.unified-inbox-panel.is-right-side.collapsed {
+  pointer-events: none;
+}
+
+.unified-inbox-panel.is-right-side.collapsed .inbox-header,
+.unified-inbox-panel.is-right-side.collapsed .collapsed-badges-container {
+  pointer-events: auto;
+}
+
 .collapsed-badges-container {
   display: flex;
   flex-direction: column;

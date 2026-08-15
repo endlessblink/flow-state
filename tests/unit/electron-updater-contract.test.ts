@@ -191,6 +191,7 @@ describe('Electron updater restart contract', () => {
       `awk -v self="$$" -v target="$target" '$1 != self && ((index($0, "/.mount_FlowSt") > 0 && index($0, "/flowstate") > 0) || index($0, target) > 0) { print $1 }'`,
     )
     expect(updaterSource).toContain('whose parser rejects the multiline parenthesized expression')
+    expect(updaterSource).toContain('kill "$signal" "$pid" 2>/dev/null || true')
   })
 
   it('allows a slow but healthy AppImage replacement to finish starting', () => {

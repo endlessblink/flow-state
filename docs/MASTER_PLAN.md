@@ -85,6 +85,8 @@ The public PWA and Electron 1.4.378 artifacts, local offline/reconnect matrix, a
 
 **Updater process-selection fix (2026-08-15)**: Direct handoff evidence showed the cleanup predicate matched mounted AppImage children but not the `/home/.../FlowState.AppImage` wrapper because `ps` includes the PID before the command text. The old wrapper therefore retained the single-instance lock and the replacement stayed on the known-good version. The predicate now matches the target path anywhere in the command row; release 1.4.405 and clean installed verification remain required.
 
+**Updater process-stop hardening (2026-08-15)**: A direct predicate probe found the expected wrapper and mounted-child PIDs, but a handoff still left a wrapper alive. Cleanup now signals both each matched process group and each exact PID, with contract coverage; release 1.4.406 and clean installed verification remain required.
+
 **Release 1.4.375 work (2026-08-13)**: A real installed 1.4.374 service launch kept the Electron window at its hidden 10x10 initial bounds when renderer readiness was delayed. Normal production launches now present the managed window immediately after document load begins, preserving hidden background launches; focused lifecycle and integration regressions pass. Installed 1.4.375 visibility and authenticated workspace usability remain required before closeout.
 
 **Release 1.4.376 work (2026-08-13)**: The installed 1.4.375 service still exposed the supervisor's 10x10 geometry, so the normal ready-to-show lifecycle now repairs collapsed bounds immediately before showing. The new regression passes locally; installed 1.4.376 visibility remains the next live gate.

@@ -152,9 +152,10 @@ cleanup_competing_flowstate_processes() {
       pgid=$(ps -o pgid= -p "$pid" | tr -d ' ')
       if [ -n "$pgid" ] && [ "$pgid" != "1" ] && [ "$pgid" != "$$" ]; then
         kill "$signal" -- "-$pgid" 2>/dev/null || true
-      else
-        kill "$signal" "$pid" 2>/dev/null || true
       fi
+      # Some AppImage wrapper processes detach from their original group while
+      # the mounted child is shutting down; always signal the exact PID too.
+      kill "$signal" "$pid" 2>/dev/null || true
     done
   }
   terminate_flowstate_process_groups -TERM

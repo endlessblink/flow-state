@@ -587,14 +587,19 @@ async function onClearMemories() {
       <div class="groq-key-row">
         <div class="groq-key-input-wrapper">
           <input
-            :type="showGroqKey ? 'text' : 'password'"
             v-model="groqKeyInput"
+            :type="showGroqKey ? 'text' : 'password'"
             placeholder="gsk_..."
             class="groq-key-input"
             spellcheck="false"
             autocomplete="off"
-          />
-          <button class="key-toggle-btn" @click="showGroqKey = !showGroqKey" :title="showGroqKey ? 'Hide' : 'Show'">
+          >
+          <button
+            class="key-toggle-btn"
+            :aria-label="showGroqKey ? 'Hide API key' : 'Show API key'"
+            :title="showGroqKey ? 'Hide' : 'Show'"
+            @click="showGroqKey = !showGroqKey"
+          >
             <EyeOff v-if="showGroqKey" :size="14" />
             <Eye v-else :size="14" />
           </button>
@@ -745,7 +750,7 @@ async function onClearMemories() {
               step="1"
               :value="(settingsStore.aiMonthlyBudgetCents / 100).toFixed(0)"
               @change="(e: Event) => settingsStore.updateSetting('aiMonthlyBudgetCents', Math.round(parseFloat((e.target as HTMLInputElement).value || '0') * 100))"
-            />
+            >
             <span class="budget-hint">/ month (informational)</span>
           </div>
         </div>
@@ -1021,7 +1026,9 @@ async function onClearMemories() {
           <HeartPulse :size="14" :class="{ spinning: memoryHealthRunning }" />
           {{ memoryHealthRunning ? 'Checking...' : 'Run Quick Check' }}
         </button>
-        <p class="mh-hint">Full assessment available in AI Hub &gt; Memory tab.</p>
+        <p class="mh-hint">
+          Full assessment available in AI Hub &gt; Memory tab.
+        </p>
 
         <div class="ai-memory-debug" data-testid="ai-memory-debug">
           <div class="ai-memory-debug-header">

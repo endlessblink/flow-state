@@ -51,6 +51,7 @@ defineEmits<{
   (e: 'startResize', event: MouseEvent, weekEvent: WeekEvent, direction: 'top' | 'bottom'): void
   (e: 'cellDblClick', event: MouseEvent, dateString: string, hour: number): void
   (e: 'cellMouseDown', event: MouseEvent, dateString: string, hour: number): void
+  (e: 'externalEventMouseDown', event: MouseEvent, externalEvent: ExternalCalendarEvent): void
 }>()
 
 // Inject helpers from parent CalendarView
@@ -383,7 +384,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
                   rel="noopener noreferrer"
                   :title="buildExternalEventTooltip(ext)"
                   @click.stop
-                  @mousedown.stop
+                  @mousedown.stop="$emit('externalEventMouseDown', $event, ext)"
                 >
                   <span class="external-event-title" dir="auto">{{ ext.title }}</span>
                 </a>
@@ -391,7 +392,7 @@ const isWeekCellInCreateRange = (dateString: string, hour: number): boolean => {
                   v-else
                   class="external-event-link external-event-link--readonly"
                   :title="buildExternalEventTooltip(ext)"
-                  @mousedown.stop
+                  @mousedown.stop="$emit('externalEventMouseDown', $event, ext)"
                 >
                   <span class="external-event-title" dir="auto">{{ ext.title }}</span>
                 </span>

@@ -45,6 +45,7 @@ defineEmits<{
   (e: 'removeFromCalendar', calEvent: CalendarEvent): void
   (e: 'startTimer', calEvent: CalendarEvent): void
   (e: 'startResize', event: MouseEvent, calEvent: CalendarEvent, direction: 'top' | 'bottom'): void
+  (e: 'externalEventMouseDown', event: MouseEvent, externalEvent: PositionedExternalEvent): void
 }>()
 // Inject helpers from parent CalendarView
 interface CalendarHelpers {
@@ -333,7 +334,7 @@ const buildExternalEventTooltip = (ext: { title: string; isAllDay: boolean; star
           v-bind="ext.htmlLink ? { href: ext.htmlLink, target: '_blank', rel: 'noopener noreferrer' } : {}"
           :title="buildExternalEventTooltip(ext)"
           @click.stop
-          @mousedown.stop
+          @mousedown.stop="$emit('externalEventMouseDown', $event, ext)"
         >
           <!-- Tiny events (< 25min): single line with time + title inline -->
           <template v-if="ext.height < 25">

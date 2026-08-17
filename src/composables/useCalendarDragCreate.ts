@@ -15,6 +15,12 @@ interface CreateDragState {
   startCoords: { x: number; y: number } | null
 }
 
+interface ExternalCalendarEventStart {
+  startTime: Date
+}
+
+const EXTERNAL_DRAG_THRESHOLD_PX = 4
+
 export function useCalendarDragCreate() {
   const isCreatingTask = ref(false)
   const createDragState = reactive<CreateDragState>({
@@ -30,6 +36,60 @@ export function useCalendarDragCreate() {
     endTime: null as Date | null,
     duration: 30
   })
+
+  let pendingExternalDrag: {
+    event: MouseEvent
+    eventStart: ExternalCalendarEventStart
+  } | null = null
+
+  const getSlotFromExternalEvent = (eventStart: ExternalCalendarEventStart): TimeSlot => {
+    const startTime = eventStart.startTime
+    const minute = startTime.getMinutes() >= 30 ? 30 : 0
+    const slotIndex = startTime.getHours() * 2 + (minute === 30 ? 1 : 0)
+    const date = `${startTime.getFullYear()}-${String(startTime.getMonth() + 1).padStart(2, '0')}-${String(startTime.getDate()).padStart(2, '0')}`
+
+    return {
+      id: `${date}-${slotIndex}`,
+      slotIndex,
+      date,
+      hour: startTime.getHours(),
+      minute
+    }
+  }
+
+  const clearPendingExternalDrag = () => {
+    document.removeEventListener('mousemove', handleExternalDragMove)
+    document.removeEventListener('mouseup', handleExternalDragEnd)
+    pendingExternalDrag = null
+  }
+
+  const handleExternalDragMove = (event: MouseEvent) => {
+    if (!pendingExternalDrag) return
+
+    const deltaX = event.clientX - pendingExternalDrag.event.clientX
+    const deltaY = event.clientY - pendingExternalDrag.event.clientY
+    if (Math.hypot(deltaX, deltaY) < EXTERNAL_DRAG_THRESHOLD_PX) return
+
+    const { event: startEvent, eventStart } = pendingExternalDrag
+    clearPendingExternalDrag()
+    startCreateDrag(startEvent, getSlotFromExternalEvent(eventStart))
+    handleCreateDragMove(event)
+  }
+
+  const handleExternalDragEnd = () => {
+    clearPendingExternalDrag()
+  }
+
+  // Google/iCal event links need to keep ordinary clicks, but a drag over the
+  // event should create a separate local task at the event's start time.
+  const handleExternalEventMouseDown = (event: MouseEvent, eventStart: ExternalCalendarEventStart) => {
+    if (event.button !== 0) return
+
+    clearPendingExternalDrag()
+    pendingExternalDrag = { event, eventStart }
+    document.addEventListener('mousemove', handleExternalDragMove)
+    document.addEventListener('mouseup', handleExternalDragEnd)
+  }
 
   // Handle mouse down on time slots
   const handleSlotMouseDown = (event: MouseEvent, slot: TimeSlot) => {
@@ -71,8 +131,12 @@ export function useCalendarDragCreate() {
     event.preventDefault()
 
     // Find the slot under the mouse cursor — try day view (.time-slot) then week view (.week-time-cell)
-    const elementUnderMouse = document.elementFromPoint(event.clientX, event.clientY)
-    const slotElement = elementUnderMouse?.closest('.time-slot') as HTMLElement
+    const elementsUnderMouse = document.elementsFromPoint?.(event.clientX, event.clientY) || []
+    const elementUnderMouse = document.elementFromPoint?.(event.clientX, event.clientY)
+    const slotElement = elementsUnderMouse.find(element =>
+      element.closest('.time-slot') || element.closest('.week-time-cell')
+    )?.closest('.time-slot, .week-time-cell') as HTMLElement
+      || elementUnderMouse?.closest('.time-slot') as HTMLElement
       || elementUnderMouse?.closest('.week-time-cell') as HTMLElement
 
     if (slotElement) {
@@ -158,6 +222,7 @@ export function useCalendarDragCreate() {
   }
 
   const resetCreateDrag = () => {
+    clearPendingExternalDrag()
     isCreatingTask.value = false
     createDragState.isActive = false
     createDragState.startSlot = null
@@ -208,6 +273,7 @@ export function useCalendarDragCreate() {
     showQuickCreateModal,
     quickCreateData,
     handleSlotMouseDown,
+    handleExternalEventMouseDown,
     isSlotInCreateRange,
     resetCreateDrag
   }

@@ -117,6 +117,7 @@
         @remove-from-calendar="handleRemoveFromCalendar"
         @start-timer="startTimerOnCalendarEvent"
         @start-resize="startResize"
+        @external-event-mouse-down="dragCreate.handleExternalEventMouseDown"
       />
 
       <!-- Week View -->
@@ -153,6 +154,7 @@
         @start-resize="startWeekResize"
         @cell-dbl-click="handleWeekCellDblClick"
         @cell-mouse-down="handleWeekCellMouseDown"
+        @external-event-mouse-down="dragCreate.handleExternalEventMouseDown"
       />
 
       <!-- Month View -->

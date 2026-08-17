@@ -50,6 +50,19 @@ describe("useSmartViews today filtering", () => {
       ),
     ).toBe(true);
   });
+
+  it("does not show a task due tomorrow just because a stale instance is dated today", () => {
+    const { isTodayTask } = useSmartViews();
+
+    expect(
+      isTodayTask(
+        makeTask({
+          dueDate: "2026-06-18",
+          instances: [{ scheduledDate: "2026-06-17" }],
+        }),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("useSmartViews all-active filtering", () => {

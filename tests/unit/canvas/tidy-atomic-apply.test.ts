@@ -63,4 +63,17 @@ describe('Canvas Tidy Vue Flow application', () => {
     expect(groupNodeCreation).toContain('width: `${groupWidth}px`')
     expect(groupNodeCreation).toContain('height: `${groupHeight}px`')
   })
+
+  it('keeps cached group data dimensions aligned with rendered bounds', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/views/CanvasView.vue'), 'utf8')
+    const applyCanonicalMoves = source.slice(
+      source.indexOf('function applyCanonicalMoves'),
+      source.indexOf('const dayRotation = useDayGroupRotation')
+    )
+
+    expect(applyCanonicalMoves).toContain('data: {')
+    expect(applyCanonicalMoves).toContain('node.data?.dimensions')
+    expect(applyCanonicalMoves).toContain('width: groupMove.size.width')
+    expect(applyCanonicalMoves).toContain('height: groupMove.size.height')
+  })
 })

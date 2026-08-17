@@ -1113,6 +1113,31 @@ test.describe('local canvas geometry regressions', () => {
     }).toBe(true)
   })
 
+  test('tidy and rotate keep dense cards inside the expanded group bounds', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'dense-monday', name: 'Monday', x: 100, y: 200, width: 400, height: 1000 },
+      { id: 'dense-tuesday', name: 'Tuesday', x: 700, y: 200, width: 400, height: 1000 },
+    ], Array.from({ length: 14 }, (_, index) => ({
+      id: `dense-task-${index}`,
+      title: `Dense task ${index} with enough text to exercise the rendered card height`,
+      parentId: 'dense-monday',
+      x: 120,
+      y: 320 + index * 110,
+    })))
+
+    for (const action of [/tidy|layout/, /rotate/]) {
+      await clickToolbar(page, action)
+      await page.waitForTimeout(500)
+      const geometry = await readGeometry(page)
+      const group = geometry.groups.find((candidate) => candidate.name === 'Monday')!
+      const tasks = geometry.tasks.filter((task) => task.parentId === group.id)
+
+      expect(group.height, JSON.stringify(geometry, null, 2)).toBeGreaterThan(1000)
+      expect(tasks.every((task) => task.x === group.x + 20), JSON.stringify(geometry, null, 2)).toBe(true)
+      expect(tasks.every((task) => task.y + 100 <= group.y + group.height), JSON.stringify(geometry, null, 2)).toBe(true)
+    }
+  })
+
   test('repairs overlapping saved cards when Canvas opens', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'startup-repair-group', name: 'Today', x: 100, y: 200, width: 400, height: 1000 },

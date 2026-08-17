@@ -444,6 +444,20 @@ function applyCanonicalMoves(
           width: groupMove.size.width,
           height: groupMove.size.height,
         },
+        // Vue Flow can retain the node data object while it reconciles
+        // dimensions after a programmatic layout. Keep the component's data
+        // geometry in sync too, otherwise GroupNodeSimple may paint with the
+        // old compact bounds while child cards have already been restacked.
+        data: {
+          ...(node.data ?? {}),
+          width: groupMove.size.width,
+          height: groupMove.size.height,
+          dimensions: {
+            ...((node.data?.dimensions as Record<string, unknown> | undefined) ?? {}),
+            width: groupMove.size.width,
+            height: groupMove.size.height,
+          },
+        },
         style: {
           ...(node.style ?? {}),
           width: `${groupMove.size.width}px`,

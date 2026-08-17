@@ -81,12 +81,13 @@ export const useSmartViews = () => {
     today.setHours(0, 0, 0, 0)
     const todayStr = getLocalDateString(today)
 
-    // Check if task is due today (exact match only — overdue is handled separately)
+    // Check if task is due today (exact match only — overdue is handled separately).
+    // A concrete dueDate is authoritative; do not fall through to a stale
+    // recurring instance from an earlier day (the Board date buckets use the
+    // same precedence rule).
     if (task.dueDate) {
       const normalizedDueDate = normalizeDateString(task.dueDate)
-      if (normalizedDueDate === todayStr) {
-        return true
-      }
+      return normalizedDueDate === todayStr
     }
 
     // Check legacy scheduled date for today.
@@ -95,9 +96,7 @@ export const useSmartViews = () => {
     // the PWA Today filter.
     if (task.scheduledDate) {
       const normalizedScheduledDate = normalizeDateString(task.scheduledDate)
-      if (normalizedScheduledDate === todayStr) {
-        return true
-      }
+      return normalizedScheduledDate === todayStr
     }
 
     // Check if task has instances scheduled for today

@@ -1,5 +1,27 @@
 # FlowState MASTER_PLAN.md
 
+### FEATURE-2025: Create FlowState tasks alongside Google Calendar events
+
+**Priority**: P1 | **Status**: IN PROGRESS (2026-08-17)
+
+**Goal**: Keep Google Calendar events read-only while allowing users to drag-create a separate FlowState task at the same time, without losing click-to-open behavior for Google event links.
+
+**Current implementation**: External event links now use a drag-only handoff into the existing calendar task creator. A click remains an external-calendar action; moving beyond the drag threshold starts local task creation from the event start time, and day/week slot lookup can pass through external overlays.
+
+**Required proof before closeout**: Focused drag-create regression, typecheck, changed-source lint, calendar-flow coverage, Electron build, and a fresh installed desktop visual check showing a FlowState task overlapping a Google event while the Google link remains usable.
+
+### BUG-2026: Board Today filter includes tasks with stale same-day instances
+
+**Priority**: P1 | **Status**: IN PROGRESS (2026-08-17)
+
+**User repro**: Selecting Today on the Board can show a task whose visible due date is tomorrow when an older recurring instance is dated today.
+
+**Exact failure mode fixed locally**: The shared Today predicate treated a concrete `dueDate` as a soft match and then fell through to stale instance dates. It now uses the same due-date-first precedence as Board date bucketing; scheduled dates and instances are only consulted when no higher-priority date exists.
+
+**Regression added**: Unit coverage for a task due tomorrow with a stale today instance, plus existing Board/KDE Today parity suites.
+
+**Open proof**: Installed Electron visual verification of the authenticated Board filter remains required before marking this issue DONE.
+
 ### TASK-2024: Keep Today synchronized across Board, Canvas, and Catalogue
 
 **Priority**: P0 | **Status**: IN PROGRESS (2026-08-14) | **Electron target**: 1.4.398
@@ -160,6 +182,8 @@ The public PWA and Electron 1.4.378 artifacts, local offline/reconnect matrix, a
 **Release 1.4.367 status (2026-08-12)**: The raw-store recovery, negative-anchor clamp, nested-group detachment, and foreground convergence changes are included in the shipped 1.4.367 Electron/PWA artifacts. The focused Tidy/canonical-layout suite passes 43 assertions locally. Installed authenticated mutation/readback, filter variants, and offline/realtime persistence remain unverified, so the issue stays open.
 
 **Current local fix (2026-08-15)**: Tidy now includes each asynchronous group update in the same completion barrier as task writes. Previously the visible layout could be applied while group persistence was still in flight, allowing a reload or canonical hydration to restore the old geometry. A focused regression now guards that group-write barrier; release 1.4.400 and authenticated installed mutation/readback remain required.
+
+**Current follow-up (2026-08-17)**: The shared Tidy/Rotate Vue Flow application path now mirrors expanded group width/height into the node data cache as well as top-level dimensions and styles. A dense 14-card browser regression checks both actions leave every card inside the expanded group bounds; installed authenticated proof remains open.
 
 **Release handoff update (2026-08-15)**: The canonical installed updater has now downloaded and handed off release 1.4.400, and the restarted FlowState window is visibly present. The required authenticated Tidy action, reload persistence, and filter/offline transition proof are still open.
 
@@ -5284,6 +5308,14 @@ Confirmed live on VPS production Supabase — both reported rows have `is_delete
 3. Keep expired session when refresh fails and IndexedDB has cached data (extend grace period)
 
 **Files**: `src/stores/auth.ts`, `src/composables/app/useAppInitialization.ts`
+
+**Current evidence (2026-08-15)**: Auth refresh timeout, cache-first startup, expired-session grace, and controller-change reload paths are implemented. The service-worker recovery helper now coalesces overlapping foreground checks and safely retries after a transient update failure; three focused PWA update-recovery tests and type-check pass. Installed PWA/Electron convergence is still unverified.
+
+**Exact failure mode fixed**: Concurrent foreground update checks and rejected service-worker updates no longer create overlapping work or unhandled promise failures.
+
+**Explicitly not covered**: Live service-worker activation, production cache state, and authenticated cross-client mutation proof.
+
+**Regression added for reported repro**: `tests/unit/pwa/service-worker-update-recovery.test.ts` covers startup/foreground checks, waiting-worker activation, coalescing, and retry after failure.
 
 ---
 
@@ -10852,6 +10884,30 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 
 **Files**: `src/composables/useRealtimeSubscription.ts`, `src/composables/useAppInitialization.ts`
 
+**Current evidence (2026-08-15)**: Reconnect setup, no-token retry, duplicate terminal-status suppression, authoritative recovery coalescing, and workspace filters pass 22 focused realtime tests. A lifecycle gap was found and fixed: sign-out now unsubscribes the authenticated channel and clears the initialized flag so a later sign-in creates a fresh subscription. The installed Electron/PWA boundary is still unverified.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | CHANNEL_ERROR/CLOSED and sign-out/re-sign-in lifecycle contracts | Partially |
+| Data shape / persisted row shape | N/A | Realtime transport lifecycle only | N/A |
+| Renderer store/state | Yes | App initialization lifecycle contract | Yes for channel ownership |
+| Electron main/preload bridge | No | Installed runtime unavailable | No |
+| Localhost sidecar endpoint | N/A | Task realtime does not use the timer sidecar | N/A |
+| KDE polling/control path | N/A | Not involved | N/A |
+| Supabase persistence/realtime | Partial | Subscription/reconnect mocks; no live authenticated channel proof | Partial |
+| Updater/runtime version | Partial | 1.4.406 artifact verified; runtime handoff pending | No |
+| Stale live process/cache state | Partial | Old duplicate windows removed; runtime currently stopped | No |
+
+**Exact failure mode fixed**: Sign-out no longer leaves realtime marked initialized, preventing the next sign-in from recreating its authenticated channel.
+
+**Explicitly not covered**: Live Supabase channel health, production reconnect behavior, and installed Electron/PWA mutation convergence.
+
+**Regression added for reported repro**: `tests/unit/app-realtime-delete-contract.test.ts` sign-out teardown contract plus 22 websocket resilience tests.
+
+**Live boundary proof**: Pending authenticated installed Electron ↔ PWA ↔ Supabase proof.
+
 ---
 
 ### BUG-1724: BaseModal Vue warning — extraneous class attribute on fragment root (📋 PLANNED)
@@ -10952,6 +11008,30 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 1. Suppress realtime DELETE echoes for 5s after undo restore (`addPendingWrite` window)
 2. Make `deleteOperationsByType` status-aware (warn on `syncing` operations)
 3. Consider single-write path for DELETEs (sync queue only, no direct save)
+
+**Current evidence (2026-08-15)**: The single-write delete path, in-flight queue protection, and pre-await realtime suppression are implemented. Focused BUG-1737 and task-store CRUD tests pass (53 tests). The installed Electron/PWA/Supabase boundary is not yet verified after the current runtime handoff, so this remains **IN PROGRESS** and must not be treated as a broad sync closeout.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Focused BUG-1737 unit scenarios | Partially |
+| Data shape / persisted row shape | Yes | Queue payload and task-store tests | Partially |
+| Renderer store/state | Yes | Task-store CRUD regression suite | Yes for local delete/undo state |
+| Electron main/preload bridge | No | Installed runtime not currently usable | No |
+| Localhost sidecar endpoint | No | Runtime handoff pending | No |
+| KDE polling/control path | N/A | Not involved in task delete/undo | N/A |
+| Supabase persistence/realtime | No | No authenticated live mutation proof | No |
+| Updater/runtime version | Partial | 1.4.406 artifact verified; GUI relaunch blocked by host runtime | No |
+| Stale live process/cache state | Partial | Duplicate windows were removed; runtime is currently stopped | No |
+
+**Exact failure mode fixed**: Local delete/undo no longer performs competing direct and queued deletes, and undo protects the restore from immediate realtime re-delete.
+
+**Explicitly not covered**: In-flight server-side deletes that already escaped before undo, and any production/runtime mismatch not exercised by an authenticated cross-client test.
+
+**Regression added for reported repro**: `tests/unit/bug-1737-undo-delete-race.test.ts` plus task-store CRUD coverage.
+
+**Live boundary proof**: Pending authenticated installed Electron ↔ PWA ↔ Supabase mutation proof without reload.
 
 **Files**: `src/composables/undoSingleton.ts`, `src/stores/tasks/taskOperations.ts`, `src/services/offline/writeQueueDB.ts`, `src/composables/app/useAppInitialization.ts`
 

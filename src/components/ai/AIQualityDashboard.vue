@@ -142,7 +142,9 @@
           <!-- Question -->
           <div class="result-question">
             <span class="question-label">Asked:</span>
-            {{ result.prompt || '(empty prompt)' }}
+            <div>
+              {{ result.prompt || '(empty prompt)' }}
+            </div>
           </div>
 
           <!-- AI Response Preview (first 3 lines) -->

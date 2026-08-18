@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect,  afterEach, vi } from 'vitest'
 import { createLazyAuthStorage } from '../authStorage'
 
 /**
@@ -15,7 +15,7 @@ describe('createLazyAuthStorage — call-time backend resolution (BUG-1874)', ()
     if (realWindowProcess === undefined) {
       delete (window as any).process
     } else {
-      ;(window as any).process = realWindowProcess
+      (window as any).process = realWindowProcess
     }
     Object.defineProperty(navigator, 'userAgent', { value: realUA, configurable: true })
     localStorage.clear()
@@ -153,7 +153,7 @@ describe('createLazyAuthStorage — call-time backend resolution (BUG-1874)', ()
   })
 
   it('ignores a non-Electron bridge object (isElectron falsy)', async () => {
-    ;(window as any).electronAPI = { isElectron: false, storeGet: vi.fn(), storeSet: vi.fn() }
+    (window as any).electronAPI = { isElectron: false, storeGet: vi.fn(), storeSet: vi.fn() }
     const storage = createLazyAuthStorage()!
     await storage.setItem('flowstate-supabase-auth', 'web-token')
     expect(localStorage.getItem('flowstate-supabase-auth')).toBe('web-token')

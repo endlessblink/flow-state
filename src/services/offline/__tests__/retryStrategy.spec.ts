@@ -583,6 +583,7 @@ describe('classifyError', () => {
         details: null,
         hint: null,
       }
+      expect(classifyError(error)).toBe('permanent')
       // Does not match auth/transient/conflict → hits 'invalid'/'schema' fallback or 'unknown'
       // The message does not contain permanent keywords → 'unknown'.
       // But a "column not found" / schema-cache miss IS permanent — test the actual shape

@@ -17,7 +17,8 @@ import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import type { Task } from '@/types/tasks'
 import type { OpenAITool } from './types'
 import { resolveTask } from './entityResolver'
-import { decideAISubtaskCreate, decideAITaskCreate, normalizeAIActionText, type AITaskUpdateFields } from './actionGuardrails'
+import type { decideAISubtaskCreate} from './actionGuardrails';
+import { decideAITaskCreate, normalizeAIActionText, type AITaskUpdateFields } from './actionGuardrails'
 import * as aiActionCommands from './actionCommands'
 
 // ============================================================================
@@ -1168,7 +1169,6 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
 
         const taskId = call.parameters.taskId as string
         const durationMinutes = (call.parameters.duration as number) || 25
-        const durationSeconds = durationMinutes * 60
 
         // Verify the task exists (unless it's 'general')
         if (taskId !== 'general') {

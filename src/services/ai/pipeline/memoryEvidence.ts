@@ -1,7 +1,7 @@
 import type { AIParameterBelief } from '@/types/aiMemory'
 import type { MemorySnapshotEvidence, PlannerDirection, PlannerLocale, PlannerTaskSnapshot, ProjectContextSnapshot, TaskContextSnapshot, WeekContext } from './weeklyPlan'
 
-const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f-\u009f]/g
+const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f-\u009f]/g; // eslint-disable-line no-control-regex
 const WHITESPACE_RE = /\s+/g
 
 export function sanitizeMemoryEvidenceText(value: unknown, maxLength = 240): string {

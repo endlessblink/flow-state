@@ -7,8 +7,12 @@
         <PartyPopper :size="80" />
       </div>
 
-      <h2 class="celebration-title">All Sorted!</h2>
-      <p class="celebration-subtitle">You've processed all your tasks</p>
+      <h2 class="celebration-title">
+        All Sorted!
+      </h2>
+      <p class="celebration-subtitle">
+        You've processed all your tasks
+      </p>
 
       <div v-if="sessionSummary" class="session-summary">
         <div class="summary-stat">
@@ -26,11 +30,11 @@
       </div>
 
       <div class="completion-actions">
-        <BaseButton variant="primary" size="lg" @click="$emit('sort-another')">
+        <BaseButton variant="primary" size="lg" @click="$emit('sortAnother')">
           <Zap :size="20" />
           {{ $t('quick_sort.sort_another_set') }}
         </BaseButton>
-        <BaseButton variant="secondary" size="lg" @click="$emit('go-to-inbox')">
+        <BaseButton variant="secondary" size="lg" @click="$emit('goToInbox')">
           <ArrowLeft :size="20" />
           Go to Inbox
         </BaseButton>
@@ -54,8 +58,8 @@ defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'go-to-inbox'): void
-  (e: 'sort-another'): void
+  (e: 'goToInbox'): void
+  (e: 'sortAnother'): void
 }>()
 
 const confettiRef = defineModel<HTMLElement | null>('confettiRef', { default: null })

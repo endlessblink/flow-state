@@ -1,6 +1,6 @@
 import type { CanvasGroup } from '@/types/canvas'
 import type { AIContextEntity, AIMemoryPatch, AIMemorySnapshot, AIParameterBelief, AIRecommendationFeedback, AIRecommendationFeedbackInput } from '@/types/aiMemory'
-import type { Lane, Subtask, Task } from '@/types/tasks'
+import type { Lane, Task } from '@/types/tasks'
 import type { useCanvasStore } from '@/stores/canvas'
 import type { useLaneStore } from '@/stores/lanes'
 import type { useTaskStore } from '@/stores/tasks'

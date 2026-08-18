@@ -460,7 +460,12 @@ async function onClearMemories() {
             <template v-else-if="bridgeStatus === 'offline'">Bridge unreachable — falling back to the free provider.</template>
             <template v-else>Checking connection…</template>
           </span>
-          <button class="refresh-models-btn" title="Re-check" @click="checkBridge()">
+          <button
+            class="refresh-models-btn"
+            title="Re-check"
+            aria-label="Re-check bridge connection"
+            @click="checkBridge()"
+          >
             <RefreshCw :size="13" />
           </button>
         </div>
@@ -510,7 +515,12 @@ async function onClearMemories() {
             placeholder="/data/local/tmp/llm/model_version.task"
             @input="settingsStore.updateSetting('androidGemmaModelPath', ($event.target as HTMLInputElement).value)"
           >
-          <button class="refresh-models-btn" title="Save Android Gemma path" @click="saveAndroidGemmaModelPath">
+          <button
+            class="refresh-models-btn"
+            title="Save Android Gemma path"
+            aria-label="Save Android Gemma path"
+            @click="saveAndroidGemmaModelPath"
+          >
             <Loader2 v-if="androidGemmaStatus === 'saving'" :size="13" class="spin" />
             <CheckCircle2 v-else-if="androidGemmaStatus === 'saved'" :size="13" />
             <AlertCircle v-else-if="androidGemmaStatus === 'error'" :size="13" />
@@ -565,6 +575,7 @@ async function onClearMemories() {
           v-if="selectedProvider === 'ollama'"
           class="refresh-models-btn"
           title="Refresh local models"
+          aria-label="Refresh Ollama models"
           @click="refreshOllamaModels()"
         >
           <RefreshCw :size="14" />
@@ -587,14 +598,20 @@ async function onClearMemories() {
       <div class="groq-key-row">
         <div class="groq-key-input-wrapper">
           <input
-            :type="showGroqKey ? 'text' : 'password'"
             v-model="groqKeyInput"
+            :type="showGroqKey ? 'text' : 'password'"
             placeholder="gsk_..."
             class="groq-key-input"
             spellcheck="false"
             autocomplete="off"
-          />
-          <button class="key-toggle-btn" @click="showGroqKey = !showGroqKey" :title="showGroqKey ? 'Hide' : 'Show'">
+          >
+          <button
+            class="key-toggle-btn"
+            :title="showGroqKey ? 'Hide' : 'Show'"
+            :aria-label="showGroqKey ? 'Hide API key' : 'Show API key'"
+            :aria-pressed="showGroqKey"
+            @click="showGroqKey = !showGroqKey"
+          >
             <EyeOff v-if="showGroqKey" :size="14" />
             <Eye v-else :size="14" />
           </button>
@@ -694,6 +711,7 @@ async function onClearMemories() {
           v-if="settingsStore.weeklyPlanProvider === 'ollama'"
           class="refresh-models-btn"
           title="Refresh local models"
+          aria-label="Refresh weekly plan Ollama models"
           @click="refreshOllamaModels()"
         >
           <RefreshCw :size="14" />
@@ -745,7 +763,7 @@ async function onClearMemories() {
               step="1"
               :value="(settingsStore.aiMonthlyBudgetCents / 100).toFixed(0)"
               @change="(e: Event) => settingsStore.updateSetting('aiMonthlyBudgetCents', Math.round(parseFloat((e.target as HTMLInputElement).value || '0') * 100))"
-            />
+            >
             <span class="budget-hint">/ month (informational)</span>
           </div>
         </div>
@@ -1021,7 +1039,9 @@ async function onClearMemories() {
           <HeartPulse :size="14" :class="{ spinning: memoryHealthRunning }" />
           {{ memoryHealthRunning ? 'Checking...' : 'Run Quick Check' }}
         </button>
-        <p class="mh-hint">Full assessment available in AI Hub &gt; Memory tab.</p>
+        <p class="mh-hint">
+          Full assessment available in AI Hub &gt; Memory tab.
+        </p>
 
         <div class="ai-memory-debug" data-testid="ai-memory-debug">
           <div class="ai-memory-debug-header">

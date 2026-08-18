@@ -41,7 +41,9 @@
             :style="{ height: getTaskHeight(task) + 'px' }"
             @click.stop="openTask(task)"
           >
-            <div class="event-title" dir="auto">{{ task.title }}</div>
+            <div class="event-title" dir="auto">
+              {{ task.title }}
+            </div>
             <div class="event-time">
               {{ task.scheduledTime }}
               <span v-if="task.estimatedDuration"> &middot; {{ task.estimatedDuration }}min</span>

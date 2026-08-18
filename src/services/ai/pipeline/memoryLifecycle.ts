@@ -258,7 +258,7 @@ function stringFact(facts: Record<string, unknown>, key: string): string {
 
 function sanitizeSnapshotText(value: unknown, maxLength: number): string {
   const text = String(value ?? '')
-    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ') // eslint-disable-line no-control-regex
     .replace(/```+/g, "'")
     .replace(/\s+/g, ' ')
     .trim()

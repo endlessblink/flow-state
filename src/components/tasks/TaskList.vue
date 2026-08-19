@@ -21,15 +21,15 @@
         <!-- Bulk action bar when tasks selected -->
         <div class="bulk-actions-bar">
           <span class="selection-count">{{ visibleSelectedTaskIds.length }} selected</span>
-          <button class="bulk-action-btn bulk-action-btn--edit" title="Batch edit selected tasks" @click="emit('batchEdit', [...visibleSelectedTaskIds])">
+          <button class="bulk-action-btn bulk-action-btn--edit" title="Batch edit selected tasks" aria-label="Batch edit selected tasks" @click="emit('batchEdit', [...visibleSelectedTaskIds])">
             <Pencil :size="14" />
             Edit
           </button>
-          <button class="bulk-action-btn bulk-action-btn--delete" title="Delete selected tasks" @click="emit('deleteSelected', [...visibleSelectedTaskIds])">
+          <button class="bulk-action-btn bulk-action-btn--delete" title="Delete selected tasks" aria-label="Delete selected tasks" @click="emit('deleteSelected', [...visibleSelectedTaskIds])">
             <Trash2 :size="14" />
             Delete
           </button>
-          <button class="bulk-action-btn bulk-action-btn--clear" title="Clear selection" @click="clearSelection">
+          <button class="bulk-action-btn bulk-action-btn--clear" title="Clear selection" aria-label="Clear selection" @click="clearSelection">
             <X :size="14" />
             Clear
           </button>

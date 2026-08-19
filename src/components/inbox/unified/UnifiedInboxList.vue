@@ -16,15 +16,15 @@
     <!-- Selection Bar -->
     <div v-if="multiSelectMode" class="selection-bar">
       <span class="selection-count">{{ selectedCount }} selected</span>
-      <button class="selection-action canvas-action" title="Send selected to Canvas" @click="$emit('sendSelectedToCanvas')">
+      <button class="selection-action canvas-action" title="Send selected to Canvas" aria-label="Send selected to Canvas" @click="$emit('sendSelectedToCanvas')">
         <Layout :size="14" />
         Canvas
       </button>
-      <button class="selection-action delete-action" title="Delete selected tasks" @click="$emit('deleteSelected')">
+      <button class="selection-action delete-action" title="Delete selected tasks" aria-label="Delete selected tasks" @click="$emit('deleteSelected')">
         <Trash2 :size="14" />
         Delete
       </button>
-      <button class="selection-action clear-action" title="Clear selection (Esc)" @click="$emit('clearSelection')">
+      <button class="selection-action clear-action" title="Clear selection (Esc)" aria-label="Clear selection" @click="$emit('clearSelection')">
         <X :size="14" />
         Clear
       </button>

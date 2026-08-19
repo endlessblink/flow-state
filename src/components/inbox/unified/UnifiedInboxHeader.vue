@@ -4,7 +4,7 @@
       class="collapse-btn" 
       :class="{ 'is-collapsed': isCollapsed }" 
       :title="isCollapsed ? 'Expand Inbox' : 'Collapse Inbox'" 
-      @click="$emit('toggleCollapse')"
+      @click="$emit('toggle-collapse')"
     >
       <template v-if="context === 'canvas'">
         <ChevronRight v-if="!isCollapsed" :size="16" />
@@ -212,7 +212,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'toggleCollapse'): void
+    (e: 'toggle-collapse'): void
   (e: 'update:activeTimeFilter', value: TimeFilterType): void
   (e: 'update:selected-canvas-groups', groups: Set<string>): void
   (e: 'update:unscheduled-only', value: boolean): void

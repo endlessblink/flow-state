@@ -211,8 +211,15 @@
     left: auto;
     top: 0.5rem;
     bottom: 0.5rem;
-    z-index: 50;
+    /* Keep the inbox controls above Vue Flow's pointer-event surface. */
+    z-index: 1100;
+    pointer-events: auto;
     max-height: calc(100vh - 1rem);
+}
+
+:deep(.unified-inbox-panel.is-right-side .inbox-header),
+:deep(.unified-inbox-panel.is-right-side .collapse-btn) {
+    pointer-events: auto;
 }
 
 /* Vue Flow container dimensions fix */

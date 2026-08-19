@@ -1,5 +1,15 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2031: Canvas inbox chevron does not expand the right-side panel
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-19)
+
+The canvas inbox header now emits the event name consumed by its parent, and the right-side panel keeps its controls pointer-active above the canvas surface.
+
+**Verified**: Focused regression, type-check, Electron package validation, and fresh packaged Electron visual click showing the panel expanded.
+
+**Explicitly not covered**: unrelated existing workspace changes.
+
 ### BUG-2030: Enter does not open the highlighted task from search
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-08-19)

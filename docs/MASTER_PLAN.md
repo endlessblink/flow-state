@@ -1,5 +1,15 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2030: Enter does not open the highlighted task from search
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-19)
+
+The search modal now handles Enter in its central keyboard path, so pressing Enter on the highlighted task emits the same task-selection event as clicking it and opens the existing task edit panel.
+
+**Verified**: SearchModal keyboard regression passes; the existing ModalManager select-task wiring remains the edit-panel boundary.
+
+**Explicitly not covered**: installed Electron visual confirmation and unrelated existing workspace changes.
+
 ### BUG-2027: Regression hunt misclassifies deterministic harness failures
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-08-19)

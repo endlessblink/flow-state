@@ -11,7 +11,6 @@
             placeholder="Search tasks, projects..."
             class="search-input"
             @keydown="handleKeydown"
-            @keydown.enter="selectResult"
             @keydown.arrow-down="moveSelection(1)"
             @keydown.arrow-up="moveSelection(-1)"
             @keydown.escape="$emit('close')"
@@ -234,9 +233,12 @@ watch(() => props.isOpen, (isOpen) => {
 
 // Handle keyboard navigation
 const handleKeydown = (event: KeyboardEvent) => {
-  // Prevent default for our handled keys
   if (['ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(event.key)) {
     event.preventDefault()
+  }
+
+  if (event.key === 'Enter') {
+    selectResult()
   }
 }
 

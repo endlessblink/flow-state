@@ -114,6 +114,18 @@ BEGIN
     );
   END IF;
 
+  old_fragment := $q$    estimated_duration = CASE$q$ || nl ||
+    $q$      WHEN v_normalized ? 'estimatedDuration' AND pg_catalog.jsonb_typeof(v_normalized->'estimatedDuration') = 'null' THEN NULL$q$ || nl ||
+    $q$      WHEN v_normalized ? 'estimatedDuration' THEN (v_normalized->>'estimatedDuration')::integer$q$ || nl ||
+    $q$      ELSE task.estimated_duration$q$ || nl ||
+    $q$    END,$q$ || nl ||
+    $q$    project_id = CASE$q$;
+  definition := pg_catalog.replace(
+    definition,
+    old_fragment,
+    $q$    project_id = CASE$q$
+  );
+
   IF coalesce(project_is_uuid, false) THEN
     definition := pg_catalog.replace(
       definition,

@@ -342,7 +342,7 @@ const handleChangePassword = async () => {
                 class="form-input"
                 placeholder="Enter new password"
               >
-              <button class="toggle-visibility" @click="showPassword = !showPassword">
+              <button class="toggle-visibility" @click="showPassword = !showPassword" :aria-label="showPassword ? 'Hide password' : 'Show password'" :title="showPassword ? 'Hide password' : 'Show password'">
                 <Eye v-if="!showPassword" :size="16" />
                 <EyeOff v-else :size="16" />
               </button>
@@ -504,7 +504,7 @@ const handleChangePassword = async () => {
             class="form-input"
             @focus="(e) => (e.target as HTMLInputElement).select()"
           >
-          <button class="toggle-visibility" :title="localApiCopied ? 'Copied!' : 'Copy'" @click="copyLocalApiToken">
+          <button class="toggle-visibility" :title="localApiCopied ? 'Copied!' : 'Copy API token'" :aria-label="localApiCopied ? 'Copied!' : 'Copy API token'" @click="copyLocalApiToken">
             <Check v-if="localApiCopied" :size="16" />
             <Copy v-else :size="16" />
           </button>

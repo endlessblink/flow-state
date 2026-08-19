@@ -13,6 +13,7 @@ export default defineConfig({
     reporter: 'html',
     use: {
         actionTimeout: 0,
+        serviceWorkers: 'block',
         trace: 'off',
         video: 'off',
         screenshot: 'off',

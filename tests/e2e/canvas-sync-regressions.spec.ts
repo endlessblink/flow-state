@@ -3655,20 +3655,25 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
 
     await clientA.reload();
     await gotoCanvasReady(clientA);
-    const afterReload = await clientA.evaluate((id) => {
-      const root = document.querySelector("#app") as any;
-      const tasks =
-        root.__vue_app__._context.config.globalProperties.$pinia._s.get(
-          "tasks",
-        )!;
-      const task = tasks.rawTasks.find((candidate: any) => candidate.id === id);
-      return { title: task?.title, status: task?.status, tags: task?.tags };
-    }, taskId);
-    expect(afterReload).toEqual({
-      title: updatedTitle,
-      status: "done",
-      tags: expect.arrayContaining(["offline-completion-probe"]),
-    });
+    // Pinia mounts before cache-first/authoritative task hydration completes.
+    // Poll the actual projection so this proves reload convergence instead of
+    // sampling a transient cache snapshot.
+    await expect(async () => {
+      const afterReload = await clientA.evaluate((id) => {
+        const root = document.querySelector("#app") as any;
+        const tasks =
+          root.__vue_app__._context.config.globalProperties.$pinia._s.get(
+            "tasks",
+          )!;
+        const task = tasks.rawTasks.find((candidate: any) => candidate.id === id);
+        return { title: task?.title, status: task?.status, tags: task?.tags };
+      }, taskId);
+      expect(afterReload).toEqual({
+        title: updatedTitle,
+        status: "done",
+        tags: expect.arrayContaining(["offline-completion-probe"]),
+      });
+    }).toPass({ timeout: 20_000 });
   });
 
   test("R12 - offline delete drains after reconnect and remains absent after reload", async ({

@@ -42,6 +42,41 @@ docker exec "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
   'GRANT SELECT, INSERT, UPDATE, DELETE ON public.tasks TO authenticated' \
   >/dev/null
 
+# The source database may already contain the post-H3 request-hash wrapper.
+# Remove that exact newer overload before replaying the pre-H3 migrations;
+# otherwise the legacy seven-argument call is ambiguous because the wrapper's
+# final argument has a default. The H3 migration recreates the wrapper later.
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
+  'DROP FUNCTION IF EXISTS public.flowstate_merge_tasks_with_recurrence(text,text,jsonb,boolean,text,text,uuid,text)' \
+  >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
+  'DROP FUNCTION IF EXISTS public.flowstate_merge_tasks(text,text,boolean,text,text,uuid,text)' \
+  >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
+  'DROP FUNCTION IF EXISTS public.flowstate_patch_task_v1(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid,text)' \
+  >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
+  'DROP FUNCTION IF EXISTS public.flowstate_complete_task_v1(text,text,text,text,bigint,boolean,text,timestamptz,uuid,text)' \
+  >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
+  'DROP FUNCTION IF EXISTS public.flowstate_done_for_now(text,boolean,date,text,text,uuid,text)' \
+  >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
+  'DROP FUNCTION IF EXISTS public.flowstate_patch_task_v1_h3_base(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid)' \
+  >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
+  'DROP FUNCTION IF EXISTS public.flowstate_complete_task_v1_h3_base(text,text,text,text,bigint,boolean,text,timestamptz,uuid)' \
+  >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
+  'DROP FUNCTION IF EXISTS public.flowstate_done_for_now_h3_base(text,boolean,date,text,text,uuid)' \
+  >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
+  'DROP FUNCTION IF EXISTS public.flowstate_merge_tasks_h3_base(text,text,boolean,text,text,uuid)' \
+  >/dev/null
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 -c \
+  'DROP FUNCTION IF EXISTS public.flowstate_merge_tasks_with_recurrence_h3_base(text,text,jsonb,boolean,text,text,uuid)' \
+  >/dev/null
+
 for migration in "${migrations[@]:0:11}"; do
   docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
     < "$migration" >/dev/null

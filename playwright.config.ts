@@ -41,6 +41,11 @@ export default defineConfig({
 
     /* Record video on failure */
     video: "retain-on-failure",
+
+    // Browser-flow assertions exercise application behavior, not service-worker
+    // activation timing. A waiting worker can trigger controllerchange and
+    // reload the page in the middle of a context-menu action.
+    serviceWorkers: "block",
   },
 
   /* Configure projects for major browsers */

@@ -1,5 +1,15 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2027: Regression hunt misclassifies deterministic harness failures
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-19)
+
+The 2026-08-19 regression hunt reported three failures under `auth/sync`, but the underlying causes were separate: an offline reload assertion sampled the task store before hydration completed, a browser-flow click could be interrupted by service-worker activation, and the disposable canonical-assistant database replay retained post-H3 overloads. The affected browser tests now wait at the actual projection boundary, browser-flow projects block service workers, and the disposable database explicitly removes post-H3 wrappers and private bases before replaying pre-H3 migrations.
+
+**Verified**: task-flow coverage 4/4, offline foundation slices R10-R18, advanced slices R24-R32, isolated R22, canonical-assistant and daily-hunt unit coverage 23/23, and typecheck. The advanced R19-R23 batch had one transient R22 board-start timeout; R22 passed when rerun alone.
+
+**Explicitly not covered**: the existing Vite `%VITE_SITE_URL%` warning and unrelated dirty/generated workspace files.
+
 ### FEATURE-2025: Create FlowState tasks alongside Google Calendar events
 
 **Priority**: P1 | **Status**: IN PROGRESS (2026-08-17)

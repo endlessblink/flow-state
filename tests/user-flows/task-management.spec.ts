@@ -126,7 +126,7 @@ test.describe('Task Management', () => {
                 subtasks: [],
                 dueDate: '2026-07-23',
                 estimatedDuration: 25,
-                projectId: 'inbox',
+                projectId: null,
                 isInInbox: true,
                 createdAt: now,
                 updatedAt: now,
@@ -142,8 +142,16 @@ test.describe('Task Management', () => {
         await page.waitForSelector('.all-tasks-view');
         await page.getByText('Inbox', { exact: true }).click();
 
+        // Guest-task hydration continues after the shell is visible; wait for
+        // the task projection before asserting the rendered row.
+        await expect.poll(async () => page.evaluate((taskId) => {
+            const root = document.querySelector('#app') as any;
+            const tasks = root?.__vue_app__?._context.config.globalProperties.$pinia?._s.get('tasks');
+            return Boolean(tasks?.rawTasks.some((task: any) => task.id === taskId));
+        }, taskId), { timeout: 20_000 }).toBe(true);
+
         const taskRow = page.locator('.hierarchical-task-row').filter({ hasText: taskTitle }).first();
-        await expect(taskRow).toBeVisible();
+        await expect(taskRow).toBeVisible({ timeout: 20_000 });
         await taskRow.click({ button: 'right' });
         await page.getByText('Mark as Done', { exact: true }).click();
 

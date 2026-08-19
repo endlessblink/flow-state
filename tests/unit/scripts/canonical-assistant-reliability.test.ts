@@ -18,6 +18,16 @@ describe('TASK-1949 canonical assistant disposable reliability harness', () => {
     expect(source).toContain('dropdb -U postgres --if-exists --force')
     expect(source).toContain('pg_dump -U postgres --schema-only --no-owner --no-privileges')
     expect(source).toContain('GRANT SELECT, INSERT, UPDATE, DELETE ON public.tasks TO authenticated')
+    expect(source).toContain('DROP FUNCTION IF EXISTS public.flowstate_merge_tasks_with_recurrence(text,text,jsonb,boolean,text,text,uuid,text)')
+    expect(source).toContain('DROP FUNCTION IF EXISTS public.flowstate_merge_tasks(text,text,boolean,text,text,uuid,text)')
+    expect(source).toContain('DROP FUNCTION IF EXISTS public.flowstate_patch_task_v1(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid,text)')
+    expect(source).toContain('DROP FUNCTION IF EXISTS public.flowstate_complete_task_v1(text,text,text,text,bigint,boolean,text,timestamptz,uuid,text)')
+    expect(source).toContain('DROP FUNCTION IF EXISTS public.flowstate_done_for_now(text,boolean,date,text,text,uuid,text)')
+    expect(source).toContain('DROP FUNCTION IF EXISTS public.flowstate_patch_task_v1_h3_base(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid)')
+    expect(source).toContain('DROP FUNCTION IF EXISTS public.flowstate_complete_task_v1_h3_base(text,text,text,text,bigint,boolean,text,timestamptz,uuid)')
+    expect(source).toContain('DROP FUNCTION IF EXISTS public.flowstate_done_for_now_h3_base(text,boolean,date,text,text,uuid)')
+    expect(source).toContain('DROP FUNCTION IF EXISTS public.flowstate_merge_tasks_h3_base(text,text,boolean,text,text,uuid)')
+    expect(source).toContain('DROP FUNCTION IF EXISTS public.flowstate_merge_tasks_with_recurrence_h3_base(text,text,jsonb,boolean,text,text,uuid)')
   })
 
   it('applies the full canonical migration chain before executable task, Notion, and race proofs', () => {

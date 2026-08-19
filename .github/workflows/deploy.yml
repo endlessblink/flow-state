@@ -110,16 +110,12 @@ jobs:
               echo 'No production Supabase/Postgres container found'
               exit 1
             fi
-            REMOTE_MIGRATION=/tmp/flowstate-p013-planning-fields.sql
-            REMOTE_PROOF=/tmp/flowstate-p013-planning-proof.sql
-            scp supabase/migrations/20260819090000_p013_planning_fields.sql \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_MIGRATION
-            scp scripts/db/test-p013-planning-fields.sql \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_PROOF
             ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-              "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f '$REMOTE_MIGRATION'"
+              "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres" \
+              < supabase/migrations/20260819090000_p013_planning_fields.sql
             ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-              "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f '$REMOTE_PROOF'"
+              "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres" \
+              < scripts/db/test-p013-planning-fields.sql
 
       # One-time cleanup: Backup old .env file (TASK-351)
       - name: Backup Legacy Env File

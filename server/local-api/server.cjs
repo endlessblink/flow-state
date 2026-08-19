@@ -659,6 +659,9 @@ function toSafeTask(record, detailed = false) {
     description: record.description || '',
     progress: Number(record.progress) || 0,
     dueTime: record.due_time || null,
+    estimatedDuration: Number.isSafeInteger(record.estimated_duration)
+      ? record.estimated_duration
+      : null,
     tags: Array.isArray(record.tags) ? record.tags : [],
     subtasks: normalizeSubtasks(record.subtasks),
     instances: normalizeTaskInstances(record.instances),
@@ -711,7 +714,7 @@ async function handleGetTask(id, res) {
   const { supabase } = ctx
   let query = supabase
     .from('tasks')
-    .select('id,title,description,status,priority,progress,due_date,due_time,project_id,subtasks,tags,position,instances,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,is_in_inbox,workspace_id,canonical_revision,created_at,updated_at,completed_at')
+    .select('id,title,description,status,priority,progress,due_date,due_time,estimated_duration,project_id,subtasks,tags,position,instances,recurrence_rule,recurrence_parent_id,recurrence_count,is_completion_record,is_in_inbox,workspace_id,canonical_revision,created_at,updated_at,completed_at')
     .eq('id', id)
     .eq('is_deleted', false)
   query = scopeTaskQuery(ctx, query)
@@ -730,6 +733,9 @@ async function handleGetTask(id, res) {
       progress: Number(task.progress) || 0,
       dueDate: toDateOnly(task.due_date),
       dueTime: task.due_time,
+      estimatedDuration: Number.isSafeInteger(task.estimated_duration)
+        ? task.estimated_duration
+        : null,
       projectId: task.project_id,
       subtasks: normalizeSubtasks(task.subtasks),
       tags: Array.isArray(task.tags) ? task.tags : [],

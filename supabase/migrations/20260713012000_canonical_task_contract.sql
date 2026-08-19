@@ -447,7 +447,7 @@ BEGIN
   SELECT pg_catalog.array_agg(key ORDER BY key)
     INTO v_unknown_keys
   FROM pg_catalog.jsonb_object_keys(p_patch) AS patch_key(key)
-  WHERE key NOT IN ('title', 'description', 'priority', 'dueDate', 'progress');
+  WHERE key NOT IN ('title', 'description', 'priority', 'dueDate', 'dueTime', 'estimatedDuration', 'projectId', 'progress');
 
   IF v_unknown_keys IS NOT NULL THEN
     RETURN pg_catalog.jsonb_build_object(
@@ -523,6 +523,49 @@ BEGIN
       );
     END;
     v_normalized := v_normalized || pg_catalog.jsonb_build_object('dueDate', p_patch->'dueDate');
+  END IF;
+
+  IF p_patch ? 'dueTime' THEN
+    IF pg_catalog.jsonb_typeof(p_patch->'dueTime') NOT IN ('string', 'null')
+       OR (pg_catalog.jsonb_typeof(p_patch->'dueTime') = 'string'
+           AND p_patch->>'dueTime' !~ '^([01]\\d|2[0-3]):[0-5]\\d$') THEN
+      RETURN pg_catalog.jsonb_build_object(
+        'ok', false, 'result', 'rejected',
+        'error', pg_catalog.jsonb_build_object('code', 'invalid_due_time', 'message', 'dueTime must be HH:MM or null')
+      );
+    END IF;
+    v_normalized := v_normalized || pg_catalog.jsonb_build_object('dueTime', p_patch->'dueTime');
+  END IF;
+
+  IF p_patch ? 'estimatedDuration' THEN
+    IF pg_catalog.jsonb_typeof(p_patch->'estimatedDuration') NOT IN ('number', 'null')
+       OR (pg_catalog.jsonb_typeof(p_patch->'estimatedDuration') = 'number'
+           AND ((p_patch->>'estimatedDuration')::numeric <> pg_catalog.trunc((p_patch->>'estimatedDuration')::numeric)
+                OR (p_patch->>'estimatedDuration')::numeric < 0)) THEN
+      RETURN pg_catalog.jsonb_build_object(
+        'ok', false, 'result', 'rejected',
+        'error', pg_catalog.jsonb_build_object('code', 'invalid_estimated_duration', 'message', 'estimatedDuration must be a non-negative integer or null')
+      );
+    END IF;
+    v_normalized := v_normalized || pg_catalog.jsonb_build_object(
+      'estimatedDuration',
+      CASE WHEN pg_catalog.jsonb_typeof(p_patch->'estimatedDuration') = 'null'
+           THEN 'null'::jsonb
+           ELSE to_jsonb((p_patch->>'estimatedDuration')::integer)
+      END
+    );
+  END IF;
+
+  IF p_patch ? 'projectId' THEN
+    IF pg_catalog.jsonb_typeof(p_patch->'projectId') NOT IN ('string', 'null')
+       OR (pg_catalog.jsonb_typeof(p_patch->'projectId') = 'string'
+           AND nullif(pg_catalog.btrim(p_patch->>'projectId'), '') IS NULL) THEN
+      RETURN pg_catalog.jsonb_build_object(
+        'ok', false, 'result', 'rejected',
+        'error', pg_catalog.jsonb_build_object('code', 'invalid_project_id', 'message', 'projectId must be a non-empty string or null')
+      );
+    END IF;
+    v_normalized := v_normalized || pg_catalog.jsonb_build_object('projectId', p_patch->'projectId');
   END IF;
 
   IF p_patch ? 'progress' THEN
@@ -718,6 +761,9 @@ BEGIN
     'description', v_task.description,
     'priority', v_task.priority,
     'dueDate', v_task.due_date,
+    'dueTime', v_task.due_time,
+    'estimatedDuration', v_task.estimated_duration,
+    'projectId', v_task.project_id,
     'progress', v_task.progress,
     'status', CASE WHEN v_task.status = 'done' THEN 'done' ELSE 'todo' END,
     'isDeleted', v_task.is_deleted,
@@ -897,6 +943,21 @@ BEGIN
     progress = CASE
       WHEN v_normalized ? 'progress' THEN (v_normalized->>'progress')::integer
       ELSE task.progress
+    END,
+    due_time = CASE
+      WHEN v_normalized ? 'dueTime' AND pg_catalog.jsonb_typeof(v_normalized->'dueTime') = 'null' THEN NULL
+      WHEN v_normalized ? 'dueTime' THEN v_normalized->>'dueTime'
+      ELSE task.due_time
+    END,
+    estimated_duration = CASE
+      WHEN v_normalized ? 'estimatedDuration' AND pg_catalog.jsonb_typeof(v_normalized->'estimatedDuration') = 'null' THEN NULL
+      WHEN v_normalized ? 'estimatedDuration' THEN (v_normalized->>'estimatedDuration')::integer
+      ELSE task.estimated_duration
+    END,
+    project_id = CASE
+      WHEN v_normalized ? 'projectId' AND pg_catalog.jsonb_typeof(v_normalized->'projectId') = 'null' THEN NULL
+      WHEN v_normalized ? 'projectId' THEN v_normalized->>'projectId'
+      ELSE task.project_id
     END
   WHERE task.id = v_task.id
   RETURNING task.* INTO STRICT v_updated;
@@ -923,6 +984,9 @@ BEGIN
     'description', v_updated.description,
     'priority', v_updated.priority,
     'dueDate', v_updated.due_date,
+    'dueTime', v_updated.due_time,
+    'estimatedDuration', v_updated.estimated_duration,
+    'projectId', v_updated.project_id,
     'progress', v_updated.progress,
     'status', CASE WHEN v_updated.status = 'done' THEN 'done' ELSE 'todo' END,
     'isDeleted', v_updated.is_deleted,

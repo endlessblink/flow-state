@@ -51,6 +51,8 @@ function committedResponse(overrides: Record<string, unknown> = {}) {
     description: '',
     priority: null,
     dueDate: null,
+    dueTime: null,
+    estimatedDuration: null,
     projectId: null,
     status: 'in_progress',
     isDeleted: false,
@@ -142,6 +144,8 @@ describe('canonical Local API task lifecycle handler', () => {
       description: 'Keep this context',
       priority: 'high',
       dueDate: '2026-07-20',
+      dueTime: '09:30',
+      estimatedDuration: 45,
       projectId: '22222222-2222-4222-8222-222222222222',
     }
     const normalizedPayload = normalizedRequest({
@@ -176,6 +180,8 @@ describe('canonical Local API task lifecycle handler', () => {
       description: '',
       priority: null,
       dueDate: null,
+      dueTime: null,
+      estimatedDuration: null,
       projectId: null,
     }
     const normalizedPayload = normalizedRequest({ action: 'create', baseRevision: 0, payload })
@@ -207,6 +213,8 @@ describe('canonical Local API task lifecycle handler', () => {
       description: 'Keep this context',
       priority: 'high',
       dueDate: '2026-07-20',
+      dueTime: '09:30',
+      estimatedDuration: 45,
       projectId: '22222222-2222-4222-8222-222222222222',
     }
     const normalized = normalizedRequest({ action: 'create', baseRevision: 0, payload })
@@ -410,7 +418,10 @@ describe('canonical Local API task lifecycle handler', () => {
     ] as const) {
       const baseRevision = action === 'create' ? 0 : 7
       const payload = action === 'create'
-        ? { title: 'A task', status: 'planned', description: '', priority: null, dueDate: null, projectId: null }
+        ? {
+            title: 'A task', status: 'planned', description: '', priority: null, dueDate: null,
+            dueTime: null, estimatedDuration: null, projectId: null,
+          }
         : {}
       const normalized = normalizedRequest({ action, baseRevision, payload })
       const response = committedResponse()

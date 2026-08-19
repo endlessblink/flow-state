@@ -126,6 +126,53 @@ describe('TASK-1945 canonical Local API task patch handler', () => {
       expect(notifyTaskMutation).not.toHaveBeenCalled()
     })
 
+    it('forwards the planning fields as one canonical preview patch', async () => {
+      const planningPreview = {
+        ...preview,
+        normalizedPayload: {
+          dueTime: '09:30',
+          estimatedDuration: 45,
+          projectId: '22222222-2222-4222-8222-222222222222',
+        },
+      }
+      const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({
+        data: planningPreview,
+        error: null,
+      })
+
+      await expect(executeCanonicalTaskPatch(
+        context(rpc),
+        'task-1',
+        {
+          operationId: 'operation-1',
+          baseRevision: 7,
+          patch: planningPreview.normalizedPayload,
+        },
+        notifyTaskMutation,
+      )).resolves.toEqual({ status: 200, body: planningPreview })
+
+      expect(rpc).toHaveBeenCalledWith('flowstate_patch_task_v1', expect.objectContaining({
+        p_patch: planningPreview.normalizedPayload,
+        p_preview: true,
+      }))
+    })
+
+    it.each([
+      [{ dueTime: '9:30' }, 'invalid_due_time'],
+      [{ estimatedDuration: -1 }, 'invalid_estimated_duration'],
+      [{ projectId: '' }, 'invalid_project_id'],
+    ])('rejects malformed planning fields before RPC', async (patch, code) => {
+      const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: preview, error: null })
+
+      await expect(executeCanonicalTaskPatch(
+        context(rpc),
+        'task-1',
+        { operationId: 'operation-1', baseRevision: 7, patch },
+        notifyTaskMutation,
+      )).resolves.toMatchObject({ status: 400, body: { error: { code } } })
+      expect(rpc).not.toHaveBeenCalled()
+    })
+
     it('requires the complete issued approval binding before apply', async () => {
       const { executeCanonicalTaskPatch, notifyTaskMutation, rpc } = harness({ data: null, error: null })
       const complete = {

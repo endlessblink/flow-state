@@ -783,6 +783,7 @@ describe("exact task runtime contract", () => {
             "description",
             "dueDate",
             "dueTime",
+            "estimatedDuration",
             "id",
             "instances",
             "isCompletionRecord",

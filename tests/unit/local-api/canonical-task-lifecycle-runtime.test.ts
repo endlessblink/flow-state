@@ -35,6 +35,8 @@ function previewResponse() {
       description: '',
       priority: null,
       dueDate: '2026-07-16',
+      dueTime: '09:30',
+      estimatedDuration: 45,
       projectId: null,
     },
   }
@@ -192,6 +194,8 @@ describe('canonical task lifecycle HTTP runtime contract', () => {
               description: '',
               priority: null,
               dueDate: '2026-07-16',
+              dueTime: '09:30',
+              estimatedDuration: 45,
               projectId: null,
             },
           }),

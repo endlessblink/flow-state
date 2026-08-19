@@ -12,6 +12,7 @@ const TASK_STATUSES = new Set([...CREATE_STATUSES, 'done'])
 const PRIORITIES = new Set(['low', 'medium', 'high'])
 const SHA256_HEX_RE = /^[0-9a-f]{64}$/
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
+const TIME_ONLY_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 const ERROR_STATUS = {
   invalid_request: 400,
   invalid_task_id: 400,
@@ -69,13 +70,18 @@ function dateOnly(value) {
 function normalizePayload(action, payload, baseRevision) {
   if (!object(payload)) return null
   if (action === 'create') {
-    const allowed = new Set(['title', 'status', 'description', 'priority', 'dueDate', 'projectId'])
+    const allowed = new Set([
+      'title', 'status', 'description', 'priority', 'dueDate', 'dueTime',
+      'estimatedDuration', 'projectId',
+    ])
     if (baseRevision !== 0 || Object.keys(payload).some(key => !allowed.has(key))) return null
     const title = typeof payload.title === 'string' ? payload.title.trim() : ''
     const status = payload.status === undefined ? 'planned' : payload.status
     const description = payload.description === undefined ? '' : payload.description
     const priority = payload.priority === undefined ? null : payload.priority
     const dueDate = payload.dueDate === undefined ? null : payload.dueDate
+    const dueTime = payload.dueTime === undefined ? null : payload.dueTime
+    const estimatedDuration = payload.estimatedDuration === undefined ? null : payload.estimatedDuration
     const projectId = payload.projectId === undefined ? null : payload.projectId
     if (!title
       || [...title].length > 500
@@ -84,8 +90,10 @@ function normalizePayload(action, payload, baseRevision) {
       || [...description].length > 10000
       || !(priority === null || PRIORITIES.has(priority))
       || !(dueDate === null || dateOnly(dueDate))
+      || !(dueTime === null || (typeof dueTime === 'string' && TIME_ONLY_RE.test(dueTime)))
+      || !(estimatedDuration === null || (Number.isSafeInteger(estimatedDuration) && estimatedDuration >= 0))
       || !(projectId === null || nonEmptyString(projectId))) return null
-    return { title, status, description, priority, dueDate, projectId }
+    return { title, status, description, priority, dueDate, dueTime, estimatedDuration, projectId }
   }
   if (!Number.isSafeInteger(baseRevision) || baseRevision < 1) return null
   if (action === 'set_status') {
@@ -171,6 +179,8 @@ function validLifecycleReadBack(readBack, body, payload, workspaceId) {
     || !(typeof readBack.description === 'string' || readBack.description === null)
     || !(readBack.priority === null || PRIORITIES.has(readBack.priority))
     || !(readBack.dueDate === null || dateOnly(readBack.dueDate))
+    || !(readBack.dueTime === null || (typeof readBack.dueTime === 'string' && TIME_ONLY_RE.test(readBack.dueTime)))
+    || !(readBack.estimatedDuration === null || (Number.isSafeInteger(readBack.estimatedDuration) && readBack.estimatedDuration >= 0))
     || !(readBack.projectId === null || nonEmptyString(readBack.projectId))
     || !TASK_STATUSES.has(readBack.status)
     || !Number.isSafeInteger(readBack.canonicalRevision)
@@ -187,6 +197,8 @@ function validLifecycleReadBack(readBack, body, payload, workspaceId) {
       && readBack.description === payload.description
       && readBack.priority === payload.priority
       && readBack.dueDate === payload.dueDate
+      && readBack.dueTime === payload.dueTime
+      && readBack.estimatedDuration === payload.estimatedDuration
       && readBack.projectId === payload.projectId
       && readBack.isDeleted === false
       && readBack.deletedAt === null

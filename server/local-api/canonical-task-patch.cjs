@@ -4,8 +4,18 @@ const { validateAffectedTaskEntry, validateCanonicalReceipt } = require('./canon
 
 const CONTRACT_VERSION = 'task-v1'
 const SOURCE = 'local-api'
-const ALLOWED_PATCH_FIELDS = new Set(['title', 'description', 'priority', 'dueDate', 'progress'])
+const ALLOWED_PATCH_FIELDS = new Set([
+  'title',
+  'description',
+  'priority',
+  'dueDate',
+  'dueTime',
+  'estimatedDuration',
+  'projectId',
+  'progress',
+])
 const SHA256_HEX_RE = /^[0-9a-f]{64}$/
+const TIME_ONLY_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 const ERROR_STATUS = {
   invalid_request: 400,
   unsupported_patch: 400,
@@ -13,6 +23,9 @@ const ERROR_STATUS = {
   invalid_description: 400,
   invalid_priority: 400,
   invalid_due_date: 400,
+  invalid_due_time: 400,
+  invalid_estimated_duration: 400,
+  invalid_project_id: 400,
   invalid_progress: 400,
   not_authenticated: 401,
   not_found: 404,
@@ -67,6 +80,20 @@ function validateRequest(taskId, body) {
     return errorResult(400, 'unsupported_patch', 'The patch contains unsupported task fields', {
       fields: unsupported,
     })
+  }
+
+  if (patch.dueTime !== undefined
+    && !(patch.dueTime === null || (typeof patch.dueTime === 'string' && TIME_ONLY_RE.test(patch.dueTime)))) {
+    return errorResult(400, 'invalid_due_time', 'dueTime must be HH:MM or null')
+  }
+  if (patch.estimatedDuration !== undefined
+    && !(patch.estimatedDuration === null
+      || (Number.isSafeInteger(patch.estimatedDuration) && patch.estimatedDuration >= 0))) {
+    return errorResult(400, 'invalid_estimated_duration', 'estimatedDuration must be a non-negative integer or null')
+  }
+  if (patch.projectId !== undefined
+    && !(patch.projectId === null || nonEmptyString(patch.projectId))) {
+    return errorResult(400, 'invalid_project_id', 'projectId must be a non-empty string or null')
   }
 
   const preview = body.preview !== false

@@ -93,7 +93,7 @@ BEGIN
        OR EXISTS (
          SELECT 1 FROM pg_catalog.jsonb_object_keys(p_payload) AS item(key)
          WHERE item.key NOT IN (
-           'title', 'status', 'description', 'priority', 'dueDate', 'projectId'
+           'title', 'status', 'description', 'priority', 'dueDate', 'dueTime', 'estimatedDuration', 'projectId'
          )
        )
        OR pg_catalog.jsonb_typeof(p_payload->'title') <> 'string'
@@ -119,6 +119,23 @@ BEGIN
        OR (
          p_payload ? 'projectId'
          AND pg_catalog.jsonb_typeof(p_payload->'projectId') NOT IN ('string', 'null')
+       )
+       OR (
+         p_payload ? 'dueTime'
+         AND (
+           pg_catalog.jsonb_typeof(p_payload->'dueTime') NOT IN ('string', 'null')
+           OR (pg_catalog.jsonb_typeof(p_payload->'dueTime') = 'string'
+               AND p_payload->>'dueTime' !~ '^([01]\\d|2[0-3]):[0-5]\\d$')
+         )
+       )
+       OR (
+         p_payload ? 'estimatedDuration'
+         AND (
+           pg_catalog.jsonb_typeof(p_payload->'estimatedDuration') NOT IN ('number', 'null')
+           OR (pg_catalog.jsonb_typeof(p_payload->'estimatedDuration') = 'number'
+               AND ((p_payload->>'estimatedDuration')::numeric <> pg_catalog.trunc((p_payload->>'estimatedDuration')::numeric)
+                    OR (p_payload->>'estimatedDuration')::numeric < 0))
+         )
        )
        OR (
          p_payload ? 'status'
@@ -177,6 +194,8 @@ BEGIN
       'description', COALESCE(p_payload->>'description', ''),
       'priority', p_payload->>'priority',
       'dueDate', CASE WHEN v_due_date IS NULL THEN NULL ELSE pg_catalog.to_char(v_due_date, 'YYYY-MM-DD') END,
+      'dueTime', p_payload->'dueTime',
+      'estimatedDuration', p_payload->'estimatedDuration',
       'projectId', CASE WHEN v_project_id IS NULL THEN NULL ELSE v_project_id::text END
     );
   ELSIF p_action = 'set_status' THEN
@@ -500,6 +519,7 @@ BEGIN
   IF p_action = 'create' THEN
     INSERT INTO public.tasks (
       id, user_id, project_id, title, description, status, priority, due_date,
+      due_time, estimated_duration,
       is_deleted, instances, subtasks,
       is_in_inbox, workspace_id, created_at, updated_at
     ) VALUES (
@@ -507,6 +527,8 @@ BEGIN
       v_normalized #>> '{payload,description}', v_normalized #>> '{payload,status}',
       v_normalized #>> '{payload,priority}',
       CASE WHEN v_due_date IS NULL THEN NULL ELSE (v_due_date::text || 'T00:00:00Z')::timestamptz END,
+      v_normalized #>> '{payload,dueTime}',
+      (v_normalized #>> '{payload,estimatedDuration}')::integer,
       false, '[]'::jsonb, '[]'::jsonb,
       true, p_workspace_id, pg_catalog.clock_timestamp(), pg_catalog.clock_timestamp()
     ) RETURNING * INTO STRICT v_updated;
@@ -546,6 +568,8 @@ BEGIN
       WHEN v_updated.due_date IS NULL THEN NULL
       ELSE pg_catalog.to_char(v_updated.due_date AT TIME ZONE 'UTC', 'YYYY-MM-DD')
     END,
+    'dueTime', v_updated.due_time,
+    'estimatedDuration', v_updated.estimated_duration,
     'projectId', v_updated.project_id,
     'isDeleted', v_updated.is_deleted, 'deletedAt', v_updated.deleted_at,
     'tombstone', EXISTS (

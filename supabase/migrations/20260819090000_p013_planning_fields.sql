@@ -12,6 +12,13 @@ BEGIN
     'public.flowstate_patch_task_v1_h3_base(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid)'::pg_catalog.regprocedure
   ) INTO definition;
 
+  definition := pg_catalog.regexp_replace(
+    definition,
+    $q$WHERE key NOT IN \([^;]*\);$q$,
+    $q$WHERE key NOT IN ('title', 'description', 'priority', 'dueDate', 'dueTime', 'estimatedDuration', 'projectId', 'progress');$q$,
+    'g'
+  );
+
   old_fragment := $q$  WHERE key NOT IN ('title', 'description', 'priority', 'dueDate', 'progress');$q$;
   definition := pg_catalog.replace(
     definition,
@@ -36,8 +43,26 @@ BEGIN
     );
   END IF;
 
+  old_fragment := $q$  IF p_patch ? 'progress' THEN$q$;
+  IF pg_catalog.strpos(definition, $q$  IF p_patch ? 'projectId' THEN$q$) = 0 THEN
+    definition := pg_catalog.replace(
+      definition,
+      old_fragment,
+      $q$  IF p_patch ? 'projectId' THEN$q$ || nl ||
+      $q$    IF pg_catalog.jsonb_typeof(p_patch->'projectId') NOT IN ('string', 'null')
+       OR (pg_catalog.jsonb_typeof(p_patch->'projectId') = 'string'
+           AND nullif(pg_catalog.btrim(p_patch->>'projectId'), '') IS NULL) THEN$q$ || nl ||
+      $q$      RETURN pg_catalog.jsonb_build_object('ok', false, 'result', 'rejected', 'error', pg_catalog.jsonb_build_object('code', 'invalid_project_id', 'message', 'projectId must be a non-empty string or null'));$q$ || nl ||
+      $q$    END IF;$q$ || nl ||
+      $q$    v_normalized := v_normalized || pg_catalog.jsonb_build_object('projectId', p_patch->'projectId');$q$ || nl ||
+      $q$  END IF;$q$ || nl || nl ||
+      old_fragment
+    );
+  END IF;
+
   old_fragment := $q$    'dueDate', v_task.due_date,$q$;
-  IF pg_catalog.strpos(definition, $q$    'estimatedDuration', v_task.estimated_duration,$q$) = 0 THEN
+  IF pg_catalog.strpos(definition, $q$    'dueTime', v_task.due_time,$q$) = 0
+     OR pg_catalog.strpos(definition, $q$    'projectId', v_task.project_id,$q$) = 0 THEN
     definition := pg_catalog.replace(
       definition,
       old_fragment,
@@ -72,7 +97,8 @@ BEGIN
   END IF;
 
   old_fragment := $q$    'dueDate', v_updated.due_date,$q$;
-  IF pg_catalog.strpos(definition, $q$    'estimatedDuration', v_updated.estimated_duration,$q$) = 0 THEN
+  IF pg_catalog.strpos(definition, $q$    'dueTime', v_updated.due_time,$q$) = 0
+     OR pg_catalog.strpos(definition, $q$    'projectId', v_updated.project_id,$q$) = 0 THEN
     definition := pg_catalog.replace(
       definition,
       old_fragment,

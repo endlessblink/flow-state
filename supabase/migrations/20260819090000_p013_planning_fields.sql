@@ -94,10 +94,6 @@ BEGIN
       $q$      WHEN v_normalized ? 'dueTime' AND pg_catalog.jsonb_typeof(v_normalized->'dueTime') = 'null' THEN NULL$q$ || nl ||
       $q$      WHEN v_normalized ? 'dueTime' THEN v_normalized->>'dueTime'$q$ || nl ||
       $q$      ELSE task.due_time$q$ || nl || $q$    END,$q$ || nl ||
-      $q$    estimated_duration = CASE$q$ || nl ||
-      $q$      WHEN v_normalized ? 'estimatedDuration' AND pg_catalog.jsonb_typeof(v_normalized->'estimatedDuration') = 'null' THEN NULL$q$ || nl ||
-      $q$      WHEN v_normalized ? 'estimatedDuration' THEN (v_normalized->>'estimatedDuration')::integer$q$ || nl ||
-      $q$      ELSE task.estimated_duration$q$ || nl || $q$    END,$q$ || nl ||
       $q$    project_id = CASE$q$ || nl ||
       $q$      WHEN v_normalized ? 'projectId' AND pg_catalog.jsonb_typeof(v_normalized->'projectId') = 'null' THEN NULL$q$ || nl ||
       $q$      WHEN v_normalized ? 'projectId' THEN v_normalized->>'projectId'$q$ || nl ||

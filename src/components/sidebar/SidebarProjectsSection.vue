@@ -7,7 +7,7 @@
         <FolderOpen :size="16" class="section-icon" />
         {{ $t('common.projects') }}
       </h3>
-      <button class="add-project-btn" :title="$t('sidebar.add_project')" @click="sidebar.openCreateProject">
+      <button class="add-project-btn" :aria-label="$t('sidebar.add_project')" :title="$t('sidebar.add_project')" @click="sidebar.openCreateProject">
         <Plus :size="14" />
       </button>
     </div>
@@ -18,7 +18,7 @@
         <span class="selection-count">{{ selectedProjectIds.size }} selected</span>
         <button
           class="selection-action delete-action"
-          title="Delete selected projects"
+          aria-label="Delete selected projects" title="Delete selected projects"
           @click="confirmDeleteSelectedProjects"
         >
           <Trash2 :size="14" />
@@ -26,7 +26,7 @@
         </button>
         <button
           class="selection-action clear-action"
-          title="Clear selection (Esc)"
+          aria-label="Clear selection (Esc)" title="Clear selection (Esc)"
           @click="clearProjectSelection"
         >
           <X :size="14" />

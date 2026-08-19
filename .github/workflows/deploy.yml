@@ -99,6 +99,27 @@ jobs:
               ./dist/ \
               ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/
 
+      # Apply and verify the P-013 canonical task contract against the same
+      # production Postgres used by the deployed FlowState instance. The SQL
+      # migration is idempotent and the proof transaction always rolls back.
+      - name: Apply and verify P-013 database contract
+        run: |
+            REMOTE_DB_CONTAINER=$(ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+              "docker ps --format '{{.Names}}' | grep -E 'supabase.*db|postgres' | head -1")
+            if [ -z "$REMOTE_DB_CONTAINER" ]; then
+              echo 'No production Supabase/Postgres container found'
+              exit 1
+            fi
+            REMOTE_MIGRATION=/tmp/flowstate-p013-planning-fields.sql
+            REMOTE_PROOF=/tmp/flowstate-p013-planning-proof.sql
+            scp supabase/migrations/20260819090000_p013_planning_fields.sql \
+              scripts/db/test-p013-planning-fields.sql \
+              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/
+            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+              "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f '$REMOTE_MIGRATION'"
+            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+              "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f '$REMOTE_PROOF'"
+
       # One-time cleanup: Backup old .env file (TASK-351)
       - name: Backup Legacy Env File
         run: |

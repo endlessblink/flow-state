@@ -8,6 +8,19 @@ export interface DoneForNowInput {
   requestHash?: string | null
 }
 
+/** Recurrence has two persisted shapes; completion must honor either active form. */
+export function getActiveTaskRecurrenceRule(task: {
+  recurrenceRule?: object | null
+  recurrence?: { isEnabled?: boolean; rule?: object | null } | null
+}): object | null {
+  if (task.recurrenceRule && typeof task.recurrenceRule === 'object') return task.recurrenceRule
+  const legacy = task.recurrence
+  if (!legacy?.isEnabled || !legacy.rule || typeof legacy.rule !== 'object') return null
+  const rule = { ...legacy.rule } as Record<string, unknown>
+  if (rule.dayOfMonth !== undefined && rule.monthDay === undefined) rule.monthDay = rule.dayOfMonth
+  return rule
+}
+
 export interface DoneForNowResult {
   ok: true
   preview: boolean

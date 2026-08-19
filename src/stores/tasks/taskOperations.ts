@@ -33,7 +33,10 @@ import { logGeometryWrite } from "@/utils/canvas/geometryWriteLog";
 // TASK-1871: fail-fast guard against write storms (same row hammered)
 import { recordWrite } from "@/utils/sync/writeRateGuard";
 import { supabase } from "@/services/auth/supabase";
-import { runDoneForNow } from "@/services/tasks/doneForNow";
+import {
+  getActiveTaskRecurrenceRule,
+  runDoneForNow,
+} from "@/services/tasks/doneForNow";
 import {
   beginCanvasDoneTrace,
   getCanvasDoneTraceTaskIds,
@@ -1925,8 +1928,10 @@ export function useTaskOperations(
     if (!task)
       throw new Error(`Done for now target task no longer exists: ${taskId}`);
 
+    const recurrenceRule = getActiveTaskRecurrenceRule(task);
+
     // Non-recurring: just mark done normally
-    if (!task.recurrenceRule) {
+    if (!recurrenceRule) {
       await moveTask(taskId, "done");
       return;
     }
@@ -1953,7 +1958,7 @@ export function useTaskOperations(
         options.nextDueDate ??
         computeNextDueDate(
           currentDueDate,
-          task.recurrenceRule,
+          recurrenceRule as never,
           (task.recurrenceCount || 0) + 1,
         );
       const completedAt = new Date();
@@ -1963,6 +1968,7 @@ export function useTaskOperations(
         status: "done",
         completedAt,
         dueDate: currentDueDate,
+        recurrence: undefined,
         recurrenceRule: undefined,
         recurrenceParentId: task.recurrenceParentId || task.id,
         recurrenceCount: task.recurrenceCount || 0,
@@ -2046,7 +2052,7 @@ export function useTaskOperations(
         options.nextDueDate ??
         computeNextDueDate(
           currentDueDate,
-          task.recurrenceRule,
+          recurrenceRule as never,
           (task.recurrenceCount || 0) + 1,
         );
       if (!nextDueDate) {
@@ -2146,6 +2152,7 @@ export function useTaskOperations(
       status: "done",
       completedAt: new Date(completed.completedAt),
       dueDate: completed.dueDate,
+      recurrence: undefined,
       recurrenceRule: undefined,
       recurrenceParentId: task.recurrenceParentId || task.id,
       recurrenceCount: task.recurrenceCount || 0,
@@ -2213,7 +2220,7 @@ export function useTaskOperations(
     options: { nextDueDate?: string; requestId?: string } = {},
   ) => {
     const targetTask = _rawTasks.value.find((task) => task.id === taskId);
-    if (!targetTask?.recurrenceRule) {
+    if (!targetTask || !getActiveTaskRecurrenceRule(targetTask)) {
       await performDoneForNow(taskId, options);
       return;
     }

@@ -217,6 +217,29 @@ describe('useTaskContextMenuActions toggleDone canonical resolution', () => {
     expect(updateTaskWithUndo).not.toHaveBeenCalled()
   })
 
+  it('USER REPRO: right-click Mark done accepts the legacy enabled recurrence shape', async () => {
+    const legacyRecurringTask = {
+      id: 'task-legacy-recurring',
+      title: 'Legacy recurring Catalog task',
+      status: 'todo',
+      recurrence: {
+        isEnabled: true,
+        rule: { pattern: 'weekly', interval: 1, weekdays: [1] },
+      },
+    } as unknown as Task
+    getTask.mockReturnValue(legacyRecurringTask)
+
+    const { toggleDone } = useTaskContextMenuActions({
+      task: legacyRecurringTask,
+      contextTask: null,
+      selectedCount: 1,
+    }, vi.fn())
+    await toggleDone()
+
+    expect(doneForNow).toHaveBeenCalledWith('task-legacy-recurring')
+    expect(updateTaskWithUndo).not.toHaveBeenCalled()
+  })
+
   it('treats an already-completed recurring occurrence as a successful refresh', async () => {
     const recurringTask = {
       id: 'task-1',

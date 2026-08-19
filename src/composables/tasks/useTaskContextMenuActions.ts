@@ -2,7 +2,7 @@
 import { computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
-import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
+import { getActiveTaskRecurrenceRule, isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import { useTimerStore } from '@/stores/timer'
 import { useCanvasStore } from '@/stores/canvas'
 import { formatDateKey } from '@/utils/dateUtils'
@@ -347,7 +347,7 @@ export function useTaskContextMenuActions(
                 return
             }
             const currentStatus = canonicalTask.status
-            const currentRecurrenceRule = canonicalTask.recurrenceRule
+            const currentRecurrenceRule = getActiveTaskRecurrenceRule(canonicalTask)
 
             // TASK-1532: Recurring tasks use "done for now" on toggle click
             if (currentStatus !== 'done' && currentRecurrenceRule) {

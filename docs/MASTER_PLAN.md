@@ -1,5 +1,33 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2032: Context-menu completion ignores legacy recurring task shape
+
+**Priority**: P1 | **Status**: IN PROGRESS (2026-08-19)
+
+The context-menu completion path now recognizes both the current `recurrenceRule` representation and the older enabled `recurrence.rule` representation, so “Mark as Done” completes the current occurrence through the recurring `Done for now` flow instead of treating it as a one-time status update.
+
+**Exact failure mode fixed**: A task could visibly remain recurring while its canonical row exposed only the legacy enabled recurrence field; the context menu checked only `recurrenceRule`, so completion skipped occurrence advancement.
+
+**Regression added for reported repro**: Context-menu action coverage for a canonical legacy recurring task shape, alongside the existing modern recurring and stale-row cases.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Context-menu completion test uses an enabled legacy recurring task | Yes |
+| Data shape / persisted row shape | Yes | Modern `recurrenceRule` and legacy `recurrence.rule` are normalized | Yes |
+| Renderer store/state | Yes | Focused composable suite passes 20/20 | Yes |
+| Electron main/preload bridge | N/A | Renderer/store completion path does not use the bridge | N/A |
+| Localhost sidecar endpoint | N/A | This fix does not change sidecar routing | N/A |
+| KDE polling/control path | N/A | This fix does not change timer control | N/A |
+| Supabase persistence/realtime | Not yet | Focused tests mock the canonical operation | No |
+| Updater/runtime version | Not yet | Electron build remains open | No |
+| Stale live process/cache state | Not yet | Packaged authenticated runtime check remains open | No |
+
+**Explicitly not covered**: Live authenticated persistence, recurrence RPC availability, packaged Electron restart, or unrelated task completion failures.
+
+**Live boundary proof**: Not yet run.
+
 ### BUG-2031: Canvas inbox chevron does not expand the right-side panel
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-08-19)

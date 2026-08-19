@@ -7,10 +7,19 @@ DECLARE
   definition text;
   nl text := pg_catalog.chr(10);
   old_fragment text;
+  project_is_uuid boolean;
 BEGIN
   SELECT pg_catalog.pg_get_functiondef(
     'public.flowstate_patch_task_v1_h3_base(text,text,text,text,bigint,jsonb,boolean,text,timestamptz,uuid)'::pg_catalog.regprocedure
   ) INTO definition;
+
+  SELECT pg_catalog.format_type(att.atttypid, att.atttypmod) = 'uuid'
+    INTO project_is_uuid
+  FROM pg_catalog.pg_attribute AS att
+  WHERE att.attrelid = 'public.tasks'::pg_catalog.regclass
+    AND att.attname = 'project_id'
+    AND att.attnum > 0
+    AND NOT att.attisdropped;
 
   definition := pg_catalog.regexp_replace(
     definition,
@@ -106,6 +115,14 @@ BEGIN
       $q$    'dueTime', v_updated.due_time,$q$ || nl ||
       $q$    'estimatedDuration', v_updated.estimated_duration,$q$ || nl ||
       $q$    'projectId', v_updated.project_id,$q$
+    );
+  END IF;
+
+  IF coalesce(project_is_uuid, false) THEN
+    definition := pg_catalog.replace(
+      definition,
+      $q$WHEN v_normalized ? 'projectId' THEN v_normalized->>'projectId'$q$,
+      $q$WHEN v_normalized ? 'projectId' THEN (v_normalized->>'projectId')::uuid$q$
     );
   END IF;
 

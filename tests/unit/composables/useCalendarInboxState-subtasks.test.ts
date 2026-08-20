@@ -156,6 +156,24 @@ describe('useCalendarInboxState subtask filtering', () => {
     expect(state.inboxTasks.value.map(item => item.id)).toEqual(['due-today-with-calendar-instance'])
   })
 
+  it('keeps a schedule-only task visible in the Today filter', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-20T12:00:00+03:00'))
+    mockTaskStore.calendarFilteredTasks = [
+      task({
+        id: 'scheduled-only-today',
+        title: 'Scheduled only today',
+        dueDate: '',
+        instances: [{ scheduledDate: '2026-08-20', scheduledTime: '12:00' }],
+      }),
+    ]
+
+    const state = useCalendarInboxState()
+    state.showTodayOnly.value = true
+
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['scheduled-only-today'])
+  })
+
   it('keeps recurring scheduled tasks visible in the calendar inbox', () => {
     mockTaskStore.calendarFilteredTasks = [
       task({

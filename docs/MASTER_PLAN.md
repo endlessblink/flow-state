@@ -104,15 +104,35 @@ The 2026-08-19 regression hunt reported three failures under `auth/sync`, but th
 
 ### TASK-2024: Keep Today synchronized across Board, Canvas, and Catalogue
 
-**Priority**: P0 | **Status**: IN PROGRESS (2026-08-14) | **Electron target**: 1.4.398
+**Priority**: P0 | **Status**: ✅ DONE (2026-08-20) | **Electron target**: 1.4.420
 
 **Goal**: Use one canonical Today task projection so all three views show the exact same task set and shared top-to-bottom order; Canvas uses row-major placement (left to right, then top to bottom), and the installed Electron runtime must pass the same structural and visual gate.
 
-**Completed evidence**: Canonical projection wired into Board, Canvas, and Catalogue; the mobile task surface now also uses persisted shared order instead of an independent Canvas-geometry traversal; Canvas startup now waits for persisted overlap in initial smart day groups before repairing; sync now projects Board order only on an order-only change and preserves geometry during drag/drop hydration; drag frames no longer write the reactive PositionManager; focused unit tests, typecheck, locked Electron build, and package validation pass. Installed Electron 1.4.398 guest-profile proof now performs a real F2 key press, persists B→A→C after reload, and visually confirms the same order in Canvas, Board, and Catalogue.
+**Completed evidence**: Canonical projection wired into Calendar Inbox, Board, Canvas, and Catalogue; the mobile task surface now also uses persisted shared order instead of an independent Canvas-geometry traversal; Canvas startup now waits for persisted overlap in initial smart day groups before repairing; sync now projects Board order only on an order-only change and preserves geometry during drag/drop hydration; drag frames no longer write the reactive PositionManager; focused Today regression tests pass 16/16, typecheck, locked Electron build, package validation, and authenticated Electron visual verification pass. Installed Electron 1.4.420 shows the same seven populated Today task IDs in Calendar Inbox, Canvas, Board, and Catalogue, with Calendar/Canvas retaining the shared row-major order and Board/Catalogue retaining their view-specific project/group presentation.
 
-**Open final gate**: The authenticated production profile currently available to the verifier has no task rows, so populated authenticated Today readback across Board, Canvas, and Catalogue remains unproven. The guest-profile installed gate is disposable runtime evidence only; do not mark this task DONE until an authenticated populated profile passes the same exact-set/order check and the user approves completion.
+**Closeout**: The authenticated populated profile passed the Today membership and visual gate in Electron 1.4.420; the user requested task completion via `$done` after the live review. The updater manifest is published at 1.4.420.
 
-**Failure-class coverage**: data shape, renderer projection, Canvas source hydration, startup geometry repair, stale-parent reconciliation, Tidy persistence, ordinary drag/drop, F2 key handling and drag-stop routing, reorder persistence, missing-position projection, Catalogue grouping, unit regressions, installed guest visual proof, package build, updater delivery, stale renderer cache handling, and prior installed authenticated readback are covered; authenticated populated Today readback and user approval remain open. The synthetic key-dispatch regression was corrected to use a real F2 keyboard press. The mandatory prebuild wrapper also exposed an unrelated existing offline-reconnect reload failure where the fixture task is undefined after reload; it was not changed here.
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Authenticated Calendar Inbox Today and Canvas Today were compared with populated data | Yes |
+| Data shape / persisted row shape | Yes | Due-date, scheduled-instance, and schedule-only regressions pass | Yes |
+| Renderer store/state | Yes | Canonical projection and inbox regression suites pass 16/16 | Yes |
+| Electron main/preload bridge | N/A | Today membership is renderer/store projection logic | N/A |
+| Localhost sidecar endpoint | N/A | Today membership does not use the timer sidecar | N/A |
+| KDE polling/control path | N/A | Today membership does not use KDE control | N/A |
+| Supabase persistence/realtime | Partial | Authenticated populated readback was verified; no cross-client mutation was performed | No |
+| Updater/runtime version | Yes | Electron 1.4.420 build, package validation, and public updater manifest pass | Yes |
+| Stale live process/cache state | Yes | Fresh authenticated Electron 1.4.420 runtime was visually and structurally audited | Yes |
+
+**Exact failure mode fixed**: Calendar Inbox Today used a narrower due-date/inbox projection than the canonical Today projection, so schedule-only or Canvas tasks could be absent from the filtered inbox even while Canvas showed them.
+
+**Explicitly not covered**: Cross-client live mutation/realtime propagation, unrelated full-suite smart-merge failures, and intentionally different project/group presentation ordering in Board and Catalogue.
+
+**Regression added for reported repro**: Schedule-only Today membership coverage plus Calendar Inbox, Canvas, Board, and Catalogue identity assertions in the visual gate.
+
+**Live boundary proof**: Authenticated Electron 1.4.420 showed the same seven populated Today task IDs across all four surfaces; Calendar and Canvas matched in row-major order, while Board and Catalogue preserved their project/group presentation.
 
 ### ~~TASK-2022~~: Synchronize Board and Canvas task ordering (✅ DONE)
 

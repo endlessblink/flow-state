@@ -76,6 +76,16 @@ export function useCalendarInboxState() {
         return task.instances.some(inst => inst.scheduledDate)
     }
 
+    const isRecurringTask = (task: Task): boolean => {
+        return Boolean(
+            task.recurrence?.isEnabled ||
+            task.recurrenceRule ||
+            task.recurrenceParentId ||
+            task.recurringInstances?.length ||
+            task.instances?.some(instance => instance.isRecurring)
+        )
+    }
+
     const embeddedSubtaskIds = computed(() => {
         const ids = new Set<string>()
         for (const task of taskStore.calendarFilteredTasks) {
@@ -102,14 +112,25 @@ export function useCalendarInboxState() {
             if (hideCalendarDoneTasks.value && task.status === 'done') return false
             if (task.isPinned) return false
 
-            // Scheduled tasks are represented by calendar events, not calendar inbox cards.
-            return !isScheduledOnCalendar(task)
+            // Recurring tasks remain inbox tasks even when they also have calendar instances.
+            return !isScheduledOnCalendar(task) || isRecurringTask(task)
+        })
+    })
+
+    // Today is a due-date projection shared with Canvas. Apply it before the
+    // normal calendar-event exclusion so a due-today task with an event still
+    // appears in the same Today set as Canvas.
+    const todayInboxTasks = computed(() => {
+        return taskStore.calendarFilteredTasks.filter(task => {
+            if (hideCalendarDoneTasks.value && task.status === 'done') return false
+            if (task.isPinned) return false
+            return isTaskDueToday(task)
         })
     })
 
     // Count tasks due today (uses normalized date comparison)
     const todayCount = computed(() => {
-        return baseInboxTasks.value.filter(task => isTaskDueToday(task)).length
+        return todayInboxTasks.value.length
     })
 
     // Active filters check
@@ -125,7 +146,7 @@ export function useCalendarInboxState() {
 
     // Final Filtered Inbox Tasks
     const inboxTasks = computed(() => {
-        let tasks = baseInboxTasks.value
+        let tasks = showTodayOnly.value ? todayInboxTasks.value : baseInboxTasks.value
 
         // 1. Canvas Group Filter (Primary)
         if (selectedCanvasGroups.value.size > 0) {
@@ -316,6 +337,7 @@ export function useCalendarInboxState() {
         hideCalendarDoneTasks,
         canvasGroupOptions,
         baseInboxTasks,
+        todayInboxTasks,
         inboxTasks,
         todayCount,
         hasActiveFilters,

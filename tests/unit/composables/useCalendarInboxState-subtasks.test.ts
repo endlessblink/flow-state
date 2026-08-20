@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest'
 
 const mockTaskStore = vi.hoisted(() => ({
   calendarFilteredTasks: [] as any[],
@@ -47,6 +47,10 @@ const task = (overrides: Record<string, unknown>) => ({
 })
 
 describe('useCalendarInboxState subtask filtering', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   beforeEach(() => {
     localStorage.clear()
     mockTaskStore.calendarFilteredTasks = []
@@ -124,6 +128,46 @@ describe('useCalendarInboxState subtask filtering', () => {
     state.sortBy.value = 'canvasOrder'
 
     expect(state.inboxTasks.value.map(item => item.id)).toEqual(['unscheduled-task'])
+  })
+
+  it('keeps a task due today visible in the Today filter even when it has a calendar instance', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-20T12:00:00+03:00'))
+    mockTaskStore.calendarFilteredTasks = [
+      task({
+        id: 'due-today-with-calendar-instance',
+        title: 'Due today with calendar instance',
+        dueDate: '2026-08-20',
+        instances: [{ scheduledDate: '2026-08-21', scheduledTime: '12:00' }],
+      }),
+      task({
+        id: 'due-tomorrow-with-calendar-instance',
+        title: 'Due tomorrow with calendar instance',
+        dueDate: '2026-08-21',
+        instances: [{ scheduledDate: '2026-08-20', scheduledTime: '12:00' }],
+      }),
+    ]
+
+    const state = useCalendarInboxState()
+    state.showTodayOnly.value = true
+
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['due-today-with-calendar-instance'])
+  })
+
+  it('keeps recurring scheduled tasks visible in the calendar inbox', () => {
+    mockTaskStore.calendarFilteredTasks = [
+      task({
+        id: 'recurring-canvas-task',
+        title: 'Recurring canvas task',
+        canvasPosition: { x: 10, y: 20 },
+        recurrenceRule: { pattern: 'weekly', interval: 1, endType: 'never' },
+        instances: [{ scheduledDate: '2026-08-02', scheduledTime: '12:00', isRecurring: true }],
+      }),
+    ]
+
+    const state = useCalendarInboxState()
+
+    expect(state.inboxTasks.value.map(item => item.id)).toEqual(['recurring-canvas-task'])
   })
 
   it('keeps due-date-only tasks in the calendar inbox', () => {

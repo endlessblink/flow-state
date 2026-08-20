@@ -8,6 +8,8 @@ const mockTaskStore = vi.hoisted(() => ({
 
 vi.mock('@/stores/tasks', () => ({
   useTaskStore: () => mockTaskStore,
+  getTaskInstances: (task: any) => task.instances ?? [],
+  parseDateKey: (dateKey: string) => new Date(`${dateKey}T00:00:00`),
 }))
 
 vi.mock('@/stores/canvas', () => ({

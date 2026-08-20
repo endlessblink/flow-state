@@ -5,7 +5,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
 import { useDirection } from '@/i18n/useDirection'
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
-import { isCalendarInboxTaskDueToday } from '@/utils/calendar/inboxTodayFilter'
+import { getCanonicalTodayTaskIds } from '@/utils/todayTaskProjection'
 import type { SortByType, SortDirection } from '@/composables/inbox/useUnifiedInboxState'
 
 export function useCalendarInboxState() {
@@ -99,10 +99,12 @@ export function useCalendarInboxState() {
     const isSubtaskCard = (task: Task): boolean =>
         Boolean(task.parentTaskId) || embeddedSubtaskIds.value.has(task.id)
 
-    // Calendar inbox Today is due-date-only; event schedules can be a different day.
-    const isTaskDueToday = (task: Task): boolean => {
-        return isCalendarInboxTaskDueToday(task)
-    }
+    // Calendar Inbox Today uses the same effective-date projection as Board and Canvas.
+    const canonicalTodayTaskIds = computed(() => getCanonicalTodayTaskIds(
+        taskStore.calendarFilteredTasks,
+        hideCalendarDoneTasks.value,
+    ))
+    const isTaskDueToday = (task: Task): boolean => canonicalTodayTaskIds.value.has(task.id)
 
     // Base Inbox Tasks — BUG-1333: Use calendarFilteredTasks (project + hide-done only)
     // instead of filteredTasks which also applies board-level smart view/status/duration

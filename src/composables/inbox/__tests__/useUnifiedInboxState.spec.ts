@@ -16,6 +16,8 @@ const canvasStoreMock = {
 
 vi.mock('@/stores/tasks', () => ({
   useTaskStore: () => taskStoreMock,
+  getTaskInstances: (task: Task) => task.instances ?? [],
+  parseDateKey: (dateKey: string) => new Date(`${dateKey}T00:00:00`),
 }))
 
 vi.mock('@/stores/canvas', () => ({
@@ -125,7 +127,7 @@ describe('useUnifiedInboxState', () => {
     expect(state.inboxTasks.value).toHaveLength(0)
   })
 
-  it('hides scheduled tasks when calendar inbox Today filter is active', async () => {
+  it('keeps a due-today task visible when its calendar event is scheduled elsewhere', async () => {
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     const tomorrow = new Date(today)
@@ -158,10 +160,10 @@ describe('useUnifiedInboxState', () => {
     state.activeTimeFilter.value = 'today'
     await nextTick()
 
-    expect(state.inboxTasks.value).toHaveLength(0)
+    expect(state.inboxTasks.value).toHaveLength(1)
   })
 
-  it('hides scheduled canvas tasks even when not marked inbox', async () => {
+  it('keeps a Canvas task in the calendar Today projection even when not marked inbox', async () => {
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     const otherDay = new Date(today)
@@ -196,6 +198,6 @@ describe('useUnifiedInboxState', () => {
     await nextTick()
 
     expect(state.baseInboxTasks.value).toHaveLength(0)
-    expect(state.inboxTasks.value).toHaveLength(0)
+    expect(state.inboxTasks.value).toHaveLength(1)
   })
 })

@@ -7,6 +7,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useSmartViews } from '@/composables/useSmartViews'
 import { useCanvasGroupMembership } from '@/composables/canvas/useCanvasGroupMembership'
 import { useDirection } from '@/i18n/useDirection'
+import { getCanonicalTodayTaskIds } from '@/utils/todayTaskProjection'
 // TASK-144: Use centralized duration categories
 import { type DurationCategory, matchesDurationCategory } from '@/utils/durationCategories'
 
@@ -26,20 +27,6 @@ function uniqueTasksById(tasks: Task[]): Task[] {
         seen.add(task.id)
         return true
     })
-}
-
-function getTodayStr(): string {
-    const d = new Date()
-    d.setHours(0, 0, 0, 0)
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
-}
-
-function isDateToday(dateStr?: string): boolean {
-    if (!dateStr) return false
-    return dateStr.trim().substring(0, 10) === getTodayStr()
 }
 
 export function useUnifiedInboxState(props: InboxContextProps) {
@@ -128,29 +115,31 @@ export function useUnifiedInboxState(props: InboxContextProps) {
         return options
     })
 
-    const hasScheduledInstanceToday = (task: Task): boolean => {
-        if (task.instances && task.instances.length > 0) {
-            return task.instances.some(inst => isDateToday(inst?.scheduledDate))
-        }
-
-        return isDateToday(task.scheduledDate)
-    }
+    // Today membership is shared with Board and Canvas; calendar events must not
+    // remove a task from this projection before the Today filter is applied.
+    const canonicalTodayTaskIds = computed(() => getCanonicalTodayTaskIds(
+        taskStore.calendarFilteredTasks,
+        !showDoneOnly.value,
+    ))
 
     const matchesCalendarInboxTodayFilter = (task: Task): boolean => {
-        if (isTodayTask(task)) return true
-
-        // Calendar inbox should still surface due-today tasks even when calendar
-        // instances live on another date. Otherwise "set to today" disappears as
-        // soon as the Today filter is enabled.
-        return props.context === 'calendar' && isDateToday(task.dueDate)
+        if (props.context === 'calendar') return canonicalTodayTaskIds.value.has(task.id)
+        return isTodayTask(task)
     }
 
     const shouldShowDueTodayTaskInCalendarInbox = (task: Task): boolean => {
         if (props.context !== 'calendar') return false
-        if (!isDateToday(task.dueDate) || hasScheduledInstanceToday(task)) return false
-
-        return true
+        return canonicalTodayTaskIds.value.has(task.id)
     }
+
+    const todayCalendarTasks = computed(() => {
+        if (props.context !== 'calendar') return []
+        return uniqueTasksById(taskStore.calendarFilteredTasks.filter(task => {
+            if (showDoneOnly.value ? task.status !== 'done' : task.status === 'done') return false
+            if (task._soft_deleted || task.isPinned) return false
+            return canonicalTodayTaskIds.value.has(task.id)
+        }))
+    })
 
     // --- Filter Logic ---
 
@@ -240,7 +229,9 @@ export function useUnifiedInboxState(props: InboxContextProps) {
     })
 
     const todayCount = computed(() => {
-        return baseInboxTasks.value.filter(task => matchesCalendarInboxTodayFilter(task)).length
+        return props.context === 'calendar'
+            ? todayCalendarTasks.value.length
+            : baseInboxTasks.value.filter(task => matchesCalendarInboxTodayFilter(task)).length
     })
 
     const next3DaysCount = computed(() => {
@@ -337,7 +328,10 @@ export function useUnifiedInboxState(props: InboxContextProps) {
             ? baseInboxTasks.value.filter(t => recentIds.has(t.id))
             : []
 
-        let tasks = baseInboxTasks.value
+        const requestedTimeFilter = activeTimeFilter.value
+        let tasks = props.context === 'calendar' && requestedTimeFilter === 'today'
+            ? todayCalendarTasks.value
+            : baseInboxTasks.value
 
         // 1. Canvas Group Filter (Multi-select)
         if (selectedCanvasGroups.value.size > 0) {

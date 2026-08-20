@@ -25,6 +25,8 @@
             v-for="tab in tabs"
             :key="tab.id"
             class="tab-btn"
+            :aria-label="tab.label"
+            :title="tab.label"
             :class="{ active: activeTab === tab.id }"
             @click="activeTab = tab.id"
           >

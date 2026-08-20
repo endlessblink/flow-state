@@ -1,5 +1,17 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2033: Electron relaunch/update shows the sign-in screen after a non-explicit auth recovery
+
+**Priority**: P0 | **Status**: IN PROGRESS (2026-08-20)
+
+**Exact failure mode**: After an update or cold relaunch, FlowState can recover the durable account identity while Supabase is refreshing or has rejected a rotated refresh token; `isAuthenticated` treated the temporary restoration state as signed out, so the app showed the sign-in surface even though the user had not signed out.
+
+**Fix boundary**: A remembered account remains signed in after initialization until the explicit `signOut()` path clears its identity. `canSyncRemotely` remains false during restoration/reconnect, so unvalidated credentials cannot perform remote writes.
+
+**Regression**: Auth-flow coverage now proves identity-only restart recovery, failed startup validation, backup restore with no live session, and expired-session reconnect all keep the signed-in shell while remaining remote-write blocked.
+
+**Required closeout**: Focused auth tests, type-check, lint, Electron build, installed/runtime update or relaunch proof, public updater verification, commit, and push.
+
 ### BUG-2032: Context-menu completion ignores legacy recurring task shape
 
 **Priority**: P1 | **Status**: IN PROGRESS (2026-08-19)

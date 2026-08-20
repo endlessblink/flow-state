@@ -409,7 +409,7 @@ describe('Auth Flow — initialize()', () => {
     await store.initialize()
 
     expect(store.user?.id).toBe('user-test-001')
-    expect(store.isAuthenticated).toBe(false)
+    expect(store.isAuthenticated).toBe(true)
     expect(store.isRestoringSession).toBe(true)
     expect(store.isOfflineGracePeriod).toBe(true)
     expect(store.canSyncRemotely).toBe(false)
@@ -429,6 +429,7 @@ describe('Auth Flow — initialize()', () => {
 
     expect(store.user?.id).toBe(rememberedUser.id)
     expect(store.session).toBeNull()
+    expect(store.isAuthenticated).toBe(true)
     expect(store.isRestoringSession).toBe(true)
     expect(store.reauthRequired).toBe(true)
   })
@@ -444,7 +445,7 @@ describe('Auth Flow — initialize()', () => {
 
     expect(store.user?.id).toBe(rememberedUser.id)
     expect(store.session).toBeNull()
-    expect(store.isAuthenticated).toBe(false)
+    expect(store.isAuthenticated).toBe(true)
     expect(store.isRestoringSession).toBe(true)
     expect(store.reauthRequired).toBe(true)
     expect(store.initializationFailed).toBe(false)
@@ -528,7 +529,7 @@ describe('Auth Flow — initialize()', () => {
     expect(mockRestoreAuthSessionFromBackup).toHaveBeenCalledOnce()
     expect(mockSetSession).toHaveBeenCalledOnce()
     expect(mockGetSession).toHaveBeenCalledOnce()
-    expect(store.isAuthenticated).toBe(false)
+    expect(store.isAuthenticated).toBe(true)
     expect(store.isRestoringSession).toBe(true)
     expect(store.canSyncRemotely).toBe(false)
     expect(store.user?.id).toBe('user-test-001')
@@ -552,7 +553,7 @@ describe('Auth Flow — initialize()', () => {
 
     expect(mockClearAuthSessionBackup).toHaveBeenCalledOnce()
     expect(mockPersistAuthSessionBackup).not.toHaveBeenCalled()
-    expect(store.isAuthenticated).toBe(false)
+    expect(store.isAuthenticated).toBe(true)
     expect(store.isRestoringSession).toBe(true)
     expect(store.canSyncRemotely).toBe(false)
     expect(store.user?.id).toBe('user-test-001')
@@ -575,7 +576,7 @@ describe('Auth Flow — initialize()', () => {
     await store.initialize()
 
     expect(mockRefreshSession).toHaveBeenCalledOnce()
-    expect(store.isAuthenticated).toBe(false)
+    expect(store.isAuthenticated).toBe(true)
     expect(store.isRestoringSession).toBe(true)
     expect(store.user?.id).toBe('user-test-001')
     expect(store.isOfflineGracePeriod).toBe(true)
@@ -605,7 +606,7 @@ describe('Auth Flow — initialize()', () => {
       const store = useAuthStore()
       await store.initialize()
 
-      expect(store.isAuthenticated).toBe(false)
+      expect(store.isAuthenticated).toBe(true)
       expect(store.isRestoringSession).toBe(true)
       expect(store.canSyncRemotely).toBe(false)
       expect(store.isOfflineGracePeriod).toBe(true)
@@ -617,7 +618,7 @@ describe('Auth Flow — initialize()', () => {
       await flushPromises()
 
       expect(mockRefreshSession.mock.calls.length).toBeGreaterThanOrEqual(4)
-      expect(store.isAuthenticated).toBe(false)
+      expect(store.isAuthenticated).toBe(true)
       expect(store.isRestoringSession).toBe(true)
       expect(store.user?.id).toBe('user-test-001')
       expect(store.canSyncRemotely).toBe(false)

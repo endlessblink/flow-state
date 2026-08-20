@@ -211,10 +211,12 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Getters
-  // A persisted identity used to own local queue entries is not proof that its
-  // token is usable. Remote readers/subscriptions continue to see signed-out
-  // until auth-js finishes validating the session.
-  const isAuthenticated = computed(() => !!user.value && !isRestoringSession.value)
+  // A remembered user is still signed in until the explicit sign-out action clears
+  // the identity. Session usability is a separate concern: `canSyncRemotely`
+  // remains false while auth-js is restoring, refreshing, or waiting for reconnect.
+  // This keeps update/relaunch from showing the sign-in screen for a user who never
+  // signed out, without allowing an unvalidated token to reach remote writers.
+  const isAuthenticated = computed(() => !!user.value && (isInitialized.value || !isRestoringSession.value))
   const canSyncRemotely = computed(() =>
     !!session.value?.access_token &&
     !!user.value?.id &&

@@ -122,9 +122,18 @@ test.describe('Today view sync visual gate', () => {
     evidence.canvas = canvasIds
     await page.screenshot({ path: 'test-results/today-sync-canvas.png', fullPage: true })
 
+    await page.goto('/#/calendar')
+    await page.waitForSelector('.calendar-inbox-panel', { timeout: 30_000 })
+    await page.locator('.today-quick-filter').click()
+    await page.waitForTimeout(500)
+    const calendarIds = await idsInDocumentOrder(page, '.calendar-inbox-panel [data-task-id]')
+    evidence.calendar = calendarIds
+    await page.screenshot({ path: 'test-results/today-sync-calendar-inbox.png', fullPage: true })
+
     expect(boardIds).toEqual(TASK_IDS)
     expect(catalogueIds).toEqual(TASK_IDS)
     expect(canvasIds).toEqual(TASK_IDS)
-    expect(evidence).toMatchObject({ expected: TASK_IDS, board: TASK_IDS, catalogue: TASK_IDS, canvas: TASK_IDS })
+    expect(calendarIds).toEqual(TASK_IDS)
+    expect(evidence).toMatchObject({ expected: TASK_IDS, board: TASK_IDS, catalogue: TASK_IDS, canvas: TASK_IDS, calendar: TASK_IDS })
   })
 })

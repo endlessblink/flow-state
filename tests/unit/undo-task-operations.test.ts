@@ -57,7 +57,8 @@ vi.mock('@/services/auth/supabase', () => ({ supabase: { rpc: mockRpc } }))
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({
     user: { id: '00000000-0000-0000-0000-000000000001' },
-    isAuthenticated: true
+    isAuthenticated: true,
+    canSyncRemotely: true,
   })
 }))
 

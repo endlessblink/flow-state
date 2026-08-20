@@ -41,6 +41,7 @@ vi.mock("@/services/auth/supabase", () => ({
 vi.mock("@/stores/auth", () => ({
   useAuthStore: () => ({
     isAuthenticated: true,
+    canSyncRemotely: true,
     user: { id: "user-123", email: "test@example.com" },
   }),
 }));

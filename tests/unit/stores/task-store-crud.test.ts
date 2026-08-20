@@ -20,6 +20,7 @@ const mockCacheTasks = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 const mockAuth = vi.hoisted(() => ({
   user: { id: '00000000-0000-0000-0000-000000000001' } as { id: string } | null,
   isAuthenticated: true,
+  canSyncRemotely: true,
 }))
 
 vi.mock('@/composables/sync/useSyncOrchestrator', () => ({

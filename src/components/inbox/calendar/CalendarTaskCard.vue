@@ -1,6 +1,7 @@
 <template>
   <div
     class="task-card"
+    :data-task-id="task.id"
     :data-priority="task.priority || 'none'"
     draggable="true"
     tabindex="0"

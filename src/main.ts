@@ -38,6 +38,7 @@ import { preloadTauriUiState } from './composables/usePersistentRef'
 
 // Initialize global error handler
 import './utils/errorHandler'
+import { startElectronRuntimeDiagnostics } from './utils/electronRuntimeDiagnostics'
 
 // Initialize security systems
 import { useSecurityHeaderManager as _useSecurityHeaderManager } from './utils/securityHeaderManager'
@@ -56,6 +57,7 @@ async function initializeApp() {
 
   // Pipe console.* to tauri-plugin-log (stdout + log file) when running as desktop app
   await initTauriLogger()
+  startElectronRuntimeDiagnostics()
 
   console.log('🚀 [MAIN] Starting app initialization...')
 

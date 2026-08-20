@@ -17,6 +17,7 @@ import {
   shutdownLocalApi,
 } from './ipc/localApi'
 import { registerDiagnosticsHandlers } from './ipc/diagnostics'
+import { attachWindowRuntimeDiagnostics, registerRuntimeDiagnostics, stopRuntimeDiagnostics } from './runtimeDiagnostics'
 import {
   createBackgroundWindowLifecycle,
   isBackgroundLaunch,
@@ -226,6 +227,7 @@ function createWindow(): BrowserWindow {
     show: false,
   })
   mainWindow = window
+  attachWindowRuntimeDiagnostics(window)
 
   // Show when ready to prevent white flash
   window.once('ready-to-show', () => {
@@ -316,6 +318,7 @@ registerWindowHandlers()
 registerOAuthHandlers()
 registerLocalApiHandlers()
 registerDiagnosticsHandlers()
+registerRuntimeDiagnostics(() => mainWindow)
   ipcMain.handle('app:getVersion', () => app.getVersion())
   ipcMain.handle('app:getSystemIdleTime', () => powerMonitor.getSystemIdleTime())
 // BUG-1932: null unless a launcher's HOME was overridden. Renderer surfaces it so a deliberate
@@ -396,6 +399,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('will-quit', () => {
+  stopRuntimeDiagnostics()
 })
 
 // Handle second instance — focus existing window

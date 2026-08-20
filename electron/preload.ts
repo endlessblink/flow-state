@@ -93,6 +93,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // BUG-1936: drag diagnostics — append a JSON line to <userData>/drag-diagnostics.log
   appendDragDiag: (line: string) => ipcRenderer.invoke('diag:appendDrag', line),
   dragDiagPath: () => ipcRenderer.invoke('diag:dragLogPath'),
+  rendererHeartbeat: (heartbeat: unknown) => ipcRenderer.invoke('diag:rendererHeartbeat', heartbeat),
+  runtimeLogPath: () => ipcRenderer.invoke('diag:runtimeLogPath'),
 })
 
 // Type declaration for the renderer
@@ -136,6 +138,8 @@ declare global {
       setLocalApiEnabled: (enabled: boolean) => Promise<{ ok: boolean; enabled: boolean }>
       appendDragDiag: (line: string) => Promise<string>
       dragDiagPath: () => Promise<string>
+      rendererHeartbeat: (heartbeat: unknown) => Promise<void>
+      runtimeLogPath: () => Promise<string>
       getLocalApiToken: () => Promise<string>
       onLocalApiTaskMutation: (callback: (mutation: unknown) => void) => void
       offLocalApiTaskMutation: () => void

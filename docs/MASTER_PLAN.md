@@ -1,5 +1,15 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2034: Electron freezes leave no automatic runtime evidence
+
+**Priority**: P1 | **Status**: IN PROGRESS (2026-08-20)
+
+**Exact failure mode**: The Electron process and sidecar can remain alive while the renderer UI stops responding, but only drag-specific diagnostics were persisted; renderer heartbeats, main-process failures, unresponsive transitions, and renderer exceptions were not retained in a bounded always-on log.
+
+**Current fix**: Electron now writes structured runtime diagnostics to `runtime-diagnostics.log` with three rotated backups, captures main/renderer errors and lifecycle events, and receives a five-second renderer heartbeat that records stale-renderer evidence without operator commands.
+
+**Required proof before closeout**: Focused diagnostics regression, Electron main/preload compilation, renderer type-check, changed-source lint, full Electron build, and installed-runtime verification that the log is created and records heartbeat/lifecycle evidence.
+
 ### BUG-2033: Electron relaunch/update shows the sign-in screen after a non-explicit auth recovery
 
 **Priority**: P0 | **Status**: IN PROGRESS (2026-08-20)

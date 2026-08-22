@@ -66,7 +66,9 @@
         @click="clearAllFilters"
       >
         <List :size="14" />
-        <OverflowTooltip class="chip-label" :text="$t('filters.all')">{{ $t('filters.all') }}</OverflowTooltip>
+        <OverflowTooltip class="chip-label" :text="$t('filters.all')">
+          {{ $t('filters.all') }}
+        </OverflowTooltip>
       </button>
 
       <!-- TASK-076: Hide Done Toggle -->
@@ -78,7 +80,9 @@
         @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
       >
         <CheckCircle2 :size="14" />
-        <OverflowTooltip class="chip-label" :text="hideDoneTasks ? $t('filters.hiding_done') : $t('filters.show_done')">{{ hideDoneTasks ? $t('filters.hiding_done') : $t('filters.show_done') }}</OverflowTooltip>
+        <OverflowTooltip class="chip-label" :text="hideDoneTasks ? $t('filters.hiding_done') : $t('filters.show_done')">
+          {{ hideDoneTasks ? $t('filters.hiding_done') : $t('filters.show_done') }}
+        </OverflowTooltip>
       </button>
 
       <!-- Unscheduled Toggle -->
@@ -89,7 +93,9 @@
         @click="$emit('update:unscheduledOnly', !unscheduledOnly)"
       >
         <CalendarOff :size="14" />
-        <OverflowTooltip class="chip-label" :text="$t('filters.unscheduled')">{{ $t('filters.unscheduled') }}</OverflowTooltip>
+        <OverflowTooltip class="chip-label" :text="$t('filters.unscheduled')">
+          {{ $t('filters.unscheduled') }}
+        </OverflowTooltip>
         <span v-if="unscheduledCount > 0" class="chip-count">{{ unscheduledCount }}</span>
       </button>
 
@@ -102,7 +108,9 @@
         @click="$emit('update:onCanvasOnly', !onCanvasOnly)"
       >
         <LayoutGrid :size="14" />
-        <OverflowTooltip class="chip-label" :text="$t('filters.on_canvas')">{{ $t('filters.on_canvas') }}</OverflowTooltip>
+        <OverflowTooltip class="chip-label" :text="$t('filters.on_canvas')">
+          {{ $t('filters.on_canvas') }}
+        </OverflowTooltip>
         <span v-if="onCanvasCount > 0" class="chip-count">{{ onCanvasCount }}</span>
       </button>
 
@@ -114,7 +122,9 @@
           @click="showPriorityDropdown = !showPriorityDropdown"
         >
           <Flag :size="14" />
-          <OverflowTooltip class="chip-label" :text="priorityLabel">{{ priorityLabel }}</OverflowTooltip>
+          <OverflowTooltip class="chip-label" :text="priorityLabel">
+            {{ priorityLabel }}
+          </OverflowTooltip>
           <ChevronDown :size="12" class="chevron" :class="{ rotated: showPriorityDropdown }" />
         </button>
         <div v-if="showPriorityDropdown" class="dropdown-menu">
@@ -149,7 +159,9 @@
           @click="showDurationDropdown = !showDurationDropdown"
         >
           <Clock :size="14" />
-          <OverflowTooltip class="chip-label" :text="durationLabel">{{ durationLabel }}</OverflowTooltip>
+          <OverflowTooltip class="chip-label" :text="durationLabel">
+            {{ durationLabel }}
+          </OverflowTooltip>
           <ChevronDown :size="12" class="chevron" :class="{ rotated: showDurationDropdown }" />
         </button>
         <div v-if="showDurationDropdown" class="dropdown-menu">
@@ -184,7 +196,9 @@
           @click="showProjectDropdown = !showProjectDropdown"
         >
           <FolderOpen :size="14" />
-          <OverflowTooltip class="chip-label" :text="projectLabel">{{ projectLabel }}</OverflowTooltip>
+          <OverflowTooltip class="chip-label" :text="projectLabel">
+            {{ projectLabel }}
+          </OverflowTooltip>
           <ChevronDown :size="12" class="chevron" :class="{ rotated: showProjectDropdown }" />
         </button>
         <div v-if="showProjectDropdown" class="dropdown-menu">
@@ -267,8 +281,6 @@ interface Props {
   onCanvasCount?: number // BUG-1530: Pre-computed count respecting active filters
 }
 
-const { t } = useI18n()
-
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
@@ -282,6 +294,8 @@ const emit = defineEmits<{
   'update:sortDirection': [value: SortDirection] // TASK-1412
   clearAll: []
 }>()
+
+const { t } = useI18n()
 
 // Dropdown visibility state
 const showPriorityDropdown = ref(false)
@@ -301,11 +315,6 @@ const priorities = computed(() => [
 // TASK-144: Duration options from centralized source
 const durations = DURATION_FILTER_OPTIONS
 
-// Computed: Check if task is scheduled on calendar (has instances with dates)
-const isScheduledOnCalendar = (task: Task): boolean => {
-  if (!task.instances || task.instances.length === 0) return false
-  return task.instances.some(inst => inst.scheduledDate)
-}
 
 // Computed: Count of unscheduled tasks (no dueDate OR overdue)
 const unscheduledCount = computed(() => {

@@ -1229,6 +1229,40 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     expect(mockInvalidateAuthCache).not.toHaveBeenCalledWith(null)
   })
 
+  it.each(['INITIAL_SESSION', 'SIGNED_OUT', 'TOKEN_REFRESHED', 'USER_UPDATED'])
+    ('24a5. passive %s without a session never becomes an implicit sign-out', async (event) => {
+      const session = buildMockSession()
+      mockGetSession.mockResolvedValue({ data: { session }, error: null })
+
+      const store = useAuthStore()
+      await store.initialize()
+      mockInvalidateAuthCache.mockClear()
+
+      await fireAuthStateChange(event, null)
+      await flushPromises()
+
+      expect(store.user?.id).toBe(session.user.id)
+      expect(store.session?.access_token).toBe(session.access_token)
+      expect(store.isAuthenticated).toBe(true)
+      expect(mockInvalidateAuthCache).not.toHaveBeenCalledWith(null)
+    })
+
+  it('24a6. only explicit signOut clears the remembered account', async () => {
+    const session = buildMockSession()
+    mockGetSession.mockResolvedValue({ data: { session }, error: null })
+
+    const store = useAuthStore()
+    await store.initialize()
+    expect(store.user?.id).toBe(session.user.id)
+
+    await store.signOut()
+
+    expect(store.user).toBeNull()
+    expect(store.session).toBeNull()
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.reauthRequired).toBe(false)
+  })
+
   it('24a4. passive reconnect cannot silently switch the remembered account', async () => {
     const remembered = buildMockUser({ id: 'account-a' })
     mockReadPersistedAuthIdentity.mockResolvedValue(remembered)

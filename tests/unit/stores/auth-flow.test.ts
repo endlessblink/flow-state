@@ -384,7 +384,7 @@ describe('Auth Flow — initialize()', () => {
     await flushPromises()
 
     expect(store.user?.id).toBe('user-test-001')
-    expect(store.isAuthenticated).toBe(false)
+    expect(store.isAuthenticated).toBe(true)
     expect(store.isRestoringSession).toBe(true)
     expect(store.canSyncRemotely).toBe(false)
     expect(store.isInitialized).toBe(false)

@@ -216,7 +216,7 @@ export const useAuthStore = defineStore('auth', () => {
   // remains false while auth-js is restoring, refreshing, or waiting for reconnect.
   // This keeps update/relaunch from showing the sign-in screen for a user who never
   // signed out, without allowing an unvalidated token to reach remote writers.
-  const isAuthenticated = computed(() => !!user.value && (isInitialized.value || !isRestoringSession.value))
+  const isAuthenticated = computed(() => !!user.value)
   const canSyncRemotely = computed(() =>
     !!session.value?.access_token &&
     !!user.value?.id &&

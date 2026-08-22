@@ -105,6 +105,7 @@ describe('AuthModal remembered-account recovery state', () => {
 
     authState.isRestoringSession = true
     authState.user = { id: 'remembered-user', email: 'remembered@example.com' }
+    authState.isAuthenticated = true
     await nextTick()
     authState.reauthRequired = true
     await nextTick()

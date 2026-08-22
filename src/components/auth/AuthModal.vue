@@ -118,7 +118,13 @@ watch(() => authStore.isAuthenticated, async (isAuth, oldIsAuth) => {
   }
 
   // Only act on transition from false -> true (sign-in), not on initial load
-  if (isAuth && !oldIsAuth && uiStore.authModalOpen) {
+  if (
+    isAuth &&
+    !oldIsAuth &&
+    uiStore.authModalOpen &&
+    !authStore.isRestoringSession &&
+    !authStore.reauthRequired
+  ) {
     const redirectPath = uiStore.authModalRedirect
 
     // BUG-340: Use nextTick to ensure Vue reactivity catches up in Tauri WebView
@@ -141,7 +147,7 @@ watch(() => authStore.isAuthenticated, async (isAuth, oldIsAuth) => {
 watch(
   () => [authStore.isAuthenticated, uiStore.authModalOpen] as const,
   ([isAuth, modalOpen]) => {
-    if (isAuth && modalOpen) {
+    if (isAuth && modalOpen && !authStore.isRestoringSession && !authStore.reauthRequired) {
       console.warn('[AUTH:UI] BUG-1085 fallback: Modal still open after auth, forcing close')
       uiStore.closeAuthModal()
     }

@@ -183,8 +183,9 @@ describe('BUG-1898: bounded reconnect grace with explicit re-auth state', () => 
 
     await vi.advanceTimersByTimeAsync(GRACE_MAX_MS + 60_000)
 
-    expect(store.isAuthenticated, 'unvalidated shell must remain remote-write-blocked').toBe(false)
+    expect(store.isAuthenticated, 'remembered account shell must remain visible during re-auth').toBe(true)
     expect(store.isRestoringSession).toBe(true)
+    expect(store.canSyncRemotely, 'unvalidated shell must remain remote-write-blocked').toBe(false)
     expect(
       store.reauthRequired,
       'grace expired with refresh still dead but no re-auth state was surfaced — app stays silently write-blocked forever'

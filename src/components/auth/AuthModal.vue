@@ -101,6 +101,18 @@ const resetEmail = ref('')
 const showReconnectForm = ref(false)
 
 // ===== Watchers =====
+// A fresh open from the sidebar is an explicit reauthentication attempt. Skip the
+// informational recovery screen so the first click exposes the actual login form.
+// Keep the initial recovery state intact when the modal is already open at startup.
+watch(() => uiStore.authModalOpen, (isOpen, wasOpen) => {
+  if (isOpen && !wasOpen && authStore.reauthRequired) {
+    showReconnectForm.value = true
+  }
+  if (!isOpen) {
+    showReconnectForm.value = false
+  }
+})
+
 // A durable remembered identity is enough to dismiss a stale sign-in modal.
 // Session validation can continue behind the signed-in account shell.
 watch(() => authStore.user?.id, async (userId, oldUserId) => {

@@ -54,6 +54,7 @@ describe('AuthModal remembered-account recovery state', () => {
 
   it('replaces the sign-in form with restoring status for a remembered account', () => {
     authState.user = { id: 'remembered-user', email: 'remembered@example.com' }
+    authState.isAuthenticated = true
     authState.isRestoringSession = true
 
     const wrapper = mountModal()
@@ -111,5 +112,21 @@ describe('AuthModal remembered-account recovery state', () => {
     await nextTick()
 
     expect(uiState.closeAuthModal).not.toHaveBeenCalled()
+  })
+
+  it('opens the login form on the first sidebar reconnect click', async () => {
+    authState.user = { id: 'remembered-user', email: 'remembered@example.com' }
+    authState.isAuthenticated = true
+    authState.isRestoringSession = true
+    authState.reauthRequired = true
+    uiState.authModalOpen = false
+    const wrapper = mountModal()
+
+    expect(wrapper.find('[data-testid="login-form"]').exists()).toBe(false)
+    uiState.authModalOpen = true
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="account-recovery"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="login-form"]').text()).toContain('Sign In')
   })
 })

@@ -18,6 +18,17 @@ The most actionable confirmed defect is a cross-boundary state mismatch: the aut
 - Focused verification: auth/Electron/Local API/runtime-diagnostic suites passed `100` tests across `8` files; Google Calendar integration passed `14` tests. These are source and mocked-boundary evidence, not installed-app or production proof.
 - Existing project history already records incomplete live gates for remembered-auth recovery, renderer freezes, and cross-client convergence; those entries were used as leads and were not treated as current proof.
 
+### Deep-dive verification added after the initial triage
+
+- Full unit run: the runner returned exit `0`, but the actual summary was `3` failing files, `34` failing tests, `4,597` passing tests, and `6` skipped tests. The exit code is therefore not a trustworthy green signal in this repository.
+- The `28` Smart Merge failures and both rollback failures share a concrete contract mismatch: the current dirty working tree gates remote persistence on `authStore.canSyncRemotely`, while those test doubles provide only `user` and `isAuthenticated`. They are consequently exercising guest behavior, not the authenticated path they claim to cover. This is both a test-harness defect and a release-risk signal: any production caller with a remembered user but no usable session is intentionally routed to a different data path.
+- The four tidy-layout failures have a separate direct cause: the new shared adoption helper requires a due date, but the spatial recovery tests use undated loose or stale-parent tasks. The previous tidy implementation used the task's rendered position and group bounds; the replacement silently drops that behavior. This is a confirmed behavior regression in the current working tree, not an auth failure.
+- Type checking completed successfully. The combined validation job did not complete within five minutes; its captured lint output contains `427` errors and `541` warnings, including three irregular-whitespace errors in a shared utility file. The validation job must not be described as passed.
+- The E2E inventory contains authenticated and offline/reconnect scenarios, including real-fixture auth setup and Google-related test names, but inventory is not execution evidence. No current run against the installed Electron artifact, a real Google callback, a real calendar response, or the public updater was captured during this audit.
+- Source review found multiple independent “continue anyway” paths around startup, cache loading, auth recovery, background refresh, realtime, Local API delivery, and Google proxy calls. They protect the UI from throwing, but several are best-effort or warning-only; the visible shell can therefore remain open while remote sync, helper access, or Google access is unavailable.
+- The Local API has useful missing-auth classifications and restart machinery, but the live scan did not prove whether the sidecar was disabled, absent, crashed, or owned by another runtime. A live port/health/session-replay probe is still mandatory.
+- The working tree contains unrelated user changes and an untracked adoption helper/test. All failures above were observed without cleaning or overwriting those changes; the report distinguishes current checkout behavior from the last pushed commit.
+
 ## Failure-class matrix
 
 | Failure class | Finding | Evidence status | Required repair gate |
@@ -35,6 +46,9 @@ The most actionable confirmed defect is a cross-boundary state mismatch: the aut
 | Data/sync state | App initialization, workspace hydration, realtime catch-up, offline queue replay, and auth recovery all touch the same stores; large cognitive-complexity hotspots increase regression risk. | Source health hints and existing matrix; broad causal repro not completed. | Build a scenario matrix covering cold start, relaunch, offline edit, refresh rotation, reconnect, cross-client mutation, and renderer restart. |
 | Updater/runtime drift | Project rules require version bump, Electron build, artifact deployment, public manifest read-back, and installed-runtime proof; current audit did not perform those mutations. | Open. | Release only after focused/broad/E2E gates, fresh AppImage launch, version/provenance/checksum match, and public manifest/artifact verification. |
 | Stale process/cache state | Mounted and installed runtimes coexist; diagnostics identify the mounted asset path, so source fixes can be invisible in the visible/active process. | Confirmed live. | Stop only task-owned runtimes through the existing safe lifecycle, launch exactly one installed artifact, record provenance, then repeat every visual/auth test there. |
+| Test contract drift | Authenticated tests omit the newer remote-sync condition, so they silently run guest branches; the full runner can also return exit 0 with failed tests. | Confirmed in current checkout: 30 failures plus misleading exit status. | Make auth fixtures model the full state machine, make the test command fail on any failed test, and rerun focused, full, and packaged gates. |
+| Canvas recovery regression | Tidy's replacement adoption rule only accepts due-dated tasks, so undated loose cards and stale-parent cards are not recovered from their visible positions. | Confirmed by 4 failing tests and direct diff. | Restore spatial containment as a separate rule, keep due-date adoption separate, and test both rendered and persisted positions. |
+| Quality-gate health | Type checking is green, but lint has 427 errors/541 warnings and combined validation timed out; full unit exit code masks failures. | Confirmed. | Fix or explicitly baseline lint errors, make validation fail reliably, and publish per-gate results instead of one aggregate status. |
 
 ## Root-cause model
 
@@ -80,9 +94,10 @@ Each edge needs a durable status, timestamp, generation/owner identifier, and us
 
 ### Workstream 5 — Reduce regression surface
 
-1. Split the high-complexity auth and initialization paths around pure transition/recovery helpers without changing behavior first.
-2. Add a durable regression matrix with one repro per failure class and an explicit evidence type: source, unit, package, installed runtime, authenticated, production, or updater.
-3. Add a challenge acceptance item for every user-facing claim; no item passes from exit codes or telemetry alone.
+1. First restore the current failing contracts: make authenticated mocks provide the complete remote-sync state, make the full test command fail when tests fail, and restore spatial tidy recovery without merging it into due-date adoption.
+2. Split the high-complexity auth and initialization paths around pure transition/recovery helpers without changing behavior first.
+3. Add a durable regression matrix with one repro per failure class and an explicit evidence type: source, unit, package, installed runtime, authenticated, production, or updater.
+4. Add a challenge acceptance item for every user-facing claim; no item passes from exit codes or telemetry alone.
 
 ### Workstream 6 — Release and prove the actual surface
 
@@ -109,9 +124,10 @@ Each edge needs a durable status, timestamp, generation/owner identifier, and us
 
 1. **Root cause:** The broad instability is caused by competing runtime/auth/provider/sidecar state machines whose partial states are not bound to one owner and one evidence-backed lifecycle; the concrete disconnect defect is the null-session sidecar clear in `src/composables/useLocalApiBridge.ts:41-69`.
 2. **HIGH / PASS for planning; not a fix claim:** The evidence is sufficient to implement the repair workstreams, but not to claim FlowState is fixed.
-3. **Before implementation:** Capture the duplicate-owner lock/profile cause, add the passive-null-session regression, and complete the real installed Google callback and sidecar probes.
-4. **Fix:** Make ownership and auth transitions explicit, preserve sidecar context through passive recovery, add Google provider-token lifecycle handling, instrument receipts, and prove the exact installed/public runtime.
-5. **Side effects:** Auth changes can affect task queues, realtime, AI sync, Local API/KDE consumers, account switching, and sign-out; Google-token changes can affect Calendar/Drive; runtime ownership changes can affect updater/background launch. Every one is covered by a dedicated matrix row and must be rechecked before release.
+3. **Current implementation gate:** The checkout is not clean: 34 unit tests fail, tidy recovery regressed, lint is not green, and the full test exit code is misleading. No repair should be declared complete until these are resolved or explicitly separated as baseline.
+4. **Before implementation:** Capture the duplicate-owner lock/profile cause, add the passive-null-session regression, restore spatial tidy recovery, correct the auth fixture contract, and complete the real installed Google callback and sidecar probes.
+5. **Fix:** Make ownership and auth transitions explicit, preserve sidecar context through passive recovery, add Google provider-token lifecycle handling, instrument receipts, and prove the exact installed/public runtime.
+6. **Side effects:** Auth changes can affect task queues, realtime, AI sync, Local API/KDE consumers, account switching, and sign-out; Google-token changes can affect Calendar/Drive; runtime ownership changes can affect updater/background launch. Every one is covered by a dedicated matrix row and must be rechecked before release.
 
 ## Challenge-loop status
 

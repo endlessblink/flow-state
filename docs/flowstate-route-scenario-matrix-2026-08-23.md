@@ -66,6 +66,9 @@ For each surface that supports the action, test create, edit title/description, 
 ## Current gaps that prevent completion
 
 - The route inventory is complete, but several routes have no executed coverage evidence.
+- Credential-safe focused verification passed `97` tests across `11` files for route configuration, auth boundaries, offline fallback, mobile ordering, Quick Sort, Calendar filtering, Electron runtime/diagnostics, and updater contracts.
+- Browser E2E was not run: the repository wrapper retrieves a Supabase service key, and the alternate Playwright path can use the existing auth state; both were refused under the credential-safety boundary. This is an execution gap, not an application pass/fail result.
+- Public read-back succeeded for the app homepage (`HTTP 200`), updater manifest (`HTTP 200`, version `1.4.422`, matching the package), and Google Calendar proxy reachability (`HTTP 401` without authorization, confirming the endpoint is live and auth-protected). None of these proves an authenticated user flow.
 - The full unit suite currently has 34 failures; type checking passes, while lint and combined validation are not green.
 - Real installed Electron, Google OAuth/Calendar, Local API health/session replay, updater, and production read-back remain unproven.
 - The requested independent challenge review is unavailable because the canonical challenge runner and isolated reviewer surface are absent.

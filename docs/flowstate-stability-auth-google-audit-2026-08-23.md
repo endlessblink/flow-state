@@ -29,6 +29,7 @@ The most actionable confirmed defect is a cross-boundary state mismatch: the aut
 - The Local API has useful missing-auth classifications and restart machinery, but the live scan did not prove whether the sidecar was disabled, absent, crashed, or owned by another runtime. A live port/health/session-replay probe is still mandatory.
 - The working tree contains unrelated user changes and an untracked adoption helper/test. All failures above were observed without cleaning or overwriting those changes; the report distinguishes current checkout behavior from the last pushed commit.
 - The exhaustive route ledger is now captured separately in `docs/flowstate-route-scenario-matrix-2026-08-23.md`: 22 route patterns, six mobile views, guard/redirect cases, state dimensions, action dimensions, and cross-boundary scenarios. It identifies four route surfaces with no execution evidence and keeps all installed/Google/helper/updater/production gates open.
+- Safe focused verification added `97` passing tests across `11` files. Public read-back found the homepage reachable (`HTTP 200`), the updater manifest reachable at version `1.4.422` (matching the current package), and the Google Calendar proxy reachable but correctly rejecting an unauthenticated request (`HTTP 401`). Browser E2E was deliberately not run because the available wrapper handles a service key and the alternate path can consume existing auth state; this remains an open manual/runtime gate.
 
 ## Failure-class matrix
 

@@ -1,7 +1,7 @@
 # FlowState Route and Scenario Matrix
 
 Date: 2026-08-23  
-Status: `in_progress` — inventory complete; execution and live proof remain open.
+Status: `in_progress` — inventory complete; signed-out production route smoke is partially verified, while authenticated, desktop, recovery, and release gates remain open.
 
 This is the coverage ledger for the exhaustive stability review. A route or test name is only an inventory signal. `PASS` requires an executed test with read-back evidence on the matching runtime; `NOT TESTED` means no such evidence was found; `FAIL` requires a reproducible failure and cause.
 
@@ -12,25 +12,33 @@ This is the coverage ledger for the exhaustive stability review. A route or test
 | `/` and `/canvas` | Desktop canvas | Public route; canvas is the default | Many canvas E2E files; current installed proof open | IN PROGRESS |
 | `/board` | Desktop board | Public route; shared workspace-safe | Board and sync E2E files | IN PROGRESS |
 | `/calendar` | Desktop calendar | Public route; Google/local calendar paths | Calendar E2E files | IN PROGRESS |
-| `/calendar-test` | VueCal calendar test surface | Public route; separate implementation | No matching E2E evidence found | NOT TESTED |
-| `/design-system` | External Storybook handoff | Opens external URL then cancels navigation | Source only | NOT TESTED |
+| `/calendar-test` | VueCal calendar test surface | Public route; separate implementation | Signed-out production browser rendered `Calendar Test` and `Vue-Cal Test Calendar` | PASS (signed-out browser) |
+| `/design-system` | External Storybook handoff | Opens external URL then cancels navigation | Production browser returned to `/` as designed; external Storybook handoff not independently read back | PARTIAL |
 | `/tasks` | All tasks | Public route; task list and query deep links | CRUD and task E2E files | IN PROGRESS |
 | `/timer` | Mobile timer | Redirects to desktop canvas on desktop | Mobile timer E2E files | IN PROGRESS |
 | `/today` | Mobile today | Redirects to desktop canvas on desktop | Mobile today E2E files | IN PROGRESS |
 | `/catalog` | Catalog/all tasks | Shares AllTasksView implementation | Catalog and CRUD E2E files | IN PROGRESS |
 | `/quick-sort` | Quick Sort | Redirects from mobile quick sort on desktop; personal-only in shared workspace | Quick Sort E2E files | IN PROGRESS |
-| `/ai` | AI fallback/sidebar | Personal-only in shared workspace | AI E2E files | IN PROGRESS |
+| `/ai` | AI fallback/sidebar | Personal-only in shared workspace | Direct signed-out production navigation returned to `/`; no standalone AI route content was rendered | FAIL (route behavior) |
 | `/mobile-quick-sort` | Mobile Quick Sort | Redirects to Quick Sort on desktop | One mobile E2E signal | IN PROGRESS |
-| `/mobile-ai-chat` | Mobile AI chat | Redirects to AI on desktop | No matching E2E evidence found | NOT TESTED |
+| `/mobile-ai-chat` | Mobile AI chat | Redirects to AI on desktop | Signed-out production desktop navigation returned to `/` rather than an AI surface | FAIL (desktop redirect target) |
 | `/mobile-calendar` | Mobile calendar | Redirects to Calendar on desktop | Mobile calendar E2E files | IN PROGRESS |
 | `/focus/:taskId` | Focus task view | Personal-only; parameter validity and missing task open | Focus-related E2E signal | IN PROGRESS |
 | `/lane/:laneId` | Lane view | Parameter validity and missing lane open | Lane E2E file | IN PROGRESS |
-| `/today-flow` | Today Flow | Personal-only in shared workspace | One E2E signal | IN PROGRESS |
-| `/keyboard-test` | Development keyboard fixture | Included only in development builds | No E2E evidence found | NOT TESTED |
-| `/ai-chat` | Legacy AI alias | Redirects to `/ai` | Redirect source only | NOT TESTED |
-| `/performance` | Performance diagnostics | Admin-only; redirects non-admin to board | Performance E2E signal | IN PROGRESS |
-| `/invite/:token` | Invite acceptance | Public route; token, expired invite, wrong account, and workspace result open | No matching E2E evidence found | NOT TESTED |
-| unknown route | Router miss | No explicit catch-all route is declared | Source only; visible fallback not proven | NOT TESTED |
+| `/today-flow` | Today Flow | Personal-only in shared workspace | Signed-out production route rendered the Today Flow shell, but also made a CSP-blocked request to `hn.algolia.com` | FAIL (CSP/runtime request) |
+| `/keyboard-test` | Development keyboard fixture | Included only in development builds | No production route expected; development-only execution remains open | NOT TESTED |
+| `/ai-chat` | Legacy AI alias | Redirects to `/ai` | Signed-out production navigation ended at `/` through the `/ai` fallback | FAIL (redirect target) |
+| `/performance` | Performance diagnostics | Admin-only; redirects non-admin to board | Signed-out production navigation ended at `/board`, matching the non-admin guard | PASS (signed-out browser) |
+| `/invite/:token` | Invite acceptance | Public route; token, expired invite, wrong account, and workspace result open | Production browser rendered `You've been invited to a workspace` for a test token; acceptance outcome remains unverified | PARTIAL |
+| unknown route | Router miss | No explicit catch-all route is declared | Production browser kept `#/unknown-route` while rendering the Canvas shell | FAIL (missing 404/catch-all) |
+
+## Live signed-out production route smoke (2026-08-23)
+
+The isolated browser opened the real public deployment without using credentials. `/`, `/calendar`, `/tasks`, `/catalog`, `/quick-sort`, `/calendar-test`, `/focus/nonexistent`, `/lane/nonexistent`, `/invite/test-token`, and the guarded `/performance` path rendered a visible shell or expected guard/error state. Desktop navigation to `/timer`, `/today`, `/mobile-calendar`, and `/mobile-quick-sort` followed the declared desktop redirects; `/ai` and `/mobile-ai-chat` instead returned to `/`, which is inconsistent with the intended AI route mapping.
+
+The same run captured three production quality issues: the Google Fonts request failed in the browser environment; startup emitted cache-scope warnings while signed out; and Today Flow attempted `https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=7`, which the deployed Content Security Policy blocks. The font failure may be environment-dependent, but the cache warning and blocked Today Flow request are application/deployment findings that require classification and a fix or explicit removal of the dependency.
+
+The unknown-route result is not a pass: the URL remained unknown while the Canvas view stayed visible, so users receive no clear “page not found” or redirect. The invite surface renders its entry state, but token validity, acceptance, wrong-account handling, and workspace membership are still not proven.
 
 ## Required state dimensions for every applicable route
 
@@ -67,16 +75,16 @@ For each surface that supports the action, test create, edit title/description, 
 
 - The route inventory is complete, but several routes have no executed coverage evidence.
 - Credential-safe focused verification passed `97` tests across `11` files for route configuration, auth boundaries, offline fallback, mobile ordering, Quick Sort, Calendar filtering, Electron runtime/diagnostics, and updater contracts.
-- Browser E2E was not run: the repository wrapper retrieves a Supabase service key, and the alternate Playwright path can use the existing auth state; both were refused under the credential-safety boundary. This is an execution gap, not an application pass/fail result.
+- Signed-out browser smoke is now executed against production, but it does not prove authenticated persistence, account switching, Google callback completion, or Calendar data access.
 - Public read-back succeeded for the app homepage (`HTTP 200`), updater manifest (`HTTP 200`, version `1.4.422`, matching the package), and Google Calendar proxy reachability (`HTTP 401` without authorization, confirming the endpoint is live and auth-protected). None of these proves an authenticated user flow.
 - The full unit suite currently has 34 failures; type checking passes, while lint and combined validation are not green.
-- Real installed Electron, Google OAuth/Calendar, Local API health/session replay, updater, and production read-back remain unproven.
+- Real installed Electron, Google callback/Calendar data, Local API health/session replay, updater install/relaunch, and authenticated production read-back remain unproven.
 - The requested independent challenge review is unavailable because the canonical challenge runner and isolated reviewer surface are absent.
 
 ## Execution order
 
 1. Separate the current dirty working tree from the pushed baseline and rerun the route inventory against both where behavior differs.
-2. Add or run route smoke coverage for every `NOT TESTED` row, including guard/redirect/unknown-route behavior.
+2. Add or run route smoke coverage for every `NOT TESTED` or `PARTIAL` row, including guard/redirect/unknown-route behavior and the AI/CSP findings above.
 3. Run the state/action matrix against authenticated browser fixtures, then the installed Electron artifact.
 4. Run real Google, helper-service, updater, and production read-back scenarios.
 5. Re-run all failed and previously untested rows, bind each verdict to evidence, and only then update the stability report to complete.

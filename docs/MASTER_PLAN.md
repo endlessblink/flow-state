@@ -8,7 +8,7 @@
 
 **Initial evidence**: Focused auth/Electron/Google tests pass in the current checkout, but the broader run found 34 failures in 3 files, including authenticated-test contract drift and a canvas tidy recovery regression; the test runner also returned exit 0 despite those failures. Live inspection found two concurrent FlowState runtimes and the installed profile contains persistent runtime diagnostics; the mounted runtime repeatedly reports `No auth token available` while its renderer is hidden. Type-check passes, lint reports 427 errors/541 warnings, and the authenticated desktop, real Google callback, sidecar, updater, and production read-back gates remain open.
 
-**Required closeout**: Complete the report at `docs/flowstate-stability-auth-google-audit-2026-08-23.md`, split the repair into independently testable workstreams, add repro-shaped regressions before fixes, verify the installed Electron runtime with a real authenticated Google flow and sidecar, publish the required Electron update, verify public artifacts, and complete the challenge-review gate.
+**Required closeout**: Complete the report at `docs/flowstate-stability-auth-google-audit-2026-08-23.md` and the exhaustive route/scenario ledger at `docs/flowstate-route-scenario-matrix-2026-08-23.md`, execute every meaningful route/state/action combination, split the repair into independently testable workstreams, add repro-shaped regressions before fixes, verify the installed Electron runtime with a real authenticated Google flow and sidecar, publish the required Electron update, verify public artifacts, and complete the challenge-review gate.
 
 ### BUG-2034: Electron freezes leave no automatic runtime evidence
 

@@ -28,6 +28,7 @@ The most actionable confirmed defect is a cross-boundary state mismatch: the aut
 - Source review found multiple independent “continue anyway” paths around startup, cache loading, auth recovery, background refresh, realtime, Local API delivery, and Google proxy calls. They protect the UI from throwing, but several are best-effort or warning-only; the visible shell can therefore remain open while remote sync, helper access, or Google access is unavailable.
 - The Local API has useful missing-auth classifications and restart machinery, but the live scan did not prove whether the sidecar was disabled, absent, crashed, or owned by another runtime. A live port/health/session-replay probe is still mandatory.
 - The working tree contains unrelated user changes and an untracked adoption helper/test. All failures above were observed without cleaning or overwriting those changes; the report distinguishes current checkout behavior from the last pushed commit.
+- The exhaustive route ledger is now captured separately in `docs/flowstate-route-scenario-matrix-2026-08-23.md`: 22 route patterns, six mobile views, guard/redirect cases, state dimensions, action dimensions, and cross-boundary scenarios. It identifies four route surfaces with no execution evidence and keeps all installed/Google/helper/updater/production gates open.
 
 ## Failure-class matrix
 

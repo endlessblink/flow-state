@@ -50,4 +50,13 @@ describe('app realtime task delete contract', () => {
     expect(src).toContain("persistedWorkspace && persistedWorkspace !== 'personal'")
     expect(src).toContain('workspaceId: persistedWorkspace')
   })
+
+  it('retires the authenticated channel so the next sign-in reinitializes realtime', () => {
+    const src = readAppInitialization()
+
+    expect(src).toContain('if (!isAuthenticated && wasAuthenticated)')
+    expect(src).toContain('activeChannel.value = null')
+    expect(src).toContain('realtimeInitialized.value = false')
+    expect(src).toContain('await channelToClose.unsubscribe()')
+  })
 })

@@ -24,7 +24,7 @@ import {
   type TaskMove,
 } from '@/composables/canvas/useCanonicalDayGroupLayout'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
-import { getDeepestContainingGroup } from '@/utils/canvas/spatialContainment'
+import { collectDayGroupAdoptions } from './useCanvasDayGroupAdoption'
 import { getUndoSystem } from '@/composables/undoSingleton'
 
 function cloneCanvasGeometrySnapshot(
@@ -37,28 +37,6 @@ function cloneCanvasGeometrySnapshot(
     tasks: tasks.filter((task) => ids.has((task as { id: string }).id)),
     groups,
   }))
-}
-
-function findColumnContainingGroup(
-  task: { position: { x: number; y: number }; width?: number; height?: number },
-  groups: Array<{ id: string; position?: { x: number; y: number; width?: number; height?: number } }>
-) {
-  const taskWidth = task.width ?? 220
-  const centerX = task.position.x + taskWidth / 2
-  const candidates = groups.filter((group) => {
-    if (!group.position) return false
-    const width = group.position.width ?? 400
-    return centerX >= group.position.x
-      && centerX <= group.position.x + width
-      && task.position.y >= group.position.y
-  })
-
-  if (candidates.length === 0) return null
-  return candidates.reduce((closest, current) => {
-    const closestDistance = Math.abs(task.position.y - (closest.position?.y ?? 0))
-    const currentDistance = Math.abs(task.position.y - (current.position?.y ?? 0))
-    return currentDistance < closestDistance ? current : closest
-  })
 }
 
 export interface TidyLayoutOptions {
@@ -110,25 +88,14 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     // parentId can survive a group reorder while the task's absolute visual
     // position now belongs to a different group; preserving that claim leaves
     // the card outside the column that the user sees it in.
+    const adoptedParents = collectDayGroupAdoptions(taskStore.rawTasks, visibleGroups, { mode: 'spatial' })
     const layoutTasks = taskStore.rawTasks.filter((task) => {
-      if (!task.canvasPosition) return false
+      if (!task.canvasPosition && !adoptedParents.has(task.id)) return false
       if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
       if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
       if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
-      return options.isTaskVisible?.(task.id) !== false
+      return options.isTaskVisible?.(task.id) !== false || adoptedParents.has(task.id)
     })
-
-    const adoptedParents = new Map<string, string>()
-    for (const task of layoutTasks) {
-      const absPos = options.getNodePosition?.(task.id) ?? task.canvasPosition
-      if (!absPos) continue
-      const size = options.getNodeSize?.(task.id)
-      const spatialTask = { position: absPos, width: size?.width, height: size?.height }
-      const containing =
-        getDeepestContainingGroup(spatialTask, visibleGroups) ??
-        findColumnContainingGroup(spatialTask, visibleGroups)
-      if (containing && containing.id !== task.parentId) adoptedParents.set(task.id, containing.id)
-    }
     if (adoptedParents.size > 0) {
       console.log('[TIDY] Adopted', adoptedParents.size, 'loose tasks into containing groups')
     }

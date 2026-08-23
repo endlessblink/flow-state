@@ -12,6 +12,8 @@
 
 **Required closeout**: Complete the report at `docs/flowstate-stability-auth-google-audit-2026-08-23.md` and the exhaustive route/scenario ledger at `docs/flowstate-route-scenario-matrix-2026-08-23.md`, execute every meaningful route/state/action combination, split the repair into independently testable workstreams, add repro-shaped regressions before fixes, verify the installed Electron runtime with a real authenticated Google flow and sidecar, publish the required Electron update, verify public artifacts, and complete the challenge-review gate.
 
+**New confirmed account-boundary findings (2026-08-23)**: Explicit sign-out clears visible task/workspace state, read-cache scopes, and pending writes, but leaves Google provider credentials and connection state in the device-wide settings store; mounted Calendar views can therefore retain refresh/auto-sync eligibility. The same device-wide storage also keeps AI conversations and Quick Sort history across users, and AI local-only conversations can be merged and uploaded under the next authenticated account. The repair order must first establish account-scoped local storage and explicit account-transition cancellation, then validate two-account sign-out/relaunch/Calendar/AI/Quick Sort isolation before any broad stability closeout.
+
 ### BUG-2034: Electron freezes leave no automatic runtime evidence
 
 **Priority**: P1 | **Status**: IN PROGRESS (2026-08-20)

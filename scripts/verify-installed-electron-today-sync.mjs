@@ -39,19 +39,36 @@ async function extractToday(view) {
       .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0) || (a.canvasPosition?.y ?? Number.POSITIVE_INFINITY) - (b.canvasPosition?.y ?? Number.POSITIVE_INFINITY) || (a.canvasPosition?.x ?? Number.POSITIVE_INFINITY) - (b.canvasPosition?.x ?? Number.POSITIVE_INFINITY) || a.id.localeCompare(b.id))
     const expected = todayTasks.map((task) => task.id)
     const allowed = new Set(expected)
+    const canvasTodayGroup = viewName === 'canvas'
+      ? [...document.querySelectorAll('.vue-flow__node')].find((node) =>
+        node.querySelector('.section-name-input')?.value?.trim() === 'Today'
+      )
+      : null
+    const canvasTodayRect = canvasTodayGroup?.getBoundingClientRect()
     const scope = viewName === 'board'
       ? [...document.querySelectorAll('.kanban-column')].find((column) => column.querySelector('.column-title')?.textContent?.trim() === 'Today')
       : viewName === 'catalogue'
         ? [...document.querySelectorAll('.task-group')].find((group) => group.querySelector('.group-name')?.textContent?.trim() === 'Today')
-        : document
+        : canvasTodayGroup
     const selector = viewName === 'canvas' ? '.vue-flow__node [data-task-id]' : '[data-task-id]'
-    const rendered = [...(scope || document).querySelectorAll(selector)]
-      .map((element) => ({ id: element.getAttribute('data-task-id'), top: element.getBoundingClientRect().top, left: element.getBoundingClientRect().left }))
+    const rendered = [...(viewName === 'canvas' ? document : (scope || document)).querySelectorAll(selector)]
+      .map((element) => {
+        const rect = element.getBoundingClientRect()
+        return { id: element.getAttribute('data-task-id'), text: element.textContent || '', top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom }
+      })
+      .filter((item) => viewName !== 'canvas' || (
+        canvasTodayRect &&
+        item.left + (item.right - item.left) / 2 >= canvasTodayRect.left &&
+        item.left + (item.right - item.left) / 2 <= canvasTodayRect.right &&
+        item.top + (item.bottom - item.top) / 2 >= canvasTodayRect.top &&
+        item.top + (item.bottom - item.top) / 2 <= canvasTodayRect.bottom
+      ))
       .filter((item) => item.id && allowed.has(item.id))
       .sort((a, b) => a.top - b.top || a.left - b.left)
     return {
       expected,
       actual: [...new Set(rendered.map((item) => item.id))],
+      actualLabels: rendered.map((item) => item.text.trim()),
       scopeFound: !!scope,
       columnTitles: [...document.querySelectorAll('.column-title')].map((element) => element.textContent?.trim()).filter(Boolean),
       todayLabel: today,
@@ -77,6 +94,10 @@ console.log(JSON.stringify({ url: page.url(), board, catalogue, canvas }, null, 
 if (!board.todayCount || !catalogue.todayCount || !canvas.todayCount) throw new Error('Today gate was empty or unauthenticated')
 for (const [name, result] of Object.entries({ board, catalogue, canvas })) {
   if (JSON.stringify(result.expected) !== JSON.stringify(result.actual)) throw new Error(`${name} Today mismatch: ${JSON.stringify(result)}`)
+  const expectedTitles = result.visibleTodayLabels
+  if (result.actualLabels.length !== expectedTitles.length || result.actualLabels.some((text, index) => !text.includes(expectedTitles[index]))) {
+    throw new Error(`${name} Today label mismatch: ${JSON.stringify(result)}`)
+  }
 }
 if (JSON.stringify(board.expected) !== JSON.stringify(catalogue.expected) || JSON.stringify(board.expected) !== JSON.stringify(canvas.expected)) throw new Error('Today source order differs across views')
 await page.screenshot({ path: 'test-results/installed-electron-today-sync.png', fullPage: true })

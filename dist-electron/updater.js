@@ -114,11 +114,10 @@ restart_supervised_on_failure() {
 }
 cleanup_competing_flowstate_processes() {
   flowstate_pids() {
-    ps -eo pid=,args= | awk -v self="$$" -v target="$target" '
-      $1 != self && (
-        (index($0, "/.mount_FlowSt") > 0 && index($0, "/flowstate") > 0)
-        || $0 ~ ("^" target "([[:space:]]|$)")
-      ) { print $1 }'
+    # Keep the predicate on one awk line. The installed updater runs mawk,
+    # whose parser rejects the multiline parenthesized expression generated
+    # here on some releases, causing every otherwise-valid swap to roll back.
+     ps -eo pid=,args= | awk -v self="$$" -v target="$target" '$1 != self && ((index($0, "/.mount_FlowSt") > 0 && index($0, "/flowstate") > 0) || index($0, target) > 0) { print $1 }'
   }
   terminate_flowstate_process_groups() {
     signal="$1"
@@ -126,9 +125,10 @@ cleanup_competing_flowstate_processes() {
       pgid=$(ps -o pgid= -p "$pid" | tr -d ' ')
       if [ -n "$pgid" ] && [ "$pgid" != "1" ] && [ "$pgid" != "$$" ]; then
         kill "$signal" -- "-$pgid" 2>/dev/null || true
-      else
-        kill "$signal" "$pid" 2>/dev/null || true
       fi
+      # Some AppImage wrapper processes detach from their original group while
+      # the mounted child is shutting down; always signal the exact PID too.
+      kill "$signal" "$pid" 2>/dev/null || true
     done
   }
   terminate_flowstate_process_groups -TERM
@@ -169,7 +169,10 @@ fail_after_swap() {
 }
 wait_for_supervised_health() {
   health_attempt=0
-  while [ "$health_attempt" -lt 100 ]; do
+  # A cold Electron/AppImage start can take over 20 seconds while the local
+  # bridge and renderer initialize; do not roll back a valid replacement too
+  # early when the process is still starting normally.
+  while [ "$health_attempt" -lt 300 ]; do
     if systemctl --user is-active --quiet flowstate-background.service && \
       curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
         grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
@@ -186,7 +189,7 @@ wait_for_direct_health() {
 wait_for_direct_health_version() {
   expected_health_version="$1"
   health_attempt=0
-  while [ "$health_attempt" -lt 100 ]; do
+  while [ "$health_attempt" -lt 300 ]; do
     if curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
       grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
       return 0

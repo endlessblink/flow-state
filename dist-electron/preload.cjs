@@ -15,6 +15,7 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     isElectron: true,
     // App info
     getVersion: () => electron_1.ipcRenderer.invoke('app:getVersion'),
+    getSystemIdleTime: () => electron_1.ipcRenderer.invoke('app:getSystemIdleTime'),
     // BUG-1932: `{ home, pinnedTo }` when a launcher rewrote HOME and userData was pinned back to the
     // real home; null otherwise.
     getHomeOverride: () => electron_1.ipcRenderer.invoke('app:getHomeOverride'),
@@ -80,5 +81,7 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     // BUG-1936: drag diagnostics — append a JSON line to <userData>/drag-diagnostics.log
     appendDragDiag: (line) => electron_1.ipcRenderer.invoke('diag:appendDrag', line),
     dragDiagPath: () => electron_1.ipcRenderer.invoke('diag:dragLogPath'),
+    rendererHeartbeat: (heartbeat) => electron_1.ipcRenderer.invoke('diag:rendererHeartbeat', heartbeat),
+    runtimeLogPath: () => electron_1.ipcRenderer.invoke('diag:runtimeLogPath'),
 });
 //# sourceMappingURL=preload.js.map

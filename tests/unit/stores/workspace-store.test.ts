@@ -162,6 +162,24 @@ describe("useWorkspaceStore", () => {
     expect(store.isLoading).toBe(false);
   });
 
+  it("resets a workspace that is no longer in the current account membership", async () => {
+    const successChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+    };
+    mockSupabaseFrom.mockReturnValue(successChain);
+
+    const { useWorkspaceStore } = await import("@/stores/workspace");
+    const store = useWorkspaceStore();
+    store.activeWorkspaceId = "stale-workspace";
+    localStorage.setItem("flowstate-last-workspace", "stale-workspace");
+
+    await store.loadWorkspaces();
+
+    expect(store.activeWorkspaceId).toBeNull();
+    expect(localStorage.getItem("flowstate-last-workspace")).toBe("personal");
+  });
+
   it("5. switchWorkspace updates activeWorkspaceId", async () => {
     // Mock member load for the switch
     const memberChain = {

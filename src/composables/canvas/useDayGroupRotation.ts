@@ -24,7 +24,7 @@ import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { canvasSyncInProgress } from './useCanvasSync'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { getDayGroupDate, toDateString } from '@/utils/dayGroupDate'
-import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
+import { collectDayGroupAdoptions } from './useCanvasDayGroupAdoption'
 import {
   computeCanonicalLayout,
   type DayGroupInput,
@@ -232,26 +232,14 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       keyword: string
       dayIndex: number | null
     }
+    const rehomedParents = collectDayGroupAdoptions(taskStore.rawTasks, groups)
     const layoutTasks = taskStore.rawTasks.filter((task) => {
-      if (!task.canvasPosition) return false
+      if (!task.canvasPosition && !rehomedParents.has(task.id)) return false
       if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
       if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
       if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
-      return options.isTaskVisible?.(task.id) !== false
+      return options.isTaskVisible?.(task.id) !== false || rehomedParents.has(task.id)
     })
-    const rotatableGroupIds = new Set(
-      groups
-        .filter((group) => group.position && isRotatableDayGroup(group.name))
-        .map((group) => group.id)
-    )
-    const rehomedParents = new Map<string, string>()
-    for (const task of layoutTasks) {
-      if (!task.dueDate) continue
-      const matchingGroup = findMatchingGroupForDueDate(task.dueDate, groups)
-      if (!matchingGroup || !rotatableGroupIds.has(matchingGroup.id)) continue
-      if (task.parentId !== matchingGroup.id) rehomedParents.set(task.id, matchingGroup.id)
-    }
-
     const inputs: WithKeyword[] = []
     for (const group of groups) {
       const keyword = detectPowerKeyword(group.name)

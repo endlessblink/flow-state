@@ -60,7 +60,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function loadWorkspaces() {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || !supabase) return
+    if (!authStore.canSyncRemotely || !supabase) return
 
     isLoading.value = true
     try {
@@ -99,6 +99,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         activeWorkspaceId.value = null
       } else if (lastWsId && workspaces.value.some(w => w.id === lastWsId)) {
         activeWorkspaceId.value = lastWsId
+      } else if (activeWorkspaceId.value && !workspaces.value.some(w => w.id === activeWorkspaceId.value)) {
+        // A remembered workspace may belong to the previous account or have
+        // been removed; never keep its scope active after membership reload.
+        activeWorkspaceId.value = null
+        localStorage.setItem(LAST_WORKSPACE_KEY, 'personal')
       }
       // Note: Personal workspace is the default. Users explicitly switch to shared workspaces.
       // Removed TASK-1555 auto-land (caused BUG-1673: tasks fetched for wrong workspace on init)
@@ -121,7 +126,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   async function switchWorkspace(id: string | null) {
     // TASK-1550: Guest mode isolation — prevent unauthenticated DB loads
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
+    if (!authStore.canSyncRemotely) return
 
     if (id === activeWorkspaceId.value) return
     if (isSwitchingWorkspace.value) return  // Prevent concurrent switches (race condition guard)
@@ -129,6 +134,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     console.log(`[WORKSPACE] Switching: ${activeWorkspaceId.value || 'personal'} → ${id || 'personal'}`)
 
     isSwitchingWorkspace.value = true  // Pause sync queue
+    const previousWorkspaceId = activeWorkspaceId.value
+    const previousLastWorkspace = localStorage.getItem(LAST_WORKSPACE_KEY)
 
     try {
       // TASK-1559: Disconnect presence BEFORE changing activeWorkspaceId,
@@ -190,6 +197,34 @@ export const useWorkspaceStore = defineStore('workspace', () => {
           await useWorkspacePresence().connect(id)
         } catch { /* presence not available */ }
       }
+    } catch (error) {
+      // A failed target load must not strand the app in a blank, partially
+      // loaded workspace. Restore the previous scope and repopulate its stores.
+      activeWorkspaceId.value = previousWorkspaceId
+      if (previousLastWorkspace) {
+        localStorage.setItem(LAST_WORKSPACE_KEY, previousLastWorkspace)
+      } else {
+        localStorage.setItem(LAST_WORKSPACE_KEY, previousWorkspaceId ?? 'personal')
+      }
+      try {
+        const { configureReadCacheScope } = await import('@/services/offline/readCacheDB')
+        configureReadCacheScope({ userId: authStore.user!.id, workspaceId: previousWorkspaceId })
+        const { useTaskStore } = await import('@/stores/tasks')
+        const { useProjectStore } = await import('@/stores/projects')
+        const { useCanvasStore } = await import('@/stores/canvas')
+        await Promise.all([
+          useTaskStore().loadFromDatabase({
+            requireRemoteAuthority: true,
+            authorityScope: { userId: authStore.user!.id, workspaceId: previousWorkspaceId },
+          }),
+          useProjectStore().loadProjectsFromDatabase(),
+          useCanvasStore().loadFromDatabase(),
+        ])
+      } catch (recoveryError) {
+        console.error('[WORKSPACE] Failed to restore the previous workspace after switch failure:', recoveryError)
+      }
+      console.error('[WORKSPACE] Workspace switch failed; restored previous workspace:', error)
+      throw error
     } finally {
       isSwitchingWorkspace.value = false  // Resume sync queue — always reset, even on early throw
       try {
@@ -285,7 +320,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   async function loadMembers(workspaceId: string) {
     // TASK-1550: Guest mode isolation
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
+    if (!authStore.canSyncRemotely) return
     if (!supabase) return
 
     try {
@@ -349,7 +384,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   async function deleteWorkspace(id: string): Promise<boolean> {
     // TASK-1550: Guest mode isolation
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || !supabase) return false
+    if (!authStore.canSyncRemotely || !supabase) return false
 
     try {
       const { error } = await supabase
@@ -377,7 +412,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function removeMember(memberId: string): Promise<boolean> {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || !supabase || !activeWorkspaceId.value) return false
+    if (!authStore.canSyncRemotely || !supabase || !activeWorkspaceId.value) return false
 
     // Find the member to check guards
     const memberList = members.value.get(activeWorkspaceId.value) || []
@@ -437,7 +472,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function leaveWorkspace(): Promise<boolean> {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || !supabase || !activeWorkspaceId.value) return false
+    if (!authStore.canSyncRemotely || !supabase || !activeWorkspaceId.value) return false
 
     const workspaceId = activeWorkspaceId.value
 
@@ -573,7 +608,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function loadPendingInvites(workspaceId: string) {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || !supabase) return
+    if (!authStore.canSyncRemotely || !supabase) return
 
     try {
       const { data, error } = await supabase

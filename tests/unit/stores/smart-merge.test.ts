@@ -51,6 +51,7 @@ vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({
     user: { id: 'test-user-id' },
     isAuthenticated: true,
+    canSyncRemotely: true,
   })
 }))
 

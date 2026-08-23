@@ -14,12 +14,27 @@ export function startServiceWorkerUpdateRecovery(input: {
   visibility: VisibilityTarget
 }): () => void {
   let stopped = false
+  let checkInFlight: Promise<void> | null = null
 
   const checkForUpdate = async () => {
     if (stopped || input.visibility.hidden) return
-    const registration = await input.ready
-    await registration.update()
-    registration.waiting?.postMessage({ type: 'SKIP_WAITING' })
+    if (checkInFlight) return checkInFlight
+
+    checkInFlight = (async () => {
+      try {
+        const registration = await input.ready
+        await registration.update()
+        registration.waiting?.postMessage({ type: 'SKIP_WAITING' })
+      } catch (error) {
+        // A transient network/service-worker failure must not become an
+        // unhandled rejection or disable the next foreground check.
+        console.warn('[PWA] Service-worker update check failed:', error)
+      } finally {
+        checkInFlight = null
+      }
+    })()
+
+    return checkInFlight
   }
   const onVisibilityChange = () => {
     void checkForUpdate()

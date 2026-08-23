@@ -79,7 +79,7 @@ export const useLaneStore = defineStore("lanes", () => {
       try {
         const { useAuthStore } = await import("@/stores/auth");
         const authStore = useAuthStore();
-        if (!authStore.isAuthenticated) {
+        if (!authStore.canSyncRemotely) {
           _rawLanes.value = loadLanesFromLocalStorage();
           console.log(
             `👤 [GUEST-MODE] Loaded ${_rawLanes.value.length} lanes from localStorage`,

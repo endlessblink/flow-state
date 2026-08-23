@@ -868,6 +868,16 @@ export function toSupabaseUserSettings(
   settings: AppSettings,
   userId: string,
 ): SupabaseUserSettings {
+  const sharedSettings = JSON.parse(JSON.stringify(settings)) as Record<string, unknown>;
+  for (const sensitiveField of [
+    'googleProviderToken',
+    'googleProviderRefreshToken',
+    'googleProviderTokenExpiry',
+    'groqApiKey',
+  ]) {
+    delete sharedSettings[sensitiveField];
+  }
+
   return {
     user_id: userId,
     // Individual columns kept for backwards compatibility
@@ -893,7 +903,7 @@ export function toSupabaseUserSettings(
         }
       ).canvasViewport || null,
     // Full settings blob for cross-device sync — stores ALL 23+ fields (BUG-settings-mapper)
-    settings: JSON.parse(JSON.stringify(settings)) as Record<string, unknown>,
+    settings: sharedSettings,
     updated_at: new Date().toISOString(),
   };
 }
@@ -906,6 +916,14 @@ export function fromSupabaseUserSettings(
   const base: Record<string, unknown> = record.settings
     ? { ...record.settings }
     : {};
+  for (const sensitiveField of [
+    'googleProviderToken',
+    'googleProviderRefreshToken',
+    'googleProviderTokenExpiry',
+    'groqApiKey',
+  ]) {
+    delete base[sensitiveField];
+  }
 
   return {
     // Spread full blob first (provides all fields not mapped individually)

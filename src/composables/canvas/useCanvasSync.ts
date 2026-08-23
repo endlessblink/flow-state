@@ -15,7 +15,7 @@ import { validateAllInvariants, assertNoDuplicateIds } from '@/utils/canvas/inva
 import { CANVAS } from '@/constants/canvas'
 import { traceCanvasDone, traceCanvasDoneNodes, traceCanvasDoneTasks } from '@/utils/canvas/doneTrace'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
-import { getCanonicalTodayTaskIds, getCanonicalTodayTasks } from '@/utils/todayTaskProjection'
+import { getCanonicalTodayTaskIds, getCanonicalTodayTasks, getStaleTodayTaskIds } from '@/utils/todayTaskProjection'
 import { computeCanonicalLayout, computeVisibleTaskCompaction } from './useCanonicalDayGroupLayout'
 
 // =============================================================================
@@ -208,6 +208,11 @@ export function useCanvasSync() {
                 shouldHideDone,
             )
             const canonicalTodayTasks = getCanonicalTodayTasks(tasks || taskStore.tasks, shouldHideDone)
+            const staleTodayTaskIds = getStaleTodayTaskIds(
+                tasks || taskStore.tasks,
+                todayGroup?.id,
+                shouldHideDone,
+            )
             const fallbackTodayY = new Map<string, number>()
             let previousTodayY = canonicalTodayTasks.find(task => task.canvasPosition)?.canvasPosition?.y
             for (const task of canonicalTodayTasks) {
@@ -292,12 +297,13 @@ export function useCanvasSync() {
             // the surviving siblings in the render projection so completing a
             // task does not leave a blank card-sized hole in its group.
             const compactedTaskPositions = new Map<string, { x: number; y: number }>()
-            if (shouldHideDone || taskStore.hideCanvasOverdueTasks) {
+            if (shouldHideDone || taskStore.hideCanvasOverdueTasks || staleTodayTaskIds.size > 0) {
                 const currentNodeById = new Map(currentNodes.map((node: any) => [node.id, node]))
                 for (const group of groups) {
                     const groupTasks = tasksToSync.filter((task) => task.parentId === group.id && task.canvasPosition)
                     const visibleGroupTasks = groupTasks.filter((task) => {
-                        const hiddenByFilter = (shouldHideDone && task.status === 'done') ||
+                        const hiddenByFilter = staleTodayTaskIds.has(task.id) ||
+                            (shouldHideDone && task.status === 'done') ||
                             (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate))
                         return !hiddenByFilter
                     })
@@ -490,7 +496,9 @@ export function useCanvasSync() {
                 // Get BOTH direct and aggregated task counts
                 // Direct = tasks where task.parentId === group.id (only this group)
                 // Aggregated = direct + all tasks in descendant groups
-                const directTaskCount = taskCountByGroupId.value.get(group.id) ?? 0
+                const directTaskCount = group.id === todayGroup?.id
+                    ? tasksToSync.filter(task => task.parentId === group.id && !staleTodayTaskIds.has(task.id)).length
+                    : taskCountByGroupId.value.get(group.id) ?? 0
                 const aggregatedTaskCount = aggregatedTaskCountByGroupId.value.get(group.id) ?? directTaskCount
 
                 // Compute parentNode for hierarchy
@@ -669,7 +677,10 @@ export function useCanvasSync() {
                     parentNode: parentId ? CanvasIds.groupNodeId(parentId) : undefined,
                     draggable: true,
                     selectable: true,
-                    hidden: (shouldHideDone && task.status === 'done') || isUnderCollapsedAncestor(task.parentId) || isInsideCollapsedGroupBounds(absolutePos),
+                    hidden: staleTodayTaskIds.has(task.id) ||
+                        (shouldHideDone && task.status === 'done') ||
+                        isUnderCollapsedAncestor(task.parentId) ||
+                        isInsideCollapsedGroupBounds(absolutePos),
                     // FIX: Removed extent: 'parent' so tasks can be dragged OUT of groups.
                     // With extent: 'parent', Vue Flow constrains movement to parent bounds,
                     // preventing tasks from being dragged outside. Without it, tasks can be

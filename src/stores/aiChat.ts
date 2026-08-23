@@ -1528,6 +1528,14 @@ export const useAIChatStore = defineStore('aiChat', () => {
    * Clears all conversations and localStorage.
    */
   function reset() {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout)
+      saveTimeout = null
+    }
+    if (supabaseSaveTimeout) {
+      clearTimeout(supabaseSaveTimeout)
+      supabaseSaveTimeout = null
+    }
     if (conversationSyncSubscription) {
       conversationSyncSubscription.unsubscribe().catch(() => {})
       conversationSyncSubscription = null

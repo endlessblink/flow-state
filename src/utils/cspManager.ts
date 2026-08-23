@@ -96,6 +96,9 @@ export const VUE_OPTIMIZED_CSP: CSPConfig = {
         'https://localhost:*',
         // BUG-021 FIX: Explicit allowlist instead of wildcards
         'https://*.supabase.co',
+        'https://api.in-theflow.com',
+        'https://www.googleapis.com',
+        'https://hn.algolia.com',
         'https://api.github.com',
         'https://raw.githubusercontent.com'
       ],
@@ -191,6 +194,9 @@ export const VUE_OPTIMIZED_CSP: CSPConfig = {
         'wss:',
         // BUG-021 FIX: Explicit allowlist instead of wildcards
         'https://*.supabase.co',
+        'https://api.in-theflow.com',
+        'https://www.googleapis.com',
+        'https://hn.algolia.com',
         'https://api.github.com',
         'https://raw.githubusercontent.com'
       ],

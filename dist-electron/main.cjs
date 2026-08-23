@@ -15,6 +15,7 @@ const updater_1 = require("./updater");
 const oauth_1 = require("./ipc/oauth");
 const localApi_1 = require("./ipc/localApi");
 const diagnostics_1 = require("./ipc/diagnostics");
+const runtimeDiagnostics_1 = require("./runtimeDiagnostics");
 const backgroundWindowLifecycle_1 = require("./backgroundWindowLifecycle");
 function installBrokenPipeConsoleGuard() {
     const isBrokenPipe = (err) => typeof err === 'object' &&
@@ -202,6 +203,7 @@ function createWindow() {
         show: false,
     });
     mainWindow = window;
+    (0, runtimeDiagnostics_1.attachWindowRuntimeDiagnostics)(window);
     // Show when ready to prevent white flash
     window.once('ready-to-show', () => {
         backgroundLifecycle.handleReadyToShow(window, process.argv);
@@ -261,6 +263,8 @@ function createWindow() {
         const indexPath = (0, path_1.join)(__dirname, '../dist/index.html');
         if ((0, fs_1.existsSync)(indexPath)) {
             window.loadFile(indexPath);
+            if (!backgroundEnabled)
+                window.show();
         }
         else {
             console.error('dist/index.html not found — run npm run build first');
@@ -283,7 +287,9 @@ function createWindow() {
 (0, oauth_1.registerOAuthHandlers)();
 (0, localApi_1.registerLocalApiHandlers)();
 (0, diagnostics_1.registerDiagnosticsHandlers)();
+(0, runtimeDiagnostics_1.registerRuntimeDiagnostics)(() => mainWindow);
 electron_1.ipcMain.handle('app:getVersion', () => electron_1.app.getVersion());
+electron_1.ipcMain.handle('app:getSystemIdleTime', () => electron_1.powerMonitor.getSystemIdleTime());
 // BUG-1932: null unless a launcher's HOME was overridden. Renderer surfaces it so a deliberate
 // sandbox run is never silently redirected to the real profile.
 electron_1.ipcMain.handle('app:getHomeOverride', () => homeOverride);
@@ -354,6 +360,9 @@ electron_1.app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         electron_1.app.quit();
     }
+});
+electron_1.app.on('will-quit', () => {
+    (0, runtimeDiagnostics_1.stopRuntimeDiagnostics)();
 });
 // Handle second instance — focus existing window
 electron_1.app.on('second-instance', () => {

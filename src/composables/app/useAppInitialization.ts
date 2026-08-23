@@ -104,7 +104,7 @@ export function useAppInitialization() {
     const canonicalChangeReader = createCanonicalChangeSupabaseReader(supabase)
     const activeCanonicalScope = (): CanonicalChangeScope | null => {
         const userId = authStore.user?.id
-        if (!authStore.isAuthenticated || !userId) return null
+        if (!authStore.canSyncRemotely || !userId) return null
         return workspaceStore.activeWorkspaceId
             ? { kind: 'workspace', userId, workspaceId: workspaceStore.activeWorkspaceId }
             : { kind: 'personal', userId }
@@ -203,7 +203,7 @@ export function useAppInitialization() {
             const scope = activeCanonicalScope()
             return scope ? [scope] : []
         },
-        isAuthenticated: () => authStore.isAuthenticated && !!authStore.user?.id,
+        isAuthenticated: () => authStore.canSyncRemotely && !!authStore.user?.id,
         isOnline: () => typeof navigator === 'undefined' || navigator.onLine !== false,
         intervalMs: 5_000,
         // BUG-2009: canonical change log currently covers tasks, while a missed
@@ -269,7 +269,7 @@ export function useAppInitialization() {
     let foregroundReloadPromise: Promise<void> | null = null
     let lastForegroundReloadAt = 0
     const reloadAuthoritativeOnForeground = () => {
-        if (!authStore.isAuthenticated || !getInitialOnlineState()) return
+        if (!authStore.canSyncRemotely || !getInitialOnlineState()) return
         if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
         const now = Date.now()
         if (now - lastForegroundReloadAt < 3000) return
@@ -766,7 +766,7 @@ export function useAppInitialization() {
             }
         }
 
-        if (authStore.isAuthenticated && isOnline) {
+        if (authStore.canSyncRemotely && isOnline) {
             const backgroundRefresh = async () => {
                 try {
                     invalidateCache.all()
@@ -821,12 +821,12 @@ export function useAppInitialization() {
                     }
 
                     // BUG-1339: If authenticated but got 0 tasks, schedule delayed retry
-                    if (authStore.isAuthenticated && taskStore._rawTasks.length === 0) {
+                    if (authStore.canSyncRemotely && taskStore._rawTasks.length === 0) {
                         console.warn('⚠️ [BUG-1339] Authenticated but 0 tasks after refresh — scheduling delayed retry (2s)')
                         setTimeout(() => {
                             // BUG-1710: Wrap in .catch() to prevent unhandled promise rejection dialog in Tauri
                             (async () => {
-                                if (taskStore._rawTasks.length === 0 && authStore.isAuthenticated) {
+                                if (taskStore._rawTasks.length === 0 && authStore.canSyncRemotely) {
                                     console.log('🔄 [BUG-1339] Delayed retry: invalidating cache and reloading...')
                                     invalidateCache.all()
                                     await reloadCoreData()
@@ -869,7 +869,7 @@ export function useAppInitialization() {
             backgroundRefresh().catch(e => {
                 console.warn('⚠️ [CACHE-FIRST] Unhandled background refresh error:', e)
             })
-        } else if (authStore.isAuthenticated && !isOnline) {
+        } else if (authStore.canSyncRemotely && !isOnline) {
             // Offline: register listener to sync when connectivity returns
             console.log('📵 [CACHE-FIRST] Offline — will sync from Supabase when network returns')
             const onBackOnline = async () => {
@@ -905,7 +905,7 @@ export function useAppInitialization() {
         // to ensure it runs on fresh Supabase data, not stale IndexedDB cache.
 
         // TASK-1500: Auto-refresh AI memory observations if stale (>24h) — non-blocking
-        if (authStore.isAuthenticated) {
+        if (authStore.canSyncRemotely) {
             try {
                 const { useWorkProfile } = await import('@/composables/useWorkProfile')
                 const { useSettingsStore: getSettings } = await import('@/stores/settings')
@@ -1226,6 +1226,25 @@ export function useAppInitialization() {
         configureReadCacheScope(isAuthenticated && authStore.user?.id
             ? { userId: authStore.user.id, workspaceId: workspaceStore.activeWorkspaceId }
             : { userId: `guest:${getOrCreateGuestSessionId()}`, workspaceId: null })
+
+        // BUG-2021: A sign-out must fully retire the authenticated realtime
+        // channel. Leaving the old channel alive while keeping this flag true
+        // makes the next sign-in skip initialization, so the app appears ready
+        // but never receives cross-client task changes.
+        if (!isAuthenticated && wasAuthenticated) {
+            const channelToClose = activeChannel.value
+            activeChannel.value = null
+            realtimeInitialized.value = false
+            if (channelToClose) {
+                try {
+                    await channelToClose.unsubscribe()
+                } catch (error) {
+                    console.warn('📡 [APP-INIT] Failed to close realtime channel after sign-out:', error)
+                }
+            }
+            return
+        }
+
         // Only trigger when:
         // 1. Going from NOT authenticated to authenticated
         // 2. Realtime wasn't already initialized
@@ -1351,7 +1370,7 @@ export function useAppInitialization() {
         if (authStore.user?.id) {
             configureReadCacheScope({ userId: authStore.user.id, workspaceId: newWsId })
         }
-        if (!realtimeInitialized.value || !authStore.isAuthenticated) return
+        if (!realtimeInitialized.value || !authStore.canSyncRemotely) return
         // Skip initial undefined → null transition
         if (newWsId === oldWsId) return
 

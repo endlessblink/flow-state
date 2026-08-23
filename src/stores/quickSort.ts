@@ -355,6 +355,24 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     interruptedSessionData.value = null
   }
 
+  function clearAll() {
+    if (quickSortSaveTimer) {
+      clearTimeout(quickSortSaveTimer)
+      quickSortSaveTimer = null
+    }
+    isActive.value = false
+    currentSessionId.value = null
+    sessionStartTime.value = null
+    tasksSortedInSession.value = 0
+    undoStack.value = []
+    redoStack.value = []
+    sessionHistory.value = []
+    lastCompletedDate.value = null
+    clearActiveSession()
+    localStorage.removeItem(STORAGE_KEYS.QUICKSORT_HISTORY)
+    localStorage.removeItem(STORAGE_KEYS.QUICKSORT_LAST_DATE)
+  }
+
   function checkForInterruptedSession() {
     try {
       const raw = localStorage.getItem(ACTIVE_SESSION_KEY)
@@ -438,6 +456,7 @@ export const useQuickSortStore = defineStore('quickSort', () => {
     undo,
     redo,
     cancelSession,
+    clearAll,
     setLastSelectedSources,
     saveToLocalStorage,
     loadFromLocalStorage,

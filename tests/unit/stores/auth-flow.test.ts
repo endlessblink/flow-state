@@ -40,6 +40,9 @@ const {
   mockClearProjectStore,
   mockClearLaneStore,
   mockClearCanvasImages,
+  mockClearQuickSortStore,
+  mockResetAIChatStore,
+  mockUpdateSetting,
   mockLoadWorkspaces,
   mockLoadProjectsFromDatabase,
   mockLoadTasksFromDatabase,
@@ -91,6 +94,9 @@ const {
     mockClearProjectStore: vi.fn(),
     mockClearLaneStore: vi.fn(),
     mockClearCanvasImages: vi.fn(),
+    mockClearQuickSortStore: vi.fn(),
+    mockResetAIChatStore: vi.fn(),
+    mockUpdateSetting: vi.fn(),
     mockLoadWorkspaces: vi.fn(),
     mockLoadProjectsFromDatabase: vi.fn(),
     mockLoadTasksFromDatabase: vi.fn(),
@@ -212,6 +218,14 @@ vi.mock('@/stores/canvasImages', () => ({
   useCanvasImagesStore: () => ({ clearAll: mockClearCanvasImages }),
 }))
 
+vi.mock('@/stores/quickSort', () => ({
+  useQuickSortStore: () => ({ clearAll: mockClearQuickSortStore }),
+}))
+
+vi.mock('@/stores/aiChat', () => ({
+  useAIChatStore: () => ({ reset: mockResetAIChatStore }),
+}))
+
 vi.mock('@/services/offline/readCacheDB', () => ({
   clearReadCache: vi.fn().mockResolvedValue(undefined),
   getReadCacheScope: vi.fn(() => ({ userId: 'user-123', workspaceId: null })),
@@ -228,7 +242,7 @@ vi.mock('@/stores/settings', () => ({
     googleProviderTokenExpiry: null,
     googleProviderRefreshToken: null,
     googleConnected: false,
-    updateSetting: vi.fn(),
+    updateSetting: mockUpdateSetting,
   }),
 }))
 
@@ -948,6 +962,24 @@ describe('Auth Flow — signOut', () => {
     expect(mockClearPrimaryAuthSession).not.toHaveBeenCalled()
     expect(store.user?.id).toBe(session.user.id)
     expect(store.session?.refresh_token).toBe(session.refresh_token)
+  })
+
+  it('14e. signOut clears Google state and device-local account history', async () => {
+    const session = buildMockSession()
+    mockGetSession.mockResolvedValue({ data: { session }, error: null })
+    mockSignOut.mockResolvedValue({ error: null })
+
+    const store = useAuthStore()
+    await store.initialize()
+    await store.signOut()
+
+    expect(mockUpdateSetting).toHaveBeenCalledWith('googleProviderToken', '')
+    expect(mockUpdateSetting).toHaveBeenCalledWith('googleProviderRefreshToken', '')
+    expect(mockUpdateSetting).toHaveBeenCalledWith('googleProviderTokenExpiry', 0)
+    expect(mockUpdateSetting).toHaveBeenCalledWith('googleConnected', false)
+    expect(mockUpdateSetting).toHaveBeenCalledWith('googleCalendars', [])
+    expect(mockClearQuickSortStore).toHaveBeenCalledOnce()
+    expect(mockResetAIChatStore).toHaveBeenCalledOnce()
   })
 })
 

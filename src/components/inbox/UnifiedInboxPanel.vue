@@ -329,7 +329,8 @@ const handleStartTimer = async (task: Task) => {
   transition: width var(--duration-normal) var(--spring-smooth), padding var(--duration-normal);
   overflow: hidden;
   position: relative;
-  z-index: 100;
+  /* Canvas Vue Flow must never intercept Inbox header clicks. */
+  z-index: 1100;
 }
 
 /* FEATURE-254: Right-side positioning for Canvas Inbox */
@@ -362,8 +363,8 @@ const handleStartTimer = async (task: Task) => {
   pointer-events: none;
 }
 
-.unified-inbox-panel.is-right-side.collapsed .inbox-header,
-.unified-inbox-panel.is-right-side.collapsed .collapsed-badges-container {
+.unified-inbox-panel.is-right-side.collapsed :deep(.inbox-header),
+.unified-inbox-panel.is-right-side.collapsed :deep(.collapsed-badges-container) {
   pointer-events: auto;
 }
 

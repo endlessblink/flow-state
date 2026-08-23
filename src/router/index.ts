@@ -159,6 +159,12 @@ const router = createRouter({
       component: () => import('@/views/InviteAcceptView.vue'),
       meta: { requiresAuth: false }
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/NotFoundView.vue'),
+      meta: { requiresAuth: false }
+    },
     // TODO: Add other views when implemented
     // {
     //   path: '/todo',

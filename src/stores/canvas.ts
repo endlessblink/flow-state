@@ -53,7 +53,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     const authStore = useAuthStore()
     const userId = authStore.user?.id
-    if (!authStore.isAuthenticated || !userId) {
+    if (!authStore.canSyncRemotely || !userId) {
       if (import.meta.env.DEV) console.debug('[CANVAS:SAVE] Group kept local-only - not authenticated')
       return
     }
@@ -138,7 +138,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       const { useAuthStore } = await import('@/stores/auth')
       const authStore = useAuthStore()
 
-      if (!authStore.isAuthenticated) {
+      if (!authStore.canSyncRemotely) {
         const localGroups = loadGroupsFromLocalStorage()
         setGroups(breakGroupCycles(localGroups), false, false)
         return
@@ -310,7 +310,7 @@ export const useCanvasStore = defineStore('canvas', () => {
   // projection; callers reload only when a group is actually missing locally.
   const hasRemoteGroupChanges = async (): Promise<boolean> => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return false
+    if (!authStore.canSyncRemotely) return false
     const { useWorkspaceStore } = await import('@/stores/workspace')
     const workspaceId = useWorkspaceStore().activeWorkspaceId ?? null
     const remoteGroups = await fetchGroups(workspaceId)

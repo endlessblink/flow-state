@@ -148,7 +148,7 @@ export function useTaskPersistence(
         // In Guest Mode, skip Supabase deletion
         const { useAuthStore } = await import('@/stores/auth')
         const authStore = useAuthStore()
-        if (!authStore.isAuthenticated) {
+        if (!authStore.canSyncRemotely) {
             if (import.meta.env.DEV) {
                 console.log(`✅ [PERSISTENCE] Task ${taskId} will be removed from localStorage after splice`)
             }
@@ -179,7 +179,7 @@ export function useTaskPersistence(
         // In Guest Mode, skip Supabase deletion
         const { useAuthStore } = await import('@/stores/auth')
         const authStore = useAuthStore()
-        if (!authStore.isAuthenticated) {
+        if (!authStore.canSyncRemotely) {
             if (import.meta.env.DEV) {
                 console.log(`✅ [PERSISTENCE] ${taskIds.length} tasks will be removed from localStorage after splice`)
             }
@@ -240,7 +240,7 @@ export function useTaskPersistence(
 
         } catch (_e) {
             // BUG-1182 FIX: Distinguish between guest-mode skip (expected) and authenticated save failure (data loss risk)
-            if (authStore.isAuthenticated) {
+            if (authStore.canSyncRemotely) {
                 console.error(`❌ [PERSISTENCE] Save failed while authenticated (${context}):`, _e)
                 // Re-throw so callers can handle (e.g., enqueue for sync retry)
                 throw _e
@@ -352,7 +352,7 @@ export function useTaskPersistence(
             // Guest mode: load from localStorage (persists across refreshes)
             const { useAuthStore } = await import('@/stores/auth')
             const authStore = useAuthStore()
-            if (!authStore.isAuthenticated) {
+            if (!authStore.canSyncRemotely) {
                 const localTasks = loadTasksFromLocalStorage()
                 const repairedGuest = repairTaskTitles(localTasks)
                 if (repairedGuest.repairedCount > 0) {
@@ -1142,7 +1142,7 @@ export function useTaskPersistence(
             let tasksToAdd = notInLocal
             const skippedIds: string[] = tasksToImport.filter(t => localIds.has(t.id)).map(t => t.id)
 
-            if (authStore.isAuthenticated) {
+            if (authStore.canSyncRemotely) {
                 const { checkTaskIdsAvailability, logDedupDecision } = useSupabaseDatabase()
                 const taskIds = notInLocal.map(t => t.id)
                 const availability = await checkTaskIdsAvailability(taskIds)

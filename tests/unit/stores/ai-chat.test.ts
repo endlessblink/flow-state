@@ -762,4 +762,23 @@ describe('useAIChatStore', () => {
     expect(store.activeConversationId).toBe('conv_real_remote')
     expect(mockSaveConversationToSupabase).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'conv_empty_new_chat' }))
   })
+
+  it('11. reset cancels delayed persistence from the previous account', async () => {
+    vi.useFakeTimers()
+    try {
+      const { useAIChatStore } = await import('@/stores/aiChat')
+      const store = useAIChatStore()
+      await store.initialize()
+      mockSaveConversationToSupabase.mockClear()
+
+      store.addUserMessage('account-private message')
+      await vi.advanceTimersByTimeAsync(300)
+      store.reset()
+      await vi.advanceTimersByTimeAsync(2000)
+
+      expect(mockSaveConversationToSupabase).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

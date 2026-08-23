@@ -416,6 +416,8 @@ export const useAuthStore = defineStore('auth', () => {
     useLaneStore().clearAll()
     useCanvasImagesStore().clearAll()
 
+    await clearAccountScopedDeviceState()
+
     try {
       const { deleteReadCacheScopesForUser } = await import('@/services/offline/readCacheDB')
       await deleteReadCacheScopesForUser(previousUserId)
@@ -429,6 +431,23 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (_e) {
       // Non-critical in environments without IndexedDB.
     }
+  }
+
+  const clearAccountScopedDeviceState = async () => {
+    const [{ useAIChatStore }, { useQuickSortStore }, { useSettingsStore }] = await Promise.all([
+      import('@/stores/aiChat'),
+      import('@/stores/quickSort'),
+      import('@/stores/settings'),
+    ])
+
+    useAIChatStore().reset()
+    useQuickSortStore().clearAll()
+    const settingsStore = useSettingsStore()
+    settingsStore.updateSetting('googleProviderToken', '')
+    settingsStore.updateSetting('googleProviderRefreshToken', '')
+    settingsStore.updateSetting('googleProviderTokenExpiry', 0)
+    settingsStore.updateSetting('googleConnected', false)
+    settingsStore.updateSetting('googleCalendars', [])
   }
 
   const preserveReconnectShellAfterFailedRefresh = (
@@ -1357,6 +1376,8 @@ export const useAuthStore = defineStore('auth', () => {
 
       const { useCanvasImagesStore } = await import('@/stores/canvasImages')
       useCanvasImagesStore().clearAll()
+
+      await clearAccountScopedDeviceState()
 
       // Clear guest ephemeral data for fresh guest experience
       clearGuestData()

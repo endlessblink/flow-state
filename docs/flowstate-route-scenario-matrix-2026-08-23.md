@@ -42,6 +42,8 @@ The unknown-route result is not a pass: the URL remained unknown while the Canva
 
 At a narrow production viewport (`390x844`), `/today`, `/timer`, `/mobile-quick-sort`, `/mobile-ai-chat`, and `/mobile-calendar` rendered their intended mobile content while signed out. This is positive surface evidence only: task mutations, mobile persistence, offline behavior, and authenticated data remain open.
 
+Guest authentication entry also rendered the expected sign-in, invalid-input, password-reset, sign-up, and Google-launch states. The first-run Welcome overlay and open AI panel intercepted the sidebar Sign In click until closed; this is tracked as an access-flow issue, not an authentication validation failure.
+
 ## Required state dimensions for every applicable route
 
 | Dimension | Cases that must be exercised |

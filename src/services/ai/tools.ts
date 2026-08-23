@@ -1169,7 +1169,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
 
         const taskId = call.parameters.taskId as string
         const durationMinutes = (call.parameters.duration as number) || 25
-        const durationSeconds = durationMinutes * 60
+        const _durationSeconds = durationMinutes * 60
 
         // Verify the task exists (unless it's 'general')
         if (taskId !== 'general') {

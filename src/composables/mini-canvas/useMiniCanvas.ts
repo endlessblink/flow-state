@@ -2,7 +2,7 @@ import { computed, ref } from "vue";
 import { useTaskStore } from "@/stores/tasks";
 import { useMiniCanvasActions } from "./useMiniCanvasActions";
 import type { Node, Edge } from "@vue-flow/core";
-import type { MiniCanvasEdge } from "@/types/tasks";
+
 
 const CHILD_RADIUS = 300;
 

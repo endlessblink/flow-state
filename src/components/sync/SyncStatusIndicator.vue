@@ -22,6 +22,7 @@
       v-if="showPopover"
       :errors="failedOperations"
       :last-error="lastError"
+      :error-count="failedCount"
       @retry="handleRetry"
       @clear="handleClear"
       @close="showPopover = false"

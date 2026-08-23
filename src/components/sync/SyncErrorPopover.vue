@@ -15,7 +15,7 @@
               Sync Errors
             </h3>
             <p class="header-subtitle">
-              {{ errors.length }} error{{ errors.length !== 1 ? 's' : '' }}
+              {{ displayedErrorCount }} error{{ displayedErrorCount !== 1 ? 's' : '' }}
               <template v-if="permanentCount > 0">
                 ({{ permanentCount }} need attention)
               </template>
@@ -39,8 +39,12 @@
             </div>
           </div>
 
-          <div v-else-if="errors.length === 0" class="empty-state">
+          <div v-else-if="displayedErrorCount === 0" class="empty-state">
             No failed sync operations. The app will keep checking for pending local changes.
+          </div>
+
+          <div v-else class="empty-state">
+            Sync needs attention. The app will keep retrying these local changes.
           </div>
 
           <!-- Error List -->
@@ -123,6 +127,7 @@ import {
 const props = defineProps<{
   errors: WriteOperation[]
   lastError?: string
+  errorCount?: number
 }>()
 
 defineEmits<{
@@ -143,7 +148,9 @@ const permanentCount = computed(() => {
   return props.errors.filter(e => isPermanentError(e)).length
 })
 
-const showErrorSummary = computed(() => Boolean(props.lastError) && props.errors.length > 0)
+const displayedErrorCount = computed(() => props.errorCount ?? props.errors.length)
+
+const showErrorSummary = computed(() => Boolean(props.lastError) && displayedErrorCount.value > 0)
 
 // Only show first 3 errors unless expanded
 const displayedErrors = computed(() => {

@@ -10,6 +10,7 @@ import {
   completeLegacyTaskOperation,
   enqueueOperation,
   getCanonicalReceipt,
+  getFailedOperations,
   getLatestCanonicalCheckpointForEntity,
   getLatestCanonicalReceiptForEntity,
   getWriteQueueDB,
@@ -436,6 +437,18 @@ describe('canonical write queue durability', () => {
     expect(await clearFailedOperations()).toBe(0)
     expect(await getWriteQueueDB().operations.get(op.id!)).toBeDefined()
     expect(await getConflicts()).toHaveLength(1)
+  })
+
+  it('includes unresolved conflicts in the operations shown by the sync error popover', async () => {
+    const op = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-1',
+      payload: { title: 'Keep me visible' }, userId: 'user-1', workspaceId: null,
+    })
+    await markConflict(op.id!, 2)
+
+    expect(await getFailedOperations()).toEqual([
+      expect.objectContaining({ id: op.id, status: 'conflict' }),
+    ])
   })
 
   it('rebases only an unpreviewed canonical conflict when the user explicitly retries it', async () => {

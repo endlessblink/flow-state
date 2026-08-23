@@ -690,7 +690,7 @@ export async function getFailedCount(): Promise<number> {
 export async function getFailedOperations(): Promise<WriteOperation[]> {
   const db = getWriteQueueDB();
 
-  return db.operations.where("status").equals("failed").toArray();
+  return db.operations.where("status").anyOf(["failed", "conflict"]).toArray();
 }
 
 /**

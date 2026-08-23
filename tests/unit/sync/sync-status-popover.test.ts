@@ -76,6 +76,30 @@ describe('sync status auth-error watchdog', () => {
     expect(document.body.textContent).toContain('No failed sync operations')
   })
 
+  it('does not show zero errors when the store has counted unresolved sync work', async () => {
+    const { default: SyncErrorPopover } = await import('@/components/sync/SyncErrorPopover.vue')
+
+    wrapper = mount(SyncErrorPopover, {
+      attachTo: document.body,
+      props: {
+        errors: [],
+        errorCount: 2,
+        lastError: 'Two local changes still need to sync',
+      },
+      global: {
+        stubs: {
+          Teleport: false,
+        },
+      },
+    })
+    await nextTick()
+
+    expect(document.body.textContent).toContain('2 errors')
+    expect(document.body.textContent).toContain('Two local changes still need to sync')
+    expect(document.body.textContent).not.toContain('0 errors')
+    expect(document.body.textContent).not.toContain('No failed sync operations')
+  })
+
   it('offers manual retry for a permanently failed local change instead of calling it corrupted', async () => {
     const { default: SyncErrorPopover } = await import('@/components/sync/SyncErrorPopover.vue')
 

@@ -2132,7 +2132,7 @@ export function useAIMemoryDatabase(ctx: DatabaseContext) {
     const table = patch.entityType === 'project' ? 'project_contexts' : 'task_contexts'
     const idColumn = patch.entityType === 'project' ? 'project_id' : 'task_id'
     const fieldMap = patch.entityType === 'project' ? PROJECT_FIELD_MAP : TASK_FIELD_MAP
-    const arrayFields = patch.entityType === 'project' ? PROJECT_ARRAY_FIELDS : TASK_ARRAY_FIELDS
+    const _arrayFields = patch.entityType === 'project' ? PROJECT_ARRAY_FIELDS : TASK_ARRAY_FIELDS
     const dbField = fieldMap[patch.field]
     if (!dbField && patch.operation !== 'confirm') {
       throw new Error(`Unsupported AI memory field: ${patch.field}`)

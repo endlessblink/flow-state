@@ -577,7 +577,7 @@ describe('classifyError', () => {
 
     it('PostgrestError with column-not-found message classifies as "permanent"', () => {
       // e.g. Supabase returns this when a column referenced in the query does not exist
-      const error = {
+      const _error = {
         message: 'Could not find a relationship between \'tasks\' and \'nonexistent_column\'',
         code: 'PGRST200',
         details: null,

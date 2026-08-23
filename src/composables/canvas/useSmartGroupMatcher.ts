@@ -36,7 +36,7 @@ export interface GroupMatchResult {
  * Get next occurrence of a day of week from today
  * @param dayIndex - 0=Sunday through 6=Saturday
  */
-function getNextDayOfWeekDate(dayIndex: number): string {
+function _getNextDayOfWeekDate(dayIndex: number): string {
   const today = new Date()
   const currentDay = today.getDay()
   let daysUntil = dayIndex - currentDay
@@ -216,7 +216,7 @@ export function calculatePositionInGroup(
   const groupX = group.position?.x || 0
   const groupY = group.position?.y || 0
   const groupWidth = group.position?.width || CANVAS.DEFAULT_GROUP_WIDTH
-  const groupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
+  const _groupHeight = group.position?.height || CANVAS.DEFAULT_GROUP_HEIGHT
 
   const taskWidth = CANVAS.DEFAULT_TASK_WIDTH
   const taskHeight = CANVAS.DEFAULT_TASK_HEIGHT

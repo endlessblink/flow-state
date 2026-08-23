@@ -127,8 +127,8 @@ export const parseMarkdown = (content: string): string => {
 
     // Normalize sentinel blank-line paragraphs (a non-breaking-space inserted by
     // htmlToMarkdown to survive the round-trip) back to true empty <p></p> so
-    // Tiptap's editor state stays clean and re-edits don't accumulate stray  .
-    const withBlanks = withHighlight.replace(/<p>(?:&nbsp;| |\s)*<\/p>/gi, '<p></p>')
+    // Tiptap's editor state stays clean and re-edits don't accumulate stray \xc2 .
+    const withBlanks = withHighlight.replace(/<p>(?:&nbsp;|\xc2 |\s)*<\/p>/gi, '<p></p>')
 
     return withBlanks
   } catch (error) {
@@ -259,12 +259,12 @@ export function htmlToMarkdown(html: string): string {
   // a single non-breaking-space paragraph in markdown so the blank line
   // survives the HTML→Markdown→HTML round-trip (markdown has no native syntax
   // for an empty paragraph between two non-empty ones).
-  markdown = markdown.replace(/<p[^>]*>(?:\s|<br\s*\/?>)*<\/p>/gi, '<p> </p>')
+  markdown = markdown.replace(/<p[^>]*>(?:\s|<br\s*\/?>)*<\/p>/gi, '<p>\xc2 </p>')
 
   // Cap consecutive sentinel (blank-line) paragraphs at one — matches the
   // behaviour of common rich-text editors and prevents pasted vertical
   // whitespace from ballooning the description.
-  markdown = markdown.replace(/(?:<p> <\/p>\s*){2,}/gi, '<p> </p>')
+  markdown = markdown.replace(/(?:<p>\xc2 <\/p>\s*){2,}/gi, '<p>\xc2 </p>')
 
   // Paragraphs: <p> -> text + standard markdown paragraph separator (\n\n).
   // Using a single \n here would let `breaks: true` (marked config) re-render

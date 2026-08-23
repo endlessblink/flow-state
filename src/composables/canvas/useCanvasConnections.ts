@@ -55,7 +55,7 @@ export function useCanvasConnections(
         deps.syncEdges({ force: true })
     }
 
-    const unlinkTaskFromGroup = async (groupNodeId: string, parentTaskId?: string) => {
+    const unlinkTaskFromGroup = async (groupNodeId: string, _parentTaskId?: string) => {
         const { id: groupId } = CanvasIds.parseNodeId(groupNodeId)
         const group = canvasStore.groups.find(g => g.id === groupId)
         if (!group?.linkedParentTaskId) return

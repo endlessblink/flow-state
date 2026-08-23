@@ -16,8 +16,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'assign-project', projectId: string): void
-  (e: 'sort-without-project'): void
+  (e: 'assignProject', projectId: string): void
+  (e: 'sortWithoutProject'): void
   (e: 'update:projectSearch', value: string): void
 }>()
 
@@ -34,7 +34,9 @@ const localSearch = computed({
       <div v-if="show" class="sheet-overlay" @click="$emit('close')">
         <div class="project-sheet" @click.stop>
           <div class="sheet-handle" />
-          <h3 class="sheet-title">Where does this belong?</h3>
+          <h3 class="sheet-title">
+            Where does this belong?
+          </h3>
 
           <!-- Search Input (sticky) -->
           <div class="project-search-wrapper">
@@ -52,7 +54,7 @@ const localSearch = computed({
             <button
               v-if="!localSearch"
               class="project-option inbox-option"
-              @click="$emit('sort-without-project')"
+              @click="$emit('sortWithoutProject')"
             >
               <span class="project-indicator inbox-indicator">📥</span>
               <span class="project-name">Keep in Inbox</span>
@@ -67,7 +69,7 @@ const localSearch = computed({
                   v-for="project in recentProjects"
                   :key="project.id"
                   class="recent-project-chip"
-                  @click="$emit('assign-project', project.id)"
+                  @click="$emit('assignProject', project.id)"
                 >
                   <span class="chip-emoji">{{ project.emoji || project.name.charAt(0) }}</span>
                   <span class="chip-name">{{ project.name }}</span>
@@ -85,7 +87,7 @@ const localSearch = computed({
               :key="project.id"
               class="project-option"
               :style="{ paddingLeft: `${16 + Math.min(depth, 2) * 24}px` }"
-              @click="$emit('assign-project', project.id)"
+              @click="$emit('assignProject', project.id)"
             >
               <span v-if="depth > 0" class="hierarchy-line" :style="{ width: `${Math.min(depth, 2) * 24}px` }">
                 <span class="hierarchy-connector" />

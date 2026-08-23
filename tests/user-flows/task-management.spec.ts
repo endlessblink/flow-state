@@ -101,6 +101,14 @@ test.describe('Task Management', () => {
             return tasks?.rawTasks.find((task: any) => task.title === title)?.status;
         }, taskTitle)).toBe('done');
 
+        // The context-menu handler updates the reactive store before its awaited
+        // guest-storage write completes. Reload only after the durable authority
+        // contains the completed status, otherwise this test races the write.
+        await expect.poll(async () => page.evaluate((title) => {
+            const tasks = JSON.parse(localStorage.getItem('flowstate-guest-tasks') || '[]');
+            return tasks.find((task: any) => task.title === title)?.status;
+        }, taskTitle)).toBe('done');
+
         await page.reload();
         await page.waitForSelector('.all-tasks-view');
         await expect.poll(async () => page.evaluate((title) => {

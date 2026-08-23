@@ -1,5 +1,15 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2035: Deep stability, crash, auth, and Google integration audit (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-23)
+
+**Scope**: Establish a failure-class report and validated end-to-end repair plan for recurring Electron crashes/freezes, duplicate or stale runtimes, remembered-account disconnects, Google OAuth failures, Google provider-token loss, Local API/sidecar blindness, sync disconnects, updater drift, and missing authenticated production proof.
+
+**Initial evidence**: Focused auth/Electron/Google tests pass in the current checkout, but live inspection found two concurrent FlowState runtimes and the installed profile contains persistent runtime diagnostics; the mounted runtime repeatedly reports `No auth token available` while its renderer is hidden. The authenticated desktop, real Google callback, sidecar, updater, and production read-back gates remain open.
+
+**Required closeout**: Complete the report at `docs/flowstate-stability-auth-google-audit-2026-08-23.md`, split the repair into independently testable workstreams, add repro-shaped regressions before fixes, verify the installed Electron runtime with a real authenticated Google flow and sidecar, publish the required Electron update, verify public artifacts, and complete the challenge-review gate.
+
 ### BUG-2034: Electron freezes leave no automatic runtime evidence
 
 **Priority**: P1 | **Status**: IN PROGRESS (2026-08-20)

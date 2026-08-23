@@ -15,14 +15,14 @@ This is the coverage ledger for the exhaustive stability review. A route or test
 | `/calendar-test` | VueCal calendar test surface | Public route; separate implementation | Signed-out production browser rendered `Calendar Test` and `Vue-Cal Test Calendar` | PASS (signed-out browser) |
 | `/design-system` | External Storybook handoff | Opens external URL then cancels navigation | Production browser returned to `/` as designed; external Storybook handoff not independently read back | PARTIAL |
 | `/tasks` | All tasks | Public route; task list and query deep links | CRUD and task E2E files | IN PROGRESS |
-| `/timer` | Mobile timer | Redirects to desktop canvas on desktop | Mobile timer E2E files | IN PROGRESS |
-| `/today` | Mobile today | Redirects to desktop canvas on desktop | Mobile today E2E files | IN PROGRESS |
+| `/timer` | Mobile timer | Redirects to desktop canvas on desktop | Narrow production browser rendered the timer state and `25:00 Ready` controls | PASS (signed-out mobile browser) |
+| `/today` | Mobile today | Redirects to desktop canvas on desktop | Narrow production browser rendered Sunday, task filters, and the empty-day state | PASS (signed-out mobile browser) |
 | `/catalog` | Catalog/all tasks | Shares AllTasksView implementation | Catalog and CRUD E2E files | IN PROGRESS |
 | `/quick-sort` | Quick Sort | Redirects from mobile quick sort on desktop; personal-only in shared workspace | Quick Sort E2E files | IN PROGRESS |
 | `/ai` | AI fallback/sidebar | Personal-only in shared workspace | Direct signed-out production navigation returned to `/`; no standalone AI route content was rendered | FAIL (route behavior) |
-| `/mobile-quick-sort` | Mobile Quick Sort | Redirects to Quick Sort on desktop | One mobile E2E signal | IN PROGRESS |
-| `/mobile-ai-chat` | Mobile AI chat | Redirects to AI on desktop | Signed-out production desktop navigation returned to `/` rather than an AI surface | FAIL (desktop redirect target) |
-| `/mobile-calendar` | Mobile calendar | Redirects to Calendar on desktop | Mobile calendar E2E files | IN PROGRESS |
+| `/mobile-quick-sort` | Mobile Quick Sort | Redirects to Quick Sort on desktop | Narrow production browser rendered Quick Sort and its capture controls; desktop redirect also verified | PASS (signed-out mobile browser) |
+| `/mobile-ai-chat` | Mobile AI chat | Redirects to AI on desktop | Narrow production browser rendered AI Chat; desktop navigation returned to `/` rather than an AI surface | PARTIAL (mobile pass, desktop fail) |
+| `/mobile-calendar` | Mobile calendar | Redirects to Calendar on desktop | Narrow production browser rendered the day timeline; desktop redirect also verified | PASS (signed-out mobile browser) |
 | `/focus/:taskId` | Focus task view | Personal-only; parameter validity and missing task open | Focus-related E2E signal | IN PROGRESS |
 | `/lane/:laneId` | Lane view | Parameter validity and missing lane open | Lane E2E file | IN PROGRESS |
 | `/today-flow` | Today Flow | Personal-only in shared workspace | Signed-out production route rendered the Today Flow shell, but also made a CSP-blocked request to `hn.algolia.com` | FAIL (CSP/runtime request) |
@@ -39,6 +39,8 @@ The isolated browser opened the real public deployment without using credentials
 The same run captured three production quality issues: the Google Fonts request failed in the browser environment; startup emitted cache-scope warnings while signed out; and Today Flow attempted `https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=7`, which the deployed Content Security Policy blocks. The font failure may be environment-dependent, but the cache warning and blocked Today Flow request are application/deployment findings that require classification and a fix or explicit removal of the dependency.
 
 The unknown-route result is not a pass: the URL remained unknown while the Canvas view stayed visible, so users receive no clear “page not found” or redirect. The invite surface renders its entry state, but token validity, acceptance, wrong-account handling, and workspace membership are still not proven.
+
+At a narrow production viewport (`390x844`), `/today`, `/timer`, `/mobile-quick-sort`, `/mobile-ai-chat`, and `/mobile-calendar` rendered their intended mobile content while signed out. This is positive surface evidence only: task mutations, mobile persistence, offline behavior, and authenticated data remain open.
 
 ## Required state dimensions for every applicable route
 

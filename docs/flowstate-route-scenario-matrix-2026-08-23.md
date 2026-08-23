@@ -56,6 +56,8 @@ Guest authentication entry also rendered the expected sign-in, invalid-input, pa
 | Screen size | desktop; narrow desktop; mobile portrait; mobile landscape; zoomed display; reduced motion where applicable |
 | Release state | current source; packaged artifact; installed artifact; update available; update applied; stale service worker/chunk; public production route |
 
+The explicit sign-out/account-switch scenario is not closed: the visible account stores and offline task data are cleared, but Google provider credentials remain in the settings store unless the user separately disconnects Calendar. This can make the next account appear connected to the previous account's Calendar and must be tested on the installed app after relaunch, not inferred from the cleared screen.
+
 ## Required action dimensions
 
 For each surface that supports the action, test create, edit title/description, change status, complete, reopen, delete, undo, restore, move project, change due date, schedule, tag, priority, duplicate, refresh, navigate away, return, and reload. For canvas/board/calendar/quick-sort/mobile this must also cover drag, drop, reorder, group membership, collapse/expand, viewport persistence, and cross-view read-back.

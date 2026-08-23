@@ -34,7 +34,7 @@ This is the coverage ledger for the exhaustive stability review. A route or test
 
 ## Live signed-out production route smoke (2026-08-23)
 
-The isolated browser opened the real public deployment without using credentials. `/`, `/calendar`, `/tasks`, `/catalog`, `/quick-sort`, `/calendar-test`, `/focus/nonexistent`, `/lane/nonexistent`, `/invite/test-token`, and the guarded `/performance` path rendered a visible shell or expected guard/error state. Desktop navigation to `/timer`, `/today`, `/mobile-calendar`, and `/mobile-quick-sort` followed the declared desktop redirects; `/ai` and `/mobile-ai-chat` instead returned to `/`, which is inconsistent with the intended AI route mapping.
+The isolated browser opened the real public deployment without using credentials. `/`, `/calendar`, `/tasks`, `/catalog`, `/quick-sort`, `/calendar-test`, `/focus/nonexistent`, `/lane/nonexistent`, `/invite/test-token`, and the guarded `/performance` path rendered a visible shell or expected guard/error state. Desktop navigation to `/timer`, `/today`, `/mobile-calendar`, and `/mobile-quick-sort` followed the declared desktop redirects; `/ai` and `/mobile-ai-chat` returned to `/` while opening the visible AI panel, which is the current intentional AI fallback behavior.
 
 The same run captured three production quality issues: the Google Fonts request failed in the browser environment; startup emitted cache-scope warnings while signed out; and Today Flow attempted `https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=7`, which the deployed Content Security Policy blocks. The font failure may be environment-dependent, but the cache warning and blocked Today Flow request are application/deployment findings that require classification and a fix or explicit removal of the dependency. The AI route’s URL normalization is intentional and is not counted as a defect.
 
@@ -85,6 +85,7 @@ For each surface that supports the action, test create, edit title/description, 
 - Real installed Electron, Google callback/Calendar data, Local API health/session replay, updater install/relaunch, and authenticated production read-back remain unproven.
 - The exact installed AppImage now starts under a virtual display and reports runtime version `1.4.420`; its Local API health and timer endpoints pass, while protected task access correctly remains unauthenticated. The package/public manifest are `1.4.422`, so installed authenticated Today synchronization, session replay, update recovery, and visual screenshot read-back remain open alongside the stale-version reconciliation.
 - The requested independent challenge review is unavailable because the canonical challenge runner and isolated reviewer surface are absent.
+- Source route policy review found that every currently declared application route except the admin diagnostic route is marked `requiresAuth: false`; this may be intentional for guest-first use, but it leaves no route-level enforcement proof for authenticated-only product data. The guard also allows navigation when the workspace store is not ready, so workspace-specific restrictions need an explicit post-load check rather than relying only on the initial guard.
 
 ## Execution order
 

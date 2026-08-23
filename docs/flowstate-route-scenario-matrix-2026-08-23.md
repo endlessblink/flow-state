@@ -97,6 +97,7 @@ For each surface that supports the action, test create, edit title/description, 
 - Runtime diagnostics source review found that periodic health records capture the window reference before window creation, so `windowVisible` can remain falsely false; crash listeners exist, but the health timeline cannot currently be trusted without a live screenshot/window-state correlation.
 - Durable auth-storage review found that a failed atomic write does not invalidate the in-memory read path, and its remembered error can make a later updater flush fail even after a new write succeeds. Auth refresh, relaunch, and update tests must include deliberate write failure and recovery, not only clean filesystem behavior.
 - Workspace source review found two scope transitions that can masquerade as auth failure: a failed workspace load after store clearing has no rollback, and an old saved workspace can remain active after account membership changes. Verify every workspace route after account switch, invite acceptance, permission loss, offline recovery, and failed remote load.
+- Cache source review found that offline projection and actual queue replay use different operation ordering rules: the projection uses timestamps while the queue uses insertion IDs. Device clock changes can therefore make the offline screen disagree with the eventual server result.
 
 ## Execution order
 

@@ -83,6 +83,7 @@ For each surface that supports the action, test create, edit title/description, 
 - Public read-back succeeded for the app homepage (`HTTP 200`), updater manifest (`HTTP 200`, version `1.4.422`, matching the package), and Google Calendar proxy reachability (`HTTP 401` without authorization, confirming the endpoint is live and auth-protected). The installed AppImage does not match the manifest’s published size or SHA-512, so update provenance is not proven. None of these proves an authenticated user flow.
 - The full unit suite currently has 34 failures; type checking passes, while lint and combined validation are not green.
 - Real installed Electron, Google callback/Calendar data, Local API health/session replay, updater install/relaunch, and authenticated production read-back remain unproven.
+- The exact installed AppImage now starts under a virtual display; its Local API health and timer endpoints pass, while protected task access correctly remains unauthenticated. Installed authenticated Today synchronization, session replay, update recovery, and visual screenshot read-back remain open.
 - The requested independent challenge review is unavailable because the canonical challenge runner and isolated reviewer surface are absent.
 
 ## Execution order

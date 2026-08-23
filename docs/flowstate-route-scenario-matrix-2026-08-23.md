@@ -19,15 +19,15 @@ This is the coverage ledger for the exhaustive stability review. A route or test
 | `/today` | Mobile today | Redirects to desktop canvas on desktop | Narrow production browser rendered Sunday, task filters, and the empty-day state | PASS (signed-out mobile browser) |
 | `/catalog` | Catalog/all tasks | Shares AllTasksView implementation | Catalog and CRUD E2E files | IN PROGRESS |
 | `/quick-sort` | Quick Sort | Redirects from mobile quick sort on desktop; personal-only in shared workspace | Quick Sort E2E files | IN PROGRESS |
-| `/ai` | AI fallback/sidebar | Personal-only in shared workspace | Direct signed-out production navigation returned to `/`; no standalone AI route content was rendered | FAIL (route behavior) |
+| `/ai` | AI fallback/sidebar | Personal-only in shared workspace | Direct signed-out production navigation opened the visible AI assistant panel and intentionally normalized the URL to `/` | PASS (signed-out browser) |
 | `/mobile-quick-sort` | Mobile Quick Sort | Redirects to Quick Sort on desktop | Narrow production browser rendered Quick Sort and its capture controls; desktop redirect also verified | PASS (signed-out mobile browser) |
-| `/mobile-ai-chat` | Mobile AI chat | Redirects to AI on desktop | Narrow production browser rendered AI Chat; desktop navigation returned to `/` rather than an AI surface | PARTIAL (mobile pass, desktop fail) |
+| `/mobile-ai-chat` | Mobile AI chat | Redirects to AI on desktop | Narrow production browser rendered AI Chat; desktop navigation normalized to `/` with the AI assistant panel visible | PASS (signed-out browser) |
 | `/mobile-calendar` | Mobile calendar | Redirects to Calendar on desktop | Narrow production browser rendered the day timeline; desktop redirect also verified | PASS (signed-out mobile browser) |
 | `/focus/:taskId` | Focus task view | Personal-only; parameter validity and missing task open | Focus-related E2E signal | IN PROGRESS |
 | `/lane/:laneId` | Lane view | Parameter validity and missing lane open | Lane E2E file | IN PROGRESS |
 | `/today-flow` | Today Flow | Personal-only in shared workspace | Signed-out production route rendered the Today Flow shell, but also made a CSP-blocked request to `hn.algolia.com` | FAIL (CSP/runtime request) |
 | `/keyboard-test` | Development keyboard fixture | Included only in development builds | No production route expected; development-only execution remains open | NOT TESTED |
-| `/ai-chat` | Legacy AI alias | Redirects to `/ai` | Signed-out production navigation ended at `/` through the `/ai` fallback | FAIL (redirect target) |
+| `/ai-chat` | Legacy AI alias | Redirects to `/ai` | Signed-out production navigation ended at `/` with the AI panel behavior defined by `/ai` | PASS (signed-out browser) |
 | `/performance` | Performance diagnostics | Admin-only; redirects non-admin to board | Signed-out production navigation ended at `/board`, matching the non-admin guard | PASS (signed-out browser) |
 | `/invite/:token` | Invite acceptance | Public route; token, expired invite, wrong account, and workspace result open | Production browser rendered `You've been invited to a workspace` for a test token; acceptance outcome remains unverified | PARTIAL |
 | unknown route | Router miss | No explicit catch-all route is declared | Production browser kept `#/unknown-route` while rendering the Canvas shell | FAIL (missing 404/catch-all) |
@@ -36,7 +36,7 @@ This is the coverage ledger for the exhaustive stability review. A route or test
 
 The isolated browser opened the real public deployment without using credentials. `/`, `/calendar`, `/tasks`, `/catalog`, `/quick-sort`, `/calendar-test`, `/focus/nonexistent`, `/lane/nonexistent`, `/invite/test-token`, and the guarded `/performance` path rendered a visible shell or expected guard/error state. Desktop navigation to `/timer`, `/today`, `/mobile-calendar`, and `/mobile-quick-sort` followed the declared desktop redirects; `/ai` and `/mobile-ai-chat` instead returned to `/`, which is inconsistent with the intended AI route mapping.
 
-The same run captured three production quality issues: the Google Fonts request failed in the browser environment; startup emitted cache-scope warnings while signed out; and Today Flow attempted `https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=7`, which the deployed Content Security Policy blocks. The font failure may be environment-dependent, but the cache warning and blocked Today Flow request are application/deployment findings that require classification and a fix or explicit removal of the dependency.
+The same run captured three production quality issues: the Google Fonts request failed in the browser environment; startup emitted cache-scope warnings while signed out; and Today Flow attempted `https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=7`, which the deployed Content Security Policy blocks. The font failure may be environment-dependent, but the cache warning and blocked Today Flow request are application/deployment findings that require classification and a fix or explicit removal of the dependency. The AI route’s URL normalization is intentional and is not counted as a defect.
 
 The unknown-route result is not a pass: the URL remained unknown while the Canvas view stayed visible, so users receive no clear “page not found” or redirect. The invite surface renders its entry state, but token validity, acceptance, wrong-account handling, and workspace membership are still not proven.
 

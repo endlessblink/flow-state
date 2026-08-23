@@ -56,7 +56,7 @@ Guest authentication entry also rendered the expected sign-in, invalid-input, pa
 | Screen size | desktop; narrow desktop; mobile portrait; mobile landscape; zoomed display; reduced motion where applicable |
 | Release state | current source; packaged artifact; installed artifact; update available; update applied; stale service worker/chunk; public production route |
 
-The explicit sign-out/account-switch scenario is not closed: the visible account stores and offline task data are cleared, but Google provider credentials remain in the settings store unless the user separately disconnects Calendar. The entire settings blob is also device-wide rather than account-scoped. Mounted Calendar views retain refresh/auto-sync eligibility because the connection flag remains true. This can make the next account appear connected to the previous account's Calendar and must be tested on the installed app after relaunch, not inferred from the cleared screen.
+The explicit sign-out/account-switch scenario is not closed: the visible account stores and offline task data are cleared, but Google provider credentials remain in the settings store unless the user separately disconnects Calendar. The entire settings blob is also device-wide rather than account-scoped; AI conversations and Quick Sort history use the same kind of global local storage and are not cleared by the account-switch cleanup. Mounted Calendar views retain refresh/auto-sync eligibility because the connection flag remains true. This can make the next account appear connected to the previous account's Calendar or inherit private local history and must be tested on the installed app after relaunch, not inferred from the cleared screen.
 
 ## Required action dimensions
 

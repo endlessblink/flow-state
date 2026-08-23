@@ -94,6 +94,7 @@ For each surface that supports the action, test create, edit title/description, 
 - Task-action source review found a split result for edits: the sync queue can accept an update before the required local read-cache write completes, and a cache exception exits the edit path without undoing the optimistic state or the queued intent. This must be tested for edit, delete, undo, reload, and retry so the UI never reports failure while a hidden remote write remains active.
 - Timer source review found a direct disappearance and duplication path: a failed timer-session read is converted to `null`, so follower polling can show idle while start cleanup can create a second active session without proving the old one was cleared. Network loss, expired auth, temporary RLS failure, and helper restart must preserve a distinct “unknown” state.
 - Local API source review found an acknowledgement gap: the renderer is told that session/timer/auth state was accepted by Electron main, not that the sidecar received it, and the status view can say “not running” when a child exists but the persistent enabled flag is false. Recovery checks need delivery and generation evidence, not IPC acceptance alone.
+- Runtime diagnostics source review found that periodic health records capture the window reference before window creation, so `windowVisible` can remain falsely false; crash listeners exist, but the health timeline cannot currently be trusted without a live screenshot/window-state correlation.
 
 ## Execution order
 

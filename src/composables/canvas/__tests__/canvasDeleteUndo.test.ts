@@ -182,7 +182,6 @@ describe('TASK-1722 — confirmBulkDelete', () => {
     })
 
     it('Shift+Delete (isPermanent=true) calls bulkPermanentlyDeleteTasksWithUndo (real hard delete), NOT soft bulkDeleteTasksWithUndo', async () => {
-        const { useCanvasTaskActions } = await import('../useCanvasTaskActions')
 
         // Arrange: two tasks, permanent delete
         bulkDeleteItemsValue = [
@@ -212,7 +211,7 @@ describe('TASK-1722 — confirmBulkDelete', () => {
             }),
         }))
 
-        const deps = buildDeps()
+        const _deps = buildDeps()
         // Manually invoke confirmBulkDelete with known state
         // Since module mocks are module-level, we test the logic directly by
         // calling the function with the mocked undoHistory and asserting on it.

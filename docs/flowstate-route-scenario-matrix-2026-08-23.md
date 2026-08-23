@@ -67,7 +67,7 @@ For each surface that supports the action, test create, edit title/description, 
 | Auth → renderer | Sign in, refresh, passive null session, explicit sign-out, relaunch | Source and focused tests; installed proof open |
 | Auth → Supabase | Access-token expiry, refresh-token rotation, concurrent launch prevention, RLS scope | Source and mocked tests; live proof open |
 | Auth → Local API | Session delivery, stale session, clear on sign-out only, renderer auth heartbeat | Source and unit tests; sidecar proof open |
-| Renderer → Local API | Helper unavailable, child exit, backoff, replay, timer endpoint, task mutation receipt | Unit tests; live endpoint proof open |
+| Renderer → Local API | Helper unavailable, child exit, backoff, replay, timer endpoint, task mutation receipt | Installed guest runtime proves health, timer, and child respawn; authenticated replay and mutation receipt remain open |
 | Renderer → sync queue | Offline edit, queue persistence, reconnect drain, duplicate echo, permanent failure, rollback | E2E inventory; current unit failures open |
 | Supabase → renderer | Empty response, partial response, tombstone response, workspace switch during load | Current unit failures and source risks open |
 | Google OAuth → app | Consent, denial, callback timeout, port conflict, repeated callback, expired session, relaunch | Mocked/source evidence; real flow not tested |

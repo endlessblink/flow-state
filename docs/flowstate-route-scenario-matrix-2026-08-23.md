@@ -95,6 +95,7 @@ For each surface that supports the action, test create, edit title/description, 
 - Timer source review found a direct disappearance and duplication path: a failed timer-session read is converted to `null`, so follower polling can show idle while start cleanup can create a second active session without proving the old one was cleared. Network loss, expired auth, temporary RLS failure, and helper restart must preserve a distinct “unknown” state.
 - Local API source review found an acknowledgement gap: the renderer is told that session/timer/auth state was accepted by Electron main, not that the sidecar received it, and the status view can say “not running” when a child exists but the persistent enabled flag is false. Recovery checks need delivery and generation evidence, not IPC acceptance alone.
 - Runtime diagnostics source review found that periodic health records capture the window reference before window creation, so `windowVisible` can remain falsely false; crash listeners exist, but the health timeline cannot currently be trusted without a live screenshot/window-state correlation.
+- Durable auth-storage review found that a failed atomic write does not invalidate the in-memory read path, and its remembered error can make a later updater flush fail even after a new write succeeds. Auth refresh, relaunch, and update tests must include deliberate write failure and recovery, not only clean filesystem behavior.
 
 ## Execution order
 

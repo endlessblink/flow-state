@@ -321,6 +321,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (options.persistBackup !== false) {
       persistAuthSessionBackup(recoverableSession).catch(e => console.warn('[AUTH] Failed to backup reconnect-grace session:', e))
     }
+    persistAuthIdentity(recoverableSession.user).catch(e => console.warn('[AUTH] Failed to persist reconnect account identity:', e))
     // BUG-1933: supabase-js nulls the primary key when a refresh fails. Without this the durable
     // session disappears while the UI still shows signed-in, so the sidecar/KDE widget and the next
     // launch see nothing.
@@ -807,11 +808,17 @@ export const useAuthStore = defineStore('auth', () => {
             // hydration, and future passive events can also arrive without a
             // usable session. Only signOut() may erase account ownership.
             if (user.value && session.value) {
-              keepSessionForExplicitReauth(
+              // A passive null event can be emitted when another runtime rotates
+              // the shared refresh token. Keep the last recoverable session
+              // durable so the active runtime can reconnect instead of leaving a
+              // remembered email with a null primary auth record on disk.
+              keepSessionForReconnect(
                 session.value,
                 `👤 [AUTH:${currentTabId}] Passive ${_event} without session — retaining account until explicit sign-out`,
                 { name: 'AuthError', message: 'Session needs reconnection', status: 401 } as AuthError,
               )
+              reauthRequired.value = true
+              isRestoringSession.value = true
               return
             }
             if (user.value) {

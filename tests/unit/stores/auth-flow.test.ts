@@ -1138,6 +1138,9 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     vi.clearAllMocks()
     mockSignOut.mockResolvedValue({ error: null })
     mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockPersistAuthSessionBackup.mockResolvedValue(undefined)
+    mockPersistPrimaryAuthSession.mockResolvedValue(undefined)
+    mockPersistAuthIdentity.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -1203,7 +1206,8 @@ describe('Auth Flow — onAuthStateChange Events', () => {
     expect(store.session?.access_token).toBe(session.access_token)
     expect(store.reauthRequired).toBe(true)
     expect(mockPersistAuthIdentity).toHaveBeenCalledWith(session.user)
-    expect(mockPersistPrimaryAuthSession).not.toHaveBeenCalledWith(session)
+    expect(mockPersistAuthSessionBackup).toHaveBeenCalledWith(session)
+    expect(mockPersistPrimaryAuthSession).toHaveBeenCalledWith(session)
   })
 
   it('24a. repeated passive SIGNED_OUT events still cannot erase the account', async () => {

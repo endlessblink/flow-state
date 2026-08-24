@@ -91,6 +91,13 @@ test.describe('AppHeader Core Functionality', () => {
     const pauseButton = page.locator('button').filter({ hasText: 'Pause timer' });
     await expect(pauseButton).toBeVisible();
 
+    // The active state must explain what is running, not only decorate the timer.
+    const activeTaskIndicator = page.locator('[data-testid="active-task-indicator"]');
+    if (await activeTaskIndicator.count()) {
+      await expect(activeTaskIndicator).toHaveAttribute('role', 'status');
+      await expect(activeTaskIndicator).toContainText('FOCUSING NOW');
+    }
+
     // Take screenshot of active timer
     await page.screenshot({
       path: 'test-results/timer-active-state.png',

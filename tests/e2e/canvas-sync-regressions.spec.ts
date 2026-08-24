@@ -2787,6 +2787,26 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
       await expect(
         clientA.getByText("Delete Recurring Task", { exact: true }),
       ).toBeVisible();
+      const actionGeometry = await clientA.locator(".modal-container .action-btn").evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const label = button.querySelector(".action-label")?.getBoundingClientRect();
+          const hint = button.querySelector(".action-hint")?.getBoundingClientRect();
+          const row = button.getBoundingClientRect();
+          return {
+            rowHeight: row.height,
+            labelBottom: label?.bottom ?? 0,
+            hintTop: hint?.top ?? 0,
+            hintBottom: hint?.bottom ?? 0,
+            rowBottom: row.bottom,
+          };
+        }),
+      );
+      expect(actionGeometry.length).toBeGreaterThanOrEqual(2);
+      for (const geometry of actionGeometry) {
+        expect(geometry.rowHeight).toBeGreaterThanOrEqual(60);
+        expect(geometry.hintTop).toBeGreaterThanOrEqual(geometry.labelBottom);
+        expect(geometry.hintBottom).toBeLessThanOrEqual(geometry.rowBottom);
+      }
       await clientA.getByText("Skip this occurrence", { exact: true }).click();
 
       await expect(

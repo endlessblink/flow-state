@@ -147,7 +147,9 @@ import { shouldUseSmartGroupLogic, getSmartGroupType } from '@/composables/useTa
 import {
   groupTasksByStatus,
   groupTasksByPriority,
-  groupTasksByDate
+  groupTasksByDate,
+  type BoardSortOption,
+  sortTasksForBoard
 } from '@/composables/board/useBoardState'
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 
@@ -160,13 +162,15 @@ interface Props {
   density?: 'ultrathin' | 'compact' | 'comfortable' | 'spacious'
   showDoneColumn?: boolean
   viewType?: 'status' | 'priority' | 'date' | 'category' | 'list'
+  sortOption?: BoardSortOption
 }
 
 const props = withDefaults(defineProps<Props>(), {
   currentFilter: null,
   density: 'comfortable',
   showDoneColumn: false,
-  viewType: 'priority'
+  viewType: 'priority',
+  sortOption: 'manual'
 })
 
 const emit = defineEmits<{
@@ -215,16 +219,19 @@ const dateColumns = computed(() => [
 ])
 
 const priorityColumns = computed(() => [
+  { key: 'immediate', label: 'Immediate' },
   { key: 'high', label: t('kanban.priority_high') },
   { key: 'medium', label: t('kanban.priority_medium') },
   { key: 'low', label: t('kanban.priority_low') },
+  { key: 'relaxed', label: 'Relaxed' },
   { key: 'no_priority', label: t('kanban.no_priority') }
 ])
 
 // Computed groupings using external helpers
-const tasksByStatus = computed(() => groupTasksByStatus(props.tasks))
-const tasksByPriority = computed(() => groupTasksByPriority(props.tasks))
-const tasksByDate = computed(() => groupTasksByDate(props.tasks, taskStore.hideDoneTasks))
+const sortedTasks = computed(() => sortTasksForBoard(props.tasks, props.sortOption))
+const tasksByStatus = computed(() => groupTasksByStatus(sortedTasks.value, props.sortOption))
+const tasksByPriority = computed(() => groupTasksByPriority(sortedTasks.value, props.sortOption))
+const tasksByDate = computed(() => groupTasksByDate(sortedTasks.value, taskStore.hideDoneTasks, props.sortOption))
 
 // FEATURE-1336: Category view - columns are projects
 const categoryColumns = computed(() => {
@@ -258,7 +265,7 @@ const tasksByCategory = computed(() => {
     result[col.key] = []
   }
   // Group tasks by projectId
-  props.tasks.forEach(task => {
+  sortedTasks.value.forEach(task => {
     const projectId = task.projectId || UNCATEGORIZED_PROJECT_ID
     if (result[projectId]) {
       result[projectId].push(task)

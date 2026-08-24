@@ -128,7 +128,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useUIStore } from '@/stores/ui'
 import { useTaskStore, type Task, type Project } from '@/stores/tasks'
-import type { TaskAttachment } from '@/types/tasks'
+import type { TaskAttachment, TaskPriority } from '@/types/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useSidebarManagement } from '@/composables/app/useSidebarManagement'
 import { createLazyModal } from '@/composables/useLazyComponent'
@@ -521,7 +521,7 @@ const handleQuickTaskCreate = async (data: {
   title: string
   description: string
   status: string
-  priority: 'low' | 'medium' | 'high'
+  priority: Exclude<TaskPriority, null>
   dueDate?: string
   projectId?: string
   attachments?: TaskAttachment[]  // FEATURE-1414
@@ -559,7 +559,7 @@ const confirmMoveToSection = async (sectionId: string) => {
 }
 
 // TASK-1419: Batch operation handlers for multi-select context menu
-const handleBatchSetPriority = async (priority: 'low' | 'medium' | 'high') => {
+const handleBatchSetPriority = async (priority: Exclude<TaskPriority, null>) => {
   await taskStore.bulkUpdateTasksWithUndo(
     contextMenuSelectedIds.value.map(id => ({ id, updates: { priority } })),
     'Set task priorities'

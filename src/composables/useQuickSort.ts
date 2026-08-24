@@ -41,7 +41,7 @@ export function useQuickSort() {
     taskId: string
     projectId: string | null | undefined
     dueDate: string
-    priority: 'low' | 'medium' | 'high' | undefined
+    priority: Task['priority'] | undefined
   }
 
   const taskSnapshot = ref<TaskSnapshot | null>(null)

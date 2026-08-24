@@ -309,7 +309,7 @@ const openTaskCreateSheet = () => {
   isTaskCreateOpen.value = true
 }
 
-const handleTaskSheetCreated = (data: { title: string; description: string; priority: 'high' | 'medium' | 'low' | null; dueDate: Date | null }) => {
+const handleTaskSheetCreated = (data: { title: string; description: string; priority: import('@/types/tasks').TaskPriority; dueDate: Date | null }) => {
   taskStore.createTask({
     title: data.title,
     status: 'todo',

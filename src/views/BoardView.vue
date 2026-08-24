@@ -24,6 +24,12 @@
           </button>
         </div>
 
+        <CustomSelect
+          v-model="boardSortOption"
+          :options="boardSortOptions"
+          compact
+        />
+
         <!-- Filter Toggle (collapsed by default) -->
         <button
           class="filter-toggle icon-only"
@@ -50,7 +56,13 @@
     <!-- Collapsible Filter Bar -->
     <Transition name="slide-down">
       <div v-if="showFilters" class="filter-bar">
-        <FilterControls />
+        <FilterControls
+          :priority-filter="priorityFilter"
+          :recurring-filter="recurringFilter"
+          show-recurring-filter
+          @update:priority-filter="priorityFilter = $event"
+          @update:recurring-filter="setRecurringFilter"
+        />
       </div>
     </Transition>
 
@@ -65,6 +77,7 @@
             :current-filter="taskStore.activeSmartView || 'none'"
             :density="currentDensity"
             :show-done-column="!hideDoneTasks"
+            :sort-option="boardSortOption"
             view-type="category"
             @select-task="handleSelectTask"
             @start-timer="handleStartTimer"
@@ -103,6 +116,7 @@
             :current-filter="taskStore.activeSmartView || 'none'"
             :density="currentDensity"
             :show-done-column="!hideDoneTasks"
+            :sort-option="boardSortOption"
             view-type="date"
             @select-task="handleSelectTask"
             @start-timer="handleStartTimer"
@@ -124,6 +138,7 @@
             :current-filter="taskStore.activeSmartView || 'none'"
             :density="currentDensity"
             :show-done-column="!hideDoneTasks"
+            :sort-option="boardSortOption"
             :view-type="currentViewType"
             @select-task="handleSelectTask"
             @start-timer="handleStartTimer"
@@ -187,7 +202,7 @@ import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
 import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import type { Task } from '@/stores/tasks'
-import type { TaskAttachment } from '@/types/tasks'
+import type { TaskAttachment, TaskPriority } from '@/types/tasks'
 import { useTimerStore } from '@/stores/timer'
 import { useUIStore } from '@/stores/ui'
 import { provideProgressiveDisclosure } from '@/composables/useProgressiveDisclosure'
@@ -197,7 +212,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useBoardModals } from '@/composables/board/useBoardModals'
 import { useBoardContextMenu } from '@/composables/board/useBoardContextMenu'
 import { getDateFromColumnKey, useBoardActions } from '@/composables/board/useBoardActions'
-import { useBoardState } from '@/composables/board/useBoardState'
+import { useBoardState, sortTasksForBoard, type BoardSortOption } from '@/composables/board/useBoardState'
 import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete'
 
 import './BoardView.css'
@@ -211,6 +226,7 @@ import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, FolderOpen, List } from 'lucide-vue-next'
 
 import FilterControls from '@/components/base/FilterControls.vue'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 import { useAssignmentFilter } from '@/composables/workspace/useTaskAssignment'
 
 const { t } = useI18n()
@@ -291,6 +307,18 @@ const currentDensity = computed(() => settingsStore.boardDensity)
 // BUG-1051: Persist UI state across refreshes
 // TASK-157: Filter bar collapsed by default for cleaner Todoist-style look
 const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', false, 'board-show-filters')
+const boardSortOption = usePersistentRef<BoardSortOption>('flowstate:board-sort-option', 'manual', 'board-sort-option')
+const priorityFilter = usePersistentRef<string>('flowstate:board-priority-filter', '', 'board-priority-filter')
+const recurringFilter = usePersistentRef<'all' | 'recurring' | 'non_recurring'>('flowstate:board-recurring-filter', 'all', 'board-recurring-filter')
+const setRecurringFilter = (value: string) => {
+  if (value === 'all' || value === 'recurring' || value === 'non_recurring') {
+    recurringFilter.value = value
+  }
+}
+const boardSortOptions = computed(() => [
+  { value: 'manual' as const, label: 'Manual order' },
+  { value: 'priority_desc' as const, label: 'Priority: High to Low' }
+])
 
 // View Type Switcher (priority, date, category, list) (TASK-1215: Tauri-aware persistence)
 const currentViewType = usePersistentRef<'priority' | 'date' | 'category' | 'list'>('flowstate:board-view-type', 'priority', 'board-view-type')
@@ -306,9 +334,12 @@ const { filterFn: assignmentFilterFn } = useAssignmentFilter()
 
 // FEATURE-1336: All tasks combined (not split by project) for category view
 const allFilteredTasks = computed(() => {
-  return taskStore.filteredTasks
+  const filteredTasks = taskStore.filteredTasks
     .filter(task => !(taskStore.hideDoneTasks && task.status === 'done'))
     .filter(assignmentFilterFn.value)
+    .filter(task => !priorityFilter.value || (priorityFilter.value === 'none' ? !task.priority : task.priority === priorityFilter.value))
+    .filter(task => recurringFilter.value === 'all' || (recurringFilter.value === 'recurring' ? Boolean(task.recurrenceRule) : !task.recurrenceRule))
+  return sortTasksForBoard(filteredTasks, boardSortOption.value)
 })
 
 // TASK-1334: Groups for list view (group by project)
@@ -420,7 +451,7 @@ const handleQuickTaskCreate = async (data: {
   title: string
   description: string
   status: string
-  priority: 'low' | 'medium' | 'high'
+  priority: Exclude<TaskPriority, null>
   dueDate?: string
   projectId?: string
   attachments?: TaskAttachment[]  // FEATURE-1414

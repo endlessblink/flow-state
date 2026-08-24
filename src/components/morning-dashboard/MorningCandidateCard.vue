@@ -9,7 +9,7 @@ const props = defineProps<{
   task: {
     id: string
     title: string
-    priority: 'low' | 'medium' | 'high' | null
+  priority: import('@/types/tasks').TaskPriority
     dueDate: string
     projectId: string
     estimatedDuration?: number

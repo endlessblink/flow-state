@@ -215,7 +215,7 @@ export function useMobileInboxLogic() {
         } else {
             switch (sortBy.value) {
                 case 'priority': {
-                    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3, none: 4 }
+        const priorityOrder: Record<string, number> = { immediate: 0, critical: 1, high: 2, medium: 3, low: 4, relaxed: 5, none: 6 }
                     tasks.sort((a, b) => (priorityOrder[a.priority || 'none'] || 4) - (priorityOrder[b.priority || 'none'] || 4))
                     break
                 }

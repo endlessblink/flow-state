@@ -30,6 +30,24 @@
       />
     </div>
 
+    <div v-if="props.priorityFilter !== undefined" class="filter-control">
+      <CustomSelect
+        :model-value="props.priorityFilter"
+        :options="priorityOptions"
+        placeholder="All Priorities"
+        @update:model-value="$emit('update:priorityFilter', String($event))"
+      />
+    </div>
+
+    <div v-if="props.showRecurringFilter" class="filter-control">
+      <CustomSelect
+        :model-value="props.recurringFilter || 'all'"
+        :options="recurringOptions"
+        placeholder="All Tasks"
+        @update:model-value="$emit('update:recurringFilter', String($event))"
+      />
+    </div>
+
     <!-- Assignment Filter (workspace only) -->
     <div v-if="!isPersonalWorkspace" class="filter-control">
       <CustomSelect
@@ -64,6 +82,17 @@ import { useAssignmentFilter, type AssignmentFilterMode } from '@/composables/wo
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import SavedViewsDropdown from '@/components/filters/SavedViewsDropdown.vue'
 
+const props = defineProps<{
+  priorityFilter?: string
+  recurringFilter?: string
+  showRecurringFilter?: boolean
+}>()
+
+defineEmits<{
+  (event: 'update:priorityFilter', value: string): void
+  (event: 'update:recurringFilter', value: string): void
+}>()
+
 const taskStore = useTaskStore()
 const { projects, activeProjectId, activeSmartView, activeStatusFilter } = storeToRefs(taskStore)
 
@@ -91,6 +120,22 @@ const statusOptions = [
   { label: 'All Status', value: '' },
   { label: 'To Do', value: 'todo' },
   { label: 'Done', value: 'done' }
+]
+
+const priorityOptions = [
+  { label: 'All Priorities', value: '' },
+  { label: 'Immediate', value: 'immediate' },
+  { label: 'High', value: 'high' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'Low', value: 'low' },
+  { label: 'Relaxed', value: 'relaxed' },
+  { label: 'No Priority', value: 'none' }
+]
+
+const recurringOptions = [
+  { label: 'All Tasks', value: 'all' },
+  { label: 'Recurring Only', value: 'recurring' },
+  { label: 'Non-recurring Only', value: 'non_recurring' }
 ]
 
 const assignmentOptions = [

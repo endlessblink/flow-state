@@ -217,7 +217,7 @@ const projects = computed(() => projectStore.projects)
 // Form state
 const editedTitle = ref('')
 const editedDescription = ref('')
-const editedPriority = ref<'low' | 'medium' | 'high' | null>(null)
+const editedPriority = ref<Task['priority']>(null)
 const editedDueDate = ref<string | undefined>(undefined)
 const editedDueDateInput = ref('')
 const editedStatus = ref<Task['status']>('todo')
@@ -230,9 +230,11 @@ const datePickerRef = ref<HTMLInputElement | null>(null)
 
 // Options
 const priorityOptions = [
+  { value: 'immediate' as const, label: 'Immediate' },
   { value: 'high' as const, label: 'High' },
   { value: 'medium' as const, label: 'Med' },
-  { value: 'low' as const, label: 'Low' }
+  { value: 'low' as const, label: 'Low' },
+  { value: 'relaxed' as const, label: 'Relaxed' }
 ]
 
 // RTL detection

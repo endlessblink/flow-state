@@ -8,6 +8,27 @@ interface BoardStateDependencies {
     taskStore: ReturnType<typeof useTaskStore>
 }
 
+export type BoardSortOption = 'manual' | 'priority_desc'
+
+const priorityRank: Record<NonNullable<Task['priority']>, number> = {
+    immediate: 0,
+    high: 1,
+    medium: 2,
+    low: 3,
+    relaxed: 4
+}
+
+export function sortTasksForBoard(tasks: Task[], sortOption: BoardSortOption = 'manual'): Task[] {
+    const orderedTasks = [...tasks]
+    if (sortOption === 'manual') return sortTasksBySharedOrder(orderedTasks)
+
+    return orderedTasks.sort((a, b) => {
+        const priorityDifference = (a.priority ? priorityRank[a.priority] : 4) - (b.priority ? priorityRank[b.priority] : 4)
+        if (priorityDifference !== 0) return priorityDifference
+        return sortTasksBySharedOrder([a, b])[0]?.id === a.id ? -1 : 1
+    })
+}
+
 export function useBoardState(deps: BoardStateDependencies) {
     const { taskStore } = deps
 
@@ -122,11 +143,11 @@ export const getNextMonday = (base: Date) => {
 }
 
 /** Sort tasks by order (ascending), then by createdAt as tiebreaker */
-function sortByOrder(tasks: Task[]): Task[] {
-    return sortTasksBySharedOrder(tasks)
+function sortByOrder(tasks: Task[], sortOption: BoardSortOption = 'manual'): Task[] {
+    return sortTasksForBoard(tasks, sortOption)
 }
 
-export function groupTasksByStatus(tasks: Task[]) {
+export function groupTasksByStatus(tasks: Task[], sortOption: BoardSortOption = 'manual') {
     const result: Record<string, Task[]> = {
         todo: [],
         done: []
@@ -137,16 +158,18 @@ export function groupTasksByStatus(tasks: Task[]) {
         }
     })
     for (const key of Object.keys(result)) {
-        result[key] = sortByOrder(result[key])
+        result[key] = sortByOrder(result[key], sortOption)
     }
     return result
 }
 
-export function groupTasksByPriority(tasks: Task[]) {
+export function groupTasksByPriority(tasks: Task[], sortOption: BoardSortOption = 'manual') {
     const result: Record<string, Task[]> = {
+        immediate: [],
         high: [],
         medium: [],
         low: [],
+        relaxed: [],
         no_priority: []
     }
     tasks.forEach(task => {
@@ -156,12 +179,12 @@ export function groupTasksByPriority(tasks: Task[]) {
         }
     })
     for (const key of Object.keys(result)) {
-        result[key] = sortByOrder(result[key])
+        result[key] = sortByOrder(result[key], sortOption)
     }
     return result
 }
 
-export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) {
+export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false, sortOption: BoardSortOption = 'manual') {
     // TASK-1348: Removed dead 'inbox' bucket (was never populated)
     const result: Record<string, Task[]> = {
         noDate: [],
@@ -240,7 +263,7 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
     })
 
     for (const key of Object.keys(result)) {
-        result[key] = sortByOrder(result[key])
+        result[key] = sortByOrder(result[key], sortOption)
     }
 
     return result

@@ -204,11 +204,11 @@ export function useCanvasTaskActions(deps: TaskActionsDeps) {
      * GEOMETRY WRITER: Creates task with initial canvas position (TASK-255)
      * This is an ALLOWED geometry write as it's an explicit user action (creating a task).
      */
-    interface QuickTaskData {
+interface QuickTaskData {
         title: string
         description: string
         status?: string
-        priority?: 'low' | 'medium' | 'high'
+  priority?: Exclude<import('@/types/tasks').TaskPriority, null>
         dueDate?: string
         projectId?: string
         attachments?: TaskAttachment[]  // FEATURE-1414

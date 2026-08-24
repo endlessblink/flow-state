@@ -279,4 +279,16 @@ describe('live boundary diagnostics', () => {
     expect(report.processes.flowStateProcessCount).toBe(1)
     expect(report.skipped).toBe(false)
   })
+
+  it('skips the live probe when only the regression runner mentions FlowState', () => {
+    const output = runBoundary(
+      fixtureEnv(healthyDiagnostics, '4152844 1598 /home/endlessblink/.local/share/flowstate/run-daily-regression-hunt-clean.sh --notify'),
+    )
+    const report = JSON.parse(output)
+
+    expect(report.processes.flowStateProcessCount).toBe(0)
+    expect(report.skipped).toBe(true)
+    expect(report.failures).toEqual([])
+    expect(report.warnings).toContain('FlowState desktop app is not running; live boundary probe skipped.')
+  })
 })

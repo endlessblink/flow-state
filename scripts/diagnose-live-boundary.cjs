@@ -75,7 +75,7 @@ function processSummary(raw) {
     .filter((line) => /FlowState|flow-state|\/flowstate(?:\s|$)|flowstate-local-api|local-api-server/i.test(line))
   const flowStateLines = lines.filter((line) =>
     !/flowstate-local-api|local-api-server/i.test(line) &&
-    /FlowState|flow-state|\/flowstate(?:\s|$)/i.test(line),
+    /(?:^|\/)(?:flowstate|flowstate\.appimage|flow-state)(?:\s|$)/i.test(line),
   )
   // BUG-1932: Electron derives userData from $HOME, so a launcher that rewrites HOME (agent
   // sandbox, systemd unit, container) runs against a pristine, empty profile — a phantom sign-out —

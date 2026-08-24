@@ -17,12 +17,12 @@
       </div>
 
       <!-- Make the task currently receiving timer time unmistakable. -->
-      <div v-if="isCurrentTaskRunning" class="running-task-indicator" role="status">
+      <div v-if="runningTimerTask" class="running-task-indicator" role="status">
         <Timer :size="16" class="running-task-indicator__icon" />
         <div class="running-task-indicator__copy">
-          <span class="running-task-indicator__label">Running now</span>
-          <OverflowTooltip :text="currentTask?.title || ''" tooltip-position="bottom">
-            <span class="running-task-indicator__title">{{ currentTask?.title }}</span>
+          <span class="running-task-indicator__label">{{ isCurrentTaskRunning ? 'Running now' : 'Timer running' }}</span>
+          <OverflowTooltip :text="runningTimerTask.title" tooltip-position="bottom">
+            <span class="running-task-indicator__title">{{ runningTimerTask.title }}</span>
           </OverflowTooltip>
         </div>
         <span class="running-task-indicator__time">{{ timerStore.displayTime }}</span>
@@ -373,9 +373,14 @@ const canvasStore = useCanvasStore()
 const projectStore = useProjectStore()
 const timerStore = useTimerStore()
 
+const runningTimerTask = computed(() => {
+  if (!timerStore.isTimerActive || !timerStore.currentTaskId || timerStore.currentTaskId === 'general') return null
+  return taskStore.getTask(timerStore.currentTaskId)
+})
+
 const isCurrentTaskRunning = computed(() => {
   const taskId = currentTask.value?.id
-  return !!taskId && timerStore.isTimerActive && timerStore.currentTaskId === taskId
+  return !!taskId && !!runningTimerTask.value && timerStore.currentTaskId === taskId
 })
 
 const menuRef = ref<HTMLElement | null>(null)

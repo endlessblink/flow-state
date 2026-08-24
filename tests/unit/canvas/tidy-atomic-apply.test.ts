@@ -30,6 +30,18 @@ describe('Canvas Tidy Vue Flow application', () => {
     expect(handleTidyLayout).toContain('}, pendingWrites)')
   })
 
+  it('does not block the Tidy click while canvas geometry hydrates', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/views/CanvasView.vue'), 'utf8')
+    const handleTidyLayout = source.slice(
+      source.indexOf('async function handleTidyLayout'),
+      source.indexOf('function getCanvasNodeSnapshot')
+    )
+
+    expect(handleTidyLayout).toContain('window.setTimeout(() => { void handleTidyLayout(true) }, 250)')
+    expect(handleTidyLayout).not.toContain('tidyWaitStart')
+    expect(handleTidyLayout).not.toContain('Date.now() - tidyWaitStart')
+  })
+
   it('waits for group persistence as part of the Tidy completion barrier', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/composables/canvas/useTidyLayout.ts'), 'utf8')
     const tidy = source.slice(source.indexOf('function tidyDayGroups'), source.indexOf('function planReorderColumn'))

@@ -762,23 +762,20 @@ function handleRotateDayGroups() {
   }, pendingWrites)
 }
 
-async function handleTidyLayout() {
+async function handleTidyLayout(isHydrationRetry = false) {
   // BUG-1899: Tidy plans from the CURRENT store — if the initial canvas load is
-  // still in flight, it lays out a partial store (recorder-proven "3 rows" /
-  // groups-skipped flake). Wait briefly for both stores' first load to settle.
-  const tidyWaitStart = Date.now()
+  // still in flight, it lays out a partial store (recorder-proven “3 rows” /
+  // groups-skipped flake). Never block the click while those stores hydrate;
+  // retry once after the next persistence/realtime turn instead.
   const hasUsableCanvasData = () =>
     (canvasStore._rawGroups ?? canvasStore.groups).some((group) => !!group.position)
     || taskStore.rawTasks.some((task) => !!task.canvasPosition)
-  while (
-    !hasUsableCanvasData() &&
-    Date.now() - tidyWaitStart < 10_000
-  ) {
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
 
   if (!hasUsableCanvasData()) {
-    console.warn('[TIDY] No usable canvas geometry after waiting for initialization')
+    if (!isHydrationRetry) {
+      window.setTimeout(() => { void handleTidyLayout(true) }, 250)
+    }
+    console.warn('[TIDY] Canvas geometry is still hydrating; retrying without blocking the click')
     return
   }
 

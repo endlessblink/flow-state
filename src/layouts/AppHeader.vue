@@ -80,6 +80,8 @@
           class="ai-toggle-btn"
           :class="{ 'ai-active': aiChatStore.isPanelOpen }"
           title="AI Assistant (Ctrl+/)"
+          aria-label="Toggle AI Assistant"
+          :aria-expanded="aiChatStore.isPanelOpen"
           @click="aiChatStore.togglePanel"
         >
           <Sparkles :size="18" />
@@ -188,7 +190,9 @@
               <template v-if="activeTaskProject.type === 'emoji'">{{ activeTaskProject.content }}</template>
             </span>
             <span v-else class="active-task-dot" />
-            <OverflowTooltip :text="timerStore.currentTaskName" class="active-task-name" style="flex: 1; min-width: 0">{{ timerStore.currentTaskName }}</OverflowTooltip>
+            <OverflowTooltip :text="timerStore.currentTaskName" class="active-task-name" style="flex: 1; min-width: 0">
+              {{ timerStore.currentTaskName }}
+            </OverflowTooltip>
           </div>
         </Transition>
       </div>

@@ -1,0 +1,3 @@
+## 2026-08-24 - Icon-only Toggle Buttons Accessibility
+**Learning:** Icon-only toggle buttons in this app often use a `title` attribute for tooltips, but miss corresponding `aria-label` for explicit screen reader naming, and lack state indicators like `aria-expanded` or `aria-pressed` to denote their current state (e.g., in AppHeader and BoardView).
+**Action:** Always ensure icon-only toggle buttons have explicit `aria-label` attributes matching their `title`, and dynamically bind `:aria-expanded` or `:aria-pressed` to their corresponding boolean state variables (e.g., `showFilters`, `isPanelOpen`).

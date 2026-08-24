@@ -651,6 +651,7 @@ test.describe('local canvas geometry regressions', () => {
     })
 
     await page.reload()
+    await expect(page.locator('.vue-flow')).toHaveClass(/canvas-startup-pending/, { timeout: 1_000 })
     await setupCanvas(page)
 
     await expect.poll(async () => {

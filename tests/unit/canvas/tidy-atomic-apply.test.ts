@@ -89,4 +89,15 @@ describe('Canvas Tidy Vue Flow application', () => {
     expect(applyCanonicalMoves).toContain('width: groupMove.size.width')
     expect(applyCanonicalMoves).toContain('height: groupMove.size.height')
   })
+
+  it('keeps unstable startup geometry out of the visible canvas', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/views/CanvasView.vue'), 'utf8')
+    const styles = readFileSync(resolve(process.cwd(), 'src/assets/canvas-view-overrides.css'), 'utf8')
+
+    expect(source).toContain("'canvas-startup-pending': !startupLayoutReady")
+    expect(source).toContain("!isCanvasReady || (!hasNoTasks && !startupLayoutReady)")
+    expect(source).toContain('finishStartupLayout()')
+    expect(styles).toContain('.vue-flow.canvas-startup-pending')
+    expect(styles).toContain('visibility: hidden')
+  })
 })

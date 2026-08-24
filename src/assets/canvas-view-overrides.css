@@ -718,6 +718,11 @@ body.dragging-active .vue-flow__background {
     opacity: 1;
 }
 
+/* Keep unstable startup geometry out of the visible canvas while Vue Flow measures nodes. */
+.vue-flow.canvas-startup-pending {
+    visibility: hidden;
+}
+
 /*
    SHIFT-DRAG SELECTION SUPPORT
    When Shift is held, disable pointer events on ALL nodes (groups AND tasks)

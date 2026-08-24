@@ -149,8 +149,12 @@ function isOwnComment(comment: TaskComment): boolean {
   return comment.userId === authStore.user?.id
 }
 
+function asDate(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value)
+}
+
 function wasEdited(comment: TaskComment): boolean {
-  return comment.updatedAt.getTime() - comment.createdAt.getTime() > 1000
+  return asDate(comment.updatedAt).getTime() - asDate(comment.createdAt).getTime() > 1000
 }
 
 function getInitials(comment: TaskComment): string {
@@ -181,8 +185,9 @@ function avatarColor(userId: string): string {
 }
 
 function relativeTime(date: Date): string {
+  const normalizedDate = asDate(date)
   const now = Date.now()
-  const diff = now - date.getTime()
+  const diff = now - normalizedDate.getTime()
   const seconds = Math.floor(diff / 1000)
   if (seconds < 60) return 'just now'
   const minutes = Math.floor(seconds / 60)
@@ -192,7 +197,7 @@ function relativeTime(date: Date): string {
   const days = Math.floor(hours / 24)
   if (days === 1) return 'yesterday'
   if (days < 7) return `${days}d ago`
-  return date.toLocaleDateString()
+  return normalizedDate.toLocaleDateString()
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────

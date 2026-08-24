@@ -19,6 +19,10 @@ interface DbTaskComment {
   updated_at: string
 }
 
+function timestampValue(value: Date | string): number {
+  return value instanceof Date ? value.getTime() : new Date(value).getTime()
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Mapping helpers
 // ────────────────────────────────────────────────────────────────────────────
@@ -304,7 +308,7 @@ export function useTaskComments() {
       // Roll back: restore the comment
       if (removed) {
         comments.value = [...comments.value, removed].sort(
-          (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+          (a, b) => timestampValue(a.createdAt) - timestampValue(b.createdAt)
         )
       }
       const msg = e instanceof Error ? e.message : String(e)
@@ -346,7 +350,7 @@ export function useTaskComments() {
             // Avoid duplicates (optimistic already applied)
             if (!comments.value.some(c => c.id === incoming.id)) {
               comments.value = [...comments.value, incoming].sort(
-                (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+                (a, b) => timestampValue(a.createdAt) - timestampValue(b.createdAt)
               )
             }
           } else if (eventType === 'UPDATE') {

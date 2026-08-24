@@ -417,7 +417,7 @@ describe('rotateDayGroupPositions()', () => {
     expect(taskCalls.map(([, update]) => update.canvasPosition.y)).toEqual([70, 166])
   })
 
-  it('4d: explicit rotate preserves dated task membership', () => {
+  it('4d: explicit rotate re-homes dated tasks into their matching smart group', () => {
     const today = makeGroup({ id: 'grp-today', name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
     const tomorrow = makeGroup({ id: 'grp-tomorrow', name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })
     const thursday = makeGroup({ id: 'grp-thu', name: 'Thursday', position: { x: 832, y: 0, width: 350, height: 600 } })
@@ -435,10 +435,10 @@ describe('rotateDayGroupPositions()', () => {
     const { taskMoves, release } = rotateDayGroupPositions()
     release()
 
-    expect(taskMoves[0]?.parentId).toBe(thursday.id)
+    expect(taskMoves[0]?.parentId).toBe(today.id)
     expect(updateTask).toHaveBeenCalledWith(
       'stale-child',
-      { canvasPosition: { x: 852, y: 70 }, positionFormat: 'absolute' },
+      { parentId: today.id, canvasPosition: { x: 20, y: 70 }, positionFormat: 'absolute' },
       'DRAG'
     )
   })

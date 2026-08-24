@@ -232,12 +232,7 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       keyword: string
       dayIndex: number | null
     }
-    // Rotation changes group geometry and day metadata; it must not rewrite
-    // persisted task membership from stale rendered coordinates.
-    const rehomedParents = collectDayGroupAdoptions(taskStore.rawTasks, groups, {
-      mode: 'spatial',
-      allowReparented: false,
-    })
+    const rehomedParents = collectDayGroupAdoptions(taskStore.rawTasks, groups)
     const layoutTasks = taskStore.rawTasks.filter((task) => {
       if (!task.canvasPosition && !rehomedParents.has(task.id)) return false
       if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false

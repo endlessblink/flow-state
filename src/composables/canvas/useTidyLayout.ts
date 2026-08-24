@@ -84,13 +84,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     // something visible regardless of the user's group naming.
     const visibleGroups = getPersistedVisibleGroups()
 
-    // Tidy can place loose cards into the group they visibly occupy, but an
-    // existing parent is persisted membership and must not be rewritten from
-    // stale geometry during a layout-only action.
-    const adoptedParents = collectDayGroupAdoptions(taskStore.rawTasks, visibleGroups, {
-      mode: 'spatial',
-      allowReparented: false,
-    })
+    const adoptedParents = collectDayGroupAdoptions(taskStore.rawTasks, visibleGroups, { mode: 'spatial' })
     const layoutTasks = taskStore.rawTasks.filter((task) => {
       if (!task.canvasPosition && !adoptedParents.has(task.id)) return false
       if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false

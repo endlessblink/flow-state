@@ -41,6 +41,16 @@
 
       <!-- Title and metadata in flex layout -->
       <div class="title-section">
+        <div
+          v-if="isTimerActive"
+          class="timer-running-indicator"
+          role="status"
+          aria-live="polite"
+        >
+          <span class="timer-running-dot" aria-hidden="true" />
+          <Timer :size="12" aria-hidden="true" />
+          <span>Running {{ timerStore.displayTime }}</span>
+        </div>
         <h3
           :id="`task-title-${task.id}`"
           class="task-title"
@@ -101,6 +111,7 @@ import { useTaskCardState } from '@/composables/tasks/card/useTaskCardState'
 import { useTaskCardActions } from '@/composables/tasks/card/useTaskCardActions'
 import { useTimerStore } from '@/stores/timer'
 import { truncateUrlsInText } from '@/utils/urlTruncate'
+import { Timer } from 'lucide-vue-next'
 
 // Sub-components
 import TaskCardStatus from './card/TaskCardStatus.vue'
@@ -184,4 +195,3 @@ onUnmounted(() => {
   window.removeEventListener('task-action-flash', handleTaskFlash)
 })
 </script>
-

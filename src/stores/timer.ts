@@ -445,17 +445,6 @@ export const useTimerStore = defineStore("timer", () => {
     sync.pauseFollowerPoll(); // Leaders don't poll, they write
 
     try {
-      // User's explicit action takes precedence - clear any existing session
-      try {
-        await sync.clearExistingSession();
-      } catch (error) {
-        console.warn(
-          "🍅 [TIMER] clearExistingSession failed, continuing anyway:",
-          error,
-        );
-        // Don't block timer start because of DB cleanup failure
-      }
-
       const claimedLeadership = crossTabSync.claimTimerLeadership();
       if (import.meta.env.DEV) {
         console.log("🍅 [TIMER] claimTimerLeadership:", claimedLeadership);
@@ -483,10 +472,25 @@ export const useTimerStore = defineStore("timer", () => {
 
       sync.resumeHeartbeat();
       sync.broadcastSession();
+      sync.resumeCountdown();
+      void requestWakeLock(); // Keep screen on - ROAD-004; never block local start
+
+      // User's explicit action takes precedence - clear any existing session.
+      // The local timer is already running so a slow/offline remote cleanup cannot
+      // make the click appear to do nothing. Stale stop echoes are ignored by the
+      // session-id guard in useTimerSync.
+      try {
+        await sync.clearExistingSession();
+      } catch (error) {
+        console.warn(
+          "🍅 [TIMER] clearExistingSession failed, continuing anyway:",
+          error,
+        );
+        // Don't block timer start because of DB cleanup failure
+      }
+
       await sync.saveTimerSessionWithLeadership();
       if (!options.silent) audio.playStartSound();
-      sync.resumeCountdown();
-      await requestWakeLock(); // Keep screen on - ROAD-004
     } catch (error) {
       sync.pauseCountdown();
       sync.pauseHeartbeat();

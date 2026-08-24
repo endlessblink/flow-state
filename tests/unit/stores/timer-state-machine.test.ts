@@ -331,6 +331,28 @@ describe('Timer State Machine — startTimer', () => {
     expect(mockEnqueue).not.toHaveBeenCalled()
   })
 
+  it('7d. startTimer does not wait for remote cleanup before starting locally', async () => {
+    const store = useTimerStore()
+    await flushPromises()
+
+    let resolveCleanup!: (session: null) => void
+    mockFetchActiveTimerSession.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveCleanup = resolve }),
+    )
+
+    const startPromise = store.startTimer('task-slow-sync', 1500, false)
+    await flushPromises()
+
+    expect(store.currentSession).toMatchObject({
+      taskId: 'task-slow-sync',
+      isActive: true,
+      isPaused: false,
+    })
+
+    resolveCleanup(null)
+    await startPromise
+  })
+
   it('8. countdown advances: remainingTime decrements each second', async () => {
     const store = useTimerStore()
     await flushPromises()

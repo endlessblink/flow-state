@@ -172,7 +172,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
    * Lay out smart + day-of-week groups in a canonical single row. Restacks
    * tasks vertically inside each group.
    */
-  function tidyDayGroups(): {
+  function tidyDayGroups(options: { deferPersistence?: boolean } = {}): {
     groupMoves: GroupMove[]
     taskMoves: TaskMove[]
     pendingWrites: Promise<void>
@@ -196,7 +196,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       canvasSyncInProgress.value = false
     }
 
-    const pendingWrites: Promise<unknown>[] = []
+    const pendingWriteFactories: Array<() => Promise<unknown>> = []
     const { inputs, groupMoves: allGroupMoves, taskMoves: allTaskMoves, adoptedParents } = planTidyDayGroups()
 
     // TASK-1871: Drop NO-OP moves (target == current position/parent). The canonical
@@ -243,7 +243,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       for (const gm of groupMoves) {
         const input = inputs.find((i) => i.group.id === gm.groupId)
         if (!input?.group.position) continue
-        pendingWrites.push(canvasStore.updateGroup(gm.groupId, {
+        pendingWriteFactories.push(() => canvasStore.updateGroup(gm.groupId, {
           position: {
             ...input.group.position,
             x: gm.position.x,
@@ -261,7 +261,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       }
       for (const tm of taskMoves) {
         const adoptedParentId = adoptedParents.get(tm.taskId)
-        pendingWrites.push(taskStore.updateTask(
+        pendingWriteFactories.push(() => taskStore.updateTask(
           tm.taskId,
           adoptedParentId
             ? { parentId: adoptedParentId, canvasPosition: tm.position, positionFormat: 'absolute' }
@@ -275,17 +275,22 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       throw err
     }
 
-    const pendingWritesWithUndo = Promise.all(pendingWrites).then(() => {
-      if (groupMoves.length > 0 || taskMoves.length > 0) {
-        const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, getPersistedVisibleGroups(), affectedIds)
-        undoSystem.pushCanvasGeometryUndoSnapshot(
-          `Tidy ${affectedIds.length} canvas item${affectedIds.length === 1 ? '' : 's'}`,
-          affectedIds,
-          snapshotBefore,
-          snapshotAfter
-        )
-      }
-    })
+    const persistAndRecordUndo = () => Promise.all(pendingWriteFactories.map((write) => write())).then(() => {
+          if (groupMoves.length > 0 || taskMoves.length > 0) {
+            const snapshotAfter = cloneCanvasGeometrySnapshot(taskStore.rawTasks, getPersistedVisibleGroups(), affectedIds)
+            undoSystem.pushCanvasGeometryUndoSnapshot(
+              `Tidy ${affectedIds.length} canvas item${affectedIds.length === 1 ? '' : 's'}`,
+              affectedIds,
+              snapshotBefore,
+              snapshotAfter
+            )
+          }
+        })
+    const pendingWritesWithUndo = options.deferPersistence
+      ? new Promise<void>((resolve, reject) => {
+          window.setTimeout(() => { persistAndRecordUndo().then(resolve).catch(reject) }, 0)
+        })
+      : persistAndRecordUndo()
 
     console.log('[TIDY] Wrote', groupMoves.length, 'group moves +', taskMoves.length, 'task moves')
     return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }

@@ -191,6 +191,18 @@ describe('Kanban drag — data layer effects', () => {
 
     expect(source).not.toContain('allTasks.value = []')
   })
+
+  it('12: moving a task between swimlanes does not trigger a board-wide resync', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const columnPath = path.resolve(
+      __dirname,
+      '../../../src/components/kanban/KanbanColumn.vue'
+    )
+    const source = fs.readFileSync(columnPath, 'utf-8')
+
+    expect(source).not.toContain("'kanban:drag-end'")
+  })
 })
 
 // ---------------------------------------------------------------------------

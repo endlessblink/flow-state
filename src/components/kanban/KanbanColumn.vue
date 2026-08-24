@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
@@ -276,8 +276,6 @@ const onDragEnd = async (evt: SortableDragEvent) => {
 
   endGlobalDrag()
   dragDiag.drop({ from: props.status })
-  // Broadcast drag-end so ALL columns resync (not just this source column)
-  window.dispatchEvent(new CustomEvent('kanban:drag-end'))
 }
 
 const taskCount = computed(() => allTasks.value.length)
@@ -421,8 +419,9 @@ const handleDragChange = async (event: SortableChangeEvent) => {
 
       const updates = getColumnDropUpdates(task)
       if (!updates) {
-        // BUG-1935: refused drop — resync every column so the card returns to its origin
-        window.dispatchEvent(new CustomEvent('kanban:drag-end'))
+        // BUG-1935: refused drop — only this destination column needs to return
+        // its local snapshot; unrelated swimlanes must not be disturbed.
+        allTasks.value = [...props.tasks]
         return
       }
 
@@ -444,27 +443,12 @@ const handleDragChange = async (event: SortableChangeEvent) => {
   }
 }
 
-// Listen for drag-end broadcast from ANY column to resync DOM with Vue's vdom.
-// SortableJS physically moves DOM elements between groups, so replace the local
-// snapshot in one render pass instead of clearing it first (which flashes empty
-// columns and races the async task update).
-const handleDragEndBroadcast = () => {
-  dragDiag.resyncCount++
-  dragDiag.mark('resync', { column: props.status, rendered: allTasks.value.length })
-  nextTick(() => {
-    allTasks.value = [...props.tasks]
-    dragDiag.mark('repopulate', { column: props.status, n: props.tasks.length })
-  })
-}
-
 onMounted(() => {
-  window.addEventListener('kanban:drag-end', handleDragEndBroadcast)
   // BUG-1936: prove the diagnostic build is live — writes one line on first board load.
   void dragDiag.sessionMarker(`board:${props.columnType}`)
 })
 
 onUnmounted(() => {
   document.body.classList.remove('kanban-dragging')
-  window.removeEventListener('kanban:drag-end', handleDragEndBroadcast)
 })
 </script>

@@ -27,6 +27,7 @@ type SeedTask = {
   parentId: string
   x: number
   y: number
+  dueDate?: string
   order?: number
 }
 
@@ -86,6 +87,7 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
         parentId: task.parentId,
         canvasPosition: { x: task.x, y: task.y },
         positionFormat: 'absolute',
+        ...(task.dueDate === undefined ? {} : { dueDate: task.dueDate }),
         ...(task.order === undefined ? {} : { order: task.order }),
       })
     }
@@ -1224,13 +1226,16 @@ test.describe('local canvas geometry regressions', () => {
   })
 
   test('tidy repairs cross-group cards with stale saved parents', async ({ page }) => {
+    const today = new Date().toISOString().slice(0, 10)
     await seedCanvas(page, [
       { id: 'cross-group-today', name: 'Today', x: 100, y: 200 },
       { id: 'cross-group-tomorrow', name: 'Tomorrow', x: 700, y: 200 },
     ], [
-      { id: 'cross-group-today-card', title: 'Today card', parentId: 'cross-group-today', x: 120, y: 320 },
-      { id: 'cross-group-stale-card', title: 'Stale parent card', parentId: 'cross-group-today', x: 720, y: 320 },
-      { id: 'cross-group-tomorrow-card', title: 'Tomorrow card', parentId: 'cross-group-tomorrow', x: 720, y: 320 },
+      { id: 'cross-group-today-card', title: 'Today card', parentId: 'cross-group-today', x: 120, y: 320, dueDate: today },
+      // This task is intentionally dated and visible in Today while its saved
+      // parent is stale; Tidy must repair the membership from its canvas position.
+      { id: 'cross-group-stale-card', title: 'Stale parent card', parentId: 'cross-group-today', x: 720, y: 320, dueDate: today },
+      { id: 'cross-group-tomorrow-card', title: 'Tomorrow card', parentId: 'cross-group-tomorrow', x: 720, y: 320, dueDate: today },
     ])
 
     await clickToolbar(page, /tidy|layout/)

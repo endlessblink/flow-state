@@ -436,7 +436,7 @@ describe('useTidyLayout', () => {
     expect(updateTask).not.toHaveBeenCalledWith('task-due-today', { parentId: today.id }, 'DRAG')
   })
 
-  it('repairs a stale parent claim from the task visual position', () => {
+  it('preserves an existing parent claim when the task visual position is stale', () => {
     const today = makeGroup('Today', 0)
     const monday = makeGroup('Monday', 500)
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, monday])
@@ -456,10 +456,40 @@ describe('useTidyLayout', () => {
     release()
 
     expect(taskMoves).toHaveLength(1)
-    expect(taskMoves[0].parentId).toBe(today.id)
+    expect(taskMoves[0].parentId).toBe(monday.id)
     expect(updateTask).toHaveBeenCalledWith(
       'stale-parent-task',
-      expect.objectContaining({ parentId: today.id }),
+      { canvasPosition: expect.any(Object), positionFormat: 'absolute' },
+      'DRAG'
+    )
+  })
+
+  it('does not reparent an existing task from stale geometry during tidy', () => {
+    const today = makeGroup('Today', 0)
+    const monday = makeGroup('Monday', 500)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, monday])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'today-task',
+        parentId: today.id,
+        canvasPosition: { x: 520, y: 100 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(taskMoves[0]?.parentId).toBe(today.id)
+    expect(updateTask).toHaveBeenCalledWith(
+      'today-task',
+      { canvasPosition: { x: 20, y: 70 }, positionFormat: 'absolute' },
+      'DRAG'
+    )
+    expect(updateTask).not.toHaveBeenCalledWith(
+      'today-task',
+      expect.objectContaining({ parentId: monday.id }),
       'DRAG'
     )
   })

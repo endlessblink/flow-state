@@ -31,11 +31,13 @@ function groupContainsTaskColumn(task: CanvasAdoptionTask, group: CanvasGroup): 
 export function collectDayGroupAdoptions(
   tasks: CanvasAdoptionTask[],
   groups: CanvasGroup[],
-  options: { mode?: 'dueDate' | 'spatial' } = {},
+  options: { mode?: 'dueDate' | 'spatial'; allowReparented?: boolean } = {},
 ): Map<string, string> {
   const mode = options.mode ?? 'dueDate'
+  const allowReparented = options.allowReparented ?? true
   const adoptions = new Map<string, string>()
   for (const task of tasks) {
+    if (mode === 'spatial' && !allowReparented && task.parentId) continue
     const eligible = mode === 'spatial'
       ? task.status !== 'done'
         && !task._soft_deleted

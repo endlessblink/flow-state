@@ -270,6 +270,21 @@ const handleDrop = (event: DragEvent) => {
 
     // Handle project drop
     if (dragData.value.type === 'project' && dragData.value.projectId) {
+      const draggedProject = taskStore.getProjectById(dragData.value.projectId)
+      const targetProject = taskStore.getProjectById(props.projectId)
+      const sameParent = draggedProject && targetProject
+        && (draggedProject.parentId || null) === (targetProject.parentId || null)
+
+      // Same-level drops reorder the siblings; cross-level drops retain the
+      // existing nesting behavior.
+      if (sameParent) {
+        const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+        const position = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+        void taskStore.reorderProject(dragData.value.projectId, props.projectId, position)
+        emit('projectDrop', dragData.value)
+        return
+      }
+
       // Special case: "__root__" means un-nest the project
       if (props.projectId === '__root__') {
         // The parent component will handle this via @project-drop

@@ -175,6 +175,7 @@ export interface Project {
   emoji?: string // For emoji-based colors
   viewType: 'status' | 'date' | 'priority' // Kanban view type for this project
   parentId?: string | null // For nested projects
+  order?: number // User-controlled order among projects with the same parent
   createdAt: Date
   updatedAt: Date
   // Workspace collaboration

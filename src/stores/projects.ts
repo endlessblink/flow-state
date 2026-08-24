@@ -81,9 +81,21 @@ export const useProjectStore = defineStore('projects', () => {
         return true
     }))
 
+    const projectOrder = (project: Project) => typeof project.order === 'number' && Number.isFinite(project.order)
+        ? (project.order as number)
+        : Number.MAX_SAFE_INTEGER
+
+    const sortProjects = (left: Project, right: Project) => {
+        const orderDifference = projectOrder(left) - projectOrder(right)
+        if (orderDifference !== 0) return orderDifference
+        return left.createdAt.getTime() - right.createdAt.getTime()
+    }
+
     // Root projects - projects without parentId (uses filtered projects to exclude corrupted)
     const rootProjects = computed(() => {
-        return projects.value.filter(p => !p.parentId || p.parentId === 'undefined' || p.parentId === undefined)
+        return projects.value
+            .filter(p => !p.parentId || p.parentId === 'undefined' || p.parentId === undefined)
+            .sort(sortProjects)
     })
 
     // BUG-1775: Canonical nested tree used by Quick Sort CategorySelector and any
@@ -103,7 +115,7 @@ export const useProjectStore = defineStore('projects', () => {
         }
         const build = (parent: string | null, depth: number, seen: Set<string>): ProjectTreeNode[] => {
             if (depth > 10) return []
-            return (byParent.get(parent) ?? [])
+            return (byParent.get(parent) ?? []).sort(sortProjects)
                 .filter(p => !seen.has(p.id))
                 .map(project => {
                     const nextSeen = new Set(seen)
@@ -264,6 +276,7 @@ export const useProjectStore = defineStore('projects', () => {
                 emoji: projectData.emoji,
                 viewType: projectData.viewType || 'status',
                 parentId: projectData.parentId || null,
+                order: projectData.order ?? _rawProjects.value.filter(p => (p.parentId || null) === (projectData.parentId || null)).length,
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 ...projectData,
@@ -361,6 +374,35 @@ export const useProjectStore = defineStore('projects', () => {
                 manualOperationInProgress.value = false
             }
         }
+    }
+
+    const reorderProject = async (projectId: string, targetProjectId: string, position: 'before' | 'after') => {
+        if (projectId === targetProjectId) return
+
+        const dragged = _rawProjects.value.find(project => project.id === projectId)
+        const target = _rawProjects.value.find(project => project.id === targetProjectId)
+        if (!dragged || !target || (dragged.parentId || null) !== (target.parentId || null)) return
+
+        const siblings = _rawProjects.value
+            .filter(project => (project.parentId || null) === (dragged.parentId || null))
+            .sort(sortProjects)
+        const withoutDragged = siblings.filter(project => project.id !== projectId)
+        const targetIndex = withoutDragged.findIndex(project => project.id === targetProjectId)
+        if (targetIndex === -1) return
+
+        withoutDragged.splice(position === 'after' ? targetIndex + 1 : targetIndex, 0, dragged)
+        withoutDragged.forEach((project, index) => {
+            project.order = index
+            project.updatedAt = new Date()
+        })
+        cacheProjects([..._rawProjects.value])
+
+        const { useAuthStore: getAuth } = await import('@/stores/auth')
+        if (!canUseRemoteProjectSync(getAuth())) {
+            saveProjectsToLocalStorage()
+            return
+        }
+        await saveProjectsToStorage([..._rawProjects.value], 'reorder')
     }
 
     const deleteProject = async (projectId: string) => {
@@ -724,6 +766,7 @@ export const useProjectStore = defineStore('projects', () => {
                 emoji: (typeof data.emoji === 'string' ? data.emoji : undefined),
                 viewType: (['list', 'board', 'calendar', 'timeline'].includes(data.viewType as string) ? data.viewType : 'status') as Project['viewType'],
                 parentId: (typeof data.parentId === 'string' ? data.parentId : null),
+                order: (typeof data.order === 'number' ? data.order : 0),
                 createdAt: new Date((typeof data.createdAt === 'string' || typeof data.createdAt === 'number') ? data.createdAt : Date.now()),
                 updatedAt: new Date((typeof data.updatedAt === 'string' || typeof data.updatedAt === 'number') ? data.updatedAt : Date.now())
             }
@@ -813,6 +856,7 @@ export const useProjectStore = defineStore('projects', () => {
         loadProjectsFromDatabase,
         createProject,
         updateProject,
+        reorderProject,
         deleteProject,
         deleteProjects,
         setProjectColor,

@@ -293,9 +293,12 @@ const durationDropdownRef = ref<HTMLElement>()
 
 // Priority options
 const priorities = computed(() => [
+  { value: 'immediate' as const, label: t('task.priority_immediate') },
   { value: 'high' as const, label: t('task.priority_high') },
   { value: 'medium' as const, label: t('task.priority_medium') },
-  { value: 'low' as const, label: t('task.priority_low') }
+  { value: 'low' as const, label: t('task.priority_low') },
+  { value: 'relaxed' as const, label: t('task.priority_relaxed') },
+  { value: 'none' as const, label: t('task.priority_none_full') }
 ])
 
 // TASK-144: Duration options from centralized source
@@ -358,7 +361,8 @@ const hasActiveFilters = computed(() => {
 })
 
 // Get count of tasks with specific priority
-const getPriorityCount = (priority: 'high' | 'medium' | 'low'): number => {
+const getPriorityCount = (priority: 'immediate' | 'high' | 'medium' | 'low' | 'relaxed' | 'none'): number => {
+  if (priority === 'none') return props.tasks.filter(task => !task.priority).length
   return props.tasks.filter(task => task.priority === priority).length
 }
 
@@ -378,7 +382,7 @@ const getDurationCount = (duration: DurationCategory): number => {
 }
 
 // TASK-1246: Toggle handlers (multi-select, don't close dropdown)
-const togglePriority = (priority: 'high' | 'medium' | 'low') => {
+const togglePriority = (priority: 'immediate' | 'high' | 'medium' | 'low' | 'relaxed' | 'none') => {
   const next = new Set(props.selectedPriorities)
   if (next.has(priority)) { next.delete(priority) } else { next.add(priority) }
   emit('update:selectedPriorities', next)
@@ -660,6 +664,15 @@ onBeforeUnmount(() => {
 
 .priority-dot.priority-low {
   background: var(--color-priority-low);
+}
+
+.priority-dot.priority-immediate {
+  background: var(--color-danger);
+}
+
+.priority-dot.priority-relaxed,
+.priority-dot.priority-none {
+  background: var(--text-muted);
 }
 
 .project-icon, .duration-icon {

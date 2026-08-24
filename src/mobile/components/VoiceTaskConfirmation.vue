@@ -66,6 +66,13 @@
             </label>
             <div class="pill-options">
               <button
+                class="pill priority-immediate"
+                :class="[{ active: editedPriority === 'immediate' }]"
+                @click="setPriority('immediate')"
+              >
+                {{ $t?.('task.priority_immediate') || 'Immediate' }}
+              </button>
+              <button
                 class="pill priority-high"
                 :class="[{ active: editedPriority === 'high' }]"
                 @click="setPriority('high')"
@@ -85,6 +92,13 @@
                 @click="setPriority('low')"
               >
                 {{ $t?.('priority.low') || 'Low' }}
+              </button>
+              <button
+                class="pill priority-relaxed"
+                :class="[{ active: editedPriority === 'relaxed' }]"
+                @click="setPriority('relaxed')"
+              >
+                {{ $t?.('task.priority_relaxed') || 'Relaxed' }}
               </button>
               <button
                 class="pill priority-none"
@@ -180,7 +194,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  confirm: [task: { title: string; priority: 'high' | 'medium' | 'low' | null; dueDate: Date | null }]
+  confirm: [task: { title: string; priority: import('@/types/tasks').TaskPriority; dueDate: Date | null }]
   cancel: []
   reRecord: []  // TASK-1110: Request re-recording
 }>()
@@ -190,7 +204,7 @@ const titleInputRef = ref<HTMLTextAreaElement | null>(null)
 
 // Editable state
 const editedTitle = ref('')
-const editedPriority = ref<'high' | 'medium' | 'low' | null>(null)
+const editedPriority = ref<import('@/types/tasks').TaskPriority>(null)
 const editedDueDate = ref<Date | null>(null)
 
 // RTL detection for title text
@@ -268,7 +282,7 @@ const isNextWeek = computed(() => {
 const isPresetDate = computed(() => isToday.value || isTomorrow.value || isNextWeek.value)
 
 // Actions
-function setPriority(value: 'high' | 'medium' | 'low' | null) {
+function setPriority(value: import('@/types/tasks').TaskPriority) {
   editedPriority.value = value
   triggerHaptic(10)
 }
@@ -575,6 +589,12 @@ function triggerHaptic(duration: number = 10) {
 }
 
 /* Priority pills */
+.pill.priority-immediate.active {
+  background: var(--danger-bg-subtle);
+  border-color: var(--danger-border-subtle);
+  color: var(--danger-text);
+}
+
 .pill.priority-high.active {
   background: var(--priority-high-bg);
   border-color: var(--priority-high-border);
@@ -591,6 +611,12 @@ function triggerHaptic(duration: number = 10) {
   background: var(--priority-low-bg);
   border-color: var(--priority-low-border);
   color: var(--color-priority-low);
+}
+
+.pill.priority-relaxed.active {
+  background: var(--surface-tertiary);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
 }
 
 .pill.priority-none.active {

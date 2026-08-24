@@ -9,6 +9,7 @@
 
 // TASK-1322: SupportedLanguage defined locally (browser speech recognition removed)
 export type SupportedLanguage = 'he-IL' | 'en-US' | 'auto'
+import type { TaskPriority } from '@/types/tasks'
 
 export interface ParsedVoiceTask {
   /** Cleaned title after extracting keywords */
@@ -16,7 +17,7 @@ export interface ParsedVoiceTask {
   /** Original raw transcript */
   rawTranscript: string
   /** Extracted priority */
-  priority: 'high' | 'medium' | 'low' | null
+  priority: TaskPriority
   /** Computed due date */
   dueDate: Date | null
   /** Human-readable label for due date (e.g., "tomorrow") */
@@ -26,8 +27,12 @@ export interface ParsedVoiceTask {
 }
 
 // Priority keywords by language
-const PRIORITY_KEYWORDS: Record<SupportedLanguage, Record<string, 'high' | 'medium' | 'low'>> = {
+const PRIORITY_KEYWORDS: Record<SupportedLanguage, Record<string, Exclude<TaskPriority, null>>> = {
   'en-US': {
+    'immediate': 'immediate',
+    'immediately': 'immediate',
+    'relaxed': 'relaxed',
+    'no rush': 'relaxed',
     'urgent': 'high',
     'high priority': 'high',
     'important': 'high',
@@ -43,6 +48,10 @@ const PRIORITY_KEYWORDS: Record<SupportedLanguage, Record<string, 'high' | 'medi
     'not urgent': 'low'
   },
   'he-IL': {
+    'מיידי': 'immediate',
+    'מיידית': 'immediate',
+    'רגוע': 'relaxed',
+    'בלי לחץ': 'relaxed',
     'דחוף': 'high',
     'בעדיפות גבוהה': 'high',
     'חשוב': 'high',
@@ -229,9 +238,9 @@ function createWordBoundaryRegex(keyword: string, language: SupportedLanguage): 
 function extractPriority(
   text: string,
   language: SupportedLanguage
-): { priority: 'high' | 'medium' | 'low' | null; cleanedText: string } {
+): { priority: TaskPriority; cleanedText: string } {
   const keywords = PRIORITY_KEYWORDS[language]
-  let priority: 'high' | 'medium' | 'low' | null = null
+  let priority: TaskPriority = null
   let cleanedText = text
 
   // Sort keywords by length (longest first) to match "high priority" before "high"

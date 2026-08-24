@@ -323,7 +323,8 @@ const priorityOptions = [
   { label: 'Low', value: 'low' },
   { label: 'Medium', value: 'medium' },
   { label: 'High', value: 'high' },
-  { label: 'Relaxed', value: 'relaxed' }
+  { label: 'Relaxed', value: 'relaxed' },
+  { label: 'No Priority', value: '' }
 ]
 
 const projects = computed(() => taskStore.projects)

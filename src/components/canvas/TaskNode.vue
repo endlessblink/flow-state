@@ -4,8 +4,10 @@
     :data-task-id="task?.id"
     :class="{
       'priority-high': task?.priority === 'high',
+      'priority-immediate': task?.priority === 'immediate',
       'priority-medium': task?.priority === 'medium',
       'priority-low': task?.priority === 'low',
+      'priority-relaxed': task?.priority === 'relaxed',
       'status-done': task?.status === 'done',
       'timer-active': isTimerActive,
       'selected': isSelected,
@@ -447,6 +449,15 @@ onUnmounted(() => {
     inset 0 0 0 var(--space-0_5) rgba(239, 68, 68, 0.06);
 }
 
+.priority-immediate {
+  border-color: var(--color-danger) !important;
+  box-shadow:
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm),
+    0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
+    0 0 var(--space-5) rgba(239, 68, 68, 0.2),
+    inset 0 0 0 var(--space-0_5) rgba(239, 68, 68, 0.08);
+}
+
 .priority-medium {
   border-color: var(--priority-medium-border) !important;
   box-shadow:
@@ -463,6 +474,15 @@ onUnmounted(() => {
     0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
     0 0 var(--space-5) rgba(59, 130, 246, 0.15),
     inset 0 0 0 var(--space-0_5) rgba(59, 130, 246, 0.06);
+}
+
+.priority-relaxed {
+  border-color: var(--priority-low-border) !important;
+  box-shadow:
+    0 var(--space-3) var(--space-6) var(--shadow-color-sm),
+    0 var(--space-1_5) var(--space-3) var(--shadow-color-sm),
+    0 0 var(--space-5) rgba(59, 130, 246, 0.1),
+    inset 0 0 0 var(--space-0_5) rgba(59, 130, 246, 0.04);
 }
 
 .timer-active {

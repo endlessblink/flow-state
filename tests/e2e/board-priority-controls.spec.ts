@@ -5,13 +5,13 @@ import { randomUUID } from 'node:crypto'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const runSuffix = randomUUID().replace(/-/g, '').slice(0, 12)
+const runSuffix = randomUUID().replace(/-/g, '').slice(0, 10)
 const TASKS = [
-  { id: `e2000000-0000-4000-8000-${runSuffix}`, title: 'Board immediate task', priority: 'immediate', recurrence_rule: null },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}1`, title: 'Board high task', priority: 'high', recurrence_rule: null },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}2`, title: 'Board recurring task', priority: 'medium', recurrence_rule: { pattern: 'daily', interval: 1, endType: 'never' } },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}3`, title: 'Board low task', priority: 'low', recurrence_rule: null },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}4`, title: 'Board relaxed task', priority: 'relaxed', recurrence_rule: null }
+  { id: `e2000000-0000-4000-8000-${runSuffix}01`, title: 'Board immediate task', priority: 'immediate', recurrence_rule: null },
+  { id: `e2000000-0000-4000-8000-${runSuffix}02`, title: 'Board high task', priority: 'high', recurrence_rule: null },
+  { id: `e2000000-0000-4000-8000-${runSuffix}03`, title: 'Board recurring task', priority: 'medium', recurrence_rule: { pattern: 'daily', interval: 1, endType: 'never' } },
+  { id: `e2000000-0000-4000-8000-${runSuffix}04`, title: 'Board low task', priority: 'low', recurrence_rule: null },
+  { id: `e2000000-0000-4000-8000-${runSuffix}05`, title: 'Board relaxed task', priority: 'relaxed', recurrence_rule: null }
 ] as const
 const TASK_IDS = TASKS.map(task => task.id)
 
@@ -69,7 +69,11 @@ test.describe('Board priority and recurring filters', () => {
     const filterSelects = page.locator('.filter-controls .custom-select')
     await filterSelects.nth(3).locator('.select-trigger').click()
     await expect(page.getByRole('option', { name: 'Immediate', exact: true })).toBeVisible()
+    await expect(page.getByRole('option', { name: 'High', exact: true })).toBeVisible()
+    await expect(page.getByRole('option', { name: 'Medium', exact: true })).toBeVisible()
+    await expect(page.getByRole('option', { name: 'Low', exact: true })).toBeVisible()
     await expect(page.getByRole('option', { name: 'Relaxed', exact: true })).toBeVisible()
+    await expect(page.getByRole('option', { name: 'No Priority', exact: true })).toBeVisible()
     await page.getByRole('option', { name: 'Immediate', exact: true }).click({ force: true })
     await expect(page.locator(`[data-task-id="${TASKS[0].id}"]`)).toBeVisible()
     await expect(page.locator(`[data-task-id="${TASKS[1].id}"]`)).toHaveCount(0)

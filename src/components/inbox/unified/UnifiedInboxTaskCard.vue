@@ -173,7 +173,7 @@ const dueStatus = computed(() => {
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-md);
   /* ADHD-friendly: Priority shown via inline-start border only */
-  border-inline-start: 4px solid transparent;
+  border-inline-start: 2px solid transparent;
   padding: var(--space-5) var(--space-5); /* BUG-1709: 20px breathing room */
   cursor: grab;
   user-select: none;
@@ -217,6 +217,15 @@ const dueStatus = computed(() => {
 
 .task-card[data-priority="low"] {
   border-inline-start-color: var(--color-priority-low);
+}
+
+.task-card[data-priority="immediate"] {
+  border-inline-start-color: var(--color-danger);
+}
+
+.task-card[data-priority="relaxed"],
+.task-card[data-priority="none"] {
+  border-inline-start-color: var(--text-muted);
 }
 
 .timer-indicator {
@@ -423,6 +432,15 @@ const dueStatus = computed(() => {
 .task-card.compact .priority-stripe.priority-low {
   background: var(--color-priority-low);
   opacity: 0.7;
+}
+.task-card.compact .priority-stripe.priority-immediate {
+  background: var(--color-danger);
+  opacity: 1;
+}
+.task-card.compact .priority-stripe.priority-relaxed,
+.task-card.compact .priority-stripe.priority-none {
+  background: var(--text-muted);
+  opacity: 0.55;
 }
 
 /* Title */

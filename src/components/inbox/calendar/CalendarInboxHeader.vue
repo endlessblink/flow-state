@@ -313,9 +313,12 @@ const sortOptions = computed(() => [
 ])
 
 const priorityOptions = computed(() => [
+  { value: 'immediate', label: t('task.priority_immediate') },
   { value: 'high', label: t('task.priority_high') },
   { value: 'medium', label: t('task.priority_medium') },
   { value: 'low', label: t('task.priority_low') },
+  { value: 'relaxed', label: t('task.priority_relaxed') },
+  { value: 'none', label: t('task.priority_none_full') },
 ] as const)
 
 const durationOptions = computed(() =>
@@ -432,7 +435,7 @@ const clearSearch = () => {
   emit('update:searchQuery', '')
 }
 
-const togglePriority = (priority: 'high' | 'medium' | 'low') => {
+const togglePriority = (priority: 'immediate' | 'high' | 'medium' | 'low' | 'relaxed' | 'none') => {
   const next = new Set(props.selectedPriorities)
   if (next.has(priority)) next.delete(priority)
   else next.add(priority)
@@ -853,6 +856,15 @@ const toggleProject = (projectId: string) => {
 
 .priority-low {
   background: var(--color-priority-low);
+}
+
+.priority-immediate {
+  background: var(--color-danger);
+}
+
+.priority-relaxed,
+.priority-none {
+  background: var(--text-muted);
 }
 
 /* Slide-down animation */

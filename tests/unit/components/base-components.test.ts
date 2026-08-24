@@ -173,6 +173,12 @@ vi.mock('lucide-vue-next', () => {
     Minus: stub,
     CheckSquare: stub,
     GitCompare: stub,
+    CircleDot: stub,
+    Flag: stub,
+    Folder: stub,
+    ListFilter: stub,
+    Repeat2: stub,
+    Users: stub,
   }
 })
 
@@ -944,7 +950,7 @@ describe('FilterControls', () => {
   it('71. renders clear button', () => {
     const wrapper = mountWithPlugins(FilterControls)
     expect(wrapper.find('.clear-filters-btn').exists()).toBe(true)
-    expect(wrapper.find('.clear-filters-btn').text()).toBe('Clear')
+    expect(wrapper.find('.clear-filters-btn').attributes('aria-label')).toBe('Clear filters')
   })
 
   it('72. renders all filter control slots', () => {

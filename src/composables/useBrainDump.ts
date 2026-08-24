@@ -3,6 +3,7 @@ import { useOnline } from '@vueuse/core'
 import { useUnifiedUndoRedo } from '@/composables/useUnifiedUndoRedo'
 import { isUrl } from '@/utils/urlDetection'
 import { scrapeUrl } from '@/services/ai/urlScraper'
+import type { TaskPriority } from '@/types/tasks'
 
 export function useBrainDump() {
     const brainDumpMode = ref(false)
@@ -71,7 +72,7 @@ export function useBrainDump() {
 
             // Regular line: parse for priority, duration, etc.
             let title = cleanedLine
-            let priority: 'high' | 'medium' | 'low' | null = null
+            let priority: TaskPriority = null
             let estimatedDuration: number | undefined
 
             // Extract priority (e.g., "!!!", "!!", "!")

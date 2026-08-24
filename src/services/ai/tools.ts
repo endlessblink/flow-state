@@ -31,7 +31,7 @@ export const MAX_TOOLS_PER_RESPONSE = 5
 const VALID_STATUSES: Task['status'][] = ['todo', 'done']
 
 /** Valid task priorities */
-const VALID_PRIORITIES: Array<Task['priority']> = ['low', 'medium', 'high', null]
+const VALID_PRIORITIES: Array<Task['priority']> = ['immediate', 'high', 'medium', 'low', 'relaxed', null]
 
 // ============================================================================
 // Localization Helper
@@ -94,7 +94,7 @@ export const AI_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         title: { type: 'string', description: 'The title of the task' },
-        priority: { type: 'string', description: 'Priority level', enum: ['low', 'medium', 'high'] },
+        priority: { type: 'string', description: 'Priority level: immediate, high, medium, low, relaxed, or none', enum: ['immediate', 'high', 'medium', 'low', 'relaxed', 'none'] },
         description: { type: 'string', description: 'Optional description for the task' },
         dueDate: { type: 'string', description: 'Optional due date in YYYY-MM-DD format' },
       },
@@ -148,7 +148,7 @@ export const AI_TOOLS: ToolDefinition[] = [
         taskId: { type: 'string', description: 'The ID of the task to update' },
         title: { type: 'string', description: 'New title' },
         description: { type: 'string', description: 'New description' },
-        priority: { type: 'string', description: 'New priority', enum: ['low', 'medium', 'high'] },
+        priority: { type: 'string', description: 'New priority: immediate, high, medium, low, relaxed, or none', enum: ['immediate', 'high', 'medium', 'low', 'relaxed', 'none'] },
         dueDate: { type: 'string', description: 'New due date in YYYY-MM-DD format' },
         status: { type: 'string', description: 'New status', enum: ['todo', 'done'] },
         estimatedDuration: { type: 'number', description: 'Estimated duration in minutes' },
@@ -164,7 +164,7 @@ export const AI_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         query: { type: 'string', description: 'Text to search for in task titles and descriptions' },
-        priority: { type: 'string', description: 'Filter by priority', enum: ['low', 'medium', 'high'] },
+        priority: { type: 'string', description: 'Filter by priority: immediate, high, medium, low, relaxed, or none', enum: ['immediate', 'high', 'medium', 'low', 'relaxed', 'none'] },
         status: { type: 'string', description: 'Filter by status. Only set this if user explicitly asks for done/completed tasks.', enum: ['todo', 'done'] },
         dueDate: { type: 'string', description: 'Filter by due date. "today" = due today only, "tomorrow" = due tomorrow, "this_week" = due this week (Mon-Sun), or exact YYYY-MM-DD date.' },
         limit: { type: 'number', description: 'Maximum results (default 20)' },
@@ -728,7 +728,8 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
 
       case 'create_task': {
         const title = call.parameters.title as string
-        const priority = (call.parameters.priority as Task['priority']) || 'medium'
+        const requestedPriority = call.parameters.priority as string | undefined
+        const priority = requestedPriority === 'none' ? null : (requestedPriority as Task['priority']) || 'medium'
         const description = call.parameters.description as string | undefined
         const dueDate = call.parameters.dueDate as string | undefined
         const projectId = call.parameters.projectId as string | undefined
@@ -867,11 +868,11 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         }
 
         // Sorting
-        const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+        const priorityOrder: Record<string, number> = { immediate: 0, critical: 1, high: 2, medium: 3, low: 4, relaxed: 5 }
         if (sortBy === 'priority') {
           tasks = [...tasks].sort((a, b) => {
-            const ap = priorityOrder[a.priority || ''] ?? 4
-            const bp = priorityOrder[b.priority || ''] ?? 4
+            const ap = priorityOrder[a.priority || ''] ?? 6
+            const bp = priorityOrder[b.priority || ''] ?? 6
             if (ap !== bp) return ap - bp
             // Secondary sort by dueDate ascending
             if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate)
@@ -985,9 +986,9 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           updatedFields.push('description')
         }
         if (call.parameters.priority !== undefined) {
-          const p = call.parameters.priority as Task['priority']
+          const p = call.parameters.priority === 'none' ? null : call.parameters.priority as Task['priority']
           if (!VALID_PRIORITIES.includes(p)) {
-            return { success: false, message: tm(language, `Invalid priority "${p}". Valid: low, medium, high`, `עדיפות לא תקינה "${p}". אפשרויות: low, medium, high`) }
+            return { success: false, message: tm(language, `Invalid priority "${p}". Valid: immediate, high, medium, low, relaxed, none`, `עדיפות לא תקינה "${p}". אפשרויות: immediate, high, medium, low, relaxed, none`) }
           }
           previousValues.priority = task.priority
           updates.priority = p
@@ -1755,9 +1756,10 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
           // Due today
           if (dueDateKey && dueDateKey === todayStr) score += 50
           // Priority scoring
-          if (t.priority === 'high') score += 30
-          else if (t.priority === 'medium') score += 15
-          else if (t.priority === 'low') score += 5
+           if (t.priority === 'immediate') score += 40
+           else if (t.priority === 'high') score += 30
+           else if (t.priority === 'medium') score += 15
+           else if (t.priority === 'low') score += 5
           // Active tasks get a small boost
           if (t.status === 'todo') score += 10
 

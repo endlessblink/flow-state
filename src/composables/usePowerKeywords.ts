@@ -27,7 +27,7 @@
  * The old file re-exports from here for backwards compatibility.
  */
 
-import type { Task } from '@/types/tasks'
+import type { Task, TaskPriority } from '@/types/tasks'
 
 /**
  * Smart group definitions (date-based)
@@ -51,9 +51,11 @@ export type PowerKeywordCategory = 'date' | 'priority' | 'status' | 'duration' |
  * Priority keywords
  */
 export const PRIORITY_KEYWORDS = {
+  IMMEDIATE: ['immediate priority', 'immediate', 'do now'],
   HIGH: ['high priority', 'urgent', 'critical', 'important'],
   MEDIUM: ['medium priority', 'normal priority'],
-  LOW: ['low priority']
+  LOW: ['low priority'],
+  RELAXED: ['relaxed priority', 'relaxed', 'no rush']
 } as const
 
 /**
@@ -132,7 +134,7 @@ export function detectPowerKeyword(groupName: string): PowerKeywordResult | null
         return {
           keyword,
           category: 'priority',
-          value: priority.toLowerCase() as 'high' | 'medium' | 'low',
+          value: priority.toLowerCase() as Exclude<TaskPriority, null>,
           displayName: `${priority.charAt(0) + priority.slice(1).toLowerCase()} Priority`
         }
       }

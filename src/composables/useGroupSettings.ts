@@ -8,6 +8,7 @@
 import { computed, ref, watch } from 'vue'
 import { detectPowerKeyword, type PowerKeywordResult } from './useTaskSmartGroups'
 import type { AssignOnDropSettings, CollectFilterSettings } from '@/stores/canvas'
+import type { TaskPriority } from '@/types/tasks'
 // TASK-144: Use centralized duration defaults
 import { DURATION_DEFAULTS, type DurationCategory } from '@/utils/durationCategories'
 import { formatDateKey } from '@/utils/dateUtils'
@@ -122,7 +123,7 @@ export function useGroupSettings() {
         settings.dueDate = keyword.value
         break
       case 'priority':
-        settings.priority = keyword.value as 'high' | 'medium' | 'low'
+    settings.priority = keyword.value as Exclude<TaskPriority, null>
         break
       case 'status':
         settings.status = keyword.value as AssignOnDropSettings['status']
@@ -157,7 +158,7 @@ export function useGroupSettings() {
         filter.matchDueDate = keyword.value as CollectFilterSettings['matchDueDate']
         break
       case 'priority':
-        filter.matchPriority = keyword.value as 'high' | 'medium' | 'low'
+    filter.matchPriority = keyword.value as Exclude<TaskPriority, null>
         break
       case 'status':
         filter.matchStatus = keyword.value as CollectFilterSettings['matchStatus']

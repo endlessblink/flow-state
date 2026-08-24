@@ -39,7 +39,14 @@ const hasActiveFilters = computed(() => {
 })
 
 const priorityLabel = computed(() => {
-  const labels: Record<string, string> = { high: 'High', medium: 'Med', low: 'Low' }
+  const labels: Record<string, string> = {
+    immediate: 'Immediate',
+    high: 'High',
+    medium: 'Med',
+    low: 'Low',
+    relaxed: 'Relaxed',
+    none: 'No priority',
+  }
   return Array.from(props.selectedPriorities)
     .map((p) => labels[p] || p)
     .join(', ')

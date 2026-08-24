@@ -385,7 +385,7 @@ export function useUnifiedInboxState(props: InboxContextProps) {
 
         // 4. Priority Filter (TASK-1246: multi-select, OR within)
         if (selectedPriorities.value.size > 0) {
-            tasks = tasks.filter(task => selectedPriorities.value.has(task.priority ?? ''))
+    tasks = tasks.filter(task => selectedPriorities.value.has(task.priority ?? 'none'))
         }
 
         // 5. Project Filter (TASK-1246: multi-select, OR within, handles 'none' sentinel)

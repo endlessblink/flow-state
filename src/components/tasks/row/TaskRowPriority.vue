@@ -7,6 +7,8 @@
         'task-row__priority-badge--high': priority === 'high',
         'task-row__priority-badge--medium': priority === 'medium',
         'task-row__priority-badge--low': priority === 'low',
+        'task-row__priority-badge--immediate': priority === 'immediate',
+        'task-row__priority-badge--relaxed': priority === 'relaxed',
         'task-row__priority-badge--none': !priority
       }"
       title="Click to change priority"
@@ -87,18 +89,22 @@ const calculateDropdownPosition = () => {
 }
 
 const priorityOptions = computed<Array<{ label: string; value: string | null }>>(() => [
+  { label: t('task.priority_immediate'), value: 'immediate' },
   { label: t('task.priority_high'), value: 'high' },
   { label: t('task.priority_medium'), value: 'medium' },
   { label: t('task.priority_low'), value: 'low' },
+  { label: t('task.priority_relaxed'), value: 'relaxed' },
   { label: t('task.priority_none'), value: null }
 ])
 
 const formattedPriority = computed(() => {
   if (!props.priority) return t('task.priority_none')
   const map: Record<string, string> = {
+    'immediate': t('task.priority_immediate'),
     'low': t('task.priority_low'),
     'medium': t('task.priority_med_abbr'),
     'high': t('task.priority_high'),
+    'relaxed': t('task.priority_relaxed'),
     'urgent': t('task.priority_urgent')
   }
   return map[props.priority] || props.priority
@@ -214,6 +220,18 @@ onBeforeUnmount(() => {
   color: var(--priority-low-text);
   background-color: var(--priority-low-bg);
   border-color: var(--priority-low-border);
+}
+
+.task-row__priority-badge--immediate {
+  color: var(--danger-text);
+  background-color: var(--danger-bg-subtle);
+  border-color: var(--danger-border-subtle);
+}
+
+.task-row__priority-badge--relaxed {
+  color: var(--text-muted);
+  background-color: var(--surface-tertiary);
+  border-color: var(--border-subtle);
 }
 
 /* None priority - subtle empty state */

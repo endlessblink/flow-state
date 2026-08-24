@@ -116,7 +116,7 @@ const cardStyle = computed(() => {
   if (!swipeState.value.isSwiping) {
     return {
       transform: 'translateX(0) translateY(0) rotate(0deg)',
-      transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+      transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
     }
   }
 
@@ -287,11 +287,19 @@ function truncateDescription(desc: string): string {
   background: linear-gradient(90deg, var(--color-priority-high), var(--priority-high-text));
 }
 
+.priority-strip.priority-immediate {
+  background: linear-gradient(90deg, var(--color-danger), var(--priority-high-text));
+}
+
 .priority-strip.priority-medium {
   background: linear-gradient(90deg, var(--color-priority-medium), var(--priority-medium-text));
 }
 
 .priority-strip.priority-low {
+  background: linear-gradient(90deg, var(--color-priority-low), var(--priority-low-text));
+}
+
+.priority-strip.priority-relaxed {
   background: linear-gradient(90deg, var(--color-priority-low), var(--priority-low-text));
 }
 
@@ -356,6 +364,14 @@ function truncateDescription(desc: string): string {
   -webkit-backdrop-filter: blur(8px);
 }
 
+.meta-item.priority-immediate {
+  color: var(--color-danger);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-danger);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
 .meta-item.priority-medium {
   color: var(--color-priority-medium);
   background: var(--glass-bg-soft);
@@ -365,6 +381,14 @@ function truncateDescription(desc: string): string {
 }
 
 .meta-item.priority-low {
+  color: var(--color-priority-low);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--color-priority-low);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.meta-item.priority-relaxed {
   color: var(--color-priority-low);
   background: var(--glass-bg-soft);
   border: 1px solid var(--color-priority-low);

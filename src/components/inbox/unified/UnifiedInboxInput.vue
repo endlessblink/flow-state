@@ -183,7 +183,7 @@ const cancelVoice = () => {
 }
 
 // Voice task confirmation handlers (TASK-1028)
-const handleVoiceTaskConfirm = (task: { title: string; priority: 'high' | 'medium' | 'low' | null; dueDate: Date | null }) => {
+const handleVoiceTaskConfirm = (task: { title: string; priority: import('@/types/tasks').TaskPriority; dueDate: Date | null }) => {
   emit('addTask', task.title, {
     ...(task.priority && { priority: task.priority }),
     ...(task.dueDate && { dueDate: task.dueDate })

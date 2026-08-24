@@ -268,9 +268,12 @@ const projects = computed(() => taskStore.projects)
 
 // Options for CustomSelect dropdowns
 const priorityOptions = [
+  { label: 'Immediate', value: 'immediate' },
   { label: 'Low', value: 'low' },
   { label: 'Medium', value: 'medium' },
-  { label: 'High', value: 'high' }
+  { label: 'High', value: 'high' },
+  { label: 'Relaxed', value: 'relaxed' },
+  { label: 'No Priority', value: '' }
 ]
 
 const durationOptions = [

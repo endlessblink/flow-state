@@ -45,6 +45,12 @@
             @click="selectOption(option)"
             @mouseenter="focusedIndex = index"
           >
+            <span
+              v-if="isPriorityValue(option.value)"
+              class="select-option__priority-dot"
+              :class="`select-option__priority-dot--${option.value}`"
+              aria-hidden="true"
+            />
             <span class="select-option__label">{{ option.label }}</span>
             <Check v-if="option.value === modelValue" :size="14" class="select-option__check" />
           </li>
@@ -123,6 +129,9 @@ const displayValue = computed(() => {
   const selected = props.options.find(opt => opt.value === props.modelValue)
   return selected ? selected.label : props.placeholder
 })
+
+const isPriorityValue = (value: string | number): boolean =>
+  ['immediate', 'high', 'medium', 'low', 'relaxed', 'none'].includes(String(value))
 
 const toggleDropdown = async () => {
   isOpen.value = !isOpen.value
@@ -347,6 +356,20 @@ watch(isOpen, (newVal) => {
 .select-option__label {
   flex: 1;
 }
+
+.select-option__priority-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.select-option__priority-dot--immediate { background: var(--color-danger); }
+.select-option__priority-dot--high { background: var(--color-priority-high); }
+.select-option__priority-dot--medium { background: var(--color-priority-medium); }
+.select-option__priority-dot--low { background: var(--color-priority-low); }
+.select-option__priority-dot--relaxed,
+.select-option__priority-dot--none { background: var(--text-muted); }
 
 .select-option__check {
   flex-shrink: 0;

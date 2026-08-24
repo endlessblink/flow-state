@@ -88,9 +88,12 @@ const projectOptions = computed(() => [
 ])
 
 const priorityOptions = [
+  { label: 'Immediate Priority', value: 'immediate' },
   { label: 'Low Priority', value: 'low' },
   { label: 'Medium Priority', value: 'medium' },
-  { label: 'High Priority', value: 'high' }
+  { label: 'High Priority', value: 'high' },
+  { label: 'Relaxed Priority', value: 'relaxed' },
+  { label: 'No Priority', value: 'none' }
 ]
 
 // Open palette

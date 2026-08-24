@@ -174,7 +174,7 @@ export function useCalendarInboxState() {
 
         // TASK-1246: Multi-select filters (OR within each)
         if (selectedPriorities.value.size > 0) {
-            tasks = tasks.filter(task => selectedPriorities.value.has(task.priority ?? ''))
+    tasks = tasks.filter(task => selectedPriorities.value.has(task.priority ?? 'none'))
         }
 
         if (selectedProjects.value.size > 0) {

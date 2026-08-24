@@ -1,8 +1,8 @@
-import type { Task } from '@/types/tasks'
+import type { Task, TaskPriority } from '@/types/tasks'
 import type { PowerKeywordResult } from '@/composables/useTaskSmartGroups'
 
 export interface GroupFilter {
-    priorities?: ('low' | 'medium' | 'high')[]
+    priorities?: TaskPriority[]
     statuses?: Task['status'][]
     projects?: string[]
     tags?: string[]
@@ -25,7 +25,7 @@ export interface ContainerBounds {
  * Settings for auto-assigning properties when a task is dropped into a group
  */
 export interface AssignOnDropSettings {
-    priority?: 'high' | 'medium' | 'low' | null  // null = don't change
+    priority?: TaskPriority  // null = don't change
     status?: Task['status'] | null
     dueDate?: 'today' | 'tomorrow' | 'this_week' | 'this_weekend' | 'later' | string | null
     projectId?: string | null
@@ -36,7 +36,7 @@ export interface AssignOnDropSettings {
  * Settings for the collect/magnet feature - which tasks to match
  */
 export interface CollectFilterSettings {
-    matchPriority?: 'high' | 'medium' | 'low' | null
+    matchPriority?: TaskPriority
     matchStatus?: Task['status'] | null
     matchDueDate?: 'today' | 'tomorrow' | 'this_week' | 'overdue' | null
     matchProjectId?: string | null
@@ -54,7 +54,7 @@ export interface CanvasGroup {
     isVisible: boolean
     isCollapsed: boolean
     /** @deprecated Use assignOnDrop instead */
-    propertyValue?: string | 'high' | 'medium' | 'low' | 'todo' | 'done'
+    propertyValue?: string | Exclude<TaskPriority, null> | 'todo' | 'done'
     autoCollect?: boolean // Auto-collect matching tasks from inbox
     collapsedHeight?: number // Store height when collapsed to restore on expand
     // Power group fields

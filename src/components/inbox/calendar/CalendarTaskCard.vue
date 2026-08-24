@@ -218,7 +218,7 @@ const formatDueDateLabel = (dueDate: string) => {
   padding: var(--space-3) var(--space-3) var(--space-3) var(--space-3);
   background: color-mix(in srgb, var(--surface-1) 78%, transparent);
   border: 1px solid var(--border-subtle);
-  border-inline-start: 4px solid transparent;
+  border-inline-start: 2px solid transparent;
   border-radius: var(--radius-md);
   cursor: grab;
   transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
@@ -247,6 +247,15 @@ const formatDueDateLabel = (dueDate: string) => {
 
 .task-card[data-priority="low"] {
   border-inline-start-color: var(--color-priority-low);
+}
+
+.task-card[data-priority="immediate"] {
+  border-inline-start-color: var(--color-danger);
+}
+
+.task-card[data-priority="relaxed"],
+.task-card[data-priority="none"] {
+  border-inline-start-color: var(--text-muted);
 }
 
 .task-title {
@@ -306,6 +315,16 @@ const formatDueDateLabel = (dueDate: string) => {
 .priority-badge--low {
   color: var(--color-priority-low);
   border-color: color-mix(in srgb, var(--color-priority-low) 42%, transparent);
+}
+
+.priority-badge--immediate {
+  color: var(--color-danger);
+  border-color: color-mix(in srgb, var(--color-danger) 42%, transparent);
+}
+
+.priority-badge--relaxed {
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
 }
 
 .due-badge-overdue { color: var(--status-error); }

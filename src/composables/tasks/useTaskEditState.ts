@@ -135,7 +135,8 @@ export function useTaskEditState(
         { label: 'Low', value: 'low' },
         { label: 'Medium', value: 'medium' },
         { label: 'High', value: 'high' },
-        { label: 'Relaxed', value: 'relaxed' }
+        { label: 'Relaxed', value: 'relaxed' },
+        { label: 'No Priority', value: '' }
     ]
 
     const statusOptions = [

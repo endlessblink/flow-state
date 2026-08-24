@@ -114,7 +114,7 @@
                 :model-value="smartSettings.priority || ''"
                 :options="priorityOptions"
                 placeholder="Select priority..."
-                @update:model-value="(val) => smartSettings.priority = val === '' ? null : (val as 'high' | 'medium' | 'low')"
+                @update:model-value="(val) => smartSettings.priority = val === '' ? null : (val as AssignOnDropSettings['priority'])"
               />
             </div>
 
@@ -234,9 +234,11 @@ const emit = defineEmits<{
 // Options for smart settings CustomSelect components
 const priorityOptions = [
   { label: "Don't change", value: '' },
+  { label: 'Immediate', value: 'immediate' },
   { label: 'High', value: 'high' },
   { label: 'Medium', value: 'medium' },
-  { label: 'Low', value: 'low' }
+  { label: 'Low', value: 'low' },
+  { label: 'Relaxed', value: 'relaxed' }
 ]
 
 const statusOptions = [
@@ -387,7 +389,7 @@ const handleNameInput = () => {
         smartSettings.dueDate = keyword.value as AssignOnDropSettings['dueDate']
         break
       case 'priority':
-        smartSettings.priority = keyword.value as 'high' | 'medium' | 'low'
+        smartSettings.priority = keyword.value as AssignOnDropSettings['priority']
         break
       case 'status':
         smartSettings.status = keyword.value as AssignOnDropSettings['status']

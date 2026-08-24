@@ -10,6 +10,7 @@ describe('TaskCard running timer indicator', () => {
     expect(source).toContain('class="timer-running-indicator"')
     expect(source).toContain('timerStore.displayTime')
     expect(source).toContain('class="timer-running-dot"')
+    expect(source.indexOf('class="timer-running-indicator"')).toBeGreaterThan(source.indexOf('<TaskCardStatus'))
     expect(styles).toContain('animation: timer-running-pulse 2.2s ease-in-out infinite')
     expect(styles).toContain('@media (prefers-reduced-motion: reduce)')
   })

@@ -781,7 +781,7 @@ async function handleTidyLayout(isHydrationRetry = false) {
 
   // TASK-1756 v8: lay out all smart + day-of-week groups in a clean single row
   // (user's left-to-right order preserved) and restack tasks inside them.
-  const { groupMoves, taskMoves, pendingWrites, release } = tidyLayout.tidyDayGroups()
+  const { groupMoves, taskMoves, pendingWrites, release } = tidyLayout.tidyDayGroups({ deferPersistence: true })
   applyCanonicalMoves(groupMoves, taskMoves)
   // Tidy has two sources to settle: the immediate Vue Flow move and the
   // optimistic store write. After both have settled, force the read path to

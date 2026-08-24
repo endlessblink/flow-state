@@ -6,10 +6,10 @@ const source = readFileSync(resolve(__dirname, '../../src/components/tasks/TaskC
 
 describe('TaskContextMenu running timer indicator', () => {
   it('shows the active task and elapsed timer state before task actions', () => {
-    expect(source).toContain('isCurrentTaskRunning')
+    expect(source).toContain('runningTimerTask')
     expect(source).toContain('timerStore.currentTaskId')
     expect(source).toContain('timerStore.displayTime')
     expect(source).toContain('running-task-indicator')
-    expect(source).toContain('Running now')
+    expect(source).toContain('Timer running')
   })
 })

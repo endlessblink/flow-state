@@ -11,6 +11,7 @@ import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupM
 import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import { useToast } from '@/composables/useToast'
 import type { Task } from '@/stores/tasks'
+import type { TaskPriority } from '@/types/tasks'
 
 // Dispatch event to trigger brief flash animation on task card
 function flashTaskCard(taskId: string): void {
@@ -252,7 +253,7 @@ export function useTaskContextMenuActions(
         }
     }
 
-    const setPriority = async (priority: 'high' | 'medium' | 'low') => {
+    const setPriority = async (priority: Exclude<TaskPriority, null>) => {
         // BUG-1184: Capture task data BEFORE closing menu (same pattern as BUG-1090)
         const taskId = currentTask.value?.id
         const isBatch = isBatchOperation.value

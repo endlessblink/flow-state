@@ -163,7 +163,7 @@
         :current-priority="currentTask?.priority"
         @mouseenter="handlePanelEnter"
         @mouseleave="handlePanelLeave('priority')"
-        @select="(p: 'high' | 'medium' | 'low') => { closeAllSubmenusNow(); setPriority(p) }"
+        @select="(p: Exclude<TaskPriority, null>) => { closeAllSubmenusNow(); setPriority(p) }"
         @clear-priority="() => { closeAllSubmenusNow(); clearPriority() }"
       />
 
@@ -268,6 +268,7 @@ import {
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
 import type { Task } from '@/stores/tasks'
+import type { TaskPriority } from '@/types/tasks'
 
 // New Architecture Imports
 import { useTaskContextMenuActions } from '@/composables/tasks/useTaskContextMenuActions'
@@ -311,7 +312,7 @@ const emit = defineEmits<{
   confirmDelete: [taskId: string, instanceId?: string, isCalendarEvent?: boolean]
   confirmPermanentDelete: [taskId: string]
   clearSelection: []
-  setPriority: [priority: 'low' | 'medium' | 'high']
+  setPriority: [priority: Exclude<TaskPriority, null>]
   setStatus: [status: 'todo' | 'done']
   setDueDate: [dateType: 'today' | 'tomorrow' | 'weekend' | 'nextweek']
   enterFocusMode: []

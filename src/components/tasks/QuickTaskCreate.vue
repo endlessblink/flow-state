@@ -228,7 +228,7 @@ const titleInput = ref<HTMLInputElement>()
 const dateInputRef = ref<HTMLInputElement>()
 const taskTitle = ref('')
 const taskDescription = ref('')
-const priority = ref<'low' | 'medium' | 'high'>('medium')
+const priority = ref<'immediate' | 'low' | 'medium' | 'high' | 'relaxed'>('medium')
 const duration = ref(props.duration)
 const projectId = ref('')
 
@@ -385,7 +385,7 @@ function openAIAssist() {
 }
 
 function handleAIAcceptPriority(p: string, dur: number) {
-  const validPriority = ['low', 'medium', 'high'].includes(p) ? p as 'low' | 'medium' | 'high' : undefined
+  const validPriority = ['immediate', 'low', 'medium', 'high', 'relaxed'].includes(p) ? p as typeof priority.value : undefined
   if (validPriority) priority.value = validPriority
   if (dur && dur > 0) duration.value = dur
   showAIAssist.value = false

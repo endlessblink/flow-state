@@ -131,9 +131,11 @@ export function useTaskEditState(
 
     // Options
     const priorityOptions = [
+        { label: 'Immediate', value: 'immediate' },
         { label: 'Low', value: 'low' },
         { label: 'Medium', value: 'medium' },
-        { label: 'High', value: 'high' }
+        { label: 'High', value: 'high' },
+        { label: 'Relaxed', value: 'relaxed' }
     ]
 
     const statusOptions = [

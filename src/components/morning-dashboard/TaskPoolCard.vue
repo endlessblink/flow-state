@@ -2,12 +2,13 @@
 import { computed } from 'vue'
 import { useTaskStore } from '@/stores/tasks'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
+import type { TaskPriority } from '@/types/tasks'
 
 const props = defineProps<{
   task: {
     id: string
     title: string
-    priority: 'low' | 'medium' | 'high' | null
+    priority: TaskPriority
     dueDate: string
     projectId: string
   }
@@ -27,12 +28,15 @@ const projectName = computed(() => {
 
 const priorityColor = computed(() => {
   switch (props.task.priority) {
+    case 'immediate':
     case 'high':
       return 'var(--color-danger)'
     case 'medium':
       return 'var(--color-warning)'
     case 'low':
       return 'var(--brand-primary)'
+    case 'relaxed':
+      return 'var(--text-muted)'
     default:
       return 'var(--text-muted)'
   }

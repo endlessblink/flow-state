@@ -5,14 +5,14 @@ import type { Task } from '@/types/tasks'
 
 defineProps<{
   title: string
-  priority: 'low' | 'medium' | 'high' | undefined
+  priority: 'immediate' | 'high' | 'medium' | 'low' | 'relaxed' | undefined
   due: 'today' | 'tomorrow' | undefined
   recentlyAdded: Task[]
 }>()
 
 defineEmits<{
   (e: 'update:title', value: string): void
-  (e: 'update:priority', value: 'low' | 'medium' | 'high' | undefined): void
+  (e: 'update:priority', value: 'immediate' | 'high' | 'medium' | 'low' | 'relaxed' | undefined): void
   (e: 'update:due', value: 'today' | 'tomorrow' | undefined): void
   (e: 'quick-add'): void
 }>()
@@ -42,11 +42,27 @@ defineExpose({ inputRef })
         <div class="quick-actions">
           <button
             class="quick-action-btn"
+            :class="{ active: priority === 'immediate' }"
+            @click="$emit('update:priority', priority === 'immediate' ? undefined : 'immediate')"
+          >
+            <Flag :size="16" class="priority-immediate" />
+            Immediate
+          </button>
+          <button
+            class="quick-action-btn"
             :class="{ active: priority === 'high' }"
             @click="$emit('update:priority', priority === 'high' ? undefined : 'high')"
           >
             <Flag :size="16" class="priority-high" />
             High
+          </button>
+          <button
+            class="quick-action-btn"
+            :class="{ active: priority === 'relaxed' }"
+            @click="$emit('update:priority', priority === 'relaxed' ? undefined : 'relaxed')"
+          >
+            <Flag :size="16" class="priority-relaxed" />
+            Relaxed
           </button>
           <button
             class="quick-action-btn"

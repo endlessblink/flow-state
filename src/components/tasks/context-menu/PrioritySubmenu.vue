@@ -10,6 +10,16 @@
     >
       <button
         class="menu-item menu-item--sm"
+        :class="{ active: currentPriority === 'immediate' }"
+        @click.stop="$emit('select', 'immediate')"
+      >
+        <span class="priority-dot immediate" />
+        <span class="menu-text">Immediate</span>
+        <Check v-if="currentPriority === 'immediate'" :size="12" class="check-icon" />
+      </button>
+
+      <button
+        class="menu-item menu-item--sm"
         :class="{ active: currentPriority === 'high' }"
         @click.stop="$emit('select', 'high')"
       >
@@ -55,6 +65,7 @@
 <script setup lang="ts">
 import type { CSSProperties } from 'vue'
 import { Check, X } from 'lucide-vue-next'
+import type { TaskPriority } from '@/types/tasks'
 
 defineProps<{
   isVisible: boolean
@@ -64,7 +75,7 @@ defineProps<{
 }>()
 
 defineEmits<{
-  select: [priority: 'high' | 'medium' | 'low']
+  select: [priority: Exclude<TaskPriority, null>]
   clearPriority: []
   mouseenter: []
   mouseleave: []
@@ -132,6 +143,8 @@ defineEmits<{
 .priority-dot.high { background-color: var(--color-priority-high); }
 .priority-dot.medium { background-color: var(--color-priority-medium); }
 .priority-dot.low { background-color: var(--color-priority-low); }
+.priority-dot.immediate { background-color: var(--color-danger); }
+.priority-dot.relaxed { background-color: var(--text-muted); }
 
 .check-icon {
   flex-shrink: 0;

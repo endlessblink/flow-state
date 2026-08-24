@@ -16,6 +16,18 @@
         </OverflowTooltip>
       </div>
 
+      <!-- Make the task currently receiving timer time unmistakable. -->
+      <div v-if="isCurrentTaskRunning" class="running-task-indicator" role="status">
+        <Timer :size="16" class="running-task-indicator__icon" />
+        <div class="running-task-indicator__copy">
+          <span class="running-task-indicator__label">Running now</span>
+          <OverflowTooltip :text="currentTask?.title || ''" tooltip-position="bottom">
+            <span class="running-task-indicator__title">{{ currentTask?.title }}</span>
+          </OverflowTooltip>
+        </div>
+        <span class="running-task-indicator__time">{{ timerStore.displayTime }}</span>
+      </div>
+
       <!-- Edit Task (single only) -->
       <button v-if="!isBatchOperation" class="menu-item" @click="handleEdit">
         <Pencil :size="16" class="menu-icon" />
@@ -250,6 +262,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import { useCanvasStore } from '@/stores/canvas'
 import { useProjectStore } from '@/stores/projects'
+import { useTimerStore } from '@/stores/timer'
 import {
   Calendar,
   CheckCircle,
@@ -358,6 +371,12 @@ const router = useRouter()
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const projectStore = useProjectStore()
+const timerStore = useTimerStore()
+
+const isCurrentTaskRunning = computed(() => {
+  const taskId = currentTask.value?.id
+  return !!taskId && timerStore.isTimerActive && timerStore.currentTaskId === taskId
+})
 
 const menuRef = ref<HTMLElement | null>(null)
 
@@ -1289,6 +1308,60 @@ onUnmounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   overflow: hidden;
+}
+
+.running-task-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 var(--space-2) var(--space-1);
+  padding: var(--space-2) var(--space-2_5);
+  border: 1px solid var(--amber-border, rgba(245, 158, 11, 0.45));
+  border-radius: var(--radius-md);
+  background: var(--amber-bg-soft, rgba(245, 158, 11, 0.12));
+  color: var(--amber-text);
+}
+
+.running-task-indicator__icon {
+  flex-shrink: 0;
+  animation: running-task-pulse 1.6s ease-in-out infinite;
+}
+
+.running-task-indicator__copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.running-task-indicator__label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  line-height: 1.2;
+}
+
+.running-task-indicator__title {
+  display: block;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+}
+
+.running-task-indicator__time {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+@keyframes running-task-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 /* Menu Items */

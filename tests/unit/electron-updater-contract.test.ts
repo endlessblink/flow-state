@@ -290,7 +290,8 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('pendingUpdateFailureVersion()')
     expect(updaterSource).toContain('Suppressing a previously failed update')
     expect(updaterSource).toContain('blockedVersion === info.version')
-    expect(updaterSource).not.toContain('clearBlockedPendingUpdate(appVersion)')
+    expect(updaterSource).toContain("ipcMain.handle('updater:retry-failed'")
+    expect(updaterSource).toContain('clearBlockedPendingUpdate(appVersion)')
   })
 
   it('does not launch a second rollback instance when the known-good bridge is already healthy', () => {

@@ -3,6 +3,7 @@ import { useSupabaseDatabase } from '@/composables/useSupabaseDatabase'
 import { useTaskStore } from '@/stores/tasks'
 import { useProjectStore } from '@/stores/projects'
 import type { WorkProfile, MemoryObservation } from '@/utils/supabaseMappers'
+import { buildTaskBehaviorInsights } from '@/services/ai/taskBehaviorInsights'
 
 export type WorkProfileData = WorkProfile
 
@@ -196,6 +197,9 @@ export function useWorkProfile() {
     // FEATURE-1317 Phase 2: Generate structured observations from stats + task context
     await generateObservationsFromStats()
     await generateObservationsFromTasks()
+    for (const observation of buildTaskBehaviorInsights(taskStore.tasks, now)) {
+      await addMemoryObservation(observation)
+    }
 
     return { avgMinutesPerDay, avgTasksPerDay, peakDays, dataSources }
   }
@@ -577,18 +581,6 @@ export function useWorkProfile() {
           confidence: Math.min(0.9, 0.5 + (counts.total * 0.05)),
           source: 'weekly_history'
         })
-      }
-    }
-
-    // Check day distribution of completed tasks
-    const dayCompletions = new Map<string, number>()
-    const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-    for (const taskId of completedTaskIds) {
-      const task = taskStore.getTask(taskId)
-      if (task) {
-        // Use current day as approximation (tasks may have been completed on different days)
-        const today = daysOfWeek[new Date().getDay()]
-        dayCompletions.set(today, (dayCompletions.get(today) || 0) + 1)
       }
     }
 

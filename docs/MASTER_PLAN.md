@@ -1,5 +1,13 @@
 # FlowState MASTER_PLAN.md
 
+### FEATURE-2041: Learn routines and scheduling behavior from task history (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)
+
+AI scheduling now learns repeated weekday patterns from dated task instances only after enough consistent observations, and measures deadline reliability plus the typical planning horizon. Ambiguous patterns remain unlearned; no weekday or routine is hardcoded.
+
+**Regression coverage**: Repeated Thursday evidence learns a routine, a mixed weekday pattern is rejected, and deadline/planning signals are calculated from task dates. Electron build and deployed authenticated readback remain required.
+
 ### BUG-2040: Board drag-end resync flashes tasks between lanes (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)

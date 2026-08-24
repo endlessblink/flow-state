@@ -50,7 +50,15 @@ describe('Electron local API lifecycle regression contract', () => {
     expect(body).toContain('latestSession = session')
     expect(body).toContain('startChild()')
     expect(body).toContain('pushSession()')
-    expect(body).not.toMatch(/if\s*\(\s*config\.enabled\s*\)\s*{[^}]*startChild\(\)/)
+  })
+
+  it('starts the protected localhost sidecar from the persisted enabled setting during registration', () => {
+    const registrationStart = LOCAL_API_TS.indexOf('export function registerLocalApiHandlers()')
+    const firstHandler = LOCAL_API_TS.indexOf("ipcMain.handle('localApi:setSession'", registrationStart)
+    const body = LOCAL_API_TS.slice(registrationStart, firstHandler)
+
+    expect(body).toContain('config = loadConfig()')
+    expect(body).toContain('if (config.enabled) startChild()')
   })
 
   it('passes the Electron userData directory to the sidecar for durable local AI runtime storage', () => {

@@ -394,6 +394,9 @@ export function registerLocalApiHandlers() {
   config = loadConfig()
   // Persist (ensures a token exists on first run).
   saveConfig(config)
+  // The enabled setting is the startup contract; do not wait for renderer auth
+  // IPC before binding the protected loopback API after an ordinary restart.
+  if (config.enabled) startChild()
 
   ipcMain.handle('localApi:setSession', (_e, session: SessionMessage) => {
     if (!session || !session.accessToken || !session.userId) return { ok: false }

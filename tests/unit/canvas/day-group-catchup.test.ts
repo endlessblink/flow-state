@@ -268,12 +268,12 @@ describe('useDayGroupRotation — catch-up guard', () => {
     expect(updateGroup).toHaveBeenCalled()
   })
 
-  it('8: genuine missed-midnight → stale-dated task re-homed to its matching group', () => {
+  it('8: genuine missed-midnight → preserves task membership while rotating geometry', () => {
     __setLastRotationDateForTest(YESTERDAY_STR)
     vi.spyOn(canvasStore, 'updateGroup').mockImplementation(vi.fn())
 
-    // Today = Wednesday. A task dated today but parked in the Thursday group
-    // must be re-homed into the Today group during the launch catch-up.
+    // The task remains in its persisted Thursday group even when its due date
+    // is stale; geometry rotation must not rewrite task membership.
     const today = makeGroup({ name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
     const tomorrow = makeGroup({ name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })
     const thursday = makeGroup({ name: 'Thursday', position: { x: 832, y: 0, width: 350, height: 600 } })
@@ -290,8 +290,8 @@ describe('useDayGroupRotation — catch-up guard', () => {
     const result = runCatchupIfNeeded()
     result.release()
 
-    const rehome = result.taskMoves.find((m) => m.taskId === 'stale-child')
-    expect(rehome?.parentId).toBe(today.id)
+    const taskMove = result.taskMoves.find((m) => m.taskId === 'stale-child')
+    expect(taskMove?.parentId).toBe(thursday.id)
   })
 
   it('9: first-ever launch (empty marker) stays metadata-only — no group moves', () => {

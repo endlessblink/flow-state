@@ -1,8 +1,8 @@
 # FlowState MASTER_PLAN.md
 
-### BUG-2040: Board drag-end resync flashes tasks between lanes (🔄 IN PROGRESS)
+### ~~BUG-2040~~: Board drag-end resync flashes tasks between lanes (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-24)
 
 Dragging a task across Board lanes briefly emptied every column before restoring the task snapshot, which made cards visibly jump between lanes while the async save completed. The fix must preserve the current DOM through one-pass resync and cover status, priority, category, date, list, reorder, create, filter, completion, selection, and delete actions.
 

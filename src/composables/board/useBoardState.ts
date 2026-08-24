@@ -175,11 +175,9 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const tomorrow = addDays(today, 1)
-    const weekendStart = getUpcomingFriday(today)
-    const weekendEnd = addDays(weekendStart, 2)
-    const nextWeekStart = getNextMonday(today)
-    const nextWeekEnd = addDays(nextWeekStart, 6)
-    const afterNextWeekStart = addDays(nextWeekEnd, 1)
+    // The board's week ends on Sunday. On Sunday, today is the end of this
+    // week; tomorrow starts the next one.
+    const weekEnd = today.getDay() === 0 ? today : addDays(today, 7 - today.getDay())
 
     // BUG-1935: One arm for both the dueDate and the instance path, so they cannot drift apart.
     const bucketForDate = (date: Date): keyof typeof result => {
@@ -187,10 +185,7 @@ export function groupTasksByDate(tasks: Task[], hideDoneTasks: boolean = false) 
         // BUG-1455: Always show tomorrow's tasks in Tomorrow column,
         // even when tomorrow falls on a weekend day
         if (isSameDay(date, tomorrow)) return 'tomorrow'
-        if ((date >= weekendStart && date <= weekendEnd) || (date >= nextWeekStart && date <= nextWeekEnd)) return 'thisWeek'
-        if (date >= afterNextWeekStart) return 'later'
-        // Between today and weekend/next week but not matching specific buckets
-        return 'thisWeek'
+        return date <= weekEnd ? 'thisWeek' : 'later'
     }
 
     tasks.forEach(task => {

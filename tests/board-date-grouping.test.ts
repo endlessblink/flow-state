@@ -333,6 +333,14 @@ describe('groupTasksByDate', () => {
     expect(result.thisWeek).toHaveLength(1)
   })
 
+  it('keeps the following Monday out of thisWeek', () => {
+    mockToday(2026, 8, 24) // Monday August 24
+    const task = makeTask({ dueDate: '2026-08-31' }) // Following Monday
+    const result = groupTasksByDate([task])
+    expect(result.thisWeek).toHaveLength(0)
+    expect(result.later).toHaveLength(1)
+  })
+
   // ---- HIDE DONE TASKS ----
 
   it('hideDoneTasks=true: done tasks still appear in date bucket but NOT in noDate', () => {

@@ -25,7 +25,7 @@
       <button
         v-if="showRemoveFromCanvas"
         class="action-btn action-btn--canvas"
-        @click="$emit('remove-from-canvas')"
+        @click="$emit('removeFromCanvas')"
       >
         <LayoutDashboard :size="20" class="action-icon action-icon--canvas" />
         <div class="action-text">
@@ -94,7 +94,7 @@ defineEmits<{
   skip: []
   stop: []
   cancel: []
-  'remove-from-canvas': []
+  removeFromCanvas: []
 }>()
 
 const ruleDescription = computed(() => {
@@ -150,14 +150,15 @@ const ruleDescription = computed(() => {
 
 .action-btn {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   width: 100%;
-  min-height: 4.25rem;
+  min-height: max(4.25rem, 4.75em);
   box-sizing: border-box;
   padding: var(--space-4) var(--space-4);
   font: inherit;
   line-height: normal;
+  overflow: visible;
   /* Glass surface — slightly brighter than the modal body so the buttons read as primary actions. */
   background: rgba(45, 40, 70, 0.55);
   backdrop-filter: blur(8px);
@@ -251,6 +252,7 @@ const ruleDescription = computed(() => {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   line-height: 1.4;
+  white-space: normal;
 }
 
 .modal-actions {

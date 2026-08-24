@@ -113,6 +113,10 @@ async function initializeApp() {
   app.use(pinia)
   app.use(router)
   app.use(i18n)
+  // Preserve deep links across a hard reload: mount only after the hash route
+  // has been resolved, otherwise the app can render the default Canvas route
+  // while the browser URL still points at Catalog or another view.
+  await router.isReady()
 
   // Global error handler for extension compatibility
   app.config.errorHandler = (err, _vm, info) => {

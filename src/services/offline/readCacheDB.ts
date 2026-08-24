@@ -303,7 +303,15 @@ export async function getCachedProjects(): Promise<Project[] | null> {
     const ageMin = Math.round(ageMs / 60_000)
 
     console.log(`📦 [READ-CACHE] Loaded ${projects.length} projects from cache (${ageMin}min old)`)
-    return projects
+    return projects.map(project => ({
+      ...project,
+      createdAt: project.createdAt instanceof Date
+        ? project.createdAt
+        : new Date(project.createdAt as unknown as string | number),
+      updatedAt: project.updatedAt instanceof Date
+        ? project.updatedAt
+        : new Date(project.updatedAt as unknown as string | number),
+    }))
   } catch (e) {
     console.warn('[READ-CACHE] Failed to read cached projects:', e)
     return null

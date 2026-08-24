@@ -84,6 +84,30 @@ describe('Electron Local API session replay runtime', () => {
     await shutdown
   })
 
+  it('starts an enabled sidecar during registration before renderer auth IPC arrives', async () => {
+    writeFileSync(sourceSidecarFixture, '')
+    writeFileSync(join(runtime.userData, 'local-api.json'), JSON.stringify({
+      enabled: true,
+      token: 'synthetic-local-api-token',
+      port: 5577,
+    }))
+    const { registerLocalApiHandlers, shutdownLocalApi } = await import('../../../electron/ipc/localApi')
+    registerLocalApiHandlers()
+
+    expect(runtime.children).toHaveLength(1)
+    expect(runtime.handlers.get('localApi:status')?.({})).toMatchObject({
+      enabled: true,
+      childRunning: true,
+      listening: false,
+      hasLatestSession: false,
+    })
+
+    const child = runtime.children[0]
+    const shutdown = shutdownLocalApi()
+    child.emit('exit', 0, null)
+    await shutdown
+  })
+
   it('waits for the stopping child to exit before forking one coalesced replacement', async () => {
     writeFileSync(sourceSidecarFixture, '')
     const { registerLocalApiHandlers, shutdownLocalApi } = await import('../../../electron/ipc/localApi')

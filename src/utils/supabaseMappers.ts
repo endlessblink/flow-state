@@ -554,6 +554,7 @@ export function fromSupabaseProject(record: SupabaseProject): Project {
     emoji: record.color_type === "emoji" ? record.color : undefined,
     viewType: (record.view_type as Project["viewType"]) || "status",
     parentId: record.parent_id || null,
+    order: record.order ?? 0,
     createdAt: new Date(record.created_at || Date.now()),
     updatedAt: new Date(record.updated_at || Date.now()),
     workspaceId: record.workspace_id || null,

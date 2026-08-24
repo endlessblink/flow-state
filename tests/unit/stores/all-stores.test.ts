@@ -207,6 +207,20 @@ describe('Projects Store', () => {
     // After update, updatedAt should be refreshed
     expect(updated?.updatedAt).toBeInstanceOf(Date)
   })
+
+  it('reorders same-level projects and persists their sibling order', async () => {
+    const store = useProjectStore()
+    const home = await store.createProject({ name: 'Home' })
+    const work = await store.createProject({ name: 'Work' })
+    const personal = await store.createProject({ name: 'Personal' })
+
+    await store.reorderProject(personal.id, home.id, 'before')
+
+    expect(store.rootProjects.map(project => project.id)).toEqual([personal.id, home.id, work.id])
+    expect(store._rawProjects.find(project => project.id === personal.id)?.order).toBe(0)
+    expect(store._rawProjects.find(project => project.id === home.id)?.order).toBe(1)
+    expect(store._rawProjects.find(project => project.id === work.id)?.order).toBe(2)
+  })
 })
 
 // ============================================================================

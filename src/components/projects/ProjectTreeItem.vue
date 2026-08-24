@@ -128,7 +128,12 @@ const isExpanded = computed(() => {
 
 // Get children of this project
 const children = computed(() => {
-  return taskStore.projects.filter(p => p.parentId === props.project.id)
+  return taskStore.projects
+    .filter(p => p.parentId === props.project.id)
+    .sort((left, right) => {
+      const orderDifference = (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER)
+      return orderDifference || left.createdAt.getTime() - right.createdAt.getTime()
+    })
 })
 
 // Toggle expansion

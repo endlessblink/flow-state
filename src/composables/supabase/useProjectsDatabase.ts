@@ -47,6 +47,7 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
 
                     const { data, error } = await query
                         .or('is_deleted.is.null,is_deleted.eq.false')
+                        .order('order', { ascending: true })
                         .order('created_at', { ascending: true })
 
                     if (error) throw error

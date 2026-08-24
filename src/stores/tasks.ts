@@ -558,6 +558,7 @@ export const useTaskStore = defineStore('tasks', () => {
     activeProjectId: computed(() => projectStore.activeProjectId),
     createProject: projectStore.createProject,
     updateProject: projectStore.updateProject,
+    reorderProject: projectStore.reorderProject,
     deleteProject: projectStore.deleteProject,
     deleteProjects: projectStore.deleteProjects,
     setProjectColor: projectStore.setProjectColor,

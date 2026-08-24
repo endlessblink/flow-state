@@ -236,7 +236,6 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
     // persisted task membership from stale rendered coordinates.
     const rehomedParents = collectDayGroupAdoptions(taskStore.rawTasks, groups, {
       mode: 'spatial',
-      allowReparented: false,
     })
     const layoutTasks = taskStore.rawTasks.filter((task) => {
       if (!task.canvasPosition && !rehomedParents.has(task.id)) return false

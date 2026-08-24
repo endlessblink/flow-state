@@ -129,7 +129,10 @@
                 </button>
                 <button
                   class="timer-btn timer-break"
-                  title="Start 5-min break"
+                  :class="{ 'timer-break-recommended': timerStore.hasPendingBreak }"
+                  :title="timerStore.hasPendingBreak ? 'Start break now (recommended)' : 'Start 5-min break'"
+                  aria-label="Start break"
+                  data-testid="timer-start-break"
                   @click="startShortBreak"
                 >
                   <Coffee :size="16" :stroke-width="1.5" class="coffee-stroke" />

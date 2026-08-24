@@ -629,6 +629,53 @@ describe('Timer State Machine — Session Completion', () => {
     expect(store.completedSessions.length).toBeGreaterThanOrEqual(1)
   })
 
+  it('21b. completed work offers a break, then starts the next work session after 90 seconds', async () => {
+    const store = useTimerStore()
+    await flushPromises()
+
+    await store.startTimer('task-001', 2, false)
+    await vi.advanceTimersByTimeAsync(3000)
+    await flushPromises()
+
+    expect(store.currentSession).toBeNull()
+    expect(store.hasPendingBreak).toBe(true)
+
+    await vi.advanceTimersByTimeAsync(86_000)
+    expect(store.currentSession).toBeNull()
+
+    await vi.advanceTimersByTimeAsync(4_000)
+    await flushPromises()
+    expect(store.currentSession?.isBreak).toBe(false)
+    expect(store.currentSession?.taskId).toBe('task-001')
+    expect(store.hasPendingBreak).toBe(false)
+  })
+
+  it('21c. starting the break cancels the automatic work restart', async () => {
+    const store = useTimerStore()
+    await flushPromises()
+
+    await store.startTimer('task-001', 2, false)
+    await vi.advanceTimersByTimeAsync(3000)
+    await flushPromises()
+    await store.startTimer('break', 300, true)
+    await vi.advanceTimersByTimeAsync(90_000)
+
+    expect(store.currentSession?.isBreak).toBe(true)
+    expect(store.hasPendingBreak).toBe(false)
+  })
+
+  it('21d. manually stopping work never schedules an automatic restart', async () => {
+    const store = useTimerStore()
+    await flushPromises()
+
+    await store.startTimer('task-001', 60, false)
+    await store.stopTimer()
+    await vi.advanceTimersByTimeAsync(90_000)
+
+    expect(store.currentSession).toBeNull()
+    expect(store.hasPendingBreak).toBe(false)
+  })
+
   it('22. completedSessions count increments after each completed work session', async () => {
     const store = useTimerStore()
     await flushPromises()

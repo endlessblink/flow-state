@@ -6,6 +6,7 @@
       class="select-trigger"
       :class="{ 'is-open': isOpen }"
       role="combobox"
+      :aria-label="ariaLabel"
       :aria-expanded="isOpen"
       aria-haspopup="listbox"
       @click="toggleDropdown"
@@ -69,11 +70,13 @@ interface Props {
   options: SelectOption[]
   placeholder?: string
   compact?: boolean
+  ariaLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   placeholder: 'Select...',
-  compact: false
+  compact: false,
+  ariaLabel: undefined
 })
 
 const emit = defineEmits<{

@@ -1,8 +1,10 @@
 <template>
-  <div class="filter-controls">
+  <div class="filter-controls" :class="{ 'filter-controls--compact': props.compact }">
     <!-- Project Filter -->
-    <div class="filter-control">
+    <div class="filter-control" title="Projects">
+      <Folder :size="16" class="filter-icon" aria-hidden="true" />
       <CustomSelect
+        aria-label="Projects"
         :model-value="activeProjectId || ''"
         :options="projectOptions"
         placeholder="All Projects"
@@ -11,8 +13,10 @@
     </div>
 
     <!-- Smart View Filter -->
-    <div class="filter-control">
+    <div class="filter-control" title="Smart views">
+      <ListFilter :size="16" class="filter-icon" aria-hidden="true" />
       <CustomSelect
+        aria-label="Smart views"
         :model-value="activeSmartView || ''"
         :options="smartViewOptions"
         placeholder="All Tasks"
@@ -21,8 +25,10 @@
     </div>
 
     <!-- Status Filter -->
-    <div class="filter-control">
+    <div class="filter-control" title="Status">
+      <CircleDot :size="16" class="filter-icon" aria-hidden="true" />
       <CustomSelect
+        aria-label="Status"
         :model-value="activeStatusFilter || ''"
         :options="statusOptions"
         placeholder="All Status"
@@ -30,8 +36,10 @@
       />
     </div>
 
-    <div v-if="props.priorityFilter !== undefined" class="filter-control">
+    <div v-if="props.priorityFilter !== undefined" class="filter-control" title="Priority">
+      <Flag :size="16" class="filter-icon" aria-hidden="true" />
       <CustomSelect
+        aria-label="Priority"
         :model-value="props.priorityFilter"
         :options="priorityOptions"
         placeholder="All Priorities"
@@ -39,8 +47,10 @@
       />
     </div>
 
-    <div v-if="props.showRecurringFilter" class="filter-control">
+    <div v-if="props.showRecurringFilter" class="filter-control" title="Recurring tasks">
+      <Repeat2 :size="16" class="filter-icon" aria-hidden="true" />
       <CustomSelect
+        aria-label="Recurring tasks"
         :model-value="props.recurringFilter || 'all'"
         :options="recurringOptions"
         placeholder="All Tasks"
@@ -49,8 +59,10 @@
     </div>
 
     <!-- Assignment Filter (workspace only) -->
-    <div v-if="!isPersonalWorkspace" class="filter-control">
+    <div v-if="!isPersonalWorkspace" class="filter-control" title="Assignment">
+      <Users :size="16" class="filter-icon" aria-hidden="true" />
       <CustomSelect
+        aria-label="Assignment"
         :model-value="assignmentFilterMode"
         :options="assignmentOptions"
         placeholder="All Tasks"
@@ -66,9 +78,12 @@
     <!-- Clear Filters -->
     <button
       class="clear-filters-btn"
+      type="button"
+      title="Clear filters"
+      aria-label="Clear filters"
       @click="clearAllFilters"
     >
-      Clear
+      <X :size="14" aria-hidden="true" />
     </button>
   </div>
 </template>
@@ -79,6 +94,7 @@ import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/tasks'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useAssignmentFilter, type AssignmentFilterMode } from '@/composables/workspace/useTaskAssignment'
+import { CircleDot, Flag, Folder, ListFilter, Repeat2, Users, X } from 'lucide-vue-next'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import SavedViewsDropdown from '@/components/filters/SavedViewsDropdown.vue'
 
@@ -86,6 +102,7 @@ const props = defineProps<{
   priorityFilter?: string
   recurringFilter?: string
   showRecurringFilter?: boolean
+  compact?: boolean
 }>()
 
 defineEmits<{
@@ -194,10 +211,62 @@ const clearAllFilters = () => {
 
 /* Filter control containers */
 .filter-control {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   min-width: 120px;
+}
+
+.filter-icon {
+  display: none;
+}
+
+.filter-controls--compact {
+  gap: var(--space-2);
+  padding-inline: var(--space-2);
+}
+
+.filter-controls--compact .filter-control {
+  width: 36px;
+  min-width: 36px;
+  height: 32px;
+  justify-content: center;
+}
+
+.filter-controls--compact .filter-icon {
+  display: block;
+  position: absolute;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.filter-controls--compact .filter-control:focus-within .filter-icon,
+.filter-controls--compact .filter-control:hover .filter-icon {
+  color: var(--text-primary);
+}
+
+.filter-controls--compact :deep(.custom-select),
+.filter-controls--compact :deep(.select-trigger) {
+  width: 100%;
+  height: 32px;
+}
+
+.filter-controls--compact :deep(.select-trigger) {
+  justify-content: center;
+  padding-inline: 0;
+  border-color: var(--border-subtle);
+}
+
+.filter-controls--compact :deep(.select-value) {
+  display: none;
+}
+
+.filter-controls--compact :deep(.select-icon) {
+  display: none;
 }
 
 /* Clear button styling - matches CustomSelect height (22px) */

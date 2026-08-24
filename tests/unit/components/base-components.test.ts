@@ -173,6 +173,12 @@ vi.mock('lucide-vue-next', () => {
     Minus: stub,
     CheckSquare: stub,
     GitCompare: stub,
+    CircleDot: stub,
+    Flag: stub,
+    Folder: stub,
+    ListFilter: stub,
+    Repeat2: stub,
+    Users: stub,
   }
 })
 
@@ -944,7 +950,14 @@ describe('FilterControls', () => {
   it('71. renders clear button', () => {
     const wrapper = mountWithPlugins(FilterControls)
     expect(wrapper.find('.clear-filters-btn').exists()).toBe(true)
-    expect(wrapper.find('.clear-filters-btn').text()).toBe('Clear')
+    expect(wrapper.find('.clear-filters-btn').attributes('aria-label')).toBe('Clear filters')
+  })
+
+  it('renders compact filter controls with accessible labels', () => {
+    const wrapper = mountWithPlugins(FilterControls, { props: { compact: true } })
+    expect(wrapper.find('.filter-controls--compact').exists()).toBe(true)
+    expect(wrapper.findAll('.filter-icon')).toHaveLength(3)
+    expect(wrapper.findAll('[role="combobox"]')[0].attributes('aria-label')).toBe('Projects')
   })
 
   it('72. renders all filter control slots', () => {

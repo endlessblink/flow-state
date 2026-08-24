@@ -60,6 +60,7 @@
           :priority-filter="priorityFilter"
           :recurring-filter="recurringFilter"
           show-recurring-filter
+          compact
           @update:priority-filter="priorityFilter = $event"
           @update:recurring-filter="setRecurringFilter"
         />

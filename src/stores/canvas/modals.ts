@@ -22,7 +22,7 @@ export const useCanvasModalsStore = defineStore('canvasModals', () => {
     // TASK-1428: Inherited properties from group (pre-fills modal form)
     const groupInheritedProps = ref<{
         dueDate?: string
-        priority?: 'low' | 'medium' | 'high'
+  priority?: 'immediate' | 'low' | 'medium' | 'high' | 'relaxed'
         status?: string
         projectId?: string
         estimatedDuration?: number

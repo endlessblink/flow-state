@@ -93,6 +93,13 @@
               Low
             </button>
             <button
+              class="priority-btn relaxed"
+              :class="{ active: newTask.priority === 'relaxed' }"
+              @click="newTask.priority = 'relaxed'"
+            >
+              Relaxed
+            </button>
+            <button
               class="priority-btn medium"
               :class="{ active: newTask.priority === 'medium' }"
               @click="newTask.priority = 'medium'"
@@ -105,6 +112,13 @@
               @click="newTask.priority = 'high'"
             >
               High
+            </button>
+            <button
+              class="priority-btn immediate"
+              :class="{ active: newTask.priority === 'immediate' }"
+              @click="newTask.priority = 'immediate'"
+            >
+              Immediate
             </button>
           </div>
         </div>
@@ -367,7 +381,7 @@ const handlePaste = async (e: ClipboardEvent) => {
 const newTask = reactive<{
   title: string
   description: string | undefined
-  priority: 'low' | 'medium' | 'high' | undefined
+  priority: 'immediate' | 'high' | 'medium' | 'low' | 'relaxed' | undefined
   dueDate: string | undefined
   projectId: string | undefined
   estimatedDuration: number | undefined

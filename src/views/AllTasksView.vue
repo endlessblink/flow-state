@@ -144,7 +144,7 @@ import type { Task, GroupByType, TaskGroup, TaskPriority } from '@/types/tasks'
 
 type CreateTaskDefaults = {
   dueDate?: string
-  priority?: 'low' | 'medium' | 'high'
+  priority?: 'immediate' | 'low' | 'medium' | 'high' | 'relaxed'
   status?: string
   projectId?: string
   estimatedDuration?: number

@@ -9,6 +9,8 @@
  * @see docs/sop/OFFLINE-SYNC-ARCHITECTURE.md
  */
 
+import type { TaskPriority } from '@/types/tasks'
+
 /**
  * Entity types that can be synced
  */
@@ -34,7 +36,7 @@ export interface CanonicalTaskReadBack {
   id: string
   title: string
   description: string | null
-  priority: 'low' | 'medium' | 'high' | null
+  priority: TaskPriority
   dueDate: string | null
   progress: number
   status: string
@@ -69,7 +71,7 @@ export interface CanonicalTaskPatchState {
   patch: Partial<{
     title: string
     description: string | null
-    priority: 'low' | 'medium' | 'high' | null
+    priority: TaskPriority
     dueDate: string | null
     progress: number
   }>

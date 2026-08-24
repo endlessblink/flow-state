@@ -332,7 +332,7 @@ const setQuickDate = (preset: 'today' | 'tomorrow' | 'weekend' | 'nextweek') => 
 }
 
 const updatePriority = (value: string | number) => {
-  const newTask = { ...props.modelValue, priority: value as 'low' | 'medium' | 'high' }
+  const newTask = { ...props.modelValue, priority: value as 'immediate' | 'low' | 'medium' | 'high' | 'relaxed' }
   emit('update:modelValue', newTask)
 }
 

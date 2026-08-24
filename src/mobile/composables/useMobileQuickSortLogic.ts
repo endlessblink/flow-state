@@ -86,7 +86,7 @@ export function useMobileQuickSortLogic() {
 
   // Capture phase state
   const newTaskTitle = ref('')
-  const newTaskPriority = ref<'low' | 'medium' | 'high' | undefined>()
+  const newTaskPriority = ref<'immediate' | 'low' | 'medium' | 'high' | 'relaxed' | undefined>()
   const newTaskDue = ref<'today' | 'tomorrow' | undefined>()
   const recentlyAdded = ref<Task[]>([])
   const captureInputRef = ref<HTMLInputElement | null>(null)
@@ -331,7 +331,7 @@ export function useMobileQuickSortLogic() {
     triggerHaptic('heavy')
   }
 
-  async function setPriority(priority: 'low' | 'medium' | 'high') {
+  async function setPriority(priority: 'immediate' | 'low' | 'medium' | 'high' | 'relaxed') {
     if (!currentTask.value || isRescheduling.value) return
     await taskStore.updateTask(currentTask.value.id, { priority })
     triggerHaptic('light')
@@ -370,7 +370,7 @@ export function useMobileQuickSortLogic() {
     triggerHaptic('heavy')
   }
 
-  function setPriorityAndClose(priority: 'low' | 'medium' | 'high') {
+  function setPriorityAndClose(priority: 'immediate' | 'low' | 'medium' | 'high' | 'relaxed') {
     setPriority(priority)
     showQuickEditPanel.value = false
   }

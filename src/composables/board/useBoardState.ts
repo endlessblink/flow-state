@@ -23,7 +23,7 @@ export function sortTasksForBoard(tasks: Task[], sortOption: BoardSortOption = '
     if (sortOption === 'manual') return sortTasksBySharedOrder(orderedTasks)
 
     return orderedTasks.sort((a, b) => {
-        const priorityDifference = (a.priority ? priorityRank[a.priority] : 4) - (b.priority ? priorityRank[b.priority] : 4)
+  const priorityDifference = (a.priority ? priorityRank[a.priority] : 5) - (b.priority ? priorityRank[b.priority] : 5)
         if (priorityDifference !== 0) return priorityDifference
         return sortTasksBySharedOrder([a, b])[0]?.id === a.id ? -1 : 1
     })

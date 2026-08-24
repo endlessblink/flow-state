@@ -210,7 +210,7 @@ interface Props {
   // TASK-1428: Properties inherited from parent group (pre-fills form)
   inheritedProps?: {
     dueDate?: string
-    priority?: 'low' | 'medium' | 'high'
+  priority?: 'immediate' | 'low' | 'medium' | 'high' | 'relaxed'
     status?: string
     projectId?: string
     estimatedDuration?: number
@@ -247,7 +247,7 @@ const dateInputRef = ref<HTMLInputElement>()
 const taskTitle = ref('')
 const taskDescription = ref('')
 const status = ref<string>('todo')
-const priority = ref<'low' | 'medium' | 'high'>('medium')
+const priority = ref<'immediate' | 'low' | 'medium' | 'high' | 'relaxed'>('medium')
 const projectId = ref<string>('')
 const localDate = ref('')
 

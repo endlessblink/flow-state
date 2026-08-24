@@ -18,7 +18,7 @@ export interface PendingTask {
   id: string
   title: string
   description?: string
-  priority?: 'low' | 'medium' | 'high'
+  priority?: 'immediate' | 'low' | 'medium' | 'high' | 'relaxed'
   dueDate?: string
   projectId?: string
 }

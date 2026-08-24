@@ -115,11 +115,13 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    margin-bottom: var(--space-1);
+    align-self: flex-start;
+    margin-top: 2px;
     color: var(--color-work);
     font-size: var(--text-meta);
     font-weight: 600;
     letter-spacing: 0.02em;
+    white-space: nowrap;
 }
 
 .timer-running-dot {

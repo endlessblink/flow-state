@@ -45,7 +45,7 @@
     >
       <!-- Loading overlay while canvas initializes -->
       <CanvasLoadingOverlay 
-        v-if="!isCanvasReady && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0"
+        v-if="(!isCanvasReady || !startupLayoutReady) && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0"
         message="Loading canvas..."
       />
 
@@ -103,7 +103,7 @@
           :nodes="nodes"
           :edges="edges"
           :apply-default="false"
-          :class="{ 'canvas-ready': isCanvasReady }"
+          :class="{ 'canvas-ready': isCanvasReady && startupLayoutReady, 'canvas-startup-pending': !startupLayoutReady }"
           class="vue-flow-container"
           :node-types="nodeTypes"
           edges-focusable
@@ -240,7 +240,7 @@
         <CanvasSelectionBox :selection-box="selectionBox" />
 
         <CanvasLoadingOverlay
-          v-if="!isCanvasReady"
+          v-if="!isCanvasReady || (!hasNoTasks && !startupLayoutReady)"
           message="Initializing Canvas..."
         />
 
@@ -516,6 +516,12 @@ let startupLayoutRepairAttempted = false
 let startupLayoutRepairAttempts = 0
 let startupRepairTaskSignature: string | null = null
 let startupRepairStableSignaturePasses = 0
+const startupLayoutReady = ref(false)
+
+function finishStartupLayout() {
+  startupLayoutRepairAttempted = true
+  startupLayoutReady.value = true
+}
 function hasOverlappingRenderedTasks() {
   const canvasNodes = getNodes.value as unknown as CanvasNodeRecord[]
   const taskRects: Array<{ left: number; top: number; right: number; bottom: number }> = []
@@ -598,7 +604,7 @@ async function repairOverlappingStartupLayout() {
     return
   }
   if (!hasSmartDayGroup) {
-    startupLayoutRepairAttempted = true
+    finishStartupLayout()
     return
   }
   const taskSignature = (getNodes.value as unknown as CanvasNodeRecord[])
@@ -652,11 +658,19 @@ async function repairOverlappingStartupLayout() {
     return
   }
   const renderedOverlap = hasOverlappingRenderedTasks()
-  startupLayoutRepairAttempted = true
-  if (!persistedOverlap && !renderedOverlap) return
-  if (!renderedOverlap) return
+  if (!persistedOverlap && !renderedOverlap) {
+    finishStartupLayout()
+    return
+  }
+  if (!renderedOverlap) {
+    finishStartupLayout()
+    return
+  }
   console.warn('[CANVAS:STARTUP-REPAIR] Overlapping task cards detected; applying canonical Tidy layout')
   await handleTidyLayout()
+  await nextTick()
+  await nextTick()
+  finishStartupLayout()
 }
 
 const dayRotation = useDayGroupRotation({
@@ -1303,6 +1317,9 @@ const tasksWithCanvasPositions = tasksWithCanvasPosition
 const handleToolbarCreateGroup = createGroup
 const handleAddTask = () => createTaskHere()
 const clearStatusFilter = () => { taskStore.activeStatusFilter = null }
+watch(hasNoTasks, (empty) => {
+  if (empty) finishStartupLayout()
+}, { immediate: true })
 // UI Wrappers
 const handleOpenSectionSettings = (id: string) => {
     const section = canvasStore.groups.find(g => g.id === id)

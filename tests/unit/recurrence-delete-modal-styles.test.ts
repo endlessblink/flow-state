@@ -67,4 +67,13 @@ describe('BUG-1783: RecurrenceDeleteModal action button contrast', () => {
     expect(MODAL_SRC).toMatch(/\.action-btn--skip\s+\.action-label\s*\{[^}]*color:\s*var\(--brand-primary\)/)
     expect(MODAL_SRC).toMatch(/\.action-btn--stop\s+\.action-label\s*\{[^}]*color:\s*var\(--color-danger\)/)
   })
+  it('keeps each action row tall enough for its label and hint', () => {
+    const css = ruleBody('.action-btn')
+    expect(css).toMatch(/min-height:\s*4\.25rem/)
+    expect(css).toMatch(/font:\s*inherit/)
+    expect(css).toMatch(/line-height:\s*normal/)
+    expect(MODAL_SRC).toMatch(/\.action-text\s*\{[^}]*flex:\s*1 1 auto/)
+    expect(MODAL_SRC).toMatch(/\.action-label\s*\{[^}]*display:\s*block/)
+    expect(MODAL_SRC).toMatch(/\.action-hint\s*\{[^}]*display:\s*block/)
+  })
 })

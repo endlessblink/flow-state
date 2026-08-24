@@ -153,8 +153,11 @@ const ruleDescription = computed(() => {
   align-items: center;
   gap: var(--space-3);
   width: 100%;
+  min-height: 4.25rem;
   box-sizing: border-box;
   padding: var(--space-4) var(--space-4);
+  font: inherit;
+  line-height: normal;
   /* Glass surface — slightly brighter than the modal body so the buttons read as primary actions. */
   background: rgba(45, 40, 70, 0.55);
   backdrop-filter: blur(8px);
@@ -222,10 +225,12 @@ const ruleDescription = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  flex: 1 1 auto;
   min-width: 0;
 }
 
 .action-label {
+  display: block;
   font-size: var(--text-base);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
@@ -242,6 +247,7 @@ const ruleDescription = computed(() => {
 }
 
 .action-hint {
+  display: block;
   font-size: var(--text-xs);
   color: var(--text-secondary);
   line-height: 1.4;

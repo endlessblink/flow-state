@@ -258,10 +258,10 @@ const sortedTasks = computed(() => {
         return dir * (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
       })
     case 'priority': {
-      const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
+      const priorityOrder: Record<string, number> = { immediate: 0, high: 1, medium: 2, low: 3, relaxed: 4 }
       return tasks.sort((a, b) => {
-        const aPriority = a.priority ? priorityOrder[a.priority] : 3
-        const bPriority = b.priority ? priorityOrder[b.priority] : 3
+        const aPriority = a.priority ? (priorityOrder[a.priority] ?? 5) : 5
+        const bPriority = b.priority ? (priorityOrder[b.priority] ?? 5) : 5
         return dir * (aPriority - bPriority)
       })
     }
@@ -411,11 +411,13 @@ const groupedTasks = computed((): TaskGroup[] => {
       }
     })
   } else if (groupBy.value === 'priority') {
-    const priorityOrder = ['high', 'medium', 'low', 'none']
+    const priorityOrder = ['immediate', 'high', 'medium', 'low', 'relaxed', 'none']
     const priorityLabels: Record<string, string> = {
+      immediate: 'Immediate',
       high: 'High Priority',
       medium: 'Medium Priority',
       low: 'Low Priority',
+      relaxed: 'Relaxed',
       none: 'No Priority'
     }
     const priorityMap = new Map<string, Task[]>()

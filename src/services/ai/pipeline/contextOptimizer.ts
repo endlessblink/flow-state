@@ -170,15 +170,15 @@ export function optimizeTaskContext(
   }
 
   // Pass 5: Everything else, sorted by priority descending
-  const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+    const priorityOrder: Record<string, number> = { immediate: 0, high: 1, medium: 2, low: 3, relaxed: 4 }
   for (const t of openTasks) {
     if (!placed.has(t.id)) {
       other.push(t)
     }
   }
   other.sort((a, b) => {
-    const aPri = priorityOrder[a.priority || ''] ?? 4
-    const bPri = priorityOrder[b.priority || ''] ?? 4
+    const aPri = priorityOrder[a.priority || ''] ?? 5
+    const bPri = priorityOrder[b.priority || ''] ?? 5
     return aPri - bPri
   })
 

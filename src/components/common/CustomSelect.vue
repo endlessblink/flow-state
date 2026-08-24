@@ -45,10 +45,17 @@
             @click="selectOption(option)"
             @mouseenter="focusedIndex = index"
           >
-            <span
-              v-if="isPriorityValue(option.value)"
-              class="select-option__priority-dot"
-              :class="`select-option__priority-dot--${option.value}`"
+            <Flag
+              v-if="option.icon === 'priority' || isPriorityValue(option.value)"
+              :size="15"
+              class="select-option__priority-icon"
+              :class="`select-option__priority-icon--${option.value || 'all'}`"
+              aria-hidden="true"
+            />
+            <CircleOff
+              v-else-if="option.icon === 'none' || String(option.value) === 'none'"
+              :size="15"
+              class="select-option__priority-icon select-option__priority-icon--none"
               aria-hidden="true"
             />
             <span class="select-option__label">{{ option.label }}</span>
@@ -62,12 +69,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { ChevronDown, Check } from 'lucide-vue-next'
+import { ChevronDown, Check, CircleOff, Flag } from 'lucide-vue-next'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 
 interface SelectOption {
   label: string
   value: string | number
+  icon?: 'priority' | 'none'
 }
 
 interface Props {
@@ -357,19 +365,18 @@ watch(isOpen, (newVal) => {
   flex: 1;
 }
 
-.select-option__priority-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.select-option__priority-icon {
   flex: 0 0 auto;
+  stroke-width: 2.4;
 }
 
-.select-option__priority-dot--immediate { background: var(--color-danger); }
-.select-option__priority-dot--high { background: var(--color-priority-high); }
-.select-option__priority-dot--medium { background: var(--color-priority-medium); }
-.select-option__priority-dot--low { background: var(--color-priority-low); }
-.select-option__priority-dot--relaxed,
-.select-option__priority-dot--none { background: var(--text-muted); }
+.select-option__priority-icon--all,
+.select-option__priority-icon--immediate { color: var(--color-danger); }
+.select-option__priority-icon--high { color: var(--color-priority-high); }
+.select-option__priority-icon--medium { color: var(--color-priority-medium); }
+.select-option__priority-icon--low { color: var(--color-priority-low); }
+.select-option__priority-icon--relaxed { color: var(--color-priority-low); }
+.select-option__priority-icon--none { color: var(--text-muted); }
 
 .select-option__check {
   flex-shrink: 0;

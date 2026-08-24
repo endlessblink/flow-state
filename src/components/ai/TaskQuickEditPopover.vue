@@ -67,10 +67,12 @@ try {
 // ============================================================================
 
 const PRIORITY_OPTIONS = [
+  { value: 'immediate', label: 'Immediate', color: 'var(--color-danger)' },
   { value: 'high', label: 'H', color: 'var(--color-priority-high)' },
   { value: 'medium', label: 'M', color: 'var(--color-priority-medium)' },
   { value: 'low', label: 'L', color: 'var(--color-priority-low)' },
-  { value: null, label: '—', color: 'var(--glass-handle)' },
+  { value: 'relaxed', label: 'Relaxed', color: 'var(--color-priority-low)' },
+  { value: null, label: 'No Priority', color: 'var(--glass-handle)' },
 ] as const
 
 const STATUS_OPTIONS = [

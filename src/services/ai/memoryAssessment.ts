@@ -813,7 +813,7 @@ export function generateRecommendations(
   }
 
   // Sort: high > medium > low
-  const priorityOrder = { high: 0, medium: 1, low: 2 }
+    const priorityOrder = { immediate: 0, high: 1, medium: 2, low: 3, relaxed: 4 }
   recs.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
 
   return recs

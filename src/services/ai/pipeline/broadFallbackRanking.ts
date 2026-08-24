@@ -62,9 +62,10 @@ export function scoreBroadFallbackTask(task: Record<string, unknown>, recommenda
   let score = 0
 
   if (task.status === 'in_progress') score += 4
-  if (task.priority === 'urgent') score += 7
+  if (task.priority === 'immediate') score += 7
   if (task.priority === 'high') score += 5
   if (task.priority === 'medium') score += 2
+  if (task.priority === 'low' || task.priority === 'relaxed') score += 1
   if (String(task.description || '').trim()) score += 3
   if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום)/i.test(text)) score += 8
   if (/(treatment|medicine|dose|twice a day|טיפול|תרופה|מנה|מנות|אוראו|פעמיים ביום)/i.test(text)) score += 7

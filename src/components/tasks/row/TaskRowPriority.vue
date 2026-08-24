@@ -36,6 +36,11 @@
             ]"
             @click="selectPriority(option.value)"
           >
+            <span
+              class="priority-dropdown__dot"
+              :class="`priority-dropdown__dot--${option.value ?? 'none'}`"
+              aria-hidden="true"
+            />
             <span class="priority-dropdown__label">{{ option.label }}</span>
             <Check v-if="isOptionActive(option.value)" :size="14" class="priority-dropdown__check" />
           </button>
@@ -324,6 +329,20 @@ onBeforeUnmount(() => {
 .priority-dropdown__label {
   flex: 1;
 }
+
+.priority-dropdown__dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.priority-dropdown__dot--immediate { background: var(--color-danger); }
+.priority-dropdown__dot--high { background: var(--color-priority-high); }
+.priority-dropdown__dot--medium { background: var(--color-priority-medium); }
+.priority-dropdown__dot--low,
+.priority-dropdown__dot--relaxed { background: var(--color-priority-low); }
 
 .priority-dropdown__check {
   flex-shrink: 0;

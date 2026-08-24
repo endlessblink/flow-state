@@ -369,17 +369,19 @@ export function useMobileInboxLogic() {
                 }
                 case 'priority': {
                     const priorityColors: Record<string, string> = {
-                        critical: 'var(--color-danger)',
+                        immediate: 'var(--color-danger)',
                         high: 'var(--color-priority-high)',
                         medium: 'var(--color-priority-medium)',
-                        low: 'var(--color-success)',
-                        none: 'var(--color-neutral)'
+                        low: 'var(--color-priority-low)',
+                        relaxed: 'var(--color-priority-low)',
+                        none: 'var(--text-muted)'
                     }
                     const priorityLabels: Record<string, string> = {
-                        critical: 'Critical (P0)',
-                        high: 'High (P1)',
-                        medium: 'Medium (P2)',
-                        low: 'Low (P3)',
+                        immediate: 'Immediate',
+                        high: 'High',
+                        medium: 'Medium',
+                        low: 'Low',
+                        relaxed: 'Relaxed',
                         none: 'No Priority'
                     }
                     const priority = task.priority || 'none'
@@ -405,7 +407,7 @@ export function useMobileInboxLogic() {
             const dateOrder = ['overdue', 'today', 'this-week', 'later', 'no-date']
             sortedGroups.sort((a, b) => dateOrder.indexOf(a.key) - dateOrder.indexOf(b.key))
         } else if (groupBy.value === 'priority') {
-            const priorityOrder = ['critical', 'high', 'medium', 'low', 'none']
+            const priorityOrder = ['immediate', 'high', 'medium', 'low', 'relaxed', 'none']
             sortedGroups.sort((a, b) => priorityOrder.indexOf(a.key) - priorityOrder.indexOf(b.key))
         } else if (groupBy.value === 'project') {
             sortedGroups.sort((a, b) => {

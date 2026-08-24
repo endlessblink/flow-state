@@ -588,7 +588,7 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
 
       // Validate and normalize suggestions
       const validFields = new Set(['priority', 'dueDate', 'status', 'estimatedDuration'])
-      const validPriorities = new Set(['high', 'medium', 'low'])
+      const validPriorities = new Set(['immediate', 'high', 'medium', 'low', 'relaxed'])
       const validStatuses = new Set(['todo'])
       const validDurations = new Set([15, 30, 60, 90, 120])
 
@@ -669,7 +669,7 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
       const systemPrompt = `You suggest task metadata for multiple tasks. Return ONLY valid JSON.
 Format: { "tasks": [{ "taskId": "...", "contextQuestion": "..." | null, "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }] }
 Rules:
-- priority: "high", "medium", "low"
+      - priority: "immediate", "high", "medium", "low", "relaxed"
 - dueDate: "YYYY-MM-DD" (today or future only)
 - status: "todo"
 - estimatedDuration: minutes (15, 30, 60, 90, 120)
@@ -711,7 +711,7 @@ Rules:
 
       // Validate and normalize
       const validFields = new Set(['priority', 'dueDate', 'status', 'estimatedDuration'])
-      const validPriorities = new Set(['high', 'medium', 'low'])
+      const validPriorities = new Set(['immediate', 'high', 'medium', 'low', 'relaxed'])
       const validStatuses = new Set(['todo'])
       const validDurations = new Set([15, 30, 60, 90, 120])
       const taskMap = new Map(tasks.map(t => [t.id, t]))

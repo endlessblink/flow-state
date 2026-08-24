@@ -91,9 +91,9 @@ export function useAIQualityAssessment() {
           const aOverdue = a.dueDate && a.dueDate < today ? 1 : 0
           const bOverdue = b.dueDate && b.dueDate < today ? 1 : 0
           if (bOverdue !== aOverdue) return bOverdue - aOverdue
-          const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
-          const aPri = priorityOrder[a.priority || ''] ?? 4
-          const bPri = priorityOrder[b.priority || ''] ?? 4
+  const priorityOrder: Record<string, number> = { immediate: 0, high: 1, medium: 2, low: 3, relaxed: 4 }
+  const aPri = priorityOrder[a.priority || ''] ?? 5
+  const bPri = priorityOrder[b.priority || ''] ?? 5
           if (aPri !== bPri) return aPri - bPri
           return 0
         })

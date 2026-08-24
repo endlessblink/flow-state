@@ -224,11 +224,11 @@ const showGroupByDropdown = ref(false)
 
 // Priority options (for dropdown display)
 const priorityOptions = [
-  { value: 'immediate', label: 'Immediate (P0)' },
-  { value: 'high', label: 'High (P1)' },
-  { value: 'medium', label: 'Medium (P2)' },
-  { value: 'low', label: 'Low (P3)' },
-  { value: 'relaxed', label: 'Relaxed (P4)' },
+  { value: 'immediate', label: 'Immediate' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+  { value: 'relaxed', label: 'Relaxed' },
   { value: 'none', label: 'No Priority' }
 ]
 
@@ -467,11 +467,11 @@ const groupedTasks = computed((): TaskGroup[] => {
     // Group by priority
     const priorityOrder = ['immediate', 'high', 'medium', 'low', 'relaxed', 'none']
     const priorityLabels: Record<string, string> = {
-      immediate: 'Immediate (P0)',
-      high: 'High (P1)',
-      medium: 'Medium (P2)',
-      low: 'Low (P3)',
-      relaxed: 'Relaxed (P4)',
+      immediate: 'Immediate',
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
+      relaxed: 'Relaxed',
       none: 'No Priority'
     }
     const priorityMap = new Map<string, Task[]>()
@@ -699,10 +699,11 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   border-radius: var(--radius-full);
 }
 
-.priority-dot.critical { background: var(--color-priority-high); }
-.priority-dot.high { background: var(--color-priority-medium); }
-.priority-dot.medium { background: var(--color-warning); }
-.priority-dot.low { background: var(--color-success); }
+.priority-dot.immediate { background: var(--color-danger); }
+.priority-dot.high { background: var(--color-priority-high); }
+.priority-dot.medium { background: var(--color-priority-medium); }
+.priority-dot.low,
+.priority-dot.relaxed { background: var(--color-priority-low); }
 
 .clear-btn {
   display: flex;
@@ -738,10 +739,11 @@ const handleSaveTask = async (taskId: string, updates: Partial<Task>) => {
   border-radius: var(--radius-xs);
 }
 
-.priority-badge.critical { background: var(--danger-bg-subtle); color: var(--danger-text); }
-.priority-badge.high { background: var(--orange-bg-subtle); color: var(--color-priority-medium); }
-.priority-badge.medium { background: var(--brand-primary-subtle); color: var(--brand-primary); }
-.priority-badge.low { background: var(--surface-tertiary); color: var(--text-muted); }
+.priority-badge.immediate { background: var(--danger-bg-subtle); color: var(--danger-text); }
+.priority-badge.high { background: var(--orange-bg-subtle); color: var(--color-priority-high); }
+.priority-badge.medium { background: var(--brand-primary-subtle); color: var(--color-priority-medium); }
+.priority-badge.low,
+.priority-badge.relaxed { background: var(--surface-tertiary); color: var(--color-priority-low); }
 
 .project-badge {
   font-size: var(--text-xs);

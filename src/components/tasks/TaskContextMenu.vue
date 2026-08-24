@@ -439,7 +439,7 @@ const currentDueDateLabel = computed(() => {
 
 const currentPriorityLabel = computed(() => {
   const priority = currentTask.value?.priority
-  if (!priority) return ''
+  if (!priority) return 'No Priority'
   return priority.charAt(0).toUpperCase() + priority.slice(1)
 })
 
@@ -1341,6 +1341,8 @@ onUnmounted(() => {
 .priority-dot-sm.high { background: var(--color-priority-high); }
 .priority-dot-sm.medium { background: var(--color-priority-medium); }
 .priority-dot-sm.low { background: var(--color-priority-low); }
+.priority-dot-sm.immediate { background: var(--color-danger); }
+.priority-dot-sm.relaxed { background: var(--color-priority-low); }
 .priority-dot-sm.none { background: var(--text-muted); opacity: 0.4; }
 
 /* TASK-1485: Mark Done line is teal */

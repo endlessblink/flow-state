@@ -1,4 +1,4 @@
-import type { Task } from '@/types/tasks'
+import type { Task, TaskPriority } from '@/types/tasks'
 import type {
   AIClarificationArtifact,
   AIClarificationCoverage,
@@ -41,7 +41,7 @@ export type PlannerTaskSnapshot = {
   version: number
   title: string
   status: 'todo' | 'in_progress' | 'blocked' | 'done' | 'dismissed'
-  priority?: 'low' | 'medium' | 'high' | 'urgent'
+  priority?: Exclude<TaskPriority, null>
   dueIso?: string | null
   project?: {
     id: string
@@ -2452,9 +2452,9 @@ function selectCandidatePool(tasks: PlannerTaskSnapshot[]): PlannerTaskSnapshot[
 function scoreTask(task: PlannerTaskSnapshot): TaskSignals {
   const days = task.derived.daysUntilDue
   const dueSoon = days == null ? 0 : days < 0 ? 1 : days <= 2 ? 0.9 : days <= 7 ? 0.55 : 0.15
-  const urgency = Math.max(dueSoon, task.priority === 'urgent' ? 0.85 : 0, task.status === 'blocked' ? 0.55 : 0)
+  const urgency = Math.max(dueSoon, task.priority === 'immediate' ? 0.95 : 0, task.status === 'blocked' ? 0.55 : 0)
   const impact = Math.min(1,
-    0.25 * Number(task.priority === 'high' || task.priority === 'urgent') +
+    0.25 * Number(task.priority === 'immediate' || task.priority === 'high') +
     0.25 * Number(task.derived.hasHumanOrExternalStakeholder) +
     0.25 * Number(task.derived.hasMoneyClientHealthFamilyLegalSignal) +
     0.20 * task.derived.substantialWorkScore +
@@ -2930,7 +2930,7 @@ function normalizeStatus(value: unknown): PlannerTaskSnapshot['status'] {
 }
 
 function normalizePriority(value: unknown): PlannerTaskSnapshot['priority'] | undefined {
-  if (value === 'low' || value === 'medium' || value === 'high' || value === 'urgent') return value
+  if (value === 'immediate' || value === 'low' || value === 'medium' || value === 'high' || value === 'relaxed') return value
   return undefined
 }
 

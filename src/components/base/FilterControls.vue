@@ -155,13 +155,13 @@ const statusOptions = [
 ]
 
 const priorityOptions = [
-  { label: 'All Priorities', value: '' },
-  { label: 'Immediate', value: 'immediate' },
-  { label: 'High', value: 'high' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'Low', value: 'low' },
-  { label: 'Relaxed', value: 'relaxed' },
-  { label: 'No Priority', value: 'none' }
+  { label: 'All Priorities', value: '', icon: 'priority' as const },
+  { label: 'Immediate', value: 'immediate', icon: 'priority' as const },
+  { label: 'High', value: 'high', icon: 'priority' as const },
+  { label: 'Medium', value: 'medium', icon: 'priority' as const },
+  { label: 'Low', value: 'low', icon: 'priority' as const },
+  { label: 'Relaxed', value: 'relaxed', icon: 'priority' as const },
+  { label: 'No Priority', value: 'none', icon: 'none' as const }
 ]
 
 const recurringOptions = [

@@ -202,7 +202,7 @@ export function useCalendarInboxState() {
         }
 
         // TASK-1412: Apply sorting with direction support
-        const priorityOrder = { high: 0, medium: 1, low: 2, undefined: 3 }
+        const priorityOrder = { immediate: 0, high: 1, medium: 2, low: 3, relaxed: 4, undefined: 5 }
         const dir = sortDirection.value === 'desc' ? -1 : 1
 
         if (sortBy.value === 'canvasOrder') {
@@ -283,8 +283,8 @@ export function useCalendarInboxState() {
             tasks = [...tasks].sort((a, b) => {
                 switch (sortBy.value) {
                     case 'priority': {
-                        const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 3
-                        const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 3
+            const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 5
+            const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 5
                         if (aPriority !== bPriority) return dir * (aPriority - bPriority)
                         return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
                     }

@@ -85,5 +85,15 @@ test.describe('Board priority and recurring filters', () => {
     await page.getByRole('option', { name: 'Recurring Only', exact: true }).click()
     await expect(page.locator(`[data-task-id="${TASKS[2].id}"]`)).toBeVisible()
     await expect(page.locator(`[data-task-id="${TASKS[1].id}"]`)).toHaveCount(0)
+
+    await filterSelects.nth(4).locator('.select-trigger').click()
+    await page.getByRole('option', { name: 'All Tasks', exact: true }).click()
+    await page.locator(`[data-task-id="${TASKS[0].id}"]`).click({ button: 'right' })
+    await expect(page.locator('.context-menu')).toBeVisible()
+    await page.locator('.context-menu .menu-item.has-submenu').filter({ hasText: 'Priority' }).hover()
+    const prioritySubmenu = page.locator('.submenu').filter({ hasText: 'Relaxed' })
+    for (const label of ['Immediate', 'High', 'Medium', 'Low', 'Relaxed', 'No Priority']) {
+      await expect(prioritySubmenu.getByRole('button', { name: label, exact: true })).toBeVisible()
+    }
   })
 })

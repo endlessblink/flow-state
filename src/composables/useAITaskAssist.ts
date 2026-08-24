@@ -544,7 +544,7 @@ Rules:
 - reason: 1 short sentence
 - A due date is a scheduling signal, not proof of importance. Never raise priority or invent a due date from a date alone.
 - Before suggesting priority or dueDate, require explicit evidence about consequence, commitment strength, strategic value, dependency, or who is expecting the work.
-- A learned personal scheduling routine (for example, doing household maintenance on Thursday or Friday) is valid evidence for a dueDate suggestion when the task matches it. Use that routine for scheduling only; never convert it into a priority decision.
+- Use a learned personal scheduling routine from USER CONTEXT as evidence for a dueDate suggestion only when the task matches that routine. Do not infer or invent routines that are not present in USER CONTEXT, and never convert a routine into a priority decision.
 - If that context is missing or ambiguous, set contextQuestion to one concise question and omit priority, dueDate, and status suggestions. Do not guess.
 - If past corrections are provided, learn from them. Avoid repeating suggestions the user has rejected for similar tasks.` + langHint
 
@@ -678,7 +678,7 @@ Rules:
 - reason: 1 short sentence
 - A due date is a scheduling signal, not proof of importance. Never raise priority or invent a due date from a date alone.
 - Before suggesting priority or dueDate, require explicit evidence about consequence, commitment strength, strategic value, dependency, or who is expecting the work.
-- A learned personal scheduling routine (for example, doing household maintenance on Thursday or Friday) is valid evidence for a dueDate suggestion when the task matches it. Use that routine for scheduling only; never convert it into a priority decision.
+- Use a learned personal scheduling routine from USER CONTEXT as evidence for a dueDate suggestion only when the task matches that routine. Do not infer or invent routines that are not present in USER CONTEXT, and never convert a routine into a priority decision.
 - If that context is missing or ambiguous, set contextQuestion to one concise question and omit priority, dueDate, and status suggestions. Do not guess.` + langHint
 
       const taskList = tasks.map(t =>

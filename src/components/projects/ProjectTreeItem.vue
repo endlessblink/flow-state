@@ -132,7 +132,7 @@ const children = computed(() => {
     .filter(p => p.parentId === props.project.id)
     .sort((left, right) => {
       const orderDifference = (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER)
-      return orderDifference || left.createdAt.getTime() - right.createdAt.getTime()
+      return orderDifference || new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
     })
 })
 

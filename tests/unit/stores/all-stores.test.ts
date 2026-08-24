@@ -221,6 +221,17 @@ describe('Projects Store', () => {
     expect(store._rawProjects.find(project => project.id === home.id)?.order).toBe(1)
     expect(store._rawProjects.find(project => project.id === work.id)?.order).toBe(2)
   })
+
+  it('sorts persisted projects when createdAt values are ISO strings', async () => {
+    const store = useProjectStore()
+    const older = await store.createProject({ name: 'Older' })
+    const newer = await store.createProject({ name: 'Newer' })
+
+    ;(store._rawProjects.find(project => project.id === older.id) as any).createdAt = '2026-01-01T00:00:00.000Z'
+    ;(store._rawProjects.find(project => project.id === newer.id) as any).createdAt = '2026-02-01T00:00:00.000Z'
+
+    expect(store.rootProjects.map(project => project.id).slice(-2)).toEqual([older.id, newer.id])
+  })
 })
 
 // ============================================================================

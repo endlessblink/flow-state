@@ -88,7 +88,7 @@ export const useProjectStore = defineStore('projects', () => {
     const sortProjects = (left: Project, right: Project) => {
         const orderDifference = projectOrder(left) - projectOrder(right)
         if (orderDifference !== 0) return orderDifference
-        return left.createdAt.getTime() - right.createdAt.getTime()
+        return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
     }
 
     // Root projects - projects without parentId (uses filtered projects to exclude corrupted)

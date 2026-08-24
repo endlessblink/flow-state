@@ -31,6 +31,7 @@ import {
 } from "@/composables/useLocalApiBridge";
 
 const LOCAL_API_TIMER_INACTIVE_HEARTBEAT_MS = 10_000;
+const BREAK_START_GRACE_MS = 90_000;
 
 const getT = () => (i18n.global as unknown as { t: (key: string) => string }).t;
 
@@ -115,6 +116,8 @@ export const useTimerStore = defineStore("timer", () => {
 
   // State
   const currentSession = ref<PomodoroSession | null>(null);
+  const pendingBreak = ref<{ sessionId: string; taskId: string } | null>(null);
+  let pendingBreakTimeout: ReturnType<typeof setTimeout> | null = null;
   const completedSessions = ref<PomodoroSession[]>([]);
   const sessions = computed(() => completedSessions.value);
   const isLeader = ref(false);
@@ -197,6 +200,7 @@ export const useTimerStore = defineStore("timer", () => {
 
   const isTimerActive = computed(() => currentSession.value?.isActive || false);
   const isPaused = computed(() => currentSession.value?.isPaused || false);
+  const hasPendingBreak = computed(() => pendingBreak.value !== null);
   const currentTaskId = computed(() => currentSession.value?.taskId || null);
 
   const displayTime = computed(() => {
@@ -353,6 +357,33 @@ export const useTimerStore = defineStore("timer", () => {
 
   // ── Timer Control Actions ────────────────────────────────────────
 
+  const clearPendingBreak = () => {
+    if (pendingBreakTimeout !== null) {
+      clearTimeout(pendingBreakTimeout);
+      pendingBreakTimeout = null;
+    }
+    pendingBreak.value = null;
+  };
+
+  const scheduleAutomaticWorkSession = (sessionId: string, taskId: string) => {
+    clearPendingBreak();
+    pendingBreak.value = { sessionId, taskId };
+    pendingBreakTimeout = setTimeout(() => {
+      pendingBreakTimeout = null;
+      const pending = pendingBreak.value;
+      if (!pending || pending.sessionId !== sessionId || currentSession.value) return;
+      pendingBreak.value = null;
+      void startTimer(
+        taskId && taskId !== "break" ? taskId : "general",
+        settings.workDuration,
+        false,
+        { silent: true },
+      ).catch((error) => {
+        console.warn("[TIMER] Automatic work restart failed:", error);
+      });
+    }, BREAK_START_GRACE_MS);
+  };
+
   /**
    * TASK-1287: Switch the timer's associated task without resetting the countdown.
    * Only changes the taskId on the running session and persists to DB.
@@ -376,6 +407,8 @@ export const useTimerStore = defineStore("timer", () => {
     isBreak: boolean = false,
     options: { silent?: boolean } = {},
   ) => {
+    // Starting any new session is an explicit answer to the pending break choice.
+    clearPendingBreak();
     if (import.meta.env.DEV) {
       console.log("🍅 [TIMER] startTimer called:", {
         taskId,
@@ -656,6 +689,9 @@ export const useTimerStore = defineStore("timer", () => {
       // remain active at 00:00 in both the app and the localhost KDE endpoint.
       currentSession.value = null;
       syncLocalApiTimerSnapshot(null, deviceId);
+      if (!wasBreak) {
+        scheduleAutomaticWorkSession(session.id, lastTaskId);
+      }
       audio.playEndSound();
       releaseWakeLock(); // Allow sleep - ROAD-004
 
@@ -892,6 +928,7 @@ export const useTimerStore = defineStore("timer", () => {
   const cleanupAllListeners = () => {
     sync.cleanup();
     notifications.cleanupServiceWorkerListener();
+    clearPendingBreak();
     clearInterval(localApiTimerHeartbeat);
     unsubscribeAuth(); // TASK-1577: Clean up auth watcher
     unsubscribeLocalApiTimer();
@@ -910,6 +947,7 @@ export const useTimerStore = defineStore("timer", () => {
     isKdeWidgetActive,
     isTimerActive,
     isPaused,
+    hasPendingBreak,
     currentTaskId,
     displayTime,
     currentTaskName,
@@ -924,6 +962,7 @@ export const useTimerStore = defineStore("timer", () => {
     pauseTimer,
     resumeTimer,
     stopTimer,
+    clearPendingBreak,
     completeSession,
     addExtraTime,
     requestNotificationPermission: notifications.requestNotificationPermission,

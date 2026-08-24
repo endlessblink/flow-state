@@ -38,6 +38,7 @@ export interface SmartSuggestion {
 export interface SmartSuggestGroupItem {
   taskId: string
   taskTitle: string
+  contextQuestion?: string
   suggestions: SmartSuggestion[]
 }
 
@@ -50,7 +51,7 @@ export interface AIAssistResult {
   title?: string
   related?: Task[]
   summary?: { summary: string; suggestedGroup: string }
-  smartSuggest?: { suggestions: SmartSuggestion[] }
+  smartSuggest?: { contextQuestion?: string; suggestions: SmartSuggestion[] }
   smartSuggestGroup?: SmartSuggestGroupItem[]
 }
 
@@ -494,19 +495,6 @@ Return ONLY valid JSON: { "title": "..." }` + langHint
 
   function getSmartSuggestFallback(task: Task): SmartSuggestion[] {
     const suggestions: SmartSuggestion[] = []
-    const today = new Date().toISOString().split('T')[0]
-
-    // Priority fallback
-    if (!task.priority) {
-      const isOverdue = task.dueDate && task.dueDate < today
-      suggestions.push({
-        field: 'priority',
-        currentValue: null,
-        suggestedValue: isOverdue ? 'high' : task.dueDate ? 'medium' : 'medium',
-        confidence: 0.4,
-        reasoning: isOverdue ? 'Task is overdue' : 'Default suggestion'
-      })
-    }
 
     // Duration fallback
     if (!task.estimatedDuration) {
@@ -519,30 +507,6 @@ Return ONLY valid JSON: { "title": "..." }` + langHint
         suggestedValue: duration,
         confidence: 0.3,
         reasoning: subtaskCount > 0 ? 'Has subtasks, likely complex' : 'Default estimate'
-      })
-    }
-
-    // Status fallback
-    if (task.dueDate && task.dueDate < today && task.status !== 'done') {
-      suggestions.push({
-        field: 'status',
-        currentValue: task.status || null,
-        suggestedValue: 'todo',
-        confidence: 0.5,
-        reasoning: 'Task is overdue, should be active'
-      })
-    }
-
-    // Date fallback
-    if (!task.dueDate) {
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      suggestions.push({
-        field: 'dueDate',
-        currentValue: null,
-        suggestedValue: tomorrow.toISOString().split('T')[0],
-        confidence: 0.3,
-        reasoning: 'Default: tomorrow'
       })
     }
 
@@ -568,8 +532,8 @@ Return ONLY valid JSON: { "title": "..." }` + langHint
         t.dueDate && t.dueDate < today && t.status !== 'done'
       ).length
 
-      const systemPrompt = `You suggest task metadata. Return ONLY valid JSON.
-Format: { "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }
+      const systemPrompt = `You suggest task metadata conservatively. Return ONLY valid JSON.
+Format: { "contextQuestion": "..." | null, "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }
 Rules:
 - priority: "high", "medium", "low"
 - dueDate: "YYYY-MM-DD" (today or future only)
@@ -578,6 +542,9 @@ Rules:
 - Only suggest fields that need changing. Omit good values.
 - confidence 0.9+ = very sure, 0.7 = fairly sure, <0.7 = guess
 - reason: 1 short sentence
+- A due date is a scheduling signal, not proof of importance. Never raise priority or invent a due date from a date alone.
+- Before suggesting priority or dueDate, require explicit evidence about consequence, commitment strength, strategic value, dependency, or who is expecting the work.
+- If that context is missing or ambiguous, set contextQuestion to one concise question and omit priority, dueDate, and status suggestions. Do not guess.
 - If past corrections are provided, learn from them. Avoid repeating suggestions the user has rejected for similar tasks.` + langHint
 
       const descSnippet = task.description ? task.description.slice(0, 100) : ''
@@ -594,15 +561,27 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
       const raw = await streamAI(messages)
       if (aborted) return
 
-      const parsed = parseAIResponse<{ suggestions: Array<{ field: string; value: string | number; confidence: number; reason: string }> }>(raw)
+      const parsed = parseAIResponse<{ contextQuestion?: string | null; suggestions: Array<{ field: string; value: string | number; confidence: number; reason: string }> }>(raw)
       if (!parsed?.suggestions || !Array.isArray(parsed.suggestions)) {
         // Fall back to deterministic suggestions
         const fallback = getSmartSuggestFallback(task)
         if (fallback.length === 0) {
-          finishWithResult({ type: 'smartSuggest', smartSuggest: { suggestions: [] } })
+          finishWithResult({
+            type: 'smartSuggest',
+            smartSuggest: {
+              contextQuestion: parsed?.contextQuestion || 'What happens if this slips, and who is expecting it?',
+              suggestions: []
+            }
+          })
           return
         }
-        finishWithResult({ type: 'smartSuggest', smartSuggest: { suggestions: fallback } })
+        finishWithResult({
+          type: 'smartSuggest',
+          smartSuggest: {
+            contextQuestion: 'What happens if this slips, and who is expecting it?',
+            suggestions: fallback
+          }
+        })
         return
       }
 
@@ -619,8 +598,10 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
         estimatedDuration: task.estimatedDuration || null
       }
 
+      const contextQuestion = parsed.contextQuestion?.trim() || undefined
       const suggestions: SmartSuggestion[] = parsed.suggestions
         .filter(s => validFields.has(s.field))
+        .filter(s => !contextQuestion || !['priority', 'dueDate', 'status'].includes(s.field))
         .filter(s => {
           // Validate field-specific values
           if (s.field === 'priority') return validPriorities.has(String(s.value))
@@ -642,14 +623,20 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
           reasoning: s.reason || ''
         }))
 
-      finishWithResult({ type: 'smartSuggest', smartSuggest: { suggestions } })
+      finishWithResult({ type: 'smartSuggest', smartSuggest: { contextQuestion, suggestions } })
     } catch (e) {
       if (aborted) return
       // On AI failure, try deterministic fallback
       try {
         const fallback = getSmartSuggestFallback(task)
         if (fallback.length > 0) {
-          finishWithResult({ type: 'smartSuggest', smartSuggest: { suggestions: fallback } })
+          finishWithResult({
+            type: 'smartSuggest',
+            smartSuggest: {
+              contextQuestion: 'What happens if this slips, and who is expecting it?',
+              suggestions: fallback
+            }
+          })
           return
         }
       } catch { /* ignore fallback errors */ }
@@ -679,7 +666,7 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
       const today = new Date().toISOString().split('T')[0]
 
       const systemPrompt = `You suggest task metadata for multiple tasks. Return ONLY valid JSON.
-Format: { "tasks": [{ "taskId": "...", "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }] }
+Format: { "tasks": [{ "taskId": "...", "contextQuestion": "..." | null, "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }] }
 Rules:
 - priority: "high", "medium", "low"
 - dueDate: "YYYY-MM-DD" (today or future only)
@@ -687,7 +674,10 @@ Rules:
 - estimatedDuration: minutes (15, 30, 60, 90, 120)
 - Only suggest fields that need changing per task. Omit good values.
 - confidence 0.9+ = very sure, 0.7 = fairly sure, <0.7 = guess
-- reason: 1 short sentence` + langHint
+- reason: 1 short sentence
+- A due date is a scheduling signal, not proof of importance. Never raise priority or invent a due date from a date alone.
+- Before suggesting priority or dueDate, require explicit evidence about consequence, commitment strength, strategic value, dependency, or who is expecting the work.
+- If that context is missing or ambiguous, set contextQuestion to one concise question and omit priority, dueDate, and status suggestions. Do not guess.` + langHint
 
       const taskList = tasks.map(t =>
         `[${t.id}] "${t.title}" — priority=${t.priority || 'none'}, due=${t.dueDate || 'none'}, status=${t.status || 'todo'}, est=${t.estimatedDuration || 'none'}min`
@@ -701,16 +691,17 @@ Rules:
       const raw = await streamAI(messages)
       if (aborted) return
 
-      const parsed = parseAIResponse<{ tasks: Array<{ taskId: string; suggestions: Array<{ field: string; value: string | number; confidence: number; reason: string }> }> }>(raw)
+      const parsed = parseAIResponse<{ tasks: Array<{ taskId: string; contextQuestion?: string | null; suggestions: Array<{ field: string; value: string | number; confidence: number; reason: string }> }> }>(raw)
       if (!parsed?.tasks || !Array.isArray(parsed.tasks)) {
         // Fallback: generate deterministic suggestions for each task
         const fallbackResults: SmartSuggestGroupItem[] = tasks
           .map(t => ({
             taskId: t.id,
             taskTitle: t.title,
+            contextQuestion: 'What happens if this slips, and who is expecting it?',
             suggestions: getSmartSuggestFallback(t)
           }))
-          .filter(r => r.suggestions.length > 0)
+          .filter(r => r.suggestions.length > 0 || r.contextQuestion)
 
         finishWithResult({ type: 'smartSuggestGroup', smartSuggestGroup: fallbackResults })
         return
@@ -734,8 +725,10 @@ Rules:
             estimatedDuration: task.estimatedDuration || null
           }
 
+          const contextQuestion = r.contextQuestion?.trim() || undefined
           const suggestions: SmartSuggestion[] = (r.suggestions || [])
             .filter(s => validFields.has(s.field))
+            .filter(s => !contextQuestion || !['priority', 'dueDate', 'status'].includes(s.field))
             .filter(s => {
               if (s.field === 'priority') return validPriorities.has(String(s.value))
               if (s.field === 'status') return validStatuses.has(String(s.value))
@@ -752,9 +745,9 @@ Rules:
               reasoning: s.reason || ''
             }))
 
-          return { taskId: task.id, taskTitle: task.title, suggestions }
+          return { taskId: task.id, taskTitle: task.title, contextQuestion, suggestions }
         })
-        .filter(r => r.suggestions.length > 0)
+        .filter(r => r.suggestions.length > 0 || r.contextQuestion)
 
       finishWithResult({ type: 'smartSuggestGroup', smartSuggestGroup: groupResults })
     } catch (e) {

@@ -85,6 +85,32 @@ describe('Task Assist AI surface (useAITaskAssist)', () => {
     expect(fields).toContain('estimatedDuration')
   })
 
+  it('smartSuggest asks for consequence context instead of promoting a task from a date alone', async () => {
+    mockReply = JSON.stringify({
+      contextQuestion: 'What happens if this slips, and who is expecting it?',
+      suggestions: [
+        { field: 'priority', value: 'high', confidence: 0.95, reason: 'It has a deadline' },
+        { field: 'dueDate', value: '2026-09-01', confidence: 0.9, reason: 'The date sounds important' },
+        { field: 'estimatedDuration', value: 60, confidence: 0.7, reason: 'This needs focused work' }
+      ]
+    })
+
+    const a = useAITaskAssist()
+    await a.smartSuggest(makeTask({
+      title: 'Prepare promotion case',
+      description: 'Discuss growth at work',
+      priority: null,
+      dueDate: null,
+      estimatedDuration: null
+    }))
+
+    const suggestions = a.result.value?.smartSuggest?.suggestions ?? []
+    expect(a.result.value?.smartSuggest?.contextQuestion).toContain('What happens if this slips')
+    expect(suggestions.map(s => s.field)).not.toContain('priority')
+    expect(suggestions.map(s => s.field)).not.toContain('dueDate')
+    expect(suggestions.map(s => s.field)).toContain('estimatedDuration')
+  })
+
   it('malformed JSON surfaces a clean error (not a crash) for breakDownTask', async () => {
     mockReply = 'Sure! Here is a breakdown: first do X, then Y.' // prose, no JSON
     const a = useAITaskAssist()

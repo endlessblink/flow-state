@@ -1,5 +1,19 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2036: AI Assist promotes tasks from deadline-shaped text without enough context (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)
+
+**Exact failure mode**: Smart Suggest could infer priority, status, or a future date from a due date or vague task title without knowing the consequence, commitment strength, strategic value, dependency, or who expects the work.
+
+**Local fix**: AI Assist now treats dates as scheduling signals, asks one concise context question when importance is ambiguous, suppresses priority/date/status suggestions in that case, and removes the deterministic “tomorrow” fallback. Duration suggestions remain allowed as low-confidence estimates.
+
+**Regression**: Promotion-context coverage proves a deadline-shaped task does not receive an automatic priority or due-date change when the model reports missing consequence context.
+
+**Local evidence (2026-08-24)**: Focused Task Assist coverage passes 8/8, AI effectiveness coverage passes 24/24, prompt-quality coverage passes, type-check passes, changed-source lint has zero errors with one existing warning, and Electron 1.4.425 AppImage/Debian packaging plus updater metadata validation pass.
+
+**Required closeout**: Focused AI tests, type-check, changed-source lint, Electron build, and a fresh installed desktop check of single-task and batch AI Assist behavior. Production model/provider identity remains runtime-dependent and must be visible in the UI before calling the behavior fully auditable.
+
 ### TASK-2035: Deep stability, crash, auth, and Google integration audit (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-23)

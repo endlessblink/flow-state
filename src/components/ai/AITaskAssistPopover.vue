@@ -680,8 +680,11 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
           <div class="result-label">
             Suggestions
           </div>
+          <p v-if="result.smartSuggest?.contextQuestion" class="smart-context-question" dir="auto">
+            {{ result.smartSuggest.contextQuestion }}
+          </p>
           <div v-if="!result.smartSuggest?.suggestions?.length" class="no-results">
-            Task looks good — no changes needed
+            No metadata change suggested until this context is clear.
           </div>
           <div
             v-for="suggestion in result.smartSuggest?.suggestions"
@@ -765,6 +768,9 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
             <div class="group-task-title" dir="auto">
               {{ item.taskTitle }}
             </div>
+            <p v-if="item.contextQuestion" class="smart-context-question" dir="auto">
+              {{ item.contextQuestion }}
+            </p>
             <div
               v-for="suggestion in item.suggestions"
               :key="`${item.taskId}-${suggestion.field}`"
@@ -1148,6 +1154,16 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
 .smart-suggestion-card--compact {
   padding: var(--space-1_5) var(--space-2);
   margin-bottom: var(--space-1);
+}
+
+.smart-context-question {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--warning-bg-light);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
 }
 
 .smart-suggestion-header {

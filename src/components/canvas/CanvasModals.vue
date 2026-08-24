@@ -83,14 +83,14 @@ import GroupSettingsMenu from '@/components/canvas/GroupSettingsMenu.vue'
 import UnifiedGroupModal from '@/components/canvas/UnifiedGroupModal.vue'
 import GroupEditModal from '@/components/canvas/GroupEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import type { TaskAttachment } from '@/types/tasks'
+import type { TaskAttachment, TaskPriority } from '@/types/tasks'
 import type { CanvasGroup } from '@/types/canvas'
 
 interface QuickTaskData {
   title: string
   description: string
   status: string
-  priority: 'low' | 'medium' | 'high'
+  priority: Exclude<TaskPriority, null>
   dueDate?: string
   projectId?: string
   attachments?: TaskAttachment[]  // FEATURE-1414

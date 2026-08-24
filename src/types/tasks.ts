@@ -91,12 +91,14 @@ export interface SimpleRecurrenceRule {
   endCount?: number                   // Max occurrences for after_count
 }
 
+export type TaskPriority = 'immediate' | 'high' | 'medium' | 'low' | 'relaxed' | null
+
 export interface Task {
   id: string
   title: string
   description: string
   status: 'todo' | 'done'
-  priority: 'low' | 'medium' | 'high' | null
+  priority: TaskPriority
   progress: number
   completedPomodoros: number
   subtasks: Subtask[]
@@ -194,7 +196,7 @@ export interface Lane {
 
 // Type aliases and utility types
 export type TaskStatus = Task['status']
-export type TaskPriority = Task['priority']
+export type LegacyTaskPriority = Exclude<Task['priority'], 'immediate' | 'relaxed'>
 export type ProjectViewType = Project['viewType']
 
 // Project tree node — shared between the store's projectTree getter and

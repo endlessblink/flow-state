@@ -201,7 +201,7 @@ import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useUrlScraping } from '@/composables/useUrlScraping'
 import { statusOptions } from '@/components/tasks/context-menu/constants'
 import TaskAttachments from './TaskAttachments.vue'
-import type { TaskAttachment } from '@/types/tasks'
+import type { TaskAttachment, TaskPriority } from '@/types/tasks'
 
 interface Props {
   isOpen: boolean
@@ -229,7 +229,7 @@ const emit = defineEmits<{
     title: string
     description: string
     status: string
-    priority: 'low' | 'medium' | 'high'
+  priority: Exclude<TaskPriority, null>
     dueDate?: string
     projectId?: string
     attachments?: TaskAttachment[]  // FEATURE-1414
@@ -319,9 +319,11 @@ const handlePaste = async (e: ClipboardEvent) => {
 
 // Options for CustomSelect dropdowns
 const priorityOptions = [
+  { label: 'Immediate', value: 'immediate' },
   { label: 'Low', value: 'low' },
   { label: 'Medium', value: 'medium' },
-  { label: 'High', value: 'high' }
+  { label: 'High', value: 'high' },
+  { label: 'Relaxed', value: 'relaxed' }
 ]
 
 const projects = computed(() => taskStore.projects)

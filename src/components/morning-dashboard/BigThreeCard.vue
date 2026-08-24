@@ -11,7 +11,7 @@ import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
-import type { Task } from '@/types/tasks'
+import type { Task, TaskPriority } from '@/types/tasks'
 
 const taskStore = useTaskStore()
 const { recurrenceAwareDelete } = useRecurrenceAwareDelete()
@@ -73,7 +73,7 @@ const contextMenuTask = ref<Task | null>(null)
 interface PoolTask {
   id: string
   title: string
-  priority: 'low' | 'medium' | 'high' | null
+  priority: TaskPriority
   dueDate: string
   projectId: string
 }

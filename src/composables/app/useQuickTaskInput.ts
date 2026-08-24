@@ -5,6 +5,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { useWhisperSpeech } from '@/composables/useWhisperSpeech'
 import { useFilterDefaults } from '@/composables/tasks/useFilterDefaults'
 import { SUCCESS_FLASH_DURATION_MS } from '@/config/timing'
+import type { TaskPriority } from '@/types/tasks'
 
 const CANVAS_CREATE_ACK_TIMEOUT_MS = 15_000
 
@@ -27,7 +28,7 @@ export function useQuickTaskInput() {
 
   // TASK-1324: Quick task metadata (date + priority)
   const quickTaskDueDate = ref<string | null>(null)
-  const quickTaskPriority = ref<'low' | 'medium' | 'high' | null>(null)
+  const quickTaskPriority = ref<TaskPriority>(null)
   const showDatePicker = ref(false)
   const showPriorityPicker = ref(false)
 
@@ -102,7 +103,7 @@ export function useQuickTaskInput() {
     title: string
     description: string
     status: string
-    priority: 'low' | 'medium' | 'high'
+    priority: Exclude<TaskPriority, null>
     dueDate?: string
     projectId?: string
     onSettled?: (saved: boolean) => void
@@ -184,17 +185,17 @@ export function useQuickTaskInput() {
     showDatePicker.value = false
   }
 
-  const selectPriority = (priority: 'low' | 'medium' | 'high' | null) => {
+  const selectPriority = (priority: TaskPriority) => {
     quickTaskPriority.value = priority
     showPriorityPicker.value = false
   }
 
-  const formatPriorityLabel = (priority: 'low' | 'medium' | 'high' | null): string => {
+  const formatPriorityLabel = (priority: TaskPriority): string => {
     if (!priority) return t('common.none')
     return priority.charAt(0).toUpperCase() + priority.slice(1)
   }
 
-  const getPriorityColor = (priority: 'low' | 'medium' | 'high' | null) => {
+  const getPriorityColor = (priority: TaskPriority) => {
     if (!priority) return {}
     const colors: Record<string, string> = {
       low: 'var(--color-priority-low)',

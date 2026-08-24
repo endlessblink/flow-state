@@ -19,8 +19,8 @@ export interface CategoryAction {
   newProjectId?: string
   oldDueDate?: string
   newDueDate?: string
-  oldPriority?: 'low' | 'medium' | 'high' | undefined
-  newPriority?: 'low' | 'medium' | 'high' | undefined
+  oldPriority?: import('@/types/tasks').TaskPriority | undefined
+  newPriority?: import('@/types/tasks').TaskPriority | undefined
   oldStatus?: 'todo' | 'done'
   newStatus?: 'todo' | 'done'
   deletedTask?: import('./tasks').Task // Store full task data for undo of deleted tasks

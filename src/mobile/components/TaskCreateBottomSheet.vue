@@ -201,6 +201,7 @@ import {
 } from 'lucide-vue-next'
 import { useVoiceNLPParser } from '@/composables/useVoiceNLPParser'
 import { useUrlScraping } from '@/composables/useUrlScraping'
+import type { TaskPriority } from '@/types/tasks'
 
 interface Props {
   isOpen: boolean
@@ -231,7 +232,7 @@ const emit = defineEmits<{
 interface TaskCreationData {
   title: string
   description: string
-  priority: 'high' | 'medium' | 'low' | null
+  priority: TaskPriority
   dueDate: Date | null
 }
 
@@ -242,7 +243,7 @@ const OPEN_GRACE_MS = 400
 // Form state
 const taskTitle = ref('')
 const taskDescription = ref('')
-const taskPriority = ref<'low' | 'medium' | 'high' | null>(null)
+const taskPriority = ref<TaskPriority>(null)
 const taskDueDate = ref<Date | null>(null)
 const taskDueDateInput = ref('')
 const showDatePicker = ref(false)

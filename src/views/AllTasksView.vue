@@ -140,7 +140,7 @@ import { runTaskMutationWithSettling } from '@/composables/tasks/settleTaskMutat
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
 import { shouldHideDoneTasksForStatus } from '@/stores/tasks/filterInvariants'
 import { getCanonicalTodayTasks } from '@/utils/todayTaskProjection'
-import type { Task, GroupByType, TaskGroup } from '@/types/tasks'
+import type { Task, GroupByType, TaskGroup, TaskPriority } from '@/types/tasks'
 
 type CreateTaskDefaults = {
   dueDate?: string
@@ -648,7 +648,7 @@ const handleCreateTaskFromModal = async (data: {
   title: string
   description: string
   status: string
-  priority: 'low' | 'medium' | 'high'
+  priority: Exclude<TaskPriority, null>
   dueDate?: string
   projectId?: string
   onSettled?: (saved: boolean) => void

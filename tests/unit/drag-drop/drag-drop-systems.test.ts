@@ -179,6 +179,18 @@ describe('Kanban drag — data layer effects', () => {
     expect(moved.projectId).toBe(task.projectId)
     expect(moved.order).toBe(task.order)
   })
+
+  it('11: drag-end resync never clears columns before repopulating them', () => {
+    const fs = require('fs')
+    const path = require('path')
+    const columnPath = path.resolve(
+      __dirname,
+      '../../../src/components/kanban/KanbanColumn.vue'
+    )
+    const source = fs.readFileSync(columnPath, 'utf-8')
+
+    expect(source).not.toContain('allTasks.value = []')
+  })
 })
 
 // ---------------------------------------------------------------------------

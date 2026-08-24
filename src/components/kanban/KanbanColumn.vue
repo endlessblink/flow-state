@@ -445,20 +445,15 @@ const handleDragChange = async (event: SortableChangeEvent) => {
 }
 
 // Listen for drag-end broadcast from ANY column to resync DOM with Vue's vdom.
-// SortableJS physically moves DOM elements between groups, causing Vue desync.
-// Double-flush (clear → repopulate) forces Vue to re-render with proper bindings.
+// SortableJS physically moves DOM elements between groups, so replace the local
+// snapshot in one render pass instead of clearing it first (which flashes empty
+// columns and races the async task update).
 const handleDragEndBroadcast = () => {
   dragDiag.resyncCount++
   dragDiag.mark('resync', { column: props.status, rendered: allTasks.value.length })
   nextTick(() => {
-    const current = [...props.tasks]
-    allTasks.value = []
-    dragDiag.emptyFlashCount++
-    dragDiag.mark('empty-flash', { column: props.status })
-    nextTick(() => {
-      allTasks.value = current
-      dragDiag.mark('repopulate', { column: props.status, n: current.length })
-    })
+    allTasks.value = [...props.tasks]
+    dragDiag.mark('repopulate', { column: props.status, n: props.tasks.length })
   })
 }
 

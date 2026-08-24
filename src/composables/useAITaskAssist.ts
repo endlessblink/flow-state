@@ -22,6 +22,7 @@ import { getSharedRouter } from '@/services/ai/routerFactory'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
+import { getAIUserContext } from '@/services/ai/userContext'
 
 // ============================================================================
 // Types
@@ -519,6 +520,7 @@ Return ONLY valid JSON: { "title": "..." }` + langHint
       const langHint = detectLanguageInstruction(task.title)
       const today = new Date().toISOString().split('T')[0]
       const taskStore = useTaskStore()
+      const userContext = await getAIUserContext('taskassist')
 
       // Gather context
       const subtasks = taskStore.tasks.filter(t => t.parentTaskId === task.id)
@@ -544,6 +546,7 @@ Rules:
 - reason: 1 short sentence
 - A due date is a scheduling signal, not proof of importance. Never raise priority or invent a due date from a date alone.
 - Before suggesting priority or dueDate, require explicit evidence about consequence, commitment strength, strategic value, dependency, or who is expecting the work.
+- A learned personal scheduling routine (for example, doing household maintenance on Thursday or Friday) is valid evidence for a dueDate suggestion when the task matches it. Use that routine for scheduling only; never convert it into a priority decision.
 - If that context is missing or ambiguous, set contextQuestion to one concise question and omit priority, dueDate, and status suggestions. Do not guess.
 - If past corrections are provided, learn from them. Avoid repeating suggestions the user has rejected for similar tasks.` + langHint
 
@@ -554,7 +557,7 @@ Project: ${taskStore.getProjectDisplayName(task.projectId) || 'none'} | Subtasks
 Today: ${today} | Overdue tasks: ${overdueTasks}`
 
       const messages: RouterChatMessage[] = [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: systemPrompt + userContext },
         { role: 'user', content: userPrompt }
       ]
 
@@ -664,6 +667,7 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
 
       const langHint = detectLanguageInstruction(tasks[0]?.title || '')
       const today = new Date().toISOString().split('T')[0]
+      const userContext = await getAIUserContext('taskassist')
 
       const systemPrompt = `You suggest task metadata for multiple tasks. Return ONLY valid JSON.
 Format: { "tasks": [{ "taskId": "...", "contextQuestion": "..." | null, "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }] }
@@ -677,6 +681,7 @@ Rules:
 - reason: 1 short sentence
 - A due date is a scheduling signal, not proof of importance. Never raise priority or invent a due date from a date alone.
 - Before suggesting priority or dueDate, require explicit evidence about consequence, commitment strength, strategic value, dependency, or who is expecting the work.
+- A learned personal scheduling routine (for example, doing household maintenance on Thursday or Friday) is valid evidence for a dueDate suggestion when the task matches it. Use that routine for scheduling only; never convert it into a priority decision.
 - If that context is missing or ambiguous, set contextQuestion to one concise question and omit priority, dueDate, and status suggestions. Do not guess.` + langHint
 
       const taskList = tasks.map(t =>
@@ -684,7 +689,7 @@ Rules:
       ).join('\n')
 
       const messages: RouterChatMessage[] = [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: systemPrompt + userContext },
         { role: 'user', content: `Today: ${today}\nTasks:\n${taskList}` }
       ]
 

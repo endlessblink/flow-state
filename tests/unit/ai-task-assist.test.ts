@@ -13,10 +13,14 @@ import type { Task } from '@/types/tasks'
 
 // The brain's streamed reply for the next call (set per test).
 let mockReply = ''
+let capturedSystemPrompt = ''
 vi.mock('@/services/ai/routerFactory', () => ({
   getSharedRouter: vi.fn(() => Promise.resolve({
     // streamAI() collects chunk.content — yield the whole reply as one chunk.
-    chatStream: async function* () { yield { content: mockReply, done: true } },
+    chatStream: async function* (messages: Array<{ role: string; content: string }>) {
+      capturedSystemPrompt = messages.find(message => message.role === 'system')?.content || ''
+      yield { content: mockReply, done: true }
+    },
     getLastUsedProvider: () => 'bridge',
   })),
   resetSharedRouter: vi.fn(),
@@ -42,6 +46,7 @@ describe('Task Assist AI surface (useAITaskAssist)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     mockReply = ''
+    capturedSystemPrompt = ''
   })
 
   it('breakDownTask parses { tasks: [...] } into a breakdown', async () => {
@@ -83,6 +88,13 @@ describe('Task Assist AI surface (useAITaskAssist)', () => {
     // priority high→low is a change (kept); duration none→30 is a change (kept)
     expect(fields).toContain('priority')
     expect(fields).toContain('estimatedDuration')
+  })
+
+  it('smartSuggest includes learned scheduling context in the model prompt', async () => {
+    mockReply = '{"suggestions":[]}'
+    const a = useAITaskAssist()
+    await a.smartSuggest(makeTask({ priority: null }))
+    expect(capturedSystemPrompt).toContain('USER CONTEXT')
   })
 
   it('smartSuggest asks for consequence context instead of promoting a task from a date alone', async () => {

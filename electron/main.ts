@@ -17,7 +17,7 @@ import {
   shutdownLocalApi,
 } from './ipc/localApi'
 import { registerDiagnosticsHandlers } from './ipc/diagnostics'
-import { attachWindowRuntimeDiagnostics, registerRuntimeDiagnostics, stopRuntimeDiagnostics } from './runtimeDiagnostics'
+import { attachWindowRuntimeDiagnostics, recordRuntimeDiagnostic, registerRuntimeDiagnostics, stopRuntimeDiagnostics } from './runtimeDiagnostics'
 import {
   createBackgroundWindowLifecycle,
   isBackgroundLaunch,
@@ -232,6 +232,17 @@ function createWindow(): BrowserWindow {
   // Show when ready to prevent white flash
   window.once('ready-to-show', () => {
     backgroundLifecycle.handleReadyToShow(window, process.argv)
+  })
+  // Some Linux/X11 launches finish loading without emitting ready-to-show. Keep a normal
+  // user launch visible after the renderer is usable; explicit background launches stay hidden.
+  window.webContents.once('did-finish-load', () => {
+    const visibleBeforeFallback = window.isVisible()
+    backgroundLifecycle.handleLoadFinished(window, process.argv)
+    recordRuntimeDiagnostic('window-load-finished-fallback', {
+      backgroundEnabled,
+      visibleBeforeFallback,
+      visibleAfterFallback: window.isVisible(),
+    })
   })
 
   window.on('close', (event) => {

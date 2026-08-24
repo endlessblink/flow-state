@@ -123,9 +123,9 @@ ipcMain.handle('diag:rendererHeartbeat', (_event, heartbeat: RendererHeartbeat) 
 
   ipcMain.handle('diag:runtimeLogPath', () => logPath())
 
-  const window = getWindow()
-  if (window) {
-    attachWindowRuntimeDiagnostics(window)
+  const initialWindow = getWindow()
+  if (initialWindow) {
+    attachWindowRuntimeDiagnostics(initialWindow)
   }
 
   healthTimer = setInterval(() => {
@@ -134,14 +134,29 @@ ipcMain.handle('diag:rendererHeartbeat', (_event, heartbeat: RendererHeartbeat) 
       lastStaleReportAt = Date.now()
       recordRuntimeDiagnostic('renderer-heartbeat-stale', rendererSnapshot())
     }
+    const currentWindow = getWindow()
     recordRuntimeDiagnostic('main-health', {
       renderer: rendererSnapshot(),
-      windowVisible: Boolean(window && !window.isDestroyed() && window.isVisible()),
+      windowVisible: Boolean(currentWindow && !currentWindow.isDestroyed() && currentWindow.isVisible()),
     })
   }, HEARTBEAT_STALE_AFTER_MS)
 }
 
 export function attachWindowRuntimeDiagnostics(window: BrowserWindow): void {
+  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    recordRuntimeDiagnostic('window-did-fail-load', {
+      errorCode,
+      errorDescription,
+      validatedURL,
+      isMainFrame,
+    })
+  })
+  window.webContents.on('dom-ready', () => {
+    recordRuntimeDiagnostic('window-dom-ready')
+  })
+  window.webContents.on('did-finish-load', () => {
+    recordRuntimeDiagnostic('window-did-finish-load')
+  })
   window.webContents.on('unresponsive', () => {
     recordRuntimeDiagnostic('renderer-unresponsive', rendererSnapshot())
   })

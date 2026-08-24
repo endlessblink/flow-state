@@ -1,8 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
-import fs from "node:fs";
 
 const authFile = "tests/.auth/user.json";
-const hasAuth = fs.existsSync(authFile);
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 /**
@@ -57,8 +55,10 @@ export default defineConfig({
         ...(chromiumExecutablePath
           ? { launchOptions: { executablePath: chromiumExecutablePath } }
           : {}),
-        // TASK-1457: Use saved auth state if available (from global-setup)
-        ...(hasAuth ? { storageState: authFile } : {}),
+        // TASK-1457: globalSetup must create this state before any test context.
+        // Requiring the file fails closed instead of silently running authenticated
+        // scenarios as a guest on a clean checkout.
+        storageState: authFile,
       },
       testIgnore: "**/mobile/**/*.spec.ts",
     },
@@ -72,7 +72,7 @@ export default defineConfig({
       name: "webkit",
       use: {
         ...devices["Desktop Safari"],
-        ...(hasAuth ? { storageState: authFile } : {}),
+        storageState: authFile,
       },
       testIgnore: "**/mobile/**/*.spec.ts",
     },
@@ -81,7 +81,7 @@ export default defineConfig({
       name: "mobile-chrome",
       use: {
         ...devices["Pixel 7"],
-        ...(hasAuth ? { storageState: authFile } : {}),
+        storageState: authFile,
       },
       testMatch: "**/mobile/**/*.spec.ts",
     },
@@ -90,7 +90,7 @@ export default defineConfig({
       name: "mobile-safari",
       use: {
         ...devices["iPhone 14 Pro Max"],
-        ...(hasAuth ? { storageState: authFile } : {}),
+        storageState: authFile,
       },
       testMatch: "**/mobile/**/*.spec.ts",
     },

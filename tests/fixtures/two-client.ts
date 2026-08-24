@@ -28,13 +28,9 @@
  * suite uses). `clientB` is a page in a brand-new independent context.
  */
 import { test as base, expect } from '@playwright/test'
-import fs from 'node:fs'
 import type { Browser, BrowserContext, Page } from '@playwright/test'
 
 const AUTH_FILE = 'tests/.auth/user.json'
-
-/** True when global-setup produced a seeded auth state we can reuse. */
-export const hasSeededAuth = fs.existsSync(AUTH_FILE)
 
 /**
  * Spin up an independent, authenticated client (own context + websocket).
@@ -43,9 +39,9 @@ export const hasSeededAuth = fs.existsSync(AUTH_FILE)
 export async function createIndependentClient(
   browser: Browser
 ): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext(
-    hasSeededAuth ? { storageState: AUTH_FILE } : {}
-  )
+  // Authenticated two-client scenarios must fail closed when global setup did
+  // not produce state; an unauthenticated client would invalidate convergence proof.
+  const context = await browser.newContext({ storageState: AUTH_FILE })
   const page = await context.newPage()
   // Suppress onboarding overlays so canvas/tasks are interactable immediately.
   await page.addInitScript(() => {

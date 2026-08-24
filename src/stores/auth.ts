@@ -16,7 +16,7 @@ import {
   type Session,
   type AuthError
 } from '@/services/auth/supabase'
-import { syncLocalApiRendererAuthState, syncLocalApiSession } from '@/composables/useLocalApiBridge'
+import { clearLocalApiSession, syncLocalApiRendererAuthState, syncLocalApiSession } from '@/composables/useLocalApiBridge'
 import { clearGuestData, clearGuestSessionId } from '@/utils/guestModeStorage'
 import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection'
 import { invalidateCache } from '@/composables/useSupabaseDatabase'
@@ -1357,6 +1357,7 @@ export const useAuthStore = defineStore('auth', () => {
       isRestoringSession.value = false
       user.value = null
       session.value = null
+      clearLocalApiSession()
 
       // Clear task store to prevent showing authenticated user's data in guest mode
       const { useTaskStore } = await import('@/stores/tasks')

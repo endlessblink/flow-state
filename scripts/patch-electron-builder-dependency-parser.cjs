@@ -176,6 +176,9 @@ const dependencyTreeEnvMarker = 'FlowState precomputed npm dependency tree patch
 const dependencyTreeInsertionPoint = `        const command = (0, packageManager_1.getPackageManagerCommand)(pm);
         const args = this.getArgs();
         try {`
+const dependencyTreeInsertionPointAfterArgs = `        const command = (0, packageManager_1.getPackageManagerCommand)(pm);
+        const args = this.getArgs();
+`
 const dependencyTreeBlock = `        const command = (0, packageManager_1.getPackageManagerCommand)(pm);
         const args = this.getArgs();
         if (pm === packageManager_1.PM.NPM && process.env.FLOWSTATE_ELECTRON_NPM_TREE_JSON) {
@@ -193,13 +196,36 @@ const dependencyTreeBlock = `        const command = (0, packageManager_1.getPac
             }
         }
         try {`
+const dependencyTreeBlockAfterArgs = `        const command = (0, packageManager_1.getPackageManagerCommand)(pm);
+        const args = this.getArgs();
+        if (pm === packageManager_1.PM.NPM && process.env.FLOWSTATE_ELECTRON_NPM_TREE_JSON) {
+            try {
+                // ${dependencyTreeEnvMarker}: managed sandboxes can reject Node
+                // child_process execution of npm. A shell wrapper can precompute
+                // the exact npm list JSON and point electron-builder at it.
+                const precomputedTree = await fs.readFile(process.env.FLOWSTATE_ELECTRON_NPM_TREE_JSON, { encoding: "utf8" });
+                if (precomputedTree.trim().length > 0) {
+                    return await Promise.resolve(this.parseDependenciesTree(precomputedTree));
+                }
+            }
+            catch (error) {
+                builder_util_1.log.debug({ error: error === null || error === void 0 ? void 0 : error.message }, "precomputed npm dependency tree unavailable; falling back to collector command");
+            }
+        }
+`
 
 if (!patched.includes(dependencyTreeEnvMarker)) {
-  if (!patched.includes(dependencyTreeInsertionPoint)) {
-    console.warn('[electron-builder-patch] skipped precomputed dependency tree patch; expected getDependenciesTree insertion point not found')
-  } else {
+  if (patched.includes(dependencyTreeInsertionPoint)) {
     patched = patched.replace(dependencyTreeInsertionPoint, dependencyTreeBlock)
     applied.push('precomputed-tree')
+  } else if (patched.includes(dependencyTreeInsertionPointAfterArgs)) {
+    patched = patched.replace(
+      dependencyTreeInsertionPointAfterArgs,
+      dependencyTreeBlockAfterArgs,
+    )
+    applied.push('precomputed-tree')
+  } else {
+    console.warn('[electron-builder-patch] skipped precomputed dependency tree patch; expected getDependenciesTree insertion point not found')
   }
 }
 

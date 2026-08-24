@@ -10,6 +10,8 @@ describe('Electron main background-window integration', () => {
     expect(source).toContain('createBackgroundWindowLifecycle({')
     expect(source).toContain('isBackgroundLaunch(process.argv)')
     expect(source).toContain('backgroundLifecycle.handleReadyToShow(window, process.argv)')
+    expect(source).toContain("window.webContents.once('did-finish-load'")
+    expect(source).toContain('backgroundLifecycle.handleLoadFinished(window, process.argv)')
     expect(source).toContain("window.on('close', (event) => {")
     expect(source).toContain('backgroundLifecycle.handleClose(event, window)')
     expect(source).toContain('backgroundThrottling: false')
@@ -43,5 +45,12 @@ describe('Electron main background-window integration', () => {
     const handler = source.slice(handlerStart, handlerStart + 240)
     expect(handler).toContain('signalQuitRequested = true')
     expect(handler).toContain('forceQuit()')
+  })
+
+  it('keeps runtime visibility diagnostics bound to the current window', () => {
+    const runtimeSource = readFileSync(resolve(process.cwd(), 'electron/runtimeDiagnostics.ts'), 'utf8')
+    expect(runtimeSource).toContain('const currentWindow = getWindow()')
+    expect(runtimeSource).toContain('currentWindow && !currentWindow.isDestroyed() && currentWindow.isVisible()')
+    expect(runtimeSource).not.toContain('window && !window.isDestroyed() && window.isVisible()')
   })
 })

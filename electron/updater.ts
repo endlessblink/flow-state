@@ -7,6 +7,7 @@ import {
   pendingAppImagePath,
   versionFromUpdateFileName,
   pendingUpdateFailureVersion,
+  clearBlockedPendingUpdate,
   clearResolvedPendingUpdateFailure,
   clearObsoletePendingAppImages,
   compareVersions,
@@ -415,6 +416,20 @@ export function registerUpdater() {
     }
   })
 
+  ipcMain.handle('updater:retry-failed', async () => {
+    if (!canUseUpdater) return null
+
+    const cleared = clearBlockedPendingUpdate(appVersion)
+    if (!cleared.cleared) return null
+
+    try {
+      return await autoUpdater.checkForUpdates()
+    } catch (err) {
+      console.error('[Updater] Retry after failed update marker failed:', (err as Error).message)
+      throw err
+    }
+  })
+
   ipcMain.handle('updater:download', async () => {
     if (!canUseUpdater) return
 
@@ -530,6 +545,14 @@ export function registerUpdater() {
       console.warn('[Updater] Suppressing a previously failed update to prevent a notification loop', {
         blockedVersion,
       })
+      const win = BrowserWindow.getAllWindows()[0]
+      if (win) {
+        win.webContents.send('updater:blocked', {
+          ...info,
+          currentVersion: appVersion,
+          message: `Update v${info.version} previously failed to install. Retry to download it again.`,
+        })
+      }
       return
     }
     const win = BrowserWindow.getAllWindows()[0]

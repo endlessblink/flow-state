@@ -1,0 +1,80 @@
+{
+  "schema": "flowstate-stability-challenge-snapshot-v1",
+  "capturedAt": "2026-08-24",
+  "revision": {
+    "head": "e942a439c522790ce941039e9893e8e9a72426ae",
+    "dirty": true,
+    "dirtyEntryCount": 28
+  },
+  "scope": [
+    "source and competing systems",
+    "persistence and account boundaries",
+    "Electron packaging and updater",
+    "Local API sidecar",
+    "browser and self-host harnesses",
+    "user-facing stress flows"
+  ],
+  "acceptance": [
+    {
+      "id": "source-contracts",
+      "status": "PASS",
+      "evidence": "Focused source contracts, type-check, task-consistency audit, updater tests, cache-failure regression, and changed-source lint complete without errors."
+    },
+    {
+      "id": "browser-stress-real-surface",
+      "status": "PASS",
+      "evidence": "Current worktree host-browser stress paths pass CRUD 20/20, canvas reload persistence, and script/event/rich-text XSS probes without skips."
+    },
+    {
+      "id": "backup-restore",
+      "status": "PASS",
+      "evidence": "Atomic backup/restore and refusal suites pass; authenticated update/cache failure preserves the queued edit and rolls back only when durable persistence fails."
+    },
+    {
+      "id": "electron-package",
+      "status": "PASS",
+      "evidence": "Fresh 1.4.429 AppImage/deb build passes package archive, renderer, main/preload, sidecar route, and launcher metadata validation."
+    },
+    {
+      "id": "packaged-sidecar-guest-boundary",
+      "status": "PASS",
+      "evidence": "Fresh AppImage under Xvfb returns health 200, timer-current 200, and protected tasks 401 without credentials."
+    },
+    {
+      "id": "authenticated-cross-client",
+      "status": "OPEN",
+      "evidence": "Shared global setup is destructive and isolated authenticated database/profile proof has not completed."
+    },
+    {
+      "id": "full-self-host",
+      "status": "OPEN",
+      "evidence": "Lite self-host passes 6/6; full Docker image build exceeds the current executor ceiling before health checks."
+    },
+    {
+      "id": "installed-runtime-update",
+      "status": "OPEN",
+      "evidence": "Fresh packaged runtime proof exists, but installed desktop version, updater transition, relaunch, and public artifact read-back are not aligned."
+    },
+    {
+      "id": "challenge-protocol",
+      "status": "BLOCKED",
+      "evidence": "Project-local canonical challenge skill and runner are absent; no protocol-valid snapshot-bound reviewer PASS can be produced."
+    }
+  ],
+  "knownRepairs": [
+    "stress runner failure propagation",
+    "stress selectors and no-skip assertions",
+    "current and legacy Supabase status parsing",
+    "dev launcher stale-owner lifecycle",
+    "self-host health predicate and concurrent-run lock",
+    "Electron updater blocked-state retry",
+    "Electron builder local binary resolution",
+    "authenticated task cache split-brain"
+  ],
+  "knownRisks": [
+    "public updater manifest is behind local 1.4.429",
+    "account-scoped provider-token and local-history isolation lacks two-account relaunch proof",
+    "real Google OAuth and authenticated Local API session replay are unproven",
+    "full self-host health and production route/CSP proof are unproven"
+  ]
+}

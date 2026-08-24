@@ -8,6 +8,7 @@ import {
 function createWindow(overrides: Partial<BackgroundWindow> = {}): BackgroundWindow {
   return {
     isDestroyed: vi.fn(() => false),
+    isVisible: vi.fn(() => false),
     isMinimized: vi.fn(() => false),
     getBounds: vi.fn(() => ({ width: 1400, height: 900 })),
     setBounds: vi.fn(),
@@ -54,6 +55,45 @@ describe('Electron background window lifecycle', () => {
 
     expect(window.show).toHaveBeenCalledOnce()
     expect(setBounds).toHaveBeenCalledWith({ width: 1400, height: 900 })
+  })
+
+  it('shows a normal launch when load finishes without ready-to-show', () => {
+    const window = createWindow()
+    const lifecycle = createBackgroundWindowLifecycle({
+      getWindow: () => window,
+      createWindow: vi.fn(() => window),
+      isBackgroundEnabled: () => true,
+    })
+
+    lifecycle.handleLoadFinished(window, ['flow-state'])
+
+    expect(window.show).toHaveBeenCalledOnce()
+  })
+
+  it('does not reveal a background launch when load finishes', () => {
+    const window = createWindow()
+    const lifecycle = createBackgroundWindowLifecycle({
+      getWindow: () => window,
+      createWindow: vi.fn(() => window),
+      isBackgroundEnabled: () => true,
+    })
+
+    lifecycle.handleLoadFinished(window, ['flow-state', '--background'])
+
+    expect(window.show).not.toHaveBeenCalled()
+  })
+
+  it('does not show a window that ready-to-show already revealed', () => {
+    const window = createWindow({ isVisible: vi.fn(() => true) })
+    const lifecycle = createBackgroundWindowLifecycle({
+      getWindow: () => window,
+      createWindow: vi.fn(() => window),
+      isBackgroundEnabled: () => true,
+    })
+
+    lifecycle.handleLoadFinished(window, ['flow-state'])
+
+    expect(window.show).not.toHaveBeenCalled()
   })
 
   it('repairs hidden supervisor geometry before showing a normal launch', () => {

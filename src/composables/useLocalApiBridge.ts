@@ -50,10 +50,7 @@ export function syncLocalApiSession(session: Session | null): void {
     // blinded the Local API — and with it the KDE widget and agent tools — while the app itself
     // showed signed-in. Hold the last good context and wait for the refreshed session; this
     // watcher re-fires with fresh tokens.
-    if (!session?.access_token || !session.user?.id) {
-      void api.clearLocalApiSession?.()
-      return
-    }
+    if (!session?.access_token || !session.user?.id) return
     if (!isFresh) return
 
     void api.setLocalApiSession?.({
@@ -63,6 +60,16 @@ export function syncLocalApiSession(session: Session | null): void {
       refreshToken: session.refresh_token || '',
       userId: session.user.id,
     })
+  } catch {
+    /* best-effort; never break the auth flow */
+  }
+}
+
+export function clearLocalApiSession(): void {
+  const api = getElectronApi()
+  if (!api) return
+  try {
+    void api.clearLocalApiSession?.()
   } catch {
     /* best-effort; never break the auth flow */
   }

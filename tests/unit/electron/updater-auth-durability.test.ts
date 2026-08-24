@@ -42,6 +42,11 @@ vi.mock('../../../electron/updater-pending', () => ({
     pendingVersion: null,
     updateInfoPath: '/tmp/update-info.json',
   })),
+  clearBlockedPendingUpdate: vi.fn(() => ({
+    cleared: false,
+    pendingVersion: null,
+    updateInfoPath: '/tmp/update-info.json',
+  })),
   pendingUpdateInfoPath: vi.fn(() => '/tmp/update-info.json'),
   pendingAppImagePath: mocks.pendingAppImagePath,
   versionFromUpdateFileName: vi.fn((fileName: string) => {

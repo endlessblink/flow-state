@@ -12,6 +12,7 @@ test.describe('Security Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(2000);
+    await page.getByRole('button', { name: 'Get Started' }).click().catch(() => {});
   });
 
   test('@quick XSS Prevention - Script Tag in Task Title', async ({ page }) => {
@@ -24,18 +25,14 @@ test.describe('Security Tests', () => {
     const marker = 'XSS_MARKER_' + Date.now();
 
     // Navigate to board
-    await page.click('[data-testid="nav-board"]').catch(() => page.keyboard.press('2'));
+    await page.locator('a[href="#/board"]').click();
     await page.waitForTimeout(1000);
 
-    // Create task with XSS payload
-    await page.keyboard.press('n');
-    await page.waitForTimeout(200);
-
-    const titleInput = page.locator('input[placeholder*="title"], input[data-testid="task-title-input"]').first();
-    if (await titleInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await titleInput.fill(xssPayload + marker);
-      await page.keyboard.press('Enter');
-    }
+    // Create task with XSS payload through the persistent quick-add control.
+    const titleInput = page.getByRole('textbox', { name: 'Quick add task' });
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill(xssPayload + marker);
+    await page.keyboard.press('Enter');
 
     await page.waitForTimeout(1000);
 
@@ -77,7 +74,7 @@ test.describe('Security Tests', () => {
     ];
 
     // Navigate to board
-    await page.click('[data-testid="nav-board"]').catch(() => page.keyboard.press('2'));
+    await page.locator('a[href="#/board"]').click();
     await page.waitForTimeout(1000);
 
     let alertTriggered = false;
@@ -88,14 +85,10 @@ test.describe('Security Tests', () => {
     });
 
     for (const payload of xssPayloads) {
-      await page.keyboard.press('n');
-      await page.waitForTimeout(200);
-
-      const titleInput = page.locator('input[placeholder*="title"], input[data-testid="task-title-input"]').first();
-      if (await titleInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await titleInput.fill(payload);
-        await page.keyboard.press('Enter');
-      }
+      const titleInput = page.getByRole('textbox', { name: 'Quick add task' });
+      await expect(titleInput).toBeVisible();
+      await titleInput.fill(payload);
+      await page.keyboard.press('Enter');
 
       await page.waitForTimeout(500);
     }
@@ -116,32 +109,34 @@ test.describe('Security Tests', () => {
     const xssPayload = '<script>document.body.innerHTML="HACKED"</script>';
 
     // Navigate to board
-    await page.click('[data-testid="nav-board"]').catch(() => page.keyboard.press('2'));
+    await page.locator('a[href="#/board"]').click();
+    await page.waitForTimeout(1000);
+
+    // Seed the acceptance surface so this test cannot pass without exercising
+    // the rich-text editor when the stress environment starts empty.
+    const titleInput = page.getByRole('textbox', { name: 'Quick add task' });
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill(`Rich text stress task ${Date.now()}`);
+    await page.keyboard.press('Enter');
     await page.waitForTimeout(1000);
 
     // Find and click a task to open details
     const taskCard = page.locator('[data-testid="task-card"], .task-card').first();
-    if (await taskCard.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await taskCard.click();
-      await page.waitForTimeout(500);
+    await expect(taskCard).toBeVisible();
+    await taskCard.dblclick();
+    await page.waitForTimeout(500);
 
-      // Look for description/notes editor
-      const editor = page.locator('.tiptap, .ProseMirror, [data-testid="task-description"]').first();
-      if (await editor.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await editor.click();
-        await page.keyboard.type(xssPayload);
-        await page.waitForTimeout(1000);
+    // Look for description/notes editor.
+    const editor = page.locator('.tiptap, .ProseMirror, [data-testid="task-description"]').first();
+    await expect(editor).toBeVisible();
+    await editor.click();
+    await page.keyboard.type(xssPayload);
+    await page.waitForTimeout(1000);
 
-        // Check body wasn't replaced
-        const bodyContent = await page.locator('body').innerHTML();
-        expect(bodyContent).not.toBe('HACKED');
-        console.log('Rich text editor XSS: NOT executed (PASS)');
-      } else {
-        console.log('Rich text editor not found - skipping');
-      }
-    } else {
-      console.log('No task cards found - skipping');
-    }
+    // Check body wasn't replaced.
+    const bodyContent = await page.locator('body').innerHTML();
+    expect(bodyContent).not.toBe('HACKED');
+    console.log('Rich text editor XSS: NOT executed (PASS)');
   });
 
   test('Input Length Limits', async ({ page }) => {

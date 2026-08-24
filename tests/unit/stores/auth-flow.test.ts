@@ -51,6 +51,7 @@ const {
   mockClearWriteQueue,
   mockDeleteReadCacheScopesForUser,
   mockSyncLocalApiSession,
+  mockClearLocalApiSession,
   mockSyncLocalApiRendererAuthState,
   mockInvalidateAuthCache,
 } = vi.hoisted(() => {
@@ -105,6 +106,7 @@ const {
     mockClearWriteQueue: vi.fn(),
     mockDeleteReadCacheScopesForUser: vi.fn(),
     mockSyncLocalApiSession: vi.fn(),
+    mockClearLocalApiSession: vi.fn(),
     mockSyncLocalApiRendererAuthState: vi.fn(),
     mockInvalidateAuthCache: vi.fn(),
   }
@@ -167,6 +169,7 @@ vi.mock('@/composables/useSupabaseDatabase', () => ({
 
 vi.mock('@/composables/useLocalApiBridge', () => ({
   syncLocalApiSession: mockSyncLocalApiSession,
+  clearLocalApiSession: mockClearLocalApiSession,
   syncLocalApiRendererAuthState: mockSyncLocalApiRendererAuthState,
 }))
 

@@ -19,6 +19,6 @@ trap cleanup EXIT INT TERM HUP
 # Run the actual dev pipeline
 bash scripts/sync-doppler.sh && \
   node scripts/validate-supabase-keys.cjs && \
-  concurrently \
+    concurrently --kill-others-on-fail \
     "vite --host 0.0.0.0 --port 5546 --strictPort" \
     "npm run backup:watch"

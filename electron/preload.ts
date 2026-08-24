@@ -60,10 +60,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateNotAvailable: (callback: () => void) => {
     ipcRenderer.on('updater:not-available', () => callback())
   },
+  onUpdateBlocked: (callback: (info: unknown) => void) => {
+    ipcRenderer.on('updater:blocked', (_event, info) => callback(info))
+  },
   onUpdateError: (callback: (message: string) => void) => {
     ipcRenderer.on('updater:error', (_event, message) => callback(String(message)))
   },
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  retryFailedUpdate: () => ipcRenderer.invoke('updater:retry-failed'),
   downloadUpdate: () => ipcRenderer.invoke('updater:download'),
   installUpdate: () => ipcRenderer.invoke('updater:install'),
 
@@ -123,8 +127,10 @@ declare global {
       onUpdateDownloadProgress: (callback: (progress: unknown) => void) => void
       onUpdateDownloaded: (callback: () => void) => void
       onUpdateNotAvailable: (callback: () => void) => void
+      onUpdateBlocked: (callback: (info: unknown) => void) => void
       onUpdateError: (callback: (message: string) => void) => void
       checkForUpdates: () => Promise<unknown>
+      retryFailedUpdate: () => Promise<unknown>
       downloadUpdate: () => Promise<void>
       installUpdate: () => Promise<void>
       minimize: () => Promise<void>

@@ -47,6 +47,8 @@
     "electron:patch-builder": "node scripts/patch-electron-builder-dependency-parser.cjs",
     "electron:validate-env": "node scripts/validate-electron-vite-env.cjs",
     "electron:validate-package": "node scripts/validate-electron-package.cjs",
+    "challenge:validate": "python3 .claude/scripts/challenge_runner.py",
+    "challenge:contract": "vitest run --maxWorkers=4 tests/unit/scripts/challenge-runner-contract.test.ts",
     "preelectron:build": "vitest run tests/contract/task-consistency-failure-matrix.test.ts tests/unit/local-api/server-contract.test.ts tests/unit/migrations/atomic-backup-restore.test.ts tests/unit/migrations/atomic-batch-permanent-delete.test.ts tests/unit/composables/useBackupRestoreDatabase.test.ts && npm run test:backup:restore && npm run test:restore:e2e && npm run test:offline-reconnect-flows",
     "electron:build": "npm run electron:validate-env && flock -n /tmp/flowstate-electron-build.lock npm run electron:build:locked",
     "electron:build:locked": "ELECTRON_BUILD=true npm run build && npm run electron:build-main && npm run electron:patch-builder && bash scripts/run-electron-builder-with-npm-tree.sh && npm run electron:validate-package",

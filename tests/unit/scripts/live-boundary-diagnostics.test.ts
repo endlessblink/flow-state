@@ -179,6 +179,28 @@ describe('live boundary diagnostics', () => {
     expect(JSON.parse(output).failures).toEqual([])
   })
 
+  it('fails closed when separate Electron artifact roots are running together', () => {
+    const processList = [
+      '123 1 /tmp/.mount_flowstate427/FlowState.AppImage --app-path=/tmp/.mount_flowstate427/resources/app.asar --user-data-dir=%DIR%',
+      '456 123 /tmp/.mount_flowstate429/flowstate --type=renderer --app-path=/tmp/.mount_flowstate429/resources/app.asar --user-data-dir=%DIR%',
+    ].join('\n')
+    let output = ''
+    try {
+      runBoundary(fixtureEnv(healthyDiagnostics, processList))
+      throw new Error('expected command to fail')
+    } catch (error) {
+      output = String((error as { stdout?: Buffer | string }).stdout || '')
+    }
+    const report = JSON.parse(output)
+    expect(report.processes.runtimeSources).toEqual([
+      '/tmp/.mount_flowstate427/resources/app.asar',
+      '/tmp/.mount_flowstate429/resources/app.asar',
+    ])
+    expect(report.failures).toContain(
+      'competing-runtime-sources:/tmp/.mount_flowstate427/resources/app.asar,/tmp/.mount_flowstate429/resources/app.asar',
+    )
+  })
+
   it('BUG-1933: fails when the primary auth key is null but a backup exists', () => {
     // Signed in on screen, signed out on disk — the sidecar and the next launch both see nothing.
     const store = {
@@ -290,5 +312,15 @@ describe('live boundary diagnostics', () => {
     expect(report.skipped).toBe(true)
     expect(report.failures).toEqual([])
     expect(report.warnings).toContain('FlowState desktop app is not running; live boundary probe skipped.')
+  })
+
+  it('does not count the diagnostic wrapper itself as a running desktop app', () => {
+    const output = runBoundary(
+      fixtureEnv(healthyDiagnostics, '/bin/sh -c /home/endlessblink/.cargo/bin/lean-ctx -c node scripts/diagnose-live-boundary.cjs'),
+    )
+    const report = JSON.parse(output)
+    expect(report.processes.flowStateProcessCount).toBe(0)
+    expect(report.skipped).toBe(true)
+    expect(report.failures).toEqual([])
   })
 })

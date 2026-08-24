@@ -1,0 +1,54 @@
+{
+  "schema": "flowstate-stability-challenge-snapshot-v1",
+  "capturedAt": "2026-08-24",
+  "revision": {
+    "head": "e942a439c522790ce941039e9893e8e9a72426ae",
+    "dirty": true,
+    "dirtyEntryCount": 47
+  },
+  "scope": [
+    "source and competing systems",
+    "persistence and account boundaries",
+    "Electron packaging and updater",
+    "Local API sidecar",
+    "browser and self-host harnesses",
+    "user-facing stress flows"
+  ],
+  "acceptance": [
+    { "id": "source-contracts", "status": "PASS", "evidence": "Focused tests, type-check, task consistency, updater, cache, OAuth callback, and CSP alignment contracts pass." },
+    { "id": "browser-stress", "status": "PASS", "evidence": "CRUD 20/20, canvas reload persistence, and XSS probes pass without skips." },
+    { "id": "packaged-guest-boundary", "status": "PASS", "evidence": "Final rebuilt installed 1.4.429 AppImage reports visibleBeforeFallback=true, visibleAfterFallback=true, periodic windowVisible=true, renderer visibility visible, and sidecar health 200 in a disposable profile; protected guest-task boundary was previously verified 401." },
+    { "id": "authenticated-cross-client", "status": "OPEN", "evidence": "Isolated authenticated persistence and two-client convergence are not completed." },
+    { "id": "full-self-host", "status": "OPEN", "evidence": "Lite smoke passes; full Docker build exceeds the executor ceiling before health checks." },
+    { "id": "installed-update", "status": "OPEN", "evidence": "The inactive launcher on disk now contains validated 1.4.429, while the public updater still serves 1.4.428; update download, relaunch, and public byte agreement remain unproven." },
+    { "id": "challenge-protocol", "status": "PASS", "evidence": "The project-local challenge runner, package contract tests, and conditional CI evidence-bundle gate are present and fail closed." }
+  ],
+  "newRepairs": [
+    "OAuth loopback server ignores stray requests until a code, provider error, or supported token payload arrives",
+    "shared security-header connect policy includes Google APIs and Hacker News origins used by current flows",
+    "Local API session synchronization no longer clears a sidecar on an ambiguous null session; explicit sign-out uses a separate clear operation",
+    "Electron packaging normalizes polluted npm dependency output and applies the precomputed tree before the builder collector",
+    "project-local challenge protocol validates snapshot, reviewer, and artifact SHA-256 bindings fail-closed",
+    "challenge validator is exposed through package scripts and conditional CI evidence-bundle gate",
+    "CI resolves the snapshot by the review-declared SHA-256 instead of filename order and runner metadata rules have regression coverage",
+    "self-host build and teardown output is bounded while preserving failure tails; repeated full-stack run still exceeds the executor window before health checks",
+    "authenticated Playwright projects and independent clients require global-setup storage state instead of silently falling back to guest",
+    "live boundary diagnostic proves the active authenticated mounted 1.4.429 runtime, healthy sidecar, timer boundary, and assistant context without reported failures",
+    "full truth ledger confirmed the original split and the inactive launcher was then aligned to validated 1.4.429 with the 1.4.427 binary preserved as a recoverable backup",
+    "live boundary diagnostics ignore their own lean-ctx wrapper and fail closed when multiple Electron artifact roots are active",
+    "truth-ledger builder contract follows the repository-local electron-builder path and remains covered after wrapper hardening",
+    "Electron runtime diagnostics record packaged load failure, DOM-ready, and finish-load boundaries instead of only reporting stale renderer heartbeats",
+    "rebuilt installed 1.4.429 AppImage reaches renderer heartbeat and sidecar health 200 in a disposable X11 profile",
+    "normal Electron launches show the managed window after did-finish-load when ready-to-show is absent, while background launches remain hidden",
+    "runtime diagnostics now resolve the current BrowserWindow instead of a pre-creation null reference; final packaged readback reports windowVisible=true"
+  ],
+  "knownRisks": [
+    "public updater manifest is behind local 1.4.429",
+    "real Google OAuth callback and provider-token/account isolation remain unproven",
+    "authenticated Local API session replay and cross-client convergence remain unproven",
+    "public updater still serves 1.4.428 while the installed launcher and local package are 1.4.429",
+    "update download, relaunch, public byte agreement, and managed-desktop screenshot proof remain unproven",
+    "deployed-edge CSP and production route behavior require public read-back",
+    "current worktree is dirty, so this ledger is evidence of an attributed snapshot, not a clean release artifact"
+  ]
+}

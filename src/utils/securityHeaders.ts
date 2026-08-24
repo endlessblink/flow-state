@@ -49,7 +49,7 @@ export const DEFAULT_SECURITY_CONFIG: SecurityHeaderConfig = {
       'img-src': ["'self'", 'data:', 'https:', 'http:'],
       'font-src': ["'self'", 'data:', 'https:'],
       // BUG-021 FIX: Explicit allowlist instead of wildcards
-      'connect-src': ["'self'", 'ws:', 'wss:', 'https://*.supabase.co', 'https://api.github.com', 'https://raw.githubusercontent.com'],
+      'connect-src': ["'self'", 'ws:', 'wss:', 'https://*.supabase.co', 'https://www.googleapis.com', 'https://hn.algolia.com', 'https://api.github.com', 'https://raw.githubusercontent.com'],
       'media-src': ["'self'"],
       'object-src': ["'none'"],
       'base-uri': ["'self'"],

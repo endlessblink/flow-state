@@ -270,7 +270,7 @@ describe("FlowState source-to-runtime truth ledger", () => {
     expect(
       buildScript.indexOf("dist-electron/flowstate-truth-ledger.json"),
     ).toBeLessThan(
-      buildScript.indexOf("electron-builder --config electron-builder.yml"),
+      buildScript.indexOf('--config "$ROOT_DIR/electron-builder.yml"'),
     );
   });
 

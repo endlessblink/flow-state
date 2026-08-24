@@ -1,0 +1,31 @@
+{
+  "verdict": "BLOCKED",
+  "snapshot": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451",
+  "findings": [
+    { "id": "open-authenticated-cross-client", "severity": "High", "evidence": "Authenticated persistence and two-client convergence are incomplete.", "scope": "authenticated-cross-client", "remediation": "Provide isolated authenticated cross-client evidence bound to this snapshot." },
+    { "id": "open-full-self-host", "severity": "High", "evidence": "Full Docker build exceeds the executor ceiling before health checks.", "scope": "full-self-host", "remediation": "Provide bounded full self-host health evidence." },
+    { "id": "open-installed-update", "severity": "Critical", "evidence": "Installed launcher, public updater, and active runtime report divergent versions; update download, relaunch, and public byte agreement remain unproven.", "scope": "installed-update", "remediation": "Provide installed update and public updater read-back evidence." }
+  ],
+  "remaining_risks": [
+    "Google OAuth callback and account isolation remain unproven.",
+    "Authenticated Local API replay and cross-client convergence remain unproven.",
+    "Public updater and installed runtime versions diverge.",
+    "Deployed-edge CSP and production route behavior remain unverified.",
+    "The worktree is dirty, so this is not a clean release artifact."
+  ],
+  "review_count": 1,
+  "reviewer": {
+    "context_id": "flowstate-independent-read-only-challenge-review-2026-08-24",
+    "authority": "read-only",
+    "isolation_evidence": "Reviewed the supplied snapshot only; made no file edits and performed no authentication setup, Docker execution, or long-running tests."
+  },
+  "evidence": [
+    { "item_id": "source-contracts", "status": "PASS", "producer_id": "snapshot-declaration", "authority": "read-only", "captured_at": "2026-08-24", "bound_snapshot_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "artifact_path_or_id": "docs/challenge/flowstate-stability-snapshot-2026-08-24-r2.json", "artifact_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "result": "Snapshot declares focused contracts and alignment checks passing." },
+    { "item_id": "browser-stress", "status": "PASS", "producer_id": "snapshot-declaration", "authority": "read-only", "captured_at": "2026-08-24", "bound_snapshot_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "artifact_path_or_id": "docs/challenge/flowstate-stability-snapshot-2026-08-24-r2.json", "artifact_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "result": "Snapshot declares CRUD, canvas persistence, and XSS probes passing." },
+    { "item_id": "packaged-guest-boundary", "status": "PASS", "producer_id": "snapshot-declaration", "authority": "read-only", "captured_at": "2026-08-24", "bound_snapshot_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "artifact_path_or_id": "docs/challenge/flowstate-stability-snapshot-2026-08-24-r2.json", "artifact_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "result": "Snapshot declares fresh AppImage sidecar health and guest authorization boundaries passing." },
+    { "item_id": "authenticated-cross-client", "status": "OPEN", "producer_id": "snapshot-declaration", "authority": "read-only", "captured_at": "2026-08-24", "bound_snapshot_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "artifact_path_or_id": "docs/challenge/flowstate-stability-snapshot-2026-08-24-r2.json", "artifact_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "result": "Snapshot explicitly marks isolated authenticated persistence and two-client convergence incomplete." },
+    { "item_id": "full-self-host", "status": "OPEN", "producer_id": "snapshot-declaration", "authority": "read-only", "captured_at": "2026-08-24", "bound_snapshot_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "artifact_path_or_id": "docs/challenge/flowstate-stability-snapshot-2026-08-24-r2.json", "artifact_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "result": "Snapshot explicitly marks full self-host health checks incomplete." },
+    { "item_id": "installed-update", "status": "OPEN", "producer_id": "snapshot-declaration", "authority": "read-only", "captured_at": "2026-08-24", "bound_snapshot_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "artifact_path_or_id": "docs/challenge/flowstate-stability-snapshot-2026-08-24-r2.json", "artifact_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "result": "Snapshot explicitly marks launcher, updater, runtime agreement, download, and relaunch unproven." },
+    { "item_id": "challenge-protocol", "status": "PASS", "producer_id": "snapshot-declaration", "authority": "read-only", "captured_at": "2026-08-24", "bound_snapshot_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "artifact_path_or_id": "docs/challenge/flowstate-stability-snapshot-2026-08-24-r2.json", "artifact_sha256": "7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451", "result": "Snapshot declares the challenge runner, package contracts, and conditional CI evidence gate present and fail-closed." }
+  ]
+}

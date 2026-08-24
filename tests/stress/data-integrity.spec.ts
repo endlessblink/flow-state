@@ -17,6 +17,7 @@ test.describe('Data Integrity Stress Tests', () => {
       // Fallback: wait for main content to be visible
       return page.waitForSelector('.app-container, .main-content, #app', { timeout: 15000 });
     });
+    await page.getByRole('button', { name: 'Get Started' }).click().catch(() => {});
   });
 
   test('@quick Task CRUD - Rapid Creation', async ({ page }) => {
@@ -28,28 +29,20 @@ test.describe('Data Integrity Stress Tests', () => {
     const createdTasks: string[] = [];
 
     // Navigate to board view for easier task creation
-    await page.click('[data-testid="nav-board"]').catch(() => {
-      return page.click('text=Board').catch(() => {
-        return page.keyboard.press('2'); // Keyboard shortcut
-      });
-    });
+    await page.locator('a[href="#/board"]').click();
 
     await page.waitForTimeout(1000);
 
     for (let i = 0; i < taskCount; i++) {
       const taskTitle = `Stress Test Task ${i + 1} - ${Date.now()}`;
 
-      // Try to create task via keyboard shortcut or button
-      await page.keyboard.press('n');
-      await page.waitForTimeout(100);
-
-      // Fill in task title
-      const titleInput = page.locator('input[placeholder*="title"], input[data-testid="task-title-input"]').first();
-      if (await titleInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await titleInput.fill(taskTitle);
-        await page.keyboard.press('Enter');
-        createdTasks.push(taskTitle);
-      }
+      // Use the persistent quick-add control so this test exercises the same
+      // creation boundary as a real user from an empty workspace.
+      const titleInput = page.getByRole('textbox', { name: 'Quick add task' });
+      await expect(titleInput).toBeVisible();
+      await titleInput.fill(taskTitle);
+      await page.keyboard.press('Enter');
+      createdTasks.push(taskTitle);
 
       // Small delay between creations to simulate rapid but realistic usage
       await page.waitForTimeout(50);
@@ -66,6 +59,8 @@ test.describe('Data Integrity Stress Tests', () => {
     const stressTestTasks = allTaskTitles.filter(t => t.includes('Stress Test Task'));
     const uniqueTasks = new Set(stressTestTasks);
 
+    expect(createdTasks).toHaveLength(taskCount);
+    expect(stressTestTasks).toHaveLength(taskCount);
     // Pass criteria: No duplicates
     expect(uniqueTasks.size).toBe(stressTestTasks.length);
     console.log(`Created ${createdTasks.length} tasks, found ${stressTestTasks.length} in UI`);
@@ -77,29 +72,29 @@ test.describe('Data Integrity Stress Tests', () => {
      */
 
     // Navigate to canvas
-    await page.click('[data-testid="nav-canvas"]').catch(() => {
-      return page.click('text=Canvas').catch(() => {
-        return page.keyboard.press('1');
-      });
-    });
+    await page.locator('a[href="#/canvas"]').click();
 
     await page.waitForTimeout(1000);
+
+    if (await page.getByRole('button', { name: /Add Task/ }).isVisible().catch(() => false)) {
+      await page.getByRole('button', { name: /Add Task/ }).click();
+      const titleInput = page.locator('input[aria-label="Task name"], input[placeholder="Task name"]').first();
+      await expect(titleInput).toBeVisible();
+      await titleInput.fill(`Canvas position stress task ${Date.now()}`);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(1000);
+    }
 
     // Find a task node on canvas
     const taskNode = page.locator('.vue-flow__node, [data-testid="canvas-task-node"]').first();
     const isVisible = await taskNode.isVisible({ timeout: 5000 }).catch(() => false);
 
-    if (!isVisible) {
-      console.log('No canvas nodes found - skipping position test');
-      return;
-    }
+    expect(isVisible).toBe(true);
 
     // Get initial position
     const initialBox = await taskNode.boundingBox();
-    if (!initialBox) {
-      console.log('Could not get bounding box - skipping');
-      return;
-    }
+    expect(initialBox).not.toBeNull();
+    if (!initialBox) throw new Error('Canvas task node had no bounding box');
 
     console.log(`Initial position: x=${initialBox.x}, y=${initialBox.y}`);
 
@@ -122,36 +117,30 @@ test.describe('Data Integrity Stress Tests', () => {
     // Get position after drag
     const afterDragBox = await taskNode.boundingBox();
     console.log(`After drag: x=${afterDragBox?.x}, y=${afterDragBox?.y}`);
+    const afterDragStyle = await taskNode.getAttribute('style');
+    const nodeId = await taskNode.getAttribute('data-id');
+    expect(afterDragStyle).toBeTruthy();
+    expect(nodeId).toBeTruthy();
 
     // Refresh page
     await page.reload();
     await page.waitForTimeout(2000);
 
     // Navigate back to canvas
-    await page.click('[data-testid="nav-canvas"]').catch(() => {
-      return page.click('text=Canvas').catch(() => {
-        return page.keyboard.press('1');
-      });
-    });
+    await page.locator('a[href="#/canvas"]').click();
 
     await page.waitForTimeout(1000);
 
     // Check position after refresh
     const refreshedNode = page.locator('.vue-flow__node, [data-testid="canvas-task-node"]').first();
     const afterRefreshBox = await refreshedNode.boundingBox();
+    await expect(refreshedNode).toBeVisible();
+    expect(await refreshedNode.getAttribute('data-id')).toBe(nodeId);
+    const afterRefreshStyle = await refreshedNode.getAttribute('style');
 
-    if (afterRefreshBox && afterDragBox) {
-      const tolerance = 50; // 50px tolerance for position drift
-      const xDiff = Math.abs(afterRefreshBox.x - afterDragBox.x);
-      const yDiff = Math.abs(afterRefreshBox.y - afterDragBox.y);
-
-      console.log(`After refresh: x=${afterRefreshBox.x}, y=${afterRefreshBox.y}`);
-      console.log(`Position drift: x=${xDiff}px, y=${yDiff}px`);
-
-      // Pass criteria: Position within tolerance
-      expect(xDiff).toBeLessThan(tolerance);
-      expect(yDiff).toBeLessThan(tolerance);
-    }
+    console.log(`After refresh: x=${afterRefreshBox?.x}, y=${afterRefreshBox?.y}`);
+    console.log(`Persisted node style: before=${afterDragStyle} after=${afterRefreshStyle}`);
+    expect(afterRefreshStyle).toBe(afterDragStyle);
   });
 
   test('Concurrent Edit Simulation', async ({ page, context }) => {

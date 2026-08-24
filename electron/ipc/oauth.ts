@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { createServer, type Server } from 'http'
+import { isOAuthCallbackUrl } from './oauthValidation'
 
 // Must match the documented Google/Supabase allow-listed loopback redirects.
 // See docs/GOOGLE-CLOUD-SETUP.md and src/composables/useTauriOAuth.ts.
@@ -78,6 +79,12 @@ export function registerOAuthHandlers() {
 
       server.on('request', (req, res) => {
         const url = `http://127.0.0.1${req.url || '/'}`
+
+        if (!isOAuthCallbackUrl(url)) {
+          res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' })
+          res.end('Waiting for the OAuth callback.')
+          return
+        }
 
         // Send success page to the browser
         res.writeHead(200, { 'Content-Type': 'text/html' })

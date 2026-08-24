@@ -72,6 +72,7 @@ function processList() {
 function processSummary(raw) {
   const lines = String(raw || '')
     .split('\n')
+    .filter((line) => !/diagnose-live-boundary|lean-ctx/i.test(line))
     .filter((line) => /FlowState|flow-state|\/flowstate(?:\s|$)|flowstate-local-api|local-api-server/i.test(line))
   const flowStateLines = lines.filter((line) =>
     !/flowstate-local-api|local-api-server/i.test(line) &&
@@ -88,12 +89,19 @@ function processSummary(raw) {
     if (match) userDataDirs.push(match[1])
   }
   const foreignUserDataDirs = [...new Set(userDataDirs.filter((dir) => dir !== USER_DATA_DIR))]
+  const runtimeSources = [...new Set(flowStateLines.flatMap((line) => {
+    const appPath = /--app-path=(\S+)/.exec(line)?.[1]
+    if (appPath) return [appPath]
+    const appImage = /((?:\/[^\s]+)?FlowState(?:-[^\s/]+)?\.AppImage)/i.exec(line)?.[1]
+    return appImage ? [appImage] : []
+  }))]
 
   return {
     flowStateProcessCount: flowStateLines.length,
     localApiProcessCount: lines.filter((line) => /flowstate-local-api|local-api-server/i.test(line)).length,
     usesRealUserData: flowStateLines.some((line) => line.includes(USER_DATA_DIR)),
     foreignUserDataDirs,
+    runtimeSources,
   }
 }
 
@@ -140,6 +148,9 @@ function evaluate({ config, processes, health, diagnostics, assistantContext, st
   // other client can read.
   if (processes.foreignUserDataDirs && processes.foreignUserDataDirs.length > 0) {
     failures.push(`foreign-profile-instance:${processes.foreignUserDataDirs.join(',')}`)
+  }
+  if (processes.runtimeSources && processes.runtimeSources.length > 1) {
+    failures.push(`competing-runtime-sources:${processes.runtimeSources.join(',')}`)
   }
 
   // BUG-1933: signed in on screen, signed out on disk.

@@ -81,6 +81,10 @@ const handleDownload = async () => {
   await updater.downloadAndInstall()
 }
 
+const handleRetryFailedUpdate = async () => {
+  await electronUpdater.retryFailedUpdate()
+}
+
 const handleRestart = async () => {
   await updater.restart()
 }
@@ -457,6 +461,17 @@ const handleChangePassword = async () => {
           <button class="update-btn primary" @click="handleRestart">
             <RefreshCw :size="16" />
             Restart to Apply
+          </button>
+        </div>
+
+        <div v-else-if="updater.status.value === 'blocked'" class="update-error">
+          <div class="update-status error">
+            <AlertCircle :size="20" />
+            <span>{{ updater.error.value || 'A previous update failed to install.' }}</span>
+          </div>
+          <button class="update-btn secondary" @click="handleRetryFailedUpdate">
+            <RefreshCw :size="16" />
+            Retry Update
           </button>
         </div>
 

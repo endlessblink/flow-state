@@ -24,6 +24,7 @@ export type UpdateStatus =
   | 'ready'
   | 'installing'
   | 'error'
+  | 'blocked'
   | 'up-to-date'
 
 // Access electronAPI safely without global type augmentation
@@ -32,8 +33,10 @@ interface ElectronUpdaterApi {
   onUpdateDownloadProgress?: (callback: (progress: unknown) => void) => void
   onUpdateDownloaded?: (callback: () => void) => void
   onUpdateNotAvailable?: (callback: () => void) => void
+  onUpdateBlocked?: (callback: (info: unknown) => void) => void
   onUpdateError?: (callback: (message: string) => void) => void
   checkForUpdates?: () => Promise<unknown>
+  retryFailedUpdate?: () => Promise<unknown>
   downloadUpdate?: () => Promise<void>
   installUpdate?: () => Promise<void>
   getVersion?: () => Promise<string>
@@ -91,6 +94,17 @@ export function useElectronUpdater() {
     api.onUpdateNotAvailable?.(() => {
       if (status.value === 'checking') {
         status.value = 'up-to-date'
+      }
+    })
+
+    api.onUpdateBlocked?.((info: any) => {
+      status.value = 'blocked'
+      error.value = info?.message || 'A previous update failed to install. Retry the update.'
+      updateInfo.value = {
+        version: info?.version || 'unknown',
+        currentVersion: resolveCurrentVersion(info),
+        body: info?.releaseNotes || info?.releaseName || null,
+        date: info?.releaseDate || null,
       }
     })
 
@@ -152,6 +166,26 @@ export function useElectronUpdater() {
     }
   }
 
+  async function retryFailedUpdate(): Promise<boolean> {
+    const api = getElectronAPI()
+    if (!isElectron() || !api?.retryFailedUpdate) return false
+
+    status.value = 'checking'
+    error.value = null
+    try {
+      await api.retryFailedUpdate()
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      if (status.value === 'checking') status.value = 'up-to-date'
+      const finalStatus = status.value as UpdateStatus
+      return finalStatus === 'available'
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      status.value = 'error'
+      error.value = msg
+      return false
+    }
+  }
+
   async function restart(): Promise<void> {
     const api = getElectronAPI()
     if (!isElectron() || !api?.installUpdate) return
@@ -190,6 +224,7 @@ export function useElectronUpdater() {
     isDownloading,
 
     checkForUpdates,
+    retryFailedUpdate,
     downloadAndInstall,
     restart,
   }

@@ -1,5 +1,91 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2040: Board drag-end resync flashes tasks between lanes (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)
+
+Dragging a task across Board lanes briefly emptied every column before restoring the task snapshot, which made cards visibly jump between lanes while the async save completed. The fix must preserve the current DOM through one-pass resync and cover status, priority, category, date, list, reorder, create, filter, completion, selection, and delete actions.
+
+**Evidence so far**: focused drag contracts pass 45/45; authenticated Board priority/filter and stale date drag E2E pass 2/2; the full CRUD workflow passes 9/15 with 6 existing skips, including the Board coverage that is not all acceptance-surface proof yet.
+
+### FEATURE-2039: Always-running Pomodoro break handoff (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)
+
+After a completed work session, the timer now exposes a direct break action and waits 90 seconds for the user to choose it. If no break starts, the timer automatically begins the next work session; manually stopped or paused sessions do not trigger this fallback.
+
+**Regression coverage**: timer state-machine tests cover the 90-second restart, starting the break canceling the restart, and manual stop not scheduling one. Electron build and installed-runtime visual verification remain required before closeout.
+
+### TASK-2038: Full stability audit — competing runtimes, harness gaps, and live E2E closure (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-24)
+
+**Audit findings**: The focused source/contract gates pass, but they do not close the real acceptance surface. Live truth-ledger inspection confirms competing runtime versions: the launcher on disk is 1.4.427, the public updater serves 1.4.428, and the active healthy sidecar belongs to a separately mounted 1.4.429 AppImage; the authenticated cross-client suite cannot be run safely in this audit because its global setup resets shared local database rows.
+
+**Harness and wiring failures reproduced**: `test:stress:quick` fails closed when port 5546 is absent, while the full stress runner uses `|| true` around Playwright and benchmark commands and can report a generated report after failures. The stress config has no real server command and depends on an external dev process. The stress cases also used stale selectors and silently skipped empty-state assertions: they navigated to the wrong view, created zero tasks, and still reported green. After repair, the browser tests use the canonical routes and Quick Add boundary, seed canvas/editor data, and assert real task/node counts. A fresh `npm run dev` starts Vite but the dual-engine backup daemon repeatedly fails because the installed `better-sqlite3` native binding is missing; startup also emits a `NODE_ENV=production` development-build warning. The dev PID file can remain stale after interrupted startup. One attempted cross-client command referenced a nonexistent `tests/e2e/playwright.config.ts`; the canonical root config is separate and performs destructive global setup.
+
+**Evidence**: type-check passes; the focused auth/sync/convergence pack passes; task-consistency audit reports 0 open critical/high vectors, 109 automated-only, and 6 live-proven; the repaired real browser stress paths pass CRUD 20/20, canvas position persistence with identical serialized node style after reload, and XSS script/event-handler/rich-text probes with no skips; container/API checks pass against 10 running Supabase containers; guest task-flow E2E passes 4/4; the refreshed live boundary diagnosis reports the active mounted 1.4.429 runtime with sidecar health 200, timer boundary 200, and assistant context 200 with no failures; the truth ledger reports installed 1.4.427 versus public 1.4.428 versus active sidecar 1.4.429; conflict analysis reports 13,018 occurrences across error handling, undo/redo, calendar, database, state, validation, and drag/drop categories. The combined runner still exceeds the local executor output/time budget, so per-surface runs are the authoritative stress evidence until the runner is made independently bounded.
+
+**Current repair evidence (2026-08-24)**: Stress runner failure propagation now has a contract regression; stress browser routes use the canonical Board/Canvas links and Quick Add control; onboarding is dismissed explicitly; CRUD asserts 20 created and 20 rendered tasks; canvas seeds a task and compares serialized node style across reload; rich-text security seeds and opens the real editor. Against the current 1.4.429 worktree, the five repaired host-browser paths pass in one run: CRUD 20/20, canvas persistence, XSS script-tag, event-handler, and rich-text probes. The E2E launcher now parses current and legacy local Supabase status formats through one bounded extractor and has a contract regression. Electron credential validation, renderer build, main/preload compilation, and package/sidecar contract validation pass with host networking. The public updater manifest serves 1.4.428 while local/package version is 1.4.429, so updater alignment and installed update proof remain unproven.
+
+**Additional runtime lifecycle repair (2026-08-24)**: The development launcher recorded its shell PID but did not propagate a Vite child failure, allowing a dead server to retain a live owner PID and make the next launch report a false legitimate-server collision. `concurrently --kill-others-on-fail` now closes the sibling backup process and lets the existing cleanup trap remove the owner PID; the lifecycle contract regression passes.
+
+**Additional self-host harness repair (2026-08-24)**: The full disposable stack health loop counted PostgREST as unhealthy forever even though its compose healthcheck is intentionally disabled. The readiness predicate now waits only on services that actually expose a health state; the isolated lite smoke path passes all 6 checks, while the full Docker run was terminated by the executor during image build before producing application evidence and was explicitly cleaned up.
+
+**Additional self-host isolation repair (2026-08-24)**: Two concurrent full self-host attempts were observed sharing the fixed `flowstate-test` Compose project and generated environment file, creating a cleanup race. The runner now takes a non-blocking lock before generating credentials; the contract suite covers the lock and refuses a second caller instead of allowing fragmented stack ownership. A clean single-owner rerun confirmed no competing processes, but the executor still terminated Docker's image build at its 120-second/8 MB ceiling before health checks; no full-stack application result is claimed.
+
+**Additional updater/package repair (2026-08-24)**: A previously generated 1.4.429 Debian artifact was malformed: package validation found duplicate `debian-binary`, control, and data archive members, and its size was approximately double the prior artifact. The canonical builder wrapper also depended on npm's implicit binary PATH when run directly. The wrapper now calls the repository-local builder explicitly; a clean rebuild produced a valid AppImage/deb pair, and package validation now passes including the executable sidecar route probe. Failed-update suppression now emits a visible blocked state with a retry action instead of allowing the renderer to claim `up-to-date`; focused updater coverage and type-check pass.
+
+**Fresh packaged-runtime evidence (2026-08-24)**: The rebuilt 1.4.429 AppImage launched under a disposable Xvfb display; its packaged sidecar reported listening on `127.0.0.1:5577`. Direct boundary probes returned health 200, timer-current 200 with an inactive local snapshot, and protected tasks 401 without credentials. This proves packaged startup and guest protection, not authenticated task sync, update download/relaunch, or installed desktop delivery.
+
+**Task cache split-brain repair (2026-08-24)**: The authenticated update path could durably enqueue a remote task edit, then throw from the read-cache refresh and tell the caller the edit failed; a retry could therefore create competing intents. The path now preserves the successful queued edit, reports cache recovery as a warning, and retains rollback/throw behavior when every durable persistence path fails. A regression reproduces queue success plus cache failure and passes with the updated task still visible.
+
+**Electron OAuth callback repair (2026-08-24)**: The loopback callback server accepted and resolved on the first HTTP request, so a browser favicon/navigation request could be mistaken for a completed Google login. Callback validation now ignores requests without a code, provider error, or supported token payload and keeps the server waiting; a pure validation regression covers stray requests, PKCE callbacks, provider errors, and implicit-flow payloads. The focused Electron Google suite passes 13/13 and the callback contract passes 2/2; real Google callback and account-isolation proof remain open.
+
+**CSP policy alignment repair (2026-08-24)**: The morning dashboard requested Hacker News and calendar code requested Google APIs, while the shared `securityHeaders` connect policy omitted both origins even though the renderer CSP manager listed them. The shared policy now includes both origins and a regression prevents the two CSP sources from drifting again; deployed-edge CSP read-back remains required because the production header is external to this repository.
+
+**Local API auth-boundary repair (2026-08-24)**: The Local API bridge exposed one function that both synchronized a session and cleared the sidecar for `null`; that conflated passive auth recovery with explicit sign-out and made future callers capable of disconnecting the helper while the remembered account remained active. Synchronization now ignores ambiguous null/expired sessions, explicit sign-out calls a separate clear operation, and bridge/auth regressions pass; installed authenticated sidecar replay remains open.
+
+**Electron builder dependency-boundary repair (2026-08-24)**: A direct fresh package build still failed because the installed builder collector ignored the precomputed npm tree when its newer source layout did not match the patch script’s only insertion point; the wrapper then fell back to a polluted collector path. The patch now supports both collector layouts, the wrapper normalizes warning-prefixed npm output to one JSON document, and the fresh AppImage/deb build plus host-level package/sidecar validation pass; the four builder contract tests pass.
+
+**Project-local challenge protocol repair (2026-08-24)**: The repository had no local challenge skill or validator, so an independent review could not be checked against the snapshot and artifact hashes. A fail-closed local protocol and runner now require a supported snapshot schema, exact reviewer binding, one review, PASS status for every acceptance item, and SHA-256-verified evidence artifacts; contract tests pass. A fresh independent review is still required before any challenge PASS can be claimed.
+
+**Challenge enforcement hardening (2026-08-24)**: Independent review found CI selecting snapshots by filename and insufficient runner metadata coverage. CI now resolves the snapshot by the reviewer-declared SHA-256 and requires exactly one review bundle; runner contract coverage now guards read-only authority, isolation evidence, exact acceptance coverage, and producer/capture/result metadata.
+
+**Self-host output-boundary repair (2026-08-24)**: Full disposable self-host runs were still losing their useful failure result to executor output truncation; Docker build output and teardown output are now redirected to bounded logs, with the last 80 build lines retained on failure and cleanup fully quiet. The isolated stack is cleaned with no competing test containers, but repeated full-stack runs still exceed the current 120-second executor window before health checks, so full-self-host remains OPEN.
+
+**Authenticated E2E ordering repair (2026-08-24)**: The root Playwright config and two-client fixture evaluated `existsSync(authFile)` while modules loaded, before global setup created the auth snapshot; clean runs could silently execute authenticated scenarios as guests, while later runs reused stale state. Authenticated projects and independent clients now require the generated state file and fail closed when setup does not produce it; the ordering regression passes 2/2 and type-check passes.
+
+**Live installed-runtime refresh (2026-08-24)**: The prior active mounted desktop reported version 1.4.429 with authenticated renderer, healthy Local API, timer, and assistant-context boundaries; the launcher target extracted as 1.4.427 while the public updater advertised 1.4.428. With no desktop process active, the stale launcher was backed up and replaced by the validated 1.4.429 artifact; the public updater still advertises 1.4.428, so update download, relaunch, active-sidecar provenance, and public byte agreement remain open.
+
+**Local launcher provenance repair (2026-08-24)**: The inactive installed launcher now matches package version 1.4.429 and the former 1.4.427 bytes are preserved in a recoverable backup. This repairs local launcher drift only; it does not claim public deployment or updater transition.
+
+**Packaged renderer diagnosis repair (2026-08-24)**: A disposable 1.4.429 launch started the Electron main process but produced no renderer heartbeat, visible window, or sidecar; GPU-off and explicit-X11 retries reproduced it. Existing diagnostics could only report stale heartbeat, so Electron now records `did-fail-load`, `dom-ready`, and `did-finish-load` events; main-process compilation passes. A rebuilt package and rerun are still required to identify the underlying packaged-load failure.
+
+**Rebuilt packaged-runtime readback (2026-08-24)**: After rebuilding with the current main/renderer outputs, the installed 1.4.429 AppImage reached `dom-ready` and `did-finish-load`, emitted renderer heartbeats with a complete file route, and returned sidecar health 200 in a disposable X11 profile. This closes packaged renderer/sidecar startup for that run; the disposable window remained reported not visible, and authenticated/user-visible relaunch plus public updater transition remain open.
+
+**Electron visible-window repair (2026-08-24)**: The packaged renderer was healthy while the BrowserWindow stayed hidden because the Linux launch did not emit `ready-to-show`. Normal launches now reveal the managed window after `did-finish-load` when still hidden, while explicit background launches remain hidden; lifecycle and main-contract regressions pass 17/17 and Electron main compilation passes. A rebuilt installed artifact and visual readback remain required.
+
+**Electron visibility-diagnostics repair (2026-08-24)**: Runtime health had captured `mainWindow` before creation, so it permanently reported `windowVisible:false` even after the fallback showed the window. The health loop now resolves the current window; final rebuilt AppImage readback reports fallback visibility before/after true, periodic `windowVisible:true`, renderer visibility visible, and sidecar health 200. A managed-desktop screenshot remains the only visual gate.
+
+**Live-boundary process identity repair (2026-08-24)**: The diagnostic’s process matcher counted its own `lean-ctx` wrapper as FlowState and could report a dead sidecar as a live app. It now ignores diagnostic-wrapper command lines and fails closed when distinct Electron artifact roots appear together; 14 live-boundary regression tests pass, and the real probe now correctly reports no desktop running and skips sidecar health checks.
+
+**Release-truth contract refresh (2026-08-24)**: The builder wrapper was hardened to invoke the repository-local Electron Builder binary, but its truth-ledger test still searched for the former implicit npm binary command. The contract now asserts the actual local-builder config boundary; the combined truth-ledger and live-boundary pack passes 21/21.
+
+**Independent challenge review (2026-08-24)**: The fresh separate read-only reviewer returned `BLOCKED` against snapshot `7adb2d2d9e7954f11363616ce5266a9f08e7ba50ff898623e0ef00c49df1b451`. The review validates the bundle binding and confirms the substantive remaining gates: authenticated cross-client convergence, full self-host health, installed/public update provenance, managed-desktop screenshot proof, OAuth/account isolation, and deployed-edge behavior. The validator replays this as a substantive `BLOCKED` result rather than a stale-review metadata failure.
+
+**Required next work**: Make the stress harness independently bounded under the executor’s 120-second/8 MB ceiling; establish one supported dev/runtime launcher and native-module installation check; remove stale PID/process ambiguity; run authenticated R9/R10/R13/R11/R12 plus Electron restart/sidecar/update proof in an isolated disposable database/profile; then repair every reproduced product failure with red-green regressions and complete the challenge-review gate. The isolated self-host stack is disposable but its Docker build exceeded the execution wrapper before health checks; the shared authenticated setup remains intentionally unrun because it deletes shared local test-user rows. This task is not ready for DONE.
+
+### BUG-2037: Board recurring-task delete dialog collapses action text (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-24)
+
+The Board’s recurring-task delete dialog could render action labels and hints on top of each other because the action rows had no stable minimum height or explicit text sizing. The shared modal now reserves space for both lines, lets the text column fill the available width, and uses explicit inherited font/line-height rules.
+
+**Regression**: Focused modal stylesheet coverage verifies the action-row height, text-column sizing, and block-level label/hint layout.
+
+**Explicitly not covered**: Installed Electron visual confirmation and authenticated destructive-action readback.
+
 ### BUG-2036: AI Assist promotes tasks from deadline-shaped text without enough context (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)

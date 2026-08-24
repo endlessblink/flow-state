@@ -1,5 +1,6 @@
 export interface BackgroundWindow {
   isDestroyed(): boolean
+  isVisible(): boolean
   isMinimized(): boolean
   getBounds(): { width: number; height: number }
   setBounds(bounds: { width: number; height: number }): void
@@ -64,6 +65,12 @@ export function createBackgroundWindowLifecycle(options: BackgroundWindowLifecyc
         setNormalLaunchBounds(window)
         window.show()
       }, 500)
+    },
+
+    handleLoadFinished(window: BackgroundWindow, argv: readonly string[]): void {
+      if (isBackgroundLaunch(argv) || window.isDestroyed() || window.isVisible()) return
+      setNormalLaunchBounds(window)
+      window.show()
     },
 
     handleClose(event: WindowCloseEvent, window: BackgroundWindow): boolean {

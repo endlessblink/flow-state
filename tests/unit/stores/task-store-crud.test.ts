@@ -220,6 +220,20 @@ describe('Task Store — CRUD', () => {
     expect(updated?.updatedAt.getTime()).toBeGreaterThanOrEqual(originalUpdatedAt.getTime())
   })
 
+  it('does not report an authenticated edit as failed when the durable queue succeeds but read-cache refresh fails', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({ title: 'Cache boundary task' })
+    mockCacheTasks.mockRejectedValueOnce(new Error('IndexedDB unavailable'))
+
+    await expect(store.updateTask(task.id, { title: 'Queued despite cache failure' })).resolves.toBeUndefined()
+
+    expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({
+      entityId: task.id,
+      operation: 'update',
+    }))
+    expect(store._rawTasks.find(candidate => candidate.id === task.id)?.title).toBe('Queued despite cache failure')
+  })
+
   it('blocks SYNC source from changing task canvas geometry', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const store = useTaskStore()

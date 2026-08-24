@@ -44,6 +44,24 @@ jobs:
       - name: Build application
         run: npm run build
 
+      # Run the fail-closed challenge validator whenever a review bundle is present.
+      # Ordinary fork-safe CI has no review artifact and therefore cannot invent a PASS.
+      - name: Validate challenge evidence bundle
+        if: ${{ hashFiles('docs/challenge/review-*.json') != '' }}
+        run: |
+          review_files=(docs/challenge/review-*.json)
+          test "${#review_files[@]}" -eq 1
+          review="${review_files[0]}"
+          expected_hash="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["snapshot"])' "$review")"
+          snapshot=""
+          while IFS= read -r candidate; do
+            candidate_hash="$(sha256sum "$candidate" | awk '{print $1}')"
+            if [ "$candidate_hash" = "$expected_hash" ]; then snapshot="$candidate"; fi
+          done < <(find docs/challenge -maxdepth 1 -name 'flowstate-stability-snapshot-*.json' -print)
+          test -n "$snapshot" -a -n "$review"
+          test "$(sha256sum "$snapshot" | awk '{print $1}')" = "$expected_hash"
+          npm run challenge:validate -- --snapshot "$snapshot" --review "$review"
+
       # Unit tests (enabled after TASK-020 fix, Dec 19, 2025)
       - name: Run safety tests
         run: npx vitest run tests/safety/ --config vitest.ci.config.ts

@@ -9,7 +9,7 @@
 #   ./scripts/run-stress-tests.sh security # Security tests only
 #
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -21,6 +21,11 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+TEST_EXIT=0
+BENCHMARK_EXIT=0
+REPORT_EXIT=0
+FINAL_EXIT=0
 
 echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║  FlowState Stress Test Suite               ║${NC}"
@@ -98,12 +103,17 @@ mkdir -p "$REPORT_DIR"
 echo -e "${YELLOW}Running Playwright stress tests...${NC}"
 cd "$PROJECT_DIR"
 
-npx playwright test \
+if npx playwright test \
     --config=tests/stress/playwright.stress.config.ts \
-    --timeout=$TIMEOUT \
+    --timeout="$TIMEOUT" \
     --reporter=list,json \
     $TEST_FILTER \
-    2>&1 | tee "$REPORT_DIR/test-output.log" || true
+    2>&1 | tee "$REPORT_DIR/test-output.log"; then
+    TEST_EXIT=0
+else
+    TEST_EXIT=$?
+    FINAL_EXIT=$TEST_EXIT
+fi
 
 # Move JSON results if generated
 if [ -f "test-results.json" ]; then
@@ -115,13 +125,23 @@ echo ""
 # Run performance benchmarks (if running all tests)
 if [ "${1:-all}" = "all" ]; then
     echo -e "${YELLOW}Running performance benchmarks...${NC}"
-    npm run test:bench 2>&1 | tee -a "$REPORT_DIR/test-output.log" || true
+    if npm run test:bench 2>&1 | tee -a "$REPORT_DIR/test-output.log"; then
+        BENCHMARK_EXIT=0
+    else
+        BENCHMARK_EXIT=$?
+        if [ "$FINAL_EXIT" -eq 0 ]; then FINAL_EXIT=$BENCHMARK_EXIT; fi
+    fi
     echo ""
 fi
 
 # Generate HTML report
 echo -e "${YELLOW}Generating report...${NC}"
-node "$SCRIPT_DIR/generate-stress-report.cjs" || true
+if node "$SCRIPT_DIR/generate-stress-report.cjs"; then
+    REPORT_EXIT=0
+else
+    REPORT_EXIT=$?
+    if [ "$FINAL_EXIT" -eq 0 ]; then FINAL_EXIT=$REPORT_EXIT; fi
+fi
 
 echo ""
 echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
@@ -132,10 +152,13 @@ echo -e "Report: ${GREEN}$REPORT_DIR/index.html${NC}"
 echo ""
 
 # Open report if on desktop
-if command -v xdg-open > /dev/null 2>&1; then
+if command -v xdg-open > /dev/null 2>&1 && [ -t 0 ] && [ -t 1 ]; then
     read -p "Open report in browser? [y/N] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         xdg-open "$REPORT_DIR/index.html"
     fi
 fi
+
+echo "Exit summary: stress=$TEST_EXIT benchmark=$BENCHMARK_EXIT report=$REPORT_EXIT"
+exit "$FINAL_EXIT"

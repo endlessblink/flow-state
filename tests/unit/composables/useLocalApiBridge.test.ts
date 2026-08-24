@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  clearLocalApiSession,
   subscribeLocalApiTaskMutations,
   subscribeLocalApiTimerMutations,
   syncLocalApiRendererAuthState,
@@ -90,6 +91,8 @@ describe('useLocalApiBridge', () => {
   it('clears the Local API sidecar on a real sign-out', () => {
     const api = installElectronApi()
     syncLocalApiSession(null)
+    expect(api.clearLocalApiSession).not.toHaveBeenCalled()
+    clearLocalApiSession()
     expect(api.clearLocalApiSession).toHaveBeenCalledOnce()
     expect(api.setLocalApiSession).not.toHaveBeenCalled()
   })

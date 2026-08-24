@@ -1380,7 +1380,16 @@ export function useTaskOperations(
       // Every update must await this boundary: a fast reload can otherwise hydrate the
       // previous snapshot even though the UI already reported the action as complete.
       const cacheSnapshot = [..._rawTasks.value];
-      await cacheTasks(cacheSnapshot, { throwOnError: true });
+      let readCacheError: unknown;
+      try {
+        await cacheTasks(cacheSnapshot, { throwOnError: true });
+      } catch (cacheError) {
+        readCacheError = cacheError;
+        console.warn(
+          `[TASK] Durable task ${taskId} was persisted, but the read cache could not be refreshed:`,
+          cacheError,
+        );
+      }
       if (!authStore.user?.id) {
         await saveTasksToStorage(cacheSnapshot, "update-task-guest-durability");
       }
@@ -1388,6 +1397,13 @@ export function useTaskOperations(
         throw persistenceError instanceof Error
           ? persistenceError
           : new Error("Task update could not be durably persisted");
+      }
+      if (readCacheError && persisted) {
+        const { showToast } = useToast();
+        showToast(
+          "Saved, but offline cache refresh was unavailable. It will recover on the next sync.",
+          "warning",
+        );
       }
     } finally {
       if (!wasManualInProgress) manualOperationInProgress.value = false;

@@ -26,6 +26,16 @@ set -euo pipefail
 PROJECT_NAME="flowstate-test"
 COMPOSE_FILE="docker-compose.self-host.yml"
 ENV_FILE=".env.self-host.test"
+LOCK_FILE="/tmp/flowstate-self-host-test.lock"
+
+# The project name and generated env file are intentionally fixed so Docker
+# cleanup is deterministic. Serialize callers to prevent two runs from
+# overwriting each other's credentials or tearing down the other's stack.
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+    echo "[FAIL] Another self-host test is already running (lock: $LOCK_FILE)"
+    exit 1
+fi
 
 # Non-default ports to avoid clashing with a running instance
 TEST_FLOWSTATE_PORT=13050
@@ -87,7 +97,7 @@ cleanup() {
     fi
     echo ""
     info "Cleaning up test stack..."
-    docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v --remove-orphans 2>/dev/null || true
+    docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
     rm -f "$ENV_FILE"
     info "Cleanup complete."
 }
@@ -173,7 +183,13 @@ success "Wrote $ENV_FILE"
 # Build & start the stack
 # ---------------------------------------------------------------------------
 info "Starting Docker Compose stack (project: ${PROJECT_NAME})..."
-docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build 2>&1 | tail -5
+BUILD_LOG="/tmp/flowstate-self-host-build-${PROJECT_NAME}.log"
+if ! docker compose --progress quiet -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build >"$BUILD_LOG" 2>&1; then
+    fail "Docker Compose build/start failed; last 80 log lines:"
+    tail -n 80 "$BUILD_LOG" >&2 || true
+    exit 1
+fi
+rm -f "$BUILD_LOG"
 
 # ---------------------------------------------------------------------------
 # Wait for health checks
@@ -191,7 +207,7 @@ while [ $elapsed -lt $HEALTH_TIMEOUT ]; do
             process.stdin.on('end',()=>{
                 try {
                     const svcs=d.trim().split('\n').filter(Boolean).map(l=>JSON.parse(l));
-                    const bad=svcs.filter(s=>s.Health!=='healthy'&&s.State==='running'&&s.Service!=='migrate');
+                    const bad=svcs.filter(s=>s.Health&&s.Health!=='healthy'&&s.State==='running'&&s.Service!=='migrate');
                     process.stdout.write(String(bad.length));
                 } catch(e) { process.stdout.write('?'); }
             });

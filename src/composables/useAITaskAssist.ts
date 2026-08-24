@@ -22,7 +22,6 @@ import { getSharedRouter } from '@/services/ai/routerFactory'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
-import { getAIUserContext } from '@/services/ai/userContext'
 
 // ============================================================================
 // Types
@@ -520,7 +519,6 @@ Return ONLY valid JSON: { "title": "..." }` + langHint
       const langHint = detectLanguageInstruction(task.title)
       const today = new Date().toISOString().split('T')[0]
       const taskStore = useTaskStore()
-      const userContext = await getAIUserContext('taskassist')
 
       // Gather context
       const subtasks = taskStore.tasks.filter(t => t.parentTaskId === task.id)
@@ -557,7 +555,7 @@ Project: ${taskStore.getProjectDisplayName(task.projectId) || 'none'} | Subtasks
 Today: ${today} | Overdue tasks: ${overdueTasks}`
 
       const messages: RouterChatMessage[] = [
-        { role: 'system', content: systemPrompt + userContext },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ]
 
@@ -667,7 +665,6 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
 
       const langHint = detectLanguageInstruction(tasks[0]?.title || '')
       const today = new Date().toISOString().split('T')[0]
-      const userContext = await getAIUserContext('taskassist')
 
       const systemPrompt = `You suggest task metadata for multiple tasks. Return ONLY valid JSON.
 Format: { "tasks": [{ "taskId": "...", "contextQuestion": "..." | null, "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }] }
@@ -689,7 +686,7 @@ Rules:
       ).join('\n')
 
       const messages: RouterChatMessage[] = [
-        { role: 'system', content: systemPrompt + userContext },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: `Today: ${today}\nTasks:\n${taskList}` }
       ]
 

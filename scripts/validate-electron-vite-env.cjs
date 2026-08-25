@@ -11,7 +11,20 @@
 
 const fs = require('fs')
 const path = require('path')
-const dotenv = require('dotenv')
+
+function parseEnvFile(contents) {
+  const parsed = {}
+  for (const line of contents.split(/\r?\n/)) {
+    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/)
+    if (!match) continue
+    let value = match[2]
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1)
+    }
+    parsed[match[1]] = value
+  }
+  return parsed
+}
 
 const root = process.env.FLOWSTATE_ENV_ROOT || path.resolve(__dirname, '..')
 const mode = process.env.FLOWSTATE_VITE_MODE || 'production'
@@ -27,7 +40,7 @@ const envFiles = [
 for (const file of envFiles) {
   const fullPath = path.join(root, file)
   if (fs.existsSync(fullPath)) {
-    Object.assign(env, dotenv.parse(fs.readFileSync(fullPath)))
+    Object.assign(env, parseEnvFile(fs.readFileSync(fullPath, 'utf8')))
   }
 }
 

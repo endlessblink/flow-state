@@ -724,4 +724,21 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
     vi.doUnmock('@/services/auth/supabase')
     vi.resetModules()
   })
+
+  it('skips settings writes for a persisted identity when the Supabase client is unavailable', async () => {
+    vi.resetModules()
+    vi.doMock('@/services/auth/supabase', () => ({ supabase: null }))
+    authStoreMock.user = { id: 'persisted-user' }
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+
+    await expect(db.saveUserSettings({ theme: 'dark' } as any)).resolves.toBeUndefined()
+    expect(fromMock).not.toHaveBeenCalled()
+    expect(mapperSpies.toSupabaseUserSettings).not.toHaveBeenCalled()
+    expect(reportMock).not.toHaveBeenCalled()
+
+    vi.doUnmock('@/services/auth/supabase')
+    vi.resetModules()
+  })
 })

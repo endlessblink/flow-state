@@ -105,6 +105,7 @@ test.describe('Board priority and recurring filters', () => {
       await page.keyboard.press('Escape')
       await expect(trigger).toHaveAttribute('aria-expanded', 'false')
     }
+    await page.screenshot({ path: '/tmp/flowstate-priority-surfaces-e2e.png', fullPage: true })
   })
 
   test('applies the shared Board filter projection to Canvas', async ({ page }) => {

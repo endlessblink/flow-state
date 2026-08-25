@@ -1,6 +1,6 @@
 import { type Ref, nextTick } from 'vue'
 import { useTaskStore, type Task } from '@/stores/tasks'
-import type { TaskAttachment } from '@/types/tasks'
+import type { TaskAttachment, TaskPriority } from '@/types/tasks'
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasModalsStore } from '@/stores/canvas/modals'
 import { markGroupDeleted, confirmGroupDeleted } from '@/utils/deletedGroupsTracker'
@@ -208,7 +208,7 @@ interface QuickTaskData {
         title: string
         description: string
         status?: string
-  priority?: Exclude<import('@/types/tasks').TaskPriority, null>
+        priority?: TaskPriority
         dueDate?: string
         projectId?: string
         attachments?: TaskAttachment[]  // FEATURE-1414

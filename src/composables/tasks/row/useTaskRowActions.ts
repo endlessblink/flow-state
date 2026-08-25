@@ -201,10 +201,10 @@ export function useTaskRowActions(
     }
 
     const cyclePriority = (taskId: string, currentPriority?: string | null) => {
-        const priorities = ['low', 'medium', 'high'] as const
-        const currentIndex = priorities.indexOf((currentPriority || 'medium') as typeof priorities[number])
+        const priorities = ['immediate', 'high', 'medium', 'low', 'relaxed', 'none'] as const
+        const currentIndex = priorities.indexOf((currentPriority || 'none') as typeof priorities[number])
         const nextIndex = (currentIndex + 1) % priorities.length
-        emit('updateTask', taskId, { priority: priorities[nextIndex] })
+        emit('updateTask', taskId, { priority: priorities[nextIndex] === 'none' ? null : priorities[nextIndex] })
     }
 
     return {

@@ -457,7 +457,7 @@ const handleQuickTaskCreate = async (data: {
   title: string
   description: string
   status: string
-  priority: Exclude<TaskPriority, null>
+  priority: TaskPriority
   dueDate?: string
   projectId?: string
   attachments?: TaskAttachment[]  // FEATURE-1414

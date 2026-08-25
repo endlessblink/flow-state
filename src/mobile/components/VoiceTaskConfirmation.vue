@@ -66,6 +66,13 @@
             </label>
             <div class="pill-options">
               <button
+                class="pill priority-immediate"
+                :class="[{ active: editedPriority === 'immediate' }]"
+                @click="setPriority('immediate')"
+              >
+                {{ $t?.('priority.immediate') || 'Immediate' }}
+              </button>
+              <button
                 class="pill priority-high"
                 :class="[{ active: editedPriority === 'high' }]"
                 @click="setPriority('high')"
@@ -92,6 +99,13 @@
                 @click="setPriority(null)"
               >
                 {{ $t?.('priority.none') || 'None' }}
+              </button>
+              <button
+                class="pill priority-relaxed"
+                :class="[{ active: editedPriority === 'relaxed' }]"
+                @click="setPriority('relaxed')"
+              >
+                {{ $t?.('priority.relaxed') || 'Relaxed' }}
               </button>
             </div>
           </div>
@@ -163,6 +177,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { CheckCircle2, X, Flag, Calendar, Plus, Mic, MicOff, Loader2 } from 'lucide-vue-next'
 import BaseModal from '@/components/base/BaseModal.vue'
 import type { ParsedVoiceTask } from '@/composables/useVoiceTaskParser'
+import type { TaskPriority } from '@/types/tasks'
 
 interface Props {
   isOpen: boolean
@@ -180,7 +195,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  confirm: [task: { title: string; priority: 'high' | 'medium' | 'low' | null; dueDate: Date | null }]
+  confirm: [task: { title: string; priority: TaskPriority; dueDate: Date | null }]
   cancel: []
   reRecord: []  // TASK-1110: Request re-recording
 }>()
@@ -190,7 +205,7 @@ const titleInputRef = ref<HTMLTextAreaElement | null>(null)
 
 // Editable state
 const editedTitle = ref('')
-const editedPriority = ref<'high' | 'medium' | 'low' | null>(null)
+const editedPriority = ref<TaskPriority>(null)
 const editedDueDate = ref<Date | null>(null)
 
 // RTL detection for title text
@@ -268,7 +283,7 @@ const isNextWeek = computed(() => {
 const isPresetDate = computed(() => isToday.value || isTomorrow.value || isNextWeek.value)
 
 // Actions
-function setPriority(value: 'high' | 'medium' | 'low' | null) {
+function setPriority(value: TaskPriority) {
   editedPriority.value = value
   triggerHaptic(10)
 }

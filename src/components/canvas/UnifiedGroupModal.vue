@@ -114,7 +114,7 @@
                 :model-value="smartSettings.priority || ''"
                 :options="priorityOptions"
                 placeholder="Select priority..."
-                @update:model-value="(val) => smartSettings.priority = val === '' ? null : (val as 'high' | 'medium' | 'low')"
+                @update:model-value="(val) => smartSettings.priority = val === '' || val === 'none' ? null : (val as AssignOnDropSettings['priority'])"
               />
             </div>
 
@@ -238,7 +238,8 @@ const priorityOptions = [
   { label: 'High', value: 'high' },
   { label: 'Medium', value: 'medium' },
   { label: 'Low', value: 'low' },
-  { label: 'Relaxed', value: 'relaxed' }
+  { label: 'Relaxed', value: 'relaxed' },
+  { label: 'No Priority', value: 'none' }
 ]
 
 const statusOptions = [
@@ -389,7 +390,7 @@ const handleNameInput = () => {
         smartSettings.dueDate = keyword.value as AssignOnDropSettings['dueDate']
         break
       case 'priority':
-        smartSettings.priority = keyword.value as 'high' | 'medium' | 'low'
+        smartSettings.priority = keyword.value as AssignOnDropSettings['priority']
         break
       case 'status':
         smartSettings.status = keyword.value as AssignOnDropSettings['status']

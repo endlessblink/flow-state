@@ -2,7 +2,7 @@ import type { Task } from '@/types/tasks'
 import type { PowerKeywordResult } from '@/composables/useTaskSmartGroups'
 
 export interface GroupFilter {
-    priorities?: ('low' | 'medium' | 'high')[]
+    priorities?: ('immediate' | 'high' | 'medium' | 'low' | 'relaxed' | null)[]
     statuses?: Task['status'][]
     projects?: string[]
     tags?: string[]
@@ -25,7 +25,7 @@ export interface ContainerBounds {
  * Settings for auto-assigning properties when a task is dropped into a group
  */
 export interface AssignOnDropSettings {
-    priority?: 'high' | 'medium' | 'low' | null  // null = don't change
+    priority?: 'immediate' | 'high' | 'medium' | 'low' | 'relaxed' | null  // null = don't change
     status?: Task['status'] | null
     dueDate?: 'today' | 'tomorrow' | 'this_week' | 'this_weekend' | 'later' | string | null
     projectId?: string | null

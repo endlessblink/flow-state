@@ -116,8 +116,12 @@ const vueCalEvents = computed<VueCalEvent[]>(() => {
 
 const _getPriorityColor = (priority: string) => {
   switch (priority) {
+    case 'immediate': return 'var(--color-danger)'
     case 'high': return 'var(--color-priority-high)'
+    case 'medium': return 'var(--color-priority-medium)'
     case 'low': return 'var(--color-priority-low)'
+    case 'relaxed': return 'var(--color-neutral)'
+    case 'none': return 'var(--color-neutral)'
     default: return 'var(--color-work)'
   }
 }

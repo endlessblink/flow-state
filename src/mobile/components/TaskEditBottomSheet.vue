@@ -44,7 +44,7 @@
               <div class="pill-row">
                 <button
                   v-for="option in priorityOptions"
-                  :key="option.value"
+                  :key="option.value ?? 'none'"
                   class="pill"
                   :class="[`pill-${option.value}`, { active: editedPriority === option.value }]"
                   @click="editedPriority = editedPriority === option.value ? null : option.value"
@@ -234,7 +234,8 @@ const priorityOptions = [
   { value: 'high' as const, label: 'High' },
   { value: 'medium' as const, label: 'Med' },
   { value: 'low' as const, label: 'Low' },
-  { value: 'relaxed' as const, label: 'Relaxed' }
+  { value: 'relaxed' as const, label: 'Relaxed' },
+  { value: null, label: 'No Priority' }
 ]
 
 // RTL detection

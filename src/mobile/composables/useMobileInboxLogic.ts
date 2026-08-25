@@ -370,9 +370,11 @@ export function useMobileInboxLogic() {
                 case 'priority': {
                     const priorityColors: Record<string, string> = {
                         critical: 'var(--color-danger)',
+                        immediate: 'var(--color-danger)',
                         high: 'var(--color-priority-high)',
                         medium: 'var(--color-priority-medium)',
-                        low: 'var(--color-success)',
+                        low: 'var(--color-priority-low)',
+                        relaxed: 'var(--color-neutral)',
                         none: 'var(--color-neutral)'
                     }
                     const priorityLabels: Record<string, string> = {

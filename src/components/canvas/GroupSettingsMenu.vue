@@ -49,7 +49,7 @@
                 :model-value="localSettings.priority || ''"
                 :options="priorityOptions"
                 placeholder="Select priority..."
-                @update:model-value="(val) => localSettings.priority = val === '' ? null : (val as AssignOnDropSettings['priority'])"
+                @update:model-value="(val) => localSettings.priority = val === '' || val === 'none' ? null : (val as AssignOnDropSettings['priority'])"
               />
             </div>
 
@@ -146,7 +146,8 @@ const priorityOptions = [
   { label: 'High', value: 'high' },
   { label: 'Medium', value: 'medium' },
   { label: 'Low', value: 'low' },
-  { label: 'Relaxed', value: 'relaxed' }
+  { label: 'Relaxed', value: 'relaxed' },
+  { label: 'No Priority', value: 'none' }
 ]
 
 // Status options for CustomSelect

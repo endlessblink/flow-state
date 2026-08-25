@@ -268,6 +268,18 @@
             <div class="edit-section">
               <span class="edit-label">Priority</span>
               <div class="priority-pills">
+                <button class="pill" :class="{ active: currentTask?.priority === 'immediate' }" @click="setPriorityAndClose('immediate')">
+                  Immediate
+                </button>
+                <button class="pill" :class="{ active: currentTask?.priority === 'high' }" @click="setPriorityAndClose('high')">
+                  High
+                </button>
+                <button class="pill" :class="{ active: currentTask?.priority === 'relaxed' }" @click="setPriorityAndClose('relaxed')">
+                  Relaxed
+                </button>
+                <button class="pill" :class="{ active: !currentTask?.priority }" @click="setPriorityAndClose(null)">
+                  No Priority
+                </button>
                 <button class="pill" :class="{ active: currentTask?.priority === 'low' }" @click="setPriorityAndClose('low')">
                   Low
                 </button>
@@ -694,6 +706,14 @@ const {
   height: var(--space-2);
   border-radius: var(--radius-full);
   flex-shrink: 0;
+}
+
+.priority-indicator.priority-immediate {
+  background: var(--color-danger);
+}
+
+.priority-indicator.priority-relaxed {
+  background: var(--color-neutral);
 }
 
 .priority-indicator.priority-high {

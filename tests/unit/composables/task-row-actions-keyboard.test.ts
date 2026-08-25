@@ -81,4 +81,19 @@ describe('useTaskRowActions keyboard handling', () => {
     expect(event.defaultPrevented).toBe(true)
     expect(emit).toHaveBeenCalledWith('select', task.id)
   })
+
+  it('cycles through every priority level and clears back to no priority', () => {
+    const { actions, emit } = createActions()
+
+    actions.cyclePriority(task.id, 'none')
+    actions.cyclePriority(task.id, 'immediate')
+    actions.cyclePriority(task.id, 'high')
+    actions.cyclePriority(task.id, 'medium')
+    actions.cyclePriority(task.id, 'low')
+    actions.cyclePriority(task.id, 'relaxed')
+
+    expect(emit.mock.calls.slice(-6).map(([, , update]) => update.priority)).toEqual([
+      'immediate', 'high', 'medium', 'low', 'relaxed', null
+    ])
+  })
 })

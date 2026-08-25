@@ -130,6 +130,7 @@ test.describe('Board priority and recurring filters', () => {
 
     await page.goto('/#/canvas')
     await page.waitForSelector('.canvas-layout', { timeout: 30_000 })
+    await expect(page.locator('.task-node').first()).toBeVisible({ timeout: 30_000 })
     const canvasTaskIds = await page.locator('.task-node').evaluateAll(elements =>
       elements.map(element => element.getAttribute('data-task-id')).filter((id): id is string => Boolean(id))
     )

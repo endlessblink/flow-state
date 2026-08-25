@@ -746,4 +746,20 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
     expect(upsertCalls).toHaveLength(1)
     expect(upsertCalls[0]?.args[1]).toEqual({ onConflict: 'id' })
   })
+
+  it('treats a persisted identity as guest mode when the Supabase client is unavailable', async () => {
+    vi.resetModules()
+    vi.doMock('@/services/auth/supabase', () => ({ supabase: null }))
+    authStoreMock.user = { id: 'persisted-user' }
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+
+    await expect(db.fetchUserSettings()).resolves.toBeNull()
+    expect(fromMock).not.toHaveBeenCalled()
+    expect(reportMock).not.toHaveBeenCalled()
+
+    vi.doUnmock('@/services/auth/supabase')
+    vi.resetModules()
+  })
 })

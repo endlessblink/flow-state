@@ -16,6 +16,18 @@
         </OverflowTooltip>
       </div>
 
+      <!-- Make the task currently receiving timer time unmistakable. -->
+      <div v-if="runningTimerTask" class="running-task-indicator" role="status">
+        <Timer :size="16" class="running-task-indicator__icon" />
+        <div class="running-task-indicator__copy">
+          <span class="running-task-indicator__label">{{ isCurrentTaskRunning ? 'Running now' : 'Timer running' }}</span>
+          <OverflowTooltip :text="runningTimerTask.title" tooltip-position="bottom">
+            <span class="running-task-indicator__title">{{ runningTimerTask.title }}</span>
+          </OverflowTooltip>
+        </div>
+        <span class="running-task-indicator__time">{{ timerStore.displayTime }}</span>
+      </div>
+
       <!-- Edit Task (single only) -->
       <button v-if="!isBatchOperation" class="menu-item" @click="handleEdit">
         <Pencil :size="16" class="menu-icon" />
@@ -100,6 +112,16 @@
         <span class="menu-text">Start Timer</span>
       </button>
 
+      <!-- Stop the currently running timer from any task context menu -->
+      <button
+        v-if="timerStore.isTimerActive && !isBatchOperation"
+        class="menu-item menu-item--timer menu-item--timer-stop"
+        @click="stopTimer"
+      >
+        <Square :size="16" class="menu-icon" />
+        <span class="menu-text">Stop Timer</span>
+      </button>
+
       <!-- Open Thinking Flow (single task only) -->
       <button v-if="!isBatchOperation" class="menu-item" @click="handleOpenPlanningCanvas">
         <LayoutDashboard :size="16" class="menu-icon" />
@@ -163,7 +185,7 @@
         :current-priority="currentTask?.priority"
         @mouseenter="handlePanelEnter"
         @mouseleave="handlePanelLeave('priority')"
-        @select="(p: 'high' | 'medium' | 'low') => { closeAllSubmenusNow(); setPriority(p) }"
+        @select="(p: Exclude<TaskPriority, null>) => { closeAllSubmenusNow(); setPriority(p) }"
         @clear-priority="() => { closeAllSubmenusNow(); clearPriority() }"
       />
 
@@ -250,6 +272,7 @@ import { useTaskStore } from '@/stores/tasks'
 import { isDoneForNowAlreadyCompletedError } from '@/services/tasks/doneForNow'
 import { useCanvasStore } from '@/stores/canvas'
 import { useProjectStore } from '@/stores/projects'
+import { useTimerStore } from '@/stores/timer'
 import {
   Calendar,
   CheckCircle,
@@ -263,11 +286,13 @@ import {
   PinOff,
   Lock,
   LockOpen,
-  LayoutDashboard
+  LayoutDashboard,
+  Square
 } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
 import type { Task } from '@/stores/tasks'
+import type { TaskPriority } from '@/types/tasks'
 
 // New Architecture Imports
 import { useTaskContextMenuActions } from '@/composables/tasks/useTaskContextMenuActions'
@@ -311,7 +336,7 @@ const emit = defineEmits<{
   confirmDelete: [taskId: string, instanceId?: string, isCalendarEvent?: boolean]
   confirmPermanentDelete: [taskId: string]
   clearSelection: []
-  setPriority: [priority: 'low' | 'medium' | 'high']
+  setPriority: [priority: Exclude<TaskPriority, null>]
   setStatus: [status: 'todo' | 'done']
   setDueDate: [dateType: 'today' | 'tomorrow' | 'weekend' | 'nextweek']
   enterFocusMode: []
@@ -357,6 +382,22 @@ const router = useRouter()
 const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const projectStore = useProjectStore()
+const timerStore = useTimerStore()
+
+const stopTimer = async () => {
+  emit('close')
+  await timerStore.stopTimer()
+}
+
+const runningTimerTask = computed(() => {
+  if (!timerStore.isTimerActive || !timerStore.currentTaskId || timerStore.currentTaskId === 'general') return null
+  return taskStore.getTask(timerStore.currentTaskId)
+})
+
+const isCurrentTaskRunning = computed(() => {
+  const taskId = currentTask.value?.id
+  return !!taskId && !!runningTimerTask.value && timerStore.currentTaskId === taskId
+})
 
 const menuRef = ref<HTMLElement | null>(null)
 
@@ -1288,6 +1329,60 @@ onUnmounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   overflow: hidden;
+}
+
+.running-task-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 var(--space-2) var(--space-1);
+  padding: var(--space-2) var(--space-2_5);
+  border: 1px solid var(--amber-border, rgba(245, 158, 11, 0.45));
+  border-radius: var(--radius-md);
+  background: var(--amber-bg-soft, rgba(245, 158, 11, 0.12));
+  color: var(--amber-text);
+}
+
+.running-task-indicator__icon {
+  flex-shrink: 0;
+  animation: running-task-pulse 1.6s ease-in-out infinite;
+}
+
+.running-task-indicator__copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.running-task-indicator__label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  line-height: 1.2;
+}
+
+.running-task-indicator__title {
+  display: block;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+}
+
+.running-task-indicator__time {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+}
+
+@keyframes running-task-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 /* Menu Items */

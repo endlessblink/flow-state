@@ -165,8 +165,22 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
       // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq)
       const workspaceId = wsStore.activeWorkspaceId
-      const loadedGroups = await fetchGroups(workspaceId)
+      let groupsReadFailed = false
+      const loadedGroups = await fetchGroups(workspaceId, {
+        onError: () => {
+          groupsReadFailed = true
+        },
+      })
       assertScope()
+      // A failed group read is reported as an empty array by the database
+      // adapter for compatibility with older callers. Never treat that
+      // sentinel as an authoritative snapshot: even a single preserved day
+      // group could otherwise make a partial failure overwrite every other
+      // in-memory group.
+      if (groupsReadFailed) {
+        console.warn('[CANVAS:LOAD] Group read failed; keeping the current projection')
+        return
+      }
       // The request may have started before a local Tidy/seed/layout action.
       // Do not commit that stale snapshot over the newer in-memory projection.
       if (Date.now() - lastLocalSyncAt.value < 30_000) return

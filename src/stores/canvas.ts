@@ -231,7 +231,17 @@ export const useCanvasStore = defineStore('canvas', () => {
         groupsModule._rawGroups.value,
         Date.now(),
         undefined,
-        cachedGroupsWithPendingWrites
+        cachedGroupsWithPendingWrites,
+        (group) => {
+          const normalizedName = group.name.trim().toLowerCase()
+          const isDayGroup = normalizedName === 'today'
+            || normalizedName === 'tomorrow'
+            || normalizedName === 'yesterday'
+            || ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].includes(normalizedName)
+          return isDayGroup && Boolean(taskStoreRef.value?.tasks.some((task) =>
+            task.parentId === group.id && !task._soft_deleted,
+          ))
+        },
       )
 
       if (import.meta.env.DEV) {

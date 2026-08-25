@@ -70,4 +70,13 @@ describe('BUG-1899: preserveRecentLocalGroups', () => {
     expect(out.map(g => g.id)).toEqual(['cached-recovery'])
     expect(out[0].name).toBe('Recovered Section')
   })
+
+  it('keeps a day group when persisted tasks still reference it', () => {
+    const today = group('today', 2 * 60 * 60 * 1000, 'Today')
+    const out = preserveRecentLocalGroups([], [today], NOW, undefined, [], (candidate) =>
+      candidate.id === 'today',
+    )
+
+    expect(out.map(g => g.id)).toEqual(['today'])
+  })
 })

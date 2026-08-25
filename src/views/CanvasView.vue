@@ -43,12 +43,6 @@
       @dragover.prevent
       @contextmenu.prevent="handleCanvasRightClick"
     >
-      <!-- Loading overlay while canvas initializes -->
-      <CanvasLoadingOverlay 
-        v-if="(!isCanvasReady || !startupLayoutReady) && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0"
-        message="Loading canvas..."
-      />
-
       <!-- Empty state when no tasks exist -->
       <CanvasEmptyState
         v-if="hasNoTasks"

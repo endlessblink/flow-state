@@ -100,4 +100,14 @@ describe('Canvas Tidy Vue Flow application', () => {
     expect(styles).toContain('.vue-flow.canvas-startup-pending')
     expect(styles).toContain('visibility: hidden')
   })
+
+  it('renders one animated loading surface instead of stacked startup overlays', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/views/CanvasView.vue'), 'utf8')
+    const overlay = readFileSync(resolve(process.cwd(), 'src/components/canvas/CanvasLoadingOverlay.vue'), 'utf8')
+
+    expect(source.match(/<CanvasLoadingOverlay/g)).toHaveLength(1)
+    expect(overlay).toContain('loading-orbit')
+    expect(overlay).toContain('prefers-reduced-motion')
+    expect(overlay).toContain('role="status"')
+  })
 })

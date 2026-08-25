@@ -114,7 +114,7 @@ jobs:
           supabase stop
           supabase start
           sleep 15
-          db_container="$(docker ps --filter label=com.supabase.cli.project=flow-state --filter label=com.supabase.cli.service=db --format '{{.Names}}' | head -n 1)"
+          db_container="$(docker ps --filter label=com.supabase.cli.project=flow-state --filter name='_db_' --format '{{.Names}}' | head -n 1)"
           test -n "$db_container"
           test "$(docker exec "$db_container" psql -U postgres -d postgres -Atqc "select to_regclass('public.canonical_change_log');")" = "public.canonical_change_log"
           docker exec "$db_container" psql -U postgres -d postgres -c "notify pgrst, 'reload schema';"

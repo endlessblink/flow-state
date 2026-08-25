@@ -5,7 +5,7 @@ function evaluateCanonicalSchemaResponse(status, body, surface = 'canonical chan
   // New-format local Supabase secret keys may be rejected by PostgREST even
   // when the table exists; only schema-cache responses prove it is missing.
   if (surface === 'canonical change log' && (status === 401 || status === 403)
-    && !body.includes('PGRST205') && !body.includes('canonical_change_log')) {
+    && !body.includes('PGRST205')) {
     return { ok: true }
   }
   if (surface === 'done-for-now receipt' && body.includes('PGRST202')) {

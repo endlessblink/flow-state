@@ -338,7 +338,7 @@ function isValidStatus(status: unknown): status is Task['status'] {
 }
 
 function isValidPriority(priority: unknown): priority is Task['priority'] {
-  const validPriorities = ['low', 'medium', 'high', null]
+  const validPriorities = ['immediate', 'low', 'medium', 'high', 'relaxed', null]
   return validPriorities.includes(priority as Task['priority'])
 }
 

@@ -255,9 +255,11 @@ const datePickerRef = ref<HTMLInputElement | null>(null)
 
 // Options
 const priorityOptions = [
+  { value: 'immediate' as const, label: 'Immediate' },
   { value: 'high' as const, label: 'High' },
   { value: 'medium' as const, label: 'Medium' },
-  { value: 'low' as const, label: 'Low' }
+  { value: 'low' as const, label: 'Low' },
+  { value: 'relaxed' as const, label: 'Relaxed' }
 ]
 
 // Computed

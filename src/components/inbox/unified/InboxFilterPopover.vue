@@ -179,9 +179,12 @@ const { t } = useI18n()
 
 // Priority options
 const priorities = computed(() => [
+  { value: 'immediate' as const, label: 'Immediate' },
   { value: 'high' as const, label: t('task.priority_high') },
   { value: 'medium' as const, label: t('task.priority_medium') },
-  { value: 'low' as const, label: t('task.priority_low') }
+  { value: 'low' as const, label: t('task.priority_low') },
+  { value: 'relaxed' as const, label: 'Relaxed' },
+  { value: 'none' as const, label: t('task.priority_none') }
 ])
 
 // Duration options from centralized source
@@ -217,7 +220,7 @@ const hasActiveFilters = computed(() => {
 })
 
 // Count helpers
-const getPriorityCount = (priority: 'high' | 'medium' | 'low'): number => {
+const getPriorityCount = (priority: string): number => {
   return props.tasks.filter(task => task.priority === priority).length
 }
 
@@ -235,7 +238,7 @@ const getDurationCount = (duration: DurationCategory): number => {
 }
 
 // Toggle handlers — use @click.stop on each option so popover stays open
-const togglePriority = (priority: 'high' | 'medium' | 'low') => {
+const togglePriority = (priority: string) => {
   const next = new Set(props.selectedPriorities)
   if (next.has(priority)) {
     next.delete(priority)

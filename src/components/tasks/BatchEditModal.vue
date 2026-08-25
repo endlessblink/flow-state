@@ -100,7 +100,7 @@
                   :model-value="fieldChanges.priority.value || ''"
                   :options="priorityOptions"
                   placeholder="Select priority..."
-                  @update:model-value="(val) => fieldChanges.priority.value = val as Task['priority']"
+                  @update:model-value="(val) => fieldChanges.priority.value = val === 'none' ? null : val as Task['priority']"
                 />
               </div>
             </div>
@@ -264,9 +264,12 @@ const statusOptions = [
 
 // Priority options for CustomSelect
 const priorityOptions = [
+  { label: 'Immediate', value: 'immediate' },
   { label: 'Low', value: 'low' },
   { label: 'Medium', value: 'medium' },
-  { label: 'High', value: 'high' }
+  { label: 'High', value: 'high' },
+  { label: 'Relaxed', value: 'relaxed' },
+  { label: 'No Priority', value: 'none' }
 ]
 
 interface Props {
@@ -356,7 +359,7 @@ const applyChanges = async () => {
       updates.status = fieldChanges.value.status.value
     }
 
-    if (fieldChanges.value.priority.enabled && fieldChanges.value.priority.value) {
+    if (fieldChanges.value.priority.enabled && fieldChanges.value.priority.value !== null) {
       updates.priority = fieldChanges.value.priority.value
     }
 

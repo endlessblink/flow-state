@@ -142,9 +142,11 @@ const emit = defineEmits<{
 // Priority options for CustomSelect
 const priorityOptions = [
   { label: "Don't change", value: '' },
+  { label: 'Immediate', value: 'immediate' },
   { label: 'High', value: 'high' },
   { label: 'Medium', value: 'medium' },
-  { label: 'Low', value: 'low' }
+  { label: 'Low', value: 'low' },
+  { label: 'Relaxed', value: 'relaxed' }
 ]
 
 // Status options for CustomSelect

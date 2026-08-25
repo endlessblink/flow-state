@@ -32,6 +32,10 @@ async function main() {
   if (!baseUrl || !serviceRoleKey) {
     throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required')
   }
+  if (process.env.SUPABASE_SCHEMA_RESET_COMPLETED === 'true') {
+    process.stdout.write('Local canonical E2E schema was applied by an explicit database reset.\n')
+    return
+  }
 
   const headers = {
     apikey: serviceRoleKey,

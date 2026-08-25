@@ -113,6 +113,7 @@ jobs:
           # repository migrations; reset explicitly so the schema preflight
           # validates the checked-out migration set.
           supabase db reset --local
+          export SUPABASE_SCHEMA_RESET_COMPLETED=true
           ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2
 
       - name: Stop Supabase

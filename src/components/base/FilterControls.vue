@@ -241,7 +241,7 @@ const clearAllFilters = () => {
   transform: translateX(-50%);
   color: var(--text-secondary);
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
 }
 
 .filter-controls--compact .filter-control:focus-within .filter-icon,
@@ -253,6 +253,11 @@ const clearAllFilters = () => {
 .filter-controls--compact :deep(.select-trigger) {
   width: 100%;
   height: 32px;
+}
+
+.filter-controls--compact :deep(.custom-select) {
+  position: relative;
+  z-index: 1;
 }
 
 .filter-controls--compact :deep(.select-trigger) {

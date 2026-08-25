@@ -246,17 +246,21 @@ export function useAppInitialization() {
     const reloadCoreData = async () => {
         await runWithQueueProcessorBarrier(async () => {
             const scope = activeCanonicalScope()
+            // Canvas projection depends on task membership for smart day
+            // groups. Hydrate tasks first so a missing Today group can be
+            // recovered from its still-referenced tasks instead of racing the
+            // canvas load and being dropped as an unreferenced stale group.
+            await taskStore.loadFromDatabase(scope ? {
+                requireRemoteAuthority: true,
+                authorityScope: {
+                    userId: scope.userId,
+                    workspaceId: scope.kind === 'workspace' ? scope.workspaceId : null,
+                },
+            } : {})
             await Promise.all([
-                taskStore.loadFromDatabase(scope ? {
-                    requireRemoteAuthority: true,
-                    authorityScope: {
-                        userId: scope.userId,
-                        workspaceId: scope.kind === 'workspace' ? scope.workspaceId : null,
-                    },
-                } : {}),
                 projectStore.loadProjectsFromDatabase(),
                 laneStore.loadLanesFromDatabase(),
-                canvasStore.loadFromDatabase()
+                canvasStore.loadFromDatabase(),
             ])
             await reapplyPendingWrites()
         })

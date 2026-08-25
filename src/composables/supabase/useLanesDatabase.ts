@@ -12,7 +12,10 @@ export function useLanesDatabase(ctx: DatabaseContext) {
     const { authStore, isSyncing, lastSyncError, getUserIdSafe, withRetry, handleError } = ctx
     const { recordTombstone } = useTombstoneDatabase(ctx)
 
-    const fetchLanes = async (workspaceId?: string | null): Promise<Lane[]> => {
+    const fetchLanes = async (
+        workspaceId?: string | null,
+        options?: { onError?: (error: unknown) => void },
+    ): Promise<Lane[]> => {
         if (!authStore.isInitialized) {
             await authStore.initialize()
         }
@@ -22,8 +25,9 @@ export function useLanesDatabase(ctx: DatabaseContext) {
         const wsKey = workspaceId === undefined ? 'all' : (workspaceId ?? 'personal')
         const cacheKey = `lanes:${userId || 'guest'}:ws:${wsKey}`
 
-        return swrCache.getOrFetch(cacheKey, async () => {
-            try {
+        try {
+            return await swrCache.getOrFetch(cacheKey, async () => {
+                try {
                 return await withRetry(async () => {
                     let query = getSupabase()
                         .from('lanes')
@@ -44,11 +48,15 @@ export function useLanesDatabase(ctx: DatabaseContext) {
 
                     return (data as SupabaseLane[]).map(fromSupabaseLane)
                 }, 'fetchLanes')
-            } catch (e: unknown) {
-                handleError(e, 'fetchLanes')
-                return []
-            }
-        })
+                } catch (e: unknown) {
+                    handleError(e, 'fetchLanes')
+                    options?.onError?.(e)
+                    throw e
+                }
+            })
+        } catch {
+            return []
+        }
     }
 
     const saveLane = async (lane: Lane): Promise<void> => {

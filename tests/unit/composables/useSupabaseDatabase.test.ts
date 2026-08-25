@@ -493,6 +493,44 @@ describe('useSupabaseDatabase - Supabase integration behavior', () => {
     ])
   })
 
+  it('does not cache a failed group read as an empty snapshot', async () => {
+    queueResponse('groups', [
+      { data: null, error: { message: 'permission denied' } },
+      { data: [{ id: 'group-recovered', name: 'Today' }], error: null },
+    ])
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+    const onError = vi.fn()
+
+    await expect(db.fetchGroups(undefined, { onError })).resolves.toEqual([])
+    await expect(db.fetchGroups()).resolves.toEqual([
+      { id: 'group-recovered', name: 'Today' },
+    ])
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(fromMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not cache a failed project read as an empty snapshot', async () => {
+    queueResponse('projects', [
+      { data: null, error: { message: 'permission denied' } },
+      { data: [{ id: 'project-recovered', name: 'Recovered' }], error: null },
+    ])
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+    const onError = vi.fn()
+
+    await expect(db.fetchProjects(undefined, { onError })).resolves.toEqual([])
+    await expect(db.fetchProjects()).resolves.toEqual([
+      { id: 'project-recovered', name: 'Recovered' },
+    ])
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(fromMock).toHaveBeenCalledTimes(2)
+  })
+
   it('saves group successfully', async () => {
     queueResponse('groups', [
       {

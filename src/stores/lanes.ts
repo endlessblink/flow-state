@@ -89,7 +89,18 @@ export const useLaneStore = defineStore("lanes", () => {
 
         const { useWorkspaceStore } = await import("@/stores/workspace");
         const workspaceId = useWorkspaceStore().activeWorkspaceId;
-        const loaded = await fetchLanes(workspaceId);
+        let lanesReadFailed = false;
+        const loaded = await fetchLanes(workspaceId, {
+          onError: () => {
+            lanesReadFailed = true;
+          },
+        });
+        if (lanesReadFailed) {
+          console.warn(
+            "⚠️ [SUPABASE] Lane read failed; keeping the current projection",
+          );
+          return;
+        }
         syncUpdateInProgress = true;
         _rawLanes.value = loaded;
         nextTick(() => {

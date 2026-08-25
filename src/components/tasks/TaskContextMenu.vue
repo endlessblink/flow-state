@@ -106,21 +106,29 @@
 
       <div class="menu-divider" />
 
-      <!-- Start Timer -->
-      <button class="menu-item menu-item--timer" @click="startTimer">
-        <Timer :size="16" class="menu-icon" />
-        <span class="menu-text">Start Timer</span>
-      </button>
-
-      <!-- Stop the currently running timer from any task context menu -->
-      <button
-        v-if="timerStore.isTimerActive && !isBatchOperation"
-        class="menu-item menu-item--timer menu-item--timer-stop"
-        @click="stopTimer"
-      >
-        <Square :size="16" class="menu-icon" />
-        <span class="menu-text">Stop Timer</span>
-      </button>
+      <!-- Timer controls: always expose both actions in the context menu. -->
+      <div class="timer-menu-actions" role="group" aria-label="Timer controls">
+        <button
+          class="menu-item menu-item--timer timer-menu-action"
+          :disabled="isBatchOperation"
+          title="Start Timer"
+          aria-label="Start Timer"
+          @click="startTimer"
+        >
+          <Play :size="16" class="menu-icon" />
+          <span class="menu-text">Play</span>
+        </button>
+        <button
+          class="menu-item menu-item--timer menu-item--timer-stop timer-menu-action"
+          :disabled="!timerStore.isTimerActive"
+          title="Stop Timer"
+          aria-label="Stop Timer"
+          @click="stopTimer"
+        >
+          <Square :size="16" class="menu-icon" />
+          <span class="menu-text">Stop</span>
+        </button>
+      </div>
 
       <!-- Open Thinking Flow (single task only) -->
       <button v-if="!isBatchOperation" class="menu-item" @click="handleOpenPlanningCanvas">
@@ -287,6 +295,7 @@ import {
   Lock,
   LockOpen,
   LayoutDashboard,
+  Play,
   Square
 } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
@@ -1446,6 +1455,24 @@ onUnmounted(() => {
 .menu-item--timer { color: var(--amber-text); }
 .menu-item--timer:hover { background: var(--amber-bg-soft); }
 .menu-item--timer .menu-icon { color: var(--amber-text); opacity: 1; }
+
+.timer-menu-actions {
+  display: flex;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+}
+
+.timer-menu-action {
+  width: auto;
+  flex: 1;
+  justify-content: center;
+  padding-inline: var(--space-2);
+}
+
+.timer-menu-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
 
 /* Done checkmark teal color */
 .icon-done { color: var(--brand-primary); opacity: 1; }

@@ -5,13 +5,13 @@ import { randomUUID } from 'node:crypto'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const runSuffix = randomUUID().replace(/-/g, '').slice(0, 12)
+const runSuffix = randomUUID().replace(/-/g, '').slice(0, 8)
 const TASKS = [
-  { id: `e2000000-0000-4000-8000-${runSuffix}`, title: 'Board immediate task', priority: 'immediate', recurrence_rule: null },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}1`, title: 'Board high task', priority: 'high', recurrence_rule: null },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}2`, title: 'Board recurring task', priority: 'medium', recurrence_rule: { pattern: 'daily', interval: 1, endType: 'never' } },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}3`, title: 'Board low task', priority: 'low', recurrence_rule: null },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}4`, title: 'Board relaxed task', priority: 'relaxed', recurrence_rule: null }
+  { id: `e2000000-0000-4000-8000-${runSuffix}0000`, title: 'Board immediate task', priority: 'immediate', recurrence_rule: null },
+  { id: `e2000000-0000-4000-8000-${runSuffix}0001`, title: 'Board high task', priority: 'high', recurrence_rule: null },
+  { id: `e2000000-0000-4000-8000-${runSuffix}0002`, title: 'Board recurring task', priority: 'medium', recurrence_rule: { pattern: 'daily', interval: 1, endType: 'never' } },
+  { id: `e2000000-0000-4000-8000-${runSuffix}0003`, title: 'Board low task', priority: 'low', recurrence_rule: null },
+  { id: `e2000000-0000-4000-8000-${runSuffix}0004`, title: 'Board relaxed task', priority: 'relaxed', recurrence_rule: null }
 ] as const
 const TASK_IDS = TASKS.map(task => task.id)
 
@@ -38,7 +38,7 @@ test.describe('Board priority and recurring filters', () => {
       user_id: userId,
       status: 'planned',
       is_in_inbox: true,
-      canvas_position: { x: index * 360, y: 120 },
+      position: { x: index * 360, y: 120 },
       order: index
     })), { onConflict: 'id' })
     if (error) throw error
@@ -52,6 +52,7 @@ test.describe('Board priority and recurring filters', () => {
     await page.addInitScript(() => {
       localStorage.setItem('flowstate:board-view-type', 'category')
       localStorage.setItem('flowstate:board-sort-option', 'manual')
+      localStorage.setItem('flowstate:board-show-filters', 'false')
       localStorage.setItem('flowstate:board-priority-filter', '')
       localStorage.setItem('flowstate:board-recurring-filter', 'all')
     })
@@ -67,6 +68,7 @@ test.describe('Board priority and recurring filters', () => {
     }
 
     await page.locator('.filter-toggle').click()
+    await page.waitForTimeout(500)
     const filterSelects = page.locator('.filter-controls .custom-select')
     for (let index = 0; index < await filterSelects.count(); index++) {
       const trigger = filterSelects.nth(index).locator('.select-trigger')
@@ -94,6 +96,7 @@ test.describe('Board priority and recurring filters', () => {
   test('applies the shared Board filter projection to Canvas', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('flowstate:board-view-type', 'category')
+      localStorage.setItem('flowstate:board-show-filters', 'false')
       localStorage.setItem('flowstate:board-priority-filter', '')
       localStorage.setItem('flowstate:board-recurring-filter', 'all')
     })
@@ -102,6 +105,7 @@ test.describe('Board priority and recurring filters', () => {
     await waitForApp(page)
 
     await page.locator('.filter-toggle').click()
+    await page.waitForTimeout(500)
     const statusSelect = page.locator('.filter-controls .custom-select').nth(2)
     await statusSelect.locator('.select-trigger').click()
     await page.getByRole('option', { name: 'Done', exact: true }).click()

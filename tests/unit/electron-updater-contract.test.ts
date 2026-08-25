@@ -294,6 +294,17 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('clearBlockedPendingUpdate(appVersion)')
   })
 
+  it('downloads again when the user retries a failed update', () => {
+    const updaterSource = readSource('electron/updater.ts')
+    const retryStart = updaterSource.indexOf("ipcMain.handle('updater:retry-failed'")
+    const downloadStart = updaterSource.indexOf("ipcMain.handle('updater:download'")
+    const retryHandler = updaterSource.slice(retryStart, downloadStart)
+
+    expect(retryHandler).toContain('await autoUpdater.checkForUpdates()')
+    expect(retryHandler).toContain('await autoUpdater.downloadUpdate()')
+    expect(retryHandler).toContain('result?.updateInfo')
+  })
+
   it('does not launch a second rollback instance when the known-good bridge is already healthy', () => {
     const updaterSource = readSource('electron/updater.ts')
 

@@ -650,7 +650,7 @@ const handleCreateTaskFromModal = async (data: {
   title: string
   description: string
   status: string
-  priority: Exclude<TaskPriority, null>
+  priority: TaskPriority
   dueDate?: string
   projectId?: string
   onSettled?: (saved: boolean) => void

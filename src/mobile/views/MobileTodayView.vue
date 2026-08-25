@@ -228,7 +228,8 @@ const priorityOptions = [
   { value: 'high', label: 'High' },
   { value: 'medium', label: 'Medium' },
   { value: 'low', label: 'Low' },
-  { value: 'relaxed', label: 'Relaxed' }
+  { value: 'relaxed', label: 'Relaxed' },
+  { value: 'none', label: 'No Priority' }
 ]
 
 // Group by options (Today view uses 'time' instead of 'none')

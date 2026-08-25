@@ -228,7 +228,7 @@ const titleInput = ref<HTMLInputElement>()
 const dateInputRef = ref<HTMLInputElement>()
 const taskTitle = ref('')
 const taskDescription = ref('')
-const priority = ref<'immediate' | 'low' | 'medium' | 'high' | 'relaxed'>('medium')
+const priority = ref<'immediate' | 'low' | 'medium' | 'high' | 'relaxed' | 'none'>('medium')
 const duration = ref(props.duration)
 const projectId = ref('')
 
@@ -272,7 +272,8 @@ const priorityOptions = [
   { label: 'Low', value: 'low' },
   { label: 'Medium', value: 'medium' },
   { label: 'High', value: 'high' },
-  { label: 'Relaxed', value: 'relaxed' }
+  { label: 'Relaxed', value: 'relaxed' },
+  { label: 'No Priority', value: 'none' }
 ]
 
 const durationOptions = [
@@ -365,7 +366,7 @@ const aiAssistTaskProxy = computed(() => ({
   title: taskTitle.value,
   description: taskDescription.value,
   status: 'todo' as const,
-  priority: priority.value,
+  priority: priority.value === 'none' ? null : priority.value,
   progress: 0,
   completedPomodoros: 0,
   subtasks: [],
@@ -427,7 +428,7 @@ const handleCreate = async () => {
   const task = await taskStore.createTaskWithUndo({
     title: taskTitle.value.trim(),
     description: taskDescription.value.trim(),
-    priority: priority.value,
+    priority: priority.value === 'none' ? null : priority.value,
     status: 'todo',
     estimatedDuration: duration.value,
     projectId: projectId.value || undefined,

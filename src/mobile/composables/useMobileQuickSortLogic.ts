@@ -331,7 +331,7 @@ export function useMobileQuickSortLogic() {
     triggerHaptic('heavy')
   }
 
-  async function setPriority(priority: 'immediate' | 'low' | 'medium' | 'high' | 'relaxed') {
+  async function setPriority(priority: Task['priority']) {
     if (!currentTask.value || isRescheduling.value) return
     await taskStore.updateTask(currentTask.value.id, { priority })
     triggerHaptic('light')
@@ -370,7 +370,7 @@ export function useMobileQuickSortLogic() {
     triggerHaptic('heavy')
   }
 
-  function setPriorityAndClose(priority: 'immediate' | 'low' | 'medium' | 'high' | 'relaxed') {
+  function setPriorityAndClose(priority: Task['priority']) {
     setPriority(priority)
     showQuickEditPanel.value = false
   }

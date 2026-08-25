@@ -98,5 +98,6 @@ test.describe('Board priority and recurring filters', () => {
     for (const label of ['Immediate', 'High', 'Medium', 'Low', 'Relaxed', 'No Priority']) {
       await expect(prioritySubmenu.getByRole('button', { name: label, exact: true })).toBeVisible()
     }
+    await page.screenshot({ path: '/tmp/flowstate-priority-surfaces-e2e.png', fullPage: true })
   })
 })

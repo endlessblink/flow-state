@@ -229,7 +229,7 @@ const emit = defineEmits<{
     title: string
     description: string
     status: string
-  priority: Exclude<TaskPriority, null>
+    priority: TaskPriority
     dueDate?: string
     projectId?: string
     attachments?: TaskAttachment[]  // FEATURE-1414
@@ -247,7 +247,7 @@ const dateInputRef = ref<HTMLInputElement>()
 const taskTitle = ref('')
 const taskDescription = ref('')
 const status = ref<string>('todo')
-const priority = ref<'immediate' | 'low' | 'medium' | 'high' | 'relaxed'>('medium')
+const priority = ref<'immediate' | 'low' | 'medium' | 'high' | 'relaxed' | 'none'>('medium')
 const projectId = ref<string>('')
 const localDate = ref('')
 
@@ -323,7 +323,8 @@ const priorityOptions = [
   { label: 'Low', value: 'low' },
   { label: 'Medium', value: 'medium' },
   { label: 'High', value: 'high' },
-  { label: 'Relaxed', value: 'relaxed' }
+  { label: 'Relaxed', value: 'relaxed' },
+  { label: 'No Priority', value: 'none' }
 ]
 
 const projects = computed(() => taskStore.projects)
@@ -434,7 +435,7 @@ const handleCreateTask = () => {
     title: trimmedTitle,
     description: taskDescription.value.trim(),
     status: status.value,
-    priority: priority.value,
+    priority: priority.value === 'none' ? null : priority.value,
     dueDate: localDate.value || undefined,
     projectId: projectId.value || undefined,
     attachments: pendingAttachments.value.length > 0 ? [...pendingAttachments.value] : undefined,

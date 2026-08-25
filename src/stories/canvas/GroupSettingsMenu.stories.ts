@@ -92,9 +92,12 @@ export const Default: Story = {
 
       const priorityOptions = [
         { value: '', label: 'No auto-assign' },
+        { value: 'immediate', label: 'Immediate' },
         { value: 'high', label: 'High' },
         { value: 'medium', label: 'Medium' },
         { value: 'low', label: 'Low' },
+        { value: 'relaxed', label: 'Relaxed' },
+        { value: 'none', label: 'No Priority' },
       ]
       const statusOptions = [
         { value: '', label: 'No auto-assign' },

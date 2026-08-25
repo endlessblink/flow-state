@@ -127,7 +127,7 @@
                 <Flag :size="14" class="option-icon" />
                 <button
                   v-for="option in priorityOptions"
-                  :key="option.value"
+                  :key="option.value ?? 'none'"
                   class="chip"
                   :class="[`priority-${option.value}`, { active: taskPriority === option.value }]"
                   @click="taskPriority = option.value"
@@ -259,7 +259,8 @@ const priorityOptions = [
   { value: 'high' as const, label: 'High' },
   { value: 'medium' as const, label: 'Medium' },
   { value: 'low' as const, label: 'Low' },
-  { value: 'relaxed' as const, label: 'Relaxed' }
+  { value: 'relaxed' as const, label: 'Relaxed' },
+  { value: null, label: 'No Priority' }
 ]
 
 // Computed

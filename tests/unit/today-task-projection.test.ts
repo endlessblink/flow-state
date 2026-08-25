@@ -51,6 +51,7 @@ describe('canonical Today task projection', () => {
       task('today', 0),
       task('stale-overdue', 1, '2026-08-13'),
       task('tomorrow', 2, '2026-08-15'),
+      { ...task('manual', 3, ''), parentId: 'today-group', canvasPosition: { x: 20, y: 70 } },
     ].map(item => ({ ...item, parentId: 'today-group', canvasPosition: { x: 20, y: 70 } }))
 
     expect([...getStaleTodayTaskIds(tasks, 'today-group')]).toEqual(['stale-overdue', 'tomorrow'])

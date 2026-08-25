@@ -128,6 +128,8 @@ function parseAIResponse<T>(content: string): T | null {
 // Composable
 // ============================================================================
 
+const TASK_ASSIST_TIMEOUT_MS = 45_000
+
 export function useAITaskAssist() {
   const isLoading = ref(false)
   const currentAction = ref<string | null>(null)
@@ -162,12 +164,26 @@ export function useAITaskAssist() {
 
   async function streamAI(messages: RouterChatMessage[]): Promise<string> {
     const router = await getRouter()
-    let fullContent = ''
-    for await (const chunk of router.chatStream(messages, { taskType: 'suggestion', contextFeature: 'taskassist' })) {
-      if (aborted) throw new Error('Aborted')
-      fullContent += chunk.content
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+    try {
+      return await Promise.race([
+        (async () => {
+          let fullContent = ''
+          for await (const chunk of router.chatStream(messages, { taskType: 'suggestion', contextFeature: 'taskassist' })) {
+            if (aborted) throw new Error('Aborted')
+            fullContent += chunk.content
+          }
+          return fullContent
+        })(),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error('AI request timed out. Try again or check your AI provider connection.'))
+          }, TASK_ASSIST_TIMEOUT_MS)
+        })
+      ])
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
     }
-    return fullContent
   }
 
   // ============================================================================

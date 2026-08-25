@@ -110,6 +110,8 @@ jobs:
         run: |
           supabase start
           supabase db reset --local --yes
+          supabase stop
+          supabase start
           ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2
 
       - name: Stop Supabase

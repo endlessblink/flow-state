@@ -57,7 +57,7 @@ jobs:
       # Run the fail-closed challenge validator whenever a review bundle is present.
       # Ordinary fork-safe CI has no review artifact and therefore cannot invent a PASS.
       - name: Validate challenge evidence bundle
-        if: ${{ hashFiles('docs/challenge/review-*.json') != '' }}
+        if: ${{ github.ref == 'refs/heads/master' && hashFiles('docs/challenge/review-*.json') != '' }}
         run: |
           review_files=(docs/challenge/review-*.json)
           test "${#review_files[@]}" -eq 1

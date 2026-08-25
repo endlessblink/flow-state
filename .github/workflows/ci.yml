@@ -109,6 +109,10 @@ jobs:
       - name: Boot Supabase + run two-client Realtime e2e (R1–R7)
         run: |
           supabase start
+          # `supabase start` can reuse a project volume without replaying the
+          # repository migrations; reset explicitly so the schema preflight
+          # validates the checked-out migration set.
+          supabase db reset --local
           ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2
 
       - name: Stop Supabase

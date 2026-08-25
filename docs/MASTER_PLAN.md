@@ -6,7 +6,7 @@
 
 AI scheduling now learns repeated weekday patterns from dated task instances only after enough consistent observations, and measures deadline reliability plus the typical planning horizon. Catalogue and Board date suggestions now combine those learned routines with workdays, days off, meeting-heavy days, open-task load, and measured daily capacity before asking the model to explain the recommendation. Ambiguous patterns remain unlearned; no weekday or routine is hardcoded, and accepting a suggestion remains an explicit user action.
 
-**Regression coverage**: Repeated Thursday evidence learns a routine, a mixed weekday pattern is rejected, and deadline/planning signals are calculated from task dates. Reload recovery now rehydrates cached project dates and waits for the deep-link router before mounting; type-check, focused AI tests (11/11), the full offline/reconnect suite (25/25), and the Electron package validation pass. Deployed authenticated readback remains required.
+**Regression coverage**: Repeated Thursday evidence learns a routine, a mixed weekday pattern is rejected, and deadline/planning signals are calculated from task dates. The Catalogue and Board group AI button now opens explicit “Suggest dates” and “Suggest all details” choices, with date mode applying only date suggestions. Reload recovery now rehydrates cached project dates and waits for the deep-link router before mounting; type-check, focused AI tests, the group-menu regression, the full offline/reconnect suite (25/25), and the Electron package validation pass. Deployed authenticated readback remains required.
 
 ### ~~BUG-2040~~: Board drag-end resync flashes tasks between lanes (✅ DONE)
 

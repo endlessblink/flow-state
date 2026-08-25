@@ -41,11 +41,13 @@ interface Props {
   context: 'context-menu' | 'edit-modal' | 'quick-create'
   selectedTaskIds?: string[]
   autoTrigger?: string | null
+  groupFocus?: 'date' | 'all'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selectedTaskIds: () => [],
-  autoTrigger: null
+  autoTrigger: null,
+  groupFocus: 'all'
 })
 
 const emit = defineEmits<{
@@ -339,7 +341,7 @@ function acceptSmartSuggestGroup() {
   const updates = items
     .map(item => ({
       taskId: item.taskId,
-      fields: item.suggestions
+      fields: getGroupSuggestions(item)
         .filter(s => isGroupSuggestionChecked(item.taskId, s))
         .map(s => ({ field: s.field, value: s.suggestedValue }))
     }))
@@ -349,6 +351,12 @@ function acceptSmartSuggestGroup() {
   }
   clearResult()
   emit('close')
+}
+
+function getGroupSuggestions(item: { suggestions: SmartSuggestion[] }): SmartSuggestion[] {
+  return props.groupFocus === 'date'
+    ? item.suggestions.filter(s => s.field === 'dueDate')
+    : item.suggestions
 }
 
 function getFieldLabel(field: string): string {
@@ -799,7 +807,7 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
               {{ item.contextQuestion }}
             </p>
             <div
-              v-for="suggestion in item.suggestions"
+              v-for="suggestion in getGroupSuggestions(item)"
               :key="`${item.taskId}-${suggestion.field}`"
               class="smart-suggestion-card smart-suggestion-card--compact"
               :class="{ 'smart-suggestion-card--checked': isGroupSuggestionChecked(item.taskId, suggestion) }"

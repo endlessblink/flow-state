@@ -115,13 +115,27 @@
         >
           <Plus :size="14" />
         </button>
-        <button
-          class="group-ai-btn"
-          title="Smart Suggest all tasks in group (AI)"
-          @click.stop="handleGroupAISuggest($event, group)"
-        >
-          <Zap :size="14" />
-        </button>
+        <div class="group-ai-menu-wrap" @click.stop>
+          <button
+            class="group-ai-btn"
+            title="Choose AI suggestions for this group"
+            :aria-expanded="activeGroupAISuggestMenu === group.key"
+            aria-haspopup="menu"
+            @click="toggleGroupAISuggestMenu(group.key)"
+          >
+            <Zap :size="14" />
+          </button>
+          <div v-if="activeGroupAISuggestMenu === group.key" class="group-ai-menu" role="menu">
+            <button class="group-ai-menu__item" role="menuitem" @click="handleGroupAISuggest($event, group, 'date')">
+              <span>Suggest dates</span>
+              <small>Move tasks to safer days</small>
+            </button>
+            <button class="group-ai-menu__item" role="menuitem" @click="handleGroupAISuggest($event, group, 'all')">
+              <span>Suggest all details</span>
+              <small>Dates, priority, and estimates</small>
+            </button>
+          </div>
+        </div>
         <span v-if="isDragging" class="group-drop-hint">
           <ArrowDownToLine :size="14" />
         </span>
@@ -242,6 +256,7 @@
       :y="aiPopoverY"
       context="context-menu"
       :auto-trigger="aiPopoverAutoTrigger"
+      :group-focus="groupSuggestFocus"
       :selected-task-ids="aiPopoverGroupTaskIds"
       @close="closeAIPopover"
       @accept-smart-suggest="handleAcceptSmartSuggest"
@@ -622,6 +637,8 @@ const aiPopoverY = ref(0)
 const aiPopoverTask = ref<Task | null>(null)
 const aiPopoverAutoTrigger = ref<string | null>(null)
 const aiPopoverGroupTaskIds = ref<string[]>([])
+const activeGroupAISuggestMenu = ref<string | null>(null)
+const groupSuggestFocus = ref<'date' | 'all'>('all')
 
 const handleAISuggest = (event: MouseEvent, task: Task) => {
   const rect = (event.target as HTMLElement).getBoundingClientRect()
@@ -633,8 +650,13 @@ const handleAISuggest = (event: MouseEvent, task: Task) => {
   showAIPopover.value = true
 }
 
-const handleGroupAISuggest = (event: MouseEvent, group: TaskGroup) => {
+const toggleGroupAISuggestMenu = (groupKey: string) => {
+  activeGroupAISuggestMenu.value = activeGroupAISuggestMenu.value === groupKey ? null : groupKey
+}
+
+const handleGroupAISuggest = (event: MouseEvent, group: TaskGroup, focus: 'date' | 'all') => {
   event.stopPropagation()
+  activeGroupAISuggestMenu.value = null
   const rect = (event.target as HTMLElement).getBoundingClientRect()
   aiPopoverX.value = rect.right + 4
   aiPopoverY.value = rect.top
@@ -643,6 +665,7 @@ const handleGroupAISuggest = (event: MouseEvent, group: TaskGroup) => {
   // For group mode, set the first task as context and pass all IDs
   aiPopoverTask.value = group.tasks[0] || null
   aiPopoverAutoTrigger.value = 'smartSuggestGroup'
+  groupSuggestFocus.value = focus
   aiPopoverGroupTaskIds.value = taskIds
   showAIPopover.value = true
 }
@@ -1050,6 +1073,50 @@ defineExpose({
   transition: all var(--duration-fast);
   opacity: 0;
   flex-shrink: 0;
+}
+
+.group-ai-menu-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.group-ai-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 190px;
+  padding: 4px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-heavy);
+  box-shadow: var(--shadow-lg);
+}
+
+.group-ai-menu__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.group-ai-menu__item:hover {
+  background: var(--glass-bg-medium);
+  color: var(--brand-primary);
+}
+
+.group-ai-menu__item small {
+  color: var(--text-tertiary);
+  font-size: 10px;
 }
 
 .group-header:hover .group-ai-btn {

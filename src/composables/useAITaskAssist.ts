@@ -23,6 +23,8 @@ import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
 import { getTaskDurationEvidence } from '@/services/ai/taskDurationInsights'
+import { getTaskDateEvidence } from '@/services/ai/taskDateInsights'
+import { useWorkProfile } from '@/composables/useWorkProfile'
 
 // ============================================================================
 // Types
@@ -319,15 +321,23 @@ export function useAITaskAssist() {
       const langHint = detectLanguageInstruction(task.title)
       const today = new Date().toISOString().split('T')[0]
       const dateInfo = task.dueDate ? `\nCurrent due date: ${task.dueDate}` : ''
+      const taskStore = useTaskStore()
+      const workProfile = useWorkProfile()
+      try {
+        await workProfile.loadProfile()
+      } catch {
+        // Date suggestions remain available when profile sync is offline.
+      }
+      const dateEvidence = getTaskDateEvidence(task, taskStore.tasks, workProfile.profile.value)
 
       const messages: RouterChatMessage[] = [
         {
           role: 'system',
-          content: 'Suggest the optimal date to work on this task. Consider the task nature. Return ONLY valid JSON: { "date": "YYYY-MM-DD", "reasoning": "..." }' + langHint
+          content: `You are a conservative scheduling planner. Suggest the best optimal date to work on this task using the task's explicit needs first, then the user's measured planning evidence. Never move a task automatically; this is only a suggestion. Return ONLY valid JSON: { "date": "YYYY-MM-DD", "reasoning": "..." }. Do not choose a weekend, day off, meeting-heavy day, or an overloaded day when the evidence provides a safer option. Historical planner evidence: ${dateEvidence.date} (${dateEvidence.basis}; confidence ${dateEvidence.confidence.toFixed(2)}). Treat this as the safe baseline and explain any intentional deviation from it.` + langHint
         },
         {
           role: 'user',
-          content: `Task: "${task.title}"${task.description ? `\nDescription: ${task.description}` : ''}\nToday's date: ${today}${dateInfo}`
+          content: `Task: "${task.title}"${task.description ? `\nDescription: ${task.description}` : ''}\nToday's date: ${today}${dateInfo}\nOpen task context: ${taskStore.tasks.filter(candidate => candidate.status !== 'done').length} tasks remain open.`
         }
       ]
 
@@ -340,11 +350,30 @@ export function useAITaskAssist() {
         return
       }
 
+      const parsedDate = parseSuggestedDate(parsed.date)
+      if (!parsedDate || parsedDate < startOfToday()) {
+        parsed.date = dateEvidence.date
+        parsed.reasoning = `Safe baseline used because the model returned an invalid or past date. ${dateEvidence.basis}.`
+      } else {
+        parsed.reasoning = `${parsed.reasoning || 'Task context considered.'} Planner evidence: ${dateEvidence.basis}.`
+      }
       finishWithResult({ type: 'date', date: parsed })
     } catch (e) {
       if (aborted) return
       finishWithError(e instanceof Error ? e.message : 'Failed to suggest date')
     }
+  }
+
+  function startOfToday(): Date {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return today
+  }
+
+  function parseSuggestedDate(value: string): Date | null {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
+    const date = new Date(`${value}T12:00:00`)
+    return Number.isFinite(date.getTime()) ? date : null
   }
 
   // ============================================================================

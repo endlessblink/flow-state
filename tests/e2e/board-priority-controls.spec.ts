@@ -38,6 +38,7 @@ test.describe('Board priority and recurring filters', () => {
       user_id: userId,
       status: 'planned',
       is_in_inbox: true,
+      canvas_position: { x: index * 360, y: 120 },
       order: index
     })), { onConflict: 'id' })
     if (error) throw error
@@ -67,6 +68,13 @@ test.describe('Board priority and recurring filters', () => {
 
     await page.locator('.filter-toggle').click()
     const filterSelects = page.locator('.filter-controls .custom-select')
+    for (let index = 0; index < await filterSelects.count(); index++) {
+      const trigger = filterSelects.nth(index).locator('.select-trigger')
+      await trigger.click()
+      await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+      await page.keyboard.press('Escape')
+      await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    }
     await filterSelects.nth(3).locator('.select-trigger').click()
     await expect(page.getByRole('option', { name: 'Immediate', exact: true })).toBeVisible()
     await expect(page.getByRole('option', { name: 'Relaxed', exact: true })).toBeVisible()
@@ -81,5 +89,26 @@ test.describe('Board priority and recurring filters', () => {
     await page.getByRole('option', { name: 'Recurring Only', exact: true }).click()
     await expect(page.locator(`[data-task-id="${TASKS[2].id}"]`)).toBeVisible()
     await expect(page.locator(`[data-task-id="${TASKS[1].id}"]`)).toHaveCount(0)
+  })
+
+  test('applies the shared Board filter projection to Canvas', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('flowstate:board-view-type', 'category')
+      localStorage.setItem('flowstate:board-priority-filter', '')
+      localStorage.setItem('flowstate:board-recurring-filter', 'all')
+    })
+    await page.goto('/#/board')
+    await page.waitForSelector('.board-view-wrapper', { timeout: 30_000 })
+    await waitForApp(page)
+
+    await page.locator('.filter-toggle').click()
+    const statusSelect = page.locator('.filter-controls .custom-select').nth(2)
+    await statusSelect.locator('.select-trigger').click()
+    await page.getByRole('option', { name: 'Done', exact: true }).click()
+    await expect(page.locator('.kanban-board [data-task-id]')).toHaveCount(0)
+
+    await page.goto('/#/canvas')
+    await page.waitForSelector('.canvas-layout', { timeout: 30_000 })
+    await expect(page.locator('.task-node')).toHaveCount(0)
   })
 })

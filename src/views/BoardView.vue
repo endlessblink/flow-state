@@ -296,12 +296,6 @@ const handleListMoveTask = (taskId: string, targetProjectId: string | null, targ
 const { hideDoneTasks } = storeToRefs(taskStore)
 const handleToggleDoneColumn = () => taskStore.toggleHideDoneTasks()
 
-const {
-  tasksByProject,
-  projectsWithTasks,
-  totalDisplayedTasks
-} = useBoardState({ taskStore })
-
 // Density state from global settings store
 const currentDensity = computed(() => settingsStore.boardDensity)
 
@@ -333,13 +327,24 @@ const viewTypeOptions = computed(() => [
 // TASK-1552: Assignment filter (shared singleton — same ref as FilterControls dropdown)
 const { filterFn: assignmentFilterFn } = useAssignmentFilter()
 
+const boardTaskMatchesLocalFilters = (task: Task) => {
+  if (priorityFilter.value && (priorityFilter.value === 'none' ? task.priority : task.priority !== priorityFilter.value)) return false
+  if (recurringFilter.value === 'recurring' && !task.recurrenceRule) return false
+  if (recurringFilter.value === 'non_recurring' && task.recurrenceRule) return false
+  return assignmentFilterFn.value(task)
+}
+
+const {
+  tasksByProject,
+  projectsWithTasks,
+  totalDisplayedTasks
+} = useBoardState({ taskStore, taskFilter: boardTaskMatchesLocalFilters })
+
 // FEATURE-1336: All tasks combined (not split by project) for category view
 const allFilteredTasks = computed(() => {
   const filteredTasks = taskStore.filteredTasks
     .filter(task => !(taskStore.hideDoneTasks && task.status === 'done'))
-    .filter(assignmentFilterFn.value)
-    .filter(task => !priorityFilter.value || (priorityFilter.value === 'none' ? !task.priority : task.priority === priorityFilter.value))
-    .filter(task => recurringFilter.value === 'all' || (recurringFilter.value === 'recurring' ? Boolean(task.recurrenceRule) : !task.recurrenceRule))
+    .filter(boardTaskMatchesLocalFilters)
   return sortTasksForBoard(filteredTasks, boardSortOption.value)
 })
 

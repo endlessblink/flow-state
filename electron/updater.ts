@@ -423,7 +423,11 @@ export function registerUpdater() {
     if (!cleared.cleared) return null
 
     try {
-      return await autoUpdater.checkForUpdates()
+      const result = await autoUpdater.checkForUpdates()
+      if (result?.updateInfo && compareVersions(result.updateInfo.version, appVersion) > 0) {
+        await autoUpdater.downloadUpdate()
+      }
+      return result
     } catch (err) {
       console.error('[Updater] Retry after failed update marker failed:', (err as Error).message)
       throw err

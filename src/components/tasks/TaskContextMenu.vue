@@ -112,6 +112,16 @@
         <span class="menu-text">Start Timer</span>
       </button>
 
+      <!-- Stop the currently running timer from any task context menu -->
+      <button
+        v-if="timerStore.isTimerActive && !isBatchOperation"
+        class="menu-item menu-item--timer menu-item--timer-stop"
+        @click="stopTimer"
+      >
+        <Square :size="16" class="menu-icon" />
+        <span class="menu-text">Stop Timer</span>
+      </button>
+
       <!-- Open Thinking Flow (single task only) -->
       <button v-if="!isBatchOperation" class="menu-item" @click="handleOpenPlanningCanvas">
         <LayoutDashboard :size="16" class="menu-icon" />
@@ -276,7 +286,8 @@ import {
   PinOff,
   Lock,
   LockOpen,
-  LayoutDashboard
+  LayoutDashboard,
+  Square
 } from 'lucide-vue-next'
 import { FOCUS_MODE_KEY } from '@/composables/useFocusMode'
 import type { FocusModeState } from '@/composables/useFocusMode'
@@ -372,6 +383,11 @@ const taskStore = useTaskStore()
 const canvasStore = useCanvasStore()
 const projectStore = useProjectStore()
 const timerStore = useTimerStore()
+
+const stopTimer = async () => {
+  emit('close')
+  await timerStore.stopTimer()
+}
 
 const runningTimerTask = computed(() => {
   if (!timerStore.isTimerActive || !timerStore.currentTaskId || timerStore.currentTaskId === 'general') return null

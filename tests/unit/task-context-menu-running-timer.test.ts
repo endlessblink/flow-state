@@ -12,4 +12,11 @@ describe('TaskContextMenu running timer indicator', () => {
     expect(source).toContain('running-task-indicator')
     expect(source).toContain('Timer running')
   })
+
+  it('offers a stop action whenever a timer is active', () => {
+    expect(source).toContain('Stop Timer')
+    expect(source).toContain('timerStore.isTimerActive && !isBatchOperation')
+    expect(source).toContain('@click="stopTimer"')
+    expect(source).toContain('await timerStore.stopTimer()')
+  })
 })

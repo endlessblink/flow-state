@@ -26,6 +26,7 @@
           class="mode-btn"
           :class="{ 'mode-btn--active': showAllWeekDays }"
           :title="showAllWeekDays ? 'Hide empty days' : 'Show all week days'"
+          :aria-label="showAllWeekDays ? 'Hide empty days' : 'Show all week days'"
           @click="showAllWeekDays = !showAllWeekDays"
         >
           <CalendarDays :size="16" />

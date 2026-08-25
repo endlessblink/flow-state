@@ -332,7 +332,7 @@ watch(isOpen, (newVal) => {
     0 0 0 1px var(--border-subtle) inset;
   border-radius: var(--radius-md);
 
-  max-height: 200px;
+  max-height: 320px;
   overflow-y: auto;
   padding: var(--space-1);
   margin: 0;

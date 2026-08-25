@@ -225,7 +225,7 @@ describe('Task Store — CRUD', () => {
     const task = await store.createTask({ title: 'Cache boundary task' })
     mockCacheTasks.mockRejectedValueOnce(new Error('IndexedDB unavailable'))
 
-    await expect(store.updateTask(task.id, { title: 'Queued despite cache failure' })).resolves.toBeUndefined()
+    await expect(store.updateTask(task.id, { title: 'Queued despite cache failure' })).resolves.toBe(true)
 
     expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({
       entityId: task.id,

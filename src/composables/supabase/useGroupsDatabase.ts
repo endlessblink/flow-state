@@ -58,8 +58,9 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
             invalidateCache.groups()
         }
 
-        return swrCache.getOrFetch(cacheKey, async () => {
-            try {
+        try {
+            return await swrCache.getOrFetch(cacheKey, async () => {
+                try {
                 // BUG-1107: Wrap in withRetry for mobile PWA network resilience
                 return await withRetry(async () => {
                     let query = getSupabase()
@@ -89,12 +90,20 @@ export function useGroupsDatabase(ctx: DatabaseContext) {
 
                     return (data as SupabaseGroup[]).map(fromSupabaseGroup)
                 }, 'fetchGroups')
-            } catch (e: unknown) {
-                handleError(e, 'fetchGroups')
-                options?.onError?.(e)
-                return []
-            }
-        })
+                } catch (e: unknown) {
+                    handleError(e, 'fetchGroups')
+                    options?.onError?.(e)
+                    // Throw through SWR so failed reads are removed instead of
+                    // cached as an empty authoritative snapshot.
+                    throw e
+                }
+            })
+        } catch {
+            // Preserve the historical [] fallback for callers that render a
+            // local/offline projection, while keeping the failed read out of
+            // the shared cache for the next attempt.
+            return []
+        }
     }
 
     const saveGroup = async (group: CanvasGroup): Promise<void> => {

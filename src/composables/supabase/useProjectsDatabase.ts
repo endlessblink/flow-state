@@ -30,8 +30,9 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
             invalidateCache.projects()
         }
 
-        return swrCache.getOrFetch(cacheKey, async () => {
-            try {
+        try {
+            return await swrCache.getOrFetch(cacheKey, async () => {
+                try {
                 return await withRetry(async () => {
                     let query = getSupabase()
                         .from('projects')
@@ -55,12 +56,15 @@ export function useProjectsDatabase(ctx: DatabaseContext) {
 
                     return (data as SupabaseProject[]).map(fromSupabaseProject)
                 }, 'fetchProjects')
-            } catch (e: unknown) {
-                handleError(e, 'fetchProjects')
-                options?.onError?.(e)
-                return []
-            }
-        })
+                } catch (e: unknown) {
+                    handleError(e, 'fetchProjects')
+                    options?.onError?.(e)
+                    throw e
+                }
+            })
+        } catch {
+            return []
+        }
     }
 
     const saveProject = async (project: Project): Promise<void> => {

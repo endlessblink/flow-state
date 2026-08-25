@@ -222,8 +222,17 @@ export const useProjectStore = defineStore('projects', () => {
             // undefined = no filter (personal/pre-migration safe), string = workspace filter
             // Pass activeWorkspaceId directly: null = personal (filter IS NULL), string = workspace (filter eq)
             const workspaceId = wsStore.activeWorkspaceId
-            const loadedProjects = await fetchProjects(workspaceId)
+            let projectsReadFailed = false
+            const loadedProjects = await fetchProjects(workspaceId, {
+                onError: () => {
+                    projectsReadFailed = true
+                },
+            })
             assertScope()
+            if (projectsReadFailed) {
+                console.warn('⚠️ [SUPABASE] Project read failed; keeping the current projection')
+                return
+            }
             await cacheProjects(loadedProjects, {
                 scopeToken: readCacheScopeToken ?? undefined,
                 throwOnError: true,

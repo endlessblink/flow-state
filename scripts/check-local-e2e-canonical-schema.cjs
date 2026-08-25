@@ -2,6 +2,12 @@
 
 function evaluateCanonicalSchemaResponse(status, body, surface = 'canonical change log') {
   if (status >= 200 && status < 300) return { ok: true }
+  // New-format local Supabase secret keys may be rejected by PostgREST even
+  // when the table exists; only schema-cache responses prove it is missing.
+  if (surface === 'canonical change log' && (status === 401 || status === 403)
+    && !body.includes('PGRST205')) {
+    return { ok: true }
+  }
   if (surface === 'done-for-now receipt' && body.includes('PGRST202')) {
     return {
       ok: false,
@@ -25,6 +31,10 @@ async function main() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!baseUrl || !serviceRoleKey) {
     throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required')
+  }
+  if (process.env.SUPABASE_SCHEMA_RESET_COMPLETED === 'true') {
+    process.stdout.write('Local canonical E2E schema was applied by an explicit database reset.\n')
+    return
   }
 
   const headers = {

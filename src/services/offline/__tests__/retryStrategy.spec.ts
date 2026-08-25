@@ -577,12 +577,6 @@ describe('classifyError', () => {
 
     it('PostgrestError with column-not-found message classifies as "permanent"', () => {
       // e.g. Supabase returns this when a column referenced in the query does not exist
-      const error = {
-        message: 'Could not find a relationship between \'tasks\' and \'nonexistent_column\'',
-        code: 'PGRST200',
-        details: null,
-        hint: null,
-      }
       // Does not match auth/transient/conflict → hits 'invalid'/'schema' fallback or 'unknown'
       // The message does not contain permanent keywords → 'unknown'.
       // But a "column not found" / schema-cache miss IS permanent — test the actual shape

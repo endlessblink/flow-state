@@ -1307,7 +1307,6 @@ useEventListener(window, 'keydown', (e) => {
 })
 
 // Aliases for template compatibility
-const tasksWithCanvasPositions = tasksWithCanvasPosition
 const handleToolbarCreateGroup = createGroup
 const handleAddTask = () => createTaskHere()
 const clearStatusFilter = () => { taskStore.activeStatusFilter = null }

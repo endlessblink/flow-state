@@ -22,6 +22,7 @@ import { getSharedRouter } from '@/services/ai/routerFactory'
 import type { ChatMessage as RouterChatMessage } from '@/services/ai/types'
 import type { Task } from '@/types/tasks'
 import { useTaskStore } from '@/stores/tasks'
+import { getTaskDurationEvidence } from '@/services/ai/taskDurationInsights'
 
 // ============================================================================
 // Types
@@ -236,6 +237,8 @@ export function useAITaskAssist() {
     resetState('suggestPriorityDuration')
     try {
       const langHint = detectLanguageInstruction(task.title)
+      const taskStore = useTaskStore()
+      const durationEvidence = getTaskDurationEvidence(task, taskStore.tasks)
       const currentInfo: string[] = []
       if (task.priority) currentInfo.push(`Current priority: ${task.priority}`)
       if (task.estimatedDuration) currentInfo.push(`Current estimated duration: ${task.estimatedDuration} minutes`)
@@ -247,7 +250,7 @@ export function useAITaskAssist() {
         },
         {
           role: 'user',
-          content: `Task: "${task.title}"${task.description ? `\nDescription: ${task.description}` : ''}${currentInfo.length > 0 ? '\n' + currentInfo.join('\n') : ''}`
+          content: `Task: "${task.title}"${task.description ? `\nDescription: ${task.description}` : ''}${currentInfo.length > 0 ? '\n' + currentInfo.join('\n') : ''}${durationEvidence ? `\nHistorical duration evidence: ${durationEvidence.minutes} minutes (${durationEvidence.basis}; confidence ${durationEvidence.confidence.toFixed(2)}). Use this as the duration baseline.` : '\nNo historical duration evidence is available; label the estimate as a general guess.'}`
         }
       ]
 
@@ -260,6 +263,10 @@ export function useAITaskAssist() {
         return
       }
 
+      if (durationEvidence && durationEvidence.confidence >= 0.7) {
+        parsed.duration = durationEvidence.minutes
+        parsed.reasoning = `${parsed.reasoning || 'AI task analysis'} Historical baseline: ${durationEvidence.basis}.`
+      }
       finishWithResult({ type: 'priority', priority: parsed })
     } catch (e) {
       if (aborted) return
@@ -515,14 +522,15 @@ Return ONLY valid JSON: { "title": "..." }` + langHint
     // Duration fallback
     if (!task.estimatedDuration) {
       const taskStore = useTaskStore()
+      const durationEvidence = getTaskDurationEvidence(task, taskStore.tasks)
       const subtaskCount = taskStore.tasks.filter(t => t.parentTaskId === task.id).length
-      const duration = subtaskCount > 0 ? 60 : task.title.length < 20 ? 15 : 30
+      const duration = durationEvidence?.minutes ?? (subtaskCount > 0 ? 60 : task.title.length < 20 ? 15 : 30)
       suggestions.push({
         field: 'estimatedDuration',
         currentValue: null,
         suggestedValue: duration,
         confidence: 0.3,
-        reasoning: subtaskCount > 0 ? 'Has subtasks, likely complex' : 'Default estimate'
+        reasoning: durationEvidence?.basis ?? (subtaskCount > 0 ? 'Has subtasks, likely complex' : 'Default estimate')
       })
     }
 
@@ -547,6 +555,7 @@ Return ONLY valid JSON: { "title": "..." }` + langHint
       const overdueTasks = taskStore.tasks.filter(t =>
         t.dueDate && t.dueDate < today && t.status !== 'done'
       ).length
+      const durationEvidence = getTaskDurationEvidence(task, taskStore.tasks)
 
       const systemPrompt = `You suggest task metadata conservatively. Return ONLY valid JSON.
 Format: { "contextQuestion": "..." | null, "suggestions": [{ "field": "priority|dueDate|status|estimatedDuration", "value": ..., "confidence": 0.0-1.0, "reason": "..." }] }
@@ -567,7 +576,7 @@ Rules:
       const descSnippet = task.description ? task.description.slice(0, 100) : ''
       const userPrompt = `Task: "${task.title}"${descSnippet ? `\nDescription: "${descSnippet}"` : ''}
 Current: priority=${task.priority || 'none'}, dueDate=${task.dueDate || 'none'}, status=${task.status || 'todo'}, duration=${task.estimatedDuration || 'none'}min
-Project: ${taskStore.getProjectDisplayName(task.projectId) || 'none'} | Subtasks: ${subtasks.length} (${subtasksDone} done)${siblings.length > 0 ? `\nSiblings: ${siblings.join(', ')}` : ''}${contextAnswer ? `\nUser clarification: "${contextAnswer}"` : ''}
+Project: ${taskStore.getProjectDisplayName(task.projectId) || 'none'} | Subtasks: ${subtasks.length} (${subtasksDone} done)${siblings.length > 0 ? `\nSiblings: ${siblings.join(', ')}` : ''}${contextAnswer ? `\nUser clarification: "${contextAnswer}"` : ''}${durationEvidence ? `\nHistorical duration evidence: ${durationEvidence.minutes} minutes (${durationEvidence.basis}; confidence ${durationEvidence.confidence.toFixed(2)}).` : '\nNo historical duration evidence is available.'}
 Today: ${today} | Overdue tasks: ${overdueTasks}`
 
       const messages: RouterChatMessage[] = [
@@ -639,6 +648,12 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
           confidence: Math.max(0, Math.min(1, s.confidence)),
           reasoning: s.reason || ''
         }))
+
+      const historicalDuration = suggestions.find(s => s.field === 'estimatedDuration')
+      if (historicalDuration && durationEvidence && durationEvidence.confidence >= 0.7) {
+        historicalDuration.suggestedValue = durationEvidence.minutes
+        historicalDuration.reasoning = durationEvidence.basis
+      }
 
       finishWithResult({ type: 'smartSuggest', smartSuggest: { contextQuestion, suggestions } })
     } catch (e) {

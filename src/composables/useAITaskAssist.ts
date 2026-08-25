@@ -529,7 +529,7 @@ Return ONLY valid JSON: { "title": "..." }` + langHint
     return suggestions
   }
 
-  async function smartSuggest(task: Task) {
+  async function smartSuggest(task: Task, contextAnswer?: string) {
     resetState('smartSuggest')
     try {
       const langHint = detectLanguageInstruction(task.title)
@@ -567,7 +567,7 @@ Rules:
       const descSnippet = task.description ? task.description.slice(0, 100) : ''
       const userPrompt = `Task: "${task.title}"${descSnippet ? `\nDescription: "${descSnippet}"` : ''}
 Current: priority=${task.priority || 'none'}, dueDate=${task.dueDate || 'none'}, status=${task.status || 'todo'}, duration=${task.estimatedDuration || 'none'}min
-Project: ${taskStore.getProjectDisplayName(task.projectId) || 'none'} | Subtasks: ${subtasks.length} (${subtasksDone} done)${siblings.length > 0 ? `\nSiblings: ${siblings.join(', ')}` : ''}
+Project: ${taskStore.getProjectDisplayName(task.projectId) || 'none'} | Subtasks: ${subtasks.length} (${subtasksDone} done)${siblings.length > 0 ? `\nSiblings: ${siblings.join(', ')}` : ''}${contextAnswer ? `\nUser clarification: "${contextAnswer}"` : ''}
 Today: ${today} | Overdue tasks: ${overdueTasks}`
 
       const messages: RouterChatMessage[] = [

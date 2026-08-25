@@ -28,6 +28,14 @@ describe('local E2E canonical schema preflight', () => {
     })
   })
 
+  it('accepts local key authorization responses when the schema is not missing', () => {
+    const { evaluateCanonicalSchemaResponse } = require(modulePath) as {
+      evaluateCanonicalSchemaResponse: (status: number, body: string) => { ok: boolean; reason?: string }
+    }
+
+    expect(evaluateCanonicalSchemaResponse(403, '{"message":"permission denied"}')).toEqual({ ok: true })
+  })
+
   it('rejects a stale done-for-now receipt signature', () => {
     const { evaluateCanonicalSchemaResponse } = require(modulePath) as {
       evaluateCanonicalSchemaResponse: (status: number, body: string, surface?: string) => { ok: boolean; reason?: string }

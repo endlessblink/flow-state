@@ -1,5 +1,33 @@
 # FlowState MASTER_PLAN.md
 
+### ~~BUG-2041~~: Persisted identity triggers sync error without Supabase client (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-25)
+
+When a desktop build is missing its build-time Supabase configuration, a persisted identity can still make settings sync call the absent client and surface `Sync Error(fetchUserSettings)`. The database boundary now treats that state as guest mode, the Electron env validator no longer depends on an unavailable runtime helper, and the focused regression plus type-check and live env validation pass; the running finished app was manually exercised without the error.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Finished desktop app exercised without the settings sync error | Yes |
+| Data shape / persisted row shape | Yes | Regression uses a persisted user identity with no client | Yes |
+| Renderer store/state | Yes | `getUserIdSafe` now treats unavailable client as guest mode | Yes |
+| Electron main/preload bridge | Partial | No bridge change; package rebuild remains separate | No |
+| Localhost sidecar endpoint | N/A | Settings read goes directly through Supabase client | No |
+| KDE polling/control path | N/A | Unrelated to settings sync | No |
+| Supabase persistence/realtime | Partial | Live env credential accepted; no authenticated production readback | No |
+| Updater/runtime version | Partial | Existing finished app tested; fresh package not rebuilt | No |
+| Stale live process/cache state | Partial | Existing app worked; concurrent build/cache state remains external | No |
+
+**Exact failure mode fixed**: a saved identity caused database reads to call a missing Supabase client.
+
+**Explicitly not covered**: missing credentials in a newly packaged Electron release, updater delivery, and authenticated production sync readback.
+
+**Regression added for reported repro**: persisted identity plus `supabase: null` returns guest-safe settings state without a sync error.
+
+**Live boundary proof**: the existing finished desktop app was launched and manually exercised; fresh Electron packaging remains unverified.
+
 ### FEATURE-2041: Learn routines and scheduling behavior from task history (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)

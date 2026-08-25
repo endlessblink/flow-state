@@ -281,7 +281,9 @@ describe('useDayGroupRotation — catch-up guard', () => {
       id: 'stale-child',
       parentId: thursday.id,
       dueDate: WEDNESDAY_STR,
-      canvasPosition: { x: 852, y: 160 },
+      // The persisted parent is stale, but the rendered position is inside
+      // Today; spatial adoption should repair the parent during catch-up.
+      canvasPosition: { x: 20, y: 160 },
     })
     vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow, thursday])
     vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([staleChild])

@@ -97,20 +97,27 @@
           <span>{{ workBlockLabel }}</span>
         </button>
 
-        <div v-if="isDurationPickerOpen" class="work-block-picker">
-          <button
-            v-for="option in quickDurationOptions"
-            :key="option.value"
-            type="button"
-            class="work-block-option"
-            :class="{ 'is-active': task.estimatedDuration === option.value }"
-            @click.stop.prevent="setWorkBlock(option.value)"
-            @mousedown.stop
-            @pointerdown.stop
+        <Teleport to="body">
+          <div
+            v-if="isDurationPickerOpen"
+            ref="pickerRef"
+            class="work-block-picker"
+            :style="pickerStyle"
           >
-            {{ option.label }}
-          </button>
-        </div>
+            <button
+              v-for="option in quickDurationOptions"
+              :key="option.value"
+              type="button"
+              class="work-block-option"
+              :class="{ 'is-active': task.estimatedDuration === option.value }"
+              @click.stop.prevent="setWorkBlock(option.value)"
+              @mousedown.stop
+              @pointerdown.stop
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </Teleport>
       </div>
     </div>
 
@@ -151,6 +158,8 @@ const taskStore = useTaskStore()
 const isPersonalWorkspace = computed(() => workspaceStore.isPersonalWorkspace)
 const isDurationPickerOpen = ref(false)
 const workBlockRef = ref<HTMLElement>()
+const pickerRef = ref<HTMLElement>()
+const pickerStyle = ref<Record<string, string>>({})
 const hasTaskTitle = computed(() => (props.task.title ?? '').trim().length > 0)
 const { workedMinutesToday, isEnoughForToday } = useWorkBlockProgress(() => props.task)
 
@@ -164,11 +173,30 @@ const quickDurationOptions = [
 
 const toggleDurationPicker = () => {
   isDurationPickerOpen.value = !isDurationPickerOpen.value
+  if (isDurationPickerOpen.value) updatePickerPosition()
 }
 
 const setWorkBlock = async (duration: number) => {
-  isDurationPickerOpen.value = false
-  await taskStore.updateTaskWithUndo(props.task.id, { estimatedDuration: duration })
+  try {
+    await taskStore.updateTaskWithUndo(props.task.id, { estimatedDuration: duration })
+    isDurationPickerOpen.value = false
+  } catch (error) {
+    console.warn('[TaskCardBadges] Could not save work block length:', error)
+  }
+}
+
+const updatePickerPosition = () => {
+  const trigger = workBlockRef.value
+  if (!trigger) return
+
+  const rect = trigger.getBoundingClientRect()
+  const pickerWidth = 320
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - pickerWidth - 8))
+  const top = rect.bottom + 4
+  pickerStyle.value = {
+    left: `${left}px`,
+    top: `${top}px`
+  }
 }
 
 const workBlockLabel = computed(() => {
@@ -184,6 +212,7 @@ const workBlockTitle = computed(() => {
 const closeDurationPickerOnOutsideClick = (event: MouseEvent) => {
   if (!isDurationPickerOpen.value) return
   if (workBlockRef.value?.contains(event.target as Node)) return
+  if (pickerRef.value?.contains(event.target as Node)) return
   isDurationPickerOpen.value = false
 }
 
@@ -292,12 +321,12 @@ const dueDateClass = computed(() => {
 }
 
 .work-block-picker {
-  position: absolute;
+  position: fixed;
   z-index: var(--z-dropdown);
-  top: calc(100% + var(--space-1));
-  left: 0;
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
+  max-width: calc(100vw - 16px);
   padding: var(--space-1);
   background: var(--overlay-component-bg);
   backdrop-filter: var(--overlay-component-backdrop);

@@ -140,11 +140,12 @@ describe('updateTask rollback (TASK-1177)', () => {
     mockEnqueue.mockRejectedValue(new Error('queue unavailable'))
     mockSaveTasks.mockRejectedValue(new Error('network error'))
 
-    await store.updateTask(task.id, { title: 'Changed' })
+    const persisted = await store.updateTask(task.id, { title: 'Changed' })
 
     // Rollback: title should be back to 'Original'
     const afterUpdate = store.tasks.find(t => t.id === task.id)
     expect(afterUpdate?.title).toBe('Original')
+    expect(persisted).toBe(false)
   })
 
   it('keeps optimistic update when sync queue succeeds', async () => {
@@ -158,10 +159,11 @@ describe('updateTask rollback (TASK-1177)', () => {
     // Direct save throws but persisted is already true
     mockSaveTasks.mockRejectedValue(new Error('direct save failed'))
 
-    await store.updateTask(task.id, { title: 'Changed' })
+    const persisted = await store.updateTask(task.id, { title: 'Changed' })
 
     const afterUpdate = store.tasks.find(t => t.id === task.id)
     expect(afterUpdate?.title).toBe('Changed')
+    expect(persisted).toBe(true)
   })
 
   it('queues a pure scalar update with its stable canonical base revision', async () => {

@@ -1405,6 +1405,7 @@ export function useTaskOperations(
           "warning",
         );
       }
+      return persisted;
     } finally {
       if (!wasManualInProgress) manualOperationInProgress.value = false;
     }

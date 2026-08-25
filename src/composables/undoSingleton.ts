@@ -1013,10 +1013,13 @@ const updateTaskWithUndo = async (taskId: string, updates: Partial<Task>) => {
   })
 
   // BUG-1051: AWAIT to ensure persistence
-  await taskStore.updateTask(taskId, updates)
+  const persisted = await taskStore.updateTask(taskId, updates)
 
   await nextTick()
   await commitOperation(handle)
+  if (persisted === false) {
+    throw new Error('Task update could not be durably persisted')
+  }
 }
 
 const bulkUpdateTasksWithUndo = async (

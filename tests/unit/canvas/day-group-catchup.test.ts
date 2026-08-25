@@ -274,9 +274,9 @@ describe('useDayGroupRotation — catch-up guard', () => {
 
     // Today = Wednesday. A task dated today but parked in the Thursday group
     // must be re-homed into the Today group during the launch catch-up.
-    const today = makeGroup({ name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
-    const tomorrow = makeGroup({ name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })
-    const thursday = makeGroup({ name: 'Thursday', position: { x: 832, y: 0, width: 350, height: 600 } })
+    const today = makeGroup({ id: 'today-group', name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const tomorrow = makeGroup({ id: 'tomorrow-group', name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })
+    const thursday = makeGroup({ id: 'thursday-group', name: 'Thursday', position: { x: 832, y: 0, width: 350, height: 600 } })
     const staleChild = makeTask({
       id: 'stale-child',
       parentId: thursday.id,

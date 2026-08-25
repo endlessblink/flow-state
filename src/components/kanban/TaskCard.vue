@@ -39,18 +39,17 @@
         @cycle="cycleStatus"
       />
 
-      <div
-        v-if="isTimerActive"
-        class="timer-running-indicator"
-        role="status"
-        aria-live="polite"
-      >
-        <span class="timer-running-dot" aria-hidden="true" />
-        <span>Running {{ timerStore.displayTime }}</span>
-      </div>
-
       <!-- Title and metadata in flex layout -->
       <div class="title-section">
+        <div
+          v-if="isTimerActive"
+          class="timer-running-indicator"
+          role="status"
+          aria-live="polite"
+        >
+          <span>Running {{ timerStore.displayTime }}</span>
+          <span class="timer-running-dot" aria-hidden="true" />
+        </div>
         <h3
           :id="`task-title-${task.id}`"
           class="task-title"

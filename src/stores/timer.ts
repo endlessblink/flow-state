@@ -489,7 +489,17 @@ export const useTimerStore = defineStore("timer", () => {
         // Don't block timer start because of DB cleanup failure
       }
 
-      await sync.saveTimerSessionWithLeadership();
+      try {
+        await sync.saveTimerSessionWithLeadership();
+      } catch (persistenceError) {
+        // The local timer is the primary user-facing control. A stale auth
+        // token or temporary network failure must not erase a session that has
+        // already started; the sync queue/heartbeat can persist it later.
+        console.warn(
+          "🍅 [TIMER] Initial persistence failed; keeping timer running locally:",
+          persistenceError,
+        );
+      }
       if (!options.silent) audio.playStartSound();
     } catch (error) {
       sync.pauseCountdown();

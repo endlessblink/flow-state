@@ -20,12 +20,32 @@
 
       <button
         class="menu-item menu-item--sm"
+        :class="{ active: currentPriority === 'relaxed' }"
+        @click.stop="$emit('select', 'relaxed')"
+      >
+        <span class="priority-dot relaxed" />
+        <span class="menu-text">Relaxed</span>
+        <Check v-if="currentPriority === 'relaxed'" :size="12" class="check-icon" />
+      </button>
+
+      <button
+        class="menu-item menu-item--sm"
         :class="{ active: currentPriority === 'high' }"
         @click.stop="$emit('select', 'high')"
       >
         <span class="priority-dot high" />
         <span class="menu-text">High</span>
         <Check v-if="currentPriority === 'high'" :size="12" class="check-icon" />
+      </button>
+
+      <button
+        class="menu-item menu-item--sm"
+        :class="{ active: !currentPriority }"
+        @click.stop="$emit('clearPriority')"
+      >
+        <CircleOff :size="12" class="priority-none-icon" />
+        <span class="menu-text">No Priority</span>
+        <Check v-if="!currentPriority" :size="12" class="check-icon" />
       </button>
 
       <button
@@ -64,7 +84,7 @@
 
 <script setup lang="ts">
 import type { CSSProperties } from 'vue'
-import { Check, X } from 'lucide-vue-next'
+import { Check, CircleOff, X } from 'lucide-vue-next'
 import type { TaskPriority } from '@/types/tasks'
 
 defineProps<{
@@ -149,6 +169,11 @@ defineEmits<{
 .check-icon {
   flex-shrink: 0;
   opacity: 0.7;
+}
+
+.priority-none-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .submenu-divider {

@@ -113,6 +113,10 @@
                 <Flag :size="12" />
                 <span>{{ $t('common.none') }}</span>
               </button>
+              <button class="dropdown-option priority-immediate" @click="selectPriority('immediate')">
+                <Flag :size="12" />
+                <span>Immediate</span>
+              </button>
               <button class="dropdown-option priority-low" @click="selectPriority('low')">
                 <Flag :size="12" />
                 <span>{{ $t('task.priority_low') }}</span>
@@ -124,6 +128,10 @@
               <button class="dropdown-option priority-high" @click="selectPriority('high')">
                 <Flag :size="12" />
                 <span>{{ $t('task.priority_high') }}</span>
+              </button>
+              <button class="dropdown-option priority-relaxed" @click="selectPriority('relaxed')">
+                <Flag :size="12" />
+                <span>Relaxed</span>
               </button>
             </div>
           </Transition>

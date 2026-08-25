@@ -1889,10 +1889,11 @@ function isDailySummaryResult(result: { tool: string; data: ChatToolResultData }
 
 function priorityColor(priority?: string): string {
   switch (priority) {
-    case 'urgent': return 'var(--color-priority-high)'
-    case 'high': return 'var(--color-priority-medium)'
-    case 'medium': return 'var(--color-priority-low)' // Typically yellow/orange
-    case 'low': return 'var(--color-success)'
+    case 'immediate': return 'var(--color-danger)'
+    case 'high': return 'var(--color-priority-high)'
+    case 'medium': return 'var(--color-priority-medium)'
+    case 'low': return 'var(--color-priority-low)'
+    case 'relaxed': return 'var(--color-priority-low)'
     default: return 'var(--glass-handle)'
   }
 }
@@ -2384,7 +2385,7 @@ async function applyDayPlan(event: MouseEvent) {
 }
 
 function normalizeTaskPriority(priority?: string): Task['priority'] {
-  if (priority === 'low' || priority === 'medium' || priority === 'high') return priority
+  if (priority === 'immediate' || priority === 'low' || priority === 'medium' || priority === 'high' || priority === 'relaxed') return priority
   return 'medium'
 }
 

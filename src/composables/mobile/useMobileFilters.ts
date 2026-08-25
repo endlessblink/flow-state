@@ -19,10 +19,12 @@ const hideDoneTasks = usePersistentRef<boolean>('flowstate-mobile-hide-done', tr
 
 // Priority label mapping
 const priorityLabels: Record<string, string> = {
-  critical: 'P0',
-  high: 'P1',
-  medium: 'P2',
-  low: 'P3'
+  immediate: 'Immediate',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  relaxed: 'Relaxed',
+  none: 'No Priority'
 }
 
 export function useMobileFilters() {

@@ -867,7 +867,7 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         }
 
         // Sorting
-        const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+  const priorityOrder: Record<string, number> = { immediate: 0, high: 1, medium: 2, low: 3, relaxed: 4 }
         if (sortBy === 'priority') {
           tasks = [...tasks].sort((a, b) => {
             const ap = priorityOrder[a.priority || ''] ?? 4

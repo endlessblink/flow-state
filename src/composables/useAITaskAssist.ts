@@ -604,7 +604,7 @@ Today: ${today} | Overdue tasks: ${overdueTasks}`
 
       // Validate and normalize suggestions
       const validFields = new Set(['priority', 'dueDate', 'status', 'estimatedDuration'])
-      const validPriorities = new Set(['high', 'medium', 'low'])
+      const validPriorities = new Set(['immediate', 'high', 'medium', 'low', 'relaxed'])
       const validStatuses = new Set(['todo'])
       const validDurations = new Set([15, 30, 60, 90, 120])
 
@@ -727,7 +727,7 @@ Rules:
 
       // Validate and normalize
       const validFields = new Set(['priority', 'dueDate', 'status', 'estimatedDuration'])
-      const validPriorities = new Set(['high', 'medium', 'low'])
+      const validPriorities = new Set(['immediate', 'high', 'medium', 'low', 'relaxed'])
       const validStatuses = new Set(['todo'])
       const validDurations = new Set([15, 30, 60, 90, 120])
       const taskMap = new Map(tasks.map(t => [t.id, t]))

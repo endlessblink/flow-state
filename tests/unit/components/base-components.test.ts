@@ -587,6 +587,25 @@ describe('CustomSelect', () => {
     })
     expect(wrapper.text()).toContain('Select...')
   })
+
+  it('36a. renders visual markers for every priority option', async () => {
+    const priorityOptions = [
+      { label: 'All Priorities', value: '', icon: 'priority' as const },
+      { label: 'Immediate', value: 'immediate', icon: 'priority' as const },
+      { label: 'High', value: 'high', icon: 'priority' as const },
+      { label: 'Medium', value: 'medium', icon: 'priority' as const },
+      { label: 'Low', value: 'low', icon: 'priority' as const },
+      { label: 'Relaxed', value: 'relaxed', icon: 'priority' as const },
+      { label: 'No Priority', value: 'none', icon: 'none' as const },
+    ]
+    const wrapper = mountWithPlugins(CustomSelect, {
+      props: { modelValue: 'medium', options: priorityOptions },
+    })
+    await wrapper.find('.select-trigger').trigger('click')
+    expect(wrapper.findAll('.select-option__priority-icon')).toHaveLength(7)
+    expect(wrapper.find('.select-option__priority-icon--immediate').exists()).toBe(true)
+    expect(wrapper.find('.select-option__priority-icon--none').exists()).toBe(true)
+  })
 })
 
 // =====================================================================

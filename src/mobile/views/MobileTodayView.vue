@@ -224,11 +224,11 @@ const showGroupByDropdown = ref(false)
 
 // Priority options (for dropdown display)
 const priorityOptions = [
-  { value: 'immediate', label: 'Immediate (P0)' },
-  { value: 'high', label: 'High (P1)' },
-  { value: 'medium', label: 'Medium (P2)' },
-  { value: 'low', label: 'Low (P3)' },
-  { value: 'relaxed', label: 'Relaxed (P4)' }
+  { value: 'immediate', label: 'Immediate' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+  { value: 'relaxed', label: 'Relaxed' }
 ]
 
 // Group by options (Today view uses 'time' instead of 'none')
@@ -466,11 +466,11 @@ const groupedTasks = computed((): TaskGroup[] => {
     // Group by priority
     const priorityOrder = ['immediate', 'high', 'medium', 'low', 'relaxed', 'none']
     const priorityLabels: Record<string, string> = {
-      immediate: 'Immediate (P0)',
-      high: 'High (P1)',
-      medium: 'Medium (P2)',
-      low: 'Low (P3)',
-      relaxed: 'Relaxed (P4)',
+      immediate: 'Immediate',
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
+      relaxed: 'Relaxed',
       none: 'No Priority'
     }
     const priorityMap = new Map<string, Task[]>()

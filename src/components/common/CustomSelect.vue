@@ -46,6 +46,19 @@
             @click="selectOption(option)"
             @mouseenter="focusedIndex = index"
           >
+            <Flag
+              v-if="option.icon === 'priority' || isPriorityValue(option.value)"
+              :size="15"
+              class="select-option__priority-icon"
+              :class="`select-option__priority-icon--${option.value || 'all'}`"
+              aria-hidden="true"
+            />
+            <CircleOff
+              v-else-if="option.icon === 'none' || String(option.value) === 'none'"
+              :size="15"
+              class="select-option__priority-icon select-option__priority-icon--none"
+              aria-hidden="true"
+            />
             <span class="select-option__label">{{ option.label }}</span>
             <Check v-if="option.value === modelValue" :size="14" class="select-option__check" />
           </li>
@@ -57,12 +70,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { ChevronDown, Check } from 'lucide-vue-next'
+import { ChevronDown, Check, CircleOff, Flag } from 'lucide-vue-next'
 import OverflowTooltip from '@/components/base/OverflowTooltip.vue'
 
 interface SelectOption {
   label: string
   value: string | number
+  icon?: 'priority' | 'none'
 }
 
 interface Props {
@@ -126,6 +140,9 @@ const displayValue = computed(() => {
   const selected = props.options.find(opt => opt.value === props.modelValue)
   return selected ? selected.label : props.placeholder
 })
+
+const isPriorityValue = (value: string | number): boolean =>
+  ['immediate', 'high', 'medium', 'low', 'relaxed', 'none'].includes(String(value))
 
 const toggleDropdown = async () => {
   isOpen.value = !isOpen.value
@@ -350,6 +367,19 @@ watch(isOpen, (newVal) => {
 .select-option__label {
   flex: 1;
 }
+
+.select-option__priority-icon {
+  flex: 0 0 auto;
+  stroke-width: 2.4;
+}
+
+.select-option__priority-icon--all,
+.select-option__priority-icon--immediate { color: var(--color-danger); }
+.select-option__priority-icon--high { color: var(--color-priority-high); }
+.select-option__priority-icon--medium { color: var(--color-priority-medium); }
+.select-option__priority-icon--low,
+.select-option__priority-icon--relaxed { color: var(--color-priority-low); }
+.select-option__priority-icon--none { color: var(--text-muted); }
 
 .select-option__check {
   flex-shrink: 0;

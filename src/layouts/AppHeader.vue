@@ -181,17 +181,26 @@
           <div
             v-if="timerStore.isTimerActive && timerStore.currentTaskName"
             class="active-task-pill"
+            data-testid="active-task-indicator"
+            role="status"
+            aria-live="polite"
+            :aria-label="`Focusing now: ${timerStore.currentTaskName}`"
           >
-            <span
-              v-if="activeTaskProject"
-              class="active-task-dot"
-              :class="{ 'active-task-dot--emoji': activeTaskProject.type === 'emoji' }"
-              :style="activeTaskProject.type !== 'emoji' ? { backgroundColor: activeTaskProject.color || '#6B7280' } : undefined"
-            >
-              <template v-if="activeTaskProject.type === 'emoji'">{{ activeTaskProject.content }}</template>
+            <span class="active-task-status">
+              <span
+                v-if="activeTaskProject"
+                class="active-task-dot"
+                :class="{ 'active-task-dot--emoji': activeTaskProject.type === 'emoji' }"
+                :style="activeTaskProject.type !== 'emoji' ? { backgroundColor: activeTaskProject.color || '#6B7280' } : undefined"
+              >
+                <template v-if="activeTaskProject.type === 'emoji'">{{ activeTaskProject.content }}</template>
+              </span>
+              <span v-else class="active-task-dot" />
+              <span class="active-task-label">FOCUSING NOW</span>
             </span>
-            <span v-else class="active-task-dot" />
-            <OverflowTooltip :text="timerStore.currentTaskName" class="active-task-name" style="flex: 1; min-width: 0">{{ timerStore.currentTaskName }}</OverflowTooltip>
+            <OverflowTooltip :text="timerStore.currentTaskName" class="active-task-name">
+              {{ timerStore.currentTaskName }}
+            </OverflowTooltip>
           </div>
         </Transition>
       </div>
@@ -824,22 +833,37 @@ const startLongBreak = async () => {
 /* TASK-1435: Active Task Glass Pill */
 .active-task-pill {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1_5) var(--space-3);
-  background: var(--glass-bg-soft);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  min-width: 180px;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   cursor: default;
-  max-width: 240px;
   transition: all var(--duration-normal) var(--spring-smooth);
 }
 
 .active-task-pill:hover {
-  border-color: var(--state-hover-border);
-  background: var(--glass-bg-medium);
+  background: transparent;
+  box-shadow: none;
+}
+
+.active-task-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.active-task-label {
+  color: var(--text-muted);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
 }
 
 .active-task-dot {
@@ -848,6 +872,13 @@ const startLongBreak = async () => {
   min-width: 8px;
   border-radius: var(--radius-full);
   background-color: #6B7280;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.14);
+  animation: activeTaskPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes activeTaskPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.82); }
 }
 
 .active-task-dot--emoji {
@@ -860,9 +891,14 @@ const startLongBreak = async () => {
 }
 
 .active-task-name {
+  display: block;
+  overflow: hidden;
   font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  font-weight: var(--font-semibold);
   color: var(--text-secondary);
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   unicode-bidi: plaintext;
   text-align: start;
 }

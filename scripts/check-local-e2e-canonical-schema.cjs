@@ -44,7 +44,9 @@ async function main() {
   let response
   let body
   let result
-  for (let attempt = 1; attempt <= 10; attempt += 1) {
+  // Supabase reports healthy before PostgREST has refreshed its schema cache
+  // after applying a large migration set. Give that cache a bounded window.
+  for (let attempt = 1; attempt <= 30; attempt += 1) {
     response = await fetch(
       `${baseUrl}/rest/v1/canonical_change_log?select=change_sequence&limit=1`,
       { headers }
@@ -52,12 +54,12 @@ async function main() {
     body = await response.text()
     result = evaluateCanonicalSchemaResponse(response.status, body)
     if (result.ok || !body.includes('PGRST205')) break
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise(resolve => setTimeout(resolve, 2000))
   }
   if (!result.ok) throw new Error(result.reason)
 
   let doneForNowResult
-  for (let attempt = 1; attempt <= 10; attempt += 1) {
+  for (let attempt = 1; attempt <= 30; attempt += 1) {
     const doneForNowResponse = await fetch(
       `${baseUrl}/rest/v1/rpc/flowstate_done_for_now`,
       {
@@ -81,7 +83,7 @@ async function main() {
       'done-for-now receipt'
     )
     if (doneForNowResult.ok || !doneForNowBody.includes('PGRST202')) break
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise(resolve => setTimeout(resolve, 2000))
   }
   if (!doneForNowResult.ok) throw new Error(doneForNowResult.reason)
   process.stdout.write('Local canonical E2E schema is ready.\n')

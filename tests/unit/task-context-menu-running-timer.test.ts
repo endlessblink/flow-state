@@ -14,10 +14,10 @@ describe('TaskContextMenu running timer indicator', () => {
   })
 
   it('offers a stop action whenever a timer is active', () => {
-    expect(source).toContain('timer-menu-actions')
+    expect(source).toContain('timer-menu-controls')
     expect(source).toContain('<Play')
     expect(source).toContain('<Square')
-    expect(source).toContain('Stop Timer')
+    expect(source).toContain('title="Stop timer"')
     expect(source).toContain(':disabled="!timerStore.isTimerActive"')
     expect(source).toContain('@click="stopTimer"')
     expect(source).toContain('await timerStore.stopTimer()')

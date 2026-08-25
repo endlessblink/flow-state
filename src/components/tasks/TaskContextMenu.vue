@@ -106,28 +106,33 @@
 
       <div class="menu-divider" />
 
-      <!-- Timer controls: always expose both actions in the context menu. -->
-      <div class="timer-menu-actions" role="group" aria-label="Timer controls">
-        <button
-          class="menu-item menu-item--timer timer-menu-action"
-          :disabled="isBatchOperation"
-          title="Start Timer"
-          aria-label="Start Timer"
-          @click="startTimer"
-        >
-          <Play :size="16" class="menu-icon" />
-          <span class="menu-text">Play</span>
-        </button>
-        <button
-          class="menu-item menu-item--timer menu-item--timer-stop timer-menu-action"
-          :disabled="!timerStore.isTimerActive"
-          title="Stop Timer"
-          aria-label="Stop Timer"
-          @click="stopTimer"
-        >
-          <Square :size="16" class="menu-icon" />
-          <span class="menu-text">Stop</span>
-        </button>
+      <!-- Timer controls: keep the row compact while making both actions visible. -->
+      <div class="timer-menu-controls" role="group" aria-label="Timer controls">
+        <div class="timer-menu-controls__label">
+          <Timer :size="16" class="menu-icon timer-menu-controls__icon" />
+          <span class="menu-text">Timer</span>
+          <span class="timer-menu-controls__status">{{ timerStore.isTimerActive ? 'Running' : 'Ready' }}</span>
+        </div>
+        <div class="timer-menu-controls__actions">
+          <button
+            class="timer-menu-button timer-menu-button--start"
+            :disabled="isBatchOperation"
+            title="Start timer"
+            aria-label="Start timer"
+            @click="startTimer"
+          >
+            <Play :size="15" />
+          </button>
+          <button
+            class="timer-menu-button timer-menu-button--stop"
+            :disabled="!timerStore.isTimerActive"
+            title="Stop timer"
+            aria-label="Stop timer"
+            @click="stopTimer"
+          >
+            <Square :size="15" />
+          </button>
+        </div>
       </div>
 
       <!-- Open Thinking Flow (single task only) -->
@@ -1451,27 +1456,85 @@ onUnmounted(() => {
 .menu-item--done:hover { background: var(--brand-bg-subtle); }
 .menu-item--done .menu-icon { color: var(--brand-primary); opacity: 1; }
 
-/* Start Timer line is amber */
-.menu-item--timer { color: var(--amber-text); }
-.menu-item--timer:hover { background: var(--amber-bg-soft); }
-.menu-item--timer .menu-icon { color: var(--amber-text); opacity: 1; }
+/* Timer controls share one row so the action hierarchy stays inside the menu rhythm. */
+.timer-menu-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+}
 
-.timer-menu-actions {
+.timer-menu-controls__label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-1);
+  color: var(--amber-text);
+  font-size: var(--text-sm);
+}
+
+.timer-menu-controls__icon {
+  color: var(--amber-text);
+  opacity: 1;
+}
+
+.timer-menu-controls__status {
+  margin-inline-start: auto;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-menu-controls__actions {
   display: flex;
   gap: var(--space-1);
-  padding: 0 var(--space-2);
 }
 
-.timer-menu-action {
-  width: auto;
-  flex: 1;
+.timer-menu-button {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  padding-inline: var(--space-2);
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast);
 }
 
-.timer-menu-action:disabled {
+.timer-menu-button--start {
+  color: var(--amber-text);
+}
+
+.timer-menu-button--start:hover:not(:disabled),
+.timer-menu-button--start:focus-visible {
+  background: var(--amber-bg-soft);
+  border-color: var(--amber-border, rgba(245, 158, 11, 0.45));
+}
+
+.timer-menu-button--stop {
+  color: var(--danger-text);
+}
+
+.timer-menu-button--stop:hover:not(:disabled),
+.timer-menu-button--stop:focus-visible {
+  background: var(--danger-bg-subtle);
+  border-color: color-mix(in srgb, var(--danger-text) 40%, transparent);
+}
+
+.timer-menu-button:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--brand-primary));
+  outline-offset: 1px;
+}
+
+.timer-menu-button:disabled {
+  color: var(--text-muted);
   cursor: not-allowed;
-  opacity: 0.4;
+  opacity: 0.38;
 }
 
 /* Done checkmark teal color */

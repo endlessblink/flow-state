@@ -89,12 +89,17 @@ function processSummary(raw) {
     if (match) userDataDirs.push(match[1])
   }
   const foreignUserDataDirs = [...new Set(userDataDirs.filter((dir) => dir !== USER_DATA_DIR))]
-  const runtimeSources = [...new Set(flowStateLines.flatMap((line) => {
+  const appPathSources = flowStateLines.flatMap((line) => {
     const appPath = /--app-path=(\S+)/.exec(line)?.[1]
-    if (appPath) return [appPath]
+    return appPath ? [appPath] : []
+  })
+  // An AppImage wrapper launches Electron from its temporary mount, so its
+  // wrapper path and child --app-path are two labels for one runtime.
+  const appImageSources = appPathSources.length > 0 ? [] : flowStateLines.flatMap((line) => {
     const appImage = /((?:\/[^\s]+)?FlowState(?:-[^\s/]+)?\.AppImage)/i.exec(line)?.[1]
     return appImage ? [appImage] : []
-  }))]
+  })
+  const runtimeSources = [...new Set([...appPathSources, ...appImageSources])]
 
   return {
     flowStateProcessCount: flowStateLines.length,

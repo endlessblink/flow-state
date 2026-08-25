@@ -47,4 +47,8 @@ export VITE_SUPABASE_URL="${SUPABASE_URL}"
 
 node scripts/check-local-e2e-canonical-schema.cjs
 
+if [ "${FLOWSTATE_E2E_PREFLIGHT_ONLY:-0}" = "1" ]; then
+  exit 0
+fi
+
 exec npx playwright test "$@"

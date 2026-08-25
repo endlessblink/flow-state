@@ -118,6 +118,7 @@ jobs:
           test -n "$db_container"
           test "$(docker exec "$db_container" psql -U postgres -d postgres -Atqc "select to_regclass('public.canonical_change_log');")" = "public.canonical_change_log"
           docker exec "$db_container" psql -U postgres -d postgres -c "notify pgrst, 'reload schema';"
+          FLOWSTATE_E2E_PREFLIGHT_ONLY=1 ./scripts/run-e2e.sh --help
           ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2
 
       - name: Stop Supabase

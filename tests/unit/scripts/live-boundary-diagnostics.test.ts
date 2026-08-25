@@ -179,6 +179,21 @@ describe('live boundary diagnostics', () => {
     expect(JSON.parse(output).failures).toEqual([])
   })
 
+  it('does not treat an AppImage wrapper and its extracted child as competing runtimes', () => {
+    const processList = [
+      '123 1 /home/endlessblink/.local/bin/FlowState.AppImage --no-sandbox',
+      '456 123 /tmp/.mount_flowstate427/flowstate --type=renderer --app-path=/tmp/.mount_flowstate427/resources/app.asar --user-data-dir=%DIR%',
+    ].join('\n')
+
+    const output = runBoundary(fixtureEnv(healthyDiagnostics, processList))
+    const report = JSON.parse(output)
+
+    expect(report.processes.runtimeSources).toEqual(['/tmp/.mount_flowstate427/resources/app.asar'])
+    expect(report.failures).not.toContain(
+      'competing-runtime-sources:/home/endlessblink/.local/bin/FlowState.AppImage,/tmp/.mount_flowstate427/resources/app.asar',
+    )
+  })
+
   it('fails closed when separate Electron artifact roots are running together', () => {
     const processList = [
       '123 1 /tmp/.mount_flowstate427/FlowState.AppImage --app-path=/tmp/.mount_flowstate427/resources/app.asar --user-data-dir=%DIR%',

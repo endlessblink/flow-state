@@ -300,8 +300,8 @@ const handleToggleDoneColumn = () => taskStore.toggleHideDoneTasks()
 const currentDensity = computed(() => settingsStore.boardDensity)
 
 // BUG-1051: Persist UI state across refreshes
-// TASK-157: Filter bar collapsed by default for cleaner Todoist-style look
-const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', false, 'board-show-filters')
+// Keep the filter bar visible so the Board controls remain discoverable and usable on startup.
+const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', true, 'board-show-filters')
 const boardSortOption = usePersistentRef<BoardSortOption>('flowstate:board-sort-option', 'manual', 'board-sort-option')
 const priorityFilter = usePersistentRef<string>('flowstate:board-priority-filter', '', 'board-priority-filter')
 const recurringFilter = usePersistentRef<'all' | 'recurring' | 'non_recurring'>('flowstate:board-recurring-filter', 'all', 'board-recurring-filter')

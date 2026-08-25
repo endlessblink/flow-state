@@ -101,6 +101,14 @@ describe('supervised AppImage installer transaction runtime', () => {
     expect(installerScript).toContain('kill "$signal" -- "-$pgid"')
   })
 
+  it('waits for the direct-mode bridge to stop before swapping the AppImage', () => {
+    expect(installerScript).toContain('wait_for_direct_port_free()')
+    expect(installerScript).toContain('old local bridge did not stop before replacement')
+    expect(installerScript.indexOf('wait_for_direct_port_free || fail_install')).toBeLessThan(
+      installerScript.indexOf('mv -f "$tmp" "$target"'),
+    )
+  })
+
   it('removes the backup and pending marker only after replacement provenance matches', () => {
     const fixture = makeFixture()
 

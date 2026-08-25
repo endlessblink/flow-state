@@ -319,6 +319,7 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('cleanup_competing_flowstate_processes()')
     expect(updaterSource).toContain('target="$target"')
     expect(updaterSource).toContain('.mount_FlowSt')
-    expect(updaterSource).toContain('cleanup_competing_flowstate_processes\nchmod 755')
+    expect(updaterSource).toContain('cleanup_competing_flowstate_processes\nif [ "$strategy" != "systemd" ]; then')
+    expect(updaterSource).toContain('wait_for_direct_port_free || fail_install "old local bridge did not stop before replacement"')
   })
 })

@@ -163,6 +163,17 @@ cleanup_competing_flowstate_processes() {
   sleep 1
   terminate_flowstate_process_groups -KILL
 }
+wait_for_direct_port_free() {
+  port_attempt=0
+  while [ "$port_attempt" -lt 300 ]; do
+    if ! curl -fsS http://127.0.0.1:5577/api/provenance >/dev/null 2>&1; then
+      return 0
+    fi
+    port_attempt=$((port_attempt + 1))
+    sleep 0.2
+  done
+  return 1
+}
 fail_install() {
   echo "FAIL $1"
   printf '%s\\n%s\\n%s\\n' "$(basename "$pending")" "$1" "$(date -u +%FT%TZ)" > "$info.failed"
@@ -240,6 +251,9 @@ if kill -0 "$parent" 2>/dev/null; then
 fi
 echo "parent gone after $i ticks"
 cleanup_competing_flowstate_processes
+if [ "$strategy" != "systemd" ]; then
+  wait_for_direct_port_free || fail_install "old local bridge did not stop before replacement"
+fi
 chmod 755 "$pending" || fail_install "chmod pending"
 cp -f "$pending" "$tmp" || fail_install "copy pending"
 chmod 755 "$tmp" || fail_install "chmod temporary target"

@@ -22,7 +22,8 @@ export function preserveRecentLocalGroups(
   inMemory: CanvasGroup[],
   nowMs: number,
   graceMs: number = PENDING_CREATE_GRACE_MS,
-  recoveryCandidates: CanvasGroup[] = []
+  recoveryCandidates: CanvasGroup[] = [],
+  preserveMissing?: (group: CanvasGroup) => boolean,
 ): CanvasGroup[] {
   const serverIds = new Set(merged.map(g => g.id))
   const preserved = inMemory.filter(g => {
@@ -32,7 +33,7 @@ export function preserveRecentLocalGroups(
     // Stale zombies always carry updatedAt from the store op that cached them.
     if (!g.updatedAt) return true
     const t = new Date(g.updatedAt).getTime()
-    return Number.isFinite(t) && nowMs - t < graceMs
+    return (Number.isFinite(t) && nowMs - t < graceMs) || Boolean(preserveMissing?.(g))
   })
   const preservedIds = new Set([...serverIds, ...preserved.map(g => g.id)])
   const recoveryPreserved = recoveryCandidates.filter(g => {

@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import {
     type DatabaseContext, type DatabaseDependencies,
     createDatabaseHelpers,
+    supabase,
 } from './_infrastructure'
 import { useTombstoneDatabase } from './_tombstone'
 import { useTasksDatabase } from './useTasksDatabase'
@@ -31,6 +32,9 @@ export function useSupabaseDatabase(_deps: DatabaseDependencies = {}) {
     const lastSyncError = ref<string | null>(null)
 
     const getUserIdSafe = (): string | null => {
+        // A persisted identity can outlive a missing build-time Supabase config.
+        // Treat that state as guest mode instead of letting every read throw.
+        if (!supabase) return null
         return authStore.user?.id || null
     }
 

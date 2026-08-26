@@ -51,7 +51,7 @@
     "challenge:contract": "vitest run --maxWorkers=4 tests/unit/scripts/challenge-runner-contract.test.ts",
     "preelectron:build": "vitest run tests/contract/task-consistency-failure-matrix.test.ts tests/unit/local-api/server-contract.test.ts tests/unit/migrations/atomic-backup-restore.test.ts tests/unit/migrations/atomic-batch-permanent-delete.test.ts tests/unit/composables/useBackupRestoreDatabase.test.ts && npm run test:backup:restore && npm run test:restore:e2e && npm run test:offline-reconnect-flows",
     "electron:build": "npm run electron:validate-env && flock -n /tmp/flowstate-electron-build.lock npm run electron:build:locked",
-    "electron:build:locked": "ELECTRON_BUILD=true npm run build && npm run electron:build-main && npm run electron:patch-builder && bash scripts/run-electron-builder-with-npm-tree.sh && npm run electron:validate-package",
+    "electron:build:locked": "npm run electron:validate-env && ELECTRON_BUILD=true npm run build && npm run electron:build-main && npm run electron:patch-builder && bash scripts/run-electron-builder-with-npm-tree.sh && npm run electron:validate-package",
     "electron:preview": "npm run electron:validate-env && ELECTRON_BUILD=true npm run build && npm run electron:build-main && electron dist-electron/main.cjs --no-sandbox",
     "tauri:update-manifest": "node scripts/generate-update-manifest.cjs",
     "tauri:build:signed": "echo '' | bash scripts/tauri-build-signed.sh",

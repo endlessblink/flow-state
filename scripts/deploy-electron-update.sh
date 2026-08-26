@@ -20,6 +20,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VPS_HOST="${VPS_HOST:?Set VPS_HOST env var}"
 VPS_USER="${VPS_USER:-root}"
 VPS_PATH="/var/www/flowstate/updates/electron"
+VPS_ROOT="/var/www/flowstate"
 SSH_KEY="$HOME/.ssh/id_ed25519"
 RELEASE_DIR="$PROJECT_DIR/release"
 
@@ -155,10 +156,11 @@ elif [ "$DRY_RUN" = true ]; then
 else
   echo -e "\n${YELLOW}[3/3] Deploying to VPS...${NC}"
 
-  # Create the release directory and a deploy-unique staging directory. Uploads
-  # can happen concurrently, but promotion is serialized below.
-  ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mkdir -p ${VPS_PATH}"
-  REMOTE_STAGE=$(ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mktemp -d '${VPS_PATH}/.staging-${VERSION}-XXXXXX'")
+  # Create a deploy-unique remote stage outside the live directory. Uploads can
+  # happen concurrently; the unified promoter serializes and validates one
+  # web/PWA/Electron transaction before publishing its manifest last.
+  REMOTE_STAGE=$(ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mktemp -d '/var/tmp/flowstate-release-stage-${VERSION}-XXXXXX'")
+  ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mkdir -p '${REMOTE_STAGE}/electron'"
   cleanup_remote_stage() {
     ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "rm -rf -- '$REMOTE_STAGE'" >/dev/null 2>&1 || true
   }
@@ -167,13 +169,16 @@ else
   # Stage the validated release under unique names. Under the remote flock, the
   # promotion script re-reads the live manifest, rejects collisions/downgrades,
   # verifies every staged byte, then publishes the manifest last.
+  scp -r -i "$SSH_KEY" \
+    "$PROJECT_DIR/dist" \
+    "${VPS_USER}@${VPS_HOST}:${REMOTE_STAGE}/"
   scp -i "$SSH_KEY" \
     "${LOCAL_ARTIFACTS[@]}" \
     "$YML" \
-    "$PROJECT_DIR/scripts/electron-release-collision-guard.cjs" \
-    "$PROJECT_DIR/scripts/promote-electron-release.sh" \
-    "${VPS_USER}@${VPS_HOST}:${REMOTE_STAGE}/"
-  ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "flock -x '${VPS_PATH}/.deploy.lock' bash '${REMOTE_STAGE}/promote-electron-release.sh' '${VPS_PATH}' '${REMOTE_STAGE}'"
+    "$PROJECT_DIR/release/flowstate-release-receipt.json" \
+    "$PROJECT_DIR/scripts/promote-flowstate-release.sh" \
+    "${VPS_USER}@${VPS_HOST}:${REMOTE_STAGE}/electron/"
+  ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "bash '${REMOTE_STAGE}/electron/promote-flowstate-release.sh' '${VPS_ROOT}' '${REMOTE_STAGE}/dist' '${REMOTE_STAGE}/electron' '${REMOTE_STAGE}/electron/flowstate-release-receipt.json'"
   cleanup_remote_stage
   trap - EXIT
 

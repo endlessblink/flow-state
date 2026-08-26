@@ -56,6 +56,10 @@ describe('production deployment convergence gates', () => {
     expect(script).toContain('trap restore_env_production EXIT')
     expect(script).toContain('npm run electron:build:locked')
     expect(script).not.toContain('npm run electron:build\n')
+    expect(script).toContain('promote-flowstate-release.sh')
+    expect(script).toContain('VPS_ROOT="/var/www/flowstate"')
+    expect(script).toContain('/var/tmp/flowstate-release-stage-')
+    expect(script).toContain('"$PROJECT_DIR/dist"')
 
     const electronStep = workflow.indexOf('Build and deploy Electron update')
     const pwaStep = workflow.indexOf('Rebuild PWA release surface after Electron packaging')

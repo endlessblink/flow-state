@@ -37,8 +37,10 @@ async function loadGuard() {
 }
 
 describe('Electron release collision guard', () => {
-  it('promotes under a remote lock and rechecks the manifest before publishing', () => {
-    expect(deploySource).toMatch(/flock[^\n]+promote-electron-release\.sh/)
+  it('uses the unified VPS promoter for one web/PWA/Electron transaction', () => {
+    expect(deploySource).toContain('promote-flowstate-release.sh')
+    expect(deploySource).toContain('VPS_ROOT="/var/www/flowstate"')
+    expect(deploySource).toContain('/var/tmp/flowstate-release-stage-')
     const guardIndex = promoteSource.indexOf('electron-release-collision-guard.cjs')
     const manifestPublishIndex = promoteSource.indexOf('mv "$STAGE_DIR/latest-linux.yml"')
     expect(guardIndex).toBeGreaterThan(-1)

@@ -7,6 +7,7 @@ import { resolve } from 'node:path'
 const root = process.cwd()
 const deploySource = readFileSync(resolve(root, 'scripts/deploy-electron-update.sh'), 'utf8')
 const promoteSource = readFileSync(resolve(root, 'scripts/promote-electron-release.sh'), 'utf8')
+const unifiedPromoteSource = readFileSync(resolve(root, 'scripts/promote-flowstate-release.sh'), 'utf8')
 
 const manifest = (
   version: string,
@@ -42,6 +43,16 @@ describe('Electron release collision guard', () => {
     const manifestPublishIndex = promoteSource.indexOf('mv "$STAGE_DIR/latest-linux.yml"')
     expect(guardIndex).toBeGreaterThan(-1)
     expect(manifestPublishIndex).toBeGreaterThan(guardIndex)
+  })
+
+  it('requires one receipt and one lock for web, PWA, and Electron promotion', () => {
+    expect(unifiedPromoteSource).toContain('RECEIPT="${4:?release receipt required}"')
+    expect(unifiedPromoteSource).toContain('flock -x 9')
+    expect(unifiedPromoteSource).toContain('refusing dirty source receipt')
+    expect(unifiedPromoteSource).toContain('rsync -a --delete --exclude updates')
+    expect(unifiedPromoteSource.indexOf('cp -f -- "$STAGE/electron/latest-linux.yml"')).toBeGreaterThan(
+      unifiedPromoteSource.indexOf('cp -f -- "$STAGE/release-receipt.json"'),
+    )
   })
 
   it('requires a non-empty local manifest before staging any artifact', () => {

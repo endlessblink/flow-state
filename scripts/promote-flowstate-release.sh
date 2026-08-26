@@ -13,10 +13,10 @@ test -s "$RECEIPT"
 test -d "$PWA_STAGE"
 test -d "$ELECTRON_STAGE"
 
-VERSION="$(node -e 'const r=require(process.argv[1]); if(!/^\\d+\\.\\d+\\.\\d+$/.test(r.version)) process.exit(2); process.stdout.write(r.version)' "$RECEIPT")"
+VERSION="$(node -e 'const r=require(process.argv[1]); if(!/^\d+\.\d+\.\d+$/.test(r.version)) process.exit(2); process.stdout.write(r.version)' "$RECEIPT")"
 UPDATES="$TARGET_ROOT/updates/electron"
 LOCK="$TARGET_ROOT/.release.lock"
-STAGE="$TARGET_ROOT/.release-transaction-$VERSION-$$"
+STAGE="/var/tmp/flowstate-release-transaction-$VERSION-$$"
 
 exec 9>"$LOCK"
 flock -x 9
@@ -61,6 +61,7 @@ NODE
 # copied only while the same lock is held; the updater manifest remains last.
 rsync -a --delete --exclude updates --exclude .release.lock "$STAGE/pwa/" "$TARGET_ROOT/"
 for artifact in "$STAGE/electron"/*; do
+  [ -f "$artifact" ] || continue
   [ "$(basename "$artifact")" = latest-linux.yml ] || cp -f -- "$artifact" "$UPDATES/"
 done
 cp -f -- "$STAGE/release-receipt.json" "$TARGET_ROOT/release-receipt.json"

@@ -953,6 +953,17 @@ describe('FilterControls', () => {
     expect(wrapper.find('.clear-filters-btn').attributes('aria-label')).toBe('Clear filters')
   })
 
+  it('clears parent-controlled priority and recurring filters too', async () => {
+    const wrapper = mountWithPlugins(FilterControls, {
+      props: { priorityFilter: 'high', recurringFilter: 'recurring', showRecurringFilter: true },
+    })
+
+    await wrapper.find('.clear-filters-btn').trigger('click')
+
+    expect(wrapper.emitted('update:priorityFilter')).toEqual([['']])
+    expect(wrapper.emitted('update:recurringFilter')).toEqual([['all']])
+  })
+
   it('renders compact filter controls with accessible labels', () => {
     const wrapper = mountWithPlugins(FilterControls, { props: { compact: true } })
     expect(wrapper.find('.filter-controls--compact').exists()).toBe(true)

@@ -105,7 +105,7 @@ const props = defineProps<{
   compact?: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (event: 'update:priorityFilter', value: string): void
   (event: 'update:recurringFilter', value: string): void
 }>()
@@ -187,6 +187,8 @@ const clearAllFilters = () => {
   taskStore.setSmartView(null)
   taskStore.setActiveStatusFilter(null)
   setFilterMode('all')
+  emit('update:priorityFilter', '')
+  emit('update:recurringFilter', 'all')
 }
 </script>
 

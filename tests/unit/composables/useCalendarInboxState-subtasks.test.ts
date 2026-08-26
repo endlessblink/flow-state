@@ -190,6 +190,21 @@ describe('useCalendarInboxState subtask filtering', () => {
     expect(state.inboxTasks.value.map(item => item.id)).toEqual(['recurring-canvas-task'])
   })
 
+  it('removes a recurring task from the calendar inbox after scheduling clears its inbox flag', () => {
+    mockTaskStore.calendarFilteredTasks = [
+      task({
+        id: 'scheduled-recurring-task',
+        recurrenceRule: { pattern: 'weekly', interval: 1, endType: 'never' },
+        instances: [{ scheduledDate: '2026-08-02', scheduledTime: '12:00', isRecurring: true }],
+        isInInbox: false,
+      }),
+    ]
+
+    const state = useCalendarInboxState()
+
+    expect(state.inboxTasks.value).toEqual([])
+  })
+
   it('keeps due-date-only tasks in the calendar inbox', () => {
     mockTaskStore.calendarFilteredTasks = [
       task({ id: 'due-date-only-task', title: 'Due date only', dueDate: '2026-08-02' }),

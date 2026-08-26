@@ -2,7 +2,7 @@
   "schema": "flowstate-stability-challenge-snapshot-v1",
   "capturedAt": "2026-08-26",
   "revision": {
-    "head": "5f5af457ee5c0bc590b9f7e2fd773e5f67555260",
+    "head": "85ddf8f499427561e62b014c14986904a3a6f6f9",
     "dirty": true,
     "dirtyReason": "preserved competing worktree changes"
   },

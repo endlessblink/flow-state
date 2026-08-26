@@ -2,6 +2,11 @@
 import { computed, ref, watch } from 'vue'
 import { RefreshCw, X, CheckCircle2 } from 'lucide-vue-next'
 import { NButton, NCard, NText } from 'naive-ui'
+// VitePWA provides a build-safe stub when the PWA plugin is disabled for
+// desktop/native builds. Import synchronously so web registration cannot be
+// lost in an async setup callback before Vue has an active component scope.
+// @ts-expect-error - Virtual module provided by vite-plugin-pwa
+import { useRegisterSW } from 'virtual:pwa-register/vue'
 
 // --- State ---
 // PWA registration - only available in web builds with PWA plugin
@@ -9,20 +14,16 @@ const offlineReady = ref(false)
 const needRefresh = ref(false)
 let updateServiceWorker = () => {}
 
-// Dynamically import PWA register only when available (web builds)
-if (typeof window !== 'undefined' && !('__TAURI__' in window)) {
-  // @ts-expect-error - Virtual module provided by vite-plugin-pwa
-  import('virtual:pwa-register/vue').then(({ useRegisterSW }) => {
-    const sw = useRegisterSW()
-    offlineReady.value = sw.offlineReady.value
-    needRefresh.value = sw.needRefresh.value
-    updateServiceWorker = sw.updateServiceWorker
+// Register synchronously during setup. The generated native/desktop stub is
+// intentionally harmless, while web builds immediately register /sw.js.
+if (typeof window !== 'undefined' && !('__TAURI__' in window) && !window.Capacitor?.isNativePlatform?.()) {
+  const sw = useRegisterSW()
+  offlineReady.value = sw.offlineReady.value
+  needRefresh.value = sw.needRefresh.value
+  updateServiceWorker = sw.updateServiceWorker
 
-    watch(sw.offlineReady, (val) => { offlineReady.value = val })
-    watch(sw.needRefresh, (val) => { needRefresh.value = val })
-  }).catch(() => {
-    // PWA plugin not available (Tauri build), ignore
-  })
+  watch(sw.offlineReady, (val) => { offlineReady.value = val })
+  watch(sw.needRefresh, (val) => { needRefresh.value = val })
 }
 
 // --- Computed ---

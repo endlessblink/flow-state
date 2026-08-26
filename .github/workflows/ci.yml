@@ -5,6 +5,7 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  workflow_dispatch:
 
 # Fork-safe: pull_request trigger has NO access to secrets.
 # Doppler secrets are NOT fetched here — ci.yml must build without them.
@@ -19,6 +20,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +33,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: timeout --foreground 10m npm ci
 
       # Lint changed source files; the repository currently carries unrelated
       # legacy lint errors outside the pull request's scope.
@@ -92,6 +94,7 @@ jobs:
   # static safety tests cannot. This is what turns "fixed" into "stays fixed".
   canvas-sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -101,7 +104,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: timeout --foreground 10m npm ci
 
       # Canvas/sync UNIT suites (no DB needed) — geometry invariants, sync orchestrator,
       # realtime resilience, legacy-group migration, write-rate guard, auth-backup replay.
@@ -118,6 +121,7 @@ jobs:
 
       - name: Boot Supabase + run two-client Realtime e2e (R1–R7)
         run: |
+          timeout --foreground 15m bash -c '
           supabase start
           # `supabase start` can reuse a project volume without replaying the
           # repository migrations; reset explicitly so the schema preflight
@@ -129,6 +133,7 @@ jobs:
           supabase stop
           supabase start
           ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2
+          '
 
       - name: Stop Supabase
         if: always()

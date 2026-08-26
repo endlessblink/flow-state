@@ -594,7 +594,7 @@ async function onClearMemories() {
             spellcheck="false"
             autocomplete="off"
           />
-          <button class="key-toggle-btn" @click="showGroqKey = !showGroqKey" :title="showGroqKey ? 'Hide' : 'Show'">
+          <button class="key-toggle-btn" :aria-label="showGroqKey ? 'Hide API key' : 'Show API key'" @click="showGroqKey = !showGroqKey" :title="showGroqKey ? 'Hide' : 'Show'">
             <EyeOff v-if="showGroqKey" :size="14" />
             <Eye v-else :size="14" />
           </button>

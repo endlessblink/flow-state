@@ -56,6 +56,27 @@ describe('local E2E canonical schema preflight', () => {
 
     expect(source).toContain("body.includes('PGRST205')")
     expect(source).toContain('attempt <= 30')
-    expect(source).toContain('setTimeout(resolve, 2000)')
+    expect(source).toContain('setTimeout(resolve, 1000)')
+  })
+
+  it('retries a first-start table response that names the canonical table without PGRST205', () => {
+    const source = require('node:fs').readFileSync(modulePath, 'utf8') as string
+
+    expect(source).toContain("body.includes('PGRST205') || body.includes('canonical_change_log')")
+    expect(source).toContain('canonicalSchemaNotReady')
+  })
+
+  it('uses the explicit service-role key before the gateway secret key', () => {
+    const source = require('node:fs').readFileSync(resolve(process.cwd(), 'scripts/run-e2e.sh'), 'utf8') as string
+
+    expect(source.indexOf('status_value SERVICE_ROLE_KEY'))
+      .toBeLessThan(source.indexOf('status_value SECRET_KEY'))
+  })
+
+  it('retries done-for-now responses that still reference the warming canonical schema', () => {
+    const source = require('node:fs').readFileSync(modulePath, 'utf8') as string
+
+    expect(source).toContain("doneForNowBody.includes('PGRST202') || doneForNowBody.includes('canonical_change_log')")
+    expect(source).toContain('doneForNowContractNotReady')
   })
 })

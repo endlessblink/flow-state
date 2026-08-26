@@ -15,11 +15,11 @@ status_value() {
 }
 
 if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-  # Try new-format secret key first (Supabase v2.x uses sb_secret_* instead of HS256 JWT)
-  SUPABASE_SERVICE_ROLE_KEY=$(status_value SECRET_KEY)
-  # Fall back to classic JWT SERVICE_ROLE_KEY if secret key not present
+  # Prefer the explicit service-role JWT for PostgREST schema probes.
+  # Fall back to the gateway secret key when the classic key is unavailable.
+  SUPABASE_SERVICE_ROLE_KEY=$(status_value SERVICE_ROLE_KEY)
   if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-    SUPABASE_SERVICE_ROLE_KEY=$(status_value SERVICE_ROLE_KEY)
+    SUPABASE_SERVICE_ROLE_KEY=$(status_value SECRET_KEY)
   fi
 fi
 

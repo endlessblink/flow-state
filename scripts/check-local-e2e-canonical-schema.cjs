@@ -53,8 +53,9 @@ async function main() {
     )
     body = await response.text()
     result = evaluateCanonicalSchemaResponse(response.status, body)
-    if (result.ok || !body.includes('PGRST205')) break
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    const canonicalSchemaNotReady = body.includes('PGRST205') || body.includes('canonical_change_log')
+    if (result.ok || !canonicalSchemaNotReady) break
+    await new Promise(resolve => setTimeout(resolve, 1000))
   }
   if (!result.ok) throw new Error(result.reason)
 
@@ -82,8 +83,9 @@ async function main() {
       doneForNowBody,
       'done-for-now receipt'
     )
-    if (doneForNowResult.ok || !doneForNowBody.includes('PGRST202')) break
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    const doneForNowContractNotReady = doneForNowBody.includes('PGRST202') || doneForNowBody.includes('canonical_change_log')
+    if (doneForNowResult.ok || !doneForNowContractNotReady) break
+    await new Promise(resolve => setTimeout(resolve, 1000))
   }
   if (!doneForNowResult.ok) throw new Error(doneForNowResult.reason)
   process.stdout.write('Local canonical E2E schema is ready.\n')

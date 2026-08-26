@@ -55,6 +55,7 @@ describe('production deployment convergence gates', () => {
     expect(script).toContain('HIDDEN_ENV_PRODUCTION')
     expect(script).toContain('trap restore_env_production EXIT')
     expect(script).toContain('npm run electron:build:locked')
+    expect(readFileSync('scripts/run-electron-builder-with-npm-tree.sh', 'utf8')).toContain('ELECTRON_BUILD=false npm run build')
     expect(script).not.toContain('npm run electron:build\n')
     expect(script).toContain('promote-flowstate-release.sh')
     expect(script).toContain('VPS_ROOT="/var/www/flowstate"')

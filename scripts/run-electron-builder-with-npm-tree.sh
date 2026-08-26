@@ -35,6 +35,11 @@ node "$ROOT_DIR/scripts/flowstate-truth-ledger.cjs" \
   --output "$ROOT_DIR/dist-electron/flowstate-truth-ledger.json"
 "$ROOT_DIR/node_modules/.bin/electron-builder" --config "$ROOT_DIR/electron-builder.yml"
 
+# Electron packaging intentionally disables the PWA plugin for file:// runtime
+# safety. Rebuild the public web surface explicitly so the unified receipt never
+# publishes Electron-mode dist as the production/PWA outlet.
+ELECTRON_BUILD=false npm run build
+
 # Release provenance must be safe to generate in CI and local packaging. Live
 # updater, installed-AppImage, and sidecar probes remain opt-in to the standalone
 # ledger command and are never contacted by the canonical build.

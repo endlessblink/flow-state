@@ -296,18 +296,12 @@ const handleListMoveTask = (taskId: string, targetProjectId: string | null, targ
 const { hideDoneTasks } = storeToRefs(taskStore)
 const handleToggleDoneColumn = () => taskStore.toggleHideDoneTasks()
 
-const {
-  tasksByProject,
-  projectsWithTasks,
-  totalDisplayedTasks
-} = useBoardState({ taskStore })
-
 // Density state from global settings store
 const currentDensity = computed(() => settingsStore.boardDensity)
 
 // BUG-1051: Persist UI state across refreshes
-// TASK-157: Filter bar collapsed by default for cleaner Todoist-style look
-const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', false, 'board-show-filters')
+// Keep the filter bar visible so the Board controls remain discoverable and usable on startup.
+const showFilters = usePersistentRef<boolean>('flowstate:board-show-filters', true, 'board-show-filters')
 const boardSortOption = usePersistentRef<BoardSortOption>('flowstate:board-sort-option', 'manual', 'board-sort-option')
 const priorityFilter = usePersistentRef<string>('flowstate:board-priority-filter', '', 'board-priority-filter')
 const recurringFilter = usePersistentRef<'all' | 'recurring' | 'non_recurring'>('flowstate:board-recurring-filter', 'all', 'board-recurring-filter')
@@ -333,13 +327,24 @@ const viewTypeOptions = computed(() => [
 // TASK-1552: Assignment filter (shared singleton — same ref as FilterControls dropdown)
 const { filterFn: assignmentFilterFn } = useAssignmentFilter()
 
+const boardTaskMatchesLocalFilters = (task: Task) => {
+  if (priorityFilter.value && (priorityFilter.value === 'none' ? task.priority : task.priority !== priorityFilter.value)) return false
+  if (recurringFilter.value === 'recurring' && !task.recurrenceRule) return false
+  if (recurringFilter.value === 'non_recurring' && task.recurrenceRule) return false
+  return assignmentFilterFn.value(task)
+}
+
+const {
+  tasksByProject,
+  projectsWithTasks,
+  totalDisplayedTasks
+} = useBoardState({ taskStore, taskFilter: boardTaskMatchesLocalFilters })
+
 // FEATURE-1336: All tasks combined (not split by project) for category view
 const allFilteredTasks = computed(() => {
   const filteredTasks = taskStore.filteredTasks
     .filter(task => !(taskStore.hideDoneTasks && task.status === 'done'))
-    .filter(assignmentFilterFn.value)
-    .filter(task => !priorityFilter.value || (priorityFilter.value === 'none' ? !task.priority : task.priority === priorityFilter.value))
-    .filter(task => recurringFilter.value === 'all' || (recurringFilter.value === 'recurring' ? Boolean(task.recurrenceRule) : !task.recurrenceRule))
+    .filter(boardTaskMatchesLocalFilters)
   return sortTasksForBoard(filteredTasks, boardSortOption.value)
 })
 

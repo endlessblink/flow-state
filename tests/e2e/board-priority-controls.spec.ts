@@ -5,13 +5,13 @@ import { randomUUID } from 'node:crypto'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const runSuffix = randomUUID().replace(/-/g, '').slice(0, 12)
+const runSuffix = randomUUID().replace(/-/g, '').slice(0, 8)
 const TASKS = [
-  { id: `e2000000-0000-4000-8000-${runSuffix}`, title: 'Board immediate task', priority: 'immediate', recurrence_rule: null },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}1`, title: 'Board high task', priority: 'high', recurrence_rule: null },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}2`, title: 'Board recurring task', priority: 'medium', recurrence_rule: { pattern: 'daily', interval: 1, endType: 'never' } },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}3`, title: 'Board low task', priority: 'low', recurrence_rule: null },
-  { id: `e2000000-0000-4000-8000-${runSuffix.slice(0, 11)}4`, title: 'Board relaxed task', priority: 'relaxed', recurrence_rule: null }
+  { id: `e2000000-0000-4000-8000-${runSuffix}0000`, title: 'Board immediate task', priority: 'immediate', recurrence_rule: null },
+  { id: `e2000000-0000-4000-8000-${runSuffix}0001`, title: 'Board high task', priority: 'high', recurrence_rule: null },
+  { id: `e2000000-0000-4000-8000-${runSuffix}0002`, title: 'Board recurring task', priority: 'medium', recurrence_rule: { pattern: 'daily', interval: 1, endType: 'never' } },
+  { id: `e2000000-0000-4000-8000-${runSuffix}0003`, title: 'Board low task', priority: 'low', recurrence_rule: null },
+  { id: `e2000000-0000-4000-8000-${runSuffix}0004`, title: 'Board relaxed task', priority: 'relaxed', recurrence_rule: null }
 ] as const
 const TASK_IDS = TASKS.map(task => task.id)
 
@@ -38,6 +38,7 @@ test.describe('Board priority and recurring filters', () => {
       user_id: userId,
       status: 'planned',
       is_in_inbox: true,
+      position: { x: index * 360, y: 120 },
       order: index
     })), { onConflict: 'id' })
     if (error) throw error
@@ -51,6 +52,7 @@ test.describe('Board priority and recurring filters', () => {
     await page.addInitScript(() => {
       localStorage.setItem('flowstate:board-view-type', 'category')
       localStorage.setItem('flowstate:board-sort-option', 'manual')
+      localStorage.setItem('flowstate:board-show-filters', 'false')
       localStorage.setItem('flowstate:board-priority-filter', '')
       localStorage.setItem('flowstate:board-recurring-filter', 'all')
     })
@@ -66,8 +68,9 @@ test.describe('Board priority and recurring filters', () => {
     }
 
     await page.locator('.filter-toggle').click()
-    const filterSelects = page.locator('.filter-controls .custom-select')
-    await filterSelects.nth(3).locator('.select-trigger').click()
+    await page.waitForTimeout(500)
+    const prioritySelect = page.getByRole('combobox', { name: 'Priority', exact: true })
+    await prioritySelect.click()
     await expect(page.getByRole('option', { name: 'Immediate', exact: true })).toBeVisible()
     await expect(page.getByRole('option', { name: 'Relaxed', exact: true })).toBeVisible()
     await page.getByRole('option', { name: 'Immediate', exact: true }).click({ force: true })
@@ -75,11 +78,62 @@ test.describe('Board priority and recurring filters', () => {
     await expect(page.locator(`[data-task-id="${TASKS[1].id}"]`)).toHaveCount(0)
     await expect(page.locator(`[data-task-id="${TASKS[4].id}"]`)).toHaveCount(0)
 
-    await filterSelects.nth(3).locator('.select-trigger').click()
+    await prioritySelect.click()
     await page.getByRole('option', { name: 'All Priorities', exact: true }).click({ force: true })
-    await filterSelects.nth(4).locator('.select-trigger').click()
+    await page.getByRole('combobox', { name: 'Recurring tasks', exact: true }).click()
     await page.getByRole('option', { name: 'Recurring Only', exact: true }).click()
     await expect(page.locator(`[data-task-id="${TASKS[2].id}"]`)).toBeVisible()
     await expect(page.locator(`[data-task-id="${TASKS[1].id}"]`)).toHaveCount(0)
+  })
+
+  test('opens every compact Board filter control', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('flowstate:board-show-filters', 'false')
+      localStorage.setItem('flowstate:board-recurring-filter', 'all')
+    })
+    await page.goto('/#/board')
+    await page.waitForSelector('.board-view-wrapper', { timeout: 30_000 })
+    await waitForApp(page)
+
+    await page.locator('.filter-toggle').click()
+    await page.waitForTimeout(500)
+    const filterSelects = page.locator('.filter-controls .custom-select')
+    for (let index = 0; index < await filterSelects.count(); index++) {
+      const trigger = filterSelects.nth(index).locator('.select-trigger')
+      await trigger.click()
+      await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+      await page.keyboard.press('Escape')
+      await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    }
+  })
+
+  test('applies the shared Board filter projection to Canvas', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('flowstate:board-view-type', 'category')
+      localStorage.setItem('flowstate:board-show-filters', 'false')
+      localStorage.setItem('flowstate:board-priority-filter', '')
+      localStorage.setItem('flowstate:board-recurring-filter', 'all')
+    })
+    await page.goto('/#/board')
+    await page.waitForSelector('.board-view-wrapper', { timeout: 30_000 })
+    await waitForApp(page)
+
+    await page.locator('.filter-toggle').click()
+    await page.waitForTimeout(500)
+    const statusSelect = page.getByRole('combobox', { name: 'Status', exact: true })
+    await statusSelect.click()
+    await page.getByRole('option', { name: 'To Do', exact: true }).click()
+    const boardTaskIds = await page.locator('.kanban-board [data-task-id]').evaluateAll(elements =>
+      elements.map(element => element.getAttribute('data-task-id')).filter((id): id is string => Boolean(id))
+    )
+    expect(boardTaskIds).toEqual(expect.arrayContaining(TASK_IDS))
+
+    await page.goto('/#/canvas')
+    await page.waitForSelector('.canvas-layout', { timeout: 30_000 })
+    await expect(page.locator('.task-node').first()).toBeVisible({ timeout: 30_000 })
+    const canvasTaskIds = await page.locator('.task-node').evaluateAll(elements =>
+      elements.map(element => element.getAttribute('data-task-id')).filter((id): id is string => Boolean(id))
+    )
+    expect(canvasTaskIds).toEqual(expect.arrayContaining(TASK_IDS))
   })
 })

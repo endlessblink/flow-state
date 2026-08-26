@@ -6,6 +6,7 @@ import { sortTasksBySharedOrder } from '@/utils/taskOrdering'
 
 interface BoardStateDependencies {
     taskStore: ReturnType<typeof useTaskStore>
+    taskFilter?: (task: Task) => boolean
 }
 
 export type BoardSortOption = 'manual' | 'priority_desc'
@@ -30,7 +31,7 @@ export function sortTasksForBoard(tasks: Task[], sortOption: BoardSortOption = '
 }
 
 export function useBoardState(deps: BoardStateDependencies) {
-    const { taskStore } = deps
+    const { taskStore, taskFilter = () => true } = deps
 
     // Helper to get a project and all its descendants recursively with cycle detection
     const getProjectAndChildren = (projectId: string, visited = new Set<string>()): string[] => {
@@ -52,6 +53,7 @@ export function useBoardState(deps: BoardStateDependencies) {
 
         taskStore.filteredTasks
             .filter(task => !(taskStore.hideDoneTasks && task.status === 'done'))
+            .filter(taskFilter)
             .forEach(task => {
                 const projectId = task.projectId || UNCATEGORIZED_PROJECT_ID
                 if (!grouped[projectId]) {

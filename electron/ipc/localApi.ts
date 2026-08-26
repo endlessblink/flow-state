@@ -91,6 +91,7 @@ let lifecyclePromise: Promise<void> | null = null
 let reconcileRequested = false
 let restartTimer: ReturnType<typeof setTimeout> | null = null
 let restartAttempt = 0
+let startAfterReadyScheduled = false
 const RESTART_BACKOFF_MS = [100, 500, 1_000, 2_000, 5_000] as const
 const FINAL_SHUTDOWN_EXIT_TIMEOUT_MS = 5_000
 
@@ -355,6 +356,20 @@ function startChild() {
     return
   }
   desiredRunning = true
+  // registerLocalApiHandlers runs before app.whenReady(), while the persisted
+  // enabled setting must still start the sidecar on a normal restart. Defer
+  // the first reconcile until Electron can legally create utility processes.
+  if (!app.isReady()) {
+    if (!startAfterReadyScheduled) {
+      startAfterReadyScheduled = true
+      void app.whenReady().then(() => {
+        startAfterReadyScheduled = false
+        if (desiredRunning && !finalShutdownRequested) void queueReconcile()
+      })
+    }
+    logLifecycle('start-deferred-until-ready')
+    return
+  }
   if (restartTimer) return
   void queueReconcile()
 }

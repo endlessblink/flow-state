@@ -61,6 +61,17 @@ describe('Electron local API lifecycle regression contract', () => {
     expect(body).toContain('if (config.enabled) startChild()')
   })
 
+  it('defers persisted sidecar startup until Electron is ready', () => {
+    const start = LOCAL_API_TS.indexOf('function startChild()')
+    const end = LOCAL_API_TS.indexOf('\nfunction stopChild()', start)
+    const body = LOCAL_API_TS.slice(start, end)
+
+    expect(body).toContain('if (!app.isReady())')
+    expect(body).toContain('app.whenReady()')
+    expect(body).toContain('startAfterReadyScheduled')
+    expect(body).toContain('queueReconcile()')
+  })
+
   it('passes the Electron userData directory to the sidecar for durable local AI runtime storage', () => {
     const startChild = spawnChildBody()
 

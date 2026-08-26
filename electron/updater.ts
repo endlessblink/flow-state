@@ -7,6 +7,8 @@ import {
   pendingAppImagePath,
   versionFromUpdateFileName,
   pendingUpdateFailureVersion,
+  readPendingUpdateFailure,
+  shouldSuppressAutomaticRetry,
   clearBlockedPendingUpdate,
   clearResolvedPendingUpdateFailure,
   clearObsoletePendingAppImages,
@@ -163,12 +165,59 @@ cleanup_competing_flowstate_processes() {
   sleep 1
   terminate_flowstate_process_groups -KILL
 }
-fail_install() {
-  echo "FAIL $1"
-  printf '%s\\n%s\\n%s\\n' "$(basename "$pending")" "$1" "$(date -u +%FT%TZ)" > "$info.failed"
+wait_for_direct_port_free() {
+  port_attempt=0
+  while [ "$port_attempt" -lt 300 ]; do
+    if ! curl -fsS http://127.0.0.1:5577/api/provenance >/dev/null 2>&1; then
+      return 0
+    fi
+    port_attempt=$((port_attempt + 1))
+    sleep 0.2
+  done
+  return 1
+}
+  fail_install() {
+    echo "FAIL $1"
+  record_failure "$1"
   rm -f "$tmp"
   restart_supervised_on_failure
   exit 1
+}
+record_failure() {
+  reason="$1"
+  failure_path="$info.failed"
+  previous_attempts=0
+  if [ -f "$failure_path" ]; then
+    previous_attempts=$(sed -n 's/^attemptCount=//p' "$failure_path" | head -1)
+  fi
+  case "$previous_attempts" in
+    ''|*[!0-9]*) previous_attempts=0 ;;
+  esac
+  attempt_count=$((previous_attempts + 1))
+  delay=300
+  delay_attempt=1
+  while [ "$delay_attempt" -lt "$attempt_count" ]; do
+    delay=$((delay * 2))
+    [ "$delay" -ge 86400 ] && { delay=86400; break; }
+    delay_attempt=$((delay_attempt + 1))
+  done
+  failed_epoch=$(date +%s)
+  failed_at=$(date -u +%FT%TZ)
+  retry_at=$(date -u -d "@$((failed_epoch + delay))" +%FT%TZ)
+  artifact_url=$(grep -o '"url"[[:space:]]*:[[:space:]]*"[^"]*"' "$info" 2>/dev/null | head -1 | sed 's/.*"url"[[:space:]]*:[[:space:]]*"//; s/"$//')
+  [ -z "$artifact_url" ] && artifact_url="$(basename "$pending")"
+  artifact_digest=$(grep -o '"sha512"[[:space:]]*:[[:space:]]*"[^"]*"' "$info" 2>/dev/null | head -1 | sed 's/.*"sha512"[[:space:]]*:[[:space:]]*"//; s/"$//')
+  error_class=installer
+  case "$reason" in
+    *hash*|*checksum*|*verify*) error_class=verification ;;
+    *readiness*|*health*|*bridge*) error_class=readiness ;;
+    *download*|*network*) error_class=download ;;
+  esac
+  {
+    printf 'FlowState-%s-x86_64.AppImage\\n' "$expected_version"
+    printf 'version=%s\\nartifactUrl=%s\\ndigest=%s\\nerrorClass=%s\\nattemptCount=%s\\nfailedAt=%s\\nnextRetryAt=%s\\nreason=%s\\n' \\
+      "$expected_version" "$artifact_url" "$artifact_digest" "$error_class" "$attempt_count" "$failed_at" "$retry_at" "$(printf '%s' "$reason" | tr '\\r\\n' '  ')"
+  } > "$failure_path"
 }
 restore_known_good() {
   echo "restoring known-good AppImage"
@@ -191,7 +240,7 @@ restore_known_good() {
 }
 fail_after_swap() {
   echo "FAIL $1"
-  printf '%s\\n%s\\n%s\\n' "$(basename "$pending")" "$1" "$(date -u +%FT%TZ)" > "$info.failed"
+  record_failure "$1"
   restore_known_good
   exit 1
 }
@@ -238,6 +287,9 @@ fi
 echo "parent gone after $i ticks"
 cleanup_competing_flowstate_processes
 chmod 755 "$pending" || fail_install "chmod pending"
+if [ "$strategy" != "systemd" ]; then
+  wait_for_direct_port_free || fail_install "old local bridge did not stop before replacement"
+fi
 cp -f "$pending" "$tmp" || fail_install "copy pending"
 chmod 755 "$tmp" || fail_install "chmod temporary target"
 if [ "$strategy" = "systemd" ]; then
@@ -544,17 +596,26 @@ export function registerUpdater() {
 
   // Forward events to renderer via IPC
   autoUpdater.on('update-available', (info) => {
-    const blockedVersion = pendingUpdateFailureVersion()
-    if (blockedVersion && compareVersions(blockedVersion, appVersion) > 0 && blockedVersion === info.version) {
+    const failure = readPendingUpdateFailure()
+    const blockedVersion = failure?.version ?? pendingUpdateFailureVersion()
+    if (
+      failure &&
+      blockedVersion &&
+      compareVersions(blockedVersion, appVersion) > 0 &&
+      blockedVersion === info.version &&
+      shouldSuppressAutomaticRetry(failure)
+    ) {
       console.warn('[Updater] Suppressing a previously failed update to prevent a notification loop', {
         blockedVersion,
+        attemptCount: failure.attemptCount,
+        nextRetryAt: failure.nextRetryAt,
       })
       const win = BrowserWindow.getAllWindows()[0]
       if (win) {
         win.webContents.send('updater:blocked', {
           ...info,
           currentVersion: appVersion,
-          message: `Update v${info.version} previously failed to install. Retry to download it again.`,
+          message: `Update v${info.version} previously failed to install (${failure.errorClass}, attempt ${failure.attemptCount}). Retry to download it again.`,
         })
       }
       return

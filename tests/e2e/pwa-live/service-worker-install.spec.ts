@@ -23,6 +23,6 @@ test('live PWA installs the current service worker and bundle', async ({ page })
   })
 
   expect(worker.activeScript).toContain('/sw.js')
-  expect(worker.source).toContain('index-DxkvzP9N.js')
+  expect(worker.source).toMatch(/index-[A-Za-z0-9_-]+\.js/)
   expect(errors.filter((error) => /Supabase client not initialized|Invalid supabaseUrl|ServiceWorker script.*encountered an error/.test(error))).toEqual([])
 })

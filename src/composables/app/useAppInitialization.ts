@@ -374,7 +374,17 @@ export function useAppInitialization() {
         // BUG-1743: When a new SW activates (after deploy), force reload to get fresh index.html
         // with matching CSS chunk hashes. Without this, the old page references old hashes that
         // the new SW's cleanupOutdatedCaches() already deleted. (Workbox #3126)
-        if ('serviceWorker' in navigator) {
+        if (
+            'serviceWorker' in navigator &&
+            typeof window !== 'undefined' &&
+            (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+        ) {
+            // Registration belongs to the startup boundary, not the reload-prompt
+            // component. The prompt mounts only after app readiness, which left
+            // fresh production clients without any worker to update or control them.
+            void navigator.serviceWorker.register('/sw.js').catch((error) => {
+                console.warn('[PWA] Service-worker registration failed:', error)
+            })
             let refreshing = false
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (refreshing) return

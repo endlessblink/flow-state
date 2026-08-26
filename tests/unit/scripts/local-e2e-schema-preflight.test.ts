@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -71,6 +73,15 @@ describe('local E2E canonical schema preflight', () => {
 
     expect(source.indexOf('status_value SERVICE_ROLE_KEY'))
       .toBeLessThan(source.indexOf('status_value SECRET_KEY'))
+  })
+
+  it('prefers detected local Supabase credentials over inherited remote credentials', () => {
+    const source = require('node:fs').readFileSync(resolve(process.cwd(), 'scripts/run-e2e.sh'), 'utf8') as string
+
+    expect(source).toContain('if [ -n "$LOCAL_API_URL" ]; then')
+    expect(source).toContain('SUPABASE_URL="$LOCAL_API_URL"')
+    expect(source).toContain('SUPABASE_SERVICE_ROLE_KEY="$LOCAL_SERVICE_ROLE_KEY"')
+    expect(source).toContain('VITE_SUPABASE_ANON_KEY="$LOCAL_ANON_KEY"')
   })
 
   it('retries done-for-now responses that still reference the warming canonical schema', () => {

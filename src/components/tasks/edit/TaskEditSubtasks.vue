@@ -1,7 +1,13 @@
 <template>
   <section class="form-section collapsible">
     <div class="section-toggle-wrapper">
-      <button class="section-toggle" type="button" @click="isExpanded = !isExpanded">
+      <button
+        class="section-toggle"
+        type="button"
+        aria-label="Toggle subtasks"
+        :aria-expanded="isExpanded"
+        @click="isExpanded = !isExpanded"
+      >
         <component
           :is="ChevronDown"
           :size="16"
@@ -19,6 +25,7 @@
         class="inline-add-btn"
         type="button"
         title="Add subtask"
+        aria-label="Add subtask"
         @click="$emit('add')"
       >
         <Plus :size="14" />
@@ -60,6 +67,9 @@
             class="custom-checkbox"
             :class="{ 'checked': subtask.isCompleted }"
             type="button"
+            role="checkbox"
+            :aria-checked="subtask.isCompleted"
+            :aria-label="subtask.isCompleted ? 'Mark subtask as incomplete' : 'Mark subtask as complete'"
             @click="subtask.isCompleted = !subtask.isCompleted; $emit('update', subtask)"
           >
             <component
@@ -85,6 +95,7 @@
               <button
                 class="delete-subtask-btn"
                 type="button"
+                aria-label="Delete subtask"
                 @click="$emit('delete', subtask.id)"
               >
                 <X :size="16" />

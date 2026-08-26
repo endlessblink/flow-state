@@ -5,6 +5,7 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  workflow_dispatch:
 
 # Fork-safe: pull_request trigger has NO access to secrets.
 # Doppler secrets are NOT fetched here — ci.yml must build without them.

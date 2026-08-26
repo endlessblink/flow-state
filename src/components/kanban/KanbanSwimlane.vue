@@ -16,7 +16,7 @@
       @contextmenu.prevent="handleGroupContextMenu"
     >
       <div class="header-content--swimlane">
-        <button class="collapse-btn">
+        <button class="collapse-btn" :aria-expanded="!isCollapsed" :aria-label="isCollapsed ? 'Expand swimlane' : 'Collapse swimlane'">
           <ChevronDown v-if="!isCollapsed" :size="14" />
           <ChevronRight v-if="isCollapsed" :size="14" />
         </button>

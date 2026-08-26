@@ -218,13 +218,16 @@ wait_for_direct_health_version() {
   expected_health_version="$1"
   health_attempt=0
   while [ "$health_attempt" -lt 300 ]; do
-    if curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
+    provenance_probe=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
+    normalized_provenance=$(printf '%s' "$provenance_probe" | tr -d '[:space:]')
+    if printf '%s' "$normalized_provenance" | \
       grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
       return 0
     fi
     health_attempt=$((health_attempt + 1))
     sleep 0.2
   done
+  echo "direct readiness probe response=$provenance_probe"
   return 1
 }
 i=0

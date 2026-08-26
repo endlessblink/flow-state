@@ -4,8 +4,9 @@ set -euo pipefail
 VPS_HOST="${VPS_HOST:-84.46.253.137}"
 VPS_USER="${VPS_USER:-root}"
 SSH_KEY="${FLOWSTATE_SSH_KEY:-${HOME}/.ssh/id_ed25519}"
-REMOTE_REPO="/var/tmp/flowstate-release-1.4.465/repo"
 NODE_BIN="/opt/flowstate/toolchains/node-v22.22.0-linux-x64/bin"
+RELEASE_VERSION="$(node -p "require('./package.json').version")"
+REMOTE_REPO="/var/tmp/flowstate-release-${RELEASE_VERSION}/repo"
 
 if [[ ! -r "$SSH_KEY" ]]; then
   echo "SSH key not found: $SSH_KEY" >&2
@@ -29,3 +30,6 @@ trap cleanup EXIT
 
 printf '%s\n' "$DOPPLER_TOKEN" | ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
   "IFS= read -r DOPPLER_TOKEN; export DOPPLER_TOKEN; export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; cd '${REMOTE_REPO}'; /usr/bin/doppler run -- '${NODE_BIN}/npm' run electron:build:locked"
+
+ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
+  "export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; cd '${REMOTE_REPO}'; bash scripts/promote-flowstate-release.sh /var/www/flowstate '${REMOTE_REPO}/dist' '${REMOTE_REPO}/release' '${REMOTE_REPO}/release/flowstate-release-receipt.json'"

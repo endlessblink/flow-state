@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => ({
       strategies: 'injectManifest', // TASK-1009: Use custom SW for notification actions
       srcDir: 'src',
       filename: 'sw.ts',
-      registerType: 'prompt',
+       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'FlowState',

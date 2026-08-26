@@ -42,3 +42,6 @@ node "$ROOT_DIR/scripts/flowstate-truth-ledger.cjs" \
   --mode non-live \
   --root "$ROOT_DIR" \
   --output "$ROOT_DIR/release/flowstate-truth-ledger.json"
+node "$ROOT_DIR/scripts/create-flowstate-release-receipt.cjs" \
+  "$ROOT_DIR" \
+  "$ROOT_DIR/release/flowstate-release-receipt.json"

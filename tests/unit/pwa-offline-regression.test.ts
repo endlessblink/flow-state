@@ -15,9 +15,8 @@ describe('PWA Offline Configuration (regression)', () => {
   describe('vite.config.ts — VitePWA settings', () => {
     const viteConfig = readFileSync(resolve(ROOT, 'vite.config.ts'), 'utf-8')
 
-    it('uses registerType "prompt" (not "autoUpdate" which causes stale SW)', () => {
-      expect(viteConfig).toContain("registerType: 'prompt'")
-      expect(viteConfig).not.toContain("registerType: 'autoUpdate'")
+    it('uses automatic registration so stale workers cannot keep serving old bundles', () => {
+      expect(viteConfig).toContain("registerType: 'autoUpdate'")
     })
 
     it('uses injectManifest strategy for custom SW', () => {
@@ -83,6 +82,11 @@ describe('PWA Offline Configuration (regression)', () => {
       expect(swSource).toContain('self.skipWaiting()')
       // Install handler must include skipWaiting() (the fix for BUG-1743)
       expect(swSource).toMatch(/addEventListener\('install'[\s\S]*?self\.skipWaiting\(\)/)
+    })
+
+    it('claims clients and fails safely when external fonts are unavailable', () => {
+      expect(swSource).toContain('clientsClaim()')
+      expect(swSource).toContain('handlerDidError: async () => new Response')
     })
 
     it('does not register either historical Supabase response cache', () => {

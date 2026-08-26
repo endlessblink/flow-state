@@ -8,6 +8,7 @@
  *
  * Uses workbox for caching + custom notification handlers
  */
+import { clientsClaim } from 'workbox-core'
 import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
 import { registerRoute, Route, NavigationRoute } from 'workbox-routing'
 import { CacheFirst, NetworkFirst } from 'workbox-strategies'
@@ -16,6 +17,10 @@ import { ExpirationPlugin } from 'workbox-expiration'
 // VitePWA injects __WB_MANIFEST at build time
 // VitePWA injects __WB_MANIFEST at build time
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
+clientsClaim()
+self.addEventListener('install', () => {
+  void self.skipWaiting()
+})
 
 // ============================================================================
 // WORKBOX PRECACHING (auto-injected by VitePWA)
@@ -71,11 +76,13 @@ registerRoute(
     ({ request }) => request.destination === 'font',
     new CacheFirst({
       cacheName: 'font-cache',
+      fetchOptions: { mode: 'cors' },
       plugins: [
         new ExpirationPlugin({
           maxEntries: 20,
           maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
         }),
+        { handlerDidError: async () => new Response('', { status: 503 }) },
       ],
     })
   )
@@ -89,11 +96,13 @@ registerRoute(
     ({ url }) => url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com',
     new CacheFirst({
       cacheName: 'google-fonts-cache',
+      fetchOptions: { mode: 'cors' },
       plugins: [
         new ExpirationPlugin({
           maxEntries: 20,
           maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
         }),
+        { handlerDidError: async () => new Response('', { status: 503 }) },
       ],
     })
   )

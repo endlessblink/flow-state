@@ -2,7 +2,7 @@
   "schema": "flowstate-stability-challenge-snapshot-v1",
   "capturedAt": "2026-08-26",
   "revision": {
-    "head": "73ec0980384ad2493666914181bf762c4b6a7edc",
+    "head": "5f5af457ee5c0bc590b9f7e2fd773e5f67555260",
     "dirty": true,
     "dirtyReason": "preserved competing worktree changes"
   },
@@ -15,19 +15,19 @@
     "installed Electron runtime and restart cycles"
   ],
   "acceptance": [
-    { "id": "release-authority", "status": "PASS", "evidence": "1.4.459 public receipt and updater manifest agree; VPS and public manifest SHA-256 values match; promotion used one lock and manifest-last publication." },
+    { "id": "release-authority", "status": "PASS", "evidence": "1.4.461 public and VPS receipts agree; public/VPS receipt SHA-256 b8b0d845 and manifest SHA-256 68a3aafd match; promotion used one lock and manifest-last publication." },
     { "id": "updater-recovery", "status": "PASS", "evidence": "Updater regression coverage includes stale failure cleanup, fresh retry, backoff, hash verification, installer failure, restart cleanup, and monotonic version handling." },
     { "id": "clean-vps-build", "status": "PASS", "evidence": "Pinned Node 22.23.2 VPS checkout built AppImage and Debian artifacts; package validation passed; receipt records sourceDirty=false and artifact SHA-256 values." },
-    { "id": "installed-electron-runtime", "status": "PASS", "evidence": "Installed 1.4.459 reports the receipt source commit and passed three close/open cycles with zero invalid Supabase URL or client-uninitialized errors." },
-    { "id": "production-pwa", "status": "PASS", "evidence": "Production route, service worker, web manifest, public bundle, updater manifest, and release receipt read back successfully at 1.4.459." },
+    { "id": "installed-electron-runtime", "status": "PASS", "evidence": "Installed 1.4.461 AppImage SHA-256 248227af reports source commit 5a20e6e4 and passed three close/open cycles; each reached sidecar listening with zero invalid Supabase URL, uninitialized-client, stale-update, or pre-ready fork errors." },
+    { "id": "production-pwa", "status": "PASS", "evidence": "Fresh production browser context read back index-DxkvzP9N.js and its service-worker precache; updater manifest and receipt are 1.4.461 with matching VPS/public hashes." },
     { "id": "authenticated-cross-client", "status": "OPEN", "evidence": "Available sync stress script uses anon credentials and its writes were RLS-blocked; authenticated two-client convergence is not proven." },
     { "id": "full-self-host", "status": "PASS", "evidence": "Full container stability check passed 15 checks with one explicitly skipped dangerous restart action." },
-    { "id": "full-unit-suite", "status": "OPEN", "evidence": "Local full suite has two failures in preserved dirty files; clean VPS full-suite result timed out without a readable exit receipt." },
+    { "id": "full-unit-suite", "status": "OPEN", "evidence": "Current local full suite has two failures in preserved dirty files: task-list-ai-menu and electron-updater-contract; targeted changed-boundary suites pass." },
     { "id": "independent-review", "status": "OPEN", "evidence": "A fresh independent snapshot-bound reviewer result has not yet been captured." }
   ],
   "artifacts": [
-    { "id": "live-release-receipt", "source": "https://in-theflow.com/release-receipt.json", "sha256": "dbda0682847d07a1b420165fbaacfefc49c7afa35978be50f1fe19887df764c8" },
-    { "id": "live-updater-manifest", "source": "https://in-theflow.com/updates/electron/latest-linux.yml", "sha256": "b4c2986850e1179a110aa6bcd91f987cd59eee60a0967c72cb6f19a934fcee2d" },
-    { "id": "installed-appimage", "source": "/home/endlessblink/.local/bin/FlowState.AppImage", "sha256": "565d89943acfe1a46be959d353c7edd17dc00a2e485ed556224aa48b2aad06c3" }
+    { "id": "live-release-receipt", "source": "https://in-theflow.com/release-receipt.json", "sha256": "b8b0d845ad46475f4c98730cecd882adec0410c5705d51edfcf7e98f216baae0" },
+    { "id": "live-updater-manifest", "source": "https://in-theflow.com/updates/electron/latest-linux.yml", "sha256": "68a3aafd8cc5c82efe773c4533bdaa556a51218d11cc93a91c8873376926c938" },
+    { "id": "installed-appimage", "source": "/home/endlessblink/.local/bin/FlowState.AppImage", "sha256": "248227af9c8689aca126affcd3206e3c93a19f288d0701507c298e1837fd3ec1" }
   ]
 }

@@ -90,7 +90,6 @@ describe('canonical queued task patch', () => {
     }))
     expect(rpc).toHaveBeenNthCalledWith(1, 'flowstate_patch_task_v1', expect.objectContaining({
       p_preview: true,
-      p_request_hash: null,
     }))
     expect(rpc).toHaveBeenNthCalledWith(2, 'flowstate_patch_task_v1', expect.objectContaining({
       p_preview: false,
@@ -127,12 +126,10 @@ describe('canonical queued task patch', () => {
     expect(result.success).toBe(true)
     expect(rpc).toHaveBeenNthCalledWith(1, 'flowstate_patch_task_v1', expect.objectContaining({
       p_preview: true,
-      p_request_hash: null,
       p_operation_id: 'web:operation-1',
     }))
     expect(rpc).toHaveBeenNthCalledWith(2, 'flowstate_patch_task_v1', expect.objectContaining({
       p_preview: true,
-      p_request_hash: null,
       p_operation_id: expect.not.stringMatching(/^web:operation-1$/),
     }))
     expect(rpc).toHaveBeenNthCalledWith(3, 'flowstate_patch_task_v1', expect.objectContaining({
@@ -340,6 +337,24 @@ describe('canonical queued task patch', () => {
         success: false, error: 'invalid_canonical_preview', classification: 'permanent',
       })
     }
+  })
+
+  it('accepts a legacy preview and applies it without hash-only arguments', async () => {
+    const op = operation()
+    const { requestHash: _previewHash, ...legacyPreview } = preview()
+    const { requestHash: _receiptHash, ...legacyReceipt } = receipt()
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ data: legacyPreview, error: null })
+      .mockResolvedValueOnce({
+        data: { ok: true, result: 'committed', receipt: legacyReceipt },
+        error: null,
+      })
+
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, vi.fn())
+
+    expect(result.success).toBe(true)
+    expect(rpc.mock.calls[0][1]).not.toHaveProperty('p_request_hash')
+    expect(rpc.mock.calls[1][1]).not.toHaveProperty('p_request_hash')
   })
 
   it('turns a rejected RPC promise into a durable transient retry result', async () => {

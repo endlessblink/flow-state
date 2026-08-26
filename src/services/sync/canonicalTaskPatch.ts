@@ -114,7 +114,7 @@ export function validCanonicalTaskReceipt(
 function validPreview(value: unknown, operation: WriteOperation): value is Record<string, unknown> & {
   previewDigest: string
   previewExpiresAt: string
-  requestHash: string
+  requestHash?: string
   normalizedPayload: CanonicalTaskPatchState['patch']
 } {
   const canonical = operation.canonicalTaskPatch
@@ -127,8 +127,8 @@ function validPreview(value: unknown, operation: WriteOperation): value is Recor
     && typeof value.previewDigest === 'string'
     && SHA256_HEX.test(value.previewDigest)
     && timestamp(value.previewExpiresAt)
-    && typeof value.requestHash === 'string'
-    && SHA256_HEX.test(value.requestHash)
+    && (value.requestHash === undefined
+      || (typeof value.requestHash === 'string' && SHA256_HEX.test(value.requestHash)))
     && validPatch(value.normalizedPayload)
     && samePatchShape(value.normalizedPayload, canonical.patch)
     && validReadBack(value.readBack, operation.entityId, canonical.baseRevision, operation.workspaceId ?? null)
@@ -216,7 +216,6 @@ export async function executeQueuedCanonicalTaskPatch(
       p_preview: true,
       p_preview_digest: null,
       p_preview_expires_at: null,
-      p_request_hash: null,
       p_source: SOURCE,
       p_task_id: operation.entityId,
       p_workspace_id: operation.workspaceId ?? null,
@@ -278,7 +277,7 @@ export async function executeQueuedCanonicalTaskPatch(
 
   let applied: Awaited<ReturnType<CanonicalRpcClient['rpc']>>
   try {
-    applied = await client.rpc('flowstate_patch_task_v1', {
+    const applyArgs: Record<string, unknown> = {
       p_base_revision: canonical.baseRevision,
       p_contract_version: CONTRACT_VERSION,
       p_operation_id: canonical.operationId,
@@ -286,11 +285,12 @@ export async function executeQueuedCanonicalTaskPatch(
       p_preview: false,
       p_preview_digest: canonical.previewDigest,
       p_preview_expires_at: canonical.previewExpiresAt,
-      p_request_hash: canonical.requestHash,
       p_source: SOURCE,
       p_task_id: operation.entityId,
       p_workspace_id: operation.workspaceId ?? null,
-    })
+    }
+    if (canonical.requestHash) applyArgs.p_request_hash = canonical.requestHash
+    applied = await client.rpc('flowstate_patch_task_v1', applyArgs)
   } catch {
     return { success: false, operation, error: 'canonical_apply_transport_failed', shouldRetry: true, classification: 'transient' }
   }
@@ -302,7 +302,7 @@ export async function executeQueuedCanonicalTaskPatch(
   }
   if (applied.data.ok !== true) return rejected(operation, applied.data)
   if (applied.data.result !== 'committed'
-    || applied.data.requestHash !== canonical.requestHash
+    || (canonical.requestHash !== undefined && applied.data.requestHash !== canonical.requestHash)
     || !validCanonicalTaskReceipt(
       applied.data.receipt,
       operation.entityId,

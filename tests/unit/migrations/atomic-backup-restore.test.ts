@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+// @vitest-environment node
+
 import { describe, expect, it } from 'vitest'
 
 const migration = readFileSync(

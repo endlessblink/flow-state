@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+test.use({ serviceWorkers: 'allow' })
+
 test('live PWA installs the current service worker and bundle', async ({ page }) => {
   const errors: string[] = []
   page.on('console', (message) => {

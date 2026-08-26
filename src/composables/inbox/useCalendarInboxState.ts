@@ -113,6 +113,7 @@ export function useCalendarInboxState() {
         return taskStore.calendarFilteredTasks.filter(task => {
             if (hideCalendarDoneTasks.value && task.status === 'done') return false
             if (task.isPinned) return false
+            if (task.isInInbox === false) return false
 
             // Recurring tasks remain inbox tasks even when they also have calendar instances.
             return !isScheduledOnCalendar(task) || isRecurringTask(task)
@@ -126,6 +127,7 @@ export function useCalendarInboxState() {
         return taskStore.calendarFilteredTasks.filter(task => {
             if (hideCalendarDoneTasks.value && task.status === 'done') return false
             if (task.isPinned) return false
+            if (task.isInInbox === false) return false
             return isTaskDueToday(task)
         })
     })

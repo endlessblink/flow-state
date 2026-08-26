@@ -92,6 +92,7 @@ jobs:
   # static safety tests cannot. This is what turns "fixed" into "stays fixed".
   canvas-sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 

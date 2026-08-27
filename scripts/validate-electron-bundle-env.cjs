@@ -5,8 +5,30 @@ const path = require('node:path')
 
 const root = path.resolve(__dirname, '..')
 const dist = path.join(root, 'dist')
-const expectedUrl = String(process.env.VITE_SUPABASE_URL || '').trim()
-const expectedAnonKey = String(process.env.VITE_SUPABASE_ANON_KEY || '').trim()
+
+function parseEnvFile(contents) {
+  const parsed = {}
+  for (const line of contents.split(/\r?\n/)) {
+    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/)
+    if (!match) continue
+    let value = match[2]
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1)
+    }
+    parsed[match[1]] = value
+  }
+  return parsed
+}
+
+const env = {}
+for (const file of ['.env', '.env.local', '.env.production', '.env.production.local']) {
+  const fullPath = path.join(root, file)
+  if (fs.existsSync(fullPath)) Object.assign(env, parseEnvFile(fs.readFileSync(fullPath, 'utf8')))
+}
+Object.assign(env, process.env)
+
+const expectedUrl = String(env.VITE_SUPABASE_URL || '').trim()
+const expectedAnonKey = String(env.VITE_SUPABASE_ANON_KEY || '').trim()
 
 if (!expectedUrl || !expectedAnonKey) {
   console.error('[electron-env] ERROR: validated build variables are missing after the renderer build.')

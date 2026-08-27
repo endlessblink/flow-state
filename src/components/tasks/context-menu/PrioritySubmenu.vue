@@ -20,6 +20,16 @@
 
       <button
         class="menu-item menu-item--sm"
+        :class="{ active: currentPriority === 'relaxed' }"
+        @click.stop="$emit('select', 'relaxed')"
+      >
+        <span class="priority-dot relaxed" />
+        <span class="menu-text">Relaxed</span>
+        <Check v-if="currentPriority === 'relaxed'" :size="12" class="check-icon" />
+      </button>
+
+      <button
+        class="menu-item menu-item--sm"
         :class="{ active: currentPriority === 'high' }"
         @click.stop="$emit('select', 'high')"
       >
@@ -48,16 +58,16 @@
         <Check v-if="currentPriority === 'low'" :size="12" class="check-icon" />
       </button>
 
-      <template v-if="currentPriority">
-        <div class="submenu-divider" />
-        <button
-          class="menu-item menu-item--sm menu-item--clear"
-          @click.stop="$emit('clearPriority')"
-        >
-          <X :size="12" class="check-icon" />
-          <span class="menu-text">Clear priority</span>
-        </button>
-      </template>
+      <div class="submenu-divider" />
+      <button
+        class="menu-item menu-item--sm menu-item--clear"
+        :class="{ active: !currentPriority }"
+        @click.stop="$emit('clearPriority')"
+      >
+        <X :size="12" class="check-icon" />
+        <span class="menu-text">No Priority</span>
+        <Check v-if="!currentPriority" :size="12" class="check-icon" />
+      </button>
     </div>
   </Teleport>
 </template>

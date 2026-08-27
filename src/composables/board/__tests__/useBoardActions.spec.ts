@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useBoardActions } from '../useBoardActions'
+import { getDateFromColumnKey, useBoardActions } from '../useBoardActions'
 
 const createTaskWithUndo = vi.fn()
 const showToast = vi.fn()
@@ -63,6 +63,21 @@ describe('useBoardActions task creation', () => {
       order: 0
     }))
     expect(createTaskWithUndo.mock.calls[0][0].dueDate).not.toBe('2026-08-01')
+  })
+
+  it('keeps Today on the local calendar date before UTC midnight', () => {
+    const originalTimezone = process.env.TZ
+    process.env.TZ = 'Asia/Jerusalem'
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-27T00:30:00+03:00'))
+
+    try {
+      expect(getDateFromColumnKey('today')).toBe('2026-08-27')
+    } finally {
+      vi.useRealTimers()
+      if (originalTimezone === undefined) delete process.env.TZ
+      else process.env.TZ = originalTimezone
+    }
   })
 
   it('clears an inherited filter date when creating in the No Date column', async () => {

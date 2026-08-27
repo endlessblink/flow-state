@@ -112,6 +112,19 @@ restart_supervised_on_failure() {
     systemctl --user start flowstate-background.service || true
   fi
 }
+restart_direct_on_failure() {
+  if [ "$strategy" != "direct" ]; then
+    return 0
+  fi
+  # A pre-swap failure can happen while the original direct app is still alive;
+  # never launch a second instance in that case.
+  if kill -0 "$parent" 2>/dev/null; then
+    return 0
+  fi
+  "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
+  replacement_parent_pid=$!
+  wait_for_health_identity "$known_good_version" "$replacement_parent_pid" || true
+}
 cleanup_competing_flowstate_processes() {
   flowstate_pids() {
     # Keep the predicate on one awk line. The installed updater runs mawk,
@@ -177,11 +190,26 @@ wait_for_direct_port_free() {
   done
   return 1
 }
+wait_for_direct_health_version() {
+  expected_health_version="$1"
+  health_attempt=0
+  while [ "$health_attempt" -lt 300 ]; do
+    health_response=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
+    if printf '%s' "$health_response" | grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
+      echo "known-good app is already healthy after rollback"
+      return 0
+    fi
+    health_attempt=$((health_attempt + 1))
+    sleep 0.2
+  done
+  return 1
+}
   fail_install() {
     echo "FAIL $1"
   record_failure "$1"
   rm -f "$tmp"
   restart_supervised_on_failure
+  restart_direct_on_failure
   exit 1
 }
 record_failure() {
@@ -214,11 +242,20 @@ record_failure() {
     *readiness*|*health*|*bridge*) error_class=readiness ;;
     *download*|*network*) error_class=download ;;
   esac
-  {
+  failure_tmp="$failure_path.tmp.$$"
+  if ! {
     printf 'FlowState-%s-x86_64.AppImage\n' "$expected_version"
     printf 'version=%s\nartifactUrl=%s\ndigest=%s\nerrorClass=%s\nattemptCount=%s\nfailedAt=%s\nnextRetryAt=%s\nreason=%s\n' \
       "$expected_version" "$artifact_url" "$artifact_digest" "$error_class" "$attempt_count" "$failed_at" "$retry_at" "$(printf '%s' "$reason" | tr '\r\n' '  ')"
-  } > "$failure_path"
+  } > "$failure_tmp"; then
+    rm -f "$failure_tmp"
+    return 1
+  fi
+  sync -f "$failure_tmp" 2>/dev/null || true
+  mv -f "$failure_tmp" "$failure_path" || {
+    rm -f "$failure_tmp"
+    return 1
+  }
 }
 restore_known_good() {
   echo "restoring known-good AppImage"
@@ -230,6 +267,9 @@ restore_known_good() {
     exit 1
   }
   cleanup_competing_flowstate_processes
+  if [ "$strategy" != "systemd" ] && wait_for_direct_health_version "$known_good_version"; then
+    return 0
+  fi
   restart_supervised_on_failure
   if [ "$strategy" = "systemd" ]; then
     replacement_parent_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)

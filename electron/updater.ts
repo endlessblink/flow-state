@@ -146,6 +146,11 @@ restart_direct_on_failure() {
   if [ "$strategy" != "direct" ]; then
     return 0
   fi
+  # A pre-swap failure can happen while the original direct app is still alive;
+  # never launch a second instance in that case.
+  if kill -0 "$parent" 2>/dev/null; then
+    return 0
+  fi
   "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
   replacement_parent_pid=$!
   wait_for_health_identity "$known_good_version" "$replacement_parent_pid" || true
@@ -267,7 +272,7 @@ record_failure() {
     *readiness*|*health*|*bridge*) error_class=readiness ;;
     *download*|*network*) error_class=download ;;
   esac
-  failure_tmp="${failure_path}.tmp.$$"
+  failure_tmp="$failure_path.tmp.$$"
   if ! {
     printf 'FlowState-%s-x86_64.AppImage\n' "$expected_version"
     printf 'version=%s\nartifactUrl=%s\ndigest=%s\nerrorClass=%s\nattemptCount=%s\nfailedAt=%s\nnextRetryAt=%s\nreason=%s\n' \

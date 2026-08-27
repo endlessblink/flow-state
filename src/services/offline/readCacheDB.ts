@@ -386,7 +386,11 @@ export async function overlayPendingTaskWrites(
     }
     const existing = taskMap.get(op.entityId) ?? fallbackMap.get(op.entityId)
     if (!existing) {
-      throw new Error(`Durable task update ${op.entityId} has no recoverable base projection`)
+      // A cache miss can be temporary while the canonical task snapshot is
+      // loading. Keep the durable operation queued and omit only its overlay;
+      // throwing here turns a recoverable cache miss into a renderer crash.
+      pendingTaskIds.delete(op.entityId)
+      continue
     }
     taskMap.set(op.entityId, applyPendingTaskPatch(existing, op.payload))
   }

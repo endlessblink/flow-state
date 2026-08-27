@@ -31,7 +31,7 @@ if ! ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
 fi
 
 ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
-  "set -e; . '${REMOTE_SECRET_FILE}'; export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; cd '${REMOTE_REPO}'; /usr/bin/doppler run -- '${NODE_BIN}/npm' run electron:build:locked"
+  "set -e; set -a; . '${REMOTE_SECRET_FILE}'; set +a; export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; cd '${REMOTE_REPO}'; /usr/bin/doppler run -- '${NODE_BIN}/npm' run electron:build:locked"
 
 ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
   "export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; cd '${REMOTE_REPO}'; bash scripts/promote-flowstate-release.sh /var/www/flowstate '${REMOTE_REPO}/dist' '${REMOTE_REPO}/release' '${REMOTE_REPO}/release/flowstate-release-receipt.json'"

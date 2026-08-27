@@ -134,6 +134,19 @@ function validPreview(value: unknown, operation: WriteOperation): value is Recor
     && validReadBack(value.readBack, operation.entityId, canonical.baseRevision, operation.workspaceId ?? null)
 }
 
+function validPersistedPreviewBinding(
+  canonical: CanonicalTaskPatchState,
+): boolean {
+  return canonical.phase === 'previewed'
+    && typeof canonical.previewDigest === 'string'
+    && SHA256_HEX.test(canonical.previewDigest)
+    && timestamp(canonical.previewExpiresAt)
+    && (canonical.requestHash === undefined
+      || (typeof canonical.requestHash === 'string' && SHA256_HEX.test(canonical.requestHash)))
+    && validPatch(canonical.normalizedPatch)
+    && samePatchShape(canonical.normalizedPatch, canonical.patch)
+}
+
 function operationId(): string {
   return `web:${crypto.randomUUID()}`
 }
@@ -201,11 +214,14 @@ export async function executeQueuedCanonicalTaskPatch(
     }
     return { success: true, operation, canonicalReceipt: canonical.receipt, serverData: canonical.receipt.readBack }
   }
-  if ((canonical.previewDigest || canonical.previewExpiresAt || canonical.phase === 'previewed')
-    && (!validPatch(canonical.normalizedPatch) || !samePatchShape(canonical.normalizedPatch, canonical.patch))) {
-    // Older queue records can contain only part of the preview binding.  Treat
-    // that local binding as unusable, rotate the operation id, and obtain a
-    // fresh server preview instead of quarantining the update forever.
+  const hasPersistedPreviewBinding = Boolean(
+    canonical.previewDigest
+      || canonical.previewExpiresAt
+      || canonical.requestHash
+      || canonical.normalizedPatch
+      || canonical.phase === 'previewed',
+  )
+  if (hasPersistedPreviewBinding && !validPersistedPreviewBinding(canonical)) {
     canonical = {
       ...canonical,
       operationId: operationId(),

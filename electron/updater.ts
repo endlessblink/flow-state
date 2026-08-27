@@ -7,6 +7,8 @@ import {
   pendingAppImagePath,
   versionFromUpdateFileName,
   pendingUpdateFailureVersion,
+  readPendingUpdateFailure,
+  shouldSuppressAutomaticRetry,
   clearBlockedPendingUpdate,
   clearResolvedPendingUpdateFailure,
   clearObsoletePendingAppImages,
@@ -121,7 +123,7 @@ function launchDetachedAppImageInstaller(): PreparedAppImageInstaller | null {
   // aborts loudly on failure, and the relaunch uses the same flags as
   // FlowState-launch.sh (TASK-1871) — a bare relaunch can die on chrome-sandbox
   // SUID / GPU init and look exactly like "nothing happened".
-  const script = `
+  const script = String.raw`
 LOG="$(dirname "$2")/update-install.log"
 exec >> "$LOG" 2>&1
 echo "=== $(date -u +%FT%TZ) installer start target=$1 pending=$2 parent=$4 ==="
@@ -163,12 +165,90 @@ cleanup_competing_flowstate_processes() {
   sleep 1
   terminate_flowstate_process_groups -KILL
 }
-fail_install() {
-  echo "FAIL $1"
-  printf '%s\\n%s\\n%s\\n' "$(basename "$pending")" "$1" "$(date -u +%FT%TZ)" > "$info.failed"
+capture_live_identity() {
+  live_identity=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
+  old_process_id=$(printf '%s' "$live_identity" | sed -n 's/.*"processId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')
+  old_instance_id=$(printf '%s' "$live_identity" | sed -n 's/.*"instanceId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+}
+read_live_identity() {
+  live_process_id=$(printf '%s' "$1" | sed -n 's/.*"processId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')
+  live_parent_pid=$(printf '%s' "$1" | sed -n 's/.*"parentPid"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')
+  live_instance_id=$(printf '%s' "$1" | sed -n 's/.*"instanceId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+}
+identity_is_valid() {
+  [ "$live_process_id" -gt 0 ] 2>/dev/null && [ "$live_parent_pid" -gt 0 ] 2>/dev/null && [ -n "$live_instance_id" ]
+}
+wait_for_health_identity() {
+  expected_health_version="$1"
+  expected_parent_pid="$2"
+  health_attempt=0
+  while [ "$health_attempt" -lt 300 ]; do
+    health_response=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
+    if printf '%s' "$health_response" | grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
+      read_live_identity "$health_response"
+      if identity_is_valid && [ "$live_parent_pid" = "$expected_parent_pid" ] &&
+        { [ "$live_process_id" != "\${old_process_id:-}" ] || [ "$live_instance_id" != "\${old_instance_id:-}" ]; }; then
+        return 0
+      fi
+    fi
+    health_attempt=$((health_attempt + 1))
+    sleep 0.2
+  done
+  return 1
+}
+wait_for_direct_port_free() {
+  port_attempt=0
+  while [ "$port_attempt" -lt 300 ]; do
+    if ! curl -fsS http://127.0.0.1:5577/api/provenance >/dev/null 2>&1; then
+      return 0
+    fi
+    port_attempt=$((port_attempt + 1))
+    sleep 0.2
+  done
+  return 1
+}
+  fail_install() {
+    echo "FAIL $1"
+  record_failure "$1"
   rm -f "$tmp"
   restart_supervised_on_failure
   exit 1
+}
+record_failure() {
+  reason="$1"
+  failure_path="$info.failed"
+  previous_attempts=0
+  if [ -f "$failure_path" ]; then
+    previous_attempts=$(sed -n 's/^attemptCount=//p' "$failure_path" | head -1)
+  fi
+  case "$previous_attempts" in
+    ''|*[!0-9]*) previous_attempts=0 ;;
+  esac
+  attempt_count=$((previous_attempts + 1))
+  delay=300
+  delay_attempt=1
+  while [ "$delay_attempt" -lt "$attempt_count" ]; do
+    delay=$((delay * 2))
+    [ "$delay" -ge 86400 ] && { delay=86400; break; }
+    delay_attempt=$((delay_attempt + 1))
+  done
+  failed_epoch=$(date +%s)
+  failed_at=$(date -u +%FT%TZ)
+  retry_at=$(date -u -d "@$((failed_epoch + delay))" +%FT%TZ)
+  artifact_url=$(grep -o '"url"[[:space:]]*:[[:space:]]*"[^"]*"' "$info" 2>/dev/null | head -1 | sed 's/.*"url"[[:space:]]*:[[:space:]]*"//; s/"$//')
+  [ -z "$artifact_url" ] && artifact_url="$(basename "$pending")"
+  artifact_digest=$(grep -o '"sha512"[[:space:]]*:[[:space:]]*"[^"]*"' "$info" 2>/dev/null | head -1 | sed 's/.*"sha512"[[:space:]]*:[[:space:]]*"//; s/"$//')
+  error_class=installer
+  case "$reason" in
+    *hash*|*checksum*|*verify*) error_class=verification ;;
+    *readiness*|*health*|*bridge*) error_class=readiness ;;
+    *download*|*network*) error_class=download ;;
+  esac
+  {
+    printf 'FlowState-%s-x86_64.AppImage\\n' "$expected_version"
+    printf 'version=%s\\nartifactUrl=%s\\ndigest=%s\\nerrorClass=%s\\nattemptCount=%s\\nfailedAt=%s\\nnextRetryAt=%s\\nreason=%s\\n' \\
+      "$expected_version" "$artifact_url" "$artifact_digest" "$error_class" "$attempt_count" "$failed_at" "$retry_at" "$(printf '%s' "$reason" | tr '\\r\\n' '  ')"
+  } > "$failure_path"
 }
 restore_known_good() {
   echo "restoring known-good AppImage"
@@ -181,17 +261,21 @@ restore_known_good() {
   }
   cleanup_competing_flowstate_processes
   restart_supervised_on_failure
-  if wait_for_direct_health_version "$known_good_version" "" ""; then
-    echo "known-good app is already healthy after rollback"
-    return 0
+  if [ "$strategy" = "systemd" ]; then
+    replacement_parent_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)
   fi
   if [ "$strategy" != "systemd" ]; then
     "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
+    replacement_parent_pid=$!
+  fi
+  if wait_for_health_identity "$known_good_version" "\${replacement_parent_pid:-0}"; then
+    echo "known-good app is healthy after rollback pid=$live_process_id parentPid=$live_parent_pid instanceId=$live_instance_id"
+    return 0
   fi
 }
 fail_after_swap() {
   echo "FAIL $1"
-  printf '%s\\n%s\\n%s\\n' "$(basename "$pending")" "$1" "$(date -u +%FT%TZ)" > "$info.failed"
+  record_failure "$1"
   restore_known_good
   exit 1
 }
@@ -202,40 +286,19 @@ wait_for_supervised_health() {
   # early when the process is still starting normally.
   while [ "$health_attempt" -lt 300 ]; do
     if systemctl --user is-active --quiet flowstate-background.service && \
-      curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
-        grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
-      return 0
+      health_response=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true) && \
+      printf '%s' "$health_response" | grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
+      read_live_identity "$health_response"
+      supervised_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)
+      if identity_is_valid && [ "$live_parent_pid" = "$supervised_pid" ] &&
+        { [ "$live_process_id" != "\${old_process_id:-}" ] || [ "$live_instance_id" != "\${old_instance_id:-}" ]; }; then
+        echo "supervised replacement identity pid=$live_process_id parentPid=$live_parent_pid instanceId=$live_instance_id"
+        return 0
+      fi
     fi
     health_attempt=$((health_attempt + 1))
     sleep 0.2
   done
-  return 1
-}
-wait_for_direct_health() {
-  wait_for_direct_health_version "$expected_version" "$replacement_pid" "$replacement_instance_id"
-}
-wait_for_direct_health_version() {
-  expected_health_version="$1"
-  expected_health_pid="$2"
-  expected_health_instance_id="$3"
-  health_attempt=0
-  while [ "$health_attempt" -lt 300 ]; do
-    if [ -n "$expected_health_pid" ] && ! kill -0 "$expected_health_pid" 2>/dev/null; then
-      health_attempt=$((health_attempt + 1))
-      sleep 0.2
-      continue
-    fi
-    provenance_probe=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
-    normalized_provenance=$(printf '%s' "$provenance_probe" | tr -d '[:space:]')
-    if printf '%s' "$normalized_provenance" | \
-      grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null && \
-      { [ -z "$expected_health_instance_id" ] || printf '%s' "$normalized_provenance" | grep -F "\"instanceId\":\"$expected_health_instance_id\"" >/dev/null; }; then
-      return 0
-    fi
-    health_attempt=$((health_attempt + 1))
-    sleep 0.2
-  done
-  echo "direct readiness probe response=$provenance_probe"
   return 1
 }
 i=0
@@ -247,8 +310,12 @@ if kill -0 "$parent" 2>/dev/null; then
   fail_install "parent did not exit before update deadline"
 fi
 echo "parent gone after $i ticks"
+capture_live_identity
 cleanup_competing_flowstate_processes
 chmod 755 "$pending" || fail_install "chmod pending"
+if [ "$strategy" != "systemd" ]; then
+  wait_for_direct_port_free || fail_install "old local bridge did not stop before replacement"
+fi
 cp -f "$pending" "$tmp" || fail_install "copy pending"
 chmod 755 "$tmp" || fail_install "chmod temporary target"
 if [ "$strategy" = "systemd" ]; then
@@ -259,6 +326,7 @@ if [ "$strategy" = "systemd" ]; then
   echo "swap complete, starting supervised replacement"
   systemctl --user reset-failed flowstate-background.service || true
   systemctl --user start flowstate-background.service || fail_after_swap "supervised restart"
+  replacement_parent_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)
   wait_for_supervised_health || fail_after_swap "supervised readiness"
   rm -f "$backup"
   rm -f "$info"
@@ -273,7 +341,8 @@ replacement_instance_id=$(cat /proc/sys/kernel/random/uuid) || fail_after_swap "
 export FLOW_STATE_UPDATE_INSTANCE_ID="$replacement_instance_id"
 "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
 replacement_pid=$!
-if ! wait_for_direct_health; then
+replacement_parent_pid="$replacement_pid"
+if ! wait_for_health_identity "$expected_version" "$replacement_parent_pid"; then
   kill "$replacement_pid" 2>/dev/null || true
   fail_after_swap "direct replacement readiness"
 fi
@@ -557,17 +626,26 @@ export function registerUpdater() {
 
   // Forward events to renderer via IPC
   autoUpdater.on('update-available', (info) => {
-    const blockedVersion = pendingUpdateFailureVersion()
-    if (blockedVersion && compareVersions(blockedVersion, appVersion) > 0 && blockedVersion === info.version) {
+    const failure = readPendingUpdateFailure()
+    const blockedVersion = failure?.version ?? pendingUpdateFailureVersion()
+    if (
+      failure &&
+      blockedVersion &&
+      compareVersions(blockedVersion, appVersion) > 0 &&
+      blockedVersion === info.version &&
+      shouldSuppressAutomaticRetry(failure)
+    ) {
       console.warn('[Updater] Suppressing a previously failed update to prevent a notification loop', {
         blockedVersion,
+        attemptCount: failure.attemptCount,
+        nextRetryAt: failure.nextRetryAt,
       })
       const win = BrowserWindow.getAllWindows()[0]
       if (win) {
         win.webContents.send('updater:blocked', {
           ...info,
           currentVersion: appVersion,
-          message: `Update v${info.version} previously failed to install. Retry to download it again.`,
+          message: `Update v${info.version} previously failed to install (${failure.errorClass}, attempt ${failure.attemptCount}). Retry to download it again.`,
         })
       }
       return

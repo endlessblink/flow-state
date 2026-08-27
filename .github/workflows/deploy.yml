@@ -26,7 +26,7 @@ jobs:
 
       # Fetch secrets and create .env for build
       - name: Fetch Secrets for Build
-        run: doppler secrets download --no-file --format env > .env.production
+        run: doppler secrets download --project flow-state --config prd --no-file --format env > .env.production
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
@@ -97,7 +97,6 @@ jobs:
             # Deploy built files to web root
             # --exclude='updates/' preserves Tauri auto-updater artifacts (FEATURE-1194)
             rsync -avz --delete --exclude='updates/' \
-              --exclude='release-receipt.json' \
               ./dist/ \
               ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/
 
@@ -106,8 +105,6 @@ jobs:
             ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
               "mv -f /var/www/flowstate/.release-receipt.json.tmp /var/www/flowstate/release-receipt.json && cp -f /var/www/flowstate/release-receipt.json /var/www/flowstate/updates/electron/flowstate-release-receipt.json"
 
-      # The receipt is promoted by the unified release transaction and must
-      # survive the static PWA sync; verify the public boundary before moving on.
       - name: Verify unified release receipt
         run: |
             MANIFEST=$(curl -fsS "${{ vars.SITE_URL }}/updates/electron/latest-linux.yml")

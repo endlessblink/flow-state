@@ -1,13 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ $# -ne 0 ]]; then
+  echo "release mode flags are not accepted by the production VPS helper" >&2
+  exit 2
+fi
+
 VPS_HOST="${VPS_HOST:-84.46.253.137}"
 VPS_USER="${VPS_USER:-root}"
 SSH_KEY="${FLOWSTATE_SSH_KEY:-${HOME}/.ssh/id_ed25519}"
 NODE_BIN="/opt/flowstate/toolchains/node-v22.22.0-linux-x64/bin"
 RELEASE_VERSION="$(node -p "require('./package.json').version")"
 REMOTE_REPO="/var/tmp/flowstate-release-${RELEASE_VERSION}/repo"
-REMOTE_SECRET_FILE="${FLOWSTATE_DOPPLER_SECRET_FILE:-/etc/flowstate/doppler-release.env}"
+RELEASE_COMMIT="$(git rev-parse HEAD)"
+
+if [[ ! "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "Could not resolve an immutable release commit" >&2
+  exit 1
+fi
+if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
+  echo "Refusing VPS build from a dirty source checkout" >&2
+  exit 1
+fi
 
 if [[ ! -r "$SSH_KEY" ]]; then
   echo "SSH key not found: $SSH_KEY" >&2
@@ -15,23 +29,7 @@ if [[ ! -r "$SSH_KEY" ]]; then
 fi
 
 ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
-  "set -e; export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; mkdir -p \"$(dirname '${REMOTE_REPO}')\"; if [[ ! -d '${REMOTE_REPO}/.git' ]]; then git clone --branch master --single-branch https://github.com/endlessblink/flow-state.git '${REMOTE_REPO}'; else git -C '${REMOTE_REPO}' fetch origin master; git -C '${REMOTE_REPO}' reset --hard origin/master; rm -rf '${REMOTE_REPO}/node_modules' '${REMOTE_REPO}/dist' '${REMOTE_REPO}/release'; git -C '${REMOTE_REPO}' clean -ffdx; fi; test \"\$(grep -m1 '\"version\": \"' '${REMOTE_REPO}/package.json' | cut -d '\"' -f4)\" = '${RELEASE_VERSION}'; cd '${REMOTE_REPO}'; '${NODE_BIN}/npm' ci --include=dev --ignore-scripts --no-audit --no-fund" < /dev/null
-
-if ! ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
-  "test -s '${REMOTE_SECRET_FILE}' && grep -q '^DOPPLER_TOKEN=.' '${REMOTE_SECRET_FILE}'"; then
-  read -r -s -p "Doppler service token (saved root-only on VPS for future releases): " DOPPLER_TOKEN
-  echo
-  if [[ -z "$DOPPLER_TOKEN" ]]; then
-    echo "A Doppler token is required." >&2
-    exit 1
-  fi
-  printf '%s\n' "$DOPPLER_TOKEN" | ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
-    "set -e; umask 077; install -d -m 700 \"$(dirname '${REMOTE_SECRET_FILE}')\"; IFS= read -r token; test -n \"\$token\"; printf 'DOPPLER_TOKEN=%s\\n' \"\$token\" > '${REMOTE_SECRET_FILE}.tmp'; chmod 600 '${REMOTE_SECRET_FILE}.tmp'; mv '${REMOTE_SECRET_FILE}.tmp' '${REMOTE_SECRET_FILE}'"
-  unset DOPPLER_TOKEN
-fi
-
-ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
-  "set -e; set -a; . '${REMOTE_SECRET_FILE}'; set +a; export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; cd '${REMOTE_REPO}'; /usr/bin/doppler run -- env NODE_ENV= npm_config_production=false npm_config_omit= '${NODE_BIN}/npm' run electron:build:locked; ELECTRON_BUILD=false /usr/bin/doppler run -- env NODE_ENV= npm_config_production=false npm_config_omit= '${NODE_BIN}/npm' run build; '${NODE_BIN}/node' scripts/generate-flowstate-release-receipt.cjs --version '${RELEASE_VERSION}' --source-commit \"\$(git rev-parse HEAD)\" --pwa-dir '${REMOTE_REPO}/dist' --electron-dir '${REMOTE_REPO}/release' --output '${REMOTE_REPO}/release/flowstate-release-receipt.json'"
+  "set -a; . /etc/flowstate/doppler-release.env; set +a; export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; if [ ! -d '${REMOTE_REPO}/.git' ]; then mkdir -p \"\$(dirname '${REMOTE_REPO}')\"; git clone --no-checkout https://github.com/endlessblink/flow-state.git '${REMOTE_REPO}'; fi; cd '${REMOTE_REPO}'; git fetch origin '${RELEASE_COMMIT}'; git reset --hard '${RELEASE_COMMIT}'; test -z \"\$(git status --porcelain --untracked-files=all)\"; test \"\$(git rev-parse HEAD)\" = '${RELEASE_COMMIT}'; git cat-file -e '${RELEASE_COMMIT}^{commit}'; export DOPPLER_PROJECT=flow-state DOPPLER_CONFIG=prd; /usr/bin/doppler run --project flow-state --config prd -- '${NODE_BIN}/npm' run electron:build:locked; /usr/bin/doppler run --project flow-state --config prd -- '${NODE_BIN}/node' scripts/create-flowstate-release-receipt.cjs '${REMOTE_REPO}' '${REMOTE_REPO}/release/flowstate-release-receipt.json'"
 
 ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
   "export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; cd '${REMOTE_REPO}'; bash scripts/promote-flowstate-release.sh /var/www/flowstate '${REMOTE_REPO}/dist' '${REMOTE_REPO}/release' '${REMOTE_REPO}/release/flowstate-release-receipt.json'"

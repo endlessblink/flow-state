@@ -133,7 +133,7 @@ const getPendingOperations: typeof _getPendingOperations = async (...args) => {
 
 const markSyncing: typeof _markSyncing = async (...args) => {
   const mod = await getWriteQueueModule()
-  if (mod) await mod.markSyncing(...args)
+  return mod ? mod.markSyncing(...args) : false
 }
 
 const markCompleted: typeof _markCompleted = async (...args) => {
@@ -664,13 +664,20 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
           if (serverState.error) {
             // BUG-1211 FIX: Entity not found — likely deleted on another device.
-            // Mark as success to remove from queue (can't update a deleted entity),
-            // but log prominently so this is visible in debugging.
+            // Keep the local intent quarantined for explicit resolution instead
+            // of acknowledging it as synced; otherwise the user's update is
+            // silently lost when another client deleted the entity.
             if (serverState.error.code === 'PGRST116') {
-              console.warn(`⚠️ [SYNC] Entity ${entityType}:${entityId} not found on server (deleted on another device?). Queued update discarded — data in this update is lost.`)
+              const error = entityType === 'task'
+                ? 'Task no longer exists in the authoritative projection; local update preserved for manual resolution'
+                : `Entity ${entityType}:${entityId} no longer exists in the authoritative projection; local update preserved for manual resolution`
+              console.warn(`⚠️ [SYNC] ${error}`)
               return {
-                success: true,
-                operation
+                success: false,
+                operation,
+                error,
+                shouldRetry: false,
+                classification: 'permanent'
               }
             }
             throw serverState.error
@@ -1402,7 +1409,7 @@ export function useSyncOrchestrator() {
     const failed = await getFailedOperations()
 
     for (const op of failed) {
-      if (op.id && getRetryConfigForError(classifyError(op.lastError ?? '')) !== null) {
+      if (op.id) {
         await import('@/services/offline/writeQueueDB').then(({ updateOperation }) =>
           updateOperation(op.id!, {
             status: 'pending',
@@ -1421,7 +1428,7 @@ export function useSyncOrchestrator() {
     const failed = await getFailedOperations()
 
     for (const op of failed) {
-      if (op.id && requested.has(op.entityId) && getRetryConfigForError(classifyError(op.lastError ?? '')) !== null) {
+      if (op.id && requested.has(op.entityId)) {
         await import('@/services/offline/writeQueueDB').then(({ updateOperation }) =>
           updateOperation(op.id!, {
             status: 'pending',

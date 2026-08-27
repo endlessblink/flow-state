@@ -19,7 +19,6 @@ import type {
   WriteConflict,
   SyncEntityType,
 } from "@/types/sync";
-import { classifyError } from "./retryStrategy";
 
 type StoredCanonicalTaskPatchReceipt = CanonicalTaskPatchReceipt & {
   scopeKey: string;
@@ -336,10 +335,18 @@ export async function updateOperation(
 /**
  * Mark an operation as syncing (in progress)
  */
-export async function markSyncing(id: number): Promise<void> {
-  await updateOperation(id, {
-    status: "syncing",
-    lastAttemptAt: Date.now(),
+export async function markSyncing(id: number): Promise<boolean> {
+  const db = getWriteQueueDB();
+  return db.transaction("rw", db.operations, async () => {
+    const operation = await db.operations.get(id);
+    if (!operation || (operation.status !== "pending" && operation.status !== "failed")) {
+      return false;
+    }
+    await db.operations.update(id, {
+      status: "syncing",
+      lastAttemptAt: Date.now(),
+    });
+    return true;
   });
 }
 
@@ -593,18 +600,18 @@ export async function markConflict(
  */
 export async function cleanupCompleted(): Promise<number> {
   const db = getWriteQueueDB();
-
-  // Delete operations that have been completed
-  const completed = await db.operations
-    .where("status")
-    .equals("completed")
-    .toArray();
-
-  if (completed.length > 0) {
-    await db.operations.bulkDelete(completed.map((op) => op.id!));
-  }
-
-  return completed.length;
+  return db.transaction("rw", db.operations, async () => {
+    const completed = await db.operations.where("status").equals("completed").toArray();
+    let deleted = 0;
+    for (const candidate of completed) {
+      const current = candidate.id === undefined ? undefined : await db.operations.get(candidate.id);
+      if (current?.status === "completed") {
+        await db.operations.delete(candidate.id!);
+        deleted += 1;
+      }
+    }
+    return deleted;
+  });
 }
 
 /**
@@ -626,12 +633,21 @@ export async function deleteOperationsForEntity(
 ): Promise<number> {
   const db = getWriteQueueDB();
 
-  const operations = await getOperationsForEntity(entityType, entityId);
-  if (operations.length > 0) {
-    await db.operations.bulkDelete(operations.map((op) => op.id!));
-  }
-
-  return operations.length;
+  return db.transaction("rw", db.operations, async () => {
+    const operations = await db.operations
+      .where("[entityType+entityId]")
+      .equals([entityType, entityId])
+      .toArray();
+    let deleted = 0;
+    for (const operation of operations) {
+      const current = operation.id === undefined ? undefined : await db.operations.get(operation.id);
+      if (current && current.status !== "syncing") {
+        await db.operations.delete(operation.id!);
+        deleted += 1;
+      }
+    }
+    return deleted;
+  });
 }
 
 /**
@@ -645,22 +661,28 @@ export async function deleteOperationsByType(
   entityId: string,
   operationType: "create" | "update" | "delete",
 ): Promise<number> {
-  const operations = await getOperationsForEntity(entityType, entityId);
-  const matching = operations.filter((op) => op.operation === operationType);
-  // BUG-1737: Skip in-flight operations — removing from IndexedDB doesn't abort the HTTP request.
-  // Orphaned 'syncing' ops are recovered by recoverStaleSyncing() on next app load.
-  const deletable = matching.filter((op) => op.status !== "syncing");
-  const skipped = matching.length - deletable.length;
-  if (skipped > 0) {
-    console.warn(
-      `⚠️ [SYNC] deleteOperationsByType: skipped ${skipped} in-flight '${operationType}' op(s) for ${entityId.slice(0, 8)}`,
-    );
-  }
-  if (deletable.length > 0) {
-    const db = getWriteQueueDB();
-    await db.operations.bulkDelete(deletable.map((op) => op.id!));
-  }
-  return deletable.length;
+  const db = getWriteQueueDB();
+  return db.transaction("rw", db.operations, async () => {
+    const matching = (await db.operations
+      .where("[entityType+entityId]")
+      .equals([entityType, entityId])
+      .toArray()).filter((op) => op.operation === operationType);
+    let deleted = 0;
+    for (const operation of matching) {
+      const current = operation.id === undefined ? undefined : await db.operations.get(operation.id);
+      if (current?.status !== "syncing") {
+        await db.operations.delete(operation.id!);
+        deleted += 1;
+      }
+    }
+    const skipped = matching.length - deleted;
+    if (skipped > 0) {
+      console.warn(
+        `⚠️ [SYNC] deleteOperationsByType: skipped ${skipped} in-flight '${operationType}' op(s) for ${entityId.slice(0, 8)}`,
+      );
+    }
+    return deleted;
+  });
 }
 
 /**
@@ -708,28 +730,32 @@ export async function getFailedOperations(): Promise<WriteOperation[]> {
 export async function recoverStaleSyncing(maxAgeMs = 60_000): Promise<number> {
   const db = getWriteQueueDB();
   const cutoff = Date.now() - Math.max(maxAgeMs, 60_000);
-
-  const staleOps = await db.operations
-    .where("status")
-    .equals("syncing")
-    .filter((op) => !op.lastAttemptAt || op.lastAttemptAt < cutoff)
-    .toArray();
-
-  if (staleOps.length > 0) {
-    for (const op of staleOps) {
-      if (op.id) {
-        await updateOperation(op.id, {
+  const recovered = await db.transaction("rw", db.operations, async () => {
+    const staleOps = await db.operations
+      .where("status")
+      .equals("syncing")
+      .filter((op) => !op.lastAttemptAt || op.lastAttemptAt < cutoff)
+      .toArray();
+    let count = 0;
+    for (const candidate of staleOps) {
+      const current = candidate.id === undefined ? undefined : await db.operations.get(candidate.id);
+      if (current?.status === "syncing" && (!current.lastAttemptAt || current.lastAttemptAt < cutoff)) {
+        await db.operations.update(candidate.id!, {
           status: "pending",
-          retryCount: op.retryCount + 1,
+          retryCount: current.retryCount + 1,
         });
+        count += 1;
       }
     }
+    return count;
+  });
+
+  if (recovered > 0) {
     console.warn(
-      `⚠️ [SYNC] BUG-1301: Recovered ${staleOps.length} stale syncing operation(s) back to pending`,
+      `⚠️ [SYNC] BUG-1301: Recovered ${recovered} stale syncing operation(s) back to pending`,
     );
   }
-
-  return staleOps.length;
+  return recovered;
 }
 
 /**
@@ -759,25 +785,14 @@ export async function clearFailedOperations(): Promise<number> {
   // BUG-1301: Also clear 'syncing' operations — these are stuck from a previous
   // session crash and will never complete. Previously only cleared 'failed' and
   // 'conflict', leaving orphaned 'syncing' ops stuck forever.
-  const toDelete = allOps.filter((op) => {
-    const isStuckGenericOperation =
+  const toDelete = allOps.filter(
+    (op) =>
       !op.canonicalTaskPatch &&
       (op.status === "failed" ||
         op.status === "conflict" ||
         op.status === "syncing" ||
-        op.retryCount >= 10);
-    const isPermanentlyFailedCanonicalOperation =
-      Boolean(
-        op.canonicalTaskPatch &&
-          op.status === "failed" &&
-          op.lastError &&
-          classifyError(op.lastError) === "permanent",
-      );
-
-    // Canonical operations retain their durable identity while recoverable.
-    // Explicit discard may remove only failures that cannot be retried safely.
-    return isStuckGenericOperation || isPermanentlyFailedCanonicalOperation;
-  });
+        op.retryCount >= 10), // Also clear anything stuck after 10+ retries
+  );
 
   if (toDelete.length > 0) {
     const ids = toDelete.map((op) => op.id!).filter((id) => id !== undefined);

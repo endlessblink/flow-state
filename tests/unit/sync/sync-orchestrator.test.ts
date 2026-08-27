@@ -73,7 +73,7 @@ const rpcMock = vi.hoisted(() => vi.fn())
 const writeQueueMocks = vi.hoisted(() => ({
   enqueueOperation: vi.fn(),
   getPendingOperations: vi.fn().mockResolvedValue([]),
-  markSyncing: vi.fn(),
+  markSyncing: vi.fn().mockResolvedValue(true),
   markCompleted: vi.fn(),
   markFailed: vi.fn(),
   markConflict: vi.fn(),
@@ -1903,7 +1903,7 @@ describe('Conflict resolution (LWW)', () => {
   it.each([
     ['task', 1850],
     ['group', 1851]
-  ] as const)('entity not found (PGRST116) on %s UPDATE → discards update, returns success (BUG-1211)', async (entityType, operationId) => {
+  ] as const)('entity not found (PGRST116) on %s UPDATE → quarantines the update for manual resolution', async (entityType, operationId) => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const op = makeOp({
       id: operationId,
@@ -1946,10 +1946,13 @@ describe('Conflict resolution (LWW)', () => {
     expect(chain.eq).toHaveBeenCalledWith('id', `${entityType}-missing-on-server`)
     expect(chain.eq).toHaveBeenCalledWith('position_version', 7)
     expect(chain.single).toHaveBeenCalledTimes(1)
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(operationId)
-    expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(
+      operationId,
+      expect.stringContaining('authoritative projection'),
+      expect.any(Number),
+    )
     expect(writeQueueMocks.markConflict).not.toHaveBeenCalled()
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not found on server'))
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('authoritative projection'))
 
     warnSpy.mockRestore()
   })
@@ -2089,10 +2092,6 @@ describe('Error classification and retry strategy', () => {
     expect(classifyError(new Error('Entity not found'))).toBe('permanent')
   })
 
-  it('missing authoritative projection quarantine → no retry', () => {
-    expect(classifyError(new Error('Task no longer exists in the authoritative projection; local update preserved for manual resolution'))).toBe('permanent')
-  })
-
   it('constraint violation → permanent', () => {
     expect(classifyError(new Error('violates foreign key constraint'))).toBe('permanent')
   })
@@ -2162,25 +2161,6 @@ describe('useSyncOrchestrator composable return shape', () => {
       status: 'pending',
       nextRetryAt: undefined,
     })
-  })
-
-  it('does not retry a quarantined update for a task missing from the authoritative projection', async () => {
-    const missingTask = makeOp({
-      id: 304,
-      status: 'failed',
-      retryCount: 2,
-      nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
-      lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
-    })
-    writeQueueMocks.getFailedOperations.mockResolvedValue([missingTask])
-
-    const sync = useSyncOrchestrator()
-    await vi.advanceTimersByTimeAsync(0)
-    writeQueueMocks.updateOperation.mockClear()
-
-    await sync.retryFailed()
-
-    expect(writeQueueMocks.updateOperation).not.toHaveBeenCalled()
   })
 
   it('remote repair retries only the requested failed entity ids', async () => {
@@ -2780,6 +2760,23 @@ describe('processQueue guards', () => {
         value: originalLocks,
       })
     }
+  })
+
+  it('does not execute or complete an operation after losing its queue claim', async () => {
+    writeQueueMocks.markSyncing.mockResolvedValue(false)
+    const op = makeOp({ id: 1957 })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed',
+    })
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(rpcMock).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1957)
   })
 
   it('surfaces a lock-service failure while retaining queued changes for retry', async () => {

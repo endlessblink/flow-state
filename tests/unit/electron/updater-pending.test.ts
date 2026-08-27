@@ -11,6 +11,8 @@ import {
   pendingUpdateFailureVersion,
   clearResolvedPendingUpdateFailure,
   recordPendingUpdateFailure,
+  readPendingUpdateFailure,
+  shouldSuppressAutomaticRetry,
 } from '../../../electron/updater-pending'
 
 const tempDirs: string[] = []
@@ -97,5 +99,89 @@ describe('Electron pending update recovery', () => {
 
     expect(clearResolvedPendingUpdateFailure('1.4.331', cacheHome)).toBe(true)
     expect(pendingUpdateFailureVersion(cacheHome)).toBeNull()
+  })
+
+  it('cleans a malformed but clearly stale version marker without touching newer markers', () => {
+    const cacheHome = makeCacheHome()
+    writeFileSync(pendingUpdateFailurePath(cacheHome), '{"version":"1.4.331","attemptCount":oops}\n')
+
+    expect(clearResolvedPendingUpdateFailure('1.4.331', cacheHome)).toBe(true)
+    expect(existsSync(pendingUpdateFailurePath(cacheHome))).toBe(false)
+
+    writeFileSync(pendingUpdateFailurePath(cacheHome), '{"version":"1.4.332","attemptCount":oops}\n')
+    expect(clearResolvedPendingUpdateFailure('1.4.331', cacheHome)).toBe(false)
+    expect(existsSync(pendingUpdateFailurePath(cacheHome))).toBe(true)
+  })
+
+  it('stores an inspectable failure receipt and increases the retry delay', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const fileName = 'FlowState-1.4.337-x86_64.AppImage'
+    writePending(pending, fileName)
+
+    recordPendingUpdateFailure('hash mismatch', cacheHome, {
+      errorClass: 'verification',
+      artifactUrl: 'https://in-theflow.com/updates/electron/FlowState-1.4.337-x86_64.AppImage',
+      digest: 'sha512:expected',
+      now: new Date('2026-08-26T10:00:00.000Z'),
+    })
+    const first = readPendingUpdateFailure(cacheHome)!
+    recordPendingUpdateFailure('installer failed', cacheHome, {
+      errorClass: 'installer',
+      artifactUrl: first.artifactUrl,
+      digest: first.digest,
+      now: new Date('2026-08-26T10:01:00.000Z'),
+    })
+    const second = readPendingUpdateFailure(cacheHome)!
+
+    expect(first).toMatchObject({
+      version: '1.4.337',
+      artifactUrl: 'https://in-theflow.com/updates/electron/FlowState-1.4.337-x86_64.AppImage',
+      digest: 'sha512:expected',
+      errorClass: 'verification',
+      attemptCount: 1,
+    })
+    expect(second.attemptCount).toBe(2)
+    expect(new Date(second.nextRetryAt).getTime()).toBeGreaterThan(new Date(first.nextRetryAt).getTime())
+  })
+
+  it('stops automatic retries after repeated failures but permits a manual retry', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    writePending(pending, 'FlowState-1.4.338-x86_64.AppImage')
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      recordPendingUpdateFailure('readiness failed', cacheHome, {
+        errorClass: 'readiness',
+        now: new Date(`2026-08-26T10:0${attempt}:00.000Z`),
+      })
+    }
+
+    const failure = readPendingUpdateFailure(cacheHome)!
+    expect(failure.attemptCount).toBe(3)
+    expect(shouldSuppressAutomaticRetry(failure, new Date('2026-08-26T12:00:00.000Z'))).toBe(true)
+    expect(clearBlockedPendingUpdate('1.4.337', cacheHome).cleared).toBe(true)
+    expect(readPendingUpdateFailure(cacheHome)).toBeNull()
+  })
+
+  it('clears failures for equal or newer installed versions, but keeps a truly newer target', () => {
+    const cacheHome = makeCacheHome()
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.340',
+      artifactUrl: 'FlowState-1.4.340-x86_64.AppImage',
+      digest: 'digest',
+      errorClass: 'installer',
+      attemptCount: 1,
+      failedAt: '2026-08-26T10:00:00.000Z',
+      nextRetryAt: '2026-08-26T10:05:00.000Z',
+    }))
+    expect(clearResolvedPendingUpdateFailure('1.4.340', cacheHome)).toBe(true)
+
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.341', artifactUrl: 'FlowState-1.4.341-x86_64.AppImage', digest: 'digest',
+      errorClass: 'installer', attemptCount: 1, failedAt: '2026-08-26T10:00:00.000Z',
+      nextRetryAt: '2026-08-26T10:05:00.000Z',
+    }))
+    expect(clearResolvedPendingUpdateFailure('1.4.340', cacheHome)).toBe(false)
+    expect(pendingUpdateFailureVersion(cacheHome)).toBe('1.4.341')
   })
 })

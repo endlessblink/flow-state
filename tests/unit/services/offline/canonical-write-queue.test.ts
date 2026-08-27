@@ -68,6 +68,17 @@ describe('canonical write queue durability', () => {
     })
   })
 
+  it('claims a queued operation only once', async () => {
+    const operation = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-claim',
+      payload: { title: 'Claim me' }, userId: 'user-1', workspaceId: null,
+    })
+
+    await expect(markSyncing(operation.id!)).resolves.toBe(true)
+    await expect(markSyncing(operation.id!)).resolves.toBe(false)
+    await expect(getWriteQueueDB().operations.get(operation.id!)).resolves.toMatchObject({ status: 'syncing' })
+  })
+
   it('atomically stores canonical proof before completing the queue row', async () => {
     const op = await enqueueOperation({
       entityType: 'task',
@@ -437,40 +448,6 @@ describe('canonical write queue durability', () => {
     expect(await clearFailedOperations()).toBe(0)
     expect(await getWriteQueueDB().operations.get(op.id!)).toBeDefined()
     expect(await getConflicts()).toHaveLength(1)
-  })
-
-  it('discards permanently quarantined canonical writes when the user clears failed operations', async () => {
-    const op = await enqueueOperation({
-      entityType: 'task', operation: 'update', entityId: 'deleted-task',
-      payload: { title: 'Preserve locally' }, userId: 'user-1', workspaceId: null,
-      canonicalTaskPatch: {
-        contractVersion: 'task-v1', operationId: 'web:deleted-task', baseRevision: 1,
-        patch: { title: 'Preserve locally' }, phase: 'queued',
-      },
-    })
-    await markFailed(
-      op.id!,
-      'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
-      Date.now() + 365 * 24 * 60 * 60 * 1000,
-    )
-
-    expect(await clearFailedOperations()).toBe(1)
-    expect(await getWriteQueueDB().operations.get(op.id!)).toBeUndefined()
-  })
-
-  it('preserves retryable canonical writes when clearing failed operations', async () => {
-    const op = await enqueueOperation({
-      entityType: 'task', operation: 'update', entityId: 'offline-task',
-      payload: { title: 'Retry me' }, userId: 'user-1', workspaceId: null,
-      canonicalTaskPatch: {
-        contractVersion: 'task-v1', operationId: 'web:offline-task', baseRevision: 1,
-        patch: { title: 'Retry me' }, phase: 'queued',
-      },
-    })
-    await markFailed(op.id!, 'network request failed', Date.now() + 1_000)
-
-    expect(await clearFailedOperations()).toBe(0)
-    expect(await getWriteQueueDB().operations.get(op.id!)).toBeDefined()
   })
 
   it('includes unresolved conflicts in the operations shown by the sync error popover', async () => {

@@ -1,7 +1,7 @@
 import { ipcMain, app, BrowserWindow, utilityProcess, type UtilityProcess } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from 'fs'
-import { randomBytes } from 'crypto'
+import { randomBytes, randomUUID } from 'crypto'
 
 /**
  * Local Task API (TASK-1797) — Electron side.
@@ -167,6 +167,8 @@ function spawnChild() {
         FLOW_STATE_API_PORT: String(config.port),
         FLOW_STATE_API_DATA_DIR: app.getPath('userData'),
         FLOW_STATE_APP_VERSION: app.getVersion(),
+        FLOW_STATE_INSTANCE_ID: randomUUID(),
+        FLOW_STATE_PARENT_PID: String(process.pid),
       },
     })
   } catch (error) {
@@ -356,8 +358,9 @@ function startChild() {
     return
   }
   desiredRunning = true
-  // Persisted settings are read while IPC handlers are registered, before the
-  // app-ready event. utilityProcess.fork is only legal after Electron is ready.
+  // registerLocalApiHandlers runs before app.whenReady(), while the persisted
+  // enabled setting must still start the sidecar on a normal restart. Defer
+  // the first reconcile until Electron can legally create utility processes.
   if (!app.isReady()) {
     if (!startAfterReadyScheduled) {
       startAfterReadyScheduled = true

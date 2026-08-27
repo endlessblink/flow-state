@@ -339,6 +339,21 @@ describe('cacheTasks / getCachedTasks', () => {
     ])
   })
 
+  it('keeps a durable update queued when its base task is temporarily absent', async () => {
+    await getWriteQueueDB().operations.add({
+      status: 'pending', retryCount: 0, createdAt: Date.now(),
+      entityType: 'task', operation: 'update', entityId: 'task-not-loaded',
+      payload: { title: 'Queued while loading' }, userId: 'user-1', workspaceId: null,
+    })
+
+    await expect(overlayPendingTaskWrites([], {
+      scope: { userId: 'user-1', workspaceId: null },
+    })).resolves.toEqual({ tasks: [], pendingTaskIds: new Set() })
+    await expect(getWriteQueueDB().operations.toArray()).resolves.toEqual([
+      expect.objectContaining({ entityId: 'task-not-loaded', status: 'pending' }),
+    ])
+  })
+
   it('repairs a legacy personal task operation for the matching authenticated user', async () => {
     const task = makeTask({ id: 'task-legacy-personal' })
     await getWriteQueueDB().operations.add({

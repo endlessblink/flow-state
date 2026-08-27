@@ -20,6 +20,9 @@ AS $$
   SELECT pg_catalog.jsonb_build_object(
     'id', task.id,
     'title', task.title,
+     'description', task.description,
+     'priority', task.priority,
+     'progress', task.progress,
     'status', CASE WHEN task.status = 'done' THEN 'done' ELSE 'todo' END,
     'completedAt', task.completed_at,
     'dueDate', task.due_date,

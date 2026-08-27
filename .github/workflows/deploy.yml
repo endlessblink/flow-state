@@ -34,7 +34,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.22.0'
           cache: 'npm'
 
       - name: Install Dependencies
@@ -78,32 +78,9 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
 
-      # Electron packaging performs its own build and may replace dist with the
-      # desktop-shaped output. Rebuild the PWA from this same checkout last so
-      # static deployment cannot publish an Electron-shaped surface or lose sw.js.
-      - name: Rebuild PWA release surface after Electron packaging
-        run: |
-            npm run build
-            ./scripts/deploy/verify-build.sh dist
-            ./scripts/deploy/validate-manifest.sh dist/manifest.webmanifest
-            node scripts/create-flowstate-release-receipt.cjs "$PWD" "$PWD/release/flowstate-release-receipt.json"
-        env:
-          NODE_ENV: production
-
-      # Deploy static files to production (NOT Docker!)
-      # System Caddy serves from /var/www/flowstate
-      - name: Deploy Static Files
-        run: |
-            # Deploy built files to web root
-            # --exclude='updates/' preserves Tauri auto-updater artifacts (FEATURE-1194)
-            rsync -avz --delete --exclude='updates/' \
-              ./dist/ \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/
-
-            scp ./release/flowstate-release-receipt.json \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/.release-receipt.json.tmp
-            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-              "mv -f /var/www/flowstate/.release-receipt.json.tmp /var/www/flowstate/release-receipt.json && cp -f /var/www/flowstate/release-receipt.json /var/www/flowstate/updates/electron/flowstate-release-receipt.json"
+      # The canonical deploy script stages the PWA, Electron artifacts, and
+      # receipt together and promotes them under one remote lock. Do not add a
+      # second static rsync here: it would reintroduce release drift.
 
       - name: Verify unified release receipt
         run: |

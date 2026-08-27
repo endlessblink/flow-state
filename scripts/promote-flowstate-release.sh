@@ -49,7 +49,7 @@ if (manifestArtifacts.length !== receiptArtifacts.length || manifestArtifacts.so
 }
 for (const artifact of receipt.artifacts) {
   if (!/^[A-Za-z0-9._-]+$/.test(artifact.name)) throw new Error(`unsafe artifact name: ${artifact.name}`)
-  if (!/^[0-9a-f]{64}$/.test(artifact.sha256) || !Number.isSafeInteger(artifact.size) || artifact.size < 0) {
+  if (!/^[0-9a-f]{64}$/.test(artifact.sha256) || typeof artifact.sha512 !== 'string' || artifact.sha512.length === 0 || !Number.isSafeInteger(artifact.size) || artifact.size < 0) {
     throw new Error(`invalid artifact receipt: ${artifact.name}`)
   }
   const path = require('path').join(require('path').dirname(manifestPath), artifact.name)
@@ -57,6 +57,8 @@ for (const artifact of receipt.artifacts) {
   if (stat.size !== artifact.size) throw new Error(`artifact size mismatch: ${artifact.name}`)
   const hash = require('crypto').createHash('sha256').update(fs.readFileSync(path)).digest('hex')
   if (hash !== artifact.sha256) throw new Error(`artifact hash mismatch: ${artifact.name}`)
+  const sha512 = require('crypto').createHash('sha512').update(fs.readFileSync(path)).digest('base64')
+  if (sha512 !== artifact.sha512) throw new Error(`artifact SHA-512 mismatch: ${artifact.name}`)
 }
 if (!receipt.web || !Number.isSafeInteger(receipt.web.fileCount) || receipt.web.fileCount <= 0 || !/^[0-9a-f]{64}$/.test(receipt.web.sha256)) {
   throw new Error('invalid web receipt')

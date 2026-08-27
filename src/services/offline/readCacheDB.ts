@@ -367,14 +367,16 @@ export async function overlayPendingTaskWrites(
     })
     .sort((a, b) => a.createdAt - b.createdAt)
 
-  const pendingTaskIds = new Set(pendingOps.map(op => op.entityId))
+  const pendingTaskIds = new Set<string>()
   const taskMap = new Map(baseTasks.map(task => [task.id, task]))
   const fallbackMap = new Map((options.fallbackTasks ?? []).map(task => [task.id, task]))
   const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
+  const { updateOperation } = await import('@/services/offline/writeQueueDB')
 
   for (const op of pendingOps) {
     if (op.operation === 'delete') {
       taskMap.delete(op.entityId)
+      pendingTaskIds.add(op.entityId)
       continue
     }
     if (op.operation === 'create') {
@@ -382,17 +384,22 @@ export async function overlayPendingTaskWrites(
         op.entityId,
         fromSupabaseTask(op.payload as unknown as import('@/utils/supabaseMappers').SupabaseTask),
       )
+      pendingTaskIds.add(op.entityId)
       continue
     }
     const existing = taskMap.get(op.entityId) ?? fallbackMap.get(op.entityId)
     if (!existing) {
-      // A cache miss can be temporary while the canonical task snapshot is
-      // loading. Keep the durable operation queued and omit only its overlay;
-      // throwing here turns a recoverable cache miss into a renderer crash.
-      pendingTaskIds.delete(op.entityId)
+      if (op.id) {
+        await updateOperation(op.id, {
+          status: 'failed',
+          lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
+          nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+        })
+      }
       continue
     }
     taskMap.set(op.entityId, applyPendingTaskPatch(existing, op.payload))
+    pendingTaskIds.add(op.entityId)
   }
 
   return { tasks: [...taskMap.values()], pendingTaskIds }

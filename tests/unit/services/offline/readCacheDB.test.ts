@@ -339,18 +339,31 @@ describe('cacheTasks / getCachedTasks', () => {
     ])
   })
 
-  it('keeps a durable update queued when its base task is temporarily absent', async () => {
+  it('preserves but stops replaying an update with no recoverable task projection', async () => {
     await getWriteQueueDB().operations.add({
-      status: 'pending', retryCount: 0, createdAt: Date.now(),
-      entityType: 'task', operation: 'update', entityId: 'task-not-loaded',
-      payload: { title: 'Queued while loading' }, userId: 'user-1', workspaceId: null,
+      status: 'pending',
+      retryCount: 2,
+      createdAt: Date.now(),
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'missing-task',
+      payload: { title: 'Queued edit must not be lost' },
+      userId: 'user-1',
+      workspaceId: null,
     })
 
-    await expect(overlayPendingTaskWrites([], {
+    const projection = await overlayPendingTaskWrites([], {
       scope: { userId: 'user-1', workspaceId: null },
-    })).resolves.toEqual({ tasks: [], pendingTaskIds: new Set() })
+    })
+
+    expect(projection.tasks).toEqual([])
+    expect(projection.pendingTaskIds).toEqual(new Set())
     await expect(getWriteQueueDB().operations.toArray()).resolves.toEqual([
-      expect.objectContaining({ entityId: 'task-not-loaded', status: 'pending' }),
+      expect.objectContaining({
+        status: 'failed',
+        lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
+        retryCount: 2,
+      }),
     ])
   })
 

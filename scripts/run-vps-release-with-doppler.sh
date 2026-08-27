@@ -13,23 +13,8 @@ if [[ ! -r "$SSH_KEY" ]]; then
   exit 1
 fi
 
-read -r -s -p "Doppler service token: " DOPPLER_TOKEN
-echo
-
-if [[ -z "$DOPPLER_TOKEN" ]]; then
-  echo "A Doppler token is required." >&2
-  exit 1
-fi
-
-export DOPPLER_TOKEN
-
-cleanup() {
-  unset DOPPLER_TOKEN
-}
-trap cleanup EXIT
-
-printf '%s\n' "$DOPPLER_TOKEN" | ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
-  "IFS= read -r DOPPLER_TOKEN; export DOPPLER_TOKEN; export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; cd '${REMOTE_REPO}'; /usr/bin/doppler run -- '${NODE_BIN}/npm' run electron:build:locked"
+ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
+  "set -a; . /etc/flowstate/doppler-release.env; set +a; export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; cd '${REMOTE_REPO}'; /usr/bin/doppler run -- '${NODE_BIN}/npm' run electron:build:locked"
 
 ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
   "export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; cd '${REMOTE_REPO}'; bash scripts/promote-flowstate-release.sh /var/www/flowstate '${REMOTE_REPO}/dist' '${REMOTE_REPO}/release' '${REMOTE_REPO}/release/flowstate-release-receipt.json'"

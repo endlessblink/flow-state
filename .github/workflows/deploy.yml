@@ -96,8 +96,23 @@ jobs:
             # Deploy built files to web root
             # --exclude='updates/' preserves Tauri auto-updater artifacts (FEATURE-1194)
             rsync -avz --delete --exclude='updates/' \
+              --exclude='release-receipt.json' \
               ./dist/ \
               ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/
+
+      # The receipt is promoted by the unified release transaction and must
+      # survive the static PWA sync; verify the public boundary before moving on.
+      - name: Verify unified release receipt
+        run: |
+            MANIFEST=$(curl -fsS "${{ vars.SITE_URL }}/updates/electron/latest-linux.yml")
+            RECEIPT=$(curl -fsS "${{ vars.SITE_URL }}/release-receipt.json")
+            MANIFEST_VERSION=$(printf '%s\n' "$MANIFEST" | awk '/^version:/{print $2; exit}')
+            RECEIPT_VERSION=$(printf '%s\n' "$RECEIPT" | jq -r '.version')
+            if [ -z "$MANIFEST_VERSION" ] || [ "$MANIFEST_VERSION" = "null" ] || [ "$MANIFEST_VERSION" != "$RECEIPT_VERSION" ]; then
+              echo "Release receipt does not match the public updater"
+              exit 1
+            fi
+            printf 'Verified public unified release: %s\n' "$MANIFEST_VERSION"
 
       # Apply and verify the P-013 canonical task contract against the same
       # production Postgres used by the deployed FlowState instance. The SQL

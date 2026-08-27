@@ -18,8 +18,11 @@ if [[ -z "$token" ]]; then
   exit 1
 fi
 
+ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
+  "set -e; install -d -m 700 \"$(dirname '${REMOTE_SECRET_FILE}')\"; test -d '${REMOTE_SECRET_FILE%/*}'"
+
 printf '%s\n' "$token" | ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
-  "set -e; umask 077; install -d -m 700 \"$(dirname '${REMOTE_SECRET_FILE}')\"; IFS= read -r token; test -n \"\$token\"; printf 'DOPPLER_TOKEN=%s\\n' \"\$token\" > '${REMOTE_SECRET_FILE}.tmp'; chmod 600 '${REMOTE_SECRET_FILE}.tmp'; mv '${REMOTE_SECRET_FILE}.tmp' '${REMOTE_SECRET_FILE}'; test \"\$(stat -c %a '${REMOTE_SECRET_FILE}')\" = 600"
+  "set -e; umask 077; IFS= read -r token; test -n \"\$token\"; printf 'DOPPLER_TOKEN=%s\\n' \"\$token\" > '${REMOTE_SECRET_FILE}.tmp'; chmod 600 '${REMOTE_SECRET_FILE}.tmp'; mv '${REMOTE_SECRET_FILE}.tmp' '${REMOTE_SECRET_FILE}'; test \"\$(stat -c %a '${REMOTE_SECRET_FILE}')\" = 600"
 
 unset token
 echo "Doppler credential stored on the VPS. Future release runs will reuse it automatically."

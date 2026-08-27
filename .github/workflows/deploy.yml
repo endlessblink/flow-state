@@ -83,9 +83,10 @@ jobs:
       # static deployment cannot publish an Electron-shaped surface or lose sw.js.
       - name: Rebuild PWA release surface after Electron packaging
         run: |
-          npm run build
-          ./scripts/deploy/verify-build.sh dist
-          ./scripts/deploy/validate-manifest.sh dist/manifest.webmanifest
+            npm run build
+            ./scripts/deploy/verify-build.sh dist
+            ./scripts/deploy/validate-manifest.sh dist/manifest.webmanifest
+            node scripts/create-flowstate-release-receipt.cjs "$PWD" "$PWD/release/flowstate-release-receipt.json"
         env:
           NODE_ENV: production
 
@@ -99,6 +100,11 @@ jobs:
               --exclude='release-receipt.json' \
               ./dist/ \
               ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/
+
+            scp ./release/flowstate-release-receipt.json \
+              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/.release-receipt.json.tmp
+            ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+              "mv -f /var/www/flowstate/.release-receipt.json.tmp /var/www/flowstate/release-receipt.json && cp -f /var/www/flowstate/release-receipt.json /var/www/flowstate/updates/electron/flowstate-release-receipt.json"
 
       # The receipt is promoted by the unified release transaction and must
       # survive the static PWA sync; verify the public boundary before moving on.

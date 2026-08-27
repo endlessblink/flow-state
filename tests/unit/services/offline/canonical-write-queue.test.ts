@@ -472,6 +472,27 @@ describe('canonical write queue durability', () => {
     expect(await getConflicts()).toHaveLength(1)
   })
 
+  it('discards explicitly quarantined canonical failures but never live syncing work', async () => {
+    const canonical = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-quarantined',
+      payload: { title: 'Discard me' }, userId: 'user-1', workspaceId: null,
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:quarantined', baseRevision: 1,
+        patch: { title: 'Discard me' }, phase: 'queued',
+      },
+    })
+    await markFailed(canonical.id!, 'invalid_canonical_preview', Date.now() + 365 * 24 * 60 * 60 * 1000)
+    const syncing = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-live',
+      payload: { title: 'Keep me' }, userId: 'user-1', workspaceId: null,
+    })
+    await markSyncing(syncing.id!)
+
+    expect(await clearFailedOperations()).toBe(1)
+    expect(await getWriteQueueDB().operations.get(canonical.id!)).toBeUndefined()
+    expect(await getWriteQueueDB().operations.get(syncing.id!)).toMatchObject({ status: 'syncing' })
+  })
+
   it('includes unresolved conflicts in the operations shown by the sync error popover', async () => {
     const op = await enqueueOperation({
       entityType: 'task', operation: 'update', entityId: 'task-1',

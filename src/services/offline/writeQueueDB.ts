@@ -200,7 +200,7 @@ export async function repairLegacyOperationScope(scope: {
   const table = getWriteQueueDB().operations;
   const candidates = await table
     .where("status")
-    .anyOf(["pending", "failed", "syncing"])
+    .anyOf(["pending", "failed"])
     .toArray();
   let repaired = 0;
 
@@ -594,7 +594,10 @@ export async function markConflict(
   const db = getWriteQueueDB();
   return db.transaction("rw", db.operations, db.conflicts, async () => {
     const operation = await db.operations.get(id);
-    if (!operation) throw new Error(`Operation ${id} not found`);
+  if (!operation) throw new Error(`Operation ${id} not found`);
+  if (operation.status === "syncing" && !syncClaimToken) {
+    throw new Error(`Operation ${id} is actively claimed`);
+  }
     if (syncClaimToken && operation.syncClaimToken !== syncClaimToken) {
       throw new Error(`Operation ${id} claim is no longer current`);
     }
@@ -807,13 +810,24 @@ export async function clearFailedOperations(): Promise<number> {
   // BUG-1301: Also clear 'syncing' operations — these are stuck from a previous
   // session crash and will never complete. Previously only cleared 'failed' and
   // 'conflict', leaving orphaned 'syncing' ops stuck forever.
+  const isDiscardableCanonicalFailure = (op: WriteOperation) => {
+    const message = op.lastError?.toLowerCase() ?? "";
+    return op.status === "failed" && (
+      message.includes("invalid_canonical_preview") ||
+      message.includes("authoritative projection") ||
+      message.includes("preserved for manual resolution") ||
+      message.includes("queue_scope_") ||
+      message.includes("not_authenticated") ||
+      message.includes("task no longer exists")
+    );
+  };
   const toDelete = allOps.filter(
     (op) =>
-      !op.canonicalTaskPatch &&
+      (op.status !== "syncing") &&
+      (!op.canonicalTaskPatch || isDiscardableCanonicalFailure(op)) &&
       (op.status === "failed" ||
         op.status === "conflict" ||
-        op.status === "syncing" ||
-        op.retryCount >= 10), // Also clear anything stuck after 10+ retries
+        op.retryCount >= 10),
   );
 
   if (toDelete.length > 0) {

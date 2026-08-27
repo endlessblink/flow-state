@@ -7,6 +7,19 @@ set -euo pipefail
 TARGET_DIR="${1:?target directory required}"
 STAGE_DIR="${2:?stage directory required}"
 GUARD="$STAGE_DIR/electron-release-collision-guard.cjs"
+RECEIPT="$STAGE_DIR/flowstate-release-receipt.json"
+
+test -s "$RECEIPT"
+node - "$RECEIPT" "$STAGE_DIR/latest-linux.yml" <<'NODE'
+const fs = require('node:fs')
+const [receiptPath, manifestPath] = process.argv.slice(2)
+const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'))
+const manifest = fs.readFileSync(manifestPath, 'utf8')
+const version = manifest.match(/^version:\s*(\S+)$/m)?.[1]
+if (receipt.schemaVersion !== 'flowstate-release-receipt-v1') throw new Error('invalid release receipt schema')
+if (receipt.version !== version) throw new Error(`receipt/manifest mismatch: ${receipt.version}/${version}`)
+if (receipt.source?.dirty === true) throw new Error('dirty release receipt')
+NODE
 
 mapfile -t ARTIFACTS < <(
   node "$GUARD" \
@@ -24,6 +37,10 @@ fi
 for artifact in "${ARTIFACTS[@]}"; do
   mv -f -- "$STAGE_DIR/$artifact" "$TARGET_DIR/$artifact"
 done
+
+# The receipt is published before the manifest so the manifest remains the final
+# visibility switch for the complete release transaction.
+cp -f -- "$RECEIPT" "$(dirname "$TARGET_DIR")/release-receipt.json"
 
 # Publish this last: clients never observe a manifest before its files exist.
 mv "$STAGE_DIR/latest-linux.yml" "$TARGET_DIR/latest-linux.yml"

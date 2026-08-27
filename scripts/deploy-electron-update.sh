@@ -23,7 +23,7 @@ if [[ "${FLOWSTATE_DOPPLER_ACTIVE:-}" != "1" ]]; then
     echo "ERROR: Doppler is required for production Electron deployment." >&2
     exit 1
   fi
-  exec doppler run -- env FLOWSTATE_DOPPLER_ACTIVE=1 "$0" "$@"
+  exec doppler run -- env FLOWSTATE_DOPPLER_ACTIVE=1 NODE_ENV= npm_config_production=false npm_config_omit= "$0" "$@"
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

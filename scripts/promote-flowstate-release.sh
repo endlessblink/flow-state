@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Promote the public web/PWA and Electron updater from one validated receipt.
+set -euo pipefail
+
+TARGET_ROOT="${1:?public root required}"
+PWA_STAGE="${2:?staged PWA directory required}"
+ELECTRON_STAGE="${3:?staged Electron directory required}"
+RECEIPT="${4:?release receipt required}"
+
+command -v flock >/dev/null
+command -v node >/dev/null
+test -s "$RECEIPT"
+test -d "$PWA_STAGE"
+test -d "$ELECTRON_STAGE"
+
+VERSION="$(node -e 'const r=require(process.argv[1]); if(!/^\d+\.\d+\.\d+$/.test(r.version)) process.exit(2); process.stdout.write(r.version)' "$RECEIPT")"
+UPDATES="$TARGET_ROOT/updates/electron"
+LOCK="$TARGET_ROOT/.release.lock"
+STAGE="/var/tmp/flowstate-release-transaction-$VERSION-$$"
+
+exec 9>"$LOCK"
+flock -x 9
+cleanup() { rm -rf -- "$STAGE"; }
+trap cleanup EXIT
+
+mkdir -p "$UPDATES" "$STAGE/pwa" "$STAGE/electron"
+cp -a "$PWA_STAGE/." "$STAGE/pwa/"
+cp -a "$ELECTRON_STAGE/." "$STAGE/electron/"
+cp -- "$RECEIPT" "$STAGE/release-receipt.json"
+
+node - "$STAGE/release-receipt.json" "$STAGE/electron/latest-linux.yml" <<'NODE'
+const fs = require('fs')
+const [receiptPath, manifestPath] = process.argv.slice(2)
+const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'))
+const manifest = fs.readFileSync(manifestPath, 'utf8')
+const version = manifest.match(/^version:\s*(\S+)$/m)?.[1]
+if (version !== receipt.version) throw new Error(`receipt/manifest version mismatch: ${version}/${receipt.version}`)
+if (receipt.source?.dirty === true) throw new Error('refusing dirty source receipt')
+if (!Array.isArray(receipt.artifacts) || receipt.artifacts.length === 0) throw new Error('receipt has no artifacts')
+for (const artifact of receipt.artifacts) {
+  if (!/^[A-Za-z0-9._-]+$/.test(artifact.name)) throw new Error(`unsafe artifact name: ${artifact.name}`)
+  const path = require('path').join(require('path').dirname(manifestPath), artifact.name)
+  const stat = fs.statSync(path)
+  if (stat.size !== artifact.size) throw new Error(`artifact size mismatch: ${artifact.name}`)
+  const hash = require('crypto').createHash('sha256').update(fs.readFileSync(path)).digest('hex')
+  if (hash !== artifact.sha256) throw new Error(`artifact hash mismatch: ${artifact.name}`)
+}
+NODE
+
+CURRENT="$(awk '/^version:/{print $2; exit}' "$UPDATES/latest-linux.yml" 2>/dev/null || true)"
+node - "$CURRENT" "$VERSION" <<'NODE'
+const [current, next] = process.argv.slice(2)
+const parts = (v) => (v || '0.0.0').split('.').map(Number)
+const a = parts(current), b = parts(next)
+const cmp = a.reduce((result, n, i) => result || Math.sign(b[i] - n), 0)
+if (cmp === 0) throw new Error(`same-version release: ${next}`)
+if (cmp < 0) throw new Error(`downgrade release: ${next} < ${current}`)
+NODE
+
+# Keep one transaction boundary: web/PWA, updater files, and the receipt are
+# copied only while the same lock is held; the updater manifest remains last.
+rsync -a --delete --exclude updates --exclude .release.lock "$STAGE/pwa/" "$TARGET_ROOT/"
+for artifact in "$STAGE/electron"/*; do
+  [ -f "$artifact" ] || continue
+  [ "$(basename "$artifact")" = latest-linux.yml ] || cp -f -- "$artifact" "$UPDATES/"
+done
+cp -f -- "$STAGE/release-receipt.json" "$TARGET_ROOT/release-receipt.json"
+cp -f -- "$STAGE/electron/latest-linux.yml" "$UPDATES/latest-linux.yml"
+echo "promoted FlowState $VERSION across web/PWA/Electron"

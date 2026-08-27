@@ -339,6 +339,34 @@ describe('cacheTasks / getCachedTasks', () => {
     ])
   })
 
+  it('preserves but stops replaying an update with no recoverable task projection', async () => {
+    await getWriteQueueDB().operations.add({
+      status: 'pending',
+      retryCount: 2,
+      createdAt: Date.now(),
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'missing-task',
+      payload: { title: 'Queued edit must not be lost' },
+      userId: 'user-1',
+      workspaceId: null,
+    })
+
+    const projection = await overlayPendingTaskWrites([], {
+      scope: { userId: 'user-1', workspaceId: null },
+    })
+
+    expect(projection.tasks).toEqual([])
+    expect(projection.pendingTaskIds).toEqual(new Set())
+    await expect(getWriteQueueDB().operations.toArray()).resolves.toEqual([
+      expect.objectContaining({
+        status: 'failed',
+        lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
+        retryCount: 2,
+      }),
+    ])
+  })
+
   it('repairs a legacy personal task operation for the matching authenticated user', async () => {
     const task = makeTask({ id: 'task-legacy-personal' })
     await getWriteQueueDB().operations.add({

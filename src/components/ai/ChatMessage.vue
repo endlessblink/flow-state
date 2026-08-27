@@ -371,11 +371,11 @@ function weeklyPlanTaskIds(rec: WeeklyPlanRecommendation): string[] {
     .filter(taskId => !dismissedCardTaskIds.value.has(taskId))
 }
 
-function weeklyPlanPrimaryTaskIds(rec: WeeklyPlanRecommendation): string[] {
+function _weeklyPlanPrimaryTaskIds(rec: WeeklyPlanRecommendation): string[] {
   return rec.primaryTaskId && !dismissedCardTaskIds.value.has(rec.primaryTaskId) ? [rec.primaryTaskId] : []
 }
 
-function weeklyPlanRelatedChipIds(rec: WeeklyPlanRecommendation): string[] {
+function _weeklyPlanRelatedChipIds(rec: WeeklyPlanRecommendation): string[] {
   return [...new Set(rec.relatedTaskIds ?? [])]
     .filter(taskId => taskId !== rec.primaryTaskId && !dismissedCardTaskIds.value.has(taskId))
     .slice(0, 4)

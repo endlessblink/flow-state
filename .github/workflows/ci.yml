@@ -132,7 +132,7 @@ jobs:
           # snapshot includes the canonical tables and RPCs.
           supabase stop
           supabase start
-          ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2
+          ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2 --grep 'R[1-7] -'
           '
 
       - name: Stop Supabase

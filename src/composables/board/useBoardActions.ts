@@ -14,33 +14,37 @@ interface BoardActionsDependencies {
 /**
  * Convert date column keys to actual date strings
  */
+function formatLocalDateKey(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 export function getDateFromColumnKey(key: string): string | undefined {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
     switch (key) {
         case 'today':
-            return today.toISOString().split('T')[0]
+            return formatLocalDateKey(today)
         case 'tomorrow': {
             const tomorrow = new Date(today)
             tomorrow.setDate(tomorrow.getDate() + 1)
-            return tomorrow.toISOString().split('T')[0]
+            return formatLocalDateKey(tomorrow)
         }
         case 'overdue':
             // For overdue column, set to today (the task is being created as "due today")
-            return today.toISOString().split('T')[0]
+            return formatLocalDateKey(today)
         case 'thisWeek': {
             // End of current week (Sunday)
             const endOfWeek = new Date(today)
             const daysUntilSunday = 7 - today.getDay()
             endOfWeek.setDate(today.getDate() + daysUntilSunday)
-            return endOfWeek.toISOString().split('T')[0]
+            return formatLocalDateKey(endOfWeek)
         }
         case 'later': {
             // Two weeks from today
             const later = new Date(today)
             later.setDate(today.getDate() + 14)
-            return later.toISOString().split('T')[0]
+            return formatLocalDateKey(later)
         }
         case 'inbox':
         case 'noDate':

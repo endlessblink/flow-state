@@ -115,6 +115,21 @@ describe('Electron pending update recovery', () => {
     expect(existsSync(pendingUpdateFailurePath(cacheHome))).toBe(false)
   })
 
+  it('does not delete outside files while clearing a blocked update', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const outside = join(cacheHome, 'FlowState-1.4.336-x86_64.AppImage')
+    writeFileSync(outside, 'must remain')
+    writeFileSync(join(pending, 'update-info.json'), JSON.stringify({ fileName: '../FlowState-1.4.336-x86_64.AppImage' }))
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.336', artifactUrl: '../FlowState-1.4.336-x86_64.AppImage', digest: 'digest', errorClass: 'installer',
+      attemptCount: 1, failedAt: '2026-08-26T10:00:00.000Z', nextRetryAt: '2026-08-26T10:05:00.000Z',
+    }))
+
+    expect(clearBlockedPendingUpdate('1.4.335', cacheHome).cleared).toBe(true)
+    expect(existsSync(outside)).toBe(true)
+  })
+
   it('clears a failure marker once the installed app has reached that version', () => {
     const cacheHome = makeCacheHome()
     writeFileSync(pendingUpdateFailurePath(cacheHome), 'FlowState-1.4.331-x86_64.AppImage\nreadiness\n')

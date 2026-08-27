@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 
 export interface PendingUpdateClearResult {
   cleared: boolean
@@ -190,11 +190,13 @@ export function clearBlockedPendingUpdate(
   const resolvedFileName = fileName || failedFileName
   const pendingVersion = versionFromUpdateFileName(resolvedFileName)
   const failure = readPendingUpdateFailure(cacheHome)
-  const blocked = resolvedFileName.length > 0 && failure?.artifactUrl.split('/').pop() === resolvedFileName
+  const blocked = resolvedFileName.length > 0
+    && failure?.artifactUrl.split('/').pop() === basename(resolvedFileName)
   if (blocked && pendingVersion && compareVersions(pendingVersion, appVersion) > 0) {
     rmSync(updateInfoPath, { force: true })
     rmSync(failurePath, { force: true })
-    rmSync(join(dirname(updateInfoPath), resolvedFileName), { force: true })
+    const updateFilePath = safePendingFilePath(updateInfoPath, resolvedFileName)
+    if (updateFilePath) rmSync(updateFilePath, { force: true })
     return { cleared: true, pendingVersion, updateInfoPath }
   }
 

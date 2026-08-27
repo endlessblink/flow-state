@@ -77,6 +77,9 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+          DOPPLER_PROJECT: flow-state
+          DOPPLER_CONFIG: prd
 
       # The canonical deploy script stages the PWA, Electron artifacts, and
       # receipt together and promotes them under one remote lock. Do not add a

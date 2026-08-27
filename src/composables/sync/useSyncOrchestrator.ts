@@ -212,7 +212,8 @@ const recoverRlsPolicyFailures = async (): Promise<number> => {
   const rlsFailures = failedOps.filter(op =>
     op.id &&
     userOwnedEntities.includes(op.entityType) &&
-    op.lastError?.toLowerCase().includes('row-level security policy')
+    op.lastError?.toLowerCase().includes('row-level security policy') &&
+    op.userId === currentUserId
   )
 
   if (!currentUserId) return 0
@@ -446,18 +447,14 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
   if (userOwnedEntities.includes(entityType)) {
     const currentUserId = await getCurrentAuthUserId()
     if (!currentUserId) {
-      if (operation.canonicalTaskPatch) {
-        return {
-          success: false,
-          operation,
-          error: 'not_authenticated: canonical task patch requires an authenticated user',
-          isAuthError: true,
-          shouldRetry: false,
-          classification: 'auth',
-        }
+      return {
+        success: false,
+        operation,
+        error: 'not_authenticated: queued user-owned intent requires an authenticated user',
+        isAuthError: true,
+        shouldRetry: false,
+        classification: 'auth',
       }
-      console.warn(`[SYNC] Dropping remote ${entityType}:${operation.operation} ${entityId.slice(0, 8)} — no authenticated user for RLS`)
-      return { success: true, operation, serverData: undefined }
     }
     if (!operation.userId || operation.userId !== currentUserId) {
       return {
@@ -868,7 +865,9 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
   if (!operation.id) return undefined
 
   // Mark as syncing
-  await markSyncing(operation.id)
+  // Older queue adapters may not return the claim result; only an explicit
+  // false means another worker owns the operation.
+  if ((await markSyncing(operation.id)) === false) return undefined
 
   // Execute the operation
   const result = await executeOperation(operation)

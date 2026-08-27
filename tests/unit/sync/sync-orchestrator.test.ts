@@ -2776,6 +2776,7 @@ describe('processQueue guards', () => {
     await sync.forceSync()
 
     expect(rpcMock).not.toHaveBeenCalled()
+    expect(supabaseMock.fromMock).not.toHaveBeenCalled()
     expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1957)
   })
 
@@ -2846,8 +2847,8 @@ describe('processQueue guards', () => {
       retryCount: 4,
       nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
       lastError: 'new row violates row-level security policy for table "tasks"',
-      userId: 'stale-user',
-      payload: { title: 'RLS failed task', user_id: 'stale-user' }
+      userId: 'current-user',
+      payload: { title: 'RLS failed task', user_id: 'current-user' }
     })
     writeQueueMocks.getFailedOperations.mockResolvedValue([failedOp])
     writeQueueMocks.getPendingOperations.mockResolvedValue([])
@@ -2866,6 +2867,34 @@ describe('processQueue guards', () => {
       userId: 'current-user',
       payload: expect.objectContaining({ user_id: 'current-user' })
     }))
+  })
+
+  it('does not adopt another account\'s RLS-failed queued task', async () => {
+    authStoreMock.user = { id: 'current-user' } as any
+    const { supabase } = await import('@/services/auth/supabase')
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'fresh-token', user: { id: 'current-user' } } },
+      error: null
+    } as any)
+    const failedOp = makeOp({
+      id: 703,
+      entityType: 'task',
+      operation: 'create',
+      entityId: 'task-other-account',
+      status: 'failed',
+      lastError: 'new row violates row-level security policy for table "tasks"',
+      userId: 'other-user',
+      payload: { title: 'Private other account task', user_id: 'other-user' }
+    })
+    writeQueueMocks.getFailedOperations.mockResolvedValue([failedOp])
+    writeQueueMocks.getPendingOperations.mockResolvedValue([])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(writeQueueMocks.updateOperation).not.toHaveBeenCalledWith(703, expect.anything())
   })
 
   it('leaves RLS-failed queued task operations untouched while no fresh auth session exists', async () => {

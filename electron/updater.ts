@@ -207,6 +207,20 @@ wait_for_direct_port_free() {
   done
   return 1
 }
+wait_for_direct_health_version() {
+  expected_health_version="$1"
+  health_attempt=0
+  while [ "$health_attempt" -lt 300 ]; do
+    health_response=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
+    if printf '%s' "$health_response" | grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
+      echo "known-good app is already healthy after rollback"
+      return 0
+    fi
+    health_attempt=$((health_attempt + 1))
+    sleep 0.2
+  done
+  return 1
+}
   fail_install() {
     echo "FAIL $1"
   record_failure "$1"
@@ -260,6 +274,9 @@ restore_known_good() {
     exit 1
   }
   cleanup_competing_flowstate_processes
+  if [ "$strategy" != "systemd" ] && wait_for_direct_health_version "$known_good_version"; then
+    return 0
+  fi
   restart_supervised_on_failure
   if [ "$strategy" = "systemd" ]; then
     replacement_parent_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)

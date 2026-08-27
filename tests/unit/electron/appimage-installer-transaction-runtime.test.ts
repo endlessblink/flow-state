@@ -162,6 +162,13 @@ describe('supervised AppImage installer transaction runtime', () => {
 
     expect(readFileSync(fixture.target, 'utf8')).toBe('known-good')
     expect(readFileSync(fixture.info, 'utf8')).toBe('{}')
+    const failureReceipt = readFileSync(`${fixture.info}.failed`, 'utf8')
+    expect(failureReceipt).toContain('FlowState-1.4.275-x86_64.AppImage\n')
+    expect(failureReceipt).toContain('version=1.4.275\n')
+    expect(failureReceipt).toContain('artifactUrl=FlowState-1.4.275-x86_64.AppImage\n')
+    expect(failureReceipt).toContain('errorClass=readiness\n')
+    expect(failureReceipt).toContain('reason=supervised readiness\n')
+    expect(failureReceipt).not.toContain('\\n')
     expect(readFileSync(fixture.systemctlLog, 'utf8')).toContain(
       'start flowstate-background.service',
     )
@@ -174,5 +181,6 @@ describe('supervised AppImage installer transaction runtime', () => {
 
     expect(readFileSync(fixture.target, 'utf8')).toBe('known-good')
     expect(readFileSync(fixture.info, 'utf8')).toBe('{}')
+    expect(readFileSync(`${fixture.info}.failed`, 'utf8')).toContain('reason=swap target\n')
   })
 })

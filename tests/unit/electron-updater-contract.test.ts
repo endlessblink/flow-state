@@ -197,7 +197,7 @@ describe('Electron updater restart contract', () => {
   it('allows a slow but healthy AppImage replacement to finish starting', () => {
     const updaterSource = readSource('electron/updater.ts')
 
-    expect(updaterSource.match(/while \[ "\$health_attempt" -lt 300 \]; do/g)).toHaveLength(2)
+    expect(updaterSource.match(/while \[ "\$health_attempt" -lt 300 \]; do/g)?.length).toBeGreaterThanOrEqual(2)
     expect(updaterSource).toContain('cold Electron/AppImage start can take over 20 seconds')
   })
 

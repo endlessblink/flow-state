@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 
@@ -63,6 +63,12 @@ function safePendingFilePath(updateInfoPath: string, fileName: string): string |
   const directory = resolve(dirname(updateInfoPath))
   const candidate = resolve(directory, fileName)
   if (dirname(candidate) !== directory) return null
+  try {
+    if (lstatSync(candidate).isSymbolicLink()) return null
+    if (dirname(realpathSync(candidate)) !== directory) return null
+  } catch {
+    return null
+  }
   return candidate
 }
 
@@ -72,8 +78,11 @@ function pendingAppImageCandidates(cacheHome?: string): Array<{ path: string; ve
 
   return readdirSync(directory)
     .filter((fileName) => fileName.endsWith('.AppImage'))
-    .map((fileName) => ({ path: join(directory, fileName), version: versionFromUpdateFileName(fileName) }))
-    .filter((candidate): candidate is { path: string; version: string } => Boolean(candidate.version))
+    .map((fileName) => ({
+      path: safePendingFilePath(join(directory, 'update-info.json'), fileName),
+      version: versionFromUpdateFileName(fileName),
+    }))
+    .filter((candidate): candidate is { path: string; version: string } => Boolean(candidate.path && candidate.version))
     .sort((a, b) => compareVersions(b.version, a.version))
 }
 
@@ -119,20 +128,27 @@ export function readPendingUpdateFailure(cacheHome?: string): PendingUpdateFailu
   const raw = readFileSync(failurePath, 'utf8')
   try {
     const parsed = JSON.parse(raw) as Partial<PendingUpdateFailure>
+    const attemptCount = parsed.attemptCount
     if (
       typeof parsed.version === 'string' &&
       typeof parsed.artifactUrl === 'string' &&
       typeof parsed.digest === 'string' &&
       typeof parsed.errorClass === 'string' &&
-      Number.isInteger(parsed.attemptCount) &&
+      typeof attemptCount === 'number' &&
+      Number.isInteger(attemptCount) &&
+      attemptCount >= 1 &&
       typeof parsed.failedAt === 'string' &&
-      typeof parsed.nextRetryAt === 'string'
+      typeof parsed.nextRetryAt === 'string' &&
+      /^\d+\.\d+\.\d+$/.test(parsed.version) &&
+      !Number.isNaN(Date.parse(parsed.failedAt)) &&
+      !Number.isNaN(Date.parse(parsed.nextRetryAt))
     ) {
       return parsed as PendingUpdateFailure
     }
   } catch {
     // Older releases wrote a three-line marker; current detached installers use key/value lines.
   }
+  if (raw.trimStart().startsWith('{')) return null
   const [fileName, reason, failedAt] = raw.split('\n')
   const fields = new Map(
     raw.split('\n').slice(1).flatMap((line) => {
@@ -142,14 +158,21 @@ export function readPendingUpdateFailure(cacheHome?: string): PendingUpdateFailu
   )
   const version = versionFromUpdateFileName(fileName)
   if (!version) return null
+  const parsedVersion = fields.get('version') || version
+  const parsedFailedAt = fields.get('failedAt') || failedAt || new Date(0).toISOString()
+  const parsedNextRetryAt = fields.get('nextRetryAt') || new Date(0).toISOString()
+  const parsedAttemptCount = Number(fields.get('attemptCount')) || 1
+  if (!/^\d+\.\d+\.\d+$/.test(parsedVersion) || parsedAttemptCount < 1
+    || !Number.isInteger(parsedAttemptCount)
+    || Number.isNaN(Date.parse(parsedFailedAt)) || Number.isNaN(Date.parse(parsedNextRetryAt))) return null
   return {
-    version: fields.get('version') || version,
+    version: parsedVersion,
     artifactUrl: fields.get('artifactUrl') || fileName,
     digest: fields.get('digest') || '',
     errorClass: fields.get('errorClass') || (reason?.includes('hash') ? 'verification' : 'legacy'),
-    attemptCount: Number(fields.get('attemptCount')) || 1,
-    failedAt: fields.get('failedAt') || failedAt || new Date(0).toISOString(),
-    nextRetryAt: fields.get('nextRetryAt') || new Date(0).toISOString(),
+    attemptCount: parsedAttemptCount,
+    failedAt: parsedFailedAt,
+    nextRetryAt: parsedNextRetryAt,
   }
 }
 
@@ -157,7 +180,9 @@ export function shouldSuppressAutomaticRetry(
   failure: PendingUpdateFailure,
   now = new Date(),
 ): boolean {
-  return failure.attemptCount >= MAX_AUTOMATIC_FAILURES || now.getTime() < Date.parse(failure.nextRetryAt)
+  const nextRetryAt = Date.parse(failure.nextRetryAt)
+  return failure.attemptCount < 1 || Number.isNaN(nextRetryAt)
+    || failure.attemptCount >= MAX_AUTOMATIC_FAILURES || now.getTime() < nextRetryAt
 }
 
 export function clearResolvedPendingUpdateFailure(appVersion: string, cacheHome?: string): boolean {
@@ -226,7 +251,15 @@ export function recordPendingUpdateFailure(
     failedAt: now.toISOString(),
     nextRetryAt: new Date(now.getTime() + backoff).toISOString(),
   }
-  writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify(failure, null, 2) + '\n', 'utf8')
+  const failurePath = pendingUpdateFailurePath(cacheHome)
+  const temporaryPath = `${failurePath}.tmp-${process.pid}`
+  try {
+    writeFileSync(temporaryPath, JSON.stringify(failure, null, 2) + '\n', 'utf8')
+    renameSync(temporaryPath, failurePath)
+  } catch (error) {
+    rmSync(temporaryPath, { force: true })
+    throw error
+  }
 }
 
 export function clearStalePendingUpdate(

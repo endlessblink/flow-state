@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -85,6 +85,20 @@ describe('Electron pending update recovery', () => {
     expect(() => clearStalePendingUpdate('1.4.331', cacheHome)).not.toThrow()
     expect(existsSync(join(pending, 'update-info.json'))).toBe(false)
     expect(existsSync(join(pending, 'FlowState-9.9.9-x86_64.AppImage'))).toBe(true)
+  })
+
+  it('rejects symlinked pending images instead of following them outside the cache', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const outside = join(cacheHome, 'outside.AppImage')
+    const linked = 'FlowState-1.4.333-x86_64.AppImage'
+    writeFileSync(outside, 'must remain')
+    symlinkSync(outside, join(pending, linked))
+    writeFileSync(join(pending, 'update-info.json'), JSON.stringify({ fileName: linked }))
+
+    expect(pendingAppImagePath(cacheHome)).toBeNull()
+    expect(clearStalePendingUpdate('1.4.332', cacheHome).cleared).toBe(false)
+    expect(existsSync(outside)).toBe(true)
   })
 
   it('recovers the newest downloaded AppImage when updater metadata is missing', () => {
@@ -180,6 +194,16 @@ describe('Electron pending update recovery', () => {
     })
     expect(second.attemptCount).toBe(2)
     expect(new Date(second.nextRetryAt).getTime()).toBeGreaterThan(new Date(first.nextRetryAt).getTime())
+  })
+
+  it('rejects semantically invalid failure receipts', () => {
+    const cacheHome = makeCacheHome()
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.340', artifactUrl: 'artifact', digest: '', errorClass: 'installer',
+      attemptCount: -1, failedAt: 'not-a-date', nextRetryAt: 'not-a-date',
+    }))
+
+    expect(readPendingUpdateFailure(cacheHome)).toBeNull()
   })
 
   it('stops automatic retries after repeated failures but permits a manual retry', () => {

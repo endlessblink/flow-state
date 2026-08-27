@@ -144,6 +144,12 @@ if [ "$DRY_RUN" = false ]; then
     echo -e "${GREEN}  Artifact: $artifact ($(du -h "$RELEASE_DIR/$artifact" | cut -f1))${NC}"
   done
   echo -e "${GREEN}  Manifest: $(basename "$YML")${NC}"
+  node "$PROJECT_DIR/scripts/generate-flowstate-release-receipt.cjs" \
+    --version "$VERSION" \
+    --source-commit "${GITHUB_SHA:-unknown}" \
+    --pwa-dir "$PROJECT_DIR/dist" \
+    --electron-dir "$RELEASE_DIR" \
+    --output "$RELEASE_DIR/flowstate-release-receipt.json"
 fi
 
 # Step 3: Deploy to VPS
@@ -170,6 +176,7 @@ else
   scp -i "$SSH_KEY" \
     "${LOCAL_ARTIFACTS[@]}" \
     "$YML" \
+    "$RELEASE_DIR/flowstate-release-receipt.json" \
     "$PROJECT_DIR/scripts/electron-release-collision-guard.cjs" \
     "$PROJECT_DIR/scripts/promote-electron-release.sh" \
     "${VPS_USER}@${VPS_HOST}:${REMOTE_STAGE}/"

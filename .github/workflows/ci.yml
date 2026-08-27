@@ -121,7 +121,7 @@ jobs:
 
       - name: Boot Supabase + run two-client Realtime e2e (R1–R7)
         run: |
-          timeout --foreground 15m bash -c '
+          timeout --foreground --kill-after=30s 15m bash -c '
           supabase start
           # `supabase start` can reuse a project volume without replaying the
           # repository migrations; reset explicitly so the schema preflight
@@ -137,4 +137,4 @@ jobs:
 
       - name: Stop Supabase
         if: always()
-        run: supabase stop || true
+        run: timeout --foreground --kill-after=30s 2m supabase stop || true

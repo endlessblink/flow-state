@@ -178,24 +178,54 @@
               Align
             </div>
             <div class="layout-icon-row">
-              <button class="menu-item menu-item-icon" title="Align Left" @click="handleAlignLeft">
+              <button
+                class="menu-item menu-item-icon"
+                title="Align Left"
+                aria-label="Align Left"
+                @click="handleAlignLeft"
+              >
                 <AlignHorizontalJustifyStart :size="16" :stroke-width="1.5" />
               </button>
-              <button class="menu-item menu-item-icon" title="Center Horizontally" @click="handleAlignCenterHorizontal">
+              <button
+                class="menu-item menu-item-icon"
+                title="Center Horizontally"
+                aria-label="Center Horizontally"
+                @click="handleAlignCenterHorizontal"
+              >
                 <AlignHorizontalJustifyCenter :size="16" :stroke-width="1.5" />
               </button>
-              <button class="menu-item menu-item-icon" title="Align Right" @click="handleAlignRight">
+              <button
+                class="menu-item menu-item-icon"
+                title="Align Right"
+                aria-label="Align Right"
+                @click="handleAlignRight"
+              >
                 <AlignHorizontalJustifyEnd :size="16" :stroke-width="1.5" />
               </button>
             </div>
             <div class="layout-icon-row">
-              <button class="menu-item menu-item-icon" title="Align Top" @click="handleAlignTop">
+              <button
+                class="menu-item menu-item-icon"
+                title="Align Top"
+                aria-label="Align Top"
+                @click="handleAlignTop"
+              >
                 <AlignVerticalJustifyStart :size="16" :stroke-width="1.5" />
               </button>
-              <button class="menu-item menu-item-icon" title="Center Vertically" @click="handleAlignCenterVertical">
+              <button
+                class="menu-item menu-item-icon"
+                title="Center Vertically"
+                aria-label="Center Vertically"
+                @click="handleAlignCenterVertical"
+              >
                 <AlignVerticalJustifyCenter :size="16" :stroke-width="1.5" />
               </button>
-              <button class="menu-item menu-item-icon" title="Align Bottom" @click="handleAlignBottom">
+              <button
+                class="menu-item menu-item-icon"
+                title="Align Bottom"
+                aria-label="Align Bottom"
+                @click="handleAlignBottom"
+              >
                 <AlignVerticalJustifyEnd :size="16" :stroke-width="1.5" />
               </button>
             </div>
@@ -209,11 +239,21 @@
                 Distribute
               </div>
               <div class="layout-icon-row">
-                <button class="menu-item menu-item-icon-wide" title="Distribute Horizontally" @click="handleDistributeHorizontal">
+                <button
+                  class="menu-item menu-item-icon-wide"
+                  title="Distribute Horizontally"
+                  aria-label="Distribute Horizontally"
+                  @click="handleDistributeHorizontal"
+                >
                   <ArrowLeftRight :size="16" :stroke-width="1.5" />
                   <span>Horiz</span>
                 </button>
-                <button class="menu-item menu-item-icon-wide" title="Distribute Vertically" @click="handleDistributeVertical">
+                <button
+                  class="menu-item menu-item-icon-wide"
+                  title="Distribute Vertically"
+                  aria-label="Distribute Vertically"
+                  @click="handleDistributeVertical"
+                >
                   <ArrowUpDown :size="16" :stroke-width="1.5" />
                   <span>Vert</span>
                 </button>
@@ -228,15 +268,30 @@
               Arrange
             </div>
             <div class="layout-icon-row">
-              <button class="menu-item menu-item-icon-wide" title="Arrange in Row" @click="handleArrangeInRow">
+              <button
+                class="menu-item menu-item-icon-wide"
+                title="Arrange in Row"
+                aria-label="Arrange in Row"
+                @click="handleArrangeInRow"
+              >
                 <Rows :size="16" :stroke-width="1.5" />
                 <span>Row</span>
               </button>
-              <button class="menu-item menu-item-icon-wide" title="Arrange in Column" @click="handleArrangeInColumn">
+              <button
+                class="menu-item menu-item-icon-wide"
+                title="Arrange in Column"
+                aria-label="Arrange in Column"
+                @click="handleArrangeInColumn"
+              >
                 <LayoutList :size="16" :stroke-width="1.5" />
                 <span>Column</span>
               </button>
-              <button class="menu-item menu-item-icon-wide" title="Arrange in Grid" @click="handleArrangeInGrid">
+              <button
+                class="menu-item menu-item-icon-wide"
+                title="Arrange in Grid"
+                aria-label="Arrange in Grid"
+                @click="handleArrangeInGrid"
+              >
                 <Grid3x3 :size="16" :stroke-width="1.5" />
                 <span>Grid</span>
               </button>

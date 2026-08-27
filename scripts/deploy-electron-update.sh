@@ -183,6 +183,7 @@ else
     "${LOCAL_ARTIFACTS[@]}" \
     "$YML" \
     "$PROJECT_DIR/release/flowstate-release-receipt.json" \
+    "$PROJECT_DIR/scripts/electron-release-collision-guard.cjs" \
     "$PROJECT_DIR/scripts/promote-flowstate-release.sh" \
     "${VPS_USER}@${VPS_HOST}:${REMOTE_STAGE}/electron/"
   ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "bash '${REMOTE_STAGE}/electron/promote-flowstate-release.sh' '${VPS_ROOT}' '${REMOTE_STAGE}/dist' '${REMOTE_STAGE}/electron' '${REMOTE_STAGE}/electron/flowstate-release-receipt.json'"

@@ -142,6 +142,14 @@ restart_supervised_on_failure() {
     systemctl --user start flowstate-background.service || true
   fi
 }
+restart_direct_on_failure() {
+  if [ "$strategy" != "direct" ]; then
+    return 0
+  fi
+  "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
+  replacement_parent_pid=$!
+  wait_for_health_identity "$known_good_version" "$replacement_parent_pid" || true
+}
 cleanup_competing_flowstate_processes() {
   flowstate_pids() {
     # Keep the predicate on one awk line. The installed updater runs mawk,
@@ -226,6 +234,7 @@ wait_for_direct_health_version() {
   record_failure "$1"
   rm -f "$tmp"
   restart_supervised_on_failure
+  restart_direct_on_failure
   exit 1
 }
 record_failure() {
@@ -258,11 +267,20 @@ record_failure() {
     *readiness*|*health*|*bridge*) error_class=readiness ;;
     *download*|*network*) error_class=download ;;
   esac
-  {
+  failure_tmp="${failure_path}.tmp.$$"
+  if ! {
     printf 'FlowState-%s-x86_64.AppImage\n' "$expected_version"
     printf 'version=%s\nartifactUrl=%s\ndigest=%s\nerrorClass=%s\nattemptCount=%s\nfailedAt=%s\nnextRetryAt=%s\nreason=%s\n' \
       "$expected_version" "$artifact_url" "$artifact_digest" "$error_class" "$attempt_count" "$failed_at" "$retry_at" "$(printf '%s' "$reason" | tr '\r\n' '  ')"
-  } > "$failure_path"
+  } > "$failure_tmp"; then
+    rm -f "$failure_tmp"
+    return 1
+  fi
+  sync -f "$failure_tmp" 2>/dev/null || true
+  mv -f "$failure_tmp" "$failure_path" || {
+    rm -f "$failure_tmp"
+    return 1
+  }
 }
 restore_known_good() {
   echo "restoring known-good AppImage"

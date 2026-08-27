@@ -277,20 +277,35 @@ describe('canonical queued task patch', () => {
     expect(rpc.mock.calls[0][1]).toMatchObject({ p_preview: false, p_operation_id: 'web:operation-1' })
   })
 
-  it('quarantines a persisted preview that lacks its validated normalized patch', async () => {
+  it('recovers a legacy persisted preview that lacks its validated normalized patch', async () => {
     const op = operation()
     op.canonicalTaskPatch = {
       ...op.canonicalTaskPatch!, phase: 'previewed', previewDigest: 'b'.repeat(64),
       previewExpiresAt: '2026-07-13T10:15:00Z',
     }
     const rpc = vi.fn()
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ...preview(), operationId: args.p_operation_id },
+        error: null,
+      }))
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: receipt({ operationId: args.p_operation_id }) },
+        error: null,
+      }))
+    const persist = vi.fn().mockResolvedValue(undefined)
 
-    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, vi.fn())
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, persist)
 
-    expect(result).toMatchObject({
-      success: false, error: 'invalid_persisted_canonical_preview', classification: 'permanent',
+    expect(result.success).toBe(true)
+    expect(rpc).toHaveBeenCalledTimes(2)
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      p_preview: true,
+      p_operation_id: expect.not.stringMatching(/^web:operation-1$/),
     })
-    expect(rpc).not.toHaveBeenCalled()
+    expect(persist).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      phase: 'queued', previewDigest: undefined, normalizedPatch: undefined,
+      operationId: expect.not.stringMatching(/^web:operation-1$/),
+    }))
   })
 
   it('replays the persisted preview after a lost apply response without issuing another preview', async () => {

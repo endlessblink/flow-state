@@ -1,0 +1,3 @@
+## 2024-11-20 - Adding explicit group semantics to calendar view mode toggles
+**Learning:** The calendar view selector (Day/Week/Month) functioned visually as a segmented control but lacked explicit structural grouping (`role="group"`) or ARIA properties (`aria-pressed`) to convey its state to screen readers. Relying solely on visual CSS classes (`.active`) for interactive state toggles is a common accessibility gap in custom Vue components.
+**Action:** When implementing or reviewing segmented controls or mutually exclusive view toggles, always ensure the container explicitly uses `role="group"` (with an appropriate `aria-label`), and the option elements dynamically bind `:aria-pressed` (or `:aria-selected` for tabs) mapped to the selected state variable.

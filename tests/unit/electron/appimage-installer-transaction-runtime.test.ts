@@ -21,6 +21,7 @@ function makeFixture(options: {
   reportedVersion?: string
   failSwap?: boolean
   strategy?: 'systemd' | 'direct'
+  replacementProcess?: 'live' | 'exited'
 } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'flowstate-appimage-transaction-'))
   const bin = join(root, 'bin')
@@ -38,7 +39,7 @@ if [ -f "$CURL_COUNT" ]; then count=$(cat "$CURL_COUNT"); fi
 count=$((count + 1))
 printf '%s' "$count" > "$CURL_COUNT"
 if [ "$INSTALL_STRATEGY" = "direct" ] && [ "$count" -eq 1 ]; then exit 1; fi
-printf '{"appVersion":"%s"}' "$REPORTED_VERSION"
+printf '{"appVersion":"%s","instanceId":"%s"}' "$REPORTED_VERSION" "$FLOW_STATE_UPDATE_INSTANCE_ID"
 `)
   writeFileSync(join(bin, 'sleep'), '#!/bin/sh\nexit 0\n')
   writeFileSync(join(bin, 'mv'), `#!/bin/sh
@@ -59,7 +60,13 @@ exec /bin/mv "$@"
   const pending = join(root, 'FlowState-1.4.275-x86_64.AppImage')
   const info = join(root, 'update-info.json')
   writeFileSync(target, 'known-good')
-  writeFileSync(pending, 'replacement')
+  writeFileSync(
+    pending,
+    options.replacementProcess === 'exited'
+      ? '#!/bin/sh\nexit 0\n'
+      : '#!/bin/sh\nprintf replacement-running\nwhile :; do /bin/sleep 1; done\n',
+  )
+  chmodSync(pending, 0o755)
   writeFileSync(info, '{}')
 
   const run = () => execFileSync('/bin/sh', [
@@ -106,7 +113,7 @@ describe('supervised AppImage installer transaction runtime', () => {
 
     fixture.run()
 
-    expect(readFileSync(fixture.target, 'utf8')).toBe('replacement')
+    expect(readFileSync(fixture.target, 'utf8')).toContain('replacement-running')
     expect(() => readFileSync(`${fixture.target}.flowstate-update-backup`)).toThrow()
     expect(() => readFileSync(fixture.info)).toThrow()
   })
@@ -116,13 +123,22 @@ describe('supervised AppImage installer transaction runtime', () => {
 
     fixture.run()
 
-    expect(readFileSync(fixture.target, 'utf8')).toBe('replacement')
+    expect(readFileSync(fixture.target, 'utf8')).toContain('replacement-running')
     expect(() => readFileSync(`${fixture.target}.flowstate-update-backup`)).toThrow()
     expect(() => readFileSync(fixture.info)).toThrow()
   })
 
   it('rolls back a direct replacement when fresh provenance is stale', () => {
     const fixture = makeFixture({ strategy: 'direct', reportedVersion: '1.4.274' })
+
+    expect(fixture.run).toThrow()
+
+    expect(readFileSync(fixture.target, 'utf8')).toBe('known-good')
+    expect(readFileSync(fixture.info, 'utf8')).toBe('{}')
+  })
+
+  it('rejects a matching provenance response when the replacement process already exited', () => {
+    const fixture = makeFixture({ strategy: 'direct', replacementProcess: 'exited' })
 
     expect(fixture.run).toThrow()
 

@@ -181,7 +181,7 @@ restore_known_good() {
   }
   cleanup_competing_flowstate_processes
   restart_supervised_on_failure
-  if wait_for_direct_health_version "$known_good_version"; then
+  if wait_for_direct_health_version "$known_good_version" "" ""; then
     echo "known-good app is already healthy after rollback"
     return 0
   fi
@@ -212,16 +212,24 @@ wait_for_supervised_health() {
   return 1
 }
 wait_for_direct_health() {
-  wait_for_direct_health_version "$expected_version"
+  wait_for_direct_health_version "$expected_version" "$replacement_pid" "$replacement_instance_id"
 }
 wait_for_direct_health_version() {
   expected_health_version="$1"
+  expected_health_pid="$2"
+  expected_health_instance_id="$3"
   health_attempt=0
   while [ "$health_attempt" -lt 300 ]; do
+    if [ -n "$expected_health_pid" ] && ! kill -0 "$expected_health_pid" 2>/dev/null; then
+      health_attempt=$((health_attempt + 1))
+      sleep 0.2
+      continue
+    fi
     provenance_probe=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
     normalized_provenance=$(printf '%s' "$provenance_probe" | tr -d '[:space:]')
     if printf '%s' "$normalized_provenance" | \
-      grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
+      grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null && \
+      { [ -z "$expected_health_instance_id" ] || printf '%s' "$normalized_provenance" | grep -F "\"instanceId\":\"$expected_health_instance_id\"" >/dev/null; }; then
       return 0
     fi
     health_attempt=$((health_attempt + 1))
@@ -261,6 +269,8 @@ rm -f "$backup"
 cp -p "$target" "$backup" || fail_install "backup known-good target"
 mv -f "$tmp" "$target" || fail_after_swap "swap target"
 echo "swap complete, relaunching direct replacement"
+replacement_instance_id=$(cat /proc/sys/kernel/random/uuid) || fail_after_swap "direct replacement instance id"
+export FLOW_STATE_UPDATE_INSTANCE_ID="$replacement_instance_id"
 "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
 replacement_pid=$!
 if ! wait_for_direct_health; then

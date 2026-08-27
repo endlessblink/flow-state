@@ -133,7 +133,7 @@ const getPendingOperations: typeof _getPendingOperations = async (...args) => {
 
 const markSyncing: typeof _markSyncing = async (...args) => {
   const mod = await getWriteQueueModule()
-  if (mod) await mod.markSyncing(...args)
+  return mod ? mod.markSyncing(...args) : false
 }
 
 const markCompleted: typeof _markCompleted = async (...args) => {

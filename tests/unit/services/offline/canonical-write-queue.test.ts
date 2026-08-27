@@ -68,6 +68,17 @@ describe('canonical write queue durability', () => {
     })
   })
 
+  it('claims a queued operation only once', async () => {
+    const operation = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-claim',
+      payload: { title: 'Claim me' }, userId: 'user-1', workspaceId: null,
+    })
+
+    await expect(markSyncing(operation.id!)).resolves.toBe(true)
+    await expect(markSyncing(operation.id!)).resolves.toBe(false)
+    await expect(getWriteQueueDB().operations.get(operation.id!)).resolves.toMatchObject({ status: 'syncing' })
+  })
+
   it('atomically stores canonical proof before completing the queue row', async () => {
     const op = await enqueueOperation({
       entityType: 'task',

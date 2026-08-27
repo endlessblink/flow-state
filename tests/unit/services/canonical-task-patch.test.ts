@@ -284,13 +284,17 @@ describe('canonical queued task patch', () => {
       previewExpiresAt: '2026-07-13T10:15:00Z',
     }
     const rpc = vi.fn()
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ...preview(), operationId: args.p_operation_id }, error: null,
+      }))
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: receipt({ operationId: args.p_operation_id }) }, error: null,
+      }))
 
     const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, vi.fn())
 
-    expect(result).toMatchObject({
-      success: false, error: 'invalid_persisted_canonical_preview', classification: 'permanent',
-    })
-    expect(rpc).not.toHaveBeenCalled()
+    expect(result.success).toBe(true)
+    expect(rpc).toHaveBeenCalled()
   })
 
   it('replays the persisted preview after a lost apply response without issuing another preview', async () => {
@@ -337,6 +341,32 @@ describe('canonical queued task patch', () => {
         success: false, error: 'invalid_canonical_preview', classification: 'permanent',
       })
     }
+  })
+
+  it('rotates and re-previews a persisted binding with malformed approval fields', async () => {
+    const op = operation()
+    const originalOperationId = op.canonicalTaskPatch!.operationId
+    op.canonicalTaskPatch = {
+        ...op.canonicalTaskPatch!,
+        phase: 'previewed',
+        previewDigest: 'not-a-digest',
+        previewExpiresAt: 'not-a-timestamp',
+        requestHash: 'not-a-hash',
+        normalizedPatch: { title: 'New title' },
+    }
+    const rpc = vi.fn()
+      .mockImplementationOnce(async (_name, args) => ({ data: { ...preview(), operationId: args.p_operation_id }, error: null }))
+      .mockImplementationOnce(async (_name, args) => ({ data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: receipt({ operationId: args.p_operation_id }) }, error: null }))
+    const persisted: CanonicalTaskPatchState[] = []
+
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, async state => {
+      persisted.push(state)
+    })
+
+    expect(result.success).toBe(true)
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_preview: true })
+    expect(rpc.mock.calls[0][1].p_operation_id).not.toBe(originalOperationId)
+    expect(persisted[0].phase).toBe('queued')
   })
 
   it('accepts a legacy preview and applies it without hash-only arguments', async () => {

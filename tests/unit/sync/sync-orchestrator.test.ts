@@ -73,7 +73,7 @@ const rpcMock = vi.hoisted(() => vi.fn())
 const writeQueueMocks = vi.hoisted(() => ({
   enqueueOperation: vi.fn(),
   getPendingOperations: vi.fn().mockResolvedValue([]),
-  markSyncing: vi.fn(),
+  markSyncing: vi.fn().mockResolvedValue(true),
   markCompleted: vi.fn(),
   markFailed: vi.fn(),
   markConflict: vi.fn(),
@@ -2757,6 +2757,23 @@ describe('processQueue guards', () => {
         value: originalLocks,
       })
     }
+  })
+
+  it('does not execute or complete an operation after losing its queue claim', async () => {
+    writeQueueMocks.markSyncing.mockResolvedValue(false)
+    const op = makeOp({ id: 1957 })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed',
+    })
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(rpcMock).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1957)
   })
 
   it('surfaces a lock-service failure while retaining queued changes for retry', async () => {

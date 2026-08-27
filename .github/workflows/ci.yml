@@ -20,7 +20,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v4
@@ -119,21 +119,26 @@ jobs:
         with:
           version: latest
 
-      - name: Boot Supabase + run two-client Realtime e2e (R1–R7)
+      - name: Start Supabase
+        run: timeout --foreground --kill-after=30s 5m supabase start
+
+      # `supabase start` can reuse a project volume without replaying the
+      # repository migrations; reset explicitly so the schema preflight
+      # validates the checked-out migration set.
+      - name: Reset Supabase schema
+        run: timeout --foreground --kill-after=30s 5m supabase db reset --local
+
+      # Recreate the API process after the reset so its initial schema snapshot
+      # includes the canonical tables and RPCs.
+      - name: Restart Supabase after schema reset
         run: |
-          timeout --foreground --kill-after=30s 15m bash -c '
-          supabase start
-          # `supabase start` can reuse a project volume without replaying the
-          # repository migrations; reset explicitly so the schema preflight
-          # validates the checked-out migration set.
-          supabase db reset --local
-          export SUPABASE_SCHEMA_RESET_COMPLETED=true
-          # Recreate the API process after the reset so its initial schema
-          # snapshot includes the canonical tables and RPCs.
-          supabase stop
-          supabase start
-          ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2 --grep 'R[1-7] -'
-          '
+          timeout --foreground --kill-after=30s 2m supabase stop
+          timeout --foreground --kill-after=30s 5m supabase start
+
+      - name: Run two-client Realtime e2e (R1–R7)
+        env:
+          SUPABASE_SCHEMA_RESET_COMPLETED: true
+        run: timeout --foreground --kill-after=30s 8m ./scripts/run-e2e.sh canvas-sync-regressions.spec.ts --project=chromium --workers=2 --grep 'R[1-7] -'
 
       - name: Stop Supabase
         if: always()

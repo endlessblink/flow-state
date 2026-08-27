@@ -208,6 +208,17 @@ function createWindow() {
     window.once('ready-to-show', () => {
         backgroundLifecycle.handleReadyToShow(window, process.argv);
     });
+    // Some Linux/X11 launches finish loading without emitting ready-to-show. Keep a normal
+    // user launch visible after the renderer is usable; explicit background launches stay hidden.
+    window.webContents.once('did-finish-load', () => {
+        const visibleBeforeFallback = window.isVisible();
+        backgroundLifecycle.handleLoadFinished(window, process.argv);
+        (0, runtimeDiagnostics_1.recordRuntimeDiagnostic)('window-load-finished-fallback', {
+            backgroundEnabled,
+            visibleBeforeFallback,
+            visibleAfterFallback: window.isVisible(),
+        });
+    });
     window.on('close', (event) => {
         backgroundLifecycle.handleClose(event, window);
     });

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerOAuthHandlers = registerOAuthHandlers;
 const electron_1 = require("electron");
 const http_1 = require("http");
+const oauthValidation_1 = require("./oauthValidation");
 // Must match the documented Google/Supabase allow-listed loopback redirects.
 // See docs/GOOGLE-CLOUD-SETUP.md and src/composables/useTauriOAuth.ts.
 const OAUTH_PORTS = [24892, 24893, 24894];
@@ -70,6 +71,11 @@ function registerOAuthHandlers() {
             }, OAUTH_TIMEOUT_MS);
             server.on('request', (req, res) => {
                 const url = `http://127.0.0.1${req.url || '/'}`;
+                if (!(0, oauthValidation_1.isOAuthCallbackUrl)(url)) {
+                    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+                    res.end('Waiting for the OAuth callback.');
+                    return;
+                }
                 // Send success page to the browser
                 res.writeHead(200, { 'Content-Type': 'text/html' });
                 res.end(SUCCESS_HTML);

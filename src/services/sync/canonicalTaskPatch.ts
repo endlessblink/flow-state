@@ -203,7 +203,20 @@ export async function executeQueuedCanonicalTaskPatch(
   }
   if ((canonical.previewDigest || canonical.previewExpiresAt || canonical.phase === 'previewed')
     && (!validPatch(canonical.normalizedPatch) || !samePatchShape(canonical.normalizedPatch, canonical.patch))) {
-    return { success: false, operation, error: 'invalid_persisted_canonical_preview', shouldRetry: false, classification: 'permanent' }
+    // Older queue records can contain only part of the preview binding.  Treat
+    // that local binding as unusable, rotate the operation id, and obtain a
+    // fresh server preview instead of quarantining the update forever.
+    canonical = {
+      ...canonical,
+      operationId: operationId(),
+      phase: 'queued',
+      previewDigest: undefined,
+      previewExpiresAt: undefined,
+      requestHash: undefined,
+      normalizedPatch: undefined,
+    }
+    operation.canonicalTaskPatch = canonical
+    await persist(canonical)
   }
 
   if (!canonical.previewDigest || !canonical.previewExpiresAt || !canonical.requestHash) {

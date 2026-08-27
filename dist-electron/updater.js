@@ -157,7 +157,7 @@ wait_for_health_identity() {
     if printf '%s' "$health_response" | grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
       read_live_identity "$health_response"
       if identity_is_valid && [ "$live_parent_pid" = "$expected_parent_pid" ] &&
-        { [ "$live_process_id" != "\${old_process_id:-}" ] || [ "$live_instance_id" != "\${old_instance_id:-}" ]; }; then
+        { [ "$live_process_id" != "${'${'}old_process_id:-}" ] || [ "$live_instance_id" != "${'${'}old_instance_id:-}" ]; }; then
         return 0
       fi
     fi
@@ -238,7 +238,7 @@ restore_known_good() {
     "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
     replacement_parent_pid=$!
   fi
-  if wait_for_health_identity "$known_good_version" "\${replacement_parent_pid:-0}"; then
+  if wait_for_health_identity "$known_good_version" "${'${'}replacement_parent_pid:-0}"; then
     echo "known-good app is healthy after rollback pid=$live_process_id parentPid=$live_parent_pid instanceId=$live_instance_id"
     return 0
   fi
@@ -261,7 +261,7 @@ wait_for_supervised_health() {
       read_live_identity "$health_response"
       supervised_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)
       if identity_is_valid && [ "$live_parent_pid" = "$supervised_pid" ] &&
-        { [ "$live_process_id" != "\${old_process_id:-}" ] || [ "$live_instance_id" != "\${old_instance_id:-}" ]; }; then
+        { [ "$live_process_id" != "${'${'}old_process_id:-}" ] || [ "$live_instance_id" != "${'${'}old_instance_id:-}" ]; }; then
         echo "supervised replacement identity pid=$live_process_id parentPid=$live_parent_pid instanceId=$live_instance_id"
         return 0
       fi

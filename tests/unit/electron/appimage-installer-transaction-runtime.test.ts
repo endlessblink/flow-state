@@ -15,7 +15,10 @@ const scriptMatch = updaterSource.match(
   /const script = (?:String\.raw)?`([\s\S]*?)`\n\n  const installerArgs/,
 )
 if (!scriptMatch) throw new Error('embedded AppImage installer script not found')
-const installerScript = scriptMatch[1].replaceAll('\\${', '${')
+// The test extracts the template source instead of importing Electron; resolve
+// the deliberately literal shell-brace expression exactly as the JS template
+// evaluates it at runtime.
+const installerScript = scriptMatch[1].replaceAll("${'${'}", '${')
 
 function makeFixture(options: { reportedVersion?: string; failSwap?: boolean; strategy?: 'systemd' | 'direct' } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'flowstate-appimage-transaction-'))

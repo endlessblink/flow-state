@@ -103,21 +103,30 @@ if (cmp === 0) throw new Error(`same-version release: ${next}`)
 if (cmp < 0) throw new Error(`downgrade release: ${next} < ${current}`)
 NODE
 
-# Keep the public entrypoint atomic: copy every hashed dependency first, then
-# replace the service worker and HTML entrypoint with same-filesystem renames.
-# Never delete the currently served tree during promotion; stale hashed files
-# are harmless and can be garbage-collected only after a later verified release.
-rsync -a --exclude index.html --exclude sw.js --exclude updates --exclude .release.lock "$STAGE/pwa/" "$TARGET_ROOT/"
-if [ -f "$STAGE/pwa/sw.js" ]; then
-  cp -f -- "$STAGE/pwa/sw.js" "$TARGET_ROOT/.sw.js.flowstate-tmp"
-  mv -f -- "$TARGET_ROOT/.sw.js.flowstate-tmp" "$TARGET_ROOT/sw.js"
-fi
-cp -f -- "$STAGE/pwa/index.html" "$TARGET_ROOT/.index.html.flowstate-tmp"
-mv -f -- "$TARGET_ROOT/.index.html.flowstate-tmp" "$TARGET_ROOT/index.html"
+# Prepare a complete next public root outside the live path. Copying the
+# existing root first preserves server-managed auth/backup/font/icon content
+# and historical updater artifacts; the staged PWA then replaces its complete
+# web tree before the live directory is switched.
+NEXT_ROOT="$STAGE/public-root"
+mkdir -p "$NEXT_ROOT"
+cp -a "$TARGET_ROOT/." "$NEXT_ROOT/"
+rsync -a --delete --exclude updates --exclude .release.lock "$STAGE/pwa/" "$NEXT_ROOT/"
+mkdir -p "$NEXT_ROOT/updates/electron"
+cp -f -- "$STAGE/release-receipt.json" "$NEXT_ROOT/release-receipt.json"
 for artifact in "$STAGE/electron"/*; do
   [ -f "$artifact" ] || continue
-  [ "$(basename "$artifact")" = latest-linux.yml ] || cp -f -- "$artifact" "$UPDATES/"
+  [ "$(basename "$artifact")" = latest-linux.yml ] || cp -f -- "$artifact" "$NEXT_ROOT/updates/electron/"
 done
-cp -f -- "$STAGE/release-receipt.json" "$TARGET_ROOT/release-receipt.json"
-cp -f -- "$STAGE/electron/latest-linux.yml" "$UPDATES/latest-linux.yml"
+cp -f -- "$STAGE/electron/latest-linux.yml" "$NEXT_ROOT/updates/electron/latest-linux.yml"
+
+# Replace the public directory only after the complete snapshot is ready.
+# Both rename operations are on the same filesystem; a failed second rename
+# restores the old tree before returning an error.
+BACKUP_ROOT="${TARGET_ROOT}.previous-${VERSION}-$$"
+mv -- "$TARGET_ROOT" "$BACKUP_ROOT"
+if ! mv -- "$NEXT_ROOT" "$TARGET_ROOT"; then
+  mv -- "$BACKUP_ROOT" "$TARGET_ROOT"
+  exit 1
+fi
+rm -rf -- "$BACKUP_ROOT"
 echo "promoted FlowState $VERSION across web/PWA/Electron"

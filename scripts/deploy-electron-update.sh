@@ -15,6 +15,17 @@
 #
 set -euo pipefail
 
+# Production Electron builds must use the same secret authority as the VPS
+# release path. Re-enter through Doppler exactly once so local .env drift cannot
+# produce a Guest Mode artifact that looks publishable.
+if [[ "${FLOWSTATE_DOPPLER_ACTIVE:-}" != "1" ]]; then
+  if ! command -v doppler >/dev/null 2>&1; then
+    echo "ERROR: Doppler is required for production Electron deployment." >&2
+    exit 1
+  fi
+  exec doppler run -- env FLOWSTATE_DOPPLER_ACTIVE=1 "$0" "$@"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VPS_HOST="${VPS_HOST:?Set VPS_HOST env var}"

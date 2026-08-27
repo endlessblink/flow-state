@@ -67,7 +67,7 @@ function readSource(root) {
     // outputs before provenance is sealed. They are not source drift.
     dirty: git(
       'status', '--porcelain', '--untracked-files=no', '--', '.',
-      ':(exclude)dist-electron/package.json',
+      ':(exclude)dist-electron',
       ':(exclude)stats.html',
     ).length > 0,
   }

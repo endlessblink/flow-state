@@ -226,6 +226,7 @@ export function classifyError(error: unknown): ErrorClassification {
     lowerMessage.includes('not found') ||
     lowerMessage.includes('forbidden') ||
     lowerMessage.includes('invalid') ||
+    lowerMessage.includes('authoritative projection') ||
     lowerMessage.includes('malformed') ||
     lowerMessage.includes('syntax') ||  // "invalid input syntax for type uuid"
     lowerMessage.includes('violates') || // constraint violations

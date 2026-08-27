@@ -482,6 +482,12 @@ describe('classifyError', () => {
       expect(classifyError(new Error('invalid input syntax for type uuid'))).toBe('permanent')
     })
 
+    it('classifies missing authoritative tasks as permanent', () => {
+      expect(
+        classifyError(new Error('Task no longer exists in the authoritative projection; local update preserved for manual resolution')),
+      ).toBe('permanent')
+    })
+
     it('for "malformed" keyword', () => {
       expect(classifyError(new Error('malformed request body'))).toBe('permanent')
     })

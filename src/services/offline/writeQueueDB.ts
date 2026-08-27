@@ -19,6 +19,7 @@ import type {
   WriteConflict,
   SyncEntityType,
 } from "@/types/sync";
+import { classifyError } from "./retryStrategy";
 
 type StoredCanonicalTaskPatchReceipt = CanonicalTaskPatchReceipt & {
   scopeKey: string;
@@ -758,14 +759,25 @@ export async function clearFailedOperations(): Promise<number> {
   // BUG-1301: Also clear 'syncing' operations — these are stuck from a previous
   // session crash and will never complete. Previously only cleared 'failed' and
   // 'conflict', leaving orphaned 'syncing' ops stuck forever.
-  const toDelete = allOps.filter(
-    (op) =>
+  const toDelete = allOps.filter((op) => {
+    const isStuckGenericOperation =
       !op.canonicalTaskPatch &&
       (op.status === "failed" ||
         op.status === "conflict" ||
         op.status === "syncing" ||
-        op.retryCount >= 10), // Also clear anything stuck after 10+ retries
-  );
+        op.retryCount >= 10);
+    const isPermanentlyFailedCanonicalOperation =
+      Boolean(
+        op.canonicalTaskPatch &&
+          op.status === "failed" &&
+          op.lastError &&
+          classifyError(op.lastError) === "permanent",
+      );
+
+    // Canonical operations retain their durable identity while recoverable.
+    // Explicit discard may remove only failures that cannot be retried safely.
+    return isStuckGenericOperation || isPermanentlyFailedCanonicalOperation;
+  });
 
   if (toDelete.length > 0) {
     const ids = toDelete.map((op) => op.id!).filter((id) => id !== undefined);

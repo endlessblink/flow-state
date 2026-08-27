@@ -245,9 +245,9 @@ record_failure() {
     *download*|*network*) error_class=download ;;
   esac
   {
-    printf 'FlowState-%s-x86_64.AppImage\\n' "$expected_version"
-    printf 'version=%s\\nartifactUrl=%s\\ndigest=%s\\nerrorClass=%s\\nattemptCount=%s\\nfailedAt=%s\\nnextRetryAt=%s\\nreason=%s\\n' \\
-      "$expected_version" "$artifact_url" "$artifact_digest" "$error_class" "$attempt_count" "$failed_at" "$retry_at" "$(printf '%s' "$reason" | tr '\\r\\n' '  ')"
+    printf 'FlowState-%s-x86_64.AppImage\n' "$expected_version"
+    printf 'version=%s\nartifactUrl=%s\ndigest=%s\nerrorClass=%s\nattemptCount=%s\nfailedAt=%s\nnextRetryAt=%s\nreason=%s\n' \
+      "$expected_version" "$artifact_url" "$artifact_digest" "$error_class" "$attempt_count" "$failed_at" "$retry_at" "$(printf '%s' "$reason" | tr '\r\n' '  ')"
   } > "$failure_path"
 }
 restore_known_good() {

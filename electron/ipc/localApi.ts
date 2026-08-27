@@ -91,6 +91,7 @@ let lifecyclePromise: Promise<void> | null = null
 let reconcileRequested = false
 let restartTimer: ReturnType<typeof setTimeout> | null = null
 let restartAttempt = 0
+let startAfterReadyScheduled = false
 const RESTART_BACKOFF_MS = [100, 500, 1_000, 2_000, 5_000] as const
 const FINAL_SHUTDOWN_EXIT_TIMEOUT_MS = 5_000
 
@@ -355,6 +356,19 @@ function startChild() {
     return
   }
   desiredRunning = true
+  // Persisted settings are read while IPC handlers are registered, before the
+  // app-ready event. utilityProcess.fork is only legal after Electron is ready.
+  if (!app.isReady()) {
+    if (!startAfterReadyScheduled) {
+      startAfterReadyScheduled = true
+      void app.whenReady().then(() => {
+        startAfterReadyScheduled = false
+        if (desiredRunning && !finalShutdownRequested) void queueReconcile()
+      })
+    }
+    logLifecycle('start-deferred-until-ready')
+    return
+  }
   if (restartTimer) return
   void queueReconcile()
 }

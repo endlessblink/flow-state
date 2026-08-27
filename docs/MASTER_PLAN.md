@@ -1,5 +1,11 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2062: Permanently clear quarantined sync errors without deleting recoverable work (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-27)
+
+When an offline canonical task update targets a task that no longer exists in the authoritative projection, the sync layer must quarantine it as a permanent failure and the explicit **Discard local changes** action must remove that quarantined local record. Retryable canonical operations must remain intact. Regression coverage must exercise both paths and the real Electron sync-error boundary must be rechecked after release.
+
 ### FEATURE-2041: Learn routines and scheduling behavior from task history (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)

@@ -129,7 +129,7 @@ describe('sync status auth-error watchdog', () => {
 
     expect(document.body.textContent).not.toContain('Retry All')
     expect(document.body.textContent).toContain('Needs attention')
-    expect(document.body.textContent).toContain('cannot be retried because the task no longer exists')
+    expect(document.body.textContent).toContain('need manual resolution and cannot be retried automatically')
   })
 
   it('requires explicit confirmation before discarding failed local changes', async () => {

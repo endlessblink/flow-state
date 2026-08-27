@@ -335,27 +335,40 @@ export async function updateOperation(
 /**
  * Mark an operation as syncing (in progress)
  */
-export async function markSyncing(id: number): Promise<boolean> {
+function createSyncClaimToken(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+export async function markSyncing(id: number): Promise<string | false> {
   const db = getWriteQueueDB();
   return db.transaction("rw", db.operations, async () => {
     const operation = await db.operations.get(id);
     if (!operation || (operation.status !== "pending" && operation.status !== "failed")) {
       return false;
     }
+    const syncClaimToken = createSyncClaimToken();
     await db.operations.update(id, {
       status: "syncing",
       lastAttemptAt: Date.now(),
+      syncClaimToken,
     });
-    return true;
+    return syncClaimToken;
   });
 }
 
 /**
  * Mark an operation as completed (successfully synced)
  */
-export async function markCompleted(id: number): Promise<void> {
-  await updateOperation(id, {
-    status: "completed",
+export async function markCompleted(id: number, syncClaimToken?: string): Promise<boolean> {
+  const db = getWriteQueueDB();
+  return db.transaction("rw", db.operations, async () => {
+    const operation = await db.operations.get(id);
+    if (!operation || (syncClaimToken && operation.syncClaimToken !== syncClaimToken)) return false;
+    await db.operations.update(id, { status: "completed", syncClaimToken: undefined });
+    return true;
   });
 }
 
@@ -373,6 +386,7 @@ async function putLatestCanonicalCheckpoint(
 export async function completeCanonicalOperation(
   id: number,
   receipt: CanonicalTaskPatchReceipt,
+  syncClaimToken?: string,
 ): Promise<void> {
   const db = getWriteQueueDB();
   await db.transaction(
@@ -384,7 +398,8 @@ export async function completeCanonicalOperation(
       const operation = await db.operations.get(id);
       if (
         !operation?.canonicalTaskPatch ||
-        operation.canonicalTaskPatch.operationId !== receipt.operationId
+        operation.canonicalTaskPatch.operationId !== receipt.operationId ||
+        (syncClaimToken && operation.syncClaimToken !== syncClaimToken)
       ) {
         throw new Error(
           "Canonical receipt does not match the queued operation",
@@ -409,6 +424,7 @@ export async function completeCanonicalOperation(
           phase: "committed",
           receipt,
         },
+        syncClaimToken: undefined,
       });
     },
   );
@@ -418,6 +434,7 @@ export async function completeCanonicalOperation(
 export async function completeLegacyTaskOperation(
   id: number,
   canonicalRevision: number,
+  syncClaimToken?: string,
 ): Promise<void> {
   if (!Number.isSafeInteger(canonicalRevision) || canonicalRevision < 1) {
     throw new Error("Canonical revision must be a positive integer");
@@ -433,7 +450,8 @@ export async function completeLegacyTaskOperation(
         !operation ||
         operation.entityType !== "task" ||
         operation.operation !== "update" ||
-        operation.canonicalTaskPatch
+        operation.canonicalTaskPatch ||
+        (syncClaimToken && operation.syncClaimToken !== syncClaimToken)
       ) {
         throw new Error(
           "Legacy task completion requires a queued compatibility update",
@@ -447,7 +465,7 @@ export async function completeLegacyTaskOperation(
         canonicalRevision,
         operationId: `legacy:${id}`,
       });
-      await db.operations.update(id, { status: "completed" });
+      await db.operations.update(id, { status: "completed", syncClaimToken: undefined });
     },
   );
 }
@@ -548,18 +566,21 @@ export async function markFailed(
   id: number,
   error: string,
   nextRetryAt: number,
-): Promise<void> {
+  syncClaimToken?: string,
+): Promise<boolean> {
   const db = getWriteQueueDB();
-  const operation = await db.operations.get(id);
-
-  if (operation) {
-    await updateOperation(id, {
+  return db.transaction("rw", db.operations, async () => {
+    const operation = await db.operations.get(id);
+    if (!operation || (syncClaimToken && operation.syncClaimToken !== syncClaimToken)) return false;
+    await db.operations.update(id, {
       status: "failed",
       lastError: error,
       retryCount: operation.retryCount + 1,
       nextRetryAt,
+      syncClaimToken: undefined,
     });
-  }
+    return true;
+  });
 }
 
 /**
@@ -569,30 +590,31 @@ export async function markConflict(
   id: number,
   serverVersion: number,
   serverData?: Record<string, unknown>,
+  syncClaimToken?: string,
 ): Promise<WriteConflict> {
   const db = getWriteQueueDB();
-  const operation = await db.operations.get(id);
+  return db.transaction("rw", db.operations, db.conflicts, async () => {
+    const operation = await db.operations.get(id);
+    if (!operation) throw new Error(`Operation ${id} not found`);
+    if (syncClaimToken && operation.syncClaimToken !== syncClaimToken) {
+      throw new Error(`Operation ${id} claim is no longer current`);
+    }
 
-  if (!operation) {
-    throw new Error(`Operation ${id} not found`);
-  }
+    await db.operations.update(id, {
+      status: "conflict",
+      syncClaimToken: undefined,
+    });
 
-  // Update operation status
-  await updateOperation(id, {
-    status: "conflict",
+    const conflict: WriteConflict = {
+      operation: { ...operation, status: "conflict", syncClaimToken: undefined },
+      serverVersion,
+      localVersion: operation.baseVersion || 0,
+      serverData,
+      detectedAt: Date.now(),
+    };
+    await db.conflicts.add(conflict);
+    return conflict;
   });
-
-  // Record the conflict
-  const conflict: WriteConflict = {
-    operation,
-    serverVersion,
-    localVersion: operation.baseVersion || 0,
-    serverData,
-    detectedAt: Date.now(),
-  };
-
-  await db.conflicts.add(conflict);
-  return conflict;
 }
 
 /**
@@ -743,6 +765,7 @@ export async function recoverStaleSyncing(maxAgeMs = 60_000): Promise<number> {
         await db.operations.update(candidate.id!, {
           status: "pending",
           retryCount: current.retryCount + 1,
+          syncClaimToken: undefined,
         });
         count += 1;
       }

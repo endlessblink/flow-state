@@ -19,6 +19,7 @@ import {
   hasLaterUnresolvedOperation,
   markFailed,
   markConflict,
+  markCompleted,
   markSyncing,
   purgeStaleOperations,
   recoverStaleSyncing,
@@ -74,9 +75,30 @@ describe('canonical write queue durability', () => {
       payload: { title: 'Claim me' }, userId: 'user-1', workspaceId: null,
     })
 
-    await expect(markSyncing(operation.id!)).resolves.toBe(true)
+    await expect(markSyncing(operation.id!)).resolves.toEqual(expect.any(String))
     await expect(markSyncing(operation.id!)).resolves.toBe(false)
     await expect(getWriteQueueDB().operations.get(operation.id!)).resolves.toMatchObject({ status: 'syncing' })
+  })
+
+  it('fences a stale worker after recovery and re-claim', async () => {
+    const operation = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-fenced',
+      payload: { title: 'Fence me' }, userId: 'user-1', workspaceId: null,
+    })
+    const firstClaim = await markSyncing(operation.id!)
+    expect(firstClaim).toEqual(expect.any(String))
+
+    await getWriteQueueDB().operations.update(operation.id!, {
+      lastAttemptAt: Date.now() - 120_000,
+    })
+    await expect(recoverStaleSyncing()).resolves.toBe(1)
+
+    const secondClaim = await markSyncing(operation.id!)
+    expect(secondClaim).toEqual(expect.any(String))
+    expect(secondClaim).not.toBe(firstClaim)
+    await expect(markCompleted(operation.id!, firstClaim as string)).resolves.toBe(false)
+    await expect(getWriteQueueDB().operations.get(operation.id!)).resolves.toMatchObject({ status: 'syncing' })
+    await expect(markCompleted(operation.id!, secondClaim as string)).resolves.toBe(true)
   })
 
   it('atomically stores canonical proof before completing the queue row', async () => {

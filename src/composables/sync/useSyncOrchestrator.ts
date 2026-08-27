@@ -138,12 +138,12 @@ const markSyncing: typeof _markSyncing = async (...args) => {
 
 const markCompleted: typeof _markCompleted = async (...args) => {
   const mod = await getWriteQueueModule()
-  if (mod) await mod.markCompleted(...args)
+  return mod ? mod.markCompleted(...args) : false
 }
 
 const markFailed: typeof _markFailed = async (...args) => {
   const mod = await getWriteQueueModule()
-  if (mod) await mod.markFailed(...args)
+  return mod ? mod.markFailed(...args) : false
 }
 
 const markConflict: typeof _markConflict = async (...args) => {
@@ -307,6 +307,16 @@ const QUEUE_LOCK_ERROR_PREFIX = 'Safe sync coordination is unavailable'
 
 // TASK-1177: Permanent failure pub/sub (module-level to match singleton state)
 const permanentFailureCallbacks = new Set<(op: WriteOperation) => void>()
+
+function requiresManualResolution(operation: WriteOperation): boolean {
+  const message = operation.lastError?.toLowerCase() ?? ''
+  return message.includes('invalid_canonical_preview')
+    || message.includes('authoritative projection')
+    || message.includes('preserved for manual resolution')
+    || message.includes('queue_scope_')
+    || message.includes('not_authenticated')
+    || message.includes('task no longer exists')
+}
 
 // Online/offline listeners (set up once)
 let listenersSetUp = false
@@ -867,7 +877,27 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
   // Mark as syncing
   // Older queue adapters may not return the claim result; only an explicit
   // false means another worker owns the operation.
-  if ((await markSyncing(operation.id)) === false) return undefined
+  const claim = await markSyncing(operation.id)
+  if (claim === false) return undefined
+  const claimToken = typeof claim === 'string' ? claim : undefined
+  const complete = (receipt: Parameters<typeof completeCanonicalOperation>[1]) =>
+    claimToken
+      ? completeCanonicalOperation(operation.id!, receipt, claimToken)
+      : completeCanonicalOperation(operation.id!, receipt)
+  const completeLegacy = (revision: number) =>
+    claimToken
+      ? completeLegacyTaskOperation(operation.id!, revision, claimToken)
+      : completeLegacyTaskOperation(operation.id!, revision)
+  const completePlain = () =>
+    claimToken ? markCompleted(operation.id!, claimToken) : markCompleted(operation.id!)
+  const fail = (error: string, nextRetryAt: number) =>
+    claimToken
+      ? markFailed(operation.id!, error, nextRetryAt, claimToken)
+      : markFailed(operation.id!, error, nextRetryAt)
+  const conflict = (serverVersion: number) =>
+    claimToken
+      ? markConflict(operation.id!, serverVersion, undefined, claimToken)
+      : markConflict(operation.id!, serverVersion)
 
   // Execute the operation
   const result = await executeOperation(operation)
@@ -876,16 +906,16 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     const returnedCanonicalRevision = Number(result.serverData?.canonical_revision)
     // Success - mark completed
     if (result.canonicalReceipt) {
-      await completeCanonicalOperation(operation.id, result.canonicalReceipt)
+      await complete(result.canonicalReceipt)
     } else if (
       operation.entityType === 'task'
       && operation.operation === 'update'
       && Number.isInteger(returnedCanonicalRevision)
       && returnedCanonicalRevision > 0
     ) {
-      await completeLegacyTaskOperation(operation.id, returnedCanonicalRevision)
+      await completeLegacy(returnedCanonicalRevision)
     } else {
-      await markCompleted(operation.id)
+      await completePlain()
     }
     let hasLaterUnresolvedTaskOperation = false
     if (operation.entityType === 'task') {
@@ -910,7 +940,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
       } catch (error) {
         console.warn('[SYNC] Failed to project canonical receipt into task state:', error)
         const message = error instanceof Error ? error.message : String(error)
-        await markFailed(operation.id, `Canonical receipt projection failed: ${message}`, Date.now() + 1_000)
+        await fail(`Canonical receipt projection failed: ${message}`, Date.now() + 1_000)
         state.value.lastError = `Canonical receipt projection failed: ${message}`
         return {
           success: false,
@@ -978,7 +1008,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     }
   } else if (result.isConflict) {
     // Conflict - need resolution
-    await markConflict(operation.id!, result.newVersion || 0)
+    await conflict(result.newVersion || 0)
     state.value.lastError = result.error
     console.warn(`⚠️ [SYNC] Conflict: ${operation.entityType}:${operation.entityId.slice(0, 8)}`)
   } else if (result.isAuthError) {
@@ -992,7 +1022,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
         const { error: refreshError } = await supabase!.auth.refreshSession()
         if (refreshError) {
           // Refresh itself failed — user is truly logged out, give up
-          await markFailed(operation.id, `Auth refresh failed: ${refreshError.message}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
+          await fail(`Auth refresh failed: ${refreshError.message}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
           state.value.lastError = `Auth refresh failed: ${refreshError.message}`
           console.error(`❌ [SYNC] Auth refresh failed for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
           permanentFailureCallbacks.forEach(cb => cb(operation))
@@ -1000,20 +1030,20 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
           // Token refreshed — reset to pending with a short delay (1s) so the
           // next queue cycle picks it up immediately rather than waiting 5s.
           const nextRetryAt = Date.now() + 1000
-          await markFailed(operation.id, result.error || 'Auth error', nextRetryAt)
+          await fail(result.error || 'Auth error', nextRetryAt)
           console.log(`✅ [SYNC] Token refreshed — ${operation.entityType}:${operation.entityId.slice(0, 8)} rescheduled in 1s`)
         }
       } catch (refreshException) {
         // Unexpected error during refresh — treat as permanent
         const msg = refreshException instanceof Error ? refreshException.message : String(refreshException)
-        await markFailed(operation.id, `Auth refresh exception: ${msg}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
+        await fail(`Auth refresh exception: ${msg}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
         state.value.lastError = `Auth refresh exception: ${msg}`
         console.error(`❌ [SYNC] Auth refresh threw for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
         permanentFailureCallbacks.forEach(cb => cb(operation))
       }
     } else {
       // Exhausted refresh attempts — user is logged out, mark permanent
-      await markFailed(operation.id, result.error || 'Auth error (max retries)', Date.now() + 365 * 24 * 60 * 60 * 1000)
+      await fail(result.error || 'Auth error (max retries)', Date.now() + 365 * 24 * 60 * 60 * 1000)
       state.value.lastError = result.error
       console.error(`❌ [SYNC] Auth retries exhausted for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
       permanentFailureCallbacks.forEach(cb => cb(operation))
@@ -1022,7 +1052,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     const retryConfig = getRetryConfigForError(result.classification as ErrorClassification)
     const nextRetryAt = result.cooldownUntil ?? calculateNextRetryTime(operation.retryCount, retryConfig ?? undefined)
     openRemoteWriteCooldown(nextRetryAt, result.error || 'Supabase rate limited writes')
-    await markFailed(operation.id, result.error || 'Rate limited', nextRetryAt)
+    await fail(result.error || 'Rate limited', nextRetryAt)
     state.value.lastError = result.error || 'Rate limited'
     console.warn(`⏳ [SYNC] Rate limited. Pausing remote writes for ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
   } else if (result.shouldRetry) {
@@ -1031,7 +1061,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
       ? getRetryConfigForError(result.classification as ErrorClassification)
       : undefined
     const nextRetryAt = calculateNextRetryTime(operation.retryCount, retryConfig ?? undefined)
-    await markFailed(operation.id, result.error || 'Unknown error', nextRetryAt)
+    await fail(result.error || 'Unknown error', nextRetryAt)
     if (import.meta.env.DEV) {
       console.warn(`⚠️ [SYNC] Retry scheduled: ${operation.entityType}:${operation.entityId.slice(0, 8)} in ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
     }
@@ -1055,7 +1085,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     }
   } else {
     // Permanent error - mark as failed (won't auto-retry)
-    await markFailed(operation.id, result.error || 'Permanent error', Date.now() + 365 * 24 * 60 * 60 * 1000) // Far future = won't auto-retry
+    await fail(result.error || 'Permanent error', Date.now() + 365 * 24 * 60 * 60 * 1000) // Far future = won't auto-retry
     state.value.lastError = result.error
     console.error(`❌ [SYNC] Permanent failure: ${operation.entityType}:${operation.entityId.slice(0, 8)} - ${result.error}`)
     permanentFailureCallbacks.forEach(cb => cb(operation))
@@ -1408,7 +1438,7 @@ export function useSyncOrchestrator() {
     const failed = await getFailedOperations()
 
     for (const op of failed) {
-      if (op.id) {
+      if (op.id && !requiresManualResolution(op)) {
         await import('@/services/offline/writeQueueDB').then(({ updateOperation }) =>
           updateOperation(op.id!, {
             status: 'pending',
@@ -1427,7 +1457,7 @@ export function useSyncOrchestrator() {
     const failed = await getFailedOperations()
 
     for (const op of failed) {
-      if (op.id && requested.has(op.entityId)) {
+      if (op.id && requested.has(op.entityId) && !requiresManualResolution(op)) {
         await import('@/services/offline/writeQueueDB').then(({ updateOperation }) =>
           updateOperation(op.id!, {
             status: 'pending',

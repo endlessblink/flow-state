@@ -65,6 +65,28 @@ describe('Electron pending update recovery', () => {
     expect(existsSync(join(cacheHome, 'flow-state-updater', 'pending', fileName))).toBe(false)
   })
 
+  it('rejects metadata paths outside the pending directory', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    writeFileSync(join(pending, 'update-info.json'), JSON.stringify({ fileName: '../outside.AppImage' }))
+    writeFileSync(join(cacheHome, 'outside.AppImage'), 'must remain')
+
+    expect(pendingAppImagePath(cacheHome)).toBeNull()
+    expect(clearStalePendingUpdate('1.4.331', cacheHome).cleared).toBe(true)
+    expect(existsSync(join(cacheHome, 'outside.AppImage'))).toBe(true)
+  })
+
+  it('clears malformed pending metadata without throwing or touching neighboring files', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    writeFileSync(join(pending, 'update-info.json'), '{not-json')
+    writeFileSync(join(pending, 'FlowState-9.9.9-x86_64.AppImage'), 'newer image')
+
+    expect(() => clearStalePendingUpdate('1.4.331', cacheHome)).not.toThrow()
+    expect(existsSync(join(pending, 'update-info.json'))).toBe(false)
+    expect(existsSync(join(pending, 'FlowState-9.9.9-x86_64.AppImage'))).toBe(true)
+  })
+
   it('recovers the newest downloaded AppImage when updater metadata is missing', () => {
     const cacheHome = makeCacheHome()
     const pending = join(cacheHome, 'flow-state-updater', 'pending')

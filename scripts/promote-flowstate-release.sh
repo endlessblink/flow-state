@@ -30,21 +30,48 @@ cp -- "$RECEIPT" "$STAGE/release-receipt.json"
 
 node - "$STAGE/release-receipt.json" "$STAGE/electron/latest-linux.yml" <<'NODE'
 const fs = require('fs')
+const crypto = require('crypto')
+const path = require('path')
 const [receiptPath, manifestPath] = process.argv.slice(2)
 const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'))
 const manifest = fs.readFileSync(manifestPath, 'utf8')
 const version = manifest.match(/^version:\s*(\S+)$/m)?.[1]
+if (receipt.schemaVersion !== 'flowstate-release-receipt-v1') throw new Error('invalid release receipt schema')
 if (version !== receipt.version) throw new Error(`receipt/manifest version mismatch: ${version}/${receipt.version}`)
-if (receipt.source?.dirty === true) throw new Error('refusing dirty source receipt')
+if (!/^\d+\.\d+\.\d+$/.test(receipt.version)) throw new Error('invalid release receipt version')
+if (!/^[0-9a-f]{40}$/.test(receipt.source?.commit || '')) throw new Error('receipt source commit is not immutable')
+if (receipt.source?.dirty !== false) throw new Error('refusing dirty source receipt')
 if (!Array.isArray(receipt.artifacts) || receipt.artifacts.length === 0) throw new Error('receipt has no artifacts')
+const manifestArtifacts = [...manifest.matchAll(/^\s*-\s+url:\s*(\S+)\s*$/gm)].map((match) => path.basename(match[1]))
+const receiptArtifacts = receipt.artifacts.map((artifact) => artifact.name)
+if (manifestArtifacts.length !== receiptArtifacts.length || manifestArtifacts.some((name) => !receiptArtifacts.includes(name))) {
+  throw new Error('receipt artifact set does not match manifest')
+}
 for (const artifact of receipt.artifacts) {
   if (!/^[A-Za-z0-9._-]+$/.test(artifact.name)) throw new Error(`unsafe artifact name: ${artifact.name}`)
-  const path = require('path').join(require('path').dirname(manifestPath), artifact.name)
-  const stat = fs.statSync(path)
+  if (!/^[0-9a-f]{64}$/.test(artifact.sha256) || !Number.isSafeInteger(artifact.size) || artifact.size < 0) {
+    throw new Error(`invalid artifact receipt: ${artifact.name}`)
+  }
+  const artifactPath = path.join(path.dirname(manifestPath), artifact.name)
+  const stat = fs.statSync(artifactPath)
   if (stat.size !== artifact.size) throw new Error(`artifact size mismatch: ${artifact.name}`)
-  const hash = require('crypto').createHash('sha256').update(fs.readFileSync(path)).digest('hex')
+  const hash = crypto.createHash('sha256').update(fs.readFileSync(artifactPath)).digest('hex')
   if (hash !== artifact.sha256) throw new Error(`artifact hash mismatch: ${artifact.name}`)
 }
+if (!receipt.web || !Number.isSafeInteger(receipt.web.fileCount) || receipt.web.fileCount <= 0 || !/^[0-9a-f]{64}$/.test(receipt.web.sha256)) {
+  throw new Error('invalid web receipt')
+}
+const pwaRoot = path.join(path.dirname(receiptPath), 'pwa')
+if (!fs.existsSync(pwaRoot)) throw new Error('staged web build is missing')
+const walk = (root, prefix = '') => fs.readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+  const relative = path.join(prefix, entry.name)
+  const absolute = path.join(root, entry.name)
+  return entry.isDirectory() ? walk(absolute, relative) : [relative]
+})
+const webFiles = walk(pwaRoot).sort()
+const webHash = crypto.createHash('sha256')
+for (const relative of webFiles) webHash.update(relative).update('\0').update(fs.readFileSync(path.join(pwaRoot, relative))).update('\0')
+if (webFiles.length !== receipt.web.fileCount || webHash.digest('hex') !== receipt.web.sha256) throw new Error('staged web build does not match receipt')
 NODE
 
 CURRENT="$(awk '/^version:/{print $2; exit}' "$UPDATES/latest-linux.yml" 2>/dev/null || true)"

@@ -66,7 +66,7 @@ function readSource(root) {
     // The canonical frontend/main build refreshes these tracked generated
     // outputs before provenance is sealed. They are not source drift.
     dirty: git(
-      'status', '--porcelain', '--untracked-files=no', '--', '.',
+      'status', '--porcelain', '--untracked-files=all', '--', '.',
       ':(exclude)dist-electron',
       ':(exclude)stats.html',
     ).length > 0,
@@ -95,6 +95,7 @@ function readBuild(root, builtAt) {
       build.packageProvenance = {
         status: 'available',
         sha256: sha256File(embeddedLedgerPath),
+        packageVersion: typeof embedded?.build?.packageVersion === 'string' ? embedded.build.packageVersion : null,
         commit: /^[0-9a-f]{40}$/.test(embedded?.source?.commit || '') ? embedded.source.commit : null,
         dirty: embedded?.source?.dirty === true,
         builtAt: typeof embedded?.build?.builtAt === 'string' ? embedded.build.builtAt : null,

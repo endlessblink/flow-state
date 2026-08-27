@@ -24,8 +24,17 @@ async function main() {
   const ledger = await buildTruthLedger({ root, mode: 'non-live' })
   const manifestPath = path.join(root, 'release', 'latest-linux.yml')
   const manifest = parseUpdaterManifest(fs.readFileSync(manifestPath, 'utf8'))
-  if (ledger.source.dirty) throw new Error('refusing to create a release receipt from dirty source')
+  if (!/^[0-9a-f]{40}$/.test(ledger.source.commit || '')) throw new Error('receipt source commit is not immutable')
+  if (ledger.source.dirty !== false) throw new Error('refusing to create a release receipt from dirty source')
   if (!manifest.version || manifest.version !== ledger.build.packageVersion) throw new Error('receipt version does not match package and manifest')
+  if (!Array.isArray(manifest.artifacts) || manifest.artifacts.length === 0) throw new Error('receipt has no manifest artifacts')
+  if (!fs.existsSync(path.join(root, 'dist'))) throw new Error('receipt web build is missing')
+  const provenance = ledger.build.packageProvenance
+  if (provenance?.status !== 'available') throw new Error('receipt embedded provenance is unavailable')
+  if (provenance.commit !== ledger.source.commit) throw new Error('receipt embedded provenance commit mismatch')
+  if (provenance.packageVersion !== ledger.build.packageVersion) throw new Error('receipt embedded provenance version mismatch')
+  if (provenance.dirty !== false) throw new Error('receipt embedded provenance is dirty')
+  if (JSON.stringify(provenance.contractSet) !== JSON.stringify(ledger.build.contractSet)) throw new Error('receipt embedded provenance contract set mismatch')
   const artifacts = manifest.artifacts.map(({ name, size }) => {
     const file = path.join(root, 'release', name)
     const stat = fs.statSync(file)
@@ -33,6 +42,7 @@ async function main() {
     return { name, sha256: sha256File(file), size: stat.size }
   })
   const webFiles = walk(path.join(root, 'dist')).sort()
+  if (webFiles.length === 0) throw new Error('receipt web build is empty')
   const webHash = createHash('sha256')
   for (const relative of webFiles) {
     const file = path.join(root, 'dist', relative)

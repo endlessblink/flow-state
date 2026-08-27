@@ -17,17 +17,27 @@ const scriptMatch = updaterSource.match(
 if (!scriptMatch) throw new Error('embedded AppImage installer script not found')
 const installerScript = scriptMatch[1].replaceAll('\\${', '${')
 
-function makeFixture(options: { reportedVersion?: string; failSwap?: boolean } = {}) {
+function makeFixture(options: {
+  reportedVersion?: string
+  failSwap?: boolean
+  strategy?: 'systemd' | 'direct'
+} = {}) {
   const root = mkdtempSync(join(tmpdir(), 'flowstate-appimage-transaction-'))
   const bin = join(root, 'bin')
   mkdirSync(bin)
   const systemctlLog = join(root, 'systemctl.log')
+  const curlCount = join(root, 'curl-count')
 
   writeFileSync(join(bin, 'systemctl'), `#!/bin/sh
 printf '%s\n' "$*" >> "$SYSTEMCTL_LOG"
 exit 0
 `)
   writeFileSync(join(bin, 'curl'), `#!/bin/sh
+count=0
+if [ -f "$CURL_COUNT" ]; then count=$(cat "$CURL_COUNT"); fi
+count=$((count + 1))
+printf '%s' "$count" > "$CURL_COUNT"
+if [ "$INSTALL_STRATEGY" = "direct" ] && [ "$count" -eq 1 ]; then exit 1; fi
 printf '{"appVersion":"%s"}' "$REPORTED_VERSION"
 `)
   writeFileSync(join(bin, 'sleep'), '#!/bin/sh\nexit 0\n')
@@ -60,7 +70,7 @@ exec /bin/mv "$@"
     pending,
     info,
     '99999999',
-    'systemd',
+    options.strategy ?? 'systemd',
     '1.4.275',
   ], {
     env: {
@@ -69,6 +79,8 @@ exec /bin/mv "$@"
       SYSTEMCTL_LOG: systemctlLog,
       REPORTED_VERSION: options.reportedVersion ?? '1.4.275',
       FAIL_SWAP: options.failSwap ? '1' : '0',
+      INSTALL_STRATEGY: options.strategy ?? 'systemd',
+      CURL_COUNT: curlCount,
     },
     stdio: 'pipe',
   })
@@ -97,6 +109,25 @@ describe('supervised AppImage installer transaction runtime', () => {
     expect(readFileSync(fixture.target, 'utf8')).toBe('replacement')
     expect(() => readFileSync(`${fixture.target}.flowstate-update-backup`)).toThrow()
     expect(() => readFileSync(fixture.info)).toThrow()
+  })
+
+  it('executes the direct replacement path and clears markers only after fresh provenance', () => {
+    const fixture = makeFixture({ strategy: 'direct' })
+
+    fixture.run()
+
+    expect(readFileSync(fixture.target, 'utf8')).toBe('replacement')
+    expect(() => readFileSync(`${fixture.target}.flowstate-update-backup`)).toThrow()
+    expect(() => readFileSync(fixture.info)).toThrow()
+  })
+
+  it('rolls back a direct replacement when fresh provenance is stale', () => {
+    const fixture = makeFixture({ strategy: 'direct', reportedVersion: '1.4.274' })
+
+    expect(fixture.run).toThrow()
+
+    expect(readFileSync(fixture.target, 'utf8')).toBe('known-good')
+    expect(readFileSync(fixture.info, 'utf8')).toBe('{}')
   })
 
   it('rejects stale localhost health and restores the known-good AppImage', () => {

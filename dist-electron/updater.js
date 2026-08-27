@@ -190,13 +190,16 @@ wait_for_direct_health_version() {
   expected_health_version="$1"
   health_attempt=0
   while [ "$health_attempt" -lt 300 ]; do
-    if curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
+    provenance_probe=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
+    normalized_provenance=$(printf '%s' "$provenance_probe" | tr -d '[:space:]')
+    if printf '%s' "$normalized_provenance" | \
       grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
       return 0
     fi
     health_attempt=$((health_attempt + 1))
     sleep 0.2
   done
+  echo "direct readiness probe response=$provenance_probe"
   return 1
 }
 i=0
@@ -373,6 +376,24 @@ function registerUpdater() {
             throw err;
         }
     });
+    electron_1.ipcMain.handle('updater:retry-failed', async () => {
+        if (!canUseUpdater)
+            return null;
+        const cleared = (0, updater_pending_1.clearBlockedPendingUpdate)(appVersion);
+        if (!cleared.cleared)
+            return null;
+        try {
+            const result = await electron_updater_1.autoUpdater.checkForUpdates();
+            if (result?.updateInfo && (0, updater_pending_1.compareVersions)(result.updateInfo.version, appVersion) > 0) {
+                await electron_updater_1.autoUpdater.downloadUpdate();
+            }
+            return result;
+        }
+        catch (err) {
+            console.error('[Updater] Retry after failed update marker failed:', err.message);
+            throw err;
+        }
+    });
     electron_1.ipcMain.handle('updater:download', async () => {
         if (!canUseUpdater)
             return;
@@ -479,6 +500,14 @@ function registerUpdater() {
             console.warn('[Updater] Suppressing a previously failed update to prevent a notification loop', {
                 blockedVersion,
             });
+            const win = electron_1.BrowserWindow.getAllWindows()[0];
+            if (win) {
+                win.webContents.send('updater:blocked', {
+                    ...info,
+                    currentVersion: appVersion,
+                    message: `Update v${info.version} previously failed to install. Retry to download it again.`,
+                });
+            }
             return;
         }
         const win = electron_1.BrowserWindow.getAllWindows()[0];

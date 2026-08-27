@@ -160,13 +160,13 @@ const updateOperation: typeof _updateOperation = async (...args) => {
 const completeCanonicalOperation: typeof _completeCanonicalOperation = async (...args) => {
   const mod = await getWriteQueueModule()
   if (!mod) throw new Error('IndexedDB not available')
-  await mod.completeCanonicalOperation(...args)
+  return mod.completeCanonicalOperation(...args)
 }
 
 const completeLegacyTaskOperation: typeof _completeLegacyTaskOperation = async (...args) => {
   const mod = await getWriteQueueModule()
   if (!mod) throw new Error('IndexedDB not available')
-  await mod.completeLegacyTaskOperation(...args)
+  return mod.completeLegacyTaskOperation(...args)
 }
 
 const getLatestCanonicalCheckpointForEntity: typeof _getLatestCanonicalCheckpointForEntity = async (...args) => {
@@ -905,18 +905,22 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
   if (result.success) {
     const returnedCanonicalRevision = Number(result.serverData?.canonical_revision)
     // Success - mark completed
+    let completionAccepted: boolean
     if (result.canonicalReceipt) {
-      await complete(result.canonicalReceipt)
+      completionAccepted = await complete(result.canonicalReceipt)
     } else if (
       operation.entityType === 'task'
       && operation.operation === 'update'
       && Number.isInteger(returnedCanonicalRevision)
       && returnedCanonicalRevision > 0
     ) {
-      await completeLegacy(returnedCanonicalRevision)
+      completionAccepted = await completeLegacy(returnedCanonicalRevision)
     } else {
-      await completePlain()
+      completionAccepted = await completePlain()
     }
+    // Older queue adapters do not return a completion result; only an explicit
+    // false means the durable claim was lost.
+    if (completionAccepted === false) return undefined
     let hasLaterUnresolvedTaskOperation = false
     if (operation.entityType === 'task') {
       try {

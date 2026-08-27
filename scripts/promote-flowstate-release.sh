@@ -10,6 +10,7 @@ GUARD="$ELECTRON_STAGE/electron-release-collision-guard.cjs"
 
 command -v flock >/dev/null
 command -v node >/dev/null
+command -v stat >/dev/null
 test -s "$RECEIPT"
 test -d "$PWA_STAGE"
 test -d "$ELECTRON_STAGE"
@@ -110,7 +111,10 @@ NODE
 NEXT_ROOT="$STAGE/public-root"
 mkdir -p "$NEXT_ROOT"
 cp -a "$TARGET_ROOT/." "$NEXT_ROOT/"
-rsync -a --delete --exclude updates --exclude .release.lock "$STAGE/pwa/" "$NEXT_ROOT/"
+# Overlay the staged web build without deleting server-managed files. Hashed
+# assets are immutable and stale files are harmless; deleting the live root is
+# never part of a release transaction.
+rsync -a "$STAGE/pwa/" "$NEXT_ROOT/"
 mkdir -p "$NEXT_ROOT/updates/electron"
 cp -f -- "$STAGE/release-receipt.json" "$NEXT_ROOT/release-receipt.json"
 for artifact in "$STAGE/electron"/*; do
@@ -123,6 +127,10 @@ cp -f -- "$STAGE/electron/latest-linux.yml" "$NEXT_ROOT/updates/electron/latest-
 # Both rename operations are on the same filesystem; a failed second rename
 # restores the old tree before returning an error.
 BACKUP_ROOT="${TARGET_ROOT}.previous-${VERSION}-$$"
+if [ "$(stat -c '%d' "$TARGET_ROOT")" != "$(stat -c '%d' "$STAGE")" ]; then
+  echo "refusing release: target and staging roots are on different filesystems" >&2
+  exit 1
+fi
 mv -- "$TARGET_ROOT" "$BACKUP_ROOT"
 if ! mv -- "$NEXT_ROOT" "$TARGET_ROOT"; then
   mv -- "$BACKUP_ROOT" "$TARGET_ROOT"

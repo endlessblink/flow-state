@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 
 export interface PendingUpdateClearResult {
   cleared: boolean
@@ -59,6 +59,13 @@ function pendingDirectory(cacheHome?: string): string {
   return dirname(pendingUpdateInfoPath(cacheHome))
 }
 
+function safePendingFilePath(updateInfoPath: string, fileName: string): string | null {
+  const directory = resolve(dirname(updateInfoPath))
+  const candidate = resolve(directory, fileName)
+  if (dirname(candidate) !== directory) return null
+  return candidate
+}
+
 function pendingAppImageCandidates(cacheHome?: string): Array<{ path: string; version: string }> {
   const directory = pendingDirectory(cacheHome)
   if (!existsSync(directory)) return []
@@ -73,10 +80,14 @@ function pendingAppImageCandidates(cacheHome?: string): Array<{ path: string; ve
 export function pendingAppImagePath(cacheHome?: string): string | null {
   const updateInfoPath = pendingUpdateInfoPath(cacheHome)
   if (existsSync(updateInfoPath)) {
-    const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string }
-    if (typeof info.fileName === 'string' && info.fileName.endsWith('.AppImage')) {
-      const updateFilePath = join(dirname(updateInfoPath), info.fileName)
-      if (existsSync(updateFilePath)) return updateFilePath
+    try {
+      const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string }
+      if (typeof info.fileName === 'string' && info.fileName.endsWith('.AppImage')) {
+        const updateFilePath = safePendingFilePath(updateInfoPath, info.fileName)
+        if (updateFilePath && existsSync(updateFilePath)) return updateFilePath
+      }
+    } catch {
+      // A malformed record is discarded below; never interpret it as a path.
     }
   }
 
@@ -225,14 +236,24 @@ export function clearStalePendingUpdate(
     return { cleared: false, pendingVersion: null, updateInfoPath }
   }
 
-  const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string }
+  let info: { fileName?: string }
+  try {
+    info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string }
+  } catch {
+    rmSync(updateInfoPath, { force: true })
+    rmSync(pendingUpdateFailurePath(cacheHome), { force: true })
+    return { cleared: true, pendingVersion: null, updateInfoPath }
+  }
   const pendingVersion = versionFromUpdateFileName(info.fileName)
   const fileName = info.fileName
   const shouldClear = !pendingVersion || compareVersions(pendingVersion, appVersion) <= 0
 
   if (shouldClear) {
     rmSync(updateInfoPath, { force: true })
-    if (fileName) rmSync(join(dirname(updateInfoPath), fileName), { force: true })
+    if (fileName) {
+      const updateFilePath = safePendingFilePath(updateInfoPath, fileName)
+      if (updateFilePath) rmSync(updateFilePath, { force: true })
+    }
     rmSync(pendingUpdateFailurePath(cacheHome), { force: true })
   }
 

@@ -387,24 +387,21 @@ export async function completeCanonicalOperation(
   id: number,
   receipt: CanonicalTaskPatchReceipt,
   syncClaimToken?: string,
-): Promise<void> {
+): Promise<boolean> {
   const db = getWriteQueueDB();
-  await db.transaction(
+  return db.transaction(
     "rw",
     db.operations,
     db.canonicalReceiptsV2,
     db.canonicalCheckpoints,
     async () => {
       const operation = await db.operations.get(id);
-      if (
-        !operation?.canonicalTaskPatch ||
-        operation.canonicalTaskPatch.operationId !== receipt.operationId ||
-        (syncClaimToken && operation.syncClaimToken !== syncClaimToken)
-      ) {
+      if (!operation?.canonicalTaskPatch || operation.canonicalTaskPatch.operationId !== receipt.operationId) {
         throw new Error(
           "Canonical receipt does not match the queued operation",
         );
       }
+      if (syncClaimToken && operation.syncClaimToken !== syncClaimToken) return false;
       if (!operation.userId)
         throw new Error("Canonical receipt requires a signed-user scope");
       await db.canonicalReceiptsV2.put({
@@ -426,6 +423,7 @@ export async function completeCanonicalOperation(
         },
         syncClaimToken: undefined,
       });
+      return true;
     },
   );
 }
@@ -435,12 +433,12 @@ export async function completeLegacyTaskOperation(
   id: number,
   canonicalRevision: number,
   syncClaimToken?: string,
-): Promise<void> {
+): Promise<boolean> {
   if (!Number.isSafeInteger(canonicalRevision) || canonicalRevision < 1) {
     throw new Error("Canonical revision must be a positive integer");
   }
   const db = getWriteQueueDB();
-  await db.transaction(
+  return db.transaction(
     "rw",
     db.operations,
     db.canonicalCheckpoints,
@@ -450,13 +448,13 @@ export async function completeLegacyTaskOperation(
         !operation ||
         operation.entityType !== "task" ||
         operation.operation !== "update" ||
-        operation.canonicalTaskPatch ||
-        (syncClaimToken && operation.syncClaimToken !== syncClaimToken)
+        operation.canonicalTaskPatch
       ) {
         throw new Error(
           "Legacy task completion requires a queued compatibility update",
         );
       }
+      if (syncClaimToken && operation.syncClaimToken !== syncClaimToken) return false;
       if (!operation.userId)
         throw new Error("Legacy task completion requires a signed-user scope");
       await putLatestCanonicalCheckpoint(db.canonicalCheckpoints, {
@@ -466,6 +464,7 @@ export async function completeLegacyTaskOperation(
         operationId: `legacy:${id}`,
       });
       await db.operations.update(id, { status: "completed", syncClaimToken: undefined });
+      return true;
     },
   );
 }

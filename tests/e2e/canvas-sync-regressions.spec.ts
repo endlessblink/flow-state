@@ -3490,10 +3490,10 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
         return route.continue();
       }
       return route.fulfill({
-        status: 403,
+        status: 503,
         contentType: "application/json",
         body: JSON.stringify({
-          message: "403 Forbidden: injected permanent persistence rejection",
+          message: "503 Service Unavailable: injected temporary persistence rejection",
         }),
       });
     });
@@ -3520,7 +3520,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     await clientA.locator(".sync-indicator.status-error").click();
     await expect(clientA.getByText("Retry All", { exact: true })).toBeVisible();
     await expect(
-      clientA.getByText("Needs attention", { exact: true }),
+      clientA.getByText(/Service Unavailable: injected temporary persistence rejection/),
     ).toBeVisible();
     await expect(
       clientA.getByText("Discard local changes", { exact: true }),
@@ -3529,7 +3529,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
       0,
     );
     await expect(
-      clientA.getByText("Cannot retry", { exact: true }),
+      clientA.getByText("Manual resolution required", { exact: true }),
     ).toHaveCount(0);
 
     const { data: unchangedTask, error: unchangedError } = await admin

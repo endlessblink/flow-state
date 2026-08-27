@@ -37,6 +37,9 @@
             <div class="error-message">
               {{ lastError }}
             </div>
+            <div v-if="retryableCount === 0" class="resolution-hint">
+              These local changes cannot be retried because the task no longer exists. You can discard them below.
+            </div>
           </div>
 
           <div v-else-if="displayedErrorCount === 0" class="empty-state">
@@ -44,7 +47,12 @@
           </div>
 
           <div v-else class="empty-state">
-            Sync needs attention. The app will keep retrying these local changes.
+            <template v-if="retryableCount > 0">
+              Sync needs attention. The app will retry recoverable local changes.
+            </template>
+            <template v-else>
+              These local changes cannot be retried because the task no longer exists. You can discard them below.
+            </template>
           </div>
 
           <!-- Error List -->
@@ -74,7 +82,7 @@
                 <span v-if="error.lastAttemptAt" class="last-attempt">
                   {{ formatTime(error.lastAttemptAt) }}
                 </span>
-                <span v-if="isPermanentError(error)" class="no-retry-hint">Manual retry available</span>
+                <span v-if="isPermanentError(error)" class="no-retry-hint">Manual resolution required</span>
               </div>
             </div>
           </div>
@@ -90,7 +98,7 @@
 
         <!-- Actions -->
         <div class="popover-footer">
-          <button v-if="errors.length > 0" class="retry-btn" @click="$emit('retry')">
+          <button v-if="retryableCount > 0" class="retry-btn" @click="$emit('retry')">
             <RefreshCw :size="16" />
             Retry All
           </button>
@@ -143,6 +151,10 @@ const isPermanentError = (error: WriteOperation): boolean => {
   if (!error.lastError) return false
   return classifyError(error.lastError) === 'permanent'
 }
+
+const retryableCount = computed(() => {
+  return props.errors.filter(error => !isPermanentError(error)).length
+})
 
 const permanentCount = computed(() => {
   return props.errors.filter(e => isPermanentError(e)).length

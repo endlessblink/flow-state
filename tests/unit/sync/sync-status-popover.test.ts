@@ -100,7 +100,7 @@ describe('sync status auth-error watchdog', () => {
     expect(document.body.textContent).not.toContain('No failed sync operations')
   })
 
-  it('offers manual retry for a permanently failed local change instead of calling it corrupted', async () => {
+  it('does not offer retry for a task missing from the authoritative projection', async () => {
     const { default: SyncErrorPopover } = await import('@/components/sync/SyncErrorPopover.vue')
 
     wrapper = mount(SyncErrorPopover, {
@@ -115,9 +115,9 @@ describe('sync status auth-error watchdog', () => {
           status: 'failed',
           retryCount: 3,
           createdAt: Date.now(),
-          lastError: '403 Forbidden: injected permanent rejection',
+          lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
         }],
-        lastError: '403 Forbidden: injected permanent rejection',
+        lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
       },
       global: {
         stubs: {
@@ -127,10 +127,9 @@ describe('sync status auth-error watchdog', () => {
     })
     await nextTick()
 
-    expect(document.body.textContent).toContain('Retry All')
+    expect(document.body.textContent).not.toContain('Retry All')
     expect(document.body.textContent).toContain('Needs attention')
-    expect(document.body.textContent).not.toContain('Corrupted')
-    expect(document.body.textContent).not.toContain('Cannot retry')
+    expect(document.body.textContent).toContain('cannot be retried because the task no longer exists')
   })
 
   it('requires explicit confirmation before discarding failed local changes', async () => {

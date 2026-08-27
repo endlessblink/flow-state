@@ -2089,6 +2089,10 @@ describe('Error classification and retry strategy', () => {
     expect(classifyError(new Error('Entity not found'))).toBe('permanent')
   })
 
+  it('missing authoritative projection quarantine → no retry', () => {
+    expect(classifyError(new Error('Task no longer exists in the authoritative projection; local update preserved for manual resolution'))).toBe('permanent')
+  })
+
   it('constraint violation → permanent', () => {
     expect(classifyError(new Error('violates foreign key constraint'))).toBe('permanent')
   })
@@ -2158,6 +2162,25 @@ describe('useSyncOrchestrator composable return shape', () => {
       status: 'pending',
       nextRetryAt: undefined,
     })
+  })
+
+  it('does not retry a quarantined update for a task missing from the authoritative projection', async () => {
+    const missingTask = makeOp({
+      id: 304,
+      status: 'failed',
+      retryCount: 2,
+      nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
+    })
+    writeQueueMocks.getFailedOperations.mockResolvedValue([missingTask])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    writeQueueMocks.updateOperation.mockClear()
+
+    await sync.retryFailed()
+
+    expect(writeQueueMocks.updateOperation).not.toHaveBeenCalled()
   })
 
   it('remote repair retries only the requested failed entity ids', async () => {

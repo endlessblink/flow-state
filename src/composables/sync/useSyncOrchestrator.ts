@@ -1402,7 +1402,7 @@ export function useSyncOrchestrator() {
     const failed = await getFailedOperations()
 
     for (const op of failed) {
-      if (op.id) {
+      if (op.id && getRetryConfigForError(classifyError(op.lastError ?? '')) !== null) {
         await import('@/services/offline/writeQueueDB').then(({ updateOperation }) =>
           updateOperation(op.id!, {
             status: 'pending',
@@ -1421,7 +1421,7 @@ export function useSyncOrchestrator() {
     const failed = await getFailedOperations()
 
     for (const op of failed) {
-      if (op.id && requested.has(op.entityId)) {
+      if (op.id && requested.has(op.entityId) && getRetryConfigForError(classifyError(op.lastError ?? '')) !== null) {
         await import('@/services/offline/writeQueueDB').then(({ updateOperation }) =>
           updateOperation(op.id!, {
             status: 'pending',

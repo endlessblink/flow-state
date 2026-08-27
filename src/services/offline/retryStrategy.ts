@@ -230,6 +230,8 @@ export function classifyError(error: unknown): ErrorClassification {
     lowerMessage.includes('syntax') ||  // "invalid input syntax for type uuid"
     lowerMessage.includes('violates') || // constraint violations
     lowerMessage.includes('schema cache') // schema mismatch
+    || lowerMessage.includes('authoritative projection')
+    || lowerMessage.includes('preserved for manual resolution')
   ) {
     return 'permanent'
   }

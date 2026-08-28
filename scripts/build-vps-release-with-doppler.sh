@@ -3,6 +3,13 @@ set -euo pipefail
 
 REMOTE_REPO="${1:?usage: build-vps-release-with-doppler.sh REMOTE_REPO}"
 NODE_BIN="/opt/flowstate/toolchains/node-v22.22.0-linux-x64/bin"
+LOCK_PATH="/var/tmp/flowstate-release-build.lock"
+
+exec 9>"$LOCK_PATH"
+if ! flock -n 9; then
+  echo "another FlowState release build is already running" >&2
+  exit 1
+fi
 
 if [[ ! -d "$REMOTE_REPO" ]]; then
   echo "release worker does not exist: $REMOTE_REPO" >&2

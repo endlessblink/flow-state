@@ -14,4 +14,12 @@ set -a
 . /etc/flowstate/doppler-release.env
 set +a
 export DOPPLER_PROJECT=flow-state DOPPLER_CONFIG=prd
-/usr/bin/doppler run --project flow-state --config prd -- npm run electron:build:locked
+BUILD_LOG="/var/tmp/flowstate-build-${RELEASE_VERSION:-unknown}-${EXPECTED_COMMIT}.log"
+rm -f -- "$BUILD_LOG"
+set +e
+/usr/bin/doppler run --project flow-state --config prd -- npm run electron:build:locked >"$BUILD_LOG" 2>&1
+BUILD_STATUS=$?
+set -e
+tail -120 "$BUILD_LOG"
+rm -f -- "$BUILD_LOG"
+exit "$BUILD_STATUS"

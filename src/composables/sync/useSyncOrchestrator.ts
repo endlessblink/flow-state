@@ -341,6 +341,17 @@ function getRetryAfterCooldown(error: unknown): number | undefined {
   return undefined
 }
 
+function guardMutationByServerTimestamp<T extends { lte?: (column: string, value: string) => T }>(
+  query: T,
+  operation: WriteOperation,
+  payload: Record<string, unknown>,
+): T {
+  const updatedAt = typeof payload.updated_at === 'string'
+    ? payload.updated_at
+    : new Date(operation.createdAt).toISOString()
+  return typeof query.lte === 'function' ? query.lte('updated_at', updatedAt) : query
+}
+
 function openRemoteWriteCooldown(until: number, reason: string): void {
   if (!state.value.remoteWriteCooldownUntil || until > state.value.remoteWriteCooldownUntil) {
     state.value.remoteWriteCooldownUntil = until
@@ -651,7 +662,11 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
         // 3. If server timestamp < our timestamp, force update (our change wins)
         // 4. If server timestamp > our timestamp, server wins - discard our change
 
-        let query = supabase!.from(tableName).update(payload).eq('id', entityId)
+        let query = guardMutationByServerTimestamp(
+          supabase!.from(tableName).update(payload).eq('id', entityId),
+          operation,
+          payload as Record<string, unknown>,
+        )
 
         // Only tasks and groups have position_version column for optimistic locking
         const hasPositionVersion = entityType === 'task' || entityType === 'group'
@@ -712,10 +727,19 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
               .from(tableName)
               .update(payload)
               .eq('id', entityId)
+              .lte(
+                'updated_at',
+                typeof payload.updated_at === 'string'
+                  ? payload.updated_at
+                  : new Date(operation.createdAt).toISOString(),
+              )
               .select()
 
             if (forceResult.error) {
               throw forceResult.error
+            }
+            if (!forceResult.data || forceResult.data.length === 0) {
+              throw new Error(`Update lost its server freshness race for ${entityType}:${entityId}`)
             }
 
             result = forceResult

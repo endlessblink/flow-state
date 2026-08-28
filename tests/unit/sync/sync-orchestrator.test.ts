@@ -294,6 +294,7 @@ function mockSupabaseChain(overrides: {
 
   chain.select = vi.fn().mockReturnValue(selectResult)
   chain.eq = vi.fn().mockReturnValue(chain)
+  chain.lte = vi.fn().mockReturnValue(chain)
   chain.limit = vi.fn().mockReturnValue(chain)
   chain.maybeSingle = vi.fn().mockResolvedValue({
     data: overrides.maybeSingleData ?? null,
@@ -1880,6 +1881,29 @@ describe('Conflict resolution (LWW)', () => {
     const localTs = new Date(localUpdatedAt).getTime()
     const serverTs = new Date(serverUpdatedAt).getTime()
     expect(localTs).toBeGreaterThan(serverTs)
+  })
+
+  it('guards ordinary updates by the queued freshness timestamp', async () => {
+    const op = makeOp({
+      id: 1852,
+      operation: 'update',
+      entityType: 'project',
+      entityId: 'project-freshness-guard',
+      payload: { name: 'Fresh project', updated_at: '2026-06-13T10:00:00.000Z' },
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'Single operation',
+    })
+    const chain = mockSupabaseChain({ selectData: [{ id: op.entityId }] })
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(chain.lte).toHaveBeenCalledWith('updated_at', op.payload.updated_at)
   })
 
   it('LWW: server timestamp > local → server wins, returns serverData', async () => {

@@ -1,4 +1,4 @@
-import { closeSync, existsSync, fsyncSync, lstatSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, fsyncSync, lstatSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -31,6 +31,7 @@ const RETRY_BACKOFF_MS = 5 * 60 * 1000
 const MAX_RETRY_BACKOFF_MS = 24 * 60 * 60 * 1000
 const RECEIPT_LOCK_RETRIES = 100
 const RECEIPT_LOCK_WAIT_MS = 10
+const RECEIPT_LOCK_STALE_MS = 60 * 1000
 
 function withPendingFailureLock<T>(failurePath: string, action: () => T): T {
   const lockPath = `${failurePath}.lock`
@@ -42,14 +43,19 @@ function withPendingFailureLock<T>(failurePath: string, action: () => T): T {
         break
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+        try {
+          if (Date.now() - statSync(lockPath).mtimeMs > RECEIPT_LOCK_STALE_MS) rmSync(lockPath, { force: true })
+        } catch {
+          // The lock may have been released between the failed open and stat.
+        }
         Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, RECEIPT_LOCK_WAIT_MS)
       }
     }
     if (lockDescriptor === undefined) throw new Error('Timed out waiting for the updater failure receipt lock')
     return action()
   } finally {
-    if (lockDescriptor !== undefined) closeSync(lockDescriptor)
     if (lockDescriptor !== undefined) rmSync(lockPath, { force: true })
+    if (lockDescriptor !== undefined) closeSync(lockDescriptor)
   }
 }
 
@@ -250,8 +256,9 @@ export function clearBlockedPendingUpdate(
   let currentArtifactUrl = resolvedFileName
   let currentDigest = ''
   try {
-    const parsedInfo = JSON.parse(info) as { artifactUrl?: unknown; sha512?: unknown; digest?: unknown }
+    const parsedInfo = JSON.parse(info) as { artifactUrl?: unknown; url?: unknown; sha512?: unknown; digest?: unknown }
     if (typeof parsedInfo.artifactUrl === 'string') currentArtifactUrl = parsedInfo.artifactUrl
+    else if (typeof parsedInfo.url === 'string') currentArtifactUrl = parsedInfo.url
     if (typeof parsedInfo.digest === 'string') currentDigest = parsedInfo.digest
     else if (typeof parsedInfo.sha512 === 'string') currentDigest = parsedInfo.sha512
   } catch {

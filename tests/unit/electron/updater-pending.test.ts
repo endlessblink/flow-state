@@ -216,6 +216,22 @@ describe('Electron pending update recovery', () => {
     expect(readPendingUpdateFailure(cacheHome)).toMatchObject({ attemptCount: 1, digest: '' })
   })
 
+  it('clears a blocked update when metadata uses the standard url and sha512 fields', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const fileName = 'FlowState-1.4.339-x86_64.AppImage'
+    const artifactUrl = `https://in-theflow.com/updates/electron/${fileName}`
+    writeFileSync(join(pending, 'update-info.json'), JSON.stringify({ fileName, url: artifactUrl, sha512: 'sha512:receipt' }))
+    writeFileSync(join(pending, fileName), 'failed-app-image')
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.339', artifactUrl, digest: 'sha512:receipt', errorClass: 'installer',
+      attemptCount: 1, failedAt: '2026-08-26T10:00:00.000Z', nextRetryAt: '2026-08-26T10:05:00.000Z',
+    }))
+
+    expect(clearBlockedPendingUpdate('1.4.338', cacheHome).cleared).toBe(true)
+    expect(existsSync(join(pending, fileName))).toBe(false)
+  })
+
   it('resets retry history when a different pending artifact replaces the failed one', () => {
     const cacheHome = makeCacheHome()
     const pending = join(cacheHome, 'flow-state-updater', 'pending')

@@ -29,6 +29,29 @@ export interface PendingUpdateFailureOptions {
 const MAX_AUTOMATIC_FAILURES = 3
 const RETRY_BACKOFF_MS = 5 * 60 * 1000
 const MAX_RETRY_BACKOFF_MS = 24 * 60 * 60 * 1000
+const RECEIPT_LOCK_RETRIES = 100
+const RECEIPT_LOCK_WAIT_MS = 10
+
+function withPendingFailureLock<T>(failurePath: string, action: () => T): T {
+  const lockPath = `${failurePath}.lock`
+  let lockDescriptor: number | undefined
+  try {
+    for (let attempt = 0; attempt < RECEIPT_LOCK_RETRIES; attempt += 1) {
+      try {
+        lockDescriptor = openSync(lockPath, 'wx', 0o600)
+        break
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, RECEIPT_LOCK_WAIT_MS)
+      }
+    }
+    if (lockDescriptor === undefined) throw new Error('Timed out waiting for the updater failure receipt lock')
+    return action()
+  } finally {
+    if (lockDescriptor !== undefined) closeSync(lockDescriptor)
+    if (lockDescriptor !== undefined) rmSync(lockPath, { force: true })
+  }
+}
 
 export function compareVersions(a: string, b: string): number {
   const aParts = parseVersionCore(a)
@@ -234,14 +257,14 @@ export function clearBlockedPendingUpdate(
   } catch {
     // Legacy metadata only carries the file name; an existing digest cannot be safely reused.
   }
-  const exactIdentityBlocked = resolvedFileName.length > 0 && Boolean(failure)
+  const exactIdentityBlocked = failure !== null && resolvedFileName.length > 0
     && artifactIdentityMatches(failure, {
       version: pendingVersion ?? '',
       artifactUrl: currentArtifactUrl,
       digest: currentDigest,
     })
   const lexicalCandidate = resolve(dirname(updateInfoPath), resolvedFileName)
-  const unsafeMetadataBlocked = resolvedFileName.length > 0 && Boolean(failure)
+  const unsafeMetadataBlocked = failure !== null && resolvedFileName.length > 0
     && failure.version === pendingVersion
     && failure.artifactUrl === resolvedFileName
     && dirname(lexicalCandidate) !== dirname(updateInfoPath)
@@ -271,51 +294,53 @@ export function recordPendingUpdateFailure(
 ): void {
   const updateInfoPath = pendingUpdateInfoPath(cacheHome)
   if (!existsSync(updateInfoPath)) return
-  const info = readFileSync(updateInfoPath, 'utf8')
-  const fileName = info.match(/"fileName"\s*:\s*"([^"]+)"/)?.[1]
-  if (!fileName) return
-  const now = options.now ?? new Date()
-  const previous = readPendingUpdateFailure(cacheHome)
-  const version = versionFromUpdateFileName(fileName) ?? 'unknown'
-  const previousMatchesArtifact = previous
-    && artifactIdentityMatches(previous, {
-      version,
-      artifactUrl: options.artifactUrl ?? fileName,
-      digest: options.digest ?? '',
-    })
-  const priorFailure = previousMatchesArtifact ? previous : undefined
-  const attemptCount = (priorFailure?.attemptCount ?? 0) + 1
-  const backoff = Math.min(RETRY_BACKOFF_MS * 2 ** (attemptCount - 1), MAX_RETRY_BACKOFF_MS)
-  const failure: PendingUpdateFailure = {
-    version,
-    artifactUrl: options.artifactUrl ?? priorFailure?.artifactUrl ?? fileName,
-    digest: options.digest ?? priorFailure?.digest ?? '',
-    errorClass: options.errorClass ?? 'unknown',
-    attemptCount,
-    failedAt: now.toISOString(),
-    nextRetryAt: new Date(now.getTime() + backoff).toISOString(),
-  }
   const failurePath = pendingUpdateFailurePath(cacheHome)
-  const temporaryPath = `${failurePath}.tmp-${process.pid}-${randomUUID()}`
-  try {
-    writeFileSync(temporaryPath, JSON.stringify(failure, null, 2) + '\n', { encoding: 'utf8', mode: 0o600, flag: 'wx' })
-    const fileDescriptor = openSync(temporaryPath, 'r')
-    try {
-      fsyncSync(fileDescriptor)
-    } finally {
-      closeSync(fileDescriptor)
+  withPendingFailureLock(failurePath, () => {
+    const info = readFileSync(updateInfoPath, 'utf8')
+    const fileName = info.match(/"fileName"\s*:\s*"([^"]+)"/)?.[1]
+    if (!fileName) return
+    const now = options.now ?? new Date()
+    const previous = readPendingUpdateFailure(cacheHome)
+    const version = versionFromUpdateFileName(fileName) ?? 'unknown'
+    const previousMatchesArtifact = previous
+      && artifactIdentityMatches(previous, {
+        version,
+        artifactUrl: options.artifactUrl ?? fileName,
+        digest: options.digest ?? '',
+      })
+    const priorFailure = previousMatchesArtifact ? previous : undefined
+    const attemptCount = (priorFailure?.attemptCount ?? 0) + 1
+    const backoff = Math.min(RETRY_BACKOFF_MS * 2 ** (attemptCount - 1), MAX_RETRY_BACKOFF_MS)
+    const failure: PendingUpdateFailure = {
+      version,
+      artifactUrl: options.artifactUrl ?? priorFailure?.artifactUrl ?? fileName,
+      digest: options.digest ?? priorFailure?.digest ?? '',
+      errorClass: options.errorClass ?? 'unknown',
+      attemptCount,
+      failedAt: now.toISOString(),
+      nextRetryAt: new Date(now.getTime() + backoff).toISOString(),
     }
-    renameSync(temporaryPath, failurePath)
-    const directoryDescriptor = openSync(dirname(failurePath), 'r')
+    const temporaryPath = `${failurePath}.tmp-${process.pid}-${randomUUID()}`
     try {
-      fsyncSync(directoryDescriptor)
-    } finally {
-      closeSync(directoryDescriptor)
+      writeFileSync(temporaryPath, JSON.stringify(failure, null, 2) + '\n', { encoding: 'utf8', mode: 0o600, flag: 'wx' })
+      const fileDescriptor = openSync(temporaryPath, 'r')
+      try {
+        fsyncSync(fileDescriptor)
+      } finally {
+        closeSync(fileDescriptor)
+      }
+      renameSync(temporaryPath, failurePath)
+      const directoryDescriptor = openSync(dirname(failurePath), 'r')
+      try {
+        fsyncSync(directoryDescriptor)
+      } finally {
+        closeSync(directoryDescriptor)
+      }
+    } catch (error) {
+      rmSync(temporaryPath, { force: true })
+      throw error
     }
-  } catch (error) {
-    rmSync(temporaryPath, { force: true })
-    throw error
-  }
+  })
 }
 
 export function clearStalePendingUpdate(

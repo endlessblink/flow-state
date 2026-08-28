@@ -898,12 +898,50 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     claimToken
       ? markConflict(operation.id!, serverVersion, undefined, claimToken)
       : markConflict(operation.id!, serverVersion)
+  const failOwned = async (error: string, nextRetryAt: number): Promise<boolean> =>
+    (await fail(error, nextRetryAt)) !== false
+  const conflictOwned = async (serverVersion: number): Promise<boolean> =>
+    (await conflict(serverVersion)) !== false
 
   // Execute the operation
   const result = await executeOperation(operation)
 
   if (result.success) {
     const returnedCanonicalRevision = Number(result.serverData?.canonical_revision)
+    let hasLaterUnresolvedTaskOperation = false
+    if (operation.entityType === 'task') {
+      try {
+        hasLaterUnresolvedTaskOperation = await hasLaterUnresolvedOperation(operation)
+      } catch (error) {
+        // Preserve optimistic state when queue ordering cannot be proven safely.
+        hasLaterUnresolvedTaskOperation = true
+        console.warn('[SYNC] Could not verify later task operations; preserving optimistic state:', error)
+      }
+    }
+
+    // Project the authoritative receipt while this worker still owns the
+    // durable claim. If projection fails, the operation remains retryable and
+    // markFailed can still verify the claim token.
+    if (result.canonicalReceipt && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
+      try {
+        const { useTaskStore } = await import('@/stores/tasks')
+        await useTaskStore().applyCanonicalTaskReceipt(result.canonicalReceipt)
+      } catch (error) {
+        console.warn('[SYNC] Failed to project canonical receipt into task state:', error)
+        const message = error instanceof Error ? error.message : String(error)
+        const failureAccepted = await fail(`Canonical receipt projection failed: ${message}`, Date.now() + 1_000)
+        if (failureAccepted === false) return undefined
+        state.value.lastError = `Canonical receipt projection failed: ${message}`
+        return {
+          success: false,
+          operation,
+          error: state.value.lastError,
+          shouldRetry: true,
+          classification: 'transient'
+        }
+      }
+    }
+
     // Success - mark completed
     let completionAccepted: boolean
     if (result.canonicalReceipt) {
@@ -919,40 +957,13 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
       completionAccepted = await completePlain()
     }
     if (completionAccepted === false) return undefined
-    let hasLaterUnresolvedTaskOperation = false
-    if (operation.entityType === 'task') {
-      try {
-        hasLaterUnresolvedTaskOperation = await hasLaterUnresolvedOperation(operation)
-      } catch (error) {
-        // Preserve optimistic state when queue ordering cannot be proven safely.
-        hasLaterUnresolvedTaskOperation = true
-        console.warn('[SYNC] Could not verify later task operations; preserving optimistic state:', error)
-      }
-    }
     await invalidateSyncedEntityCache(operation.entityType)
     state.value.lastSyncAt = Date.now()
     consecutiveTransientFailures = 0  // BUG-P1: reset on any success
 
     // BUG-1321: When LWW "server wins", apply serverData back to Pinia store.
     // Without this, the local store silently diverges from VPS truth.
-    if (result.canonicalReceipt && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
-      try {
-        const { useTaskStore } = await import('@/stores/tasks')
-        await useTaskStore().applyCanonicalTaskReceipt(result.canonicalReceipt)
-      } catch (error) {
-        console.warn('[SYNC] Failed to project canonical receipt into task state:', error)
-        const message = error instanceof Error ? error.message : String(error)
-        await fail(`Canonical receipt projection failed: ${message}`, Date.now() + 1_000)
-        state.value.lastError = `Canonical receipt projection failed: ${message}`
-        return {
-          success: false,
-          operation,
-          error: state.value.lastError,
-          shouldRetry: true,
-          classification: 'transient'
-        }
-      }
-    } else if (result.serverData && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
+    if (result.serverData && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
       try {
         const { useTaskStore } = await import('@/stores/tasks')
         const taskStore = useTaskStore()
@@ -1010,7 +1021,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     }
   } else if (result.isConflict) {
     // Conflict - need resolution
-    await conflict(result.newVersion || 0)
+    if (!await conflictOwned(result.newVersion || 0)) return undefined
     state.value.lastError = result.error
     console.warn(`⚠️ [SYNC] Conflict: ${operation.entityType}:${operation.entityId.slice(0, 8)}`)
   } else if (result.isAuthError) {
@@ -1024,7 +1035,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
         const { error: refreshError } = await supabase!.auth.refreshSession()
         if (refreshError) {
           // Refresh itself failed — user is truly logged out, give up
-          await fail(`Auth refresh failed: ${refreshError.message}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
+          if (!await failOwned(`Auth refresh failed: ${refreshError.message}`, Date.now() + 365 * 24 * 60 * 60 * 1000)) return undefined
           state.value.lastError = `Auth refresh failed: ${refreshError.message}`
           console.error(`❌ [SYNC] Auth refresh failed for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
           permanentFailureCallbacks.forEach(cb => cb(operation))
@@ -1032,20 +1043,20 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
           // Token refreshed — reset to pending with a short delay (1s) so the
           // next queue cycle picks it up immediately rather than waiting 5s.
           const nextRetryAt = Date.now() + 1000
-          await fail(result.error || 'Auth error', nextRetryAt)
+          if (!await failOwned(result.error || 'Auth error', nextRetryAt)) return undefined
           console.log(`✅ [SYNC] Token refreshed — ${operation.entityType}:${operation.entityId.slice(0, 8)} rescheduled in 1s`)
         }
       } catch (refreshException) {
         // Unexpected error during refresh — treat as permanent
         const msg = refreshException instanceof Error ? refreshException.message : String(refreshException)
-        await fail(`Auth refresh exception: ${msg}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
+        if (!await failOwned(`Auth refresh exception: ${msg}`, Date.now() + 365 * 24 * 60 * 60 * 1000)) return undefined
         state.value.lastError = `Auth refresh exception: ${msg}`
         console.error(`❌ [SYNC] Auth refresh threw for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
         permanentFailureCallbacks.forEach(cb => cb(operation))
       }
     } else {
       // Exhausted refresh attempts — user is logged out, mark permanent
-      await fail(result.error || 'Auth error (max retries)', Date.now() + 365 * 24 * 60 * 60 * 1000)
+      if (!await failOwned(result.error || 'Auth error (max retries)', Date.now() + 365 * 24 * 60 * 60 * 1000)) return undefined
       state.value.lastError = result.error
       console.error(`❌ [SYNC] Auth retries exhausted for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
       permanentFailureCallbacks.forEach(cb => cb(operation))
@@ -1054,7 +1065,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     const retryConfig = getRetryConfigForError(result.classification as ErrorClassification)
     const nextRetryAt = result.cooldownUntil ?? calculateNextRetryTime(operation.retryCount, retryConfig ?? undefined)
     openRemoteWriteCooldown(nextRetryAt, result.error || 'Supabase rate limited writes')
-    await fail(result.error || 'Rate limited', nextRetryAt)
+    if (!await failOwned(result.error || 'Rate limited', nextRetryAt)) return undefined
     state.value.lastError = result.error || 'Rate limited'
     console.warn(`⏳ [SYNC] Rate limited. Pausing remote writes for ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
   } else if (result.shouldRetry) {
@@ -1063,7 +1074,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
       ? getRetryConfigForError(result.classification as ErrorClassification)
       : undefined
     const nextRetryAt = calculateNextRetryTime(operation.retryCount, retryConfig ?? undefined)
-    await fail(result.error || 'Unknown error', nextRetryAt)
+    if (!await failOwned(result.error || 'Unknown error', nextRetryAt)) return undefined
     if (import.meta.env.DEV) {
       console.warn(`⚠️ [SYNC] Retry scheduled: ${operation.entityType}:${operation.entityId.slice(0, 8)} in ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
     }
@@ -1087,7 +1098,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     }
   } else {
     // Permanent error - mark as failed (won't auto-retry)
-    await fail(result.error || 'Permanent error', Date.now() + 365 * 24 * 60 * 60 * 1000) // Far future = won't auto-retry
+    if (!await failOwned(result.error || 'Permanent error', Date.now() + 365 * 24 * 60 * 60 * 1000)) return undefined // Far future = won't auto-retry
     state.value.lastError = result.error
     console.error(`❌ [SYNC] Permanent failure: ${operation.entityType}:${operation.entityId.slice(0, 8)} - ${result.error}`)
     permanentFailureCallbacks.forEach(cb => cb(operation))

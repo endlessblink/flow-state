@@ -513,7 +513,7 @@ describe('canonical task patch queue', () => {
     await vi.advanceTimersByTimeAsync(0)
     await sync.forceSync()
 
-    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledWith(1966, receipt, expect.any(String))
+    expect(writeQueueMocks.completeCanonicalOperation).not.toHaveBeenCalled()
     expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(
       1966,
       expect.stringContaining('projection'),

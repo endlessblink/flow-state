@@ -245,12 +245,18 @@ export function recordPendingUpdateFailure(
   if (!fileName) return
   const now = options.now ?? new Date()
   const previous = readPendingUpdateFailure(cacheHome)
-  const attemptCount = (previous?.attemptCount ?? 0) + 1
+  const version = versionFromUpdateFileName(fileName) ?? 'unknown'
+  const previousMatchesArtifact = previous
+    && previous.version === version
+    && basename(previous.artifactUrl) === basename(fileName)
+    && (!options.digest || !previous.digest || previous.digest === options.digest)
+  const priorFailure = previousMatchesArtifact ? previous : undefined
+  const attemptCount = (priorFailure?.attemptCount ?? 0) + 1
   const backoff = Math.min(RETRY_BACKOFF_MS * 2 ** (attemptCount - 1), MAX_RETRY_BACKOFF_MS)
   const failure: PendingUpdateFailure = {
-    version: versionFromUpdateFileName(fileName) ?? 'unknown',
-    artifactUrl: options.artifactUrl ?? previous?.artifactUrl ?? fileName,
-    digest: options.digest ?? previous?.digest ?? '',
+    version,
+    artifactUrl: options.artifactUrl ?? priorFailure?.artifactUrl ?? fileName,
+    digest: options.digest ?? priorFailure?.digest ?? '',
     errorClass: options.errorClass ?? 'unknown',
     attemptCount,
     failedAt: now.toISOString(),

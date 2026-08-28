@@ -196,6 +196,24 @@ describe('Electron pending update recovery', () => {
     expect(new Date(second.nextRetryAt).getTime()).toBeGreaterThan(new Date(first.nextRetryAt).getTime())
   })
 
+  it('resets retry history when a different pending artifact replaces the failed one', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    writePending(pending, 'FlowState-1.4.337-x86_64.AppImage')
+    recordPendingUpdateFailure('installer failed', cacheHome, {
+      errorClass: 'installer', digest: 'sha512:old', now: new Date('2026-08-26T10:00:00.000Z'),
+    })
+    writePending(pending, 'FlowState-1.4.338-x86_64.AppImage')
+
+    recordPendingUpdateFailure('verification failed', cacheHome, {
+      errorClass: 'verification', digest: 'sha512:new', now: new Date('2026-08-26T10:01:00.000Z'),
+    })
+
+    expect(readPendingUpdateFailure(cacheHome)).toMatchObject({
+      version: '1.4.338', attemptCount: 1, digest: 'sha512:new', errorClass: 'verification',
+    })
+  })
+
   it('rejects semantically invalid failure receipts', () => {
     const cacheHome = makeCacheHome()
     writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({

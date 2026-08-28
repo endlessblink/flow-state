@@ -1,4 +1,5 @@
-import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, fsyncSync, lstatSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 
@@ -218,10 +219,14 @@ export function clearBlockedPendingUpdate(
   const blocked = resolvedFileName.length > 0
     && failure?.artifactUrl.split('/').pop() === basename(resolvedFileName)
   if (blocked && pendingVersion && compareVersions(pendingVersion, appVersion) > 0) {
+    const updateFilePath = safePendingFilePath(updateInfoPath, resolvedFileName)
+    const lexicalCandidate = resolve(dirname(updateInfoPath), resolvedFileName)
+    if (!updateFilePath && dirname(lexicalCandidate) === dirname(updateInfoPath) && existsSync(lexicalCandidate)) {
+      return { cleared: false, pendingVersion, updateInfoPath }
+    }
+    if (updateFilePath) rmSync(updateFilePath, { force: true })
     rmSync(updateInfoPath, { force: true })
     rmSync(failurePath, { force: true })
-    const updateFilePath = safePendingFilePath(updateInfoPath, resolvedFileName)
-    if (updateFilePath) rmSync(updateFilePath, { force: true })
     return { cleared: true, pendingVersion, updateInfoPath }
   }
 
@@ -252,10 +257,22 @@ export function recordPendingUpdateFailure(
     nextRetryAt: new Date(now.getTime() + backoff).toISOString(),
   }
   const failurePath = pendingUpdateFailurePath(cacheHome)
-  const temporaryPath = `${failurePath}.tmp-${process.pid}`
+  const temporaryPath = `${failurePath}.tmp-${process.pid}-${randomUUID()}`
   try {
-    writeFileSync(temporaryPath, JSON.stringify(failure, null, 2) + '\n', 'utf8')
+    writeFileSync(temporaryPath, JSON.stringify(failure, null, 2) + '\n', { encoding: 'utf8', mode: 0o600, flag: 'wx' })
+    const fileDescriptor = openSync(temporaryPath, 'r')
+    try {
+      fsyncSync(fileDescriptor)
+    } finally {
+      closeSync(fileDescriptor)
+    }
     renameSync(temporaryPath, failurePath)
+    const directoryDescriptor = openSync(dirname(failurePath), 'r')
+    try {
+      fsyncSync(directoryDescriptor)
+    } finally {
+      closeSync(directoryDescriptor)
+    }
   } catch (error) {
     rmSync(temporaryPath, { force: true })
     throw error

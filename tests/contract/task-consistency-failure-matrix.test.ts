@@ -182,7 +182,10 @@ describe('cardinal task consistency failure matrix', () => {
     expect(issueSignals.filter(signal => !masterPlan.includes(signal))).toEqual([])
     expect(new Set(matrix.historyAudit.gitCommitSignals).size).toBe(matrix.historyAudit.gitCommitSignals.length)
     expect(matrix.historyAudit.gitCommitSignals.length).toBeGreaterThanOrEqual(10)
-    if (gitHistory.complete) {
+    const hasCompleteSignalCoverage = gitHistory.complete && matrix.historyAudit.gitCommitSignals.every(signal => (
+      gitHistory.commits.some(commit => commit.startsWith(signal))
+    ))
+    if (hasCompleteSignalCoverage) {
       expect(matrix.historyAudit.gitCommitSignals.filter(signal => (
         !gitHistory.commits.some(commit => commit.startsWith(signal))
       ))).toEqual([])

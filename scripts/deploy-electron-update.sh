@@ -42,18 +42,25 @@ NC='\033[0m'
 # Parse arguments
 NOTES=""
 DRY_RUN=false
+SKIP_GUARD=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --notes) NOTES="$2"; shift 2 ;;
-    --skip-deploy|--skip-guard|--skip-tests)
+    --skip-deploy|--skip-tests)
       echo -e "${RED}Refusing production deployment bypass: $1${NC}" >&2
       exit 1
       ;;
+    --skip-guard) SKIP_GUARD=true; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
     *) echo -e "${RED}Unknown option: $1${NC}"; exit 1 ;;
   esac
 done
+
+if [ "$SKIP_GUARD" = true ] && [ "$DRY_RUN" != true ]; then
+  echo -e "${RED}Refusing --skip-guard outside --dry-run${NC}" >&2
+  exit 1
+fi
 
 # Get version from package.json
 VERSION=$(node -p "require('./package.json').version")
@@ -77,7 +84,9 @@ fi
 
 # Step 1: Run the Electron sync/auth/canvas regression sentinel before packaging.
 echo -e "\n${YELLOW}[1/3] Electron sync regression guard...${NC}"
-if [ "$DRY_RUN" = true ]; then
+if [ "$SKIP_GUARD" = true ]; then
+  echo -e "${YELLOW}  [DRY RUN] Skipping Electron sync regression guard by explicit request${NC}"
+elif [ "$DRY_RUN" = true ]; then
   echo -e "${CYAN}  [DRY RUN] Would run: npm run guard:electron-sync${NC}"
 else
   # Run the guard in test mode. Doppler injects NODE_ENV=production, under which vite

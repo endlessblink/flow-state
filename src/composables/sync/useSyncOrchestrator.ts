@@ -341,14 +341,21 @@ function getRetryAfterCooldown(error: unknown): number | undefined {
   return undefined
 }
 
+function operationFreshnessTimestamp(operation: WriteOperation, payload: Record<string, unknown>): string {
+  const candidate = typeof payload.updated_at === 'string'
+    ? payload.updated_at
+    : new Date(operation.createdAt).toISOString()
+  return Number.isNaN(Date.parse(candidate))
+    ? new Date(operation.createdAt).toISOString()
+    : candidate
+}
+
 function guardMutationByServerTimestamp<T extends { lte?: (column: string, value: string) => T }>(
   query: T,
   operation: WriteOperation,
   payload: Record<string, unknown>,
 ): T {
-  const updatedAt = typeof payload.updated_at === 'string'
-    ? payload.updated_at
-    : new Date(operation.createdAt).toISOString()
+  const updatedAt = operationFreshnessTimestamp(operation, payload)
   return typeof query.lte === 'function' ? query.lte('updated_at', updatedAt) : query
 }
 
@@ -713,9 +720,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
 
           // Last-Write-Wins: Compare timestamps
           const serverUpdatedAt = new Date(serverState.data.updated_at).getTime()
-          const localUpdatedAt = payload.updated_at
-            ? new Date(payload.updated_at as string).getTime()
-            : Date.now()
+          const localUpdatedAt = Date.parse(operationFreshnessTimestamp(operation, payload as Record<string, unknown>))
 
           if (localUpdatedAt >= serverUpdatedAt) {
             // Our change is newer - force update without version check
@@ -729,9 +734,7 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
               .eq('id', entityId)
               .lte(
                 'updated_at',
-                typeof payload.updated_at === 'string'
-                  ? payload.updated_at
-                  : new Date(operation.createdAt).toISOString(),
+                operationFreshnessTimestamp(operation, payload as Record<string, unknown>),
               )
               .select()
 

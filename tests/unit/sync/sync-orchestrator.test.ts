@@ -1906,6 +1906,30 @@ describe('Conflict resolution (LWW)', () => {
     expect(chain.lte).toHaveBeenCalledWith('updated_at', op.payload.updated_at)
   })
 
+  it.each([
+    ['missing timestamp', undefined],
+    ['malformed timestamp', 'not-a-date'],
+  ])('uses the operation creation time for a %s', async (_label, updatedAt) => {
+    const createdAt = Date.parse('2026-06-13T10:00:00.000Z')
+    const op = makeOp({
+      id: 1853,
+      operation: 'update',
+      entityType: 'project',
+      entityId: `project-${_label.replace(' ', '-')}`,
+      createdAt,
+      payload: updatedAt === undefined ? { name: 'Fallback' } : { name: 'Fallback', updated_at: updatedAt },
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({ operation: op, mergedOperationIds: [], description: 'Single operation' })
+    const chain = mockSupabaseChain({ selectData: [{ id: op.entityId }] })
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(chain.lte).toHaveBeenCalledWith('updated_at', '2026-06-13T10:00:00.000Z')
+  })
+
   it('LWW: server timestamp > local → server wins, returns serverData', async () => {
     // When server is newer, executeOperation returns { success: true, serverData: ... }
     const now = Date.now()

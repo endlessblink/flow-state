@@ -115,6 +115,7 @@ import type {
   getStats as _getStats,
   getFailedOperations as _getFailedOperations,
   recoverStaleSyncing as _recoverStaleSyncing,
+  renewSyncClaim as _renewSyncClaim,
 } from '@/services/offline/writeQueueDB'
 
 // Wrapped functions that handle missing IndexedDB gracefully
@@ -200,6 +201,11 @@ const getFailedOperations: typeof _getFailedOperations = async () => {
 const recoverStaleSyncing: typeof _recoverStaleSyncing = async maxAgeMs => {
   const mod = await getWriteQueueModule()
   return mod ? mod.recoverStaleSyncing(maxAgeMs) : 0
+}
+
+const renewSyncClaim: typeof _renewSyncClaim = async (...args) => {
+  const mod = await getWriteQueueModule()
+  return mod ? mod.renewSyncClaim(...args) : false
 }
 
 const recoverRlsPolicyFailures = async (): Promise<number> => {
@@ -903,8 +909,24 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
   const conflictOwned = async (serverVersion: number): Promise<boolean> =>
     (await conflict(serverVersion)) !== false
 
-  // Execute the operation
-  const result = await executeOperation(operation)
+  // Keep the claim alive while remote work or renderer projection is in
+  // flight. A crashed worker still becomes recoverable after the lease age.
+  let claimLost = false
+  const claimHeartbeat = setInterval(() => {
+    void renewSyncClaim(operation.id!, claimToken).then((owned) => {
+      if (!owned) claimLost = true
+    }).catch(() => {
+      claimLost = true
+    })
+  }, 15_000)
+
+  let result: SyncResult
+  try {
+    result = await executeOperation(operation)
+  } finally {
+    clearInterval(claimHeartbeat)
+  }
+  if (claimLost || !(await renewSyncClaim(operation.id!, claimToken))) return undefined
 
   if (result.success) {
     const returnedCanonicalRevision = Number(result.serverData?.canonical_revision)
@@ -923,6 +945,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     // durable claim. If projection fails, the operation remains retryable and
     // markFailed can still verify the claim token.
     if (result.canonicalReceipt && operation.entityType === 'task' && !hasLaterUnresolvedTaskOperation) {
+      if (!(await renewSyncClaim(operation.id!, claimToken))) return undefined
       try {
         const { useTaskStore } = await import('@/stores/tasks')
         await useTaskStore().applyCanonicalTaskReceipt(result.canonicalReceipt)

@@ -74,6 +74,7 @@ const writeQueueMocks = vi.hoisted(() => ({
   enqueueOperation: vi.fn(),
   getPendingOperations: vi.fn().mockResolvedValue([]),
   markSyncing: vi.fn().mockResolvedValue('test-sync-claim'),
+  renewSyncClaim: vi.fn().mockResolvedValue(true),
   markCompleted: vi.fn(),
   markFailed: vi.fn(),
   markConflict: vi.fn(),
@@ -332,6 +333,7 @@ beforeEach(async () => {
   }
   writeQueueMocks.getPendingOperations.mockResolvedValue([])
   writeQueueMocks.markSyncing.mockResolvedValue('test-sync-claim')
+  writeQueueMocks.renewSyncClaim.mockResolvedValue(true)
   writeQueueMocks.getStats.mockResolvedValue(defaultStats)
   writeQueueMocks.getFailedOperations.mockResolvedValue([])
   writeQueueMocks.cleanupCompleted.mockResolvedValue(0)

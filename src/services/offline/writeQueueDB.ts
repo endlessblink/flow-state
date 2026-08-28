@@ -359,6 +359,17 @@ export async function markSyncing(id: number): Promise<string | false> {
   });
 }
 
+/** Renew an active worker lease without changing the operation state. */
+export async function renewSyncClaim(id: number, syncClaimToken: string): Promise<boolean> {
+  const db = getWriteQueueDB();
+  return db.transaction("rw", db.operations, async () => {
+    const operation = await db.operations.get(id);
+    if (operation?.status !== "syncing" || operation.syncClaimToken !== syncClaimToken) return false;
+    await db.operations.update(id, { lastAttemptAt: Date.now() });
+    return true;
+  });
+}
+
 /**
  * Mark an operation as completed (successfully synced)
  */

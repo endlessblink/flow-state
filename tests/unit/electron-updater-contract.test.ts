@@ -309,8 +309,8 @@ describe('Electron updater restart contract', () => {
     const updaterSource = readSource('electron/updater.ts')
 
     expect(updaterSource).toContain('known_good_version="$7"')
-    expect(updaterSource).toContain('known-good app is already healthy after rollback')
-    expect(updaterSource).toContain('wait_for_direct_health_version "$known_good_version"')
+    expect(updaterSource).toContain('known-good app is healthy after rollback pid=')
+    expect(updaterSource).toContain('wait_for_health_identity "$known_good_version"')
   })
 
   it('cleans only confirmed FlowState AppImage processes before replacement', () => {
@@ -320,5 +320,6 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('target="$target"')
     expect(updaterSource).toContain('.mount_FlowSt')
     expect(updaterSource).toContain('cleanup_competing_flowstate_processes\nchmod 755')
+    expect(updaterSource).toContain('wait_for_direct_port_free || fail_install "old local bridge did not stop before replacement"')
   })
 })

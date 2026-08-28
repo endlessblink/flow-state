@@ -337,7 +337,7 @@ const groupedTasks = computed((): TaskGroup[] => {
     })
 
     // Build project hierarchy: top-level projects first, then children indented
-    const topLevelProjects = taskStore.rootProjects
+    const topLevelProjects = taskStore.rootProjects ?? []
     const processedIds = new Set<string>()
 
     const addProjectGroup = (project: { id: string; name: string; emoji?: string; color?: string | string[] }, indent: number) => {
@@ -356,14 +356,15 @@ const groupedTasks = computed((): TaskGroup[] => {
         })
       }
       // Add child projects
-      const children = taskStore.getChildProjects(project.id)
+      const children = taskStore.getChildProjects?.(project.id) ?? []
       children.forEach(child => addProjectGroup(child, indent + 1))
     }
 
     topLevelProjects.forEach(p => addProjectGroup(p, 0))
 
     // Add projects that aren't top-level but have tasks (orphaned projects)
-    taskStore.projects.forEach(p => {
+    const loadedProjects = taskStore.projects ?? []
+    loadedProjects.forEach(p => {
       if (!processedIds.has(p.id) && projectMap.has(p.id)) {
         addProjectGroup(p, 0)
       }

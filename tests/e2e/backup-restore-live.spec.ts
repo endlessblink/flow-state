@@ -84,7 +84,7 @@ test.describe.serial('absolute task backup and recovery', () => {
         ]))
       }).toPass({ timeout: 12_000 })
 
-      const { error: trashSeedError } = await admin.from('tasks').insert({
+      const { error: trashSeedError } = await admin.from('tasks').upsert({
         id: DELETED_TASK_ID,
         user_id: userId,
         title: DELETED_TASK_TITLE,
@@ -276,6 +276,8 @@ test.describe.serial('absolute task backup and recovery', () => {
 
     await admin.from('tasks').delete().in('id', [MIXED_PERSONAL_TASK_ID, MIXED_SHARED_TASK_ID])
     await admin.from('tombstones').delete().in('entity_id', [
+      MIXED_PERSONAL_TASK_ID,
+      MIXED_SHARED_TASK_ID,
       MIXED_PERSONAL_TOMBSTONE_ID,
       MIXED_SHARED_TOMBSTONE_ID,
     ])
@@ -456,6 +458,8 @@ test.describe.serial('absolute task backup and recovery', () => {
     } finally {
       await admin.from('tasks').delete().in('id', [MIXED_PERSONAL_TASK_ID, MIXED_SHARED_TASK_ID])
       await admin.from('tombstones').delete().in('entity_id', [
+        MIXED_PERSONAL_TASK_ID,
+        MIXED_SHARED_TASK_ID,
         MIXED_PERSONAL_TOMBSTONE_ID,
         MIXED_SHARED_TOMBSTONE_ID,
       ])

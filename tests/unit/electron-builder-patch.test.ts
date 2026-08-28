@@ -33,6 +33,8 @@ describe('electron-builder dependency parser patch', () => {
     expect(patchScript).toContain("patched.includes(shellSpawnCollector)")
     expect(patchScript).toContain("patched.includes(syncShellCollector)")
     expect(patchScript).toContain('collectorEnvWithoutShimBypass')
+    expect(patchScript).toContain('FlowState bounded dependency summary logging')
+    expect(patchScript).toContain('count: dependencies.length')
   })
 
   it('runs the patch before every tracked Electron packaging path', () => {

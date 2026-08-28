@@ -297,6 +297,64 @@ export async function executeQueuedCanonicalTaskPatch(
   if (applied.error) {
     return { success: false, operation, error: 'canonical_apply_transport_failed', shouldRetry: true, classification: 'transient' }
   }
+  if (object(applied.data)
+    && applied.data.ok !== true
+    && object(applied.data.error)
+    && applied.data.error.code === 'preview_expired') {
+    // A durably bound preview can expire before apply. Rotate its identity;
+    // replaying the old identity is intentionally rejected by the RPC.
+    canonical = {
+      ...canonical,
+      operationId: operationId(), phase: 'queued',
+      previewDigest: undefined, previewExpiresAt: undefined,
+      requestHash: undefined, normalizedPatch: undefined,
+    }
+    operation.canonicalTaskPatch = canonical
+    await persist(canonical)
+    let freshPreview: Awaited<ReturnType<CanonicalRpcClient['rpc']>>
+    try {
+      freshPreview = await client.rpc('flowstate_patch_task_v1', {
+        p_base_revision: canonical.baseRevision, p_contract_version: CONTRACT_VERSION,
+        p_operation_id: canonical.operationId, p_patch: canonical.patch, p_preview: true,
+        p_preview_digest: null, p_preview_expires_at: null, p_source: SOURCE,
+        p_task_id: operation.entityId, p_workspace_id: operation.workspaceId ?? null,
+      })
+    } catch {
+      return { success: false, operation, error: 'canonical_preview_transport_failed', shouldRetry: true, classification: 'transient' }
+    }
+    if (freshPreview.error) {
+      return { success: false, operation, error: 'canonical_preview_transport_failed', shouldRetry: true, classification: 'transient' }
+    }
+    if (!object(freshPreview.data) || freshPreview.data.ok !== true || !validPreview(freshPreview.data, operation)) {
+      return object(freshPreview.data) && freshPreview.data.ok !== true
+        ? rejected(operation, freshPreview.data)
+        : { success: false, operation, error: 'invalid_canonical_preview', shouldRetry: false, classification: 'permanent' }
+    }
+    canonical = {
+      ...canonical, phase: 'previewed',
+      previewDigest: freshPreview.data.previewDigest,
+      previewExpiresAt: freshPreview.data.previewExpiresAt,
+      requestHash: freshPreview.data.requestHash,
+      normalizedPatch: freshPreview.data.normalizedPayload,
+    }
+    operation.canonicalTaskPatch = canonical
+    await persist(canonical)
+    const retryArgs: Record<string, unknown> = {
+      p_base_revision: canonical.baseRevision, p_contract_version: CONTRACT_VERSION,
+      p_operation_id: canonical.operationId, p_patch: canonical.patch, p_preview: false,
+      p_preview_digest: canonical.previewDigest, p_preview_expires_at: canonical.previewExpiresAt,
+      p_source: SOURCE, p_task_id: operation.entityId, p_workspace_id: operation.workspaceId ?? null,
+    }
+    if (canonical.requestHash) retryArgs.p_request_hash = canonical.requestHash
+    try {
+      applied = await client.rpc('flowstate_patch_task_v1', retryArgs)
+    } catch {
+      return { success: false, operation, error: 'canonical_apply_transport_failed', shouldRetry: true, classification: 'transient' }
+    }
+    if (applied.error) {
+      return { success: false, operation, error: 'canonical_apply_transport_failed', shouldRetry: true, classification: 'transient' }
+    }
+  }
   if (!object(applied.data)) {
     return { success: false, operation, error: 'invalid_canonical_apply_response', shouldRetry: false, classification: 'permanent' }
   }

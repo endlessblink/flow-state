@@ -74,7 +74,7 @@
                 <span v-if="error.lastAttemptAt" class="last-attempt">
                   {{ formatTime(error.lastAttemptAt) }}
                 </span>
-                <span v-if="isPermanentError(error)" class="no-retry-hint">Manual retry available</span>
+                <span v-if="isPermanentError(error)" class="no-retry-hint">Manual resolution required</span>
               </div>
             </div>
           </div>
@@ -90,7 +90,7 @@
 
         <!-- Actions -->
         <div class="popover-footer">
-          <button v-if="errors.length > 0" class="retry-btn" @click="$emit('retry')">
+          <button v-if="retryableErrorCount > 0" class="retry-btn" @click="$emit('retry')">
             <RefreshCw :size="16" />
             Retry All
           </button>
@@ -146,6 +146,10 @@ const isPermanentError = (error: WriteOperation): boolean => {
 
 const permanentCount = computed(() => {
   return props.errors.filter(e => isPermanentError(e)).length
+})
+
+const retryableErrorCount = computed(() => {
+  return props.errors.filter(e => !isPermanentError(e)).length
 })
 
 const displayedErrorCount = computed(() => props.errorCount ?? props.errors.length)
@@ -212,6 +216,9 @@ const formatErrorMessage = (error: string): string => {
   // Handle legacy corrupted entries stored before error handling fix
   if (error === '[object Object]') {
     return 'Error details unavailable (legacy entry - consider clearing)'
+  }
+  if (/task no longer exists in the authoritative projection/i.test(error)) {
+    return 'This task cannot be retried because the task no longer exists in the authoritative projection; the local update is preserved for manual resolution.'
   }
   // Truncate very long error messages
   if (error.length > 150) {

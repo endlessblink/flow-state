@@ -43,12 +43,6 @@
       @dragover.prevent
       @contextmenu.prevent="handleCanvasRightClick"
     >
-      <!-- Loading overlay while canvas initializes -->
-      <CanvasLoadingOverlay 
-        v-if="(!isCanvasReady || !startupLayoutReady) && !hasNoTasks && tasksWithCanvasPositions && tasksWithCanvasPositions.length > 0"
-        message="Loading canvas..."
-      />
-
       <!-- Empty state when no tasks exist -->
       <CanvasEmptyState
         v-if="hasNoTasks"
@@ -1138,7 +1132,7 @@ async function debugTidyPlanOnlyToClipboard() {
 const orchestrator = useCanvasOrchestrator()
 const {
   nodes, edges, isCanvasReady, isVueFlowReady, initialViewport, shift, control, meta, vueFlowRef,
-  tasksWithCanvasPosition, dynamicNodeExtent, hasNoTasks,
+  dynamicNodeExtent, hasNoTasks,
   handleNodeDragStart, handleNodeDrag, handleNodeDragStop, handleKeyDown,
   handleSectionResizeStart, handleSectionResize, handleSectionResizeEnd,
   onPaneReady,
@@ -1313,7 +1307,6 @@ useEventListener(window, 'keydown', (e) => {
 })
 
 // Aliases for template compatibility
-const tasksWithCanvasPositions = tasksWithCanvasPosition
 const handleToolbarCreateGroup = createGroup
 const handleAddTask = () => createTaskHere()
 const clearStatusFilter = () => { taskStore.activeStatusFilter = null }
@@ -1489,6 +1482,26 @@ const handleCanvasPaste = async (e: ClipboardEvent) => {
     console.error('[CANVAS:PASTE] Failed to paste image:', err)
   }
 }
+
+// Re-arm startup repair when cache-first hydration adds the first task nodes
+// after an initially empty canvas; delay the pass so the pending startup state
+// remains observable during a renderer reload.
+let startupTaskNodesHydrated = false
+watch(
+  () => (getNodes.value as unknown as CanvasNodeRecord[]).filter((node) => node.type === 'taskNode').length,
+  (taskNodeCount, previousTaskNodeCount) => {
+    if (startupTaskNodesHydrated || taskNodeCount === 0 || previousTaskNodeCount !== 0) return
+    startupTaskNodesHydrated = true
+    window.setTimeout(() => {
+      startupLayoutRepairAttempted = false
+      startupLayoutReady.value = false
+      startupRepairTaskSignature = null
+      startupRepairStableSignaturePasses = 0
+      startupLayoutRepairAttempts = 0
+      void repairOverlappingStartupLayout()
+    }, 1_200)
+  },
+)
 
 onMounted(() => {
   document.addEventListener('paste', handleCanvasPaste)

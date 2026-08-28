@@ -27,6 +27,16 @@ const target = path.join(
   'nodeModulesCollector.js'
 )
 
+const appFileCopierTarget = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  'app-builder-lib',
+  'out',
+  'util',
+  'appFileCopier.js'
+)
+
 const upstreamBroken = `        // Find the first index that starts with { or [
         const bracketOpen = Math.max(consoleOutput.indexOf("{"), 0);
         const bracketOpenSquare = Math.max(consoleOutput.indexOf("["), 0);
@@ -167,6 +177,17 @@ if (!fs.existsSync(target)) {
   console.warn(`[electron-builder-patch] skipped; ${target} does not exist`)
   process.exit(0)
 }
+
+const boundedDependencySummaryMarker = 'FlowState bounded dependency summary logging'
+const verboseDependencySummary = `        builder_util_1.log[logLevel]({ dependencies }, errorMessage);`
+const boundedDependencySummary = `        // ${boundedDependencySummaryMarker}: dependency arrays can exceed the
+        // release executor output budget; preserve the diagnostic signal without
+        // dumping hundreds of repeated package names.
+        builder_util_1.log[logLevel]({ count: dependencies.length }, errorMessage);`
+const needsBoundedDependencySummaryPatch = fs.existsSync(appFileCopierTarget) && (() => {
+  const copier = fs.readFileSync(appFileCopierTarget, 'utf8')
+  return !copier.includes(boundedDependencySummaryMarker) && copier.includes(verboseDependencySummary)
+})()
 
 const current = fs.readFileSync(target, 'utf8')
 let patched = current
@@ -338,10 +359,17 @@ if (patched.includes(collectorEnvWithoutShimBypass)) {
   applied.push('shim-bypass')
 }
 
-if (patched === current) {
+if (patched === current && !needsBoundedDependencySummaryPatch) {
   console.log('[electron-builder-patch] dependency collector already patched')
   process.exit(0)
 }
 
 fs.writeFileSync(target, patched)
+if (fs.existsSync(appFileCopierTarget)) {
+  const copier = fs.readFileSync(appFileCopierTarget, 'utf8')
+  if (!copier.includes(boundedDependencySummaryMarker) && copier.includes(verboseDependencySummary)) {
+    fs.writeFileSync(appFileCopierTarget, copier.replace(verboseDependencySummary, boundedDependencySummary))
+    applied.push('bounded-summary')
+  }
+}
 console.log(`[electron-builder-patch] patched app-builder-lib ${applied.join(' + ')}`)

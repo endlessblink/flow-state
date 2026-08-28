@@ -165,6 +165,37 @@ cleanup_competing_flowstate_processes() {
   sleep 1
   terminate_flowstate_process_groups -KILL
 }
+capture_live_identity() {
+  live_identity=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
+  old_process_id=$(printf '%s' "$live_identity" | sed -n 's/.*"processId"[[:space:]]*:[[:space:]]*\\([0-9][0-9]*\\).*/\\1/p')
+  old_instance_id=$(printf '%s' "$live_identity" | sed -n 's/.*"instanceId"[[:space:]]*:[[:space:]]*"\\([^"]*\\)".*/\\1/p')
+}
+read_live_identity() {
+  live_process_id=$(printf '%s' "$1" | sed -n 's/.*"processId"[[:space:]]*:[[:space:]]*\\([0-9][0-9]*\\).*/\\1/p')
+  live_parent_pid=$(printf '%s' "$1" | sed -n 's/.*"parentPid"[[:space:]]*:[[:space:]]*\\([0-9][0-9]*\\).*/\\1/p')
+  live_instance_id=$(printf '%s' "$1" | sed -n 's/.*"instanceId"[[:space:]]*:[[:space:]]*"\\([^"]*\\)".*/\\1/p')
+}
+identity_is_valid() {
+  [ "$live_process_id" -gt 0 ] 2>/dev/null && [ "$live_parent_pid" -gt 0 ] 2>/dev/null && [ -n "$live_instance_id" ]
+}
+wait_for_health_identity() {
+  expected_health_version="$1"
+  expected_parent_pid="$2"
+  health_attempt=0
+  while [ "$health_attempt" -lt 300 ]; do
+    health_response=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
+    if printf '%s' "$health_response" | grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
+      read_live_identity "$health_response"
+      if identity_is_valid && [ "$live_parent_pid" = "$expected_parent_pid" ] &&
+        { [ "$live_process_id" != "\${old_process_id:-}" ] || [ "$live_instance_id" != "\${old_instance_id:-}" ]; }; then
+        return 0
+      fi
+    fi
+    health_attempt=$((health_attempt + 1))
+    sleep 0.2
+  done
+  return 1
+}
 wait_for_direct_port_free() {
   port_attempt=0
   while [ "$port_attempt" -lt 300 ]; do
@@ -230,12 +261,16 @@ restore_known_good() {
   }
   cleanup_competing_flowstate_processes
   restart_supervised_on_failure
-  if wait_for_direct_health_version "$known_good_version"; then
-    echo "known-good app is already healthy after rollback"
-    return 0
+  if [ "$strategy" = "systemd" ]; then
+    replacement_parent_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)
   fi
   if [ "$strategy" != "systemd" ]; then
     "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
+    replacement_parent_pid=$!
+  fi
+  if wait_for_health_identity "$known_good_version" "\${replacement_parent_pid:-0}"; then
+    echo "known-good app is healthy after rollback pid=$live_process_id parentPid=$live_parent_pid instanceId=$live_instance_id"
+    return 0
   fi
 }
 fail_after_swap() {
@@ -251,25 +286,15 @@ wait_for_supervised_health() {
   # early when the process is still starting normally.
   while [ "$health_attempt" -lt 300 ]; do
     if systemctl --user is-active --quiet flowstate-background.service && \
-      curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
-        grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
-      return 0
-    fi
-    health_attempt=$((health_attempt + 1))
-    sleep 0.2
-  done
-  return 1
-}
-wait_for_direct_health() {
-  wait_for_direct_health_version "$expected_version"
-}
-wait_for_direct_health_version() {
-  expected_health_version="$1"
-  health_attempt=0
-  while [ "$health_attempt" -lt 300 ]; do
-    if curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null | \
-      grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
-      return 0
+      health_response=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true) && \
+      printf '%s' "$health_response" | grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
+      read_live_identity "$health_response"
+      supervised_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)
+      if identity_is_valid && [ "$live_parent_pid" = "$supervised_pid" ] &&
+        { [ "$live_process_id" != "\${old_process_id:-}" ] || [ "$live_instance_id" != "\${old_instance_id:-}" ]; }; then
+        echo "supervised replacement identity pid=$live_process_id parentPid=$live_parent_pid instanceId=$live_instance_id"
+        return 0
+      fi
     fi
     health_attempt=$((health_attempt + 1))
     sleep 0.2
@@ -285,6 +310,7 @@ if kill -0 "$parent" 2>/dev/null; then
   fail_install "parent did not exit before update deadline"
 fi
 echo "parent gone after $i ticks"
+capture_live_identity
 cleanup_competing_flowstate_processes
 chmod 755 "$pending" || fail_install "chmod pending"
 if [ "$strategy" != "systemd" ]; then
@@ -300,6 +326,7 @@ if [ "$strategy" = "systemd" ]; then
   echo "swap complete, starting supervised replacement"
   systemctl --user reset-failed flowstate-background.service || true
   systemctl --user start flowstate-background.service || fail_after_swap "supervised restart"
+  replacement_parent_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)
   wait_for_supervised_health || fail_after_swap "supervised readiness"
   rm -f "$backup"
   rm -f "$info"
@@ -312,7 +339,8 @@ mv -f "$tmp" "$target" || fail_after_swap "swap target"
 echo "swap complete, relaunching direct replacement"
 "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
 replacement_pid=$!
-if ! wait_for_direct_health; then
+replacement_parent_pid="$replacement_pid"
+if ! wait_for_health_identity "$expected_version" "$replacement_parent_pid"; then
   kill "$replacement_pid" 2>/dev/null || true
   fail_after_swap "direct replacement readiness"
 fi

@@ -254,6 +254,7 @@ export async function quarantineUnscopedOperations(scope: {
     if (!operation.id) continue;
     if (operation.userId && operation.userId !== scope.userId) continue;
     if (operation.userId && operation.workspaceId !== undefined) continue;
+    if (operation.status === "syncing") continue;
 
     await markConflict(operation.id, 0, {
       code: "unscoped_durable_operation",
@@ -335,19 +336,34 @@ export async function updateOperation(
 /**
  * Mark an operation as syncing (in progress)
  */
-export async function markSyncing(id: number): Promise<void> {
-  await updateOperation(id, {
-    status: "syncing",
-    lastAttemptAt: Date.now(),
+export async function markSyncing(id: number): Promise<string | false> {
+  const db = getWriteQueueDB();
+  return db.transaction("rw", db.operations, async () => {
+    const operation = await db.operations.get(id);
+    if (!operation || (operation.status !== "pending" && operation.status !== "failed")) {
+      return false;
+    }
+    const syncClaimId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    await db.operations.update(id, {
+      status: "syncing",
+      lastAttemptAt: Date.now(),
+      syncClaimId,
+    });
+    return syncClaimId;
   });
 }
 
 /**
  * Mark an operation as completed (successfully synced)
  */
-export async function markCompleted(id: number): Promise<void> {
-  await updateOperation(id, {
-    status: "completed",
+export async function markCompleted(id: number, syncClaimId?: string): Promise<boolean> {
+  const db = getWriteQueueDB();
+  return db.transaction("rw", db.operations, async () => {
+    const operation = await db.operations.get(id);
+    if (!operation || (syncClaimId !== undefined &&
+      (operation.status !== "syncing" || operation.syncClaimId !== syncClaimId))) return false;
+    await db.operations.update(id, { status: "completed", syncClaimId: undefined });
+    return true;
   });
 }
 
@@ -365,6 +381,7 @@ async function putLatestCanonicalCheckpoint(
 export async function completeCanonicalOperation(
   id: number,
   receipt: CanonicalTaskPatchReceipt,
+  syncClaimId?: string,
 ): Promise<void> {
   const db = getWriteQueueDB();
   await db.transaction(
@@ -376,7 +393,9 @@ export async function completeCanonicalOperation(
       const operation = await db.operations.get(id);
       if (
         !operation?.canonicalTaskPatch ||
-        operation.canonicalTaskPatch.operationId !== receipt.operationId
+        operation.canonicalTaskPatch.operationId !== receipt.operationId ||
+        (syncClaimId !== undefined &&
+          (operation.status !== "syncing" || operation.syncClaimId !== syncClaimId))
       ) {
         throw new Error(
           "Canonical receipt does not match the queued operation",
@@ -401,6 +420,7 @@ export async function completeCanonicalOperation(
           phase: "committed",
           receipt,
         },
+        syncClaimId: undefined,
       });
     },
   );
@@ -410,6 +430,7 @@ export async function completeCanonicalOperation(
 export async function completeLegacyTaskOperation(
   id: number,
   canonicalRevision: number,
+  syncClaimId?: string,
 ): Promise<void> {
   if (!Number.isSafeInteger(canonicalRevision) || canonicalRevision < 1) {
     throw new Error("Canonical revision must be a positive integer");
@@ -425,7 +446,9 @@ export async function completeLegacyTaskOperation(
         !operation ||
         operation.entityType !== "task" ||
         operation.operation !== "update" ||
-        operation.canonicalTaskPatch
+        operation.canonicalTaskPatch ||
+        (syncClaimId !== undefined &&
+          (operation.status !== "syncing" || operation.syncClaimId !== syncClaimId))
       ) {
         throw new Error(
           "Legacy task completion requires a queued compatibility update",
@@ -439,7 +462,7 @@ export async function completeLegacyTaskOperation(
         canonicalRevision,
         operationId: `legacy:${id}`,
       });
-      await db.operations.update(id, { status: "completed" });
+      await db.operations.update(id, { status: "completed", syncClaimId: undefined });
     },
   );
 }
@@ -540,18 +563,20 @@ export async function markFailed(
   id: number,
   error: string,
   nextRetryAt: number,
-): Promise<void> {
+  syncClaimId?: string,
+): Promise<boolean> {
   const db = getWriteQueueDB();
-  const operation = await db.operations.get(id);
-
-  if (operation) {
-    await updateOperation(id, {
-      status: "failed",
-      lastError: error,
-      retryCount: operation.retryCount + 1,
-      nextRetryAt,
+  return db.transaction("rw", db.operations, async () => {
+    const operation = await db.operations.get(id);
+    if (!operation || (syncClaimId !== undefined &&
+      (operation.status !== "syncing" || operation.syncClaimId !== syncClaimId))) return false;
+    if (syncClaimId === undefined && operation.status === "syncing") return false;
+    await db.operations.update(id, {
+      status: "failed", lastError: error, retryCount: operation.retryCount + 1,
+      nextRetryAt, syncClaimId: undefined,
     });
-  }
+    return true;
+  });
 }
 
 /**
@@ -561,30 +586,33 @@ export async function markConflict(
   id: number,
   serverVersion: number,
   serverData?: Record<string, unknown>,
+  syncClaimId?: string,
 ): Promise<WriteConflict> {
   const db = getWriteQueueDB();
-  const operation = await db.operations.get(id);
+  return db.transaction("rw", db.operations, db.conflicts, async () => {
+    const operation = await db.operations.get(id);
+    if (!operation) {
+      throw new Error(`Operation ${id} not found`);
+    }
+    if (syncClaimId !== undefined &&
+      (operation.status !== "syncing" || operation.syncClaimId !== syncClaimId)) {
+      throw new Error(`Operation ${id} is no longer owned by this sync worker`);
+    }
+    if (syncClaimId === undefined && operation.status === "syncing") {
+      throw new Error(`Operation ${id} is actively claimed for syncing`);
+    }
 
-  if (!operation) {
-    throw new Error(`Operation ${id} not found`);
-  }
-
-  // Update operation status
-  await updateOperation(id, {
-    status: "conflict",
+    const conflict: WriteConflict = {
+      operation,
+      serverVersion,
+      localVersion: operation.baseVersion || 0,
+      serverData,
+      detectedAt: Date.now(),
+    };
+    await db.operations.update(id, { status: "conflict", syncClaimId: undefined });
+    await db.conflicts.add(conflict);
+    return conflict;
   });
-
-  // Record the conflict
-  const conflict: WriteConflict = {
-    operation,
-    serverVersion,
-    localVersion: operation.baseVersion || 0,
-    serverData,
-    detectedAt: Date.now(),
-  };
-
-  await db.conflicts.add(conflict);
-  return conflict;
 }
 
 /**
@@ -644,22 +672,22 @@ export async function deleteOperationsByType(
   entityId: string,
   operationType: "create" | "update" | "delete",
 ): Promise<number> {
-  const operations = await getOperationsForEntity(entityType, entityId);
-  const matching = operations.filter((op) => op.operation === operationType);
-  // BUG-1737: Skip in-flight operations — removing from IndexedDB doesn't abort the HTTP request.
-  // Orphaned 'syncing' ops are recovered by recoverStaleSyncing() on next app load.
-  const deletable = matching.filter((op) => op.status !== "syncing");
-  const skipped = matching.length - deletable.length;
-  if (skipped > 0) {
-    console.warn(
-      `⚠️ [SYNC] deleteOperationsByType: skipped ${skipped} in-flight '${operationType}' op(s) for ${entityId.slice(0, 8)}`,
-    );
-  }
-  if (deletable.length > 0) {
-    const db = getWriteQueueDB();
-    await db.operations.bulkDelete(deletable.map((op) => op.id!));
-  }
-  return deletable.length;
+  const db = getWriteQueueDB();
+  return db.transaction("rw", db.operations, async () => {
+    // Claim and cancellation are serialized so a pending row cannot be
+    // deleted after another window has changed it to syncing.
+    const matching = (await db.operations
+      .where("[entityType+entityId]")
+      .equals([entityType, entityId])
+      .toArray()).filter((op) => op.operation === operationType);
+    const deletable = matching.filter((op) => op.status !== "syncing");
+    const skipped = matching.length - deletable.length;
+    if (skipped > 0) {
+      console.warn(`⚠️ [SYNC] deleteOperationsByType: skipped ${skipped} in-flight '${operationType}' op(s) for ${entityId.slice(0, 8)}`);
+    }
+    if (deletable.length > 0) await db.operations.bulkDelete(deletable.map((op) => op.id!));
+    return deletable.length;
+  });
 }
 
 /**
@@ -715,17 +743,26 @@ export async function recoverStaleSyncing(maxAgeMs = 60_000): Promise<number> {
     .toArray();
 
   if (staleOps.length > 0) {
+    let recovered = 0;
     for (const op of staleOps) {
-      if (op.id) {
-        await updateOperation(op.id, {
+      if (!op.id) continue;
+      const didRecover = await db.transaction("rw", db.operations, async () => {
+        const current = await db.operations.get(op.id!);
+        if (!current || current.status !== "syncing" ||
+          (current.lastAttemptAt ?? 0) >= cutoff) return false;
+        await db.operations.update(op.id!, {
           status: "pending",
-          retryCount: op.retryCount + 1,
+          retryCount: current.retryCount + 1,
+          syncClaimId: undefined,
         });
-      }
+        return true;
+      });
+      if (didRecover) recovered++;
     }
     console.warn(
-      `⚠️ [SYNC] BUG-1301: Recovered ${staleOps.length} stale syncing operation(s) back to pending`,
+      `⚠️ [SYNC] BUG-1301: Recovered ${recovered} stale syncing operation(s) back to pending`,
     );
+    return recovered;
   }
 
   return staleOps.length;
@@ -746,43 +783,36 @@ export async function purgeStaleOperations(
 }
 
 /**
- * Clear all failed operations (for corrupted entries that can't be fixed)
- * Also clears conflict and permanently stuck operations
+ * Clear failed/conflict operations that are explicitly disposable.
+ * Pending and syncing rows are durable user intent and must survive cleanup.
  */
 export async function clearFailedOperations(): Promise<number> {
   const db = getWriteQueueDB();
-
-  // Get ALL non-completed operations to see what's in the queue
-  const allOps = await db.operations.toArray();
-
-  // BUG-1301: Also clear 'syncing' operations — these are stuck from a previous
-  // session crash and will never complete. Previously only cleared 'failed' and
-  // 'conflict', leaving orphaned 'syncing' ops stuck forever.
-  const toDelete = allOps.filter(
-    (op) =>
-      !op.canonicalTaskPatch &&
-      (op.status === "failed" ||
-        op.status === "conflict" ||
-        op.status === "syncing" ||
-        op.retryCount >= 10), // Also clear anything stuck after 10+ retries
-  );
-
-  if (toDelete.length > 0) {
-    const ids = toDelete.map((op) => op.id!).filter((id) => id !== undefined);
-    await db.operations.bulkDelete(ids);
-  }
-
-  // BUG-1179: Also clear the conflicts table to reset error state
-  const disposableConflicts = (await db.conflicts.toArray()).filter(
-    (conflict) => !conflict.operation.canonicalTaskPatch,
-  );
-  if (disposableConflicts.length > 0) {
-    await db.conflicts.bulkDelete(
-      disposableConflicts.map((conflict) => conflict.id!),
+  return db.transaction("rw", db.operations, db.conflicts, async () => {
+    // Re-read and delete under one transaction so a worker cannot be deleted
+    // after it claims a row between the scan and the cleanup.
+    const allOps = await db.operations.toArray();
+    const toDelete = allOps.filter(
+      (op) =>
+        !op.canonicalTaskPatch &&
+        (op.status === "failed" || op.status === "conflict"),
     );
-  }
+    if (toDelete.length > 0) {
+      await db.operations.bulkDelete(
+        toDelete.map((op) => op.id!).filter((id) => id !== undefined),
+      );
+    }
 
-  return toDelete.length + disposableConflicts.length;
+    const disposableConflicts = (await db.conflicts.toArray()).filter(
+      (conflict) => !conflict.operation.canonicalTaskPatch,
+    );
+    if (disposableConflicts.length > 0) {
+      await db.conflicts.bulkDelete(
+        disposableConflicts.map((conflict) => conflict.id!),
+      );
+    }
+    return toDelete.length + disposableConflicts.length;
+  });
 }
 
 /**

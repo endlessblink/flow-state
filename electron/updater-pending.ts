@@ -1,6 +1,6 @@
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 export interface PendingUpdateClearResult {
   cleared: boolean
@@ -45,6 +45,22 @@ function parseVersionCore(version: string): number[] {
   return [Number(match[1]), Number(match[2]), Number(match[3])]
 }
 
+function validFailureReceipt(value: Partial<PendingUpdateFailure>): value is PendingUpdateFailure {
+  return typeof value.version === 'string'
+    && Boolean(versionFromUpdateFileName(value.version))
+    && typeof value.artifactUrl === 'string'
+    && value.artifactUrl.length > 0
+    && typeof value.digest === 'string'
+    && typeof value.errorClass === 'string'
+    && value.errorClass.length > 0
+    && Number.isSafeInteger(value.attemptCount)
+    && (value.attemptCount ?? 0) >= 1
+    && typeof value.failedAt === 'string'
+    && Number.isFinite(Date.parse(value.failedAt))
+    && typeof value.nextRetryAt === 'string'
+    && Number.isFinite(Date.parse(value.nextRetryAt))
+}
+
 export function versionFromUpdateFileName(fileName: unknown): string | null {
   if (typeof fileName !== 'string') return null
   const match = fileName.match(/(\d+\.\d+\.\d+)(?:[+][0-9A-Za-z.-]+)?/)
@@ -59,6 +75,16 @@ function pendingDirectory(cacheHome?: string): string {
   return dirname(pendingUpdateInfoPath(cacheHome))
 }
 
+function isSafePendingAppImagePath(filePath: string, directory: string): boolean {
+  try {
+    if (lstatSync(filePath).isSymbolicLink()) return false
+    return realpathSync(dirname(filePath)) === realpathSync(directory)
+      && basename(filePath) === filePath.slice(directory.length + 1)
+  } catch {
+    return false
+  }
+}
+
 function pendingAppImageCandidates(cacheHome?: string): Array<{ path: string; version: string }> {
   const directory = pendingDirectory(cacheHome)
   if (!existsSync(directory)) return []
@@ -66,6 +92,7 @@ function pendingAppImageCandidates(cacheHome?: string): Array<{ path: string; ve
   return readdirSync(directory)
     .filter((fileName) => fileName.endsWith('.AppImage'))
     .map((fileName) => ({ path: join(directory, fileName), version: versionFromUpdateFileName(fileName) }))
+    .filter((candidate) => isSafePendingAppImagePath(candidate.path, directory))
     .filter((candidate): candidate is { path: string; version: string } => Boolean(candidate.version))
     .sort((a, b) => compareVersions(b.version, a.version))
 }
@@ -74,9 +101,11 @@ export function pendingAppImagePath(cacheHome?: string): string | null {
   const updateInfoPath = pendingUpdateInfoPath(cacheHome)
   if (existsSync(updateInfoPath)) {
     const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string }
-    if (typeof info.fileName === 'string' && info.fileName.endsWith('.AppImage')) {
+    if (typeof info.fileName === 'string'
+      && info.fileName === basename(info.fileName)
+      && info.fileName.endsWith('.AppImage')) {
       const updateFilePath = join(dirname(updateInfoPath), info.fileName)
-      if (existsSync(updateFilePath)) return updateFilePath
+      if (existsSync(updateFilePath) && isSafePendingAppImagePath(updateFilePath, dirname(updateInfoPath))) return updateFilePath
     }
   }
 
@@ -108,20 +137,15 @@ export function readPendingUpdateFailure(cacheHome?: string): PendingUpdateFailu
   const raw = readFileSync(failurePath, 'utf8')
   try {
     const parsed = JSON.parse(raw) as Partial<PendingUpdateFailure>
-    if (
-      typeof parsed.version === 'string' &&
-      typeof parsed.artifactUrl === 'string' &&
-      typeof parsed.digest === 'string' &&
-      typeof parsed.errorClass === 'string' &&
-      Number.isInteger(parsed.attemptCount) &&
-      typeof parsed.failedAt === 'string' &&
-      typeof parsed.nextRetryAt === 'string'
-    ) {
+    if (validFailureReceipt(parsed)) {
       return parsed as PendingUpdateFailure
     }
   } catch {
     // Older releases wrote a three-line marker; current detached installers use key/value lines.
   }
+  // A JSON-looking receipt that fails semantic validation is not a legacy
+  // marker; treating it as one would silently reset its safety state.
+  if (raw.trimStart().startsWith('{')) return null
   const [fileName, reason, failedAt] = raw.split('\n')
   const fields = new Map(
     raw.split('\n').slice(1).flatMap((line) => {
@@ -146,12 +170,21 @@ export function shouldSuppressAutomaticRetry(
   failure: PendingUpdateFailure,
   now = new Date(),
 ): boolean {
-  return failure.attemptCount >= MAX_AUTOMATIC_FAILURES || now.getTime() < Date.parse(failure.nextRetryAt)
+  const failedAt = Date.parse(failure.failedAt)
+  const nextRetryAt = Date.parse(failure.nextRetryAt)
+  if (!validFailureReceipt(failure) || !Number.isFinite(failedAt) || !Number.isFinite(nextRetryAt)) return true
+  return failure.attemptCount >= MAX_AUTOMATIC_FAILURES || now.getTime() < nextRetryAt
 }
 
 export function clearResolvedPendingUpdateFailure(appVersion: string, cacheHome?: string): boolean {
   const failurePath = pendingUpdateFailurePath(cacheHome)
-  const failureVersion = pendingUpdateFailureVersion(cacheHome)
+  const failureVersion = pendingUpdateFailureVersion(cacheHome) ?? (() => {
+    if (!existsSync(failurePath)) return null
+    const raw = readFileSync(failurePath, 'utf8')
+    const jsonVersion = raw.match(/"version"\s*:\s*"(\d+\.\d+\.\d+)"/)?.[1]
+    const fileVersion = versionFromUpdateFileName(raw.split('\n', 1)[0])
+    return jsonVersion ?? fileVersion
+  })()
   if (!failureVersion || compareVersions(failureVersion, appVersion) > 0) return false
   rmSync(failurePath, { force: true })
   return true
@@ -207,7 +240,15 @@ export function recordPendingUpdateFailure(
     failedAt: now.toISOString(),
     nextRetryAt: new Date(now.getTime() + backoff).toISOString(),
   }
-  writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify(failure, null, 2) + '\n', 'utf8')
+  const failurePath = pendingUpdateFailurePath(cacheHome)
+  mkdirSync(dirname(failurePath), { recursive: true })
+  const temporaryPath = `${failurePath}.${process.pid}.tmp`
+  try {
+    writeFileSync(temporaryPath, JSON.stringify(failure, null, 2) + '\n', 'utf8')
+    renameSync(temporaryPath, failurePath)
+  } finally {
+    rmSync(temporaryPath, { force: true })
+  }
 }
 
 export function clearStalePendingUpdate(

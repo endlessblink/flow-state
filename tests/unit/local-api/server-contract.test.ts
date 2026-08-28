@@ -109,6 +109,9 @@ describe("Local API sidecar timer endpoint regression contract", () => {
     expect(provenanceRoute).toBeLessThan(tokenCheck);
     expect(body).toContain("schemaVersion: 'flowstate-sidecar-provenance-v1'");
     expect(body).toContain("appVersion: APP_VERSION");
+    expect(body).toContain("processId: process.pid");
+    expect(body).toContain("parentPid: PARENT_PID");
+    expect(body).toContain("instanceId: INSTANCE_ID");
     expect(body).toContain("sourceCommit");
     expect(body).toContain("sourceDirty");
     expect(body).toContain("builtAt");

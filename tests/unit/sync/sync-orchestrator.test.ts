@@ -1471,6 +1471,32 @@ describe('executeOperation: CREATE', () => {
     expect(writeQueueMocks.completeLegacyTaskOperation).toHaveBeenCalledWith(414, 8)
   })
 
+  it('does not project a remote success after another worker wins the completion claim', async () => {
+    const op = makeOp({
+      id: 412,
+      operation: 'update',
+      entityType: 'task',
+      entityId: 'task-claim-lost',
+      payload: { title: 'stale worker result' },
+    })
+    const taskChain = mockSupabaseChain({ selectData: [{ id: op.entityId, position_version: 4 }] })
+    supabaseMock.fromMock.mockReturnValue(taskChain)
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    writeQueueMocks.markCompleted.mockResolvedValue(false)
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op, mergedOperationIds: [], description: 'No coalescing needed',
+    })
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id)
+    expect(invalidateCacheMock.tasks).not.toHaveBeenCalled()
+    expect(taskStoreMock.updateTaskFromSync).not.toHaveBeenCalled()
+    expect(taskStoreMock.removePendingWrite).not.toHaveBeenCalled()
+    expect(sync.lastError.value ?? '').toBe('')
+  })
+
   it('waits instead of hitting RLS when no fresh auth session is available', async () => {
     authStoreMock.user = { id: 'cached-user' } as any
     const { supabase } = await import('@/services/auth/supabase')
@@ -1903,7 +1929,7 @@ describe('Conflict resolution (LWW)', () => {
   it.each([
     ['task', 1850],
     ['group', 1851]
-  ] as const)('entity not found (PGRST116) on %s UPDATE → discards update, returns success (BUG-1211)', async (entityType, operationId) => {
+  ] as const)('entity not found (PGRST116) on %s UPDATE → preserves update for manual resolution', async (entityType, operationId) => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const op = makeOp({
       id: operationId,
@@ -1946,8 +1972,12 @@ describe('Conflict resolution (LWW)', () => {
     expect(chain.eq).toHaveBeenCalledWith('id', `${entityType}-missing-on-server`)
     expect(chain.eq).toHaveBeenCalledWith('position_version', 7)
     expect(chain.single).toHaveBeenCalledTimes(1)
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(operationId)
-    expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(operationId)
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(
+      operationId,
+      `${entityType === 'group' ? 'Group' : 'Task'} no longer exists in the authoritative projection; local update preserved for manual resolution`,
+      expect.any(Number),
+    )
     expect(writeQueueMocks.markConflict).not.toHaveBeenCalled()
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not found on server'))
 
@@ -2953,8 +2983,9 @@ describe('Source code integrity (regression guards)', () => {
 
   it('PGRST116 handling exists for entity-not-found (BUG-1211)', () => {
     expect(sourceCode).toContain('PGRST116')
-    // Should return success: true when entity not found
-    expect(sourceCode).toContain("success: true")
+    // A missing authoritative row preserves local intent for manual resolution.
+    expect(sourceCode).toContain('local update preserved for manual resolution')
+    expect(sourceCode).toContain("classification: 'permanent'")
   })
 
   it('auth refresh has max attempt cap (BUG-1517)', () => {

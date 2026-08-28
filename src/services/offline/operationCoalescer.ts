@@ -62,16 +62,6 @@ export async function coalesceOperationsForEntity(
   // Sort by creation time
   pendingOps.sort((a, b) => a.createdAt - b.createdAt)
 
-  // Canonical patches have server-bound operation identities and preview receipts.
-  // Never merge, rewrite, or delete any operation in a group that contains one.
-  if (pendingOps.some(op => op.canonicalTaskPatch)) {
-    return {
-      operation: pendingOps[0],
-      mergedOperationIds: [],
-      description: 'Canonical operation identities preserved',
-    }
-  }
-
   // Recurring "done for now" is also a durable multi-step transaction intent.
   // Keep its queue row intact so same-entity update coalescing cannot erase
   // the request ID or next-occurrence date before reconnect.
@@ -130,6 +120,16 @@ export async function coalesceOperationsForEntity(
       operation: deleteOp,
       mergedOperationIds: mergedIds,
       description: `Merged ${mergedIds.length} operations into delete`
+    }
+  }
+
+  // Canonical patches have server-bound operation identities and preview receipts.
+  // Preserve them unless a later delete superseded the whole entity intent.
+  if (pendingOps.some(op => op.canonicalTaskPatch)) {
+    return {
+      operation: pendingOps[0],
+      mergedOperationIds: [],
+      description: 'Canonical operation identities preserved',
     }
   }
 

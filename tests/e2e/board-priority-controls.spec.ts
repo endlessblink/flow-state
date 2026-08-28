@@ -38,7 +38,7 @@ test.describe('Board priority and recurring filters', () => {
       user_id: userId,
       status: 'planned',
       is_in_inbox: true,
-      canvas_position: { x: index * 360, y: 120 },
+      position: { x: index * 360, y: 120 },
       order: index
     })), { onConflict: 'id' })
     if (error) throw error
@@ -54,10 +54,13 @@ test.describe('Board priority and recurring filters', () => {
       localStorage.setItem('flowstate:board-sort-option', 'manual')
       localStorage.setItem('flowstate:board-priority-filter', '')
       localStorage.setItem('flowstate:board-recurring-filter', 'all')
+      localStorage.removeItem('flowstate-onboarding-v2')
+      localStorage.removeItem('flowstate-welcome-seen')
     })
     await page.goto('/#/board')
     await page.waitForSelector('.board-view-wrapper', { timeout: 30_000 })
     await waitForApp(page)
+    await expect(page.locator('.onboarding-overlay')).toHaveCount(0)
 
     const sortSelect = page.locator('.header-controls .custom-select').first()
     await sortSelect.locator('.select-trigger').click()
@@ -66,8 +69,8 @@ test.describe('Board priority and recurring filters', () => {
       await expect(page.locator(`[data-task-id="${task.id}"]`)).toBeVisible()
     }
 
-    await page.locator('.filter-toggle').click()
     const filterSelects = page.locator('.filter-controls .custom-select')
+    await expect(filterSelects.first()).toBeVisible()
     for (let index = 0; index < await filterSelects.count(); index++) {
       const trigger = filterSelects.nth(index).locator('.select-trigger')
       await trigger.click()
@@ -101,8 +104,8 @@ test.describe('Board priority and recurring filters', () => {
     await page.waitForSelector('.board-view-wrapper', { timeout: 30_000 })
     await waitForApp(page)
 
-    await page.locator('.filter-toggle').click()
     const statusSelect = page.locator('.filter-controls .custom-select').nth(2)
+    await expect(statusSelect).toBeVisible()
     await statusSelect.locator('.select-trigger').click()
     await page.getByRole('option', { name: 'Done', exact: true }).click()
     await expect(page.locator('.kanban-board [data-task-id]')).toHaveCount(0)

@@ -19,7 +19,9 @@ import {
   hasLaterUnresolvedOperation,
   markFailed,
   markConflict,
+  markCompleted,
   markSyncing,
+  updateOperation,
   purgeStaleOperations,
   recoverStaleSyncing,
   resolveConflictRetry,
@@ -284,6 +286,38 @@ describe('canonical write queue durability', () => {
     expect(await recoverStaleSyncing(0)).toBe(0)
   })
 
+  it('fences a stale worker from completing a recovered operation', async () => {
+    const operation = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-claim-fence',
+      payload: { title: 'Claim fence' }, userId: 'user-1', workspaceId: null,
+    })
+    const firstClaim = await markSyncing(operation.id!)
+    expect(firstClaim).toEqual(expect.any(String))
+    await getWriteQueueDB().operations.update(operation.id!, {
+      lastAttemptAt: Date.now() - 60_001,
+    })
+    await recoverStaleSyncing(0)
+    const secondClaim = await markSyncing(operation.id!)
+    expect(secondClaim).toEqual(expect.any(String))
+    expect(secondClaim).not.toBe(firstClaim)
+
+    expect(await markCompleted(operation.id!, firstClaim as string)).toBe(false)
+    await expect(getWriteQueueDB().operations.get(operation.id!)).resolves.toMatchObject({ status: 'syncing' })
+    expect(await markCompleted(operation.id!, secondClaim as string)).toBe(true)
+  })
+
+  it('fences a stale worker from recording a late failure', async () => {
+    const operation = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-failure-fence',
+      payload: { title: 'Failure fence' }, userId: 'user-1', workspaceId: null,
+    })
+    const claim = await markSyncing(operation.id!)
+    expect(await markFailed(operation.id!, 'stale worker', Date.now(), `${claim}-stale`)).toBe(false)
+    await expect(getWriteQueueDB().operations.get(operation.id!)).resolves.toMatchObject({ status: 'syncing' })
+    await markFailed(operation.id!, 'current worker', Date.now(), claim as string)
+    await expect(getWriteQueueDB().operations.get(operation.id!)).resolves.toMatchObject({ status: 'failed', lastError: 'current worker' })
+  })
+
   it('blocks a successor while an earlier failed operation waits for its retry time', async () => {
     const first = await enqueueOperation({
       entityType: 'task', operation: 'update', entityId: 'task-ordered', payload: { title: 'First' },
@@ -437,6 +471,23 @@ describe('canonical write queue durability', () => {
     expect(await clearFailedOperations()).toBe(0)
     expect(await getWriteQueueDB().operations.get(op.id!)).toBeDefined()
     expect(await getConflicts()).toHaveLength(1)
+  })
+
+  it('cleanup preserves pending and active syncing intent even after many retries', async () => {
+    const pending = await enqueueOperation({
+      entityType: 'task', operation: 'update', entityId: 'task-pending',
+      payload: { title: 'Pending intent' }, userId: 'user-1', workspaceId: null,
+    })
+    await updateOperation(pending.id!, { retryCount: 10 })
+    const syncing = await enqueueOperation({
+      entityType: 'task', operation: 'delete', entityId: 'task-syncing',
+      payload: { id: 'task-syncing' }, userId: 'user-1', workspaceId: null,
+    })
+    await markSyncing(syncing.id!)
+
+    expect(await clearFailedOperations()).toBe(0)
+    await expect(getWriteQueueDB().operations.get(pending.id!)).resolves.toBeDefined()
+    await expect(getWriteQueueDB().operations.get(syncing.id!)).resolves.toBeDefined()
   })
 
   it('includes unresolved conflicts in the operations shown by the sync error popover', async () => {

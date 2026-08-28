@@ -1,5 +1,257 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2061: Rebuild the release and updater pipeline from the ground up (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-27)
+
+The Electron app can appear to update and then show older or incomplete behavior because the updater, Electron package, PWA build, service worker, staged artifacts, and installed-runtime state are not yet proven as one atomic release. The current failure is concrete: the 1.4.481 VPS run stopped before producing a release receipt, while the public updater remained on 1.4.480 and the installed app still reports a previously failed 1.4.480 update. Rebuild this system from first principles so a release either produces one verified, monotonic, source-bound release across production, PWA, and Electron or publishes nothing.
+
+**Required scope**: trace manifest discovery, version selection, stale failure persistence, retry and backoff, fresh download, artifact/hash verification, installer execution, restart detection, expected-version success recording, service-worker generation/cache invalidation, VPS staging, receipt creation, promotion locking, and public read-back. Remove ambiguous partial-success states, ensure failed records cannot cause infinite retries or regressions, preserve recoverable local work, and make the helper fail with a bounded, user-readable reason at the exact failed stage. Include a safe recovery path for already-installed stale failed records and verify the stored VPS Doppler credential is used without repeated manual entry.
+
+**Acceptance**: from a clean current-mainline checkout, build Electron and PWA separately with the pinned Node toolchain, generate and validate one source/artifact/web receipt, stage outside the live directory, promote the manifest last, and read back matching version/source/hash/service-worker evidence from the VPS and public endpoints. Install the resulting Electron artifact, verify the expected version after repeated close/open cycles, verify PWA startup and service-worker registration, confirm no older failed update is retried after verified success, and exercise fresh/corrupt/reused/equal/newer/repeated-failure updater cases. Run focused, full, authenticated sync, self-host, package, installed-runtime, visual, and independent challenge-review gates; do not mark complete on source or CI evidence alone.
+
+### TASK-2047: Pause knowledge-management work during stabilization (⏸️ PAUSED)
+
+**Priority**: P1 | **Status**: ⏸️ PAUSED (2026-08-27)
+
+Pause all knowledge-management, documentation-curation, memory-maintenance, and backlog-organization tasks in this plan until the FlowState stabilization, updater, installed-runtime, production, and branch-consolidation gates are complete.
+
+**Boundary**: Continue only the documentation updates required to record active defects, verified evidence, release decisions, branch dispositions, and handoff safety. Do not start or advance unrelated knowledge-management work during the pause.
+
+### FEATURE-2053: Remove all tasks from the canvas (📝 PLANNED)
+
+**Priority**: P1 | **Status**: 📝 PLANNED (2026-08-27)
+
+Add a clearly labeled canvas action that removes all tasks from the current canvas while preserving the existing safety model, undo/recovery behavior, sync semantics, and confirmation requirements. The action must define whether it removes tasks only from the canvas view or deletes task records, and must make that scope unmistakable before execution.
+
+**Acceptance**: verify the action on an authenticated canvas with mixed task types, confirm the intended scope, protect against accidental destructive execution, preserve undo/recovery and queued-sync correctness, and verify renderer reload, PWA, and Electron behavior.
+
+### FEATURE-2054: Create reusable group-layout presets (📝 PLANNED)
+
+**Priority**: P1 | **Status**: 📝 PLANNED (2026-08-27)
+
+Add presets for creating useful group layouts, including all days of the week, Today and Tomorrow, and priority-based groups. Presets must reuse canonical task/date/priority semantics, avoid duplicate or destructive creation, support clear naming and ordering, and work consistently across canvas, board, PWA, and Electron.
+
+**Acceptance**: create each preset from a clean canvas, verify the expected groups and membership rules, repeat without unintended duplicates, reload and sync across clients, and confirm that priority colors and date boundaries remain canonical.
+
+### FEATURE-2055: Improve timer completion, KDE controls, and break recovery (📝 PLANNED)
+
+**Priority**: P1 | **Status**: 📝 PLANNED (2026-08-27)
+
+Improve the timer and KDE timer workflow with a clear, accessible completion popup offering five more minutes or a break. Each five-minute continuation must be visibly counted. When a break ends without the user starting a task session, open an empty session with an obvious way to choose a task, including useful top-task suggestions; also support a distinct long break option for lunch and other extended pauses.
+
+**Acceptance**: verify timer completion in web/PWA and Electron, KDE timer state and controls, repeated five-minute extensions and their count, short-break and long-break transitions, empty-session fallback, suggested-task assignment, renderer reload, sidecar recovery, and authenticated cross-client consistency without duplicate timers or sessions.
+
+### FEATURE-2056: Conduct a deep ADHD-friendly UX and UI simplification review (📝 PLANNED)
+
+**Priority**: P1 | **Status**: 📝 PLANNED (2026-08-27)
+
+Run a comprehensive UX/UI review using the project design-review skills, including Impeccable where appropriate, to reduce visual noise, competing emphasis, cognitive load, and overwhelming interaction density for users with ADHD. The review must cover the primary task, timer, board, calendar, canvas, inbox, settings, empty, error, and recovery states without sacrificing discoverability or accessibility.
+
+**Acceptance**: produce a prioritized review with concrete changes, validate hierarchy and focus in the real rendered app, preserve keyboard/screen-reader access and essential status visibility, and verify the highest-impact improvements in PWA and Electron.
+
+### FEATURE-2057: Make Lanes calm, usable, and accessible (📝 PLANNED)
+
+**Priority**: P1 | **Status**: 📝 PLANNED (2026-08-27)
+
+Redesign and repair the Lane feature so it provides a calm, attractive workspace that isolates the task currently being worked on while keeping the next tasks clearly visible and easy to act on. The flow must be understandable for ADHD users, minimize distraction, support keyboard and assistive technology access, and remain consistent with task, timer, priority, date, and sync behavior.
+
+**Acceptance**: create and manage a Lane, focus a current task, view and advance upcoming tasks, start and complete timer sessions, recover from empty/error states, verify accessible navigation and responsive layout, and confirm persistence across reload, authenticated sync, PWA, and Electron.
+
+### FEATURE-2058: Reorder projects from the project sidebar (📝 PLANNED)
+
+**Priority**: P1 | **Status**: 📝 PLANNED (2026-08-27)
+
+Provide an easy, discoverable way to reorder projects directly in the Projects side panel. The chosen order must persist, synchronize safely, and be reflected consistently anywhere projects are listed or selected across the app, including board, task editors, filters, canvas, calendar, PWA, mobile, and Electron.
+
+**Acceptance**: reorder projects using pointer and keyboard interactions, verify clear feedback and accessible names/states, confirm persistence after reload and authenticated sync, and verify the same order across every project-list surface without losing hierarchy or task associations.
+
+### BUG-2059: Make active filters visually unmistakable (📝 PLANNED)
+
+**Priority**: P1 | **Status**: 📝 PLANNED (2026-08-27)
+
+When a task filter is active, the interface must make that state immediately obvious, including the active filter type and value where practical. The indication must remain clear in compact toolbars and dense layouts, use more than color alone, provide an accessible name/state, and stay consistent across board, list, calendar, canvas, inbox, mobile, PWA, and Electron.
+
+**Acceptance**: activate each supported filter, verify a persistent high-clarity visual indicator and accessible state, distinguish filtered from unfiltered and partially cleared states, verify reset/clear feedback, and confirm the indicator survives reload and does not obscure task content or priority colors.
+
+### FEATURE-2060: Hide unnecessary empty board lanes (📝 PLANNED)
+
+**Priority**: P1 | **Status**: 📝 PLANNED (2026-08-27)
+
+Add a clear board option to hide empty lanes, so users can focus on lanes that contain tasks without losing access to lane creation or task placement. The setting must work across status, priority, date, category, and other board configurations, preserve intentional empty-lane access when needed, and remain understandable in compact layouts.
+
+**Acceptance**: toggle empty-lane visibility, verify populated lanes always remain visible, restore hidden lanes on demand, add tasks into a previously hidden lane, preserve lane ordering and task counts, expose the setting with an accessible name/state, and verify persistence across reload, PWA, mobile, and Electron.
+
+### BUG-2050: Tasks created in Today appear in Overdue (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-27)
+
+Creating a new task from the Today board incorrectly places it in Overdue instead of Today. The task must retain the Today context and must not receive an unintended past due date or overdue projection.
+
+**Acceptance**: create a task from Today, confirm it appears in Today and not Overdue, reload the renderer, and verify the same placement after authenticated sync and in Electron.
+
+### BUG-2051: Priority options and colors are inconsistent across task surfaces (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-27)
+
+The task priority menu does not consistently show every priority option, and priority colors are not guaranteed to remain distinct and consistent across menus, cards, boards, calendar, inbox, filters, badges, mobile, and Electron. The full priority model is Immediate, High, Medium, and Low; each must have its own canonical color and that color must be rendered wherever the priority is represented.
+
+**Acceptance**: audit every priority producer, selector, serializer, filter, renderer, badge, and test; verify all four priorities are selectable, persisted, synchronized, and displayed with their canonical colors across web/PWA, mobile, and Electron, including empty/cleared states and accessibility contrast.
+
+### BUG-2049: Durable task update fails without a recoverable base projection (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-27)
+
+A queued durable task update can surface a JavaScript error stating that it has no recoverable base projection. The queue must recover or quarantine the operation through a user-visible path without throwing an uncaught renderer error or retrying an irrecoverable update forever.
+
+**Acceptance**: reproduce the reported task update, classify the missing-base condition, recover from current server/cache state when safe, provide an explicit discard or repair path when not safe, and verify behavior across reload, retry, authenticated sync, and Electron.
+
+### BUG-2048: Unified release receipt does not match promoted updater (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-27)
+
+The public updater and VPS artifact directory now serve 1.4.469, but the authoritative root receipt is absent and the retained updater receipt still identifies 1.4.465. The release path must publish one version/hash/source receipt alongside the web and Electron promotion, or fail closed before claiming a unified release.
+
+**Acceptance**: after the next release, the root receipt, updater manifest, PWA artifact set, and Electron artifacts agree on version, source commit, sizes, and hashes; read-back from the VPS and public endpoints proves the same release.
+
+### TASK-2045: Process all open MASTER_PLAN work consecutively (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-26)
+
+Continue through every open FlowState task, bug, and feature in priority order, including the current sync and Calendar Inbox regressions, branch consolidation, release verification, and existing backlog items.
+
+**Working rule**: each item keeps its own acceptance criteria and failure-class boundaries; investigate, implement, test, verify the real affected surface, update evidence, and only then advance to the next item. Preserve unrelated dirty work and do not mark an item complete without the required runtime, deployment, or visual proof.
+
+**Acceptance**: no open plan item is silently skipped; blocked items name one exact external action and the gate it unblocks; completed items have source, test, runtime, and production evidence appropriate to their scope.
+
+### TASK-2044: Safely consolidate all FlowState branches (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-26)
+
+Review every local and remote branch against the current FlowState mainline, identify unique commits and competing work, merge compatible changes, and clear only branches that are demonstrably empty, duplicated, or intentionally retired.
+
+**Safety requirements**: preserve dirty work and live sessions; never reset or mass-stage; inspect stale branches for deletion-only drift before merging; replay unique commits onto a fresh current-mainline branch when necessary; record merge, retention, and cleanup evidence in this plan.
+
+**Acceptance**: no unique branch work is lost, merged branches pass the relevant quality gates, stale/duplicate branches have an explicit disposition, and the final branch inventory is read back from both the local repository and remote.
+
+**Current evidence (2026-08-26)**: Sync compatibility landed through fresh current-mainline PR #280; the secure current-worker release helper landed through PR #281; the Calendar Inbox projection fix landed through PR #282; unified release version 1.4.467 landed through PR #283; helper self-bootstrap of the disposable VPS worker landed through PR #284; and a fresh-mainline replay of the compatible local Supabase preflight work landed through PR #285. The duplicate accessibility PR #277 was closed and its remote branch deleted after `git cherry` proved its commit equivalent to mainline. The remaining unmerged remote branches are retained for individual unique-work review; sampled open accessibility branches contain unique commits and are not safe to mass-merge.
+
+**Full branch/worktree audit (2026-08-26)**: The requested origin/main ref does not exist; the only remote mainline is origin/master, currently at 87a4f051, confirmed locally and with git ls-remote. The repository contains many local/remote branches and registered worktrees, while the primary worktree remains heavily dirty and divergent, so it is not safe to merge or rebase in place.
+
+**Branch dispositions**: Recent merge/replay candidates are codex/merge-runtime-contract-tests-20260826 (7 behind, clean except one plan change), codex/merge-a11y-toggles-20260826 (7 behind, clean), codex/merge-board-filter-current-20260826 (8 behind/4 ahead), codex/merge-board-filter-current-20260826-local (8 behind/5 ahead), codex/priority-release (70 behind/7 ahead), codex/priority-current-local (40 behind/6 ahead), codex/runtime-supabase-fix-20260825 (10 behind/0 ahead), and codex/updater-retry-20260825 (17 behind/0 ahead). Their subjects and unique commits were read back; none is authorized for deletion, and each requires fresh-mainline replay plus focused gates.
+
+**Retention decisions**: The active-task-loading family has six divergent variants (22–48 behind, 2–4 ahead); Hermes reliability/provenance is 422–433 behind with unique commits; request-hash/integration is 392–430 behind with unique recovery commits; and older release/fix families range from 252–430 behind. The codex/untangled-local-* family is 59 behind with 28–29 unique commits across AI, build, Canvas, concurrency, docs, E2E, Electron, generated, and task branches. These are stale or historically valuable, not empty, and remain retained for forensic/replay classification.
+
+**Worktree state**: 22 registrations under /tmp are prunable because their gitdir files are missing; cleanup remains gated on confirming no live process or session uses them. Active .worktrees include clean merge/replay snapshots and dirty investigation/build snapshots, including electron-current-master, merge-runtime-contract-tests-20260826, promote-e2e-20260825, untangled-electron-20260825, untangled-local-e2e-20260825, and untangled-local-generated-20260825; external Hermes worktrees include dirty reliability and canonical/duration investigation states. The main worktree and all dirty worktrees were preserved; no reset, stash, prune, deletion, merge, or branch cleanup was performed.
+
+**Required follow-up**: Create a fresh branch from origin/master, classify and replay unique commits in isolated staging worktrees, run relevant quality gates before any merge, and read back local and remote refs again. Add a remote main alias only if the repository owner standardizes that naming; until then, all comparisons use origin/master.
+
+**Inventory refresh (2026-08-27)**: After `git fetch origin --prune`, 68 remote branches and 48 local branches still diverge from `origin/master`. This is an inventory count, not a merge authorization: branch classification, dirty-worktree checks, unique-commit review, and fresh-mainline replay remain required before any integration or cleanup.
+
+**Branch disposition refresh (2026-08-27)**: PR #279 (`chore(a11y): label toggle controls`) is merged into current mainline as `2a7b05da`; replaying its apparent unique commit onto a clean `origin/master` worktree produced an empty cherry-pick, confirming the accessibility change is already present. The original stale branch remains only as historical remote inventory until its safe cleanup is separately authorized; the remaining open accessibility PRs are not equivalent to this merged change and require individual review.
+
+**Open-branch sample (2026-08-27)**: PR #266 is 63 commits behind and 4 commits ahead, but its cumulative diff deletes 1,696 lines across current release, challenge, sync, updater, and test files; it is unsafe as-is and must be mined by individual commit only if a specific requirement remains unmet. No merge or deletion was performed.
+
+**Open-branch sample 2 (2026-08-27)**: PR #224 is 440 commits behind and 1 commit ahead; its cumulative diff deletes 75,830 lines across 524 files, including 247 deletion-only files. It is retained as stale forensic material and is not eligible for direct merge; no merge or deletion was performed.
+
+**Safe replay refresh (2026-08-26)**: PR #288 merged as `2e179e5c9ae5143ea1701e2faddb4a81994d674c` after complete green standard and canvas/sync checks; it adds bounded updater-readiness diagnostics and bounded CI commands. PR #289 merged as `93075e71de3d1cdff63514515042f76ae4b4945e` after complete green checks; it replays only calendar accessibility state labels onto current mainline and excludes unrelated metadata. No stale branch was merged as-is.
+
+**Public release read-back (2026-08-26)**: Public production serves updater version `1.4.468`; the AppImage and Debian sizes and SHA-512 values match the public manifest and VPS files, and the served application bundle contains the valid Supabase URL. The authoritative root release receipt and installed-Electron restart/update proof remain open; the installed local AppImage is older and no local sidecar is currently running.
+
+**Stabilization refresh (2026-08-27)**: `origin/master` is `dda680a2` after the safe replay/release merges; the remote inventory is 84 branches and the currently open PR sample is dominated by retained accessibility branches requiring individual review. The public updater still reads `1.4.468`; the release helper passes its token directly for the build and does not persist it, while the VPS root receipt and installed-runtime proof remain open.
+
+**Node toolchain read-back (2026-08-27)**: The VPS has both disposable Node `22.13.0` and `22.22.0` toolchains installed side-by-side; direct execution of the pinned release toolchain reports Node `22.22.0` and npm `10.9.4`, while the system Node remains `20.20.0` and was not altered. The Node-version requirement is therefore satisfied for the release path; the missing release receipt and installed-app proof are separate gates.
+
+**Branch review refresh 2 (2026-08-27)**: PR #247 was replayed onto a fresh `origin/master` worktree; its four ARIA additions duplicated attributes already present on current mainline, and the replay failed type-check with duplicate-property errors. The temporary worktree was removed, no merge was performed, and the PR is classified as duplicate rather than lost work.
+
+**Branch review refresh 3 (2026-08-27)**: PR #255 contained two unique settings accessibility changes plus unrelated `.Jules` metadata. Those source changes were replayed alone onto fresh current mainline, passed Node `22.13.0` type-check and 101 base-component tests, and were opened as PR #292. GitHub had not reported remote checks at read-back, so it remains open and unmerged pending its remote gate.
+
+**Branch review refresh 4 (2026-08-27)**: PR #257 contains a separable Task Edit subtask accessibility change, but also unrelated AI/base-component work and no dedicated regression test. The isolated source replay passed type-check and 101 component tests, but was intentionally not merged because those tests do not prove the exact subtask controls; the candidate remains retained for a test-backed replay.
+
+**Branch review refresh 5 (2026-08-27)**: The separable PR #257 Task Edit controls were replayed onto fresh current mainline with an exact red-green regression for collapsed state, action labels, checkbox state, and update emission. PR #293 is pushed with Node `22.13.0` type-check and 103 focused/component tests passing; its standard and canvas-sync remote checks are pending, so no merge has occurred.
+
+**CI read-back (2026-08-27)**: The original PR #293 workflow run was canceled after the canvas-sync job remained in progress without logs; GitHub rejected a direct rerun as a broken-workflow run. The explicit dispatch run (`33022983776`) showed Supabase seeding and authentication completing, then was canceled before its 34 serial Playwright tests could finish; no test failure was produced. A final bounded dispatch run (`33023500052`) is now running, and merge remains gated on its result.
+
+**CI result correction (2026-08-27)**: Workflow-dispatch run `33023500052` completed successfully for the exact PR #293 head `12901460210fe9596a07f79bb3639b423d9dae47`; both `check` and `canvas-sync` passed in 9m32s. GitHub’s PR check rollup still retains the earlier canceled `canvas-sync` result and reports `UNSTABLE`, so a normal merge was rejected; no protected-branch bypass was used.
+
+**Verified merge refresh (2026-08-27)**: PR #292 merged normally as `2dee40897e20edf9f8083d7b424d6e519278c867` after both required checks passed; its fresh-mainline settings accessibility replay is confirmed on `origin/master`. PR #293 remains separate task-edit accessibility work with a canceled PR check despite a matching successful dispatch run, so it remains unmerged pending a refreshed protected check.
+
+**Verified merge refresh 2 (2026-08-27)**: After synchronizing PR #293 with current `origin/master` in a clean detached worktree, its fresh protected workflow run `33024313705` completed successfully: both `check` and `canvas-sync` passed. PR #293 then merged normally as `f2d5d6f67de6d87b9760676862f7b3a5dc2dd6e9`; `origin/master` was read back after fetch. The original dirty PR worktree was preserved and was not used for the merge.
+
+**Release preparation refresh (2026-08-27)**: Current `origin/master` is `f2d5d6f6` and public Electron remains `1.4.468`. An isolated release worktree was created from that mainline, package metadata was bumped to `1.4.469`, the repository hook stress tests passed, and PR #294 was pushed as `e3fcee88`. GitHub has not yet attached checks to the metadata-only PR; no merge or deployment is claimed.
+
+**Release CI blocker read-back (2026-08-27)**: Mainline push CI for `f2d5d6f6` passes lint, type-check, and build, but the fail-closed challenge gate returns `BLOCKED` because the checked-in independent review still records authenticated cross-client, full self-host, and installed-update evidence as open. The validator behaves correctly locally: the `r2` snapshot is bound to the review but the review verdict is `BLOCKED`; the older snapshot is hash-mismatched. No evidence was fabricated and no gate was weakened.
+
+**Release worktree verification (2026-08-27)**: The isolated `1.4.469` worktree passes type-check under disposable Node `22.13.0`, the exact Task Edit accessibility and base-component pack passes `103/103`, and the production renderer build passes. The initial dependency install correctly warned that the host system Node `20.20.2` is below the project engine requirement; all release verification was rerun through Node `22.13.0`.
+
+**Release PR merge refresh (2026-08-27)**: PR #294 passed both protected checks, including the two-client Realtime job, and merged normally as `57d31bcb04eaea3cbc18d77178e48c2bc2ab53fa`. `origin/master` now reads that commit and package version `1.4.469`; public updater read-back remains `1.4.468` until the secure VPS release helper is run with the operator-provided Doppler token.
+
+**Branch inventory refresh 2 (2026-08-27)**: After pruning, the remote inventory contains 87 branch refs and 38 open PRs. The newest open PRs are the retained accessibility family (#257, #258, #259, #260, #261, #262, #266); their statuses remain UNKNOWN and they are not eligible for blind merge. The primary worktree remains dirty and was preserved.
+
+**Public release refresh (2026-08-27)**: The automatic master deployment completed successfully and public production now serves updater version `1.4.469`; the live PWA bundle contains the valid Supabase URL and the VPS updater directory contains the matching 1.4.469 AppImage/deb and release receipt. The authoritative root receipt is still absent, and the installed launcher remains older, so installed-runtime and root-receipt proof are not claimed.
+
+**Receipt repair refresh (2026-08-27)**: Read-back found the updater receipt still identifying 1.4.465 while the manifest and artifacts identify 1.4.469, and no root receipt existed. A fresh-mainline repair generates a deterministic receipt from the exact PWA/Electron bytes, validates its schema/version, copies it to the root before publishing the manifest, and leaves the manifest as the final visibility switch. PR #295 is pushed as `4af925d6`; its local hook stress tests passed, and protected CI/next-release proof remain open.
+
+**Receipt repair merge refresh (2026-08-27)**: PR #295 passed both protected checks, including canvas/Realtime, and merged normally as `344b03d3efbd16a72202e15ff35dd7aba9d8f46a`. A fresh release worktree from that mainline prepared monotonic version `1.4.470` as commit `06073c1f`; its local hook stress tests passed and PR #296 is open for protected release checks.
+
+**Receipt release merge refresh (2026-08-27)**: PR #296 passed both protected checks, including canvas/Realtime, and merged normally as `4a26ebd70e8616193e18e42c0addf60e27b8db3a`. Mainline now contains the receipt publication repair and version `1.4.470`; automatic deployment and live receipt read-back remain open.
+
+**Public receipt guard refresh (2026-08-27)**: Read-back after the 1.4.470 deployment found the updater manifest and artifacts at 1.4.470 while the updater receipt remained at 1.4.465 and the root receipt was absent. PR #297 preserves the root receipt during static PWA synchronization and adds a public manifest/receipt version check; its local backup gate passed 16 + 34 tests, both protected checks passed, and it merged normally as `aa52714b1c8ba21b0f8485ae7378b4a662a726b8`. The follow-up deployment is queued; the current public receipt still requires read-back after that deployment.
+
+**Unified receipt release refresh (2026-08-27)**: PR #298/#299/#300/#301/#302 were merged through protected checks while repairing the committed receipt generator, final-PWA receipt timing, generated Electron dirty classification, and monotonic release versions. The final deployment completed successfully as run `33035570469`; public updater version `1.4.473`, root receipt, updater receipt, VPS artifact sizes, and VPS SHA-256 values all match, and the public PWA bundle contains `https://api.in-theflow.com`. The installed Electron runtime, authenticated user flow, independent challenge review, and remaining branch dispositions remain open.
+
+**Installed and branch audit refresh (2026-08-27)**: The installed launcher remains an older AppImage from 2026-08-26 and no FlowState process is currently running, so installed-update and close/open proof remain open even though the public updater is ready at 1.4.473. The current remote inventory is 92 branches and 38 open PRs. PRs #257, #258, and #266 were rechecked against `origin/master`: each has unique commits but no deletion-only files in its cumulative diff; #257/#258 overlap previously merged accessibility families and #266 remains a stale multi-file accessibility candidate, so none was merged or deleted without fresh replay and focused evidence.
+
+**Canonical preview recovery refresh (2026-08-27)**: The recurring `invalid_canonical_preview` state was traced to legacy queued operations containing partial preview bindings; the previous permanent quarantine left those updates visible forever. PR #303 rotates the operation id, clears only the unusable binding, and requests a fresh validated preview; its focused 18-test suite and type-check pass, while protected CI and authenticated runtime proof remain open.
+
+**Canonical preview CI read-back (2026-08-27)**: PR #303 standard checks passed. Its authenticated canvas/sync job completed dependency installation and unit checks, then remained in progress during the two-client Realtime stage without a final result; no duplicate rerun or merge was performed.
+
+**Missing-projection recovery merge (2026-08-27)**: PR #306 merged as `77abe2731fb47dde4ca1fc3208852b0bce4d620d` after both protected checks passed; it hardens disposable release-worker cleanup. PR #307 merged as `0c2f6e970a8570fbb09eb15c71a4afcbd1bd7804` after both protected checks passed; it prevents a missing cached task projection from throwing the renderer error while retaining the durable operation for recovery. The local branches remain registered in preserved worktrees, so their local deletion was intentionally not forced. A new versioned release and installed-app verification are still required.
+
+**Current release preparation (2026-08-27)**: PR #308 replayed the canvas accessibility source change onto current master, passed both protected checks, and merged as `3c5b5e0a1a2c7e18ec51074980aba1c07608aa40`; its original diverged branch was not merged directly. Isolated release PR #309 bumps the version to `1.4.475` from that mainline and is awaiting protected checks. Public updater remains `1.4.474`, and the installed Electron runtime remains older, so the repaired missing-projection path is not yet proven in the installed app.
+
+### BUG-2043: Calendar Inbox task remains after drag into Calendar (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-26)
+
+Dragging a task such as `להשקות צמחים` from Calendar Inbox into Calendar creates the calendar event but leaves the original task visible in Calendar Inbox. This is a projection/lifecycle regression: the move must complete the source-side removal as well as the destination-side calendar insertion.
+
+**Acceptance**: after the drag, the task appears exactly once in Calendar, is absent from Calendar Inbox, remains absent after renderer reload and authenticated sync, and does not create duplicate records or events.
+
+**Evidence**: source regression and projection fix are present on current mainline; the focused Calendar Inbox suite passes 8/8 and the combined direct sync/calendar pack passes 26/26 under Node 22.13.0. The exact installed-Electron drag path, renderer reload, authenticated sync convergence, and production release remain unverified.
+
+**Required next work**: reproduce the exact drag path in the installed app, verify destination insertion plus Inbox removal and reload convergence, then verify the authenticated browser surface.
+
+### BUG-2042: Canonical task update remains permanently blocked by invalid preview (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-26)
+
+The installed Electron app shows a queued task update as `invalid_canonical_preview` and marks it as needing manual attention. Source inspection found a client/server contract mismatch: the current client requires a preview `requestHash` and sends `p_request_hash`, while the checked-in `flowstate_patch_task_v1` migration emits the legacy preview shape and does not declare that argument.
+
+**Exact failure mode under investigation**: an authenticated local task edit is accepted into the durable queue, but the canonical preview response is rejected by the renderer before the update can be applied.
+
+**Evidence**: the user-visible Electron sync popover reproduces the permanent error; the current client validator requires the hash; the repository migration returns no preview `requestHash` and has no `p_request_hash` parameter. A red-green regression now covers the legacy preview contract; the focused canonical/sync suite passes 137/137 and type-check passes under Node 22.13.0. Production database migration state and the affected operation's persisted payload still require authenticated readback.
+
+**Required next work**: verify the deployed RPC signature and preview response without exposing credentials, then rebuild and verify authenticated Electron sync plus close/open persistence. The source compatibility regression is covered; the live RPC and installed-app retry are still open.
+
+### BUG-2046: invalid_canonical_preview recurs for queued Electron updates (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-27)
+
+The installed Electron app is still showing `invalid_canonical_preview` for more than one queued task update, including task identifiers `d6765982...` and `4ec75bae...`; the second failure appeared after the first, proving this is an ongoing failure class rather than one isolated stale queue item.
+
+**Acceptance**: reproduce the exact queued-update failure in the currently installed app, identify the live client/RPC preview-shape mismatch, make retry either apply safely or remain durably actionable without an endless loop, and verify two previously failing updates after close/open and authenticated sync.
+
+**Required next work**: capture safe renderer/runtime diagnostics for the two operations, compare the installed app version and bundled canonical patch behavior with current mainline, verify the deployed RPC contract without exposing credentials, then rebuild and test the real retry path.
+
+**Initial evidence (2026-08-27)**: Runtime diagnostics record `d6765982` and `4ec75bae` as `invalid_canonical_preview` failures from the mounted 1.4.464 bundle (`index-CMHduAJI.js`). The same log records separate 1.4.467 startups, and current mainline accepts legacy previews and omits `p_request_hash` unless the server provides a request hash. The first verification action is therefore to close the still-running 1.4.464 instance and retry both queued updates in 1.4.467 before changing the live contract.
+
+**Updater evidence (2026-08-27)**: The local updater failure receipt records two 1.4.467 direct-replacement attempts ending in `direct replacement readiness`, followed by rollback to the known-good 1.4.464 launcher. A 1.4.467 startup did emit a local-api `fork-threw` readiness diagnostic before the rollback. This leaves the installed-update handoff and packaged sidecar readiness open even though the public 1.4.467 artifact is valid.
+
+**Repair in review (2026-08-27)**: PR #288 is based directly on current `origin/master` and normalizes the direct provenance response before matching the expected version, while recording the final probe response on failure. The packaged installer runtime suite passes 5/5 under Node 22.13.0; the commit hook backup stress checks pass 34 tests with 45 intentional skips. Deployment and installed-runtime proof remain open until this repair is merged, released, and exercised.
+
+**CI-boundary repair (2026-08-27)**: The canvas-sync job had no execution deadline and remained in progress without logs across repeated readbacks. PR #288 now bounds that job to 20 minutes while retaining its always-run Supabase cleanup; the change is pushed as commit `d428251e`. The existing older run remains in progress, and no duplicate workflow was forced.
+
 ### ~~BUG-2041~~: Persisted identity triggers sync error without Supabase client (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-08-25)
@@ -11381,6 +11633,12 @@ Removed the entire gamification system (~23,700 lines): XP, achievements, challe
 - If implemented, Canvas group/task positions do not jump, overwrite, or cross-leak between users/workspaces.
 
 ---
+
+### FEATURE-2041: Reorder project categories across sidebar and Board (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)
+
+Project categories now retain their user-controlled sibling order, and dragging a project onto another project at the same level places it before or after the target. Cross-level project drops continue to create nesting; focused project-store coverage passes, while Electron build and installed visual verification remain required.
 
 ## Formatting Guide
 

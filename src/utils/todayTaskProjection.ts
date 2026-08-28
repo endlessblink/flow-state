@@ -29,7 +29,10 @@ export function getStaleTodayTaskIds(
   const canonicalIds = getCanonicalTodayTaskIds(tasks, hideDoneTasks)
   return new Set(
     tasks
-      .filter(task => task.parentId === todayGroupId && !canonicalIds.has(task.id))
+      // A task without a due date may be intentionally placed in a manually
+      // named Today group; only date-bearing tasks can be stale smart-group
+      // projections.
+      .filter(task => task.parentId === todayGroupId && !!task.dueDate && !canonicalIds.has(task.id))
       .map(task => task.id),
   )
 }

@@ -3,13 +3,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 /**
  * Expose a safe API to the renderer process via contextBridge.
  * This replaces Tauri's window.__TAURI_INTERNALS__.invoke() pattern.
- *
- * In the renderer, access via: window.electronAPI.invoke('channel', args)
  */
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Generic IPC invoke (replaces Tauri's invoke())
-  invoke: (channel: string, ...args: unknown[]) => ipcRenderer.invoke(channel, ...args),
-
   // Platform detection
   platform: process.platform,
   isElectron: true,
@@ -105,7 +100,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 declare global {
   interface Window {
     electronAPI: {
-      invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
       platform: string
       isElectron: boolean
       getVersion: () => Promise<string>

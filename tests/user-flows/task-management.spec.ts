@@ -121,7 +121,19 @@ test.describe('Task Management', () => {
     test('recurring guest mark-as-done advances to the next occurrence without an error toast', async ({ page }) => {
         const taskId = `00000000-0000-4000-8000-${String(Date.now()).slice(-12).padStart(12, '0')}`;
         const taskTitle = `Recurring Guest Gate ${Date.now()}`;
-        await page.evaluate(({ taskId, taskTitle }) => {
+        const formatDate = (date: Date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        const initialDate = new Date();
+        initialDate.setDate(initialDate.getDate() - 1);
+        const initialDueDate = formatDate(initialDate);
+        const nextDate = new Date(initialDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        const nextDueDate = formatDate(nextDate);
+        await page.evaluate(({ taskId, taskTitle, initialDueDate }) => {
             const now = new Date().toISOString();
             localStorage.setItem('flowstate-guest-tasks', JSON.stringify([{
                 id: taskId,
@@ -132,7 +144,7 @@ test.describe('Task Management', () => {
                 progress: 0,
                 completedPomodoros: 0,
                 subtasks: [],
-                dueDate: '2026-07-23',
+                dueDate: initialDueDate,
                 estimatedDuration: 25,
                 projectId: null,
                 isInInbox: true,
@@ -144,7 +156,7 @@ test.describe('Task Management', () => {
                     endType: 'never',
                 },
             }]));
-        }, { taskId, taskTitle });
+        }, { taskId, taskTitle, initialDueDate });
 
         await page.reload();
         await page.waitForSelector('.all-tasks-view');
@@ -181,11 +193,25 @@ test.describe('Task Management', () => {
         }, [taskTitle, taskId])).toEqual({
             title: taskTitle,
             status: 'todo',
-            dueDate: '2026-07-24',
-            doneForNowUntil: '2026-07-24',
+            dueDate: nextDueDate,
+            doneForNowUntil: nextDueDate,
             recurrenceCount: 1,
-            completionDueDate: '2026-07-23',
+            completionDueDate: initialDueDate,
             completionStatus: 'done',
+        });
+
+        await expect.poll(async () => page.evaluate((taskId) => {
+            const tasks = JSON.parse(localStorage.getItem('flowstate-guest-tasks') || '[]');
+            const living = tasks.find((task: any) => task.id === taskId);
+            return {
+                dueDate: living?.dueDate,
+                doneForNowUntil: living?.doneForNowUntil,
+                recurrenceCount: living?.recurrenceCount,
+            };
+        }, taskId)).toEqual({
+            dueDate: nextDueDate,
+            doneForNowUntil: nextDueDate,
+            recurrenceCount: 1,
         });
 
         await page.reload();
@@ -202,8 +228,8 @@ test.describe('Task Management', () => {
             };
         }, taskId)).toEqual({
             status: 'todo',
-            dueDate: '2026-07-24',
-            doneForNowUntil: '2026-07-24',
+            dueDate: nextDueDate,
+            doneForNowUntil: nextDueDate,
             recurrenceCount: 1,
         });
     });

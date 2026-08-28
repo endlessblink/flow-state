@@ -172,6 +172,14 @@ function doSmartSuggest() {
   smartSuggest(props.task)
 }
 
+function retrySmartSuggestWithContext() {
+  if (!props.task || !contextAnswer.value.trim()) return
+  smartSuggestChecked.value = {}
+  const answer = contextAnswer.value.trim()
+  contextAnswer.value = ''
+  smartSuggest(props.task, answer)
+}
+
 function doSmartSuggestGroup() {
   if (!props.selectedTaskIds?.length) return
   smartSuggestGroupChecked.value = {}
@@ -228,6 +236,7 @@ function acceptTitle() {
 
 const smartSuggestChecked = ref<Record<string, boolean>>({})
 const smartSuggestGroupChecked = ref<Record<string, Record<string, boolean>>>({})
+const contextAnswer = ref('')
 
 // FEATURE-1342: Feedback state for suggestion corrections
 const showFeedbackInputs = ref(false)
@@ -402,6 +411,7 @@ watch(() => props.isVisible, (visible) => {
     feedbackText.value = {}
     showDismissFeedback.value = false
     dismissFeedbackText.value = ''
+    contextAnswer.value = ''
   }
 })
 
@@ -683,6 +693,23 @@ watch(() => [props.isVisible, props.autoTrigger] as const, ([visible, trigger]) 
           <p v-if="result.smartSuggest?.contextQuestion" class="smart-context-question" dir="auto">
             {{ result.smartSuggest.contextQuestion }}
           </p>
+          <div v-if="result.smartSuggest?.contextQuestion" class="smart-context-answer">
+            <input
+              v-model="contextAnswer"
+              class="feedback-input feedback-input--full"
+              type="text"
+              placeholder="Answer briefly (optional)"
+              dir="auto"
+              @keydown.enter.prevent="retrySmartSuggestWithContext"
+            >
+            <button
+              class="accept-btn"
+              :disabled="!contextAnswer.trim()"
+              @click="retrySmartSuggestWithContext"
+            >
+              Answer &amp; retry
+            </button>
+          </div>
           <div v-if="!result.smartSuggest?.suggestions?.length" class="no-results">
             No metadata change suggested until this context is clear.
           </div>

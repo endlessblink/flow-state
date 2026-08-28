@@ -224,6 +224,7 @@ export function classifyError(error: unknown): ErrorClassification {
     lowerMessage.includes('404') ||
     lowerMessage.includes('400') ||  // Bad request (validation errors)
     lowerMessage.includes('not found') ||
+    lowerMessage.includes('no longer exists') ||
     lowerMessage.includes('forbidden') ||
     lowerMessage.includes('invalid') ||
     lowerMessage.includes('malformed') ||

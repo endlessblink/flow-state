@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="modal-fade">
       <div
-        v-if="isVisible"
+        v-if="shouldShow"
         class="onboarding-overlay"
         tabindex="-1"
         @click.self="dismiss"
@@ -85,6 +85,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { X, LayoutGrid, Timer, Shield, UserPlus, Inbox, ArrowUpDown } from 'lucide-vue-next'
 import AppLogo from '@/components/base/AppLogo.vue'
 import { useOnboardingWizard } from '@/composables/app/useOnboardingWizard'
@@ -99,6 +101,14 @@ const {
   openSignUp,
   handleKeydown,
 } = useOnboardingWizard()
+
+const route = useRoute()
+const shouldShow = computed(() => {
+  if (!isVisible.value) return false
+
+  // Workspace controls must remain usable on direct links and fresh installs.
+  return !['board', 'canvas'].includes(String(route.name))
+})
 </script>
 
 <style scoped>

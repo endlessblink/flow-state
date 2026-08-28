@@ -277,6 +277,41 @@ describe('canonical queued task patch', () => {
     expect(rpc.mock.calls[0][1]).toMatchObject({ p_preview: false, p_operation_id: 'web:operation-1' })
   })
 
+  it('rotates a fully-bound preview when apply reports that it expired', async () => {
+    const op = operation()
+    op.canonicalTaskPatch = {
+      ...op.canonicalTaskPatch!,
+      phase: 'previewed',
+      previewDigest: 'b'.repeat(64),
+      previewExpiresAt: '2026-07-13T10:15:00Z',
+      requestHash: REQUEST_HASH,
+      normalizedPatch: { title: 'New title' },
+    }
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({
+        data: { ok: false, result: 'conflict', error: { code: 'preview_expired', message: 'Approval expired' } },
+        error: null,
+      })
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ...preview(), operationId: args.p_operation_id, requestHash: REQUEST_HASH },
+        error: null,
+      }))
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: receipt({ operationId: args.p_operation_id }) },
+        error: null,
+      }))
+    const persist = vi.fn().mockResolvedValue(undefined)
+
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, persist)
+
+    expect(result.success).toBe(true)
+    expect(rpc).toHaveBeenCalledTimes(3)
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_preview: false, p_request_hash: REQUEST_HASH })
+    expect(rpc.mock.calls[1][1]).toMatchObject({ p_preview: true, p_operation_id: expect.not.stringMatching(/^web:operation-1$/) })
+    expect(rpc.mock.calls[2][1]).toMatchObject({ p_preview: false, p_request_hash: REQUEST_HASH, p_operation_id: expect.not.stringMatching(/^web:operation-1$/) })
+    expect(persist).toHaveBeenCalledWith(expect.objectContaining({ phase: 'queued', previewDigest: undefined, requestHash: undefined }))
+  })
+
   it('quarantines a persisted preview that lacks its validated normalized patch', async () => {
     const op = operation()
     op.canonicalTaskPatch = {

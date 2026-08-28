@@ -131,25 +131,39 @@ const getPendingOperations: typeof _getPendingOperations = async (...args) => {
   return mod ? mod.getPendingOperations(...args) : []
 }
 
-const markSyncing: typeof _markSyncing = async (...args) => {
+const markSyncing = async (...args: Parameters<typeof _markSyncing>): Promise<string | false> => {
   const mod = await getWriteQueueModule()
-  if (mod) await mod.markSyncing(...args)
+  if (!mod) return false
+  const result = await mod.markSyncing(...args)
+  // Older test/runtime adapters return void; only an explicit false is a lost claim.
+  return result === false ? false : (typeof result === 'string' ? result : 'legacy-claim')
 }
 
 const markCompleted: typeof _markCompleted = async (...args) => {
   const mod = await getWriteQueueModule()
-  if (mod) await mod.markCompleted(...args)
+  if (!mod) return false
+  const result = args[1] === undefined
+    ? await mod.markCompleted(args[0])
+    : await mod.markCompleted(...args)
+  // Older adapters returned void; only an explicit false means the lease was lost.
+  return result === false ? false : true
 }
 
 const markFailed: typeof _markFailed = async (...args) => {
   const mod = await getWriteQueueModule()
-  if (mod) await mod.markFailed(...args)
+  if (!mod) return false
+  const result = args[3] === undefined
+    ? mod.markFailed(args[0], args[1], args[2])
+    : mod.markFailed(...args)
+  return (await result) === false ? false : true
 }
 
 const markConflict: typeof _markConflict = async (...args) => {
   const mod = await getWriteQueueModule()
   if (!mod) throw new Error('IndexedDB not available')
-  return mod.markConflict(...args)
+  return args[3] === undefined
+    ? mod.markConflict(args[0], args[1], args[2])
+    : mod.markConflict(...args)
 }
 
 const updateOperation: typeof _updateOperation = async (...args) => {
@@ -160,13 +174,15 @@ const updateOperation: typeof _updateOperation = async (...args) => {
 const completeCanonicalOperation: typeof _completeCanonicalOperation = async (...args) => {
   const mod = await getWriteQueueModule()
   if (!mod) throw new Error('IndexedDB not available')
-  await mod.completeCanonicalOperation(...args)
+  if (args[2] === undefined) await mod.completeCanonicalOperation(args[0], args[1])
+  else await mod.completeCanonicalOperation(...args)
 }
 
 const completeLegacyTaskOperation: typeof _completeLegacyTaskOperation = async (...args) => {
   const mod = await getWriteQueueModule()
   if (!mod) throw new Error('IndexedDB not available')
-  await mod.completeLegacyTaskOperation(...args)
+  if (args[2] === undefined) await mod.completeLegacyTaskOperation(args[0], args[1])
+  else await mod.completeLegacyTaskOperation(...args)
 }
 
 const getLatestCanonicalCheckpointForEntity: typeof _getLatestCanonicalCheckpointForEntity = async (...args) => {
@@ -663,14 +679,17 @@ async function executeOperation(operation: WriteOperation): Promise<SyncResult> 
             .single()
 
           if (serverState.error) {
-            // BUG-1211 FIX: Entity not found — likely deleted on another device.
-            // Mark as success to remove from queue (can't update a deleted entity),
-            // but log prominently so this is visible in debugging.
+            // A missing entity is authoritative information, not successful
+            // delivery: keep the local intent for explicit user resolution.
             if (serverState.error.code === 'PGRST116') {
-              console.warn(`⚠️ [SYNC] Entity ${entityType}:${entityId} not found on server (deleted on another device?). Queued update discarded — data in this update is lost.`)
+              const error = `${entityType === 'group' ? 'Group' : 'Task'} no longer exists in the authoritative projection; local update preserved for manual resolution`
+              console.warn(`⚠️ [SYNC] Entity ${entityType}:${entityId} not found on server; preserving queued update for manual resolution`)
               return {
-                success: true,
-                operation
+                success: false,
+                operation,
+                error,
+                shouldRetry: false,
+                classification: 'permanent'
               }
             }
             throw serverState.error
@@ -861,7 +880,11 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
   if (!operation.id) return undefined
 
   // Mark as syncing
-  await markSyncing(operation.id)
+  const syncClaimId = await markSyncing(operation.id)
+  if (!syncClaimId) return undefined
+  // Test/legacy adapters may only expose the pre-fencing void API; preserve
+  // their call shape while real IndexedDB workers remain claim-fenced.
+  const claimForMutation = syncClaimId === 'legacy-claim' ? undefined : syncClaimId
 
   // Execute the operation
   const result = await executeOperation(operation)
@@ -869,17 +892,24 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
   if (result.success) {
     const returnedCanonicalRevision = Number(result.serverData?.canonical_revision)
     // Success - mark completed
-    if (result.canonicalReceipt) {
-      await completeCanonicalOperation(operation.id, result.canonicalReceipt)
-    } else if (
-      operation.entityType === 'task'
-      && operation.operation === 'update'
-      && Number.isInteger(returnedCanonicalRevision)
-      && returnedCanonicalRevision > 0
-    ) {
-      await completeLegacyTaskOperation(operation.id, returnedCanonicalRevision)
-    } else {
-      await markCompleted(operation.id)
+    try {
+      if (result.canonicalReceipt) {
+        await completeCanonicalOperation(operation.id, result.canonicalReceipt, claimForMutation)
+      } else if (
+        operation.entityType === 'task'
+        && operation.operation === 'update'
+        && Number.isInteger(returnedCanonicalRevision)
+        && returnedCanonicalRevision > 0
+      ) {
+        await completeLegacyTaskOperation(operation.id, returnedCanonicalRevision, claimForMutation)
+      } else if (!await markCompleted(operation.id, claimForMutation)) {
+        // Another worker won the lease while the remote request was in flight.
+        // Its result is no longer safe to project into this worker's local state.
+        return undefined
+      }
+    } catch (error) {
+      console.warn('[SYNC] Completion claim was lost or could not be committed:', error)
+      return undefined
     }
     let hasLaterUnresolvedTaskOperation = false
     if (operation.entityType === 'task') {
@@ -904,7 +934,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
       } catch (error) {
         console.warn('[SYNC] Failed to project canonical receipt into task state:', error)
         const message = error instanceof Error ? error.message : String(error)
-        await markFailed(operation.id, `Canonical receipt projection failed: ${message}`, Date.now() + 1_000)
+        if (!await markFailed(operation.id, `Canonical receipt projection failed: ${message}`, Date.now() + 1_000, claimForMutation)) return undefined
         state.value.lastError = `Canonical receipt projection failed: ${message}`
         return {
           success: false,
@@ -972,7 +1002,12 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     }
   } else if (result.isConflict) {
     // Conflict - need resolution
-    await markConflict(operation.id!, result.newVersion || 0)
+    try {
+      await markConflict(operation.id!, result.newVersion || 0, undefined, claimForMutation)
+    } catch (error) {
+      console.warn('[SYNC] Conflict claim was lost before it could be recorded:', error)
+      return undefined
+    }
     state.value.lastError = result.error
     console.warn(`⚠️ [SYNC] Conflict: ${operation.entityType}:${operation.entityId.slice(0, 8)}`)
   } else if (result.isAuthError) {
@@ -986,7 +1021,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
         const { error: refreshError } = await supabase!.auth.refreshSession()
         if (refreshError) {
           // Refresh itself failed — user is truly logged out, give up
-          await markFailed(operation.id, `Auth refresh failed: ${refreshError.message}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
+          if (!await markFailed(operation.id, `Auth refresh failed: ${refreshError.message}`, Date.now() + 365 * 24 * 60 * 60 * 1000, claimForMutation)) return undefined
           state.value.lastError = `Auth refresh failed: ${refreshError.message}`
           console.error(`❌ [SYNC] Auth refresh failed for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
           permanentFailureCallbacks.forEach(cb => cb(operation))
@@ -994,20 +1029,20 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
           // Token refreshed — reset to pending with a short delay (1s) so the
           // next queue cycle picks it up immediately rather than waiting 5s.
           const nextRetryAt = Date.now() + 1000
-          await markFailed(operation.id, result.error || 'Auth error', nextRetryAt)
+          if (!await markFailed(operation.id, result.error || 'Auth error', nextRetryAt, claimForMutation)) return undefined
           console.log(`✅ [SYNC] Token refreshed — ${operation.entityType}:${operation.entityId.slice(0, 8)} rescheduled in 1s`)
         }
       } catch (refreshException) {
         // Unexpected error during refresh — treat as permanent
         const msg = refreshException instanceof Error ? refreshException.message : String(refreshException)
-        await markFailed(operation.id, `Auth refresh exception: ${msg}`, Date.now() + 365 * 24 * 60 * 60 * 1000)
+        if (!await markFailed(operation.id, `Auth refresh exception: ${msg}`, Date.now() + 365 * 24 * 60 * 60 * 1000, claimForMutation)) return undefined
         state.value.lastError = `Auth refresh exception: ${msg}`
         console.error(`❌ [SYNC] Auth refresh threw for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
         permanentFailureCallbacks.forEach(cb => cb(operation))
       }
     } else {
       // Exhausted refresh attempts — user is logged out, mark permanent
-      await markFailed(operation.id, result.error || 'Auth error (max retries)', Date.now() + 365 * 24 * 60 * 60 * 1000)
+      if (!await markFailed(operation.id, result.error || 'Auth error (max retries)', Date.now() + 365 * 24 * 60 * 60 * 1000, claimForMutation)) return undefined
       state.value.lastError = result.error
       console.error(`❌ [SYNC] Auth retries exhausted for ${operation.entityType}:${operation.entityId.slice(0, 8)} — marking permanent`)
       permanentFailureCallbacks.forEach(cb => cb(operation))
@@ -1016,7 +1051,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     const retryConfig = getRetryConfigForError(result.classification as ErrorClassification)
     const nextRetryAt = result.cooldownUntil ?? calculateNextRetryTime(operation.retryCount, retryConfig ?? undefined)
     openRemoteWriteCooldown(nextRetryAt, result.error || 'Supabase rate limited writes')
-    await markFailed(operation.id, result.error || 'Rate limited', nextRetryAt)
+    if (!await markFailed(operation.id, result.error || 'Rate limited', nextRetryAt, claimForMutation)) return undefined
     state.value.lastError = result.error || 'Rate limited'
     console.warn(`⏳ [SYNC] Rate limited. Pausing remote writes for ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
   } else if (result.shouldRetry) {
@@ -1025,7 +1060,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
       ? getRetryConfigForError(result.classification as ErrorClassification)
       : undefined
     const nextRetryAt = calculateNextRetryTime(operation.retryCount, retryConfig ?? undefined)
-    await markFailed(operation.id, result.error || 'Unknown error', nextRetryAt)
+    if (!await markFailed(operation.id, result.error || 'Unknown error', nextRetryAt, claimForMutation)) return undefined
     if (import.meta.env.DEV) {
       console.warn(`⚠️ [SYNC] Retry scheduled: ${operation.entityType}:${operation.entityId.slice(0, 8)} in ${Math.round((nextRetryAt - Date.now()) / 1000)}s`)
     }
@@ -1049,7 +1084,7 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     }
   } else {
     // Permanent error - mark as failed (won't auto-retry)
-    await markFailed(operation.id, result.error || 'Permanent error', Date.now() + 365 * 24 * 60 * 60 * 1000) // Far future = won't auto-retry
+    if (!await markFailed(operation.id, result.error || 'Permanent error', Date.now() + 365 * 24 * 60 * 60 * 1000, claimForMutation)) return undefined // Far future = won't auto-retry
     state.value.lastError = result.error
     console.error(`❌ [SYNC] Permanent failure: ${operation.entityType}:${operation.entityId.slice(0, 8)} - ${result.error}`)
     permanentFailureCallbacks.forEach(cb => cb(operation))

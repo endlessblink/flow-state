@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.4.466",
+  "version": "1.4.483",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://github.com/endlessblink/flow-state",
   "repository": {
@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/endlessblink/flow-state/issues"
   },
-  "main": "src/main.ts",
+  "main": "dist-electron/main.cjs",
   "type": "module",
   "scripts": {
     "predev": "bash scripts/predev-port-check.sh",

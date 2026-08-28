@@ -2,7 +2,7 @@
 # deploy-electron-update.sh — Build Electron app and deploy to VPS auto-updater
 #
 # Usage:
-#   ./scripts/deploy-electron-update.sh [--notes "Release notes"] [--skip-deploy] [--skip-guard] [--skip-tests] [--dry-run]
+#   ./scripts/deploy-electron-update.sh [--notes "Release notes"] [--dry-run]
 #
 # Prerequisites:
 #   1. SSH key at ~/.ssh/id_ed25519 with access to VPS
@@ -33,18 +33,15 @@ NC='\033[0m'
 
 # Parse arguments
 NOTES=""
-SKIP_DEPLOY=false
-SKIP_GUARD="${SKIP_GUARD:-false}"
 DRY_RUN=false
-
-SKIP_TESTS=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --notes) NOTES="$2"; shift 2 ;;
-    --skip-deploy) SKIP_DEPLOY=true; shift ;;
-    --skip-guard) SKIP_GUARD=true; shift ;;
-    --skip-tests) SKIP_TESTS=true; shift ;;
+    --skip-deploy|--skip-guard|--skip-tests)
+      echo -e "${RED}Refusing production deployment bypass: $1${NC}" >&2
+      exit 1
+      ;;
     --dry-run) DRY_RUN=true; shift ;;
     *) echo -e "${RED}Unknown option: $1${NC}"; exit 1 ;;
   esac
@@ -67,9 +64,7 @@ fi
 
 # Step 1: Run the Electron sync/auth/canvas regression sentinel before packaging.
 echo -e "\n${YELLOW}[1/3] Electron sync regression guard...${NC}"
-if [ "$SKIP_GUARD" = true ]; then
-  echo -e "${YELLOW}  Skipping guard (--skip-guard / SKIP_GUARD=true)${NC}"
-elif [ "$DRY_RUN" = true ]; then
+if [ "$DRY_RUN" = true ]; then
   echo -e "${CYAN}  [DRY RUN] Would run: npm run guard:electron-sync${NC}"
 else
   # Run the guard in test mode. Doppler injects NODE_ENV=production, under which vite
@@ -85,9 +80,7 @@ fi
 # physically refuse to ship a regression these tests can see (~3-5 min).
 # Emergency hotfix escape hatch: --skip-tests (loud, on your head).
 echo -e "\n${YELLOW}[1b/3] Full ship gate (type-check + unit suite)...${NC}"
-if [ "$SKIP_TESTS" = true ] || [ "$SKIP_GUARD" = true ]; then
-  echo -e "${RED}  ⚠ SHIP GATE SKIPPED (--skip-tests/--skip-guard). This release is NOT regression-checked.${NC}"
-elif [ "$DRY_RUN" = true ]; then
+if [ "$DRY_RUN" = true ]; then
   echo -e "${CYAN}  [DRY RUN] Would run: npm run type-check && npm run test${NC}"
 else
   echo -e "  type-check (vue-tsc)..."
@@ -148,9 +141,7 @@ if [ "$DRY_RUN" = false ]; then
 fi
 
 # Step 3: Deploy to VPS
-if [ "$SKIP_DEPLOY" = true ]; then
-  echo -e "\n${YELLOW}[3/3] Skipping deploy (--skip-deploy)${NC}"
-elif [ "$DRY_RUN" = true ]; then
+if [ "$DRY_RUN" = true ]; then
   echo -e "\n${YELLOW}[3/3] Deploy (DRY RUN)${NC}"
   echo -e "${CYAN}  Would upload to ${VPS_USER}@${VPS_HOST}:${VPS_PATH}/${NC}"
 else

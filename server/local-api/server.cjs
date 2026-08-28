@@ -89,6 +89,8 @@ const TOKEN = process.env.FLOW_STATE_API_TOKEN || ''
 const DATA_DIR = process.env.FLOW_STATE_API_DATA_DIR || join(process.cwd(), '.flowstate-local-api')
 const LOCAL_TIMER_INACTIVE_GRACE_MS = 15_000
 const APP_VERSION = process.env.FLOW_STATE_APP_VERSION || 'unknown'
+const INSTANCE_ID = process.env.FLOW_STATE_INSTANCE_ID || crypto.randomUUID()
+const PARENT_PID = Number(process.env.FLOW_STATE_PARENT_PID) || null
 const BUILD_PROVENANCE_PATH = process.env.FLOW_STATE_BUILD_PROVENANCE_PATH
   || join(__dirname, 'flowstate-truth-ledger.json')
 
@@ -1496,6 +1498,9 @@ function handleGetBuildProvenance(res) {
   send(res, 200, {
     schemaVersion: 'flowstate-sidecar-provenance-v1',
     appVersion: APP_VERSION,
+    processId: process.pid,
+    parentPid: PARENT_PID,
+    instanceId: INSTANCE_ID,
     sourceCommit,
     sourceDirty,
     builtAt,

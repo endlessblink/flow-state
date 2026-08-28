@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -78,6 +78,18 @@ describe('Electron pending update recovery', () => {
     expect(existsSync(join(pending, 'FlowState-1.4.332-x86_64.AppImage'))).toBe(true)
   })
 
+  it('rejects symlinked pending AppImages instead of launching outside the pending directory', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const outside = join(cacheHome, 'outside.AppImage')
+    writeFileSync(outside, 'outside-app-image')
+    symlinkSync(outside, join(pending, 'FlowState-9.9.999-x86_64.AppImage'))
+    writePending(pending, 'FlowState-9.9.998-x86_64.AppImage')
+    rmSync(join(pending, 'FlowState-9.9.998-x86_64.AppImage'))
+
+    expect(pendingAppImagePath(cacheHome)).toBeNull()
+  })
+
   it('clears a failed marker even after electron-updater removed its metadata', () => {
     const cacheHome = makeCacheHome()
     const pending = join(cacheHome, 'flow-state-updater', 'pending')
@@ -99,6 +111,18 @@ describe('Electron pending update recovery', () => {
 
     expect(clearResolvedPendingUpdateFailure('1.4.331', cacheHome)).toBe(true)
     expect(pendingUpdateFailureVersion(cacheHome)).toBeNull()
+  })
+
+  it('cleans a malformed but clearly stale version marker without touching newer markers', () => {
+    const cacheHome = makeCacheHome()
+    writeFileSync(pendingUpdateFailurePath(cacheHome), '{"version":"1.4.331","attemptCount":oops}\n')
+
+    expect(clearResolvedPendingUpdateFailure('1.4.331', cacheHome)).toBe(true)
+    expect(existsSync(pendingUpdateFailurePath(cacheHome))).toBe(false)
+
+    writeFileSync(pendingUpdateFailurePath(cacheHome), '{"version":"1.4.332","attemptCount":oops}\n')
+    expect(clearResolvedPendingUpdateFailure('1.4.331', cacheHome)).toBe(false)
+    expect(existsSync(pendingUpdateFailurePath(cacheHome))).toBe(true)
   })
 
   it('stores an inspectable failure receipt and increases the retry delay', () => {
@@ -171,5 +195,24 @@ describe('Electron pending update recovery', () => {
     }))
     expect(clearResolvedPendingUpdateFailure('1.4.340', cacheHome)).toBe(false)
     expect(pendingUpdateFailureVersion(cacheHome)).toBe('1.4.341')
+  })
+
+  it('fails closed for semantically malformed JSON failure receipts', () => {
+    const cacheHome = makeCacheHome()
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.340', artifactUrl: 'FlowState-1.4.340-x86_64.AppImage', digest: '',
+      errorClass: 'installer', attemptCount: -1,
+      failedAt: 'not-a-date', nextRetryAt: 'not-a-date',
+    }))
+
+    expect(readPendingUpdateFailure(cacheHome)).toBeNull()
+  })
+
+  it('suppresses automatic retry when an in-memory failure receipt has invalid timing', () => {
+    expect(shouldSuppressAutomaticRetry({
+      version: '1.4.340', artifactUrl: 'FlowState-1.4.340-x86_64.AppImage', digest: '',
+      errorClass: 'installer', attemptCount: 1,
+      failedAt: 'not-a-date', nextRetryAt: 'not-a-date',
+    })).toBe(true)
   })
 })

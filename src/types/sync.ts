@@ -127,6 +127,9 @@ export interface WriteOperation {
   /** Timestamp of last sync attempt */
   lastAttemptAt?: number
 
+  /** Lease token fencing the worker that currently owns a syncing operation. */
+  syncClaimId?: string
+
   /** Next scheduled retry time (for exponential backoff) */
   nextRetryAt?: number
 

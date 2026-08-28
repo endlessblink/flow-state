@@ -166,6 +166,29 @@ describe('TASK-1168: sync conflict resolution edge-cases (operation coalescing)'
     expect(writeQueueMocks.updateOperation).not.toHaveBeenCalled()
   })
 
+  it('lets a later delete supersede a pending canonical update', async () => {
+    const canonicalUpdate = makeOp({
+      id: 44,
+      operation: 'update',
+      createdAt: 1000,
+      payload: { title: 'stale preview' },
+      canonicalTaskPatch: {
+        operationId: 'web:stale',
+        baseRevision: 3,
+        patch: { title: 'stale preview' },
+        phase: 'previewed',
+      } as any,
+    })
+    const remove = makeOp({ id: 45, operation: 'delete', createdAt: 1200, payload: {} })
+    writeQueueMocks.getOperationsForEntity.mockResolvedValue([canonicalUpdate, remove])
+
+    const result = await coalesceOperationsForEntity('task', 'task-1')
+
+    expect(result.operation).toEqual(remove)
+    expect(result.mergedOperationIds).toEqual([44])
+    expect(writeQueueMocks.deleteOperation).toHaveBeenCalledWith(44)
+  })
+
   it('ignores syncing/completed operations when resolving conflicts', async () => {
     const pending = makeOp({ id: 51, operation: 'update', status: 'pending', createdAt: 1000, payload: { title: 'pending' } })
     const failed = makeOp({ id: 52, operation: 'update', status: 'failed', createdAt: 1100, payload: { title: 'failed-win' } })

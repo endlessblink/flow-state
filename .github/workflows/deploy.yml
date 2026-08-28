@@ -26,7 +26,7 @@ jobs:
 
       # Fetch secrets and create .env for build
       - name: Fetch Secrets for Build
-        run: doppler secrets download --no-file --format env > .env.production
+        run: doppler secrets download --project flow-state --config prd --no-file --format env > .env.production
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
@@ -69,6 +69,25 @@ jobs:
             cp ~/.ssh/id_rsa ~/.ssh/id_ed25519
             chmod 600 ~/.ssh/id_ed25519
 
+      # The client validates the canonical preview/read-back envelope strictly.
+      # Apply the forward compatibility repair before publishing any artifact;
+      # otherwise a newer client can reach an older RPC and quarantine queued
+      # updates as invalid_canonical_preview.
+      - name: Apply and verify canonical task read-back contract
+        run: |
+          REMOTE_DB_CONTAINER=$(ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "docker ps --format '{{.Names}}' | grep -E 'supabase.*db|postgres' | head -1")
+          if [ -z "$REMOTE_DB_CONTAINER" ]; then
+            echo 'No production Supabase/Postgres container found'
+            exit 1
+          fi
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres" \
+            < supabase/migrations/20260827000000_fix_canonical_task_readback.sql
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "docker exec -i '$REMOTE_DB_CONTAINER' psql -v ON_ERROR_STOP=1 -U postgres -d postgres" \
+            < scripts/db/test-canonical-task-contract.sql
+
       # Keep the desktop updater on the same source/version as the PWA deploy.
       # The script stages and promotes artifacts under a remote lock, then the
       # web files below are published from this exact checkout as well.
@@ -77,27 +96,6 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
-
-      # Electron packaging performs its own build and may replace dist with the
-      # desktop-shaped output. Rebuild the PWA from this same checkout last so
-      # static deployment cannot publish an Electron-shaped surface or lose sw.js.
-      - name: Rebuild PWA release surface after Electron packaging
-        run: |
-          npm run build
-          ./scripts/deploy/verify-build.sh dist
-          ./scripts/deploy/validate-manifest.sh dist/manifest.webmanifest
-        env:
-          NODE_ENV: production
-
-      # Deploy static files to production (NOT Docker!)
-      # System Caddy serves from /var/www/flowstate
-      - name: Deploy Static Files
-        run: |
-            # Deploy built files to web root
-            # --exclude='updates/' preserves Tauri auto-updater artifacts (FEATURE-1194)
-            rsync -avz --delete --exclude='updates/' \
-              ./dist/ \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/flowstate/
 
       # Apply and verify the P-013 canonical task contract against the same
       # production Postgres used by the deployed FlowState instance. The SQL

@@ -13,10 +13,12 @@ import type { Task } from '@/types/tasks'
 
 // The brain's streamed reply for the next call (set per test).
 let mockReply = ''
+let mockStreamHangs = false
 vi.mock('@/services/ai/routerFactory', () => ({
   getSharedRouter: vi.fn(() => Promise.resolve({
     // streamAI() collects chunk.content — yield the whole reply as one chunk.
     chatStream: async function* () {
+      if (mockStreamHangs) await new Promise(() => {})
       yield { content: mockReply, done: true }
     },
     getLastUsedProvider: () => 'bridge',
@@ -44,6 +46,7 @@ describe('Task Assist AI surface (useAITaskAssist)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     mockReply = ''
+    mockStreamHangs = false
   })
 
   it('breakDownTask parses { tasks: [...] } into a breakdown', async () => {
@@ -129,5 +132,19 @@ describe('Task Assist AI surface (useAITaskAssist)', () => {
     // or a clean empty result, never throw.
     expect(a.error.value).toBeNull()
     expect(a.result.value?.type).toBe('smartSuggest')
+  })
+
+  it('surfaces a timeout instead of loading forever when the AI stream stalls', async () => {
+    vi.useFakeTimers()
+    mockStreamHangs = true
+    const a = useAITaskAssist()
+    const request = a.breakDownTask(makeTask())
+
+    await vi.advanceTimersByTimeAsync(45_000)
+    await request
+
+    expect(a.result.value).toBeNull()
+    expect(a.error.value).toContain('AI request timed out')
+    vi.useRealTimers()
   })
 })

@@ -10,6 +10,7 @@ test('live PWA installs the current service worker and bundle', async ({ page })
 
   await page.goto('https://in-theflow.com/?release-check=1461', { waitUntil: 'networkidle' })
   await page.waitForTimeout(3_000)
+  await page.waitForLoadState('networkidle')
 
   const worker = await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.getRegistration('/')
@@ -27,4 +28,5 @@ test('live PWA installs the current service worker and bundle', async ({ page })
   expect(worker.activeScript).toContain('/sw.js')
   expect(worker.source).toMatch(/index-[A-Za-z0-9_-]+\.js/)
   expect(errors.filter((error) => /Supabase client not initialized|Invalid supabaseUrl|ServiceWorker script.*encountered an error/.test(error))).toEqual([])
+  await page.screenshot({ path: '/tmp/flowstate-production-verified.png', fullPage: false })
 })

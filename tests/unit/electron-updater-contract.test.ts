@@ -209,6 +209,8 @@ describe('Electron updater restart contract', () => {
     )
     expect(updaterSource).toContain('wait_for_health_identity "$expected_version" ""')
     expect(updaterSource).toContain('AppImage launches can insert a wrapper process')
+    expect(updaterSource).toContain('rollback_expected_parent_pid=""')
+    expect(updaterSource).toContain('wait_for_health_identity "$known_good_version" "$rollback_expected_parent_pid"')
   })
 
   it('prepares the supervised detached handoff before stopping the local bridge', () => {

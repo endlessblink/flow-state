@@ -265,14 +265,16 @@ restore_known_good() {
   }
   cleanup_competing_flowstate_processes
   restart_supervised_on_failure
-  if [ "$strategy" = "systemd" ]; then
-    replacement_parent_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)
+   rollback_expected_parent_pid=""
+   if [ "$strategy" = "systemd" ]; then
+     replacement_parent_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)
+     rollback_expected_parent_pid="$replacement_parent_pid"
   fi
   if [ "$strategy" != "systemd" ]; then
     "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
     replacement_parent_pid=$!
   fi
-  if wait_for_health_identity "$known_good_version" "\${replacement_parent_pid:-0}"; then
+   if wait_for_health_identity "$known_good_version" "$rollback_expected_parent_pid"; then
     echo "known-good app is healthy after rollback pid=$live_process_id parentPid=$live_parent_pid instanceId=$live_instance_id"
     return 0
   fi

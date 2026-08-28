@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 
 const root = process.cwd()
 const deploySource = readFileSync(resolve(root, 'scripts/deploy-electron-update.sh'), 'utf8')
-const promoteSource = readFileSync(resolve(root, 'scripts/promote-electron-release.sh'), 'utf8')
+const promoteSource = readFileSync(resolve(root, 'scripts/promote-flowstate-release.sh'), 'utf8')
 
 const manifest = (
   version: string,
@@ -37,11 +37,20 @@ async function loadGuard() {
 
 describe('Electron release collision guard', () => {
   it('promotes under a remote lock and rechecks the manifest before publishing', () => {
-    expect(deploySource).toMatch(/flock[^\n]+promote-electron-release\.sh/)
+    expect(deploySource).toContain('promote-flowstate-release.sh')
     const guardIndex = promoteSource.indexOf('electron-release-collision-guard.cjs')
-    const manifestPublishIndex = promoteSource.indexOf('mv "$STAGE_DIR/latest-linux.yml"')
+    const manifestPublishIndex = promoteSource.indexOf('cp -f -- "$STAGE/electron/latest-linux.yml" "$NEXT_ROOT/updates/electron/latest-linux.yml"')
     expect(guardIndex).toBeGreaterThan(-1)
     expect(manifestPublishIndex).toBeGreaterThan(guardIndex)
+  })
+
+  it('switches a complete prepared public root instead of mutating the live tree', () => {
+    expect(promoteSource).toContain('NEXT_ROOT="$STAGE/public-root"')
+    expect(promoteSource).toContain('cp -a "$TARGET_ROOT/." "$NEXT_ROOT/"')
+    expect(promoteSource).toContain('mv -- "$TARGET_ROOT" "$BACKUP_ROOT"')
+    expect(promoteSource).toContain('mv -- "$NEXT_ROOT" "$TARGET_ROOT"')
+    expect(promoteSource).toContain('if ! mv -- "$NEXT_ROOT" "$TARGET_ROOT"; then')
+    expect(promoteSource).not.toContain('rsync -a --delete --exclude updates --exclude .release.lock "$STAGE/pwa/" "$TARGET_ROOT/"')
   })
 
   it('requires a non-empty local manifest before staging any artifact', () => {

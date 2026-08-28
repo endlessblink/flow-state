@@ -38,7 +38,7 @@
               {{ lastError }}
             </div>
             <div v-if="retryableCount === 0" class="resolution-hint">
-              These local changes cannot be retried because the task no longer exists. You can discard them below.
+              These local changes need manual resolution and cannot be retried automatically. You can discard them below.
             </div>
           </div>
 
@@ -51,7 +51,7 @@
               Sync needs attention. The app will retry recoverable local changes.
             </template>
             <template v-else>
-              These local changes cannot be retried because the task no longer exists. You can discard them below.
+              These local changes need manual resolution and cannot be retried automatically. You can discard them below.
             </template>
           </div>
 

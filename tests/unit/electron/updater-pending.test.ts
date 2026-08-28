@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -11,6 +11,8 @@ import {
   pendingUpdateFailureVersion,
   clearResolvedPendingUpdateFailure,
   recordPendingUpdateFailure,
+  readPendingUpdateFailure,
+  shouldSuppressAutomaticRetry,
 } from '../../../electron/updater-pending'
 
 const tempDirs: string[] = []
@@ -63,6 +65,42 @@ describe('Electron pending update recovery', () => {
     expect(existsSync(join(cacheHome, 'flow-state-updater', 'pending', fileName))).toBe(false)
   })
 
+  it('rejects metadata paths outside the pending directory', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    writeFileSync(join(pending, 'update-info.json'), JSON.stringify({ fileName: '../outside.AppImage' }))
+    writeFileSync(join(cacheHome, 'outside.AppImage'), 'must remain')
+
+    expect(pendingAppImagePath(cacheHome)).toBeNull()
+    expect(clearStalePendingUpdate('1.4.331', cacheHome).cleared).toBe(true)
+    expect(existsSync(join(cacheHome, 'outside.AppImage'))).toBe(true)
+  })
+
+  it('clears malformed pending metadata without throwing or touching neighboring files', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    writeFileSync(join(pending, 'update-info.json'), '{not-json')
+    writeFileSync(join(pending, 'FlowState-9.9.9-x86_64.AppImage'), 'newer image')
+
+    expect(() => clearStalePendingUpdate('1.4.331', cacheHome)).not.toThrow()
+    expect(existsSync(join(pending, 'update-info.json'))).toBe(false)
+    expect(existsSync(join(pending, 'FlowState-9.9.9-x86_64.AppImage'))).toBe(true)
+  })
+
+  it('rejects symlinked pending images instead of following them outside the cache', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const outside = join(cacheHome, 'outside.AppImage')
+    const linked = 'FlowState-1.4.333-x86_64.AppImage'
+    writeFileSync(outside, 'must remain')
+    symlinkSync(outside, join(pending, linked))
+    writeFileSync(join(pending, 'update-info.json'), JSON.stringify({ fileName: linked }))
+
+    expect(pendingAppImagePath(cacheHome)).toBeNull()
+    expect(clearStalePendingUpdate('1.4.332', cacheHome).cleared).toBe(false)
+    expect(existsSync(outside)).toBe(true)
+  })
+
   it('recovers the newest downloaded AppImage when updater metadata is missing', () => {
     const cacheHome = makeCacheHome()
     const pending = join(cacheHome, 'flow-state-updater', 'pending')
@@ -91,11 +129,174 @@ describe('Electron pending update recovery', () => {
     expect(existsSync(pendingUpdateFailurePath(cacheHome))).toBe(false)
   })
 
+  it('does not delete outside files while clearing a blocked update', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const outside = join(cacheHome, 'FlowState-1.4.336-x86_64.AppImage')
+    writeFileSync(outside, 'must remain')
+    writeFileSync(join(pending, 'update-info.json'), JSON.stringify({ fileName: '../FlowState-1.4.336-x86_64.AppImage' }))
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.336', artifactUrl: '../FlowState-1.4.336-x86_64.AppImage', digest: 'digest', errorClass: 'installer',
+      attemptCount: 1, failedAt: '2026-08-26T10:00:00.000Z', nextRetryAt: '2026-08-26T10:05:00.000Z',
+    }))
+
+    expect(clearBlockedPendingUpdate('1.4.335', cacheHome).cleared).toBe(true)
+    expect(existsSync(outside)).toBe(true)
+  })
+
   it('clears a failure marker once the installed app has reached that version', () => {
     const cacheHome = makeCacheHome()
     writeFileSync(pendingUpdateFailurePath(cacheHome), 'FlowState-1.4.331-x86_64.AppImage\nreadiness\n')
 
     expect(clearResolvedPendingUpdateFailure('1.4.331', cacheHome)).toBe(true)
     expect(pendingUpdateFailureVersion(cacheHome)).toBeNull()
+  })
+
+  it('cleans a malformed but clearly stale version marker without touching newer markers', () => {
+    const cacheHome = makeCacheHome()
+    writeFileSync(pendingUpdateFailurePath(cacheHome), '{"version":"1.4.331","attemptCount":oops}\n')
+
+    expect(clearResolvedPendingUpdateFailure('1.4.331', cacheHome)).toBe(true)
+    expect(existsSync(pendingUpdateFailurePath(cacheHome))).toBe(false)
+
+    writeFileSync(pendingUpdateFailurePath(cacheHome), '{"version":"1.4.332","attemptCount":oops}\n')
+    expect(clearResolvedPendingUpdateFailure('1.4.331', cacheHome)).toBe(false)
+    expect(existsSync(pendingUpdateFailurePath(cacheHome))).toBe(true)
+  })
+
+  it('stores an inspectable failure receipt and increases the retry delay', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const fileName = 'FlowState-1.4.337-x86_64.AppImage'
+    writePending(pending, fileName)
+
+    recordPendingUpdateFailure('hash mismatch', cacheHome, {
+      errorClass: 'verification',
+      artifactUrl: 'https://in-theflow.com/updates/electron/FlowState-1.4.337-x86_64.AppImage',
+      digest: 'sha512:expected',
+      now: new Date('2026-08-26T10:00:00.000Z'),
+    })
+    const first = readPendingUpdateFailure(cacheHome)!
+    recordPendingUpdateFailure('installer failed', cacheHome, {
+      errorClass: 'installer',
+      artifactUrl: first.artifactUrl,
+      digest: first.digest,
+      now: new Date('2026-08-26T10:01:00.000Z'),
+    })
+    const second = readPendingUpdateFailure(cacheHome)!
+
+    expect(first).toMatchObject({
+      version: '1.4.337',
+      artifactUrl: 'https://in-theflow.com/updates/electron/FlowState-1.4.337-x86_64.AppImage',
+      digest: 'sha512:expected',
+      errorClass: 'verification',
+      attemptCount: 1,
+    })
+    expect(second.attemptCount).toBe(2)
+    expect(new Date(second.nextRetryAt).getTime()).toBeGreaterThan(new Date(first.nextRetryAt).getTime())
+  })
+
+  it('does not reuse retry history when the same filename has a different digest', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const fileName = 'FlowState-1.4.337-x86_64.AppImage'
+    writePending(pending, fileName)
+    recordPendingUpdateFailure('first artifact', cacheHome, { digest: 'sha512:first' })
+    recordPendingUpdateFailure('replacement artifact', cacheHome, { digest: 'sha512:second' })
+    expect(readPendingUpdateFailure(cacheHome)).toMatchObject({ attemptCount: 1, digest: 'sha512:second' })
+  })
+
+  it('does not inherit a persisted digest when the current artifact has none', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const fileName = 'FlowState-1.4.338-x86_64.AppImage'
+    writePending(pending, fileName)
+    recordPendingUpdateFailure('hashed artifact', cacheHome, { digest: 'sha512:old' })
+    recordPendingUpdateFailure('artifact without digest', cacheHome)
+    expect(readPendingUpdateFailure(cacheHome)).toMatchObject({ attemptCount: 1, digest: '' })
+  })
+
+  it('clears a blocked update when metadata uses the standard url and sha512 fields', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const fileName = 'FlowState-1.4.339-x86_64.AppImage'
+    const artifactUrl = `https://in-theflow.com/updates/electron/${fileName}`
+    writeFileSync(join(pending, 'update-info.json'), JSON.stringify({ fileName, url: artifactUrl, sha512: 'sha512:receipt' }))
+    writeFileSync(join(pending, fileName), 'failed-app-image')
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.339', artifactUrl, digest: 'sha512:receipt', errorClass: 'installer',
+      attemptCount: 1, failedAt: '2026-08-26T10:00:00.000Z', nextRetryAt: '2026-08-26T10:05:00.000Z',
+    }))
+
+    expect(clearBlockedPendingUpdate('1.4.338', cacheHome).cleared).toBe(true)
+    expect(existsSync(join(pending, fileName))).toBe(false)
+  })
+
+  it('resets retry history when a different pending artifact replaces the failed one', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    writePending(pending, 'FlowState-1.4.337-x86_64.AppImage')
+    recordPendingUpdateFailure('installer failed', cacheHome, {
+      errorClass: 'installer', digest: 'sha512:old', now: new Date('2026-08-26T10:00:00.000Z'),
+    })
+    writePending(pending, 'FlowState-1.4.338-x86_64.AppImage')
+
+    recordPendingUpdateFailure('verification failed', cacheHome, {
+      errorClass: 'verification', digest: 'sha512:new', now: new Date('2026-08-26T10:01:00.000Z'),
+    })
+
+    expect(readPendingUpdateFailure(cacheHome)).toMatchObject({
+      version: '1.4.338', attemptCount: 1, digest: 'sha512:new', errorClass: 'verification',
+    })
+  })
+
+  it('rejects semantically invalid failure receipts', () => {
+    const cacheHome = makeCacheHome()
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.340', artifactUrl: 'artifact', digest: '', errorClass: 'installer',
+      attemptCount: -1, failedAt: 'not-a-date', nextRetryAt: 'not-a-date',
+    }))
+
+    expect(readPendingUpdateFailure(cacheHome)).toBeNull()
+  })
+
+  it('stops automatic retries after repeated failures but permits a manual retry', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    writePending(pending, 'FlowState-1.4.338-x86_64.AppImage')
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      recordPendingUpdateFailure('readiness failed', cacheHome, {
+        errorClass: 'readiness',
+        now: new Date(`2026-08-26T10:0${attempt}:00.000Z`),
+      })
+    }
+
+    const failure = readPendingUpdateFailure(cacheHome)!
+    expect(failure.attemptCount).toBe(3)
+    expect(shouldSuppressAutomaticRetry(failure, new Date('2026-08-26T12:00:00.000Z'))).toBe(true)
+    expect(clearBlockedPendingUpdate('1.4.337', cacheHome).cleared).toBe(true)
+    expect(readPendingUpdateFailure(cacheHome)).toBeNull()
+  })
+
+  it('clears failures for equal or newer installed versions, but keeps a truly newer target', () => {
+    const cacheHome = makeCacheHome()
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.340',
+      artifactUrl: 'FlowState-1.4.340-x86_64.AppImage',
+      digest: 'digest',
+      errorClass: 'installer',
+      attemptCount: 1,
+      failedAt: '2026-08-26T10:00:00.000Z',
+      nextRetryAt: '2026-08-26T10:05:00.000Z',
+    }))
+    expect(clearResolvedPendingUpdateFailure('1.4.340', cacheHome)).toBe(true)
+
+    writeFileSync(pendingUpdateFailurePath(cacheHome), JSON.stringify({
+      version: '1.4.341', artifactUrl: 'FlowState-1.4.341-x86_64.AppImage', digest: 'digest',
+      errorClass: 'installer', attemptCount: 1, failedAt: '2026-08-26T10:00:00.000Z',
+      nextRetryAt: '2026-08-26T10:05:00.000Z',
+    }))
+    expect(clearResolvedPendingUpdateFailure('1.4.340', cacheHome)).toBe(false)
+    expect(pendingUpdateFailureVersion(cacheHome)).toBe('1.4.341')
   })
 })

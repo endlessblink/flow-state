@@ -127,6 +127,9 @@ export interface WriteOperation {
   /** Timestamp of last sync attempt */
   lastAttemptAt?: number
 
+  /** Durable fence for the worker currently processing this operation. */
+  syncClaimToken?: string
+
   /** Next scheduled retry time (for exponential backoff) */
   nextRetryAt?: number
 

@@ -44,14 +44,14 @@ jobs:
       # Fetch secrets from Doppler for build
       - name: Fetch Build Secrets
         run: |
-          doppler secrets download --no-file --format env > .env.production
+          doppler secrets download --project flow-state --config prd --no-file --format env > .env.production
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.22.0'
           cache: 'npm'
 
       - name: Install Rust stable
@@ -102,7 +102,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.22.0'
 
       - name: Download release artifacts
         env:
@@ -251,14 +251,14 @@ jobs:
       # Fetch secrets from Doppler for build
       - name: Fetch Build Secrets
         run: |
-          doppler secrets download --no-file --format env > .env.production
+          doppler secrets download --project flow-state --config prd --no-file --format env > .env.production
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.22.0'
           cache: 'npm'
 
       - name: Install Rust stable

@@ -26,6 +26,7 @@ vi.mock('electron', () => ({
   app: {
     getPath: () => runtime.userData,
     getVersion: () => '1.4.260',
+    isReady: () => true,
   },
   BrowserWindow: { getAllWindows: () => [] },
   ipcMain: {

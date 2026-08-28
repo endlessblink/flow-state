@@ -73,7 +73,8 @@ const rpcMock = vi.hoisted(() => vi.fn())
 const writeQueueMocks = vi.hoisted(() => ({
   enqueueOperation: vi.fn(),
   getPendingOperations: vi.fn().mockResolvedValue([]),
-  markSyncing: vi.fn(),
+  markSyncing: vi.fn().mockResolvedValue('test-sync-claim'),
+  renewSyncClaim: vi.fn().mockResolvedValue(true),
   markCompleted: vi.fn(),
   markFailed: vi.fn(),
   markConflict: vi.fn(),
@@ -293,6 +294,7 @@ function mockSupabaseChain(overrides: {
 
   chain.select = vi.fn().mockReturnValue(selectResult)
   chain.eq = vi.fn().mockReturnValue(chain)
+  chain.lte = vi.fn().mockReturnValue(chain)
   chain.limit = vi.fn().mockReturnValue(chain)
   chain.maybeSingle = vi.fn().mockResolvedValue({
     data: overrides.maybeSingleData ?? null,
@@ -331,6 +333,8 @@ beforeEach(async () => {
     failedCount: 0, completedCount: 0, conflictCount: 0
   }
   writeQueueMocks.getPendingOperations.mockResolvedValue([])
+  writeQueueMocks.markSyncing.mockResolvedValue('test-sync-claim')
+  writeQueueMocks.renewSyncClaim.mockResolvedValue(true)
   writeQueueMocks.getStats.mockResolvedValue(defaultStats)
   writeQueueMocks.getFailedOperations.mockResolvedValue([])
   writeQueueMocks.cleanupCompleted.mockResolvedValue(0)
@@ -476,7 +480,7 @@ describe('canonical task patch queue', () => {
     await sync.forceSync()
 
     expect(rpcMock).toHaveBeenCalledTimes(2)
-    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledWith(1946, receipt)
+    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledWith(1946, receipt, expect.any(String))
     expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledTimes(1)
     expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1946)
     expect(coalescerMocks.coalesceOperationsForEntity).not.toHaveBeenCalled()
@@ -512,11 +516,12 @@ describe('canonical task patch queue', () => {
     await vi.advanceTimersByTimeAsync(0)
     await sync.forceSync()
 
-    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledWith(1966, receipt)
+    expect(writeQueueMocks.completeCanonicalOperation).not.toHaveBeenCalled()
     expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(
       1966,
       expect.stringContaining('projection'),
-      expect.any(Number)
+      expect.any(Number),
+      expect.any(String)
     )
     expect(taskStoreMock.removePendingWrite).not.toHaveBeenCalled()
   })
@@ -546,7 +551,7 @@ describe('canonical task patch queue', () => {
 
     expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1947)
     expect(writeQueueMocks.completeCanonicalOperation).not.toHaveBeenCalled()
-    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1947, expect.stringContaining('authenticated'), expect.any(Number))
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1947, expect.stringContaining('authenticated'), expect.any(Number), expect.any(String))
     expect(rpcMock).not.toHaveBeenCalled()
   })
 
@@ -568,7 +573,7 @@ describe('canonical task patch queue', () => {
 
     expect(rpcMock).not.toHaveBeenCalled()
     expect(writeQueueMocks.completeCanonicalOperation).not.toHaveBeenCalled()
-    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1948, expect.stringContaining('scope'), expect.any(Number))
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1948, expect.stringContaining('scope'), expect.any(Number), expect.any(String))
   })
 
   it('rebases an unpreviewed successor from the latest durable scoped receipt', async () => {
@@ -651,14 +656,14 @@ describe('canonical task patch queue', () => {
 
     await sync.forceSync()
 
-    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenNthCalledWith(1, 1960, firstReceipt)
+    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenNthCalledWith(1, 1960, firstReceipt, expect.any(String))
     expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(1961, {
       canonicalTaskPatch: expect.objectContaining({ baseRevision: 5, parentOperationId: 'web:ordered-first' }),
     })
     expect(rpcMock).toHaveBeenNthCalledWith(3, 'flowstate_patch_task_v1', expect.objectContaining({
       p_operation_id: 'web:ordered-second', p_base_revision: 5, p_preview: true,
     }))
-    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenNthCalledWith(2, 1961, secondReceipt)
+    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenNthCalledWith(2, 1961, secondReceipt, expect.any(String))
   })
 
   it('rebases a queued canonical successor from a successful legacy task update', async () => {
@@ -697,7 +702,7 @@ describe('canonical task patch queue', () => {
 
     await sync.forceSync()
 
-    expect(writeQueueMocks.completeLegacyTaskOperation).toHaveBeenCalledWith(1962, 5)
+    expect(writeQueueMocks.completeLegacyTaskOperation).toHaveBeenCalledWith(1962, 5, expect.any(String))
     expect(writeQueueMocks.updateOperation).toHaveBeenCalledWith(1963, {
       canonicalTaskPatch: expect.objectContaining({
         baseRevision: 5, parentOperationId: 'legacy:1962', phase: 'queued',
@@ -751,8 +756,8 @@ describe('canonical task patch queue', () => {
 
     await sync.forceSync()
 
-    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledWith(1964, firstReceipt)
-    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1965, expect.any(String), expect.any(Number))
+    expect(writeQueueMocks.completeCanonicalOperation).toHaveBeenCalledWith(1964, firstReceipt, expect.any(String))
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1965, expect.any(String), expect.any(Number), expect.any(String))
     expect(taskStoreMock.applyCanonicalTaskReceipt).not.toHaveBeenCalled()
     expect(taskStoreMock.removePendingWrite).not.toHaveBeenCalled()
   })
@@ -808,7 +813,7 @@ describe('canonical task patch queue', () => {
     await sync.forceSync()
 
     expect(rpcMock).toHaveBeenCalledTimes(1)
-    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1951, expect.any(String), expect.any(Number))
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1951, expect.any(String), expect.any(Number), expect.any(String))
     expect(writeQueueMocks.markSyncing).not.toHaveBeenCalledWith(1952)
 
     rpcMock.mockClear()
@@ -836,7 +841,7 @@ describe('canonical task patch queue', () => {
 
     await sync.forceSync()
 
-    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1953, expect.any(String), expect.any(Number))
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1953, expect.any(String), expect.any(Number), expect.any(String))
     expect(coalescerMocks.coalesceOperationsForEntity).not.toHaveBeenCalled()
     expect(writeQueueMocks.markSyncing).not.toHaveBeenCalledWith(1954)
   })
@@ -861,7 +866,7 @@ describe('canonical task patch queue', () => {
 
     await sync.forceSync()
 
-    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1955, expect.any(String), expect.any(Number))
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1955, expect.any(String), expect.any(Number), expect.any(String))
     expect(rpcMock).not.toHaveBeenCalled()
     expect(writeQueueMocks.markSyncing).not.toHaveBeenCalledWith(1956)
   })
@@ -922,7 +927,7 @@ describe('recurring done-for-now queue', () => {
         requestHash: 'a'.repeat(64),
       },
     })
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1950)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1950, expect.any(String))
     expect(taskStoreMock.updateTaskFromSync).not.toHaveBeenCalled()
   })
 
@@ -1008,7 +1013,7 @@ describe('recurring done-for-now queue', () => {
       p_request_hash: 'b'.repeat(64),
       p_request_id: 'done-for-now-ack-loss',
     })
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1951)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1951, expect.any(String))
   })
 
   it('clears a stale durable binding and re-previews with the same request identity', async () => {
@@ -1091,7 +1096,7 @@ describe('recurring done-for-now queue', () => {
       p_request_hash: 'd'.repeat(64),
       p_request_id: 'done-for-now-stale',
     })
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1952)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(1952, expect.any(String))
   })
 
   it('keeps the queue row retryable when apply omits the durable request identity', async () => {
@@ -1129,7 +1134,7 @@ describe('recurring done-for-now queue', () => {
     await sync.forceSync()
 
     expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1953)
-    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1953, expect.any(String), expect.any(Number))
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1953, expect.any(String), expect.any(Number), expect.any(String))
   })
 
   it('keeps the queue row retryable when receipt fields contradict the durable request', async () => {
@@ -1174,7 +1179,7 @@ describe('recurring done-for-now queue', () => {
     await sync.forceSync()
 
     expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1957)
-    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1957, expect.any(String), expect.any(Number))
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(1957, expect.any(String), expect.any(Number), expect.any(String))
   })
 
   it('clears a version-only legacy binding when apply requires a request hash', async () => {
@@ -1259,7 +1264,7 @@ describe('executeOperation: CREATE', () => {
     expect(taskChain.upsert).toHaveBeenCalled()
     expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(411)
     expect(taskStoreMock.removePendingWrite).not.toHaveBeenCalledWith('task-empty-create')
-    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(411, expect.any(String), expect.any(Number))
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(411, expect.any(String), expect.any(Number), expect.any(String))
   })
 
   it('uses upsert with onConflict: id (BUG-1212 fix)', async () => {
@@ -1395,6 +1400,7 @@ describe('executeOperation: CREATE', () => {
       412,
       expect.stringContaining('another signed user'),
       expect.any(Number),
+      expect.any(String),
     )
     expect(writeQueueMocks.deleteOperation).not.toHaveBeenCalledWith(412)
   })
@@ -1433,6 +1439,7 @@ describe('executeOperation: CREATE', () => {
       415,
       expect.stringContaining('no provable account owner'),
       expect.any(Number),
+      expect.any(String),
     )
     expect(writeQueueMocks.deleteOperation).not.toHaveBeenCalledWith(415)
   })
@@ -1468,7 +1475,7 @@ describe('executeOperation: CREATE', () => {
     expect(taskChain.update).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Member edit', workspace_id: 'workspace-1',
     }))
-    expect(writeQueueMocks.completeLegacyTaskOperation).toHaveBeenCalledWith(414, 8)
+    expect(writeQueueMocks.completeLegacyTaskOperation).toHaveBeenCalledWith(414, 8, expect.any(String))
   })
 
   it('waits instead of hitting RLS when no fresh auth session is available', async () => {
@@ -1549,7 +1556,7 @@ describe('executeOperation: CREATE', () => {
 
     expect(supabase.auth.refreshSession).toHaveBeenCalled()
     expect(taskChain.update).toHaveBeenCalled()
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(914)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(914, expect.any(String))
     expect(sync.status.value).not.toBe('error')
     expect(sync.lastError.value ?? '').not.toMatch(/sign in again/i)
   })
@@ -1758,7 +1765,7 @@ describe('Field name mapping (BUG-1211 regression prevention)', () => {
       entity_id: op.entityId,
       expires_at: null
     }), { onConflict: 'entity_type,entity_id,user_id' })
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id, expect.any(String))
   })
 
   it('persists recurrence stop and soft delete as one queued task mutation', async () => {
@@ -1798,7 +1805,7 @@ describe('Field name mapping (BUG-1211 regression prevention)', () => {
       is_deleted: true,
       deleted_at: expect.any(String),
     }))
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id, expect.any(String))
   })
 
   it('camelCase field sanitization converts _soft_deleted to is_deleted (BUG-1533b)', async () => {
@@ -1854,7 +1861,7 @@ describe('Conflict resolution (LWW)', () => {
     await vi.advanceTimersByTimeAsync(0)
     await sync.forceSync()
 
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(op.id, expect.any(String))
     expect(invalidateCacheMock.tasks).toHaveBeenCalledTimes(1)
   })
 
@@ -1874,6 +1881,53 @@ describe('Conflict resolution (LWW)', () => {
     const localTs = new Date(localUpdatedAt).getTime()
     const serverTs = new Date(serverUpdatedAt).getTime()
     expect(localTs).toBeGreaterThan(serverTs)
+  })
+
+  it('guards ordinary updates by the queued freshness timestamp', async () => {
+    const op = makeOp({
+      id: 1852,
+      operation: 'update',
+      entityType: 'project',
+      entityId: 'project-freshness-guard',
+      payload: { name: 'Fresh project', updated_at: '2026-06-13T10:00:00.000Z' },
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'Single operation',
+    })
+    const chain = mockSupabaseChain({ selectData: [{ id: op.entityId }] })
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(chain.lte).toHaveBeenCalledWith('updated_at', op.payload.updated_at)
+  })
+
+  it.each([
+    ['missing timestamp', undefined],
+    ['malformed timestamp', 'not-a-date'],
+  ])('uses the operation creation time for a %s', async (_label, updatedAt) => {
+    const createdAt = Date.parse('2026-06-13T10:00:00.000Z')
+    const op = makeOp({
+      id: 1853,
+      operation: 'update',
+      entityType: 'project',
+      entityId: `project-${_label.replace(' ', '-')}`,
+      createdAt,
+      payload: updatedAt === undefined ? { name: 'Fallback' } : { name: 'Fallback', updated_at: updatedAt },
+    })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({ operation: op, mergedOperationIds: [], description: 'Single operation' })
+    const chain = mockSupabaseChain({ selectData: [{ id: op.entityId }] })
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+
+    expect(chain.lte).toHaveBeenCalledWith('updated_at', '2026-06-13T10:00:00.000Z')
   })
 
   it('LWW: server timestamp > local → server wins, returns serverData', async () => {
@@ -1903,7 +1957,7 @@ describe('Conflict resolution (LWW)', () => {
   it.each([
     ['task', 1850],
     ['group', 1851]
-  ] as const)('entity not found (PGRST116) on %s UPDATE → discards update, returns success (BUG-1211)', async (entityType, operationId) => {
+  ] as const)('entity not found (PGRST116) on %s UPDATE → quarantines the update for manual resolution', async (entityType, operationId) => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const op = makeOp({
       id: operationId,
@@ -1946,10 +2000,14 @@ describe('Conflict resolution (LWW)', () => {
     expect(chain.eq).toHaveBeenCalledWith('id', `${entityType}-missing-on-server`)
     expect(chain.eq).toHaveBeenCalledWith('position_version', 7)
     expect(chain.single).toHaveBeenCalledTimes(1)
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(operationId)
-    expect(writeQueueMocks.markFailed).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markFailed).toHaveBeenCalledWith(
+      operationId,
+      expect.stringContaining('authoritative projection'),
+      expect.any(Number),
+      expect.any(String),
+    )
     expect(writeQueueMocks.markConflict).not.toHaveBeenCalled()
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not found on server'))
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('authoritative projection'))
 
     warnSpy.mockRestore()
   })
@@ -1984,7 +2042,7 @@ describe('Conflict resolution (LWW)', () => {
     await vi.advanceTimersByTimeAsync(0)
     await sync.forceSync()
 
-    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(404)
+    expect(writeQueueMocks.markCompleted).toHaveBeenCalledWith(404, expect.any(String))
     expect(taskStoreMock.removePendingWrite).toHaveBeenCalledWith('task-pending-cleared')
   })
 
@@ -2089,10 +2147,6 @@ describe('Error classification and retry strategy', () => {
     expect(classifyError(new Error('Entity not found'))).toBe('permanent')
   })
 
-  it('missing authoritative projection quarantine → no retry', () => {
-    expect(classifyError(new Error('Task no longer exists in the authoritative projection; local update preserved for manual resolution'))).toBe('permanent')
-  })
-
   it('constraint violation → permanent', () => {
     expect(classifyError(new Error('violates foreign key constraint'))).toBe('permanent')
   })
@@ -2162,25 +2216,6 @@ describe('useSyncOrchestrator composable return shape', () => {
       status: 'pending',
       nextRetryAt: undefined,
     })
-  })
-
-  it('does not retry a quarantined update for a task missing from the authoritative projection', async () => {
-    const missingTask = makeOp({
-      id: 304,
-      status: 'failed',
-      retryCount: 2,
-      nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
-      lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
-    })
-    writeQueueMocks.getFailedOperations.mockResolvedValue([missingTask])
-
-    const sync = useSyncOrchestrator()
-    await vi.advanceTimersByTimeAsync(0)
-    writeQueueMocks.updateOperation.mockClear()
-
-    await sync.retryFailed()
-
-    expect(writeQueueMocks.updateOperation).not.toHaveBeenCalled()
   })
 
   it('remote repair retries only the requested failed entity ids', async () => {
@@ -2782,6 +2817,24 @@ describe('processQueue guards', () => {
     }
   })
 
+  it('does not execute or complete an operation after losing its queue claim', async () => {
+    writeQueueMocks.markSyncing.mockResolvedValue(false)
+    const op = makeOp({ id: 1957 })
+    writeQueueMocks.getPendingOperations.mockResolvedValue([op])
+    coalescerMocks.coalesceOperationsForEntity.mockResolvedValue({
+      operation: op,
+      mergedOperationIds: [],
+      description: 'No coalescing needed',
+    })
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(rpcMock).not.toHaveBeenCalled()
+    expect(supabaseMock.fromMock).not.toHaveBeenCalled()
+    expect(writeQueueMocks.markCompleted).not.toHaveBeenCalledWith(1957)
+  })
+
   it('surfaces a lock-service failure while retaining queued changes for retry', async () => {
     const originalLocks = navigator.locks
     Object.defineProperty(navigator, 'locks', {
@@ -2849,8 +2902,8 @@ describe('processQueue guards', () => {
       retryCount: 4,
       nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
       lastError: 'new row violates row-level security policy for table "tasks"',
-      userId: 'stale-user',
-      payload: { title: 'RLS failed task', user_id: 'stale-user' }
+      userId: 'current-user',
+      payload: { title: 'RLS failed task', user_id: 'current-user' }
     })
     writeQueueMocks.getFailedOperations.mockResolvedValue([failedOp])
     writeQueueMocks.getPendingOperations.mockResolvedValue([])
@@ -2869,6 +2922,34 @@ describe('processQueue guards', () => {
       userId: 'current-user',
       payload: expect.objectContaining({ user_id: 'current-user' })
     }))
+  })
+
+  it('does not adopt another account\'s RLS-failed queued task', async () => {
+    authStoreMock.user = { id: 'current-user' } as any
+    const { supabase } = await import('@/services/auth/supabase')
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: { access_token: 'fresh-token', user: { id: 'current-user' } } },
+      error: null
+    } as any)
+    const failedOp = makeOp({
+      id: 703,
+      entityType: 'task',
+      operation: 'create',
+      entityId: 'task-other-account',
+      status: 'failed',
+      lastError: 'new row violates row-level security policy for table "tasks"',
+      userId: 'other-user',
+      payload: { title: 'Private other account task', user_id: 'other-user' }
+    })
+    writeQueueMocks.getFailedOperations.mockResolvedValue([failedOp])
+    writeQueueMocks.getPendingOperations.mockResolvedValue([])
+
+    const sync = useSyncOrchestrator()
+    await vi.advanceTimersByTimeAsync(0)
+    await sync.forceSync()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(writeQueueMocks.updateOperation).not.toHaveBeenCalledWith(703, expect.anything())
   })
 
   it('leaves RLS-failed queued task operations untouched while no fresh auth session exists', async () => {

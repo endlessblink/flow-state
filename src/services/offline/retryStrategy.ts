@@ -233,6 +233,9 @@ export function classifyError(error: unknown): ErrorClassification {
     lowerMessage.includes('schema cache') // schema mismatch
     || lowerMessage.includes('authoritative projection')
     || lowerMessage.includes('preserved for manual resolution')
+    || lowerMessage.includes('invalid_canonical_preview')
+    || lowerMessage.includes('queue_scope_')
+    || lowerMessage.includes('not_authenticated')
   ) {
     return 'permanent'
   }

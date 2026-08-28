@@ -1,7 +1,7 @@
 import { ipcMain, app, BrowserWindow, utilityProcess, type UtilityProcess } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from 'fs'
-import { randomBytes } from 'crypto'
+import { randomBytes, randomUUID } from 'crypto'
 
 /**
  * Local Task API (TASK-1797) — Electron side.
@@ -91,6 +91,7 @@ let lifecyclePromise: Promise<void> | null = null
 let reconcileRequested = false
 let restartTimer: ReturnType<typeof setTimeout> | null = null
 let restartAttempt = 0
+let startAfterReadyScheduled = false
 const RESTART_BACKOFF_MS = [100, 500, 1_000, 2_000, 5_000] as const
 const FINAL_SHUTDOWN_EXIT_TIMEOUT_MS = 5_000
 
@@ -166,6 +167,8 @@ function spawnChild() {
         FLOW_STATE_API_PORT: String(config.port),
         FLOW_STATE_API_DATA_DIR: app.getPath('userData'),
         FLOW_STATE_APP_VERSION: app.getVersion(),
+        FLOW_STATE_INSTANCE_ID: randomUUID(),
+        FLOW_STATE_PARENT_PID: String(process.pid),
       },
     })
   } catch (error) {
@@ -355,6 +358,20 @@ function startChild() {
     return
   }
   desiredRunning = true
+  // registerLocalApiHandlers runs before app.whenReady(), while the persisted
+  // enabled setting must still start the sidecar on a normal restart. Defer
+  // the first reconcile until Electron can legally create utility processes.
+  if (!app.isReady()) {
+    if (!startAfterReadyScheduled) {
+      startAfterReadyScheduled = true
+      void app.whenReady().then(() => {
+        startAfterReadyScheduled = false
+        if (desiredRunning && !finalShutdownRequested) void queueReconcile()
+      })
+    }
+    logLifecycle('start-deferred-until-ready')
+    return
+  }
   if (restartTimer) return
   void queueReconcile()
 }

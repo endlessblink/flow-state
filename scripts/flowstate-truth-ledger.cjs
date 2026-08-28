@@ -66,7 +66,7 @@ function readSource(root) {
     // The canonical frontend/main build refreshes these tracked generated
     // outputs before provenance is sealed. They are not source drift.
     dirty: git(
-      'status', '--porcelain', '--untracked-files=no', '--', '.',
+      'status', '--porcelain', '--untracked-files=all', '--', '.',
       ':(exclude)dist-electron',
       ':(exclude)stats.html',
     ).length > 0,

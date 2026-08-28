@@ -2,7 +2,7 @@
 # deploy-electron-update.sh — Build Electron app and deploy to VPS auto-updater
 #
 # Usage:
-#   ./scripts/deploy-electron-update.sh [--notes "Release notes"] [--skip-deploy] [--skip-guard] [--skip-tests] [--dry-run]
+#   ./scripts/deploy-electron-update.sh [--notes "Release notes"] [--dry-run]
 #
 # Prerequisites:
 #   1. SSH key at ~/.ssh/id_ed25519 with access to VPS
@@ -15,11 +15,20 @@
 #
 set -euo pipefail
 
+if [[ -z "${DOPPLER_TOKEN:-}" || "${DOPPLER_PROJECT:-}" != "flow-state" || "${DOPPLER_CONFIG:-}" != "prd" ]]; then
+  if ! command -v doppler >/dev/null 2>&1; then
+    echo "ERROR: Doppler is required for production Electron deployment." >&2
+    exit 1
+  fi
+  exec doppler run --project flow-state --config prd -- env DOPPLER_PROJECT=flow-state DOPPLER_CONFIG=prd NODE_ENV= npm_config_production=false npm_config_omit= "$0" "$@"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VPS_HOST="${VPS_HOST:?Set VPS_HOST env var}"
 VPS_USER="${VPS_USER:-root}"
 VPS_PATH="/var/www/flowstate/updates/electron"
+VPS_ROOT="/var/www/flowstate"
 SSH_KEY="$HOME/.ssh/id_ed25519"
 RELEASE_DIR="$PROJECT_DIR/release"
 
@@ -32,25 +41,34 @@ NC='\033[0m'
 
 # Parse arguments
 NOTES=""
-SKIP_DEPLOY=false
-SKIP_GUARD="${SKIP_GUARD:-false}"
 DRY_RUN=false
-
-SKIP_TESTS=false
+SKIP_GUARD=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --notes) NOTES="$2"; shift 2 ;;
-    --skip-deploy) SKIP_DEPLOY=true; shift ;;
+    --skip-deploy|--skip-tests)
+      echo -e "${RED}Refusing production deployment bypass: $1${NC}" >&2
+      exit 1
+      ;;
     --skip-guard) SKIP_GUARD=true; shift ;;
-    --skip-tests) SKIP_TESTS=true; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
     *) echo -e "${RED}Unknown option: $1${NC}"; exit 1 ;;
   esac
 done
 
+if [ "$SKIP_GUARD" = true ] && [ "$DRY_RUN" != true ]; then
+  echo -e "${RED}Refusing --skip-guard outside --dry-run${NC}" >&2
+  exit 1
+fi
+
 # Get version from package.json
 VERSION=$(node -p "require('./package.json').version")
+RELEASE_COMMIT=$(git rev-parse HEAD)
+if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
+  echo "ERROR: refusing production deployment from a dirty source checkout." >&2
+  exit 1
+fi
 echo -e "${CYAN}=== FlowState Electron Deploy v${VERSION} ===${NC}"
 echo -e "Notes: ${NOTES:-'(none)'}"
 
@@ -67,7 +85,7 @@ fi
 # Step 1: Run the Electron sync/auth/canvas regression sentinel before packaging.
 echo -e "\n${YELLOW}[1/3] Electron sync regression guard...${NC}"
 if [ "$SKIP_GUARD" = true ]; then
-  echo -e "${YELLOW}  Skipping guard (--skip-guard / SKIP_GUARD=true)${NC}"
+  echo -e "${YELLOW}  [DRY RUN] Skipping Electron sync regression guard by explicit request${NC}"
 elif [ "$DRY_RUN" = true ]; then
   echo -e "${CYAN}  [DRY RUN] Would run: npm run guard:electron-sync${NC}"
 else
@@ -84,9 +102,7 @@ fi
 # physically refuse to ship a regression these tests can see (~3-5 min).
 # Emergency hotfix escape hatch: --skip-tests (loud, on your head).
 echo -e "\n${YELLOW}[1b/3] Full ship gate (type-check + unit suite)...${NC}"
-if [ "$SKIP_TESTS" = true ] || [ "$SKIP_GUARD" = true ]; then
-  echo -e "${RED}  ⚠ SHIP GATE SKIPPED (--skip-tests/--skip-guard). This release is NOT regression-checked.${NC}"
-elif [ "$DRY_RUN" = true ]; then
+if [ "$DRY_RUN" = true ]; then
   echo -e "${CYAN}  [DRY RUN] Would run: npm run type-check && npm run test${NC}"
 else
   echo -e "  type-check (vue-tsc)..."
@@ -150,18 +166,17 @@ if [ "$DRY_RUN" = false ]; then
 fi
 
 # Step 3: Deploy to VPS
-if [ "$SKIP_DEPLOY" = true ]; then
-  echo -e "\n${YELLOW}[3/3] Skipping deploy (--skip-deploy)${NC}"
-elif [ "$DRY_RUN" = true ]; then
+if [ "$DRY_RUN" = true ]; then
   echo -e "\n${YELLOW}[3/3] Deploy (DRY RUN)${NC}"
   echo -e "${CYAN}  Would upload to ${VPS_USER}@${VPS_HOST}:${VPS_PATH}/${NC}"
 else
   echo -e "\n${YELLOW}[3/3] Deploying to VPS...${NC}"
 
-  # Create the release directory and a deploy-unique staging directory. Uploads
-  # can happen concurrently, but promotion is serialized below.
-  ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mkdir -p ${VPS_PATH}"
-  REMOTE_STAGE=$(ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mktemp -d '${VPS_PATH}/.staging-${VERSION}-XXXXXX'")
+  # Create a deploy-unique remote stage outside the live directory. Uploads can
+  # happen concurrently; the unified promoter serializes and validates one
+  # web/PWA/Electron transaction before publishing its manifest last.
+  REMOTE_STAGE=$(ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mktemp -d '/var/tmp/flowstate-release-stage-${VERSION}-XXXXXX'")
+  ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "mkdir -p '${REMOTE_STAGE}/electron'"
   cleanup_remote_stage() {
     ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "rm -rf -- '$REMOTE_STAGE'" >/dev/null 2>&1 || true
   }
@@ -170,14 +185,17 @@ else
   # Stage the validated release under unique names. Under the remote flock, the
   # promotion script re-reads the live manifest, rejects collisions/downgrades,
   # verifies every staged byte, then publishes the manifest last.
+  scp -r -i "$SSH_KEY" \
+    "$PROJECT_DIR/dist" \
+    "${VPS_USER}@${VPS_HOST}:${REMOTE_STAGE}/"
   scp -i "$SSH_KEY" \
     "${LOCAL_ARTIFACTS[@]}" \
     "$YML" \
-    "$RELEASE_DIR/flowstate-release-receipt.json" \
+    "$PROJECT_DIR/release/flowstate-release-receipt.json" \
     "$PROJECT_DIR/scripts/electron-release-collision-guard.cjs" \
-    "$PROJECT_DIR/scripts/promote-electron-release.sh" \
-    "${VPS_USER}@${VPS_HOST}:${REMOTE_STAGE}/"
-  ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "flock -x '${VPS_PATH}/.deploy.lock' bash '${REMOTE_STAGE}/promote-electron-release.sh' '${VPS_PATH}' '${REMOTE_STAGE}'"
+    "$PROJECT_DIR/scripts/promote-flowstate-release.sh" \
+    "${VPS_USER}@${VPS_HOST}:${REMOTE_STAGE}/electron/"
+  ssh -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" "bash '${REMOTE_STAGE}/electron/promote-flowstate-release.sh' '${VPS_ROOT}' '${REMOTE_STAGE}/dist' '${REMOTE_STAGE}/electron' '${REMOTE_STAGE}/electron/flowstate-release-receipt.json'"
   cleanup_remote_stage
   trap - EXIT
 

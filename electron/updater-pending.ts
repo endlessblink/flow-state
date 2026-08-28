@@ -1,7 +1,7 @@
 import { closeSync, existsSync, fsyncSync, lstatSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { homedir } from 'node:os'
-import { basename, dirname, join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 
 export interface PendingUpdateClearResult {
   cleared: boolean
@@ -58,6 +58,14 @@ export function pendingUpdateInfoPath(cacheHome = process.env.XDG_CACHE_HOME || 
 
 function pendingDirectory(cacheHome?: string): string {
   return dirname(pendingUpdateInfoPath(cacheHome))
+}
+
+function artifactIdentityMatches(
+  previous: Pick<PendingUpdateFailure, 'version' | 'artifactUrl' | 'digest'>,
+  current: { version: string; artifactUrl: string; digest: string },
+): boolean {
+  if (previous.version !== current.version || previous.artifactUrl !== current.artifactUrl) return false
+  return previous.digest === current.digest && (previous.digest.length > 0 || current.digest.length === 0)
 }
 
 function safePendingFilePath(updateInfoPath: string, fileName: string): string | null {
@@ -216,13 +224,36 @@ export function clearBlockedPendingUpdate(
   const resolvedFileName = fileName || failedFileName
   const pendingVersion = versionFromUpdateFileName(resolvedFileName)
   const failure = readPendingUpdateFailure(cacheHome)
-  const blocked = resolvedFileName.length > 0
-    && failure?.artifactUrl.split('/').pop() === basename(resolvedFileName)
+  let currentArtifactUrl = resolvedFileName
+  let currentDigest = ''
+  try {
+    const parsedInfo = JSON.parse(info) as { artifactUrl?: unknown; sha512?: unknown; digest?: unknown }
+    if (typeof parsedInfo.artifactUrl === 'string') currentArtifactUrl = parsedInfo.artifactUrl
+    if (typeof parsedInfo.digest === 'string') currentDigest = parsedInfo.digest
+    else if (typeof parsedInfo.sha512 === 'string') currentDigest = parsedInfo.sha512
+  } catch {
+    // Legacy metadata only carries the file name; an existing digest cannot be safely reused.
+  }
+  const exactIdentityBlocked = resolvedFileName.length > 0 && Boolean(failure)
+    && artifactIdentityMatches(failure, {
+      version: pendingVersion ?? '',
+      artifactUrl: currentArtifactUrl,
+      digest: currentDigest,
+    })
+  const lexicalCandidate = resolve(dirname(updateInfoPath), resolvedFileName)
+  const unsafeMetadataBlocked = resolvedFileName.length > 0 && Boolean(failure)
+    && failure.version === pendingVersion
+    && failure.artifactUrl === resolvedFileName
+    && dirname(lexicalCandidate) !== dirname(updateInfoPath)
+  const blocked = exactIdentityBlocked || unsafeMetadataBlocked
   if (blocked && pendingVersion && compareVersions(pendingVersion, appVersion) > 0) {
     const updateFilePath = safePendingFilePath(updateInfoPath, resolvedFileName)
-    const lexicalCandidate = resolve(dirname(updateInfoPath), resolvedFileName)
     if (!updateFilePath && dirname(lexicalCandidate) === dirname(updateInfoPath) && existsSync(lexicalCandidate)) {
-      return { cleared: false, pendingVersion, updateInfoPath }
+      // The metadata is blocked, but the candidate is unsafe to remove; clear only
+      // the updater records and leave the potentially external file untouched.
+      rmSync(updateInfoPath, { force: true })
+      rmSync(failurePath, { force: true })
+      return { cleared: true, pendingVersion, updateInfoPath }
     }
     if (updateFilePath) rmSync(updateFilePath, { force: true })
     rmSync(updateInfoPath, { force: true })
@@ -247,9 +278,11 @@ export function recordPendingUpdateFailure(
   const previous = readPendingUpdateFailure(cacheHome)
   const version = versionFromUpdateFileName(fileName) ?? 'unknown'
   const previousMatchesArtifact = previous
-    && previous.version === version
-    && basename(previous.artifactUrl) === basename(fileName)
-    && (!options.digest || !previous.digest || previous.digest === options.digest)
+    && artifactIdentityMatches(previous, {
+      version,
+      artifactUrl: options.artifactUrl ?? fileName,
+      digest: options.digest ?? '',
+    })
   const priorFailure = previousMatchesArtifact ? previous : undefined
   const attemptCount = (priorFailure?.attemptCount ?? 0) + 1
   const backoff = Math.min(RETRY_BACKOFF_MS * 2 ** (attemptCount - 1), MAX_RETRY_BACKOFF_MS)

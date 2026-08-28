@@ -196,6 +196,26 @@ describe('Electron pending update recovery', () => {
     expect(new Date(second.nextRetryAt).getTime()).toBeGreaterThan(new Date(first.nextRetryAt).getTime())
   })
 
+  it('does not reuse retry history when the same filename has a different digest', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const fileName = 'FlowState-1.4.337-x86_64.AppImage'
+    writePending(pending, fileName)
+    recordPendingUpdateFailure('first artifact', cacheHome, { digest: 'sha512:first' })
+    recordPendingUpdateFailure('replacement artifact', cacheHome, { digest: 'sha512:second' })
+    expect(readPendingUpdateFailure(cacheHome)).toMatchObject({ attemptCount: 1, digest: 'sha512:second' })
+  })
+
+  it('does not inherit a persisted digest when the current artifact has none', () => {
+    const cacheHome = makeCacheHome()
+    const pending = join(cacheHome, 'flow-state-updater', 'pending')
+    const fileName = 'FlowState-1.4.338-x86_64.AppImage'
+    writePending(pending, fileName)
+    recordPendingUpdateFailure('hashed artifact', cacheHome, { digest: 'sha512:old' })
+    recordPendingUpdateFailure('artifact without digest', cacheHome)
+    expect(readPendingUpdateFailure(cacheHome)).toMatchObject({ attemptCount: 1, digest: '' })
+  })
+
   it('resets retry history when a different pending artifact replaces the failed one', () => {
     const cacheHome = makeCacheHome()
     const pending = join(cacheHome, 'flow-state-updater', 'pending')

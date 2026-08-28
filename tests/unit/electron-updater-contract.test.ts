@@ -201,6 +201,16 @@ describe('Electron updater restart contract', () => {
     expect(updaterSource).toContain('cold Electron/AppImage start can take over 20 seconds')
   })
 
+  it('accepts a healthy direct AppImage launch when its wrapper changes the launcher PID', () => {
+    const updaterSource = readSource('electron/updater.ts')
+
+    expect(updaterSource).toContain(
+      'if identity_is_valid && { [ -z "$expected_parent_pid" ] || [ "$live_parent_pid" = "$expected_parent_pid" ]; } &&',
+    )
+    expect(updaterSource).toContain('wait_for_health_identity "$expected_version" ""')
+    expect(updaterSource).toContain('AppImage launches can insert a wrapper process')
+  })
+
   it('prepares the supervised detached handoff before stopping the local bridge', () => {
     const updaterSource = readSource('electron/updater.ts')
     const installHandlerStart = updaterSource.indexOf("ipcMain.handle('updater:install'")

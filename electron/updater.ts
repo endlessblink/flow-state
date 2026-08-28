@@ -186,7 +186,11 @@ wait_for_health_identity() {
     health_response=$(curl -fsS http://127.0.0.1:5577/api/provenance 2>/dev/null || true)
     if printf '%s' "$health_response" | grep -F "\"appVersion\":\"$expected_health_version\"" >/dev/null; then
       read_live_identity "$health_response"
-      if identity_is_valid && [ "$live_parent_pid" = "$expected_parent_pid" ] &&
+       # AppImage launches can insert a wrapper process, so the sidecar parent
+       # PID is not guaranteed to equal the shell PID that launched the image.
+       # Supervised launches still provide an exact service parent; direct
+       # launches pass an empty expected parent and rely on the new identity.
+       if identity_is_valid && { [ -z "$expected_parent_pid" ] || [ "$live_parent_pid" = "$expected_parent_pid" ]; } &&
         { [ "$live_process_id" != "\${old_process_id:-}" ] || [ "$live_instance_id" != "\${old_instance_id:-}" ]; }; then
         return 0
       fi
@@ -290,7 +294,7 @@ wait_for_supervised_health() {
       printf '%s' "$health_response" | grep -F "\"appVersion\":\"$expected_version\"" >/dev/null; then
       read_live_identity "$health_response"
       supervised_pid=$(systemctl --user show --property=MainPID --value flowstate-background.service 2>/dev/null || true)
-      if identity_is_valid && [ "$live_parent_pid" = "$supervised_pid" ] &&
+       if identity_is_valid && [ "$live_parent_pid" = "$supervised_pid" ] &&
         { [ "$live_process_id" != "\${old_process_id:-}" ] || [ "$live_instance_id" != "\${old_instance_id:-}" ]; }; then
         echo "supervised replacement identity pid=$live_process_id parentPid=$live_parent_pid instanceId=$live_instance_id"
         return 0
@@ -340,7 +344,7 @@ echo "swap complete, relaunching direct replacement"
 "$target" --no-sandbox --ozone-platform=x11 --disable-gpu --class=flow-state >/dev/null 2>&1 &
 replacement_pid=$!
 replacement_parent_pid="$replacement_pid"
-if ! wait_for_health_identity "$expected_version" "$replacement_parent_pid"; then
+ if ! wait_for_health_identity "$expected_version" ""; then
   kill "$replacement_pid" 2>/dev/null || true
   fail_after_swap "direct replacement readiness"
 fi

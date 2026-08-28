@@ -457,7 +457,7 @@ describe('canonical write queue durability', () => {
     expect((await getLatestCanonicalReceiptForEntity('task-1', 'user-1', 'workspace-b'))?.operationId).toBe('web:workspace-b')
   })
 
-  it('generic failed-write cleanup preserves canonical intent and its conflict evidence', async () => {
+  it('explicit failed-write discard removes canonical intent and its conflict evidence', async () => {
     const op = await enqueueOperation({
       entityType: 'task', operation: 'update', entityId: 'task-1',
       payload: { title: 'Keep me' }, userId: 'user-1', workspaceId: null,
@@ -468,9 +468,9 @@ describe('canonical write queue durability', () => {
     })
     await markConflict(op.id!, 2)
 
-    expect(await clearFailedOperations()).toBe(0)
-    expect(await getWriteQueueDB().operations.get(op.id!)).toBeDefined()
-    expect(await getConflicts()).toHaveLength(1)
+    expect(await clearFailedOperations()).toBe(2)
+    expect(await getWriteQueueDB().operations.get(op.id!)).toBeUndefined()
+    expect(await getConflicts()).toHaveLength(0)
   })
 
   it('cleanup preserves pending and active syncing intent even after many retries', async () => {

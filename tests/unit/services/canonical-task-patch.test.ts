@@ -312,19 +312,33 @@ describe('canonical queued task patch', () => {
     expect(persist).toHaveBeenCalledWith(expect.objectContaining({ phase: 'queued', previewDigest: undefined, requestHash: undefined }))
   })
 
-  it('quarantines a persisted preview that lacks its validated normalized patch', async () => {
+  it('re-previews a persisted preview that lacks its validated normalized patch', async () => {
     const op = operation()
     op.canonicalTaskPatch = {
       ...op.canonicalTaskPatch!, phase: 'previewed', previewDigest: 'b'.repeat(64),
       previewExpiresAt: '2026-07-13T10:15:00Z',
     }
     const rpc = vi.fn()
+      .mockImplementationOnce(async (_name, args) => ({ data: { ...preview(), operationId: args.p_operation_id }, error: null }))
+      .mockImplementationOnce(async (_name, args) => ({
+        data: { ok: true, result: 'committed', requestHash: REQUEST_HASH, receipt: receipt({ operationId: args.p_operation_id }) }, error: null,
+      }))
+    const persist = vi.fn().mockResolvedValue(undefined)
 
+    const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, persist)
+
+    expect(result.success).toBe(true)
+    expect(rpc).toHaveBeenCalledTimes(2)
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_preview: true, p_operation_id: expect.not.stringMatching(/^web:operation-1$/) })
+    expect(persist).toHaveBeenCalledWith(expect.objectContaining({ phase: 'queued', previewDigest: undefined, normalizedPatch: undefined }))
+  })
+
+  it('keeps an invalid durable patch in manual resolution', async () => {
+    const op = operation()
+    op.canonicalTaskPatch = { ...op.canonicalTaskPatch!, phase: 'previewed', previewDigest: 'b'.repeat(64), previewExpiresAt: '2026-07-13T10:15:00Z', patch: { title: '' } }
+    const rpc = vi.fn()
     const result = await executeQueuedCanonicalTaskPatch({ rpc }, op, vi.fn())
-
-    expect(result).toMatchObject({
-      success: false, error: 'invalid_persisted_canonical_preview', classification: 'permanent',
-    })
+    expect(result).toMatchObject({ success: false, error: 'invalid_persisted_canonical_preview', classification: 'permanent' })
     expect(rpc).not.toHaveBeenCalled()
   })
 

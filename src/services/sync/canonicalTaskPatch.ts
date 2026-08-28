@@ -203,7 +203,20 @@ export async function executeQueuedCanonicalTaskPatch(
   }
   if ((canonical.previewDigest || canonical.previewExpiresAt || canonical.phase === 'previewed')
     && (!validPatch(canonical.normalizedPatch) || !samePatchShape(canonical.normalizedPatch, canonical.patch))) {
-    return { success: false, operation, error: 'invalid_persisted_canonical_preview', shouldRetry: false, classification: 'permanent' }
+    if (!validPatch(canonical.patch)) {
+      return { success: false, operation, error: 'invalid_persisted_canonical_preview', shouldRetry: false, classification: 'permanent' }
+    }
+    canonical = {
+      ...canonical,
+      operationId: operationId(),
+      phase: 'queued',
+      previewDigest: undefined,
+      previewExpiresAt: undefined,
+      requestHash: undefined,
+      normalizedPatch: undefined,
+    }
+    operation.canonicalTaskPatch = canonical
+    await persist(canonical)
   }
 
   if (!canonical.previewDigest || !canonical.previewExpiresAt || !canonical.requestHash) {

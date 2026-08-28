@@ -783,7 +783,7 @@ export async function purgeStaleOperations(
 }
 
 /**
- * Clear failed/conflict operations that are explicitly disposable.
+ * Discard failed/conflict operations after the user explicitly confirms.
  * Pending and syncing rows are durable user intent and must survive cleanup.
  */
 export async function clearFailedOperations(): Promise<number> {
@@ -792,26 +792,18 @@ export async function clearFailedOperations(): Promise<number> {
     // Re-read and delete under one transaction so a worker cannot be deleted
     // after it claims a row between the scan and the cleanup.
     const allOps = await db.operations.toArray();
-    const toDelete = allOps.filter(
-      (op) =>
-        !op.canonicalTaskPatch &&
-        (op.status === "failed" || op.status === "conflict"),
-    );
+    const toDelete = allOps.filter((op) => op.status === "failed" || op.status === "conflict");
     if (toDelete.length > 0) {
       await db.operations.bulkDelete(
         toDelete.map((op) => op.id!).filter((id) => id !== undefined),
       );
     }
 
-    const disposableConflicts = (await db.conflicts.toArray()).filter(
-      (conflict) => !conflict.operation.canonicalTaskPatch,
-    );
-    if (disposableConflicts.length > 0) {
-      await db.conflicts.bulkDelete(
-        disposableConflicts.map((conflict) => conflict.id!),
-      );
+    const conflicts = await db.conflicts.toArray();
+    if (conflicts.length > 0) {
+      await db.conflicts.bulkDelete(conflicts.map((conflict) => conflict.id!));
     }
-    return toDelete.length + disposableConflicts.length;
+    return toDelete.length + conflicts.length;
   });
 }
 

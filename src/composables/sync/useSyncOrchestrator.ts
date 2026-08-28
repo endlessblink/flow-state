@@ -875,11 +875,11 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
   if (!operation.id) return undefined
 
   // Mark as syncing
-  // Older queue adapters may not return the claim result; only an explicit
-  // false means another worker owns the operation.
+  // A durable claim token is mandatory. Without it, a late network response
+  // could mutate a row that a different worker has already reclaimed.
   const claim = await markSyncing(operation.id)
-  if (claim === false) return undefined
-  const claimToken = typeof claim === 'string' ? claim : undefined
+  if (typeof claim !== 'string') return undefined
+  const claimToken = claim
   const complete = (receipt: Parameters<typeof completeCanonicalOperation>[1]) =>
     claimToken
       ? completeCanonicalOperation(operation.id!, receipt, claimToken)
@@ -918,8 +918,6 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     } else {
       completionAccepted = await completePlain()
     }
-    // Older queue adapters do not return a completion result; only an explicit
-    // false means the durable claim was lost.
     if (completionAccepted === false) return undefined
     let hasLaterUnresolvedTaskOperation = false
     if (operation.entityType === 'task') {

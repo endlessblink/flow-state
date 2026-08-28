@@ -935,8 +935,8 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
     (await fail(error, nextRetryAt)) !== false
   const conflictOwned = async (serverVersion: number): Promise<boolean> => {
     try {
-      await conflict(serverVersion)
-      return true
+      const persisted = await conflict(serverVersion) as unknown
+      return persisted !== false
     } catch {
       return false
     }

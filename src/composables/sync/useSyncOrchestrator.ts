@@ -933,8 +933,14 @@ async function processOperation(operation: WriteOperation): Promise<SyncResult |
       : markConflict(operation.id!, serverVersion)
   const failOwned = async (error: string, nextRetryAt: number): Promise<boolean> =>
     (await fail(error, nextRetryAt)) !== false
-  const conflictOwned = async (serverVersion: number): Promise<boolean> =>
-    (await conflict(serverVersion)) !== false
+  const conflictOwned = async (serverVersion: number): Promise<boolean> => {
+    try {
+      await conflict(serverVersion)
+      return true
+    } catch {
+      return false
+    }
+  }
 
   // Keep the claim alive while remote work or renderer projection is in
   // flight. A crashed worker still becomes recoverable after the lease age.

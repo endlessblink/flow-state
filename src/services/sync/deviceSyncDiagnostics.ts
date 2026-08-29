@@ -77,6 +77,30 @@ export function getDeviceSyncDeviceId(): string {
   return created
 }
 
+export async function buildLocalSyncDiagnostic(lastSyncAt?: number) {
+  const operations = await getWriteQueueDB().operations
+    .where('status')
+    .anyOf(['pending', 'syncing', 'failed', 'conflict'])
+    .toArray()
+  const status: SyncStatus = operations.some(operation => operation.status === 'failed' || operation.status === 'conflict')
+    ? 'error'
+    : operations.some(operation => operation.status === 'syncing')
+      ? 'syncing'
+      : operations.length > 0
+        ? 'pending'
+        : 'synced'
+
+  return buildDeviceSyncReceipt({
+    deviceId: getDeviceSyncDeviceId(),
+    runtime: detectRuntime(),
+    appVersion: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'unknown',
+    status,
+    isOnline: typeof navigator === 'undefined' ? true : navigator.onLine,
+    lastSyncAt,
+    operations,
+  })
+}
+
 function detectRuntime(): SyncRuntime {
   if (isElectron()) return 'electron'
   if (isCapacitor()) return 'capacitor'

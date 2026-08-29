@@ -1,5 +1,13 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2062: Provide a redacted local sync diagnostic export (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-29)
+
+Provide an in-app support action that generates a local, redacted sync report without requiring remote debugging or access to a signed-in session. The report may include app/runtime version, sync status, queue counts, bounded operation IDs, retry counts, timestamps, and stable error categories; it must never include task titles, descriptions, raw errors, tokens, session data, or credentials.
+
+**Acceptance**: expose the action in Settings with an accessible name and clear privacy explanation, copy a valid report from the installed Electron app and PWA, prove redaction with regression tests including Hebrew/private payloads and raw errors, and use the report to diagnose persisted sync failures without repeated authorization.
+
 ### BUG-2061: Rebuild the release and updater pipeline from the ground up (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-27)

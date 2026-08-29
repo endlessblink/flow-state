@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CheckCircle, Download, RefreshCw, AlertCircle, ExternalLink, Info } from 'lucide-vue-next'
+import { CheckCircle, Download, RefreshCw, AlertCircle, ExternalLink, Info, ClipboardCopy } from 'lucide-vue-next'
 import SettingsSection from '../SettingsSection.vue'
 import SettingsToggle from '../SettingsToggle.vue'
 import { useTauriUpdater } from '@/composables/useTauriUpdater'
@@ -10,6 +10,8 @@ import { isElectron } from '@/utils/platform'
 import { useSettingsStore } from '@/stores/settings'
 import { EXTERNAL_URLS } from '@/config/urls'
 import { openExternal } from '@/utils/openExternal'
+import { buildLocalSyncDiagnostic } from '@/services/sync/deviceSyncDiagnostics'
+import { useCopy } from '@/composables/useCopy'
 
 declare const __APP_VERSION__: string
 
@@ -20,6 +22,7 @@ const updater = isTauri() ? tauriUpdater : electronUpdater
 const showUpdater = computed(() => isTauri() || isElectron())
 const currentVersion = __APP_VERSION__
 const settingsStore = useSettingsStore()
+const { copyToClipboard } = useCopy()
 
 const handleCheckForUpdates = async () => {
   // After checking, update version from the updater response if available
@@ -44,6 +47,15 @@ const openWebsite = () => {
 
 const openGithub = () => {
   openExternal(EXTERNAL_URLS.GITHUB_REPO)
+}
+
+const copySyncDiagnostics = async () => {
+  const diagnostic = await buildLocalSyncDiagnostic()
+  await copyToClipboard({
+    text: JSON.stringify(diagnostic, null, 2),
+    showFeedback: true,
+    feedbackMessage: 'Safe sync diagnostics copied',
+  })
 }
 </script>
 
@@ -163,6 +175,18 @@ const openGithub = () => {
             @update="(val: boolean) => settingsStore.updateSetting('autoUpdateEnabled', val)"
           />
         </div>
+      </div>
+    </SettingsSection>
+
+    <SettingsSection title="Support diagnostics">
+      <div class="diagnostics-section">
+        <p class="diagnostics-description">
+          Copy a safe report with sync counts and error categories. It never includes task text, descriptions, or credentials.
+        </p>
+        <button class="link-btn" @click="copySyncDiagnostics">
+          <ClipboardCopy :size="16" />
+          Copy sync diagnostics
+        </button>
       </div>
     </SettingsSection>
 
@@ -398,6 +422,19 @@ const openGithub = () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.diagnostics-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.diagnostics-description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
 }
 
 .auto-update-toggle {

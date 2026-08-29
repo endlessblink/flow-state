@@ -1,9 +1,33 @@
 import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { buildDeviceSyncReceipt } from '@/services/sync/deviceSyncDiagnostics'
+import { buildDeviceSyncReceipt, buildLocalSyncDiagnostic } from '@/services/sync/deviceSyncDiagnostics'
 import { executeDeviceSyncRepair } from '@/services/sync/deviceSyncRepair'
+import { clearAll, enqueueOperation, markFailed } from '@/services/offline/writeQueueDB'
 
 describe('device sync diagnostics', () => {
+  it('builds a local report from the durable queue without exposing payload text or raw errors', async () => {
+    const operation = await enqueueOperation({
+      entityType: 'task',
+      operation: 'update',
+      entityId: 'task-private',
+      payload: { title: 'private title', description: 'private description' },
+      userId: 'user-private',
+      workspaceId: null,
+    })
+    await markFailed(operation.id!, 'JWT expired: private server detail')
+
+    const report = await buildLocalSyncDiagnostic()
+    const serialized = JSON.stringify(report)
+
+    expect(report.status).toBe('error')
+    expect(report.queue.failed).toBe(1)
+    expect(report.operations[0]).toMatchObject({ entityId: 'task-private', errorCode: 'auth' })
+    expect(serialized).not.toContain('private title')
+    expect(serialized).not.toContain('private description')
+    expect(serialized).not.toContain('private server detail')
+    await clearAll()
+  })
+
   it('publishes enough queue identity to trace a missing task without task content', async () => {
     const receipt = await buildDeviceSyncReceipt({
       deviceId: '0d619ffe-a177-4f6a-b890-c38f985d91cb',

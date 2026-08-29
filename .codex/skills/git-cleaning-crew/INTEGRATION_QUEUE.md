@@ -44,6 +44,15 @@ Archived refs above were checked for reachability and retained in the
 recoverable archive namespace; no preserved ref was deleted or treated as
 disposable merely because it was old.
 
+## Newly surfaced untracked work
+
+The agent-coordination scripts and hook wiring surfaced during the full test
+run were not discarded. They were quarantined with their complete test folder
+under `git-cleaning-crew-20260829-001/new-agent-coordinator/`; the quarantine
+manifest records SHA-256 checksums for each preserved file. The live copies
+were removed only after that receipt existed, restoring the canonical checkout
+to a clean state.
+
 ## P0 — recovery and correctness
 
 - `codex/sync-diagnostic-1485`

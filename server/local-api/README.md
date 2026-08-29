@@ -132,6 +132,45 @@ error. Soft-deleted, done, and completion-history rows are excluded.
 }
 ```
 
+### `GET /api/tasks/:id/recurrence-chain`
+
+Bearer-protected, read-only view of one living recurring definition. The response
+separates the definition from immutable completion history, the current occurrence,
+and the next future occurrence; descriptions, secrets, and raw task payloads are
+not returned. A completion-history row or non-recurring task returns `409` with the
+typed error code `not_recurring`.
+
+```json
+{
+  "ok": true,
+  "contractVersion": "recurrence-chain-v1",
+  "definition": {
+    "id": "task-id",
+    "title": "Water the plants",
+    "status": "todo",
+    "dueDate": "2026-08-29",
+    "dueTime": "09:00",
+    "recurrenceRule": { "frequency": "weekly", "interval": 1 },
+    "recurrenceCount": 2,
+    "workspaceId": null,
+    "canonicalRevision": 4,
+    "canonicalUpdatedAt": "2026-08-29T08:00:00.000Z"
+  },
+  "history": [],
+  "currentOccurrence": {
+    "id": "occurrence-id",
+    "taskId": "task-id",
+    "dueDate": "2026-08-29",
+    "status": "todo"
+  },
+  "nextOccurrence": null
+}
+```
+
+This read does not change the definition, create occurrences, or rewrite completion
+history. Lifecycle edits remain preview-first and will be added to the same
+revision-guarded recurrence contract.
+
 ### `GET /api/assistant/context`
 Bearer-protected read-only summary for local personal-assistant clients such as
 Hermes. It is user-scoped through the same Local Task API auth context and

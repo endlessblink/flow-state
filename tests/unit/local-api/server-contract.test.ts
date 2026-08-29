@@ -440,6 +440,54 @@ describe("Local API sidecar timer endpoint regression contract", () => {
     );
   });
 
+  it("exposes the recurrence-chain read behind the external-app bearer token boundary", () => {
+    const tokenCheck = SERVER_CJS.indexOf("if (TOKEN)");
+    const chainRoute = SERVER_CJS.indexOf(
+      "path.match(/^\\/api\\/tasks\\/([^/]+)\\/recurrence-chain$/)",
+    );
+    const taskRoute = SERVER_CJS.indexOf(
+      "const taskMatch = path.match(/^\\/api\\/tasks\\/([^/]+)$/)",
+    );
+
+    expect(chainRoute, "recurrence-chain route not found").toBeGreaterThan(-1);
+    expect(chainRoute).toBeGreaterThan(tokenCheck);
+    expect(chainRoute).toBeLessThan(taskRoute);
+    expect(SERVER_CJS).toContain(
+      "return await handleGetRecurrenceChain(decodeURIComponent(recurrenceChainMatch[1]), res)",
+    );
+  });
+
+  it("keeps recurrence-chain reads scoped, redacted, and mutation-free", () => {
+    const body = functionBody("handleGetRecurrenceChain");
+    const handlerStart = SERVER_CJS.indexOf("async function handleGetRecurrenceChain(");
+    const handlerEnd = SERVER_CJS.indexOf("async function handleWorkBlock(", handlerStart);
+    const handlerOnly = SERVER_CJS.slice(handlerStart, handlerEnd);
+
+    expect(body).toContain(".select('id,title,status,due_date,due_time,recurrence_rule,recurrence_count,recurrence_parent_id,is_completion_record,instances,workspace_id,canonical_revision,updated_at')");
+    expect(body).toContain("scopeTaskQuery(ctx, definitionQuery)");
+    expect(body).toContain(".select('id,status,due_date,completed_at,recurrence_parent_id,recurrence_count,is_completion_record')");
+    expect(body).toContain(".eq('recurrence_parent_id', id)");
+    expect(body).toContain(".eq('is_completion_record', true)");
+    expect(body).toContain("scopeTaskQuery(ctx, historyQuery)");
+    expect(body).toContain("code: 'not_recurring'");
+    expect(body).toContain("buildRecurrenceChainRead({ definition, history })");
+    expect(handlerOnly).not.toContain(".insert(");
+    expect(handlerOnly).not.toContain(".update(");
+    expect(handlerOnly).not.toContain(".delete(");
+    expect(handlerOnly).not.toContain("accessToken");
+    expect(handlerOnly).not.toContain("refreshToken");
+    expect(handlerOnly).not.toContain("description");
+  });
+
+  it("documents the exact recurrence-chain read shape and its non-recurring guard", () => {
+    expect(README).toContain("### `GET /api/tasks/:id/recurrence-chain`");
+    expect(README).toContain('"contractVersion": "recurrence-chain-v1"');
+    expect(README).toContain("currentOccurrence");
+    expect(README).toContain("nextOccurrence");
+    expect(README).toContain("not_recurring");
+    expect(README).toContain("read-only");
+  });
+
   it("reads task instances from the active signed-user scope with revision authority", () => {
     const body = functionBody("handleGetTaskInstances");
 

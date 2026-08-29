@@ -42,6 +42,7 @@ const { executeNotionActivation } = require('./notion-activation.cjs')
 const { classifyMissingAuthContext } = require('./auth-availability.cjs')
 const { executeAuditCoverageReport } = require('./audit-coverage-report.cjs')
 const { resolveLocalTimerSnapshot } = require('./localTimerSnapshot.cjs')
+const { buildRecurrenceChainRead } = require('./recurrence-chain.cjs')
 const {
   buildTaskSearchQuery,
   filteredSampleMetadata,
@@ -837,6 +838,35 @@ async function handleGetTaskInstances(id, res) {
   })
 }
 
+async function handleGetRecurrenceChain(id, res) {
+  const { supabase } = ctx
+  let definitionQuery = supabase
+    .from('tasks')
+    .select('id,title,status,due_date,due_time,recurrence_rule,recurrence_count,recurrence_parent_id,is_completion_record,instances,workspace_id,canonical_revision,updated_at')
+    .eq('id', id)
+    .eq('is_deleted', false)
+  definitionQuery = scopeTaskQuery(ctx, definitionQuery)
+  const { data: definition, error: definitionError } = await definitionQuery.maybeSingle()
+  if (definitionError) return send(res, 500, { error: definitionError.message })
+  if (!definition) return send(res, 404, { error: 'not found' })
+  if (definition.is_completion_record === true || !definition.recurrence_rule) {
+    return send(res, 409, { error: { code: 'not_recurring', message: 'Task is not a living recurring definition' } })
+  }
+
+  let historyQuery = supabase
+    .from('tasks')
+    .select('id,status,due_date,completed_at,recurrence_parent_id,recurrence_count,is_completion_record')
+    .eq('recurrence_parent_id', id)
+    .eq('is_completion_record', true)
+    .eq('is_deleted', false)
+    .order('due_date', { ascending: true })
+  historyQuery = scopeTaskQuery(ctx, historyQuery)
+  const { data: history, error: historyError } = await historyQuery
+  if (historyError) return send(res, 500, { error: historyError.message })
+
+  send(res, 200, buildRecurrenceChainRead({ definition, history }))
+}
+
 async function handleWorkBlock(id, req, res) {
   const body = await readJsonBody(req)
   const result = await executeCanonicalWorkBlock(ctx, id, body, notifyTaskMutation)
@@ -1609,6 +1639,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && taskInstancesMatch) {
       return await handlePostTaskInstance(decodeURIComponent(taskInstancesMatch[1]), req, res)
+    }
+    const recurrenceChainMatch = path.match(/^\/api\/tasks\/([^/]+)\/recurrence-chain$/)
+    if (req.method === 'GET' && recurrenceChainMatch) {
+      return await handleGetRecurrenceChain(decodeURIComponent(recurrenceChainMatch[1]), res)
     }
     const workBlocksMatch = path.match(/^\/api\/tasks\/([^/]+)\/work-blocks$/)
     if (req.method === 'POST' && workBlocksMatch) {

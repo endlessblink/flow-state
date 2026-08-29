@@ -115,6 +115,7 @@ import type {
   getStats as _getStats,
   getFailedOperations as _getFailedOperations,
   recoverStaleSyncing as _recoverStaleSyncing,
+  repairStaleCanonicalPreviewFailures as _repairStaleCanonicalPreviewFailures,
 } from '@/services/offline/writeQueueDB'
 
 // Wrapped functions that handle missing IndexedDB gracefully
@@ -216,6 +217,11 @@ const getFailedOperations: typeof _getFailedOperations = async () => {
 const recoverStaleSyncing: typeof _recoverStaleSyncing = async maxAgeMs => {
   const mod = await getWriteQueueModule()
   return mod ? mod.recoverStaleSyncing(maxAgeMs) : 0
+}
+
+const repairStaleCanonicalPreviewFailures: typeof _repairStaleCanonicalPreviewFailures = async () => {
+  const mod = await getWriteQueueModule()
+  return mod ? mod.repairStaleCanonicalPreviewFailures() : 0
 }
 
 const recoverRlsPolicyFailures = async (): Promise<number> => {
@@ -1306,8 +1312,9 @@ function startProcessing(): void {
   // Initial status update
   updateStatus()
 
-  // Process immediately
-  processQueue()
+  // Requeue only legacy canonical-preview failures that the current validator
+  // can repair, then process the queue so existing users recover automatically.
+  void repairStaleCanonicalPreviewFailures().finally(() => processQueue())
 
   // Then process periodically
   processIntervalId.value = setInterval(processQueue, PROCESS_INTERVAL_MS)

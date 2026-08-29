@@ -24,6 +24,7 @@ import {
   updateOperation,
   purgeStaleOperations,
   recoverStaleSyncing,
+  repairStaleCanonicalPreviewFailures,
   resolveConflictRetry,
 } from '@/services/offline/writeQueueDB'
 
@@ -488,6 +489,23 @@ describe('canonical write queue durability', () => {
     expect(await clearFailedOperations()).toBe(0)
     await expect(getWriteQueueDB().operations.get(pending.id!)).resolves.toBeDefined()
     await expect(getWriteQueueDB().operations.get(syncing.id!)).resolves.toBeDefined()
+  })
+
+  it('requeues legacy canonical-preview failures once without retrying unrelated permanent errors', async () => {
+    const repairable = await getWriteQueueDB().operations.add({
+      entityType: 'task', operation: 'update', entityId: 'task-repairable', payload: { priority: 'immediate' },
+      status: 'failed', retryCount: 2, createdAt: Date.now(), lastError: 'invalid_canonical_preview',
+    })
+    const permanent = await getWriteQueueDB().operations.add({
+      entityType: 'task', operation: 'update', entityId: 'task-permanent', payload: { title: 'Keep' },
+      status: 'failed', retryCount: 2, createdAt: Date.now(), lastError: 'not_found: Task not found',
+    })
+
+    expect(await repairStaleCanonicalPreviewFailures()).toBe(1)
+    await expect(getWriteQueueDB().operations.get(repairable)).resolves.toMatchObject({ status: 'pending' })
+    await expect(getWriteQueueDB().operations.get(repairable)).resolves.not.toHaveProperty('lastError')
+    await expect(getWriteQueueDB().operations.get(permanent)).resolves.toMatchObject({ status: 'failed', lastError: 'not_found: Task not found' })
+    expect(await repairStaleCanonicalPreviewFailures()).toBe(0)
   })
 
   it('includes unresolved conflicts in the operations shown by the sync error popover', async () => {

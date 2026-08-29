@@ -36,23 +36,27 @@
 /* Hide action buttons by default, show on hover */
 .task-card .card-actions {
     opacity: 0;
+    pointer-events: none;
     transition: opacity var(--duration-fast) ease;
 }
 
 .task-card:hover .card-actions,
 .task-card:focus-within .card-actions {
     opacity: 1;
+    pointer-events: auto;
 }
 
 /* Also handle compact-actions class */
 .task-card .compact-actions {
     opacity: 0;
+    pointer-events: none;
     transition: opacity var(--duration-fast) ease;
 }
 
 .task-card:hover .compact-actions,
 .task-card:focus-within .compact-actions {
     opacity: 1;
+    pointer-events: auto;
 }
 
 .task-card.completed {

@@ -42,6 +42,7 @@ runtime/database gate.
 - `rejected-with-reason`: `fix/bug-1983-permanent-delete` — current `main` already uses the authorized permanent-delete RPC; applying the archived commit would remove newer recurrence-chain protection and delete tracing.
 - `archived`: `fix/canonical-duration-1.4.285`, `wip/task-1964-martha-email` — estimated-duration support requires a coordinated application/server/database migration review; the current client contract does not yet carry that field, so no partial transplant was made.
 - `already-present`: `integrate/request-hash-recovery-current`, `codex/request-hash-recovery` — current `main` already reissues expired unbound previews and binds committed receipts to request hashes; the archived variants add overlapping history but no required missing behavior.
+- `already-present`: `codex/fix-local-api-startup-20260824` — the enabled-setting sidecar startup behavior and its lifecycle coverage are already in current `main`.
 
 Archived refs above were checked for reachability and retained in the
 recoverable archive namespace; no preserved ref was deleted or treated as

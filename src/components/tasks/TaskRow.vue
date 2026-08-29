@@ -71,6 +71,7 @@
       <button
         class="task-row__action-btn task-row__action-btn--focus"
         :title="$t('task.focus_mode')"
+        :aria-label="$t('task.focus_mode')"
         @click.stop="enterFocusMode"
       >
         <Eye :size="14" />
@@ -78,6 +79,7 @@
       <button
         class="task-row__action-btn"
         :title="$t('task.start_timer')"
+        :aria-label="$t('task.start_timer')"
         @click.stop="$emit('startTimer', task.id)"
       >
         <Play :size="14" />
@@ -85,6 +87,7 @@
       <button
         class="task-row__action-btn"
         :title="$t('task.edit_task')"
+        :aria-label="$t('task.edit_task')"
         @click.stop="$emit('edit', task.id)"
       >
         <Edit :size="14" />
@@ -116,7 +119,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const { t } = useI18n()
 defineEmits<{
   select: [taskId: string]
   toggleComplete: [taskId: string]
@@ -127,7 +129,7 @@ defineEmits<{
   updateProject: [taskId: string, projectId: string | null]
   updateDueDate: [taskId: string, dueDate: string | null]
 }>()
-
+const { t } = useI18n()
 const statusOptions = computed(() => [
   { label: t('task.status_todo'), value: 'todo' },
   { label: t('task.status_done'), value: 'done' }
@@ -336,11 +338,14 @@ onUnmounted(() => {
   gap: var(--space-1);
   justify-content: flex-end;
   opacity: 0;
+  pointer-events: none;
   transition: all var(--duration-normal) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.task-row:hover .task-row__actions {
+.task-row:hover .task-row__actions,
+.task-row:focus-within .task-row__actions {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .task-row__action-btn {

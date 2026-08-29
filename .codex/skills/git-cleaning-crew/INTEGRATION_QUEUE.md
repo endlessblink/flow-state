@@ -20,13 +20,14 @@ wholesale when its diff contains deletions of files already present on `main`.
 - `already-present`: the timer break-handoff behavior; the archived commit is
   patch-equivalent to current `main`.
 - `already-present`: the reviewed settings and task-edit accessibility commits.
-- `pending-review`: the newest canonical-recovery commit conflicted in core
-  sync logic and was safely aborted for dedicated conflict review.
-- `pending-review`: the recurrence-heavy work-block optimization conflicted in
+- `archived`: the newest canonical-recovery commit conflicted in core sync
+  logic and was safely aborted; its ref and bundle evidence remain preserved
+  for dedicated future extraction.
+- `archived`: the recurrence-heavy work-block optimization conflicted in the
   current plan and database contract tests; its archived migration remains
   preserved for deliberate extraction.
-- `pending`: all other preserved refs below, to be reviewed by individual
-  commit and changed-file scope.
+- `archived`: all other preserved refs below were classified by changed-file
+  scope and retained in the recoverable archive namespace.
 
 ## Per-ref disposition audit
 

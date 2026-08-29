@@ -125,6 +125,10 @@ describe('validate-electron-vite-env', () => {
       resolve(__dirname, '../../../scripts/deploy-electron-update.sh'),
       'utf8'
     )
+    const bundleValidator = readFileSync(
+      resolve(__dirname, '../../../scripts/validate-electron-bundle-env.cjs'),
+      'utf8'
+    )
 
     expect(packageJson.scripts['electron:build']).toMatch(/^npm run electron:validate-env &&/)
     expect(packageJson.scripts['electron:build']).toContain('flock -n /tmp/flowstate-electron-build.lock')
@@ -133,5 +137,7 @@ describe('validate-electron-vite-env', () => {
     expect(deployScript.indexOf('validate-electron-vite-env.cjs')).toBeLessThan(
       deployScript.indexOf('guard:electron-sync')
     )
+    expect(bundleValidator).toContain("['.env', '.env.local', `.env.${mode}`, `.env.${mode}.local`]")
+    expect(bundleValidator).toContain('Object.assign(env, process.env)')
   })
 })

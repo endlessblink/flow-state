@@ -12,6 +12,10 @@ const README = readFileSync(
   resolve(__dirname, "../../../server/local-api/README.md"),
   "utf-8",
 );
+const RECURRENCE_LIFECYCLE_MIGRATION = readFileSync(
+  resolve(__dirname, "../../../supabase/migrations/20260829120000_recurrence_lifecycle_rpc.sql"),
+  "utf-8",
+);
 // TASK-1977: the timer-snapshot decision was extracted from
 // getLocalTimerResponse into this unit-tested helper (see
 // tests/unit/local-api/local-timer-snapshot.test.ts). The structural contracts
@@ -457,6 +461,22 @@ describe("Local API sidecar timer endpoint regression contract", () => {
     );
   });
 
+  it("routes preview-first recurrence lifecycle edits through the canonical handler", () => {
+    const tokenCheck = SERVER_CJS.indexOf("if (TOKEN)");
+    const lifecycleRoute = SERVER_CJS.indexOf(
+      "path.match(/^\\/api\\/tasks\\/([^/]+)\\/recurrence-lifecycle$/)",
+    );
+    const taskRoute = SERVER_CJS.indexOf(
+      "const taskMatch = path.match(/^\\/api\\/tasks\\/([^/]+)$/)",
+    );
+
+    expect(lifecycleRoute, "recurrence lifecycle route not found").toBeGreaterThan(-1);
+    expect(lifecycleRoute).toBeGreaterThan(tokenCheck);
+    expect(lifecycleRoute).toBeLessThan(taskRoute);
+    expect(SERVER_CJS).toContain("require('./recurrence-lifecycle.cjs')");
+    expect(SERVER_CJS).toContain("executeRecurrenceLifecycle(");
+  });
+
   it("keeps recurrence-chain reads scoped, redacted, and mutation-free", () => {
     const body = functionBody("handleGetRecurrenceChain");
     const handlerStart = SERVER_CJS.indexOf("async function handleGetRecurrenceChain(");
@@ -486,6 +506,18 @@ describe("Local API sidecar timer endpoint regression contract", () => {
     expect(README).toContain("nextOccurrence");
     expect(README).toContain("not_recurring");
     expect(README).toContain("read-only");
+  });
+
+  it("keeps recurrence lifecycle mutation transactional and history-preserving", () => {
+    expect(RECURRENCE_LIFECYCLE_MIGRATION).toContain("CREATE OR REPLACE FUNCTION public.flowstate_edit_recurrence(");
+    expect(RECURRENCE_LIFECYCLE_MIGRATION).toContain("p_preview boolean DEFAULT true");
+    expect(RECURRENCE_LIFECYCLE_MIGRATION).toContain("flowstate_action_receipts");
+    expect(RECURRENCE_LIFECYCLE_MIGRATION).toContain("FOR UPDATE");
+    expect(RECURRENCE_LIFECYCLE_MIGRATION).toContain("ambiguous_current_occurrence");
+    expect(RECURRENCE_LIFECYCLE_MIGRATION).toContain("historyPreserved");
+    expect(RECURRENCE_LIFECYCLE_MIGRATION).toContain("SET recurrence_rule = v_rule");
+    expect(RECURRENCE_LIFECYCLE_MIGRATION).not.toContain("DELETE FROM public.tasks");
+    expect(RECURRENCE_LIFECYCLE_MIGRATION).not.toContain("UPDATE public.tasks SET is_deleted");
   });
 
   it("reads task instances from the active signed-user scope with revision authority", () => {

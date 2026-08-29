@@ -168,8 +168,26 @@ typed error code `not_recurring`.
 ```
 
 This read does not change the definition, create occurrences, or rewrite completion
-history. Lifecycle edits remain preview-first and will be added to the same
-revision-guarded recurrence contract.
+history. Lifecycle edits use the same revision-guarded recurrence contract.
+
+### `POST /api/tasks/:id/recurrence-lifecycle`
+
+Preview is the default. Supported actions are `set_cadence`, `pause`, `resume`,
+and `end`; each operation preserves completion history and only changes future
+recurrence behavior. Apply requires the exact preview's `previewVersion` and
+`requestHash`, plus a stable `requestId`.
+
+```json
+{
+  "requestId": "operation-id",
+  "action": "pause",
+  "preview": true
+}
+```
+
+For `set_cadence`, include a validated `recurrenceRule` and an optional later
+`nextDueDate`. Apply uses `preview: false`; stale previews, conflicting request
+IDs, ambiguous current occurrences, and non-recurring tasks are rejected.
 
 ### `GET /api/assistant/context`
 Bearer-protected read-only summary for local personal-assistant clients such as

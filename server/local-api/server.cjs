@@ -43,6 +43,7 @@ const { classifyMissingAuthContext } = require('./auth-availability.cjs')
 const { executeAuditCoverageReport } = require('./audit-coverage-report.cjs')
 const { resolveLocalTimerSnapshot } = require('./localTimerSnapshot.cjs')
 const { buildRecurrenceChainRead } = require('./recurrence-chain.cjs')
+const { executeRecurrenceLifecycle } = require('./recurrence-lifecycle.cjs')
 const {
   buildTaskSearchQuery,
   filteredSampleMetadata,
@@ -1643,6 +1644,17 @@ const server = http.createServer(async (req, res) => {
     const recurrenceChainMatch = path.match(/^\/api\/tasks\/([^/]+)\/recurrence-chain$/)
     if (req.method === 'GET' && recurrenceChainMatch) {
       return await handleGetRecurrenceChain(decodeURIComponent(recurrenceChainMatch[1]), res)
+    }
+    const recurrenceLifecycleMatch = path.match(/^\/api\/tasks\/([^/]+)\/recurrence-lifecycle$/)
+    if (req.method === 'POST' && recurrenceLifecycleMatch) {
+      const body = await readJsonBody(req)
+      const result = await executeRecurrenceLifecycle(
+        ctx,
+        decodeURIComponent(recurrenceLifecycleMatch[1]),
+        body,
+        notifyTaskMutation,
+      )
+      return send(res, result.status, result.body)
     }
     const workBlocksMatch = path.match(/^\/api\/tasks\/([^/]+)\/work-blocks$/)
     if (req.method === 'POST' && workBlocksMatch) {

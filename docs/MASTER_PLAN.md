@@ -6712,9 +6712,9 @@ tests and renderer store tests exercise the same command path.
 Canvas update without restart; moving/resizing/removing one block is visible in
 the running signed-in Electron app and does not alter sibling blocks.
 
-### FEATURE-1945: Hermes-safe recurrence chain read and lifecycle editing (📋 PLANNED)
+### FEATURE-1945: Hermes-safe recurrence chain read and lifecycle editing (🔄 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED (2026-07-14) | **Depends on**: FEATURE-1943
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-29) | **Depends on**: FEATURE-1943
 
 **Outcome**: expose recurrence definition, occurrence chain, and completion
 history reads plus preview/apply commands to edit cadence, pause, resume, or end
@@ -9416,7 +9416,7 @@ Current empty state is minimal. Add visual illustration, feature highlights, gue
 | **BUG-1975**         | **P0**      | 🔄 **Catalog Done and All Active filters can contradict each other and hide the canonical task; local right-click complete/reopen proof passes, packaged Electron remains**                                                                                                                                       |
 | **FEATURE-1943**     | **P0**      | 🔄 **Hermes-safe recurring Done for now: atomic history, recurrence advance, idempotent preview/apply, and live UI reconciliation**                                                                                                                                                                               |
 | **FEATURE-1944**     | **P0**      | 📋 **Shared transactional work-block move/resize/remove lifecycle for UI, Local API, and Hermes**                                                                                                                                                                                                                 |
-| **FEATURE-1945**     | **P0**      | 📋 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions**                                                                                                                                                                                                               |
+| **FEATURE-1945**     | **P0**      | 🔄 **Recurrence chain/history reads plus safe cadence edit, pause, resume, and end-series actions**                                                                                                                                                                                                               |
 | **FEATURE-1946**     | **P1**      | 📋 **Authenticated project/group reads and previewed exact-ID assignment**                                                                                                                                                                                                                                        |
 | **FEATURE-1947**     | **P0**      | 🔄 **Leadership-safe timer start/pause/resume/stop through the signed-in Local API**                                                                                                                                                                                                                              |
 | **FEATURE-1948**     | **P1**      | 📋 **Bounded Canvas read plus move/group/ungroup/remove-placement actions**                                                                                                                                                                                                                                       |

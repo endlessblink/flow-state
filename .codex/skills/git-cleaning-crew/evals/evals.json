@@ -1,0 +1,23 @@
+{
+  "skill_name": "git-cleaning-crew",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Clean this repository down to one local main branch tracking origin/main. Safely resolve every other branch and worktree, preserve anything valuable, discard only confirmed disposable work, and prove the final zero-state.",
+      "expected_output": "A resumable audit and execution plan that inventories all items, archives unique work before deletion, handles dirty and untracked files separately, and verifies the final state.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Monitor the Git cleanup overnight and keep fixing issues until there is only main, no worktrees, no dirty or untracked files, and no stale worktree metadata. Stop safely if new work appears.",
+      "expected_output": "A monitoring workflow that records receipts, detects drift, returns to planning, and never silently deletes newly appearing work.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "There are many old release branches and linked worktrees. Some may contain fixes that are not on main, while the primary checkout is dirty. Tell me what can be merged, archived, or discarded without losing work.",
+      "expected_output": "An exhaustive classification with merge-base and unique-commit evidence, explicit manual-review cases, and no destructive action during audit.",
+      "files": []
+    }
+  ]
+}

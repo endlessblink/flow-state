@@ -11,7 +11,11 @@ wholesale when its diff contains deletions of files already present on `main`.
   passed 2/2 tests.
 - `integrated`: the non-duplicate board orchestration change; the remaining
   board commits were patch-equivalent after reconciliation and were skipped.
+- `integrated`: the isolated updater stale-bridge fix; its focused suite passed
+  32/32 tests.
 - `already-present`: the reviewed settings and task-edit accessibility commits.
+- `pending-review`: the newest canonical-recovery commit conflicted in core
+  sync logic and was safely aborted for dedicated conflict review.
 - `pending`: all other preserved refs below, to be reviewed by individual
   commit and changed-file scope.
 

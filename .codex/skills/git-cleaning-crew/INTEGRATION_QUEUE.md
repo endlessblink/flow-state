@@ -43,6 +43,7 @@ runtime/database gate.
 - `archived`: `fix/canonical-duration-1.4.285`, `wip/task-1964-martha-email` — estimated-duration support requires a coordinated application/server/database migration review; the current client contract does not yet carry that field, so no partial transplant was made.
 - `already-present`: `integrate/request-hash-recovery-current`, `codex/request-hash-recovery` — current `main` already reissues expired unbound previews and binds committed receipts to request hashes; the archived variants add overlapping history but no required missing behavior.
 - `already-present`: `codex/fix-local-api-startup-20260824` — the enabled-setting sidecar startup behavior and its lifecycle coverage are already in current `main`.
+- `manual-review`: `codex/h1-session-ack` — the session-ack protocol is absent from current `main`, but the archived change spans 11 Electron/sidecar/auth files and must be integrated as one runtime protocol with authenticated E2E proof; no partial transplant was made.
 
 Archived refs above were checked for reachability and retained in the
 recoverable archive namespace; no preserved ref was deleted or treated as

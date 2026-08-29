@@ -6739,6 +6739,16 @@ the default and apply requires approval.
 closed occurrences, and Today/Inbox/Calendar/Canvas show only the appropriate
 current or future occurrence without restart.
 
+**Implementation evidence (2026-08-29)**: Read-only chain inspection and
+preview-first lifecycle commands are now shipped in the Local API contract, with
+`set_cadence`, `pause`, `resume`, and `end` actions backed by a revision-guarded
+transactional RPC. Completion history is preserved, lifecycle apply is
+idempotency-protected, Hermes capabilities advertise both routes, and Electron
+1.4.486 was published with the sidecar markers. Full repository tests pass
+4,737/4,737 with 6 skipped; Local API tests pass 535/535 with 1 skipped; the
+public updater manifest reads 1.4.486. Live authenticated lifecycle apply and
+installed-runtime read-back remain required before this task can be marked done.
+
 ### FEATURE-1946: Hermes-safe project and group reads and assignment (📋 PLANNED)
 
 **Priority**: P1 | **Status**: 📋 PLANNED (2026-07-14) | **Depends on**: FEATURE-1943

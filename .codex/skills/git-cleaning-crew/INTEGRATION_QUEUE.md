@@ -15,11 +15,16 @@ wholesale when its diff contains deletions of files already present on `main`.
   32/32 tests.
 - `integrated`: the subtask description focus-boundary behavior; its focused
   task-edit accessibility suite passed 3/3 tests.
+- `integrated`: the unavailable-Supabase settings-write regression; its
+  focused database suite passed 28/28 tests.
 - `already-present`: the timer break-handoff behavior; the archived commit is
   patch-equivalent to current `main`.
 - `already-present`: the reviewed settings and task-edit accessibility commits.
 - `pending-review`: the newest canonical-recovery commit conflicted in core
   sync logic and was safely aborted for dedicated conflict review.
+- `pending-review`: the recurrence-heavy work-block optimization conflicted in
+  current plan and database contract tests; its archived migration remains
+  preserved for deliberate extraction.
 - `pending`: all other preserved refs below, to be reviewed by individual
   commit and changed-file scope.
 

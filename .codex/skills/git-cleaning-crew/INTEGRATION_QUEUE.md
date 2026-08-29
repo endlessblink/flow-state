@@ -5,6 +5,16 @@ The active development branch is `main`. The archived refs under
 work. Review and land them in this order; do not merge an archived branch tip
 wholesale when its diff contains deletions of files already present on `main`.
 
+## Current ledger
+
+- `integrated`: priority-consistency commits; the focused priority contract
+  passed 2/2 tests.
+- `integrated`: the non-duplicate board orchestration change; the remaining
+  board commits were patch-equivalent after reconciliation and were skipped.
+- `already-present`: the reviewed settings and task-edit accessibility commits.
+- `pending`: all other preserved refs below, to be reviewed by individual
+  commit and changed-file scope.
+
 ## P0 — recovery and correctness
 
 - `codex/sync-diagnostic-1485`

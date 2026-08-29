@@ -87,6 +87,7 @@ const toggleViewOptions = () => {
         :aria-expanded="showViewOptions"
         aria-label="View options"
         title="View options"
+        :aria-expanded="showViewOptions"
         @click="toggleViewOptions"
       >
         <MoreVertical :size="16" :stroke-width="1.5" />

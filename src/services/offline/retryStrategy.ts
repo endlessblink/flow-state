@@ -239,6 +239,17 @@ export function classifyError(error: unknown): ErrorClassification {
   return 'unknown'
 }
 
+export function isRepairablePermanentError(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message
+    : error && typeof error === 'object' && 'message' in error
+      ? String((error as { message: unknown }).message)
+      : String(error)
+  const lowerMessage = message.toLowerCase()
+  return lowerMessage.includes('invalid_canonical_preview')
+    || lowerMessage.includes('invalid_persisted_canonical_preview')
+}
+
 /**
  * Get retry config based on error classification
  *

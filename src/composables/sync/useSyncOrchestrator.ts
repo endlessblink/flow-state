@@ -281,6 +281,7 @@ import {
   calculateNextRetryTime,
   shouldRetry,
   classifyError,
+  isRepairablePermanentError,
   getRetryConfigForError,
   type ErrorClassification
 } from '@/services/offline/retryStrategy'
@@ -1437,6 +1438,7 @@ export function useSyncOrchestrator() {
     const failed = await getFailedOperations()
 
     for (const op of failed) {
+      if (classifyError(op.lastError) === 'permanent' && !isRepairablePermanentError(op.lastError)) continue
       if (op.id) {
         await import('@/services/offline/writeQueueDB').then(({ updateOperation }) =>
           updateOperation(op.id!, {
@@ -1456,6 +1458,7 @@ export function useSyncOrchestrator() {
     const failed = await getFailedOperations()
 
     for (const op of failed) {
+      if (classifyError(op.lastError) === 'permanent' && !isRepairablePermanentError(op.lastError)) continue
       if (op.id && requested.has(op.entityId)) {
         await import('@/services/offline/writeQueueDB').then(({ updateOperation }) =>
           updateOperation(op.id!, {

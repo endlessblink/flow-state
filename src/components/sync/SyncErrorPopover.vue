@@ -74,7 +74,8 @@
                 <span v-if="error.lastAttemptAt" class="last-attempt">
                   {{ formatTime(error.lastAttemptAt) }}
                 </span>
-                <span v-if="isPermanentError(error)" class="no-retry-hint">Manual resolution required</span>
+                <span v-if="isPermanentError(error) && !isRepairablePermanentError(error.lastError)" class="no-retry-hint">Manual resolution required</span>
+                <span v-else-if="isRepairablePermanentError(error.lastError)" class="retry-hint">Retry available after app upgrade</span>
               </div>
             </div>
           </div>
@@ -110,7 +111,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { WriteOperation, SyncEntityType, SyncOperationType } from '@/types/sync'
-import { classifyError } from '@/services/offline/retryStrategy'
+import { classifyError, isRepairablePermanentError } from '@/services/offline/retryStrategy'
 import {
   AlertTriangle,
   X,
@@ -149,7 +150,7 @@ const permanentCount = computed(() => {
 })
 
 const retryableErrorCount = computed(() => {
-  return props.errors.filter(e => !isPermanentError(e)).length
+  return props.errors.filter(e => !isPermanentError(e) || isRepairablePermanentError(e.lastError)).length
 })
 
 const displayedErrorCount = computed(() => props.errorCount ?? props.errors.length)

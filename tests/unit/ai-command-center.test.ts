@@ -74,6 +74,59 @@ function buildBatch(): AICommandBatch {
 }
 
 describe('AI command center', () => {
+  it('lets the user edit a proposed day-plan date before apply', async () => {
+    const batch = buildBatch()
+    batch.commands = [{
+      id: 'update-date-1',
+      kind: 'task.update',
+      taskId: 'task-1',
+      updates: { dueDate: '2026-08-30' },
+      confidence: 0.91,
+      impact: 'low',
+    }]
+    batch.preview.commands = [{
+      id: 'update-date-1',
+      kind: 'task.update',
+      status: 'will_create',
+      identity: {
+        kind: 'task.update',
+        sourceMessageId: 'message-1',
+        targetEntityId: 'task-1',
+        scope: 'task:task-1:metadata',
+        fingerprint: 'update-date-fingerprint',
+      },
+      diff: {
+        entityType: 'task',
+        before: { id: 'task-1', dueDate: null },
+        after: { id: 'task-1', dueDate: '2026-08-30' },
+      },
+      requiresExplicitApproval: false,
+    }]
+
+    const wrapper = mount(AICommandCenterCard, {
+      props: {
+        batch,
+        title: 'AI day plan',
+        why: 'Fit the task into today.',
+      },
+    })
+
+    await wrapper.get('[data-testid="ai-command-edit-update-date-1"]').trigger('click')
+    const editor = wrapper.get('[data-testid="ai-command-value-update-date-1"]')
+    expect(editor.attributes('type')).toBe('date')
+    await editor.setValue('2026-08-31')
+    expect(wrapper.get('#ai-command-details-update-date-1').text()).toContain('2026-08-31')
+    expect(wrapper.get('#ai-command-details-update-date-1').text()).not.toContain('2026-08-30')
+    await wrapper.get('[data-testid="ai-command-apply"]').trigger('click')
+
+    expect(wrapper.emitted('apply')?.[0]?.[0]).toMatchObject({
+      commands: [expect.objectContaining({
+        id: 'update-date-1',
+        updates: expect.objectContaining({ dueDate: '2026-08-31' }),
+      })],
+    })
+  })
+
   it('shows grounded diffs and lets the user edit, reject, and apply selected commands', async () => {
     const wrapper = mount(AICommandCenterCard, {
       props: {

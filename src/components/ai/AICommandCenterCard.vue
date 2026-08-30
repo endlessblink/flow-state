@@ -85,20 +85,41 @@ function commandTitle(command: AICommand): string {
   return 'Record recommendation feedback'
 }
 
-function editableText(command: AICommand): string | null {
-  if ('title' in command && typeof command.title === 'string') return command.title
-  if (command.kind === 'lane.create' || command.kind === 'canvas.group.create') return command.name
+type EditableCommandField = {
+  key: 'title' | 'name' | 'dueDate'
+  value: string
+  inputType: 'text' | 'date'
+}
+
+function editableField(command: AICommand): EditableCommandField | null {
+  if ('title' in command && typeof command.title === 'string') {
+    return { key: 'title', value: command.title, inputType: 'text' }
+  }
+  if (command.kind === 'lane.create' || command.kind === 'canvas.group.create') {
+    return { key: 'name', value: command.name, inputType: 'text' }
+  }
+  if (command.kind === 'task.update' && typeof command.updates.dueDate === 'string') {
+    return { key: 'dueDate', value: command.updates.dueDate, inputType: 'date' }
+  }
   return null
 }
 
-function updateEditableText(commandId: string, value: string) {
+function updateEditableValue(commandId: string, value: string) {
   const command = commandFor(commandId)
   if (!command) return
   if ('title' in command && typeof command.title === 'string') {
     command.title = value
   } else if (command.kind === 'lane.create' || command.kind === 'canvas.group.create') {
     command.name = value
+  } else if (command.kind === 'task.update' && typeof command.updates.dueDate === 'string') {
+    command.updates.dueDate = value
   }
+}
+
+function editorTestId(command: AICommand): string {
+  return editableField(command)?.key === 'dueDate'
+    ? `ai-command-value-${command.id}`
+    : `ai-command-title-${command.id}`
 }
 
 function toggleSelected(commandId: string) {
@@ -131,6 +152,17 @@ function displayValue(value: unknown): string {
 function diffRows(value: Record<string, unknown> | null): Array<[string, string]> {
   if (!value) return []
   return Object.entries(value).map(([key, item]) => [key, displayValue(item)])
+}
+
+function effectiveAfter(preview: AICommandPreviewItem): Record<string, unknown> | null {
+  if (!preview.diff.after) return null
+  const command = commandFor(preview.id)
+  const field = command ? editableField(command) : null
+  if (!field) return preview.diff.after
+  return {
+    ...preview.diff.after,
+    [field.key]: field.value,
+  }
 }
 
 function statusLabel(preview: AICommandPreviewItem): string {
@@ -220,12 +252,12 @@ function applySelected() {
             <small>{{ preview.kind }} · {{ statusLabel(preview) }}</small>
           </div>
           <button
-            v-if="commandFor(preview.id) && editableText(commandFor(preview.id)!) !== null"
+            v-if="commandFor(preview.id) && editableField(commandFor(preview.id)!) !== null"
             :data-testid="`ai-command-edit-${preview.id}`"
             type="button"
             class="command-icon-btn"
             title="Edit proposal"
-            :aria-label="`Edit ${commandTitle(commandFor(preview.id)!)}`"
+            :aria-label="`Edit proposed change for ${commandTitle(commandFor(preview.id)!)}`"
             @click="toggleEditing(preview.id)"
           >
             <Pencil :size="13" />
@@ -243,12 +275,13 @@ function applySelected() {
         </div>
 
         <input
-          v-if="editingIds.has(preview.id) && commandFor(preview.id) && editableText(commandFor(preview.id)!) !== null"
-          :data-testid="`ai-command-title-${preview.id}`"
+          v-if="editingIds.has(preview.id) && commandFor(preview.id) && editableField(commandFor(preview.id)!) !== null"
+          :data-testid="editorTestId(commandFor(preview.id)!)"
           class="command-edit-input"
-          :value="editableText(commandFor(preview.id)!)"
+          :value="editableField(commandFor(preview.id)!)!.value"
+          :type="editableField(commandFor(preview.id)!)!.inputType"
           aria-label="Edit proposed value"
-          @input="updateEditableText(preview.id, ($event.target as HTMLInputElement).value)"
+          @input="updateEditableValue(preview.id, ($event.target as HTMLInputElement).value)"
         >
 
         <div v-if="expandedIds.has(preview.id)" :id="`ai-command-details-${preview.id}`" class="command-item__details">
@@ -264,7 +297,7 @@ function applySelected() {
             </div>
             <div>
               <span>After</span>
-              <p v-for="[key, value] in diffRows(preview.diff.after)" :key="`after-${key}`">
+              <p v-for="[key, value] in diffRows(effectiveAfter(preview))" :key="`after-${key}`">
                 <b>{{ key }}</b>: {{ value }}
               </p>
             </div>

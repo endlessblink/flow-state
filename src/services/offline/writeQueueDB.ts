@@ -336,7 +336,7 @@ export async function updateOperation(
 /** Requeue the legacy permanent errors made repairable by the current
  * canonical-priority validator. The marker prevents repeated startup loops. */
 export async function repairStaleCanonicalPreviewFailures(): Promise<number> {
-  const marker = "canonical-preview-priority-repair-v2";
+  const marker = "canonical-preview-priority-repair-v3";
   if (await getMetadata<boolean>(marker)) return 0;
 
   const table = getWriteQueueDB().operations;

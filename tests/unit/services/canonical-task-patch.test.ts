@@ -230,6 +230,17 @@ describe('canonical queued task patch', () => {
     expect(createCanonicalTaskPatchState({ due_date: '2026-02-30' }, 7, 'op')).toBeUndefined()
   })
 
+  it.each(['immediate', 'high', 'medium', 'low', 'relaxed'] as const)(
+    'accepts the canonical %s priority in a durable task patch', priority => {
+      expect(createCanonicalTaskPatchState({ priority }, 7, `priority-${priority}`)).toMatchObject({
+        operationId: `priority-${priority}`,
+        baseRevision: 7,
+        patch: { priority },
+        phase: 'queued',
+      })
+    },
+  )
+
   it('persists preview binding and validated receipt before reporting success', async () => {
     const op = operation()
     const rpc = vi.fn()

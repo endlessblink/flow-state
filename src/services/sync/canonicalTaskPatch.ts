@@ -49,7 +49,7 @@ function validPatch(value: unknown): value is CanonicalTaskPatchState['patch'] {
   if (keys.length === 0 || keys.some(key => !PATCH_FIELDS.has(key))) return false
   if ('title' in value && (typeof value.title !== 'string' || value.title.trim().length === 0)) return false
   if ('description' in value && typeof value.description !== 'string' && value.description !== null) return false
-  if ('priority' in value && !['low', 'medium', 'high', null].includes(value.priority as never)) return false
+  if ('priority' in value && !['immediate', 'high', 'medium', 'low', 'relaxed', null].includes(value.priority as never)) return false
   if ('dueDate' in value && !validDueDate(value.dueDate)) return false
   if ('progress' in value && (!Number.isSafeInteger(value.progress) || Number(value.progress) < 0 || Number(value.progress) > 100)) return false
   return true
@@ -70,7 +70,7 @@ function validReadBack(
     && typeof value.title === 'string'
     && value.title.trim().length > 0
     && (typeof value.description === 'string' || value.description === null)
-    && (value.priority === 'low' || value.priority === 'medium' || value.priority === 'high' || value.priority === null)
+    && (value.priority === 'immediate' || value.priority === 'high' || value.priority === 'medium' || value.priority === 'low' || value.priority === 'relaxed' || value.priority === null)
     && validDueDate(value.dueDate)
     && Number.isSafeInteger(value.progress)
     && Number(value.progress) >= 0

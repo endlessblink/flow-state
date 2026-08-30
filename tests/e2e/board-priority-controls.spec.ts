@@ -91,6 +91,14 @@ test.describe('Board priority and recurring filters', () => {
     await page.getByRole('button', { name: 'Clear filters', exact: true }).click()
     await expect(prioritySelect).toHaveAttribute('aria-label', 'Priority')
     await expect(page.getByRole('combobox', { name: 'Recurring tasks', exact: true })).toHaveAttribute('aria-expanded', 'false')
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('flowstate:board-priority-filter'))).toBe('')
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('flowstate:board-recurring-filter'))).toBe('all')
+    for (const task of TASKS) {
+      await expect(page.locator(`[data-task-id="${task.id}"]`)).toBeVisible()
+    }
+
+    await page.reload()
+    await waitForApp(page)
     for (const task of TASKS) {
       await expect(page.locator(`[data-task-id="${task.id}"]`)).toBeVisible()
     }

@@ -2756,6 +2756,34 @@ describe('Operation dependency analysis', () => {
 // 19. PROCESS QUEUE GUARDS
 // ===========================================================================
 describe('processQueue guards', () => {
+  it('repairs stale canonical-preview failures before preserving same-entity queue order', async () => {
+    const repairedPredecessor = makeOp({
+      id: 20630,
+      status: 'pending',
+      entityId: 'task-canonical-preview-repair',
+    })
+    const laterIntent = makeOp({
+      id: 20631,
+      status: 'pending',
+      entityId: 'task-canonical-preview-repair',
+    })
+    writeQueueMocks.repairStaleCanonicalPreviewFailures.mockResolvedValue(1)
+    writeQueueMocks.getPendingOperations.mockResolvedValue([repairedPredecessor, laterIntent])
+    writeQueueMocks.hasEarlierUnresolvedOperation.mockImplementation(
+      async operation => operation.id === laterIntent.id,
+    )
+
+    const sync = useSyncOrchestrator()
+    await sync.forceSync()
+
+    expect(writeQueueMocks.repairStaleCanonicalPreviewFailures).toHaveBeenCalledTimes(1)
+    expect(writeQueueMocks.repairStaleCanonicalPreviewFailures.mock.invocationCallOrder[0])
+      .toBeLessThan(writeQueueMocks.getPendingOperations.mock.invocationCallOrder[0])
+    expect(writeQueueMocks.hasEarlierUnresolvedOperation).toHaveBeenNthCalledWith(1, repairedPredecessor)
+    expect(writeQueueMocks.hasEarlierUnresolvedOperation).toHaveBeenNthCalledWith(2, laterIntent)
+    expect(coalescerMocks.coalesceOperationsForEntity).toHaveBeenCalledTimes(1)
+  })
+
   it('holds the cross-window queue lock while using conservative crash recovery', async () => {
     const originalLocks = navigator.locks
     const request = vi.fn(async (_name, _options, callback) =>

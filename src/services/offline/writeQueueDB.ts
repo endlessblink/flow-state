@@ -333,10 +333,10 @@ export async function updateOperation(
   await db.operations.update(id, updates);
 }
 
-/** Requeue the legacy permanent errors made repairable by the current
- * canonical-priority validator. The marker prevents repeated startup loops. */
+/** Requeue permanent canonical-priority errors made repairable by the current
+ * client and server validators. The marker prevents repeated startup loops. */
 export async function repairStaleCanonicalPreviewFailures(): Promise<number> {
-  const marker = "canonical-preview-priority-repair-v3";
+  const marker = "canonical-preview-priority-repair-v4";
   if (await getMetadata<boolean>(marker)) return 0;
 
   const table = getWriteQueueDB().operations;
@@ -345,10 +345,14 @@ export async function repairStaleCanonicalPreviewFailures(): Promise<number> {
   for (const operation of candidates) {
     if (!operation.id || !operation.lastError) continue;
     const error = operation.lastError.toLowerCase();
-    if (
-      !error.includes("invalid_canonical_preview") &&
-      !error.includes("invalid_persisted_canonical_preview")
-    ) continue;
+    const priority = operation.canonicalTaskPatch?.patch.priority;
+    const legacyPreviewFailure =
+      error.includes("invalid_canonical_preview") ||
+      error.includes("invalid_persisted_canonical_preview");
+    const repairedServerPriorityFailure =
+      error.includes("invalid_priority") &&
+      (priority === "immediate" || priority === "relaxed");
+    if (!legacyPreviewFailure && !repairedServerPriorityFailure) continue;
     await table.where("id").equals(operation.id).modify((current) => {
       current.status = "pending";
       delete current.nextRetryAt;

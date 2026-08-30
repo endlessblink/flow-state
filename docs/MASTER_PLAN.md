@@ -1,5 +1,13 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2064: Electron rejects valid Immediate and Relaxed sync updates (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-30)
+
+**Exact failure mode**: The installed authenticated Electron 1.4.489 runtime has two failed canonical task updates with `invalid_priority` and three newer operations blocked behind them. Complete authenticated task inventory proves both referenced tasks still exist, so the popover's deleted-task fallback is incorrect for this failure class and discarding would lose valid local edits. The deployed canonical task RPC delegates validation to its preserved H3 base function, which still accepts only `low`, `medium`, `high`, or null even though the Board and client contract also support `immediate` and `relaxed`.
+
+**Repair in progress**: Add a fail-closed forward migration for the deployed base RPC and a one-time Electron recovery generation that requeues only canonical operations whose rejected priority is exactly `immediate` or `relaxed`. Malformed priorities and unrelated permanent failures remain quarantined.
+
 ### ~~BUG-2063: Electron Board filters do not open and stale canonical sync failures block newer edits~~ (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-08-30)

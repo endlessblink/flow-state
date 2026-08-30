@@ -499,6 +499,38 @@ describe('canonical write queue durability', () => {
     expect(await repairStaleCanonicalPreviewFailures()).toBe(0)
   })
 
+  it('requeues server-rejected valid extended priorities without retrying malformed priorities', async () => {
+    await setMetadata('canonical-preview-priority-repair-v1', true)
+    await setMetadata('canonical-preview-priority-repair-v2', true)
+    await setMetadata('canonical-preview-priority-repair-v3', true)
+    const immediate = await getWriteQueueDB().operations.add({
+      entityType: 'task', operation: 'update', entityId: 'task-immediate', payload: { priority: 'immediate' },
+      status: 'failed', retryCount: 2, createdAt: Date.now(), lastError: 'invalid_priority: priority is invalid',
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:immediate', baseRevision: 1,
+        patch: { priority: 'immediate' }, phase: 'queued',
+      },
+    })
+    const relaxed = await getWriteQueueDB().operations.add({
+      entityType: 'task', operation: 'update', entityId: 'task-relaxed', payload: { priority: 'relaxed' },
+      status: 'failed', retryCount: 2, createdAt: Date.now(), lastError: 'invalid_priority: priority is invalid',
+      canonicalTaskPatch: {
+        contractVersion: 'task-v1', operationId: 'web:relaxed', baseRevision: 1,
+        patch: { priority: 'relaxed' }, phase: 'queued',
+      },
+    })
+    const malformed = await getWriteQueueDB().operations.add({
+      entityType: 'task', operation: 'update', entityId: 'task-malformed', payload: { priority: 'urgent' },
+      status: 'failed', retryCount: 2, createdAt: Date.now(), lastError: 'invalid_priority: priority is invalid',
+    })
+
+    expect(await repairStaleCanonicalPreviewFailures()).toBe(2)
+    await expect(getWriteQueueDB().operations.get(immediate)).resolves.toMatchObject({ status: 'pending' })
+    await expect(getWriteQueueDB().operations.get(relaxed)).resolves.toMatchObject({ status: 'pending' })
+    await expect(getWriteQueueDB().operations.get(malformed)).resolves.toMatchObject({ status: 'failed' })
+    expect(await repairStaleCanonicalPreviewFailures()).toBe(0)
+  })
+
   it('includes unresolved conflicts in the operations shown by the sync error popover', async () => {
     const op = await enqueueOperation({
       entityType: 'task', operation: 'update', entityId: 'task-1',

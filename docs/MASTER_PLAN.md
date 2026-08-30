@@ -1,12 +1,36 @@
 # FlowState MASTER_PLAN.md
 
-### BUG-2064: Electron rejects valid Immediate and Relaxed sync updates (🔄 IN PROGRESS)
+### ~~BUG-2064: Electron rejects valid Immediate and Relaxed sync updates~~ (✅ DONE)
 
-**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-30)
+**Priority**: P0 | **Status**: ✅ DONE (2026-08-30)
 
 **Exact failure mode**: The installed authenticated Electron 1.4.489 runtime has two failed canonical task updates with `invalid_priority` and three newer operations blocked behind them. Complete authenticated task inventory proves both referenced tasks still exist, so the popover's deleted-task fallback is incorrect for this failure class and discarding would lose valid local edits. The deployed canonical task RPC delegates validation to its preserved H3 base function, which still accepts only `low`, `medium`, `high`, or null even though the Board and client contract also support `immediate` and `relaxed`.
 
-**Repair in progress**: Add a fail-closed forward migration for the deployed base RPC and a one-time Electron recovery generation that requeues only canonical operations whose rejected priority is exactly `immediate` or `relaxed`. Malformed priorities and unrelated permanent failures remain quarantined.
+**Repair**: A fail-closed forward migration extends the deployed base RPC to the complete Board priority domain. Electron recovery generation v4 requeues only canonical `invalid_priority` operations whose bound patch priority is exactly `immediate` or `relaxed`; malformed priorities and unrelated permanent failures remain quarantined.
+
+**Regression and release evidence**: The new queue and migration regressions failed before implementation and pass after it; the focused failure-class suites pass 278/278, type-check passes, the guarded release suite passes 370/370, and the Electron package validates. The production base RPC read-back contains both extended priorities. Public updater read-back reports 1.4.490, and the installed authenticated 1.4.490 runtime reports `synced` with zero failed, pending, syncing, or conflicting operations after restart. Direct production read-back proves both reported task prefixes still exist, are not deleted, and now hold the intended `immediate` priority; one is done and one remains planned. A window-scoped installed-app capture shows the sync indicator green with no red badge or visible sync warning. The active timer also survived the installed-app restart.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Two exact `invalid_priority` task prefixes reproduced in the installed Electron receipt | Yes |
+| Data shape / persisted row shape | Yes | Both production task rows exist, are not deleted, and hold `immediate` after convergence | Yes |
+| Renderer store/state | Yes | Recovery generation v4 drained the failed rows and their blocked successors | Yes |
+| Electron main/preload bridge | N/A | The failure occurred after queue admission at the server RPC validator | No change needed |
+| Localhost sidecar endpoint | Yes | Installed 1.4.490 health and authenticated diagnostics return 200 with no failures | No change needed |
+| KDE polling/control path | N/A | No KDE timer or control failure was involved | No change needed |
+| Supabase persistence/realtime | Yes | Live base RPC definition and final task rows read back from production | Yes |
+| Updater/runtime version | Yes | Public and installed versions both report 1.4.490 | Yes |
+| Stale live process/cache state | Yes | Real profile restarted; queue reached zero and the active timer persisted | Yes |
+
+**Exact failure mode fixed**: Valid canonical task updates carrying `immediate` or `relaxed` were rejected by the preserved production base RPC and remained permanently failed in Electron.
+
+**Explicitly not covered**: Malformed priority values, unrelated permanent queue failures, and historical browser/PWA queue conflicts are not retried or discarded by this repair.
+
+**Regression added for reported repro**: Red-green queue coverage proves only bound `immediate` and `relaxed` failures are requeued; a migration contract test requires the deployed base RPC repair and complete priority domain.
+
+**Live boundary proof**: Installed authenticated Electron 1.4.490 reports zero queue errors, both task rows remain in production with the intended priority, and the window-scoped sync indicator is green without an error badge.
 
 ### ~~BUG-2063: Electron Board filters do not open and stale canonical sync failures block newer edits~~ (✅ DONE)
 

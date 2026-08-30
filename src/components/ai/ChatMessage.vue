@@ -29,6 +29,7 @@ import type { Options as MarkdownItOptions } from 'markdown-it'
 import { useAIChatStore, type ChatMessage, type ChatAction } from '@/stores/aiChat'
 import { formatRelativeDate } from '@/utils/dateUtils'
 import TaskQuickEditPopover from './TaskQuickEditPopover.vue'
+import AICommandCenterCard, { type AICommandCenterStep } from './AICommandCenterCard.vue'
 import { executeTool } from '@/services/ai/tools'
 import { sanitizeMarkdownHtml } from '@/utils/security'
 import { detectLanguage } from '@/services/ai/pipeline/languageDetector'
@@ -43,7 +44,7 @@ import type { AIClarificationArtifact, AIClarificationQuestion, AIContextEntityT
 import { resumeLocalClarificationRuntime } from '@/services/ai/runtime/localClarificationRuntimeClient'
 import { decideAITaskCreate } from '@/services/ai/actionGuardrails'
 import * as aiActionCommands from '@/services/ai/actionCommands'
-import type { AICommand, AICommandMemoryStore } from '@/services/ai/actionCommands'
+import type { AICommand, AICommandAuditEntry, AICommandBatch, AICommandMemoryStore } from '@/services/ai/actionCommands'
 
 // ============================================================================
 // Props
@@ -129,6 +130,20 @@ const dayPlanError = ref('')
 const smartLaneApplying = ref(false)
 const smartLaneApplied = ref(false)
 const smartLaneError = ref('')
+const commandCenterBatch = ref<AICommandBatch | null>(null)
+const commandCenterTitle = ref('')
+const commandCenterWhy = ref('')
+const commandCenterSources = ref<string[]>([])
+const commandCenterSteps = ref<AICommandCenterStep[]>([])
+const commandCenterBusy = ref(false)
+const commandCenterError = ref('')
+const commandCenterAuditEntry = ref<AICommandAuditEntry | null>(null)
+const commandCenterAuditTrail = ref<AICommandAuditEntry[]>([])
+const lastCommandCenterApply = ref<{
+  selectedCommandIds: string[]
+  commands: AICommand[]
+  explicitApproval: boolean
+} | null>(null)
 
 // Schedule onboarding
 const selectedDays = ref<Set<string>>(new Set())
@@ -369,16 +384,6 @@ const weeklyPlanSnapshotDueByTaskId = computed(() => {
 function weeklyPlanTaskIds(rec: WeeklyPlanRecommendation): string[] {
   return [...new Set([rec.primaryTaskId, ...(rec.relatedTaskIds ?? [])].filter(Boolean))]
     .filter(taskId => !dismissedCardTaskIds.value.has(taskId))
-}
-
-function weeklyPlanPrimaryTaskIds(rec: WeeklyPlanRecommendation): string[] {
-  return rec.primaryTaskId && !dismissedCardTaskIds.value.has(rec.primaryTaskId) ? [rec.primaryTaskId] : []
-}
-
-function weeklyPlanRelatedChipIds(rec: WeeklyPlanRecommendation): string[] {
-  return [...new Set(rec.relatedTaskIds ?? [])]
-    .filter(taskId => taskId !== rec.primaryTaskId && !dismissedCardTaskIds.value.has(taskId))
-    .slice(0, 4)
 }
 
 function weeklyLaneTitle(rec: WeeklyPlanRecommendation): string {
@@ -1840,6 +1845,7 @@ const hasRenderableMessage = computed(() => {
     scheduleQuestion.value ||
     toolResults.value.length > 0 ||
     cardGroups.value ||
+    commandCenterBatch.value ||
     hasInlineCardLayout.value ||
     hasBottomCardGroups.value,
   )
@@ -2329,6 +2335,97 @@ async function recordInlineTaskFeedback(
   }
 }
 
+function setCommandCenterStep(stepId: string, update: Partial<AICommandCenterStep>) {
+  commandCenterSteps.value = commandCenterSteps.value.map(step =>
+    step.id === stepId ? { ...step, ...update } : step,
+  )
+}
+
+async function applyCommandCenterSelection(payload: {
+  selectedCommandIds: string[]
+  commands: AICommand[]
+  explicitApproval: boolean
+}) {
+  const current = commandCenterBatch.value
+  if (!current || commandCenterBusy.value || commandCenterAuditEntry.value) return
+
+  lastCommandCenterApply.value = payload
+  commandCenterBusy.value = true
+  commandCenterError.value = ''
+  setCommandCenterStep('approval', { status: 'completed', message: `${payload.selectedCommandIds.length} changes approved` })
+  setCommandCenterStep('apply', { status: 'running', message: 'Applying selected changes' })
+  try {
+    const rebuilt = aiActionCommands.buildAICommandBatchPreview({
+      sourcePrompt: current.sourcePrompt,
+      sourceRunId: current.sourceRunId,
+      sourceMessageId: current.sourceMessageId,
+      dataUsed: current.dataUsed,
+      commands: payload.commands,
+      tasks: taskStore.tasks,
+      lanes: laneStore.lanes,
+      canvasGroups: canvasStore.groups,
+    })
+    const result = await aiActionCommands.applyAICommandBatch(rebuilt, {
+      selectedCommandIds: payload.selectedCommandIds,
+      taskStore,
+      laneStore,
+      canvasStore,
+      memoryStore: aiMemoryDb as AICommandMemoryStore,
+      explicitApproval: payload.explicitApproval,
+    })
+    commandCenterBatch.value = rebuilt
+    commandCenterAuditEntry.value = result
+    commandCenterAuditTrail.value = await aiActionCommands.loadAICommandAuditTrail({
+      sourceMessageId: current.sourceMessageId,
+      limit: 5,
+    })
+    setCommandCenterStep('apply', { status: 'completed', message: `${result.appliedCommands.length} changes applied` })
+    setCommandCenterStep('verify', { status: 'completed', message: 'Audit and rollback record saved' })
+    dayPlanApplied.value = true
+  } catch (err) {
+    console.error('[ChatMessage] Apply command-center proposal failed:', err)
+    commandCenterError.value = err instanceof Error ? err.message : 'Could not apply this proposal.'
+    setCommandCenterStep('apply', {
+      status: 'failed',
+      message: commandCenterError.value,
+      retryable: true,
+    })
+  } finally {
+    commandCenterBusy.value = false
+  }
+}
+
+async function retryCommandCenterStep(stepId: string) {
+  if (stepId !== 'apply' || !lastCommandCenterApply.value) return
+  await applyCommandCenterSelection(lastCommandCenterApply.value)
+}
+
+async function undoCommandCenterApply(rollbackPointer: string) {
+  if (commandCenterBusy.value) return
+  commandCenterBusy.value = true
+  commandCenterError.value = ''
+  try {
+    await aiActionCommands.rollbackAICommandBatch(rollbackPointer, {
+      taskStore,
+      laneStore,
+      canvasStore,
+      memoryStore: aiMemoryDb as AICommandMemoryStore,
+    })
+    commandCenterAuditEntry.value = null
+    commandCenterAuditTrail.value = await aiActionCommands.loadAICommandAuditTrail({
+      sourceMessageId: props.message.id,
+      limit: 5,
+    })
+    dayPlanApplied.value = false
+    setCommandCenterStep('apply', { status: 'waiting_approval', message: 'Changes undone; ready to review again' })
+    setCommandCenterStep('verify', { status: 'pending', message: undefined })
+  } catch (err) {
+    commandCenterError.value = err instanceof Error ? err.message : 'Could not undo this proposal.'
+  } finally {
+    commandCenterBusy.value = false
+  }
+}
+
 async function applyDayPlan(event: MouseEvent) {
   event.stopPropagation()
   const plan = cardGroups.value
@@ -2370,12 +2467,29 @@ async function applyDayPlan(event: MouseEvent) {
       tasks: taskStore.tasks,
       canvasGroups: canvasStore.groups,
     })
-    await aiActionCommands.applyAICommandBatch(batch, {
-      selectedCommandIds: commands.map(command => command.id),
-      taskStore,
-      canvasStore,
+    commandCenterBatch.value = batch
+    commandCenterTitle.value = 'AI day plan'
+    commandCenterWhy.value = result.targetGroupName
+      ? `These changes place the selected work into ${result.targetGroupName} using the current task and canvas context.`
+      : 'These changes turn the proposed order into today\'s concrete task plan.'
+    commandCenterSources.value = [
+      `${result.plannedCount} planned task${result.plannedCount === 1 ? '' : 's'}`,
+      ...visibleGroups.flatMap(group => group.tasks.map(task => task.reason).filter((reason): reason is string => Boolean(reason))),
+    ]
+    commandCenterSteps.value = [
+      { id: 'read', label: 'Reading context', status: 'completed', message: `${taskStore.tasks.length} tasks checked` },
+      { id: 'build', label: 'Building proposal', status: 'completed', message: `${commands.length} changes prepared` },
+      { id: 'validate', label: 'Validating changes', status: 'completed', message: 'Command identities and duplicates checked' },
+      { id: 'approval', label: 'Waiting for approval', status: 'waiting_approval' },
+      { id: 'apply', label: 'Applying changes', status: 'pending' },
+      { id: 'verify', label: 'Verifying result', status: 'pending' },
+    ]
+    commandCenterAuditEntry.value = null
+    commandCenterAuditTrail.value = await aiActionCommands.loadAICommandAuditTrail({
+      sourceMessageId: props.message.id,
+      limit: 5,
     })
-    dayPlanApplied.value = true
+    commandCenterError.value = ''
   } catch (err) {
     console.error('[ChatMessage] Apply day plan failed:', err)
     dayPlanError.value = 'Could not apply this plan.'
@@ -3386,13 +3500,13 @@ async function saveSchedule() {
           <button
             class="day-plan-apply-btn"
             :class="{ applied: dayPlanApplied }"
-            :disabled="dayPlanApplying || dayPlanApplied"
+            :disabled="dayPlanApplying || dayPlanApplied || Boolean(commandCenterBatch)"
             @click="applyDayPlan"
           >
             <Loader2 v-if="dayPlanApplying" :size="14" class="spin" />
             <Check v-else-if="dayPlanApplied" :size="14" />
             <ListOrdered v-else :size="14" />
-            <span>{{ dayPlanApplied ? 'Plan applied' : `Apply this order (${dayPlanTaskCount})` }}</span>
+            <span>{{ dayPlanApplied ? 'Plan applied' : commandCenterBatch ? 'Review the proposal below' : `Review this order (${dayPlanTaskCount})` }}</span>
           </button>
           <span v-if="dayPlanError" class="day-plan-error">{{ dayPlanError }}</span>
         </div>
@@ -3410,6 +3524,21 @@ async function saveSchedule() {
           </button>
           <span v-if="smartLaneError" class="day-plan-error">{{ smartLaneError }}</span>
         </div>
+        <AICommandCenterCard
+          v-if="isDayPlan && commandCenterBatch"
+          :batch="commandCenterBatch"
+          :title="commandCenterTitle"
+          :why="commandCenterWhy"
+          :sources="commandCenterSources"
+          :steps="commandCenterSteps"
+          :busy="commandCenterBusy"
+          :error="commandCenterError"
+          :audit-entry="commandCenterAuditEntry"
+          :audit-trail="commandCenterAuditTrail"
+          @apply="applyCommandCenterSelection"
+          @retry="retryCommandCenterStep"
+          @undo="undoCommandCenterApply"
+        />
         <div v-for="(group, gi) in remainingCardGroups" :key="'g' + gi" class="card-group">
           <div v-if="group.name" class="card-group-name" dir="auto">
             {{ group.name }}

@@ -1737,9 +1737,9 @@ _Original plan below._
 - The command-center surface should render/edit/reject selected commands from `buildAICommandBatchPreview`, show command diffs and `AIActionIdentity`/duplicate status, expose audit entries from `loadAICommandAuditTrail()`, and reuse rollback pointers for undo.
 - Preserve TASK-1855 boundaries: manual user writes remain unchanged; new AI write consumers must add a typed command family or route through an existing one before mutating stores/services.
 
-### TASK-1856: AI command center and agent progress UI (📋 PLANNED)
+### TASK-1856: AI command center and agent progress UI (🔄 IN PROGRESS)
 
-**Priority**: P0-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1855
+**Priority**: P0-HIGH | **Status**: 🔄 IN PROGRESS (started 2026-08-30) | **Depends on**: TASK-1855
 
 **Why**: The bot needs a consistent visible surface for suggestions, command previews, step progress, confidence, "why", apply/edit/reject controls, and failure recovery. Otherwise each feature becomes a different ad hoc card.
 
@@ -1755,6 +1755,10 @@ _Original plan below._
 
 - This should replace single-purpose bot cards over time, not add another parallel UI system.
 - The surface should support later proactive cards like "3 risks detected" or "recommended focus block" without requiring a new component family.
+
+**Progress**:
+
+- 2026-08-30: Added the first shared command-center surface around the real day-plan command-batch consumer. Reviewing a plan now shows grounded sources, before/after diffs, command identity and duplicate status, per-command edit/reject controls, explicit approval for high-impact changes, six-stage progress, recoverable failures, persisted audit history, and rollback actions before any task mutation. RED/green regression coverage proves preview does not mutate tasks and Apply uses only the selected command set. Focused command-center and AI sidebar tests pass; type-check passes. Full lint, Electron build, installed-runtime verification, updater release, and production read-back remain in progress.
 
 ### TASK-1857: Intake and messy-work organizer agent (📋 PLANNED)
 

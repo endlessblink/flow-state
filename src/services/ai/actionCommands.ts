@@ -1,6 +1,6 @@
 import type { CanvasGroup } from '@/types/canvas'
 import type { AIContextEntity, AIMemoryPatch, AIMemorySnapshot, AIParameterBelief, AIRecommendationFeedback, AIRecommendationFeedbackInput } from '@/types/aiMemory'
-import type { Lane, Subtask, Task } from '@/types/tasks'
+import type { Lane, Task } from '@/types/tasks'
 import type { useCanvasStore } from '@/stores/canvas'
 import type { useLaneStore } from '@/stores/lanes'
 import type { useTaskStore } from '@/stores/tasks'
@@ -223,6 +223,9 @@ export type AICommandAuditEntry = {
   commandsRejected: RejectedAICommand[]
   timestamp: string
   rollbackPointer: string
+  rollbackVersion?: 2
+  status?: 'applied' | 'failed_rolled_back' | 'failed_needs_rollback'
+  error?: string
 }
 
 export type AICommandApplyResult = AICommandAuditEntry & {
@@ -1355,74 +1358,9 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
     : undefined
   const appliedCommands: AppliedAICommand[] = []
   const rejectedCommands: RejectedAICommand[] = []
-
-  for (const command of batch.commands) {
-    const preview = getPreview(batch, command.id)
-    if (!selected.has(command.id)) {
-      rejectedCommands.push({ ...preview, reason: 'not_selected' })
-      continue
-    }
-    if (preview.requiresExplicitApproval && !options.explicitApproval) {
-      rejectedCommands.push({ ...preview, reason: 'requires_explicit_approval' })
-      continue
-    }
-
-    const applied = command.kind === 'task.create'
-      ? await applyTaskCreate(command, options.taskStore, batch.sourceMessageId)
-      : command.kind === 'task.update'
-        ? await applyTaskUpdate(command, options.taskStore, batch.sourceMessageId)
-        : command.kind === 'task.delete'
-          ? await applyTaskDelete(command, options.taskStore, batch.sourceMessageId)
-          : command.kind === 'task.subtask.create'
-            ? await applySubtaskCreate(command, options.taskStore, batch.sourceMessageId)
-            : command.kind === 'lane.create'
-              ? await applyLaneCreate(
-                command,
-                options.laneStore ?? missingLaneStore(),
-                batch.sourceMessageId,
-              )
-              : command.kind === 'calendar.schedule_task'
-                ? await applyCalendarScheduleTask(command, options.taskStore, batch.sourceMessageId)
-                : command.kind === 'focus.timer.start'
-                  ? await applyFocusTimerStart(command, {
-                    taskStore: options.taskStore,
-                    timerStore: options.timerStore ?? missingTimerStore(),
-                    sourceMessageId: batch.sourceMessageId,
-                  })
-                  : command.kind === 'focus.timer.stop'
-                    ? await applyFocusTimerStop(command, {
-                      taskStore: options.taskStore,
-                      timerStore: options.timerStore ?? missingTimerStore(),
-                      sourceMessageId: batch.sourceMessageId,
-                    })
-                    : command.kind === 'canvas.group.create'
-                      ? await applyCanvasGroupCreate(
-                        command,
-                        options.canvasStore ?? missingCanvasStore(),
-                        batch.sourceMessageId,
-                      )
-                      : command.kind === 'canvas.node.move'
-                        ? await applyCanvasNodeMove(command, {
-                          taskStore: options.taskStore,
-                          canvasStore: options.canvasStore,
-                          sourceMessageId: batch.sourceMessageId,
-                        })
-                        : command.kind === 'memory.patch'
-                          ? await applyMemoryPatch(
-                            command,
-                            options.memoryStore ?? missingMemoryStore(),
-                            batch.sourceMessageId,
-                          )
-                          : await applyRecommendationFeedback(
-                            command,
-                            options.memoryStore ?? missingMemoryStore(),
-                            batch.sourceMessageId,
-                          )
-    appliedCommands.push(applied)
-  }
-
   const rollbackPointer = `ai-rollback:${batch.id}:${Date.now()}`
-  await persistAICommandRollbackSnapshot({
+  const rollbackSnapshot: AICommandRollbackSnapshot = {
+    rollbackVersion: 2,
     rollbackPointer,
     batchId: batch.id,
     createdAt: new Date().toISOString(),
@@ -1431,8 +1369,114 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
     canvasGroupsBefore,
     timerBefore,
     memoryBefore,
-    appliedEntityIds: appliedCommands.map(command => command.entityId),
-  })
+    appliedEntityIds: [],
+    appliedCommands: [],
+  }
+  await persistAICommandRollbackSnapshot(rollbackSnapshot)
+
+  try {
+    for (const command of batch.commands) {
+      const preview = getPreview(batch, command.id)
+      if (!selected.has(command.id)) {
+        rejectedCommands.push({ ...preview, reason: 'not_selected' })
+        continue
+      }
+      if (preview.requiresExplicitApproval && !options.explicitApproval) {
+        rejectedCommands.push({ ...preview, reason: 'requires_explicit_approval' })
+        continue
+      }
+
+      const applied = command.kind === 'task.create'
+        ? await applyTaskCreate(command, options.taskStore, batch.sourceMessageId)
+        : command.kind === 'task.update'
+          ? await applyTaskUpdate(command, options.taskStore, batch.sourceMessageId)
+          : command.kind === 'task.delete'
+            ? await applyTaskDelete(command, options.taskStore, batch.sourceMessageId)
+            : command.kind === 'task.subtask.create'
+              ? await applySubtaskCreate(command, options.taskStore, batch.sourceMessageId)
+              : command.kind === 'lane.create'
+                ? await applyLaneCreate(
+                  command,
+                  options.laneStore ?? missingLaneStore(),
+                  batch.sourceMessageId,
+                )
+                : command.kind === 'calendar.schedule_task'
+                  ? await applyCalendarScheduleTask(command, options.taskStore, batch.sourceMessageId)
+                  : command.kind === 'focus.timer.start'
+                    ? await applyFocusTimerStart(command, {
+                      taskStore: options.taskStore,
+                      timerStore: options.timerStore ?? missingTimerStore(),
+                      sourceMessageId: batch.sourceMessageId,
+                    })
+                    : command.kind === 'focus.timer.stop'
+                      ? await applyFocusTimerStop(command, {
+                        taskStore: options.taskStore,
+                        timerStore: options.timerStore ?? missingTimerStore(),
+                        sourceMessageId: batch.sourceMessageId,
+                      })
+                      : command.kind === 'canvas.group.create'
+                        ? await applyCanvasGroupCreate(
+                          command,
+                          options.canvasStore ?? missingCanvasStore(),
+                          batch.sourceMessageId,
+                        )
+                        : command.kind === 'canvas.node.move'
+                          ? await applyCanvasNodeMove(command, {
+                            taskStore: options.taskStore,
+                            canvasStore: options.canvasStore,
+                            sourceMessageId: batch.sourceMessageId,
+                          })
+                          : command.kind === 'memory.patch'
+                            ? await applyMemoryPatch(
+                              command,
+                              options.memoryStore ?? missingMemoryStore(),
+                              batch.sourceMessageId,
+                            )
+                            : await applyRecommendationFeedback(
+                              command,
+                              options.memoryStore ?? missingMemoryStore(),
+                              batch.sourceMessageId,
+                            )
+      appliedCommands.push(applied)
+      if ((applied.kind === 'focus.timer.start' || applied.kind === 'focus.timer.stop') && options.timerStore) {
+        rollbackSnapshot.timerAfter = cloneTimerSession(options.timerStore.currentSession)
+      }
+      if ((applied.kind === 'memory.patch' || applied.kind === 'memory.feedback.record') && options.memoryStore?.createAICommandMemorySnapshot) {
+        rollbackSnapshot.memoryAfter = cloneMemorySnapshot(await options.memoryStore.createAICommandMemorySnapshot())
+      }
+      rollbackSnapshot.appliedCommands = [...appliedCommands]
+      rollbackSnapshot.appliedEntityIds = appliedCommands.map(item => item.entityId)
+      await persistAICommandRollbackSnapshot(rollbackSnapshot)
+    }
+  } catch (error) {
+    let rollbackError: unknown = null
+    try {
+      await rollbackAICommandBatch(rollbackPointer, options)
+    } catch (caughtRollbackError) {
+      rollbackError = caughtRollbackError
+    }
+    const message = error instanceof Error ? error.message : String(error)
+    await persistAICommandAuditEntry({
+      batchId: batch.id,
+      sourcePrompt: batch.sourcePrompt,
+      sourceRunId: batch.sourceRunId,
+      sourceMessageId: batch.sourceMessageId,
+      dataUsed: batch.dataUsed,
+      commandsApplied: appliedCommands,
+      commandsRejected: rejectedCommands,
+      timestamp: new Date().toISOString(),
+      rollbackPointer,
+      rollbackVersion: 2,
+      status: rollbackError ? 'failed_needs_rollback' : 'failed_rolled_back',
+      error: rollbackError
+        ? `${message}; automatic rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
+        : message,
+    })
+    if (rollbackError) {
+      throw new Error(`${message}; automatic rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`)
+    }
+    throw error
+  }
 
   const auditEntry: AICommandAuditEntry = {
     batchId: batch.id,
@@ -1444,6 +1488,8 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
     commandsRejected: rejectedCommands,
     timestamp: new Date().toISOString(),
     rollbackPointer,
+    rollbackVersion: 2,
+    status: 'applied',
   }
   await persistAICommandAuditEntry(auditEntry)
   return {
@@ -1466,61 +1512,122 @@ export async function rollbackAICommandBatch(rollbackPointer: string, options: {
 }): Promise<void> {
   const snapshot = await loadAICommandRollbackSnapshot(rollbackPointer)
   if (!snapshot) throw new Error(`Rollback snapshot ${rollbackPointer} not found`)
-
-  const beforeIds = new Set(snapshot.tasksBefore.map(task => task.id))
-  for (const task of [...options.taskStore.tasks]) {
-    if (!beforeIds.has(task.id)) {
-      await options.taskStore.deleteTask(task.id, 'ai-command-rollback')
-    }
+  if (!Array.isArray(snapshot.appliedCommands)) {
+    throw new Error('This legacy rollback snapshot cannot be applied safely because it has no command scope')
   }
 
-  for (const beforeTask of snapshot.tasksBefore) {
-      const existing = options.taskStore.getTask(beforeTask.id)
-    if (existing) {
-      await options.taskStore.updateTask(beforeTask.id, cloneTask(beforeTask))
-    } else {
-      await options.taskStore.createTask(cloneTask(beforeTask))
-    }
-  }
+  const beforeTask = (taskId: string) => snapshot.tasksBefore.find(task => task.id === taskId)
+  const beforeGroup = (groupId: string) => snapshot.canvasGroupsBefore?.find(group => group.id === groupId)
 
-  if (options.laneStore && snapshot.lanesBefore) {
-    const beforeLaneIds = new Set(snapshot.lanesBefore.map(lane => lane.id))
-    for (const lane of [...options.laneStore.lanes]) {
-      if (!beforeLaneIds.has(lane.id)) {
-        await options.laneStore.deleteLane(lane.id)
+  for (const applied of [...snapshot.appliedCommands].reverse()) {
+    if (applied.result === 'reused_existing') continue
+
+    if (applied.kind === 'task.create') {
+      if (options.taskStore.getTask(applied.entityId)) {
+        await options.taskStore.deleteTask(applied.entityId, 'ai-command-rollback')
       }
+      continue
     }
 
-    for (const beforeLane of snapshot.lanesBefore) {
-      const existing = options.laneStore.lanes.find(lane => lane.id === beforeLane.id)
-      if (existing) {
-        await options.laneStore.updateLane(beforeLane.id, cloneLane(beforeLane))
+    if (applied.kind === 'task.subtask.create') {
+      const parentId = applied.identity.targetEntityId
+      const parent = parentId ? options.taskStore.getTask(parentId) : null
+      if (parentId && parent) {
+        await options.taskStore.updateTask(parentId, {
+          subtasks: parent.subtasks.filter(subtask => subtask.id !== applied.entityId),
+        })
+      }
+      continue
+    }
+
+    if (applied.kind === 'task.update') {
+      const taskId = applied.identity.targetEntityId ?? applied.entityId
+      const original = beforeTask(taskId)
+      const current = options.taskStore.getTask(taskId)
+      if (original && current) {
+        const changedFields = Object.keys(applied.diff.after).filter(key => key !== 'id')
+        const inverse = changedFields.reduce<Record<string, unknown>>((updates, key) => {
+          updates[key] = original[key as keyof Task]
+          return updates
+        }, {})
+        await options.taskStore.updateTask(taskId, inverse as Partial<Task>)
+      }
+      continue
+    }
+
+    if (applied.kind === 'task.delete') {
+      const original = beforeTask(applied.entityId)
+      if (original) {
+        const current = options.taskStore.getTask(original.id)
+        if (current) await options.taskStore.updateTask(original.id, cloneTask(original))
+        else await options.taskStore.createTask(cloneTask(original))
+      }
+      continue
+    }
+
+    if (applied.kind === 'calendar.schedule_task') {
+      const taskId = applied.identity.targetEntityId
+      if (taskId) await options.taskStore.deleteTaskInstance(taskId, applied.entityId)
+      continue
+    }
+
+    if (applied.kind === 'lane.create') {
+      if (options.laneStore?.lanes.some(lane => lane.id === applied.entityId)) {
+        await options.laneStore.deleteLane(applied.entityId)
+      }
+      continue
+    }
+
+    if (applied.kind === 'canvas.group.create') {
+      if (options.canvasStore?.groups.some(group => group.id === applied.entityId)) {
+        await options.canvasStore.deleteGroup(applied.entityId)
+      }
+      continue
+    }
+
+    if (applied.kind === 'canvas.node.move') {
+      const nodeId = applied.identity.targetEntityId ?? applied.entityId
+      if (applied.diff.entityType === 'canvas_layout' && applied.diff.before?.nodeType === 'group') {
+        const original = beforeGroup(nodeId)
+        if (original && options.canvasStore?.groups.some(group => group.id === nodeId)) {
+          const changedFields = Object.keys(applied.diff.after).filter(key => key !== 'id' && key !== 'nodeType')
+          const inverse = changedFields.reduce<Record<string, unknown>>((updates, key) => {
+            updates[key] = original[key as keyof CanvasGroup]
+            return updates
+          }, {})
+          await options.canvasStore.updateGroup(nodeId, inverse)
+        }
       } else {
-        await options.laneStore.createLane(cloneLane(beforeLane))
+        const original = beforeTask(nodeId)
+        const current = options.taskStore.getTask(nodeId)
+        if (original && current) {
+          const changedFields = Object.keys(applied.diff.after).filter(key => key !== 'id' && key !== 'nodeType')
+          const inverse = changedFields.reduce<Record<string, unknown>>((updates, key) => {
+            updates[key] = original[key as keyof Task]
+            return updates
+          }, {})
+          await options.taskStore.updateTask(nodeId, inverse as Partial<Task>)
+        }
       }
     }
   }
 
-  if (options.canvasStore && snapshot.canvasGroupsBefore) {
-    const beforeGroupIds = new Set(snapshot.canvasGroupsBefore.map(group => group.id))
-    for (const group of [...options.canvasStore.groups]) {
-      if (!beforeGroupIds.has(group.id)) {
-        await options.canvasStore.deleteGroup(group.id)
-      }
-    }
-
-    for (const beforeGroup of snapshot.canvasGroupsBefore) {
-      const existing = options.canvasStore.groups.find(group => group.id === beforeGroup.id)
-      if (existing) {
-        await options.canvasStore.updateGroup(beforeGroup.id, cloneCanvasGroup(beforeGroup))
-      } else {
-        await options.canvasStore.createGroup(cloneCanvasGroup(beforeGroup))
-      }
-    }
-  }
-
-  if (options.timerStore && snapshot.timerBefore !== undefined) {
+  const touchedTimer = snapshot.appliedCommands.some(command => command.kind === 'focus.timer.start' || command.kind === 'focus.timer.stop')
+  if (touchedTimer && options.timerStore && snapshot.timerBefore !== undefined) {
     const currentSession = options.timerStore.currentSession
+    const expectedSession = snapshot.timerAfter
+    const timerStateMatches = expectedSession
+      ? Boolean(
+        currentSession &&
+        currentSession.id === expectedSession.id &&
+        currentSession.taskId === expectedSession.taskId &&
+        currentSession.isActive === expectedSession.isActive &&
+        currentSession.isBreak === expectedSession.isBreak,
+      )
+      : !currentSession?.isActive
+    if (!timerStateMatches) {
+      throw new Error('Cannot undo because the timer changed after this AI action')
+    }
     if (!snapshot.timerBefore) {
       if (currentSession?.isActive) {
         await options.timerStore.stopTimer()
@@ -1539,9 +1646,14 @@ export async function rollbackAICommandBatch(rollbackPointer: string, options: {
     }
   }
 
-  if (snapshot.memoryBefore) {
-    if (!options.memoryStore?.restoreAICommandMemorySnapshot) {
-      throw new Error('memoryStore with restoreAICommandMemorySnapshot is required to roll back AI memory commands')
+  const touchedMemory = snapshot.appliedCommands.some(command => command.kind === 'memory.patch' || command.kind === 'memory.feedback.record')
+  if (touchedMemory && snapshot.memoryBefore) {
+    if (!snapshot.memoryAfter || !options.memoryStore?.createAICommandMemorySnapshot || !options.memoryStore.restoreAICommandMemorySnapshot) {
+      throw new Error('Cannot safely undo this AI memory action because scoped memory rollback data is unavailable')
+    }
+    const currentMemory = cloneMemorySnapshot(await options.memoryStore.createAICommandMemorySnapshot())
+    if (JSON.stringify(currentMemory) !== JSON.stringify(snapshot.memoryAfter)) {
+      throw new Error('Cannot undo because memory changed after this AI action')
     }
     await options.memoryStore.restoreAICommandMemorySnapshot(snapshot.memoryBefore)
   }

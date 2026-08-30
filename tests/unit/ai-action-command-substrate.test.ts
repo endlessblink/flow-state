@@ -349,6 +349,59 @@ describe('AI action command substrate', () => {
     expect(taskStore.tasks.find(task => task.id === parent.id)?.subtasks).toEqual([])
   })
 
+  it('rolls back only entities touched by the batch and preserves later manual work', async () => {
+    const taskStore = useTaskStore()
+
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Create one temporary task',
+      sourceRunId: 'run-scoped-rollback',
+      sourceMessageId: 'msg-scoped-rollback',
+      dataUsed: {},
+      commands: [{ id: 'cmd-scoped-create', kind: 'task.create', title: 'Temporary AI task' }],
+      tasks: taskStore.tasks,
+    })
+    const result = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-scoped-create'],
+      taskStore,
+    })
+    await taskStore.createTask({ title: 'Manual task created later' })
+
+    await rollbackAICommandBatch(result.rollbackPointer, { taskStore })
+
+    expect(taskStore.tasks.map(task => task.title)).toEqual(['Manual task created later'])
+  })
+
+  it('automatically compensates a partial apply and records a failed audit with rollback evidence', async () => {
+    const taskStore = useTaskStore()
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Apply a batch whose second command fails',
+      sourceRunId: 'run-partial-failure',
+      sourceMessageId: 'msg-partial-failure',
+      dataUsed: {},
+      commands: [
+        { id: 'cmd-created-before-failure', kind: 'task.create', title: 'Must be compensated' },
+        { id: 'cmd-missing-update', kind: 'task.update', taskId: 'missing-task', updates: { priority: 'high' } },
+      ],
+      tasks: taskStore.tasks,
+    })
+
+    await expect(applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-created-before-failure', 'cmd-missing-update'],
+      taskStore,
+    })).rejects.toThrow('missing-task')
+
+    expect(taskStore.tasks.some(task => task.title === 'Must be compensated')).toBe(false)
+    const audit = await loadAICommandAuditTrail({ sourceRunId: 'run-partial-failure' })
+    expect(audit).toEqual([
+      expect.objectContaining({
+        status: 'failed_rolled_back',
+        error: expect.stringContaining('missing-task'),
+        rollbackPointer: expect.stringMatching(/^ai-rollback:/),
+        commandsApplied: [expect.objectContaining({ id: 'cmd-created-before-failure' })],
+      }),
+    ])
+  })
+
   it('loads durable audit entries by source run after localStorage is cleared', async () => {
     const taskStore = useTaskStore()
 
@@ -967,6 +1020,56 @@ describe('AI action command substrate', () => {
     expect(memoryStore.entities).toEqual([])
   })
 
+  it('refuses memory rollback after unrelated memory changed later', async () => {
+    const taskStore = useTaskStore()
+    const memoryStore = createMemoryCommandStore()
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Remember one preference',
+      sourceRunId: 'run-memory-divergence',
+      sourceMessageId: 'msg-memory-divergence',
+      dataUsed: {},
+      commands: [{
+        id: 'cmd-memory-divergence',
+        kind: 'memory.patch',
+        patch: {
+          entityType: 'preference',
+          entityId: 'planning-style',
+          operation: 'set',
+          field: 'weeklyPlanningStyle',
+          value: 'compact',
+          confidence: 0.9,
+          source: 'model_inference',
+        },
+      }],
+      tasks: taskStore.tasks,
+      memoryEntities: memoryStore.entities,
+    })
+    const result = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-memory-divergence'],
+      taskStore,
+      memoryStore,
+    })
+    memoryStore.entities.push({
+      entityKey: 'preference:unrelated-later',
+      entityType: 'preference',
+      displayName: 'Unrelated later preference',
+      facts: { theme: 'dark' },
+      corrections: [],
+      confidence: 1,
+      completenessScore: 1,
+      askCount: 0,
+      lastAnsweredAt: new Date().toISOString(),
+      reinforcementCount: 1,
+    })
+
+    await expect(rollbackAICommandBatch(result.rollbackPointer, {
+      taskStore,
+      memoryStore,
+    })).rejects.toThrow('memory changed after this AI action')
+
+    expect(memoryStore.entities).toHaveLength(2)
+  })
+
   it('applies and rolls back AI recommendation feedback through the memory store', async () => {
     const taskStore = useTaskStore()
     const memoryStore = createMemoryCommandStore()
@@ -1220,6 +1323,54 @@ describe('AI action command substrate', () => {
     await rollbackAICommandBatch(result.rollbackPointer, { taskStore, timerStore })
     expect(timerStore.stopTimer).toHaveBeenCalled()
     expect(timerStore.currentSession).toBeNull()
+  })
+
+  it('refuses timer rollback when a different session started later', async () => {
+    const taskStore = useTaskStore()
+    const task = await taskStore.createTask({ title: 'First AI focus' })
+    const laterTask = await taskStore.createTask({ title: 'Later manual focus' })
+    const timerStore = {
+      currentSession: null as PomodoroSession | null,
+      isTimerActive: false,
+      currentTaskName: null as string | null,
+      startTimer: vi.fn(async (taskId: string, duration: number, isBreak: boolean = false) => {
+        timerStore.currentSession = {
+          id: `session-${taskId}`,
+          taskId,
+          startTime: new Date('2026-08-30T09:00:00Z'),
+          duration,
+          remainingTime: duration,
+          isActive: true,
+          isPaused: false,
+          isBreak,
+        }
+        timerStore.isTimerActive = true
+      }),
+      stopTimer: vi.fn(async () => {
+        timerStore.currentSession = null
+        timerStore.isTimerActive = false
+      }),
+    }
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Start first focus',
+      sourceRunId: 'run-focus-divergence',
+      sourceMessageId: 'msg-focus-divergence',
+      dataUsed: {},
+      commands: [{ id: 'cmd-focus-divergence', kind: 'focus.timer.start', taskId: task.id, durationMinutes: 25 }],
+      tasks: taskStore.tasks,
+    })
+    const result = await applyAICommandBatch(batch, {
+      selectedCommandIds: ['cmd-focus-divergence'],
+      taskStore,
+      timerStore,
+    })
+    await timerStore.startTimer(laterTask.id, 900, false)
+
+    await expect(rollbackAICommandBatch(result.rollbackPointer, {
+      taskStore,
+      timerStore,
+    })).rejects.toThrow('timer changed after this AI action')
+    expect(timerStore.currentSession?.taskId).toBe(laterTask.id)
   })
 
   it('applies and rolls back AI focus timer stops through the command substrate', async () => {

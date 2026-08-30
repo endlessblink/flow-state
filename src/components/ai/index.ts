@@ -5,4 +5,5 @@
  */
 
 export { default as AIChatPanel } from './AIChatPanel.vue'
+export { default as AICommandCenterCard } from './AICommandCenterCard.vue'
 export { default as ChatMessage } from './ChatMessage.vue'

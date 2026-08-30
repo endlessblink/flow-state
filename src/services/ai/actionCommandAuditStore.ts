@@ -3,7 +3,7 @@ import type { CanvasGroup } from '@/types/canvas'
 import type { AIContextEntity, AIMemorySnapshot, AIParameterBelief, AIRecommendationFeedback } from '@/types/aiMemory'
 import type { Lane, Task } from '@/types/tasks'
 import type { PomodoroSession } from '@/stores/timer'
-import type { AICommandAuditEntry } from './actionCommands'
+import type { AICommandAuditEntry, AppliedAICommand } from './actionCommands'
 
 export const AI_COMMAND_AUDIT_KEY = 'flowstate-ai-command-audit-trail'
 export const AI_COMMAND_ROLLBACK_KEY = 'flowstate-ai-command-rollback-snapshots'
@@ -19,6 +19,7 @@ export type AICommandAuditQuery = {
 }
 
 export type AICommandRollbackSnapshot = {
+  rollbackVersion: 2
   rollbackPointer: string
   batchId: string
   createdAt: string
@@ -26,13 +27,21 @@ export type AICommandRollbackSnapshot = {
   lanesBefore?: Lane[]
   canvasGroupsBefore?: CanvasGroup[]
   timerBefore?: PomodoroSession | null
+  timerAfter?: PomodoroSession | null
   memoryBefore?: {
     contextEntities?: AIContextEntity[]
     recommendationFeedback?: AIRecommendationFeedback[]
     parameterBeliefs?: AIParameterBelief[]
     memorySnapshots?: AIMemorySnapshot[]
   }
+  memoryAfter?: {
+    contextEntities?: AIContextEntity[]
+    recommendationFeedback?: AIRecommendationFeedback[]
+    parameterBeliefs?: AIParameterBelief[]
+    memorySnapshots?: AIMemorySnapshot[]
+  }
   appliedEntityIds: string[]
+  appliedCommands: AppliedAICommand[]
 }
 
 class AICommandAuditDatabase extends Dexie {
@@ -103,6 +112,7 @@ function persistLocalAuditEntry(entry: AICommandAuditEntry): void {
 
 function persistLocalRollbackSnapshot(snapshot: AICommandRollbackSnapshot): void {
   const snapshots = readJsonArray<AICommandRollbackSnapshot>(AI_COMMAND_ROLLBACK_KEY)
+    .filter(existing => existing.rollbackPointer !== snapshot.rollbackPointer)
   snapshots.unshift(snapshot)
   writeJsonArray(AI_COMMAND_ROLLBACK_KEY, snapshots.slice(0, MAX_ROLLBACK_SNAPSHOTS))
 }

@@ -3690,13 +3690,15 @@ describe("AI sidebar-first desktop experience", () => {
     await flushPromises();
     await nextTick();
 
-    expect(
-      taskStore.tasks.filter(
-        (task) =>
-          task.parentTaskId === "task-renewal" &&
-          task.title === "Follow up: Send renewal proposal to Amit",
-      ),
-    ).toHaveLength(2);
+    await vi.waitFor(() => {
+      expect(
+        taskStore.tasks.filter(
+          (task) =>
+            task.parentTaskId === "task-renewal" &&
+            task.title === "Follow up: Send renewal proposal to Amit",
+        ),
+      ).toHaveLength(2);
+    });
     expect(buildPreviewSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         sourceMessageId: "msg-weekly-followup-duplicate-override",
@@ -5079,13 +5081,16 @@ describe("AI sidebar-first desktop experience", () => {
     expect(wrapper.text()).toContain("Lanes applied");
   });
 
-  it("applies day-plan cards through command batches instead of undo bulk updates", async () => {
+  it("previews day-plan command batches before applying the selected changes", async () => {
     const taskStore = useTaskStore();
     const buildPreviewSpy = vi.spyOn(
       actionCommands,
       "buildAICommandBatchPreview",
     );
     const applyBatchSpy = vi.spyOn(actionCommands, "applyAICommandBatch");
+    const loadAuditTrailSpy = vi
+      .spyOn(actionCommands, "loadAICommandAuditTrail")
+      .mockResolvedValue([]);
     const commandTaskUpdateSpy = vi.spyOn(taskStore, "updateTask");
     taskStore._rawTasks.push({
       id: "task-day-plan-command",
@@ -5154,7 +5159,25 @@ describe("AI sidebar-first desktop experience", () => {
         ],
       }),
     );
-    expect(applyBatchSpy).toHaveBeenCalledWith(
+    expect(wrapper.get('[data-testid="ai-command-center"]').text()).toContain(
+      "AI day plan",
+    );
+    expect(loadAuditTrailSpy).toHaveBeenCalledWith({
+      sourceMessageId: "msg-day-plan-command",
+      limit: 5,
+    });
+    expect(wrapper.text()).toContain("unblocks command safety");
+    expect(applyBatchSpy).not.toHaveBeenCalled();
+    expect(commandTaskUpdateSpy).not.toHaveBeenCalled();
+    expect(
+      taskStore.tasks.find((task) => task.id === "task-day-plan-command")
+        ?.dueDate,
+    ).toBe("");
+
+    await wrapper.get('[data-testid="ai-command-apply"]').trigger("click");
+
+    await vi.waitFor(() => {
+      expect(applyBatchSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         commands: [expect.objectContaining({ kind: "task.update" })],
       }),
@@ -5162,24 +5185,95 @@ describe("AI sidebar-first desktop experience", () => {
         selectedCommandIds: expect.any(Array),
         taskStore,
       }),
-    );
-    expect(commandTaskUpdateSpy).toHaveBeenCalledWith(
-      "task-day-plan-command",
-      expect.objectContaining({
-        dueDate: expect.any(String),
-      }),
-    );
-    expect(
-      taskStore.tasks.find((task) => task.id === "task-day-plan-command")
-        ?.dueDate,
-    ).toEqual(expect.any(String));
-    // TASK-1977: the confirmation appears only after applyAICommandBatch has
-    // written its durable audit + rollback snapshot to IndexedDB. That settles
-    // on a macrotask, which flushPromises()/nextTick() do not wait for, so this
-    // assertion has to poll rather than assume a microtask flush is enough.
+      );
+    });
+    await vi.waitFor(() => {
+      expect(commandTaskUpdateSpy).toHaveBeenCalledWith(
+        "task-day-plan-command",
+        expect.objectContaining({
+          dueDate: expect.any(String),
+        }),
+      );
+      expect(
+        taskStore.tasks.find((task) => task.id === "task-day-plan-command")
+          ?.dueDate,
+      ).toEqual(expect.any(String));
+    });
     await vi.waitFor(() => {
       expect(wrapper.text()).toContain("Plan applied");
     });
+  });
+
+  it("preserves reviewed day-plan selections when apply fails and remains retryable", async () => {
+    const taskStore = useTaskStore();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(actionCommands, "applyAICommandBatch").mockRejectedValueOnce(
+      new Error("Connection lost during apply"),
+    );
+    for (const [index, title] of ["First planned task", "Rejected planned task"].entries()) {
+      taskStore._rawTasks.push({
+        id: `task-day-plan-failure-${index}`,
+        title,
+        description: "",
+        status: "todo",
+        priority: "high",
+        progress: 0,
+        completedPomodoros: 0,
+        subtasks: [],
+        dueDate: "",
+        createdAt: new Date("2026-08-30T08:00:00Z"),
+        updatedAt: new Date("2026-08-30T08:00:00Z"),
+      } as Task);
+    }
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          id: "msg-day-plan-failure",
+          role: "assistant",
+          content: "Review this plan.",
+          timestamp: Date.now(),
+          metadata: {
+            cardGroups: {
+              kind: "day_plan",
+              total: 2,
+              groups: [{
+                name: "Now",
+                tasks: taskStore.tasks.map((task) => ({
+                  id: task.id,
+                  title: task.title,
+                  status: task.status,
+                  priority: task.priority,
+                  reason: "fits today",
+                })),
+              }],
+            },
+          },
+        },
+      },
+      global: { stubs: { TaskQuickEditPopover: true } },
+    });
+
+    await wrapper.get(".day-plan-apply-btn").trigger("click");
+    await flushPromises();
+    const rejectButtons = wrapper.findAll('[data-testid^="ai-command-reject-"]');
+    expect(rejectButtons).toHaveLength(2);
+    await rejectButtons[1].trigger("click");
+    expect(wrapper.text()).toContain("1 of 2 selected");
+
+    await wrapper.get('[data-testid="ai-command-apply"]').trigger("click");
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("Connection lost during apply");
+    });
+
+    expect(wrapper.text()).toContain("1 of 2 selected");
+    expect(rejectButtons[1].text()).toContain("Restore");
+    expect(wrapper.get('[data-testid="ai-command-retry-apply"]').exists()).toBe(true);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[ChatMessage] Apply command-center proposal failed:",
+      expect.any(Error),
+    );
+    errorSpy.mockRestore();
   });
 
   it("persists broad inline card postponement feedback outside weekly plans", async () => {
@@ -5286,20 +5380,22 @@ describe("AI sidebar-first desktop experience", () => {
         selectedCommandIds: expect.any(Array),
       }),
     );
-    expect(supabaseDbMocks.recordAIRecommendationFeedback).toHaveBeenCalledWith(
-      expect.objectContaining({
-        recommendationId: "inline_day_plan_task-broad-alpha",
-        taskId: "task-broad-alpha",
-        entityKey: "project:ai-planner",
-        action: "postpone",
-        reasonCategory: "low_energy",
-        sourceMessageId: "msg-broad-inline-feedback",
-        outcomeSignals: expect.objectContaining({
-          cardKind: "day_plan",
-          inlineCard: true,
+    await vi.waitFor(() => {
+      expect(supabaseDbMocks.recordAIRecommendationFeedback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recommendationId: "inline_day_plan_task-broad-alpha",
+          taskId: "task-broad-alpha",
+          entityKey: "project:ai-planner",
+          action: "postpone",
+          reasonCategory: "low_energy",
+          sourceMessageId: "msg-broad-inline-feedback",
+          outcomeSignals: expect.objectContaining({
+            cardKind: "day_plan",
+            inlineCard: true,
+          }),
         }),
-      }),
-    );
+      );
+    });
     expect(
       supabaseDbMocks.recordAIRecommendationFeedback.mock.calls[0][0].revisitAt,
     ).toEqual(expect.any(String));
@@ -5415,17 +5511,19 @@ describe("AI sidebar-first desktop experience", () => {
     await flushPromises();
     await nextTick();
 
-    expect(supabaseDbMocks.recordAIRecommendationFeedback).toHaveBeenCalledWith(
-      expect.objectContaining({
-        generatedPlanId: "plan-feedback-1",
-        recommendationId: "rec-feedback-1",
-        taskId: "task-feedback-plan",
-        entityKey: "task:task-feedback-plan",
-        action: "postpone",
-        reasonCategory: "needs_more_info",
-        sourceMessageId: "msg-feedback-plan",
-      }),
-    );
+    await vi.waitFor(() => {
+      expect(supabaseDbMocks.recordAIRecommendationFeedback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          generatedPlanId: "plan-feedback-1",
+          recommendationId: "rec-feedback-1",
+          taskId: "task-feedback-plan",
+          entityKey: "task:task-feedback-plan",
+          action: "postpone",
+          reasonCategory: "needs_more_info",
+          sourceMessageId: "msg-feedback-plan",
+        }),
+      );
+    });
     const savedPayload =
       supabaseDbMocks.recordAIRecommendationFeedback.mock.calls[0][0];
     expect(savedPayload.outcomeSignals).toMatchObject({

@@ -24,6 +24,7 @@ import {
   repairStaleCanonicalPreviewFailures,
   recoverStaleSyncing,
   resolveConflictRetry,
+  setMetadata,
 } from '@/services/offline/writeQueueDB'
 
 const receipt: CanonicalTaskPatchReceipt = {
@@ -475,6 +476,7 @@ describe('canonical write queue durability', () => {
   })
 
   it('requeues legacy canonical-preview failures once without retrying unrelated permanent errors', async () => {
+    await setMetadata('canonical-preview-priority-repair-v1', true)
     const repairable = await getWriteQueueDB().operations.add({
       entityType: 'task', operation: 'update', entityId: 'task-repairable', payload: { priority: 'immediate' },
       status: 'failed', retryCount: 2, createdAt: Date.now(), lastError: 'invalid_canonical_preview',

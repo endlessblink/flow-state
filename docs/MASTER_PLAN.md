@@ -10,7 +10,7 @@
 
 **Regression evidence**: The focused filter unit suite passes 103/103; the canonical write-queue suite passes 27/27, including the two repairable failure classes, an unrelated permanent failure, and the once-only marker; authenticated Board filter E2E passes 3/3 with a real pointer hitbox, filtering, clearing, and Canvas projection. A managed-desktop capture of the real installed profile shows exactly two failed updates, both `invalid_canonical_preview`, with three newer intents blocked behind them; this confirms the live repro matches the repaired failure class.
 
-**Failure-class matrix**: Data shape and queue ordering checked; renderer filter state checked; Electron main/preload and localhost sidecar are healthy and outside the filter fix; Supabase authenticated convergence after the repaired queue drains remains to be read back; updater/runtime and stale-process state remain open until 1.4.487 is published and run in the installed profile.
+**Failure-class matrix**: Data shape and queue ordering checked; renderer filter state checked; Electron main/preload and localhost sidecar are healthy and outside the filter fix. Installed 1.4.487 read-back showed the legacy v1 repair marker was already present, so the restored v1 pass correctly did not rerun and the queue remained blocked. The repair generation is now v2, with a regression proving a prior v1 marker cannot suppress the new recovery. Supabase authenticated convergence remains open until 1.4.488 drains the real installed-profile queue.
 
 ### BUG-2062: Permanently clear quarantined sync errors without deleting recoverable work (🔄 IN PROGRESS)
 

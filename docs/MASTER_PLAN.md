@@ -623,7 +623,7 @@ The R10 offline-create E2E now passes end-to-end with the local canonical schema
 | Order | Lane                         | Task      | Depends on                      | Outcome                                                                                                                  |
 | ----- | ---------------------------- | --------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | 1     | Safety and command substrate | TASK-1855 | TASK-1854                       | Bot actions become previewable, idempotent, duplicate-aware, auditable, and undoable instead of direct hidden mutations. |
-| 2     | AI command center            | TASK-1856 | TASK-1855                       | The chat/sidebar becomes an action surface with suggestions, diffs, apply/edit/reject, and visible agent progress.       |
+| 2     | AI command center ✅         | TASK-1856 | TASK-1855                       | The chat/sidebar becomes an action surface with suggestions, diffs, apply/edit/reject, and visible agent progress.       |
 | 3     | Intake and organization      | TASK-1857 | TASK-1856                       | Messy captures, inbox tasks, and canvas notes can be clustered, deduped, decomposed, and turned into tasks/lanes.        |
 | 4     | Daily/weekly planning agent  | TASK-1858 | TASK-1856, TASK-1857            | Bot proposes day/week plans using tasks, lanes, calendar, focus capacity, memory, and goals.                             |
 | 5     | Next-best-action engine      | TASK-1859 | TASK-1858                       | "What should I do now?" becomes context-aware and personalized instead of a static priority list.                        |
@@ -1733,13 +1733,13 @@ _Original plan below._
 
 **Next implementation cursor**:
 
-- Start TASK-1856 next. Build the command-center UI around the real converted consumers and command audit records from TASK-1855 rather than a parallel proposal abstraction.
-- The command-center surface should render/edit/reject selected commands from `buildAICommandBatchPreview`, show command diffs and `AIActionIdentity`/duplicate status, expose audit entries from `loadAICommandAuditTrail()`, and reuse rollback pointers for undo.
-- Preserve TASK-1855 boundaries: manual user writes remain unchanged; new AI write consumers must add a typed command family or route through an existing one before mutating stores/services.
+- Start TASK-1857 next. Build intake and messy-work organization on the completed command-center surface instead of adding a parallel proposal UI.
+- Reuse the existing preview/edit/reject/apply, command identity, audit, rollback, progress, and grounded-source controls for every organizer proposal.
+- Preserve TASK-1855/TASK-1856 boundaries: manual user writes remain unchanged; new AI write consumers must add a typed command family or route through an existing one before mutating stores/services.
 
-### TASK-1856: AI command center and agent progress UI (🔄 IN PROGRESS)
+### ~~TASK-1856: AI command center and agent progress UI~~ (✅ DONE)
 
-**Priority**: P0-HIGH | **Status**: 🔄 IN PROGRESS (started 2026-08-30) | **Depends on**: TASK-1855
+**Priority**: P0-HIGH | **Status**: ✅ DONE (started and completed 2026-08-30) | **Depends on**: TASK-1855
 
 **Why**: The bot needs a consistent visible surface for suggestions, command previews, step progress, confidence, "why", apply/edit/reject controls, and failure recovery. Otherwise each feature becomes a different ad hoc card.
 
@@ -1758,7 +1758,25 @@ _Original plan below._
 
 **Progress**:
 
-- 2026-08-30: Added the first shared command-center surface around the real day-plan command-batch consumer. Reviewing a plan now shows grounded sources, before/after diffs, command identity and duplicate status, per-command edit/reject controls, explicit approval for high-impact changes, six-stage progress, recoverable failures, persisted audit history, and rollback actions before any task mutation. RED/green regression coverage proves preview does not mutate tasks and Apply uses only the selected command set. The full suite passes 4,757 tests with 6 intentional skips; type-check and package validation pass; changed-source ESLint reports zero errors; and independent review returned SHIP after scoped rollback, partial-failure compensation, legacy-audit, and retry-state blockers were repaired. Electron updater 1.4.491 is deployed: the public manifest and both Linux artifacts return HTTP 200 with manifest-matching sizes, and local/VPS SHA-512 hashes match. A disposable packaged 1.4.491 process stayed healthy for the full probe and started its bundled localhost sidecar, but KDE exposed no distinguishable second window beside the active 1.4.490 session. Final installed 1.4.491 visual confirmation remains pending a safe restart of the existing Electron app; the live profile, tasks, and timer were not disturbed.
+- 2026-08-30: Completed the shared command-center surface around the real day-plan command-batch consumer. Reviewing a plan shows grounded sources, live before/after diffs, command identity and duplicate status, per-command date/title edit and reject controls, explicit approval for high-impact changes, six-stage progress, recoverable failures, persisted audit history, and scoped rollback actions before any task mutation. RED/green unit coverage includes preview-only behavior, selected apply, retry-state preservation, legacy undo refusal, partial-failure compensation, later manual-edit protection, memory/timer divergence refusal, editable day-plan dates, and reactive edited diffs. A permanent synthetic Playwright lane renders the real sidebar and command center, edits a proposed date, verifies the visible diff updates, and proves stored task dates remain unchanged because Apply is never clicked. Visual review confirms all six stages, grounded rationale, matching editor/diff values, edit/reject controls, and Apply-selected state with no readability defect. The full suite passes 4,758 tests with 6 intentional skips; focused command-center/substrate/sidebar coverage passes 118/118; type-check, changed-source ESLint, Electron build, and package validation pass; and independent review returned SHIP. Production updater 1.4.492 serves both Linux artifacts with HTTP 200 and manifest-matching sizes; local and VPS SHA-512 hashes match. Authenticated Electron 1.4.492 reports sidecar health 200, sync-capable initialized auth, assistant context 200, no diagnostic failures or warnings, and an inactive timer. Real task data was never sent to an external model during acceptance verification.
+
+**Exact failure modes fixed**: FlowState had no shared user-visible command-center surface for command previews, per-command selection, progress, approval, failure recovery, audit, and rollback; day-plan review initially exposed Reject but not Edit for date-only commands; and after date editing was added, the visible `After` diff initially stayed stale instead of reflecting the command that would be applied.
+
+**Explicitly not covered**: Acceptance did not submit the authenticated user's real task inventory to an external model and did not click Apply against production data. The synthetic E2E covers the real renderer and command substrate without disclosure or mutation. Later intake, planning, proactive, calendar, and canvas consumers remain scoped to TASK-1857 through TASK-1864.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Real sidebar renders a day-plan proposal; synthetic E2E opens review, edits a date, sees the diff update, and leaves stored dates unchanged before Apply | Yes |
+| Data shape / persisted row shape | Yes | Command tests cover selected apply, audit/rollback snapshots, partial compensation, later manual edits, and legacy rollback refusal | Yes |
+| Renderer store/state | Yes | Component and sidebar tests plus visual E2E cover grounded sources, six progress stages, live diffs, edit/reject, approval, retry, audit, and undo state | Yes |
+| Electron main/preload bridge | Yes | Electron build and package validation pass; authenticated 1.4.492 runtime initializes against the real profile | No bridge change needed |
+| Localhost sidecar endpoint | Yes | Authenticated 1.4.492 health and assistant-context boundaries return 200 with no failures or warnings | No sidecar change needed |
+| KDE polling/control path | Yes | Packaged 1.4.492 opens visibly with green sync state; timer remains inactive | No KDE change needed |
+| Supabase persistence/realtime | Boundary preserved | No production Apply was performed; command apply/rollback persistence is covered by automated tests | Production mutation intentionally not covered |
+| Updater/runtime version | Yes | Public manifest and authenticated runtime both report 1.4.492; public artifact sizes and local/VPS hashes match | Yes |
+| Stale live process/cache state | Yes | Prior verification runtime exited, then 1.4.492 launched cleanly against the real profile with initialized sync-capable auth | Yes |
 
 ### TASK-1857: Intake and messy-work organizer agent (📋 PLANNED)
 

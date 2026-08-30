@@ -979,6 +979,21 @@ describe('FilterControls', () => {
     expect(wrapper.findAll('[role="combobox"]')[0].attributes('aria-label')).toBe('Projects')
   })
 
+  it('clears parent-owned priority and recurring filters', async () => {
+    const wrapper = mountWithPlugins(FilterControls, {
+      props: {
+        priorityFilter: 'high',
+        recurringFilter: 'recurring',
+        showRecurringFilter: true,
+      },
+    })
+
+    await wrapper.find('.clear-filters-btn').trigger('click')
+
+    expect(wrapper.emitted('update:priorityFilter')).toEqual([['']])
+    expect(wrapper.emitted('update:recurringFilter')).toEqual([['all']])
+  })
+
   it('72. renders all filter control slots', () => {
     const wrapper = mountWithPlugins(FilterControls)
     const filterControls = wrapper.findAll('.filter-control')

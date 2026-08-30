@@ -333,6 +333,33 @@ export async function updateOperation(
   await db.operations.update(id, updates);
 }
 
+/** Requeue the legacy permanent errors made repairable by the current
+ * canonical-priority validator. The marker prevents repeated startup loops. */
+export async function repairStaleCanonicalPreviewFailures(): Promise<number> {
+  const marker = "canonical-preview-priority-repair-v1";
+  if (await getMetadata<boolean>(marker)) return 0;
+
+  const table = getWriteQueueDB().operations;
+  const candidates = await table.where("status").equals("failed").toArray();
+  let repaired = 0;
+  for (const operation of candidates) {
+    if (!operation.id || !operation.lastError) continue;
+    const error = operation.lastError.toLowerCase();
+    if (
+      !error.includes("invalid_canonical_preview") &&
+      !error.includes("invalid_persisted_canonical_preview")
+    ) continue;
+    await table.where("id").equals(operation.id).modify((current) => {
+      current.status = "pending";
+      delete current.nextRetryAt;
+      delete current.lastError;
+    });
+    repaired++;
+  }
+  await setMetadata(marker, true);
+  return repaired;
+}
+
 /**
  * Mark an operation as syncing (in progress)
  */

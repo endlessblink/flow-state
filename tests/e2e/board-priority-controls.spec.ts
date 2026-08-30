@@ -70,6 +70,9 @@ test.describe('Board priority and recurring filters', () => {
     await page.locator('.filter-toggle').click()
     await page.waitForTimeout(500)
     const prioritySelect = page.getByRole('combobox', { name: 'Priority', exact: true })
+    const priorityHitbox = await prioritySelect.boundingBox()
+    expect(priorityHitbox?.width).toBeGreaterThanOrEqual(32)
+    expect(priorityHitbox?.height).toBeGreaterThanOrEqual(32)
     await prioritySelect.click()
     await expect(page.getByRole('option', { name: 'Immediate', exact: true })).toBeVisible()
     await expect(page.getByRole('option', { name: 'Relaxed', exact: true })).toBeVisible()
@@ -84,6 +87,13 @@ test.describe('Board priority and recurring filters', () => {
     await page.getByRole('option', { name: 'Recurring Only', exact: true }).click()
     await expect(page.locator(`[data-task-id="${TASKS[2].id}"]`)).toBeVisible()
     await expect(page.locator(`[data-task-id="${TASKS[1].id}"]`)).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Clear filters', exact: true }).click()
+    await expect(prioritySelect).toHaveAttribute('aria-label', 'Priority')
+    await expect(page.getByRole('combobox', { name: 'Recurring tasks', exact: true })).toHaveAttribute('aria-expanded', 'false')
+    for (const task of TASKS) {
+      await expect(page.locator(`[data-task-id="${task.id}"]`)).toBeVisible()
+    }
   })
 
   test('opens every compact Board filter control', async ({ page }) => {

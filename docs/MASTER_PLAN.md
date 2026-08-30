@@ -1,5 +1,17 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2063: Electron Board filters do not open and stale canonical sync failures block newer edits (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-30)
+
+**Exact failure modes**: Compact Board filter controls rendered a zero-width interactive target, so pointer clicks could not open them; clearing filters also left the parent-owned priority and recurring filters active. Separately, the installed authenticated Electron 1.4.486 runtime had two failed queued task updates and three newer pending updates. Queue ordering correctly prevented the newer same-task updates from overtaking the failed predecessor, but the one-time startup recovery for legacy `invalid_canonical_preview` and `invalid_persisted_canonical_preview` failures had disappeared from current source.
+
+**Repair**: Compact filters retain a full-size select hitbox and Clear resets both parent-owned filters. Startup requeues only the two legacy canonical-preview failure classes once, preserving operation identity and payload while leaving unrelated permanent failures untouched.
+
+**Regression evidence**: The focused filter unit suite passes 103/103; the canonical write-queue suite passes 27/27, including the two repairable failure classes, an unrelated permanent failure, and the once-only marker; authenticated Board filter E2E passes 3/3 with a real pointer hitbox, filtering, clearing, and Canvas projection. A managed-desktop capture of the real installed profile shows exactly two failed updates, both `invalid_canonical_preview`, with three newer intents blocked behind them; this confirms the live repro matches the repaired failure class.
+
+**Failure-class matrix**: Data shape and queue ordering checked; renderer filter state checked; Electron main/preload and localhost sidecar are healthy and outside the filter fix; Supabase authenticated convergence after the repaired queue drains remains to be read back; updater/runtime and stale-process state remain open until 1.4.487 is published and run in the installed profile.
+
 ### BUG-2062: Permanently clear quarantined sync errors without deleting recoverable work (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-27)

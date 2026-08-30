@@ -115,6 +115,7 @@ import type {
   getStats as _getStats,
   getFailedOperations as _getFailedOperations,
   recoverStaleSyncing as _recoverStaleSyncing,
+  repairStaleCanonicalPreviewFailures as _repairStaleCanonicalPreviewFailures,
 } from '@/services/offline/writeQueueDB'
 
 // Wrapped functions that handle missing IndexedDB gracefully
@@ -200,6 +201,11 @@ const getFailedOperations: typeof _getFailedOperations = async () => {
 const recoverStaleSyncing: typeof _recoverStaleSyncing = async maxAgeMs => {
   const mod = await getWriteQueueModule()
   return mod ? mod.recoverStaleSyncing(maxAgeMs) : 0
+}
+
+const repairStaleCanonicalPreviewFailures: typeof _repairStaleCanonicalPreviewFailures = async () => {
+  const mod = await getWriteQueueModule()
+  return mod ? mod.repairStaleCanonicalPreviewFailures() : 0
 }
 
 const recoverRlsPolicyFailures = async (): Promise<number> => {
@@ -299,6 +305,7 @@ let consecutiveTransientFailures = 0
 // while pending operations exist — a dead session under a signed-in shell must
 // not silently strand the queue.
 let consecutiveAuthGateSkips = 0
+let staleCanonicalPreviewRepairChecked = false
 const AUTH_GATE_SURFACE_AFTER = 2
 const TRANSIENT_PAUSE_THRESHOLD = 5
 const MIN_RATE_LIMIT_COOLDOWN_MS = 30_000
@@ -1143,6 +1150,15 @@ async function runProcessQueue(
   consecutiveAuthGateSkips = 0
 
   try {
+    if (!staleCanonicalPreviewRepairChecked) {
+      try {
+        await repairStaleCanonicalPreviewFailures()
+        staleCanonicalPreviewRepairChecked = true
+      } catch (error) {
+        console.warn('[SYNC] Failed to repair stale canonical-preview operations:', error)
+      }
+    }
+
     // BUG-1301: Recover operations stuck in 'syncing' from a previous session crash.
     // These ops were marked 'syncing' but never completed — reset them to 'pending'
     // so they can be retried. Without this, they're stuck forever because

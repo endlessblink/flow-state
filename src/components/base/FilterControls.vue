@@ -8,7 +8,6 @@
         :model-value="activeProjectId || ''"
         :options="projectOptions"
         placeholder="All Projects"
-        :compact="props.compact"
         @update:model-value="updateProjectFilter"
       />
     </div>
@@ -21,7 +20,6 @@
         :model-value="activeSmartView || ''"
         :options="smartViewOptions"
         placeholder="All Tasks"
-        :compact="props.compact"
         @update:model-value="updateSmartView"
       />
     </div>
@@ -34,44 +32,55 @@
         :model-value="activeStatusFilter || ''"
         :options="statusOptions"
         placeholder="All Status"
-        :compact="props.compact"
         @update:model-value="updateStatusFilter"
       />
     </div>
 
-    <div v-if="props.priorityFilter !== undefined" class="filter-control" :class="{ 'filter-control--active': Boolean(props.priorityFilter) }" title="Priority">
+    <div
+      v-if="props.priorityFilter !== undefined"
+      class="filter-control"
+      :class="{ 'filter-control--active': Boolean(props.priorityFilter) }"
+      title="Priority"
+    >
       <Flag :size="16" class="filter-icon" aria-hidden="true" />
       <CustomSelect
         aria-label="Priority"
         :model-value="props.priorityFilter"
         :options="priorityOptions"
         placeholder="All Priorities"
-        :compact="props.compact"
         @update:model-value="$emit('update:priorityFilter', String($event))"
       />
     </div>
 
-    <div v-if="props.showRecurringFilter" class="filter-control" :class="{ 'filter-control--active': props.recurringFilter && props.recurringFilter !== 'all' }" title="Recurring tasks">
+    <div
+      v-if="props.showRecurringFilter"
+      class="filter-control"
+      :class="{ 'filter-control--active': props.recurringFilter && props.recurringFilter !== 'all' }"
+      title="Recurring tasks"
+    >
       <Repeat2 :size="16" class="filter-icon" aria-hidden="true" />
       <CustomSelect
         aria-label="Recurring tasks"
         :model-value="props.recurringFilter || 'all'"
         :options="recurringOptions"
         placeholder="All Tasks"
-        :compact="props.compact"
         @update:model-value="$emit('update:recurringFilter', String($event))"
       />
     </div>
 
     <!-- Assignment Filter (workspace only) -->
-    <div v-if="!isPersonalWorkspace" class="filter-control" :class="{ 'filter-control--active': assignmentFilterMode !== 'all' }" title="Assignment">
+    <div
+      v-if="!isPersonalWorkspace"
+      class="filter-control"
+      :class="{ 'filter-control--active': assignmentFilterMode !== 'all' }"
+      title="Assignment"
+    >
       <Users :size="16" class="filter-icon" aria-hidden="true" />
       <CustomSelect
         aria-label="Assignment"
         :model-value="assignmentFilterMode"
         :options="assignmentOptions"
         placeholder="All Tasks"
-        :compact="props.compact"
         @update:model-value="updateAssignmentFilter"
       />
     </div>
@@ -111,7 +120,7 @@ const props = defineProps<{
   compact?: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (event: 'update:priorityFilter', value: string): void
   (event: 'update:recurringFilter', value: string): void
 }>()
@@ -193,6 +202,8 @@ const clearAllFilters = () => {
   taskStore.setSmartView(null)
   taskStore.setActiveStatusFilter(null)
   setFilterMode('all')
+  emit('update:priorityFilter', '')
+  emit('update:recurringFilter', 'all')
 }
 </script>
 
@@ -270,15 +281,12 @@ const clearAllFilters = () => {
 .filter-controls--compact :deep(.custom-select) {
   position: absolute;
   inset: 0;
-}
-
-.filter-controls--compact :deep(.custom-select) {
-  position: relative;
   z-index: 1;
 }
 
 .filter-controls--compact :deep(.select-trigger) {
   justify-content: center;
+  width: 100%;
   height: 34px;
   padding: 0 !important;
   background: transparent;

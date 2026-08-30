@@ -93,6 +93,7 @@ const writeQueueMocks = vi.hoisted(() => ({
   }),
   getFailedOperations: vi.fn().mockResolvedValue([]),
   recoverStaleSyncing: vi.fn().mockResolvedValue(0),
+  repairStaleCanonicalPreviewFailures: vi.fn().mockResolvedValue(0),
   clearFailedOperations: vi.fn().mockResolvedValue(0),
   getOperationsForEntity: vi.fn().mockResolvedValue([]),
   deleteOperation: vi.fn(),
@@ -335,6 +336,7 @@ beforeEach(async () => {
   writeQueueMocks.getFailedOperations.mockResolvedValue([])
   writeQueueMocks.cleanupCompleted.mockResolvedValue(0)
   writeQueueMocks.recoverStaleSyncing.mockResolvedValue(0)
+  writeQueueMocks.repairStaleCanonicalPreviewFailures.mockResolvedValue(0)
   writeQueueMocks.clearFailedOperations.mockResolvedValue(0)
   writeQueueMocks.purgeStaleOperations.mockResolvedValue(undefined)
   writeQueueMocks.enqueueOperation.mockResolvedValue(makeOp())

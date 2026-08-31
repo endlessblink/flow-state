@@ -1,4 +1,4 @@
-import { mount, VueWrapper } from '@vue/test-utils'
+import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -8,6 +8,41 @@ import type { Task } from '@/stores/tasks'
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() })
+}))
+
+const updateTaskWithUndo = vi.fn()
+const getTask = vi.fn()
+const requestSync = vi.fn()
+
+vi.mock('@/stores/tasks', () => ({
+  useTaskStore: () => ({
+    getTask,
+    updateTaskWithUndo,
+    createTaskWithUndo: vi.fn(),
+    doneForNow: vi.fn(),
+    initializeFromDatabase: vi.fn(),
+    startTaskNowWithUndo: vi.fn()
+  })
+}))
+
+vi.mock('@/stores/timer', () => ({
+  useTimerStore: () => ({ settings: { workDuration: 25 }, startTimer: vi.fn() })
+}))
+
+vi.mock('@/stores/canvas', () => ({
+  useCanvasStore: () => ({ requestSync, _rawGroups: [] })
+}))
+
+vi.mock('@/composables/canvas/useSmartGroupMatcher', () => ({
+  findMatchingGroupForDueDate: () => null
+}))
+
+vi.mock('@/composables/canvas/useMoveToCanvasGroup', () => ({
+  useMoveToCanvasGroup: () => ({ moveToGroupWithToast: vi.fn() })
+}))
+
+vi.mock('@/composables/useToast', () => ({
+  useToast: () => ({ showToast: vi.fn() })
 }))
 
 const projectRoot = resolve(__dirname, '../..')
@@ -57,6 +92,9 @@ let wrappers: VueWrapper[] = []
 
 beforeEach(() => {
   setActivePinia(createPinia())
+  vi.clearAllMocks()
+  getTask.mockReturnValue(task)
+  updateTaskWithUndo.mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -66,6 +104,20 @@ afterEach(() => {
 })
 
 describe('TaskContextMenu outside dismissal contract', () => {
+  it('USER REPRO: clicking Mark as Done runs the task completion mutation before the menu is dismissed', async () => {
+    const wrapper = mountMenu()
+    wrappers.push(wrapper)
+
+    const doneButton = document.body.querySelector<HTMLButtonElement>('.menu-item--done')
+    expect(doneButton).toBeTruthy()
+    doneButton?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await flushPromises()
+
+    expect(updateTaskWithUndo).toHaveBeenCalledWith('task-1', { status: 'done' })
+    expect(requestSync).toHaveBeenCalledWith('user:context-menu')
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
   it('dismisses on pointer and contextmenu events, not click-only events', () => {
     const source = readSource('src/components/tasks/TaskContextMenu.vue')
 

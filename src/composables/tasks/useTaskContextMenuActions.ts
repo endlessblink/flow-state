@@ -19,6 +19,12 @@ function flashTaskCard(taskId: string): void {
     window.dispatchEvent(new CustomEvent('task-action-flash', { detail: { taskId } }))
 }
 
+function traceTaskCompletion(phase: string, data: Record<string, unknown> = {}): void {
+    // Electron persists renderer warnings to the local runtime log. A single
+    // string retains the structured fields in that diagnostic boundary.
+    console.warn(`[TaskCompletionTrace] ${JSON.stringify({ phase, ...data })}`)
+}
+
 export function useTaskContextMenuActions(
     props: { task: Task | null; contextTask?: Task | null; selectedCount?: number },
     emit: (event: string, ...args: unknown[]) => void
@@ -318,10 +324,20 @@ export function useTaskContextMenuActions(
         const taskId = currentTask.value?.id
         const isBatch = isBatchOperation.value
 
+        // BUG-2067: The Board menu closes before its asynchronous mutation runs.
+        // Keep a durable renderer trace of each boundary so a visually silent
+        // click can be distinguished from a stale task lookup or failed write.
+        traceTaskCompletion('invoked', {
+            taskId: taskId ?? null,
+            isBatch,
+            visibleStatus: currentTask.value?.status ?? null,
+        })
+
         // BUG-1095: Close menu FIRST to prevent "stuck" menu
         emit('close')
 
         if (isBatch) {
+            traceTaskCompletion('batch-emitted', { taskId: taskId ?? null })
             emit('setStatus', 'done')
         } else if (taskId) {
             // Catalog rows can render ahead of the canonical task snapshot
@@ -344,16 +360,24 @@ export function useTaskContextMenuActions(
                 }
             }
             if (!canonicalTask) {
+                traceTaskCompletion('canonical-missing', { taskId })
                 reportMutationFailure('completed', new Error(`Task update target no longer exists: ${taskId}`))
                 return
             }
             const currentStatus = canonicalTask.status
             const currentRecurrenceRule = getActiveTaskRecurrenceRule(canonicalTask)
 
+            traceTaskCompletion('canonical-resolved', {
+                taskId,
+                currentStatus,
+                recurring: !!currentRecurrenceRule,
+            })
+
             // TASK-1532: Recurring tasks use "done for now" on toggle click
             if (currentStatus !== 'done' && currentRecurrenceRule) {
                 try {
                     await taskStore.doneForNow(taskId)
+                    traceTaskCompletion('recurring-completed', { taskId })
                     canvasStore.requestSync('user:context-menu')
                 } catch (error) {
                     if (isDoneForNowAlreadyCompletedError(error)) {
@@ -383,6 +407,7 @@ export function useTaskContextMenuActions(
             const newStatus = currentStatus === 'done' ? 'todo' : 'done'
             try {
                 await runTaskMutationWithSettling(taskId, () => taskStore.updateTaskWithUndo(taskId, { status: newStatus }))
+                traceTaskCompletion('updated', { taskId, status: newStatus })
                 canvasStore.requestSync('user:context-menu')
             } catch (error) {
                 reportMutationFailure('completed', error)

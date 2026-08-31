@@ -64,9 +64,9 @@ When an offline canonical task update targets a task that no longer exists in th
 
 **Follow-up repair and regression**: A completed Board card now renders its recorded completion date with a completion marker while retaining the original deadline in storage. Component coverage asserts that a completed task with an older due date shows only its completion date.
 
-**Release evidence**: The focused task-store and context-menu suites pass 71/71, the source lint and type-check pass, and the full release gate, Electron package validation, and VPS promotion completed for 1.4.494. The public updater manifest reports 1.4.494 and names the AppImage and Debian artifacts with validated sizes and checksums.
+**Release evidence**: The focused task-store and context-menu suites pass 71/71; the follow-up Board-card regression passes 3/3; source type-check passes; and Electron packaging plus VPS promotion completed for 1.4.496. The public updater manifest reports 1.4.496 and names the AppImage and Debian artifacts with validated sizes and checksums.
 
-**Remaining closeout**: Ship 1.4.496, then verify a fresh installed Electron click on a disposable Board task shows its completion date. The active 1.4.494 desktop session was preserved rather than restarted during the report.
+**Remaining closeout**: Verify a fresh installed Electron click on a disposable Board task shows its completion date. The active 1.4.494 desktop session was preserved rather than restarted during the report.
 
 ### ~~BUG-2065: Canvas grouping leaves visible tasks outside the covered group~~ (✅ DONE)
 

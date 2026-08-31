@@ -17,6 +17,11 @@ import { createMockTask } from '../../factories'
 
 const mockEnqueue = vi.fn().mockResolvedValue({ id: 1, status: 'pending' })
 const mockCacheTasks = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
+const mockTimer = vi.hoisted(() => ({
+  currentTaskId: null as string | null,
+  isTimerActive: false,
+  stopTimer: vi.fn().mockResolvedValue(undefined),
+}))
 const mockAuth = vi.hoisted(() => ({
   user: { id: '00000000-0000-0000-0000-000000000001' } as { id: string } | null,
   isAuthenticated: true,
@@ -98,11 +103,7 @@ vi.mock('@/composables/useGamificationHooks', () => ({
 }))
 
 vi.mock('@/stores/timer', () => ({
-  useTimerStore: () => ({
-    currentTaskId: null,
-    isTimerActive: false,
-    stopTimer: vi.fn().mockResolvedValue(undefined)
-  })
+  useTimerStore: () => mockTimer
 }))
 
 vi.mock('@/composables/useToast', () => ({
@@ -142,6 +143,9 @@ describe('Task Store — CRUD', () => {
     mockSaveTasks.mockResolvedValue(undefined)
     mockDeleteTask.mockResolvedValue(undefined)
     mockPermanentDeleteTask.mockResolvedValue(undefined)
+    mockTimer.currentTaskId = null
+    mockTimer.isTimerActive = false
+    mockTimer.stopTimer.mockResolvedValue(undefined)
     mockAuth.user = { id: '00000000-0000-0000-0000-000000000001' }
     mockAuth.isAuthenticated = true
     localStorage.clear()
@@ -509,6 +513,21 @@ describe('Task Store — CRUD', () => {
       status: 'done',
       dueDate: '2026-07-25',
     })).rejects.toThrow('Task update target no longer exists: missing-task-id')
+  })
+
+  it('rejects completion when the canonical task disappears while stopping its timer', async () => {
+    const store = useTaskStore()
+    const task = await store.createTask({ title: 'Completion refresh race', status: 'todo' })
+    mockTimer.currentTaskId = task.id
+    mockTimer.isTimerActive = true
+    mockTimer.stopTimer.mockImplementationOnce(async () => {
+      const taskIndex = store._rawTasks.findIndex(candidate => candidate.id === task.id)
+      store._rawTasks.splice(taskIndex, 1)
+    })
+
+    await expect(store.updateTask(task.id, { status: 'done' })).rejects.toThrow(
+      `Task update target no longer exists: ${task.id}`
+    )
   })
 
   it('skips the only live recurring guest task in place without creating completion history', async () => {

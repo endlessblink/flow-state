@@ -986,9 +986,10 @@ export function useTaskOperations(
       const freshIndex = _rawTasks.value.findIndex((t) => t.id === taskId);
       if (freshIndex === -1) {
         console.warn(
-          `[updateTask] Task ${taskId.slice(0, 8)} disappeared during async operations — skipping write`,
+          `[updateTask] Task ${taskId.slice(0, 8)} disappeared during async operations`,
         );
-        return;
+        removePendingWrite(taskId);
+        throw new Error(`Task update target no longer exists: ${taskId}`);
       }
       _rawTasks.value[freshIndex] = {
         ...task,

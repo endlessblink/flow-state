@@ -50,6 +50,18 @@
 
 When an offline canonical task update targets a task that no longer exists in the authoritative projection, the sync layer must quarantine it as a permanent failure and the explicit **Discard local changes** action must remove that quarantined local record. Retryable canonical operations must remain intact. Regression coverage must exercise both paths and the real Electron sync-error boundary must be rechecked after release.
 
+### BUG-2067: Board context-menu completion can silently skip after a timer-stop refresh (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-08-31)
+
+**User repro**: Choosing **Mark as Done** from a visible Board card can close the menu without changing the card.
+
+**Exact failure mode**: Completion awaits timer shutdown before its canonical write. If a concurrent refresh replaces the task list during that await, the store sees the task disappear and returns success without persisting or reporting a failure; the existing context-menu retry only runs for the known missing-target error.
+
+**Repair and regression**: Treat that post-await missing canonical task as the existing retryable missing-target error, clear its pending-write marker, and cover a completion whose active timer removes the canonical task during shutdown. The context-menu recovery regression already proves that this error refreshes and retries the visible task mutation.
+
+**Remaining closeout**: Type-check, release guards, Electron package/update verification, a fresh installed Electron click on a disposable task, commit, and push.
+
 ### ~~BUG-2065: Canvas grouping leaves visible tasks outside the covered group~~ (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-08-31) | **Related to**: TASK-1857, TASK-1861

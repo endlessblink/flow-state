@@ -99,6 +99,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dragDiagPath: () => ipcRenderer.invoke('diag:dragLogPath'),
   rendererHeartbeat: (heartbeat: unknown) => ipcRenderer.invoke('diag:rendererHeartbeat', heartbeat),
   runtimeLogPath: () => ipcRenderer.invoke('diag:runtimeLogPath'),
+  appendTaskCompletionDiag: (line: string) => ipcRenderer.invoke('diag:appendTaskCompletion', line),
 })
 
 // Type declaration for the renderer
@@ -146,6 +147,7 @@ declare global {
       dragDiagPath: () => Promise<string>
       rendererHeartbeat: (heartbeat: unknown) => Promise<void>
       runtimeLogPath: () => Promise<string>
+      appendTaskCompletionDiag: (line: string) => Promise<string>
       getLocalApiToken: () => Promise<string>
       onLocalApiTaskMutation: (callback: (mutation: unknown) => void) => void
       offLocalApiTaskMutation: () => void

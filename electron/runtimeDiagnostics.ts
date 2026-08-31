@@ -122,6 +122,10 @@ ipcMain.handle('diag:rendererHeartbeat', (_event, heartbeat: RendererHeartbeat) 
   })
 
   ipcMain.handle('diag:runtimeLogPath', () => logPath())
+  ipcMain.handle('diag:appendTaskCompletion', async (_event, line: string) => {
+    recordRuntimeDiagnostic('task-completion', { line })
+    return logPath()
+  })
 
   const initialWindow = getWindow()
   if (initialWindow) {

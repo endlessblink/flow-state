@@ -13,6 +13,7 @@ vi.mock('vue-router', () => ({
 const updateTaskWithUndo = vi.fn()
 const getTask = vi.fn()
 const requestSync = vi.fn()
+const appendTaskCompletionDiag = vi.fn()
 
 vi.mock('@/stores/tasks', () => ({
   useTaskStore: () => ({
@@ -93,6 +94,11 @@ let wrappers: VueWrapper[] = []
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
+  appendTaskCompletionDiag.mockResolvedValue('/tmp/task-completion-diagnostics.log')
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    value: { appendTaskCompletionDiag }
+  })
   getTask.mockReturnValue(task)
   updateTaskWithUndo.mockResolvedValue(undefined)
 })
@@ -116,6 +122,7 @@ describe('TaskContextMenu outside dismissal contract', () => {
     expect(updateTaskWithUndo).toHaveBeenCalledWith('task-1', { status: 'done' })
     expect(requestSync).toHaveBeenCalledWith('user:context-menu')
     expect(wrapper.emitted('close')).toHaveLength(1)
+    expect(appendTaskCompletionDiag).toHaveBeenCalledWith(expect.stringContaining('"phase":"invoked"'))
   })
 
   it('dismisses on pointer and contextmenu events, not click-only events', () => {

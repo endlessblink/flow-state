@@ -20,9 +20,14 @@ function flashTaskCard(taskId: string): void {
 }
 
 function traceTaskCompletion(phase: string, data: Record<string, unknown> = {}): void {
-    // Electron persists renderer warnings to the local runtime log. A single
-    // string retains the structured fields in that diagnostic boundary.
-    console.warn(`[TaskCompletionTrace] ${JSON.stringify({ phase, ...data })}`)
+    const line = JSON.stringify({ at: new Date().toISOString(), phase, ...data })
+    console.warn(`[TaskCompletionTrace] ${line}`)
+    // This direct renderer-to-main IPC survives a closed context menu and does
+    // not rely on developer-console forwarding from a packaged Electron app.
+    const electronAPI = (window as unknown as {
+        electronAPI?: { appendTaskCompletionDiag?: (entry: string) => Promise<string> }
+    }).electronAPI
+    void electronAPI?.appendTaskCompletionDiag?.(line)
 }
 
 export function useTaskContextMenuActions(

@@ -585,6 +585,43 @@ describe('AI action command substrate', () => {
     expect(mockDeleteLane).toHaveBeenCalledWith(expect.stringMatching(/.+/))
   })
 
+  it('previews and applies lane-dependent task changes as one rollback-safe batch', async () => {
+    const taskStore = useTaskStore()
+    const laneStore = useLaneStore()
+    const task = await taskStore.createTask({ title: 'Renewal proposal' })
+    const batch = buildAICommandBatchPreview({
+      sourcePrompt: 'Organize renewal work',
+      sourceRunId: 'run-lane-dependent',
+      sourceMessageId: 'msg-lane-dependent',
+      dataUsed: {},
+      commands: [
+        { id: 'lane-renewals', kind: 'lane.create', name: 'Client Renewals' },
+        { id: 'move-renewal', kind: 'task.update', taskId: task.id, updates: {}, laneCommandId: 'lane-renewals' },
+        { id: 'create-follow-up', kind: 'task.create', title: 'Draft renewal follow-up', laneCommandId: 'lane-renewals' },
+      ],
+      tasks: taskStore.tasks,
+      lanes: laneStore.lanes,
+    })
+
+    expect(laneStore.lanes).toHaveLength(0)
+    expect(taskStore.getTask(task.id)?.laneId).toBeFalsy()
+    expect(batch.preview.commands[1].diff.after).toMatchObject({ laneId: 'Proposed lane: Client Renewals' })
+
+    const result = await applyAICommandBatch(batch, {
+      selectedCommandIds: batch.commands.map(command => command.id),
+      taskStore,
+      laneStore,
+    })
+    const lane = laneStore.lanes[0]
+    expect(taskStore.getTask(task.id)?.laneId).toBe(lane.id)
+    expect(taskStore.tasks.find(item => item.title === 'Draft renewal follow-up')?.laneId).toBe(lane.id)
+
+    await rollbackAICommandBatch(result.rollbackPointer, { taskStore, laneStore })
+    expect(laneStore.lanes).toHaveLength(0)
+    expect(taskStore.getTask(task.id)?.laneId).toBeFalsy()
+    expect(taskStore.tasks.some(item => item.title === 'Draft renewal follow-up')).toBe(false)
+  })
+
   it('applies AI task metadata updates through the command substrate and reuses no-op replays', async () => {
     const taskStore = useTaskStore()
     const laneStore = useLaneStore()

@@ -23,6 +23,52 @@ interface ActionsDeps {
     recentlyDeletedGroups?: Ref<Set<string>>
 }
 
+interface SelectionNodeGeometry {
+    position: { x: number; y: number }
+    computedPosition?: { x: number; y: number }
+    dimensions?: { width?: unknown; height?: unknown }
+    width?: unknown
+    height?: unknown
+}
+
+const GROUP_PADDING = 40
+const FALLBACK_TASK_WIDTH = 280
+const FALLBACK_TASK_HEIGHT = 80
+
+const positiveDimension = (measured: unknown, fallback: unknown, defaultValue: number) => {
+    if (typeof measured === 'number' && Number.isFinite(measured) && measured > 0) return measured
+    if (typeof fallback === 'number' && Number.isFinite(fallback) && fallback > 0) return fallback
+    return defaultValue
+}
+
+export function calculateSelectionGroupPosition(nodes: SelectionNodeGeometry[]) {
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+
+    for (const node of nodes) {
+        const absoluteX = node.computedPosition?.x
+        const absoluteY = node.computedPosition?.y
+        const x = typeof absoluteX === 'number' && Number.isFinite(absoluteX) ? absoluteX : node.position.x
+        const y = typeof absoluteY === 'number' && Number.isFinite(absoluteY) ? absoluteY : node.position.y
+        const width = positiveDimension(node.dimensions?.width, node.width, FALLBACK_TASK_WIDTH)
+        const height = positiveDimension(node.dimensions?.height, node.height, FALLBACK_TASK_HEIGHT)
+
+        minX = Math.min(minX, x)
+        minY = Math.min(minY, y)
+        maxX = Math.max(maxX, x + width)
+        maxY = Math.max(maxY, y + height)
+    }
+
+    return {
+        x: minX - GROUP_PADDING,
+        y: minY - GROUP_PADDING,
+        width: (maxX - minX) + (GROUP_PADDING * 2),
+        height: (maxY - minY) + (GROUP_PADDING * 2),
+    }
+}
+
 // NOTE: State is now decomposed into sub-composables but we keep this interface 
 // if we need to aggregate it for the view, but the ReturnType of this composable
 // will naturally expose everything.
@@ -177,37 +223,9 @@ export function useCanvasActions(
             return
         }
 
-        // Calculate bounding box of selected task nodes using ABSOLUTE positions
-        // BUG-1203 FIX: node.position is relative when task has a parent group.
-        // Using computedPosition (absolute) prevents wrong bounding box calculation.
-        const PADDING = 40 // Padding around the group
-        const NODE_WIDTH = 280 // Approximate task card width
-        const NODE_HEIGHT = 80 // Approximate task card height
-
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-
-        for (const node of taskNodes) {
-            // BUG-1203: Use computedPosition (absolute) instead of position (may be relative)
-            const vfNode = node as { computedPosition?: { x: number; y: number } }
-            const x = (vfNode.computedPosition?.x != null && isFinite(vfNode.computedPosition.x))
-                ? vfNode.computedPosition.x
-                : node.position.x
-            const y = (vfNode.computedPosition?.y != null && isFinite(vfNode.computedPosition.y))
-                ? vfNode.computedPosition.y
-                : node.position.y
-            minX = Math.min(minX, x)
-            minY = Math.min(minY, y)
-            maxX = Math.max(maxX, x + NODE_WIDTH)
-            maxY = Math.max(maxY, y + NODE_HEIGHT)
-        }
-
-        // Add padding to the bounding box
-        const groupPosition = {
-            x: minX - PADDING,
-            y: minY - PADDING,
-            width: (maxX - minX) + (PADDING * 2),
-            height: (maxY - minY) + (PADDING * 2)
-        }
+        // BUG-2065: Task cards grow with their content. Using a fixed height
+        // made tall selected cards extend beyond the newly created group.
+        const groupPosition = calculateSelectionGroupPosition(taskNodes)
 
         if (import.meta.env.DEV) {
             console.log('📦 [TASK-1128] Creating group at:', groupPosition, 'for', taskNodes.length, 'tasks')

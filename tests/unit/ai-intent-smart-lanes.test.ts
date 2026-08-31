@@ -21,4 +21,19 @@ describe('AI intent router smart-lanes flow', () => {
       { tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 30 } },
     ])
   })
+
+  it('routes pasted task organizer requests without reading unrelated stored tasks', () => {
+    const routed = routeIntentByKeywords(
+      'Organize these tasks:\n- Call Maya about renewal\n- Draft launch checklist',
+      [],
+      new EntityMemory(),
+    )
+
+    expect(routed.responseMode).toBe('smart_lanes')
+    expect(routed.tools).toEqual([])
+    expect(routed.draftTasks).toEqual([
+      expect.objectContaining({ title: 'Call Maya about renewal', draft: true }),
+      expect.objectContaining({ title: 'Draft launch checklist', draft: true }),
+    ])
+  })
 })

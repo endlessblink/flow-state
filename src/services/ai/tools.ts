@@ -17,7 +17,8 @@ import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import type { Task } from '@/types/tasks'
 import type { OpenAITool } from './types'
 import { resolveTask } from './entityResolver'
-import { decideAISubtaskCreate, decideAITaskCreate, normalizeAIActionText, type AITaskUpdateFields } from './actionGuardrails'
+import { decideAITaskCreate, normalizeAIActionText, type AITaskUpdateFields } from './actionGuardrails'
+import type { decideAISubtaskCreate } from './actionGuardrails'
 import * as aiActionCommands from './actionCommands'
 
 // ============================================================================
@@ -117,6 +118,7 @@ export const AI_TOOLS: ToolDefinition[] = [
         status: { type: 'string', description: 'Filter by status. Default excludes done tasks. Use "all" to include done.', enum: ['todo', 'done', 'all'] },
         dueDate: { type: 'string', description: 'Filter by due date. "today" = due today only, "tomorrow" = due tomorrow, "this_week" = due this week (Mon-Sun), or exact YYYY-MM-DD date.' },
         projectId: { type: 'string', description: 'Filter tasks by project ID. Use list_projects to get project IDs first.' },
+        taskIds: { type: 'array', description: 'Limit results to these exact task IDs.', items: { type: 'string' } },
         sortBy: { type: 'string', description: 'Sort results before applying limit. Default: "priority" (critical > high > medium > low > none).', enum: ['priority', 'dueDate', 'title'] },
         limit: { type: 'number', description: 'Maximum number of tasks to return (default 50)' },
       },
@@ -813,10 +815,16 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
         const status = call.parameters.status as string | undefined
         const dueDateFilter = call.parameters.dueDate as string | undefined
         const projectIdFilter = call.parameters.projectId as string | undefined
+        const taskIdsFilter = call.parameters.taskIds as string[] | undefined
         const sortBy = (call.parameters.sortBy as string) || 'priority'
         const limit = (call.parameters.limit as number) || 50
 
         let tasks = taskStore.tasks
+
+        if (taskIdsFilter?.length) {
+          const selectedIds = new Set(taskIdsFilter)
+          tasks = tasks.filter((t: Task) => selectedIds.has(t.id))
+        }
 
         // Project filter (TASK-1393)
         if (projectIdFilter) {
@@ -1168,8 +1176,6 @@ export async function executeTool(call: ToolCall, language: Lang = 'en'): Promis
 
         const taskId = call.parameters.taskId as string
         const durationMinutes = (call.parameters.duration as number) || 25
-        const durationSeconds = durationMinutes * 60
-
         // Verify the task exists (unless it's 'general')
         if (taskId !== 'general') {
           const task = validateTaskExists(taskStore, taskId)

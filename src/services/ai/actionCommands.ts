@@ -44,6 +44,7 @@ export type AITaskCreateCommand = {
   description?: string
   dueDate?: string
   laneId?: string | null
+  laneCommandId?: string
   parentTaskId?: string | null
   projectId?: string | null
   allowDuplicate?: boolean
@@ -56,6 +57,7 @@ export type AITaskUpdateCommand = {
   kind: 'task.update'
   taskId: string
   updates: Partial<AITaskUpdateFields>
+  laneCommandId?: string
   confidence?: number
   impact?: AICommandImpact
 }
@@ -312,6 +314,7 @@ function previewCommand(command: AICommand, input: {
   memoryEntities: AIContextEntity[]
   recommendationFeedback: AIRecommendationFeedback[]
   sourceMessageId: string
+  proposedLaneNames?: Map<string, string>
 }): AICommandPreviewItem {
   const { tasks, lanes, canvasGroups, memoryEntities, recommendationFeedback, sourceMessageId } = input
   const timerSession = input.timerSession ?? null
@@ -350,7 +353,9 @@ function previewCommand(command: AICommand, input: {
           priority: command.priority || 'medium',
           description: command.description || '',
           dueDate: command.dueDate || '',
-          laneId: command.laneId ?? null,
+          laneId: command.laneCommandId
+            ? `Proposed lane: ${input.proposedLaneNames?.get(command.laneCommandId) || command.laneCommandId}`
+            : command.laneId ?? null,
           parentTaskId: command.parentTaskId || null,
           projectId: command.projectId || undefined,
         },
@@ -360,10 +365,16 @@ function previewCommand(command: AICommand, input: {
 
   if (command.kind === 'task.update') {
     const task = tasks.find(task => task.id === command.taskId) ?? null
+    const previewUpdates = command.laneCommandId
+      ? {
+        ...command.updates,
+        laneId: `Proposed lane: ${input.proposedLaneNames?.get(command.laneCommandId) || command.laneCommandId}`,
+      }
+      : command.updates
     const decision = decideAITaskUpdate({
       task,
       taskId: command.taskId,
-      updates: command.updates,
+      updates: previewUpdates,
       sourceMessageId,
     })
     const before = task
@@ -386,7 +397,7 @@ function previewCommand(command: AICommand, input: {
         before,
         after: {
           id: command.taskId,
-          ...command.updates,
+          ...previewUpdates,
         },
       },
     }
@@ -799,6 +810,9 @@ export function buildAICommandBatchPreview(input: {
   memoryEntities?: AIContextEntity[]
   recommendationFeedback?: AIRecommendationFeedback[]
 }): AICommandBatch {
+  const proposedLaneNames = new Map(input.commands.flatMap(command =>
+    command.kind === 'lane.create' ? [[command.id, command.name] as const] : [],
+  ))
   return {
     id: generateBatchId(input.sourceRunId, input.sourceMessageId),
     sourcePrompt: input.sourcePrompt,
@@ -815,6 +829,7 @@ export function buildAICommandBatchPreview(input: {
         memoryEntities: input.memoryEntities || [],
         recommendationFeedback: input.recommendationFeedback || [],
         sourceMessageId: input.sourceMessageId,
+        proposedLaneNames,
       })),
     },
     createdAt: new Date().toISOString(),
@@ -1386,54 +1401,70 @@ export async function applyAICommandBatch(batch: AICommandBatch, options: {
         continue
       }
 
-      const applied = command.kind === 'task.create'
-        ? await applyTaskCreate(command, options.taskStore, batch.sourceMessageId)
-        : command.kind === 'task.update'
-          ? await applyTaskUpdate(command, options.taskStore, batch.sourceMessageId)
-          : command.kind === 'task.delete'
-            ? await applyTaskDelete(command, options.taskStore, batch.sourceMessageId)
-            : command.kind === 'task.subtask.create'
-              ? await applySubtaskCreate(command, options.taskStore, batch.sourceMessageId)
-              : command.kind === 'lane.create'
+      const laneCommandId = command.kind === 'task.create' || command.kind === 'task.update'
+        ? command.laneCommandId
+        : undefined
+      const proposedLane = laneCommandId
+        ? appliedCommands.find(item => item.id === laneCommandId && item.kind === 'lane.create')
+        : undefined
+      if (laneCommandId && !proposedLane) {
+        rejectedCommands.push({ ...preview, reason: 'not_selected' })
+        continue
+      }
+      const effectiveCommand: AICommand = proposedLane && command.kind === 'task.create'
+        ? { ...command, laneId: proposedLane.entityId, laneCommandId: undefined }
+        : proposedLane && command.kind === 'task.update'
+          ? { ...command, updates: { ...command.updates, laneId: proposedLane.entityId }, laneCommandId: undefined }
+          : command
+
+      const applied = effectiveCommand.kind === 'task.create'
+        ? await applyTaskCreate(effectiveCommand, options.taskStore, batch.sourceMessageId)
+        : effectiveCommand.kind === 'task.update'
+          ? await applyTaskUpdate(effectiveCommand, options.taskStore, batch.sourceMessageId)
+          : effectiveCommand.kind === 'task.delete'
+            ? await applyTaskDelete(effectiveCommand, options.taskStore, batch.sourceMessageId)
+            : effectiveCommand.kind === 'task.subtask.create'
+              ? await applySubtaskCreate(effectiveCommand, options.taskStore, batch.sourceMessageId)
+              : effectiveCommand.kind === 'lane.create'
                 ? await applyLaneCreate(
-                  command,
+                   effectiveCommand,
                   options.laneStore ?? missingLaneStore(),
                   batch.sourceMessageId,
                 )
-                : command.kind === 'calendar.schedule_task'
-                  ? await applyCalendarScheduleTask(command, options.taskStore, batch.sourceMessageId)
-                  : command.kind === 'focus.timer.start'
-                    ? await applyFocusTimerStart(command, {
+                : effectiveCommand.kind === 'calendar.schedule_task'
+                  ? await applyCalendarScheduleTask(effectiveCommand, options.taskStore, batch.sourceMessageId)
+                  : effectiveCommand.kind === 'focus.timer.start'
+                    ? await applyFocusTimerStart(effectiveCommand, {
                       taskStore: options.taskStore,
                       timerStore: options.timerStore ?? missingTimerStore(),
                       sourceMessageId: batch.sourceMessageId,
                     })
-                    : command.kind === 'focus.timer.stop'
-                      ? await applyFocusTimerStop(command, {
+                    : effectiveCommand.kind === 'focus.timer.stop'
+                      ? await applyFocusTimerStop(effectiveCommand, {
                         taskStore: options.taskStore,
                         timerStore: options.timerStore ?? missingTimerStore(),
                         sourceMessageId: batch.sourceMessageId,
                       })
-                      : command.kind === 'canvas.group.create'
+                      : effectiveCommand.kind === 'canvas.group.create'
                         ? await applyCanvasGroupCreate(
-                          command,
+                          effectiveCommand,
                           options.canvasStore ?? missingCanvasStore(),
                           batch.sourceMessageId,
                         )
-                        : command.kind === 'canvas.node.move'
-                          ? await applyCanvasNodeMove(command, {
+                        : effectiveCommand.kind === 'canvas.node.move'
+                          ? await applyCanvasNodeMove(effectiveCommand, {
                             taskStore: options.taskStore,
                             canvasStore: options.canvasStore,
                             sourceMessageId: batch.sourceMessageId,
                           })
-                          : command.kind === 'memory.patch'
+                          : effectiveCommand.kind === 'memory.patch'
                             ? await applyMemoryPatch(
-                              command,
+                              effectiveCommand,
                               options.memoryStore ?? missingMemoryStore(),
                               batch.sourceMessageId,
                             )
                             : await applyRecommendationFeedback(
-                              command,
+                              effectiveCommand,
                               options.memoryStore ?? missingMemoryStore(),
                               batch.sourceMessageId,
                             )

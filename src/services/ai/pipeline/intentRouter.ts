@@ -25,6 +25,11 @@ import type { DetectedLanguage } from './types'
 import { getSharedRouter } from '../routerFactory'
 import { isOverwhelmedDayPlanRequest, isWeekPlanRequest } from './dayPlan'
 import { isSmartLaneRequest } from './smartLanes'
+import {
+  extractPastedTaskDrafts,
+  isTaskOrganizerRequest,
+  type TaskOrganizerDraft,
+} from './taskOrganizer'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -71,6 +76,8 @@ export interface RoutedIntent {
     | 'next_task'
     | 'overdue_triage'
     | 'task_breakdown'
+  /** User-pasted task lines that remain drafts until the preview is applied. */
+  draftTasks?: TaskOrganizerDraft[]
 }
 
 // ---------------------------------------------------------------------------
@@ -481,6 +488,18 @@ export function routeIntentByKeywords(
     }
   }
 
+  if (isTaskOrganizerRequest(userMessage)) {
+    const draftTasks = extractPastedTaskDrafts(userMessage)
+    return {
+      type: 'task_query',
+      tools: draftTasks.length ? [] : [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 30 } }],
+      language,
+      formatDirective: 'Organize only the supplied work. Deduplicate it, clean up unclear titles, suggest concrete next actions or decomposition where needed, assign useful lanes, and identify archive candidates without mutating tasks before review.',
+      responseMode: 'smart_lanes',
+      ...(draftTasks.length ? { draftTasks } : {}),
+    }
+  }
+
   if (isSmartLaneRequest(userMessage)) {
     return {
       type: 'task_query',
@@ -702,6 +721,18 @@ export async function routeIntent(
       language,
       formatDirective: 'Build a concrete ordered day plan. Sequence the tasks into focus blocks, and include only what should actually be done today.',
       responseMode: 'day_plan',
+    }
+  }
+
+  if (isTaskOrganizerRequest(userMessage)) {
+    const draftTasks = extractPastedTaskDrafts(userMessage)
+    return {
+      type: 'task_query',
+      tools: draftTasks.length ? [] : [{ tool: 'list_tasks', parameters: { status: 'todo', sortBy: 'priority', limit: 30 } }],
+      language,
+      formatDirective: 'Organize only the supplied work. Deduplicate it, clean up unclear titles, suggest concrete next actions or decomposition where needed, assign useful lanes, and identify archive candidates without mutating tasks before review.',
+      responseMode: 'smart_lanes',
+      ...(draftTasks.length ? { draftTasks } : {}),
     }
   }
 

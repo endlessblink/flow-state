@@ -353,6 +353,24 @@ describe('AI tool execution regressions', () => {
     expect(JSON.stringify(doneList.data)).toContain('Review Work bucket priorities')
   })
 
+  it('limits task listings to the exact selected task IDs', async () => {
+    const taskStore = useTaskStore()
+    const selectedA = await taskStore.createTask({ title: 'Selected renewal call', priority: 'high' })
+    const selectedB = await taskStore.createTask({ title: 'Selected launch checklist', priority: 'medium' })
+    await taskStore.createTask({ title: 'Outside selection', priority: 'high' })
+
+    const result = await executeTool({
+      tool: 'list_tasks',
+      parameters: { status: 'todo', taskIds: [selectedA.id, selectedB.id] },
+    })
+    const payload = JSON.stringify(result.data)
+
+    expect(result.success).toBe(true)
+    expect(payload).toContain('Selected renewal call')
+    expect(payload).toContain('Selected launch checklist')
+    expect(payload).not.toContain('Outside selection')
+  })
+
   it('routes task mutation tools through AI command batches', async () => {
     const taskStore = useTaskStore()
     const applyBatchSpy = vi.spyOn(actionCommands, 'applyAICommandBatch')

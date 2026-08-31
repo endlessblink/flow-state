@@ -63,6 +63,27 @@ describe('parseCardGroups — maps [N] index → the RIGHT task', () => {
     expect(r?.groups[0].newTasks).toEqual([
       { title: 'Draft follow-up sequence', priority: 'medium', reason: 'turns list into outreach' },
     ])
+    expect(r?.uncoveredTasks?.map(task => task.id)).toEqual(['t1', 't3'])
+  })
+
+  it('does not report pasted draft inputs as uncovered existing tasks', () => {
+    const draftResults = [{
+      success: true,
+      data: [
+        { id: 'draft:1', title: 'Call Maya', draft: true },
+        { id: 'draft:2', title: 'Draft launch checklist', draft: true },
+      ],
+    }]
+    const text = block({
+      kind: 'smart_lanes',
+      groups: [{
+        name: 'Launch',
+        items: [],
+        newTasks: [{ title: 'Call Maya' }, { title: 'Draft launch checklist' }],
+      }],
+    })
+
+    expect(parseCardGroups(text, draftResults)?.uncoveredTasks).toEqual([])
   })
 
   it('TASK-1820: maps weekly-review cards (completed tasks) and preserves kind', () => {

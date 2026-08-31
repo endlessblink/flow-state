@@ -24,6 +24,7 @@ export interface ParsedCards {
   total: number
   rawBlock: string
   kind?: 'day_plan' | 'smart_lanes' | 'weekly_review' | 'week_plan'
+  uncoveredTasks?: Array<Record<string, unknown>>
 }
 
 export function collectCardTasks(toolResults: CardToolResult[]): Array<Record<string, unknown>> {
@@ -101,7 +102,12 @@ export function parseCardGroups(text: string, toolResults: CardToolResult[]): Pa
     .filter(g => g.tasks.length > 0 || (g.newTasks?.length ?? 0) > 0)
 
   const kind = parsed.kind === 'day_plan' || parsed.kind === 'smart_lanes' || parsed.kind === 'weekly_review' || parsed.kind === 'week_plan' ? parsed.kind : undefined
-  return groups.length ? { groups, total: indexedTasks.length, rawBlock: m[0], kind } : null
+  const uncoveredTasks = indexedTasks.filter(task => {
+    if (task.draft === true) return false
+    const taskKey = String(task.id || task.title || '').trim()
+    return !taskKey || !seenTaskKeys.has(taskKey)
+  })
+  return groups.length ? { groups, total: indexedTasks.length, rawBlock: m[0], kind, uncoveredTasks } : null
 }
 
 /**

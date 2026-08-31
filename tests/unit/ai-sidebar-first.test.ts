@@ -4942,6 +4942,7 @@ describe("AI sidebar-first desktop experience", () => {
     const applyBatchSpy = vi.spyOn(actionCommands, "applyAICommandBatch");
     const commandLaneCreateSpy = vi.spyOn(laneStore, "createLane");
     const commandTaskCreateSpy = vi.spyOn(taskStore, "createTask");
+    vi.spyOn(actionCommands, "loadAICommandAuditTrail").mockResolvedValue([]);
     taskStore._rawTasks.push({
       id: "task-smart-existing",
       title: "Renewal proposal",
@@ -4969,6 +4970,14 @@ describe("AI sidebar-first desktop experience", () => {
             cardGroups: {
               kind: "smart_lanes",
               total: 2,
+              uncoveredTasks: [
+                {
+                  id: "task-outside-proposal",
+                  title: "Confirm legal wording",
+                  status: "todo",
+                  priority: "medium",
+                },
+              ],
               groups: [
                 {
                   name: "Client Renewals",
@@ -5005,14 +5014,12 @@ describe("AI sidebar-first desktop experience", () => {
     await flushPromises();
     await nextTick();
 
-    // TASK-1977: smart lanes apply in two phases — lanes are created first so
-    // their ids exist, then tasks are assigned to them. Phase two only starts
-    // once phase one's durable audit/rollback write to IndexedDB has settled,
-    // which is a macrotask that flushPromises()/nextTick() do not wait for.
-    // Poll for the final state instead of asserting one microtask flush in.
-    await vi.waitFor(() => {
-      expect(wrapper.text()).toContain("Lanes applied");
-    });
+    expect(wrapper.get('[data-testid="ai-command-center"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain("Outside this proposal: Confirm legal wording");
+    expect(applyBatchSpy).not.toHaveBeenCalled();
+    expect(commandLaneCreateSpy).not.toHaveBeenCalled();
+    expect(commandTaskCreateSpy).not.toHaveBeenCalled();
+    expect(taskStore.tasks.find((task) => task.id === "task-smart-existing")?.laneId).toBeFalsy();
 
     expect(buildPreviewSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -5033,33 +5040,27 @@ describe("AI sidebar-first desktop experience", () => {
           expect.objectContaining({
             kind: "task.update",
             taskId: "task-smart-existing",
-            updates: expect.objectContaining({ laneId: expect.any(String) }),
+            updates: {},
+            laneCommandId: "smart-lane:0:lane",
           }),
           expect.objectContaining({
             kind: "task.create",
             title: "Draft renewal follow-up",
             priority: "medium",
             parentTaskId: "task-smart-existing",
-            laneId: expect.any(String),
+            laneCommandId: "smart-lane:0:lane",
           }),
         ]),
       }),
     );
+    await wrapper.get('[data-testid="ai-command-apply"]').trigger("click");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("Lanes applied"));
+
+    expect(applyBatchSpy).toHaveBeenCalledTimes(1);
     expect(applyBatchSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         commands: expect.arrayContaining([
           expect.objectContaining({ kind: "lane.create" }),
-        ]),
-      }),
-      expect.objectContaining({
-        laneStore,
-        selectedCommandIds: expect.any(Array),
-        taskStore,
-      }),
-    );
-    expect(applyBatchSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        commands: expect.arrayContaining([
           expect.objectContaining({ kind: "task.update" }),
           expect.objectContaining({ kind: "task.create" }),
         ]),

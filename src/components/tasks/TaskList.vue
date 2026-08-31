@@ -275,6 +275,7 @@ import AITaskAssistPopover from '@/components/ai/AITaskAssistPopover.vue'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { usePersistentRef } from '@/composables/usePersistentRef'
 import { useTaskStore } from '@/stores/tasks'
+import { useAIChatStore } from '@/stores/aiChat'
 import { collectVisibleTaskIds, retainVisibleSelection } from '@/utils/selectionVisibility'
 import { Inbox, ChevronRight, ChevronUp, ChevronDown, Pencil, Trash2, X, Zap, ArrowDownToLine, Plus } from 'lucide-vue-next'
 
@@ -418,6 +419,7 @@ const dropIndicator = ref<{ groupKey: string | null; y: number; insertIndex: num
 // --- Drag to Group Header ---
 const { isDragging, dragData, endDrag } = useDragAndDrop()
 const taskStore = useTaskStore()
+const aiChatStore = useAIChatStore()
 
 // TASK-1476: Allow dropping on collapsed group headers
 const headerDropTarget = ref<string | null>(null)
@@ -723,6 +725,14 @@ const visibleSelectedTaskIds = computed(() =>
 )
 
 const selectionMode = computed(() => visibleSelectedTaskIds.value.length > 0)
+const publishedSelectedTaskIds = ref<string[]>([])
+
+const ownsPublishedAISelection = () => {
+  const currentSelection = aiChatStore.context.selectedTaskIds || []
+  return publishedSelectedTaskIds.value.length > 0
+    && currentSelection.length === publishedSelectedTaskIds.value.length
+    && currentSelection.every(id => publishedSelectedTaskIds.value.includes(id))
+}
 
 watch(
   () => allTasks.value.map(task => task.id),
@@ -733,6 +743,17 @@ watch(
     }
   },
   { flush: 'sync' }
+)
+
+watch(
+  visibleSelectedTaskIds,
+  taskIds => {
+    if (taskIds.length > 0 || ownsPublishedAISelection()) {
+      aiChatStore.updateContext({ selectedTaskIds: [...taskIds] })
+    }
+    publishedSelectedTaskIds.value = [...taskIds]
+  },
+  { immediate: true, flush: 'sync' },
 )
 
 const allSelected = computed(() => {
@@ -847,6 +868,9 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('open-ai-assist', handleOpenAIAssist)
+  if (ownsPublishedAISelection()) {
+    aiChatStore.updateContext({ selectedTaskIds: [] })
+  }
 })
 
 // BUG-1493: Initialize respecting persisted collapsed state.

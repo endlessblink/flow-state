@@ -55,6 +55,7 @@ import { retrieveBroadAIMemory, type BroadMemoryRetrievalResult } from '@/servic
 import { retrieveGlobalChatMemory } from '@/services/ai/pipeline/globalChatMemory'
 import type { PreProcessResult, UserIntent } from '@/services/ai/pipeline/types'
 import { routeIntent, type RoutedIntent } from '@/services/ai/pipeline/intentRouter'
+import { scopeTaskOrganizerIntent } from '@/services/ai/pipeline/taskOrganizer'
 import { getTemplate } from '@/services/ai/pipeline/responseTemplates'
 import { buildReasoningDirective } from '@/services/ai/pipeline/reasoningDirective'
 import { collectCardTasks, ensureCardTaskMentions, parseCardGroups, stripCardsBlock, stripStreamingCardsBlock } from '@/services/ai/pipeline/cardsBlock'
@@ -792,15 +793,20 @@ export function useAIChat() {
 
     // Get visible tasks if on canvas - use nodes from canvas store
     let visibleTaskIds: string[] | undefined
+    let selectedTaskIds = currentContext.selectedTaskIds
     if (currentContext.currentView === 'canvas') {
-      visibleTaskIds = canvasStore.nodes
+      const taskNodes = canvasStore.nodes
         .filter((n: { type?: string }) => n.type === 'taskNode' || n.type === 'task')
-        .map((n: { id: string }) => n.id)
+      visibleTaskIds = taskNodes.map((n: { id: string }) => n.id)
+      const canvasTaskIds = new Set(visibleTaskIds)
+      const selectedCanvasTaskIds = canvasStore.selectedNodeIds.filter(id => canvasTaskIds.has(id))
+      selectedTaskIds = selectedCanvasTaskIds
     }
 
     return {
       ...currentContext,
-      visibleTaskIds
+      visibleTaskIds,
+      selectedTaskIds,
     }
   }
 
@@ -1232,28 +1238,6 @@ export function useAIChat() {
     return lang === 'he'
       ? 'ההקשר חסר; זו מועמדת לבדיקה, לא דירוג חשיבות'
       : 'context is missing; treat this as a candidate, not an importance ranking'
-  }
-
-  function fallbackTaskImpact(task: Record<string, unknown>, lang: 'he' | 'en'): string {
-    const text = `${String(task.title || '')} ${String(task.description || '')}`.toLowerCase()
-    if (/(payment|invoice|cardcom|charge|billing|תשלום|חשבונית|חיוב|קאדרקום)/i.test(text)) {
-      return lang === 'he' ? 'מנקה סיכון כסף ומונע בדיקה חוזרת בהמשך' : 'clears money risk and avoids another audit loop'
-    }
-    if (/(reply|send|call|email|message|stakeholder|להגיב|לשלוח|להתקשר|מייל|הודעה)/i.test(text)) {
-      return lang === 'he' ? 'פותח תנועה אצל אדם אחר ומקטין חוב תקשורתי' : 'unblocks another person and reduces communication debt'
-    }
-    if (/(outreach|cold opener|target list|sales|lead|פייפרפורט|לסקין|רשימת|אאוטריץ|מכירות)/i.test(text)) {
-      return lang === 'he' ? 'מקדם רצף מכירות במקום להשאיר חלקים מפוזרים' : 'moves a sales sequence instead of leaving fragments open'
-    }
-    if (/(treatment|medicine|dose|twice a day|טיפול|תרופה|מנה|מנות|אוראו|פעמיים ביום)/i.test(text)) {
-      return lang === 'he' ? 'שומר על רצף שאי אפשר להשלים טוב בדיעבד' : 'protects a sequence that is hard to recover retroactively'
-    }
-    if (/(lecture|choose|slot|date|הרצאה|לבחור|מועד|תאריך)/i.test(text)) {
-      return lang === 'he' ? 'סוגר התחייבות זמן ומפחית החלטה פתוחה' : 'closes a time commitment and removes an open decision'
-    }
-    return lang === 'he'
-      ? 'מקטין עומס פתוח ומבהיר אם המשימה באמת שייכת לשבוע'
-      : 'reduces open load and clarifies whether it belongs this week'
   }
 
   function fallbackTaskSlot(task: Record<string, unknown>, lang: 'he' | 'en'): string {
@@ -1832,11 +1816,12 @@ export function useAIChat() {
     // (each CLI call is ~6s) — keyword routing is instant and falls back to ReAct.
     const continuationMode = clarificationContinuationMode(trimmedContent)
     const detectedLanguage = detectLanguage(trimmedContent) === 'he' ? 'he' : 'en'
-    const routed = continuationMode
+    const routedResult = continuationMode
       ? routeClarificationContinuation(continuationMode, resolveChatOutputLanguage(detectedLanguage, chatLanguage.value))
       : await routeIntent(trimmedContent, taskStore.tasks, entityMemory, {
           skipLLMClassification: isBridgeActive(),
         })
+    const routed = scopeTaskOrganizerIntent(routedResult, buildContext().selectedTaskIds)
     traceAssistantTurn(turnId, 'routed', {
       routedType: routed.type,
       responseMode: routed.responseMode,
@@ -1915,7 +1900,13 @@ export function useAIChat() {
       activityId: phaseActivityId,
       label: 'Preparing response',
     })
-    const toolResults: ToolResult[] = []
+    const draftResultCount = routed.draftTasks?.length ? 1 : 0
+    const toolResults: ToolResult[] = routed.draftTasks?.length
+      ? [{ success: true, message: 'Pasted task drafts', data: routed.draftTasks }]
+      : []
+    const toolNameForResult = (index: number) => index < draftResultCount
+      ? 'organizer_drafts'
+      : routed.tools[index - draftResultCount]?.tool || 'unknown'
 
     try {
       // ── Step 1: Handle greeting (no tools, no LLM) ──────────────────
@@ -1969,8 +1960,8 @@ export function useAIChat() {
             success: r.success,
             message: r.message,
             data: r.data,
-            tool: routed.tools[i]?.tool || 'unknown',
-            type: AI_TOOLS.find(t => t.name === routed.tools[i]?.tool)?.category || 'read',
+            tool: toolNameForResult(i),
+            type: AI_TOOLS.find(t => t.name === toolNameForResult(i))?.category || 'read',
           })),
         } as Record<string, unknown>
       }
@@ -2027,7 +2018,7 @@ export function useAIChat() {
         ? buildRichToolResultsData(toolResults, outputLanguage)
         : toolResults
             .map((r, i) => {
-              const toolName = routed.tools[i]?.tool || 'unknown'
+              const toolName = toolNameForResult(i)
               return digestToolResults(toolName, r.data, `[${r.success ? 'OK' : 'ERROR'}] ${r.message}`, outputLanguage)
             })
             .join('\n\n')
@@ -2041,6 +2032,7 @@ export function useAIChat() {
 
       const languageName = languageNameFor(outputLanguage)
       const hasTaskList = collectCardTasks(toolResults).length > 0
+      const hasDraftTasks = collectCardTasks(toolResults).some(task => task.draft === true)
       const isDayPlan = routed.responseMode === 'day_plan'
       const isSmartLanes = routed.responseMode === 'smart_lanes'
       const isWeeklyReview = routed.responseMode === 'weekly_review'
@@ -2569,7 +2561,9 @@ export function useAIChat() {
           : isDayPlan
           ? `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — name the first task and the capacity call. If some tasks should be deferred, mention that in prose but DO NOT include deferred tasks in the cards. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"day_plan","groups":[{"name":"short focus block label in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"why this task belongs in this slot in ${languageName}, max 10 words"}]}]}\n\`\`\`\nThe groups are the exact order of the user's day. Include only tasks they should actually do today. Reference tasks by [N] number INSIDE the cards block only; in prose use the task NAME, never [N].`
           : isSmartLanes
-            ? `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — name the strongest lane and why it matters. Do NOT write a full per-task breakdown in prose; the cards carry it. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"smart_lanes","groups":[{"name":"actionable lane name in ${languageName}","items":[{"i":<existing task [N] from the data>,"reason":"why it belongs in this lane, max 10 words"}],"newTasks":[{"title":"new child task title in ${languageName}","priority":"medium","reason":"what it unblocks, max 10 words"}]}]}\n\`\`\`\nUse \`items\` for existing tasks to assign to the lane. Use \`newTasks\` only when a large existing task should be broken into concrete child tasks; keep each title actionable and small. If a group has one existing item plus newTasks, that existing item is the parent task. Reference tasks by [N] number INSIDE the cards block only; in prose use task names, never [N].`
+            ? hasDraftTasks
+              ? `\n\nThese are PASTED DRAFTS, not saved tasks. Deduplicate them and keep them unchanged until review. STRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE short sentence naming the strongest lane. If any draft has needsClarification=true, add ONE concise clarification sentence naming it and omit it from newTasks. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"smart_lanes","groups":[{"name":"actionable lane name in ${languageName}","items":[],"newTasks":[{"title":"cleaned actionable draft title in ${languageName}","priority":"medium","reason":"why it belongs here, max 10 words"}]}]}\n\`\`\`\nRepresent every specific deduplicated draft exactly once as a newTask. Never put a draft in items. Do not invent work, save tasks, or mutate anything before Apply.`
+              : `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — name the strongest lane and why it matters. Do NOT write a full per-task breakdown in prose; the cards carry it. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"kind":"smart_lanes","groups":[{"name":"actionable lane name in ${languageName}","items":[{"i":<existing task [N] from the data>,"reason":"why it belongs in this lane, max 10 words"}],"newTasks":[{"title":"new child task title in ${languageName}","priority":"medium","reason":"what it unblocks, max 10 words"}]}]}\n\`\`\`\nUse \`items\` for existing tasks to assign to the lane. Use \`newTasks\` only when a large existing task should be broken into concrete child tasks; keep each title actionable and small. If a group has one existing item plus newTasks, that existing item is the parent task. Reference tasks by [N] number INSIDE the cards block only; in prose use task names, never [N].`
             : `\n\nSTRUCTURE YOUR ANSWER AS EXACTLY: (1) ONE or TWO short sentences — the single biggest cross-cutting insight or what to tackle first. Do NOT write a per-task breakdown, headings, or numbered reasons in the prose — the cards below carry every per-task detail, so repeating it is noise. (2) Then a fenced code block tagged \`cards\` with JSON ONLY:\n\`\`\`cards\n{"groups":[{"name":"short group label in ${languageName}","items":[{"i":<the task's [N] number from the data>,"reason":"the specific stake for THIS task in ${languageName}, max 10 words — NOT 'overdue'/'high priority'"}]}]}\n\`\`\`\nReference each task by its [N] number INSIDE the cards block only; in the prose use the task NAME, never [N]. Include only tasks worth acting on now, grouped by theme or sequence (a single task may be its own group), ordered by importance.`
         : ''
       const responseShapeInstruction = cardsInstruction

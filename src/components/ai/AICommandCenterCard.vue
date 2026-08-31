@@ -124,8 +124,18 @@ function editorTestId(command: AICommand): string {
 
 function toggleSelected(commandId: string) {
   const next = new Set(selectedCommandIds.value)
-  if (next.has(commandId)) next.delete(commandId)
-  else next.add(commandId)
+  const selecting = !next.has(commandId)
+  if (selecting) next.add(commandId)
+  else next.delete(commandId)
+  const command = commandFor(commandId)
+  if (command?.kind === 'lane.create') {
+    for (const dependent of editedCommands.value) {
+      if ((dependent.kind === 'task.create' || dependent.kind === 'task.update') && dependent.laneCommandId === commandId) {
+        if (selecting) next.add(dependent.id)
+        else next.delete(dependent.id)
+      }
+    }
+  }
   selectedCommandIds.value = next
 }
 
@@ -177,10 +187,16 @@ function canUndoEntry(entry: AICommandAuditEntry): boolean {
 
 function applySelected() {
   if (!canApply.value) return
+  const selectedLaneIds = new Set(editedCommands.value
+    .filter(command => command.kind === 'lane.create' && selectedCommandIds.value.has(command.id))
+    .map(command => command.id))
   emit('apply', {
     selectedCommandIds: props.batch.commands
-      .map(command => command.id)
-      .filter(id => selectedCommandIds.value.has(id)),
+      .filter(command => selectedCommandIds.value.has(command.id))
+      .filter(command => (
+        command.kind !== 'task.create' && command.kind !== 'task.update'
+      ) || !command.laneCommandId || selectedLaneIds.has(command.laneCommandId))
+      .map(command => command.id),
     commands: editedCommands.value,
     explicitApproval: explicitApproval.value,
   })

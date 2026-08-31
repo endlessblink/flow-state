@@ -1739,6 +1739,7 @@ const cardGroups = computed(() => {
     }>
     total?: number
     kind?: string
+    uncoveredTasks?: TaskListItem[]
   } | undefined
   if (!cg?.groups?.length || !hasRenderedResponse.value) return null
   return cg
@@ -1859,6 +1860,7 @@ const smartLaneApplyCount = computed(() => {
   return groups.reduce((sum, group) =>
     sum + 1 + group.tasks.length + (group.newTasks?.length ?? 0), 0)
 })
+const smartLaneUncoveredTasks = computed(() => liveTasks(cardGroups.value?.uncoveredTasks ?? []))
 
 /**
  * Check if a tool result contains a task list that should be rendered as clickable items.
@@ -2381,7 +2383,8 @@ async function applyCommandCenterSelection(payload: {
     })
     setCommandCenterStep('apply', { status: 'completed', message: `${result.appliedCommands.length} changes applied` })
     setCommandCenterStep('verify', { status: 'completed', message: 'Audit and rollback record saved' })
-    dayPlanApplied.value = true
+    if (isSmartLanes.value) smartLaneApplied.value = true
+    else dayPlanApplied.value = true
   } catch (err) {
     console.error('[ChatMessage] Apply command-center proposal failed:', err)
     commandCenterError.value = err instanceof Error ? err.message : 'Could not apply this proposal.'
@@ -2416,7 +2419,8 @@ async function undoCommandCenterApply(rollbackPointer: string) {
       sourceMessageId: props.message.id,
       limit: 5,
     })
-    dayPlanApplied.value = false
+    if (isSmartLanes.value) smartLaneApplied.value = false
+    else dayPlanApplied.value = false
     setCommandCenterStep('apply', { status: 'waiting_approval', message: 'Changes undone; ready to review again' })
     setCommandCenterStep('verify', { status: 'pending', message: undefined })
   } catch (err) {
@@ -2520,34 +2524,10 @@ async function applySmartLanes(event: MouseEvent) {
       color: laneColors[index % laneColors.length],
       impact: 'low',
     }))
-    const laneBatch = aiActionCommands.buildAICommandBatchPreview({
-      sourcePrompt: 'smart lanes lane creation',
-      sourceRunId: props.message.id,
-      sourceMessageId: props.message.id,
-      dataUsed: {
-        messageId: props.message.id,
-        groupCount: visibleGroups.length,
-        groups: visibleGroups.map(group => ({
-          name: group.name,
-          taskIds: group.tasks.map(task => task.id).filter(Boolean),
-          newTaskCount: group.newTasks?.length ?? 0,
-        })),
-      },
-      commands: laneCommands,
-      tasks: taskStore.tasks,
-      lanes: laneStore.lanes,
-    })
-    const laneResult = await aiActionCommands.applyAICommandBatch(laneBatch, {
-      selectedCommandIds: laneCommands.map(command => command.id),
-      taskStore,
-      laneStore,
-    })
-    const laneIdsByCommandId = new Map(laneResult.appliedCommands.map(command => [command.id, command.entityId]))
     const taskCommands: AICommand[] = []
 
     for (const [index, group] of visibleGroups.entries()) {
-      const laneId = laneIdsByCommandId.get(`smart-lane:${index}:lane`)
-      if (!laneId) throw new Error(`Smart lane ${index + 1} was not applied`)
+      const laneCommandId = `smart-lane:${index}:lane`
       const parentTaskId = group.tasks.length === 1 ? group.tasks[0].id : null
 
       for (const task of group.tasks) {
@@ -2556,7 +2536,8 @@ async function applySmartLanes(event: MouseEvent) {
           id: `smart-lane:${index}:task-update:${task.id}`,
           kind: 'task.update',
           taskId: task.id,
-          updates: { laneId },
+          updates: {},
+          laneCommandId,
           impact: 'low',
         })
       }
@@ -2567,34 +2548,57 @@ async function applySmartLanes(event: MouseEvent) {
           kind: 'task.create',
           title: newTask.title,
           priority: normalizeTaskPriority(newTask.priority),
-          laneId,
+          laneCommandId,
           parentTaskId,
           impact: 'low',
         })
       }
     }
 
-    if (taskCommands.length > 0) {
-      const taskBatch = aiActionCommands.buildAICommandBatchPreview({
-        sourcePrompt: 'smart lanes task assignment',
-        sourceRunId: props.message.id,
-        sourceMessageId: props.message.id,
-        dataUsed: {
-          messageId: props.message.id,
-          laneIds: Array.from(laneIdsByCommandId.values()),
-          taskCommandCount: taskCommands.length,
-        },
-        commands: taskCommands,
-        tasks: taskStore.tasks,
-        lanes: laneStore.lanes,
-      })
-      await aiActionCommands.applyAICommandBatch(taskBatch, {
-        selectedCommandIds: taskCommands.map(command => command.id),
-        taskStore,
-        laneStore,
-      })
-    }
-    smartLaneApplied.value = true
+    const commands = [...laneCommands, ...taskCommands]
+    const uncoveredTasks = plan.uncoveredTasks ?? []
+    const batch = aiActionCommands.buildAICommandBatchPreview({
+      sourcePrompt: 'Review and apply AI smart lanes',
+      sourceRunId: props.message.id,
+      sourceMessageId: props.message.id,
+      dataUsed: {
+        messageId: props.message.id,
+        groupCount: visibleGroups.length,
+        uncoveredTaskIds: uncoveredTasks.map(task => task.id).filter(Boolean),
+        groups: visibleGroups.map(group => ({
+          name: group.name,
+          taskIds: group.tasks.map(task => task.id).filter(Boolean),
+          newTaskCount: group.newTasks?.length ?? 0,
+        })),
+      },
+      commands,
+      tasks: taskStore.tasks,
+      lanes: laneStore.lanes,
+    })
+    commandCenterBatch.value = batch
+    commandCenterTitle.value = 'AI smart lanes'
+    commandCenterWhy.value = 'These changes group related work into lanes. Review every proposed lane and task move before applying.'
+    commandCenterSources.value = [
+      `${visibleGroups.length} proposed lane${visibleGroups.length === 1 ? '' : 's'}`,
+      `${taskCommands.length} proposed task change${taskCommands.length === 1 ? '' : 's'}`,
+      uncoveredTasks.length > 0
+        ? `Outside this proposal: ${uncoveredTasks.map(task => task.title || '(untitled)').join(', ')}`
+        : 'Every task in scope is covered by this proposal',
+    ]
+    commandCenterSteps.value = [
+      { id: 'read', label: 'Reading context', status: 'completed', message: `${plan.total ?? taskStore.tasks.length} tasks checked` },
+      { id: 'build', label: 'Building proposal', status: 'completed', message: `${commands.length} changes prepared` },
+      { id: 'validate', label: 'Validating coverage', status: 'completed', message: uncoveredTasks.length > 0 ? `${uncoveredTasks.length} tasks explicitly outside the proposal` : 'Every task accounted for' },
+      { id: 'approval', label: 'Waiting for approval', status: 'waiting_approval' },
+      { id: 'apply', label: 'Applying changes', status: 'pending' },
+      { id: 'verify', label: 'Verifying result', status: 'pending' },
+    ]
+    commandCenterAuditEntry.value = null
+    commandCenterAuditTrail.value = await aiActionCommands.loadAICommandAuditTrail({
+      sourceMessageId: props.message.id,
+      limit: 5,
+    })
+    commandCenterError.value = ''
   } catch (err) {
     console.error('[ChatMessage] Apply smart lanes failed:', err)
     smartLaneError.value = 'Could not apply these lanes.'
@@ -3514,18 +3518,26 @@ async function saveSchedule() {
           <button
             class="day-plan-apply-btn"
             :class="{ applied: smartLaneApplied }"
-            :disabled="smartLaneApplying || smartLaneApplied"
+            :disabled="smartLaneApplying || smartLaneApplied || Boolean(commandCenterBatch)"
             @click="applySmartLanes"
           >
             <Loader2 v-if="smartLaneApplying" :size="14" class="spin" />
             <Check v-else-if="smartLaneApplied" :size="14" />
             <ListOrdered v-else :size="14" />
-            <span>{{ smartLaneApplied ? 'Lanes applied' : `Apply lanes (${smartLaneApplyCount})` }}</span>
+            <span>{{ smartLaneApplied ? 'Lanes applied' : commandCenterBatch ? 'Review the proposal below' : `Review lanes (${smartLaneApplyCount})` }}</span>
           </button>
+          <span
+            v-if="smartLaneUncoveredTasks.length"
+            class="smart-lane-uncovered"
+            data-testid="smart-lane-uncovered"
+            dir="auto"
+          >
+            Outside this proposal: {{ smartLaneUncoveredTasks.map(task => task.title || '(untitled)').join(', ') }}
+          </span>
           <span v-if="smartLaneError" class="day-plan-error">{{ smartLaneError }}</span>
         </div>
         <AICommandCenterCard
-          v-if="isDayPlan && commandCenterBatch"
+          v-if="(isDayPlan || isSmartLanes) && commandCenterBatch"
           :batch="commandCenterBatch"
           :title="commandCenterTitle"
           :why="commandCenterWhy"
@@ -4395,6 +4407,7 @@ async function saveSchedule() {
 }
 .day-plan-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
@@ -4427,6 +4440,11 @@ async function saveSchedule() {
 .day-plan-error {
   font-size: var(--text-xs);
   color: var(--color-danger);
+}
+.smart-lane-uncovered {
+  flex-basis: 100%;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 .card-group {
   display: flex;

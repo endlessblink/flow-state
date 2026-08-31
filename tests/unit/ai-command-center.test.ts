@@ -165,6 +165,26 @@ describe('AI command center', () => {
     })
   })
 
+  it('rejects task changes that depend on a rejected proposed lane', async () => {
+    const batch = buildBatch()
+    batch.commands = [
+      { id: 'lane-1', kind: 'lane.create', name: 'Client Renewals' },
+      { id: 'task-1-lane', kind: 'task.update', taskId: 'task-1', updates: {}, laneCommandId: 'lane-1' },
+      { id: 'independent-task', kind: 'task.create', title: 'Independent follow-up' },
+    ]
+    batch.preview.commands = [
+      { ...batch.preview.commands[0], id: 'lane-1', kind: 'lane.create' },
+      { ...batch.preview.commands[1], id: 'task-1-lane', kind: 'task.update' },
+      { ...batch.preview.commands[1], id: 'independent-task', kind: 'task.create' },
+    ]
+    const wrapper = mount(AICommandCenterCard, { props: { batch, title: 'Smart lanes', why: 'Group related work.' } })
+
+    await wrapper.get('[data-testid="ai-command-reject-lane-1"]').trigger('click')
+    await wrapper.get('[data-testid="ai-command-apply"]').trigger('click')
+
+    expect(wrapper.emitted('apply')?.[0]?.[0]).toMatchObject({ selectedCommandIds: ['independent-task'] })
+  })
+
   it('requires explicit approval for high-impact commands and exposes retry for failed steps', async () => {
     const batch = buildBatch()
     batch.commands[0].impact = 'high'

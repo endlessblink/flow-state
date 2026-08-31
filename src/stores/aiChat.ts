@@ -172,6 +172,7 @@ export interface ChatContext {
   currentView: ViewContext
   selectedTaskId?: string
   selectedTask?: Task
+  selectedTaskIds?: string[]
   visibleTaskIds?: string[]
   /** Additional context string (e.g., user's recent activity) */
   additionalContext?: string

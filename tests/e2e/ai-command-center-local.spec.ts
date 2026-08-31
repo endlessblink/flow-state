@@ -149,3 +149,119 @@ test('renders the real command center from a synthetic day plan without mutation
   await commandCenter.getByTestId('ai-command-apply').scrollIntoViewIfNeeded()
   await page.screenshot({ path: '/tmp/flowstate-task1856-command-center-apply-e2e.png', fullPage: false })
 })
+
+test('organizer exposes lower uncovered work before review and applies only the selected lane', async ({ page }) => {
+  await page.goto('/src/main.ts', { waitUntil: 'domcontentloaded' })
+  await page.evaluate(() => {
+    const now = new Date().toISOString()
+    const task = (id: string, title: string) => ({
+      id,
+      title,
+      description: 'Synthetic organizer acceptance data only.',
+      status: 'todo',
+      priority: 'medium',
+      progress: 0,
+      completedPomodoros: 0,
+      subtasks: [],
+      dueDate: '',
+      projectId: 'uncategorized',
+      isUncategorized: true,
+      isInInbox: true,
+      canvasDismissed: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+    const tasks = [
+      task('task1857-synthetic-1', 'Prepare launch brief'),
+      task('task1857-synthetic-2', 'Review launch evidence'),
+      task('task1857-synthetic-3', 'Clarify website request'),
+    ]
+
+    localStorage.clear()
+    localStorage.setItem('flowstate-onboarding-v2', 'true')
+    localStorage.setItem('flowstate-welcome-seen', 'true')
+    localStorage.setItem('flowstate-guest-tasks', JSON.stringify(tasks))
+    localStorage.setItem('flowstate-settings-v2', JSON.stringify({ aiSetupComplete: true }))
+    localStorage.setItem('flowstate-ai-settings', JSON.stringify({
+      provider: 'bridge',
+      model: 'codex',
+      chatDirection: 'ltr',
+      chatLanguage: 'en',
+    }))
+    localStorage.setItem('flowstate-ai-conversations', JSON.stringify({
+      activeConversationId: 'task1857-synthetic-conversation',
+      conversations: [{
+        id: 'task1857-synthetic-conversation',
+        title: 'Synthetic organizer acceptance',
+        createdAt: now,
+        updatedAt: now,
+        messages: [
+          {
+            id: 'task1857-synthetic-user',
+            role: 'user',
+            content: 'Organize these selected synthetic tasks',
+            timestamp: now,
+          },
+          {
+            id: 'task1857-synthetic-assistant',
+            role: 'assistant',
+            content: 'Review these synthetic lanes before applying anything.',
+            timestamp: now,
+            metadata: {
+              cardGroups: {
+                kind: 'smart_lanes',
+                total: 3,
+                groups: [
+                  {
+                    name: 'Launch preparation',
+                    tasks: [{ ...tasks[0], reason: 'Creates the launch input.' }],
+                  },
+                  {
+                    name: 'Release review',
+                    tasks: [{ ...tasks[1], reason: 'Checks the launch evidence.' }],
+                  },
+                ],
+                uncoveredTasks: [tasks[2]],
+              },
+            },
+          },
+        ],
+      }],
+    }))
+  })
+
+  await page.goto('/#/canvas')
+  await expect(page.locator('button[title^="AI Assistant"]')).toBeVisible({ timeout: 30_000 })
+  await page.locator('button[title^="AI Assistant"]').click()
+  await expect(page.getByText('Review these synthetic lanes before applying anything.')).toBeVisible()
+  await expect(page.getByTestId('smart-lane-uncovered')).toContainText('Outside this proposal: Clarify website request')
+  await page.locator('.day-plan-apply-btn').click()
+
+  const commandCenter = page.getByTestId('ai-command-center')
+  await expect(commandCenter).toBeVisible()
+  await expect(commandCenter).toContainText('Outside this proposal: Clarify website request')
+
+  await commandCenter.getByTestId('ai-command-reject-smart-lane:0:lane').click()
+  await expect(commandCenter.locator('.command-item.is-rejected')).toHaveCount(2)
+  await commandCenter.getByTestId('ai-command-apply').click()
+  await expect(page.locator('.day-plan-apply-btn')).toContainText('Lanes applied')
+
+  const appliedState = await page.evaluate(() => {
+    const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+    const pinia = root.__vue_app__._context.config.globalProperties.$pinia
+    const taskStore = pinia._s.get('tasks')!
+    const laneStore = pinia._s.get('lanes')!
+    const tasks = taskStore.rawTasks || taskStore.tasks || []
+    return {
+      firstLaneId: tasks.find((candidate: any) => candidate.id === 'task1857-synthetic-1')?.laneId || null,
+      secondLaneId: tasks.find((candidate: any) => candidate.id === 'task1857-synthetic-2')?.laneId || null,
+      laneNames: (laneStore.lanes || []).map((lane: any) => lane.name),
+    }
+  })
+  expect(appliedState.firstLaneId).toBeNull()
+  expect(appliedState.secondLaneId).toBeTruthy()
+  expect(appliedState.laneNames).not.toContain('Launch preparation')
+  expect(appliedState.laneNames).toContain('Release review')
+
+  await page.screenshot({ path: '/tmp/flowstate-task1857-organizer-e2e.png', fullPage: false })
+})

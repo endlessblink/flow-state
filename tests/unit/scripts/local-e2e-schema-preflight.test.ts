@@ -75,6 +75,25 @@ describe('local E2E canonical schema preflight', () => {
       .toBeLessThan(source.indexOf('status_value SECRET_KEY'))
   })
 
+  it('uses the gateway secret for Auth admin without replacing the schema service role', () => {
+    const runnerSource = require('node:fs').readFileSync(resolve(process.cwd(), 'scripts/run-e2e.sh'), 'utf8') as string
+    const setupSource = require('node:fs').readFileSync(resolve(process.cwd(), 'tests/global-setup.ts'), 'utf8') as string
+    const canvasSyncSource = require('node:fs').readFileSync(
+      resolve(process.cwd(), 'tests/e2e/canvas-sync-regressions.spec.ts'),
+      'utf8'
+    ) as string
+
+    expect(runnerSource).toContain('LOCAL_AUTH_ADMIN_KEY=$(status_value SECRET_KEY)')
+    expect(runnerSource).toContain('SUPABASE_AUTH_ADMIN_KEY="$LOCAL_AUTH_ADMIN_KEY"')
+    expect(setupSource).toContain(
+      'process.env.SUPABASE_AUTH_ADMIN_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY'
+    )
+    expect(canvasSyncSource).toContain(
+      'process.env.SUPABASE_AUTH_ADMIN_KEY || SERVICE_ROLE_KEY'
+    )
+    expect(canvasSyncSource).toContain('ensureAuthUser(authAdmin, {')
+  })
+
   it('prefers detected local Supabase credentials over inherited remote credentials', () => {
     const source = require('node:fs').readFileSync(resolve(process.cwd(), 'scripts/run-e2e.sh'), 'utf8') as string
 

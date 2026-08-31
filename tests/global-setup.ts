@@ -7,22 +7,30 @@ import { ensureAuthUser } from './fixtures/auth'
 // TASK-1457: Dedicated Playwright test user — completely isolated from real users
 const SUPABASE_URL = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const SUPABASE_AUTH_ADMIN_KEY = process.env.SUPABASE_AUTH_ADMIN_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
 const TEST_USER_EMAIL = 'playwright@test.flowstate'
 const TEST_USER_PASSWORD = 'pw-playwright-e2e-2026!'
 
 async function ensureTestUser() {
   if (!SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('[global-setup] SUPABASE_SERVICE_ROLE_KEY is required to create the test user')
+    console.error('[global-setup] SUPABASE_SERVICE_ROLE_KEY is required to seed test data')
     console.error('[global-setup] Run: export SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o env | grep SERVICE_ROLE_KEY | cut -d= -f2)')
+    process.exit(1)
+  }
+  if (!SUPABASE_AUTH_ADMIN_KEY) {
+    console.error('[global-setup] SUPABASE_AUTH_ADMIN_KEY or SUPABASE_SERVICE_ROLE_KEY is required to create the test user')
     process.exit(1)
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
+  const authAdmin = createClient(SUPABASE_URL, SUPABASE_AUTH_ADMIN_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
 
-  const testUser = await ensureAuthUser(supabase, {
+  const testUser = await ensureAuthUser(authAdmin, {
     email: TEST_USER_EMAIL,
     password: TEST_USER_PASSWORD,
     email_confirm: true,

@@ -31,6 +31,8 @@ import { ensureAuthUser, TEST_USER } from "../fixtures/auth";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "http://127.0.0.1:54321";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const AUTH_ADMIN_KEY =
+  process.env.SUPABASE_AUTH_ADMIN_KEY || SERVICE_ROLE_KEY;
 
 // Canvas tasks seeded far from the global-setup groups (x=100/500) to avoid
 // spatial auto-assignment stealing them into a group.
@@ -98,6 +100,7 @@ const CHILD_TASK = {
 };
 
 let admin: SupabaseClient;
+let authAdmin: SupabaseClient;
 let userId: string;
 
 const ALL_IDS = [
@@ -183,7 +186,10 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    const user = await ensureAuthUser(admin, {
+    authAdmin = createClient(SUPABASE_URL, AUTH_ADMIN_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const user = await ensureAuthUser(authAdmin, {
       ...TEST_USER,
       email_confirm: true,
     });

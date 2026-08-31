@@ -19,6 +19,10 @@ LOCAL_SERVICE_ROLE_KEY=$(status_value SERVICE_ROLE_KEY)
 if [ -z "$LOCAL_SERVICE_ROLE_KEY" ]; then
   LOCAL_SERVICE_ROLE_KEY=$(status_value SECRET_KEY)
 fi
+LOCAL_AUTH_ADMIN_KEY=$(status_value SECRET_KEY)
+if [ -z "$LOCAL_AUTH_ADMIN_KEY" ]; then
+  LOCAL_AUTH_ADMIN_KEY="$LOCAL_SERVICE_ROLE_KEY"
+fi
 LOCAL_ANON_KEY=$(status_value PUBLISHABLE_KEY)
 if [ -z "$LOCAL_ANON_KEY" ]; then
   LOCAL_ANON_KEY=$(status_value ANON_KEY)
@@ -29,11 +33,13 @@ if [ -n "$LOCAL_API_URL" ]; then
   # caller injected production credentials for the surrounding build.
   SUPABASE_URL="$LOCAL_API_URL"
   SUPABASE_SERVICE_ROLE_KEY="$LOCAL_SERVICE_ROLE_KEY"
+  SUPABASE_AUTH_ADMIN_KEY="$LOCAL_AUTH_ADMIN_KEY"
   VITE_SUPABASE_ANON_KEY="$LOCAL_ANON_KEY"
 else
   # Preserve explicitly supplied credentials for remote or externally managed
   # E2E environments when local Supabase is unavailable.
   SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-}"
+  SUPABASE_AUTH_ADMIN_KEY="${SUPABASE_AUTH_ADMIN_KEY:-$SUPABASE_SERVICE_ROLE_KEY}"
   VITE_SUPABASE_ANON_KEY="${VITE_SUPABASE_ANON_KEY:-}"
 fi
 
@@ -43,6 +49,7 @@ if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ] || [ -z "${VITE_SUPABASE_ANON_KEY:-}"
 fi
 
 export SUPABASE_SERVICE_ROLE_KEY
+export SUPABASE_AUTH_ADMIN_KEY
 export VITE_SUPABASE_ANON_KEY
 export SUPABASE_URL
 export SUPABASE_URL="${SUPABASE_URL:-http://127.0.0.1:54321}"

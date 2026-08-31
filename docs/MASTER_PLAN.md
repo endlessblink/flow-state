@@ -69,6 +69,43 @@ When an offline canonical task update targets a task that no longer exists in th
 - Add a repro fixture matching the reported canvas layout and assert the lower tasks are either included or explicitly surfaced as excluded.
 - Capture a visible before/after result from the canvas review surface once the fix lands.
 
+### BUG-2066: Offline reconnect regression hunt aborts before sync coverage (✅ DONE)
+
+**Priority**: P0 | **Status**: ✅ DONE (2026-08-31) | **Failure class**: auth/sync
+
+**Exact failure mode**: The daily `offline-reconnect-convergence` run aborted in Playwright global setup before any reconnect scenario executed. Local Supabase Auth rejected the legacy HS256 service-role JWT used by `auth.admin.createUser`, even though the same environment exposed a supported gateway secret for Auth administration. The report therefore contained no evidence about reconnect convergence itself.
+
+**Repair**: Keep the explicit service-role key for canonical PostgREST schema probes and seeded data writes, but pass the local gateway secret through a dedicated Auth-admin credential. Externally managed environments retain the existing service-role fallback.
+
+**Verified closeout**:
+
+- Red-green harness contract: the new credential-separation assertion failed before the suite used the dedicated Auth-admin client, then passed after the repair (10/10 focused unit tests).
+- Exact reconnect boundary: R10 passed offline creation, reconnect queue drain, second-client delivery, and reload survival.
+- Full canvas/sync regression boundary: 34/34 Chromium cases passed from global setup through convergence assertions in 4.4 minutes.
+- `scripts/run-e2e.sh` syntax and the project TypeScript check passed. No product runtime code changed, so no Electron release was required.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | The same local E2E entrypoint now completes global Auth setup and runs R10. | Yes |
+| Data shape / persisted row shape | Yes | R10 verified the offline-created row after reconnect and after reload. | No product change needed |
+| Renderer store/state | Yes | R10 verified the task exists locally while offline before convergence. | No product change needed |
+| Electron main/preload bridge | N/A | The failed report was browser Playwright setup, not Electron. | No |
+| Localhost sidecar endpoint | N/A | This regression does not use the timer sidecar. | No |
+| KDE polling/control path | N/A | This regression does not use KDE integration. | No |
+| Supabase persistence/realtime | Yes | R10 passed queue drain and second-client delivery; the full 34-case suite passed. | Auth harness only |
+| Updater/runtime version | N/A | No product runtime code changed. | No |
+| Stale live process/cache state | Yes | The clean Playwright-managed server passed after an inherited-env development server was removed from the investigation. | No |
+
+**Exact failure mode fixed**: Local E2E Auth administration used a legacy service-role JWT that the current local Auth service rejects, so global setup aborted before sync coverage.
+
+**Explicitly not covered**: Production authentication, Electron authentication, updater delivery, timer sidecar behavior, KDE integration, and unrelated product sync failure classes.
+
+**Regression added for reported repro**: The harness contract requires the detected gateway secret to reach both global setup and the canvas/sync suite as the dedicated Auth-admin credential while retaining the service-role key for schema and seeded-data access.
+
+**Live boundary proof**: The exact R10 reconnect test passed, then the complete Chromium canvas/sync suite passed 34/34 from Auth setup through cross-client convergence and reload.
+
 ### FEATURE-2041: Learn routines and scheduling behavior from task history (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)

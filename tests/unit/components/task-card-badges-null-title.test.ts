@@ -63,4 +63,24 @@ describe('TaskCardBadges — null/undefined title', () => {
       wrapper.unmount()
     }).not.toThrow()
   })
+
+  it('shows the completion date instead of the unchanged due date for a completed task', () => {
+    const wrapper = shallowMount(TaskCardBadges, {
+      props: {
+        ...baseProps,
+        task: {
+          id: 'completed-task',
+          title: 'Completed task',
+          status: 'done',
+          dueDate: '2026-08-30',
+          completedAt: new Date('2026-08-31T10:00:00Z'),
+        } as any,
+        formattedDueDate: 'Aug 30',
+        formattedCompletedDate: 'Aug 31',
+      },
+    })
+
+    expect(wrapper.text()).toContain('Completed Aug 31')
+    expect(wrapper.text()).not.toContain('Aug 30')
+  })
 })

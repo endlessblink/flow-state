@@ -5,9 +5,19 @@
     aria-label="Task metadata"
   >
     <div class="badge-left">
+      <!-- Completion Date -->
+      <span
+        v-if="task.status === 'done' && formattedCompletedDate"
+        class="badge-item"
+        :title="`Completed: ${formattedCompletedDate}`"
+      >
+        <CheckCircle2 :size="12" />
+        <span class="badge-text">Completed {{ formattedCompletedDate }}</span>
+      </span>
+
       <!-- Due Date -->
       <span
-        v-if="task.dueDate"
+        v-else-if="task.dueDate"
         class="badge-item"
         :class="dueDateClass"
         :title="`Due: ${formattedDueDate}`"
@@ -131,7 +141,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import type { Task } from '@/stores/tasks'
-import { Calendar, CheckSquare, Timer, Paperclip, Repeat } from 'lucide-vue-next'
+import { Calendar, CheckCircle2, CheckSquare, Timer, Paperclip, Repeat } from 'lucide-vue-next'
 import { reactiveToday, ensureDateTimer } from '@/composables/useReactiveDate'
 import { describeRecurrenceRule } from '@/utils/recurrenceUtils'
 import { useWorkspaceStore } from '@/stores/workspace'
@@ -143,6 +153,7 @@ const props = defineProps<{
   task: Task
   density?: 'ultrathin' | 'compact' | 'comfortable' | 'spacious'
   formattedDueDate: string
+  formattedCompletedDate?: string
   formattedDuration: string
   completedSubtasks: number
   hasDependencies?: boolean

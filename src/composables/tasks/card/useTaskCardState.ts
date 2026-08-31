@@ -39,6 +39,15 @@ export function useTaskCardState(props: { task: Task; disabled?: boolean }) {
         return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(dateObj)
     })
 
+    const formattedCompletedDate = computed(() => {
+        if (!props.task.completedAt) return ''
+        const date = props.task.completedAt instanceof Date
+            ? props.task.completedAt
+            : new Date(props.task.completedAt)
+        if (Number.isNaN(date.getTime())) return ''
+        return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date)
+    })
+
     // Format duration
     const formattedDuration = computed(() => {
         const d = props.task.estimatedDuration || 0
@@ -107,6 +116,7 @@ export function useTaskCardState(props: { task: Task; disabled?: boolean }) {
         hasDependencies,
         completedSubtasks,
         formattedDueDate,
+        formattedCompletedDate,
         formattedDuration,
         durationBadgeClass,
         titleAlignmentClasses,

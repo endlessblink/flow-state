@@ -86,6 +86,7 @@
         task,
         density,
         formattedDueDate,
+        formattedCompletedDate,
         formattedDuration,
         completedSubtasks,
         hasDependencies,
@@ -155,7 +156,7 @@ const isTimerActive = computed(() => {
 const {
   isExpanded, isFocused, isPressed, cardRef,
   isSelected, hasDependencies, completedSubtasks,
-  formattedDueDate, formattedDuration, durationBadgeClass,
+  formattedDueDate, formattedCompletedDate, formattedDuration, durationBadgeClass,
   titleAlignmentClasses, isRtl, projectVisual, taskAriaLabel,
   progressiveDisclosureEnabled,
   descriptionPreview, visibleTags, hasMoreTags, remainingTagCount

@@ -50,6 +50,25 @@
 
 When an offline canonical task update targets a task that no longer exists in the authoritative projection, the sync layer must quarantine it as a permanent failure and the explicit **Discard local changes** action must remove that quarantined local record. Retryable canonical operations must remain intact. Regression coverage must exercise both paths and the real Electron sync-error boundary must be rechecked after release.
 
+### BUG-2065: Canvas grouping leaves visible tasks outside the covered group (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-08-31) | **Related to**: TASK-1857, TASK-1861
+
+**Exact failure mode**: In the canvas intake/work-organization flow, grouping a visible vertical cluster can stop too early and leave additional tasks from the same apparent stack outside the group's covered region. The screenshot repro shows a grouped stack in the center-left column while lower cards in the same vertical chain remain visibly ungrouped below the group's boundary, creating a false sense that the full capture was already organized.
+
+**Acceptance**:
+
+- Group coverage includes every task card visually selected or implied by the user's grouped stack, including lower cards in the same continuous column when they are part of the same capture.
+- The preview/apply state makes uncovered tasks obvious instead of implying the group is complete.
+- Regression coverage locks the reported repro shape: a tall vertical task stack with additional cards below the initially grouped region.
+- Verification distinguishes intentional exclusions from accidental truncation.
+
+**Evidence to collect**:
+
+- Read back the grouping selection/candidate logic that determines which canvas tasks belong to one clustered result.
+- Add a repro fixture matching the reported canvas layout and assert the lower tasks are either included or explicitly surfaced as excluded.
+- Capture a visible before/after result from the canvas review surface once the fix lands.
+
 ### FEATURE-2041: Learn routines and scheduling behavior from task history (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-08-24)

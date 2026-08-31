@@ -50,9 +50,9 @@
 
 When an offline canonical task update targets a task that no longer exists in the authoritative projection, the sync layer must quarantine it as a permanent failure and the explicit **Discard local changes** action must remove that quarantined local record. Retryable canonical operations must remain intact. Regression coverage must exercise both paths and the real Electron sync-error boundary must be rechecked after release.
 
-### BUG-2065: Canvas grouping leaves visible tasks outside the covered group (📋 PLANNED)
+### ~~BUG-2065: Canvas grouping leaves visible tasks outside the covered group~~ (✅ DONE)
 
-**Priority**: P1 | **Status**: 📋 PLANNED (filed 2026-08-31) | **Related to**: TASK-1857, TASK-1861
+**Priority**: P1 | **Status**: ✅ DONE (2026-08-31) | **Related to**: TASK-1857, TASK-1861
 
 **Exact failure mode**: In the canvas intake/work-organization flow, grouping a visible vertical cluster can stop too early and leave additional tasks from the same apparent stack outside the group's covered region. The screenshot repro shows a grouped stack in the center-left column while lower cards in the same vertical chain remain visibly ungrouped below the group's boundary, creating a false sense that the full capture was already organized.
 
@@ -68,6 +68,30 @@ When an offline canonical task update targets a task that no longer exists in th
 - Read back the grouping selection/candidate logic that determines which canvas tasks belong to one clustered result.
 - Add a repro fixture matching the reported canvas layout and assert the lower tasks are either included or explicitly surfaced as excluded.
 - Capture a visible before/after result from the canvas review surface once the fix lands.
+
+**Completion evidence**: Canvas groups now derive their bounds from every selected node and preserve the complete tall-stack selection during apply. The organizer review explicitly lists tasks outside a proposed cluster before apply, so intentional exclusions no longer look covered. Regression coverage locks the reported lower-card repro shape, and the real command-center Playwright surface passed 2/2 with the uncovered-task notice visible before review. Desktop updater 1.4.493 serves both Linux artifacts with HTTP 200 and manifest-matching sizes.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Tall vertical selected stack includes the lower cards and exposes omitted proposal tasks before review | Yes |
+| Data shape / persisted row shape | Yes | Group commands retain every selected canvas node id and apply dependent node moves atomically | Yes |
+| Renderer store/state | Yes | Measured group bounds cover every selected node and the real command-center surface renders uncovered tasks | Yes |
+| Electron main/preload bridge | N/A | Grouping and organizer execution stay in the renderer command substrate | Not involved |
+| Localhost sidecar endpoint | N/A | No sidecar route participates in canvas grouping | Not involved |
+| KDE polling/control path | N/A | No KDE integration participates in canvas grouping | Not involved |
+| Supabase persistence/realtime | Boundary preserved | Synthetic preview/apply coverage avoids production task mutation; command persistence is covered by unit tests | Production mutation intentionally not covered |
+| Updater/runtime version | Yes | Public manifest reports 1.4.493 and both manifest-sized Linux artifacts return HTTP 200 | Yes |
+| Stale live process/cache state | Not checked | Acceptance used a fresh synthetic renderer and public updater read-back | Installed-profile cache state remains outside this fix |
+
+**Exact failure mode fixed**: A group created from a tall selected canvas stack could use incomplete/static bounds and visually stop above lower selected cards; organizer proposals could also omit tasks without showing that omission before review.
+
+**Explicitly not covered**: Automatic spatial inference for nearby but unselected canvas nodes remains part of TASK-1861. This fix guarantees complete coverage of the explicit selection and makes every proposal exclusion visible.
+
+**Regression added for reported repro**: A tall vertical canvas fixture asserts the group bottom encloses the lowest selected card, with organizer and command-center coverage asserting excluded tasks remain visible and selected-only apply stays atomic.
+
+**Live boundary proof**: The real synthetic command-center Playwright surface passed 2/2 without production mutation, and public Electron updater 1.4.493 plus both Linux artifacts read back successfully.
 
 ### BUG-2066: Offline reconnect regression hunt aborts before sync coverage (✅ DONE)
 
@@ -680,7 +704,7 @@ The R10 offline-create E2E now passes end-to-end with the local canonical schema
 | ----- | ---------------------------- | --------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | 1     | Safety and command substrate | TASK-1855 | TASK-1854                       | Bot actions become previewable, idempotent, duplicate-aware, auditable, and undoable instead of direct hidden mutations. |
 | 2     | AI command center ✅         | TASK-1856 | TASK-1855                       | The chat/sidebar becomes an action surface with suggestions, diffs, apply/edit/reject, and visible agent progress.       |
-| 3     | Intake and organization      | TASK-1857 | TASK-1856                       | Messy captures, inbox tasks, and canvas notes can be clustered, deduped, decomposed, and turned into tasks/lanes.        |
+| 3     | Intake and organization ✅   | TASK-1857 | TASK-1856                       | Messy captures, inbox tasks, and canvas notes can be clustered, deduped, decomposed, and turned into tasks/lanes.        |
 | 4     | Daily/weekly planning agent  | TASK-1858 | TASK-1856, TASK-1857            | Bot proposes day/week plans using tasks, lanes, calendar, focus capacity, memory, and goals.                             |
 | 5     | Next-best-action engine      | TASK-1859 | TASK-1858                       | "What should I do now?" becomes context-aware and personalized instead of a static priority list.                        |
 | 6     | Calendar and focus defense   | TASK-1860 | TASK-1858, TASK-1859            | Bot protects focus blocks, detects overcommitment, and proposes reschedules without silent calendar changes.             |
@@ -1789,8 +1813,8 @@ _Original plan below._
 
 **Next implementation cursor**:
 
-- Start TASK-1857 next. Build intake and messy-work organization on the completed command-center surface instead of adding a parallel proposal UI.
-- Reuse the existing preview/edit/reject/apply, command identity, audit, rollback, progress, and grounded-source controls for every organizer proposal.
+- Start TASK-1858 next. Build daily and weekly planning on the completed command-center and organizer surfaces instead of adding a parallel proposal UI.
+- Reuse the existing preview/edit/reject/apply, command identity, audit, rollback, progress, and grounded-source controls for every planning proposal.
 - Preserve TASK-1855/TASK-1856 boundaries: manual user writes remain unchanged; new AI write consumers must add a typed command family or route through an existing one before mutating stores/services.
 
 ### ~~TASK-1856: AI command center and agent progress UI~~ (✅ DONE)
@@ -1834,9 +1858,9 @@ _Original plan below._
 | Updater/runtime version | Yes | Public manifest and authenticated runtime both report 1.4.492; public artifact sizes and local/VPS hashes match | Yes |
 | Stale live process/cache state | Yes | Prior verification runtime exited, then 1.4.492 launched cleanly against the real profile with initialized sync-capable auth | Yes |
 
-### TASK-1857: Intake and messy-work organizer agent (📋 PLANNED)
+### ~~TASK-1857: Intake and messy-work organizer agent~~ (✅ DONE)
 
-**Priority**: P0-HIGH | **Status**: 📋 PLANNED (filed 2026-06-13) | **Depends on**: TASK-1856
+**Priority**: P0-HIGH | **Status**: ✅ DONE (2026-08-31) | **Depends on**: TASK-1856
 
 **Why**: A high-value bot can reduce task chaos: messy captures, vague tasks, duplicate tasks, canvas scraps, and unstructured notes should become clean projects, lanes, subtasks, or clarified next actions.
 
@@ -1852,6 +1876,8 @@ _Original plan below._
 
 - This is broader than "smart lanes". Smart lanes become one mode inside the organizer: a clustering/apply workflow, not the whole product direction.
 - Regression coverage should include apply-selected-only behavior, no mutation on preview, duplicate protection, and vague-task clarification fallback.
+
+**Completion evidence**: The organizer accepts selected inbox tasks, selected canvas nodes, explicit organizer prompts, and raw English or Hebrew pasted lists. It proposes themed lanes plus deduplication and clarification work, exposes every uncovered task, and applies only selected changes through the shared command substrate with atomic dependent actions. Type-check passed; the full unit suite passed 4,769 tests with 6 intentional skips; independent focused review passed 155 tests; the synthetic command-center Playwright lane passed 2/2; the Electron build and package validation passed; and public updater 1.4.493 serves the AppImage and Debian package with HTTP 200 and manifest-matching sizes.
 
 ### TASK-1858: Daily and weekly planning agent (📋 PLANNED)
 

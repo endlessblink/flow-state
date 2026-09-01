@@ -93,8 +93,8 @@ describe('supervised AppImage installer transaction runtime', () => {
   it('verifies a direct replacement before clearing the pending marker', () => {
     expect(installerScript).toContain('wait_for_direct_health()')
     expect(installerScript).toContain('fail_after_swap "direct replacement readiness"')
-    expect(installerScript).toContain('grep -Eq')
-    expect(installerScript).toContain('[[:space:]]*:[[:space:]]*')
+    expect(installerScript).toContain("tr -d '[:space:]'")
+    expect(installerScript).toContain("*'\"appVersion\":\"'\"$expected_health_version\"'\"'*) return 0 ;;")
     expect(installerScript).toContain('direct readiness expected=[$expected_health_version] response=$provenance_probe')
   })
 

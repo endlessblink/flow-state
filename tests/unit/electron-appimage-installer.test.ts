@@ -34,7 +34,9 @@ describe('detached AppImage installer', () => {
     const startedMarker = join(directory, 'replacement-started')
     const binDirectory = join(directory, 'bin')
     const fakeCurl = join(binDirectory, 'curl')
+    const fakeGrep = join(binDirectory, 'grep')
     const fakePs = join(binDirectory, 'ps')
+    const fakeSleep = join(binDirectory, 'sleep')
 
     mkdirSync(pendingDirectory, { recursive: true })
     mkdirSync(binDirectory, { recursive: true })
@@ -47,7 +49,12 @@ describe('detached AppImage installer', () => {
       `#!/bin/sh\nif [ -e '${startedMarker}' ]; then\n  printf '{\\n  "schemaVersion": "flowstate-sidecar-provenance-v1",\\n  "appVersion": "1.4.777",\\n  "sourceCommit": "live-shaped-provenance"\\n}\\n'\n  exit 0\nfi\nexit 7\n`,
       { mode: 0o755 },
     )
+    // The installed retry observed a healthy response but did not accept the
+    // grep result. The handoff must retain an exact-version replacement even
+    // when that external matcher fails unexpectedly.
+    writeFileSync(fakeGrep, '#!/bin/sh\nexit 1\n', { mode: 0o755 })
     writeFileSync(fakePs, '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+    writeFileSync(fakeSleep, '#!/bin/sh\nexit 0\n', { mode: 0o755 })
 
     try {
       execFileSync('/bin/sh', [

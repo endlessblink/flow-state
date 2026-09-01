@@ -1,0 +1,12 @@
+{
+  "schema": "flowstate-stability-challenge-snapshot-v1",
+  "capturedAt": "2026-09-01",
+  "revision": { "head": "f95e02fb87f7427649004db30345fe1962b0aac4", "dirty": true },
+  "candidate": "BUG-2071 failed Electron update retry recovery",
+  "acceptance": [
+    { "id": "explicit-retry-redownload", "status": "PASS", "evidence": "The IPC regression clears a confirmed blocked marker and invokes one fresh update check and one download for the newer version." },
+    { "id": "direct-healthy-replacement", "status": "PASS", "evidence": "The exact detached installer script retains a replacement whose isolated provenance response reports the expected version with whitespace." },
+    { "id": "rollback-protection", "status": "PASS", "evidence": "Existing pending-update and updater-contract tests retain version comparison, failed-marker scope, and known-good rollback coverage." },
+    { "id": "focused-updater-suite", "status": "PASS", "evidence": "docs/challenge/evidence-2026-09-01-bug-2071.md records the exact command and its four-file, 39-test PASS result." }
+  ]
+}

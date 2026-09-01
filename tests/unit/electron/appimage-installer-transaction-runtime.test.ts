@@ -41,6 +41,7 @@ if [ "$INSTALL_STRATEGY" = "direct" ] && [ "$count" -eq 1 ]; then exit 1; fi
 printf '{"appVersion":"%s"}' "$REPORTED_VERSION"
 `)
   writeFileSync(join(bin, 'sleep'), '#!/bin/sh\nexit 0\n')
+  writeFileSync(join(bin, 'ps'), '#!/bin/sh\nexit 0\n')
   writeFileSync(join(bin, 'mv'), `#!/bin/sh
 source="$1"
 if [ "$source" = "-f" ]; then source="$2"; fi
@@ -51,7 +52,7 @@ case "$source" in
 esac
 exec /bin/mv "$@"
 `)
-  for (const command of ['systemctl', 'curl', 'sleep', 'mv']) {
+  for (const command of ['systemctl', 'curl', 'sleep', 'ps', 'mv']) {
     chmodSync(join(bin, command), 0o755)
   }
 
@@ -92,8 +93,9 @@ describe('supervised AppImage installer transaction runtime', () => {
   it('verifies a direct replacement before clearing the pending marker', () => {
     expect(installerScript).toContain('wait_for_direct_health()')
     expect(installerScript).toContain('fail_after_swap "direct replacement readiness"')
-    expect(installerScript).toContain("tr -d '[:space:]'")
-    expect(installerScript).toContain('direct readiness expected=$expected_health_version response=$provenance_probe')
+    expect(installerScript).toContain('grep -Eq')
+    expect(installerScript).toContain('[[:space:]]*:[[:space:]]*')
+    expect(installerScript).toContain('direct readiness expected=[$expected_health_version] response=$provenance_probe')
   })
 
   it('terminates the old AppImage process group so its sidecar cannot hold the health port', () => {

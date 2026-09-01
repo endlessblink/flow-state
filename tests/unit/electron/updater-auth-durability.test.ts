@@ -14,6 +14,16 @@ const mocks = vi.hoisted(() => {
     quit: vi.fn(),
     send: vi.fn(),
     pendingAppImagePath: vi.fn<() => string | null>(() => null),
+    clearBlockedPendingUpdate: vi.fn(() => ({
+      cleared: false,
+      pendingVersion: null,
+      updateInfoPath: '/tmp/update-info.json',
+    })),
+    clearResolvedPendingUpdateFailure: vi.fn(() => false),
+    clearObsoletePendingAppImages: vi.fn(() => []),
+    compareVersions: vi.fn((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true })),
+    checkForUpdates: vi.fn(async () => null),
+    downloadUpdate: vi.fn(async () => undefined),
     spawnSync: vi.fn(),
   }
 })
@@ -42,11 +52,10 @@ vi.mock('../../../electron/updater-pending', () => ({
     pendingVersion: null,
     updateInfoPath: '/tmp/update-info.json',
   })),
-  clearBlockedPendingUpdate: vi.fn(() => ({
-    cleared: false,
-    pendingVersion: null,
-    updateInfoPath: '/tmp/update-info.json',
-  })),
+  clearBlockedPendingUpdate: mocks.clearBlockedPendingUpdate,
+  clearResolvedPendingUpdateFailure: mocks.clearResolvedPendingUpdateFailure,
+  clearObsoletePendingAppImages: mocks.clearObsoletePendingAppImages,
+  compareVersions: mocks.compareVersions,
   pendingUpdateInfoPath: vi.fn(() => '/tmp/update-info.json'),
   pendingAppImagePath: mocks.pendingAppImagePath,
   versionFromUpdateFileName: vi.fn((fileName: string) => {
@@ -77,8 +86,8 @@ vi.mock('electron', () => ({
 
 vi.mock('electron-updater', () => ({
   autoUpdater: {
-    checkForUpdates: vi.fn(async () => null),
-    downloadUpdate: vi.fn(async () => undefined),
+    checkForUpdates: mocks.checkForUpdates,
+    downloadUpdate: mocks.downloadUpdate,
     quitAndInstall: mocks.quitAndInstall,
     on: vi.fn(),
   },
@@ -105,6 +114,22 @@ describe('Electron updater durable-auth gate', () => {
     mocks.send.mockReset()
     mocks.pendingAppImagePath.mockReset()
     mocks.pendingAppImagePath.mockReturnValue(null)
+    mocks.clearBlockedPendingUpdate.mockReset()
+    mocks.clearBlockedPendingUpdate.mockReturnValue({
+      cleared: false,
+      pendingVersion: null,
+      updateInfoPath: '/tmp/update-info.json',
+    })
+    mocks.clearResolvedPendingUpdateFailure.mockReset()
+    mocks.clearResolvedPendingUpdateFailure.mockReturnValue(false)
+    mocks.clearObsoletePendingAppImages.mockReset()
+    mocks.clearObsoletePendingAppImages.mockReturnValue([])
+    mocks.compareVersions.mockReset()
+    mocks.compareVersions.mockImplementation((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true }))
+    mocks.checkForUpdates.mockReset()
+    mocks.checkForUpdates.mockResolvedValue(null)
+    mocks.downloadUpdate.mockReset()
+    mocks.downloadUpdate.mockResolvedValue(undefined)
     mocks.spawnSync.mockReset()
     registerUpdater()
   })
@@ -129,6 +154,22 @@ describe('Electron updater durable-auth gate', () => {
       'updater:error',
       expect.stringContaining('could not save the current session'),
     )
+  })
+
+  it('redownloads the exact blocked update after the user explicitly retries it', async () => {
+    mocks.clearBlockedPendingUpdate.mockReturnValueOnce({
+      cleared: true,
+      pendingVersion: '1.4.270',
+      updateInfoPath: '/tmp/update-info.json',
+    })
+    mocks.checkForUpdates.mockResolvedValueOnce({ updateInfo: { version: '1.4.270' } })
+    const retry = mocks.handlers.get('updater:retry-failed')!
+
+    await expect(retry()).resolves.toEqual({ updateInfo: { version: '1.4.270' } })
+
+    expect(mocks.clearBlockedPendingUpdate).toHaveBeenCalledWith('1.4.269')
+    expect(mocks.checkForUpdates).toHaveBeenCalledOnce()
+    expect(mocks.downloadUpdate).toHaveBeenCalledOnce()
   })
 
   it('does not release the lock or restart when the durable store flush times out', async () => {

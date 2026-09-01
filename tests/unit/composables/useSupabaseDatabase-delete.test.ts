@@ -143,10 +143,43 @@ describe('useSupabaseDatabase permanent task delete', () => {
     )
 
     expect(queryCalls).toContainEqual({ table: 'tasks', method: 'maybeSingle', args: [] })
-    expect(fromMock).not.toHaveBeenCalledWith('tombstones')
+    expect(fromMock).toHaveBeenCalledWith('tombstones')
   })
 
-  it('does not attempt fallback tombstone persistence after an unscoped zero-row delete', async () => {
+  it('treats a matching existing tombstone as an idempotent completed delete', async () => {
+    queueResponse('tasks', [
+      { data: [], error: null },
+      { data: null, error: null }
+    ])
+    queueResponse('tombstones', [{ data: { entity_id: 'task-already-deleted' }, error: null }])
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+
+    await expect(db.permanentlyDeleteTask('task-already-deleted')).resolves.toBeUndefined()
+
+    expect(queryCalls).toContainEqual({ table: 'tombstones', method: 'eq', args: ['user_id', 'user-1'] })
+    expect(queryCalls).toContainEqual({ table: 'tombstones', method: 'eq', args: ['entity_type', 'task'] })
+    expect(queryCalls).toContainEqual({ table: 'tombstones', method: 'eq', args: ['entity_id', 'task-already-deleted'] })
+    expect(queryCalls).toContainEqual({ table: 'tombstones', method: 'maybeSingle', args: [] })
+  })
+
+  it('fails closed when an absent task has no matching tombstone', async () => {
+    queueResponse('tasks', [
+      { data: [], error: null },
+      { data: null, error: null }
+    ])
+    queueResponse('tombstones', [{ data: null, error: null }])
+
+    const { useSupabaseDatabase } = await import('@/composables/useSupabaseDatabase')
+    const db = useSupabaseDatabase()
+
+    await expect(db.permanentlyDeleteTask('task-unknown')).rejects.toThrow(
+      'cannot establish deletion scope'
+    )
+  })
+
+  it('checks for, but does not create, a tombstone after an unscoped zero-row delete', async () => {
     queueResponse('tasks', [
       { data: [], error: null },
       { data: null, error: null }
@@ -157,7 +190,7 @@ describe('useSupabaseDatabase permanent task delete', () => {
     await expect(db.permanentlyDeleteTask('task-absent')).rejects.toThrow(
       'cannot establish deletion scope'
     )
-    expect(fromMock).not.toHaveBeenCalledWith('tombstones')
+    expect(fromMock).toHaveBeenCalledWith('tombstones')
   })
 
   it('throws when the fallback visibility check errors and does not create a tombstone', async () => {

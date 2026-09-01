@@ -1,0 +1,11 @@
+{
+  "schema": "flowstate-stability-challenge-snapshot-v1",
+  "capturedAt": "2026-09-01",
+  "revision": { "head": "5dce3ac3c33c3d5586533168eaaf56f0adbc4929", "dirty": true },
+  "candidate": "Permanent-delete known-tombstone idempotency repair",
+  "acceptance": [
+    { "id": "matching-tombstone-success", "status": "PASS", "evidence": "Focused unit coverage resolves only when a matching user-scoped tombstone exists." },
+    { "id": "unknown-scope-fails-closed", "status": "PASS", "evidence": "Focused unit coverage retains errors for no tombstone, visible rows, and lookup errors." },
+    { "id": "type-safety", "status": "PASS", "evidence": "npm run type-check completed without errors." }
+  ]
+}

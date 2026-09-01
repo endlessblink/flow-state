@@ -1,5 +1,50 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2068: Redesign Board lanes and add direct lane assignment (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-01)
+
+Redesign the Board lane surface to feel more deliberate and inviting, using a canvas-inspired presentation with clear headers, meaningful empty/drop zones, subtle depth, responsive horizontal scrolling, and complete RTL/dark/light support. Keep the existing Board data model and grouping modes; this is not a freeform Canvas conversion.
+
+**Required flows**:
+
+- Drag an existing card to a lane with a clear target preview, one persisted field update, reload/sync survival, undo, and safe restoration with an inline error on failure.
+- Drag from an empty lane/drop zone to open quick-create prefilled from that lane; cancel creates nothing and save appears in exactly that lane.
+- Right-click a task and use **Move/assign to…** to show only valid destinations for the active grouping; the update persists and moves the card visibly while preserving existing context-menu actions.
+- Right-click empty lane space and use **Add task here** with the same lane-value inheritance.
+
+**Mapping and safety**: status→status, priority→priority, date→due date (including inbox/no-date), category→project; never mutate unrelated fields. Creation or assignment into a completed lane must be explicitly blocked by default with a clear explanation. Preserve filters, recurrence, timer, keyboard access, screen-reader labels, reduced motion, permissions, offline/retry, and current Mark-as-Done behavior.
+
+**Acceptance evidence**: mapping and failure tests; Board drag-create and context-menu assignment E2E across all grouping modes; offline/reconnect and reload persistence; RTL desktop visual proof; regression coverage for completion/context-menu behavior. Resolve before implementation whether drag-create originates from the lane empty state (recommended) or another task source, and define overdue-date behavior.
+
+### BUG-2070: Canvas F2 reordering resets Today's group bounds and misorders tasks (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-01)
+
+**User repro**: On Canvas, enter reorganization with F2 and drag to change task order. The Today group changes size/reset and the final task order does not match the intended drag position.
+
+**Required repair**: Keep group geometry and membership stable while a reorder interaction is active; calculate and persist the intended canonical ordering once per completed drag, with no unrelated node, group, or date mutation. Preserve cancel/undo, keyboard and pointer reordering, RTL, and concurrent sync handling.
+
+**Acceptance evidence**: Red-green regression matching an F2 reorder inside Today's group; component/store checks for stable group bounds and exact resulting order; Canvas E2E visual proof for drag, reload, and sync/reconnect; failures restore the prior order and group geometry with a visible error.
+
+### BUG-2071: A failed Electron update cannot reliably retry its download and installation (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-01)
+
+**User repro**: Update 1.4.500 failed to install. Requesting the same update again does not reliably restart the download and installation path.
+
+**Required repair**: Identify and clear only the failed-update suppression state for the requested version, then restart the updater lifecycle without deleting user data or accepting a wrong-version artifact. Preserve checksum, manifest version, and rollback protections.
+
+**Acceptance evidence**: Reproduce a failed download/install; retry from the visible installed-app surface; prove the requested version is downloaded, installed after restart, and matches the public manifest's version and checksum. Regression coverage must keep unrelated failure suppression and downgrade protection intact.
+
+### BUG-2069: A successful permanent deletion can be reported as a sync failure (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-01)
+
+**User repro**: `permanentlyDeleteTask` reports that it cannot establish deletion scope after DELETE affects zero rows, even though the exact task already has its matching server tombstone.
+
+**Repair and regression**: When the fallback cannot see the task, confirm only the current user's `task` tombstone for that exact id; treat that match as an already-successful deletion. An absent or mismatched tombstone remains a fail-closed sync error. Focused regression coverage covers both paths; installed authenticated deletion/restart proof remains required.
+
 ### ~~BUG-2064: Electron rejects valid Immediate and Relaxed sync updates~~ (✅ DONE)
 
 **Priority**: P0 | **Status**: ✅ DONE (2026-08-30)
@@ -75,6 +120,8 @@ When an offline canonical task update targets a task that no longer exists in th
   **Recurring-task diagnostic follow-up (2026-09-01)**: The reported Telegram-work-plan task reaches `invoked` and `canonical-resolved` as a recurring task, but never reaches `recurring-completed` or emits an error. Version 1.4.499 records the awaited timer settlement, remote-preview, and remote-apply boundaries individually, so the next reproduction identifies the non-returning operation rather than treating the menu dismissal as the failure. Its updater readiness log also records the expected version alongside the observed response, because prior releases falsely rolled back after an otherwise version-valid direct readiness probe. Focused diagnostics and updater tests pass; full unit suite passes 404 files / 4,777 tests (6 skipped); packaged manifest validation passes. Installed recurring-task reproduction and updater handoff remain required.
 
   **Bounded-preview follow-up (2026-09-01)**: The installed 1.4.499 reproduction reaches `done-for-now-preview-start` after timer settlement but never reaches `done-for-now-preview-received`, proving the task-specific remote preview is pending indefinitely. Version 1.4.500 bounds that RPC to 15 seconds, records `done-for-now-preview-failed` with the typed timeout code, releases the in-flight guard for a retry, and surfaces a user-visible failure instead of silently doing nothing. Unit coverage reproduces a permanently pending preview. A fresh installed reproduction is still required to prove the server-side task can complete or report the bounded timeout.
+
+  **Rescheduled-occurrence follow-up (2026-09-01)**: Production diagnostics for the reported Telegram-work-plan task show the remote preview returns `already_completed`. The recurring base RPC deduplicated by parent and recurrence count only, so a completed July occurrence at count 4 blocked the rescheduled August occurrence that still carried count 4. The new migration distinguishes same-date retries from a stale-count reschedule: it allocates a fresh count above completed history only for the latter, while the original same-date duplicate remains `already_completed`. The disposable database contract covers both exact shapes. Installed authenticated completion and updater proof remain required.
 
 ### ~~BUG-2065: Canvas grouping leaves visible tasks outside the covered group~~ (✅ DONE)
 

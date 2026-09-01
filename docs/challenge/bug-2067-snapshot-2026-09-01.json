@@ -1,0 +1,11 @@
+{
+  "schema": "flowstate-stability-challenge-snapshot-v1",
+  "capturedAt": "2026-09-01",
+  "revision": { "head": "5dce3ac3c33c3d5586533168eaaf56f0adbc4929", "dirty": true },
+  "candidate": "BUG-2067 stale recurring occurrence-count repair",
+  "acceptance": [
+    { "id": "reported-rescheduled-occurrence", "status": "PASS", "evidence": "The disposable DB contract completes the exact stale-count/different-date shape and preserves historical identity." },
+    { "id": "same-date-duplicate-protection", "status": "PASS", "evidence": "The same disposable contract requires the original same-date completed occurrence to return already_completed." },
+    { "id": "type-safety", "status": "PASS", "evidence": "npm run type-check completed without errors." }
+  ]
+}

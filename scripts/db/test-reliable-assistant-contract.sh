@@ -22,6 +22,7 @@ migrations=(
 )
 h3_migration="${migrations[11]}"
 h5_migration="${migrations[12]}"
+h6_migration="$root_dir/supabase/migrations/20260901090000_done_for_now_match_completed_occurrence_date.sql"
 h3_rollback="$root_dir/scripts/db/rollback-canonical-domain-receipts.sql"
 lifecycle_migration="$root_dir/supabase/migrations/20260716090000_canonical_task_lifecycle.sql"
 work_block_migration="$root_dir/supabase/migrations/20260716110000_canonical_work_blocks.sql"
@@ -211,6 +212,12 @@ for _ in 1 2; do
   docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
     < "$h5_migration" >/dev/null
 done
+for _ in 1 2; do
+  docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+    < "$h6_migration" >/dev/null
+done
+docker exec -i "$container" psql -U postgres -d "$test_db" -v ON_ERROR_STOP=1 \
+  < "$root_dir/scripts/db/test-done-for-now-rescheduled-occurrence.sql" >/dev/null
 docker exec -i "$container" psql -X -U postgres -d "$test_db" -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 DO $$
 BEGIN

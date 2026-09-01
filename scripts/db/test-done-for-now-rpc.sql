@@ -88,6 +88,17 @@ INSERT INTO public.tasks (
     'Disposable bounded recurrence fixture', 'planned', '2026-07-12', null, 25,
     '{"pattern":"daily","interval":1,"endType":"on_date","endDate":"2026-07-16"}',
     'd0f00000-0000-4000-8000-000000000205', 0, false, false, '[]', '[]', true
+  ),
+  (
+    'd0f00000-0000-4000-8000-000000000207', 'd0f00000-0000-4000-8000-000000000001', null,
+    'Rescheduled recurring fixture', 'planned', '2026-08-31', null, 25,
+    '{"pattern":"weekly","interval":1,"endType":"never"}',
+    'd0f00000-0000-4000-8000-000000000207', 4, false, false, '[]', '[]', true
+  ),
+  (
+    'd0f00000-0000-4000-8000-000000000208', 'd0f00000-0000-4000-8000-000000000001', null,
+    'Historic completed occurrence fixture', 'done', '2026-07-28', null, 25,
+    null, 'd0f00000-0000-4000-8000-000000000207', 4, true, false, '[]', '[]', false
   );
 
 SELECT set_config('request.jwt.claim.sub', 'd0f00000-0000-4000-8000-000000000001', true);
@@ -101,6 +112,25 @@ CREATE TEMP TABLE done_for_now_results (
   key text PRIMARY KEY,
   payload jsonb NOT NULL
 ) ON COMMIT DROP;
+
+-- BUG-2067: a historic completion with a reused count must not block a later,
+-- rescheduled occurrence. The occurrence date is part of its identity.
+INSERT INTO done_for_now_results (key, payload)
+SELECT 'rescheduled_occurrence_preview', public.flowstate_done_for_now(
+  p_task_id => 'd0f00000-0000-4000-8000-000000000207',
+  p_preview => true
+);
+
+DO $$
+DECLARE
+  v_preview jsonb := (SELECT payload FROM done_for_now_results WHERE key = 'rescheduled_occurrence_preview');
+BEGIN
+  IF v_preview #>> '{ok}' <> 'true'
+     OR v_preview #>> '{currentOccurrence,dueDate}' <> '2026-08-31'
+     OR v_preview #>> '{recurrence,nextDueDateAfter}' <> '2026-09-07' THEN
+    RAISE EXCEPTION 'FAIL: historic completed occurrence blocked rescheduled recurrence: %', v_preview;
+  END IF;
+END $$;
 
 -- Preview is exact and performs no writes.
 INSERT INTO done_for_now_results (key, payload)

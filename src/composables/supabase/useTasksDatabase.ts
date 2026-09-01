@@ -376,6 +376,26 @@ export function useTasksDatabase(ctx: DatabaseContext) {
                     logPermanentDeleteTrace(taskId, 'supabase-db.visible-but-delete-zero')
                     throw new Error(`permanentlyDeleteTask: row ${taskId} is visible but DELETE affected 0 rows — RLS delete policy is blocking it`)
                 }
+                // A matching tombstone is durable, user-scoped evidence that a prior
+                // DELETE already completed. Treat this retry as idempotent success;
+                // do not create or infer any new deletion scope.
+                const userId = getUserIdSafe()
+                if (userId) {
+                    const { data: tombstone, error: tombstoneError } = await sb
+                        .from('tombstones')
+                        .select('entity_id')
+                        .eq('user_id', userId)
+                        .eq('entity_type', 'task')
+                        .eq('entity_id', taskId)
+                        .maybeSingle()
+                    logPermanentDeleteTrace(taskId, 'supabase-db.tombstone-check', {
+                        found: Boolean(tombstone),
+                        errorCode: tombstoneError?.code,
+                        errorMessage: tombstoneError?.message,
+                    })
+                    if (tombstoneError) throw tombstoneError
+                    if (tombstone) return
+                }
                 // An absent row may be personal, shared, already deleted, or hidden by
                 // membership/RLS. Inventing personal scope here can corrupt recovery truth.
                 logPermanentDeleteTrace(taskId, 'supabase-db.unscoped-zero-row')

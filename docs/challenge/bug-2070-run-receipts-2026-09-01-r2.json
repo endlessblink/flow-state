@@ -1,0 +1,31 @@
+{
+  "schema": "flowstate-challenge-run-receipts-v1",
+  "capturedAt": "2026-09-01",
+  "revision": "136e5255b81a607fcc6c19a1b4f70294cbc65e07",
+  "receipts": [
+    {
+      "id": "type-check",
+      "command": "npm run type-check",
+      "exitCode": 0,
+      "output": "> vue-tsc --noEmit -p tsconfig.json --composite false"
+    },
+    {
+      "id": "focused-canvas-units",
+      "command": "npm test -- --run tests/unit/canvas/tidy-layout.test.ts tests/unit/canvas/canonical-layout.test.ts",
+      "exitCode": 0,
+      "result": { "testFilesPassed": 2, "testsPassed": 45 }
+    },
+    {
+      "id": "f2-drag-e2e",
+      "command": "npx playwright test tests/e2e/canvas-geometry-local.spec.ts --config=tests/e2e/playwright.canvas-local.config.ts --workers=1 --grep \"F2 drag reorders a task and persists the new slot after sync\" --retries=1",
+      "exitCode": 0,
+      "result": { "passed": 1, "failed": 0, "durationMs": 11550 }
+    },
+    {
+      "id": "diff-check",
+      "command": "git diff --check",
+      "exitCode": 0,
+      "output": ""
+    }
+  ]
+}

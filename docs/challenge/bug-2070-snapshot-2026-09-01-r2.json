@@ -1,0 +1,12 @@
+{
+  "schema": "flowstate-stability-challenge-snapshot-v1",
+  "capturedAt": "2026-09-01",
+  "revision": { "head": "136e5255b81a607fcc6c19a1b4f70294cbc65e07", "dirty": true },
+  "candidate": "BUG-2070 F2 reorder consumes task-slot moves only",
+  "acceptance": [
+    { "id": "today-group-geometry-stable", "status": "PASS", "evidence": "Receipt focused-canvas-units records 45 passing focused tests, including the 420x900 Today geometry regression." },
+    { "id": "f2-order-persists", "status": "PASS", "evidence": "Receipt f2-drag-e2e records the exact F2 drag/sync/reload Playwright scenario passed." },
+    { "id": "normal-tidy-protection-preserved", "status": "PASS", "evidence": "Receipt focused-canvas-units covers tidy-layout and canonical-layout behavior while source scope limits group-move suppression to F2 reorder." },
+    { "id": "type-safety", "status": "PASS", "evidence": "Receipts type-check and diff-check record zero-exit verification." }
+  ]
+}

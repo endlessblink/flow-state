@@ -152,6 +152,7 @@ import {
   sortTasksForBoard
 } from '@/composables/board/useBoardState'
 import { UNCATEGORIZED_PROJECT_ID } from '@/stores/tasks/taskOperations'
+import { settleBackgroundTaskMutation } from '@/utils/taskMutationErrors'
 
 import './KanbanSwimlane.css'
 
@@ -299,22 +300,28 @@ const totalTasks = computed(() => props.tasks.length)
 const handleMoveTask = (taskId: string, targetKey: string) => {
   if (currentViewType.value === 'category') {
     // FEATURE-1336: Category view - move task to target project
-    taskStore.moveTaskToProject(taskId, targetKey === UNCATEGORIZED_PROJECT_ID ? '' : targetKey)
+    void settleBackgroundTaskMutation(
+      taskStore.moveTaskToProject(taskId, targetKey === UNCATEGORIZED_PROJECT_ID ? '' : targetKey),
+      'board category drop',
+    )
   } else if (currentViewType.value === 'status') {
     emit('moveTask', taskId, targetKey as Task['status'])
   } else if (currentViewType.value === 'date') {
     if (shouldUseSmartGroupLogic(targetKey)) {
       const smartGroupType = getSmartGroupType(targetKey)
       if (smartGroupType) {
-        taskStore.moveTaskToSmartGroup(taskId, smartGroupType)
+        void settleBackgroundTaskMutation(taskStore.moveTaskToSmartGroup(taskId, smartGroupType), 'board smart-group drop')
       } else {
-        taskStore.moveTaskToDate(taskId, targetKey)
+        void settleBackgroundTaskMutation(taskStore.moveTaskToDate(taskId, targetKey), 'board date drop')
       }
     } else {
-      taskStore.moveTaskToDate(taskId, targetKey)
+      void settleBackgroundTaskMutation(taskStore.moveTaskToDate(taskId, targetKey), 'board date drop')
     }
   } else if (currentViewType.value === 'priority') {
-    taskStore.moveTaskToPriority(taskId, targetKey as Task['priority'] | 'no_priority')
+    void settleBackgroundTaskMutation(
+      taskStore.moveTaskToPriority(taskId, targetKey as Task['priority'] | 'no_priority'),
+      'board priority drop',
+    )
   }
 }
 

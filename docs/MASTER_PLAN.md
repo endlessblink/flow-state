@@ -68,7 +68,9 @@ When an offline canonical task update targets a task that no longer exists in th
 
 **Diagnostic follow-up**: Version 1.4.497 sends each Mark-as-Done boundary directly from the renderer to Electron main before the menu closes, preserving `invoked`, canonical lookup, and update-result records in the runtime diagnostics log. The click contract test first failed because no persistent bridge was called, then passed with the direct IPC trace; the focused diagnostics suite and type-check pass.
 
-**Remaining closeout**: Install 1.4.497, click Mark as Done once on a disposable Board task, then read the runtime diagnostics log to identify the exact boundary reached. The active 1.4.494 desktop session was preserved rather than restarted during the report.
+**Board race regression follow-up**: The missing-target error now remains available to the context-menu retry, but every fire-and-forget Board, project-navigation, and canvas move settles only that specific stale-gesture error. All other errors still reach the global handler. Focused unit and Board contract coverage pass; version 1.4.498 requires Electron packaging and a live desktop confirmation.
+
+**Remaining closeout**: Install 1.4.498, click Mark as Done once on a disposable Board task, then read the runtime diagnostics log to identify the exact boundary reached. The active 1.4.494 desktop session was preserved rather than restarted during the report.
 
 ### ~~BUG-2065: Canvas grouping leaves visible tasks outside the covered group~~ (✅ DONE)
 

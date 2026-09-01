@@ -83,6 +83,7 @@ import BaseBadge from './BaseBadge.vue'
 import OverflowTooltip from './OverflowTooltip.vue'
 import { useDragAndDrop, type DragData } from '@/composables/useDragAndDrop'
 import { useTaskStore } from '@/stores/tasks'
+import { settleBackgroundTaskMutation } from '@/utils/taskMutationErrors'
 
 interface Props {
   active?: boolean
@@ -264,7 +265,10 @@ const handleDrop = (event: DragEvent) => {
   if (dragData.value && isDragValid.value) {
     // Handle task drop - move task to this project
     if (dragData.value.type === 'task' && dragData.value.taskId) {
-      taskStore.moveTaskToProject(dragData.value.taskId, props.projectId)
+      void settleBackgroundTaskMutation(
+        taskStore.moveTaskToProject(dragData.value.taskId, props.projectId),
+        'project navigation drop',
+      )
       emit('taskDrop', dragData.value)
     }
 

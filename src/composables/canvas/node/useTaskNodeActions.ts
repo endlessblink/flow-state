@@ -6,6 +6,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
 import { formatDateKey } from '@/utils/dateUtils'
 import { detectPowerKeyword } from '@/composables/usePowerKeywords'
+import { settleBackgroundTaskMutation } from '@/utils/taskMutationErrors'
 
 // TASK-289: Map reschedule options to Smart Group keywords
 const DATE_TYPE_TO_KEYWORDS: Record<string, string[]> = {
@@ -209,10 +210,10 @@ export function useTaskNodeActions(
     }
 
     // TASK-289: Move task to a Smart Group with position update
-    const moveTaskToSmartGroup = (taskId: string, group: CanvasGroup) => {
+    const moveTaskToSmartGroup = (taskId: string, group: CanvasGroup): Promise<void> => {
         // Skip if already in this group
     const task = taskStore.getTask(taskId)
-        if (!task || task.parentId === group.id) return
+        if (!task || task.parentId === group.id) return Promise.resolve()
 
         // Calculate position inside group (offset from group position)
         const PADDING = 20
@@ -226,12 +227,14 @@ export function useTaskNodeActions(
             console.log(`📍 [TASK-289] Moving task "${task.title}" to group "${group.name}" at (${newPosition.x}, ${newPosition.y})`)
         }
 
-        // Update task with geometry change (user-initiated = allowed per SOP-002)
-        // Fire without await - UI updates immediately via Pinia reactivity
-        taskStore.updateTask(taskId, {
-            parentId: group.id,
-            canvasPosition: newPosition
-        }, 'USER')
+        // Update task with geometry change (user-initiated = allowed per SOP-002).
+        return settleBackgroundTaskMutation(
+            taskStore.updateTask(taskId, {
+                parentId: group.id,
+                canvasPosition: newPosition
+            }, 'USER'),
+            'canvas smart-group reschedule',
+        )
     }
 
     // Clear "Done for now" badge by resetting doneForNowUntil
@@ -292,11 +295,14 @@ export function useTaskNodeActions(
 
             // Use updateTask directly (not updateTaskWithUndo) for INSTANT UI update
             // updateTaskWithUndo has saveState/dynamic imports that cause delay
-            taskStore.updateTask(props.task.id, { dueDate: newDueDate }, 'USER')
+            void settleBackgroundTaskMutation(
+                taskStore.updateTask(props.task.id, { dueDate: newDueDate }, 'USER'),
+                'canvas reschedule',
+            )
 
             // Move to matching Smart Group if exists
             if (targetGroup) {
-                moveTaskToSmartGroup(props.task.id, targetGroup)
+                void moveTaskToSmartGroup(props.task.id, targetGroup)
             }
 
             // TASK-289: Force immediate canvas sync to update the node display

@@ -8,6 +8,8 @@ export interface DoneForNowInput {
   requestHash?: string | null
 }
 
+export const DONE_FOR_NOW_RPC_TIMEOUT_MS = 15_000
+
 /** Recurrence has two persisted shapes; completion must honor either active form. */
 export function getActiveTaskRecurrenceRule(task: {
   recurrenceRule?: object | null
@@ -96,7 +98,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export async function runDoneForNow(client: DoneForNowClient, input: DoneForNowInput): Promise<DoneForNowResult> {
-  const { data, error } = await client.rpc('flowstate_done_for_now', {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new DoneForNowError(
+        'recurrence_transaction_timeout',
+        'Done for now timed out. Please try again.',
+      ))
+    }, DONE_FOR_NOW_RPC_TIMEOUT_MS)
+  })
+  const rpc = client.rpc('flowstate_done_for_now', {
     p_next_due_date: input.nextDueDate || null,
     p_preview: input.preview,
     p_preview_version: input.previewVersion || null,
@@ -105,6 +116,13 @@ export async function runDoneForNow(client: DoneForNowClient, input: DoneForNowI
     p_task_id: input.taskId,
     p_workspace_id: input.workspaceId || null,
   })
+  let response: { data: unknown; error: unknown }
+  try {
+    response = await Promise.race([rpc, timeout])
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId)
+  }
+  const { data, error } = response
 
   if (error || !isRecord(data)) {
     const errorCode = error && typeof error === 'object' && 'code' in error

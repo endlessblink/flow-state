@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { runDoneForNow } from '@/services/tasks/doneForNow'
+import { DONE_FOR_NOW_RPC_TIMEOUT_MS, runDoneForNow } from '@/services/tasks/doneForNow'
 
 describe('recurring Done for now domain adapter', () => {
   it('previews and applies through the same canonical transaction contract', async () => {
@@ -56,6 +56,23 @@ describe('recurring Done for now domain adapter', () => {
       code: 'PGRST301',
       message: 'Done for now could not be completed',
     })
+  })
+
+  it('rejects instead of leaving a recurring completion preview pending forever', async () => {
+    vi.useFakeTimers()
+    try {
+      const client = { rpc: vi.fn(() => new Promise<never>(() => {})) }
+      const request = runDoneForNow(client, { taskId: 'stuck-recurring-task', preview: true })
+      const rejection = expect(request).rejects.toMatchObject({
+        code: 'recurrence_transaction_timeout',
+        message: 'Done for now timed out. Please try again.',
+      })
+
+      await vi.advanceTimersByTimeAsync(DONE_FOR_NOW_RPC_TIMEOUT_MS)
+      await rejection
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('keeps compatibility with a pre-receipt server that returns no request hash', async () => {

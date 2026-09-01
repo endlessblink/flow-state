@@ -2141,12 +2141,24 @@ export function useTaskOperations(
     // The renderer action itself is the user's approval, while Hermes must surface
     // the previewVersion before it can call apply.
     traceTaskCompletion("done-for-now-preview-start", { taskId });
-    const preview = await runDoneForNow(supabase, {
-      taskId,
-      preview: true,
-      workspaceId: task.workspaceId,
-      nextDueDate: options.nextDueDate,
-    });
+    let preview: Awaited<ReturnType<typeof runDoneForNow>>;
+    try {
+      preview = await runDoneForNow(supabase, {
+        taskId,
+        preview: true,
+        workspaceId: task.workspaceId,
+        nextDueDate: options.nextDueDate,
+      });
+    } catch (error) {
+      traceTaskCompletion("done-for-now-preview-failed", {
+        taskId,
+        code:
+          error && typeof error === "object" && "code" in error
+            ? String(error.code)
+            : "unknown",
+      });
+      throw error;
+    }
     if (!preview.previewVersion)
       throw new Error("Done for now preview did not return a version");
     traceTaskCompletion("done-for-now-preview-received", { taskId });

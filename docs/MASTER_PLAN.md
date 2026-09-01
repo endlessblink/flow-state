@@ -27,6 +27,8 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 
 **Acceptance evidence**: Red-green regression matching an F2 reorder inside Today's group; component/store checks for stable group bounds and exact resulting order; Canvas E2E visual proof for drag, reload, and sync/reconnect; failures restore the prior order and group geometry with a visible error.
 
+**Current progress (2026-09-01)**: The F2-specific reorder path now consumes only canonical task-slot moves and ignores planner-originated group geometry moves, so a manually sized Today column no longer resets during reorder. Focused unit coverage proves no group move/write is emitted, and the Canvas Playwright repro passes for drag, explicit sync, and reload with the group still at `420x900`. Release closeout remains open because the broader Electron prebuild backup/restore suite is currently red outside this change set, and the isolated `$challenge-review` gate has not been completed yet.
+
 ### BUG-2071: A failed Electron update cannot reliably retry its download and installation (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-01)

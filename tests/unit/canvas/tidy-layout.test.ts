@@ -521,6 +521,28 @@ describe('useTidyLayout', () => {
   // and defer task persistence into commit(), so the wrapper can let the drag
   // handler's write land first and reorder still wins last-write-wins.
   describe('reorderColumn (TASK-1809b instant-paint split)', () => {
+    it('reorders a Today column without emitting or persisting group geometry', () => {
+      const today = {
+        ...makeGroup('Today', 180, 160),
+        position: { x: 180, y: 160, width: 420, height: 900 },
+      }
+      vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+      vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+        { id: 'top', parentId: today.id, canvasPosition: { x: 244, y: 252 }, createdAt: '2026-04-01T00:00:00Z' },
+        { id: 'dropped', parentId: today.id, canvasPosition: { x: 244, y: 396 }, createdAt: '2026-04-01T00:00:00Z' },
+        { id: 'bottom', parentId: today.id, canvasPosition: { x: 244, y: 540 }, createdAt: '2026-04-01T00:00:00Z' },
+      ] as any)
+
+      const { reorderColumn } = useTidyLayout()
+      const result = reorderColumn(today.id, new Map([['dropped', { x: 244, y: 180 }]]))
+
+      expect(result.taskMoves.map((move) => move.taskId)).toEqual(['dropped', 'top', 'bottom'])
+      expect(result.groupMoves).toEqual([])
+      expect(updateGroup).not.toHaveBeenCalled()
+
+      result.release()
+    })
+
     it('returns task moves synchronously WITHOUT writing tasks until commit()', () => {
       const today = makeGroup('Today', 0, 0)
       vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])

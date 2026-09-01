@@ -1,0 +1,12 @@
+{
+  "schema": "flowstate-stability-challenge-snapshot-v1",
+  "capturedAt": "2026-09-01",
+  "revision": { "head": "f6ada80fa9bac91cdc268c775add0b9270d8a14b", "dirty": true },
+  "candidate": "BUG-2070 F2 reorder consumes task-slot moves only",
+  "acceptance": [
+    { "id": "today-group-geometry-stable", "status": "PASS", "evidence": "Focused unit regression proves a 420x900 Today group produces no group moves or group writes during reorder." },
+    { "id": "f2-order-persists", "status": "PASS", "evidence": "Canvas Playwright scenario drags with F2, verifies exact task order after sync, then verifies it after reload." },
+    { "id": "normal-tidy-protection-preserved", "status": "PASS", "evidence": "Canonical-layout and tidy-layout unit suites remain green; only the F2-specific path suppresses group moves." },
+    { "id": "type-safety", "status": "PASS", "evidence": "vue-tsc completed without errors and git diff --check is clean." }
+  ]
+}

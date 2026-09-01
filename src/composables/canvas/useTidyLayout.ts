@@ -340,13 +340,16 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     }
 
     const input: DayGroupInput = { group, visualPos, tasks: layoutTasks, taskSizes, taskPositions }
-    const { groupMoves, taskMoves } = computeCanonicalLayout([input], [groupId], {
+    const { taskMoves } = computeCanonicalLayout([input], [groupId], {
       taskPositioning: 'fromHeader',
       maxTasksPerColumn: null,
       taskSpacing: 'contentGap',
       taskOrdering: 'canvasPosition',
     })
-    return { input, groupMoves, taskMoves }
+    // F2 is an ordering gesture, not a group-layout command. Reusing the
+    // canonical planner is safe for its sorted task slots, but its group move
+    // would reset a manually sized Today column on every reorder.
+    return { input, groupMoves: [], taskMoves }
   }
 
   /**

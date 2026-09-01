@@ -924,6 +924,8 @@ test.describe('local canvas geometry regressions', () => {
       { id: 'f2-reorder-b', title: 'F2 Reorder B', parentId: 'f2-reorder-group', x: 244, y: 396, order: 1 },
       { id: 'f2-reorder-c', title: 'F2 Reorder C', parentId: 'f2-reorder-group', x: 244, y: 540, order: 2 },
     ])
+    const beforeGroup = (await readGeometry(page)).groups.find((group) => group.id === 'f2-reorder-group')
+    expect(beforeGroup).toEqual({ id: 'f2-reorder-group', name: 'F2 Reorder Group', x: 180, y: 160, width: 420, height: 900 })
 
     await page.keyboard.down('F2')
     try {
@@ -933,11 +935,16 @@ test.describe('local canvas geometry regressions', () => {
     }
 
     await page.waitForTimeout(1200)
+    await page.evaluate(async () => {
+      const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
+      await root.__vue_app__._context.config.globalProperties.$pinia._s.get('canvas')?.requestSync?.('user:manual')
+    })
     const geometry = await readGeometry(page)
     const tasks = geometry.tasks
       .filter((task) => task.id.startsWith('f2-reorder-'))
       .sort((a, b) => a.y - b.y)
     expect(tasks.map((task) => task.id), JSON.stringify(geometry, null, 2)).toEqual(['f2-reorder-b', 'f2-reorder-a', 'f2-reorder-c'])
+    expect(geometry.groups.find((group) => group.id === 'f2-reorder-group')).toEqual(beforeGroup)
 
     await page.reload()
     await setupCanvas(page)

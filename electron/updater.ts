@@ -238,7 +238,7 @@ wait_for_direct_health_version() {
     health_attempt=$((health_attempt + 1))
     sleep 0.2
   done
-  echo "direct readiness probe response=$provenance_probe"
+  echo "direct readiness expected=$expected_health_version response=$provenance_probe"
   return 1
 }
 i=0

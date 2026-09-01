@@ -72,6 +72,8 @@ When an offline canonical task update targets a task that no longer exists in th
 
 **Remaining closeout**: Install 1.4.498, click Mark as Done once on a disposable Board task, then read the runtime diagnostics log to identify the exact boundary reached. The active 1.4.494 desktop session was preserved rather than restarted during the report.
 
+**Recurring-task diagnostic follow-up (2026-09-01)**: The reported Telegram-work-plan task reaches `invoked` and `canonical-resolved` as a recurring task, but never reaches `recurring-completed` or emits an error. Version 1.4.499 records the awaited timer settlement, remote-preview, and remote-apply boundaries individually, so the next reproduction identifies the non-returning operation rather than treating the menu dismissal as the failure. Its updater readiness log also records the expected version alongside the observed response, because prior releases falsely rolled back after an otherwise version-valid direct readiness probe. Focused diagnostics and updater tests pass; full unit suite passes 404 files / 4,777 tests (6 skipped); packaged manifest validation passes. Installed recurring-task reproduction and updater handoff remain required.
+
 ### ~~BUG-2065: Canvas grouping leaves visible tasks outside the covered group~~ (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-08-31) | **Related to**: TASK-1857, TASK-1861

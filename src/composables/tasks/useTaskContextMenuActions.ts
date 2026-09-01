@@ -10,6 +10,7 @@ import { reconcileStaleInstancesForDueDate } from '@/utils/dueDateInstances'
 import { findMatchingGroupForDueDate } from '@/composables/canvas/useSmartGroupMatcher'
 import { useMoveToCanvasGroup } from '@/composables/canvas/useMoveToCanvasGroup'
 import { useToast } from '@/composables/useToast'
+import { traceTaskCompletion } from '@/utils/taskCompletionTrace'
 import type { Task } from '@/stores/tasks'
 import type { TaskPriority } from '@/types/tasks'
 
@@ -17,17 +18,6 @@ import type { TaskPriority } from '@/types/tasks'
 function flashTaskCard(taskId: string): void {
     console.log('[FLASH] Dispatching task-action-flash for:', taskId)
     window.dispatchEvent(new CustomEvent('task-action-flash', { detail: { taskId } }))
-}
-
-function traceTaskCompletion(phase: string, data: Record<string, unknown> = {}): void {
-    const line = JSON.stringify({ at: new Date().toISOString(), phase, ...data })
-    console.warn(`[TaskCompletionTrace] ${line}`)
-    // This direct renderer-to-main IPC survives a closed context menu and does
-    // not rely on developer-console forwarding from a packaged Electron app.
-    const electronAPI = (window as unknown as {
-        electronAPI?: { appendTaskCompletionDiag?: (entry: string) => Promise<string> }
-    }).electronAPI
-    void electronAPI?.appendTaskCompletionDiag?.(line)
 }
 
 export function useTaskContextMenuActions(

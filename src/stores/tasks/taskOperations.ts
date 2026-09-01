@@ -28,6 +28,7 @@ import {
   logPermanentDeleteTrace,
 } from "@/utils/permanentDeleteTrace";
 import { sanitizeTaskTitle } from "@/utils/taskValidation";
+import { traceTaskCompletion } from "@/utils/taskCompletionTrace";
 // TASK-1871 Phase 0: observable geometry-write chokepoint instrumentation
 import { logGeometryWrite } from "@/utils/canvas/geometryWriteLog";
 // TASK-1871: fail-fast guard against write storms (same row hammered)
@@ -1968,6 +1969,8 @@ export function useTaskOperations(
       console.warn("[Timer] Auto-stop on done-for-now failed:", e);
     }
 
+    traceTaskCompletion("done-for-now-timer-settled", { taskId });
+
     if (!authStore.user?.id) {
       const taskBeforeCompletion = task;
       const { computeNextDueDate } = await import("@/utils/recurrenceUtils");
@@ -2137,6 +2140,7 @@ export function useTaskOperations(
     // 2. Preview and apply the same canonical transaction used by the Local Task API.
     // The renderer action itself is the user's approval, while Hermes must surface
     // the previewVersion before it can call apply.
+    traceTaskCompletion("done-for-now-preview-start", { taskId });
     const preview = await runDoneForNow(supabase, {
       taskId,
       preview: true,
@@ -2145,6 +2149,8 @@ export function useTaskOperations(
     });
     if (!preview.previewVersion)
       throw new Error("Done for now preview did not return a version");
+    traceTaskCompletion("done-for-now-preview-received", { taskId });
+    traceTaskCompletion("done-for-now-apply-start", { taskId });
     const receipt = await runDoneForNow(supabase, {
       taskId,
       preview: false,
@@ -2154,6 +2160,7 @@ export function useTaskOperations(
       ...(preview.requestHash ? { requestHash: preview.requestHash } : {}),
       requestId: options.requestId || crypto.randomUUID(),
     });
+    traceTaskCompletion("done-for-now-apply-received", { taskId });
     const completed = receipt.completedOccurrence;
     const next = receipt.nextOccurrence;
     if (!completed)

@@ -93,7 +93,7 @@ describe('supervised AppImage installer transaction runtime', () => {
     expect(installerScript).toContain('wait_for_direct_health()')
     expect(installerScript).toContain('fail_after_swap "direct replacement readiness"')
     expect(installerScript).toContain("tr -d '[:space:]'")
-    expect(installerScript).toContain('direct readiness probe response')
+    expect(installerScript).toContain('direct readiness expected=$expected_health_version response=$provenance_probe')
   })
 
   it('terminates the old AppImage process group so its sidecar cannot hold the health port', () => {

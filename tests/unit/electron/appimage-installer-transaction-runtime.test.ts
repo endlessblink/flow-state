@@ -19,6 +19,7 @@ const installerScript = scriptMatch[1].replaceAll('\\${', '${')
 
 function makeFixture(options: {
   reportedVersion?: string
+  provenancePayload?: string
   failSwap?: boolean
   strategy?: 'systemd' | 'direct'
 } = {}) {
@@ -27,6 +28,7 @@ function makeFixture(options: {
   mkdirSync(bin)
   const systemctlLog = join(root, 'systemctl.log')
   const curlCount = join(root, 'curl-count')
+  const provenanceResponse = join(root, 'provenance-response.json')
 
   writeFileSync(join(bin, 'systemctl'), `#!/bin/sh
 printf '%s\n' "$*" >> "$SYSTEMCTL_LOG"
@@ -38,7 +40,12 @@ if [ -f "$CURL_COUNT" ]; then count=$(cat "$CURL_COUNT"); fi
 count=$((count + 1))
 printf '%s' "$count" > "$CURL_COUNT"
 if [ "$INSTALL_STRATEGY" = "direct" ] && [ "$count" -eq 1 ]; then exit 1; fi
-printf '{"appVersion":"%s"}' "$REPORTED_VERSION"
+if [ -n "$PROVENANCE_PAYLOAD" ]; then
+  printf '%s' "$PROVENANCE_PAYLOAD" > "$PROVENANCE_RESPONSE"
+else
+  printf '{"appVersion":"%s"}' "$REPORTED_VERSION" > "$PROVENANCE_RESPONSE"
+fi
+cat "$PROVENANCE_RESPONSE"
 `)
   writeFileSync(join(bin, 'sleep'), '#!/bin/sh\nexit 0\n')
   writeFileSync(join(bin, 'ps'), '#!/bin/sh\nexit 0\n')
@@ -79,6 +86,8 @@ exec /bin/mv "$@"
       PATH: `${bin}:${process.env.PATH ?? ''}`,
       SYSTEMCTL_LOG: systemctlLog,
       REPORTED_VERSION: options.reportedVersion ?? '1.4.275',
+      PROVENANCE_PAYLOAD: options.provenancePayload ?? '',
+      PROVENANCE_RESPONSE: provenanceResponse,
       FAIL_SWAP: options.failSwap ? '1' : '0',
       INSTALL_STRATEGY: options.strategy ?? 'systemd',
       CURL_COUNT: curlCount,
@@ -86,7 +95,7 @@ exec /bin/mv "$@"
     stdio: 'pipe',
   })
 
-  return { root, target, pending, info, systemctlLog, run }
+  return { root, target, pending, info, systemctlLog, provenanceResponse, run }
 }
 
 describe('supervised AppImage installer transaction runtime', () => {
@@ -126,6 +135,18 @@ describe('supervised AppImage installer transaction runtime', () => {
 
     fixture.run()
 
+    expect(readFileSync(fixture.target, 'utf8')).toBe('replacement')
+    expect(() => readFileSync(`${fixture.target}.flowstate-update-backup`)).toThrow()
+    expect(() => readFileSync(fixture.info)).toThrow()
+  })
+
+  it('keeps a direct replacement when its fresh provenance contains whitespace', () => {
+    const provenancePayload = '{\n  "appVersion": "1.4.275"\n}\n'
+    const fixture = makeFixture({ strategy: 'direct', provenancePayload })
+
+    fixture.run()
+
+    expect(readFileSync(fixture.provenanceResponse, 'utf8')).toBe(provenancePayload)
     expect(readFileSync(fixture.target, 'utf8')).toBe('replacement')
     expect(() => readFileSync(`${fixture.target}.flowstate-update-backup`)).toThrow()
     expect(() => readFileSync(fixture.info)).toThrow()

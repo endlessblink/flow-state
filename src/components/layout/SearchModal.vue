@@ -4,9 +4,10 @@
       <div class="search-header">
         <div class="search-input-wrapper">
           <Search :size="20" class="search-icon" />
-          <input dir="auto"
+          <input
             ref="searchInput"
             v-model="searchQuery"
+            dir="auto"
             type="text"
             placeholder="Search tasks, projects..."
             class="search-input"
@@ -62,6 +63,7 @@
               v-if="task.canvasPosition"
               class="reveal-canvas-btn"
               title="Show on Canvas"
+              aria-label="Show on Canvas"
               @click.stop="emit('revealTask', task)"
             >
               <Crosshair :size="14" />
@@ -99,8 +101,12 @@
         <!-- No Results -->
         <div v-if="filteredTasks.length === 0 && filteredProjects.length === 0" class="no-results">
           <Search :size="32" />
-          <p v-if="searchQuery.trim()">No results found for "{{ searchQuery }}"</p>
-          <p v-else>No tasks match the active filters</p>
+          <p v-if="searchQuery.trim()">
+            No results found for "{{ searchQuery }}"
+          </p>
+          <p v-else>
+            No tasks match the active filters
+          </p>
         </div>
       </div>
 

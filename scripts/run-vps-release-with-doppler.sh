@@ -15,7 +15,7 @@ if [[ ! -r "$SSH_KEY" ]]; then
 fi
 
 ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
-  "set -e; export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; mkdir -p \"$(dirname '${REMOTE_REPO}')\"; if [[ ! -d '${REMOTE_REPO}/.git' ]]; then git clone --branch master --single-branch https://github.com/endlessblink/flow-state.git '${REMOTE_REPO}'; else git -C '${REMOTE_REPO}' fetch origin master; git -C '${REMOTE_REPO}' reset --hard origin/master; rm -rf '${REMOTE_REPO}/node_modules' '${REMOTE_REPO}/dist' '${REMOTE_REPO}/release'; git -C '${REMOTE_REPO}' clean -ffdx; fi; test \"\$(grep -m1 '\"version\": \"' '${REMOTE_REPO}/package.json' | cut -d '\"' -f4)\" = '${RELEASE_VERSION}'; cd '${REMOTE_REPO}'; '${NODE_BIN}/npm' ci --include=dev --ignore-scripts --no-audit --no-fund" < /dev/null
+  "set -e; export PATH='${NODE_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; mkdir -p \"$(dirname '${REMOTE_REPO}')\"; if [[ ! -d '${REMOTE_REPO}/.git' ]]; then git clone --branch main --single-branch https://github.com/endlessblink/flow-state.git '${REMOTE_REPO}'; else git -C '${REMOTE_REPO}' fetch origin main; git -C '${REMOTE_REPO}' reset --hard origin/main; rm -rf '${REMOTE_REPO}/node_modules' '${REMOTE_REPO}/dist' '${REMOTE_REPO}/release'; git -C '${REMOTE_REPO}' clean -ffdx; fi; test \"\$(grep -m1 '\"version\": \"' '${REMOTE_REPO}/package.json' | cut -d '\"' -f4)\" = '${RELEASE_VERSION}'; cd '${REMOTE_REPO}'; '${NODE_BIN}/npm' ci --include=dev --ignore-scripts --no-audit --no-fund" < /dev/null
 
 if ! ssh -T -i "$SSH_KEY" "${VPS_USER}@${VPS_HOST}" \
   "test -s '${REMOTE_SECRET_FILE}' && grep -q '^DOPPLER_TOKEN=.' '${REMOTE_SECRET_FILE}'"; then

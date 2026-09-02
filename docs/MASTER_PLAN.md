@@ -33,11 +33,63 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-01)
 
-**User repro**: Update 1.4.500 failed to install. Requesting the same update again does not reliably restart the download and installation path.
+**User repro**: Update 1.4.500 failed to install. The same failure is now reported for 1.4.503: the visible retry says to download again, but installation remains unproven. Requesting the same update again does not reliably restart the download and installation path.
 
-**Required repair**: Identify and clear only the failed-update suppression state for the requested version, then restart the updater lifecycle without deleting user data or accepting a wrong-version artifact. Preserve checksum, manifest version, and rollback protections.
+**Required repair**: Release the corrected direct-replacement readiness predicate in a version newer than the trapped 1.4.503 artifact. The installed 1.4.502 updater swapped to 1.4.503, received a valid 1.4.503 provenance response, then falsely failed its readiness match and rolled back; retry must offer a newer artifact and preserve checksum, manifest version, and rollback protections.
 
 **Acceptance evidence**: Reproduce a failed download/install; retry from the visible installed-app surface; prove the requested version is downloaded, installed after restart, and matches the public manifest's version and checksum. Regression coverage must keep unrelated failure suppression and downgrade protection intact.
+
+**Failure-class matrix (open)**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Reported | Failed-install retry recurred for 1.4.503 after the prior 1.4.500 report | Not yet |
+| Data shape / persisted row shape | N/A | No task or canvas row is involved | N/A |
+| Renderer store/state | Not checked | Visible retry state and its requested version have not been captured | Not yet |
+| Electron main/preload bridge | Traced | `update-install.log` records a successful replacement startup and valid 1.4.503 provenance before the old installer falsely marked readiness failed | Fixed in source; release pending |
+| Localhost sidecar endpoint | N/A | The updater does not use the local task API | N/A |
+| KDE polling/control path | N/A | No KDE control path is involved | N/A |
+| Supabase persistence/realtime | N/A | The updater uses the release manifest, not task persistence | N/A |
+| Updater/runtime version | Traced | Installed 1.4.502 updater commit `c0d5990` rolled back 1.4.503 despite a valid 1.4.503 runtime response; later source commit `f6ada80f` uses an exact whitespace-tolerant version token | 1.4.504 release pending |
+| Stale live process/cache state | Traced | The current-version failed marker correctly records the actual false rollback and prevents a blind repeat of 1.4.503 | 1.4.504 release pending |
+
+**Exact failure mode fixed**: The 1.4.502 installer treated a healthy, whitespace-formatted provenance response from the directly started 1.4.503 replacement as unreadable, logged `FAIL direct replacement readiness`, restored the known-good AppImage, and left a correctly scoped failed marker. Source commit `f6ada80f` replaces the brittle match with an exact whitespace-tolerant version token; 1.4.504 is required to deliver it past the 1.4.503 self-install trap.
+
+**Explicitly not covered**: Session/authentication recovery, task synchronization, and unrelated package download failures.
+
+**Regression required for reported repro**: The extracted real installer script must retain a directly started replacement when its expected-version provenance is whitespace-formatted, while stale provenance, unrelated failed markers, and downgrade protections remain rejected. Live proof must show installed 1.4.502 receives and installs 1.4.504 after the failed 1.4.503 marker.
+
+**Live boundary proof required**: Installed Electron retry, restart, version read-back, and public manifest checksum/version match.
+
+### BUG-2072: Electron unexpectedly signs out and rate-limited re-authentication cannot recover (🔄 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-02)
+
+**User repro**: The running desktop app signed the user out without an explicit sign-out action. A recovery sign-in then failed with `AuthApiError: API rate limit exceeded`.
+
+**Required repair**: Preserve the remembered account and durable session through startup, refresh, updater restart, bridge recovery, and transient network/auth-service failures. Only explicit user sign-out, a server-confirmed terminal session revocation, or an expired session beyond the documented reconnect grace may show sign-in. Recovery must avoid multiplying attempts after an Auth API rate-limit response, show the safe retry state, and succeed once the service permits it without losing local work.
+
+**Failure-class matrix (open)**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Reported | Unwanted desktop sign-out followed by `AuthApiError: API rate limit exceeded` on recovery sign-in | Not yet |
+| Data shape / persisted row shape | Not checked | Durable identity, primary session candidate, and backup must be inspected without exposing secrets | Not yet |
+| Renderer store/state | Partially mapped | Auth store has reconnect grace and `reauthRequired`; actual transition is untraced | Not yet |
+| Electron main/preload bridge | Partially mapped | Auth storage refuses volatile Electron fallback; installed bridge availability is unverified | Not yet |
+| Localhost sidecar endpoint | Not checked | Sidecar auth-state heartbeat may reflect or amplify session transitions | Not yet |
+| KDE polling/control path | N/A | No KDE timer/control failure is reported | N/A |
+| Supabase persistence/realtime | Reported failure | Auth API returned a rate-limit rejection; request cadence and retry window are unknown | Not yet |
+| Updater/runtime version | Not checked | Need correlate the sign-out with the running version and any update restart | Not yet |
+| Stale live process/cache state | Not checked | Need compare real running process/session cache with durable auth candidates | Not yet |
+
+**Exact failure mode fixed**: Unknown. This issue deliberately contains two separate gates: (1) no involuntary loss of a remembered account and (2) rate-limited recovery does not create a dead end or extra auth attempts.
+
+**Explicitly not covered**: Intentional sign-out, server-confirmed revoked/invalid refresh tokens after the documented grace boundary, password reset, and unrelated account-policy failures.
+
+**Regression required for reported repro**: Electron session preservation across launch/refresh/update boundaries, plus a controlled Auth API rate-limit response that verifies one bounded retry policy, visible retry guidance, and eventual successful sign-in without clearing local work.
+
+**Live boundary proof required**: Installed authenticated Electron continuity across restart and one real recovery sign-in after the provider accepts requests again; no secrets or tokens recorded in diagnostics.
 
 ### BUG-2069: A successful permanent deletion can be reported as a sync failure (🔄 IN PROGRESS)
 

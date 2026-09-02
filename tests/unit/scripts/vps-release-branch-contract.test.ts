@@ -6,7 +6,7 @@ const releaseScript = readFileSync('scripts/run-vps-release-with-doppler.sh', 'u
 describe('VPS Electron release branch contract', () => {
   it('builds the pushed main release rather than stale master', () => {
     expect(releaseScript).toContain('git clone --branch main --single-branch')
-    expect(releaseScript).toContain("git -C '${REMOTE_REPO}' fetch origin main")
+    expect(releaseScript).toContain("git -C '${REMOTE_REPO}' fetch origin main:refs/remotes/origin/main")
     expect(releaseScript).toContain("git -C '${REMOTE_REPO}' reset --hard origin/main")
     expect(releaseScript).not.toMatch(/origin\/master|--branch master/)
   })

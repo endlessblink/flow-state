@@ -1,0 +1,7 @@
+# BUG-2071 Sure gate — transient release credential validation
+
+1. **Root cause:** the Electron release guard made one `/auth/v1/settings` request and classified every non-2xx response, including the observed HTTP 429 rate limit, as a permanently rejected credential. This blocked a safe release before updater delivery began.
+2. **Confidence:** HIGH / PASS for the narrow guard behavior. The red test failed before the change (a 429 followed by 200 exited 1); it passes after the change. The focused suite also preserves 401 rejection and proves repeated 429 responses still exit 1.
+3. **Candidate:** v1.4.506 retries only HTTP 429 twice, with 250 ms then 500 ms delays, under the existing five-second abort boundary. The prediction is that a transient rate limit no longer blocks a valid release, while an invalid or continuously rate-limited credential remains rejected.
+4. **Existing protection preservation:** successful credential validation remains mandatory. No response body or credential is logged; 401 and every non-429 failure still fail immediately, and persistent 429 fails after the bounded retry budget.
+5. **Regression surface:** the unit fixture covers 429→200 success, 429→429→429 failure, existing 401 failure, missing env, valid 200, secret redaction, and wiring before Electron release builds. The remaining independent challenge review, sealed package, VPS promotion, public manifest, and installed-app retry are separate gates.

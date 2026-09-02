@@ -50,6 +50,8 @@ for (const [key, value] of Object.entries(process.env)) {
 
 const missing = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']
   .filter((key) => !String(env[key] || '').trim())
+const maxRateLimitRetries = 2
+const rateLimitRetryDelayMs = 250
 
 if (missing.length > 0) {
   console.error('[electron-env] ERROR: Electron build is missing Supabase Vite env.')
@@ -65,15 +67,27 @@ async function validateBackendCredential() {
 
   try {
     const settingsUrl = new URL('/auth/v1/settings', String(env.VITE_SUPABASE_URL))
-    const response = await fetch(settingsUrl, {
-      method: 'GET',
-      headers: {
-        apikey: String(env.VITE_SUPABASE_ANON_KEY),
-      },
-      signal: controller.signal,
-    })
+    for (let attempt = 0; attempt <= maxRateLimitRetries; attempt += 1) {
+      const response = await fetch(settingsUrl, {
+        method: 'GET',
+        headers: {
+          apikey: String(env.VITE_SUPABASE_ANON_KEY),
+        },
+        signal: controller.signal,
+      })
 
-    if (!response.ok) {
+      if (response.ok) {
+        console.log(
+          '[electron-env] Supabase Vite env present; backend credential accepted for Electron build.'
+        )
+        return
+      }
+
+      if (response.status === 429 && attempt < maxRateLimitRetries) {
+        await new Promise((resolve) => setTimeout(resolve, rateLimitRetryDelayMs * (attempt + 1)))
+        continue
+      }
+
       console.error(
         `[electron-env] ERROR: Backend credential rejected (HTTP ${response.status}).`
       )
@@ -81,10 +95,6 @@ async function validateBackendCredential() {
       process.exitCode = 1
       return
     }
-
-    console.log(
-      '[electron-env] Supabase Vite env present; backend credential accepted for Electron build.'
-    )
   } catch {
     console.error('[electron-env] ERROR: Could not validate backend credential (request failed).')
     console.error('[electron-env] Refusing to build without a successful credential check.')

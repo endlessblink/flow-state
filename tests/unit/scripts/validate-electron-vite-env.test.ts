@@ -26,16 +26,19 @@ function makeRoot() {
   return root
 }
 
-function mockSettingsResponse(root: string, status: number, body = '') {
-  const preloadPath = join(root, `mock-settings-${status}.cjs`)
+function mockSettingsResponse(root: string, statuses: number | number[], body = '') {
+  const sequence = Array.isArray(statuses) ? statuses : [statuses]
+  const preloadPath = join(root, `mock-settings-${sequence.join('-')}.cjs`)
   writeFileSync(
     preloadPath,
+    `const statuses = ${JSON.stringify(sequence)}\n` +
+      `let callCount = 0\n` +
     `global.fetch = async (url, options) => {\n` +
       `  const requestIsValid = String(url).endsWith('/auth/v1/settings')\n` +
       `    && options?.method === 'GET'\n` +
       `    && typeof options?.headers?.apikey === 'string'\n` +
       `    && options.headers.apikey.length > 0\n` +
-      `  const status = requestIsValid ? ${status} : 418\n` +
+      `  const status = requestIsValid ? statuses[Math.min(callCount++, statuses.length - 1)] : 418\n` +
       `  return {\n` +
       `    ok: status >= 200 && status < 300,\n` +
       `    status,\n` +
@@ -115,6 +118,39 @@ describe('validate-electron-vite-env', () => {
     expect(result.stdout).toContain('credential accepted')
     expect(output).not.toContain(secretKey)
     expect(output).not.toContain(secretBody)
+  })
+
+  it('retries a rate-limited credential check and accepts a later success', () => {
+    const root = makeRoot()
+    const preloadPath = mockSettingsResponse(root, [429, 200])
+    writeFileSync(
+      join(root, '.env.local'),
+      'VITE_SUPABASE_URL=https://api.in-theflow.com\\nVITE_SUPABASE_ANON_KEY=test-anon-key\\n'
+    )
+
+    const result = runValidator(root, {
+      NODE_OPTIONS: `--require=${preloadPath}`,
+      VITE_SUPABASE_URL: 'https://api.in-theflow.com',
+      VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+    })
+
+    expect(result.stderr).toBe('')
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('credential accepted')
+  })
+
+  it('keeps rejecting a credential check that remains rate limited', () => {
+    const root = makeRoot()
+    const preloadPath = mockSettingsResponse(root, [429, 429, 429])
+
+    const result = runValidator(root, {
+      NODE_OPTIONS: `--require=${preloadPath}`,
+      VITE_SUPABASE_URL: 'https://api.in-theflow.com',
+      VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('HTTP 429')
   })
 
   it('keeps credential validation wired before Electron release builds', () => {

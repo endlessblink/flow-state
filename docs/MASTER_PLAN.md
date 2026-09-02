@@ -50,14 +50,14 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 | Localhost sidecar endpoint | N/A | The updater does not use the local task API | N/A |
 | KDE polling/control path | N/A | No KDE control path is involved | N/A |
 | Supabase persistence/realtime | N/A | The updater uses the release manifest, not task persistence | N/A |
-| Updater/runtime version | Traced | Installed 1.4.504 reached a healthy 1.4.504 replacement but its packaged updater still contained the older verifier; the package gate now rejects artifacts that lack the exact direct-retry predicate | 1.4.505 release pending |
-| Stale live process/cache state | Traced | The current-version failed marker correctly records the actual false rollback and prevents a blind repeat of 1.4.504 | 1.4.505 release pending |
+| Updater/runtime version | Traced | Installed 1.4.504 reached a healthy 1.4.504 replacement but its packaged updater still contained the older verifier; the package gate now rejects artifacts that lack the exact direct-retry predicate | 1.4.506 release pending |
+| Stale live process/cache state | Traced | The current-version failed marker correctly records the actual false rollback and prevents a blind repeat of 1.4.504 | 1.4.506 release pending |
 
-**Exact failure mode fixed in source; package delivery still in progress**: A healthy direct replacement can be falsely rejected when its packaged updater does not carry the source-level exact provenance predicate. The new package-content gate extracts `dist-electron/updater.js` from the sealed archive and rejects the older verifier; 1.4.505 is required to deliver the verified package past the 1.4.504 trap.
+**Exact failure mode fixed in source; package delivery still in progress**: A healthy direct replacement can be falsely rejected when its packaged updater does not carry the source-level exact provenance predicate. The new package-content gate extracts `dist-electron/updater.js` from the sealed archive and rejects the older verifier; 1.4.506 is required to deliver the verified package past the 1.4.504 trap. The release credential guard now treats only a bounded transient HTTP 429 as retryable; invalid credentials and persistent rate limits remain fail-closed.
 
 **Explicitly not covered**: Session/authentication recovery, task synchronization, and unrelated package download failures.
 
-**Regression required for reported repro**: The extracted real installer script must retain a directly started replacement when its expected-version provenance is whitespace-formatted, while stale provenance, unrelated failed markers, downgrade protections, and an AppImage carrying the pre-fix verifier remain rejected. Live proof must show installed 1.4.504 receives and installs 1.4.505 after the failed 1.4.504 marker.
+**Regression required for reported repro**: The extracted real installer script must retain a directly started replacement when its expected-version provenance is whitespace-formatted, while stale provenance, unrelated failed markers, downgrade protections, and an AppImage carrying the pre-fix verifier remain rejected. Live proof must show installed 1.4.504 receives and installs 1.4.506 after the failed 1.4.504 marker. The release gate must accept a 429 followed by success while retaining its persistent-429 and invalid-credential failures.
 
 **Live boundary proof required**: Installed Electron retry, restart, version read-back, and public manifest checksum/version match.
 
@@ -90,6 +90,16 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 **Regression required for reported repro**: Electron session preservation across launch/refresh/update boundaries, plus a controlled Auth API rate-limit response that verifies one bounded retry policy, visible retry guidance, and eventual successful sign-in without clearing local work.
 
 **Live boundary proof required**: Installed authenticated Electron continuity across restart and one real recovery sign-in after the provider accepts requests again; no secrets or tokens recorded in diagnostics.
+
+### TASK-2073: Timer completion resets without offering the configured break (📋 PLANNED)
+
+**Priority**: P0 | **Status**: 📋 PLANNED (2026-09-02)
+
+**User repro**: A focus timer reaches completion, resets, and does not offer or begin the expected break.
+
+**Required investigation and repair**: Trace the completion transition through the timer store, renderer, Electron lifecycle, persisted timer session, and notification/break-selection state. Preserve the configured focus/break cycle, do not silently discard a completed interval, and make the next-break choice visible and actionable. Cover manual completion, natural countdown completion, restart/recovery, and a transient persistence failure without duplicating sessions or notifications.
+
+**Acceptance evidence**: A red-green regression for the reported completion shape; focused timer transition tests; an installed Electron run showing a completed focus interval reaches the visible break offer or configured automatic break; and persisted session read-back proving exactly one completed focus interval and the intended next state.
 
 ### BUG-2069: A successful permanent deletion can be reported as a sync failure (🔄 IN PROGRESS)
 

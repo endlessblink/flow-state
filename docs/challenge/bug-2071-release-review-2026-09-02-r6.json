@@ -1,0 +1,69 @@
+{
+  "verdict": "REVISE",
+  "snapshot": "73e9543d4cab7fb73243a5857c6dceab59c9b0d8aff5f4e4615d5ee3e04aac1b",
+  "findings": [
+    {
+      "id": "stale-v1-4-506-build-proof",
+      "severity": "High",
+      "evidence": "The r6 snapshot claims a v1.4.506 sealed-package pass and a real Electron build that passed the new credential guard, but the carried evidence note still describes a v1.4.505 build at commit b2a7d5015f0dcec2a7a3540d83189c123e022f87 and the current release receipt still records version 1.4.505. Current release/latest-linux.yml is 1.4.506, so the snapshot is binding current artifacts to stale proof.",
+      "scope": "release acceptance items sealed-updater-contract and transient-credential-validation",
+      "remediation": "Regenerate and bind fresh v1.4.506 build evidence: a current receipt or equivalent artifact proving the exact v1.4.506 build, plus a current validator/build artifact showing validate-electron-package and validate-electron-vite-env passed against this candidate."
+    }
+  ],
+  "remaining_risks": [
+    "Public updater read-back is still unproven in this review scope; no live fetch evidence is bound for the published v1.4.506 manifest and artifact.",
+    "Installed desktop retry remains unproven in this review scope; no installed-app evidence shows a failed-marker retry downloading, relaunching, and reporting v1.4.506."
+  ],
+  "review_count": 1,
+  "reviewer": {
+    "context_id": "bug-2071-release-challenge-review-r6-2026-09-02",
+    "authority": "read-only",
+    "isolation_evidence": "Inspected only the supplied r6 snapshot plus the bounded local source, tests, and release artifacts needed to evaluate its acceptance items: scripts/validate-electron-vite-env.cjs, tests/unit/scripts/validate-electron-vite-env.test.ts, package.json, package-lock.json, electron/updater.ts, scripts/validate-electron-package.cjs, tests/unit/scripts/validate-electron-package.test.ts, tests/unit/electron/appimage-installer-transaction-runtime.test.ts, tests/unit/electron-appimage-installer.test.ts, tests/unit/electron/updater-auth-durability.test.ts, tests/unit/electron/updater-pending.test.ts, docs/challenge/evidence-2026-09-02-bug-2071-release.md, release/latest-linux.yml, release/linux-unpacked/resources/app.asar, and release/flowstate-release-receipt.json. Ran no tests and made no code changes."
+  },
+  "evidence": [
+    {
+      "item_id": "direct-healthy-replacement",
+      "status": "PASS",
+      "producer_id": "challenge-review",
+      "authority": "read-only",
+      "captured_at": "2026-09-02",
+      "bound_snapshot_sha256": "73e9543d4cab7fb73243a5857c6dceab59c9b0d8aff5f4e4615d5ee3e04aac1b",
+      "artifact_path_or_id": "tests/unit/electron/appimage-installer-transaction-runtime.test.ts",
+      "artifact_sha256": "d847d16657559e855c1ea41478268176ef80590b5ce58c3034901585759fec89",
+      "result": "The bounded direct-installer runtime fixture still verifies the direct replacement path, accepts the exact multi-line whitespace-formatted provenance payload for the target version, and rolls back when provenance reports a stale version."
+    },
+    {
+      "item_id": "retry-marker-protection",
+      "status": "PASS",
+      "producer_id": "challenge-review",
+      "authority": "read-only",
+      "captured_at": "2026-09-02",
+      "bound_snapshot_sha256": "73e9543d4cab7fb73243a5857c6dceab59c9b0d8aff5f4e4615d5ee3e04aac1b",
+      "artifact_path_or_id": "tests/unit/electron/updater-auth-durability.test.ts",
+      "artifact_sha256": "c787b76ce0ebcbbe3f2141c583f82b09e0b2b51a4e355fcf3a344c7fe7fa9c3f",
+      "result": "The bounded updater retry suite still proves explicit retry clears only the blocked marker for the running version, performs a fresh update check, and redownloads the exact blocked update; the paired pending-update suite remains present for cleanup coverage."
+    },
+    {
+      "item_id": "sealed-updater-contract",
+      "status": "REVISE",
+      "producer_id": "challenge-review",
+      "authority": "read-only",
+      "captured_at": "2026-09-02",
+      "bound_snapshot_sha256": "73e9543d4cab7fb73243a5857c6dceab59c9b0d8aff5f4e4615d5ee3e04aac1b",
+      "artifact_path_or_id": "docs/challenge/evidence-2026-09-02-bug-2071-release.md",
+      "artifact_sha256": "c170aaa3d6200fc2ac2a81b0e11ed75421777791b13dbaf9778f5d7d8550992c",
+      "result": "The source and regression test for the sealed updater contract are still present, but the only bound runtime/build evidence in scope still describes a v1.4.505 package-validation pass, not the r6 candidate's claimed v1.4.506 sealed-package validation."
+    },
+    {
+      "item_id": "transient-credential-validation",
+      "status": "REVISE",
+      "producer_id": "challenge-review",
+      "authority": "read-only",
+      "captured_at": "2026-09-02",
+      "bound_snapshot_sha256": "73e9543d4cab7fb73243a5857c6dceab59c9b0d8aff5f4e4615d5ee3e04aac1b",
+      "artifact_path_or_id": "release/flowstate-release-receipt.json",
+      "artifact_sha256": "2140be4b926fb9da6bae530d940cd52307b0545601e9e58e8ae9d6102f1247e9",
+      "result": "The new validator source and regression test cover 429-then-200 success, persistent 429 failure, 401 failure, and secret redaction, but no fresh runtime artifact proves the real Electron build executed that guard for v1.4.506; the available release receipt is still for v1.4.505."
+    }
+  ]
+}

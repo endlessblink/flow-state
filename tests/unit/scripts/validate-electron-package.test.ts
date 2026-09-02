@@ -96,7 +96,7 @@ appImage:
 async function writeAppAsar(
   root: string,
   entries: string[],
-  options: { sidecar?: string } = {},
+  options: { sidecar?: string; updater?: string } = {},
 ) {
   const source = join(root, 'asar-source')
   const appAsar = join(root, 'release/linux-unpacked/resources/app.asar')
@@ -119,7 +119,12 @@ async function writeAppAsar(
           })
         : entry.endsWith('local-api-server.cjs')
           ? options.sidecar ?? bundledSidecar()
-        : 'fixture'
+          : entry.endsWith('updater.js')
+            ? options.updater ?? [
+              "provenance_compact=$(printf '%s' \"$provenance_probe\" | tr -d '[:space:]')",
+              "*'\"appVersion\":\"'\"$expected_health_version\"'\"'*) return 0 ;;",
+            ].join('\n')
+          : 'fixture'
     writeFile(source, entry.replace(/^\//, ''), content)
   }
 
@@ -174,6 +179,7 @@ describe('validate-electron-package', () => {
       '/dist/index.html',
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
+      '/dist-electron/updater.js',
       '/dist-electron/local-api-server.cjs',
       '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
@@ -191,6 +197,7 @@ describe('validate-electron-package', () => {
     await writeAppAsar(root, [
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
+      '/dist-electron/updater.js',
       '/dist-electron/local-api-server.cjs',
       '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
@@ -202,6 +209,27 @@ describe('validate-electron-package', () => {
     expect(result.stderr).toContain('/dist/index.html')
   })
 
+  it('fails before shipping an AppImage with the pre-fix direct retry verifier', async () => {
+    const root = makeRoot()
+    writeBuilderConfig(root)
+    await writeAppAsar(root, [
+      '/dist/index.html',
+      '/dist-electron/main.cjs',
+      '/dist-electron/preload.cjs',
+      '/dist-electron/updater.js',
+      '/dist-electron/local-api-server.cjs',
+      '/dist-electron/flowstate-truth-ledger.json',
+      '/package.json',
+    ], {
+      updater: 'grep -Eq \'"appVersion"[[:space:]]*:[[:space:]]*"$expected_health_version"\'',
+    })
+
+    const result = runValidator(root)
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('direct-retry provenance contract')
+  })
+
   it('fails before shipping a package whose sidecar location does not match Electron runtime lookup', async () => {
     const root = makeRoot()
     writeBuilderConfig(root)
@@ -209,6 +237,7 @@ describe('validate-electron-package', () => {
       '/dist/index.html',
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
+      '/dist-electron/updater.js',
       '/dist-electron/ipc/local-api-server.cjs',
       '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
@@ -227,6 +256,7 @@ describe('validate-electron-package', () => {
       '/dist/index.html',
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
+      '/dist-electron/updater.js',
       '/dist-electron/local-api-server.cjs',
       '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
@@ -245,6 +275,7 @@ describe('validate-electron-package', () => {
       '/dist/index.html',
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
+      '/dist-electron/updater.js',
       '/dist-electron/local-api-server.cjs',
       '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
@@ -263,6 +294,7 @@ describe('validate-electron-package', () => {
       '/dist/index.html',
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
+      '/dist-electron/updater.js',
       '/dist-electron/local-api-server.cjs',
       '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
@@ -281,6 +313,7 @@ describe('validate-electron-package', () => {
       '/dist/index.html',
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
+      '/dist-electron/updater.js',
       '/dist-electron/local-api-server.cjs',
       '/dist-electron/flowstate-truth-ledger.json',
       '/package.json',
@@ -302,6 +335,7 @@ describe('validate-electron-package', () => {
       '/dist/index.html',
       '/dist-electron/main.cjs',
       '/dist-electron/preload.cjs',
+      '/dist-electron/updater.js',
       '/dist-electron/local-api-server.cjs',
       '/package.json',
     ])

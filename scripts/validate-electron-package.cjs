@@ -26,6 +26,7 @@ const requiredAsarEntries = [
   '/dist/index.html',
   '/dist-electron/main.cjs',
   '/dist-electron/preload.cjs',
+  '/dist-electron/updater.js',
   '/dist-electron/local-api-server.cjs',
   '/dist-electron/flowstate-truth-ledger.json',
   '/package.json',
@@ -119,6 +120,22 @@ async function validateAppAsar(packagePath) {
     }
   } catch (error) {
     fail(`Unable to validate packaged FlowState truth ledger: ${error.message}`)
+  }
+  try {
+    const updater = asar.extractFile(
+      packagePath,
+      'dist-electron/updater.js',
+    ).toString('utf8')
+    const requiredDirectRetryMarkers = [
+      "provenance_compact=$(printf '%s' \"$provenance_probe\" | tr -d '[:space:]')",
+      "*'\"appVersion\":\"'\"$expected_health_version\"'\"'*) return 0 ;;",
+    ]
+    const missing = requiredDirectRetryMarkers.filter((marker) => !updater.includes(marker))
+    if (missing.length > 0) {
+      fail(`Packaged updater is missing the direct-retry provenance contract: ${missing.join(', ')}`)
+    }
+  } catch (error) {
+    fail(`Unable to validate packaged direct-retry provenance contract: ${error.message}`)
   }
   try {
     const sidecar = asar.extractFile(

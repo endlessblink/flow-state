@@ -35,7 +35,7 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 
 **User repro**: Update 1.4.500 failed to install. The same failure is now reported for 1.4.503: the visible retry says to download again, but installation remains unproven. Requesting the same update again does not reliably restart the download and installation path.
 
-**Required repair**: Release the corrected direct-replacement readiness predicate in a version newer than the trapped 1.4.503 artifact. The installed 1.4.502 updater swapped to 1.4.503, received a valid 1.4.503 provenance response, then falsely failed its readiness match and rolled back; retry must offer a newer artifact and preserve checksum, manifest version, and rollback protections.
+**Required repair**: Release the corrected direct-replacement readiness predicate in a version newer than the trapped 1.4.504 artifact. The published 1.4.504 AppImage carried an older updater script despite source provenance for the fix, then swapped to a healthy 1.4.504 replacement and falsely failed its readiness match; retry must offer a newer artifact and preserve checksum, manifest version, rollback protections, and a package-content proof of the updater predicate.
 
 **Acceptance evidence**: Reproduce a failed download/install; retry from the visible installed-app surface; prove the requested version is downloaded, installed after restart, and matches the public manifest's version and checksum. Regression coverage must keep unrelated failure suppression and downgrade protection intact.
 
@@ -50,14 +50,14 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 | Localhost sidecar endpoint | N/A | The updater does not use the local task API | N/A |
 | KDE polling/control path | N/A | No KDE control path is involved | N/A |
 | Supabase persistence/realtime | N/A | The updater uses the release manifest, not task persistence | N/A |
-| Updater/runtime version | Traced | Installed 1.4.502 updater commit `c0d5990` rolled back 1.4.503 despite a valid 1.4.503 runtime response; later source commit `f6ada80f` uses an exact whitespace-tolerant version token | 1.4.504 release pending |
-| Stale live process/cache state | Traced | The current-version failed marker correctly records the actual false rollback and prevents a blind repeat of 1.4.503 | 1.4.504 release pending |
+| Updater/runtime version | Traced | Installed 1.4.504 reached a healthy 1.4.504 replacement but its packaged updater still contained the older verifier; the package gate now rejects artifacts that lack the exact direct-retry predicate | 1.4.505 release pending |
+| Stale live process/cache state | Traced | The current-version failed marker correctly records the actual false rollback and prevents a blind repeat of 1.4.504 | 1.4.505 release pending |
 
-**Exact failure mode fixed**: The 1.4.502 installer treated a healthy, whitespace-formatted provenance response from the directly started 1.4.503 replacement as unreadable, logged `FAIL direct replacement readiness`, restored the known-good AppImage, and left a correctly scoped failed marker. Source commit `f6ada80f` replaces the brittle match with an exact whitespace-tolerant version token; 1.4.504 is required to deliver it past the 1.4.503 self-install trap.
+**Exact failure mode fixed in source; package delivery still in progress**: A healthy direct replacement can be falsely rejected when its packaged updater does not carry the source-level exact provenance predicate. The new package-content gate extracts `dist-electron/updater.js` from the sealed archive and rejects the older verifier; 1.4.505 is required to deliver the verified package past the 1.4.504 trap.
 
 **Explicitly not covered**: Session/authentication recovery, task synchronization, and unrelated package download failures.
 
-**Regression required for reported repro**: The extracted real installer script must retain a directly started replacement when its expected-version provenance is whitespace-formatted, while stale provenance, unrelated failed markers, and downgrade protections remain rejected. Live proof must show installed 1.4.502 receives and installs 1.4.504 after the failed 1.4.503 marker.
+**Regression required for reported repro**: The extracted real installer script must retain a directly started replacement when its expected-version provenance is whitespace-formatted, while stale provenance, unrelated failed markers, downgrade protections, and an AppImage carrying the pre-fix verifier remain rejected. Live proof must show installed 1.4.504 receives and installs 1.4.505 after the failed 1.4.504 marker.
 
 **Live boundary proof required**: Installed Electron retry, restart, version read-back, and public manifest checksum/version match.
 

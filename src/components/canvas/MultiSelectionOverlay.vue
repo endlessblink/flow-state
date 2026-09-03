@@ -26,13 +26,28 @@
 
       <div class="control-group">
         <span class="control-label">Quick Actions:</span>
-        <button class="action-btn" title="Select All" @click="selectAll">
+        <button
+          class="action-btn"
+          title="Select All"
+          aria-label="Select All"
+          @click="selectAll"
+        >
           <CheckSquare :size="14" />
         </button>
-        <button class="action-btn" title="Clear Selection" @click="clearSelection">
+        <button
+          class="action-btn"
+          title="Clear Selection"
+          aria-label="Clear Selection"
+          @click="clearSelection"
+        >
           <X :size="14" />
         </button>
-        <button class="action-btn" title="Invert Selection" @click="invertSelection">
+        <button
+          class="action-btn"
+          title="Invert Selection"
+          aria-label="Invert Selection"
+          @click="invertSelection"
+        >
           <RotateCcw :size="14" />
         </button>
       </div>

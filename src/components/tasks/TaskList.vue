@@ -111,6 +111,7 @@
         <button
           class="group-add-btn"
           title="Add task to this group"
+          aria-label="Add task to this group"
           @click.stop="emit('addTaskToGroup', group.key, props.groupBy)"
         >
           <Plus :size="14" />
@@ -119,6 +120,7 @@
           <button
             class="group-ai-btn"
             title="Choose AI suggestions for this group"
+            aria-label="Choose AI suggestions for this group"
             :aria-expanded="activeGroupAISuggestMenu === group.key"
             aria-haspopup="menu"
             @click="toggleGroupAISuggestMenu(group.key)"

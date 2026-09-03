@@ -91,9 +91,9 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 
 **Live boundary proof required**: Installed authenticated Electron continuity across restart and one real recovery sign-in after the provider accepts requests again; no secrets or tokens recorded in diagnostics.
 
-### TASK-2073: Timer completion resets without offering the configured break (📋 PLANNED)
+### TASK-2073: Timer completion resets without offering the configured break (🚧 IN PROGRESS)
 
-**Priority**: P0 | **Status**: 📋 PLANNED (2026-09-02)
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-02)
 
 **User repro**: A focus timer reaches completion, resets, and does not offer or begin the expected break.
 

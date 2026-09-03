@@ -1,0 +1,61 @@
+{
+  "schema": "flowstate-stability-challenge-snapshot-v1",
+  "capturedAt": "2026-09-02",
+  "revision": {
+    "head": "85b3fed51486089ad6f20392e735f40599a393b8",
+    "dirty": true
+  },
+  "candidate": "TASK-2073 v1.4.507 preserves the explicit break choice after work completion",
+  "acceptance": [
+    {
+      "id": "no-silent-work-restart",
+      "status": "PASS",
+      "evidence": "The focused timer-state-machine regression reproduces completion, advances two minutes beyond the former fallback, and requires no active work session while the break remains pending."
+    },
+    {
+      "id": "visible-break-offer",
+      "status": "PASS",
+      "evidence": "The header contract requires the pending-break state to render a visible live prompt beside the retained Start Break action."
+    },
+    {
+      "id": "timer-safety-preserved",
+      "status": "PASS",
+      "evidence": "Focused completion, duplicate-notification, persistence-hang, manual-stop, and break-start regressions pass; the source lint and type-check are clean."
+    },
+    {
+      "id": "desktop-package",
+      "status": "PASS",
+      "evidence": "The v1.4.507 Electron package phase completed and release/latest-linux.yml binds the generated AppImage. The combined build preflight remains separately failed by an unrelated backup-restore live fixture seed assertion."
+    }
+  ],
+  "candidateArtifacts": [
+    {
+      "path": "src/stores/timer.ts",
+      "sha256": "37dcd83789425780ad04f33758bad3bc02e729c3b2927fdf2a623aa8ef0ac130"
+    },
+    {
+      "path": "src/layouts/AppHeader.vue",
+      "sha256": "bbd68a181b421937502f04ce0f4cab652fdbdca1964ca90c96d87d2a8a2aec41"
+    },
+    {
+      "path": "tests/unit/stores/timer-state-machine.test.ts",
+      "sha256": "35a5348f4497f408008f7e49dc69f01e07947e5b5f6bef38677d552baf479f15"
+    },
+    {
+      "path": "tests/unit/timer-break-offer-rendering.test.ts",
+      "sha256": "5f5c2dbdda614553c1b4f7af19947723b4ee0de53e3bdc7e2ba4881dde5e5afb"
+    },
+    {
+      "path": "package.json",
+      "sha256": "030da9859dfdaa70516aa299618c6b763b86e8e9894a2575677c19b9cbca864a"
+    },
+    {
+      "path": "release/latest-linux.yml",
+      "sha256": "a46a7baa3e406b8334835dd641726570426bd54d7d641c2424782a9a7cbf4eff"
+    },
+    {
+      "path": "release/FlowState-1.4.507-x86_64.AppImage",
+      "sha256": "b6efad364a6a98aeedd5d06d7db62807f596c304fd0550afd0e6d1b233ada107"
+    }
+  ]
+}

@@ -629,7 +629,7 @@ describe('Timer State Machine — Session Completion', () => {
     expect(store.completedSessions.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('21b. completed work offers a break, then starts the next work session after 90 seconds', async () => {
+  it('21b. completed work keeps the break offer available instead of silently restarting work', async () => {
     const store = useTimerStore()
     await flushPromises()
 
@@ -640,17 +640,13 @@ describe('Timer State Machine — Session Completion', () => {
     expect(store.currentSession).toBeNull()
     expect(store.hasPendingBreak).toBe(true)
 
-    await vi.advanceTimersByTimeAsync(86_000)
-    expect(store.currentSession).toBeNull()
-
-    await vi.advanceTimersByTimeAsync(4_000)
+    await vi.advanceTimersByTimeAsync(2 * 60 * 1000)
     await flushPromises()
-    expect(store.currentSession?.isBreak).toBe(false)
-    expect(store.currentSession?.taskId).toBe('task-001')
-    expect(store.hasPendingBreak).toBe(false)
+    expect(store.currentSession).toBeNull()
+    expect(store.hasPendingBreak).toBe(true)
   })
 
-  it('21c. starting the break cancels the automatic work restart', async () => {
+  it('21c. starting the break clears the pending break offer', async () => {
     const store = useTimerStore()
     await flushPromises()
 

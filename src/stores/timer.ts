@@ -31,7 +31,6 @@ import {
 } from "@/composables/useLocalApiBridge";
 
 const LOCAL_API_TIMER_INACTIVE_HEARTBEAT_MS = 10_000;
-const BREAK_START_GRACE_MS = 90_000;
 
 const getT = () => (i18n.global as unknown as { t: (key: string) => string }).t;
 
@@ -117,7 +116,6 @@ export const useTimerStore = defineStore("timer", () => {
   // State
   const currentSession = ref<PomodoroSession | null>(null);
   const pendingBreak = ref<{ sessionId: string; taskId: string } | null>(null);
-  let pendingBreakTimeout: ReturnType<typeof setTimeout> | null = null;
   const completedSessions = ref<PomodoroSession[]>([]);
   const sessions = computed(() => completedSessions.value);
   const isLeader = ref(false);
@@ -358,30 +356,12 @@ export const useTimerStore = defineStore("timer", () => {
   // ── Timer Control Actions ────────────────────────────────────────
 
   const clearPendingBreak = () => {
-    if (pendingBreakTimeout !== null) {
-      clearTimeout(pendingBreakTimeout);
-      pendingBreakTimeout = null;
-    }
     pendingBreak.value = null;
   };
 
-  const scheduleAutomaticWorkSession = (sessionId: string, taskId: string) => {
+  const offerBreak = (sessionId: string, taskId: string) => {
     clearPendingBreak();
     pendingBreak.value = { sessionId, taskId };
-    pendingBreakTimeout = setTimeout(() => {
-      pendingBreakTimeout = null;
-      const pending = pendingBreak.value;
-      if (!pending || pending.sessionId !== sessionId || currentSession.value) return;
-      pendingBreak.value = null;
-      void startTimer(
-        taskId && taskId !== "break" ? taskId : "general",
-        settings.workDuration,
-        false,
-        { silent: true },
-      ).catch((error) => {
-        console.warn("[TIMER] Automatic work restart failed:", error);
-      });
-    }, BREAK_START_GRACE_MS);
   };
 
   /**
@@ -690,7 +670,7 @@ export const useTimerStore = defineStore("timer", () => {
       currentSession.value = null;
       syncLocalApiTimerSnapshot(null, deviceId);
       if (!wasBreak) {
-        scheduleAutomaticWorkSession(session.id, lastTaskId);
+        offerBreak(session.id, lastTaskId);
       }
       audio.playEndSound();
       releaseWakeLock(); // Allow sleep - ROAD-004

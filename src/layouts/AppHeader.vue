@@ -120,6 +120,15 @@
             </div>
             <div class="timer-controls">
               <div v-if="!timerStore.currentSession" class="timer-start-options">
+                <div
+                  v-if="timerStore.hasPendingBreak"
+                  class="timer-break-offer"
+                  role="status"
+                  aria-live="polite"
+                  data-testid="timer-break-offer"
+                >
+                  Time for a break
+                </div>
                 <button
                   class="timer-btn timer-start"
                   title="Start 25-min work timer"
@@ -615,7 +624,15 @@ const startLongBreak = async () => {
 
 .timer-start-options {
   display: flex;
+  align-items: center;
   gap: var(--space-1);
+}
+
+.timer-break-offer {
+  color: var(--color-break);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  white-space: nowrap;
 }
 
 .timer-btn {

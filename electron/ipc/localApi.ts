@@ -90,6 +90,7 @@ let childGeneration = 0
 let lifecyclePromise: Promise<void> | null = null
 let reconcileRequested = false
 let restartTimer: ReturnType<typeof setTimeout> | null = null
+let waitingForAppReady = false
 let restartAttempt = 0
 const RESTART_BACKOFF_MS = [100, 500, 1_000, 2_000, 5_000] as const
 const FINAL_SHUTDOWN_EXIT_TIMEOUT_MS = 5_000
@@ -138,6 +139,18 @@ function logLifecycle(event: string, details: Record<string, unknown> = {}) {
 }
 
 function spawnChild() {
+  if (!app.isReady()) {
+    if (!waitingForAppReady) {
+      waitingForAppReady = true
+      void app.whenReady().then(() => {
+        waitingForAppReady = false
+        if (desiredRunning && !finalShutdownRequested) void queueReconcile()
+      })
+    }
+    logLifecycle('start-deferred-until-app-ready')
+    return
+  }
+
   const path = sidecarPath()
   lastStartAttemptAt = Date.now()
   lastSidecarPath = path

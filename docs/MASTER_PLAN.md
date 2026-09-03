@@ -101,6 +101,16 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 
 **Acceptance evidence**: A red-green regression for the reported completion shape; focused timer transition tests; an installed Electron run showing a completed focus interval reaches the visible break offer or configured automatic break; and persisted session read-back proving exactly one completed focus interval and the intended next state.
 
+### TASK-2074: FlowState desktop startup attempts the Local API before Electron is ready (🚧 IN PROGRESS)
+
+**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-03)
+
+**User repro**: FlowState does not load from the installed desktop launcher.
+
+**Exact failure mode**: Main-process IPC registration occurs before `app.whenReady()`. When the saved Local Task API setting is enabled, registration immediately starts its sidecar, causing Electron to reject `utilityProcess.fork` before app readiness.
+
+**Repair and regression**: Defer a desired Local API start until Electron signals readiness, without losing the persisted enabled startup contract or duplicating the child. Add a red-green runtime regression for an enabled profile registered before readiness, then verify the packaged Electron launch no longer logs the pre-ready fork error.
+
 ### BUG-2069: A successful permanent deletion can be reported as a sync failure (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-01)

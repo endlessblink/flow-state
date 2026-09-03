@@ -12,6 +12,8 @@ const runtime = vi.hoisted(() => ({
   userData: '',
   forkAttempts: 0,
   forkFailuresRemaining: 0,
+  appReady: true,
+  appReadyPromise: Promise.resolve(),
 }))
 
 const session = {
@@ -26,6 +28,8 @@ vi.mock('electron', () => ({
   app: {
     getPath: () => runtime.userData,
     getVersion: () => '1.4.260',
+    isReady: () => runtime.appReady,
+    whenReady: () => runtime.appReadyPromise,
   },
   BrowserWindow: { getAllWindows: () => [] },
   ipcMain: {
@@ -56,6 +60,8 @@ describe('Electron Local API session replay runtime', () => {
     runtime.children.length = 0
     runtime.forkAttempts = 0
     runtime.forkFailuresRemaining = 0
+    runtime.appReady = true
+    runtime.appReadyPromise = Promise.resolve()
     runtime.userData = mkdtempSync(join(tmpdir(), 'flowstate-local-api-main-'))
     vi.resetModules()
   })
@@ -102,6 +108,36 @@ describe('Electron Local API session replay runtime', () => {
       hasLatestSession: false,
     })
 
+    const child = runtime.children[0]
+    const shutdown = shutdownLocalApi()
+    child.emit('exit', 0, null)
+    await shutdown
+  })
+
+  it('waits for Electron readiness before starting an enabled sidecar during registration', async () => {
+    writeFileSync(sourceSidecarFixture, '')
+    writeFileSync(join(runtime.userData, 'local-api.json'), JSON.stringify({
+      enabled: true,
+      token: 'synthetic-local-api-token',
+      port: 5577,
+    }))
+    let markReady!: () => void
+    runtime.appReady = false
+    runtime.appReadyPromise = new Promise<void>((resolve) => {
+      markReady = resolve
+    })
+
+    const { registerLocalApiHandlers, shutdownLocalApi } = await import('../../../electron/ipc/localApi')
+    registerLocalApiHandlers()
+
+    expect(runtime.forkAttempts).toBe(0)
+    expect(runtime.children).toHaveLength(0)
+
+    runtime.appReady = true
+    markReady()
+    await Promise.resolve()
+
+    expect(runtime.forkAttempts).toBe(1)
     const child = runtime.children[0]
     const shutdown = shutdownLocalApi()
     child.emit('exit', 0, null)

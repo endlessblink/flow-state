@@ -1,3 +1,7 @@
 ## 2024-05-18 - Missing ARIA labels in canvas context menu
 **Learning:** Icon-only and minimally-labeled buttons in complex components like the canvas context menu (e.g. alignment grids) often rely solely on title attributes for description, which are inconsistently read by screen readers.
 **Action:** Ensure all icon-heavy submenus explicitly duplicate title text into aria-label attributes to guarantee robust screen reader support.
+
+## 2026-09-03 - Missing ARIA labels on icon-only buttons with titles
+**Learning:** Icon-only buttons often use `title` for tooltips but omit `aria-label`. Screen readers process `title` inconsistently, leading to poor accessibility.
+**Action:** Ensure all icon-only buttons include an `aria-label` (or dynamically bound `:aria-label`) alongside any `title` attribute.

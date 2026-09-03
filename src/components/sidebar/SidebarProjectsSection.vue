@@ -7,7 +7,12 @@
         <FolderOpen :size="16" class="section-icon" />
         {{ $t('common.projects') }}
       </h3>
-      <button class="add-project-btn" :title="$t('sidebar.add_project')" @click="sidebar.openCreateProject">
+      <button
+        class="add-project-btn"
+        :title="$t('sidebar.add_project')"
+        :aria-label="$t('sidebar.add_project')"
+        @click="sidebar.openCreateProject"
+      >
         <Plus :size="14" />
       </button>
     </div>

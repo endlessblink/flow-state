@@ -436,6 +436,36 @@ describe('useTidyLayout', () => {
     expect(updateTask).not.toHaveBeenCalledWith('task-due-today', { parentId: today.id }, 'DRAG')
   })
 
+  it('adopts a loose dated task into its matching day group during tidy', () => {
+    const today = makeGroup('Today', 0)
+    const monday = makeGroup('Monday', 500)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, monday])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'loose-task-due-today',
+        parentId: undefined,
+        dueDate: '2026-05-04',
+        canvasPosition: { x: -400, y: 520 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout()
+    const { taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(taskMoves).toContainEqual(expect.objectContaining({
+      taskId: 'loose-task-due-today',
+      parentId: today.id,
+      position: { x: 20, y: 70 },
+    }))
+    expect(updateTask).toHaveBeenCalledWith(
+      'loose-task-due-today',
+      { parentId: today.id, canvasPosition: { x: 20, y: 70 }, positionFormat: 'absolute' },
+      'DRAG'
+    )
+  })
+
   it('repairs a stale parent claim from the task visual position', () => {
     const today = makeGroup('Today', 0)
     const monday = makeGroup('Monday', 500)

@@ -8,7 +8,7 @@
 
 **Boundary**: This is a Canvas Tidy recovery regression, not a Board date-lane issue. Do not change task due dates; only eligible visible Canvas cards may be re-parented, positioned, and persisted by the user-invoked Tidy action.
 
-**Investigation and acceptance**: Reproduce a Today day group with eligible loose cards vertically below its frame. Assert Tidy writes their parent ID to Today, restacks from the header, and derives a group height containing every measured card. Verify the persisted result after a Canvas reload. Preserve hidden, pinned, done, dismissed, and cross-account isolation safeguards.
+**Investigation and acceptance**: Reproduce a Today day group with eligible loose cards vertically below its frame and a loose root card completely outside every day column with a matching due date. Assert Tidy writes their parent ID to Today, restacks from the header, and derives a group height containing every measured card. Verify the persisted result after a Canvas reload. Preserve hidden, pinned, done, dismissed, cross-account isolation, and existing group-membership safeguards.
 
 ### ~~TASK-2075: Make the Board local-date regression deterministic~~ (✅ DONE)
 

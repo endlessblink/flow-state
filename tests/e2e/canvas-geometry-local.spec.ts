@@ -1207,6 +1207,55 @@ test.describe('local canvas geometry regressions', () => {
     }))
   })
 
+  test('tidy re-homes a loose dated task outside every day column', async ({ page }) => {
+    const today = await page.evaluate(() => {
+      const now = new Date()
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    })
+
+    await seedCanvas(page, [
+      { id: 'dated-today', name: 'Today', x: 100, y: 200, width: 400, height: 320 },
+      { id: 'dated-tomorrow', name: 'Tomorrow', x: 700, y: 200, width: 400, height: 320 },
+    ], [
+      { id: 'dated-loose-task', title: 'Loose dated task', parentId: '', dueDate: today, x: -400, y: 540 },
+    ])
+
+    await clickToolbar(page, /tidy|layout/)
+
+    await expect.poll(async () => {
+      const geometry = await readGeometry(page)
+      const group = geometry.groups.find((candidate) => candidate.id === 'dated-today')
+      const task = geometry.tasks.find((candidate) => candidate.id === 'dated-loose-task')
+      return { group, task }
+    }).toMatchObject({
+      group: expect.objectContaining({ id: 'dated-today' }),
+      task: expect.objectContaining({
+        id: 'dated-loose-task',
+        parentId: 'dated-today',
+        x: 120,
+        y: 270,
+      }),
+    })
+
+    const afterTidy = await readGeometry(page)
+    const todayGroup = afterTidy.groups.find((group) => group.id === 'dated-today')!
+    const adoptedTask = afterTidy.tasks.find((task) => task.id === 'dated-loose-task')!
+    expect(adoptedTask.y + 100 <= todayGroup.y + todayGroup.height, JSON.stringify(afterTidy, null, 2)).toBe(true)
+
+    await page.reload()
+    await setupCanvas(page)
+
+    await expect.poll(async () => {
+      const geometry = await readGeometry(page)
+      return geometry.tasks.find((task) => task.id === 'dated-loose-task')
+    }).toEqual(expect.objectContaining({
+      id: 'dated-loose-task',
+      parentId: 'dated-today',
+      x: 120,
+      y: 270,
+    }))
+  })
+
   test('tidy stacks variable-height cards without overlap', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'thu', name: 'Thursday', x: 100, y: 200 },

@@ -94,6 +94,17 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       return visualPosition ? { ...task, canvasPosition: visualPosition } : task
     })
     const adoptedParents = collectDayGroupAdoptions(tasksForSpatialAdoption, visibleGroups, { mode: 'spatial' })
+
+    // A root-level card can be far outside every rendered group after a failed
+    // drop or resize. Once Tidy is explicitly invoked, recover that loose card
+    // into its matching day group. Existing group membership stays intact, and
+    // spatial containment above wins when the card is visibly inside a group.
+    const looseDatedTasks = taskStore.rawTasks.filter(
+      (task) => !task.parentId && !adoptedParents.has(task.id)
+    )
+    for (const [taskId, groupId] of collectDayGroupAdoptions(looseDatedTasks, visibleGroups, { mode: 'dueDate' })) {
+      adoptedParents.set(taskId, groupId)
+    }
     const layoutTasks = taskStore.rawTasks.filter((task) => {
       if (!task.canvasPosition && !adoptedParents.has(task.id)) return false
       if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
@@ -102,7 +113,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       return options.isTaskVisible?.(task.id) !== false || adoptedParents.has(task.id)
     })
     if (adoptedParents.size > 0) {
-      console.log('[TIDY] Adopted', adoptedParents.size, 'loose tasks into containing groups')
+      console.log('[TIDY] Adopted', adoptedParents.size, 'loose tasks into matching groups')
     }
 
     const inputs: DayGroupInput[] = []

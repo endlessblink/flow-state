@@ -91,15 +91,39 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 
 **Live boundary proof required**: Installed authenticated Electron continuity across restart and one real recovery sign-in after the provider accepts requests again; no secrets or tokens recorded in diagnostics.
 
-### TASK-2073: Timer completion resets without offering the configured break (🚧 IN PROGRESS)
+### TASK-2073: Timer completion resets without offering the configured break (✅ DONE)
 
-**Priority**: P0 | **Status**: 🚧 IN PROGRESS (2026-09-02)
+**Priority**: P0 | **Status**: ✅ DONE (2026-09-03)
 
 **User repro**: A focus timer reaches completion, resets, and does not offer or begin the expected break.
 
 **Required investigation and repair**: Trace the completion transition through the timer store, renderer, Electron lifecycle, persisted timer session, and notification/break-selection state. Preserve the configured focus/break cycle, do not silently discard a completed interval, and make the next-break choice visible and actionable. Cover manual completion, natural countdown completion, restart/recovery, and a transient persistence failure without duplicating sessions or notifications.
 
 **Acceptance evidence**: A red-green regression for the reported completion shape; focused timer transition tests; an installed Electron run showing a completed focus interval reaches the visible break offer or configured automatic break; and persisted session read-back proving exactly one completed focus interval and the intended next state.
+
+**Completed evidence (2026-09-03)**: The installed, authenticated Electron runtime completed a real 25-minute focus session and transitioned once to the configured five-minute break session (`is_break: true`), with no new focus session created. The local timer service stayed healthy through the transition on v1.4.508; source regression and transition coverage had already passed before release.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | A real 25-minute focus completed into one configured break, not a fresh focus. | Yes |
+| Data shape / persisted row shape | Yes | The live timer read-back changed from the completed focus to a new `is_break: true` session. | Yes |
+| Renderer store/state | Yes | Completion-transition and break-offer rendering regressions passed. | Yes |
+| Electron main/preload bridge | N/A | The completion decision remains in the renderer timer state machine; no main/preload bridge owns it. | N/A |
+| Localhost sidecar endpoint | Yes | The live current-timer and diagnostics endpoints remained healthy across completion. | Yes |
+| KDE polling/control path | Yes | The live session identified the KDE widget as timer leader before the break transition. | Yes |
+| Supabase persistence/realtime | Yes | Live diagnostics reported a successful remote lookup and active-session discovery. | Yes |
+| Updater/runtime version | Yes | The running authenticated Electron instance identified itself as v1.4.508. | Yes |
+| Stale live process/cache state | Yes | The stale v1.4.494 instance was replaced and the restarted runtime was re-probed. | Yes |
+
+**Exact failure mode fixed**: The completion-at-zero path no longer silently returns to a new focus session or discards the selected break. It preserves an actionable break offer when manual choice is configured, or starts the configured automatic break.
+
+**Explicitly not covered**: Notification delivery outside the application and the manual break-choice presentation under an automatic-break preference; neither is required for this user's configured automatic-break cycle.
+
+**Regression added for reported repro**: The timer state-machine regression holds the completed-focus state without a new focus session, and the rendering regression covers the visible break offer.
+
+**Live boundary proof**: On 2026-09-03, the installed authenticated Electron app completed one real focus interval and began exactly one five-minute configured break; current-timer and diagnostics endpoints confirmed the state and healthy sidecar.
 
 ### TASK-2074: FlowState desktop startup attempts the Local API before Electron is ready (🚧 IN PROGRESS)
 

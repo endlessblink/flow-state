@@ -517,6 +517,41 @@ describe('useTidyLayout', () => {
     )
   })
 
+  it('adopts a visibly aligned loose task when its saved position is stale', () => {
+    const today = makeGroup('Today', 200, 0)
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([
+      {
+        id: 'task-with-stale-saved-position',
+        parentId: undefined,
+        // The persisted X position is stale, but Vue Flow visibly renders the
+        // card below Today in its column. Tidy must recover that visible state.
+        canvasPosition: { x: 800, y: 520 },
+        createdAt: '2026-04-01T00:00:00Z',
+      },
+    ] as any)
+
+    const { tidyDayGroups } = useTidyLayout({
+      getNodePosition: (nodeId) => nodeId === 'task-with-stale-saved-position'
+        ? { x: 220, y: 520 }
+        : undefined,
+    })
+    const { taskMoves, release } = tidyDayGroups()
+    release()
+
+    expect(taskMoves).toHaveLength(1)
+    expect(taskMoves[0]).toMatchObject({
+      taskId: 'task-with-stale-saved-position',
+      parentId: today.id,
+      position: { x: 220, y: 70 },
+    })
+    expect(updateTask).toHaveBeenCalledWith(
+      'task-with-stale-saved-position',
+      { parentId: today.id, canvasPosition: { x: 220, y: 70 }, positionFormat: 'absolute' },
+      'DRAG'
+    )
+  })
+
   // TASK-1809b: reorderColumn must return moves synchronously (for instant paint)
   // and defer task persistence into commit(), so the wrapper can let the drag
   // handler's write land first and reorder still wins last-write-wins.

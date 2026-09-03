@@ -84,7 +84,16 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     // something visible regardless of the user's group naming.
     const visibleGroups = getPersistedVisibleGroups()
 
-    const adoptedParents = collectDayGroupAdoptions(taskStore.rawTasks, visibleGroups, { mode: 'spatial' })
+    // Adoption is a visible-canvas recovery operation. Vue Flow may already
+    // render a card at its current absolute position while its persisted
+    // canvasPosition still reflects a stale parent or pre-drag location.
+    // Use that live position for membership only; persistence remains the
+    // canonical layout move below.
+    const tasksForSpatialAdoption = taskStore.rawTasks.map((task) => {
+      const visualPosition = options.getNodePosition?.(task.id)
+      return visualPosition ? { ...task, canvasPosition: visualPosition } : task
+    })
+    const adoptedParents = collectDayGroupAdoptions(tasksForSpatialAdoption, visibleGroups, { mode: 'spatial' })
     const layoutTasks = taskStore.rawTasks.filter((task) => {
       if (!task.canvasPosition && !adoptedParents.has(task.id)) return false
       if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false

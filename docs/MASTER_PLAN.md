@@ -1,5 +1,15 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2076: Canvas Tidy must visibly re-home loose day-column tasks (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-03)
+
+**User repro**: On the dotted Canvas, cards visibly aligned with the **Today** day column continue below its group frame. Running **Tidy** must re-home eligible loose cards into that column and resize/restack the group so every adopted card is visibly contained.
+
+**Boundary**: This is a Canvas Tidy recovery regression, not a Board date-lane issue. Do not change task due dates; only eligible visible Canvas cards may be re-parented, positioned, and persisted by the user-invoked Tidy action.
+
+**Investigation and acceptance**: Reproduce a Today day group with eligible loose cards vertically below its frame. Assert Tidy writes their parent ID to Today, restacks from the header, and derives a group height containing every measured card. Verify the persisted result after a Canvas reload. Preserve hidden, pinned, done, dismissed, and cross-account isolation safeguards.
+
 ### ~~TASK-2075: Make the Board local-date regression deterministic~~ (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-09-03)

@@ -1104,6 +1104,109 @@ test.describe('local canvas geometry regressions', () => {
     await expect.poll(readTidyGeometry).toEqual(afterTidy)
   })
 
+  test('tidy re-homes a visibly aligned loose task when its saved position is stale', async ({ page }) => {
+    await seedCanvas(page, [
+      { id: 'stale-today', name: 'Today', x: 100, y: 200, width: 400, height: 320 },
+      { id: 'stale-tomorrow', name: 'Tomorrow', x: 700, y: 200, width: 400, height: 320 },
+    ], [
+      { id: 'stale-loose-task', title: 'Stale loose task', parentId: '', x: 920, y: 540 },
+    ])
+
+    const beforeMismatch = await page.evaluate(() => {
+      const root = document.querySelector('#app') as {
+        __vue_app__?: {
+          _context: {
+            config: { globalProperties: { $pinia: { _s: Map<string, any> } } }
+          }
+        }
+      } | null
+      const pinia = root?.__vue_app__?._context.config.globalProperties.$pinia
+      const taskStore = pinia?._s.get('tasks')
+      const task = taskStore?.rawTasks.find((candidate: any) => candidate.id === 'stale-loose-task')
+      // Vue Flow keeps the live computed position on its rendered node record;
+      // deliberately leave the persisted task record stale to reproduce the
+      // renderer/store disagreement reported by the user.
+      const renderedNode = document.querySelector('.vue-flow__node[data-id="stale-loose-task"]') as (HTMLElement & {
+      }) | null
+      const findCanvasInstance = (vnode: any): any => {
+        if (!vnode) return undefined
+        if (vnode.component?.type?.__name === 'CanvasView') return vnode.component
+        const children = Array.isArray(vnode.children) ? vnode.children : []
+        return children.map(findCanvasInstance).find(Boolean)
+          ?? findCanvasInstance(vnode.component?.subTree)
+      }
+      const canvasInstance = findCanvasInstance(root?.__vue_app__?._instance?.subTree)
+      const nodes = canvasInstance?.setupState?.getNodes?.value ?? canvasInstance?.setupState?.getNodes ?? []
+      const node = nodes.find((candidate: any) => candidate.id === 'stale-loose-task')
+
+      if (!task || !node) {
+        return { ok: false, reason: 'task-or-node-missing', hasTask: !!task, hasRenderedNode: !!renderedNode, nodeCount: nodes.length }
+      }
+
+      task.canvasPosition = { x: 920, y: 540 }
+      task.parentId = ''
+      node.position = { x: 220, y: 540 }
+      node.computedPosition = { x: 220, y: 540, z: node.computedPosition?.z ?? 0 }
+
+      const renderedLeft = renderedNode?.getBoundingClientRect().left ?? null
+
+      return {
+        ok: true,
+        storeX: Math.round(task.canvasPosition.x),
+        storeParentId: task.parentId ?? '',
+        nodeX: Math.round(node.position?.x ?? NaN),
+        computedX: Math.round(node.computedPosition?.x ?? NaN),
+        renderedLeft: renderedLeft === null ? null : Math.round(renderedLeft),
+      }
+    })
+
+    expect(beforeMismatch, JSON.stringify(beforeMismatch, null, 2)).toMatchObject({
+      ok: true,
+      storeX: 920,
+      storeParentId: '',
+      nodeX: 220,
+      computedX: 220,
+    })
+
+    await clickToolbar(page, /tidy|layout/)
+
+    await expect.poll(async () => {
+      const geometry = await readGeometry(page)
+      const group = geometry.groups.find((candidate) => candidate.id === 'stale-today')
+      const task = geometry.tasks.find((candidate) => candidate.id === 'stale-loose-task')
+      return {
+        group,
+        task,
+      }
+    }).toMatchObject({
+      group: expect.objectContaining({ id: 'stale-today' }),
+      task: expect.objectContaining({
+        id: 'stale-loose-task',
+        parentId: 'stale-today',
+        x: 120,
+        y: 270,
+      }),
+    })
+
+    const afterTidy = await readGeometry(page)
+    const todayGroup = afterTidy.groups.find((group) => group.id === 'stale-today')!
+    const adoptedTask = afterTidy.tasks.find((task) => task.id === 'stale-loose-task')!
+    expect(adoptedTask.y + 100 <= todayGroup.y + todayGroup.height, JSON.stringify(afterTidy, null, 2)).toBe(true)
+
+    await page.reload()
+    await setupCanvas(page)
+
+    await expect.poll(async () => {
+      const geometry = await readGeometry(page)
+      return geometry.tasks.find((task) => task.id === 'stale-loose-task')
+    }).toEqual(expect.objectContaining({
+      id: 'stale-loose-task',
+      parentId: 'stale-today',
+      x: 120,
+      y: 270,
+    }))
+  })
+
   test('tidy stacks variable-height cards without overlap', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'thu', name: 'Thursday', x: 100, y: 200 },

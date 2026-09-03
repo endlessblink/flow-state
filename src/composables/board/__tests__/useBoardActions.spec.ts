@@ -66,8 +66,6 @@ describe('useBoardActions task creation', () => {
   })
 
   it('keeps Today on the local calendar date before UTC midnight', () => {
-    const originalTimezone = process.env.TZ
-    process.env.TZ = 'Asia/Jerusalem'
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-27T00:30:00+03:00'))
 
@@ -75,8 +73,6 @@ describe('useBoardActions task creation', () => {
       expect(getDateFromColumnKey('today')).toBe('2026-08-27')
     } finally {
       vi.useRealTimers()
-      if (originalTimezone === undefined) delete process.env.TZ
-      else process.env.TZ = originalTimezone
     }
   })
 

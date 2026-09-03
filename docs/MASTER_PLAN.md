@@ -1,5 +1,13 @@
 # FlowState MASTER_PLAN.md
 
+### ~~TASK-2075: Make the Board local-date regression deterministic~~ (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-03)
+
+**Failure mode**: The Board local-date unit test changes `TZ` after its Vitest worker has started. Node can retain the process-start timezone, so a UTC-started nightly worker returns the prior calendar day even though the production helper correctly uses local-date accessors.
+
+**Completed evidence**: Vitest now starts in `Asia/Jerusalem` through a cross-platform Node runner; the Board test no longer mutates `TZ` after worker startup. The focused runner/Board tests passed from a parent `TZ=UTC`, and the full unit suite passed (401 files, 4,779 tests, 3 skipped). This changes test-process setup only; Board date behavior remains unchanged.
+
 ### TASK-2068: Redesign Board lanes and add direct lane assignment (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-01)

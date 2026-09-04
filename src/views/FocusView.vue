@@ -93,6 +93,7 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTimerStore } from '@/stores/timer'
 import { useTaskStore } from '@/stores/tasks'
+import { settleBackgroundTaskMutation } from '@/utils/taskMutationErrors'
 
 interface Props {
   taskId?: string
@@ -120,7 +121,10 @@ const toggleSubtask = (subtask: { id: string; isCompleted: boolean }) => {
   const updatedSubtasks = currentTask.value.subtasks?.map(s =>
     s.id === subtask.id ? { ...s, isCompleted: !subtask.isCompleted } : s
   )
-  tasksStore.updateTaskWithUndo(currentTask.value.id, { subtasks: updatedSubtasks })
+  void settleBackgroundTaskMutation(
+    tasksStore.updateTaskWithUndo(currentTask.value.id, { subtasks: updatedSubtasks }),
+    'Focus subtask toggle',
+  )
 }
 
 const startFocusSession = async () => {
@@ -131,7 +135,10 @@ const startFocusSession = async () => {
 
 const handleComplete = () => {
   if (currentTask.value) {
-    tasksStore.updateTaskWithUndo(currentTask.value.id, { status: 'done' })
+    void settleBackgroundTaskMutation(
+      tasksStore.updateTaskWithUndo(currentTask.value.id, { status: 'done' }),
+      'Focus completion',
+    )
   }
   timerStore.stopTimer()
   router.back()

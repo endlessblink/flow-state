@@ -3,6 +3,7 @@ import { useTaskStore, type Task, type Subtask, type TaskInstance } from '@/stor
 import { useCanvasStore } from '@/stores/canvas'
 import { useCanvasUiStore } from '@/stores/canvas/canvasUi'
 import { useToast } from '@/composables/useToast'
+import { settleBackgroundTaskMutation } from '@/utils/taskMutationErrors'
 import type { SimpleRecurrenceRule } from '@/types/tasks'
 import { RecurrencePattern, EndCondition } from '@/types/recurrence'
 import type { RecurrenceRule as LegacyRecurrenceRule, RecurrenceEndCondition, WeeklyRecurrenceRule, MonthlyRecurrenceRule } from '@/types/recurrence'
@@ -83,10 +84,13 @@ export function useTaskEditActions(
         const totalSubtasks = editedTask.value.subtasks.length
         const newProgress = totalSubtasks > 0 ? Math.round((completedCount / totalSubtasks) * 100) : 0
 
-        taskStore.updateTaskWithUndo(editedTask.value.id, {
-            progress: newProgress,
-            updatedAt: new Date()
-        })
+        void settleBackgroundTaskMutation(
+            taskStore.updateTaskWithUndo(editedTask.value.id, {
+                progress: newProgress,
+                updatedAt: new Date()
+            }),
+            'subtask progress update',
+        )
     }
 
     const resetPomodoros = () => {

@@ -153,6 +153,46 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 
 **Repair and regression**: Defer a desired Local API start until Electron signals readiness, without losing the persisted enabled startup contract or duplicating the child. Add a red-green runtime regression for an enabled profile registered before readiness, then verify the packaged Electron launch no longer logs the pre-ready fork error.
 
+### TASK-2077: Stabilize local-date board tests and suppress benign stale-gesture errors (✅ DONE)
+
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-04)
+
+**User repro**: The Board `today` test reports the previous UTC date before midnight, and a refresh race can expose a raw “Task update target no longer exists” error toast after a Focus or subtask action.
+
+**Repair and regression**: Make the Board test deterministic without changing local-date product behavior. Route the three fire-and-forget Focus/subtask update calls through the existing stale-gesture settlement boundary, which suppresses only the known missing-target race and preserves all other failures. Add red-green regression coverage for each reported shape, then run the complete challenge-loop protocol with a snapshot-bound independent review and final Sure gate.
+
+**Evidence**: Full unit suite passed (409 files), type-check passed, scoped lint had zero errors, and the snapshot-bound challenge runner plus independent read-only review passed on 2026-09-04. The Electron release gate is tracked separately by TASK-2078.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Board local-date regression and three-caller source contract passed. | Yes |
+| Data shape / persisted row shape | N/A | Neither failure depends on a stored row shape. | N/A |
+| Renderer store/state | Yes | The exact missing-target settlement helper retains rejection for unrelated errors. | Yes, for the three fire-and-forget callers |
+| Electron main/preload bridge | N/A | Neither path crosses the desktop bridge. | N/A |
+| Localhost sidecar endpoint | N/A | Neither path calls the local sidecar. | N/A |
+| KDE polling/control path | N/A | Neither path controls KDE. | N/A |
+| Supabase persistence/realtime | No | The stale-task race can be initiated by refresh or sync, but no live persistence race was exercised. | No |
+| Updater/runtime version | No | Version was bumped, but Electron packaging is blocked by TASK-2078. | No |
+| Stale live process/cache state | No | Tests run in fresh workers; no installed-app session was exercised. | No |
+
+**Exact failure mode fixed**: A Vitest worker inheriting a late timezone mutation and three known fire-and-forget callers allowing the exact missing-target refresh race to reach global unhandled-rejection reporting.
+
+**Explicitly not covered**: A real Supabase refresh/sync race, an installed desktop session, and Electron package/updater delivery.
+
+**Regression added for reported repro**: The Board local-date spec runs with `Asia/Jerusalem` set before the Vitest worker exists, and a source contract requires all three reported callers to use the exact stale-gesture settlement boundary.
+
+**Live boundary proof**: No live boundary is claimed; full unit/type proof and challenge-loop acceptance passed. TASK-2078 blocks the required desktop build boundary.
+
+### TASK-2078: Restore backup/restore E2E seeded-task durability (🚧 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🚧 IN PROGRESS (2026-09-04)
+
+**Release gate**: `npm run electron:build` stops in the backup/restore browser suite because its seeded task cannot be read from the test database (`PGRST116`, zero rows). The failure is outside TASK-2077's Board and stale-gesture repair surface.
+
+**Required proof**: Identify why the live-browser seed is absent, add a regression for the durability boundary, make all backup/restore E2E cases pass, then rebuild Electron and verify the updater artifact before claiming a desktop release.
+
 ### BUG-2069: A successful permanent deletion can be reported as a sync failure (🔄 IN PROGRESS)
 
 **Priority**: P0 | **Status**: 🔄 IN PROGRESS (2026-09-01)

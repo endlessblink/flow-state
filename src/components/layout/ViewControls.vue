@@ -20,6 +20,7 @@
       :aria-pressed="hideDoneTasks"
       :class="{ active: hideDoneTasks }"
       :title="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
+      :aria-label="hideDoneTasks ? 'Show completed tasks' : 'Hide completed tasks'"
       @click="$emit('update:hideDoneTasks', !hideDoneTasks)"
     >
       <EyeOff v-if="hideDoneTasks" :size="20" :stroke-width="1.5" />

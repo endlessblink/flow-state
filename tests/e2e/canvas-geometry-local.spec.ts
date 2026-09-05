@@ -47,8 +47,8 @@ const setupCanvas = async (page: Page) => {
   }, { timeout: 30_000 })
 }
 
-const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], options: { refreshOnMissing?: boolean } = {}) => {
-  await page.evaluate(async ({ groups, tasks }) => {
+const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], options: { refreshOnMissing?: boolean; sync?: boolean } = {}) => {
+  await page.evaluate(async ({ groups, tasks, options }) => {
     const root = document.querySelector('#app') as { __vue_app__: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, any> } } } } } }
     const pinia = root.__vue_app__._context.config.globalProperties.$pinia
     const taskStore = pinia._s.get('tasks')!
@@ -92,8 +92,10 @@ const seedCanvas = async (page: Page, groups: SeedGroup[], tasks: SeedTask[], op
       })
     }
 
-    await canvasStore.requestSync?.('user:manual')
-  }, { groups, tasks })
+    if (options.sync !== false) {
+      await canvasStore.requestSync?.('user:manual')
+    }
+  }, { groups, tasks, options })
 
   await expect.poll(async () => {
     try {
@@ -1207,7 +1209,18 @@ test.describe('local canvas geometry regressions', () => {
     }))
   })
 
-  test('tidy re-homes a loose dated task outside every day column', async ({ page }) => {
+  test('tidy re-homes a stale date-parent task outside every day column', async ({ page }) => {
+    await page.waitForFunction(() => {
+      const root = document.querySelector('#app') as { __vue_app__?: { _context: { config: { globalProperties: { $pinia: { _s: Map<string, unknown> } } } } } } | null
+      const canvasStore = root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas') as { _hasInitializedOnce?: boolean } | undefined
+      return canvasStore?._hasInitializedOnce === true
+    }, { timeout: 30_000 })
+
+    // This regression owns synthetic geometry. Cut the remote feed only after
+    // startup authentication/hydration so a delayed realtime snapshot cannot
+    // replace its two target lanes while Tidy is being exercised.
+    await page.context().setOffline(true)
+
     const today = await page.evaluate(() => {
       const now = new Date()
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -1217,31 +1230,58 @@ test.describe('local canvas geometry regressions', () => {
       { id: 'dated-today', name: 'Today', x: 100, y: 200, width: 400, height: 320 },
       { id: 'dated-tomorrow', name: 'Tomorrow', x: 700, y: 200, width: 400, height: 320 },
     ], [
-      { id: 'dated-loose-task', title: 'Loose dated task', parentId: '', dueDate: today, x: -400, y: 540 },
-    ])
+      // A failed drag left the saved Tomorrow parent behind even though the
+      // card is visibly outside every column. Tidy must recover by date.
+      { id: 'dated-loose-task', title: 'Loose dated task', parentId: 'dated-tomorrow', dueDate: today, x: -400, y: 540 },
+    ], { sync: false, refreshOnMissing: false })
+
+    // Establish that the Tidy click operates on the intended persisted
+    // geometry. A delayed sync must not replace this targeted repro with an
+    // unrelated canvas snapshot between seed and the action.
+    await expect.poll(async () => {
+      const geometry = await readGeometry(page)
+      const tomorrowGroup = geometry.groups.find((group) => group.name === 'Tomorrow')
+      return {
+        groups: geometry.groups.map((group) => group.name).sort(),
+        task: geometry.tasks.find((task) => task.id === 'dated-loose-task'),
+        tomorrowGroupId: tomorrowGroup?.id,
+      }
+    }).toMatchObject({
+      groups: ['Today', 'Tomorrow'],
+      task: {
+        x: -400,
+        y: 540,
+      },
+      tomorrowGroupId: expect.any(String),
+    })
+
+    const beforeTidy = await readGeometry(page)
+    const tomorrowGroupId = beforeTidy.groups.find((group) => group.name === 'Tomorrow')!.id
+    expect(beforeTidy.tasks.find((task) => task.id === 'dated-loose-task')!.parentId).toBe(tomorrowGroupId)
 
     await clickToolbar(page, /tidy|layout/)
 
     await expect.poll(async () => {
       const geometry = await readGeometry(page)
-      const group = geometry.groups.find((candidate) => candidate.id === 'dated-today')
+      const group = geometry.groups.find((candidate) => candidate.name === 'Today')
       const task = geometry.tasks.find((candidate) => candidate.id === 'dated-loose-task')
       return { group, task }
     }).toMatchObject({
-      group: expect.objectContaining({ id: 'dated-today' }),
+      group: expect.objectContaining({ name: 'Today' }),
       task: expect.objectContaining({
         id: 'dated-loose-task',
-        parentId: 'dated-today',
         x: 120,
         y: 270,
       }),
     })
 
     const afterTidy = await readGeometry(page)
-    const todayGroup = afterTidy.groups.find((group) => group.id === 'dated-today')!
+    const todayGroup = afterTidy.groups.find((group) => group.name === 'Today')!
     const adoptedTask = afterTidy.tasks.find((task) => task.id === 'dated-loose-task')!
+    expect(adoptedTask.parentId).toBe(todayGroup.id)
     expect(adoptedTask.y + 100 <= todayGroup.y + todayGroup.height, JSON.stringify(afterTidy, null, 2)).toBe(true)
 
+    await page.context().setOffline(false)
     await page.reload()
     await setupCanvas(page)
 
@@ -1250,10 +1290,13 @@ test.describe('local canvas geometry regressions', () => {
       return geometry.tasks.find((task) => task.id === 'dated-loose-task')
     }).toEqual(expect.objectContaining({
       id: 'dated-loose-task',
-      parentId: 'dated-today',
       x: 120,
       y: 270,
     }))
+
+    const afterReload = await readGeometry(page)
+    const persistedTodayGroup = afterReload.groups.find((group) => group.name === 'Today')!
+    expect(afterReload.tasks.find((task) => task.id === 'dated-loose-task')!.parentId).toBe(persistedTodayGroup.id)
   })
 
   test('tidy stacks variable-height cards without overlap', async ({ page }) => {

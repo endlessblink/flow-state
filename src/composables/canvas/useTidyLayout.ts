@@ -95,12 +95,29 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
     })
     const adoptedParents = collectDayGroupAdoptions(tasksForSpatialAdoption, visibleGroups, { mode: 'spatial' })
 
-    // A root-level card can be far outside every rendered group after a failed
-    // drop or resize. Once Tidy is explicitly invoked, recover that loose card
-    // into its matching day group. Existing group membership stays intact, and
-    // spatial containment above wins when the card is visibly inside a group.
+    // A card can be far outside every rendered group after a failed drop or
+    // reload with stale parent metadata. Once Tidy is explicitly invoked,
+    // recover a loose root card or one that still claims a date lane into its
+    // matching day group. Spatial containment above wins, and custom-group
+    // membership remains authoritative even when the card is off-canvas.
+    const dateGroupIds = new Set(
+      visibleGroups
+        .filter((group) => {
+          const keyword = detectPowerKeyword(group.name)
+          return keyword?.category === 'date' || keyword?.category === 'day_of_week'
+        })
+        .map((group) => group.id)
+    )
+    const isInsideVisibleGroupColumn = (task: typeof taskStore.rawTasks[number]) => {
+      const position = options.getNodePosition?.(task.id) ?? task.canvasPosition
+      return Boolean(position && visibleGroups.some((group) => (
+        position.x >= group.position.x
+        && position.x <= group.position.x + group.position.width
+      )))
+    }
     const looseDatedTasks = taskStore.rawTasks.filter(
-      (task) => !task.parentId && !adoptedParents.has(task.id)
+      (task) => !adoptedParents.has(task.id)
+        && (!task.parentId || (dateGroupIds.has(task.parentId) && !isInsideVisibleGroupColumn(task)))
     )
     for (const [taskId, groupId] of collectDayGroupAdoptions(looseDatedTasks, visibleGroups, { mode: 'dueDate' })) {
       adoptedParents.set(taskId, groupId)

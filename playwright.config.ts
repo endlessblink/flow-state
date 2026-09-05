@@ -104,7 +104,9 @@ export default defineConfig({
     // `npm run dev` includes extra watchers and secret sync that can delay readiness.
     command: `npx vite --host 127.0.0.1 --port ${e2ePort} --strictPort`,
     url: e2eBaseUrl,
-    reuseExistingServer: !process.env.CI,
+    // The release gate seeds local Supabase and must never reuse a Vite process
+    // that was started with a different backend configuration.
+    reuseExistingServer: false,
     timeout: 120 * 1000,
   },
 });

@@ -1,6 +1,6 @@
 {
   "name": "flow-state",
-  "version": "1.4.510",
+  "version": "1.4.511",
   "description": "Multi-view productivity app with integrated task management and pomodoro timer - Vue 3 Edition",
   "homepage": "https://github.com/endlessblink/flow-state",
   "repository": {
@@ -177,7 +177,7 @@
     "test:user-flows": "npx playwright test tests/user-flows/ --config=tests/user-flows/playwright.config.ts",
     "pretest:task-flows": "npm run build",
     "test:task-flows": "npx playwright test tests/user-flows/task-management.spec.ts --config=tests/user-flows/playwright.config.ts",
-    "test:offline-reconnect-flows": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium} ./scripts/run-e2e.sh tests/e2e/canvas-sync-regressions.spec.ts --project=chromium --workers=1 -g 'R10|R11|R12|R13|R14|R15|R16|R17|R18|R19|R20|R21|R22|R23|R24|R25|R26|R27|R28|R29|R30|R31|R32|R33|R34'",
+    "test:offline-reconnect-flows": "FLOWSTATE_E2E_PORT=${FLOWSTATE_E2E_PORT:-15548} PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium} ./scripts/run-e2e.sh tests/e2e/canvas-sync-regressions.spec.ts --project=chromium --workers=1 -g 'R10|R11|R12|R13|R14|R15|R16|R17|R18|R19|R20|R21|R22|R23|R24|R25|R26|R27|R28|R29|R30|R31|R32|R33|R34'",
     "test:offline-reconnect-foundation": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium} ./scripts/run-e2e.sh tests/e2e/canvas-sync-regressions.spec.ts --project=chromium --workers=1 -g 'R10|R11|R12|R13|R14|R15|R16|R17|R18'",
     "test:offline-reconnect-advanced": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium} ./scripts/run-e2e.sh tests/e2e/canvas-sync-regressions.spec.ts --project=chromium --workers=1 -g 'R19|R20|R21|R22|R23|R24|R25|R26|R27|R28|R29|R30|R31|R32'",
     "test:offline-reconnect-foundation-a": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium} ./scripts/run-e2e.sh tests/e2e/canvas-sync-regressions.spec.ts --project=chromium --workers=1 -g 'R10|R13|R14|R16|R18'",
@@ -244,7 +244,7 @@
     "test:backup:restore": "vitest run tests/unit/backup-validation.test.ts --maxWorkers=1 --testNamePattern='Restore'",
     "test:restore": "npm run test:backup:restore",
     "test:restore:full": "npm run test:backup && npm run test:restore:e2e",
-    "test:restore:e2e": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium} bash scripts/run-e2e.sh tests/e2e/backup-restore-live.spec.ts --project=chromium --workers=1",
+    "test:restore:e2e": "FLOWSTATE_E2E_PORT=${FLOWSTATE_E2E_PORT:-15547} PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium} bash scripts/run-e2e.sh tests/e2e/backup-restore-live.spec.ts --project=chromium --workers=1",
     "test:container": "node scripts/stress-container.cjs",
     "test:container:quick": "node scripts/stress-container.cjs --quick",
     "test:sync": "node scripts/stress-sync.cjs",

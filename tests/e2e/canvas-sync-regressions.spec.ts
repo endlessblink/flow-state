@@ -884,6 +884,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     clientB,
   }) => {
     const workspaceId = randomUUID();
+    const workspaceName = `Existence Boundary Workspace ${randomUUID()}`;
     const personalTitle = `Personal existence ${randomUUID()}`;
     const workspaceTitle = `Workspace existence ${randomUUID()}`;
     const clientLogs: string[] = [];
@@ -899,7 +900,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     try {
       const { error: workspaceError } = await admin.from("workspaces").insert({
         id: workspaceId,
-        name: "Existence Boundary Workspace",
+        name: workspaceName,
         owner_id: userId,
         color: "#4ECDC4",
       });
@@ -933,7 +934,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
       await switcher.click();
       await clientA
         .locator(".workspace-menu .workspace-option")
-        .filter({ hasText: "Existence Boundary Workspace" })
+        .filter({ hasText: workspaceName })
         .click();
 
       await expect

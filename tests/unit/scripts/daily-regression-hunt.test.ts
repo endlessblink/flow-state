@@ -367,3 +367,15 @@ describe('daily regression hunt script', () => {
     expect(readFileSync(notifyCapture, 'utf8')).toContain('FlowState fixture failure')
   })
 })
+
+describe('daily regression browser isolation', () => {
+  it('assigns the clean runner a dedicated configurable browser-test port', () => {
+    const runner = readFileSync('scripts/run-daily-regression-hunt-clean.sh', 'utf8')
+    const playwrightConfig = readFileSync('playwright.config.ts', 'utf8')
+
+    expect(runner).toContain('FLOWSTATE_E2E_PORT="${FLOWSTATE_REGRESSION_E2E_PORT:-15547}"')
+    expect(playwrightConfig).toContain('const e2ePort = Number(process.env.FLOWSTATE_E2E_PORT ?? 5547)')
+    expect(playwrightConfig).toContain('http://127.0.0.1:${e2ePort}')
+    expect(playwrightConfig).toContain('--port ${e2ePort} --strictPort')
+  })
+})

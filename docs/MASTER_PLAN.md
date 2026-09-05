@@ -1,5 +1,13 @@
 # FlowState MASTER_PLAN.md
 
+### BUG-2079: Daily offline/reconnect hunt collides with a developer Vite server (🔄 IN PROGRESS)
+
+**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-05) | **Failure class**: E2E runtime isolation
+
+**Exact failure mode**: The clean daily runner used Playwright's default port 5547. When a developer Vite server already owned that port, the runner aborted before browser scenarios began, leaving the daily report without reconnect-convergence evidence.
+
+**Acceptance**: The clean runner owns a dedicated configurable port, the browser configuration uses it for both server startup and navigation, and the offline/reconnect browser suite completes while port 5547 remains occupied. Preserve the default port for ordinary local Playwright use. This covers E2E runtime isolation only, not product sync behavior or Electron runtime delivery.
+
 ### BUG-2076: Canvas Tidy must visibly re-home loose day-column tasks (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-03)

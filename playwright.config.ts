@@ -2,6 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 const authFile = "tests/.auth/user.json";
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const e2ePort = Number(process.env.FLOWSTATE_E2E_PORT ?? 5547);
+const e2eBaseUrl = `http://127.0.0.1:${e2ePort}`;
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -29,7 +31,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://127.0.0.1:5547",
+    baseURL: e2eBaseUrl,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -100,8 +102,8 @@ export default defineConfig({
   webServer: {
     // Keep Playwright server startup minimal and deterministic.
     // `npm run dev` includes extra watchers and secret sync that can delay readiness.
-    command: "npx vite --host 127.0.0.1 --port 5547 --strictPort",
-    url: "http://127.0.0.1:5547",
+    command: `npx vite --host 127.0.0.1 --port ${e2ePort} --strictPort`,
+    url: e2eBaseUrl,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

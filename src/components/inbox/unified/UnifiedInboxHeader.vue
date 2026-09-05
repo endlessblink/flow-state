@@ -84,6 +84,7 @@
       <template #trigger>
         <button
           class="icon-filter-btn"
+          :aria-label="groupFilterLabel"
           :class="{ active: selectedCanvasGroups.size > 0 }"
           :title="groupFilterLabel"
         >
@@ -125,8 +126,9 @@
     <div v-if="!isCollapsed && isSearchExpanded" class="search-input-row">
       <div class="search-input-wrapper">
         <Search :size="14" class="search-icon" />
-        <input dir="auto"
+        <input
           ref="searchInputRef"
+          dir="auto"
           type="text"
           class="search-input"
           :value="searchQuery"

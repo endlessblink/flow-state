@@ -29,9 +29,11 @@ const mountModal = () => mount(AuthModal, {
   global: {
     stubs: {
       BaseModal: { template: '<div><slot name="title" /><slot /></div>' },
-      LoginForm: { template: '<div data-testid="login-form">Sign In</div>' },
-      SignupForm: { template: '<div data-testid="signup-form">Sign Up</div>' },
-      GoogleSignInButton: true,
+      LoginForm: { template: '<div data-testid="login-form">Sign In<slot name="google-signin" /></div>' },
+      SignupForm: { template: '<div data-testid="signup-form">Sign Up<slot name="google-signin" /></div>' },
+      GoogleSignInButton: {
+        template: '<button data-testid="google-signin-button" @click="$emit(\'error\', new Error(\'Google sign-in is temporarily rate limited. Wait 60 seconds and try again.\'))">Google</button>',
+      },
       ResetPasswordView: true,
     },
   },
@@ -128,5 +130,15 @@ describe('AuthModal remembered-account recovery state', () => {
 
     expect(wrapper.find('[data-testid="account-recovery"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="login-form"]').text()).toContain('Sign In')
+  })
+
+  it('shows an actionable Google reconnect failure instead of discarding it', async () => {
+    const wrapper = mountModal()
+
+    await wrapper.get('[data-testid="google-signin-button"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="google-signin-error"]').text()).toContain(
+      'Google sign-in is temporarily rate limited. Wait 60 seconds and try again.'
+    )
   })
 })

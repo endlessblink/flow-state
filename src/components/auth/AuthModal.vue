@@ -16,6 +16,14 @@
     <!-- Modal Body -->
     <div class="auth-modal-body">
       <div
+        v-if="googleErrorMessage"
+        class="auth-google-error"
+        data-testid="google-signin-error"
+        role="alert"
+      >
+        {{ googleErrorMessage }}
+      </div>
+      <div
         v-if="(authStore.isRestoringSession || (authStore.user && authStore.reauthRequired)) && !showReconnectForm"
         class="auth-recovery-state"
         data-testid="account-recovery"
@@ -99,6 +107,7 @@ const router = useRouter()
 // ===== State =====
 const resetEmail = ref('')
 const showReconnectForm = ref(false)
+const googleErrorMessage = ref<string | null>(null)
 
 // ===== Watchers =====
 // A fresh open from the sidebar is an explicit reauthentication attempt. Skip the
@@ -169,6 +178,7 @@ watch(
 
 // ===== Methods =====
 async function handleAuthSuccess(user: User) {
+  googleErrorMessage.value = null
   if (import.meta.env.DEV) {
     console.log('[AUTH:UI] Authentication successful:', user?.email)
   }
@@ -204,15 +214,17 @@ async function handleResetSuccess() {
 
 function handleGoogleError(error: Error) {
   console.error('[AUTH:UI] Google sign-in error:', error)
-  // Error is already handled by GoogleSignInButton and auth store
+  googleErrorMessage.value = error.message || 'Google sign-in failed. Please try again.'
 }
 
 function handleReconnect() {
+  googleErrorMessage.value = null
   uiStore.switchAuthView('login')
   showReconnectForm.value = true
 }
 
 function handleClose() {
+  googleErrorMessage.value = null
   showReconnectForm.value = false
   uiStore.closeAuthModal()
 }
@@ -227,6 +239,15 @@ function handleClose() {
 .auth-modal-body {
   padding: var(--space-4) 0;
   /* Allow content to define height */
+}
+
+.auth-google-error {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-error, #ef4444);
+  border-radius: var(--radius-md, 8px);
+  color: var(--color-error, #ef4444);
+  background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent);
 }
 
 .auth-recovery-state {

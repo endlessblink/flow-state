@@ -34,6 +34,15 @@ export const GRACE_MAX_MS = 10 * 60 * 1000
 // recovery path at all — grace could only end via an unrelated refresh.
 export const GRACE_RETRY_MS = 60 * 1000
 export const LOCAL_API_AUTH_HEARTBEAT_MS = 30 * 1000
+export const GOOGLE_AUTH_RATE_LIMIT_COOLDOWN_MS = 60 * 1000
+
+const isRateLimitedAuthError = (candidate: unknown): boolean => {
+  if (!candidate || typeof candidate !== 'object') return false
+  const error = candidate as { status?: unknown; code?: unknown; message?: unknown }
+  return error.status === 429 ||
+    error.code === 'over_request_rate_limit' ||
+    /rate.?limit/i.test(String(error.message || ''))
+}
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -75,6 +84,7 @@ export const useAuthStore = defineStore('auth', () => {
   // BUG-339: Proactive token refresh timer
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
   let reconnectRefreshTimer: ReturnType<typeof setTimeout> | null = null
+  let googleAuthRetryAfter = 0
 
   /**
    * BUG-339: Schedule proactive token refresh before expiry
@@ -1426,6 +1436,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const signInWithGoogle = async () => {
+    const remainingGoogleAuthCooldownMs = googleAuthRetryAfter - Date.now()
+    if (remainingGoogleAuthCooldownMs > 0) {
+      const retrySeconds = Math.ceil(remainingGoogleAuthCooldownMs / 1000)
+      const rateLimitError = Object.assign(
+        new Error(`Google sign-in is temporarily rate limited. Wait ${retrySeconds} seconds and try again.`),
+        { name: 'AuthApiError', status: 429 },
+      ) as AuthError
+      error.value = rateLimitError
+      throw rateLimitError
+    }
+
     try {
       isLoading.value = true
       error.value = null
@@ -1556,11 +1577,22 @@ export const useAuthStore = defineStore('auth', () => {
       })
 
       if (signInError) throw signInError
+      googleAuthRetryAfter = 0
     } catch (e: unknown) {
       // BUG-1056: Detect if Brave Shields blocked the OAuth redirect
       if (isBlockedByBrave(e)) {
         recordBlockedResource('supabase-auth-google-oauth')
         console.error('[AUTH] Google sign-in blocked by Brave Shields. Please disable Shields for this site.')
+      }
+      if (isRateLimitedAuthError(e)) {
+        googleAuthRetryAfter = Date.now() + GOOGLE_AUTH_RATE_LIMIT_COOLDOWN_MS
+        const rateLimitError = Object.assign(
+          new Error('Google sign-in is temporarily rate limited. Wait 60 seconds and try again.'),
+          { name: 'AuthApiError', status: 429 },
+        ) as AuthError
+        console.warn('[AUTH] Google sign-in rate limited; holding further attempts for 60 seconds')
+        error.value = rateLimitError
+        throw rateLimitError
       }
       console.error('Google sign in failed:', e)
       error.value = e as AuthError

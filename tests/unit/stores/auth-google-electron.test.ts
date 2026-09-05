@@ -147,6 +147,46 @@ describe('Auth Google sign-in in Electron', () => {
     expect(electronAPI().oauthWaitForCallback).not.toHaveBeenCalled()
   })
 
+  it('allows one new Google authorization request after the rate-limit cooldown expires', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-05T12:00:00Z'))
+    mockSignInWithOAuth
+      .mockResolvedValueOnce({
+        data: { url: null },
+        error: { name: 'AuthApiError', message: 'API rate limit exceeded', status: 429 },
+      })
+      .mockResolvedValueOnce({
+        data: { url: 'https://accounts.google.com/o/oauth2/v2/auth' },
+        error: null,
+      })
+
+    const { useAuthStore } = await import('@/stores/auth')
+    const store = useAuthStore()
+
+    await expect(store.signInWithGoogle()).rejects.toThrow('temporarily rate limited')
+    vi.advanceTimersByTime(60_000)
+    await expect(store.signInWithGoogle()).resolves.toBeUndefined()
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
+
+  it('does not multiply Google authorization requests while the auth API is rate limited', async () => {
+    mockSignInWithOAuth.mockResolvedValue({
+      data: null,
+      error: { name: 'AuthApiError', message: 'API rate limit exceeded', status: 429 },
+    })
+    const { useAuthStore } = await import('@/stores/auth')
+    const store = useAuthStore()
+
+    await expect(store.signInWithGoogle()).rejects.toThrow('temporarily rate limited')
+    await expect(store.signInWithGoogle()).rejects.toThrow('temporarily rate limited')
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledTimes(1)
+    expect(electronAPI().oauthStart).toHaveBeenCalledTimes(1)
+    expect(electronAPI().oauthCancel).toHaveBeenCalledTimes(1)
+  })
+
   it('cancels the local callback server when Supabase returns no provider URL', async () => {
     mockSignInWithOAuth.mockResolvedValue({
       data: { url: null },

@@ -85,6 +85,47 @@ export const useAuthStore = defineStore('auth', () => {
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
   let reconnectRefreshTimer: ReturnType<typeof setTimeout> | null = null
   let googleAuthRetryAfter = 0
+  let refreshAuthRequest: ReturnType<NonNullable<typeof supabase>['auth']['refreshSession']> | null = null
+  let refreshAuthRetryAfter = 0
+
+  // A 429 is account-wide, not tied to one UI action. Startup, proactive
+  // refresh, and reconnect recovery used to call refreshSession independently,
+  // turning one rate-limit response into a retry storm that also blocked Google
+  // sign-in. Share both the in-flight request and its cooldown across them.
+  const refreshSessionWithRateLimitGuard = async () => {
+    if (!supabase) {
+      return {
+        data: { session: null },
+        error: { name: 'AuthError', message: 'Supabase client unavailable', status: 503 } as AuthError,
+      }
+    }
+
+    if (refreshAuthRequest) return refreshAuthRequest
+
+    if (Date.now() < refreshAuthRetryAfter) {
+      return {
+        data: { session: null },
+        error: { name: 'AuthApiError', message: 'API rate limit exceeded', status: 429 } as AuthError,
+      }
+    }
+
+    const request = supabase.auth.refreshSession()
+    refreshAuthRequest = request
+    try {
+      const result = await request
+      if (isRateLimitedAuthError(result.error)) {
+        refreshAuthRetryAfter = Date.now() + GOOGLE_AUTH_RATE_LIMIT_COOLDOWN_MS
+      }
+      return result
+    } catch (refreshError) {
+      if (isRateLimitedAuthError(refreshError)) {
+        refreshAuthRetryAfter = Date.now() + GOOGLE_AUTH_RATE_LIMIT_COOLDOWN_MS
+      }
+      throw refreshError
+    } finally {
+      refreshAuthRequest = null
+    }
+  }
 
   /**
    * BUG-339: Schedule proactive token refresh before expiry
@@ -121,9 +162,13 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       console.log('[AUTH] Proactive token refresh starting...')
-      const { data, error: refreshError } = await supabase.auth.refreshSession()
+      const { data, error: refreshError } = await refreshSessionWithRateLimitGuard()
 
       if (refreshError) {
+        if (isRateLimitedAuthError(refreshError)) {
+          console.warn('[AUTH] Token refresh is rate limited — holding retries until the cooldown expires')
+          return
+        }
         if (attempt < maxAttempts) {
           const delay = Math.pow(2, attempt) * 1000 // 2s, 4s, 8s
           console.warn(`[AUTH] Token refresh failed, retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})`)
@@ -155,6 +200,10 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
     } catch (e) {
+      if (isRateLimitedAuthError(e)) {
+        console.warn('[AUTH] Token refresh is rate limited — holding retries until the cooldown expires')
+        return
+      }
       if (attempt < maxAttempts) {
         const delay = Math.pow(2, attempt) * 1000 // 2s, 4s, 8s
         console.warn(`[AUTH] Token refresh error, retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})`)
@@ -584,7 +633,7 @@ export const useAuthStore = defineStore('auth', () => {
             // BUG-1743: Timeout after 5s to prevent blank screen on flaky networks
             const REFRESH_TIMEOUT_MS = 5000
             const { data: refreshData, error: refreshError } = await Promise.race([
-              supabase.auth.refreshSession(),
+              refreshSessionWithRateLimitGuard(),
               new Promise<{ data: { session: null }, error: AuthError }>((resolve) =>
                 setTimeout(() => resolve({
                   data: { session: null },
@@ -618,7 +667,7 @@ export const useAuthStore = defineStore('auth', () => {
                       console.log(`[AUTH] BUG-1514: Retry ${attempt}/${maxAttempts} after ${delay}ms`)
                       await new Promise(resolve => setTimeout(resolve, delay))
                     }
-                    const { data: onlineData, error: onlineError } = await supabase.auth.refreshSession()
+                    const { data: onlineData, error: onlineError } = await refreshSessionWithRateLimitGuard()
                     if (!onlineError && onlineData.session) {
                       console.log(`[AUTH] Session refreshed successfully after coming online (attempt ${attempt})`)
                       session.value = onlineData.session
@@ -674,7 +723,7 @@ export const useAuthStore = defineStore('auth', () => {
                       const delay = Math.pow(3, attempt - 1) * 1000
                       await new Promise(resolve => setTimeout(resolve, delay))
                     }
-                    const { data: onlineData, error: onlineError } = await supabase.auth.refreshSession()
+                    const { data: onlineData, error: onlineError } = await refreshSessionWithRateLimitGuard()
                     if (!onlineError && onlineData.session) {
                       session.value = onlineData.session
                       user.value = onlineData.session.user

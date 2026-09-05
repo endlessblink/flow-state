@@ -10,6 +10,7 @@
       <!-- Trigger: icon-only filter button matching .icon-filter-btn pattern -->
       <button
         class="icon-filter-btn"
+        aria-label="Filter tasks"
         :class="{ active: hasActiveFilters }"
         title="Filter tasks"
       >
@@ -20,10 +21,11 @@
 
     <!-- Popover content -->
     <div class="filter-popover-content">
-
       <!-- Status Section -->
       <div class="filter-section">
-        <div class="filter-section-label">Status</div>
+        <div class="filter-section-label">
+          Status
+        </div>
 
         <button
           class="filter-option"
@@ -53,7 +55,9 @@
 
       <!-- Priority Section -->
       <div class="filter-section">
-        <div class="filter-section-label">Priority</div>
+        <div class="filter-section-label">
+          Priority
+        </div>
 
         <button
           v-for="priority in priorities"
@@ -73,7 +77,9 @@
 
       <!-- Duration Section -->
       <div class="filter-section">
-        <div class="filter-section-label">Duration</div>
+        <div class="filter-section-label">
+          Duration
+        </div>
 
         <button
           v-for="duration in durations"
@@ -93,7 +99,9 @@
 
       <!-- Project Section -->
       <div class="filter-section">
-        <div class="filter-section-label">Project</div>
+        <div class="filter-section-label">
+          Project
+        </div>
 
         <button
           class="filter-option"

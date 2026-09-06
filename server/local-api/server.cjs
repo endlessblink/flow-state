@@ -128,7 +128,6 @@ mkdirSync(DATA_DIR, { recursive: true })
 // once at startup; in token mode it is set/replaced when the parent posts a
 // session, and cleared on sign-out.
 let ctx = null
-let authSubscription = null
 let aiRuntime = null
 let localTimerSnapshot = null
 let rendererAuthState = null
@@ -187,42 +186,21 @@ function buildServiceRoleContext() {
 
 /**
  * Token mode: (re)build the context from a session posted by the Electron main
- * process. Uses the anon key; setSession makes PostgREST carry the user JWT so
- * RLS scopes every query to that user. The sidecar refreshes its own token so
- * it stays authoritative when no renderer window is alive.
+ * process. PostgREST carries the supplied user JWT so RLS scopes each query.
+ * The renderer owns token rotation, including while its window is hidden.
+ * Do not use auth.setSession here: expired sessions trigger an implicit refresh.
  */
 async function applySession(msg) {
-  const { supabaseUrl, anonKey, accessToken, refreshToken, userId } = msg || {}
+  const { supabaseUrl, anonKey, accessToken, userId } = msg || {}
   if (!supabaseUrl || !anonKey || !accessToken || !userId) {
     logErr('Ignoring incomplete session message')
     return
   }
   try {
-    if (authSubscription) {
-      authSubscription.unsubscribe()
-      authSubscription = null
-    }
     const supabase = createClient(supabaseUrl, anonKey, {
-      auth: { persistSession: false, autoRefreshToken: true },
+      accessToken: async () => accessToken,
+      auth: { persistSession: false, autoRefreshToken: false },
     })
-    const { error } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken || '',
-    })
-    if (error) {
-      logErr(`setSession failed: ${error.message}`)
-      return
-    }
-    const { data: listener } = supabase.auth.onAuthStateChange((event, refreshedSession) => {
-      if (event !== 'TOKEN_REFRESHED' || !refreshedSession || !PARENT_PORT) return
-      PARENT_PORT.postMessage({
-        type: 'sessionRefresh',
-        accessToken: refreshedSession.access_token,
-        refreshToken: refreshedSession.refresh_token,
-        userId: refreshedSession.user?.id || userId,
-      })
-    })
-    authSubscription = listener.subscription
     ctx = { supabase, userId, activeWorkspaceId, signedUser: true }
   } catch (e) {
     logErr(`applySession error: ${e && e.message}`)
@@ -1729,10 +1707,6 @@ if (TOKEN_MODE) {
       if (!msg || typeof msg !== 'object') return
       if (msg.type === 'session') applySession(msg)
       else if (msg.type === 'clear') {
-        if (authSubscription) {
-          authSubscription.unsubscribe()
-          authSubscription = null
-        }
         ctx = null
         rendererAuthState = {
           isAuthenticated: false,

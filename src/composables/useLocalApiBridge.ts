@@ -57,7 +57,6 @@ export function syncLocalApiSession(session: Session | null): void {
       supabaseUrl: supabaseConfig.url,
       anonKey: supabaseConfig.anonKey,
       accessToken: session.access_token,
-      refreshToken: session.refresh_token || '',
       userId: session.user.id,
     })
   } catch {

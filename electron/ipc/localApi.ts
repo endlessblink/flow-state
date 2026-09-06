@@ -22,7 +22,6 @@ interface SessionMessage {
   supabaseUrl: string
   anonKey: string
   accessToken: string
-  refreshToken: string
   userId: string
 }
 
@@ -216,9 +215,6 @@ function spawnChild() {
       operation?: string
       taskId?: string
       session?: Record<string, unknown>
-      accessToken?: string
-      refreshToken?: string
-      userId?: string
     }
     lastChildMessageType = typeof m?.type === 'string' ? m.type : 'unknown'
     lastChildMessageAt = Date.now()
@@ -246,20 +242,6 @@ function spawnChild() {
     } else if (m?.type === 'timerMutation' && m.session && typeof m.session === 'object') {
       for (const window of BrowserWindow.getAllWindows()) {
         window.webContents.send('localApi:timerMutation', m.session)
-      }
-    } else if (
-      m?.type === 'sessionRefresh'
-      && latestSession
-      && m.userId === latestSession.userId
-      && typeof m.accessToken === 'string'
-      && m.accessToken
-      && typeof m.refreshToken === 'string'
-      && m.refreshToken
-    ) {
-      latestSession = {
-        ...latestSession,
-        accessToken: m.accessToken,
-        refreshToken: m.refreshToken,
       }
     }
   })
@@ -413,7 +395,12 @@ export function registerLocalApiHandlers() {
 
   ipcMain.handle('localApi:setSession', (_e, session: SessionMessage) => {
     if (!session || !session.accessToken || !session.userId) return { ok: false }
-    latestSession = session
+    latestSession = {
+      supabaseUrl: session.supabaseUrl,
+      anonKey: session.anonKey,
+      accessToken: session.accessToken,
+      userId: session.userId,
+    }
     startChild()
     pushSession()
     return { ok: true }

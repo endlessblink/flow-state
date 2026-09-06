@@ -69,18 +69,18 @@ describe('BUG-1942 Local Task API renderer reconciliation', () => {
     expect(readSource('src/composables/timer/useTimerSync.ts')).toContain('if (!force && now - lastResyncAt < 1000) return')
   })
 
-  it('lets the sidecar refresh its signed user session without a renderer heartbeat', () => {
+  it('keeps refresh ownership in the renderer while the sidecar uses its access token', () => {
     const tokenContext = server.slice(
       server.indexOf('async function applySession('),
       server.indexOf('// --- Status mapping'),
     )
-    expect(tokenContext).toContain('autoRefreshToken: true')
+    expect(tokenContext).toContain('accessToken: async () => accessToken')
+    expect(tokenContext).toContain('autoRefreshToken: false')
     expect(tokenContext).toContain('persistSession: false')
-    expect(tokenContext).toContain("event !== 'TOKEN_REFRESHED'")
-    expect(tokenContext).toContain("type: 'sessionRefresh'")
-    expect(electronMain).toContain("m?.type === 'sessionRefresh'")
-    expect(electronMain).toContain('m.userId === latestSession.userId')
-    expect(electronMain).toContain('refreshToken: m.refreshToken')
+    expect(tokenContext).not.toContain('supabase.auth.setSession')
+    expect(tokenContext).not.toContain('refreshToken')
+    expect(electronMain).not.toContain("m?.type === 'sessionRefresh'")
+    expect(rendererBridge).not.toContain('refreshToken:')
   })
 
   it('materializes elapsed companion time and closes expired rows on canonical reads', () => {

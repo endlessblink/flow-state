@@ -64,9 +64,9 @@ describe('useLocalApiBridge', () => {
 
     expect(api.setLocalApiSession).toHaveBeenCalledWith(expect.objectContaining({
       accessToken: 'fresh-access-token',
-      refreshToken: 'refresh-token',
       userId: 'user-1',
     }))
+    expect(api.setLocalApiSession.mock.calls[0][0]).not.toHaveProperty('refreshToken')
     expect(api.clearLocalApiSession).not.toHaveBeenCalled()
   })
 

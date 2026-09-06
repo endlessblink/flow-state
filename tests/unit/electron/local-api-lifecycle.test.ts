@@ -47,7 +47,8 @@ describe('Electron local API lifecycle regression contract', () => {
   it('starts the localhost sidecar as soon as a signed-in renderer session arrives', () => {
     const body = handlerBody('localApi:setSession')
 
-    expect(body).toContain('latestSession = session')
+    expect(body).toContain('accessToken: session.accessToken')
+    expect(body).not.toContain('refreshToken')
     expect(body).toContain('startChild()')
     expect(body).toContain('pushSession()')
   })

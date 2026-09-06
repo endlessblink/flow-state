@@ -24,6 +24,13 @@ const session = {
   userId: '11111111-1111-4111-8111-111111111111',
 }
 
+const sidecarSession = {
+  supabaseUrl: session.supabaseUrl,
+  anonKey: session.anonKey,
+  accessToken: session.accessToken,
+  userId: session.userId,
+}
+
 vi.mock('electron', () => ({
   app: {
     getPath: () => runtime.userData,
@@ -80,7 +87,8 @@ describe('Electron Local API session replay runtime', () => {
 
     child.emit('message', { type: 'listening', port: 5577 })
 
-    expect(child.postMessage).toHaveBeenCalledWith({ type: 'session', ...session })
+    expect(child.postMessage).toHaveBeenCalledWith({ type: 'session', ...sidecarSession })
+    expect(JSON.stringify(child.postMessage.mock.calls)).not.toContain('synthetic-refresh-token')
     const status = runtime.handlers.get('localApi:status')?.({})
     expect(status.hasLatestSession).toBe(true)
     expect(JSON.stringify(status)).not.toContain('synthetic-access-token')
@@ -276,7 +284,8 @@ describe('Electron Local API session replay runtime', () => {
     expect(runtime.children).toHaveLength(2)
     const replacement = runtime.children[1]
     replacement.emit('message', { type: 'listening', port: 5577 })
-    expect(replacement.postMessage).toHaveBeenCalledWith({ type: 'session', ...session })
+    expect(replacement.postMessage).toHaveBeenCalledWith({ type: 'session', ...sidecarSession })
+    expect(JSON.stringify(replacement.postMessage.mock.calls)).not.toContain('synthetic-refresh-token')
     expect(replacement.postMessage).toHaveBeenCalledWith(expect.objectContaining({
       type: 'rendererAuthState',
       state: expect.objectContaining({ isAuthenticated: true, canSyncRemotely: true }),

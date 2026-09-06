@@ -12,7 +12,7 @@ Make the scheduled regression audit current and actionable — next: after 09:30
 - scripts/run-daily-regression-hunt-clean.sh — committed/pushed
 - tests/unit/scripts/daily-regression-hunt.test.ts — committed/pushed
 - HANDOFF.md — this handoff, uncommitted
-- Unrelated dirty files: dist-electron/package.json, dist-electron/preload.cjs, dist-electron/preload.js, dist-electron/preload.js.map, dist-electron/updater.js, dist-electron/updater.js.map, stats.html. Do not stage, reset, or modify them.
+- Unrelated dirty files: dist-electron/package.json, dist-electron/preload.cjs, dist-electron/preload.js.map, dist-electron/updater.js, dist-electron/updater.js.map, stats.html. Do not stage, reset, or modify them.
 
 ## Key decisions & gotchas
 - Root cause: the systemd daily runner was pinned to origin/master, so it audited a stale detached checkout. The source fix now defaults to main, validates the target ref, and adds branch+commit provenance to each report.

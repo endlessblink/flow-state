@@ -259,12 +259,30 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       if (!cp) return true
       return Math.abs(cp.x - tm.position.x) > EPS || Math.abs(cp.y - tm.position.y) > EPS
     })
-    pendingGroupMoves = groupMoves
-    pendingTaskMoves = taskMoves
+    pendingGroupMoves = allGroupMoves
+    pendingTaskMoves = allTaskMoves
 
-    if (inputs.length === 0 || (groupMoves.length === 0 && taskMoves.length === 0)) {
+    if (inputs.length === 0) {
       release()
       return { groupMoves: [], taskMoves: [], pendingWrites: Promise.resolve(), release }
+    }
+
+    // Explicit Tidy also repairs stale rendered geometry when the stored layout
+    // is already correct. Hold every visual move until the caller settles it;
+    // only the filtered moves below create persistence writes or undo entries.
+    try {
+      for (const gm of allGroupMoves) {
+        positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
+      }
+      for (const tm of allTaskMoves) {
+        positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
+      }
+    } catch (err) {
+      release()
+      throw err
+    }
+    if (groupMoves.length === 0 && taskMoves.length === 0) {
+      return { groupMoves: allGroupMoves, taskMoves: allTaskMoves, pendingWrites: Promise.resolve(), release }
     }
 
     const affectedIds = [...new Set([
@@ -294,7 +312,6 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
           // off-canvas.
           ...(input.group.parentGroupId ? { parentGroupId: null } : {}),
         }))
-        positionManager.updatePosition(gm.groupId, gm.position, 'user-drag', null)
       }
       for (const tm of taskMoves) {
         const adoptedParentId = adoptedParents.get(tm.taskId)
@@ -305,7 +322,6 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
             : { canvasPosition: tm.position, positionFormat: 'absolute' },
           'DRAG'
         ))
-        positionManager.updatePosition(tm.taskId, tm.position, 'user-drag', tm.parentId)
       }
     } catch (err) {
       release()
@@ -330,7 +346,7 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       : persistAndRecordUndo()
 
     console.log('[TIDY] Wrote', groupMoves.length, 'group moves +', taskMoves.length, 'task moves')
-    return { groupMoves, taskMoves, pendingWrites: pendingWritesWithUndo, release }
+    return { groupMoves: allGroupMoves, taskMoves: allTaskMoves, pendingWrites: pendingWritesWithUndo, release }
   }
 
   /**

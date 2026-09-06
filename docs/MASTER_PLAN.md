@@ -18,6 +18,32 @@
 
 **Investigation and acceptance**: Reproduce a Today day group with eligible loose cards vertically below its frame and a loose root card completely outside every day column with a matching due date. Assert Tidy writes their parent ID to Today, restacks from the header, and derives a group height containing every measured card. Verify the persisted result after a Canvas reload. Preserve hidden, pinned, done, dismissed, cross-account isolation, and existing group-membership safeguards.
 
+**2026-09-06 screenshot follow-up — in_progress**: User confirmed the authentication update works, but supplied a group whose frame stops above three aligned cards. Found and reproduced a separate renderer recovery gap: Tidy filtered unchanged saved geometry out of its visual result, so a stale short frame survived even though saved bounds were correct. Tidy now reapplies the complete calculated visual layout while filtering persistence writes and undo entries exactly as before.
+
+**Regression evidence**: Added a four-card browser case that first lays out the group, shortens only its rendered frame, then clicks Tidy again. Original source fails the actual DOM containment assertion; fixed source restores containment without changing saved geometry and passes after reload. Added a unit regression proving repeated Tidy returns complete geometry with zero repeated saves or undo entries and releases all locks. Focused unit checks: 32 passed. Broader checks and Electron delivery pending.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Partial | Screenshot confirms three overflowing cards; browser recreates short frame with four cards | Short-frame repair; exact live membership unverified |
+| Data shape / persisted row shape | Yes | Regression keeps already-correct saved geometry unchanged | No data migration |
+| Renderer store/state | Yes | Original code fails DOM containment; fixed code passes | Yes |
+| Electron main/preload bridge | N/A | Layout change stays in renderer | No |
+| Localhost sidecar endpoint | Partial | Live provenance reports 1.4.515 | No sidecar change |
+| KDE polling/control path | N/A | Canvas toolbar layout | No |
+| Supabase persistence/realtime | Partial | Authenticated local browser reload passes; unit proves no redundant writes | Existing persistence preserved |
+| Updater/runtime version | Pending | 1.4.516 delivery pending | Pending |
+| Stale live process/cache state | Pending | User's affected desktop cannot be inspected through attached browser | Not yet verified |
+
+**Exact failure mode fixed**: Explicit Tidy failed to repair stale rendered bounds when corresponding saved geometry was already canonical.
+
+**Explicitly not covered**: Root cause that originally shortened the live frame; hidden/excluded task membership; all other Canvas failures. BUG-2076 remains in progress until the user's affected installed canvas is checked.
+
+**Regression added for reported repro**: `tidy repairs a short rendered frame when saved group bounds are already correct` checks actual card rectangles, unchanged saved geometry, and reload.
+
+**Live boundary proof**: Pending Electron updater delivery and the affected installed Canvas check.
+
 ### ~~TASK-2075: Make the Board local-date regression deterministic~~ (✅ DONE)
 
 **Priority**: P1 | **Status**: ✅ DONE (2026-09-03)

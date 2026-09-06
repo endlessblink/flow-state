@@ -1299,6 +1299,55 @@ test.describe('local canvas geometry regressions', () => {
     expect(afterReload.tasks.find((task) => task.id === 'dated-loose-task')!.parentId).toBe(persistedTodayGroup.id)
   })
 
+  test('tidy repairs a short rendered frame when saved group bounds are already correct', async ({ page }) => {
+    const ids = ['frame-tall', 'frame-second', 'frame-third', 'frame-recurring']
+    await seedCanvas(page, [
+      { id: 'frame-group', name: 'Frame repair', x: 100, y: 200, height: 1200 },
+    ], ids.map((id, index) => ({
+      id,
+      title: index === 0 ? 'משימה ארוכה עם כמה שורות כדי לבדוק שהקבוצה מכסה את כל הכרטיסים' : `Frame task ${index}`,
+      parentId: 'frame-group', x: 120, y: 320 + index * 200,
+    })))
+    await clickToolbar(page, /tidy|layout/)
+    await page.waitForTimeout(500)
+    const saved = await readGeometry(page)
+
+    await page.evaluate(() => {
+      const root = document.querySelector('#app') as any
+      const findCanvas = (vnode: any): any => {
+        if (!vnode) return undefined
+        if (vnode.component?.type?.__name === 'CanvasView') return vnode.component
+        return (Array.isArray(vnode.children) ? vnode.children : []).map(findCanvas).find(Boolean)
+          ?? findCanvas(vnode.component?.subTree)
+      }
+      const canvas = findCanvas(root.__vue_app__._instance.subTree)
+      const nodes = canvas.setupState.getNodes?.value ?? canvas.setupState.getNodes
+      const group = nodes.find((node: any) => node.id === 'section-frame-group')
+      // Reproduce the renderer/store mismatch: metadata remains canonical, but
+      // Vue Flow's displayed frame has stale dimensions. Three cards overflow.
+      group.height = 200
+      group.dimensions = { ...group.dimensions, height: 200 }
+      group.style = { ...group.style, height: '200px' }
+    })
+    const containsCards = () => page.evaluate((ids) => {
+      const groupElement = document.querySelector('[data-id="section-frame-group"]')
+      if (!groupElement) return false
+      const group = groupElement.getBoundingClientRect()
+      return ids.every((id) => {
+        const cardElement = document.querySelector(`[data-task-id="${id}"]`)
+        if (!cardElement) return false
+        const card = cardElement.getBoundingClientRect()
+        return card.bottom <= group.bottom && card.top >= group.top
+      })
+    }, ids)
+    await expect.poll(containsCards).toBe(false)
+    await clickToolbar(page, /tidy|layout/)
+    await expect.poll(containsCards, { message: 'Tidy repairs displayed frame' }).toBe(true)
+    expect(await readGeometry(page)).toEqual(saved)
+    await page.reload()
+    await expect.poll(containsCards, { message: 'Repaired bounds survive reload' }).toBe(true)
+  })
+
   test('tidy stacks variable-height cards without overlap', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'thu', name: 'Thursday', x: 100, y: 200 },

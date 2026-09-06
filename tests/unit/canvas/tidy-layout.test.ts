@@ -41,6 +41,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useTaskStore } from '@/stores/tasks'
 import { lockManager } from '@/services/canvas/LockManager'
 import { positionManager } from '@/services/canvas/PositionManager'
+import { getUndoSystem } from '@/composables/undoSingleton'
 import type { CanvasGroup } from '@/types/canvas'
 
 let counter = 0
@@ -77,6 +78,48 @@ describe('useTidyLayout', () => {
     vi.restoreAllMocks()
     positionManager.clear()
     vi.useRealTimers()
+  })
+
+  it('returns the complete visual layout on a second Tidy without repeating persistence or undo', async () => {
+    const today = makeGroup('Today', 0)
+    const tasks = Array.from({ length: 4 }, (_, index) => ({
+      id: `repair-${index}`, parentId: today.id,
+      canvasPosition: { x: 20, y: 100 + index * 400 },
+      createdAt: '2026-04-01T00:00:00Z',
+    }))
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue(tasks as any)
+    updateGroup.mockImplementation((_id, changes) => Object.assign(today, changes))
+    updateTask.mockImplementation((id, changes) => {
+      const task = tasks.find(task => task.id === id)
+      if (task) Object.assign(task, changes)
+    })
+    const pushUndo = vi.spyOn(getUndoSystem(), 'pushCanvasGeometryUndoSnapshot')
+    const { tidyDayGroups } = useTidyLayout({ getNodeSize: () => ({ width: 280, height: 400 }) })
+    const first = tidyDayGroups()
+    await first.pendingWrites
+    first.release()
+    expect(today.position.height).toBeGreaterThan(1600)
+    updateGroup.mockClear()
+    updateTask.mockClear()
+    pushUndo.mockClear()
+
+    // The store is correct but the renderer may still show its old 200px frame.
+    // A repeated explicit Tidy must provide all geometry needed to repair it.
+    const second = tidyDayGroups()
+    expect(second.groupMoves).toEqual(first.groupMoves)
+    expect(second.taskMoves).toEqual(first.taskMoves)
+    expect(mockCanvasSyncInProgress.value).toBe(true)
+    expect(lockManager.isLocked(today.id)).toBe(true)
+    expect(tasks.every(task => lockManager.isLocked(task.id))).toBe(true)
+    await second.pendingWrites
+    expect(updateGroup).not.toHaveBeenCalled()
+    expect(updateTask).not.toHaveBeenCalled()
+    expect(pushUndo).not.toHaveBeenCalled()
+    second.release()
+    expect(mockCanvasSyncInProgress.value).toBe(false)
+    expect(lockManager.isLocked(today.id)).toBe(false)
+    expect(tasks.some(task => lockManager.isLocked(task.id))).toBe(false)
   })
 
   it('orders day groups from the current weekday instead of preserving broken X order', () => {

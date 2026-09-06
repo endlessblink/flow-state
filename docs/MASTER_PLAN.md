@@ -109,7 +109,9 @@ Redesign the Board lane surface to feel more deliberate and inviting, using a ca
 | Updater/runtime version | Not checked | Need correlate the sign-out with the running version and any update restart | Not yet |
 | Stale live process/cache state | Not checked | Need compare real running process/session cache with durable auth candidates | Not yet |
 
-**Exact failure mode fixed**: Unknown. This issue deliberately contains two separate gates: (1) no involuntary loss of a remembered account and (2) rate-limited recovery does not create a dead end or extra auth attempts.
+**2026-09-06 Electron PKCE follow-up (in_progress)**: The user reports `PKCE code verifier not found in storage` during recovery in the Electron app. A synthetic reproduction with the installed auth-js dependency confirms both `_saveSession` and `_removeSession` erase the verifier while browser authorization is pending. The repair preserves only the pending desktop verifier, rejects overlapping attempts, and deletes it on completion/failure/cancellation. Explicit sign-out cancels pending callbacks and waits for any active exchange before clearing sessions. Main-process cancellation also clears the old waiter timer so it cannot erase a newer server. The five-file auth regression pack passes, along with renderer/Electron typechecks and the task-consistency guard; targeted source lint has zero errors. Full lint, Electron 1.4.514 packaging, updater delivery, and real provider sign-in remain pending.
+
+**Exact failure mode addressed**: Background auth-js session maintenance deleting a pending Electron OAuth verifier. This does not establish why the original live app lost its session. The broader issue retains separate continuity and bounded rate-limit recovery gates.
 
 **Explicitly not covered**: Intentional sign-out, server-confirmed revoked/invalid refresh tokens after the documented grace boundary, password reset, and unrelated account-policy failures.
 

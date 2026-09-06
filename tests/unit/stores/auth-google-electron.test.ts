@@ -7,12 +7,18 @@ const {
   mockSetSession,
   mockIsBlockedByBrave,
   mockRecordBlockedResource,
+  mockEndPkce,
 } = vi.hoisted(() => ({
   mockSignInWithOAuth: vi.fn(),
   mockExchangeCodeForSession: vi.fn(),
   mockSetSession: vi.fn(),
   mockIsBlockedByBrave: vi.fn().mockReturnValue(false),
   mockRecordBlockedResource: vi.fn(),
+  mockEndPkce: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('@/services/auth/authStorage', () => ({
+  beginElectronPkceAttempt: vi.fn(() => mockEndPkce),
 }))
 
 vi.mock('@/services/auth/supabase', () => ({
@@ -60,6 +66,28 @@ describe('Auth Google sign-in in Electron', () => {
   function electronAPI() {
     return (window as any).electronAPI
   }
+
+  it('rejects overlapping desktop attempts without replacing the pending verifier', async () => {
+    let callback!: (url: string) => void
+    electronAPI().oauthWaitForCallback.mockImplementation(() => new Promise<string>(resolve => { callback = resolve }))
+    const { useAuthStore } = await import('@/stores/auth')
+    const store = useAuthStore()
+    const first = store.signInWithGoogle()
+    await vi.waitFor(() => expect(callback).toBeDefined())
+    await expect(store.signInWithGoogle()).rejects.toThrow('already in progress')
+    expect(mockSignInWithOAuth).toHaveBeenCalledTimes(1)
+    callback('http://127.0.0.1:24892?code=auth-code')
+    await first
+    expect(mockEndPkce).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['success', 'exchange failure', 'browser failure'])('cleans up the verifier after %s', async outcome => {
+    if (outcome === 'exchange failure') mockExchangeCodeForSession.mockResolvedValue({ error: new Error('exchange failed') })
+    if (outcome === 'browser failure') electronAPI().openExternal.mockRejectedValue(new Error('browser failed'))
+    const { useAuthStore } = await import('@/stores/auth')
+    await useAuthStore().signInWithGoogle().catch(() => undefined)
+    expect(mockEndPkce).toHaveBeenCalledTimes(1)
+  })
 
   beforeEach(() => {
     setActivePinia(createPinia())

@@ -17,6 +17,8 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const {
   mockGetSession,
+  mockSignInWithOAuth,
+  mockExchangeCodeForSession,
   mockSetSession,
   mockSignInWithPassword,
   mockSignOut,
@@ -69,6 +71,8 @@ const {
 
   return {
     mockGetSession: vi.fn(),
+    mockSignInWithOAuth: vi.fn(),
+    mockExchangeCodeForSession: vi.fn(),
     mockSetSession: vi.fn(),
     mockSignInWithPassword: vi.fn(),
     mockSignOut: vi.fn(),
@@ -120,6 +124,8 @@ vi.mock('@/services/auth/supabase', () => ({
   supabase: {
     auth: {
       getSession: mockGetSession,
+      signInWithOAuth: mockSignInWithOAuth,
+      exchangeCodeForSession: mockExchangeCodeForSession,
       setSession: mockSetSession,
       signInWithPassword: mockSignInWithPassword,
       signOut: mockSignOut,
@@ -311,6 +317,76 @@ const fireAuthStateChange = async (event: string, session: MockSession | null) =
 const resetAuthListeners = () => {
   ;(mockOnAuthStateChange as unknown as AuthListenersMock)._reset()
 }
+
+describe('Electron OAuth cancellation on explicit sign-out', () => {
+  let callbackResolve: (url: string) => void
+  let bridge: { isElectron: boolean; oauthStart: ReturnType<typeof vi.fn>; oauthWaitForCallback: ReturnType<typeof vi.fn>; oauthCancel: ReturnType<typeof vi.fn>; openExternal: ReturnType<typeof vi.fn>; storeGet: ReturnType<typeof vi.fn>; storeSet: ReturnType<typeof vi.fn> }
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    resetAuthListeners()
+    setActivePinia(createPinia())
+    const callback = new Promise<string>(resolve => { callbackResolve = resolve })
+    bridge = {
+      isElectron: true,
+      oauthStart: vi.fn().mockResolvedValue(24892),
+      oauthWaitForCallback: vi.fn(() => callback),
+      oauthCancel: vi.fn().mockResolvedValue(undefined),
+      openExternal: vi.fn().mockResolvedValue(undefined),
+      storeGet: vi.fn().mockResolvedValue(null),
+      storeSet: vi.fn().mockResolvedValue(undefined),
+    }
+    ;(window as any).electronAPI = bridge
+    mockSignInWithOAuth.mockResolvedValue({ data: { url: 'https://auth.example.test/authorize' }, error: null })
+    mockExchangeCodeForSession.mockResolvedValue({ data: { session: buildMockSession() }, error: null })
+    mockSignOut.mockResolvedValue({ error: null })
+    mockClearAuthSessionBackup.mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    delete (window as any).electronAPI
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
+  it('settles pending login promptly and never exchanges a callback arriving after sign-out', async () => {
+    const store = useAuthStore()
+    let loginSettled = false
+    const login = store.signInWithGoogle().then(() => { loginSettled = true; return null }, err => { loginSettled = true; return err })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(bridge.oauthWaitForCallback).toHaveBeenCalledOnce()
+    const logout = store.signOut()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(loginSettled).toBe(true)
+    expect(await login).toBeInstanceOf(Error)
+    await logout
+    callbackResolve('http://127.0.0.1:24892?code=late-code')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled()
+    expect(bridge.oauthCancel).toHaveBeenCalled()
+    expect(mockClearPrimaryAuthSession).toHaveBeenCalled()
+  })
+
+  it('waits for an in-flight exchange before clearing the durable session', async () => {
+    let finishExchange!: (result: unknown) => void
+    mockExchangeCodeForSession.mockImplementationOnce(() => new Promise(resolve => { finishExchange = resolve }))
+    const store = useAuthStore()
+    const login = store.signInWithGoogle().catch(err => err)
+    await vi.advanceTimersByTimeAsync(0)
+    callbackResolve('http://127.0.0.1:24892?code=in-flight-code')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(mockExchangeCodeForSession).toHaveBeenCalledOnce()
+    const logout = store.signOut()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(mockClearPrimaryAuthSession).not.toHaveBeenCalled()
+    finishExchange({ data: { session: buildMockSession() }, error: null })
+    await login
+    await logout
+    expect(mockClearPrimaryAuthSession).toHaveBeenCalledOnce()
+    expect(store.isAuthenticated).toBe(false)
+  })
+})
 
 beforeEach(() => {
   mockPersistAuthIdentity.mockResolvedValue(undefined)

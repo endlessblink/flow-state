@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { createServer, type Server } from 'http'
+import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'http'
 import { isOAuthCallbackUrl } from './oauthValidation'
 
 // Must match the documented Google/Supabase allow-listed loopback redirects.
@@ -8,6 +8,16 @@ const OAUTH_PORTS = [24892, 24893, 24894]
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 
 let activeServer: Server | null = null
+let cancelPendingWait: (() => void) | null = null
+
+function cancelActiveOAuth() {
+  if (cancelPendingWait) {
+    cancelPendingWait()
+  } else if (activeServer) {
+    activeServer.close()
+    activeServer = null
+  }
+}
 
 const SUCCESS_HTML = `<!DOCTYPE html>
 <html><head><style>
@@ -35,10 +45,7 @@ export function registerOAuthHandlers() {
   // Start localhost OAuth server, returns the port
   ipcMain.handle('oauth:start', async () => {
     // Clean up any previous server
-    if (activeServer) {
-      activeServer.close()
-      activeServer = null
-    }
+    cancelActiveOAuth()
 
     // Try each port until one works
     let server: Server | null = null
@@ -67,17 +74,28 @@ export function registerOAuthHandlers() {
     if (!activeServer) {
       throw new Error('OAuth server not started')
     }
+    if (cancelPendingWait) throw new Error('OAuth callback wait already in progress')
 
     const server = activeServer
 
     return new Promise<string>((resolve, reject) => {
-      const timeout = setTimeout(() => {
+      const cleanup = () => {
+        clearTimeout(timeout)
+        server.removeListener('request', onRequest)
         server.close()
-        activeServer = null
+        if (activeServer === server) activeServer = null
+        if (cancelPendingWait === cancel) cancelPendingWait = null
+      }
+      const cancel = () => {
+        cleanup()
+        reject(new Error('OAuth cancelled'))
+      }
+      const timeout = setTimeout(() => {
+        cleanup()
         reject(new Error('OAuth timed out — no response received within 5 minutes'))
       }, OAUTH_TIMEOUT_MS)
 
-      server.on('request', (req, res) => {
+      const onRequest = (req: IncomingMessage, res: ServerResponse) => {
         const url = `http://127.0.0.1${req.url || '/'}`
 
         if (!isOAuthCallbackUrl(url)) {
@@ -91,20 +109,17 @@ export function registerOAuthHandlers() {
         res.end(SUCCESS_HTML)
 
         // Clean up
-        clearTimeout(timeout)
-        server.close()
-        activeServer = null
+        cleanup()
 
         resolve(url)
-      })
+      }
+      cancelPendingWait = cancel
+      server.on('request', onRequest)
     })
   })
 
   // Cancel/cleanup
   ipcMain.handle('oauth:cancel', async () => {
-    if (activeServer) {
-      activeServer.close()
-      activeServer = null
-    }
+    cancelActiveOAuth()
   })
 }

@@ -22,6 +22,7 @@ import { isBlockedByBrave, recordBlockedResource } from '@/utils/braveProtection
 import { invalidateCache } from '@/composables/useSupabaseDatabase'
 import { DB_TABLES } from '@/constants/dbTables'
 import { isTauri as isTauriRuntime } from '@/utils/platform'
+import { beginElectronPkceAttempt } from '@/services/auth/authStorage'
 import type { Task } from '@/types/tasks'
 export type { User, Session, AuthError }
 
@@ -45,6 +46,7 @@ const isRateLimitedAuthError = (candidate: unknown): boolean => {
 }
 
 export const useAuthStore = defineStore('auth', () => {
+  let electronOAuthAttempt: { cancel: () => void; done: Promise<void> } | null = null
   // State
   const user = ref<User | null>(null)
   const session = ref<Session | null>(null)
@@ -1367,13 +1369,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const signOut = async () => {
+    // Invalidate browser callbacks synchronously, before any cleanup imports await.
+    isSigningOut = true
+    const pendingOAuth = electronOAuthAttempt
+    pendingOAuth?.cancel()
     try {
       isLoading.value = true
+      // An exchange already in flight may still save a session. Clear it only
+      // after that attempt and its verifier cleanup have settled.
+      await pendingOAuth?.done
       const readCache = await import('@/services/offline/readCacheDB')
       const signedOutCacheScope = readCache.getReadCacheScope()
-
-      // BUG-1352: Set flag to prevent onAuthStateChange from re-establishing session
-      isSigningOut = true
 
       // Explicit sign-out is the only terminal account transition. Cancel every
       // recovery path so no delayed refresh can recreate auth afterward.
@@ -1485,6 +1491,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const signInWithGoogle = async () => {
+    if (isSigningOut) throw new Error('Sign-out is in progress')
+    if (electronOAuthAttempt) throw new Error('Google sign-in is already in progress')
+    let finishElectronAttempt: (() => Promise<void>) | undefined
     const remainingGoogleAuthCooldownMs = googleAuthRetryAfter - Date.now()
     if (remainingGoogleAuthCooldownMs > 0) {
       const retrySeconds = Math.ceil(remainingGoogleAuthCooldownMs / 1000)
@@ -1530,11 +1539,38 @@ export const useAuthStore = defineStore('auth', () => {
       const isElectronApp = typeof window !== 'undefined' && !!(window as any).electronAPI?.isElectron
       if (isElectronApp) {
         const electronAPI = (window as any).electronAPI
+        const endPkce = beginElectronPkceAttempt('flowstate-supabase-auth')
+        let cancelled = false
+        let cancelWait!: () => void
+        const cancellation = new Promise<void>(resolve => { cancelWait = resolve })
+        let markDone!: () => void
+        const done = new Promise<void>(resolve => { markDone = resolve })
+        let serverStarted = false
+        let callbackReceived = false
+        const checkCancelled = () => {
+          if (cancelled) throw new Error('Google sign-in cancelled by sign-out')
+        }
+        electronOAuthAttempt = {
+          done,
+          cancel: () => { cancelled = true; cancelWait() },
+        }
+        finishElectronAttempt = async () => {
+          try {
+            if (serverStarted && !callbackReceived) await electronAPI.oauthCancel()
+          } finally {
+            try { await endPkce() } finally {
+              electronOAuthAttempt = null
+              markDone()
+            }
+          }
+        }
 
         // 1. Start localhost OAuth server
         let port: number
         try {
           port = await electronAPI.oauthStart()
+          serverStarted = true
+          checkCancelled()
         } catch (e: unknown) {
           throw new Error(`Failed to start OAuth server: ${e instanceof Error ? e.message : e}`)
         }
@@ -1555,16 +1591,17 @@ export const useAuthStore = defineStore('auth', () => {
           }
         })
 
+        checkCancelled()
+
         if (oauthError || !oauthData?.url) {
-          await electronAPI.oauthCancel()
           throw oauthError || new Error('Failed to generate OAuth URL')
         }
 
         // 3. Open OAuth in system browser
         try {
           await electronAPI.openExternal(oauthData.url)
+          checkCancelled()
         } catch (e: unknown) {
-          await electronAPI.oauthCancel()
           throw new Error(`Failed to open browser for authentication: ${e instanceof Error ? e.message : e}`)
         }
         console.log('[AUTH] Opened system browser for Electron OAuth')
@@ -1572,7 +1609,12 @@ export const useAuthStore = defineStore('auth', () => {
         // 4. Wait for callback
         let callbackUrl: string
         try {
-          callbackUrl = await electronAPI.oauthWaitForCallback()
+          callbackUrl = await Promise.race([
+            electronAPI.oauthWaitForCallback() as Promise<string>,
+            cancellation.then(() => { throw new Error('Google sign-in cancelled by sign-out') }),
+          ])
+          callbackReceived = true
+          checkCancelled()
         } catch (e: unknown) {
           throw new Error(`OAuth callback failed: ${e instanceof Error ? e.message : e}`)
         }
@@ -1589,6 +1631,7 @@ export const useAuthStore = defineStore('auth', () => {
         const code = url.searchParams.get('code')
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+          checkCancelled()
           if (exchangeError) throw exchangeError
           console.log('[AUTH] Electron OAuth session established via PKCE')
         } else {
@@ -1601,6 +1644,7 @@ export const useAuthStore = defineStore('auth', () => {
               access_token: accessToken,
               refresh_token: refreshToken || '',
             })
+            checkCancelled()
             if (setError) throw setError
             console.log('[AUTH] Electron OAuth session established via implicit flow')
           } else {
@@ -1647,7 +1691,9 @@ export const useAuthStore = defineStore('auth', () => {
       error.value = e as AuthError
       throw e
     } finally {
-      isLoading.value = false
+      try { await finishElectronAttempt?.() } finally {
+        if (!isSigningOut) isLoading.value = false
+      }
     }
   }
 

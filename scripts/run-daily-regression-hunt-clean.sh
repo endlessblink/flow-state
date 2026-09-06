@@ -6,6 +6,9 @@ RUNNER_DIR="${FLOWSTATE_REGRESSION_RUNNER_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/f
 REPORT_DIR="${FLOWSTATE_REGRESSION_REPORT_DIR:-$SOURCE_REPO/reports/regression-hunt}"
 export FLOWSTATE_E2E_PORT="${FLOWSTATE_REGRESSION_E2E_PORT:-15547}"
 DEPENDENCY_ROOT="${FLOWSTATE_REGRESSION_DEPENDENCY_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/flowstate-regression-dependencies}"
+TARGET_REF="${FLOWSTATE_REGRESSION_REF:-main}"
+TARGET_REMOTE_REF="origin/$TARGET_REF"
+export FLOWSTATE_REGRESSION_REF="$TARGET_REF"
 PREFLIGHT=true
 NOTIFY_PREFLIGHT=false
 
@@ -23,7 +26,7 @@ notify_preflight_failure() {
       --urgency=critical \
       --app-name=FlowState \
       'FlowState regression runner failed before checks' \
-      "Could not prepare clean origin/master. Check flowstate-daily-regression-hunt.service." \
+      "Could not prepare clean $TARGET_REMOTE_REF. Check flowstate-daily-regression-hunt.service." \
       || true
   fi
   exit "$exit_code"
@@ -35,12 +38,15 @@ mkdir -p "$(dirname "$RUNNER_DIR")" "$REPORT_DIR"
 
 # The primary checkout is frequently used for long-running work. Refresh the
 # remote ref without rebasing, cleaning, or otherwise touching that checkout.
-git -C "$SOURCE_REPO" fetch --quiet origin master
+git check-ref-format --branch "$TARGET_REF" >/dev/null
+git -C "$SOURCE_REPO" fetch --quiet origin "$TARGET_REF"
+git -C "$SOURCE_REPO" rev-parse --verify --quiet "$TARGET_REMOTE_REF^{commit}" >/dev/null
 
 if [ -e "$RUNNER_DIR/.git" ]; then
   # This directory is dedicated to the watchdog, so resetting it is safe. Tests
-  # must describe current origin/master rather than arbitrary in-progress files.
-  git -C "$RUNNER_DIR" reset --hard origin/master
+  # must describe the configured current release branch rather than arbitrary
+  # in-progress files.
+  git -C "$RUNNER_DIR" reset --hard "$TARGET_REMOTE_REF"
   git -C "$RUNNER_DIR" clean -ffdx
 else
   if [ -e "$RUNNER_DIR" ]; then
@@ -48,7 +54,7 @@ else
     exit 1
   fi
   git -C "$SOURCE_REPO" worktree prune
-  git -C "$SOURCE_REPO" worktree add --detach "$RUNNER_DIR" origin/master
+  git -C "$SOURCE_REPO" worktree add --detach "$RUNNER_DIR" "$TARGET_REMOTE_REF"
 fi
 
 # Install dependencies from the exact inputs and runtime being tested. Native

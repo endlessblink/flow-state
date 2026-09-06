@@ -31,6 +31,10 @@ describe('daily regression hunt script', () => {
 
     expect(report.mode).toBe('daily')
     expect(report.dryRun).toBe(true)
+    expect(report.provenance).toEqual({
+      branch: 'main',
+      commit: expect.stringMatching(/^[0-9a-f]{40}$/),
+    })
     expect(ids).toEqual(expect.arrayContaining([
       'git-status',
       'electron-sync-guard',
@@ -270,7 +274,7 @@ describe('daily regression hunt script', () => {
     }
   })
 
-  it('installs the user timer against a clean current-master snapshot with notifications enabled', () => {
+  it('installs the user timer against a clean current-main snapshot with notifications enabled', () => {
     const installer = readFileSync('scripts/install-daily-regression-hunt.sh', 'utf8')
     const runner = readFileSync('scripts/run-daily-regression-hunt-clean.sh', 'utf8')
 
@@ -278,9 +282,11 @@ describe('daily regression hunt script', () => {
     expect(installer).toContain('Environment=FLOWSTATE_REGRESSION_SOURCE_REPO=$SOURCE_REPO')
     expect(installer).toContain('ExecStart=/usr/bin/env bash $RUNNER_PATH --notify')
     expect(installer).toContain('OnCalendar=*-*-* 09:30:00')
-    expect(runner).toContain('git -C "$SOURCE_REPO" fetch --quiet origin master')
-    expect(runner).toContain('git -C "$SOURCE_REPO" worktree add --detach "$RUNNER_DIR" origin/master')
-    expect(runner).toContain('git -C "$RUNNER_DIR" reset --hard origin/master')
+    expect(installer).toContain('Environment=FLOWSTATE_REGRESSION_REF=main')
+    expect(runner).toContain('TARGET_REF="${FLOWSTATE_REGRESSION_REF:-main}"')
+    expect(runner).toContain('git -C "$SOURCE_REPO" fetch --quiet origin "$TARGET_REF"')
+    expect(runner).toContain('git -C "$SOURCE_REPO" worktree add --detach "$RUNNER_DIR" "$TARGET_REMOTE_REF"')
+    expect(runner).toContain('git -C "$RUNNER_DIR" reset --hard "$TARGET_REMOTE_REF"')
     expect(runner).toContain('git -C "$RUNNER_DIR" clean -ffdx')
     expect(runner).toContain('--report-dir "$REPORT_DIR"')
     expect(runner).toContain('trap notify_preflight_failure ERR')
@@ -297,7 +303,7 @@ describe('daily regression hunt script', () => {
     expect(runner).not.toContain('"$SOURCE_REPO/node_modules"')
   })
 
-  it('runs remote master without modifying a dirty primary checkout and propagates notified failures', () => {
+  it('runs remote main without modifying a dirty primary checkout and propagates notified failures', () => {
     const root = mkdtempSync(join(tmpdir(), 'flowstate-clean-runner-'))
     const remote = join(root, 'remote.git')
     const seed = join(root, 'seed')
@@ -311,7 +317,8 @@ describe('daily regression hunt script', () => {
     const lock = JSON.stringify({ name: 'fixture', version: '1.0.0', lockfileVersion: 3, packages: {} })
 
     execFileSync('git', ['init', '--bare', remote])
-    execFileSync('git', ['init', '-b', 'master', seed])
+    execFileSync('git', ['-C', remote, 'symbolic-ref', 'HEAD', 'refs/heads/main'])
+    execFileSync('git', ['init', '-b', 'main', seed])
     execFileSync('git', ['-C', seed, 'config', 'user.email', 'fixture@flowstate.test'])
     execFileSync('git', ['-C', seed, 'config', 'user.name', 'FlowState Fixture'])
     writeFileSync(join(seed, 'package.json'), JSON.stringify({ name: 'fixture', version: '1.0.0' }))
@@ -322,7 +329,7 @@ describe('daily regression hunt script', () => {
     execFileSync('git', ['-C', seed, 'add', '.'])
     execFileSync('git', ['-C', seed, 'commit', '-m', 'fixture v1'])
     execFileSync('git', ['-C', seed, 'remote', 'add', 'origin', remote])
-    execFileSync('git', ['-C', seed, 'push', '-u', 'origin', 'master'])
+    execFileSync('git', ['-C', seed, 'push', '-u', 'origin', 'main'])
     execFileSync('git', ['clone', remote, primary])
 
     const primaryHead = execFileSync('git', ['-C', primary, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
@@ -332,7 +339,7 @@ describe('daily regression hunt script', () => {
     writeFileSync(join(seed, 'version.txt'), 'remote-v2\n')
     execFileSync('git', ['-C', seed, 'add', 'version.txt'])
     execFileSync('git', ['-C', seed, 'commit', '-m', 'fixture v2'])
-    execFileSync('git', ['-C', seed, 'push', 'origin', 'master'])
+    execFileSync('git', ['-C', seed, 'push', 'origin', 'main'])
     const remoteHead = execFileSync('git', ['-C', seed, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
 
     mkdirSync(binDir)

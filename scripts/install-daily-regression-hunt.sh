@@ -21,6 +21,7 @@ Documentation=file://$SOURCE_REPO/docs/MASTER_PLAN.md
 Type=oneshot
 Environment=TZ=Asia/Jerusalem
 Environment=FLOWSTATE_REGRESSION_SOURCE_REPO=$SOURCE_REPO
+Environment=FLOWSTATE_REGRESSION_REF=main
 ExecStart=/usr/bin/env bash $RUNNER_PATH --notify
 SERVICE
 

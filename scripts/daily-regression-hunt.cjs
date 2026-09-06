@@ -406,6 +406,24 @@ function runCommand(check, dryRun) {
   }
 }
 
+function readCheckoutProvenance() {
+  const branchResult = spawnSync('git', ['branch', '--show-current'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  })
+  const commit = spawnSync('git', ['rev-parse', 'HEAD'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  })
+
+  const branch = process.env.FLOWSTATE_REGRESSION_REF || branchResult.stdout.trim()
+  if (branchResult.status !== 0 || commit.status !== 0 || !branch || !commit.stdout.trim()) {
+    throw new Error('Regression hunt requires an attached checkout with a resolvable HEAD commit')
+  }
+
+  return { branch, commit: commit.stdout.trim() }
+}
+
 function tail(text, limit) {
   if (!text) {
     return ''
@@ -447,6 +465,8 @@ function renderMarkdown(report) {
     `- Date: ${report.date}`,
     `- Mode: ${report.mode}`,
     `- Dry run: ${report.dryRun ? 'yes' : 'no'}`,
+    `- Branch: ${report.provenance.branch}`,
+    `- Commit: ${report.provenance.commit}`,
     `- Summary: ${report.summary.pass} passed, ${report.summary.fail} failed, ${report.summary.skipped} skipped`,
     `- Started: ${report.startedAt}`,
     `- Finished: ${report.finishedAt}`,
@@ -541,15 +561,17 @@ function main() {
 
   const startedAt = new Date().toISOString()
   const date = options.date || startedAt.slice(0, 10)
+  const provenance = readCheckoutProvenance()
   const plannedChecks = buildChecks(options)
   const checks = plannedChecks.map((check) => runCommand(check, options.dryRun))
   const finishedAt = new Date().toISOString()
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: 'flowstate-daily-regression-hunt',
     mode: options.mode,
     date,
     dryRun: options.dryRun,
+    provenance,
     startedAt,
     finishedAt,
     summary: summarize(checks),

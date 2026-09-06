@@ -20,7 +20,9 @@
 
 **2026-09-06 screenshot follow-up — in_progress**: User confirmed the authentication update works, but supplied a group whose frame stops above three aligned cards. Found and reproduced a separate renderer recovery gap: Tidy filtered unchanged saved geometry out of its visual result, so a stale short frame survived even though saved bounds were correct. Tidy now reapplies the complete calculated visual layout while filtering persistence writes and undo entries exactly as before.
 
-**Regression evidence**: Added a four-card browser case that first lays out the group, shortens only its rendered frame, then clicks Tidy again. Original source fails the actual DOM containment assertion; fixed source restores containment without changing saved geometry and passes after reload. Added a unit regression proving repeated Tidy returns complete geometry with zero repeated saves or undo entries and releases all locks. Focused unit checks: 32 passed. Broader checks and Electron delivery pending.
+**Regression evidence**: Added a four-card browser case that first lays out the group, shortens only its rendered frame, then clicks Tidy again. Original source fails the actual DOM containment assertion; fixed source restores containment without changing saved geometry and passes after reload. Added a unit regression proving repeated Tidy returns complete geometry with zero repeated saves or undo entries and releases all locks. Focused unit checks: 32 passed. Source lint and typecheck pass. Complete release suite: 412 files, 4,815 passed, six skipped; task-consistency guard: 37 passed; Electron sync guard: 375 passed.
+
+**Browser coverage limitation / remaining work**: Compact layout, reload, short-frame repair, date-parent adoption, variable-height spacing, and dense Tidy/Rotate pass. The wider authenticated geometry suite is not all green: global seeded tasks can reappear after memory-only fixture clearing, and custom weekday groups can be replaced by canonical groups. The weekday test fails on both original and fixed code from the same extra global task; cross-group baseline fails during seeding before Tidy. Dense bounds passed on both baseline and restored fixed source after one intermittent fixture-remapping failure. Follow-up: isolate persisted test-user fixtures and await hydration before seeding; rerun the complete matrix without weakening membership/count assertions.
 
 **Failure-class matrix**:
 
@@ -33,7 +35,7 @@
 | Localhost sidecar endpoint | Partial | Live provenance reports 1.4.515 | No sidecar change |
 | KDE polling/control path | N/A | Canvas toolbar layout | No |
 | Supabase persistence/realtime | Partial | Authenticated local browser reload passes; unit proves no redundant writes | Existing persistence preserved |
-| Updater/runtime version | Pending | 1.4.516 delivery pending | Pending |
+| Updater/runtime version | Yes / installed pending | Public manifest advertises 1.4.516; AppImage HTTP 200 with matching size | Published; affected installed canvas pending |
 | Stale live process/cache state | Pending | User's affected desktop cannot be inspected through attached browser | Not yet verified |
 
 **Exact failure mode fixed**: Explicit Tidy failed to repair stale rendered bounds when corresponding saved geometry was already canonical.
@@ -42,7 +44,7 @@
 
 **Regression added for reported repro**: `tidy repairs a short rendered frame when saved group bounds are already correct` checks actual card rectangles, unchanged saved geometry, and reload.
 
-**Live boundary proof**: Pending Electron updater delivery and the affected installed Canvas check.
+**1.4.516 delivery evidence — manual_action_required**: Guarded Electron build, package validation, checksum-checked publishing, and deployment completed. Local release receipt binds the artifacts to clean source commit `4204a9d95a7916377e3967d4ec4cd469f59b83da`; that commit is pushed to main. Public updater read-back advertises 1.4.516, and the AppImage returns HTTP 200 with the expected 182,869,422-byte length. All six pre-existing generated-file changes were restored byte-for-byte. Required manual gate: install 1.4.516, open the affected Canvas, click Tidy, and verify the group encloses the overflowing cards, including after reopening Canvas. The exact live membership and the original frame-shrink trigger remain unverified; BUG-2076 stays IN PROGRESS.
 
 ### ~~TASK-2075: Make the Board local-date regression deterministic~~ (✅ DONE)
 

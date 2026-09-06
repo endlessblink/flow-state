@@ -7,6 +7,8 @@
         class="filter-btn"
         :class="{ active: activeFilter === filter.key }"
         :title="`${filter.description} (${filter.count} tasks)`"
+        :aria-label="`${filter.description} (${filter.count} tasks)`"
+        :aria-pressed="activeFilter === filter.key"
         @click="$emit('filterChanged', filter.key)"
       >
         <component :is="filter.icon" :size="14" />

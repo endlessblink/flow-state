@@ -9,6 +9,16 @@ const oauthValidation_1 = require("./oauthValidation");
 const OAUTH_PORTS = [24892, 24893, 24894];
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 let activeServer = null;
+let cancelPendingWait = null;
+function cancelActiveOAuth() {
+    if (cancelPendingWait) {
+        cancelPendingWait();
+    }
+    else if (activeServer) {
+        activeServer.close();
+        activeServer = null;
+    }
+}
 const SUCCESS_HTML = `<!DOCTYPE html>
 <html><head><style>
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -33,10 +43,7 @@ function registerOAuthHandlers() {
     // Start localhost OAuth server, returns the port
     electron_1.ipcMain.handle('oauth:start', async () => {
         // Clean up any previous server
-        if (activeServer) {
-            activeServer.close();
-            activeServer = null;
-        }
+        cancelActiveOAuth();
         // Try each port until one works
         let server = null;
         let port = 0;
@@ -62,14 +69,28 @@ function registerOAuthHandlers() {
         if (!activeServer) {
             throw new Error('OAuth server not started');
         }
+        if (cancelPendingWait)
+            throw new Error('OAuth callback wait already in progress');
         const server = activeServer;
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
+            const cleanup = () => {
+                clearTimeout(timeout);
+                server.removeListener('request', onRequest);
                 server.close();
-                activeServer = null;
+                if (activeServer === server)
+                    activeServer = null;
+                if (cancelPendingWait === cancel)
+                    cancelPendingWait = null;
+            };
+            const cancel = () => {
+                cleanup();
+                reject(new Error('OAuth cancelled'));
+            };
+            const timeout = setTimeout(() => {
+                cleanup();
                 reject(new Error('OAuth timed out — no response received within 5 minutes'));
             }, OAUTH_TIMEOUT_MS);
-            server.on('request', (req, res) => {
+            const onRequest = (req, res) => {
                 const url = `http://127.0.0.1${req.url || '/'}`;
                 if (!(0, oauthValidation_1.isOAuthCallbackUrl)(url)) {
                     res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -80,19 +101,16 @@ function registerOAuthHandlers() {
                 res.writeHead(200, { 'Content-Type': 'text/html' });
                 res.end(SUCCESS_HTML);
                 // Clean up
-                clearTimeout(timeout);
-                server.close();
-                activeServer = null;
+                cleanup();
                 resolve(url);
-            });
+            };
+            cancelPendingWait = cancel;
+            server.on('request', onRequest);
         });
     });
     // Cancel/cleanup
     electron_1.ipcMain.handle('oauth:cancel', async () => {
-        if (activeServer) {
-            activeServer.close();
-            activeServer = null;
-        }
+        cancelActiveOAuth();
     });
 }
 //# sourceMappingURL=oauth.js.map

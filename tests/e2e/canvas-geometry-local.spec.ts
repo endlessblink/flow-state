@@ -1430,6 +1430,56 @@ test.describe('local canvas geometry regressions', () => {
     }, { timeout: 12_000 }).toBe(true)
   })
 
+  test('rotate moves a due-today card from Tomorrow into Today without rescheduling it', async ({ page }) => {
+    await page.waitForFunction(() => {
+      const root = document.querySelector('#app') as any
+      return root?.__vue_app__?._context.config.globalProperties.$pinia._s.get('canvas')?._hasInitializedOnce === true
+    }, { timeout: 30_000 })
+    await page.context().setOffline(true)
+    const today = await page.evaluate(() => {
+      const now = new Date()
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    })
+    await seedCanvas(page, [
+      { id: 'rotate-date-today', name: 'Today', x: 100, y: 200 },
+      { id: 'rotate-date-tomorrow', name: 'Tomorrow', x: 700, y: 200 },
+    ], [
+      { id: 'rotate-date-task', title: 'Due today in Tomorrow', parentId: 'rotate-date-tomorrow', dueDate: today, x: 720, y: 300 },
+    ], { sync: false, refreshOnMissing: false })
+    const before = await readGeometry(page)
+    expect(before.tasks.find((task) => task.id === 'rotate-date-task')?.parentId)
+      .toBe(before.groups.find((group) => group.name === 'Tomorrow')?.id)
+
+    await clickToolbar(page, /rotate/)
+    const readDateMembership = () => page.evaluate(() => {
+      const pinia = (document.querySelector('#app') as any).__vue_app__._context.config.globalProperties.$pinia
+      const task = pinia._s.get('tasks').rawTasks.find((candidate: any) => candidate.id === 'rotate-date-task')
+      const group = pinia._s.get('canvas').groups.find((candidate: any) => candidate.id === task?.parentId)
+      return { group: group?.name, dueDate: task?.dueDate }
+    })
+    await expect.poll(readDateMembership).toEqual({ group: 'Today', dueDate: today })
+    const geometry = await readGeometry(page)
+    const group = geometry.groups.find((candidate) => candidate.name === 'Today')!
+    const card = page.locator('.vue-flow__node').filter({ hasText: 'Due today in Tomorrow' })
+    await expect(card).toHaveCount(1)
+    const task = geometry.tasks.find((candidate) => candidate.id === 'rotate-date-task')!
+    expect(task.x).toBeGreaterThanOrEqual(group.x)
+    expect(task.x).toBeLessThan(group.x + group.width)
+    expect(task.y).toBeGreaterThan(group.y)
+    expect(task.y + 100).toBeLessThanOrEqual(group.y + group.height)
+    await expect.poll(() => page.evaluate((groupId) => {
+      const frame = document.querySelector(`[data-id="section-${groupId}"]`)?.getBoundingClientRect()
+      const card = document.querySelector('[data-task-id="rotate-date-task"]')?.getBoundingClientRect()
+      return !!frame && !!card && card.left >= frame.left && card.right <= frame.right
+        && card.top >= frame.top && card.bottom <= frame.bottom
+    }, group.id)).toBe(true)
+
+    await page.context().setOffline(false)
+    await page.reload()
+    await setupCanvas(page)
+    await expect.poll(readDateMembership).toEqual({ group: 'Today', dueDate: today })
+  })
+
   test('rotate orders Today, Tomorrow, then the day after tomorrow on Monday', async ({ page }) => {
     await seedCanvas(page, [
       { id: 'wed', name: 'Wednesday', x: 3000, y: 200 },

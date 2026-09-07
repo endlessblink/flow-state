@@ -24,7 +24,8 @@ import { detectPowerKeyword } from '@/composables/usePowerKeywords'
 import { canvasSyncInProgress } from './useCanvasSync'
 import { positionManager } from '@/services/canvas/PositionManager'
 import { getDayGroupDate, toDateString } from '@/utils/dayGroupDate'
-import { collectDayGroupAdoptions } from './useCanvasDayGroupAdoption'
+import { collectDayGroupAdoptions, isEligibleForDayGroupAdoption } from './useCanvasDayGroupAdoption'
+import { findMatchingGroupForDueDate } from './useSmartGroupMatcher'
 import {
   computeCanonicalLayout,
   type DayGroupInput,
@@ -232,17 +233,35 @@ export function useDayGroupRotation(options: DayGroupRotationOptions = {}) {
       keyword: string
       dayIndex: number | null
     }
-    // Rotation changes group geometry and day metadata; it must not rewrite
-    // persisted task membership from stale rendered coordinates.
+    // Preserve spatial adoption, then reconcile existing rolling date lanes.
+    // Weekday and custom group ownership remains independent of due dates.
     const rehomedParents = collectDayGroupAdoptions(taskStore.rawTasks, groups, {
       mode: 'spatial',
     })
+    const rollingGroups = groups.filter((group) => {
+      const keyword = detectPowerKeyword(group.name)
+      return group.isVisible !== false && keyword?.category === 'date'
+        && (keyword.keyword === 'today' || keyword.keyword === 'tomorrow')
+    })
+    const rollingIds = new Set(rollingGroups.map((group) => group.id))
+    const rollingTasks = taskStore.rawTasks.filter((task) =>
+      rollingIds.has(task.parentId ?? '') && Boolean(task.canvasPosition)
+      && options.isTaskVisible?.(task.id) !== false,
+    )
+    for (const task of rollingTasks) {
+      if (!isEligibleForDayGroupAdoption(task)) continue
+      const target = findMatchingGroupForDueDate(task.dueDate, rollingGroups)
+      if (!target) continue
+      if (target.id === task.parentId) rehomedParents.delete(task.id)
+      else rehomedParents.set(task.id, target.id)
+    }
     const layoutTasks = taskStore.rawTasks.filter((task) => {
       if (!task.canvasPosition && !rehomedParents.has(task.id)) return false
       if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
       if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
-      if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
-      return options.isTaskVisible?.(task.id) !== false || rehomedParents.has(task.id)
+      const visible = options.isTaskVisible?.(task.id)
+      if (visible !== true && taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
+      return visible !== false || rehomedParents.has(task.id)
     })
     const inputs: WithKeyword[] = []
     for (const group of groups) {

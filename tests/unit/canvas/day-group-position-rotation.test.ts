@@ -443,6 +443,58 @@ describe('rotateDayGroupPositions()', () => {
     )
   })
 
+  it.each(['today', 'tomorrow'])('reconciles a due-today card physically in Tomorrow with parent %s', (parentId) => {
+    const today = makeGroup({ id: 'today', name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const tomorrow = makeGroup({ id: 'tomorrow', name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })
+    const task = makeTask({ id: 'rolled-over', parentId, dueDate: '2026-04-08', canvasPosition: { x: 436, y: 160 } })
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([task])
+
+    const { taskMoves, release } = useDayGroupRotation({ isTaskVisible: () => true }).rotateDayGroupPositions()
+    release()
+
+    expect(taskMoves[0]?.parentId).toBe(today.id)
+    expect(updateTask).toHaveBeenCalledWith(task.id, expect.objectContaining({
+      canvasPosition: { x: 20, y: 70 }, positionFormat: 'absolute',
+    }), 'DRAG')
+    expect(updateTask.mock.calls[0][1].parentId ?? parentId).toBe(today.id)
+    expect(task.dueDate).toBe('2026-04-08')
+  })
+
+  it('keeps explicitly rendered overdue cards in rotation layout', () => {
+    const today = makeGroup({ id: 'today', name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
+    const tomorrow = makeGroup({ id: 'tomorrow', name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })
+    const task = makeTask({ id: 'visible-overdue', parentId: today.id, dueDate: '2026-04-07', canvasPosition: { x: 20, y: 160 } })
+    taskStore.hideCanvasOverdueTasks = true
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([task])
+
+    const { taskMoves, release } = useDayGroupRotation({ isTaskVisible: () => true }).rotateDayGroupPositions()
+    release()
+
+    expect(taskMoves.map((move) => move.taskId)).toEqual([task.id])
+  })
+
+  it.each(['pinned', 'hidden', 'done', 'dismissed', 'custom'] as const)(
+    'does not date-rehome a %s card during rotation', (scope) => {
+      const today = makeGroup({ id: 'today', name: 'Today', position: { x: 0, y: 0, width: 350, height: 600 } })
+      const tomorrow = makeGroup({ id: 'tomorrow', name: 'Tomorrow', position: { x: 416, y: 0, width: 350, height: 600 } })
+      const custom = makeGroup({ id: 'custom', name: 'Projects', position: { x: 832, y: 0, width: 350, height: 600 } })
+      const task = makeTask({ id: 'excluded', parentId: scope === 'custom' ? custom.id : tomorrow.id,
+        dueDate: '2026-04-08', canvasPosition: { x: scope === 'custom' ? 852 : 436, y: 160 },
+        isPinned: scope === 'pinned', status: scope === 'done' ? 'done' : 'planned',
+        canvasDismissed: scope === 'dismissed',
+      })
+      vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([today, tomorrow, custom])
+      vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue([task])
+
+      const { release } = useDayGroupRotation({ isTaskVisible: () => scope !== 'hidden' }).rotateDayGroupPositions()
+      release()
+
+      expect(updateTask.mock.calls.every(([, patch]) => patch.parentId === undefined && patch.dueDate === undefined)).toBe(true)
+    },
+  )
+
   // --------------------------------------------------------------------------
   // Test 5: Single group → no-op (need >= 2 groups)
   // --------------------------------------------------------------------------

@@ -1,5 +1,29 @@
 # FlowState MASTER_PLAN.md
 
+### TASK-2080: Use distinct, consistent priority colors and ordering everywhere (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (2026-09-07) | **Sequence**: Next after the current Tidy, Rotate, and sync regression delivery (BUG-2076).
+
+**User request**: Make sure each priority has its own color, is represented everywhere, and appears in the correct order throughout FlowState.
+
+**Acceptance**: Audit every supported priority and define one shared color and rank for each. Apply the same mapping across task cards, Canvas groups, Board lanes, lists, calendar, badges, editors, menus, filters, and sorting on desktop and mobile wherever priority is shown. Show every supported priority in selectors and filters, order priorities consistently from highest to lowest, and verify priority sorting uses that rank rather than alphabetic order. Preserve readable labels and accessible contrast. Add regression coverage for complete mappings and ordering, visually verify representative surfaces, and deliver and verify the Electron update.
+
+### TASK-2081: Explore a calmer view for organizing an overwhelming task list (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (2026-09-07) | **Sequence**: After TASK-2080; keep the current regression delivery first.
+
+**User need**: When overwhelmed by many tasks and unsure how to organize them, find a view that makes the next organizing decision easier.
+
+**Discovery and acceptance**: Evaluate the existing Canvas, Board, list, and planning flows, including the existing overwhelm/day-plan work (TASK-1815), before deciding whether to improve an existing view or add one. Compare a small set of concrete concepts, such as reviewing one task at a time, grouping a limited batch, or choosing a short Now/Next/Later list. Prototype the most promising approach with a realistically crowded task set and verify that the user can sort, defer, break down, and select a manageable next action without needing to reorganize everything first. Keep remaining tasks discoverable, changes reversible, and progress resumable. Validate the interaction with the user before committing to a full implementation; this task does not prescribe AI or a new view in advance.
+
+### TASK-2082: Automatically start the timer at the first PC work session (📋 PLANNED)
+
+**Priority**: P1 | **Status**: 📋 PLANNED (2026-09-07) | **Sequence**: After TASK-2081; keep the current regression delivery first.
+
+**User request**: The timer should start automatically when the user first sits down to work at the PC.
+
+**Acceptance**: Establish what counts as the first work session (for example, first actual activity after login/unlock each local day) and use the Electron system-activity boundary to start the configured work timer without requiring a manual Start click. Coordinate with FEATURE-2021's existing return-after-absence behavior so both triggers share timer protections and never create duplicate sessions. Preserve an active work/break timer and deliberate pause/stop, avoid retriggering on app reload or update, and provide a clear preference to control the behavior. Cover cold startup, unlock, overnight rollover, an already-running timer, and repeated activity events with regression tests; verify automatic start and timer read-back in the installed Electron app.
+
 ### BUG-2079: Daily offline/reconnect hunt collides with a developer Vite server (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-05) | **Failure class**: E2E runtime isolation
@@ -16,7 +40,9 @@
 
 **Concurrent Sync Errors regression — in_progress**: An empty or partial local task cache could incorrectly mark a queued edit as permanently missing from the authoritative projection. Cache absence no longer makes that assertion. Fresh complete remote reconciliation can recover only exact-scope updates with that precise failure marker when the task exists, is active, has no known deletion/tombstone, and has no queued deletion; the transaction rechecks operation identity/status/scope. It does not create missing tasks or discard local payloads. Read-cache and smart-merge checks pass (90); popover checks retain discard confirmation and no blind retry. The popover no longer claims every permanent error proves task deletion. The user's specific task's remote existence and queued edit remain unverified; no live data was discarded.
 
-**1.4.517 delivery — in_progress**: Release gates, Electron packaging, publication, and installed read-back are pending. BUG-2076 remains open; the reproduced failure modes do not yet establish the exact cause of the user's canvas or queued edit.
+**2026-09-07 Rotate follow-up — in_progress**: Explicit Rotate previously adopted by spatial column, leaving a due-today card inside Tomorrow. Eligible cards already owned by visible Today/Tomorrow groups now reconcile membership from their due date during Rotate, including stale visual positions, without rescheduling them. Existing weekday metadata and custom ownership behavior remain unchanged. Rotate also includes explicitly rendered overdue cards when sizing groups. Regression tests demonstrate failures before correction and pass afterward (25 unit checks); the browser due-today repro passes through reload. Installed behavior remains unverified.
+
+**1.4.517 delivery — in_progress**: Final targeted browser checks pass for overdue-card enclosure and due-today rotation with DOM containment and reload persistence (2). A broader ordering check failed during seeded-group rendering before Rotate ran; the subsequent weekday-only test did not run. Source lint has no errors. Release gates, Electron packaging, publication, and installed read-back are pending. BUG-2076 remains open; the reproduced failure modes do not yet establish the exact cause of the user's canvas or queued edit.
 
 **User repro**: On the dotted Canvas, cards visibly aligned with the **Today** day column continue below its group frame. Running **Tidy** must re-home eligible loose cards into that column and resize/restack the group so every adopted card is visibly contained.
 

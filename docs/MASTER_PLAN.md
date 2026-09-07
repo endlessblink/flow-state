@@ -100,9 +100,9 @@
 
 **Completed evidence**: Vitest now starts in `Asia/Jerusalem` through a cross-platform Node runner; the Board test no longer mutates `TZ` after worker startup. The focused runner/Board tests passed from a parent `TZ=UTC`, and the full unit suite passed (401 files, 4,779 tests, 3 skipped). This changes test-process setup only; Board date behavior remains unchanged.
 
-### TASK-2068: Replace Board lanes with a focused task timeline (🔄 IN PROGRESS)
+### ~~TASK-2068: Replace Board lanes with a focused task timeline~~ (✅ DONE)
 
-**Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-01)
+**Priority**: P1 | **Status**: ✅ DONE (2026-09-07)
 
 Redesign the Board lane as a focused task sequence: the active task owns the center, the immediately previous and next tasks remain identifiable but secondary, and explicit arrows communicate `Task 1 → Task 2 → Task 3`. Reveal more tasks through navigation instead of presenting the full backlog at once; preserve RTL/dark/light support and the existing task data model.
 
@@ -116,6 +116,30 @@ Redesign the Board lane as a focused task sequence: the active task owns the cen
 **Interaction and safety**: task navigation changes only the local active index and never mutates task data. Filters, recurrence, timer, keyboard access, screen-reader labels, reduced motion, permissions, offline/retry, and current Mark-as-Done behavior remain in scope. Empty results show a direct Add task action.
 
 **Acceptance evidence**: focused component contract; populated Board E2E proving `Task 1 → Task 2 → Task 3` disclosure and arrow navigation; LTR and RTL desktop visual proof; type-check, lint, Electron build, updater delivery, and public manifest read-back.
+
+**Failure-class matrix**:
+
+| Class | Checked? | Evidence | Covered by this fix? |
+| --- | --- | --- | --- |
+| User repro shape | Yes | Populated LTR/RTL Board E2E and reviewed desktop screenshots | Yes |
+| Data shape / persisted row shape | Yes | Timeline consumes the existing filtered task collection without schema changes | Yes |
+| Renderer store/state | Yes | Component contract and Board E2E cover focused index retention and navigation | Yes |
+| Electron main/preload bridge | N/A | This is a renderer-only presentation change | N/A |
+| Localhost sidecar endpoint | N/A | The Board timeline does not use the timer sidecar boundary | N/A |
+| KDE polling/control path | N/A | No KDE integration behavior changed | N/A |
+| Supabase persistence/realtime | Yes | Offline/reconnect suite passed all 25 tests with the timeline selectors | No change required |
+| Updater/runtime version | Yes | Public manifest and AppImage read-back prove 1.4.519 delivery | Yes |
+| Stale live process/cache state | Yes | Version bump and no-cache updater artifact provide a distinct runtime | Yes |
+
+**Exact failure mode fixed**: the Board exposed the full lane backlog instead of presenting the active task and its immediate sequence context as the primary interaction.
+
+**Explicitly not covered**: this does not redesign List view, change task ordering rules, or alter task persistence, synchronization, timer, recurrence, or completion semantics.
+
+**Regression added for reported repro**: the populated Board E2E proves only `Task 1 → Task 2 → Task 3` is initially disclosed and validates arrow, neighbor, and keyboard navigation in LTR and RTL.
+
+**Live boundary proof**: Electron 1.4.519 packaged successfully; the deployed updater manifest advertises 1.4.519 and its 182,791,637-byte AppImage returns HTTP 200.
+
+**Completed evidence**: Board now presents one centered active task with only its immediate neighbors visible, explicit arrow and keyboard navigation, clickable neighbors, preserved task actions, responsive RTL support, and List as the dense alternate view. The focused contract passed (3 tests), the populated LTR/RTL Board E2E passed (2 tests), the full offline/reconnect regression suite passed (25 tests), targeted lint and type-check passed, and the packaged Electron build passed. FlowState 1.4.519 was deployed; the public updater manifest advertises 1.4.519 and the 182,791,637-byte AppImage returns HTTP 200.
 
 ### BUG-2070: Canvas F2 reordering resets Today's group bounds and misorders tasks (🔄 IN PROGRESS)
 

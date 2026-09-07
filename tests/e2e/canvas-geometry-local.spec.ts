@@ -1299,6 +1299,29 @@ test.describe('local canvas geometry regressions', () => {
     expect(afterReload.tasks.find((task) => task.id === 'dated-loose-task')!.parentId).toBe(persistedTodayGroup.id)
   })
 
+  test('tidy encloses rendered overdue cards when the overdue preference is enabled', async ({ page }) => {
+    const ids = ['visible-overdue-a', 'visible-overdue-b', 'visible-overdue-c']
+    await seedCanvas(page, [
+      { id: 'visible-overdue-group', name: 'Visible overdue', x: 100, y: 200, height: 200 },
+    ], ids.map((id, index) => ({
+      id, title: `Visible overdue card ${index}`, parentId: 'visible-overdue-group',
+      x: 120, y: 300 + index * 800, dueDate: '2020-01-01',
+    })))
+    await page.evaluate(() => {
+      const root = document.querySelector('#app') as any
+      root.__vue_app__._context.config.globalProperties.$pinia._s.get('tasks').hideCanvasOverdueTasks = true
+    })
+    for (const id of ids) await expect(page.locator(`[data-task-id="${id}"]`)).toBeVisible()
+    await clickToolbar(page, /tidy|layout/)
+    await expect.poll(() => page.evaluate((ids) => {
+      const frame = document.querySelector('[data-id="section-visible-overdue-group"]')?.getBoundingClientRect()
+      return !!frame && ids.every((id) => {
+        const card = document.querySelector(`[data-task-id="${id}"]`)?.getBoundingClientRect()
+        return !!card && card.top >= frame.top && card.bottom <= frame.bottom
+      })
+    }, ids), { message: 'Every rendered overdue card stays inside the Tidy frame' }).toBe(true)
+  })
+
   test('tidy repairs a short rendered frame when saved group bounds are already correct', async ({ page }) => {
     const ids = ['frame-tall', 'frame-second', 'frame-third', 'frame-recurring']
     await seedCanvas(page, [

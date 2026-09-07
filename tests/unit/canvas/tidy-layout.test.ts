@@ -410,6 +410,32 @@ describe('useTidyLayout', () => {
     )
   })
 
+  it.each(['tidy', 'reorder'] as const)('includes visibly rendered overdue cards in %s while preserving hidden cards', (action) => {
+    const group = makeGroup('Work', 0)
+    taskStore.hideCanvasOverdueTasks = true
+    vi.spyOn(canvasStore, 'groups', 'get').mockReturnValue([group])
+    vi.spyOn(taskStore, 'rawTasks', 'get').mockReturnValue(
+      ['visible-top', 'visible-bottom', 'hidden-overdue'].map((id, index) => ({
+        id,
+        parentId: group.id,
+        status: 'todo',
+        dueDate: '2026-05-01',
+        canvasPosition: { x: 30, y: 100 + index * 800 },
+        createdAt: '2026-04-01T00:00:00Z',
+      })) as any,
+    )
+    const layout = useTidyLayout({
+      isTaskVisible: (id) => id.startsWith('visible-'),
+      getNodeSize: () => ({ width: 280, height: 800 }),
+    })
+    const result = action === 'tidy' ? layout.planTidyDayGroups() : layout.planReorderColumn(group.id)
+    expect(result.taskMoves.map((move) => move.taskId)).toEqual(['visible-top', 'visible-bottom'])
+    if (action === 'tidy') {
+      const bottom = Math.max(...result.taskMoves.map((move) => move.position.y + 800))
+      expect(result.groupMoves[0].position.y + result.groupMoves[0].size.height).toBeGreaterThan(bottom)
+    }
+  })
+
   it('does not leave blank rows for done tasks hidden on canvas', () => {
     const today = makeGroup('Today', 0)
     taskStore.hideCanvasDoneTasks = true

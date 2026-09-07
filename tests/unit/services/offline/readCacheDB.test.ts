@@ -354,6 +354,7 @@ describe('cacheTasks / getCachedTasks', () => {
 
     const projection = await overlayPendingTaskWrites([], {
       scope: { userId: 'user-1', workspaceId: null },
+      authoritative: true,
     })
 
     expect(projection.tasks).toEqual([])
@@ -366,6 +367,61 @@ describe('cacheTasks / getCachedTasks', () => {
       }),
     ])
   })
+
+  it.each([false, true])('does not quarantine a missing update from a partial cache: %s', async (partial) => {
+    if (partial) await cacheTasks([makeTask({ id: 'another-task' })])
+    const id = await getWriteQueueDB().operations.add({
+      status: 'pending', retryCount: 2, createdAt: Date.now(),
+      entityType: 'task', operation: 'update', entityId: 'uncached-task',
+      payload: { title: 'Preserved edit', canvas_position: { x: 10, y: 20 } },
+      userId: 'user-1', workspaceId: null,
+    })
+    const before = await getWriteQueueDB().operations.get(id)
+
+    const tasks = await getCachedTasksWithPendingWrites()
+
+    expect(tasks?.some(task => task.id === 'uncached-task') ?? false).toBe(false)
+    expect(await getWriteQueueDB().operations.get(id)).toEqual(before)
+  })
+
+  it.each(['remote', 'cache', 'fallback', 'deleted', 'deleted-at', 'tombstone', 'queued-delete', 'other-scope', 'conflict', 'other-error', 'no-scope'])(
+    'only recovers a false missing-task failure with active remote evidence: %s', async (source) => {
+      const task = makeTask({
+        id: 'recoverable-task',
+        ...(source === 'deleted' ? { _soft_deleted: true } : {}),
+        ...(source === 'deleted-at' ? { deletedAt: new Date() } : {}),
+      })
+      const id = await getWriteQueueDB().operations.add({
+        status: source === 'conflict' ? 'conflict' : 'failed', retryCount: 2, createdAt: Date.now(),
+        entityType: 'task', operation: 'update', entityId: task.id,
+        payload: { title: 'Preserved local edit' },
+        userId: source === 'other-scope' ? 'user-2' : 'user-1', workspaceId: null,
+        lastError: source === 'other-error' ? 'Remote task is deleted'
+          : 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
+        nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      })
+      if (source === 'queued-delete') await getWriteQueueDB().operations.add({
+        status: 'pending', retryCount: 0, createdAt: Date.now() + 1,
+        entityType: 'task', operation: 'delete', entityId: task.id,
+        payload: {}, userId: 'user-1', workspaceId: null,
+      })
+      const before = await getWriteQueueDB().operations.get(id)
+
+      await overlayPendingTaskWrites(source === 'fallback' ? [] : [task], {
+        scope: source === 'no-scope' ? undefined : { userId: 'user-1', workspaceId: null },
+        authoritative: source !== 'cache',
+        remotelyDeletedTaskIds: source === 'tombstone' ? new Set([task.id]) : new Set(),
+        fallbackTasks: source === 'fallback' ? [task] : [],
+      })
+
+      const after = await getWriteQueueDB().operations.get(id)
+      if (source === 'remote') {
+        expect(after).toMatchObject({ status: 'pending', retryCount: 2, payload: before!.payload })
+        expect(after?.lastError).toBeUndefined()
+        expect(after?.nextRetryAt).toBeUndefined()
+      } else expect(after).toEqual(before)
+    },
+  )
 
   it('repairs a legacy personal task operation for the matching authenticated user', async () => {
     const task = makeTask({ id: 'task-legacy-personal' })

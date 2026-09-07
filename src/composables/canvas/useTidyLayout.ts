@@ -126,8 +126,11 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       if (!task.canvasPosition && !adoptedParents.has(task.id)) return false
       if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
       if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
-      if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
-      return options.isTaskVisible?.(task.id) !== false || adoptedParents.has(task.id)
+      const visible = options.isTaskVisible?.(task.id)
+      // Rendered cards must contribute to their frame even when a stored
+      // filter preference has not hidden them in the current projection.
+      if (visible !== true && taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
+      return visible !== false || adoptedParents.has(task.id)
     })
     if (adoptedParents.size > 0) {
       console.log('[TIDY] Adopted', adoptedParents.size, 'loose tasks into matching groups')
@@ -374,8 +377,9 @@ export function useTidyLayout(options: TidyLayoutOptions = {}) {
       if (!task.canvasPosition) return false
       if (task._soft_deleted || task.isCompletionRecord || task.isPinned) return false
       if (taskStore.hideCanvasDoneTasks && task.status === 'done') return false
-      if (taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
-      return options.isTaskVisible?.(task.id) !== false
+      const visible = options.isTaskVisible?.(task.id)
+      if (visible !== true && taskStore.hideCanvasOverdueTasks && isOverdue(task.dueDate)) return false
+      return visible !== false
     })
 
     // Nothing to reorder with fewer than 2 cards.

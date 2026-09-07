@@ -330,6 +330,8 @@ export interface PendingTaskProjection {
   pendingTaskIds: Set<string>
 }
 
+const MISSING_TASK_PROJECTION_ERROR = 'Task no longer exists in the authoritative projection; local update preserved for manual resolution'
+
 /**
  * Apply the durable task write queue over an arbitrary canonical projection.
  * Exact-scope mode fails closed for legacy/unscoped operations: ambiguous rows
@@ -340,6 +342,9 @@ export async function overlayPendingTaskWrites(
   options: {
     scope?: PendingTaskWriteScope
     fallbackTasks?: Task[]
+    /** Only a fresh, complete remote projection can prove a task is missing. */
+    authoritative?: boolean
+    remotelyDeletedTaskIds?: ReadonlySet<string>
   } = {},
 ): Promise<PendingTaskProjection> {
   const { getWriteQueueDB } = await import('@/services/offline/writeQueueDB')
@@ -368,6 +373,7 @@ export async function overlayPendingTaskWrites(
     .sort((a, b) => a.createdAt - b.createdAt)
 
   const pendingTaskIds = new Set<string>()
+  const authoritativeTaskMap = new Map(baseTasks.map(task => [task.id, task]))
   const taskMap = new Map(baseTasks.map(task => [task.id, task]))
   const fallbackMap = new Map((options.fallbackTasks ?? []).map(task => [task.id, task]))
   const { fromSupabaseTask } = await import('@/utils/supabaseMappers')
@@ -389,14 +395,45 @@ export async function overlayPendingTaskWrites(
     }
     const existing = taskMap.get(op.entityId) ?? fallbackMap.get(op.entityId)
     if (!existing) {
-      if (op.id) {
+      if (op.id && options.authoritative) {
         await updateOperation(op.id, {
           status: 'failed',
-          lastError: 'Task no longer exists in the authoritative projection; local update preserved for manual resolution',
+          lastError: MISSING_TASK_PROJECTION_ERROR,
           nextRetryAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
         })
       }
       continue
+    }
+    const remoteTask = authoritativeTaskMap.get(op.entityId)
+    if (
+      options.authoritative && options.scope && op.id
+      && op.status === 'failed' && op.lastError === MISSING_TASK_PROJECTION_ERROR
+      && remoteTask && !remoteTask._soft_deleted && !remoteTask.deletedAt
+      && !options.remotelyDeletedTaskIds?.has(op.entityId)
+    ) {
+      const database = getWriteQueueDB()
+      const operationId = op.id
+      const scope = options.scope
+      // Recheck inside the write transaction: sync or a local delete may have
+      // changed the operation since this projection read the queue.
+      await database.transaction('rw', database.operations, async () => {
+        const current = await database.operations.get(operationId)
+        if (
+          current?.status !== 'failed' || current.lastError !== MISSING_TASK_PROJECTION_ERROR
+          || current.operation !== 'update' || current.entityType !== 'task'
+          || current.entityId !== op.entityId
+          || current.userId !== scope.userId
+          || current.workspaceId !== scope.workspaceId
+        ) return
+        const siblings = await database.operations
+          .where('[entityType+entityId]').equals(['task', op.entityId]).toArray()
+        if (siblings.some(sibling => sibling.operation === 'delete'
+          && sibling.userId === current.userId && sibling.workspaceId === current.workspaceId
+          && sibling.status !== 'completed')) return
+        await database.operations.update(operationId, {
+          status: 'pending', lastError: undefined, nextRetryAt: undefined,
+        })
+      })
     }
     taskMap.set(op.entityId, applyPendingTaskPatch(existing, op.payload))
     pendingTaskIds.add(op.entityId)

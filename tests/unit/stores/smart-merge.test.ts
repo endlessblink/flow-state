@@ -296,6 +296,10 @@ describe('Smart Merge Algorithm (taskPersistence.ts)', () => {
     })
 
     expect(store._rawTasks.find(task => task.id === taskId)?.title).toBe('Queued offline title')
+    expect(overlayPendingTaskWrites).toHaveBeenCalledWith([serverTask], expect.objectContaining({
+      authoritative: true,
+      scope: { userId: 'test-user-id', workspaceId: null },
+    }))
     expect(mockEnqueue).not.toHaveBeenCalled()
   })
 

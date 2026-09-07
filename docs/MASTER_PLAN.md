@@ -12,6 +12,12 @@
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-03)
 
+**2026-09-06 second installed follow-up — in_progress**: Live provenance confirms 1.4.516, and independent desktop inspection confirms the same three overflowing cards. Read-only metadata extraction was blocked by unstable desktop focus; exact card membership/filter state remains unverified. Reproduced a separate visibility mismatch: the renderer displays overdue cards while Tidy excludes them when the overdue preference is enabled. Tidy/reorder now include explicitly rendered overdue cards while preserving hidden-card exclusions. Focused layout tests pass (34); browser containment checks for visible overdue cards and the earlier short-frame regression pass (2).
+
+**Concurrent Sync Errors regression — in_progress**: An empty or partial local task cache could incorrectly mark a queued edit as permanently missing from the authoritative projection. Cache absence no longer makes that assertion. Fresh complete remote reconciliation can recover only exact-scope updates with that precise failure marker when the task exists, is active, has no known deletion/tombstone, and has no queued deletion; the transaction rechecks operation identity/status/scope. It does not create missing tasks or discard local payloads. Read-cache and smart-merge checks pass (90); popover checks retain discard confirmation and no blind retry. The popover no longer claims every permanent error proves task deletion. The user's specific task's remote existence and queued edit remain unverified; no live data was discarded.
+
+**1.4.517 delivery — in_progress**: Release gates, Electron packaging, publication, and installed read-back are pending. BUG-2076 remains open; the reproduced failure modes do not yet establish the exact cause of the user's canvas or queued edit.
+
 **User repro**: On the dotted Canvas, cards visibly aligned with the **Today** day column continue below its group frame. Running **Tidy** must re-home eligible loose cards into that column and resize/restack the group so every adopted card is visibly contained.
 
 **Boundary**: This is a Canvas Tidy recovery regression, not a Board date-lane issue. Do not change task due dates; only eligible visible Canvas cards may be re-parented, positioned, and persisted by the user-invoked Tidy action.

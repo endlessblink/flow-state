@@ -460,8 +460,10 @@ export function useTaskPersistence(
             const durablePendingTaskIds = new Set<string>()
             if (requireRemoteAuthority) {
                 const overlay = await overlayPendingTaskWrites(loadedTasks, {
+                    authoritative: true,
                     scope: authorityScope,
                     fallbackTasks: cachedTasks,
+                    remotelyDeletedTaskIds,
                 })
                 loadedTasks = overlay.tasks
                 for (const taskId of overlay.pendingTaskIds) durablePendingTaskIds.add(taskId)

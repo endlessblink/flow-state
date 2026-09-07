@@ -186,6 +186,18 @@
     "requires_reauth": "Calendar access requires re-authentication with Google"
   },
   "kanban": {
+    "focus_timeline": "Focused task timeline",
+    "current_sequence": "Current sequence",
+    "one_task_at_a_time": "One task at a time",
+    "focus_previous_named": "Go to previous task: {title}",
+    "focus_next_named": "Go to next task: {title}",
+    "task_number": "Task {number}",
+    "task_number_now": "Task {number} · Now",
+    "focus_navigation": "Task timeline navigation",
+    "focus_position": "{current} of {total}",
+    "previous_task": "Previous task",
+    "next_task": "Next task",
+    "add_task": "Add task",
     "no_tasks_in": "No {status} tasks",
     "add_task_in": "Add {status} task",
     "todo": "To Do",

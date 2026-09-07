@@ -142,6 +142,20 @@ async function gotoBoardReady(page: Page) {
   await page.waitForSelector(".task-card[data-task-id]", { timeout: 30_000 });
 }
 
+async function focusBoardTask(page: Page, taskId: string) {
+  const card = page.locator(`.task-card[data-task-id="${taskId}"]`);
+  const next = page.getByRole("button", { name: "Next task", exact: true });
+
+  for (let index = 0; index < 100; index += 1) {
+    if (await card.isVisible()) return card;
+    if (await next.isDisabled()) break;
+    await next.click();
+  }
+
+  await expect(card).toBeVisible();
+  return card;
+}
+
 async function gotoCalendarReady(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem("flowstate:calendar-view-mode", "day");
@@ -2517,7 +2531,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     await gotoBoardReady(clientB);
 
     const task = ROOT_TASKS[1];
-    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`);
+    const taskCard = await focusBoardTask(clientA, task.id);
     await expect(taskCard).toBeVisible();
 
     await clientA.context().setOffline(true);
@@ -2614,9 +2628,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     }, OFFLINE_RECURRING_TASK.id);
     expect(initialDueDate).toBeTruthy();
 
-    const recurringCard = clientA.locator(
-      `.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`,
-    );
+    const recurringCard = await focusBoardTask(clientA, OFFLINE_RECURRING_TASK.id);
     await expect(recurringCard).toBeVisible();
     await clientA.context().setOffline(true);
     await recurringCard.click({ button: "right" });
@@ -2739,9 +2751,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
   }) => {
     await gotoBoardReady(clientA);
 
-    const recurringCard = clientA.locator(
-      `.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`,
-    );
+    const recurringCard = await focusBoardTask(clientA, OFFLINE_RECURRING_TASK.id);
     await expect(recurringCard).toBeVisible();
     const initialTask = await clientA.evaluate((taskId) => {
       const root = document.querySelector("#app") as any;
@@ -2870,9 +2880,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     }, OFFLINE_RECURRING_TASK.id);
     expect(initialDueDate).toBeTruthy();
 
-    const recurringCard = clientA.locator(
-      `.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`,
-    );
+    const recurringCard = await focusBoardTask(clientA, OFFLINE_RECURRING_TASK.id);
     await expect(recurringCard).toBeVisible();
     await clientA.context().setOffline(true);
     await recurringCard.click({ button: "right" });
@@ -2950,9 +2958,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
         isDeleted: false,
       });
     await expect(
-      clientB.locator(
-        `.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`,
-      ),
+      await focusBoardTask(clientB, OFFLINE_RECURRING_TASK.id),
     ).toBeVisible();
     await clientB.reload();
     await gotoBoardReady(clientB);
@@ -2973,9 +2979,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
       expect(completions).toHaveLength(0);
     }).toPass({ timeout: 20_000 });
     await expect(
-      clientB.locator(
-        `.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`,
-      ),
+      await focusBoardTask(clientB, OFFLINE_RECURRING_TASK.id),
     ).toBeVisible();
   });
 
@@ -2984,9 +2988,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
   }) => {
     await gotoBoardReady(clientA);
 
-    const recurringCard = clientA.locator(
-      `.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`,
-    );
+    const recurringCard = await focusBoardTask(clientA, OFFLINE_RECURRING_TASK.id);
     await expect(recurringCard).toBeVisible();
     const initialTask = await clientA.evaluate((taskId) => {
       const root = document.querySelector("#app") as any;
@@ -3084,8 +3086,9 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     await gotoBoardReady(clientA);
     await gotoBoardReady(clientB);
 
-    const recurringCard = clientA.locator(
-      `.task-card[data-task-id="${OFFLINE_RECURRING_TASK.id}"]`,
+    const recurringCard = await focusBoardTask(
+      clientA,
+      OFFLINE_RECURRING_TASK.id,
     );
     await expect(recurringCard).toBeVisible();
     await clientA.context().setOffline(true);
@@ -3163,7 +3166,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
 
     const task = ROOT_TASKS[2];
     const editedTitle = `${task.title} Board Offline Edit`;
-    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`);
+    const taskCard = await focusBoardTask(clientA, task.id);
     await expect(taskCard).toBeVisible();
 
     await clientA.context().setOffline(true);
@@ -3269,7 +3272,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     const initialRevision = Number(before?.canonical_revision);
     expect(Number.isInteger(initialRevision)).toBe(true);
 
-    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`);
+    const taskCard = await focusBoardTask(clientA, task.id);
     await expect(taskCard).toBeVisible();
     await clientA.context().setOffline(true);
     await taskCard.click({ button: "right" });
@@ -3353,7 +3356,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     await gotoBoardReady(clientB);
 
     const task = ROOT_TASKS[0];
-    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`);
+    const taskCard = await focusBoardTask(clientA, task.id);
     await expect(taskCard).toBeVisible();
 
     await clientA.context().setOffline(true);
@@ -3436,7 +3439,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
     await gotoBoardReady(clientA);
 
     const task = ROOT_TASKS[0];
-    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`);
+    const taskCard = await focusBoardTask(clientA, task.id);
     await expect(taskCard).toBeVisible();
     await clientA.evaluate(() => {
       const root = document.querySelector("#app") as any;
@@ -3505,7 +3508,7 @@ test.describe("Recurring canvas/sync regressions (TASK-1871)", () => {
       });
     });
 
-    const taskCard = clientA.locator(`.task-card[data-task-id="${task.id}"]`);
+    const taskCard = await focusBoardTask(clientA, task.id);
     await taskCard.click({ button: "right" });
     await clientA.getByText("Edit", { exact: true }).click();
     const editModal = clientA

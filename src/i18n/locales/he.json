@@ -186,6 +186,18 @@
     "requires_reauth": "גישה ליומן דורשת אימות מחדש עם Google"
   },
   "kanban": {
+    "focus_timeline": "ציר זמן ממוקד למשימות",
+    "current_sequence": "הרצף הנוכחי",
+    "one_task_at_a_time": "משימה אחת בכל פעם",
+    "focus_previous_named": "מעבר למשימה הקודמת: {title}",
+    "focus_next_named": "מעבר למשימה הבאה: {title}",
+    "task_number": "משימה {number}",
+    "task_number_now": "משימה {number} · עכשיו",
+    "focus_navigation": "ניווט בציר הזמן של המשימות",
+    "focus_position": "{current} מתוך {total}",
+    "previous_task": "המשימה הקודמת",
+    "next_task": "המשימה הבאה",
+    "add_task": "הוספת משימה",
     "no_tasks_in": "אין משימות {status}",
     "add_task_in": "הוסף משימת {status}",
     "todo": "לביצוע",

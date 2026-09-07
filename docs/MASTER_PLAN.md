@@ -100,22 +100,22 @@
 
 **Completed evidence**: Vitest now starts in `Asia/Jerusalem` through a cross-platform Node runner; the Board test no longer mutates `TZ` after worker startup. The focused runner/Board tests passed from a parent `TZ=UTC`, and the full unit suite passed (401 files, 4,779 tests, 3 skipped). This changes test-process setup only; Board date behavior remains unchanged.
 
-### TASK-2068: Redesign Board lanes and add direct lane assignment (🔄 IN PROGRESS)
+### TASK-2068: Replace Board lanes with a focused task timeline (🔄 IN PROGRESS)
 
 **Priority**: P1 | **Status**: 🔄 IN PROGRESS (2026-09-01)
 
-Redesign the Board lane surface to feel more deliberate and inviting, using a canvas-inspired presentation with clear headers, meaningful empty/drop zones, subtle depth, responsive horizontal scrolling, and complete RTL/dark/light support. Keep the existing Board data model and grouping modes; this is not a freeform Canvas conversion.
+Redesign the Board lane as a focused task sequence: the active task owns the center, the immediately previous and next tasks remain identifiable but secondary, and explicit arrows communicate `Task 1 → Task 2 → Task 3`. Reveal more tasks through navigation instead of presenting the full backlog at once; preserve RTL/dark/light support and the existing task data model.
 
 **Required flows**:
 
-- Drag an existing card to a lane with a clear target preview, one persisted field update, reload/sync survival, undo, and safe restoration with an inline error on failure.
-- Drag from an empty lane/drop zone to open quick-create prefilled from that lane; cancel creates nothing and save appears in exactly that lane.
-- Right-click a task and use **Move/assign to…** to show only valid destinations for the active grouping; the update persists and moves the card visibly while preserving existing context-menu actions.
-- Right-click empty lane space and use **Add task here** with the same lane-value inheritance.
+- Show exactly one active task at center stage, with only its immediate previous and next tasks visible as secondary context.
+- Navigate the sequence with explicit arrow controls, clickable neighbor tasks, and keyboard Left/Right controls; retain the active task when filters or sorting update the list.
+- Keep task selection, timer, edit, delete, context-menu, filtering, sorting, hide-done, and quick-create behavior available from the focused view.
+- Keep the existing List view as the alternate dense overview; legacy Board grouping preferences open the focused timeline without losing stored settings compatibility.
 
-**Mapping and safety**: status→status, priority→priority, date→due date (including inbox/no-date), category→project; never mutate unrelated fields. Creation or assignment into a completed lane must be explicitly blocked by default with a clear explanation. Preserve filters, recurrence, timer, keyboard access, screen-reader labels, reduced motion, permissions, offline/retry, and current Mark-as-Done behavior.
+**Interaction and safety**: task navigation changes only the local active index and never mutates task data. Filters, recurrence, timer, keyboard access, screen-reader labels, reduced motion, permissions, offline/retry, and current Mark-as-Done behavior remain in scope. Empty results show a direct Add task action.
 
-**Acceptance evidence**: mapping and failure tests; Board drag-create and context-menu assignment E2E across all grouping modes; offline/reconnect and reload persistence; RTL desktop visual proof; regression coverage for completion/context-menu behavior. Resolve before implementation whether drag-create originates from the lane empty state (recommended) or another task source, and define overdue-date behavior.
+**Acceptance evidence**: focused component contract; populated Board E2E proving `Task 1 → Task 2 → Task 3` disclosure and arrow navigation; LTR and RTL desktop visual proof; type-check, lint, Electron build, updater delivery, and public manifest read-back.
 
 ### BUG-2070: Canvas F2 reordering resets Today's group bounds and misorders tasks (🔄 IN PROGRESS)
 

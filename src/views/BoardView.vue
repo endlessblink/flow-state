@@ -9,13 +9,13 @@
         <span class="task-count--subtle">{{ totalDisplayedTasks }}</span>
       </div>
       <div class="header-controls header-controls--minimal">
-        <!-- View Type Switcher -->
+        <!-- Focus timeline / list switcher -->
         <div class="view-type-switcher">
           <button
             v-for="option in viewTypeOptions"
             :key="option.value"
             class="view-type-btn"
-            :class="{ active: currentViewType === option.value }"
+            :class="{ active: option.value === 'priority' ? currentViewType !== 'list' : currentViewType === option.value }"
             :title="option.label"
             @click="currentViewType = option.value"
           >
@@ -70,28 +70,8 @@
     <!-- SCROLL CONTAINER FOR KANBAN BOARD -->
     <div class="kanban-scroll-container scroll-container" :class="{ 'list-mode': currentViewType === 'list' }">
       <div class="kanban-board" @click="closeContextMenu">
-        <!-- FEATURE-1336: Category view renders ONE swimlane with project columns -->
-        <template v-if="currentViewType === 'category'">
-          <KanbanSwimlane
-            :project="{ id: '__category__', name: 'All Tasks', color: '#6B7280', colorType: 'hex', viewType: 'status', createdAt: new Date(), updatedAt: new Date() }"
-            :tasks="allFilteredTasks"
-            :current-filter="taskStore.activeSmartView || 'none'"
-            :density="currentDensity"
-            :show-done-column="!hideDoneTasks"
-            :sort-option="boardSortOption"
-            view-type="category"
-            @select-task="handleSelectTask"
-            @start-timer="handleStartTimer"
-            @edit-task="handleEditTask"
-            @delete-task="handleDeleteTask"
-            @move-task="handleListMoveTask"
-            @add-task="handleAddTask"
-            @context-menu="handleContextMenu"
-          />
-        </template>
-
-        <!-- TASK-1334: List view renders TaskList directly -->
-        <template v-else-if="currentViewType === 'list'">
+        <!-- TASK-1334: List view remains available as a secondary view. -->
+        <template v-if="currentViewType === 'list'">
           <TaskList
             :tasks="allFilteredTasks"
             :groups="listViewGroups"
@@ -109,47 +89,16 @@
           />
         </template>
 
-        <!-- TASK-1492: Due Date view: flat single swimlane (no per-project rows) -->
-        <template v-else-if="currentViewType === 'date'">
-          <KanbanSwimlane
-            :project="{ id: '__date__', name: 'All Tasks', color: '#6B7280', colorType: 'hex', viewType: 'status', createdAt: new Date(), updatedAt: new Date() }"
-            :tasks="allFilteredTasks"
-            :current-filter="taskStore.activeSmartView || 'none'"
-            :density="currentDensity"
-            :show-done-column="!hideDoneTasks"
-            :sort-option="boardSortOption"
-            view-type="date"
-            @select-task="handleSelectTask"
-            @start-timer="handleStartTimer"
-            @edit-task="handleEditTask"
-            @delete-task="handleDeleteTask"
-            @move-task="handleMoveTask"
-            @add-task="handleAddTask"
-            @context-menu="handleContextMenu"
-          />
-        </template>
-
-        <!-- Standard views (priority): per-project swimlanes -->
-        <template v-else>
-          <KanbanSwimlane
-            v-for="project in projectsWithTasks"
-            :key="project.id"
-            :project="project"
-            :tasks="tasksByProject[project.id] || []"
-            :current-filter="taskStore.activeSmartView || 'none'"
-            :density="currentDensity"
-            :show-done-column="!hideDoneTasks"
-            :sort-option="boardSortOption"
-            :view-type="currentViewType"
-            @select-task="handleSelectTask"
-            @start-timer="handleStartTimer"
-            @edit-task="handleEditTask"
-            @delete-task="handleDeleteTask"
-            @move-task="handleMoveTask"
-            @add-task="handleAddTask"
-            @context-menu="handleContextMenu"
-          />
-        </template>
+        <TaskFocusTimeline
+          v-else
+          :tasks="allFilteredTasks"
+          @select-task="handleSelectTask"
+          @start-timer="handleStartTimer"
+          @edit-task="handleEditTask"
+          @delete-task="handleDeleteTask"
+          @context-menu="handleContextMenu"
+          @add-task="handleTimelineAddTask"
+        />
       </div>
     </div>
 
@@ -218,13 +167,13 @@ import { useRecurrenceAwareDelete } from '@/composables/useRecurrenceAwareDelete
 
 import './BoardView.css'
 
-import KanbanSwimlane from '@/components/kanban/KanbanSwimlane.vue'
+import TaskFocusTimeline from '@/components/kanban/TaskFocusTimeline.vue'
 import TaskList from '@/components/tasks/TaskList.vue'
 import TaskEditModal from '@/components/tasks/TaskEditModal.vue'
 import QuickTaskCreateModal from '@/components/tasks/QuickTaskCreateModal.vue'
 import TaskContextMenu from '@/components/tasks/TaskContextMenu.vue'
 import ConfirmationModal from '@/components/common/ConfirmationModal.vue'
-import { CheckCircle, Circle, SlidersHorizontal, Flag, Calendar, FolderOpen, List } from 'lucide-vue-next'
+import { CheckCircle, Circle, SlidersHorizontal, MoveRight, List } from 'lucide-vue-next'
 
 import FilterControls from '@/components/base/FilterControls.vue'
 import CustomSelect from '@/components/common/CustomSelect.vue'
@@ -281,7 +230,6 @@ const {
   startTimer: handleStartTimer,
   createTaskForColumn,
   deleteTask: doDeleteTask,
-  moveTask: handleMoveTask,
   addSubtask: _handleAddSubtaskFromMenu
 } = useBoardActions({ taskStore, timerStore })
 
@@ -315,12 +263,10 @@ const boardSortOptions = computed(() => [
   { value: 'priority_desc' as const, label: 'Priority: High to Low' }
 ])
 
-// View Type Switcher (priority, date, category, list) (TASK-1215: Tauri-aware persistence)
+// Keep the stored values backward compatible while presenting one visual timeline and List.
 const currentViewType = usePersistentRef<'priority' | 'date' | 'category' | 'list'>('flowstate:board-view-type', 'priority', 'board-view-type')
 const viewTypeOptions = computed(() => [
-  { value: 'priority' as const, label: t('filters.group_priority'), icon: Flag },
-  { value: 'date' as const, label: t('filters.group_due_date'), icon: Calendar },
-  { value: 'category' as const, label: t('filters.group_category'), icon: FolderOpen },
+  { value: 'priority' as const, label: t('kanban.focus_timeline'), icon: MoveRight },
   { value: 'list' as const, label: t('filters.group_list'), icon: List }
 ])
 
@@ -334,11 +280,7 @@ const boardTaskMatchesLocalFilters = (task: Task) => {
   return assignmentFilterFn.value(task)
 }
 
-const {
-  tasksByProject,
-  projectsWithTasks,
-  totalDisplayedTasks
-} = useBoardState({ taskStore, taskFilter: boardTaskMatchesLocalFilters })
+const { totalDisplayedTasks } = useBoardState({ taskStore, taskFilter: boardTaskMatchesLocalFilters })
 
 // FEATURE-1336: All tasks combined (not split by project) for category view
 const allFilteredTasks = computed(() => {
@@ -404,6 +346,8 @@ const handleAddTaskToGroup = (groupKey: string, _groupBy: string) => {
   openQuickTaskCreate('todo', groupKey === '__uncategorized__' ? '' : groupKey, 'list')
 }
 
+const handleTimelineAddTask = () => openQuickTaskCreate('todo', '', 'list')
+
 // Load saved settings on mount
 onMounted(() => {
   // Initialize UI store
@@ -433,10 +377,6 @@ const handleBoardKeydown = (event: KeyboardEvent) => {
 }
 
 // Task management methods (wrappers for composables to match template emitters)
-const handleAddTask = (payload: { columnKey: string, projectId: string, viewType: 'priority' | 'date' | 'category' | 'list' }) => {
-  openQuickTaskCreate(payload.columnKey, payload.projectId, payload.viewType)
-}
-
 const quickTaskInheritedProps = computed(() => {
   if (pendingTaskViewType.value !== 'date') return null
   return { dueDate: getDateFromColumnKey(pendingTaskColumnKey.value) }
